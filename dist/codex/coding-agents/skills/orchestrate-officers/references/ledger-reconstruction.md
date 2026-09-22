@@ -1,9 +1,9 @@
 # Ledger reconstruction after a compaction or restart
 
 The parent skill's `<ledger_derivation>` states the entry point's invocation
-contract and result shape. This reference states how the input document is
-acquired once the session's own memory of the Change is gone, which is the only
-condition that requires reconstruction.
+form and the rule for accepting its result. This reference states how the input
+document is acquired once the session's own memory of the Change is gone, which
+is the only condition that requires reconstruction.
 
 ## Acquisition
 

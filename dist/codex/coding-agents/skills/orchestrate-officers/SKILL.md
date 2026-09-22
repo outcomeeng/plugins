@@ -81,6 +81,7 @@ accepted operation names.
 | --------------------------------------------------- | ----------------------------------------------------------- |
 | `${SKILL_DIR}/references/officer-order.md`          | Complete launch-and-order contract                          |
 | `${SKILL_DIR}/references/standing-rules.md`         | Fleet-wide autonomy, durability, event, and lifecycle rules |
+| `${SKILL_DIR}/references/ledger-contract.md`        | Ledger input document, derived ledger, and refused sources  |
 | `${SKILL_DIR}/references/ledger-reconstruction.md`  | Ledger input acquisition after a compaction or restart      |
 | `${SKILL_DIR}/references/ledger-script-coverage.md` | Tested cases and inputs for the bundled ledger entry point  |
 
@@ -115,44 +116,12 @@ under the standing autonomy rules. A third round waits for the operator.
 
 <ledger_derivation>
 
-The bundled entry point accepts one JSON document with this source-owned
-shape:
-
-```json
-{
-  "schemaVersion": 1,
-  "change": "owner/changes#123",
-  "mailRecords": [],
-  "journalRuns": []
-}
-```
-
-Each mail record preserves the store's integer `id` and string `body`. A JSON
-body with a `ledger` object contributes its declared fields; other bodies
-remain durable mail facts without entering the derived ledger. That object
-carries any of `pass`, `head`, `verdict`, `decision`, `failure`,
-`findingProvenance`, `read`, `spend`, and `wallTimeSeconds`. A `decision` event
-records its autonomous class, choice, and reasoning. A `failure` event records
-an operator instruction naming an officer session or an officer fact reporting
-an operator interaction. A `read` event records one of the causes `message`,
-`officer-state-change`, `bound-crossed`, and `operator-cadence`, as one object
-or an array of them. `findingProvenance` is always an array.
-
-Each journal object preserves its `runToken` and carries the same event fields
-at its own top level rather than under a `ledger` key — a run object holding
-only its `runToken` therefore contributes no pass, verdict, spend, or duration.
-The sources differ only in where the event fields sit and in which identity
-stamps the entries they produce:
-
-```json
-{
-  "runToken": "2026-09-22_10-14-02-117-af31c9d0e4b2",
-  "pass": "round-2",
-  "verdict": "REJECT",
-  "spend": { "currency": "USD", "amount": "12.50" },
-  "wallTimeSeconds": "93.5"
-}
-```
+The bundled entry point derives one per-Change ledger from a JSON document on
+stdin. What that document holds, what the ledger holds, and which sources the
+entry point refuses live in
+`${SKILL_DIR}/references/ledger-contract.md`; this section carries the
+invocation form and the rule for accepting a result, so contract detail the
+entry point gains later lands in that reference rather than here.
 
 Submit the document through one of these forms and preserve the complete
 result.
@@ -171,21 +140,14 @@ When the runner requires one physical command line:
 printf '%s\n' '{"schemaVersion":1,"change":"owner/changes#123","mailRecords":[],"journalRuns":[]}' | python3 "${SKILL_DIR}/scripts/derive_ledger.py" derive
 ```
 
-Accept only `schemaVersion: 1` with `status: "succeeded"`. The ledger carries
-exactly `change`, `passes`, `heads`, `verdicts`, `decisions`, `failures`,
-`findingProvenance`, `reads`, `runningSpend`, and `wallTimeSeconds`, with source
-provenance on every entry: the mail record's integer store `id`, or the journal
-run's `runToken`. A source repeating one identity — records sharing a store `id`
-or runs sharing a `runToken` — contributes once, while a value one record lists
-twice is recorded twice. Each `runningSpend` amount and the `wallTimeSeconds`
-total is a decimal string carrying every digit of the amounts it came from, not
-a JSON number: read it into an exact decimal type rather than a float. Every
-rejection
-— a malformed document, a refused schema version, or a wrong argument vector —
-exits two and writes one `status: "invalid-input"` result carrying
-`schemaVersion`, `status`, and `detail` on stdout, leaving stderr empty, so one
-parse reads every outcome. A rejection caused by one record names that record's
-position, so a document holding many records identifies the offending one.
+Accept only `schemaVersion: 1` with `status: "succeeded"`. Every refusal — of
+the argument vector, of the document, or of one record inside it — writes one
+`status: "invalid-input"` result on stdout carrying `schemaVersion`, `status`,
+and `detail`, exits two, and leaves the error stream empty, so one parse reads
+every outcome and no source reaches the caller as a traceback. Read each total
+the accepted ledger carries into an exact decimal type: the totals are decimal
+strings rather than JSON numbers, and a float parse drops digits the sources
+carried.
 
 Reconstruction after a compaction or restart runs only then, and its acquisition
 procedure lives in `${SKILL_DIR}/references/ledger-reconstruction.md`.

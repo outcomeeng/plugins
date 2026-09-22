@@ -1,7 +1,8 @@
 <required_reading>
 
 Read `${CLAUDE_SKILL_DIR}/references/standing-rules.md`. After a compaction or
-restart, also read `${CLAUDE_SKILL_DIR}/references/ledger-reconstruction.md`.
+restart, also read `${CLAUDE_SKILL_DIR}/references/ledger-reconstruction.md` and
+`${CLAUDE_SKILL_DIR}/references/ledger-contract.md`.
 
 </required_reading>
 

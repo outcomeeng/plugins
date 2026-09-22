@@ -75,6 +75,12 @@ Wait for the operator's word in exactly these four decision classes:
 3. a Change Frame amendment
 4. a product-intent conflict
 
+A held decision and every escalation are written as text in this session's own
+pane, never raised through the structured-question tool. The operator is assumed
+away, so a structured question would hold this session on an answer that may not
+come while the fleet it supervises keeps running; pane text leaves the decision
+visible and this session free to continue every independent officer.
+
 Before endorsing an officer proposal or escalating a Verifier finding, restate
 the governing rule from loaded decisions and specs and judge every term of the
 proposal or finding against that rule.
@@ -133,9 +139,10 @@ verification-journal runs, never treated as an independent source of truth, and
 is rebuilt after a compaction or restart. Every derived entry keeps its source
 provenance. Spend and wall time are courtesy fields rather than gates.
 
-The skill's `<ledger_derivation>` states the entry point's invocation contract,
-the ledger's keys, and the mail-body `ledger` event fields. Record a
-machine-readable ledger fact in that form.
+The skill's `<ledger_derivation>` states the entry point's invocation form and
+the rule for accepting its result, and names where the document's and the
+ledger's own contents are stated. Record a machine-readable ledger fact in that
+form.
 
 An officer reports a successful Change disposal as one `fact` record whose
 body contains this versioned object:

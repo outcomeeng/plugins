@@ -85,6 +85,20 @@ class LedgerInputError(ValueError):
     """Report a malformed ledger source without a traceback."""
 
 
+# Every error the source document's own text can provoke while it is read and
+# validated. `ValueError` covers the JSON scanner's syntax refusal, its refusal
+# of an integer literal past the interpreter's digit-string conversion limit, a
+# byte stream no codec decodes, and this module's own `LedgerInputError`;
+# `RecursionError` covers the scanner's nesting guard. Every other error — a
+# type error, an exhausted resource, an interrupt — states something about this
+# process rather than about the document, and stays uncaught so that a fault is
+# never reported as a rejected source.
+REFUSED_SOURCE_ERRORS: Final[tuple[type[BaseException], ...]] = (
+    ValueError,
+    RecursionError,
+)
+
+
 def _mapping(value: object, label: str) -> Mapping[str, object]:
     if not isinstance(value, Mapping):
         raise LedgerInputError(f"{label} must be an object")
@@ -227,7 +241,10 @@ def _event_from_record(
         raise LedgerInputError(f"{where} body must be a string")
     try:
         payload = json.loads(body)
-    except json.JSONDecodeError:
+    except REFUSED_SOURCE_ERRORS:
+        # A body the parser refuses carries no ledger object, so it stays a
+        # durable mail fact and contributes nothing, exactly as a body whose
+        # JSON carries no such object does.
         return None
     if not isinstance(payload, Mapping) or LEDGER_FIELD not in payload:
         return None
@@ -257,7 +274,14 @@ def _absorb(
 
 def derive_ledger(payload: Mapping[str, object]) -> dict[str, object]:
     """Return one deterministic ledger derived from mail and journal sources."""
-    if payload.get(SCHEMA_VERSION_FIELD) != SCHEMA_VERSION:
+    # `True` equals `1`, so the boolean guard every other numeric acceptance in
+    # this module applies is what keeps a boolean version out of the derivation.
+    schema_version = payload.get(SCHEMA_VERSION_FIELD)
+    if (
+        isinstance(schema_version, bool)
+        or not isinstance(schema_version, int)
+        or schema_version != SCHEMA_VERSION
+    ):
         raise LedgerInputError(f"schemaVersion must be {SCHEMA_VERSION}")
     change = payload.get(CHANGE_FIELD)
     if not isinstance(change, str) or not change:
@@ -349,7 +373,7 @@ def main(
     try:
         raw_payload = json.load(input_stream)
         result = derive_ledger(_mapping(raw_payload, "input"))
-    except (json.JSONDecodeError, LedgerInputError) as error:
+    except REFUSED_SOURCE_ERRORS as error:
         return _reject(output_stream, str(error))
 
     json.dump(result, output_stream, sort_keys=True)
