@@ -192,6 +192,8 @@ DECLARED_CODEX_SOURCE = declared_codex_source(
     Path(__file__).resolve().parents[2], MARKETPLACE
 )
 """The same declared source in the form Codex adds it."""
+EMPTY_CODEX_MARKETPLACE_LISTING = json.dumps({CODEX_MARKETPLACES_FIELD: []})
+"""A Codex registry listing carrying no marketplace, as a home with none reports."""
 CODEX_CONFIG_PLUGINS_TABLE = "plugins"
 """The trusted-product `config.toml` table carrying plugin activation overrides."""
 CODEX_CONFIG_PLUGIN_ENABLED_KEY = "enabled"
@@ -682,6 +684,12 @@ class RecordingRunner:
     """
     registered: bool = True
     """Whether the Claude registry lists the marketplace; False lists no entry."""
+    codex_registered: bool = True
+    """Whether the Codex registry lists the marketplace; False lists no entry.
+
+    The two registries move independently on a real machine, so the state each
+    run meets is a case dimension rather than a fixed value.
+    """
     clone: Path | None = None
     """The marketplace clone the registry entry names, when the entry carries one."""
     head_commit: str = "0" * 40
@@ -762,6 +770,12 @@ class RecordingRunner:
                 if self.registered
                 else "[]"
             )
+        elif (
+            command.agent is Agent.CODEX
+            and command.operation is Operation.MARKETPLACE_INSPECT
+            and not self.codex_registered
+        ):
+            stdout = EMPTY_CODEX_MARKETPLACE_LISTING
         else:
             stdout = _successful_command_payload(command, self.installed)
         return CommandResult(
@@ -1041,7 +1055,7 @@ def _persistent_plan_with_catalog_inventories(
         codex_marketplace_payload=(
             codex_marketplace_listing_payload(codex_source, MARKETPLACE)
             if codex_source is not None
-            else json.dumps({CODEX_MARKETPLACES_FIELD: []})
+            else EMPTY_CODEX_MARKETPLACE_LISTING
         ),
         codex_plugins_payload=_plugin_listing_payload(
             Agent.CODEX,
@@ -1444,32 +1458,50 @@ def observe_install_record_rewrite(
 
 
 @dataclass(frozen=True)
-class UnreadableSourceObservation:
-    """A persistent run from an invocation checkout whose own settings cannot be read."""
+class RegistryState:
+    """Whether each agent's marketplace registry carries the marketplace at run start."""
 
-    settings_path: Path
-    bootstrap_error: str | None
-    """The rejection a run reports when the registry lacks the marketplace too."""
-    other_checkout: Path
+    claude: bool
+    codex: bool
+
+
+@dataclass(frozen=True)
+class UnreadableSourceCase:
+    """One persistent run under unreadable invocation settings at one registry state."""
+
+    state: RegistryState
     plan: InstallationPlan
-    """The plan for the registered case: an empty invocation inventory beside another checkout's record."""
     warnings: tuple[InstallationWarning, ...]
     attempted: tuple[InstallationCommand, ...]
-    """Every command the registered run issued, closing listing included."""
+    """Every command the run issued, closing listing included."""
     record_file_after: dict[str, object]
     target_version: str
     exit_code: int
 
 
-def observe_unreadable_source() -> UnreadableSourceObservation:
+@dataclass(frozen=True)
+class UnreadableSourceObservation:
+    """Persistent runs from an invocation checkout whose own settings cannot be read."""
+
+    settings_path: Path
+    other_checkout: Path
+    cases: tuple[UnreadableSourceCase, ...]
+    """One case per caller-supplied registry state, in the order supplied."""
+
+
+def observe_unreadable_source(
+    states: Sequence[RegistryState],
+) -> UnreadableSourceObservation:
     """Run persistent installation with the invocation checkout's settings malformed.
 
-    First with no registry entry and an empty inventory, where bootstrap has
-    no source to register: the rejection is one observation. Then with the
-    marketplace registered, the invocation checkout recording nothing, and
-    another checkout recording `spec-tree` at an older version: the plan,
-    its warnings, every command the run issues, the install-record document
-    after the run, and the exit code are the observations.
+    The checkout's own settings are the source a bootstrap registration reads,
+    and each agent's registry either carries the marketplace or does not, so
+    the caller supplies the registry states the runs range over. Every run
+    faces the same malformed settings, the same invocation checkout recording
+    nothing, and the same other checkout recording `spec-tree` at an older
+    version, in its own disposable agent state; each run's plan, warnings,
+    commands, install-record document, target version, and exit code are the
+    observations.
     """
     checkout = repository_root()
     with TemporaryDirectory() as temporary_directory:
@@ -1483,71 +1515,88 @@ def observe_unreadable_source() -> UnreadableSourceObservation:
         settings.write_text(MALFORMED_SETTINGS_CONTENT, encoding="utf-8")
         clone = temporary_root / "clone"
         mirror_installation_inputs(checkout, clone)
-        environment = _persistent_environment(temporary_root)
-        _prepare_agent_state(environment)
-        preflight = build_persistent_preflight(mirror, environment)
-        marketplace = preflight.roots.marketplace
-        bootstrap_error: str | None = None
-        try:
-            build_persistent_installation_plan(
-                preflight,
-                claude_marketplace_payload="[]",
-                claude_plugins_payload="[]",
-                codex_marketplace_payload=codex_marketplace_listing_payload(
-                    DECLARED_CODEX_SOURCE, marketplace
-                ),
-                codex_plugins_payload=_plugin_listing_payload(
-                    Agent.CODEX, mirror, frozenset({SPEC_TREE_PLUGIN})
-                ),
+        cases = tuple(
+            _unreadable_source_case(
+                mirror,
+                clone,
+                other,
+                temporary_root / f"state-{index}",
+                state,
             )
-        except ValueError as error:
-            bootstrap_error = str(error)
-        cases = generated_other_checkout_records(
-            marketplace, SPEC_TREE_PLUGIN, other, LISTED_VERSION
-        )
-        target_version = served_version(len(cases))
-        _serve_clone_versions(clone, (SPEC_TREE_PLUGIN,), target_version)
-        cache_root = (
-            preflight.roots.claude_config / CLAUDE_PLUGIN_CACHE_RELATIVE / marketplace
-        )
-        (cache_root / SPEC_TREE_PLUGIN / target_version).mkdir(parents=True)
-        record_file = preflight.roots.claude_config / CLAUDE_INSTALLED_PLUGINS_RELATIVE
-        record_file.parent.mkdir(parents=True, exist_ok=True)
-        record_file.write_text(
-            json.dumps(_record_file_from_cases(cases, cache_root), indent=2)
-        )
-        plan = build_persistent_installation_plan(
-            preflight,
-            claude_marketplace_payload=claude_marketplace_listing_payload(
-                DECLARED_CLAUDE_SOURCE, marketplace, clone
-            ),
-            claude_plugins_payload=json.dumps([entry for entry, _ in cases]),
-            codex_marketplace_payload=codex_marketplace_listing_payload(
-                DECLARED_CODEX_SOURCE, marketplace
-            ),
-            codex_plugins_payload=_plugin_listing_payload(
-                Agent.CODEX, mirror, frozenset({SPEC_TREE_PLUGIN})
-            ),
-        )
-        runner = RecordingRunner(
-            record_file=record_file, clone=clone, served_version=target_version
-        )
-        exit_code = main(
-            [CHECKOUT_OPTION, str(mirror), JSON_OUTPUT_OPTION],
-            base_environment=environment,
-            runner=runner,
-        )
-        record_file_after = cast(
-            "dict[str, object]", json.loads(record_file.read_text())
+            for index, state in enumerate(states)
         )
     return UnreadableSourceObservation(
         settings_path=settings,
-        bootstrap_error=bootstrap_error,
         other_checkout=other.resolve(),
+        cases=cases,
+    )
+
+
+def _unreadable_source_case(
+    mirror: Path,
+    clone: Path,
+    other: Path,
+    state_root: Path,
+    state: RegistryState,
+) -> UnreadableSourceCase:
+    """One persistent run against one registry state in its own disposable agent state."""
+    environment = _persistent_environment(state_root)
+    _prepare_agent_state(environment)
+    preflight = build_persistent_preflight(mirror, environment)
+    marketplace = preflight.roots.marketplace
+    records = generated_other_checkout_records(
+        marketplace, SPEC_TREE_PLUGIN, other, LISTED_VERSION
+    )
+    target_version = served_version(len(records))
+    _serve_clone_versions(clone, (SPEC_TREE_PLUGIN,), target_version)
+    cache_root = (
+        preflight.roots.claude_config / CLAUDE_PLUGIN_CACHE_RELATIVE / marketplace
+    )
+    (cache_root / SPEC_TREE_PLUGIN / target_version).mkdir(parents=True)
+    record_file = preflight.roots.claude_config / CLAUDE_INSTALLED_PLUGINS_RELATIVE
+    record_file.parent.mkdir(parents=True, exist_ok=True)
+    record_file.write_text(
+        json.dumps(_record_file_from_cases(records, cache_root), indent=2)
+    )
+    plan = build_persistent_installation_plan(
+        preflight,
+        claude_marketplace_payload=(
+            claude_marketplace_listing_payload(
+                DECLARED_CLAUDE_SOURCE, marketplace, clone
+            )
+            if state.claude
+            else json.dumps([])
+        ),
+        claude_plugins_payload=json.dumps([entry for entry, _ in records]),
+        codex_marketplace_payload=(
+            codex_marketplace_listing_payload(DECLARED_CODEX_SOURCE, marketplace)
+            if state.codex
+            else EMPTY_CODEX_MARKETPLACE_LISTING
+        ),
+        codex_plugins_payload=_plugin_listing_payload(
+            Agent.CODEX, mirror, frozenset({SPEC_TREE_PLUGIN})
+        ),
+    )
+    runner = RecordingRunner(
+        record_file=record_file,
+        clone=clone,
+        served_version=target_version,
+        registered=state.claude,
+        codex_registered=state.codex,
+    )
+    exit_code = main(
+        [CHECKOUT_OPTION, str(mirror), JSON_OUTPUT_OPTION],
+        base_environment=environment,
+        runner=runner,
+    )
+    return UnreadableSourceCase(
+        state=state,
         plan=plan,
         warnings=plan.warnings,
         attempted=tuple(runner.calls),
-        record_file_after=record_file_after,
+        record_file_after=cast(
+            "dict[str, object]", json.loads(record_file.read_text())
+        ),
         target_version=target_version,
         exit_code=exit_code,
     )
@@ -3614,6 +3663,11 @@ __all__ = [
     "observe_install_record_rewrite",
     "install_record_fixture_path",
     "PathlessListingObservation",
+    "RegistryState",
+    "UnreadableSourceCase",
+    "UnreadableSourceObservation",
+    "observe_unreadable_source",
+    "EMPTY_CODEX_MARKETPLACE_LISTING",
     "MARKETPLACE",
     "DECLARED_CLAUDE_SOURCE",
     "DECLARED_CODEX_SOURCE",

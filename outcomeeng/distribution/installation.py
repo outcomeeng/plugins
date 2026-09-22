@@ -190,6 +190,12 @@ UNREADABLE_SETTINGS_WARNING = (
     "other install record is refreshed."
 )
 UNDECLARED_SOURCE_DIAGNOSTIC = "the invocation checkout declares no marketplace source"
+WITHHELD_REGISTRATION_WARNING = (
+    "{diagnostic}; this agent registers no {marketplace} marketplace and the "
+    "invocation checkout declares no readable source for one, so that "
+    "registration and the operations depending on it are withheld while every "
+    "other install record is refreshed."
+)
 UNLOCATED_REGISTRY_DIAGNOSTIC = "the marketplace registry entry names no clone"
 OFF_TARGET_DIAGNOSTIC = "install records off the target after refresh"
 CHECKOUT_OPTION = "--checkout"
@@ -766,6 +772,7 @@ class AgentAdapter(Protocol):
         recorded: frozenset[str] = frozenset(),
         clone: Path | None = None,
         bootstrap: bool = True,
+        bootstrap_source: str | None = None,
     ) -> tuple[InstallationCommand, ...]: ...
 
     def closing(
@@ -798,22 +805,26 @@ class ClaudeInstallationAdapter:
         recorded: frozenset[str] = frozenset(),
         clone: Path | None = None,
         bootstrap: bool = True,
+        bootstrap_source: str | None = None,
     ) -> tuple[InstallationCommand, ...]:
         scope = (
             CLAUDE_PROJECT_SCOPE
             if mode is InstallationMode.PERSISTENT
             else CLAUDE_USER_SCOPE
         )
-        source = (
-            declared_claude_source(roots.checkout, roots.marketplace)
-            if mode is InstallationMode.PERSISTENT and source_action is SourceAction.ADD
-            else str(roots.checkout)
+        registering = (
+            mode is InstallationMode.PERSISTENT and source_action is SourceAction.ADD
         )
-        commands = list(
-            _claude_source_commands(source_action, source, scope, roots, environment)
-        )
+        source = bootstrap_source if registering else str(roots.checkout)
+        commands: list[InstallationCommand] = []
+        if source is not None:
+            commands.extend(
+                _claude_source_commands(
+                    source_action, source, scope, roots, environment
+                )
+            )
         for plugin in plugins:
-            if plugin in recorded or not bootstrap:
+            if plugin in recorded or not bootstrap or source is None:
                 continue
             plugin_id = marketplace_plugin_identifier(plugin, roots.marketplace)
             commands.append(
@@ -931,16 +942,21 @@ class CodexInstallationAdapter:
         recorded: frozenset[str] = frozenset(),
         clone: Path | None = None,
         bootstrap: bool = True,
+        bootstrap_source: str | None = None,
     ) -> tuple[InstallationCommand, ...]:
-        # Codex keys no install record by project path and reads no checkout
-        # settings, so the shared signature's Claude records, clone, and
-        # bootstrap switch carry nothing for this adapter.
+        # Codex keys no install record by project path, so the shared
+        # signature's Claude records, clone, and bootstrap switch carry
+        # nothing for this adapter.
         del records, recorded, clone, bootstrap
-        source = (
-            declared_codex_source(roots.checkout, roots.marketplace)
-            if mode is InstallationMode.PERSISTENT and source_action is SourceAction.ADD
-            else str(roots.checkout)
+        registering = (
+            mode is InstallationMode.PERSISTENT and source_action is SourceAction.ADD
         )
+        source = bootstrap_source if registering else str(roots.checkout)
+        if source is None:
+            # The registration this run would perform has no source, and every
+            # Codex plugin operation installs from that registration, so the
+            # whole Codex plan is withheld and the caller reports it.
+            return ()
         commands = list(
             _codex_source_commands(source_action, source, roots, environment)
         )
@@ -1108,7 +1124,10 @@ def build_persistent_installation_plan(
     The checkout's committed settings declare the marketplace source, but a
     fresh agent home has no marketplace to refresh: the declared action holds
     only where the live listing carries the marketplace, and an absent live
-    marketplace is added regardless of the declaration.
+    marketplace is added regardless of the declaration. Those settings are a
+    bootstrap input alone: a document that cannot be read, or that declares no
+    source, withholds the registration that needs it and is reported, while
+    every other install record on the machine is still refreshed.
     """
     marketplace = preflight.roots.marketplace
     claude_registered = claude_registered_marketplace(
@@ -1116,11 +1135,6 @@ def build_persistent_installation_plan(
     )
     claude_action = (
         SourceAction.ADD if claude_registered is None else SourceAction.REFRESH
-    )
-    claude_source = (
-        declared_claude_source(preflight.roots.checkout, marketplace)
-        if claude_registered is None
-        else claude_registered.source
     )
     if claude_registered is not None and claude_registered.install_location is None:
         raise ValueError(
@@ -1132,6 +1146,32 @@ def build_persistent_installation_plan(
     )
     codex_action = (
         SourceAction.ADD if codex_registered is None else SourceAction.REFRESH
+    )
+    declared_source, declared_source_error = _declared_bootstrap_source(
+        preflight.roots.checkout,
+        marketplace,
+        needed=claude_registered is None or codex_registered is None,
+    )
+    claude_source = (
+        declared_source if claude_registered is None else claude_registered.source
+    )
+    codex_bootstrap_source = (
+        None if declared_source is None else codex_source_form(declared_source)
+    )
+    withheld_warnings = tuple(
+        InstallationWarning(
+            agent=agent,
+            message=WITHHELD_REGISTRATION_WARNING.format(
+                diagnostic=declared_source_error,
+                marketplace=marketplace,
+            ),
+            blocking=True,
+        )
+        for agent, registered in (
+            (Agent.CLAUDE, claude_registered),
+            (Agent.CODEX, codex_registered),
+        )
+        if declared_source_error is not None and registered is None
     )
     claude_installed = installed_plugin_names(
         Agent.CLAUDE,
@@ -1204,6 +1244,7 @@ def build_persistent_installation_plan(
                 claude_warning,
                 codex_warning,
                 settings_warning,
+                *withheld_warnings,
                 *record_warnings,
             )
             if warning is not None
@@ -1217,6 +1258,8 @@ def build_persistent_installation_plan(
         ),
         claude_source=claude_source,
         claude_catalog=preflight.claude_plugins,
+        claude_bootstrap_source=declared_source,
+        codex_bootstrap_source=codex_bootstrap_source,
     )
 
 
@@ -1333,6 +1376,8 @@ def _build_plan(
     claude_clone: Path | None = None,
     claude_source: str | None = None,
     claude_catalog: tuple[str, ...] = (),
+    claude_bootstrap_source: str | None = None,
+    codex_bootstrap_source: str | None = None,
 ) -> InstallationPlan:
     selected_codex_agents = (
         generated_codex_agent_definitions(
@@ -1349,6 +1394,10 @@ def _build_plan(
         Agent.CODEX: codex_plugins,
     }
     actions = {Agent.CLAUDE: claude_action, Agent.CODEX: codex_action}
+    bootstrap_sources = {
+        Agent.CLAUDE: claude_bootstrap_source,
+        Agent.CODEX: codex_bootstrap_source,
+    }
     commands = tuple(
         command
         for adapter in AGENT_ADAPTERS
@@ -1362,6 +1411,7 @@ def _build_plan(
             claude_recorded,
             claude_clone,
             claude_bootstrap,
+            bootstrap_sources[adapter.agent],
         )
     )
     closing = tuple(
@@ -2705,15 +2755,41 @@ def declared_claude_source(checkout: Path, marketplace: str) -> str:
     raise ValueError(f"{UNDECLARED_SOURCE_DIAGNOSTIC}: {checkout}")
 
 
-def declared_codex_source(checkout: Path, marketplace: str) -> str:
-    """The Codex form of the source the invocation checkout declares for Claude Code.
+def codex_source_form(source: str) -> str:
+    """The Codex spelling of one Claude Code marketplace source.
 
     A GitHub `owner/repo` becomes its HTTPS URL; a directory or git URL is used as is.
     """
-    source = declared_claude_source(checkout, marketplace)
     if claude_source_type(source) == CLAUDE_GITHUB_SOURCE_TYPE:
         return f"https://github.com/{source}"
     return source
+
+
+def declared_codex_source(checkout: Path, marketplace: str) -> str:
+    """The Codex form of the source the invocation checkout declares for Claude Code."""
+    return codex_source_form(declared_claude_source(checkout, marketplace))
+
+
+def _declared_bootstrap_source(
+    checkout: Path,
+    marketplace: str,
+    *,
+    needed: bool,
+) -> tuple[str | None, str | None]:
+    """The source a bootstrap registration would use, or the diagnostic withholding it.
+
+    The invocation checkout's settings are a bootstrap input alone. A document
+    that cannot be read, or that declares no source for this marketplace,
+    withholds the registration that needs it rather than stopping the run: the
+    machine-wide refresh of every other install record reads no settings and
+    stays performable. A run that needs no registration reads nothing.
+    """
+    if not needed:
+        return None, None
+    try:
+        return declared_claude_source(checkout, marketplace), None
+    except ValueError as error:
+        return None, str(error)
 
 
 GIT_URL_PREFIXES = ("http://", "https://", "ssh://", "git://", "git@")
@@ -3227,6 +3303,7 @@ __all__ = [
     "codex_registered_marketplace",
     "declared_claude_source",
     "declared_codex_source",
+    "codex_source_form",
     "marketplace_target",
     "plan_install_record_rewrite",
     "render_claude_source",
@@ -3344,6 +3421,7 @@ __all__ = [
     "CLAUDE_MANAGED_SCOPE",
     "UNREADABLE_SETTINGS_DIAGNOSTIC",
     "UNREADABLE_SETTINGS_WARNING",
+    "WITHHELD_REGISTRATION_WARNING",
     "UNREGISTERED_TARGET_WARNING",
     "marketplace_plugin_identifier",
     "marketplace_plugin_name",

@@ -20,7 +20,8 @@ from outcomeeng.distribution.installation import (
     PATHLESS_LISTING_ENTRY_WARNING,
     ReportField,
     SPEC_TREE_PLUGIN,
-    UNREADABLE_SETTINGS_DIAGNOSTIC,
+    UNREADABLE_SETTINGS_WARNING,
+    WITHHELD_REGISTRATION_WARNING,
     marketplace_plugin_identifier,
     marketplace_plugin_name,
     report_document,
@@ -33,6 +34,8 @@ from outcomeeng_testing.generators.installation import (
     RecordDisposition,
 )
 from outcomeeng_testing.harnesses.installation import (
+    RegistryState,
+    UnreadableSourceCase,
     absent_from_every_agent,
     committed_catalog_plugin_names,
     observe_first_persistent_cli,
@@ -394,43 +397,86 @@ def test_a_pathless_refresh_scope_entry_is_reported_and_the_run_continues() -> N
 
 
 def test_unreadable_invocation_settings_stop_bootstrap_and_nothing_else() -> None:
-    observation = observe_unreadable_source()
+    both_registered = RegistryState(claude=True, codex=True)
+    codex_unregistered = RegistryState(claude=True, codex=False)
+    claude_unregistered = RegistryState(claude=False, codex=True)
+    observation = observe_unreadable_source(
+        (both_registered, codex_unregistered, claude_unregistered)
+    )
 
-    assert observation.bootstrap_error is not None
-    assert observation.bootstrap_error.startswith(UNREADABLE_SETTINGS_DIAGNOSTIC)
-    assert str(observation.settings_path) in observation.bootstrap_error
-    settings_warnings = [
-        warning
-        for warning in observation.warnings
-        if warning.message.startswith(UNREADABLE_SETTINGS_DIAGNOSTIC)
-    ]
-    assert len(settings_warnings) == 1
-    assert str(observation.settings_path) in settings_warnings[0].message
-    assert settings_warnings[0].blocking
-    assert [
-        command.operation
-        for command in observation.attempted
-        if command.agent is Agent.CLAUDE
-    ] == [
+    by_state = {case.state: case for case in observation.cases}
+    marketplace = by_state[both_registered].plan.roots.marketplace
+    settings_suffix = UNREADABLE_SETTINGS_WARNING.format(diagnostic="")
+    withheld_suffix = WITHHELD_REGISTRATION_WARNING.format(
+        diagnostic="", marketplace=marketplace
+    )
+    for state, case in by_state.items():
+        settings_warnings = [
+            warning
+            for warning in case.warnings
+            if warning.message.endswith(settings_suffix)
+        ]
+        assert len(settings_warnings) == 1, state
+        assert str(observation.settings_path) in settings_warnings[0].message, state
+        assert settings_warnings[0].blocking, state
+        claude_operations = _agent_operations(case, Agent.CLAUDE)
+        assert Operation.PLUGIN_INSTALL not in claude_operations, state
+        assert Operation.PLUGIN_ENABLE not in claude_operations, state
+        assert {
+            warning.agent
+            for warning in case.warnings
+            if warning.message.endswith(withheld_suffix)
+        } == {
+            agent
+            for agent, registered in (
+                (Agent.CLAUDE, state.claude),
+                (Agent.CODEX, state.codex),
+            )
+            if not registered
+        }, state
+        assert case.exit_code != 0, state
+
+    for state in (both_registered, codex_unregistered):
+        case = by_state[state]
+        assert _agent_operations(case, Agent.CLAUDE) == (
+            Operation.MARKETPLACE_INSPECT,
+            Operation.PLUGIN_INSPECT,
+            Operation.MARKETPLACE_REFRESH,
+            Operation.MARKETPLACE_HEAD,
+            Operation.PLUGIN_LIST,
+        ), state
+        assert [record.project_path for record in case.plan.rewrite_records] == [
+            observation.other_checkout
+        ], state
+        assert (
+            _recorded_version(
+                case.record_file_after,
+                SPEC_TREE_PLUGIN,
+                marketplace,
+                observation.other_checkout,
+            )
+            == case.target_version
+        ), state
+
+    assert _agent_operations(by_state[codex_unregistered], Agent.CODEX) == (
         Operation.MARKETPLACE_INSPECT,
         Operation.PLUGIN_INSPECT,
-        Operation.MARKETPLACE_REFRESH,
-        Operation.MARKETPLACE_HEAD,
         Operation.PLUGIN_LIST,
-    ]
-    assert [record.project_path for record in observation.plan.rewrite_records] == [
-        observation.other_checkout
-    ]
-    assert (
-        _recorded_version(
-            observation.record_file_after,
-            SPEC_TREE_PLUGIN,
-            observation.plan.roots.marketplace,
-            observation.other_checkout,
-        )
-        == observation.target_version
     )
-    assert observation.exit_code != 0
+    assert _agent_operations(by_state[claude_unregistered], Agent.CLAUDE) == (
+        Operation.MARKETPLACE_INSPECT,
+        Operation.PLUGIN_INSPECT,
+        Operation.PLUGIN_LIST,
+    )
+    assert by_state[claude_unregistered].plan.rewrite_records == ()
+
+
+def _agent_operations(
+    case: UnreadableSourceCase, agent: Agent
+) -> tuple[Operation, ...]:
+    return tuple(
+        command.operation for command in case.attempted if command.agent is agent
+    )
 
 
 def _recorded_version(
