@@ -365,7 +365,7 @@ This is not slower. The ad hoc script takes the same effort as a test, but the s
 <success_criteria>
 
 - Every product-declared touched-scope deterministic command exits zero on the final committed subject.
-- Each applicable architecture and test-evidence auditor returns `APPROVED`; each applicable eval-evidence auditor returns JSON `overall: PASS` with no `FAIL` or `UNKNOWN` row; and each implementation-audit run renders `terminalStatus: approved` for the exact committed subject.
+- Each applicable architecture and test-evidence auditor returns `APPROVED`; each applicable eval-evidence auditor returns JSON `overall: PASS` with no `FAIL` or `UNKNOWN` row; every artifact auditor `<lane_table>` selects — the spec, skill, prose, and decision auditors — returns a clean verdict; and each implementation-audit run renders `terminalStatus: approved` for the exact committed subject.
 - A changeset that selects Step 9 carries a raw review run token whose sealed projection renders successfully, with every valid finding fixed, including every in-scope same-class instance; unbacked findings are dropped.
 - `git rev-parse HEAD` matches the final gate subject and `git status --porcelain` is empty.
 - The requested delivery boundary has observable completion: default-branch work has reached the default branch on origin through `/merge`'s selected transport and every declared release action reports success or no-op; proposal, analysis, review, or local-only work reaches its explicitly selected boundary; an explicit lifecycle gate reports its blocking token only after no independent action remains.

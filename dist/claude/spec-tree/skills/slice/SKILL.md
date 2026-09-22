@@ -65,7 +65,7 @@ Confirm that delivering the slice makes one real invocation more useful and insp
 </step>
 
 <step number="6" name="Hand off to apply">
-Hand the selected slice's node set to the apply lifecycle as its work queue: Use skill `spec-tree:apply`. `/apply` runs the per-node apply flow over each node in ascending index order, then carries the changeset through `/merge`.
+Return the selected slice's node set to the caller as its work queue, in ascending index order. `/apply` consumes that queue, running the per-node apply flow over each node and carrying the changeset through `/merge`. This step returns the node set and never invokes the apply lifecycle — `/apply` reaches slice selection through its own Step 0, so invoking it here would re-enter that step and run the queue twice.
 </step>
 
 </workflow>
