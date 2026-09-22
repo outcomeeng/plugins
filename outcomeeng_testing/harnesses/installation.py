@@ -4577,6 +4577,23 @@ the module that owns that name: the Python packages by the gate's own source
 list, the spec tree and the authored source tree by their declaring modules."""
 
 
+def every_real_process_row_file() -> tuple[Path, ...]:
+    """Return every executed test file in the tree whose cell admits a real agent.
+
+    The projection rule quantifies over every row that starts a real Codex or
+    Claude process, and such a row can sit under any node. Reading one node's
+    directory leaves a row elsewhere reported by nothing, so the file set is the
+    whole spec tree's executed tests at the cells an acquired executable
+    reaches.
+    """
+    tests_root = repository_root() / SPEC_TREE_ROOT
+    return tuple(
+        path
+        for path in sorted(tests_root.rglob("tests/test_*.py"))
+        if any(f".{level}." in path.name for level in ACQUIRED_EXECUTABLE_LEVELS)
+    )
+
+
 def real_process_row_files(node_tests: Path) -> tuple[Path, ...]:
     """Return the node's test files whose cell admits an acquired agent executable.
 

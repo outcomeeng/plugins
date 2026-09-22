@@ -52,6 +52,7 @@ from outcomeeng_testing.harnesses.installation import (
     SWITCH_PROJECTIONS,
     SWITCH_SCAN_ROOTS,
     agent_switch_value_property,
+    every_real_process_row_file,
     real_process_row_files,
 )
 from outcomeeng_testing.harnesses.discovery_auth import (
@@ -1219,9 +1220,11 @@ def test_disable_switch_leaves_the_other_agent_rows_running(
 
 
 def test_every_real_process_row_projects_its_agent_switch() -> None:
-    in_scope = real_process_row_files(Path(__file__).parent)
+    in_scope = every_real_process_row_file()
 
     assert in_scope
+    assert real_process_row_files(Path(__file__).parent)
+    assert set(real_process_row_files(Path(__file__).parent)) <= set(in_scope)
     assert (
         rows_without_their_projection(
             in_scope,
