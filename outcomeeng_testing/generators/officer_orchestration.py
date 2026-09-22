@@ -335,13 +335,36 @@ def read_details() -> st.SearchStrategy[dict[str, str]]:
 
 
 def foreign_read_causes(module: LedgerVocabulary) -> st.SearchStrategy[object]:
-    """Read causes outside the derivation's declared cause set."""
-    return st.one_of(
+    """Read causes outside the derivation's declared cause set.
+
+    A source document's `cause` is whatever JSON carries under that key, so the
+    domain spans both halves of the JSON value space. The scalar branch is
+    filtered against the declared set, which each of its members can be
+    compared with. The container branch — a JSON array and a JSON object — lies
+    outside a set of strings by construction and carries no such filter,
+    because comparing an unhashable value against a set is the very operation a
+    gate performs on it: filtering here would refuse the domain instead of
+    reaching the refusal the document owes. A container's members are drawn so
+    that a declared cause can sit among them, which is what a gate reading
+    inside a container rather than reading the value it received would find.
+    """
+    declared = st.sampled_from(sorted(module.READ_CAUSES))
+    members = st.one_of(declared, st.text(max_size=16), st.integers())
+    scalars = st.one_of(
         st.text(max_size=16),
         st.integers(),
         st.booleans(),
         st.none(),
     ).filter(lambda cause: cause not in module.READ_CAUSES)
+    containers = st.one_of(
+        st.lists(members, max_size=3),
+        st.dictionaries(
+            keys=st.from_regex(r"[a-z]{1,10}", fullmatch=True),
+            values=members,
+            max_size=3,
+        ),
+    )
+    return st.one_of(scalars, containers)
 
 
 def foreign_argument_vectors(module: LedgerVocabulary) -> st.SearchStrategy[list[str]]:

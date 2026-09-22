@@ -174,7 +174,8 @@ deleting it.
 The per-Change ledger is derived from agent-mail records and sealed
 verification-journal runs, never treated as an independent source of truth, and
 is rebuilt after a compaction or restart. Every derived entry keeps its source
-provenance. Spend and wall time are courtesy fields rather than gates.
+provenance. What spend and wall time are to this fleet's gates is stated once,
+in the skill's `<result>`, and that one statement governs here too.
 
 The skill's `<ledger_derivation>` states the entry point's invocation form and
 the rule for accepting its result, and names where the document's and the

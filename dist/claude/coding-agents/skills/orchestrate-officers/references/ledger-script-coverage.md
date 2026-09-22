@@ -95,9 +95,11 @@ Each exits two with empty stderr and a result carrying exactly `detail`,
   as booleans, a float carrying the declared version's own value, other finite
   floats, other integers, text, and null, each detail naming the schema-version
   field and the required version
-- `property` — a read whose cause lies outside the declared set, generated as
-  text, an integer, a boolean, and null, whose detail names the admitted causes
-  and the offending record's position
+- `property` — a read whose cause lies outside the declared set, generated
+  across both halves of the JSON value space: as text, an integer, a boolean,
+  and null, and as an array and an object, each container drawn so that a
+  declared cause can sit among its members, whose detail names the admitted
+  causes and the offending record's position
 - `property` — an argument vector other than the declared derive operation,
   generated as a token run that reaches from the empty vector through runs
   carrying the declared operation among other tokens, whose detail names the

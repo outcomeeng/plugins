@@ -84,8 +84,9 @@ decodes.
 A document the parser reads whole refuses when:
 
 - the document is not a JSON object
-- `schemaVersion` is absent, or is a boolean, a float, a string, null, or an
-  integer other than the declared one
+- `schemaVersion` is anything other than the declared integer — absent, a
+  boolean, a float, a string, null, an array, an object, or another integer,
+  the boolean and the float that compare equal to the declared one included
 - `change` is not a non-empty string
 - `mailRecords` or `journalRuns` is absent or is not an array
 - a mail record is not an object, or its `id` is not an integer
@@ -95,18 +96,21 @@ A document the parser reads whole refuses when:
   a run repeating a `runToken` an earlier run carried is passed over before its
   event fields are read
 - `findingProvenance` is not an array, or one of its entries is not an object
-- `read` is neither an object nor an array of objects, or a read's `cause` lies
-  outside the declared set, whose detail names the admitted causes
+- `read` is neither an object nor an array of objects, or a read carries no
+  `cause` at all or a `cause` outside the declared set — every JSON value that
+  is not one of the declared strings lies outside it, a scalar and a container
+  alike — whose detail names the admitted causes
 - `spend` is not an object, its `currency` is not a non-empty string, or its
   `amount` is not a number or a string that reads as a finite decimal
 - `wallTimeSeconds` is not a number or a string that reads as a finite decimal
   at or above zero
 
-Every event field is optional: a record omitting one contributes nothing to that
+Every event field is optional, and `null` under one reads as its absence: a
+record omitting a field, or carrying `null` there, contributes nothing to that
 collection and refuses nothing. The scalar event fields — `pass`, `head`,
 `verdict`, `decision`, and `failure` — carry no gate of their own: whatever
-value an admitted record places under one of them becomes that collection's
-entry.
+value other than `null` an admitted record places under one of them becomes
+that collection's entry.
 
 A value refusal turns on the value rather than on its shape: in a record or run
 the derivation admits, a `wallTimeSeconds` of `-1` is well-formed text and still

@@ -178,7 +178,14 @@ def _append_reads(
     for item in items:
         read = dict(_mapping(item, f"{where} read"))
         cause = read.get(CAUSE_FIELD)
-        if cause not in READ_CAUSES:
+        # The cause is whatever JSON carried under that key, so its type is
+        # established before the declared set is consulted: testing membership
+        # of an unhashable value raises rather than answering, and that raise
+        # is a `TypeError` the refused-source handler does not catch, so it
+        # would leave the caller a traceback in place of the refusal the
+        # document owes. A value that is not a string lies outside a set of
+        # strings, so it takes the refusal a foreign string already takes.
+        if not isinstance(cause, str) or cause not in READ_CAUSES:
             allowed = ", ".join(sorted(READ_CAUSES))
             raise LedgerInputError(f"{where} read cause must be one of: {allowed}")
         reads.append({VALUE_FIELD: read, SOURCE_FIELD: dict(source)})

@@ -186,15 +186,10 @@ capability result, or ledger change to report.
 
 <success_criteria>
 
-- A launch result includes the successful herdr inventory/start identity, exact
-  worktree and pane, frozen full HEAD, Change, bounded wait result, and proven
-  registered mail identity before any order is sent.
-- An order result includes a successful agent-mail response whose returned
-  record has an integer store `id`; a derivation run over that record succeeds
-  and preserves the id as source provenance.
-- A read result names one allowed event cause, preserves the successful inbox or
-  pane response, and emits no state-change report when the checked state is
-  unchanged unless operator cadence requested one.
+Each of the eight routed operations also satisfies its own workflow's
+`<success_criteria>`, which states what that operation's result carries. The
+criteria below hold for all eight alike.
+
 - Every returned operation includes the complete capability results it relied
   on; each accepted result satisfies `<essential_principles>`, and any failed
   capability status remains a failed operation.
