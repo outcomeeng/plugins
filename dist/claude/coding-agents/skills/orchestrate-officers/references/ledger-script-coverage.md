@@ -38,9 +38,10 @@ executes it.
 - `scenario` — the empty document
   `{"schemaVersion":1,"change":"owner/changes#123","mailRecords":[],"journalRuns":[]}`
   exits zero with empty stderr and writes a result carrying exactly `ledger`,
-  `schemaVersion`, and `status: "succeeded"`, whose ledger carries exactly the
-  keys named in `<ledger_derivation>` with empty collections, an empty running
-  spend, and a zero wall time
+  `schemaVersion`, and `status: "succeeded"`, whose ledger carries exactly
+  `change`, `passes`, `heads`, `verdicts`, `decisions`, `failures`,
+  `findingProvenance`, `reads`, `runningSpend`, and `wallTimeSeconds`, with
+  every collection empty, an empty running spend, and a zero wall time
 
 ## Derivation from populated inputs
 
@@ -79,10 +80,13 @@ Each exits two with empty stderr and a result carrying exactly `detail`,
   and the required version
 - `scenario` — the malformed stdin document `{`, whose detail is non-empty
 - `property` — documents the JSON parser refuses, generated as text no JSON
-  production opens and as an integer literal wider than the interpreter
-  converts — that literal standing alone and carried inside an otherwise
-  well-formed envelope — each answered with a non-empty detail rather than a
-  traceback
+  production opens, as an integer literal wider than the interpreter converts
+  from a digit string — that literal standing alone and carried inside an
+  otherwise well-formed envelope — as a nesting run past the scanner's own
+  recursion guard, and as bytes no codec decodes between bytes that do; the
+  digit width and the nesting depth are read from the running interpreter
+  rather than fixed here, and each document is answered with a non-empty detail
+  rather than a traceback
 - `property` — every schema version other than the declared integer, generated
   as booleans, floats carrying the declared version's own value, other integers,
   text, and null, each detail naming the schema-version field and the required

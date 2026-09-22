@@ -7,7 +7,8 @@ Read `${SKILL_DIR}/references/officer-order.md` and
 
 <process>
 
-1. Use `coding-agents:operate-herdr` to inventory the environment.
+1. Use skill `coding-agents:operate-herdr`. Ask it for an inventory of the
+   environment; every pane operation below runs through that same capability.
 2. Validate the capability result under the parent skill's
    `<essential_principles>`, then require one free pane whose `cwd` equals the
    exact absolute worktree. Preserve the pane identity and frozen full HEAD.

@@ -15,8 +15,8 @@ Read `${CLAUDE_SKILL_DIR}/references/standing-rules.md`.
    rules. Require the exact Change, order store id, requested operation,
    `succeeded` status, and resulting lifecycle; a release also requires its
    complete Handoff. Preserve the fact's integer store identity.
-4. Only after that durable lifecycle fact reports success, stop the session
-   through `coding-agents:operate-herdr`, passing the standing pane
+4. Use skill `coding-agents:operate-herdr`. Only after that durable lifecycle
+   fact reports success, ask it to stop the session, passing the standing pane
    authorization as `"mutationAuthorized": true`, and validate the stopped
    identity.
 5. Relaunch the selected officer definition in the same proven pane before the

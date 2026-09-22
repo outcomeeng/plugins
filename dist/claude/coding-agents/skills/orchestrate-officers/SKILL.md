@@ -207,8 +207,9 @@ capability result, or ledger change to report.
 - After compaction or restart, the acquisition in
   `${CLAUDE_SKILL_DIR}/references/ledger-reconstruction.md` reaches correlation
   closure over the durable mail and sealed journal inputs, and running the
-  documented derivation over them produces the ledger keys in
-  `<ledger_derivation>`, each entry carrying the source that supplied it.
+  documented derivation over them produces the ledger keys
+  `${CLAUDE_SKILL_DIR}/references/ledger-contract.md` declares under
+  `## The derived ledger`, each entry carrying the source that supplied it.
 
 </success_criteria>
 

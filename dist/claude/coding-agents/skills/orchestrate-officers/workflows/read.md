@@ -10,11 +10,11 @@ restart, also read `${CLAUDE_SKILL_DIR}/references/ledger-reconstruction.md` and
 
 1. Require one allowed cause: message, officer state change, crossed bound, or
    operator-named cadence.
-2. Use the environment capability for the relevant pane state. Validate the
-   result under the parent skill's `<essential_principles>`.
-3. For an ordinary event read, use the inbox capability for the positively
-   identified recipient that raised the event and select the exact per-Change
-   correlation.
+2. Use skill `coding-agents:operate-herdr`. Ask it for the relevant pane state,
+   and validate the result under the parent skill's `<essential_principles>`.
+3. For an ordinary event read, use skill `coding-agents:operate-agent-mail`. Ask
+   it for the inbox of the positively identified recipient that raised the
+   event, and select the exact per-Change correlation.
 4. After compaction or restart, acquire the complete derivation input through
    `${CLAUDE_SKILL_DIR}/references/ledger-reconstruction.md`. Refuse a partial
    input.

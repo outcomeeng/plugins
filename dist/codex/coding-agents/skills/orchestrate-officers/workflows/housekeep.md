@@ -13,8 +13,9 @@ Read `${SKILL_DIR}/references/standing-rules.md`.
    a sealed journal, and every orchestrating-session ledger event. Require the
    complete positively identified participant set needed for correlation-closed
    reconstruction after restart.
-3. Run the selected herdr operation and validate its result under the parent
-   skill's `<essential_principles>`. When that operation is `key`, `start`,
+3. Use skill `coding-agents:operate-herdr`. Run the selected operation through
+   it and validate its result under the parent skill's
+   `<essential_principles>`. When that operation is `key`, `start`,
    `relaunch`, `stop`, or `open-worktree`, pass the standing pane authorization
    as `"mutationAuthorized": true`.
 4. Report every affected officer by absolute worktree and Change; keep internal
