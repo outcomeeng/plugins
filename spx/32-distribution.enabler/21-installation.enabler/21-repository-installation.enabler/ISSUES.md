@@ -234,6 +234,31 @@ since that is the event that leaves a stale owned definition in consumer homes.
 
 **Evidence**: raised by changeset review `2026-08-17_01-03-44-668-0ddd9fe582a1`.
 
+## The classifier recognises a scheme no case exercises
+
+`claude_source_type` classifies a registered marketplace source by the scheme
+it names, and the registry-entry generator carries a GitHub repository, an
+https git URL, a local directory, and no entry. No case carries a source whose
+scheme is `http`, `ssh`, or `git`, so the branch that recognises them reaches no
+predicate. Each falls to the directory branch if it stops matching, and a source
+recorded as a directory is a silent misclassification: the run would read a
+target from a path that is no working tree, which reaches the unreadable-head
+disposition rather than an error naming the cause.
+
+This gap surfaced while judging whether a scanner's objection to the `http`
+token could be answered by deleting it. It could not, and nothing in the
+evidence would have said so.
+
+**Resolution shape**: extend the registry-entry generator over every scheme the
+classifier recognises, so each reaches the git source type through the mapping
+assertion that already ranges over registry shapes.
+
+**Settlement condition**: every scheme in the classifier's own tuple is carried
+by a generated registry entry and asserted to the git source type.
+
+**Evidence**: established while dispositioning SonarCloud rule `python:S5332`
+against pull request 601; no Verifier raised it.
+
 ## The unrefreshable record disposition, and the rewrite half of the unresolved one, reach no evidence
 
 `plan_install_record_rewrite` in `outcomeeng/distribution/installation.py`
