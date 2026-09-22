@@ -233,3 +233,71 @@ consumer would look for the missing prune.
 since that is the event that leaves a stale owned definition in consumer homes.
 
 **Evidence**: raised by changeset review `2026-08-17_01-03-44-668-0ddd9fe582a1`.
+
+## The unresolved-target and unrefreshable record dispositions reach no evidence
+
+`plan_install_record_rewrite` in `outcomeeng/distribution/installation.py`
+reports a record whose plugin resolves to no target version with
+`UNRESOLVED_TARGET_RECORD_WARNING`, and a record whose target version has no
+cache directory with `UNREFRESHABLE_RECORD_WARNING`; both are blocking, and
+`21-installation-architecture.adr.md` declares both in prose. Every observer in
+`outcomeeng_testing/harnesses/installation.py` serves the target version for the
+whole catalog through `_serve_clone_versions` and creates a cache directory for
+every cataloged plugin, so neither branch is ever entered. Removing either
+warning, or rewriting such a record to a tree no session can load, leaves every
+linked test passing.
+
+Neither disposition reaches a tagged assertion either: the record-mapping
+assertion enumerates the out-of-catalog and out-of-scope warnings only, so the
+gap is a declaration gap before it is an evidence gap.
+
+**Resolution shape**: give the record-mapping assertion the two remaining
+dispositions, then drive each from the harness — a clone whose catalog names no
+source for one cataloged plugin, or whose manifest carries no version, for the
+unresolved target, and a served target version with no cache directory for the
+unrefreshable record — asserting that the named record is left unchanged while
+every other plugin's records still move.
+
+**Why separate**: each disposition needs a clone or cache shape no present
+observer builds, so the pair is a new evidence lane with its own harness
+support, and the assertion it verifies is a decision amendment rather than a
+predicate over the assertions this changeset carries.
+
+**Settlement condition**: the record-mapping assertion names both dispositions
+and a case drives each with another plugin's records moving beside it.
+
+**Evidence**: found by this changeset's sweep for states the spec declares whose
+linked evidence carries no invocation-checkout record; both warnings are
+introduced by this changeset and are referenced only at their emission site.
+
+## The listing-defect evidence never pairs a defect with an invocation-checkout record
+
+`observe_defective_record_listing` in `outcomeeng_testing/harnesses/installation.py`
+builds its listing from `generated_listing_defect_records`, which emits a
+pathless entry, a versionless entry, and one well-formed record in another
+checkout. The invocation checkout records nothing there, so the run's
+continuation past either defect is observed for the rewrite disposition and for
+the bootstrap install and enable, never for the native update of a record the
+invocation checkout holds. `21-installation-architecture.adr.md` states that
+neither defect settles anything about the rest of the machine's records, and the
+native update is one of the dispositions that rest carries, so a regression that
+abandoned that branch on a defect would leave every linked test passing.
+
+**Resolution shape**: give `generated_listing_defect_records` an
+invocation-checkout record beside the two defects and the other checkout's
+record, and retain the present listing as a second case, so the defect state is
+paired with the native-update disposition as well as the bootstrap one.
+
+**Why separate**: the present case's assertion that the bootstrap install and
+enable still run past each defect is itself the evidence for the bootstrap
+disposition, and an invocation-checkout record suppresses bootstrap, so the
+pairing adds an observation rather than widening this one — a second observer
+and a generator parameter, not an assertion.
+
+**Settlement condition**: a defect case whose listing carries a record of the
+invocation checkout, asserting that its native update still runs.
+
+**Evidence**: found by this changeset's sweep for states the spec declares whose
+linked evidence carries no invocation-checkout record — the same class that
+produced the withheld-registration case now covered in
+`tests/test_repository_installation.scenario.l1.py`.
