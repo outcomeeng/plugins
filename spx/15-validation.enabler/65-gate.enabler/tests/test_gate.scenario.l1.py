@@ -4,13 +4,6 @@ from __future__ import annotations
 
 import pytest
 
-from outcomeeng.validation._engine import (
-    STEP_HEADER_FORM,
-    STEP_STATUS_PREFIX_FORM,
-    TIMING_FAILED_LABEL,
-    TIMING_SUMMARY_BANNER,
-    TIMING_TOTAL_LABEL,
-)
 from outcomeeng.validation import (
     FAILURE_EXCERPT_LINE_LIMIT,
     FORWARDED_SIGNALS,
@@ -28,7 +21,9 @@ from outcomeeng.validation import (
     RUN_PASS_STATUS,
     SPAWN_FAILURE_EXIT_CODE,
     STEP_FAIL_STATUS,
+    STEP_HEADER_FORM,
     STEP_PASS_STATUS,
+    STEP_STATUS_PREFIX_FORM,
     SUCCESS_EXIT_CODE,
     SUMMARY_KEY_ARGV,
     SUMMARY_KEY_EXCERPT,
@@ -43,6 +38,9 @@ from outcomeeng.validation import (
     SUMMARY_KEY_VERIFICATION_TYPE,
     TEST_RECIPE,
     TEST_STEPS,
+    TIMING_FAILED_LABEL,
+    TIMING_SUMMARY_BANNER,
+    TIMING_TOTAL_LABEL,
     VALIDATION_RECIPE,
     VALIDATION_STEPS,
     VERIFICATION_TYPE_TESTING,

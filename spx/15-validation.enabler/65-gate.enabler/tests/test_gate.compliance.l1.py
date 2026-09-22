@@ -10,12 +10,6 @@ import signal
 
 import pytest
 
-from outcomeeng.validation._engine import (
-    TIMING_DIVIDER,
-    TIMING_SUMMARY_BANNER,
-    TimingBlockNotBounded,
-    timing_row_values,
-)
 from outcomeeng.validation._spawner import _restore_child_signal_mask
 from outcomeeng.validation.polling_enforcement import (
     SLEEP_ATTRIBUTE,
@@ -58,11 +52,15 @@ from outcomeeng.validation import (
     Step,
     TEST_RECIPE,
     TEST_STEPS,
+    TIMING_DIVIDER,
+    TIMING_SUMMARY_BANNER,
+    TimingBlockNotBounded,
     VALIDATION_RECIPE,
     VALIDATION_STEPS,
     VERIFICATION_TYPE_TESTING,
     VERIFICATION_TYPE_VALIDATION,
     test_recipe as build_test_recipe,
+    timing_row_values,
 )
 from outcomeeng.validation.agent_disable import (
     AGENT_SWITCHES,
@@ -307,39 +305,39 @@ def test_the_row_reader_refuses_a_block_missing_either_bound() -> None:
 
 
 def test_a_real_child_records_each_declared_skip_with_its_own_switch() -> None:
-    recording = declared_skip_recording()
+    with declared_skip_recording() as recording:
+        records = [json.loads(line) for line in recording.recorded_lines]
 
-    records = [json.loads(line) for line in recording.recorded_lines]
-
-    assert recording.exit_code == SUCCESS_EXIT_CODE, recording.output
-    assert [sorted(record) for record in records] == [
-        sorted((SKIP_REPORT_TEST_FIELD, SKIP_REPORT_SWITCH_FIELD))
-    ] * len(recording.switch_rows)
-    assert {
-        (record[SKIP_REPORT_TEST_FIELD], record[SKIP_REPORT_SWITCH_FIELD])
-        for record in records
-    } == set(recording.switch_rows)
-    assert not [
-        record
-        for record in records
-        if record[SKIP_REPORT_TEST_FIELD] in recording.other_rows
-    ]
+        assert recording.exit_code == SUCCESS_EXIT_CODE, recording.output
+        assert [sorted(record) for record in records] == [
+            sorted((SKIP_REPORT_TEST_FIELD, SKIP_REPORT_SWITCH_FIELD))
+        ] * len(recording.switch_rows)
+        assert {
+            (record[SKIP_REPORT_TEST_FIELD], record[SKIP_REPORT_SWITCH_FIELD])
+            for record in records
+        } == set(recording.switch_rows)
+        assert not [
+            record
+            for record in records
+            if record[SKIP_REPORT_TEST_FIELD] in recording.other_rows
+        ]
 
 
 def test_a_real_child_records_nothing_when_no_destination_is_named() -> None:
-    recording = declared_skip_recording(name_destination=False)
-
-    assert recording.exit_code == SUCCESS_EXIT_CODE, recording.output
-    assert recording.recorded_lines == ()
-    assert not recording.destination.exists()
+    with declared_skip_recording(name_destination=False) as recording:
+        assert recording.exit_code == SUCCESS_EXIT_CODE, recording.output
+        assert recording.recorded_lines == ()
+        assert not recording.destination.exists()
 
 
 def test_a_confined_recording_run_proceeds_inside_its_own_disposable_root() -> None:
-    recording = declared_skip_recording()
+    with declared_skip_recording() as recording:
+        assert recording.exit_code == SUCCESS_EXIT_CODE, recording.output
+        assert recording.child_reported_directory == recording.state_root.resolve()
+        assert recording.child_reported_directory in recording.confinement_checked
+        assert recording.destination.resolve() in recording.confinement_checked
 
-    assert recording.exit_code == SUCCESS_EXIT_CODE, recording.output
-    assert recording.destination.parent == recording.state_root
-    assert recording.child_directory == recording.state_root
+    assert not recording.state_root.exists()
 
 
 def test_an_unconfined_target_is_refused_by_name(tmp_path: Path) -> None:

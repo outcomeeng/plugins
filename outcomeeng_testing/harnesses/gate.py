@@ -20,7 +20,8 @@ import math
 import os
 import subprocess
 import sys
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -40,7 +41,10 @@ from outcomeeng.validation import (
     PYTEST_ARGV,
     SIGNAL_GRACE_SECONDS,
     SIGNAL_POLL_INTERVAL_SECONDS,
+    SKIP_REPORT_FILE_SUFFIX,
     SUCCESS_EXIT_CODE,
+    TIMING_DIVIDER,
+    TIMING_SUMMARY_BANNER,
     TEST_STEPS,
     VALIDATION_RECIPE,
     VALIDATION_STEPS,
@@ -53,11 +57,6 @@ from outcomeeng.validation import (
     run_check,
     run_recipe,
     terminate_process_group,
-)
-from outcomeeng.validation._engine import (
-    SKIP_REPORT_FILE_SUFFIX,
-    TIMING_DIVIDER,
-    TIMING_SUMMARY_BANNER,
 )
 from outcomeeng.validation._git import GitCommandResult
 from outcomeeng.validation.agent_disable import (
@@ -1246,6 +1245,10 @@ PYTEST_NO_CACHE_PLUGIN = "no:cacheprovider"
 """The plugin spelling that keeps the child from writing a cache directory."""
 PYTHONPATH_ENV = "PYTHONPATH"
 """The interpreter's own import-path variable, set so the child reaches this tree."""
+CHILD_DIRECTORY_REPORT_NAME = "child-working-directory"
+"""The file the recording child writes its own working directory into."""
+CHILD_DIRECTORY_REPORT_ENV = "OE_DECLARED_SKIP_CHILD_DIRECTORY"
+"""The variable naming that file, so the child writes it wherever it runs."""
 DECLARED_SKIP_CHILD_TIMEOUT_SECONDS = 120.0
 """The bound on the recording child's run, so no observation waits without end."""
 REPOSITORY_ROOT = Path(validation_pkg.__file__).resolve().parents[2]
@@ -1254,12 +1257,17 @@ REPOSITORY_ROOT = Path(validation_pkg.__file__).resolve().parents[2]
 DECLARED_SKIP_MODULE_FORM = '''"""Generated rows for the declared-skip recording observation."""
 
 import os
+import pathlib
 
 import pytest
 
 from outcomeeng.validation.agent_disable import (
     claude_disabled_reason,
     codex_disabled_reason,
+)
+
+pathlib.Path(os.environ["{directory_report_env}"]).write_text(
+    os.getcwd(), encoding="utf-8"
 )
 
 
@@ -1294,8 +1302,8 @@ class UnconfinedDisposableState(RuntimeError):
         self.path = path
 
 
-def confined_to(root: Path, *paths: Path) -> None:
-    """Refuse unless every path is `root` itself or lies beneath it.
+def confined_to(root: Path, *paths: Path) -> tuple[Path, ...]:
+    """Return the resolved paths accepted, refusing any that lie outside `root`.
 
     The recording child writes a report and runs with a working directory this
     harness chooses, and it holds both disable switches in its environment. Both
@@ -1303,13 +1311,21 @@ def confined_to(root: Path, *paths: Path) -> None:
     the child collects only the rows that run generated in that root and no row
     of the repository it runs inside. The confinement is enforced here rather
     than asserted elsewhere, and a path outside the root is refused by name.
+
+    The accepted paths are returned rather than discarded, so a run's record of
+    what was confined is this enforcement's own output: a run that never reaches
+    this function holds no such record, and one whose paths are refused never
+    receives one.
     """
 
     resolved_root = root.resolve()
+    accepted: list[Path] = []
     for path in paths:
         candidate = path.resolve()
         if candidate != resolved_root and resolved_root not in candidate.parents:
             raise UnconfinedDisposableState(resolved_root, candidate)
+        accepted.append(candidate)
+    return tuple(accepted)
 
 
 @dataclass(frozen=True)
@@ -1318,26 +1334,36 @@ class DeclaredSkipRecording:
 
     `switch_rows` and `other_rows` describe the stimulus the harness generated —
     which row reads which switch's predicate, and which rows no switch declared
-    — never an expected result. `state_root` and `child_directory` report where
-    the run wrote and where its child ran. Every predicate over the recorded
-    lines and those paths belongs to the linked test.
+    — never an expected result. Every predicate over the recorded lines, the
+    confinement record, the reported directory, and the run's own filesystem
+    state belongs to the linked test.
+
+    The disposable root still exists for as long as the observation is held, so
+    a predicate over `destination` or `state_root` reads the run's real state
+    rather than a path already removed.
     """
 
     exit_code: int
     output: str
     destination: Path
+    """The file a reporting run records into; named whether or not it was used."""
     recorded_lines: tuple[str, ...]
     state_root: Path
     """The disposable root this run created and confined every path to."""
-    child_directory: Path
-    """The working directory the recording child ran in."""
+    confinement_checked: tuple[Path, ...]
+    """The resolved paths the confinement accepted before the child started."""
+    child_reported_directory: Path | None
+    """The working directory the child itself reported, or `None` when it left none."""
     switch_rows: tuple[tuple[str, str], ...]
     """Each generated row's nodeid paired with the switch its body reads."""
     other_rows: tuple[str, ...]
     """The generated rows' nodeids that no switch declared optional."""
 
 
-def declared_skip_recording(*, name_destination: bool = True) -> DeclaredSkipRecording:
+@contextmanager
+def declared_skip_recording(
+    *, name_destination: bool = True
+) -> Iterator[DeclaredSkipRecording]:
     """Run a real pytest child whose rows both switches declare optional.
 
     The child runs the product's own predicates over an environment holding both
@@ -1350,7 +1376,13 @@ def declared_skip_recording(*, name_destination: bool = True) -> DeclaredSkipRec
     the disposable root it creates. `confined_to` refuses before the child
     starts unless the report target and the child's working directory lie in
     that root, so no selected live row of the surrounding repository is in
-    reach of the environment this run writes.
+    reach of the environment this run writes; the paths it accepted are carried
+    in the observation.
+
+    This harness owns the root's lifetime. The root exists throughout the
+    `with` body, so a predicate there reads the run's real filesystem state, and
+    it is removed on every exit path including a failing body — the observation
+    never outlives the state it reports.
     """
 
     with TemporaryDirectory() as temporary_directory:
@@ -1359,14 +1391,18 @@ def declared_skip_recording(*, name_destination: bool = True) -> DeclaredSkipRec
         destination = (
             state_root / f"{DECLARED_SKIP_MODULE_NAME}{SKIP_REPORT_FILE_SUFFIX}"
         )
+        directory_report = state_root / CHILD_DIRECTORY_REPORT_NAME
         child_directory = state_root
-        confined_to(state_root, module, destination, child_directory)
+        confinement_checked = confined_to(
+            state_root, module, destination, directory_report, child_directory
+        )
         module.write_text(
             DECLARED_SKIP_MODULE_FORM.format(
                 codex_row=CODEX_ROW_NAME,
                 claude_row=CLAUDE_ROW_NAME,
                 unrelated_row=UNRELATED_SKIP_ROW_NAME,
                 running_row=RUNNING_ROW_NAME,
+                directory_report_env=CHILD_DIRECTORY_REPORT_ENV,
                 unrelated_reason=UNRELATED_SKIP_REASON_FORM.format(
                     switch=DISABLE_CODEX_ENV
                 ),
@@ -1390,6 +1426,7 @@ def declared_skip_recording(*, name_destination: bool = True) -> DeclaredSkipRec
             env={
                 **os.environ,
                 PYTHONPATH_ENV: str(REPOSITORY_ROOT),
+                CHILD_DIRECTORY_REPORT_ENV: str(directory_report),
                 DISABLE_CODEX_ENV: DISABLE_VALUE,
                 DISABLE_CLAUDE_ENV: DISABLE_VALUE,
             },
@@ -1403,13 +1440,19 @@ def declared_skip_recording(*, name_destination: bool = True) -> DeclaredSkipRec
             if destination.exists()
             else ()
         )
-        return DeclaredSkipRecording(
+        child_reported_directory = (
+            Path(directory_report.read_text(encoding="utf-8"))
+            if directory_report.exists()
+            else None
+        )
+        yield DeclaredSkipRecording(
             exit_code=completed.returncode,
             output=f"{completed.stdout}{completed.stderr}",
             destination=destination,
             recorded_lines=recorded_lines,
             state_root=state_root,
-            child_directory=child_directory,
+            confinement_checked=confinement_checked,
+            child_reported_directory=child_reported_directory,
             switch_rows=(
                 (
                     SKIPPED_ROW_ID_SHAPE.format(

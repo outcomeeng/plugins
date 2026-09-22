@@ -5,6 +5,7 @@ Public surface:
 - `Step` and `Recipe` — frozen dataclasses naming steps and recipe metadata
 - `VALIDATION_RECIPE`, `TEST_RECIPE`, `CHECK_RECIPES` — declared recipe surfaces
 - `*_ARGV` and output-label constants — source-owned values imported by tests
+- `SKIP_REPORT_FILE_SUFFIX` — the suffix of the file a step's declared skips go to
 - `ORCHESTRATOR_MODULE_NAMES` — the modules a rule over the orchestrator's source reads
 - `SUCCESS_EXIT_CODE`, `SPAWN_FAILURE_EXIT_CODE` — the exit codes this orchestrator returns
 - `ProcessHandle`, `ProcessSpawner` — DI Protocols for subprocess creation
@@ -26,9 +27,12 @@ from outcomeeng.validation._engine import (
     POST_KILL_REAP_ATTEMPTS,
     RUN_FAIL_STATUS,
     RUN_PASS_STATUS,
+    RECIPE_HEADER_FORM,
     SIGNAL_GRACE_SECONDS,
     SIGNAL_POLL_INTERVAL_SECONDS,
+    SKIP_REPORT_FILE_SUFFIX,
     SPAWN_FAILURE_EXIT_CODE,
+    STEP_HEADER_FORM,
     SUCCESS_EXIT_CODE,
     SUMMARY_KEY_ARGV,
     SUMMARY_KEY_DURATION_SECONDS,
@@ -48,6 +52,10 @@ from outcomeeng.validation._engine import (
     STEP_SKIP_STATUS,
     STEP_STATUS_LINE_FORM,
     STEP_STATUS_PREFIX_FORM,
+    TIMING_DIVIDER,
+    TIMING_FAILED_LABEL,
+    TIMING_SUMMARY_BANNER,
+    TIMING_TOTAL_LABEL,
     TimingBlockNotBounded,
     timing_row_values,
     SUMMARY_KEY_SUMMARY_PATH,
@@ -163,6 +171,7 @@ __all__ = [
     "RUFF_CHECK_ARGV",
     "RUFF_FORMAT_ARGV",
     "RECIPE_CHECK",
+    "RECIPE_HEADER_FORM",
     "RECIPE_CHECK_FULL",
     "RECIPE_AD_HOC",
     "RECIPE_TEST",
@@ -171,6 +180,7 @@ __all__ = [
     "RUN_PASS_STATUS",
     "SIGNAL_GRACE_SECONDS",
     "SIGNAL_POLL_INTERVAL_SECONDS",
+    "SKIP_REPORT_FILE_SUFFIX",
     "SPAWN_FAILURE_EXIT_CODE",
     "SUCCESS_EXIT_CODE",
     "SHELLCHECK_ARGV",
@@ -190,9 +200,14 @@ __all__ = [
     "SUMMARY_KEY_STEPS",
     "SKIP_LINE_FORM",
     "STEP_FAILURE_LINE_FORM",
+    "STEP_HEADER_FORM",
     "STEP_SKIP_STATUS",
     "STEP_STATUS_LINE_FORM",
     "STEP_STATUS_PREFIX_FORM",
+    "TIMING_DIVIDER",
+    "TIMING_FAILED_LABEL",
+    "TIMING_SUMMARY_BANNER",
+    "TIMING_TOTAL_LABEL",
     "TimingBlockNotBounded",
     "timing_row_values",
     "SUMMARY_KEY_SUMMARY_PATH",

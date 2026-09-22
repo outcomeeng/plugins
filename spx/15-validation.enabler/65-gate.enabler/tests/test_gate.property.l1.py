@@ -19,8 +19,8 @@ from outcomeeng.validation import (
     SUMMARY_PATH_LABEL,
     Step,
     run,
+    timing_row_values,
 )
-from outcomeeng.validation._engine import timing_row_values
 from outcomeeng_testing.harnesses.gate import RecordingSpawner, gate_property
 
 
