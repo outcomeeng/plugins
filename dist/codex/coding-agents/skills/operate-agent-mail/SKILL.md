@@ -7,7 +7,7 @@ allowed-tools: Bash(printf:*), Bash(python3 "${SKILL_DIR}/scripts/agent_mail.py"
 ---
 
 <objective>
-A versioned JSON agent-mail operation result — a registered identity, a delivered record with its store-assigned id, the recipient's records, or a receipt — under the project key the repository names, with every store identity preserved verbatim.
+A versioned JSON agent-mail operation result — a registered identity, a delivered record with its store-assigned id, the recipient's records, or a receipt — under the project key the repository names, or that key alone as an unversioned `projectKey` answer, with every store identity preserved verbatim.
 </objective>
 
 <operation_surface>
