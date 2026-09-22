@@ -348,3 +348,55 @@ invocation checkout, asserting that its native update still runs.
 linked evidence carries no invocation-checkout record — the same class that
 produced the withheld-registration case now covered in
 `tests/test_repository_installation.scenario.l1.py`.
+
+## Two review surfaces report success for something that did not happen
+
+The changeset review has two surfaces that read as success while the thing they
+appear to report never occurred. They are one defect class, and both are silent:
+the officer sees a success and stops looking.
+
+**The mention dispatches nothing.** `spx/local/merging.md` documents a trigger
+phrase for re-running the changeset review, and `.github/workflows/spec-tree-review.yml`
+passes that phrase to the reusable workflow it calls. The caller's own triggers
+are `pull_request` on `opened`, `synchronize`, and `reopened` alone, so no
+comment event reaches it and the phrase can dispatch no run on this repository.
+The failure is not an inert control: runs of that workflow appear continuously
+for other pull requests, so an officer who comments, then reads the run list,
+sees a run start and concludes it is theirs. Establishing otherwise takes reading
+each run's head.
+
+**A green check row is not an approval.** The `spec-tree-review` check row
+reports the workflow's exit status, and the workflow exits zero whether the
+review approves or rejects; the verdict is written as a pull-request
+conversation comment. The row and the verdict are therefore two readings that
+can disagree, and the disagreement is invisible from the row: a pull request can
+read CLEAN with every check green while carrying an unaddressed BLOCKING finding
+on its current head.
+
+**Resolution shape**: for the mention, either give the caller a
+`issue_comment` trigger that honours the documented phrase and guards it to
+pull-request comments on the right head, or remove the phrase from the overlay
+and from the caller's inputs and state in the overlay that a re-run is a
+re-dispatch of the run rather than a comment. For the check row, either make the
+workflow's exit status carry the verdict, or name the row in the overlay as a
+liveness signal and state that `MERGE_READINESS`'s review predicate reads the
+conversation comment on the current head.
+
+**Why separate**: both artifacts are the review workflow's own surface and its
+overlay, governed by the merge lifecycle rather than by installation; neither
+lies in this changeset's diff, and the exit-status change alters what every
+pull request in the repository reports.
+
+**Settlement condition**: the documented trigger dispatches a run on the pull
+request it is commented on, or no trigger phrase is documented; and the check
+row either carries the verdict or is declared a liveness signal beside the
+predicate that reads the verdict.
+
+**Evidence**: established against pull request 601. The mention posted at
+2026-09-22T13:52Z dispatched no run — the run that appeared next,
+`35730806082`, belongs to a different pull request on branch
+`work/apply-output-lanes` — and the review had to be re-dispatched by re-running
+`35726901359` instead. The same pull request's `spec-tree-review` row read green
+while the 2026-09-22T12:40:10Z conversation comment carried three unaddressed
+DEBT findings. Both were found by reading the surfaces against what they
+claimed, not by any gate.
