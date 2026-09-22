@@ -730,7 +730,7 @@ class RecordingRunner:
             _apply_native_update(
                 self.record_file,
                 command.plugin,
-                command.argv[-1],
+                _command_scope(command),
                 command.cwd,
                 self.served_version,
                 self.head_commit,
@@ -1420,7 +1420,9 @@ def observe_install_record_rewrite(
     rewrites, warnings = plan_install_record_rewrite(
         records, target, cache_root, cached_plugin_versions(cache_root, plugins)
     )
-    rewrite_install_records(document_path, rewrites, MARKETPLACE)
+    written, write_warnings = rewrite_install_records(
+        document_path, rewrites, MARKETPLACE
+    )
     text_after = document_path.read_text(encoding="utf-8")
     inode_after = document_path.stat().st_ino
     return RecordRewriteObservation(
@@ -1428,8 +1430,8 @@ def observe_install_record_rewrite(
         document_after=cast("dict[str, object]", json.loads(text_after)),
         text_before=text_before,
         text_after=text_after,
-        rewrites=rewrites,
-        warnings=warnings,
+        rewrites=written,
+        warnings=(*warnings, *write_warnings),
         marketplace=MARKETPLACE,
         target=target,
         cache_root=cache_root,
@@ -3216,13 +3218,28 @@ def _prepare_agent_state(environment: Mapping[str, str]) -> None:
         Path(environment[name]).mkdir(parents=True, exist_ok=True)
 
 
+def _command_scope(command: InstallationCommand) -> str:
+    """The install-record scope a scope-bearing command names.
+
+    The command publishes its scope, so the recording collaborator reads it
+    by name rather than by a position in the argv production builds.
+    """
+    scope = command.scope
+    if scope is None:
+        raise RuntimeError(f"{command.operation.value} names no install-record scope")
+    return scope
+
+
 def _registration_target(plan: InstallationPlan, agent: Agent) -> str:
     command = next(
         command
         for command in plan.commands
         if command.agent is agent and command.operation is Operation.MARKETPLACE_ADD
     )
-    return command.argv[4]
+    source = command.source
+    if source is None:
+        raise RuntimeError(f"{agent.value} registration command names no source")
+    return source
 
 
 def _state_roots(plan: InstallationPlan) -> tuple[Path, ...]:

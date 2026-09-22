@@ -151,6 +151,11 @@ UNREFRESHABLE_RECORD_WARNING = (
     "plugin cache carries no directory for the target version {version}; the "
     "record is left unchanged."
 )
+UNWRITTEN_RECORD_WARNING = (
+    "Claude Code's install-record document carries no {scope}-scope entry for "
+    "{plugin} at {project_path} that the rewrite could address, so the record "
+    "the run planned to move is left unchanged."
+)
 UNRESOLVED_TARGET_RECORD_WARNING = (
     "Claude Code records {plugin} at {scope} scope for {project_path}, but the "
     "registered clone's catalog names no source for {plugin}, so the run resolved "
@@ -471,6 +476,14 @@ class InstallationCommand:
     argv: tuple[str, ...]
     cwd: Path
     environment: tuple[tuple[str, str], ...]
+    scope: str | None = None
+    """The install-record scope the command addresses, where the agent keys one.
+
+    Claude Code keys its records by scope, so a scope-bearing command names it
+    here rather than leaving a reader to recover it from a position in `argv`.
+    """
+    source: str | None = None
+    """The marketplace source a registration command carries, where it carries one."""
 
 
 @dataclass(frozen=True)
@@ -817,6 +830,7 @@ class ClaudeInstallationAdapter:
                     ),
                     roots,
                     environment,
+                    scope=scope,
                 )
             )
             commands.append(
@@ -833,6 +847,7 @@ class ClaudeInstallationAdapter:
                     ),
                     roots,
                     environment,
+                    scope=scope,
                 )
             )
         for record in records:
@@ -850,6 +865,7 @@ class ClaudeInstallationAdapter:
                     ),
                     roots,
                     environment,
+                    scope=record.scope,
                 )
             )
         if clone is not None:
@@ -2336,12 +2352,12 @@ def _rewrite_records(
         cache_root,
         cached_plugin_versions(cache_root, plan.claude_catalog),
     )
-    rewrite_install_records(
+    written, write_warnings = rewrite_install_records(
         plan.roots.claude_config / CLAUDE_INSTALLED_PLUGINS_RELATIVE,
         rewrites,
         plan.roots.marketplace,
     )
-    return target, rewrites, warnings
+    return target, written, (*warnings, *write_warnings)
 
 
 def _record_drift(
@@ -2478,6 +2494,8 @@ def _claude_source_commands(
                 ),
                 roots,
                 environment,
+                scope=scope,
+                source=source,
             )
         )
     else:
@@ -2496,6 +2514,7 @@ def _claude_source_commands(
                 ),
                 roots,
                 environment,
+                scope=scope,
             )
         )
     return tuple(commands)
@@ -2524,6 +2543,7 @@ def _codex_source_commands(
                 ),
                 roots,
                 environment,
+                source=source,
             )
         )
     else:
@@ -2827,16 +2847,22 @@ def rewrite_install_records(
     document_path: Path,
     rewrites: Sequence[RecordRewrite],
     marketplace: str,
-) -> None:
+) -> tuple[tuple[RecordRewrite, ...], tuple[InstallationWarning, ...]]:
     """Rewrite the planned entries in Claude Code's install-record document.
 
     The document is read whole, each planned entry — matched by plugin,
     scope, and project path — receives the target install path, version, and
     commit, and the whole document is written through a temporary file and
     one atomic replace; every other entry and field is preserved as read.
+
+    A planned record the document no longer carries is one condition with two
+    forms: the plugin's identifier is absent, or its entries name no match for
+    the record's scope and project path. Both return the record as unwritten
+    with one blocking warning, so the run reports what it moved and what it
+    could not rather than claiming the whole plan.
     """
     if not rewrites:
-        return
+        return (), ()
     text = document_path.read_text(encoding="utf-8")
     document = cast(object, json.loads(text))
     if not isinstance(document, dict):
@@ -2844,29 +2870,49 @@ def rewrite_install_records(
     plugins = document.get(CLAUDE_INSTALLED_PLUGINS_FIELD)
     if not isinstance(plugins, dict):
         raise ValueError(f"{document_path} carries no plugin records")
+    written: list[RecordRewrite] = []
+    warnings: list[InstallationWarning] = []
     for rewrite in rewrites:
         identifier = marketplace_plugin_identifier(rewrite.record.plugin, marketplace)
         entries = plugins.get(identifier)
-        if not isinstance(entries, list):
-            raise ValueError(f"{document_path} records no {identifier}")
-        for entry in entries:
-            if not isinstance(entry, dict):
-                continue
-            project_path = entry.get(CLAUDE_PLUGIN_PROJECT_PATH_FIELD)
-            if (
-                entry.get(CLAUDE_PLUGIN_SCOPE_FIELD) == rewrite.record.scope
-                and isinstance(project_path, str)
-                and Path(project_path).expanduser().resolve()
-                == rewrite.record.project_path
-            ):
-                entry[CLAUDE_INSTALLED_RECORD_PATH_FIELD] = str(rewrite.install_path)
-                entry[CLAUDE_INSTALLED_RECORD_VERSION_FIELD] = rewrite.version
-                entry[CLAUDE_INSTALLED_RECORD_COMMIT_FIELD] = rewrite.commit
+        matched = False
+        if isinstance(entries, list):
+            for entry in entries:
+                if not isinstance(entry, dict):
+                    continue
+                project_path = entry.get(CLAUDE_PLUGIN_PROJECT_PATH_FIELD)
+                if (
+                    entry.get(CLAUDE_PLUGIN_SCOPE_FIELD) == rewrite.record.scope
+                    and isinstance(project_path, str)
+                    and Path(project_path).expanduser().resolve()
+                    == rewrite.record.project_path
+                ):
+                    entry[CLAUDE_INSTALLED_RECORD_PATH_FIELD] = str(
+                        rewrite.install_path
+                    )
+                    entry[CLAUDE_INSTALLED_RECORD_VERSION_FIELD] = rewrite.version
+                    entry[CLAUDE_INSTALLED_RECORD_COMMIT_FIELD] = rewrite.commit
+                    matched = True
+        if matched:
+            written.append(rewrite)
+            continue
+        warnings.append(
+            InstallationWarning(
+                agent=Agent.CLAUDE,
+                message=UNWRITTEN_RECORD_WARNING.format(
+                    plugin=rewrite.record.plugin,
+                    scope=rewrite.record.scope,
+                    project_path=rewrite.record.project_path,
+                ),
+                blocking=True,
+            )
+        )
     indent = 2 if "\n  " in text else None
     rendered = json.dumps(document, indent=indent)
     if text.endswith("\n"):
         rendered += "\n"
     _atomic_write(document_path, rendered.encode("utf-8"))
+    return tuple(written), tuple(warnings)
 
 
 def cached_plugin_versions(
@@ -2984,6 +3030,9 @@ def _command(
     argv: tuple[str, ...],
     roots: InstallationRoots,
     environment: tuple[tuple[str, str], ...],
+    *,
+    scope: str | None = None,
+    source: str | None = None,
 ) -> InstallationCommand:
     return InstallationCommand(
         agent=agent,
@@ -2992,6 +3041,8 @@ def _command(
         argv=argv,
         cwd=roots.checkout,
         environment=environment,
+        scope=scope,
+        source=source,
     )
 
 
@@ -3166,6 +3217,7 @@ __all__ = [
     "UNLOCATED_REGISTRY_DIAGNOSTIC",
     "UNREFRESHABLE_RECORD_WARNING",
     "UNRESOLVED_TARGET_RECORD_WARNING",
+    "UNWRITTEN_RECORD_WARNING",
     "cached_plugin_versions",
     "catalog_marketplace_name",
     "claude_marketplace_source",
