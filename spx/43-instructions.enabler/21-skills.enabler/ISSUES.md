@@ -212,6 +212,21 @@ from `08d4ef11a7085974f27e3cf58afe92942cde066c` through `f0b078ea0b0c8870084c24a
 `405584488036a9cbbd617519bb09659a132446c5`, and `f0b078ea0b0c8870084c24a422edb1caa4b9b596` alike, so
 the fault and the return to praise judge identical text on both sides of the corroboration.
 
+The description's closing clause is passed over and then faulted. On head
+`ccaef088c98007c963125af0fc621040d1f6b51b` the run returned `APPROVED` with `must-fix` empty and
+three `worth-improving` warnings — on the locatability of `references/ledger-script-coverage.md`, on
+`<success_criteria>` enumerating three of the eight routed operations, and on the sentence "Spend and
+wall time are courtesy fields rather than gates" standing in both `SKILL.md` and
+`references/standing-rules.md` — and none of the three concerned line 4. On head
+`1ea3cf1567a963c6466366098155fcaa3a04d01a` the run returned `APPROVED` with `must-fix` empty and two
+warnings, of which `f-006`, rule `redundant_never_clause`, faults line 4's closing NEVER clause as a
+negative the sibling capability skills already carry and asks for it to be dropped. Line 4 is the
+`description` frontmatter value, and it is byte-identical at
+`ab87d964b416a6e8067d3930fbc64748c378449e`, `ccaef088c98007c963125af0fc621040d1f6b51b`, and
+`1ea3cf1567a963c6466366098155fcaa3a04d01a`, hashing to
+`92d888a23de5a58281959046ee4b8a3a56c35ab88cb4ad2c4962a01b5ba327a6` at each. One run passed over that
+line and the next faulted it, with no edit between them.
+
 One verdict document contradicts itself with no second head involved. On head
 `f0b078ea0b0c8870084c24a422edb1caa4b9b596` finding `f-004` praised the router's
 progressive-disclosure split while finding `f-007`, in that same document, faulted that same split

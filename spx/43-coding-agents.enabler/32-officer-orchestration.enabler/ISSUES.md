@@ -107,6 +107,15 @@ a returned operation for completeness.
 with `must-fix` empty, finding `f-007` (severity `WARNING`) against
 `SKILL.md` `<result>`.
 
+**Evidence, second and independent raise**: the run on head
+`1ea3cf1567a963c6466366098155fcaa3a04d01a` reached the same defect on its own,
+as that run's own finding `f-007`, rule `prose_output_contract`, against
+`SKILL.md` `<result>`: the section lists the content it returns in prose while
+the same skill requires exactly-keyed versioned objects from every capability
+result, from the ledger entry point, and from the officer's lifecycle fact. Two
+runs reaching it independently strengthens what this entry records and leaves
+what settles it unchanged.
+
 **Gap**: no assertion in this node declares a result envelope for the
 supervision skill. Naming the fields in the skill body alone would make the
 surface claim a contract no assertion carries, which the truth hierarchy
@@ -184,12 +193,35 @@ not honour for a journal run repeating a `runToken`, because the derivation
 passes such a run over before reading its event fields. That finding lands on a
 document derived from the code in the same round.
 
+The round after that produced the shape again, out of a change that was itself
+correct. The repair at `1ea3cf1567a963c6466366098155fcaa3a04d01a` fixed a
+genuine code defect — the read-cause gate establishes the value's type before
+consulting the declared set, so an unhashable cause takes the refusal a foreign
+string already takes rather than raising past the refused-source handler. That
+correct repair falsified both documents again, and both were edited in the same
+commit as the code: `ledger-contract.md`'s refusal enumeration and
+`ledger-script-coverage.md`'s record of the covered domain. Deriving those
+sentences from the source also exposed two further disagreements the round had
+not been looking for: the `schemaVersion` clause enumerated a value list that
+omitted arrays and objects, and the event-field paragraph stated that a record
+omitting a field contributes nothing without stating that an explicit `null`
+behaves identically, which every one of the five event-field handlers
+implements by guarding `value is None` first. Review run
+`2026-09-22_22-31-21-934-144dc32f0bcc` on that head returned zero findings. What
+this entry predicts held once more: the documents did not drift through
+neglect, they were falsified by a repair that was itself correct, which is what
+this entry says happens by construction.
+
 **Evidence**: the class sweep at commit
 `31401d957ab517228b600fc04e8e2d8ac148060f`, which replaced both enumerations
 whole and whose message records the thirteen disagreements and the generator
 docstring; and review run `2026-09-22_18-30-17-398-2ea1e6382b59` on head
 `ab87d964b416a6e8067d3930fbc64748c378449e`, which raised the `runToken`
-value-refusal drift against `ledger-contract.md` after that sweep.
+value-refusal drift against `ledger-contract.md` after that sweep; and the
+repair commit `1ea3cf1567a963c6466366098155fcaa3a04d01a`, which edited
+`ledger-contract.md` and `ledger-script-coverage.md` alongside the entry point
+and whose re-derivation of those sentences exposed the schema-version and
+null-event-field disagreements no round had reported.
 
 **Impact**: a document hand-maintained against code is missed by whoever just
 changed the code, reliably, including when that person knows the rule and has
