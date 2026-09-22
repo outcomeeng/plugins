@@ -106,7 +106,6 @@
         "source": "local",
         "path": "./dist/codex/coding-agents"
       },
-      "description": "Coding-agent environments, coordination, and officer supervision: /operate-prowl, /operate-herdr, /operate-agent-mail, /message-agents, /coordinate-agents, /recover-prowl-agents, /orchestrate-officers",
       "policy": {
         "installation": "AVAILABLE",
         "authentication": "ON_INSTALL"
