@@ -84,6 +84,7 @@ from outcomeeng_testing.harnesses.installation import (
     observe_failed_run_restore,
     install_record_fixture_path,
     observe_install_record_rewrite,
+    observe_racing_install_record_rewrite,
     observe_scope_split,
     skill_enabling_definition,
 )
@@ -1009,3 +1010,52 @@ def test_the_install_record_rewrite_is_atomic_and_preserves_every_other_field(
     assert observation.text_after.endswith("\n") == observation.text_before.endswith(
         "\n"
     )
+
+
+def test_a_record_written_between_the_writers_read_and_its_replace_survives(
+    tmp_path: Path,
+) -> None:
+    observation = observe_racing_install_record_rewrite(
+        install_record_fixture_path(), tmp_path
+    )
+    plugins = cast(
+        "dict[str, list[dict[str, object]]]",
+        observation.document_after[CLAUDE_INSTALLED_PLUGINS_FIELD],
+    )
+    concurrent_path = observation.concurrent_entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD]
+    surviving = [
+        entry
+        for entry in plugins[observation.concurrent_identifier]
+        if entry.get(CLAUDE_PLUGIN_PROJECT_PATH_FIELD) == concurrent_path
+    ]
+
+    assert surviving == [observation.concurrent_entry]
+    assert observation.reads > 1
+    assert observation.rewrites
+    assert observation.warnings == ()
+    for rewrite in observation.rewrites:
+        identifier = marketplace_plugin_identifier(
+            rewrite.record.plugin, observation.marketplace
+        )
+        moved = [
+            entry
+            for entry in plugins[identifier]
+            if entry.get(CLAUDE_PLUGIN_SCOPE_FIELD) == rewrite.record.scope
+            and entry.get(CLAUDE_PLUGIN_PROJECT_PATH_FIELD) is not None
+            and Path(cast("str", entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD]))
+            .expanduser()
+            .resolve()
+            == rewrite.record.project_path
+        ]
+        assert moved
+        for entry in moved:
+            assert (
+                entry[CLAUDE_INSTALLED_RECORD_VERSION_FIELD]
+                == (observation.target.versions[rewrite.record.plugin])
+            )
+            assert entry[CLAUDE_INSTALLED_RECORD_COMMIT_FIELD] == (
+                observation.target.commit
+            )
+            assert entry[CLAUDE_INSTALLED_RECORD_PATH_FIELD] == str(
+                rewrite.install_path
+            )

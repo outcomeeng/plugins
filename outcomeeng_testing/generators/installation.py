@@ -720,6 +720,25 @@ def generated_failure_classification_cases(
     )
 
 
+CONCURRENT_SESSION_CHECKOUT = "concurrent-session-checkout"
+"""The project-path leaf a record another agent session writes during a run carries."""
+
+
+def generated_concurrent_record_entry(
+    entries: Sequence[Mapping[str, object]], root: Path
+) -> dict[str, object]:
+    """One install-record entry another agent session writes while a run is in flight.
+
+    Derived from an entry the document already carries, so every field the
+    agent writes is present and only the project path differs: the entry names
+    a checkout no plan of the run carries, which is what makes it a record the
+    run never planned, cannot move, and must not erase.
+    """
+    entry = dict(entries[0])
+    entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD] = str(root / CONCURRENT_SESSION_CHECKOUT)
+    return entry
+
+
 __all__ = [
     "catalog_plugin_names_from_bytes",
     "catalog_plugin_names_from_document",
@@ -735,6 +754,8 @@ __all__ = [
     "RegistryShape",
     "UNCATALOGED_PLUGIN",
     "generated_codex_listing_entries",
+    "CONCURRENT_SESSION_CHECKOUT",
+    "generated_concurrent_record_entry",
     "generated_failure_classification_cases",
     "generated_invalid_catalog_subsets",
     "generated_persistent_catalog_selections",

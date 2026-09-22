@@ -10,7 +10,7 @@ import subprocess
 import sys
 import tempfile
 import tomllib
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from enum import StrEnum
 from pathlib import Path
@@ -1501,7 +1501,14 @@ def _restore_plugin_selection(
     settings: Path,
     declared: DeclaredSelection | None,
 ) -> None:
-    """Re-apply a declared plugin selection, leaving the rest of the document."""
+    """Re-apply a declared plugin selection, leaving the rest of the document.
+
+    The checkout's settings document belongs to the operator and the agent,
+    not to this run, so the selection is applied to the document as it stands
+    at the write boundary and the file is replaced atomically: a reader never
+    observes a truncated settings document, and every field written while the
+    run was in flight survives.
+    """
     if declared is None or not settings.exists():
         return
     document = _settings_document(settings)
@@ -1511,7 +1518,7 @@ def _restore_plugin_selection(
         document[CLAUDE_ENABLED_PLUGINS_FIELD] = declared.value
     else:
         document.pop(CLAUDE_ENABLED_PLUGINS_FIELD, None)
-    settings.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
+    _atomic_write(settings, (json.dumps(document, indent=2) + "\n").encode("utf-8"))
 
 
 def _build_plan(
@@ -3262,27 +3269,28 @@ def plan_install_record_rewrite(
     return tuple(rewrites), tuple(warnings)
 
 
-def rewrite_install_records(
-    document_path: Path,
+def apply_install_record_writes(
+    text: str,
     rewrites: Sequence[RecordRewrite],
     marketplace: str,
-) -> tuple[tuple[RecordRewrite, ...], tuple[InstallationWarning, ...]]:
-    """Rewrite the planned entries in Claude Code's install-record document.
+    document_path: Path,
+) -> tuple[str, tuple[RecordRewrite, ...], tuple[InstallationWarning, ...]]:
+    """Apply the planned write set to one install-record document text.
 
-    The document is read whole, each planned entry — matched by plugin,
-    scope, and project path — receives the target install path, version, and
-    commit, and the whole document is written through a temporary file and
-    one atomic replace; every other entry and field is preserved as read.
+    A pure function from document text and write set to the replacement text:
+    each planned entry — matched by plugin, scope, and project path — receives
+    the target install path, version, and commit, and every other entry and
+    field of the text it is given is carried through unchanged.
 
-    A planned record the document no longer carries is one condition with two
-    forms: the plugin's identifier is absent, or its entries name no match for
-    the record's scope and project path. Both return the record as unwritten
-    with one blocking warning, so the run reports what it moved and what it
-    could not rather than claiming the whole plan.
+    A planned record the text does not carry is one condition with two forms:
+    the plugin's identifier is absent, or its entries name no match for the
+    record's scope and project path. Both return the record as unwritten with
+    one blocking warning, so the run reports what it moved and what it could
+    not rather than claiming the whole plan.
+
+    `document_path` names the document in the diagnostics a malformed text
+    raises; nothing here reads or writes it.
     """
-    if not rewrites:
-        return (), ()
-    text = document_path.read_text(encoding="utf-8")
     document = cast(object, json.loads(text))
     if not isinstance(document, dict):
         raise ValueError(f"{document_path} must be a JSON object")
@@ -3330,8 +3338,54 @@ def rewrite_install_records(
     rendered = json.dumps(document, indent=indent)
     if text.endswith("\n"):
         rendered += "\n"
+    return rendered, tuple(written), tuple(warnings)
+
+
+def read_install_record_document(document_path: Path) -> str:
+    """Read one install-record document whole; the writer's default reader."""
+    return document_path.read_text(encoding="utf-8")
+
+
+def rewrite_install_records(
+    document_path: Path,
+    rewrites: Sequence[RecordRewrite],
+    marketplace: str,
+    *,
+    read_document: Callable[[Path], str] = read_install_record_document,
+) -> tuple[tuple[RecordRewrite, ...], tuple[InstallationWarning, ...]]:
+    """Rewrite the planned entries in Claude Code's install-record document.
+
+    The run does not own this document. Other agent sessions write into it
+    while the run is in flight, and the agent admits no lock over it, so the
+    replacement is built from the document as it stands at the write boundary
+    rather than from a copy read before it: the writer reads the document,
+    applies the planned set, reads the document once more immediately before
+    the replace, and applies the same set again when the store moved under the
+    first read. A record another session wrote in that interval is therefore
+    carried into the replacement with every field the plan does not set, and
+    reaches the closing listing comparison, which reports it.
+
+    That second read is one read at the write boundary, not a lock, a wait, or
+    a loop: the writer makes no further observation of the store, waits for no
+    other session, and chases no record it sees.
+
+    `read_document` is the reader boundary. Production binds the file reader;
+    evidence binds a reader that schedules another session's write into the
+    interval the two reads span.
+    """
+    if not rewrites:
+        return (), ()
+    text = read_document(document_path)
+    rendered, written, warnings = apply_install_record_writes(
+        text, rewrites, marketplace, document_path
+    )
+    current = read_document(document_path)
+    if current != text:
+        rendered, written, warnings = apply_install_record_writes(
+            current, rewrites, marketplace, document_path
+        )
     _atomic_write(document_path, rendered.encode("utf-8"))
-    return tuple(written), tuple(warnings)
+    return written, warnings
 
 
 def cached_plugin_versions(
@@ -3650,7 +3704,9 @@ __all__ = [
     "declared_codex_source",
     "codex_source_form",
     "marketplace_target",
+    "apply_install_record_writes",
     "plan_install_record_rewrite",
+    "read_install_record_document",
     "unreadable_head_warnings",
     "unresolved_target_warnings",
     "render_claude_source",

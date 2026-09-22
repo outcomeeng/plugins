@@ -126,6 +126,7 @@ from outcomeeng.distribution.installation import (
     RecordRewrite,
     cached_plugin_versions,
     plan_install_record_rewrite,
+    read_install_record_document,
     rewrite_install_records,
     CLAUDE_PLUGIN_CACHE_RELATIVE,
     CATALOG_PLUGIN_SOURCE_FIELD,
@@ -150,6 +151,7 @@ from outcomeeng_testing.generators.installation import (
     UNCATALOGED_PLUGIN,
     catalog_plugin_names_from_document,
     generated_agent_subsets,
+    generated_concurrent_record_entry,
     generated_claude_install_records,
     generated_other_checkout_records,
     generated_no_target_records,
@@ -1406,22 +1408,21 @@ class RecordRewriteObservation:
     """The document's inode before and after: a replace yields a new inode, an in-place write keeps it."""
 
 
-def observe_install_record_rewrite(
-    fixture: Path, tmp_path: Path
-) -> RecordRewriteObservation:
-    """Copy a real install-record document and rewrite its project- and local-scope entries.
+def _planned_document_rewrite(
+    document_path: Path, tmp_path: Path
+) -> tuple[
+    tuple[RecordRewrite, ...],
+    tuple[InstallationWarning, ...],
+    MarketplaceTarget,
+    Path,
+]:
+    """Plan every project- and local-scope entry of one document to one target version.
 
-    The fixture's own entries select the records: every entry of the
-    marketplace named by this checkout's catalog at project or local scope is
-    planned to a target version no entry carries, with a cache directory for
-    that version created so every record is rewritable.
+    The document's own entries select the records, so the plan is a pure
+    function of the opening listing and the target: a target version no entry
+    carries, with a cache directory for that version created so every record
+    is rewritable.
     """
-    document_path = tmp_path / CLAUDE_INSTALLED_PLUGINS_RELATIVE
-    document_path.parent.mkdir(parents=True)
-    shutil.copy2(fixture, document_path)
-    text_before = document_path.read_text(encoding="utf-8")
-    inode_before = document_path.stat().st_ino
-    document_before = cast("dict[str, object]", json.loads(text_before))
     records = tuple(
         record
         for record in claude_install_records(
@@ -1440,6 +1441,28 @@ def observe_install_record_rewrite(
     )
     rewrites, warnings = plan_install_record_rewrite(
         records, target, cache_root, cached_plugin_versions(cache_root, plugins)
+    )
+    return rewrites, warnings, target, cache_root
+
+
+def observe_install_record_rewrite(
+    fixture: Path, tmp_path: Path
+) -> RecordRewriteObservation:
+    """Copy a real install-record document and rewrite its project- and local-scope entries.
+
+    The fixture's own entries select the records: every entry of the
+    marketplace named by this checkout's catalog at project or local scope is
+    planned to a target version no entry carries, with a cache directory for
+    that version created so every record is rewritable.
+    """
+    document_path = tmp_path / CLAUDE_INSTALLED_PLUGINS_RELATIVE
+    document_path.parent.mkdir(parents=True)
+    shutil.copy2(fixture, document_path)
+    text_before = document_path.read_text(encoding="utf-8")
+    inode_before = document_path.stat().st_ino
+    document_before = cast("dict[str, object]", json.loads(text_before))
+    rewrites, warnings, target, cache_root = _planned_document_rewrite(
+        document_path, tmp_path
     )
     written, write_warnings = rewrite_install_records(
         document_path, rewrites, MARKETPLACE
@@ -1461,6 +1484,117 @@ def observe_install_record_rewrite(
         sibling_files=tuple(
             sorted(entry.name for entry in document_path.parent.iterdir())
         ),
+    )
+
+
+@dataclass(frozen=True)
+class RacingRewriteObservation:
+    """One rewrite over a document another agent session writes into mid-write.
+
+    The document after the replace, the entry the other session wrote, the
+    rewrites the writer reports as written, and how many times the writer read
+    the document are the observations.
+    """
+
+    document_after: dict[str, object]
+    concurrent_identifier: str
+    concurrent_entry: dict[str, object]
+    rewrites: tuple[RecordRewrite, ...]
+    warnings: tuple[InstallationWarning, ...]
+    marketplace: str
+    target: MarketplaceTarget
+    reads: int
+
+
+def racing_document_reader(
+    target: Path,
+    inject: Callable[[], None],
+    real: Callable[[Path], str],
+) -> Callable[[Path], str]:
+    """Document reader whose first read of ``target`` runs ``inject`` after returning.
+
+    Controlled collaborator under `/test` Stage 5 exception 3 (Time and
+    concurrency): a session writing into the install-record document after the
+    writer has read it and before the writer replaces it cannot be scheduled
+    deterministically against the real filesystem. The injection runs on the
+    content the first read already returned, so the writer holds the document
+    as it stood before that write and only a read at the write boundary can
+    carry the write into the replacement.
+    """
+    calls: dict[Path, int] = {}
+
+    def reader(path: Path) -> str:
+        calls[path] = calls.get(path, 0) + 1
+        content = real(path)
+        if path == target and calls[path] == 1:
+            inject()
+        return content
+
+    return reader
+
+
+def observe_racing_install_record_rewrite(
+    fixture: Path, tmp_path: Path
+) -> RacingRewriteObservation:
+    """Rewrite a document another agent session writes a record into mid-write.
+
+    The plan is built from the document as the run's opening listing finds it.
+    The injected reader then writes one further record of the catalog-bounded
+    marketplace — at a project path no plan carries — into the document after
+    the writer's first read has returned, which is the interval a writer that
+    replaced the document from the copy it read would erase.
+    """
+    document_path = tmp_path / CLAUDE_INSTALLED_PLUGINS_RELATIVE
+    document_path.parent.mkdir(parents=True)
+    shutil.copy2(fixture, document_path)
+    rewrites, warnings, target, _ = _planned_document_rewrite(document_path, tmp_path)
+    document = cast(
+        "dict[str, dict[str, list[dict[str, object]]]]",
+        json.loads(document_path.read_text(encoding="utf-8")),
+    )
+    identifier = next(
+        key
+        for key in document[CLAUDE_INSTALLED_PLUGINS_FIELD]
+        if marketplace_plugin_name(key, MARKETPLACE) is not None
+    )
+    entry = generated_concurrent_record_entry(
+        document[CLAUDE_INSTALLED_PLUGINS_FIELD][identifier], tmp_path
+    )
+
+    def inject() -> None:
+        written_document = cast(
+            "dict[str, dict[str, list[dict[str, object]]]]",
+            json.loads(document_path.read_text(encoding="utf-8")),
+        )
+        written_document[CLAUDE_INSTALLED_PLUGINS_FIELD][identifier].append(dict(entry))
+        document_path.write_text(
+            json.dumps(written_document, indent=2) + "\n", encoding="utf-8"
+        )
+
+    reads: list[Path] = []
+
+    def counted(path: Path) -> str:
+        reads.append(path)
+        return read_install_record_document(path)
+
+    written, write_warnings = rewrite_install_records(
+        document_path,
+        rewrites,
+        MARKETPLACE,
+        read_document=racing_document_reader(document_path, inject, counted),
+    )
+    return RacingRewriteObservation(
+        document_after=cast(
+            "dict[str, object]",
+            json.loads(document_path.read_text(encoding="utf-8")),
+        ),
+        concurrent_identifier=identifier,
+        concurrent_entry=entry,
+        rewrites=written,
+        warnings=(*warnings, *write_warnings),
+        marketplace=MARKETPLACE,
+        target=target,
+        reads=len(reads),
     )
 
 
@@ -3992,6 +4126,9 @@ __all__ = [
     "observe_unreadable_head_record",
     "observe_registry_shape_plan",
     "observe_install_record_rewrite",
+    "observe_racing_install_record_rewrite",
+    "racing_document_reader",
+    "RacingRewriteObservation",
     "install_record_fixture_path",
     "DefectiveListingObservation",
     "observe_defective_record_listing",
