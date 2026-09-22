@@ -1,17 +1,17 @@
 """Resolve an implementation audit selector and reconcile a run against it.
 
-Tested before this script is bundled by the audit node's
-``test_implementation_scope.scenario.l1.py`` (stale-local-base resolution, a
-nonexistent repository) and ``test_implementation_scope.compliance.l1.py``
-(a run-input object whose keys cannot displace the git-resolved scope, a
-non-object and a malformed run-input value, a sealed inventory path carrying no
-recorded scope unit, a required unit outside the final coverage statuses beside
-an optional unit carrying the same status, exact inventory agreement, drift in
-both directions, a recorded subject outside the inventory, a missing-skill unit
-naming its absent skill, an advisory live path beside the committed inventory, a reconcile request carrying no sealed
-scope identity, a run token the CLI cannot read, a CLI that cannot be launched,
-a run document shaped so the comparison cannot run, and a head behind the
-fetched base relayed as the stale-base refusal).
+Tested before this script is bundled by the audit node's implementation-scope
+scenario evidence (stale-local-base resolution and a nonexistent repository)
+and compliance evidence (a run-input object whose keys cannot displace the
+git-resolved scope; non-object and malformed run-input values; a sealed
+inventory path with no recorded scope unit; a required unit outside the final
+coverage statuses beside an optional unit carrying the same status; exact
+inventory agreement; drift in both directions; a recorded subject outside the
+inventory; a missing-skill unit naming its absent skill; an advisory live path
+beside the committed inventory; a reconcile request carrying no sealed scope
+identity; a run token the CLI cannot read; a CLI that cannot be launched; a run
+document shaped so the comparison cannot run; and a head behind the fetched
+base relayed as the stale-base refusal).
 
 The provider is reached by the installed tree's `__file__`-relative layout,
 the plugin build's contract for logic one provider skill owns and several

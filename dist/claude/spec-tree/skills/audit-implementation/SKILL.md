@@ -6,12 +6,12 @@ description: >-
   per-language code, test, and architecture concerns, finding falsifiability,
   and completeness of the inspection.
 argument-hint: "<HEAD | branch | base...head | worktree:selector>"
-allowed-tools: Read, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_scope.py":*), Bash(git rev-parse:*), Bash(git status:*), Bash(git show:*), Bash(spx verification run:*), Bash(printf:*), Glob, Grep, Skill
+allowed-tools: Read, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_scope.py":*), Bash(git rev-parse:*), Bash(git status:*), Bash(git show:*), Bash(spx verification run start:*), Bash(spx verification run scope add:*), Bash(spx verification run finding add:*), Bash(spx verification run finish:*), Bash(spx verification run render:*), Bash(printf:*), Glob, Grep, Skill
 ---
 
 <objective>
 
-An authoritative SPX projection and raw run token for the requested implementation scope, judged against its governing decisions and specs and each language's code, test, and architecture standards, carrying `terminalStatus` (`approved` or `rejected`) and findings that name the artifact, the violated rule, and observed-versus-expected evidence. A run that cannot reach that projection yields a `BLOCKED` diagnostic naming the request failure, command failure, or absent prerequisite that stopped it.
+A verdict on the requested implementation scope against its governing decisions, specs, and language standards — APPROVED, or REJECTED with each finding naming the artifact, violated rule, and observed-versus-expected evidence. The verdict carries the exact SPX run token and projection. A run that cannot reach a verdict yields a `BLOCKED` diagnostic naming the request failure, command failure, or absent prerequisite that stopped it.
 
 </objective>
 
@@ -22,7 +22,7 @@ An authoritative SPX projection and raw run token for the requested implementati
 - NEVER run deterministic verification — the audit composes agentic concern audits only.
 - NEVER include language-specific file extensions, commands, examples, or evidence patterns beyond the dispatch template `audit-{lang}-{code|tests|architecture}`.
 - ALWAYS treat the `spx verification run` command exit code as payload validity; NEVER hand-validate emitted payload JSON after SPX accepts it.
-- NEVER end a run because work remains, time has passed, context is tight, or reading is unfinished — a stop names the failed command with its exit code and stderr, or the absent prerequisite.
+- NEVER end a run because work remains, time has passed, context is tight, or reading is unfinished — a stop names the failed command with one of the three command-evidence shapes, or the absent prerequisite that command established.
 - NEVER assign `incomplete` or `skipped` to a required coverage unit; neither describes an admissible terminal state for required coverage.
 - NEVER derive a subject body from a single commit's patch, or leave a truncated read unrecovered — a partial read is re-issued, never converted into coverage evidence.
 - NEVER hand-transcribe the resolved changed-path set into a payload — the resolver's own output reaches the run through a pipe, because a retyped inventory drops and substitutes paths without any later step noticing.
@@ -82,8 +82,10 @@ Run these stages in order. Each names what holds before the next begins, and
    reference carries the reasoning.
 
 A run that cannot bring a required unit to a stage 6 status returns the
-`<verdict_format>` blocked diagnostic naming the concrete failed operation or
-absent prerequisite. Remaining work, elapsed time, context pressure, and
+`<verdict_format>` blocked diagnostic naming the failed command with an exit
+code and captured stderr, a named termination and captured stderr, or a
+harness-tool failure and its error text, or the absent prerequisite that failed
+command established. Remaining work, elapsed time, context pressure, and
 unfinished reading are never such a cause.
 
 </execution_sequence>
@@ -393,10 +395,10 @@ Each expected unit carries the scope payload in `<verification_run_contract>`: o
 - Queue each returned finding after those scope rows, associated with its matching path-scoped unit.
 - Persist queued units one `spx verification run scope add` command at a time, ordered by language discovery order then concern order `code`, `tests`, `architecture`, preserving each command result before the next mutation.
 - Derive the concern's finding count from the accepted finding rows; NEVER emit a custom count SPX discards.
-- A concern returning no complete result for a required unit MUST name the failed operation or absent prerequisite. When it names neither, drive the concern to a final result rather than recording a non-audited status.
+- A concern returning no complete result for a required unit MUST name the failed command with an exit code and captured stderr, a named termination and captured stderr, or a harness-tool failure and its error text, or the absent prerequisite that failed command established. When it names neither, drive the concern to a final result rather than recording a non-audited status.
 - NEVER manufacture a completed result from Claude's own inspection in place of a concern result.
 
-A missing required concern skill or an unsupported path already claimed by a recognized implementation-language partition rejects the run through accepted coverage status and the evidence-derived terminal rollup. A required unit that receives no concern result reaches no admissible status, so the run returns BLOCKED under `<verdict_format>` naming the failed operation or absent prerequisite rather than sealing. Do not continue concern dispatch after detecting an absent required skill for a recognized language partition; queue the complete final gap inventory, persist it serially, finish, and render the rejected run. An SPX command or payload rejection is a command failure and returns BLOCKED under `<verdict_format>` rather than becoming coverage evidence.
+A missing required concern skill or an unsupported path already claimed by a recognized implementation-language partition rejects the run through accepted coverage status and the evidence-derived terminal rollup. A required unit that receives no concern result reaches no admissible status, so the run returns BLOCKED under `<verdict_format>` naming the failed command with one of the three command-evidence shapes, or the absent prerequisite that failed command established, rather than sealing. Do not continue concern dispatch after detecting an absent required skill for a recognized language partition; queue the complete final gap inventory, persist it serially, finish, and render the rejected run. An SPX command or payload rejection is a command failure and returns BLOCKED under `<verdict_format>` rather than becoming coverage evidence.
 
 </coverage_model>
 
@@ -434,24 +436,17 @@ If SPX rejects terminal status, report the rejected command and stderr as the au
 
 <verdict_format>
 
-When the run completes, return the exact run token and rendered `spx verification run render` projection. The projection's `terminalStatus` is authoritative: `approved` passes and `rejected` requires repair. Do not add an `APPROVED` or `REJECTED` prose envelope.
+When the run completes, return `APPROVED` for projection `terminalStatus:
+approved`, or `REJECTED` for `terminalStatus: rejected`, followed by the exact
+run token and rendered `spx verification run render` projection. The projection
+remains authoritative; the canonical verdict label only exposes its determination.
 
-Return BLOCKED for three causes: target preparation fails before `spx
-verification run start` (a missing selector or identity field, a failed
-command, or the resolver's stale-base refusal), SPX rejects a command, or a
-required unit cannot reach a final status after the run started. Use the
-complete diagnostic below; preparation failures use `runToken: not-started`,
-`payloadSource: none`, and `payloadKey: none`.
-
-A required unit that cannot reach a final status is not a command rejection, so
-its diagnostic carries the started `runToken`, the absent prerequisite or failed
-operation in `command` — the exact operation attempted, such as the unreadable
-subject path or the governing node that could not be discovered — and
-`payloadSource: none`, `payloadKey: none`, `exitCode: none`, `stderr: none`.
-Name the unit by its `unitId` in the `command` line so the blocked unit is
-identifiable. After a run starts, record a missing required concern skill
-as `missing-skill`, finish with terminal status `rejected`, render, and return
-the run token plus projection.
+Return BLOCKED when preparation fails before a command starts, SPX rejects a
+command, or a failed command after run start prevents a required unit from
+reaching a final status. It may instead name the absent prerequisite that the
+failed command established. After a run starts, record a missing required
+concern skill as `missing-skill`, finish `rejected`, render, and return REJECTED
+with the run token and projection.
 
 Preserve each value verbatim from the invocation and command result:
 
@@ -461,17 +456,22 @@ runToken: <exact-token-if-start-succeeded-or-not-started>
 command: <exact-command-with-selectors-and-no-invented-redaction>
 payloadSource: <stdin|none>
 payloadKey: <unitId-or-finding-idempotency-key-or-none>
-exitCode: <exact-exit-code>
-stderr: <exact-stderr>
+exitCode: <exact-integer|timeout-with-bound|signal-with-number|harness-tool-name|none>
+stderr: <captured-stderr|harness-tool-error-text|none>
 ```
 
-Never return the command alone: the run token locates durable state, the payload
-source and key identify the rejected boundary, and the exit code and stderr carry
-the failure evidence — a stale-base refusal is read from its exit code and stderr.
+A preparation failure where no command started uses `runToken: not-started`,
+`payloadSource: none`, `payloadKey: none`, `exitCode: none`, and `stderr: none`.
+A preparation command that ran and failed keeps `runToken: not-started`, names
+that exact command, and preserves its integer exit code and captured stderr,
+named termination and captured stderr, or harness-tool name and error text. A stale-base resolver refusal preserves its exit code and stderr. Every started-run
+diagnostic carries the same three command-evidence shapes. Name a blocked unit by its `unitId` in `command`; never return the command alone, because the remaining
+fields locate durable state and identify the failed boundary.
 
 Each finding row names every field of the finding payload shape in `<verification_run_contract>`, so a reader sees the producer, unit, rule, severity, location, message, and observed-versus-expected evidence without opening the journal.
 
-The rendered SPX projection is the inspection surface. Do not hand-format a competing verdict when `spx verification run render` succeeds.
+The rendered SPX projection is the inspection surface; the verdict label derives
+from it and introduces no competing determination.
 
 </verdict_format>
 
@@ -486,13 +486,13 @@ boundary; preserve the exact diagnostic and apply the no-retry rule, since these
 <success_criteria>
 
 - The verdict covers every required implementation concern for every language partition in the supplied scope: code, tests, and architecture.
-- A missing required concern skill after run start appears as `missing-skill` rejected coverage in the projection, and a blocked run names the exact malformed request field or failed SPX command that prevented a valid completed projection; the projection's `terminalStatus` is the sole determination.
+- A missing required concern skill after run start appears as `missing-skill` rejected coverage in the projection, and a blocked run names the exact malformed request field or failed command with one of the three command-evidence shapes that prevented a valid completed projection; the projection's `terminalStatus` is the sole determination.
 - Every rejected finding is falsifiable: it names the stable producer identity, unit, violated rule or principle, severity, location, message, and observed-versus-expected evidence.
 - Every missing-skill, unsupported-path, and accounting unit appears in the rendered projection rather than in prose, and each audited concern preserves its complete inspected-path set as path-scoped units whose `subject` fields are the exact paths, audited only after that concern completes, with finding counts derived from accepted finding rows rather than a custom field.
 - The same request, committed scope, normalized live file list, and installed plugin versions produce the same coverage units, finding identities, and terminal determination.
 - Every gate-eligible run addresses an exact committed head with no live-file additions and established passing deterministic evidence; an explicit `worktree:` target includes the complete discovered modified and untracked path list and supplies no reusable gate evidence.
 - The sealed run is self-describing: its recorded subject set equals the inventory its own start input carries, no recorded subject lies outside that inventory, every required unit carries a final status and every unclaimed path its accounting record, and every finding references an accepted unit of its own concern — so a reader establishes the inspection's completeness from the run without the run driver's account of it.
-- A run that reaches no admissible status for a required unit returns the blocked diagnostic naming a concrete failed operation or absent prerequisite, never a sealed projection; a head behind the fetched base returns the resolver's stale-base refusal before any subject is read.
+- A run that reaches no admissible status for a required unit returns the blocked diagnostic naming a failed command with one of the three command-evidence shapes or the absent prerequisite that failed command established, never a sealed projection; a head behind the fetched base returns the resolver's stale-base refusal before any subject is read.
 - No plugin-side verdict script, legacy journal command, deterministic verification command, or language-specific file pattern can affect the determination outside the SPX-recorded run.
 
 </success_criteria>

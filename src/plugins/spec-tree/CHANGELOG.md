@@ -10,6 +10,14 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.98.5
+
+### Fixed
+
+- **Implementation-audit `BLOCKED` results carry command evidence after a run starts.** A started run can block only on a failed command with an exit code and captured stderr, a named timeout or signal and captured stderr, a harness-tool failure with the tool name and error text, or the absent prerequisite that command established. Partial or truncated reading is recovered in bounded ranges and cannot become a blocked cause; `exitCode: none` with `stderr: none` is reserved for preparation failures that ran no command. The audit's SPX permission surface now admits only run start, scope addition, finding addition, finish, and render commands.
+- **Apply and merge stop on malformed started-run audit results.** A started-run `BLOCKED` result missing those command-evidence shapes is unusable on its first occurrence and enters neither the repair loop nor an automatic relaunch. The operator, or the orchestrating session standing in for the operator, may authorize one fresh dispatch as a new launch; otherwise apply keeps the gate blocked and merge releases the Change with the run token in its Handoff.
+- **Completed implementation audits expose their verdict before the durable result.** The audit skill and its thin agent now return `APPROVED` or `REJECTED`, followed by the exact `spx verification run` token and rendered projection. The projection remains authoritative while the leading envelope gives callers the canonical verdict without replacing or reformatting the recorded evidence.
+
 ## 0.98.4
 
 ### Requires
