@@ -115,9 +115,7 @@ base delta.
 Every orchestrating-session ledger event is a durable `fact` record addressed
 to the orchestrating mail identity under the Change's correlation before the
 session relies on it across compaction. This includes each autonomous decision,
-read cause, and orchestrating-session failure. The skill's
-`references/ledger-reconstruction.md` states how those records and the sealed
-journal runs are reacquired after a compaction or restart. A missing, ambiguous,
+read cause, and orchestrating-session failure. A missing, ambiguous,
 unavailable, or unsealed source refuses reconstruction; a partial ledger is
 never reported.
 

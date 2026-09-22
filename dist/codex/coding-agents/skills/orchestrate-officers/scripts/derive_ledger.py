@@ -3,11 +3,19 @@
 
 from __future__ import annotations
 
+import decimal
 import json
 import sys
 from collections.abc import Mapping, Sequence
 from decimal import Decimal, InvalidOperation
 from typing import Final, TextIO
+
+# Totals are declared exact, so accumulation runs outside the default
+# twenty-eight-significant-digit context, which would round a long enough
+# series and silently drop digits the sources carried.
+EXACT_DECIMAL_CONTEXT: Final = decimal.Context(
+    prec=decimal.MAX_PREC, Emax=decimal.MAX_EMAX, Emin=decimal.MIN_EMIN
+)
 
 SCHEMA_VERSION: Final = 1
 SCHEMA_VERSION_FIELD: Final = "schemaVersion"
@@ -95,10 +103,14 @@ def _source(kind: str, source_id: int | str) -> dict[str, object]:
     return {SOURCE_KIND_FIELD: kind, SOURCE_ID_FIELD: source_id}
 
 
-def _mail_source(source_id: object, where: str) -> dict[str, object]:
+def _mail_store_id(source_id: object, where: str) -> int:
     if isinstance(source_id, bool) or not isinstance(source_id, int):
         raise LedgerInputError(f"{where} source identity must be an integer")
-    return _source(MAIL_SOURCE_KIND, source_id)
+    return source_id
+
+
+def _mail_source(store_id: int) -> dict[str, object]:
+    return _source(MAIL_SOURCE_KIND, store_id)
 
 
 def _journal_run_token(run_token: object, where: str) -> str:
@@ -111,6 +123,10 @@ def _journal_source(run_token: str) -> dict[str, object]:
     return _source(JOURNAL_SOURCE_KIND, run_token)
 
 
+# Deduplication is a property of a source record, never of a derived entry: a
+# record is admitted once under its own identity, and every admitted record
+# contributes each of its values. Collapsing equal entries instead would drop
+# an entry a second record carried while still counting its spend and duration.
 def _append_entry(
     entries: list[dict[str, object]],
     value: object,
@@ -118,9 +134,7 @@ def _append_entry(
 ) -> None:
     if value is None:
         return
-    entry = {VALUE_FIELD: value, SOURCE_FIELD: dict(source)}
-    if entry not in entries:
-        entries.append(entry)
+    entries.append({VALUE_FIELD: value, SOURCE_FIELD: dict(source)})
 
 
 def _append_findings(
@@ -133,12 +147,7 @@ def _append_findings(
         return
     for finding in _sequence(value, f"{where} findingProvenance"):
         finding_data = dict(_mapping(finding, f"{where} finding provenance entry"))
-        entry: dict[str, object] = {
-            VALUE_FIELD: finding_data,
-            SOURCE_FIELD: dict(source),
-        }
-        if entry not in findings:
-            findings.append(entry)
+        findings.append({VALUE_FIELD: finding_data, SOURCE_FIELD: dict(source)})
 
 
 def _append_reads(
@@ -149,16 +158,16 @@ def _append_reads(
 ) -> None:
     if value is None:
         return
-    values = value if isinstance(value, list) else [value]
-    for item in values:
+    # One read object stands for itself; every other shape routes through the
+    # module's sequence validator, as findingProvenance does.
+    items = [value] if isinstance(value, Mapping) else _sequence(value, f"{where} read")
+    for item in items:
         read = dict(_mapping(item, f"{where} read"))
         cause = read.get(CAUSE_FIELD)
         if cause not in READ_CAUSES:
             allowed = ", ".join(sorted(READ_CAUSES))
             raise LedgerInputError(f"{where} read cause must be one of: {allowed}")
-        entry: dict[str, object] = {VALUE_FIELD: read, SOURCE_FIELD: dict(source)}
-        if entry not in reads:
-            reads.append(entry)
+        reads.append({VALUE_FIELD: read, SOURCE_FIELD: dict(source)})
 
 
 def _add_spend(totals: dict[str, Decimal], value: object, where: str) -> None:
@@ -196,11 +205,17 @@ def _wall_time(value: object, where: str) -> Decimal:
     return duration
 
 
-def _json_number(value: Decimal) -> int | float:
-    integral = value.to_integral_value()
-    if value == integral:
-        return int(integral)
-    return float(value)
+def _decimal_text(value: Decimal) -> str:
+    """Render one total as the exact decimal text a consumer parses.
+
+    JSON's number grammar carries no interoperable precision: a conformant
+    parser is free to read a number literal into an IEEE-754 double, and the
+    common ones do, so every digit past a double's reach is lost at the parse
+    boundary however exactly the literal is written. A decimal string survives
+    every conformant parser byte for byte, and the consumer builds its own
+    exact decimal from it.
+    """
+    return str(value)
 
 
 def _event_from_record(
@@ -254,36 +269,43 @@ def derive_ledger(payload: Mapping[str, object]) -> dict[str, object]:
     spend_totals: dict[str, Decimal] = {}
     wall_time = Decimal()
 
-    mail_records = _sequence(payload.get(MAIL_RECORDS_FIELD), MAIL_RECORDS_FIELD)
-    for index, raw_record in enumerate(mail_records):
-        where = f"{MAIL_POSITION_LABEL} {index}"
-        record = _mapping(raw_record, where)
-        source = _mail_source(record.get(ID_FIELD), where)
-        event = _event_from_record(record, where)
-        if event is None:
-            continue
-        wall_time += _absorb(collected, spend_totals, event, source, where)
+    with decimal.localcontext(EXACT_DECIMAL_CONTEXT):
+        mail_records = _sequence(payload.get(MAIL_RECORDS_FIELD), MAIL_RECORDS_FIELD)
+        seen_store_ids: set[int] = set()
+        for index, raw_record in enumerate(mail_records):
+            where = f"{MAIL_POSITION_LABEL} {index}"
+            record = _mapping(raw_record, where)
+            store_id = _mail_store_id(record.get(ID_FIELD), where)
+            if store_id in seen_store_ids:
+                continue
+            seen_store_ids.add(store_id)
+            event = _event_from_record(record, where)
+            if event is None:
+                continue
+            wall_time += _absorb(
+                collected, spend_totals, event, _mail_source(store_id), where
+            )
 
-    journal_runs = _sequence(payload.get(JOURNAL_RUNS_FIELD), JOURNAL_RUNS_FIELD)
-    seen_run_tokens: set[str] = set()
-    for index, raw_run in enumerate(journal_runs):
-        where = f"{JOURNAL_POSITION_LABEL} {index}"
-        run = _mapping(raw_run, where)
-        run_token = _journal_run_token(run.get(RUN_TOKEN_FIELD), where)
-        if run_token in seen_run_tokens:
-            continue
-        seen_run_tokens.add(run_token)
-        source = _journal_source(run_token)
-        wall_time += _absorb(collected, spend_totals, run, source, where)
+        journal_runs = _sequence(payload.get(JOURNAL_RUNS_FIELD), JOURNAL_RUNS_FIELD)
+        seen_run_tokens: set[str] = set()
+        for index, raw_run in enumerate(journal_runs):
+            where = f"{JOURNAL_POSITION_LABEL} {index}"
+            run = _mapping(raw_run, where)
+            run_token = _journal_run_token(run.get(RUN_TOKEN_FIELD), where)
+            if run_token in seen_run_tokens:
+                continue
+            seen_run_tokens.add(run_token)
+            source = _journal_source(run_token)
+            wall_time += _absorb(collected, spend_totals, run, source, where)
 
     ledger = {
         CHANGE_FIELD: change,
         **collected,
         RUNNING_SPEND_FIELD: {
-            currency: _json_number(amount)
+            currency: _decimal_text(amount)
             for currency, amount in sorted(spend_totals.items())
         },
-        WALL_TIME_SECONDS_FIELD: _json_number(wall_time),
+        WALL_TIME_SECONDS_FIELD: _decimal_text(wall_time),
     }
     return {
         SCHEMA_VERSION_FIELD: SCHEMA_VERSION,

@@ -1,8 +1,9 @@
 # Ledger entry-point tested coverage
 
-The cases executed against `scripts/derive_ledger.py`, with the inputs each
-uses. Read this when judging what the entry point is proven to do; the parent
-skill's `<ledger_derivation>` carries the invocation contract an operation needs.
+The cases executed against `${SKILL_DIR}/scripts/derive_ledger.py`, with
+the inputs each uses. Read this when judging what the entry point is proven to
+do; the parent skill's `<ledger_derivation>` carries the invocation contract an
+operation needs.
 
 Each case below fails when the behavior it covers is disabled or inverted.
 
@@ -12,8 +13,8 @@ Each case below fails when the behavior it covers is disabled or inverted.
   `{"schemaVersion":1,"change":"owner/changes#123","mailRecords":[],"journalRuns":[]}`
   exits zero with empty stderr and writes a result carrying exactly `ledger`,
   `schemaVersion`, and `status: "succeeded"`, whose ledger carries exactly the
-  ten keys named in `<ledger_derivation>` with empty collections, an empty
-  running spend, and zero wall time
+  keys named in `<ledger_derivation>` with empty collections, an empty running
+  spend, and a zero wall time
 
 ## Derivation from populated inputs
 
@@ -26,9 +27,15 @@ Each case below fails when the behavior it covers is disabled or inverted.
   rather than under `ledger` — derives the ledger of a document with no record
 - every declared read cause records one read carrying that cause and payload
 - amounts across several currencies total per currency at their own decimal
-  precision, and durations across mail records and journal runs total together
-- journal runs repeating one `runToken` derive the ledger of their first
-  occurrences alone
+  precision, and durations across mail records and journal runs total together,
+  over amounts and durations whose fractional precision ranges from absent to
+  more digits than a double carries
+- both totals are emitted as decimal text carrying every digit of the amount
+  and duration the record supplied
+- mail records repeating one store `id` and journal runs repeating one
+  `runToken` derive the ledger of their first occurrences alone
+- a finding provenance or read one record lists several times is recorded once
+  per occurrence
 - every entry names the mail store `id` or `runToken` that carried it
 
 ## Rejections

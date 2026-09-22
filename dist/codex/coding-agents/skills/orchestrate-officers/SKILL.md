@@ -8,7 +8,8 @@ allowed-tools: Read, Bash(printf:*), Bash(python3 "${SKILL_DIR}/scripts/derive_l
 
 <objective>
 A supervised officer fleet whose Changes advance through bounded, durable,
-event-driven execution, every officer pane reached only through this session.
+event-driven execution.
+
 </objective>
 
 Use skill `coding-agents:operate-herdr`.
@@ -29,7 +30,8 @@ Use only these composed capabilities:
   verification run whose complete identity a durable mail record supplies
 
 Beyond them, the one executable this skill runs is its own bundled ledger entry
-point, governed by `<ledger_derivation>`.
+point, governed by `<ledger_derivation>`; `printf` appears only as the shell
+plumbing that feeds that entry point its document on a single command line.
 
 Pass semantic requests to those skills and preserve their complete results.
 Neither infer nor reproduce their underlying command grammar. This skill has no
@@ -51,9 +53,9 @@ trying a fallback.
 <intake>
 
 Interpret `$ARGUMENTS` as the operator request or officer event. Select one of
-the eight operations in `<routing>`. When the request is empty, ambiguous, or
+the operations in `<routing>`. When the request is empty, ambiguous, or
 names several operations, run nothing and return `invalid-invocation` with the
-eight accepted operation names.
+accepted operation names.
 
 </intake>
 
@@ -132,9 +134,27 @@ carries any of `pass`, `head`, `verdict`, `decision`, `failure`,
 records its autonomous class, choice, and reasoning. A `failure` event records
 an operator instruction naming an officer session or an officer fact reporting
 an operator interaction. A `read` event records one of the causes `message`,
-`officer-state-change`, `bound-crossed`, and `operator-cadence`. Each journal
-object preserves its `runToken`. Submit the document through one of these forms
-and preserve the complete result.
+`officer-state-change`, `bound-crossed`, and `operator-cadence`, as one object
+or an array of them. `findingProvenance` is always an array.
+
+Each journal object preserves its `runToken` and carries the same event fields
+at its own top level rather than under a `ledger` key — a run object holding
+only its `runToken` therefore contributes no pass, verdict, spend, or duration.
+The sources differ only in where the event fields sit and in which identity
+stamps the entries they produce:
+
+```json
+{
+  "runToken": "2026-09-22_10-14-02-117-af31c9d0e4b2",
+  "pass": "round-2",
+  "verdict": "REJECT",
+  "spend": { "currency": "USD", "amount": "12.50" },
+  "wallTimeSeconds": "93.5"
+}
+```
+
+Submit the document through one of these forms and preserve the complete
+result.
 
 When the shell accepts multiline input:
 
@@ -154,7 +174,12 @@ Accept only `schemaVersion: 1` with `status: "succeeded"`. The ledger carries
 exactly `change`, `passes`, `heads`, `verdicts`, `decisions`, `failures`,
 `findingProvenance`, `reads`, `runningSpend`, and `wallTimeSeconds`, with source
 provenance on every entry: the mail record's integer store `id`, or the journal
-run's `runToken`. Runs repeating one `runToken` contribute once. Every rejection
+run's `runToken`. A source repeating one identity — records sharing a store `id`
+or runs sharing a `runToken` — contributes once, while a value one record lists
+twice is recorded twice. Each `runningSpend` amount and the `wallTimeSeconds`
+total is a decimal string carrying every digit of the amounts it came from, not
+a JSON number: read it into an exact decimal type rather than a float. Every
+rejection
 — a malformed document, a refused schema version, or a wrong argument vector —
 exits two and writes one `status: "invalid-input"` result carrying
 `schemaVersion`, `status`, and `detail` on stdout, leaving stderr empty, so one
@@ -181,6 +206,10 @@ triggering event, capability results, ledger change, and next event boundary.
 Spend and wall time are courtesy fields rather than gates. Preserve complete
 session, message, commit, and verification-run identities.
 
+A refused invocation returns `invalid-invocation` and the accepted operation
+names, and nothing else — no capability ran, so it carries no officer identity,
+capability result, or ledger change to report.
+
 </result>
 
 <success_criteria>
@@ -200,6 +229,9 @@ session, message, commit, and verification-run identities.
 - Every mutating herdr operation the result reports carries the standing pane
   authorization for a pane this skill launched, and no pane outside that set is
   mutated.
+- A request that is empty, ambiguous, or names several operations returns
+  `invalid-invocation` with the accepted operation names, and the result carries
+  no capability call, because none ran.
 - After compaction or restart, the acquisition in
   `${SKILL_DIR}/references/ledger-reconstruction.md` reaches correlation
   closure over the durable mail and sealed journal inputs, and running the
