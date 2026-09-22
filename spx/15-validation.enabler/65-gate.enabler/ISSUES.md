@@ -2,42 +2,46 @@
 
 Known follow-ups for the gate node. Coordination note; not spec truth.
 
-## Two readings of the no-harness-sets-a-switch rule stand side by side
+## The no-harness-sets-a-switch rule is scoped to this repository's own selected live rows
 
 `spx/15-validation.enabler/65-gate.enabler/21-selected-gate.enabler/15-live-discovery.pdr.md`
 states without qualification: `NEVER: a harness, a skill, a generated instruction surface, or the
 CI workflow sets a disable switch — explicit full verification and CI require the successful
 execution of every selected live row with their own credential.`
 
-`declared_skip_recording` in `outcomeeng_testing/harnesses/gate.py` sets both switches in the
-environment of a pytest child it spawns, over four rows it generates itself, so the recorder the
-gate registers writes the records a real gate step would leave. Two readings of the NEVER apply to
-that write:
+**Settled scope.** The operator ruled on 2026-09-22 that the NEVER is scoped rather than literal:
+it binds this repository's own selected live rows, which are the proof a switch must never be
+allowed to suppress. A disposable child collecting rows a run generates in a temporary directory is
+not this repository's live discovery, so `declared_skip_recording` in
+`outcomeeng_testing/harnesses/gate.py` — which sets both switches in the environment of a pytest
+child it spawns over four rows it generates itself — was never within the rule's subject. The
+unqualified phrasing over-reached into a case the decision did not contemplate.
 
-- **Literal reading.** The rule admits no exception, so a harness that sets a switch in any
-  environment violates it, and the evidence for the declared-skip summary must be produced some
-  other way.
-- **Scoped reading.** The rule was written about this repository's own selected live rows — the
-  proof a switch must not be allowed to suppress. A disposable child over generated rows reaches no
-  such row, so the write is outside the rule's subject.
+**Why the scope holds.** `confined_to` in `outcomeeng_testing/harnesses/gate.py` refuses before the
+child starts unless the report target and the child's working directory lie in the disposable root
+that run created, raising `UnconfinedDisposableState` with the offending path. That enforcement is
+what makes "not this repository's live discovery" a checkable fact about every run rather than a
+claim about one: a target outside the root never reaches a child at all, so no selected live row of
+the surrounding repository is in reach of the environment the harness writes. The confinement is
+the reason the scope holds, not a precaution held in case the ruling went the other way, and both
+its branches are driven from this node's linked evidence in
+`spx/15-validation.enabler/65-gate.enabler/tests/test_gate.compliance.l1.py`: a confined run that
+proceeds, and an unconfined target that is refused by name.
 
-**Reading in force.** The scoped reading, while the amendment below is pending.
+**Disposition of the audit finding.** The implementation audit under run token
+`2026-09-22_03-49-57-231-897034592bcc` raised the harness's switch write against the rule's text.
+That finding is disposed on the settled scope rather than held pending an amendment: it read the
+decision's text correctly, and the text is what is wrong.
 
-**Enforced by.** `confined_to` in `outcomeeng_testing/harnesses/gate.py` refuses before the child
-starts unless the report target and the child's working directory lie in the disposable root that
-run created, raising `UnconfinedDisposableState` with the offending path. The confinement is
-enforced in code rather than asserted in prose, and both branches are driven from this node's
-linked evidence in `spx/15-validation.enabler/65-gate.enabler/tests/test_gate.compliance.l1.py`: a
-confined run that proceeds, and an unconfined target that is refused.
-
-**Settlement condition.** The reading in force is product truth and belongs in the PDR, which only
-the operator amends — carrying both readings above and the evidence that the write reaches no
-selected live row of this repository. A ruling for the literal reading repairs the harness rather
-than the evidence built on it: the write moves out of the harness, and the declared-skip evidence
-keeps its assertions.
+**Settlement condition.** The PDR's own wording is unchanged and still states the rule without the
+scope it carries, so what remains is amending that text to say what the rule now means. Only the
+operator amends a decision, and that amendment is refinement held elsewhere rather than work for
+this Change. Until it lands, a reader who reaches the unqualified sentence reads this entry for the
+scope in force.
 
 **Evidence.** The rule text quoted above against the `env=` mapping `declared_skip_recording`
-passes to its child.
+passes to its child, and against the `confined_to` refusal that bounds every path that mapping can
+reach.
 
 ## The no-polling rule's subject was read as the whole validation package
 
@@ -160,3 +164,58 @@ test evidence, alongside the signal-harness seam entry above.
 **Why separate**: the rename moves a file whose evidence the changeset does not otherwise touch, and the two scenario assertions linking it would need their links re-pointed in the same pass.
 
 **Evidence**: the gate node's test-evidence audit recorded it as a warning against the execution-level rule.
+
+## Two compliance cells read the conforming spawner source with no violating case
+
+Two compliance assertions in `spx/15-validation.enabler/65-gate.enabler/gate.md` are exercised by
+reading the production spawner's own source and nothing else:
+
+> ALWAYS: each child subprocess is started with `start_new_session=True` so signal forwarding
+> targets a process group, never a single PID — prevents orphaned grandchildren when the
+> orchestrator is interrupted ([test](tests/test_gate.compliance.l1.py))
+
+> ALWAYS: each production child subprocess unblocks SIGTERM, SIGINT, and SIGHUP before exec so the
+> orchestrator's protected spawn window does not make validators inherit a blocked
+> forwarded-signal mask ([test](tests/test_gate.compliance.l1.py))
+
+**What each reads.** `test_subprocess_lives_only_in_the_production_spawner` in
+`spx/15-validation.enabler/65-gate.enabler/tests/test_gate.compliance.l1.py` parses
+`outcomeeng/validation/_spawner.py`, the one module that imports `subprocess`, and requires of
+every `subprocess.Popen` call in it that `start_new_session` be the literal `True` and that
+`preexec_fn` name `_restore_child_signal_mask`; it then requires the module's text to carry the
+`signal.pthread_sigmask(signal.SIG_UNBLOCK` call and each of the three forwarded signal names.
+Every input is the conforming source. Neither rule has a source that violates it passed to the
+reading by path.
+
+**Deferrable rather than unfalsifiable.** Production mutation still breaks each assertion: dropping
+`start_new_session=True` from the `Popen` call fails the first, and removing the `preexec_fn`
+argument or the child-side unblock call fails the second, so the evidence can falsify the behavior
+it names. What is absent is the compliance cell's own requirement — at least one real violating
+case, a whole source artifact that breaks the rule, handed to the reading by path. A reading that
+returned nothing on a violating source would pass here unnoticed, so the cell proves the conforming
+source conforms without proving the rule is detected.
+
+**The shape to reach.** The no-polling evidence in the same file already has it.
+`unbounded_polling_sites` is a reader the validation package owns, and
+`test_a_while_true_sleep_is_reported`, `test_a_watch_invocation_is_reported`, and
+`test_a_bounded_loop_is_not_reported` each write a real source file under `tmp_path` and hand it to
+that reader by path — two violating and one conforming, so a reader reporting everything or nothing
+fails. The two cells above have no reader separable from the test to hand a fixture to.
+
+**Settlement condition.** Each cell reaches a reader the validation package owns over the spawn
+call's arguments, exercised against a violating source fixture passed by path: for the session
+rule, a spawner-shaped source whose `subprocess.Popen` call omits `start_new_session` and one that
+passes it `False`; for the signal-mask rule, a spawner-shaped source whose `Popen` call carries no
+`preexec_fn`, and one whose child-side function omits the `SIG_UNBLOCK` of the three forwarded
+signals. Conforming sources beside them establish that the reader raises no false positive, as the
+no-polling cases do.
+
+**Why separate.** Both cells lie outside the Output this changeset carries — the per-agent disable
+switch and the declared skip its report names. Reaching the settlement condition extracts a
+spawn-argument reader out of the test into the validation package and authors its violating
+fixtures, which rewrites evidence the switch work does not touch.
+
+**Evidence.** The two assertions' text against the inputs of
+`test_subprocess_lives_only_in_the_production_spawner`, which are the conforming spawner source
+alone; and the same file's no-polling cases as the violating-source shape the compliance cell
+requires.
