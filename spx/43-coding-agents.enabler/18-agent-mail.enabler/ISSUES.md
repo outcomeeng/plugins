@@ -92,7 +92,7 @@ Readings 1 and 3 ask for visibility; reading 2 objects to placement among reques
 
 **Evidence**: the three findings above, with the heads each was produced on. The `instructions:skill-auditor` verdicts carry no run token; the reviewer reading carries the run token named in item 2.
 
-## The probe confirms four of the five variables the lookup removes
+## The probe confirms three of the five variables the lookup removes
 
 `GIT_LOCATION_VARIABLES` in `src/plugins/coding-agents/skills/operate-agent-mail/scripts/agent_mail.py` removes five names. The mapping test's domain is the set Git's own behaviour confirms redirects a repository lookup, and on the pools that test builds Git confirms three of them: `GIT_DIR` and `GIT_COMMON_DIR` by answering with another repository, `GIT_CEILING_DIRECTORIES` by giving the answer it gives where no repository exists. `GIT_WORK_TREE` and `GIT_DISCOVERY_ACROSS_FILESYSTEM` are removed and not confirmed.
 
