@@ -35,7 +35,7 @@ The record and its delivery rules:
 - **One recipient.** `recipient` names one agent. A value carrying the store's `,` separator is rejected with `invalid-schema` before any command runs.
 - **Foreign rows.** A row another sender wrote reads back rather than failing the inbox read: without a thread it reads as `unclassified` with `correlation: null` and its subject verbatim, and an acknowledgement status other than `pending` or `acked` reads as `ackRequired: false`. A row without the store's `id`, `from`, or `subject` key is a malformed store response and fails the read as `invalid-schema`.
 
-The project key is the repository's own common Git directory, so every worktree of one pool, the pool's bare repository, and the pool's main checkout resolve one mail project, and no checkout's deletion removes it. The adapter reads that directory for its own working directory before every operation and reads no working directory, environment variable, or parent path in its place. A working directory that is no repository yields `repository-unresolved`.
+The project key is the repository's own common Git directory, so every worktree of one pool, the pool's bare repository, and the pool's main checkout resolve one mail project, and no checkout's deletion removes it. The adapter reads that directory for its own working directory before every operation and reads no working directory, environment variable, or parent path in its place. The lookup drops every variable that could make Git answer from something other than that directory — one naming a repository, one bounding where Git may look — and carries every other through, so a repository reachable only across a mount boundary still resolves. A working directory that is no repository yields `repository-unresolved`.
 
 </operation_surface>
 
@@ -114,7 +114,7 @@ The bundled adapter is covered over generated request, record, and repository-lo
 
 - every registry operation's argument vector is read against the store CLI's captured usage text under the resolved project key;
 - a real pool's linked worktree, bare repository, main checkout, and a symlinked route to one of them each resolve one key, while the pool's parent directory resolves none;
-- every environment variable Git's own behaviour confirms redirects a repository lookup — one naming another repository, one bounding discovery above the working directory — leaves the key unchanged, each alone and all together, read from the pool shape whose lookup Git confirmed it redirects, while the parent directory still resolves none;
+- every environment variable Git's own behaviour confirms moves the answer off the working directory — one naming another repository, one bounding discovery above it — leaves the key unchanged, each alone and all together, read from the pool shape whose lookup Git confirmed it moves, while the parent directory still resolves none;
 - generated records round-trip through the store field mapping;
 - an `order`, its `delegation-request`, and its one correlated terminal handback are delivered through this capability's own send path;
 - repeated and conflicting terminal handbacks reduce to one result;

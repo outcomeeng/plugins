@@ -16,7 +16,7 @@ This capability is an agent adapter: the configured way the agent harness lets o
 ### Mappings
 
 - Registration, send, inbox, and receipt each map one source-owned request shape to one mail command and checked result that preserves the store's message, thread, and agent identities verbatim ([test](tests/test_agent_mail.mapping.l1.py))
-- The project key maps from the absolute canonical path of the repository's common Git directory, read for the adapter's own working directory with Git's location variables removed so no value the caller inherited redirects the lookup — neither onto another repository nor away from its own — so every worktree of one pool, the pool's bare repository, and its main checkout resolve one mail project; a working directory that is no repository yields the unavailable result ([test](tests/test_agent_mail.mapping.l1.py))
+- The project key maps from the absolute canonical path of the repository's common Git directory, read for the adapter's own working directory with every variable removed that can make Git answer the location question from something other than that directory, so no value the caller inherited moves the answer — neither onto another repository nor away from its own — so every worktree of one pool, the pool's bare repository, and its main checkout resolve one mail project; a working directory that is no repository yields the unavailable result ([test](tests/test_agent_mail.mapping.l1.py))
 
 ### Properties
 

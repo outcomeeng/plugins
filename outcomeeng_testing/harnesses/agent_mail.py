@@ -114,9 +114,9 @@ POOL_SYMLINK_NAME = "linked-by-symlink"
 # discover a repository reaches only such a shape: at a checkout's own root the
 # repository is found before any ceiling above it applies.
 POOL_NESTED_RELATIVE = ("workspace", "package")
-# A second repository beside the pool, no checkout of it. A caller carrying
-# one of Git's location variables can name it, so the pool can be read from
-# an environment that points away from the working directory.
+# A second repository beside the pool, no checkout of it. A caller carrying a
+# variable that names a repository can name it, so the pool can be read from an
+# environment that points away from the working directory.
 FOREIGN_REPOSITORY_NAME = "foreign"
 # One absolute key for probes that need a repository but do not vary it.
 SHARED_PROJECT_KEY = "/repository/pool.git"
@@ -932,8 +932,8 @@ def run_cli_project_key(
     """Run the shipped CLI's project-key operation in ``working_directory``.
 
     ``environment`` names variables to add to the inherited environment for
-    this run, so a caller's Git location variables can be carried into the
-    process the way a hook carries them.
+    this run, so the variables a caller could answer a location question from
+    are carried into the process the way a hook carries them.
     """
     module = _load()
     completed = subprocess.run(
@@ -950,7 +950,8 @@ def run_cli_project_key(
 
 @dataclass(frozen=True)
 class GitLocationProbe:
-    """One environment variable Git's own behaviour shows redirects a lookup.
+    """One variable Git's own behaviour shows moves a lookup's answer off the
+    invoking working directory.
 
     ``environment`` is the caller's environment that produced ``outcome`` from
     ``working_directory``: ``misdirected`` when raw Git answered with another
@@ -981,15 +982,14 @@ GIT_COMMON_DIR_QUESTION = (
 # Git's own report of the environment variables local to a repository. It is
 # the candidate space, not the answer.
 GIT_LOCAL_ENV_VARS_QUESTION = ("git", "rev-parse", "--local-env-vars")
-# Candidate names beyond that report: Git's discovery-bounding variables, which
-# answer a location question by limiting where a repository may be found rather
-# than by naming one. This list only widens the search — a candidate joins the
-# confirmed domain solely where Git's behaviour shows it redirects the lookup,
-# so a name that changes nothing costs one probe and confirms nothing.
-GIT_DISCOVERY_CANDIDATES: tuple[str, ...] = (
-    "GIT_CEILING_DIRECTORIES",
-    "GIT_DISCOVERY_ACROSS_FILESYSTEM",
-)
+# Candidate names beyond that report: the discovery-bounding variables, which
+# move the answer off the working directory by hiding the repository it belongs
+# to rather than by naming another. A variable that only widens the search
+# toward the repository genuinely there is not a candidate, because it cannot
+# move the answer off the working directory at all. This list only widens the
+# search — a candidate joins the confirmed domain solely where Git's behaviour
+# shows the answer moved, so a name that changes nothing confirms nothing.
+GIT_DISCOVERY_CANDIDATES: tuple[str, ...] = ("GIT_CEILING_DIRECTORIES",)
 GIT_PROBE_TIMEOUT_SECONDS = 30
 
 
@@ -1031,13 +1031,16 @@ def _probe_value_pairs(
 
 
 def git_location_variables(pool: MailPool) -> list[GitLocationProbe]:
-    """The location variables Git itself confirms, with the case confirming each.
+    """The variables Git itself confirms move a lookup's answer off the invoking
+    working directory, with the case confirming each.
 
     The candidate space is Git's own `rev-parse --local-env-vars` report widened
     by `GIT_DISCOVERY_CANDIDATES`; the oracle is Git's behaviour in ``pool``. A
     candidate is confirmed where one value makes raw Git answer with another
     repository, or gives the answer Git gives where no repository exists, while
-    an inert value of the same shape leaves the answer unchanged.
+    an inert value of the same shape leaves the answer unchanged. A variable
+    that only widens discovery toward the repository genuinely there confirms
+    under neither outcome, which is why the claim leaves it out of the class.
     """
     reported = _ask_git(GIT_LOCAL_ENV_VARS_QUESTION, pool.main_checkout, {})
     if reported[0] != 0 or not reported[1].split():

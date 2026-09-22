@@ -48,20 +48,22 @@ JSON_OPTION = "--json"
 PATH_FORMAT_ABSOLUTE_OPTION = "--path-format=absolute"
 GIT_COMMON_DIR_OPTION = "--git-common-dir"
 
-# The variables Git answers a location question from when the caller carries
-# one: the three that name a repository directly, and the two that bound where
-# Git may discover one. Git exports GIT_DIR into every hook and into the
-# commands it runs itself, so an inherited value would name a repository the
-# adapter's working directory does not belong to; a caller carrying a ceiling
-# above that directory instead hides the repository it does belong to. Both
-# answer a location question from the caller rather than from the working
-# directory, so the lookup runs without either class.
+# Every variable that can make Git answer the location question from something
+# other than the invoking working directory. Git exports GIT_DIR into every hook
+# and into the commands it runs itself, so an inherited value would name a
+# repository the adapter's working directory does not belong to; a caller
+# carrying a ceiling above that directory instead hides the repository it does
+# belong to. Naming one and hiding one are the two ways the answer stops coming
+# from the working directory, so the lookup runs without either.
+#
+# A variable that only widens the search toward the repository genuinely there
+# is outside the class and stays: removing it could not prevent a wrong answer,
+# only a right one.
 GIT_LOCATION_VARIABLES: Final[tuple[str, ...]] = (
     "GIT_DIR",
     "GIT_COMMON_DIR",
     "GIT_WORK_TREE",
     "GIT_CEILING_DIRECTORIES",
-    "GIT_DISCOVERY_ACROSS_FILESYSTEM",
 )
 
 # The separator the project key's absolute path is written with.
@@ -698,10 +700,12 @@ def repository_lookup_environment() -> dict[str, str]:
 
     Every variable in `GIT_LOCATION_VARIABLES` is removed, so the lookup
     answers from its own working directory and no value the caller inherited
-    redirects it. Without that removal the key would follow whatever the caller
-    carried: a mail operation invoked from a hook would key the store to the
-    repository that ran the hook, and one invoked under a ceiling above its own
-    working directory would resolve no repository at all.
+    moves that answer. Without the removal the key would follow whatever the
+    caller carried: a mail operation invoked from a hook would key the store to
+    the repository that ran the hook, and one invoked under a ceiling above its
+    own working directory would resolve no repository at all. Every other `GIT_`
+    variable is carried through, so a caller whose repository is reachable only
+    because of one still resolves it.
     """
     return {
         name: value
