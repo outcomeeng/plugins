@@ -175,7 +175,7 @@ def test_real_persistent_run_moves_records_at_differing_versions_to_one_version(
 def test_real_run_moves_a_record_whose_directory_is_gone_and_exits_zero() -> None:
     observation = observe_real_record_refresh()
 
-    assert not observation.gone_checkout.exists()
+    assert not observation.gone_checkout_present_at_run
     assert observation.exit_code == 0, observation.stderr
     document = json.loads(observation.stdout)
     target = document[ReportField.TARGET][ReportField.VERSIONS][SPEC_TREE_PLUGIN]

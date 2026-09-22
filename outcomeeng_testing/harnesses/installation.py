@@ -3031,6 +3031,14 @@ class RealRecordRefreshObservation:
     """The record rewritten to an older version in the agent state before the run."""
     gone_checkout: Path
     """A checkout whose record exists in the agent state while its directory does not."""
+    gone_checkout_present_at_run: bool
+    """Whether that checkout's directory existed when the recipe ran.
+
+    Read inside the temporary root's lifetime, because every path in this
+    observation is removed when that root closes: a presence test taken from
+    the returned path answers for the cleanup rather than for the removal the
+    run is observed against.
+    """
     report: dict[str, object]
     """The first run's JSON report, parsed."""
     second_exit_code: int
@@ -3085,6 +3093,7 @@ def observe_real_record_refresh() -> RealRecordRefreshObservation:
         records_before = claude_install_records(
             _run_listing(Agent.CLAUDE, invocation, environment).stdout, MARKETPLACE
         )
+        gone_checkout_present_at_run = gone.exists()
         result = _run_persistent_recipe(checkout, invocation, environment)
         records_after = claude_install_records(
             _run_listing(Agent.CLAUDE, invocation, environment).stdout, MARKETPLACE
@@ -3109,6 +3118,7 @@ def observe_real_record_refresh() -> RealRecordRefreshObservation:
         other_activation_after=other_activation_after,
         seeded_record=seeded_record,
         gone_checkout=gone,
+        gone_checkout_present_at_run=gone_checkout_present_at_run,
         report=cast("dict[str, object]", json.loads(result.stdout))
         if result.returncode == 0
         else {},
