@@ -2,6 +2,81 @@
 
 Known follow-ups for the gate node. Coordination note; not spec truth.
 
+## Two readings of the no-harness-sets-a-switch rule stand side by side
+
+`spx/15-validation.enabler/65-gate.enabler/21-selected-gate.enabler/15-live-discovery.pdr.md`
+states without qualification: `NEVER: a harness, a skill, a generated instruction surface, or the
+CI workflow sets a disable switch — explicit full verification and CI require the successful
+execution of every selected live row with their own credential.`
+
+`declared_skip_recording` in `outcomeeng_testing/harnesses/gate.py` sets both switches in the
+environment of a pytest child it spawns, over four rows it generates itself, so the recorder the
+gate registers writes the records a real gate step would leave. Two readings of the NEVER apply to
+that write:
+
+- **Literal reading.** The rule admits no exception, so a harness that sets a switch in any
+  environment violates it, and the evidence for the declared-skip summary must be produced some
+  other way.
+- **Scoped reading.** The rule was written about this repository's own selected live rows — the
+  proof a switch must not be allowed to suppress. A disposable child over generated rows reaches no
+  such row, so the write is outside the rule's subject.
+
+**Reading in force.** The scoped reading, while the amendment below is pending.
+
+**Enforced by.** `confined_to` in `outcomeeng_testing/harnesses/gate.py` refuses before the child
+starts unless the report target and the child's working directory lie in the disposable root that
+run created, raising `UnconfinedDisposableState` with the offending path. The confinement is
+enforced in code rather than asserted in prose, and both branches are driven from this node's
+linked evidence in `spx/15-validation.enabler/65-gate.enabler/tests/test_gate.compliance.l1.py`: a
+confined run that proceeds, and an unconfined target that is refused.
+
+**Settlement condition.** The reading in force is product truth and belongs in the PDR, which only
+the operator amends — carrying both readings above and the evidence that the write reaches no
+selected live row of this repository. A ruling for the literal reading repairs the harness rather
+than the evidence built on it: the write moves out of the harness, and the declared-skip evidence
+keeps its assertions.
+
+**Evidence.** The rule text quoted above against the `env=` mapping `declared_skip_recording`
+passes to its child.
+
+## The no-polling rule's subject was read as the whole validation package
+
+The implementation audit under run token `2026-09-22_03-49-57-231-897034592bcc` raised a third
+blocking finding: that the no-polling rule must scan every module of the `outcomeeng/validation`
+package, `selected_gate.py` among them, and that a subject narrower than the package leaves modules
+unscanned.
+
+The premise does not hold. `spx/15-validation.enabler/21-subprocess-execution.adr.md` enumerates the
+gate orchestrator as exactly `_engine.py`, `_model.py`, `_spawner.py`, `_steps.py`, `__init__.py`,
+and `__main__.py`, and the assertion the rule backs, in
+`spx/15-validation.enabler/65-gate.enabler/gate.md`, takes the orchestrator source as its subject:
+
+> NEVER: the orchestrator source contains a literal `gh run watch` invocation or a `while True:`
+> loop containing `time.sleep` — unbounded polling waits are forbidden across the marketplace per
+> `spx/13-plugin-and-runtime-conventions.adr.md` ([test](tests/test_gate.compliance.l1.py))
+
+Widening the subject to the package would pull
+`selected_gate.py`, whose behavior the child node
+`spx/15-validation.enabler/65-gate.enabler/21-selected-gate.enabler` declares, under the parent
+node's assertion. The finding is wrong on its premise, not merely unbacked or unfiled.
+
+The defect the same round did carry was in the predicate rather than in the subject:
+`_imports_the_declaration` in `outcomeeng/validation/agent_switch_enforcement.py` recognised two of
+the five import forms that bind `outcomeeng/validation/agent_disable.py`, missing
+`from outcomeeng.validation import agent_disable`, `from . import agent_disable`, and
+`from .agent_disable import codex_disabled_reason` — the first of which is the form the rule's own
+module uses to reach the declaration.
+
+**Settlement condition.** None; the subject stays at the decision's enumeration, and
+`ORCHESTRATOR_MODULE_NAMES` in `outcomeeng/validation/__init__.py` publishes it so a rule reads the
+enumeration rather than a naming pattern. A later auditor raising the wider subject reads this entry
+first; a change of subject is an amendment to
+`spx/15-validation.enabler/21-subprocess-execution.adr.md`.
+
+**Evidence.** The five import forms driven against `modules_reading_the_switch_predicate`, two
+reported and three missed; and the decision's six-file enumeration against the finding's expected
+package-wide subject.
+
 ## The signal harness owns the predicates its linked tests should own
 
 `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`
