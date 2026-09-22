@@ -13,6 +13,7 @@ import pytest
 from outcomeeng.validation._spawner import _restore_child_signal_mask
 from outcomeeng.validation.polling_enforcement import (
     SLEEP_ATTRIBUTE,
+    SLEEP_MODULE,
     WATCH_INVOCATION,
     unbounded_polling_sites,
 )
@@ -62,8 +63,8 @@ from outcomeeng.validation import (
     test_recipe as build_test_recipe,
     timing_row_values,
 )
-from outcomeeng.validation.agent_disable import (
-    AGENT_SWITCHES,
+from outcomeeng.validation.agent_disable import AGENT_SWITCHES
+from outcomeeng.validation.skip_report import (
     SKIP_REPORT_SWITCH_FIELD,
     SKIP_REPORT_TEST_FIELD,
 )
@@ -213,6 +214,35 @@ def test_a_while_true_sleep_is_reported(tmp_path: Path) -> None:
     assert str(offender) in reported[0]
 
 
+def test_a_while_true_name_bound_sleep_is_reported(tmp_path: Path) -> None:
+    offender = tmp_path / "name_poller.py"
+    offender.write_text(
+        f"from {SLEEP_MODULE} import {SLEEP_ATTRIBUTE}\n\n\ndef run() -> None:\n"
+        f"    while True:\n        {SLEEP_ATTRIBUTE}(1)\n",
+        encoding="utf-8",
+    )
+
+    reported = unbounded_polling_sites((offender,))
+
+    assert len(reported) == 1
+    assert str(offender) in reported[0]
+
+
+def test_a_loop_calling_its_own_same_named_function_is_not_reported(
+    tmp_path: Path,
+) -> None:
+    conforming = tmp_path / "own_sleep.py"
+    conforming.write_text(
+        f"def {SLEEP_ATTRIBUTE}(count: int) -> int:\n    return count - 1\n\n\n"
+        f"def run(count: int) -> None:\n"
+        f"    while True:\n        count = {SLEEP_ATTRIBUTE}(count)\n"
+        f"        if count == 0:\n            return None\n",
+        encoding="utf-8",
+    )
+
+    assert unbounded_polling_sites((conforming,)) == ()
+
+
 def test_a_watch_invocation_is_reported(tmp_path: Path) -> None:
     offender = tmp_path / "watcher.py"
     offender.write_text(f'COMMAND = "{WATCH_INVOCATION}"\n', encoding="utf-8")
@@ -354,6 +384,22 @@ def test_a_real_child_records_each_declared_skip_with_its_own_switch() -> None:
         assert [sorted(record) for record in records] == [
             sorted((SKIP_REPORT_TEST_FIELD, SKIP_REPORT_SWITCH_FIELD))
         ] * len(recording.switch_rows)
+        assert {
+            (record[SKIP_REPORT_TEST_FIELD], record[SKIP_REPORT_SWITCH_FIELD])
+            for record in records
+        } == set(recording.switch_rows)
+        assert not [
+            record
+            for record in records
+            if record[SKIP_REPORT_TEST_FIELD] in recording.other_rows
+        ]
+
+
+def test_a_real_child_records_a_marker_bearing_row_with_its_own_switch() -> None:
+    with declared_skip_recording(through_markers=True) as recording:
+        records = [json.loads(line) for line in recording.recorded_lines]
+
+        assert recording.exit_code == SUCCESS_EXIT_CODE, recording.output
         assert {
             (record[SKIP_REPORT_TEST_FIELD], record[SKIP_REPORT_SWITCH_FIELD])
             for record in records

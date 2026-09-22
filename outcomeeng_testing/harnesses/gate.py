@@ -63,11 +63,13 @@ from outcomeeng.validation.agent_disable import (
     DISABLE_CLAUDE_ENV,
     DISABLE_CODEX_ENV,
     DISABLE_VALUE,
+    AgentDisableStates,
+    read_agent_disable_states,
+)
+from outcomeeng.validation.skip_report import (
     SKIP_REPORT_OPTION,
     SKIP_REPORT_SWITCH_FIELD,
     SKIP_REPORT_TEST_FIELD,
-    AgentDisableStates,
-    read_agent_disable_states,
 )
 from outcomeeng.validation.selected_gate import (
     COPIED_GIT_STATUS_PREFIX,
@@ -1301,6 +1303,42 @@ def {running_row}() -> None:
 '''
 """The rows the recording child collects, each reading its own agent's predicate."""
 
+DECLARED_SKIP_MARKER_MODULE_FORM = '''"""Generated rows carrying the production markers this repository ships."""
+
+import os
+import pathlib
+
+from outcomeeng_testing.harnesses.installation import (
+    runs_real_claude,
+    runs_real_codex,
+)
+
+pathlib.Path(os.environ["{directory_report_env}"]).write_text(
+    os.getcwd(), encoding="utf-8"
+)
+
+
+@runs_real_codex
+def {codex_row}() -> None:
+    return None
+
+
+@runs_real_claude
+def {claude_row}() -> None:
+    return None
+
+
+def {running_row}() -> None:
+    return None
+'''
+"""The rows the recording child collects through the markers the real rows carry.
+
+The rows carry no predicate call of their own: the markers decide the skip and
+the reason, exactly as a row that starts a real agent process does. The step
+from the marker's reason to an attributable record is what these rows drive, so
+a marker built without its declared reason leaves the recorder nothing to write.
+"""
+
 
 class UnconfinedDisposableState(RuntimeError):
     """A path this harness would write to or run in lies outside its own root."""
@@ -1371,7 +1409,7 @@ class DeclaredSkipRecording:
 
 @contextmanager
 def declared_skip_recording(
-    *, name_destination: bool = True
+    *, name_destination: bool = True, through_markers: bool = False
 ) -> Iterator[DeclaredSkipRecording]:
     """Run a real pytest child whose rows both switches declare optional.
 
@@ -1379,7 +1417,10 @@ def declared_skip_recording(
     switches, skips through pytest, and loads the recorder the gate registers, so
     the records read back are the ones a real gate step would leave. With
     `name_destination` false the child receives no destination option, which is
-    how every step outside a reporting run is spawned.
+    how every step outside a reporting run is spawned. With `through_markers`
+    true the generated rows carry the production markers instead of calling the
+    predicates themselves, so the child drives the same marker step a real
+    live row does.
 
     Both switches are set for the child alone, over rows this run generates in
     the disposable root it creates. `confined_to` refuses before the child
@@ -1406,7 +1447,14 @@ def declared_skip_recording(
             state_root, module, destination, directory_report, child_directory
         )
         module.write_text(
-            DECLARED_SKIP_MODULE_FORM.format(
+            DECLARED_SKIP_MARKER_MODULE_FORM.format(
+                codex_row=CODEX_ROW_NAME,
+                claude_row=CLAUDE_ROW_NAME,
+                running_row=RUNNING_ROW_NAME,
+                directory_report_env=CHILD_DIRECTORY_REPORT_ENV,
+            )
+            if through_markers
+            else DECLARED_SKIP_MODULE_FORM.format(
                 codex_row=CODEX_ROW_NAME,
                 claude_row=CLAUDE_ROW_NAME,
                 unrelated_row=UNRELATED_SKIP_ROW_NAME,
@@ -1478,6 +1526,10 @@ def declared_skip_recording(
             ),
             other_rows=tuple(
                 SKIPPED_ROW_ID_SHAPE.format(path=DECLARED_SKIP_MODULE_NAME, name=name)
-                for name in (UNRELATED_SKIP_ROW_NAME, RUNNING_ROW_NAME)
+                for name in (
+                    (RUNNING_ROW_NAME,)
+                    if through_markers
+                    else (UNRELATED_SKIP_ROW_NAME, RUNNING_ROW_NAME)
+                )
             ),
         )
