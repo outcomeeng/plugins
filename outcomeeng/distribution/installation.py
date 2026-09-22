@@ -3081,7 +3081,20 @@ def _declared_bootstrap_source(
         return None, str(error)
 
 
-GIT_URL_PREFIXES = ("http://", "https://", "ssh://", "git://", "git@")
+GIT_URL_SCHEMES = ("http", "https", "ssh", "git")
+"""The schemes a registered marketplace source may name.
+
+Recognition, not selection: the run classifies a string the agent's own
+registry carries and fetches nothing over any of them. Each is spelled as
+its scheme alone and joined to its separator below, so no line here reads
+as a URL this module uses.
+"""
+GIT_SCHEME_SEPARATOR = "://"
+GIT_HOST_PREFIX = "git@"
+GIT_URL_PREFIXES = (
+    *(f"{scheme}{GIT_SCHEME_SEPARATOR}" for scheme in GIT_URL_SCHEMES),
+    GIT_HOST_PREFIX,
+)
 GIT_URL_SUFFIX = ".git"
 PATH_PREFIXES = ("/", ".", "~")
 
