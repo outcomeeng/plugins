@@ -12,12 +12,14 @@ from the instruction-block template, preserve the same structured-question
 boundary for decisions that require operator direction.
 
 **Evidence**: the escalation assertion in
-`spx/43-coding-agents.enabler/32-officer-orchestration.enabler/officer-orchestration.md`
-and the `<imperfection_protocol>` and `<closing_protocol>` sections of the
-shipped `/understand` foundation, together with the generated root guide's
-`Operator questions` and `Autonomy Boundary` sections rendered from the
-instruction-block template, prescribe different handling for the same blocking
-decision.
+`spx/43-coding-agents.enabler/32-officer-orchestration.enabler/officer-orchestration.md`,
+realized by the standing delivery rule in
+`src/plugins/coding-agents/skills/orchestrate-officers/references/standing-rules.md`
+and the escalate workflow that performs it, and the `<imperfection_protocol>`
+and `<closing_protocol>` sections of the shipped `/understand` foundation,
+together with the generated root guide's `Operator questions` and `Autonomy
+Boundary` sections rendered from the instruction-block template, prescribe
+different handling for the same blocking decision.
 
 **Impact**: the product-specific officer contract cannot compose with the
 portable methodology foundation or generated router without an admitted
