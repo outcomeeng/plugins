@@ -5,6 +5,8 @@ description: >-
   or deciding which spec-tree nodes /apply should build next from an
   implementation plan. NEVER choose the next nodes by ad hoc selection — this
   skill scopes an existing plan to demonstrable value before /apply runs.
+argument-hint: "[implementation-plan-or-path]"
+allowed-tools: Read, Glob, Grep, Skill, AskUserQuestion
 ---
 
 <objective>
@@ -22,18 +24,20 @@ A slice is observable when its merged result can be shown to the operator as a c
 
 <workflow>
 
+The plan is `$ARGUMENTS` when the invocation carries one — an implementation plan inline or a path to one — and otherwise the plan the conversation already holds. When neither exists, report that no plan is available and stop; this skill scopes a plan rather than producing one.
+
 <step number="1" name="Load methodology" frequency="once per session">
-Invoke `/understand`. Skip when the `SPEC_TREE_FOUNDATION` marker is already present.
+Use skill `spec-tree:understand`.
 </step>
 
 <step number="2" name="Load tree context">
-Identify the candidate area the plan touches, then invoke `/contextualize` on the lowest common ancestor of the nodes the plan reaches. Load the existing nodes, their ancestry, and the governing decisions — the slice is selected from nodes that already exist, so their current specs and ordering constrain what a coherent increment can be.
+Identify the candidate area the plan touches. Then, for the lowest common ancestor of the nodes the plan reaches: Use skill `spec-tree:contextualize`. Load the existing nodes, their ancestry, and the governing decisions — the slice is selected from nodes that already exist, so their current specs and ordering constrain what a coherent increment can be.
 
-When the plan names no existing node — the work needs nodes that do not exist yet — stop and route to `/decompose` (to compose the structure) or `/author` (to create a node), then return. Slice selection operates over an existing tree.
+When the plan names no existing node — the work needs nodes that do not exist yet — stop and route to the owning skill — Use skill `spec-tree:decompose`. to compose the structure, or Use skill `spec-tree:author`. to create a node — then return. Slice selection operates over an existing tree.
 </step>
 
 <step number="3" name="Select the slice with the operator">
-Invoke `/interview` to decide the slice. Reason to a recommendation first: the smallest coherent node set whose merged result demonstrates business and user value. Ask the operator only what the plan, the specs, and the loaded context do not settle — the value the next increment should demonstrate, and which of several coherent slices to take first.
+Use skill `spec-tree:interview`. Decide the slice with it. Reason to a recommendation first: the smallest coherent node set whose merged result demonstrates business and user value. Ask the operator only what the plan, the specs, and the loaded context do not settle — the value the next increment should demonstrate, and which of several coherent slices to take first.
 
 Confirm with the operator:
 
@@ -61,7 +65,7 @@ Confirm that delivering the slice makes one real invocation more useful and insp
 </step>
 
 <step number="6" name="Hand off to apply">
-Hand the selected slice's node set to `/apply` as its work queue. `/apply` runs the per-node TDD flow over each node in ascending index order, then carries the changeset through `/merge`.
+Return the selected slice's node set to the caller as its work queue, in ascending index order. `/apply` consumes that queue, running the per-node apply flow over each node and carrying the changeset through `/merge`. This step returns the node set and never invokes the apply lifecycle — `/apply` reaches slice selection through its own Step 0, so invoking it here would re-enter that step and run the queue twice.
 </step>
 
 </workflow>
@@ -72,17 +76,18 @@ Hand the selected slice's node set to `/apply` as its work queue. `/apply` runs 
 - NEVER express a slice as a list of files — express it as a path through existing nodes, addressable by full path from the product's `spx/` root.
 - NEVER scope a slice to a stopping point that demonstrates no value — the slice boundary is the value boundary.
 - NEVER over-specify later slices — specify them only where they constrain the current slice's architecture, interfaces, or constraints.
-- ALWAYS decide the slice with the operator — slice selection is an operator decision the preflight surfaces, not a unilateral pick.
+- ALWAYS decide the slice with the operator — slice selection is an operator decision step 3 surfaces through the interview, not a unilateral pick.
 
 </constraints>
 
 <success_criteria>
 
-- [ ] The slice's demonstrable business and user value is stated and confirmed with the operator
-- [ ] The slice names its actor, invocation, inputs, behavior, externalized result, inspection surface, failure behavior, and verification
-- [ ] Every dependency is justified by the observable path
-- [ ] The slice is expressed as an ordered node set of full paths, not a file list
-- [ ] Later slices are specified only where they constrain the current slice's architecture, interfaces, or constraints
-- [ ] No durable tree structure was created, split, re-scoped, or reindexed — any such need was routed to `/decompose` or `/author`
+- [ ] Every path in the handed-off node set resolves to an existing node directory, and the set is in ascending index order
+- [ ] The demonstrable-value statement names the actor, the invocation, and the inspection surface on which the operator sees it work
+- [ ] The slice states its input shape, product behavior, persisted or externalized result, first useful failure behavior, and verification gates
+- [ ] Every dependency in the set is reached by the observable path
+- [ ] The set contains node paths from the product's `spx/` root and no file path
+- [ ] A later slice appears only where it constrains the current slice's architecture, interfaces, or constraints
+- [ ] The tree carries no node this selection created, split, re-scoped, or reindexed
 
 </success_criteria>

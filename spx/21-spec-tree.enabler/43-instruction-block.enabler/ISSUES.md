@@ -139,3 +139,13 @@ instruction-block node leaves pinned router prose's verification form unstated.
 verification form for pinned router prose, the drift-gate claim states its rule
 atemporally, and the removal-mutation test is settled under the same condition as
 the five prose-coupling assertions.
+
+## The router template routes a retired flow name to /apply
+
+`src/plugins/spec-tree/skills/update-instruction-block/templates/instruction-block.md` maps the user phrase "Start the TDD flow" to `/apply` in its skill-routing table. The node that flow names, `spx/21-spec-tree.enabler/65-apply.enabler/54-node-flow.enabler`, declares the per-node apply flow composing an authoring, deterministic-verification, and artifact-audit lane for every Output kind present, and only its Code lane carries a test-before-implementation sequence. The template renders the managed router block into every consumer repository's root `CLAUDE.md` and `AGENTS.md`, so the retired term reaches every consumer session that reads its router.
+
+**Evidence.** Raised as a consistency finding by review run `2026-09-22_02-38-19-474-b3b4be548528` against the changeset that retired the name.
+
+**Settlement condition**: the routing table's trigger phrase names the apply flow, and the regenerated router blocks in both root instruction files carry that phrase.
+
+**Why separate**: the template belongs to this node rather than to the apply subtree whose changeset retired the name, and editing it regenerates both root instruction files, which are governance surfaces.

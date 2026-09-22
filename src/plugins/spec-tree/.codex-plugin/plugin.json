@@ -1,7 +1,7 @@
 {
   "name": "spec-tree",
-  "version": "0.98.4",
-  "description": "Spec Tree: git-native product structure for Outcome Engineering, with commit workflow, Change coordination, and TDD flows driven by specs",
+  "version": "0.99.0",
+  "description": "Spec Tree: git-native product structure for Outcome Engineering, with commit workflow, Change coordination, and apply flows driven by specs",
   "author": {
     "name": "Simon Heimlicher",
     "url": "https://github.com/outcomeeng"

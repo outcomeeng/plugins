@@ -177,3 +177,13 @@ Harness modules under `outcomeeng_testing/harnesses/` and a generator under `out
 **Resolution shape.** Decide where the guard lives: a Verifier-mode context load that reads the committed subject without `/sync-base`, or a `/sync-base` result that reports behind-base without moving the checkout when the caller is a Verifier. Amend the audit skills that load context to select it, so the dispatch-readiness record's clean committed head stays the audited head.
 
 **Why separate.** The fix amends the context-loading, base-sync, and audit skills, none of which the host-readiness changeset touches.
+
+## The product spec names the apply flow by its retired name
+
+`spx/outcomeeng.product.md` lists "TDD flow orchestration (`/apply`) with language-specific delegation" among the product's included scope. The node that flow names, `spx/21-spec-tree.enabler/65-apply.enabler/54-node-flow.enabler`, declares the per-node apply flow composing an authoring, deterministic-verification, and artifact-audit lane for every Output kind present, and only its Code lane carries a test-before-implementation sequence. A skill-only or spec-only slice runs no TDD sequence at all, so the product line describes a flow the declaration no longer provides.
+
+**Evidence.** Raised as a consistency finding by review run `2026-09-22_00-01-42-556-7c7bb37033f0`, and the incomplete retirement re-raised by run `2026-09-22_02-38-19-474-b3b4be548528`. The changeset that surfaced it corrected the sites inside the apply subtree and the two spec-tree plugin manifests. Seven sites naming the flow remain outside it: this one; the managed router template, recorded at `spx/21-spec-tree.enabler/43-instruction-block.enabler/ISSUES.md`; `README.md` line 115, which is authored prose outside the generated catalog extent `spx/local/generated-sources.toml` declares; and `docs/tutorial.md` lines 155, 157, 245, and 257. `TDD` as a general practice term stands correctly elsewhere — the TDD-red opener in the merge policy and the TypeScript code lane's TDD phases are not this class.
+
+**Settlement condition**: the product spec's scope line names the composed per-node apply flow rather than a TDD flow.
+
+**Why separate**: the line sits in the product root spec, outside the apply subtree the changeset that surfaced it governs.

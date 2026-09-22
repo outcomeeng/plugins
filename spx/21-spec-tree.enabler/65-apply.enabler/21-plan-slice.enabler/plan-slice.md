@@ -1,8 +1,8 @@
 # Plan Slice
 
 PROVIDES selection of the next executable observable slice from an implementation plan — a coherent set of changesets, spanning one or more merges, that delivers demonstrable business and user value
-SO THAT the per-node TDD flow (`spx/21-spec-tree.enabler/65-apply.enabler/54-node-flow.enabler`)
-CAN run against a work queue scoped to a value-bearing increment rather than an ad hoc node selection
+SO THAT all implementation agents
+CAN run the per-node apply flow against a work queue scoped to a value-bearing increment rather than an ad hoc node selection
 
 ## Assertions
 
@@ -13,5 +13,5 @@ CAN run against a work queue scoped to a value-bearing increment rather than an 
 - ALWAYS: scope the slice to an observable increment — a coherent set of changesets, across one or more `/merge` cycles, whose delivered business and user value the operator can be shown; the slice boundary is the value boundary, not a convenient stopping point ([audit])
 - ALWAYS: fully specify the next executable slice through its actor, invocation, inputs, behavior, persisted or externalized result, inspection surface, first useful failure behavior, and verification gates; specify later slices only where they constrain the current slice's architecture, interfaces, or constraints ([audit])
 - ALWAYS: tie every included dependency to the observable path and reject a dependency-ordered infrastructure list that makes no real invocation more useful or inspectable ([audit])
-- ALWAYS: hand the selected slice's node set to the per-node TDD flow as its work queue — slice selection feeds `spx/21-spec-tree.enabler/65-apply.enabler/54-node-flow.enabler`, which runs each node in ascending index order ([audit])
+- ALWAYS: hand the selected slice's node set to the per-node apply flow as its work queue — slice selection feeds `spx/21-spec-tree.enabler/65-apply.enabler/54-node-flow.enabler`, which runs each node in ascending index order ([audit])
 - NEVER: create, split, re-scope, or reindex durable tree structure during slice selection — node boundaries, ordering evidence, and indices belong to `/decompose`; `/slice` selects an execution path across nodes that already exist ([audit])
