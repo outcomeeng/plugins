@@ -98,6 +98,10 @@ CLAUDE_DIRECTORY_FIELD = "path"
 CLAUDE_GITHUB_SOURCE_TYPE = "github"
 CLAUDE_DIRECTORY_SOURCE_TYPE = "directory"
 CLAUDE_GIT_SOURCE_TYPE = "git"
+CLAUDE_SOURCE_TYPES: frozenset[str] = frozenset(
+    {CLAUDE_GITHUB_SOURCE_TYPE, CLAUDE_DIRECTORY_SOURCE_TYPE, CLAUDE_GIT_SOURCE_TYPE}
+)
+"""The source types a Claude Code marketplace entry names for itself."""
 CLAUDE_URL_FIELD = "url"
 CODEX_MARKETPLACES_FIELD = "marketplaces"
 CODEX_MARKETPLACE_NAME_FIELD = "name"
@@ -1300,7 +1304,11 @@ def build_persistent_installation_plan(
         needed=claude_registered is None or codex_registered is None,
     )
     claude_source = (
-        declared_source if claude_registered is None else claude_registered.source
+        claude_registered.source
+        if claude_registered is not None
+        else None
+        if declared_source is None
+        else declared_source.source
     )
     codex_bootstrap_source = (
         None if declared_source is None else codex_source_form(declared_source)
@@ -1406,7 +1414,9 @@ def build_persistent_installation_plan(
         ),
         claude_source=claude_source,
         claude_catalog=preflight.claude_plugins,
-        claude_bootstrap_source=declared_source,
+        claude_bootstrap_source=(
+            None if declared_source is None else declared_source.source
+        ),
         codex_bootstrap_source=codex_bootstrap_source,
     )
     first_install = _first_install_warnings(
@@ -3028,35 +3038,68 @@ def invocation_settings_error(checkout: Path) -> str | None:
     return None
 
 
-def declared_claude_source(checkout: Path, marketplace: str) -> str:
+@dataclass(frozen=True)
+class DeclaredSource:
+    """One marketplace source a checkout declares, with the type it declared it as.
+
+    The settings entry names its own type, so the type travels with the value
+    rather than being inferred back from it: the rendered value alone is
+    ambiguous, and a relative directory path reads as an `owner/repo`
+    shorthand under any grammar that has to guess.
+    """
+
+    source_type: str
+    source: str
+
+
+def declared_claude_marketplace(checkout: Path, marketplace: str) -> DeclaredSource:
     """The marketplace source the invocation checkout's own settings declare.
 
     Read in Claude Code's precedence order, local before project; the first
     declaration decides. Bootstrap registers this source, so a checkout that
-    declares none cannot bootstrap.
+    declares none cannot bootstrap. The entry's own type field is the declared
+    type; an entry that names no recognised type falls to the grammar, which
+    is the only case where the type has to be read from the value.
     """
     for relative in CLAUDE_SETTINGS_PRECEDENCE:
         entry = _marketplace_entry(_settings_document(checkout / relative), marketplace)
         if isinstance(entry, dict):
             source = entry.get(CLAUDE_SOURCE_FIELD)
             if isinstance(source, dict):
-                return render_claude_source(source)
+                rendered = render_claude_source(source)
+                declared = source.get(CLAUDE_SOURCE_FIELD)
+                return DeclaredSource(
+                    source_type=(
+                        declared
+                        if declared in CLAUDE_SOURCE_TYPES
+                        else claude_source_type(rendered)
+                    ),
+                    source=rendered,
+                )
     raise ValueError(f"{UNDECLARED_SOURCE_DIAGNOSTIC}: {checkout}")
 
 
-def codex_source_form(source: str) -> str:
+def declared_claude_source(checkout: Path, marketplace: str) -> str:
+    """The rendered `marketplace add` argument the invocation checkout declares."""
+    return declared_claude_marketplace(checkout, marketplace).source
+
+
+def codex_source_form(declared: DeclaredSource) -> str:
     """The Codex spelling of one Claude Code marketplace source.
 
-    A GitHub `owner/repo` becomes its HTTPS URL; a directory or git URL is used as is.
+    A GitHub `owner/repo` becomes its HTTPS URL; a directory or git URL is used
+    as is. The conversion reads the declared type rather than the value's
+    shape, so a declared directory whose path contains a separator stays a
+    directory instead of becoming a repository the checkout never named.
     """
-    if claude_source_type(source) == CLAUDE_GITHUB_SOURCE_TYPE:
-        return f"https://github.com/{source}"
-    return source
+    if declared.source_type == CLAUDE_GITHUB_SOURCE_TYPE:
+        return f"https://github.com/{declared.source}"
+    return declared.source
 
 
 def declared_codex_source(checkout: Path, marketplace: str) -> str:
     """The Codex form of the source the invocation checkout declares for Claude Code."""
-    return codex_source_form(declared_claude_source(checkout, marketplace))
+    return codex_source_form(declared_claude_marketplace(checkout, marketplace))
 
 
 def _declared_bootstrap_source(
@@ -3064,7 +3107,7 @@ def _declared_bootstrap_source(
     marketplace: str,
     *,
     needed: bool,
-) -> tuple[str | None, str | None]:
+) -> tuple[DeclaredSource | None, str | None]:
     """The source a bootstrap registration would use, or the diagnostic withholding it.
 
     The invocation checkout's settings are a bootstrap input alone. A document
@@ -3076,7 +3119,7 @@ def _declared_bootstrap_source(
     if not needed:
         return None, None
     try:
-        return declared_claude_source(checkout, marketplace), None
+        return declared_claude_marketplace(checkout, marketplace), None
     except ValueError as error:
         return None, str(error)
 
@@ -3714,6 +3757,8 @@ __all__ = [
     "codex_list_command",
     "codex_registered_marketplace",
     "declared_claude_source",
+    "declared_claude_marketplace",
+    "DeclaredSource",
     "declared_codex_source",
     "codex_source_form",
     "marketplace_target",
@@ -3749,6 +3794,7 @@ __all__ = [
     "CLAUDE_DIRECTORY_FIELD",
     "CLAUDE_DIRECTORY_SOURCE_TYPE",
     "CLAUDE_GIT_SOURCE_TYPE",
+    "CLAUDE_SOURCE_TYPES",
     "CLAUDE_URL_FIELD",
     "CLAUDE_GITHUB_SOURCE_TYPE",
     "CLAUDE_PLUGIN_ENABLED_FIELD",
