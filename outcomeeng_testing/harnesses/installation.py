@@ -669,8 +669,8 @@ class RecordingRunner:
     unpublished: frozenset[str] = frozenset()
     """Plugins whose plugin operations fail with the captured unpublished wording.
 
-    Stage 5 Failure simulation: a canonical marketplace lacks a plugin only
-    while it is unpublished, a state that cannot be produced on demand.
+    Stage 5 Failure simulation: a registered marketplace source lacks a plugin
+    only while it is unpublished, a state that cannot be produced on demand.
     """
     closing_listing: str | None = None
     """The Claude listing returned after execution; None repeats the inventory listing.
@@ -3233,12 +3233,12 @@ def observe_real_installation() -> RealInstallationObservation:
             persistent_mirror,
             selected_environment,
         )
-        # The seed installs from the canonical marketplace, so it can seed only
-        # the plugins that marketplace publishes. A checkout plugin the
-        # marketplace has not published can never be installed state, so the
+        # The seed installs from the registered marketplace source, so it can
+        # seed only the plugins that source publishes. A checkout plugin the
+        # source has not published can never be installed state, so the
         # persistent run never selects it; the pending-publication carve-out is
         # exercised by the l1 scenario evidence with simulated agent output.
-        published = canonical_catalog_plugin_names()
+        published = published_catalog_plugin_names()
         persistent_subsets = {
             agent: subset & published
             for agent, subset in generated_agent_subsets(
@@ -4023,7 +4023,7 @@ def _shipped_agent_snapshot(checkout: Path) -> tuple[tuple[str, bytes], ...]:
 
 
 # Transcribed verbatim from each real agent CLI's install failure against a
-# canonical marketplace that had not published the named plugin; independent of
+# registered marketplace source that had not published the named plugin; independent of
 # the production fragment constant so a drifted constant fails the linked tests.
 _CAPTURED_UNPUBLISHED_PLUGIN_STDERR: Mapping[Agent, str] = {
     Agent.CLAUDE: (
@@ -4098,7 +4098,7 @@ __all__ = [
     "UnpublishedPluginObservation",
     "UnpublishedPluginRunner",
     "VerificationRecipeObservation",
-    "canonical_catalog_plugin_names",
+    "published_catalog_plugin_names",
     "committed_catalog_plugin_names",
     "observe_agent_home_collision",
     "observe_interrupted_reconciliation",
@@ -4358,8 +4358,8 @@ def observe_designated_failure(
     )
 
 
-def canonical_catalog_plugin_names() -> frozenset[str]:
-    """Plugins the canonical marketplace publishes, read from the base ref.
+def published_catalog_plugin_names() -> frozenset[str]:
+    """Plugins the registered marketplace source publishes, read from the base ref.
 
     An independent oracle: the published branch's own committed catalogs, read
     through git rather than through the installation run whose classification is

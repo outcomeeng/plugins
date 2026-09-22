@@ -2535,8 +2535,8 @@ def _is_pending_publication(
 ) -> bool:
     """Whether a failed plugin operation names a plugin the source has not published.
 
-    A persistent run installs from the canonical marketplace, so a checkout whose
-    committed catalog is ahead of that marketplace declares plugins it cannot yet
+    A persistent run installs from the registered marketplace source, so a checkout
+    whose committed catalog is ahead of that source declares plugins it cannot yet
     install — every changeset that adds a plugin is in exactly that state until it
     merges. That is the checkout leading its published source, not a failure.
 
