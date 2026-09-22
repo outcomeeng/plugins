@@ -18,6 +18,33 @@ The mapping assertion's identifier and disposable-state-root derivation is unfal
 
 **Evidence**: test-evidence audit findings `f-001` and `f-002` against `06b86db6b31704c58203929603bb2f2ceea237cb`, `f-001` through `f-004` against `3e1ba91c9ec059d96dcd2007a2fe371681599df2`, `f-001` through `f-003` against `548f8cc7b598a30969b0e68c243acb17d387f1ef`, `f-001` through `f-003` against `d84b4d2cb433059d995e6271d33551e30deb306d`, `f-001` through `f-005` with `f-008` against `f689b9b25cdd37f5e57545d313f30d29ad9cbd35`, `f-001` through `f-007` against `be286e7e32cdfbb0cc782f6175ed0f274e428e8d`, `f-001` through `f-005` against `b9ee9c2ca56d3341f03ea81abb1ec2f4cd8df57b`, `f-005` through `f-009` against `ef8b057ab649bc3da5c642cc4a18fc6745023718`, `f-003` through `f-008` against `841e864a9759eae04c8988c2931aa44b1ca21c74`, `f-001` through `f-006` against `f011edcdd33c0fdec41d8ccfbcdfe1393fc6b35a`, and `f-001` through `f-006` with `f-008` against `c3b42a5514452b1b71e01c77467e7e45abfad048`, the last seven rounds naming the execution-level mismatch and the last five naming the environment literals; the unfalsified row identifier and state root reached a finding of its own in the last round; the cited test and harness files lie outside every changeset's diff.
 
+## The profile isolation filter strips an ambient marker no module declares
+
+`_isolated_environment` in `outcomeeng_testing/harnesses/native_profile_execution.py`
+removes the ambient overrides a profile probe must not inherit. Two of the three
+names it strips come from imported constant sets their owning module publishes;
+the third is the inline literal `CLAUDECODE`, which no module under `outcomeeng/`
+declares. The harness therefore holds one name of the isolation policy that has
+no source contract, so a change to that marker in production reaches no importer
+and the filter keeps stripping a name the product no longer uses, or stops
+stripping one it does.
+
+This is not the class the native-profile entry above records. That entry covers
+evidence restating vocabulary the owning modules hold, whose remedy is to import
+from the owner; here there is no owner to import from and the remedy is to
+publish the name first.
+
+**Resolution shape**: publish the ambient marker from the module that owns the
+isolation policy, beside the constant sets the filter already imports, and have
+`_isolated_environment` import it.
+
+**Settlement condition**: the marker is published from an owning module and the
+filter imports it rather than spelling it.
+
+**Evidence**: test-evidence audit finding `f-010` (INFO) against `c2f6d8e1c3bc87f24d775fcbc62451b9c2ff6322`. The cited
+harness lies outside that changeset's diff, and the remedy publishes a constant
+from a production module the changeset's Frame does not name.
+
 ## Pending plugins' prior owned definitions have no reconciliation evidence
 
 The reconciliation assertion states that a pending plugin's prior owned definitions are preserved, and both `spx/12-marketplace-state.adr.md` and `21-installation-architecture.adr.md` require it, but no harness case combines a pending-publication plugin with agent-home reconciliation: `observe_agent_home_reconciliation` builds both preflights from a changed catalog with every plugin published. The clause therefore reaches no predicate, and the same observer retires one agent source rather than dropping a plugin from the home selection, so the clause that prunes owned definitions of plugins outside the catalog-bounded selection is likewise never driven. The plan builder also composes the agent-home plan before any command runs, so a plugin that turns out pending during execution still has its checkout definitions in the desired set; whether the applied plan copies definitions for unavailable skill content, against the decision, is undetermined until the scenario exists.
