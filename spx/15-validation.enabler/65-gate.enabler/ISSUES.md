@@ -238,6 +238,52 @@ prose rather than behavior, so no evidence changes with it.
 **Evidence**: the gate node's test-evidence audit recorded it as finding `f-008`, INFO,
 against the stale-evidence-reference rule.
 
+## The gate cannot tell a package's declared dependencies from this host's installed ones
+
+`pyproject.toml` declares two runtime dependencies for this product, `click` and `jinja2`,
+and carries pytest in the `dev` dependency group alone. Five justfile recipes — `test`,
+`test-v`, `validation`, `check`, and `check-full` — start the orchestrator as
+`python3 -m outcomeeng.validation` under the bare interpreter. A module of that package
+importing pytest at module scope therefore breaks the orchestrator for any environment
+whose interpreter does not happen to carry pytest, and every deterministic lane on this
+host reports success, because this host has pytest installed.
+
+The gate's one dependency reading is the `preflight-uv-import` step, whose argv is
+`uv run python -c "import outcomeeng"`. It imports the top-level package under the
+development environment, so it reaches neither `outcomeeng.validation` nor the interpreter
+the five recipes use. Between the two, nothing the gate runs distinguishes a package that
+imports its declared dependencies from one that imports whatever this machine happens to
+have.
+
+**How it surfaced.** Relocating the skip-report recorder into `outcomeeng/validation/`
+brought `import pytest` to module scope in a module `__init__.py`, `_engine.py`, and
+`_summary_schema.py` all import. The full gate passed. The repair is a `TYPE_CHECKING`
+guard, proven by mutation: with the import at module scope, importing
+`outcomeeng.validation` under a meta-path finder that refuses pytest raises
+`ImportError`; under the guard it imports, because `from __future__ import annotations`
+leaves all three uses — `pytest.TestReport`, `pytest.Parser`, `pytest.Config` — as strings.
+What the mutation also shows is that no gate step observes the difference.
+
+**Resolution shape**: give the gate a step that imports the orchestrator package under the
+declared runtime dependencies alone and nothing else — the interpreter the five recipes
+use, with the dev group absent — so an undeclared import fails the gate on the host that
+introduced it. The step list is enumerated by a compliance assertion in
+`spx/15-validation.enabler/65-gate.enabler/gate.md`, so the new step is declared there
+beside the others.
+
+**Why separate**: adding a gate step and naming it in the node's step-list assertion is an
+authoring pass over this node's assertions, not a repair of the misplaced import; and the
+step needs a dependency-only environment this repository's recipes do not currently build.
+
+**Settlement condition**: a gate step imports `outcomeeng.validation` under the declared
+runtime dependencies alone, the step-list assertion in `gate.md` names it, and a case
+establishes that an undeclared module-scope import fails it.
+
+**Evidence**: the repaired import at `outcomeeng/validation/skip_report.py` against
+`pyproject.toml`'s `[project] dependencies` and its `dev` group; the five recipe lines in
+`justfile`; the `preflight-uv-import` argv in `outcomeeng/validation/_steps.py`; and a full
+gate that exited 0 over the module-scope import.
+
 ## The skip-report channel's split home is closed
 
 `outcomeeng/validation/skip_report.py` states the skip-report channel as its subject and declares the option, its configuration name, the two record fields, the report file's prefix and suffix, the recorded row's status, the printed line form, and the recorder that writes the records. Both ends read every name from it, and the repository's pytest configuration registers the plugin from there.
