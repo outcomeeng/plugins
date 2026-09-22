@@ -84,7 +84,6 @@ STEP_STATUS_LINE_FORM: Final = STEP_STATUS_PREFIX_FORM + "  {elapsed}s"
 """One step's status line: the prefix followed by its elapsed seconds."""
 STEP_FAILURE_LINE_FORM: Final = STEP_STATUS_LINE_FORM + "  exit {exit_code}"
 """A failing step's line: the status line followed by the child's exit code."""
-"""One declared skip's line: the skipped status, the row, and its switch."""
 _TIMING_ROW_VALUE: Final = re.compile(r"(\d+)s$", re.MULTILINE)
 """The engine's one reading of a row's value, applied inside the timing block.
 
