@@ -171,32 +171,45 @@ def single_step_recipe(name: str) -> Recipe:
     )
 
 
+class SummaryShapeError(RuntimeError):
+    """A summary the harness reads does not carry the shape it reads it as."""
+
+    def __init__(self, what: str, value: object) -> None:
+        super().__init__(f"summary {what} is {type(value).__name__}")
+        self.what = what
+        self.value = value
+
+
 def read_summary(path: Path) -> dict[str, object]:
     """Read a validation summary JSON object."""
 
     data = json.loads(path.read_text(encoding="utf-8"))
-    assert isinstance(data, dict)
+    if not isinstance(data, dict):
+        raise SummaryShapeError("document", data)
     return cast("dict[str, object]", data)
+
+
+def _object_rows(rows: object, what: str) -> list[dict[str, object]]:
+    """Read one summary list of objects, or refuse the shape by name."""
+
+    if not isinstance(rows, list):
+        raise SummaryShapeError(what, rows)
+    for row in rows:
+        if not isinstance(row, dict):
+            raise SummaryShapeError(f"{what} entry", row)
+    return cast("list[dict[str, object]]", rows)
 
 
 def summary_steps(summary: dict[str, object]) -> list[dict[str, object]]:
     """Return typed step summaries."""
 
-    steps = summary[SUMMARY_KEY_STEPS]
-    assert isinstance(steps, list)
-    for step in steps:
-        assert isinstance(step, dict)
-    return cast("list[dict[str, object]]", steps)
+    return _object_rows(summary[SUMMARY_KEY_STEPS], SUMMARY_KEY_STEPS)
 
 
 def summary_recipes(summary: dict[str, object]) -> list[dict[str, object]]:
     """Return typed recipe summaries."""
 
-    recipes = summary[SUMMARY_KEY_RECIPES]
-    assert isinstance(recipes, list)
-    for recipe in recipes:
-        assert isinstance(recipe, dict)
-    return cast("list[dict[str, object]]", recipes)
+    return _object_rows(summary[SUMMARY_KEY_RECIPES], SUMMARY_KEY_RECIPES)
 
 
 def switches_declaring_nothing() -> AgentDisableStates:
