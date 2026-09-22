@@ -4,6 +4,7 @@ from decimal import Decimal
 from typing import cast
 
 from outcomeeng_testing.harnesses.officer_orchestration import (
+    derivation_document,
     derive,
     event_record,
     load_ledger_module,
@@ -16,12 +17,13 @@ def test_entrypoint_returns_the_minimum_versioned_ledger() -> None:
     source = load_ledger_module()
     observation = run_ledger(
         [source.DERIVE_OPERATION],
-        {
-            source.SCHEMA_VERSION_FIELD: source.SCHEMA_VERSION,
-            source.CHANGE_FIELD: "owner/changes#123",
-            source.MAIL_RECORDS_FIELD: [],
-            source.JOURNAL_RUNS_FIELD: [],
-        },
+        derivation_document(
+            source,
+            "owner/changes#123",
+            [],
+            [],
+            schema_version=source.SCHEMA_VERSION,
+        ),
     )
     result = observation.result
     ledger = cast(dict[str, object], result[source.LEDGER_FIELD])
@@ -147,12 +149,7 @@ def test_entrypoint_rejects_schema_version_two() -> None:
     source = load_ledger_module()
     observation = run_ledger(
         [source.DERIVE_OPERATION],
-        {
-            source.SCHEMA_VERSION_FIELD: 2,
-            source.CHANGE_FIELD: "owner/changes#123",
-            source.MAIL_RECORDS_FIELD: [],
-            source.JOURNAL_RUNS_FIELD: [],
-        },
+        derivation_document(source, "owner/changes#123", [], [], schema_version=2),
     )
     detail = cast(str, observation.result[source.DETAIL_FIELD])
 

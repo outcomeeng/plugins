@@ -216,10 +216,17 @@ def derivation_document(
     change: str,
     mail_records: Sequence[Mapping[str, object]],
     journal_runs: Sequence[Mapping[str, object]],
+    *,
+    schema_version: object,
 ) -> dict[str, object]:
-    """The versioned input document the derivation entry point accepts."""
+    """The versioned input document the derivation entry point accepts.
+
+    The schema version carries no default, so a case declaring an unsupported
+    version reaches this one envelope owner and the version under test stays
+    visible at the call site rather than hidden behind a harness choice.
+    """
     return {
-        module.SCHEMA_VERSION_FIELD: module.SCHEMA_VERSION,
+        module.SCHEMA_VERSION_FIELD: schema_version,
         module.CHANGE_FIELD: change,
         module.MAIL_RECORDS_FIELD: list(mail_records),
         module.JOURNAL_RUNS_FIELD: list(journal_runs),
@@ -233,10 +240,21 @@ def derive(
     journal_runs: Sequence[Mapping[str, object]] = (),
     arguments: Sequence[str] | None = None,
 ) -> LedgerEntrypointObservation:
-    """Execute the entry point over one document and capture its observation."""
+    """Execute the entry point over one supported-schema document.
+
+    A case whose own value is the schema version builds its document through
+    `derivation_document` instead, so this driver never carries that case.
+    """
     vector = [module.DERIVE_OPERATION] if arguments is None else list(arguments)
     return run_ledger(
-        vector, derivation_document(module, change, mail_records, journal_runs)
+        vector,
+        derivation_document(
+            module,
+            change,
+            mail_records,
+            journal_runs,
+            schema_version=module.SCHEMA_VERSION,
+        ),
     )
 
 
