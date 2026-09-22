@@ -120,6 +120,12 @@ The bundled adapter is covered over generated request, record, and repository-lo
 
 </testing>
 
+<failure_modes>
+
+**A store keyed under the earlier derivation read back as an empty inbox.** Claude read an inbox for an agent that had been registered before the project key moved from the pool's main checkout path to the repository's own common Git directory, and took the empty result as "no messages". The registrations and message records were still in the store under the previous key, so the read was addressing a different project. An inbox that reads back empty for an agent known to be registered is a key mismatch rather than an absent-message state: re-register the agent under the current key, or adopt the earlier project into it, before reading an empty result as an answer.
+
+</failure_modes>
+
 <success_criteria>
 
 - A successful `run` operation is established only when the bundled script exits zero and emits `schemaVersion: 1`, `status: "succeeded"`, `commandExitCode: 0`, `projectKey`, `response`, and `data` without exposing `am` command grammar; a successful `project-key` operation is established only when it exits zero and emits `projectKey`.
