@@ -116,7 +116,7 @@ decomposition can carry.
 
 ## Plugin changelog titles use two forms
 
-Ten plugin changelogs open with "# Changelog — {plugin} plugin"; the prose changelog opens with "# Prose plugin changelog", the form the prose canon's em dash rule requires. One sweep renames the other ten titles to the dash-free form. Surfaced by the CI changeset review on the chat-voice branch; deferred there because the sweep touches ten plugins outside that changeset.
+Most plugin changelogs open with "# Changelog — {plugin} plugin"; a minority open with the dash-free "# {Plugin} plugin changelog", the form the prose canon's em dash rule requires. `head -1` over every `src/plugins/*/CHANGELOG.md` derives which titles stand in which form, so this entry names that relation and never a count. The count it first carried was falsified twice over — once when a plugin was added after the sentence was written, and once when a changeset renamed a single title — and neither edit was in view of the sentence holding the figure. One sweep renames every title still carrying the dash, and the entry closes when that derivation yields the dash-free form for every plugin. Surfaced by the CI changeset review on the chat-voice branch; deferred there because the sweep touches every plugin whose title still carries the dash, all of them outside that changeset.
 
 ## Two verifier rules collide on pinning a spec-declared tuning value
 
@@ -177,3 +177,40 @@ Harness modules under `outcomeeng_testing/harnesses/` and a generator under `out
 **Resolution shape.** Decide where the guard lives: a Verifier-mode context load that reads the committed subject without `/sync-base`, or a `/sync-base` result that reports behind-base without moving the checkout when the caller is a Verifier. Amend the audit skills that load context to select it, so the dispatch-readiness record's clean committed head stays the audited head.
 
 **Why separate.** The fix amends the context-loading, base-sync, and audit skills, none of which the host-readiness changeset touches.
+
+## A skill-directory token inside an `allowed-tools` pattern may never match
+
+`/skill-standards` `references/command-capabilities.md` `<file_references>` documents `${CLAUDE_SKILL_DIR}`
+for the skill **body**, where the loader substitutes the absolute path before the agent sees the command.
+It states no substitution behavior for an `allowed-tools` frontmatter pattern. Skill surfaces across three
+plugins nonetheless spell the token inside a permission entry — `Bash(python3
+"${CLAUDE_SKILL_DIR}/scripts/<name>.py":*)` — so each grant is written against a string the loader may never
+produce. Two readings are open, and no amount of reading separates them: either the loader expands the token
+in the pattern as it does in the body, and the grant means what it says, or the pattern is matched literally
+against a command whose path is already expanded, and the grant matches nothing. The question is the token's
+behavior in a permission pattern across every surface that uses it, not the correctness of one line.
+
+**Evidence**: `instructions:skill-auditor` finding `f-007`, severity `WARNING`, against
+`src/plugins/coding-agents/skills/orchestrate-officers/SKILL.md:6`; then a sweep of the `allowed-tools`
+frontmatter across `src/plugins/*/skills/*/SKILL.md`, which examined 113 surfaces and found the token in a
+permission entry on 17 of them, spanning `coding-agents` (6), `spec-tree` (10), and `contribute` (1). That
+grep over the frontmatter derives the current population, so this entry names the sweep rather than a list
+every new script-invoking skill would falsify.
+
+**Impact**: a grant that never matches does not fail — it degrades. The declared containment stops being the
+real approval boundary, and every invocation of the script falls back to a per-call permission prompt, which
+strands an unattended run. The degradation is silent in both directions: nothing in the skill surface, the
+build, or the deterministic gate distinguishes a grant that matches from one that never will, and a session
+running interactively sees only a prompt it would answer anyway.
+
+**Settlement condition**: an executed invocation is the only evidence that closes this. A session runs one of
+the surfaces the sweep names to the point where it issues its `python3` command, and records whether the
+harness admits the command under the declared grant or prompts for it; the established behavior then fixes
+one spelling across the whole swept population. Reading the loader's documentation, the skill body, or the
+frontmatter settles nothing.
+
+**Related**: `The non-interactive git guard sits on the command that cannot prompt` above asks the adjacent
+question — whether Claude Code's Bash grant matcher tolerates an `ENV=value` prefix on the command string.
+Both turn on how that matcher treats a grant pattern that is not a literal prefix of the command the harness
+issues, so one executed invocation that reports the matcher's behavior on an unexpanded token and on an
+environment-variable prefix answers both.
