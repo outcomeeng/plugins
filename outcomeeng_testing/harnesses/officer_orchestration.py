@@ -20,6 +20,7 @@ from outcomeeng_testing.generators.officer_orchestration import (
     change_identifiers,
     declared_read_causes,
     duration_series,
+    EventPayload,
     event_payloads,
     finding_entries,
     foreign_argument_vectors,
@@ -333,17 +334,20 @@ def run_wall_time_property(
     )
 
 
-def payload_event(
-    module: LedgerModule, payload: Mapping[str, str]
-) -> dict[str, object]:
-    """One ledger event carrying a generated payload's label, spend, and duration."""
+def payload_event(module: LedgerModule, payload: EventPayload) -> dict[str, object]:
+    """One ledger event carrying a generated payload's label, spend, and duration.
+
+    Each value reaches its document field through the generator's record and
+    the derivation module's own field name, so neither vocabulary is re-typed
+    here.
+    """
     return {
-        module.PASS_FIELD: payload["label"],
+        module.PASS_FIELD: payload.label,
         module.SPEND_FIELD: {
-            module.CURRENCY_FIELD: payload["currency"],
-            module.AMOUNT_FIELD: payload["amount"],
+            module.CURRENCY_FIELD: payload.currency,
+            module.AMOUNT_FIELD: payload.amount,
         },
-        module.WALL_TIME_SECONDS_FIELD: payload["duration"],
+        module.WALL_TIME_SECONDS_FIELD: payload.duration,
     }
 
 
@@ -351,12 +355,12 @@ def run_deduplication_property(
     assert_deduplication: Callable[
         [
             LedgerModule,
-            list[tuple[int, dict[str, str]]],
-            list[tuple[str, dict[str, str]]],
+            list[tuple[int, EventPayload]],
+            list[tuple[str, EventPayload]],
             Callable[
                 [
-                    Sequence[tuple[int, dict[str, str]]],
-                    Sequence[tuple[str, dict[str, str]]],
+                    Sequence[tuple[int, EventPayload]],
+                    Sequence[tuple[str, EventPayload]],
                 ],
                 LedgerEntrypointObservation,
             ],
@@ -377,13 +381,13 @@ def run_deduplication_property(
         change=change_identifiers(),
     )
     def generated_deduplication(
-        mail: list[tuple[int, dict[str, str]]],
-        journal: list[tuple[str, dict[str, str]]],
+        mail: list[tuple[int, EventPayload]],
+        journal: list[tuple[str, EventPayload]],
         change: str,
     ) -> None:
         def derive_series(
-            records: Sequence[tuple[int, dict[str, str]]],
-            runs: Sequence[tuple[str, dict[str, str]]],
+            records: Sequence[tuple[int, EventPayload]],
+            runs: Sequence[tuple[str, EventPayload]],
         ) -> LedgerEntrypointObservation:
             return derive(
                 module,
@@ -470,7 +474,7 @@ def run_repeated_value_property(
 
 def run_exact_text_property(
     assert_exact_text: Callable[
-        [LedgerModule, dict[str, str], LedgerEntrypointObservation], None
+        [LedgerModule, EventPayload, LedgerEntrypointObservation], None
     ],
 ) -> None:
     """Drive one spend and duration; the test owns the emitted-form law."""
@@ -484,7 +488,7 @@ def run_exact_text_property(
         change=change_identifiers(),
     )
     def generated_exact_text(
-        payload: dict[str, str], identifier: int, change: str
+        payload: EventPayload, identifier: int, change: str
     ) -> None:
         record = event_record(module, identifier, payload_event(module, payload))
         assert_exact_text(

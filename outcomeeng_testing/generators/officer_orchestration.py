@@ -5,6 +5,7 @@ from __future__ import annotations
 import decimal
 import json
 import sys
+from dataclasses import dataclass
 from typing import Protocol
 
 from hypothesis import strategies as st
@@ -19,6 +20,23 @@ DIGITS = "0123456789"
 DEFAULT_DECIMAL_PRECISION = decimal.DefaultContext.prec
 MAX_INTEGER_DIGITS = 12
 MAX_FRACTION_DIGITS = DEFAULT_DECIMAL_PRECISION + 8
+
+
+@dataclass(frozen=True, slots=True)
+class EventPayload:
+    """The values one generated ledger event carries.
+
+    This module builds the payload, so it owns the payload's shape: every
+    consumer reaches the four values through these attributes rather than
+    re-typing a key. The names are this domain's own — the document field each
+    value lands under is the derivation's to name, and a consumer reads that
+    name from the derivation module.
+    """
+
+    label: str
+    currency: str
+    amount: str
+    duration: str
 
 
 class LedgerVocabulary(Protocol):
@@ -271,19 +289,18 @@ def journal_carriers() -> st.SearchStrategy[list[tuple[str, str]]]:
     )
 
 
-def event_payloads() -> st.SearchStrategy[dict[str, str]]:
+def event_payloads() -> st.SearchStrategy[EventPayload]:
     """The label, currency, amount, and duration one generated event carries."""
-    return st.fixed_dictionaries(
-        {
-            "label": pass_labels(),
-            "currency": currencies(),
-            "amount": spend_amounts(),
-            "duration": durations(),
-        }
+    return st.builds(
+        EventPayload,
+        label=pass_labels(),
+        currency=currencies(),
+        amount=spend_amounts(),
+        duration=durations(),
     )
 
 
-def repeated_mail_series() -> st.SearchStrategy[list[tuple[int, dict[str, str]]]]:
+def repeated_mail_series() -> st.SearchStrategy[list[tuple[int, EventPayload]]]:
     """Store ids drawn with repetition from a pool, each with one payload."""
     return st.lists(store_message_ids(), min_size=1, max_size=3, unique=True).flatmap(
         lambda pool: st.lists(
@@ -294,7 +311,7 @@ def repeated_mail_series() -> st.SearchStrategy[list[tuple[int, dict[str, str]]]
     )
 
 
-def repeated_run_series() -> st.SearchStrategy[list[tuple[str, dict[str, str]]]]:
+def repeated_run_series() -> st.SearchStrategy[list[tuple[str, EventPayload]]]:
     """Run tokens drawn with repetition from a pool, each with one payload."""
     return st.lists(run_tokens(), min_size=1, max_size=3, unique=True).flatmap(
         lambda pool: st.lists(

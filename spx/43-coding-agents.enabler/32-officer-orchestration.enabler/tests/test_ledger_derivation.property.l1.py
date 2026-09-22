@@ -4,6 +4,7 @@ from collections.abc import Callable, Sequence
 from decimal import MAX_EMAX, MAX_PREC, MIN_EMIN, Decimal, localcontext
 from typing import cast
 
+from outcomeeng_testing.generators.officer_orchestration import EventPayload
 from outcomeeng_testing.harnesses.officer_orchestration import (
     LedgerEntrypointObservation,
     LedgerModule,
@@ -102,17 +103,17 @@ def test_every_total_is_emitted_as_exact_decimal_text() -> None:
 
     def assert_exact_text(
         source: LedgerModule,
-        payload: dict[str, str],
+        payload: EventPayload,
         observation: LedgerEntrypointObservation,
     ) -> None:
         ledger = cast(dict[str, object], observation.result[source.LEDGER_FIELD])
         totals = cast(dict[str, object], ledger[source.RUNNING_SPEND_FIELD])
-        spend = totals[payload["currency"]]
+        spend = totals[payload.currency]
         duration = ledger[source.WALL_TIME_SECONDS_FIELD]
 
         with localcontext(prec=MAX_PREC, Emax=MAX_EMAX, Emin=MIN_EMIN):
-            unrounded_spend = str(Decimal() + Decimal(payload["amount"]))
-            unrounded_duration = str(Decimal() + Decimal(payload["duration"]))
+            unrounded_spend = str(Decimal() + Decimal(payload.amount))
+            unrounded_duration = str(Decimal() + Decimal(payload.duration))
 
         assert observation.exit_code == source.SUCCESS_EXIT_CODE
         assert isinstance(spend, str)
@@ -157,23 +158,23 @@ def test_repeated_source_identities_contribute_once() -> None:
 
     def assert_deduplication(
         source: LedgerModule,
-        mail: list[tuple[int, dict[str, str]]],
-        journal: list[tuple[str, dict[str, str]]],
+        mail: list[tuple[int, EventPayload]],
+        journal: list[tuple[str, EventPayload]],
         derive_series: Callable[
             [
-                Sequence[tuple[int, dict[str, str]]],
-                Sequence[tuple[str, dict[str, str]]],
+                Sequence[tuple[int, EventPayload]],
+                Sequence[tuple[str, EventPayload]],
             ],
             LedgerEntrypointObservation,
         ],
     ) -> None:
-        first_records: list[tuple[int, dict[str, str]]] = []
+        first_records: list[tuple[int, EventPayload]] = []
         seen_ids: set[int] = set()
         for identifier, payload in mail:
             if identifier not in seen_ids:
                 seen_ids.add(identifier)
                 first_records.append((identifier, payload))
-        first_runs: list[tuple[str, dict[str, str]]] = []
+        first_runs: list[tuple[str, EventPayload]] = []
         seen_tokens: set[str] = set()
         for token, payload in journal:
             if token not in seen_tokens:
