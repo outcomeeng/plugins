@@ -157,7 +157,8 @@ standards-skill pass that owns it.
 ## The skill auditor returns opposite verdicts on unchanged skill text
 
 `instructions:skill-auditor` ran against `src/plugins/coding-agents/skills/orchestrate-officers/`
-on two consecutive heads and reversed itself in both directions.
+across a run of consecutive heads and reversed itself in both directions, more than once, and inside
+a single verdict document.
 
 On head `08d4ef11a7085974f27e3cf58afe92942cde066c` it raised finding `f-007`, rule
 `unverified_allow_list_match`, severity `WARNING`, against `SKILL.md` line 6: the `allowed-tools`
@@ -183,7 +184,51 @@ the restatement itself — every proof field `f-002` named survives verbatim, mo
 43-47 to lines 39-44. `f-008` targets the presence of those fields, which is what `f-002` said the
 skill would be worse without.
 
-The auditor's own rule vocabulary is unbounded, which is what lets the two readings coexist. Its
+The router shape draws opposite readings. On head `581e53137d45defb65757dac683a3132e1edf5c6` the
+run praised the coexistence of `<routing>` and `<workflows_index>` as the complete router shape. On
+head `a18cf8929a8280899e6637c6d1b47482c5e61eeb` finding `f-005`, severity `WARNING`, asked for the
+two to be merged into one table. Both sections are byte-identical across the pair: `<routing>`
+occupies lines 71-84 and `<workflows_index>` lines 98-113 at both heads, and each block hashes to the
+same value at both.
+
+The project-key consequence clause reverses the same way. On head
+`581e53137d45defb65757dac683a3132e1edf5c6` the run praised that clause by quoting it approvingly; on
+head `a18cf8929a8280899e6637c6d1b47482c5e61eeb` finding `f-006`, severity `WARNING`, asked for it to
+be moved out of `<essential_principles>`. That section occupies lines 16-60 at both heads and hashes
+to the same value at both. The only change to `SKILL.md` between the two heads falls at lines
+199-204, outside every section these two reversals judge.
+
+The `<failure_modes>` entries reverse and then reverse back. Consecutive runs praised the four
+entries, one calling their corroboration with `references/standing-rules.md` a virtue because it kept
+the operational knowledge non-speculative. Then on heads
+`96d8c01ed5d92711519e392b826410ca86761451` and `405584488036a9cbbd617519bb09659a132446c5` finding
+`f-006`, severity `WARNING`, faulted that same corroboration as duplication drift. Then on head
+`f0b078ea0b0c8870084c24a422edb1caa4b9b596` finding `f-003` praised them again. The `<failure_modes>`
+block at lines 216-236 hashes to
+`b1e8eabca6691b699e8e9ca78c75488c40169f13c87de5b8aaeb615ce412b003` at every head this entry names,
+from `08d4ef11a7085974f27e3cf58afe92942cde066c` through `f0b078ea0b0c8870084c24a422edb1caa4b9b596`.
+`references/standing-rules.md`, the other half of the corroboration, is blob
+`4c23c5e8e68f4afcc5e53618ded003f348208de7` at `96d8c01ed5d92711519e392b826410ca86761451`,
+`405584488036a9cbbd617519bb09659a132446c5`, and `f0b078ea0b0c8870084c24a422edb1caa4b9b596` alike, so
+the fault and the return to praise judge identical text on both sides of the corroboration.
+
+One verdict document contradicts itself with no second head involved. On head
+`f0b078ea0b0c8870084c24a422edb1caa4b9b596` finding `f-004` praised the router's
+progressive-disclosure split while finding `f-007`, in that same document, faulted that same split
+for having all eight workflows read `references/standing-rules.md`. The split and those workflows are
+one arrangement: `workflows/` holds `answer.md`, `close.md`, `correct.md`, `escalate.md`,
+`housekeep.md`, `launch.md`, `order.md`, and `read.md` at that head, and each names
+`references/standing-rules.md` once. The shape repeats on head
+`581e53137d45defb65757dac683a3132e1edf5c6`, where finding `f-004` praised
+`references/ledger-script-coverage.md` for satisfying the script-testing rule while finding `f-009`
+faulted that same file under that same rule for naming no command form.
+
+Intra-run contradiction is the stronger form of the claim. It admits no explanation that a
+cross-head comparison admits: no text moved, no reference changed, and no slug was minted between
+the two findings, because there is no between. One file set is the subject and one document is the
+judgment.
+
+The auditor's own rule vocabulary is unbounded, which is what lets opposed readings coexist. Its
 `<verdict_format>` types the `rule` field as a free-form `<strength-name>` or `<issue-name>`
 placeholder, and `src/plugins/instructions/skills/audit-skill/SKILL.md` fixes only
 `configuration_issue`, `actor_or_activity_objective`, and `auditor_skeleton_violation`. None of
@@ -192,7 +237,7 @@ anywhere under `src/plugins/` or `dist/`, so each run mints the slug it judges u
 binds one run's classification of a line to the next run's.
 
 **Impact.** `src/plugins/instructions/skills/audit-skill/SKILL.md` `<success_criteria>` states "The
-same SKILL.md yields the same verdict"; these two runs falsify that criterion on its own subject.
+same SKILL.md yields the same verdict"; these runs falsify that criterion on its own subject.
 Convergence requires a verdict to be a function of its subject. Where the same Verifier definition
 returns opposite judgments on unchanged input, repair chases noise, and a changeset cannot converge,
 because the next round raises what this one blessed and dropping a finding as unbacked is
@@ -202,9 +247,16 @@ severity is unstable across runs on unchanged text carries no `blocking`-versus-
 act on, and the repeated-class invalidation rule in the same decision reads a re-raised reversal as
 a failed repair invariant when no repair was owed.
 
+The filing has twice prevented wasted work. On each occasion a finding this auditor raised, and a
+later run of the same auditor then praised, was dropped rather than repaired; repairing either would
+have undone correct work.
+
 **Settlement condition.** Two runs of `instructions:skill-auditor` against one unchanged skill
-surface return the same rule and severity for every line both judge. Reaching that needs the rule
-vocabulary bounded — `/skill-standards` owning the enumerated rule slugs `/audit-skill` may emit,
+surface return the same rule and severity for every line both judge, and no single run's verdict
+document both praises and faults the same subject under the same rule. The intra-run contradictions
+add the second clause: runs that contradict themselves the same way satisfy the cross-run clause
+while each verdict stays unusable. Reaching either needs the rule vocabulary bounded —
+`/skill-standards` owning the enumerated rule slugs `/audit-skill` may emit,
 which is what the node assertion requiring `/skill-standards` to own every rule `/audit-skill`
 enforces already declares — so a line cannot be classified under a slug minted for one run.
 
