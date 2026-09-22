@@ -33,6 +33,7 @@ from outcomeeng.validation.agent_disable import AGENT_SWITCHES
 from outcomeeng_testing.harnesses.gate import (
     FAIL_EXIT_CODE,
     FAILING_CHILD_OUTPUT_PREFIX,
+    UNDECLARED_SWITCH,
     RecordingSpawner,
     read_summary,
     single_step_recipe,
@@ -180,6 +181,21 @@ def test_summary_with_declared_skips_conforms_to_schema() -> None:
 
     assert_json_schema(observation.summary, PRIMITIVE_SUMMARY_SCHEMA)
     assert any(SUMMARY_KEY_SKIPPED in step for step in steps)
+    assert observation.exit_code == SUCCESS_EXIT_CODE
+
+
+def test_a_report_line_outside_the_declared_switches_leaves_the_summary_conforming() -> (
+    None
+):
+    observation = skip_report_observation(
+        recipe=TEST_RECIPE,
+        exit_codes=[SUCCESS_EXIT_CODE]
+        * (len(TEST_RECIPE.preflight_steps) + len(TEST_RECIPE.steps)),
+        switches=(*AGENT_SWITCHES, UNDECLARED_SWITCH),
+    )
+
+    assert UNDECLARED_SWITCH not in AGENT_SWITCHES
+    assert_json_schema(observation.summary, PRIMITIVE_SUMMARY_SCHEMA)
     assert observation.exit_code == SUCCESS_EXIT_CODE
 
 

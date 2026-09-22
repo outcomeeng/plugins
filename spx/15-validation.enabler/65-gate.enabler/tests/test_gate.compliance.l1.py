@@ -69,6 +69,7 @@ from outcomeeng.validation.agent_disable import (
 )
 from outcomeeng_testing.harnesses.gate import (
     HIGH_VOLUME_CHILD_OUTPUT,
+    UNDECLARED_SWITCH,
     OrchestratorModuleAbsent,
     SleepBudgetExhausted,
     UnconfinedDisposableState,
@@ -280,6 +281,47 @@ def test_declared_skips_are_named_in_the_summary_and_after_the_status_line() -> 
         )
         assert line in observation.output
         assert observation.output.index(line) > status_at
+
+
+def test_a_report_line_naming_an_undeclared_switch_reaches_no_summary_row() -> None:
+    observation = skip_report_observation(
+        recipe=TEST_RECIPE,
+        exit_codes=[SUCCESS_EXIT_CODE] * (len(TEST_RECIPE.preflight_steps) + 1),
+        switches=(*AGENT_SWITCHES, UNDECLARED_SWITCH),
+    )
+    declared = [
+        record
+        for record in observation.written_records
+        if record[SKIP_REPORT_SWITCH_FIELD] in AGENT_SWITCHES
+    ]
+    refused = [
+        record
+        for record in observation.written_records
+        if record[SKIP_REPORT_SWITCH_FIELD] not in AGENT_SWITCHES
+    ]
+    steps = observation.summary[SUMMARY_KEY_STEPS]
+    assert isinstance(steps, list)
+    recorded = [step for step in steps if SUMMARY_KEY_SKIPPED in step]
+
+    assert declared
+    assert refused
+    assert observation.recording_steps == 1
+    assert len(recorded) == observation.recording_steps
+    assert [step[SUMMARY_KEY_SKIPPED] for step in recorded] == [declared] * len(
+        recorded
+    )
+    for record in refused:
+        assert record[SKIP_REPORT_TEST_FIELD] not in json.dumps(observation.summary)
+        assert record[SKIP_REPORT_TEST_FIELD] not in observation.output
+    for record in declared:
+        assert (
+            SKIP_LINE_FORM.format(
+                status=STEP_SKIP_STATUS,
+                test=record[SKIP_REPORT_TEST_FIELD],
+                switch=record[SKIP_REPORT_SWITCH_FIELD],
+            )
+            in observation.output
+        )
 
 
 def test_the_row_reader_reads_every_step_row_of_a_complete_block() -> None:

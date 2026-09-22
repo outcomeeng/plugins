@@ -28,6 +28,7 @@ from typing import Final, TextIO
 
 from outcomeeng.validation._model import ProcessHandle, ProcessSpawner, Recipe, Step
 from outcomeeng.validation.agent_disable import (
+    AGENT_SWITCHES,
     SKIP_REPORT_OPTION,
     SKIP_REPORT_SWITCH_FIELD,
     SKIP_REPORT_TEST_FIELD,
@@ -278,11 +279,19 @@ def _step_reporting_skips(step: Step, report_path: Path) -> Step:
 
 
 def _read_skip_records(report_path: Path | None) -> tuple[dict[str, object], ...]:
-    """Read the records the child left, ignoring any line it did not shape.
+    """Read the records the child left, keeping only declared skips.
 
     The producer is a separate process, so a truncated or malformed line is a
     child-side condition rather than an orchestrator failure: it is skipped and
     the well-formed records still reach the step's summary.
+
+    A line is rejected on four counts: it does not parse as JSON, it parses as
+    something other than an object, either field is absent or is not a string,
+    or the switch it names is not one this package declares. The last is the
+    reader's own domain rather than the line's shape — `AGENT_SWITCHES` is the
+    same declaration the summary schema's switch enum reads, so a switch
+    outside it names no skip this package can have declared, and copying it
+    into the summary would emit a run summary the schema refuses.
     """
     if report_path is None:
         return ()
@@ -303,6 +312,8 @@ def _read_skip_records(report_path: Path | None) -> tuple[dict[str, object], ...
         test = entry.get(SKIP_REPORT_TEST_FIELD)
         switch = entry.get(SKIP_REPORT_SWITCH_FIELD)
         if not isinstance(test, str) or not isinstance(switch, str):
+            continue
+        if switch not in AGENT_SWITCHES:
             continue
         records.append({SKIP_REPORT_TEST_FIELD: test, SKIP_REPORT_SWITCH_FIELD: switch})
     return tuple(records)

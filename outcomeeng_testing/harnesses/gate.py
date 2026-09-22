@@ -1106,6 +1106,15 @@ SKIPPED_ROW_ID_SHAPE = "{path}::{name}"
 """The nodeid shape a pytest child reports for a row a switch declared optional."""
 SKIPPED_ROW_PATH = "spx/example.enabler/tests/test_example.compliance.l3.py"
 """The row path the recording child reports; an incidental harness handle value."""
+UNDECLARED_SWITCH = f"{DISABLE_CLAUDE_ENV}_OUTSIDE_THE_DECLARED_SET"
+"""A switch name for a report line no declaration of this package accounts for.
+
+Derived from a declared switch rather than written as its own literal, so the
+stimulus moves with the declaration instead of standing beside it, and so this
+module carries no second spelling of a switch's own text. Its non-membership in
+the declared set is the property the reading depends on, so the linked test
+states that non-membership rather than trusting this name's shape.
+"""
 
 
 def _skip_report_destination(argv: Sequence[str]) -> Path | None:
