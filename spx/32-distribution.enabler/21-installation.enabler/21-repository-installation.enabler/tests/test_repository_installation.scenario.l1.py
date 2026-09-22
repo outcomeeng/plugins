@@ -65,6 +65,22 @@ def _first_install_warning(agent: Agent) -> str:
     )
 
 
+def _announced_first_installs(
+    case: UnreadableSourceCase, marketplace: str
+) -> frozenset[Agent]:
+    """The agents whose first install one run announced."""
+    return frozenset(
+        warning.agent
+        for warning in case.warnings
+        if warning.message
+        == FIRST_INSTALL_WARNING.format(
+            marketplace=marketplace,
+            agent=warning.agent.value,
+            plugin=SPEC_TREE_PLUGIN,
+        )
+    )
+
+
 def test_verification_recipe_uses_pytest_discovery_for_the_node() -> None:
     observation = observe_verification_recipe()
 
@@ -618,6 +634,23 @@ def test_unreadable_invocation_settings_stop_bootstrap_and_nothing_else() -> Non
         # invocation checkout already recording the plugin — exits zero.
         stopped = not (state.claude and state.codex and state.recorded)
         assert (case.exit_code != 0) is stopped, state
+        # The empty invocation inventory proposes the bootstrap; the plan
+        # decides it. No run here carries a Claude install, and the Codex
+        # home already declares the plugin, so no run announces a first
+        # install for either agent.
+        assert _announced_first_installs(case, marketplace) == frozenset(), state
+        # The report names what the run performed. Claude reaches the plugin
+        # only through the native update of a record the invocation checkout
+        # already holds, which the withheld registration takes with it; Codex
+        # reaches it only where its own registration stands.
+        assert case.document[ReportField.CLAUDE_PLUGINS] == (
+            [SPEC_TREE_PLUGIN] if state.claude and state.recorded else []
+        ), state
+        codex_named = case.document[ReportField.CODEX_PLUGINS]
+        if state.codex:
+            assert SPEC_TREE_PLUGIN in codex_named, state
+        else:
+            assert codex_named == [], state
 
     for state in (both_registered, both_registered_with_record, codex_unregistered):
         case = by_state[state]

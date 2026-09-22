@@ -11,7 +11,7 @@ import sys
 import tempfile
 import tomllib
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import StrEnum
 from pathlib import Path
 from typing import Protocol, cast
@@ -219,16 +219,29 @@ VERSIONLESS_LISTING_ENTRY_WARNING = (
 )
 UNREADABLE_SETTINGS_DIAGNOSTIC = "invalid Claude Code settings"
 UNREADABLE_SETTINGS_WARNING = (
-    "{diagnostic}; bootstrap of the invocation checkout is skipped and every "
-    "other install record is refreshed."
+    "{diagnostic}; bootstrap of the invocation checkout is skipped, and no "
+    "other operation reads those settings."
 )
+"""The unreadable-settings disposition, worded for the condition's own reach.
+
+The message names what the settings decide — the bootstrap alone — rather
+than what the rest of the run goes on to do, because a run that also
+withholds the registration performs nothing else either. Each record's own
+disposition is reported beside this warning.
+"""
 UNDECLARED_SOURCE_DIAGNOSTIC = "the invocation checkout declares no marketplace source"
 WITHHELD_REGISTRATION_WARNING = (
     "{diagnostic}; this agent registers no {marketplace} marketplace and the "
     "invocation checkout declares no readable source for one, so that "
-    "registration and the operations depending on it are withheld while every "
-    "other install record is refreshed."
+    "registration and every operation depending on it are withheld."
 )
+"""The withheld-registration disposition, worded for what the plan withholds.
+
+Every operation naming the marketplace goes with the registration, which for
+Claude Code is the native update of each record the invocation checkout
+holds, so the message claims no refresh. Each record the run leaves where it
+found it carries its own warning.
+"""
 UNLOCATED_REGISTRY_DIAGNOSTIC = "the marketplace registry entry names no clone"
 OFF_TARGET_DIAGNOSTIC = "install records off the target after refresh"
 CHECKOUT_OPTION = "--checkout"
@@ -767,19 +780,24 @@ class InstallationReport:
         )
 
     def installed_for(self, agent: Agent) -> frozenset[str]:
-        """The plugins this agent installed: what it planned, less what is pending.
+        """The plugins this agent installed: what its plan carries, less what is pending.
 
-        The plan carries the committed catalog, which is what the run intended
-        rather than what it achieved. Every reader of this report — the text
-        summary and the JSON document alike — answers from here, so the two
-        cannot disagree about whether a pending plugin was installed.
+        The selection says which plugins the run means to reach; the install
+        and native-update commands its plan carries say which it does reach.
+        The two part wherever a later condition withholds an agent's
+        operations — unreadable invocation settings, or a registration this
+        run cannot make — so this answers from the commands. Every reader of
+        this report, the text summary and the JSON document alike, answers
+        from here, so the two cannot disagree about whether a plugin was
+        installed.
         """
-        planned = (
-            self.plan.claude_plugins
-            if agent is Agent.CLAUDE
-            else self.plan.codex_plugins
-        )
-        return frozenset(planned) - self.pending_for(agent)
+        return frozenset(
+            command.plugin
+            for command in self.plan.commands
+            if command.agent is agent
+            and command.plugin is not None
+            and command.operation in {Operation.PLUGIN_INSTALL, Operation.PLUGIN_UPDATE}
+        ) - self.pending_for(agent)
 
     def refreshed_claude_records(self) -> tuple[ClaudeInstallRecord, ...]:
         """The Claude install records this run moved: natively, then by rewrite.
@@ -1308,13 +1326,13 @@ def build_persistent_installation_plan(
         checkout=preflight.roots.checkout,
         marketplace=marketplace,
     )
-    claude_selection, claude_warning = _persistent_selection(
+    claude_selection, claude_bootstrapping = _persistent_selection(
         Agent.CLAUDE,
         preflight.claude_plugins,
         claude_installed,
         marketplace,
     )
-    codex_selection, codex_warning = _persistent_selection(
+    codex_selection, codex_bootstrapping = _persistent_selection(
         Agent.CODEX,
         preflight.codex_plugins,
         installed_plugin_names(
@@ -1359,7 +1377,7 @@ def build_persistent_installation_plan(
             blocking=any(plugin not in claude_installed for plugin in claude_selection),
         )
     )
-    return _build_plan(
+    plan = _build_plan(
         InstallationMode.PERSISTENT,
         preflight.roots,
         preflight.environment,
@@ -1373,8 +1391,6 @@ def build_persistent_installation_plan(
         warnings=tuple(
             warning
             for warning in (
-                claude_warning,
-                codex_warning,
                 settings_warning,
                 *withheld_warnings,
                 *record_warnings,
@@ -1393,6 +1409,14 @@ def build_persistent_installation_plan(
         claude_bootstrap_source=declared_source,
         codex_bootstrap_source=codex_bootstrap_source,
     )
+    first_install = _first_install_warnings(
+        plan,
+        {Agent.CLAUDE: claude_bootstrapping, Agent.CODEX: codex_bootstrapping},
+        marketplace,
+    )
+    if not first_install:
+        return plan
+    return replace(plan, warnings=(*first_install, *plan.warnings))
 
 
 def execute_persistent_installation(
@@ -1882,31 +1906,57 @@ def _persistent_selection(
     catalog: tuple[str, ...],
     installed: frozenset[str],
     marketplace: str,
-) -> tuple[tuple[str, ...], InstallationWarning | None]:
+) -> tuple[tuple[str, ...], bool]:
+    """One agent's selection and whether an empty inventory proposed the bootstrap.
+
+    The empty inventory proposes the bootstrap; it does not decide it. A
+    later condition — unreadable invocation settings, or a registration this
+    run cannot make — can withhold the install that proposal names, so the
+    flag travels to the plan and the first-install warning is raised from
+    what the plan carries rather than from the inventory read here.
+    """
     if SPEC_TREE_PLUGIN not in catalog:
         raise ValueError(
             f"invalid {agent.value} catalog: `{SPEC_TREE_PLUGIN}` is required"
         )
     if not installed:
-        return (
-            (SPEC_TREE_PLUGIN,),
-            InstallationWarning(
-                agent=agent,
-                message=FIRST_INSTALL_WARNING.format(
-                    marketplace=marketplace,
-                    agent=agent.value,
-                    plugin=SPEC_TREE_PLUGIN,
-                ),
-            ),
-        )
+        return (SPEC_TREE_PLUGIN,), True
     if SPEC_TREE_PLUGIN not in installed:
         raise ValueError(
             f"invalid {agent.value} installed selection: nonempty {marketplace} "
             f"inventory must include `{SPEC_TREE_PLUGIN}`"
         )
-    return (
-        tuple(plugin for plugin in catalog if plugin in installed),
-        None,
+    return tuple(plugin for plugin in catalog if plugin in installed), False
+
+
+def _first_install_warnings(
+    plan: InstallationPlan,
+    bootstrapping: Mapping[Agent, bool],
+    marketplace: str,
+) -> tuple[InstallationWarning, ...]:
+    """One first-install warning per agent whose plan carries the bootstrap install.
+
+    The warning announces an install, so it reads the install commands the
+    plan carries. An agent whose bootstrap the run withholds issues none of
+    them and announces nothing; the condition that withheld the bootstrap
+    carries its own warning.
+    """
+    installing = frozenset(
+        command.agent
+        for command in plan.commands
+        if command.operation is Operation.PLUGIN_INSTALL
+    )
+    return tuple(
+        InstallationWarning(
+            agent=agent,
+            message=FIRST_INSTALL_WARNING.format(
+                marketplace=marketplace,
+                agent=agent.value,
+                plugin=SPEC_TREE_PLUGIN,
+            ),
+        )
+        for agent in Agent
+        if bootstrapping.get(agent, False) and agent in installing
     )
 
 

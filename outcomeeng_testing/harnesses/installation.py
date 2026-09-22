@@ -1490,6 +1490,8 @@ class UnreadableSourceCase:
     warnings: tuple[InstallationWarning, ...]
     attempted: tuple[InstallationCommand, ...]
     """Every command the run issued, closing listing included."""
+    document: dict[str, object]
+    """The JSON report the public CLI printed for this run."""
     record_file_after: dict[str, object]
     target_version: str
     exit_code: int
@@ -1611,16 +1613,19 @@ def _unreadable_source_case(
         registered=state.claude,
         codex_registered=state.codex,
     )
-    exit_code = main(
-        [CHECKOUT_OPTION, str(mirror), JSON_OUTPUT_OPTION],
-        base_environment=environment,
-        runner=runner,
-    )
+    stdout = StringIO()
+    with redirect_stdout(stdout):
+        exit_code = main(
+            [CHECKOUT_OPTION, str(mirror), JSON_OUTPUT_OPTION],
+            base_environment=environment,
+            runner=runner,
+        )
     return UnreadableSourceCase(
         state=state,
         plan=plan,
         warnings=plan.warnings,
         attempted=tuple(runner.calls),
+        document=cast("dict[str, object]", json.loads(stdout.getvalue())),
         record_file_after=cast(
             "dict[str, object]", json.loads(record_file.read_text())
         ),
