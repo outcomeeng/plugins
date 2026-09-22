@@ -2,12 +2,14 @@
 
 from dataclasses import replace
 
+import pytest
+
 from outcomeeng_testing.harnesses.discovery_auth_cases import NativeFault
 from outcomeeng_testing.harnesses import (
     native_profile_execution as profile_execution_harness,
 )
 from outcomeeng_testing.harnesses.installation import (
-    native_profile_execution_recipe_line as recipe_line_source,
+    native_profile_execution_recipe,
 )
 from outcomeeng_testing.harnesses.native_profile_failures import native_profile_failure
 
@@ -18,6 +20,7 @@ from outcomeeng.distribution.profiles import AGENT_PROFILES
 from outcomeeng.validation.agent_disable import AGENT_SWITCHES
 from outcomeeng.validation.agent_switch_enforcement import (
     DECLARING_MODULE_NAME,
+    NotAPythonSource,
     modules_naming_a_switch,
     modules_reading_the_switch_predicate,
 )
@@ -173,9 +176,9 @@ def test_the_profile_execution_recipe_reads_no_disable_switch() -> None:
 
     assert modules_naming_a_switch((entrypoint,)) == ()
     assert modules_reading_the_switch_predicate((entrypoint,)) == ()
-    assert not any(switch in recipe_line_source() for switch in AGENT_SWITCHES), (
-        recipe_line_source()
-    )
+    assert not any(
+        switch in native_profile_execution_recipe() for switch in AGENT_SWITCHES
+    ), native_profile_execution_recipe()
 
 
 def test_a_module_importing_the_predicate_is_reported(tmp_path: Path) -> None:
@@ -203,3 +206,23 @@ def test_profile_execution_rows_cover_every_central_profile() -> None:
         for target, profiles in AGENT_PROFILES.items()
         for profile in profiles
     }
+
+
+def test_a_non_python_path_is_refused_rather_than_scanned_as_empty(
+    tmp_path: Path,
+) -> None:
+    not_source = tmp_path / "notes.txt"
+    not_source.write_text("text\n", encoding="utf-8")
+
+    with pytest.raises(NotAPythonSource):
+        modules_naming_a_switch((not_source,))
+
+    with pytest.raises(NotAPythonSource):
+        modules_reading_the_switch_predicate((not_source,))
+
+
+def test_a_single_offending_file_is_reported(tmp_path: Path) -> None:
+    offender = tmp_path / "second_spelling.py"
+    offender.write_text(f'VALUE = "{AGENT_SWITCHES[0]}"\n', encoding="utf-8")
+
+    assert modules_naming_a_switch((offender,)) == (offender,)

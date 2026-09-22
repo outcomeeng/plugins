@@ -14,6 +14,7 @@ from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from dataclasses import dataclass, field
 from functools import cache
+from itertools import takewhile
 from io import StringIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -28,6 +29,9 @@ from outcomeeng.distribution.agents import (
     AGENT_SKILL_ENABLED_FIELD,
 )
 from outcomeeng.distribution.build import render_text
+from outcomeeng.validation.agent_switch_enforcement import (
+    ACQUIRED_EXECUTABLE_LEVELS,
+)
 from outcomeeng.validation.agent_disable import (
     claude_disabled_reason,
     codex_disabled_reason,
@@ -4550,14 +4554,15 @@ REAL_PROCESS_ENTRY_POINTS = (
 SWITCH_PROJECTIONS = ("runs_real_claude", "runs_real_codex")
 """This home's own projection markers, declared as it declares any public name."""
 
-REAL_PROCESS_LEVELS = ("l2", "l3")
-"""The execution-level cells whose rows reach an acquired agent executable."""
-
 SWITCH_SCAN_ROOTS = (
     repository_root() / "outcomeeng",
     repository_root() / "outcomeeng_testing",
+    repository_root() / "outcomeeng_evals",
+    repository_root() / "spx",
+    repository_root() / "src",
 )
-"""The source roots the only-the-declaring-module rule is enforced over."""
+"""Every source root the repository carries, so the rule reaches the co-located
+tests it most directly protects as well as the packages."""
 
 
 def real_process_row_files(node_tests: Path) -> tuple[Path, ...]:
@@ -4570,7 +4575,7 @@ def real_process_row_files(node_tests: Path) -> tuple[Path, ...]:
     return tuple(
         path
         for path in sorted(node_tests.glob("test_*.py"))
-        if any(f".{level}." in path.name for level in REAL_PROCESS_LEVELS)
+        if any(f".{level}." in path.name for level in ACQUIRED_EXECUTABLE_LEVELS)
     )
 
 
@@ -4578,11 +4583,19 @@ NATIVE_PROFILE_RECIPE = "verify-native-profile-execution"
 """The recipe whose only caller is release acceptance."""
 
 
-def native_profile_execution_recipe_line() -> str:
-    """Return the recipe's own lines from the repository's justfile."""
-    text = (repository_root() / "justfile").read_text(encoding="utf-8")
-    lines = text.splitlines()
+def native_profile_execution_recipe() -> str:
+    """Return the recipe's declaration together with its complete body.
+
+    A justfile recipe body is every indented line following its declaration, so
+    the reader returns all of them rather than a fixed window: a rule over the
+    recipe must see every line the recipe carries.
+    """
+    lines = (repository_root() / "justfile").read_text(encoding="utf-8").splitlines()
     for index, line in enumerate(lines):
-        if line.startswith(f"{NATIVE_PROFILE_RECIPE} "):
-            return "\n".join(lines[index : index + 2])
+        if not line.startswith(f"{NATIVE_PROFILE_RECIPE} "):
+            continue
+        body = list(
+            takewhile(lambda item: item.startswith((" ", "\t")), lines[index + 1 :])
+        )
+        return "\n".join([line, *body])
     raise RuntimeError(f"recipe {NATIVE_PROFILE_RECIPE} is absent from the justfile")
