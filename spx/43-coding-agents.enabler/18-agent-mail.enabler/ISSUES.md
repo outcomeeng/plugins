@@ -63,3 +63,5 @@ Each rule is right about its own subject, and shipped content cannot satisfy bot
 **Why separate**: the fix belongs to the `instructions` plugin's audit skill and its standards, which no agent-mail changeset touches.
 
 **Evidence**: `instructions:skill-auditor` finding `f-006`, rule `abstract_testing_record`, against the skill surface committed at `b3b1b32a068e2e492567f2bb3e6f5ce148c6914d`; the `spec-tree:changes-reviewer` warning on `src/plugins/coding-agents/skills/operate-agent-mail/SKILL.md` line 107 that required removing the same address.
+
+**Recurrence**: the same rule returned as `f-008` against the surface committed at `b6ce460eab6ac1401eecdf652b1b631e868d4144`, this time proposing a remedy that keeps the address out — record which input each domain was exercised with and which result it must return. That remedy does not collide with the portability constraint, so it is a live option for the settlement above rather than a second contradiction; the reviewer's own reading, that the domain bullets already satisfy the script-testing rule, is the competing one.
