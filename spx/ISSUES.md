@@ -177,3 +177,13 @@ Harness modules under `outcomeeng_testing/harnesses/` and a generator under `out
 **Resolution shape.** Decide where the guard lives: a Verifier-mode context load that reads the committed subject without `/sync-base`, or a `/sync-base` result that reports behind-base without moving the checkout when the caller is a Verifier. Amend the audit skills that load context to select it, so the dispatch-readiness record's clean committed head stays the audited head.
 
 **Why separate.** The fix amends the context-loading, base-sync, and audit skills, none of which the host-readiness changeset touches.
+
+## The product spec names the apply flow by its retired name
+
+`spx/outcomeeng.product.md` lists "TDD flow orchestration (`/apply`) with language-specific delegation" among the product's included scope. The node that flow names, `spx/21-spec-tree.enabler/65-apply.enabler/54-node-flow.enabler`, declares the per-node apply flow composing an authoring, deterministic-verification, and artifact-audit lane for every Output kind present, and only its Code lane carries a test-before-implementation sequence. A skill-only or spec-only slice runs no TDD sequence at all, so the product line describes a flow the declaration no longer provides.
+
+**Evidence.** Raised as a consistency finding by review run `2026-09-22_00-01-42-556-7c7bb37033f0`. Its same-class sweep found the same retired term in the consumers inside the apply subtree, which that changeset corrected.
+
+**Settlement condition**: the product spec's scope line names the composed per-node apply flow rather than a TDD flow.
+
+**Why separate**: the line sits in the product root spec, outside the apply subtree the changeset that surfaced it governs.
