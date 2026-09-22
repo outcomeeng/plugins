@@ -75,3 +75,19 @@ The verbatim-identity constraint in `src/plugins/coding-agents/skills/operate-ag
 **Settlement condition**: the constraint states the property of the value itself — store identities are the store's own lookup keys, so any transformation makes the value address nothing — and the skill surface passes the typed skill auditor.
 
 **Evidence**: `instructions:skill-auditor` finding `f-008`, rule `caller_independence`, against the surface committed at `dce2ced56b7bceefe265f668d0d458a9a0bbecc0`; the line predates this changeset, which reached the file for three unrelated findings.
+
+## DEBT: the operation-surface shape for the project-key form is contested
+
+`project-key` is invocable but takes no JSON request, so it is a CLI form rather than a member of the request-operation registry. Three independent readings of `src/plugins/coding-agents/skills/operate-agent-mail/SKILL.md` have pulled its presentation in opposite directions, and each was correct against the surface it read.
+
+1. On head `18903ace30be971b041eba9e74606e97bf0182ae`, `instructions:skill-auditor` finding `f-011`, rule `operation_surface_omits_documented_operation`: the form appeared only under `<invocation_forms>`, so a caller consulting the operation table concluded the capability offered no such operation and would derive the key itself. It asked for a row.
+2. On head `1d7a14a2998039feec89d7ff19de82baaa4a30a8`, with the row present, `instructions:skill-auditor` finding `f-007`, rule `surface_conflation`, and `spec-tree:changes-reviewer` run `2026-09-21_23-42-42-028-42e88f3fa3af` both found that a table introduced as the request operations, under workflow steps applying to every row, leads a caller to submit a `run` request the registry rejects as `operation-unavailable`. The row was removed and the framing narrowed to request operations.
+3. On head `7150fdc3bf9a7068a3b16eec7c184e366bdada6a`, `instructions:skill-auditor` finding `f-008`, rule `operation_surface_completeness`: the one table claiming to be the operation surface enumerates four forms while a fifth equally invocable form is described only in following prose, so a reader forms a four-operation model the rejection at the workflow step then contradicts. It asked for a row or a companion table.
+
+Readings 1 and 3 ask for visibility; reading 2 objects to placement among request operations. A companion table satisfies all three and is the shape the surface now carries.
+
+**Impact**: none of the three findings is wrong, and the surface has changed three times. The cost is a repair round per reading, not a defect a consumer meets.
+
+**Settlement condition**: a governing standard states how a skill's operation surface presents forms that share an invocation entry point but not a request shape — one table with a form column, two tables, or a table plus a named companion — so a later reading applies that rule instead of judging the shape afresh. Until then the companion table stands, and a fourth reading pulling on this line is reported against this entry rather than repaired again.
+
+**Evidence**: the three findings above, with the heads each was produced on. The `instructions:skill-auditor` verdicts carry no run token; the reviewer reading carries the run token named in item 2.
