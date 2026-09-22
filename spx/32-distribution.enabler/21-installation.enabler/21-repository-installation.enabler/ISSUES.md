@@ -4,7 +4,7 @@ Known defects in the repository-installation evidence. Each entry names the arti
 
 ## Native-profile evidence restates protocol vocabulary the owning modules hold
 
-`tests/test_native_profile_execution.compliance.l1.py` indexes the child-thread document with the literal `parentThreadId` while `outcomeeng/distribution/native_thread_evidence.py` owns that key as `ChildIdentityField.PARENT`, and `tests/test_native_profile_execution.compliance.l2.py` asserts the retained child-listing artifact through the literals `childIds`, `pages`, and `result`, for which that module publishes no field constants. Both are source-ownership defects: a rename in the owning module leaves the evidence asserting a contract production no longer emits.
+`tests/test_native_profile_execution.compliance.l1.py` indexes the child-thread document with the literal `parentThreadId` while `outcomeeng/distribution/native_thread_evidence.py` owns that key as `ChildIdentityField.PARENT`, and `tests/test_native_profile_execution.compliance.l2.py` asserts the retained child-listing artifact through the literals `childIds`, `pages`, and `result`, which that module publishes no constant for — the producer-side gap the next entry records. Both are source-ownership defects: a rename in the owning module leaves the evidence asserting a contract production no longer emits.
 
 `outcomeeng_testing/harnesses/native_thread_evidence.py` repeats the class in `RecordingThreadReader`: its failure-shaping methods hand-write `childIds`, `thread`, `turns`, `status`, and `items` while the same harness builds the payloads through `NativeChildLookupPayload`, `NativeChildThread`, and `NativeTurn` elsewhere. Its `_read_empty_native_state` builds the child environment from the literals `HOME`, `CODEX_HOME`, and `CODEX_SQLITE_HOME` while `outcomeeng/distribution/installation.py` publishes those names and the `STATE_ENV_NAMES` tuple.
 
@@ -12,9 +12,52 @@ Two clauses of the same assertion are also unfalsified: removing the ambient mod
 
 The mapping assertion's identifier and disposable-state-root derivation is unfalsified in the same way: collapsing `identifier` in `native_profile_rows` to a constant makes every row share one `state_root` and one artifact directory, while `test_native_profile_rows_cover_the_central_configuration_matrix` still keys on target and profile and `test_native_profile_artifacts_are_separate_from_disposable_state` checks only parent-directory relations, so no predicate observes that the identifier and state root derive from the registry entry or are distinct per row.
 
-**Resolution shape**: publish the listing-artifact field names from `outcomeeng/distribution/native_thread_evidence.py` beside `NativeChildLookupPayload`, import every key the test and the recording reader index from that module, add predicates over the recorded child environment that reject an ambient override or a second credential, and assert that every row's identifier and state root derive from its registry entry and differ from every other row's.
+**Resolution shape**: import every key the test and the recording reader index from the module that owns it, which for the three listing-artifact keys waits on the publication the next entry records, add predicates over the recorded child environment that reject an ambient override or a second credential, and assert that every row's identifier and state root derive from its registry entry and differ from every other row's.
 
 **Evidence**: test-evidence audit findings `f-001` and `f-002` against `06b86db6b31704c58203929603bb2f2ceea237cb`, `f-001` through `f-004` against `3e1ba91c9ec059d96dcd2007a2fe371681599df2`, `f-001` through `f-003` against `548f8cc7b598a30969b0e68c243acb17d387f1ef`, `f-001` through `f-003` against `d84b4d2cb433059d995e6271d33551e30deb306d`, `f-001` through `f-005` with `f-008` against `f689b9b25cdd37f5e57545d313f30d29ad9cbd35`, `f-001` through `f-007` against `be286e7e32cdfbb0cc782f6175ed0f274e428e8d`, `f-001` through `f-005` against `b9ee9c2ca56d3341f03ea81abb1ec2f4cd8df57b`, `f-005` through `f-009` against `ef8b057ab649bc3da5c642cc4a18fc6745023718`, `f-003` through `f-008` against `841e864a9759eae04c8988c2931aa44b1ca21c74`, `f-001` through `f-006` against `f011edcdd33c0fdec41d8ccfbcdfe1393fc6b35a`, `f-001` through `f-006` with `f-008` against `c3b42a5514452b1b71e01c77467e7e45abfad048`, and `f-001` through `f-006` against each of `9ab0fc92c2f5c673edbfb2c73eea42502cef68e5` and `c2f6d8e1c3bc87f24d775fcbc62451b9c2ff6322`, the last nine rounds naming the execution-level mismatch and the last five naming the environment literals; the unfalsified row identifier and state root reached a finding of its own in the last round; the cited test and harness files lie outside every changeset's diff. The round against `05a7165277750d69c88bc8abbece2c4f6a96bb7c` raised the same six as `f-001` through `f-006`: `f-001` the literal `parentThreadId` where `ChildIdentityField.PARENT` owns the key; `f-002` the literals `childIds`, `pages` and `result`, for which production publishes no field constant; `f-003` the hand-written keys in `RecordingThreadReader` and the environment names in `_read_empty_native_state`; `f-004` the two `l1` cases that start the installed Codex CLI, whose floor is `l2`; `f-005` the unfalsified override and credential clauses; `f-006` the unfalsified row identifier and state root. The round against `cc5f3e86be4dbcc2c727c46f5c96593bab02b680` raised the same six again as `f-001` through `f-006`.
+
+## The child-listing artifact's keys are written as literals and published nowhere
+
+`outcomeeng/distribution/native_thread_evidence.py` builds and reads the retained
+child-listing artifact through the bare literals `childIds`, `pages`, and `result`, and
+publishes a constant for none of them. It publishes `ChildIdentityField` for the
+thread/read identity fields (lines 27-35) and `NativeChildLookupPayload` for the payload's
+shape, so the module already states which of its keys are a contract; these three are a
+contract it emits and does not name.
+
+**The eleven sites.** `childIds` at lines 139, 326, and 369; `pages` at lines 326, 368,
+374, and 382; `result` at lines 254, 286, 334, 361, and 437 — twelve occurrences across
+eleven lines, since line 326 carries two. Line 139 reads the key back out of a document the
+same module wrote at 326, so a rename reaches both halves of one round trip through two
+independently spelled literals.
+
+**What it blocks.** `tests/test_native_profile_execution.compliance.l2.py` indexes the same
+three keys at lines 24 and 25 and is a source-ownership defect for doing so, recorded in the
+entry above. That defect cannot be repaired while this one stands: the rule requires the
+evidence to import the name from the source complying with the declaration, and there is no
+published name to import. The evidence half waits on this half.
+
+**Resolution shape**: publish the three keys from this module beside
+`NativeChildLookupPayload` — a field enum in the shape of `ChildIdentityField`, or module
+constants — and read every one of the eleven sites from it, so the writer and the reader at
+lines 326 and 139 spell the key once.
+
+**Why separate**: the module lies outside this changeset's diff while the evidence file lies
+inside it. Publishing a contract from a production module no Frame here names is a change to
+the producer, which is neither the Author's to make nor the Executor's to authorise, so the
+evidence half stays unrepaired until a Change carries the producer. Every round that audits
+this node raises the evidence half again while that holds; the re-raise is this entry doing
+its work, and each one is another reading for the Change that closes it.
+
+**Settlement condition**: `outcomeeng/distribution/native_thread_evidence.py` publishes a
+constant for each of `childIds`, `pages`, and `result`, every site in that module reads it,
+and `tests/test_native_profile_execution.compliance.l2.py` imports the three names rather
+than spelling them.
+
+**Evidence**: the literal sites above against the module's own published
+`ChildIdentityField` and `NativeChildLookupPayload`; and the test-evidence audit rounds
+recorded in the entry above, whose finding on the evidence half named these keys as the ones
+the owning module publishes no constant for.
 
 ## The profile isolation filter strips an ambient marker no module declares
 
