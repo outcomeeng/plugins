@@ -24,11 +24,12 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Final
-
-import pytest
+from typing import TYPE_CHECKING, Final
 
 from outcomeeng.validation.agent_disable import declared_switch
+
+if TYPE_CHECKING:
+    import pytest
 
 SKIP_REPORT_OPTION: Final = "--oe-skip-report"
 """The pytest option naming the file a step's declared skips are recorded in."""
