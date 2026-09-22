@@ -43,3 +43,15 @@ The apply flow's evidence repair scans for the rejected class inside the linked 
 **Settlement condition**: both lines state the report and the authorization requirement without naming a caller, and the herdr node's skill surface passes the typed skill auditor.
 
 **Evidence**: `instructions:skill-auditor` finding `f-010` against the agent-mail skill on head `d6d1b5458af190ac9d1f05775c869c08ab206c95`, then a same-class sweep across `src/plugins/coding-agents/skills/*/SKILL.md` that found the two herdr instances and no others.
+
+## Two adapter skill descriptions hedge their NEVER clause
+
+`/agent-prompt-standards` `<constraint_language>` reads a NEVER as unconditional. Three coding-agents capability skills end their description's NEVER with "when this capability is available" — a condition that holds wherever the description is loaded, so it hedges the prohibition without narrowing it and spends characters from the shared listing budget on a no-op qualifier. `src/plugins/coding-agents/skills/operate-herdr/SKILL.md` line 4 and `src/plugins/coding-agents/skills/operate-prowl/SKILL.md` line 4 still carry it; the same clause in `src/plugins/coding-agents/skills/operate-agent-mail/SKILL.md` is repaired in the changeset that found it.
+
+**Impact**: a workflow reading either description can take the prohibition as conditional on some availability check it is expected to make, when no such check exists.
+
+**Settlement condition**: both descriptions end their NEVER clause at the prohibition, and each owning node's skill surface passes the typed skill auditor.
+
+**Why separate**: each instance belongs to a different node — `spx/43-coding-agents.enabler/18-herdr-environment.enabler` and `spx/43-coding-agents.enabler/18-prowl-environment.enabler` — whose surfaces this changeset does not touch, and each carries its own audit gate and plugin bump.
+
+**Evidence**: `instructions:skill-auditor` finding `f-007`, rule `hedged_never_clause`, against the agent-mail skill surface committed at `5f61aa80ce127256f1829e96535f33a1a0295227`, then a sweep over `src/plugins/*/skills/*/SKILL.md` that found the two siblings and no others.
