@@ -30,7 +30,6 @@ from outcomeeng.validation._engine import (
     RECIPE_HEADER_FORM,
     SIGNAL_GRACE_SECONDS,
     SIGNAL_POLL_INTERVAL_SECONDS,
-    SKIP_REPORT_FILE_SUFFIX,
     SPAWN_FAILURE_EXIT_CODE,
     STEP_HEADER_FORM,
     SUCCESS_EXIT_CODE,
@@ -47,9 +46,7 @@ from outcomeeng.validation._engine import (
     SUMMARY_KEY_SKIPPED,
     SUMMARY_KEY_STATUS,
     SUMMARY_KEY_STEPS,
-    SKIP_LINE_FORM,
     STEP_FAILURE_LINE_FORM,
-    STEP_SKIP_STATUS,
     STEP_STATUS_LINE_FORM,
     STEP_STATUS_PREFIX_FORM,
     TIMING_DIVIDER,
@@ -67,6 +64,11 @@ from outcomeeng.validation._engine import (
     run_check,
     run_recipe,
     terminate_process_group,
+)
+from outcomeeng.validation.skip_report import (
+    SKIP_LINE_FORM,
+    SKIP_REPORT_FILE_SUFFIX,
+    STEP_SKIP_STATUS,
 )
 from outcomeeng.validation._model import (
     ProcessHandle,

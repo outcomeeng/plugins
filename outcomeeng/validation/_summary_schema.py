@@ -6,6 +6,8 @@ from typing import cast
 
 from outcomeeng.validation.agent_disable import (
     AGENT_SWITCHES,
+)
+from outcomeeng.validation.skip_report import (
     SKIP_REPORT_SWITCH_FIELD,
     SKIP_REPORT_TEST_FIELD,
 )

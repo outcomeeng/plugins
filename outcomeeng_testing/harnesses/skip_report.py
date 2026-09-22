@@ -16,12 +16,12 @@ from pathlib import Path
 
 import pytest
 
-from outcomeeng.validation.agent_disable import (
+from outcomeeng.validation.agent_disable import declared_switch
+from outcomeeng.validation.skip_report import (
     SKIP_REPORT_DEST,
     SKIP_REPORT_OPTION,
     SKIP_REPORT_SWITCH_FIELD,
     SKIP_REPORT_TEST_FIELD,
-    declared_switch,
 )
 
 

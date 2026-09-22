@@ -27,11 +27,15 @@ from types import FrameType
 from typing import Final, TextIO
 
 from outcomeeng.validation._model import ProcessHandle, ProcessSpawner, Recipe, Step
-from outcomeeng.validation.agent_disable import (
-    AGENT_SWITCHES,
+from outcomeeng.validation.agent_disable import AGENT_SWITCHES
+from outcomeeng.validation.skip_report import (
+    SKIP_LINE_FORM,
+    SKIP_REPORT_FILE_PREFIX,
+    SKIP_REPORT_FILE_SUFFIX,
     SKIP_REPORT_OPTION,
     SKIP_REPORT_SWITCH_FIELD,
     SKIP_REPORT_TEST_FIELD,
+    STEP_SKIP_STATUS,
 )
 from outcomeeng.validation._steps import PYTEST_ARGV, RECIPE_AD_HOC, RECIPE_CHECK
 
@@ -80,7 +84,6 @@ STEP_STATUS_LINE_FORM: Final = STEP_STATUS_PREFIX_FORM + "  {elapsed}s"
 """One step's status line: the prefix followed by its elapsed seconds."""
 STEP_FAILURE_LINE_FORM: Final = STEP_STATUS_LINE_FORM + "  exit {exit_code}"
 """A failing step's line: the status line followed by the child's exit code."""
-SKIP_LINE_FORM: Final = "{status}  {test}  {switch}"
 """One declared skip's line: the skipped status, the row, and its switch."""
 _TIMING_ROW_VALUE: Final = re.compile(r"(\d+)s$", re.MULTILINE)
 """The engine's one reading of a row's value, applied inside the timing block.
@@ -108,9 +111,6 @@ SUMMARY_KEY_ARGV: Final = "argv"
 SUMMARY_KEY_LOG_PATH: Final = "log_path"
 SUMMARY_KEY_EXCERPT: Final = "excerpt"
 SUMMARY_KEY_SKIPPED: Final = "skipped"
-STEP_SKIP_STATUS: Final = "SKIP"
-SKIP_REPORT_FILE_PREFIX: Final = "outcomeeng-validation-skips-"
-SKIP_REPORT_FILE_SUFFIX: Final = ".jsonl"
 
 _current_handle_ref: list[ProcessHandle | None] = [None]
 

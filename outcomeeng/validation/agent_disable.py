@@ -24,14 +24,6 @@ SWITCH_UNSET: Final = "unset: rows starting a real process for this agent run"
 """The state wording for a switch holding anything else."""
 AGENT_SWITCHES: Final = (DISABLE_CLAUDE_ENV, DISABLE_CODEX_ENV)
 """Every switch that can declare a row optional, in reporting order."""
-SKIP_REPORT_OPTION: Final = "--oe-skip-report"
-"""The pytest option naming the file a step's declared skips are recorded in."""
-SKIP_REPORT_DEST: Final = "oe_skip_report"
-"""The pytest configuration name that option is stored under."""
-SKIP_REPORT_TEST_FIELD: Final = "test"
-"""The recorded field naming the row a switch declared optional."""
-SKIP_REPORT_SWITCH_FIELD: Final = "switch"
-"""The recorded field naming the switch that declared the skip."""
 
 
 def codex_disabled_reason(environment: Mapping[str, str]) -> str | None:
