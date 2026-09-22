@@ -50,17 +50,17 @@ the methodology's published probe-evidence mechanism.
 ## The shipped ledger script is unproven generic logic past the size bound
 
 `src/plugins/coding-agents/skills/orchestrate-officers/scripts/derive_ledger.py`
-runs to 339 lines — the source-owned field vocabulary and scalar-event registry,
-per-event parsing for passes, heads, verdicts, decisions, failures, finding
-provenance and reads, decimal spend accumulation across currencies, wall-time
-totalling, source provenance on every entry, and the versioned entry point with
-its success and invalid-input result contracts. None of that is agent-specific: it derives a
-record from durable inputs and would behave identically for any coding agent, so
-`spx/12-shipped-scripting.adr.md` governs it as a generic shipped script and
-states that past fifty lines such a script "is debt awaiting extraction once
-proven, or removal when it is not". The plugin-local adapter exemption in the
-same decision does not reach it, because moving this logic into SPX would couple
-SPX to no coding agent.
+runs past the fifty-line bound — the source-owned field vocabulary and scalar-
+event registry, per-event parsing for passes, heads, verdicts, decisions,
+failures, finding provenance and reads, decimal spend accumulation across
+currencies, wall-time totalling, source provenance on every entry, and the
+versioned entry point with its success and invalid-input result contracts. None
+of that is agent-specific: it derives a record from durable inputs and would
+behave identically for any coding agent, so `spx/12-shipped-scripting.adr.md`
+governs it as a generic shipped script and states that past fifty lines such a
+script "is debt awaiting extraction once proven, or removal when it is not". The
+plugin-local adapter exemption in the same decision does not reach it, because
+moving this logic into SPX would couple SPX to no coding agent.
 
 Which branch it owes is undecided, and that is what separates this entry from
 the marketplace's other oversized-script entries: the waiter and the worktree
@@ -71,13 +71,16 @@ asserted rather than observed, and the ADR's removal branch remains live.
 
 **Evidence**: `spx/12-shipped-scripting.adr.md` `## Verification` carries
 "NEVER: a generic shipped script beyond fifty lines stands as settled" and
-"NEVER: retain an unproven shipped script"; the file is 339 lines against a
-fifty-line bound; `probes/officer-run/probe.md` records `Artifacts: none` and no
-attested run of the skill that invokes it.
+"NEVER: retain an unproven shipped script"; the script named above exceeds that
+bound, and `wc -l` over its path derives the length it stands at. The length is
+the file's own, so this entry states the relation and never a copy of the
+figure, which every edit to the script would falsify;
+`probes/officer-run/probe.md` records `Artifacts: none` and no attested run of
+the skill that invokes it.
 
-**Impact**: a consumer repository carries 339 lines of generic derivation logic
-it cannot version independently and cannot repair without a marketplace release,
-for a capability no observed run has yet shown is wanted.
+**Impact**: a consumer repository carries the whole of that generic derivation
+logic, which it cannot version independently and cannot repair without a
+marketplace release, for a capability no observed run has yet shown is wanted.
 
 **Settlement condition**: an attested officer run establishes whether the
 derivation earns its place. If it does, the logic ports into the agent-neutral
@@ -106,7 +109,7 @@ with `must-fix` empty, finding `f-007` (severity `WARNING`) against
 supervision skill. Naming the fields in the skill body alone would make the
 surface claim a contract no assertion carries, which the truth hierarchy
 forbids; declaring the envelope first means choosing its field spelling,
-nesting, and versioning for all eight operations, and the `[probe]`-tagged
+nesting, and versioning for every routed operation, and the `[probe]`-tagged
 behavioral assertions that would exercise it still have no attested run.
 
 **Settlement condition**: the node declares the supervision result's envelope as
