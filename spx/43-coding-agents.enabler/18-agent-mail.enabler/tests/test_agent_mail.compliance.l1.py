@@ -108,6 +108,35 @@ def test_operations_reach_no_program_outside_the_adapters_own_commands() -> None
     run_generated_identities(assert_case)
 
 
+def test_no_operation_invokes_a_command_the_adapter_does_not_own() -> None:
+    module = load_agent_mail()
+
+    # The injected runner is the one boundary every external call crosses, so a
+    # call whose result the adapter discarded is still recorded here. The
+    # stub-path case above observes only that each operation completes where the
+    # adapter's own two programs resolve, which an ignored invocation survives;
+    # the programs the runner recorded are what an ignored invocation cannot.
+    adapter_programs = frozenset({module.GIT_COMMAND, module.AM_COMMAND})
+
+    def assert_case(
+        module: ModuleType, agent: str, program: str, model: str, project_key: str
+    ) -> None:
+        for request in requests_over_every_operation(module):
+            operation = module.Operation(request[module.OPERATION_FIELD])
+            arguments = cast(dict[str, object], request[module.ARGUMENTS_FIELD])
+            runner = common_dir_seeded_runner(
+                module, project_key, store_response_result(module, operation, arguments)
+            )
+
+            result = module.execute(request, runner)
+
+            assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
+            invoked = frozenset(argv[0] for argv, _ in runner.calls)
+            assert invoked <= adapter_programs, (operation, invoked)
+
+    run_generated_identities(assert_case)
+
+
 def test_no_other_shipped_script_constructs_mail_commands_or_git_keys() -> None:
     module = load_agent_mail()
 
