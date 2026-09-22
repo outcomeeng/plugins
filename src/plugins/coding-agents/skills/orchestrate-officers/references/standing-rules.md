@@ -18,11 +18,21 @@ Change's Refiner, Executor, Author, Fixer, or Verifier roles.
 ## Pane mutation authorization
 
 Mutating a pane requires the explicit standing or same-turn authorization the
-invoking workflow holds for that exact pane. The authorization is scoped to
-exactly the officer panes this skill launched and reaches no further: a pane
-this skill did not launch, the operator's own pane, and every pane of another
-fleet stay outside it. A pane leaves the set when its session is stopped and
-re-enters it only through a relaunch this skill performs.
+invoking workflow holds for that exact pane. That authorization covers exactly
+what the operator's invocation assigned to this fleet: each officer worktree
+that invocation named, and, inside such a worktree, the free pane selected for
+that officer's launch together with every pane this skill has started or
+relaunched that officer into. It reaches no further — the operator's own pane, a
+pane running a session this skill did not launch, a worktree the invocation
+never named, and every pane and worktree of another fleet stay outside it.
+
+The set therefore already holds the panes that the acts filling it must mutate.
+A free pane is in it before the first `start`, because a pane not yet launched
+into is exactly what `start` mutates. A pane stays in it after `stop`, and after
+an officer session ends on its own, because `relaunch` into that same pane acts
+on a pane the invocation still assigns to this fleet: a stop withdraws no
+authorization for this skill's own relaunch of that pane. Nothing this skill
+does extends the set past the worktrees the operator's invocation named.
 
 Each mutating request carries that authorization. The mutating herdr
 operations are `key`, `start`, `relaunch`, `stop`, and `open-worktree`; each

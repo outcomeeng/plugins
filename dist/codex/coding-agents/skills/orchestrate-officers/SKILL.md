@@ -199,8 +199,8 @@ capability result, or ledger change to report.
   on; each accepted result satisfies `<essential_principles>`, and any failed
   capability status remains a failed operation.
 - Every mutating herdr operation the result reports carries the standing pane
-  authorization for a pane this skill launched, and no pane outside that set is
-  mutated.
+  authorization for a pane the operator's invocation assigned to this fleet, and
+  no pane outside that set is mutated.
 - A request that is empty, ambiguous, or names several operations returns
   `invalid-invocation` with the accepted operation names, and the result carries
   no capability call, because none ran.

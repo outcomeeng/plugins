@@ -6,7 +6,8 @@ Read `${SKILL_DIR}/references/standing-rules.md`.
 
 <process>
 
-1. Require that this skill launched the target pane.
+1. Require that the target pane is one the operator's invocation assigned to
+   this fleet.
 2. Use skill `coding-agents:operate-herdr`. Ask it to read the officer pane and
    validate that result before repeating a stalled prompt; every pane read and
    keystroke below runs through that same capability.

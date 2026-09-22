@@ -7,6 +7,7 @@
 - [Frame and build constraints](#frame-and-build-constraints)
 - [Delegation contract](#delegation-contract)
 - [Round ceiling](#round-ceiling)
+- [Verification reuse](#verification-reuse)
 - [Standing rules](#standing-rules)
 - [Change lifecycle](#change-lifecycle)
 - [Reporting cadence](#reporting-cadence)
@@ -92,6 +93,21 @@ ceiling, the second-rejection procedure, and the third-round rule. Fill the
 first field by citing it, never by restating its values, so one authored
 statement governs all four. The repeated-class hard stop is this template's own
 and is stated here in full.
+
+## Verification reuse
+
+- Byte-identical reuse: `a Verifier verdict already reached on a byte-identical
+  subject is reused and never re-dispatched`
+- Rebase preservation: `after a rebase, that reuse holds only when the
+  repository's preservation proof establishes an unchanged branch diff and an
+  unrelated base movement, together with every further condition the
+  repository's merge overlay declares; absent that proof the verdict is
+  re-dispatched`
+- Base-delta validation: `the narrower validation the base delta requires is
+  run whatever the preservation proof permits to be reused`
+
+The verification-reuse intent is stated here in full rather than left to the
+standing authority recorded below, so every filled order carries it.
 
 ## Standing rules
 
