@@ -147,6 +147,8 @@ def test_fresh_codex_session_discovers_every_placed_canonical_subagent() -> None
     assert observation.placed_subagent_names <= observation.discovered_subagent_names
 
 
+@runs_real_claude
+@runs_real_codex
 def test_real_persistent_run_moves_records_at_differing_versions_to_one_version() -> (
     None
 ):
@@ -183,6 +185,8 @@ def test_real_persistent_run_moves_records_at_differing_versions_to_one_version(
         assert reported[key] == (before[record], version_after), key
 
 
+@runs_real_claude
+@runs_real_codex
 def test_real_run_moves_a_record_whose_directory_is_gone_and_exits_zero() -> None:
     observation = observe_real_record_refresh()
 
@@ -209,6 +213,8 @@ def test_real_run_moves_a_record_whose_directory_is_gone_and_exits_zero() -> Non
     )
 
 
+@runs_real_claude
+@runs_real_codex
 def test_real_second_run_reports_records_refreshed_at_unchanged_versions() -> None:
     observation = observe_real_record_refresh()
     assert observation.second_exit_code == 0, observation.second_stderr
