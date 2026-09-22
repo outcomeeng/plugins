@@ -8,10 +8,12 @@ from outcomeeng_testing.harnesses.officer_orchestration import (
     LedgerEntrypointObservation,
     LedgerModule,
     run_deduplication_property,
+    run_exact_text_property,
     run_foreign_argument_property,
     run_foreign_read_cause_property,
     run_inert_body_property,
     run_provenance_property,
+    run_repeated_value_property,
     run_spend_property,
     run_wall_time_property,
 )
@@ -33,7 +35,12 @@ def test_a_body_carrying_no_ledger_object_contributes_nothing() -> None:
 
 
 def test_running_spend_totals_each_currency_independently() -> None:
-    """Each currency's total is the sum of that currency's amounts alone."""
+    """Each currency's total is the sum of that currency's amounts alone.
+
+    The emitted total is compared as text against the exactly summed amounts,
+    so a total that carries the right value at a coarser precision than the
+    amounts it came from fails here rather than comparing numerically equal.
+    """
 
     def assert_spend(
         source: LedgerModule,
@@ -46,8 +53,8 @@ def test_running_spend_totals_each_currency_independently() -> None:
         assert observation.exit_code == source.SUCCESS_EXIT_CODE
         assert set(totals) == set(series)
         for currency, amounts in series.items():
-            assert Decimal(str(totals[currency])) == sum(
-                (Decimal(amount) for amount in amounts), Decimal()
+            assert totals[currency] == str(
+                sum((Decimal(amount) for amount in amounts), Decimal())
             )
 
     run_spend_property(assert_spend)
@@ -64,38 +71,118 @@ def test_wall_time_totals_every_event_duration() -> None:
         ledger = cast(dict[str, object], observation.result[source.LEDGER_FIELD])
 
         assert observation.exit_code == source.SUCCESS_EXIT_CODE
-        assert Decimal(str(ledger[source.WALL_TIME_SECONDS_FIELD])) == sum(
-            (Decimal(duration) for duration in series), Decimal()
+        assert ledger[source.WALL_TIME_SECONDS_FIELD] == str(
+            sum((Decimal(duration) for duration in series), Decimal())
         )
 
     run_wall_time_property(assert_wall_time)
 
 
-def test_repeated_run_tokens_contribute_once() -> None:
-    """A run series derives the ledger of its first occurrence per token."""
+def test_every_total_is_emitted_as_exact_decimal_text() -> None:
+    """Both totals reach the consumer as the exact decimal text of their value.
+
+    A JSON number literal is read into a double by conformant parsers, so the
+    emitted form is checked to be text and to carry every digit of the amount
+    and duration the record supplied.
+    """
+
+    def assert_exact_text(
+        source: LedgerModule,
+        payload: dict[str, str],
+        observation: LedgerEntrypointObservation,
+    ) -> None:
+        ledger = cast(dict[str, object], observation.result[source.LEDGER_FIELD])
+        totals = cast(dict[str, object], ledger[source.RUNNING_SPEND_FIELD])
+        spend = totals[payload["currency"]]
+        duration = ledger[source.WALL_TIME_SECONDS_FIELD]
+
+        assert observation.exit_code == source.SUCCESS_EXIT_CODE
+        assert isinstance(spend, str)
+        assert isinstance(duration, str)
+        assert spend == str(Decimal() + Decimal(payload["amount"]))
+        assert duration == str(Decimal() + Decimal(payload["duration"]))
+
+    run_exact_text_property(assert_exact_text)
+
+
+def test_repeated_source_identities_contribute_once() -> None:
+    """Each source derives the ledger of its first occurrence per identity.
+
+    Both sources are driven in one document, so a rule that admits a repeated
+    mail record while rejecting a repeated run — or the reverse — fails here.
+    """
 
     def assert_deduplication(
         source: LedgerModule,
-        series: list[tuple[str, str]],
+        mail: list[tuple[int, dict[str, str]]],
+        journal: list[tuple[str, dict[str, str]]],
         derive_series: Callable[
-            [Sequence[tuple[str, str]]], LedgerEntrypointObservation
+            [
+                Sequence[tuple[int, dict[str, str]]],
+                Sequence[tuple[str, dict[str, str]]],
+            ],
+            LedgerEntrypointObservation,
         ],
     ) -> None:
-        first_occurrences: list[tuple[str, str]] = []
-        seen: set[str] = set()
-        for token, label in series:
-            if token not in seen:
-                seen.add(token)
-                first_occurrences.append((token, label))
-        complete = derive_series(series)
-        deduplicated = derive_series(first_occurrences)
+        first_records: list[tuple[int, dict[str, str]]] = []
+        seen_ids: set[int] = set()
+        for identifier, payload in mail:
+            if identifier not in seen_ids:
+                seen_ids.add(identifier)
+                first_records.append((identifier, payload))
+        first_runs: list[tuple[str, dict[str, str]]] = []
+        seen_tokens: set[str] = set()
+        for token, payload in journal:
+            if token not in seen_tokens:
+                seen_tokens.add(token)
+                first_runs.append((token, payload))
+        complete = derive_series(mail, journal)
+        deduplicated = derive_series(first_records, first_runs)
         ledger = cast(dict[str, object], complete.result[source.LEDGER_FIELD])
 
         assert complete.exit_code == source.SUCCESS_EXIT_CODE
         assert complete.result == deduplicated.result
-        assert len(cast(list[object], ledger[source.PASSES_FIELD])) == len(seen)
+        assert len(cast(list[object], ledger[source.PASSES_FIELD])) == len(
+            seen_ids
+        ) + len(seen_tokens)
 
     run_deduplication_property(assert_deduplication)
+
+
+def test_a_value_a_record_repeats_enters_its_collection_each_time() -> None:
+    """A finding or read a record lists twice is recorded twice.
+
+    Deduplication is a rule about a source record, not about a derived entry,
+    so a collection that dropped a repeat would lose a value the record
+    genuinely carried.
+    """
+
+    def assert_repeats(
+        source: LedgerModule,
+        finding: dict[str, str],
+        read: dict[str, object],
+        repeats: int,
+        identifier: int,
+        observation: LedgerEntrypointObservation,
+    ) -> None:
+        ledger = cast(dict[str, object], observation.result[source.LEDGER_FIELD])
+        provenance = {
+            source.SOURCE_KIND_FIELD: source.MAIL_SOURCE_KIND,
+            source.SOURCE_ID_FIELD: identifier,
+        }
+
+        assert observation.exit_code == source.SUCCESS_EXIT_CODE
+        assert (
+            ledger[source.FINDING_PROVENANCE_FIELD]
+            == [{source.VALUE_FIELD: finding, source.SOURCE_FIELD: provenance}]
+            * repeats
+        )
+        assert (
+            ledger[source.READS_FIELD]
+            == [{source.VALUE_FIELD: read, source.SOURCE_FIELD: provenance}] * repeats
+        )
+
+    run_repeated_value_property(assert_repeats)
 
 
 def test_every_entry_carries_the_provenance_of_its_record() -> None:

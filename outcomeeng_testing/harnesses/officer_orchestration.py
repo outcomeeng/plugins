@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import functools
 import importlib.util
 import io
 import json
@@ -17,7 +18,10 @@ from hypothesis import strategies as st
 
 from outcomeeng_testing.generators.officer_orchestration import (
     change_identifiers,
+    declared_read_causes,
     duration_series,
+    event_payloads,
+    finding_entries,
     foreign_argument_vectors,
     foreign_read_causes,
     journal_carriers,
@@ -26,6 +30,8 @@ from outcomeeng_testing.generators.officer_orchestration import (
     non_ledger_bodies,
     pass_labels,
     read_details,
+    repeat_counts,
+    repeated_mail_series,
     repeated_run_series,
     spend_series,
     store_message_ids,
@@ -52,6 +58,10 @@ WALL_TIME_PROPERTY_SEED = 2026092202
 WALL_TIME_PROPERTY_EXAMPLES = 40
 DEDUPLICATION_PROPERTY_SEED = 2026092203
 DEDUPLICATION_PROPERTY_EXAMPLES = 40
+REPEATED_VALUE_PROPERTY_SEED = 2026092209
+REPEATED_VALUE_PROPERTY_EXAMPLES = 40
+EXACT_TEXT_PROPERTY_SEED = 2026092210
+EXACT_TEXT_PROPERTY_EXAMPLES = 40
 PROVENANCE_PROPERTY_SEED = 2026092204
 PROVENANCE_PROPERTY_EXAMPLES = 40
 INERT_BODY_PROPERTY_SEED = 2026092205
@@ -132,8 +142,14 @@ class LedgerEntrypointObservation:
     stderr: str
 
 
+@functools.cache
 def load_ledger_module() -> LedgerModule:
-    """Load the shipped ledger entry point from the authored skill surface."""
+    """Load the shipped ledger entry point from the authored skill surface.
+
+    The shipped module holds no mutable state between invocations, so one load
+    per process serves every case; re-executing the file per entry-point call
+    would repeat the import for every generated example of every property.
+    """
     specification = importlib.util.spec_from_file_location(
         LEDGER_MODULE_NAME, LEDGER_SCRIPT_PATH
     )
@@ -293,42 +309,167 @@ def run_wall_time_property(
     )
 
 
+def payload_event(
+    module: LedgerModule, payload: Mapping[str, str]
+) -> dict[str, object]:
+    """One ledger event carrying a generated payload's label, spend, and duration."""
+    return {
+        module.PASS_FIELD: payload["label"],
+        module.SPEND_FIELD: {
+            module.CURRENCY_FIELD: payload["currency"],
+            module.AMOUNT_FIELD: payload["amount"],
+        },
+        module.WALL_TIME_SECONDS_FIELD: payload["duration"],
+    }
+
+
 def run_deduplication_property(
     assert_deduplication: Callable[
         [
             LedgerModule,
-            list[tuple[str, str]],
-            Callable[[Sequence[tuple[str, str]]], LedgerEntrypointObservation],
+            list[tuple[int, dict[str, str]]],
+            list[tuple[str, dict[str, str]]],
+            Callable[
+                [
+                    Sequence[tuple[int, dict[str, str]]],
+                    Sequence[tuple[str, dict[str, str]]],
+                ],
+                LedgerEntrypointObservation,
+            ],
         ],
         None,
     ],
 ) -> None:
-    """Drive run series carrying repeated tokens; the test owns the dedup law."""
+    """Drive both sources carrying repeated identities; the test owns the law."""
     module = load_ledger_module()
 
     @seed(DEDUPLICATION_PROPERTY_SEED)
     @settings(
         max_examples=DEDUPLICATION_PROPERTY_EXAMPLES, deadline=None, print_blob=True
     )
-    @given(series=repeated_run_series(), change=change_identifiers())
-    def generated_deduplication(series: list[tuple[str, str]], change: str) -> None:
+    @given(
+        mail=repeated_mail_series(),
+        journal=repeated_run_series(),
+        change=change_identifiers(),
+    )
+    def generated_deduplication(
+        mail: list[tuple[int, dict[str, str]]],
+        journal: list[tuple[str, dict[str, str]]],
+        change: str,
+    ) -> None:
         def derive_series(
-            runs: Sequence[tuple[str, str]],
+            records: Sequence[tuple[int, dict[str, str]]],
+            runs: Sequence[tuple[str, dict[str, str]]],
         ) -> LedgerEntrypointObservation:
             return derive(
                 module,
                 change,
+                mail_records=[
+                    event_record(module, identifier, payload_event(module, payload))
+                    for identifier, payload in records
+                ],
                 journal_runs=[
-                    journal_run(module, token, {module.PASS_FIELD: label})
-                    for token, label in runs
+                    journal_run(module, token, payload_event(module, payload))
+                    for token, payload in runs
                 ],
             )
 
-        assert_deduplication(module, series, derive_series)
+        assert_deduplication(module, mail, journal, derive_series)
 
     run_replayable_property(
         generated_deduplication,
         seed_value=DEDUPLICATION_PROPERTY_SEED,
+        replay_path=PROPERTY_REPLAY_PATH,
+    )
+
+
+def run_repeated_value_property(
+    assert_repeats: Callable[
+        [
+            LedgerModule,
+            dict[str, str],
+            dict[str, object],
+            int,
+            int,
+            LedgerEntrypointObservation,
+        ],
+        None,
+    ],
+) -> None:
+    """Drive one record listing a finding and a read several times over."""
+    module = load_ledger_module()
+
+    @seed(REPEATED_VALUE_PROPERTY_SEED)
+    @settings(
+        max_examples=REPEATED_VALUE_PROPERTY_EXAMPLES, deadline=None, print_blob=True
+    )
+    @given(
+        finding=finding_entries(),
+        details=read_details(),
+        cause=declared_read_causes(load_ledger_module()),
+        repeats=repeat_counts(),
+        identifier=store_message_ids(),
+        change=change_identifiers(),
+    )
+    def generated_repeats(
+        finding: dict[str, str],
+        details: dict[str, str],
+        cause: str,
+        repeats: int,
+        identifier: int,
+        change: str,
+    ) -> None:
+        read: dict[str, object] = {**details, module.CAUSE_FIELD: cause}
+        record = event_record(
+            module,
+            identifier,
+            {
+                module.FINDING_PROVENANCE_FIELD: [finding] * repeats,
+                module.READ_FIELD: [read] * repeats,
+            },
+        )
+        assert_repeats(
+            module,
+            finding,
+            read,
+            repeats,
+            identifier,
+            derive(module, change, mail_records=[record]),
+        )
+
+    run_replayable_property(
+        generated_repeats,
+        seed_value=REPEATED_VALUE_PROPERTY_SEED,
+        replay_path=PROPERTY_REPLAY_PATH,
+    )
+
+
+def run_exact_text_property(
+    assert_exact_text: Callable[
+        [LedgerModule, dict[str, str], LedgerEntrypointObservation], None
+    ],
+) -> None:
+    """Drive one spend and duration; the test owns the emitted-form law."""
+    module = load_ledger_module()
+
+    @seed(EXACT_TEXT_PROPERTY_SEED)
+    @settings(max_examples=EXACT_TEXT_PROPERTY_EXAMPLES, deadline=None, print_blob=True)
+    @given(
+        payload=event_payloads(),
+        identifier=store_message_ids(),
+        change=change_identifiers(),
+    )
+    def generated_exact_text(
+        payload: dict[str, str], identifier: int, change: str
+    ) -> None:
+        record = event_record(module, identifier, payload_event(module, payload))
+        assert_exact_text(
+            module, payload, derive(module, change, mail_records=[record])
+        )
+
+    run_replayable_property(
+        generated_exact_text,
+        seed_value=EXACT_TEXT_PROPERTY_SEED,
         replay_path=PROPERTY_REPLAY_PATH,
     )
 
@@ -427,8 +568,11 @@ def run_foreign_read_cause_property(
         identifier: int,
         change: str,
     ) -> None:
+        # Each filler carries an identity distinct from every other filler and
+        # from the offending record, so no record is skipped as a repeat of one
+        # already absorbed and the offending read reaches the derivation.
         conforming = [
-            event_record(module, index + 1, {module.PASS_FIELD: filler})
+            event_record(module, identifier + 1 + index, {module.PASS_FIELD: filler})
             for index in range(leading)
         ]
         offending = event_record(

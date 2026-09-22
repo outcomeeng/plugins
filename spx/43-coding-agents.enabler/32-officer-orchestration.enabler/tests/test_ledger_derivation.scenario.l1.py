@@ -1,5 +1,6 @@
 """Reachability and populated-derivation evidence for the officer ledger."""
 
+from decimal import Decimal
 from typing import cast
 
 from outcomeeng_testing.harnesses.officer_orchestration import (
@@ -55,7 +56,7 @@ def test_entrypoint_returns_the_minimum_versioned_ledger() -> None:
     assert ledger[source.FINDING_PROVENANCE_FIELD] == []
     assert ledger[source.READS_FIELD] == []
     assert ledger[source.RUNNING_SPEND_FIELD] == {}
-    assert ledger[source.WALL_TIME_SECONDS_FIELD] == 0
+    assert ledger[source.WALL_TIME_SECONDS_FIELD] == str(Decimal())
 
 
 def test_one_ledger_body_populates_every_collection_with_its_provenance() -> None:
@@ -64,6 +65,10 @@ def test_one_ledger_body_populates_every_collection_with_its_provenance() -> Non
     The read's cause comes from the entry point's declared cause set rather than
     a literal; this scenario exercises recording, while the complete cause
     domain is the mapping evidence's subject.
+
+    The expected running spend and wall time are the record's own amount and
+    duration: one record's total is that record's value at the precision it was
+    written with. Neither expectation replays the entry point's conversion.
     """
     source = load_ledger_module()
     read = {source.CAUSE_FIELD: min(source.READ_CAUSES), "messageId": 41}
@@ -73,6 +78,10 @@ def test_one_ledger_body_populates_every_collection_with_its_provenance() -> Non
         "choice": "track",
         "reasoning": "the branch carries the findings and the next Activity resumes",
     }
+    spend = {
+        source.CURRENCY_FIELD: "USD",
+        source.AMOUNT_FIELD: "12.50",
+    }
     event = {
         source.PASS_FIELD: "round-2",
         source.HEAD_FIELD: "ecf41380c089203f6248a29ad8284bf8df4cd74a",
@@ -81,10 +90,7 @@ def test_one_ledger_body_populates_every_collection_with_its_provenance() -> Non
         source.FAILURE_FIELD: "an operator instruction named the officer session",
         source.FINDING_PROVENANCE_FIELD: [finding],
         source.READ_FIELD: read,
-        source.SPEND_FIELD: {
-            source.CURRENCY_FIELD: "USD",
-            source.AMOUNT_FIELD: "12.50",
-        },
+        source.SPEND_FIELD: spend,
         source.WALL_TIME_SECONDS_FIELD: "93.5",
     }
     observation = derive(
@@ -127,8 +133,13 @@ def test_one_ledger_body_populates_every_collection_with_its_provenance() -> Non
     assert ledger[source.READS_FIELD] == [
         {source.VALUE_FIELD: read, source.SOURCE_FIELD: provenance}
     ]
-    assert ledger[source.RUNNING_SPEND_FIELD] == {"USD": 12.5}
-    assert ledger[source.WALL_TIME_SECONDS_FIELD] == 93.5
+    assert ledger[source.RUNNING_SPEND_FIELD] == {
+        spend[source.CURRENCY_FIELD]: spend[source.AMOUNT_FIELD]
+    }
+    assert (
+        ledger[source.WALL_TIME_SECONDS_FIELD]
+        == (event[source.WALL_TIME_SECONDS_FIELD])
+    )
 
 
 def test_entrypoint_rejects_schema_version_two() -> None:

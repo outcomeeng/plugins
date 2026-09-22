@@ -85,3 +85,53 @@ SPX CLI, is published to npm, `REQUIRED_SPX_VERSION` advances to that release,
 and the skill keeps its instruction with no script. If it does not, the script is
 removed rather than extracted, and `<ledger_derivation>` and `<script_validation>`
 are withdrawn with it.
+
+## The supervision skill's own result carries no declared shape
+
+`/orchestrate-officers` validates every value it composes against a declared
+versioned shape — the herdr and agent-mail results under `schemaVersion: 1`, and
+the ledger under the entry point's own key set — while its `<result>` section
+names the content it returns as prose: the operation, officer identity, absolute
+worktree, Change, triggering event, capability results, ledger change, and next
+event boundary. A caller therefore compares the emitted operation against a list
+of nouns rather than against field names, and no deterministic reader can check
+a returned operation for completeness.
+
+**Evidence**: `instructions:skill-auditor` on
+`src/plugins/coding-agents/skills/orchestrate-officers/`, verdict `APPROVED`
+with `must-fix` empty, finding `f-007` (severity `WARNING`) against
+`SKILL.md` `<result>`.
+
+**Gap**: no assertion in this node declares a result envelope for the
+supervision skill. Naming the fields in the skill body alone would make the
+surface claim a contract no assertion carries, which the truth hierarchy
+forbids; declaring the envelope first means choosing its field spelling,
+nesting, and versioning for all eight operations, and the `[probe]`-tagged
+behavioral assertions that would exercise it still have no attested run.
+
+**Settlement condition**: the node declares the supervision result's envelope as
+an assertion — its fields, nesting, and version — the skill body states that
+envelope once, and each workflow's success criteria names the fields its
+operation fills.
+
+## The router loads the journal capability on every routed operation
+
+`/orchestrate-officers` composes `spec-tree:project-run-journal` at the router
+level, while only the reconstruction path consumes it — the read workflow after
+a compaction or restart, and the pre-compaction housekeep path. The other routed
+operations carry that capability's payload without inspecting a journal run.
+
+**Evidence**: `instructions:skill-auditor` on
+`src/plugins/coding-agents/skills/orchestrate-officers/`, verdict `APPROVED`
+with `must-fix` empty, finding `f-007` (severity `WARNING`).
+
+**Gap**: moving the composition into the consuming workflow's required reading
+changes which capabilities a routed invocation loads. Which paths genuinely
+reach a journal run is settled by the officer-run probe, and
+`probes/officer-run/probe.md` records no attested run, so the consuming set is
+asserted rather than observed.
+
+**Settlement condition**: an attested officer run establishes which routed
+operations inspect a sealed journal run, and the composition moves to those
+workflows' required reading while the capabilities nearly every operation uses
+stay at the router level.
