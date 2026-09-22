@@ -2198,7 +2198,7 @@ def observe_missing_codex_home() -> str | None:
 def _installation_plans(temporary_root: Path) -> tuple[InstallationPlan, ...]:
     """Build every plan repository installation performs across its modes.
 
-    A persistent plan against an already-canonical source refreshes it, while
+    A persistent plan against a registered source refreshes it, while
     an absent registration is added, so both persistent variants are needed to
     cover the marketplace operation vocabulary.
     """
@@ -3712,7 +3712,7 @@ class UnpublishedPluginRunner:
     Controlled under `/test` Stage 5 Failure simulation: a real marketplace
     reports a plugin absent only while that plugin is genuinely unpublished, a
     state that disappears the moment the plugin merges, so it cannot be produced
-    on demand against the canonical source.
+    on demand against the registered source.
     """
 
     unpublished: Mapping[Agent, frozenset[str]]
@@ -3804,7 +3804,7 @@ def observe_failure_operation_domains() -> tuple[
     """Expose reachable operations for every mode and source plan variant.
 
     The persistent variants are an absent registration, which the plan adds,
-    and the canonical source, which it refreshes.
+    and a registered source, which it refreshes.
     """
     sources: tuple[str | None, ...] = (None, DECLARED_CLAUDE_SOURCE)
     with TemporaryDirectory() as temporary_directory:
