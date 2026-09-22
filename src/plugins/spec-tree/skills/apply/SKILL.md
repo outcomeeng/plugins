@@ -8,7 +8,7 @@ allowed-tools: Read, Glob, Grep, Edit, Write, {{! tool('use_skill') !}},{!% if t
 ---
 
 <objective>
-A spec-tree work item implemented and ready for the delivery boundary the user requested.
+A spec-tree work item delivered to the boundary the user requested — for default-branch work, merged to the default branch on origin.
 
 </objective>
 
@@ -17,6 +17,7 @@ A spec-tree work item implemented and ready for the delivery boundary the user r
 The raw invocation string `$ARGUMENTS` controls what runs before the per-node flow below. Parse it exactly once before Step 0:
 
 - `$ARGUMENTS` containing a canonical full `spx/...` node path → the work queue is that single node.
+- Non-empty `$ARGUMENTS` that is not a canonical node path → treat it as the plan or proposal `argument-hint` advertises and route it to Step 0, whose node set becomes the work queue.
 - Empty `$ARGUMENTS` → determine the work from the conversation. If nothing is clear, complete Step 1 first — invoke `/understand` when the live `SPEC_TREE_FOUNDATION` marker is absent — then read `spx/EXCLUDE`, whose entries are relative to `spx/`, and prefix each non-comment, non-blank entry with `spx/` before adding it to the work queue. Never access `spx/EXCLUDE` before the foundation is live, and never pass a bare entry to `/contextualize`. If no work is found, report "Nothing to apply" and stop.
 
 Construct the work queue through Step 0 when its condition applies; otherwise use the specific node or `spx/EXCLUDE` list resolved above.
@@ -144,7 +145,7 @@ This map is the code row's language-specific flow. Steps 0–2, 9, and 10 are la
 | 0    | Select the slice        | {!% require_skill 'spec-tree:slice' %!}                                                                                             | same                                            | same                                               | same                                           |
 | 1    | Load methodology        | {!% require_skill 'spec-tree:understand' %!}                                                                                        | same                                            | same                                               | same                                           |
 | 2    | Load context            | Use skill `spec-tree:contextualize` for `{full-spx-node-path}`.                                                                     | same                                            | same                                               | same                                           |
-| 3    | Architect               | {!% require_skill 'typescript:architect-typescript' %!}                                                                             | {!% require_skill 'python:architect-python' %!} | {!% require_skill 'rust:architect-rust' %!}        | {!% require_skill 'go:architect-go' %!}        |
+| 3    | Author                  | {!% require_skill 'typescript:architect-typescript' %!}                                                                             | {!% require_skill 'python:architect-python' %!} | {!% require_skill 'rust:architect-rust' %!}        | {!% require_skill 'go:architect-go' %!}        |
 | 4    | Architecture audit      | `{{! subagent_name('spec-tree', 'adr-auditor') !}}` or `{{! subagent_name('spec-tree', 'pdr-auditor') !}}` agent                    | same                                            | same                                               | same                                           |
 | 5    | Establish evidence      | {!% require_skill 'spec-tree:verify' %!}                                                                                            | same                                            | same                                               | same                                           |
 | 6    | Evidence audit          | `{{! subagent_name('spec-tree', 'test-evidence-auditor') !}}`, `{{! subagent_name('spec-tree', 'eval-evidence-auditor') !}}` agents | same                                            | same                                               | same                                           |
@@ -163,13 +164,13 @@ Invoke the exact skill or agent surface shown. Never substitute, skip, or reorde
 
 <step number="0" name="Select the slice" frequency="only for a plan or proposal">
 
-Invoke `/slice` when the work is described as a plan or proposal rather than a specific node or queue, per `<invocation_modes>`; its node set becomes the work queue. Skip this step for a specific node or an `spx/EXCLUDE` list.
+When the work is described as a plan or proposal rather than a specific node or queue, per `<invocation_modes>`: {!% require_skill 'spec-tree:slice' %!} Its node set becomes the work queue. Skip this step for a specific node or an `spx/EXCLUDE` list.
 
 </step>
 
 <step number="1" name="Load methodology" frequency="once per session">
 
-Invoke `/understand`.
+{!% require_skill 'spec-tree:understand' %!}
 
 This loads the spec-tree methodology — node types, assertion formats, durable map rules. Skip if `SPEC_TREE_FOUNDATION` marker is already present in this session.
 
@@ -218,7 +219,7 @@ Before invoking the audit, apply `<stabilized_diff_rule>` and `<verification_che
 
 <step number="5" name="Establish evidence">
 
-Invoke `/verify` for every selected row whose changed declaration requires verification routing. It selects each assertion's verification type, routes selected test work through `/test` to each applicable installed language specialist, routes selected evaluate work through its own eval routing, and records pathless audit requirements without producing their verdict.
+{!% require_skill 'spec-tree:verify' %!} Run it for every selected row whose changed declaration requires verification routing. It selects each assertion's verification type, routes selected test work through `/test` to each applicable installed language specialist, routes selected evaluate work through its own eval routing, and records pathless audit requirements without producing their verdict.
 
 Establish every selected path-bearing evidence definition before implementation. When `/verify` selects test, the linked tests exist before implementation. When it selects evaluate, the eval definition, cases, prompt, and producer contract exist before implementation. A pathless audit selection records the isolated-verifier requirement and creates no preimplementation artifact.
 
@@ -306,7 +307,7 @@ Skip this step only when the user explicitly scoped the work to a proposal, anal
 
 Local readiness is not delivered value. A Step 8 projection with `terminalStatus: approved`, a converged Step 9 review, passing tests, a clean working tree, and a local commit ahead of base are progress. Delivered value is the change merged to the default branch on origin.
 
-Invoke `/merge`. It selects the transport and drives the change to the default branch under its own authority gates — this flow neither re-implements the merge protocol nor re-decides those gates. The `/merge` lifecycle owns commit, push, integration review, and merge.
+{!% require_skill 'spec-tree:merge' %!} It selects the transport and drives the change to the default branch under its own authority gates — this flow neither re-implements the merge protocol nor re-decides those gates. The `/merge` lifecycle owns commit, push, integration review, and merge.
 
 The flow is complete only when the change reaches the default branch on origin, or an explicit merge lifecycle gate blocks with no independent local action remaining. A clean working tree, a local commit, or a branch ahead of base is never the endpoint for default-branch work.
 
