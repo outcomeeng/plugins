@@ -5,6 +5,7 @@ from typing import cast
 
 from outcomeeng.distribution.installation import (
     Agent,
+    UNLOCATED_REGISTRY_DIAGNOSTIC,
     CLAUDE_INSTALLED_PLUGINS_FIELD,
     CLAUDE_INSTALLED_RECORD_COMMIT_FIELD,
     CLAUDE_INSTALLED_RECORD_PATH_FIELD,
@@ -37,6 +38,7 @@ from outcomeeng_testing.generators.installation import (
     RecordDisposition,
 )
 from outcomeeng_testing.harnesses.installation import (
+    observe_unlocated_registry_plan,
     MARKETPLACE,
     RegistryState,
     UnreadableSourceCase,
@@ -784,3 +786,10 @@ def test_a_record_written_between_the_listing_reads_is_reported_and_fails_the_ru
     assert claude_operations.count(Operation.PLUGIN_LIST) == 1
     assert claude_operations[-1] is Operation.PLUGIN_LIST
     assert observation.exit_code != 0
+
+
+def test_a_registry_entry_naming_no_install_location_stops_planning() -> None:
+    observation = observe_unlocated_registry_plan()
+
+    assert observation.error is not None
+    assert UNLOCATED_REGISTRY_DIAGNOSTIC in observation.error

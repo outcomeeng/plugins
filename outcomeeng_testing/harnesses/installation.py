@@ -145,6 +145,7 @@ from outcomeeng_testing.generators.installation import (
     RecordDisposition,
     RegistryShape,
     generated_marketplace_registry_entries,
+    generated_unlocated_registry_entry,
     served_version,
     generated_closing_listing,
     recorded_version,
@@ -1315,6 +1316,48 @@ class RegistryShapeObservation:
     marketplace: str
     declared_source: str
     clone: Path
+
+
+@dataclass(frozen=True)
+class UnlocatedRegistryObservation:
+    """The planning outcome for a registry entry that locates no clone."""
+
+    error: str | None
+    """The diagnostic planning raised, or None when planning returned a plan."""
+
+
+def observe_unlocated_registry_plan() -> UnlocatedRegistryObservation:
+    """Plan a persistent run against a registry entry that names no install location."""
+    checkout = repository_root()
+    with TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory).resolve()
+        mirror = temporary_root / "checkout"
+        mirror_installation_inputs(checkout, mirror)
+        _write_project_marketplace(mirror, DECLARED_CLAUDE_SOURCE)
+        environment = _persistent_environment(temporary_root)
+        _prepare_agent_state(environment)
+        preflight = build_persistent_preflight(mirror, environment)
+        marketplace = preflight.roots.marketplace
+        error: str | None = None
+        try:
+            build_persistent_installation_plan(
+                preflight,
+                claude_marketplace_payload=generated_unlocated_registry_entry(
+                    marketplace
+                ),
+                claude_plugins_payload=_plugin_listing_payload(
+                    Agent.CLAUDE, mirror, frozenset({SPEC_TREE_PLUGIN})
+                ),
+                codex_marketplace_payload=codex_marketplace_listing_payload(
+                    DECLARED_CODEX_SOURCE, marketplace
+                ),
+                codex_plugins_payload=_plugin_listing_payload(
+                    Agent.CODEX, mirror, frozenset({SPEC_TREE_PLUGIN})
+                ),
+            )
+        except ValueError as raised:
+            error = str(raised)
+    return UnlocatedRegistryObservation(error=error)
 
 
 def observe_registry_shape_plan() -> RegistryShapeObservation:
@@ -4132,6 +4175,8 @@ __all__ = [
     "RecordRefreshObservation",
     "RecordRewriteObservation",
     "RegistryShapeObservation",
+    "UnlocatedRegistryObservation",
+    "observe_unlocated_registry_plan",
     "UnreadableHeadObservation",
     "observe_unreadable_head_record",
     "observe_registry_shape_plan",

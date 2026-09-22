@@ -596,6 +596,25 @@ class RegistryShape(StrEnum):
     ABSENT = "absent"
 
 
+def generated_unlocated_registry_entry(marketplace: str) -> str:
+    """A registry listing whose entry under the catalog's name locates no clone.
+
+    The construction law is the registry entry grammar with its install-location
+    field absent, which is the condition itself: Claude Code records where it
+    keeps a marketplace's clone, and an entry that names no location leaves the
+    run with nowhere to read the target's head from.
+    """
+    return json.dumps(
+        [
+            {
+                CLAUDE_MARKETPLACE_NAME_FIELD: marketplace,
+                CLAUDE_SOURCE_FIELD: CLAUDE_GITHUB_SOURCE_TYPE,
+                CLAUDE_REPOSITORY_FIELD: f"{marketplace}-org/{marketplace}-plugins",
+            }
+        ]
+    )
+
+
 def generated_marketplace_registry_entries(
     marketplace: str, clone: Path, checkout: Path
 ) -> tuple[tuple[str, RegistryShape, str | None, SourceAction], ...]:
@@ -748,6 +767,7 @@ __all__ = [
     "generated_claude_listing_entries",
     "generated_no_target_records",
     "generated_marketplace_registry_entries",
+    "generated_unlocated_registry_entry",
     "foreign_marketplace_name",
     "MOVED_DISPOSITIONS",
     "RecordDisposition",
