@@ -140,3 +140,85 @@ asserted rather than observed.
 operations inspect a sealed journal run, and the composition moves to those
 workflows' required reading while the capabilities nearly every operation uses
 stay at the router level.
+
+## Two shipped references restate behaviour the entry point owns
+
+`src/plugins/coding-agents/skills/orchestrate-officers/references/ledger-contract.md`
+enumerates the refusal classes
+`src/plugins/coding-agents/skills/orchestrate-officers/scripts/derive_ledger.py`
+implements, and
+`src/plugins/coding-agents/skills/orchestrate-officers/references/ledger-script-coverage.md`
+enumerates the shapes
+`outcomeeng_testing/generators/officer_orchestration.py` emits. Neither states a
+claim its source does not already state. Every correct change to the code
+therefore falsifies the document that restates it, by construction rather than
+by oversight.
+
+The evidence is a sequence, and the sequence is the point. Three correct code
+repairs each falsified one of these documents as a side effect: a section shrink
+that moved the ledger contract out of the skill body, a generator widening that
+added parser-refusal shapes, and an inert-body fix that added a generated body
+shape. Each repair was right. Each left a document false. Each was then repaired
+as a single instance, and the next code change falsified the documents again.
+
+A class sweep followed: both enumerations were derived from the source and
+replaced whole rather than repaired instance by instance. That sweep found
+thirteen disagreements between the documents and the code beyond the two a
+review had named — among them an unstated top-level object gate,
+absent-container refusals, mail-record and journal-run gates never named as
+refusals, a run-token type gate, and a blanket phrase naming no field, which
+could neither be falsified nor confirmed against any code path. The thirteen is
+what that one reading found, not a running total; a later reader who sweeps
+again should restate what that reading finds rather than add to this figure.
+
+The same defect stood inside the generator's own docstring, which counted shapes
+the strategy no longer carried. That instance sits in no shipped document at
+all, which places the defect in prose restating executable behaviour rather than
+in these two files.
+
+The sweep did not end it. On head
+`ab87d964b416a6e8067d3930fbc64748c378449e`, review run
+`2026-09-22_18-30-17-398-2ea1e6382b59` raised a further drift finding against
+`ledger-contract.md`: a universal value-refusal sentence the entry point does
+not honour for a journal run repeating a `runToken`, because the derivation
+passes such a run over before reading its event fields. That finding lands on a
+document derived from the code in the same round.
+
+**Evidence**: the class sweep at commit
+`31401d957ab517228b600fc04e8e2d8ac148060f`, which replaced both enumerations
+whole and whose message records the thirteen disagreements and the generator
+docstring; and review run `2026-09-22_18-30-17-398-2ea1e6382b59` on head
+`ab87d964b416a6e8067d3930fbc64748c378449e`, which raised the `runToken`
+value-refusal drift against `ledger-contract.md` after that sweep.
+
+**Impact**: a document hand-maintained against code is missed by whoever just
+changed the code, reliably, including when that person knows the rule and has
+just applied it elsewhere — the sequence above carries one instance where the
+same correction was relayed and then repeated two commits later. Verification
+does not catch the drift either: four Verifier passes approved these documents
+across the rounds in which those thirteen unreported disagreements accumulated.
+A consumer reading either document therefore reads a claim the installed entry
+point may not honour, and no gate says which sentence is stale.
+
+**Settlement condition**: a Frame decision settles whether these two documents
+restate the executable's behaviour at all — either they carry only claims the
+code cannot state, such as intent, boundaries, the reason behind a refusal, and
+what a consumer must supply, with the enumerations generated from the source or
+dropped; or the decision states why a hand-maintained restatement is worth its
+drift and names the mechanism that catches it. Repairing the next drift instance
+does not close this entry. Repairing instances was tried, and it established
+that each repair holds only until the following code change. The class sweep was
+tried, and it established two things: the drift was far wider than any round had
+reported, and a document derived from the code in one round drifts again in the
+next.
+
+**Adjacent, and distinct**:
+`spx/43-coding-agents.enabler/18-agent-mail.enabler/ISSUES.md` records a skill
+body restating an adapter-owned predicate and dropping a different condition on
+each rewrite, and its settlement asks for a rule choosing between stating the
+outcome a caller must handle and restating the predicate a decision already
+owns. That entry is a handful of sentences inside one skill body, where the
+restatement is incidental to the body's purpose. This one is two whole reference
+documents whose purpose is the enumeration, so the question here is whether the
+documents should carry such content at all rather than how carefully they carry
+it. A rule settling either bears on the other.
