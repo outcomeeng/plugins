@@ -30,7 +30,12 @@ One further form answers outside the request shape, so it takes no JSON request 
 The record and its delivery rules:
 
 - **Fields.** A `record` carries exactly `schema` (`1`), `kind`, `correlation`, `sender`, `recipient`, `subject`, `body`, and `ackRequired`; the store assigns `id` on delivery.
-- **Kinds a sender writes.** `order`, `fact`, `question`, `answer`, `delegation-request`, and the four terminal handbacks `delegation-completed`, `delegation-failed`, `delegation-rejected`, and `delegation-unavailable`. A read-back record reports `unclassified` with its subject verbatim unless the row carries a thread and that subject opens with a bracketed prefix naming one of those kinds before a non-empty remainder — so a threadless row reads `unclassified` whatever its subject says, as does a subject with no prefix, an unclosed or empty one, and a prefix naming no kind a sender writes.
+- **Kinds a sender writes.** `order`, `fact`, `question`, `answer`, `delegation-request`, and the four terminal handbacks `delegation-completed`, `delegation-failed`, `delegation-rejected`, and `delegation-unavailable`. A read-back record takes its kind from the row's subject prefix, and reports `unclassified` with its subject verbatim whenever any of these holds:
+  - the row carries no thread, whatever its subject says;
+  - the subject does not open with a bracketed prefix;
+  - that prefix never closes, or closes on an empty name;
+  - the name it carries is not one of the kinds above;
+  - nothing follows the prefix.
 - **Mapping.** The adapter maps `correlation` onto the store's thread, `kind` onto a subject prefix, and `ackRequired` onto the store's acknowledgement requirement, and reads each back; a store limit never shapes the record.
 - **One recipient.** `recipient` names one agent. A value carrying the store's `,` separator is rejected with `invalid-schema` before any command runs.
 - **Foreign rows.** A row another sender wrote reads back rather than failing the inbox read: without a thread it reads with `correlation: null`, classified by the kind rule above, and an acknowledgement status other than `pending` or `acked` reads as `ackRequired: false`. A row without the store's `id`, `from`, or `subject` key is a malformed store response and fails the read as `invalid-schema`.
