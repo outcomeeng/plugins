@@ -64,7 +64,7 @@ The project key is the repository's own common Git directory, so every worktree 
    ```
 
 3. Submit the request over stdin in one of the forms in `<invocation_forms>`.
-4. For a `run` request, accept only `status: "succeeded"`. Preserve the complete versioned result: `commandExitCode`, `projectKey`, the store's `response`, and `data`. A delivered message is the `record` in `data` carrying its store-assigned `id`. Stop with the exact `status` and `detail` on `command-failed`, `invalid-schema`, `store-unavailable`, `repository-unresolved`, or `operation-unavailable`; none of them admits a fallback command, key, or store. The `project-key` operation answers in its own shape, stated with its form below.
+4. For a `run` request, accept only `status: "succeeded"`, which exits zero and carries exactly seven fields, every one of them preserved: `schemaVersion`, `operation`, `status`, `commandExitCode`, `projectKey`, the store's `response`, and `data`. A delivered message is the `record` in `data` carrying its store-assigned `id`. A request the adapter read and rejected answers instead with `schemaVersion`, `operation` — the requested operation, or `unknown` where the request named none — `status` (`command-failed`, `invalid-schema`, `store-unavailable`, `repository-unresolved`, or `operation-unavailable`), `detail`, and `commandExitCode` where a store command ran, and exits 1. Stdin the adapter cannot read as a JSON object is rejected before any operation is read, so that answer carries `status: "invalid-schema"` and `detail` alone — no `schemaVersion`, no `operation`, no `commandExitCode` — and exits 2; read it by those two fields rather than as a versioned result. Stop on the exact `status` and `detail` of every failing form; none of them admits a fallback command, key, or store. The `project-key` operation answers in its own shape, stated with its form below.
 
 </workflow>
 
@@ -132,8 +132,8 @@ The bundled adapter is covered over generated request, record, and repository-lo
 
 <success_criteria>
 
-- A successful `run` operation is established only when the bundled script exits zero and emits `schemaVersion: 1`, `status: "succeeded"`, `commandExitCode: 0`, `projectKey`, `response`, and `data` without exposing `am` command grammar; a successful `project-key` operation is established only when it exits zero and emits `projectKey`.
-- Every record sent and read back carries the same `kind`, `correlation`, `sender`, `recipient`, `subject`, `body`, and `ackRequired`, plus the store-assigned `id` on read.
+- A successful `run` operation is established only when the bundled script exits zero and emits exactly the seven fields of the versioned success result — `schemaVersion: 1`, `operation`, `status: "succeeded"`, `commandExitCode: 0`, `projectKey`, `response`, and `data` — without exposing `am` command grammar; a successful `project-key` operation is established only when it exits zero and emits `projectKey`.
+- Every record sent and read back carries the same `schema`, `kind`, `correlation`, `sender`, `recipient`, `subject`, `body`, and `ackRequired`, plus the store-assigned `id` on read.
 - An absent store or an unresolvable repository yields its named unavailable result and no fallback.
 - No registration result carries the store's registration token.
 
