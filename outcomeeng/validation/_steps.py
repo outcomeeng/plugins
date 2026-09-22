@@ -86,6 +86,8 @@ FOUNDATION_MANIFEST_ARGV: Final = (
     "outcomeeng.validation.foundation_manifest",
 )
 PYTEST_ARGV: Final = ("uv", "run", "python", "-m", "pytest")
+PYTEST_STEP_LABEL: Final = "pytest"
+"""The label the pytest-backed step carries in every recipe that runs it."""
 
 # Generated eval artifacts. Both derive from `eval.toml` definitions and the
 # producers those definitions name; both fail the gate when the committed
@@ -296,7 +298,7 @@ VALIDATION_STEPS: Final = (
     Step(label="spx-version", argv=SPX_VERSION_FLOOR_ARGV),
 )
 
-TEST_STEPS: Final = (Step(label="pytest", argv=PYTEST_ARGV),)
+TEST_STEPS: Final = (Step(label=PYTEST_STEP_LABEL, argv=PYTEST_ARGV),)
 
 VALIDATION_RECIPE: Final = Recipe(
     name=RECIPE_VALIDATION,
@@ -327,5 +329,5 @@ def test_recipe(pytest_args: Sequence[str] = ()) -> Recipe:
         verification_type=TEST_RECIPE.verification_type,
         purpose=TEST_RECIPE.purpose,
         preflight_steps=TEST_RECIPE.preflight_steps,
-        steps=(Step(label="pytest", argv=(*PYTEST_ARGV, *pytest_args)),),
+        steps=(Step(label=PYTEST_STEP_LABEL, argv=(*PYTEST_ARGV, *pytest_args)),),
     )

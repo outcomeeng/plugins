@@ -6,6 +6,8 @@ import pytest
 
 from outcomeeng.validation._engine import (
     STEP_HEADER_FORM,
+    STEP_STATUS_PREFIX_FORM,
+    TIMING_FAILED_LABEL,
     TIMING_SUMMARY_BANNER,
     TIMING_TOTAL_LABEL,
 )
@@ -132,7 +134,10 @@ def test_a_passing_pipeline_prints_headers_in_order_and_removes_logs() -> None:
     assert header_positions == sorted(header_positions)
     for step in steps:
         assert step.label in summary
-        assert f"{STEP_PASS_STATUS}  {step.label}" in run.output
+        assert (
+            STEP_STATUS_PREFIX_FORM.format(status=STEP_PASS_STATUS, label=step.label)
+            in run.output
+        )
     assert run.retained_logs == (None,) * len(steps)
 
 
@@ -155,9 +160,12 @@ def test_a_failing_step_stops_the_pipeline_and_retains_its_log() -> None:
     assert steps[0].label in summary
     assert steps[1].label in summary
     assert steps[2].label not in summary
-    assert "FAILED" in summary
-    assert steps[1].label in summary[summary.index("FAILED") :]
-    assert f"{STEP_FAIL_STATUS}  {steps[1].label}" in run.output
+    assert TIMING_FAILED_LABEL in summary
+    assert steps[1].label in summary[summary.index(TIMING_FAILED_LABEL) :]
+    assert (
+        STEP_STATUS_PREFIX_FORM.format(status=STEP_FAIL_STATUS, label=steps[1].label)
+        in run.output
+    )
     assert FULL_LOG_LABEL in run.output
     assert run.log_paths[1] in run.output
     assert f"{FAILING_CHILD_OUTPUT_PREFIX} 0" not in run.output
@@ -198,7 +206,12 @@ def test_a_spawn_failure_is_recorded_with_its_message() -> None:
 
     steps = summary_steps(run.summary)
     assert run.exit_code == SPAWN_FAILURE_EXIT_CODE
-    assert f"{STEP_FAIL_STATUS}  {recipe.preflight_steps[0].label}" in run.output
+    assert (
+        STEP_STATUS_PREFIX_FORM.format(
+            status=STEP_FAIL_STATUS, label=recipe.preflight_steps[0].label
+        )
+        in run.output
+    )
     assert run.summary[SUMMARY_KEY_STATUS] == RUN_FAIL_STATUS
     assert run.summary[SUMMARY_KEY_PHASE] == PHASE_PREFLIGHT
     assert run.summary[SUMMARY_KEY_EXIT_CODE] == SPAWN_FAILURE_EXIT_CODE

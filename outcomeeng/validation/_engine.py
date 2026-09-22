@@ -64,6 +64,14 @@ TIMING_TOTAL_LABEL: Final = "TOTAL"
 """The label of the timing block's total row."""
 TIMING_FAILED_LABEL: Final = "FAILED"
 """The label of the timing block's failed row."""
+STEP_STATUS_PREFIX_FORM: Final = "{status}  {label}"
+"""The opening of every step line: its status and its label."""
+STEP_STATUS_LINE_FORM: Final = STEP_STATUS_PREFIX_FORM + "  {elapsed}s"
+"""One step's status line: the prefix followed by its elapsed seconds."""
+STEP_FAILURE_LINE_FORM: Final = STEP_STATUS_LINE_FORM + "  exit {exit_code}"
+"""A failing step's line: the status line followed by the child's exit code."""
+SKIP_LINE_FORM: Final = "{status}  {test}  {switch}"
+"""One declared skip's line: the skipped status, the row, and its switch."""
 _TIMING_ROW_VALUE: Final = re.compile(r"\s+(\d+)s$")
 """The engine's one reading of its own timing-row value."""
 FULL_LOG_LABEL: Final = "Full log:"
@@ -257,9 +265,14 @@ def _read_skip_records(report_path: Path | None) -> tuple[dict[str, object], ...
 
 def _write_skip_lines(sink: TextIO, records: Sequence[dict[str, object]]) -> None:
     for record in records:
-        test = record[SKIP_REPORT_TEST_FIELD]
-        switch = record[SKIP_REPORT_SWITCH_FIELD]
-        sink.write(f"{STEP_SKIP_STATUS}  {test}  {switch}\n")
+        sink.write(
+            SKIP_LINE_FORM.format(
+                status=STEP_SKIP_STATUS,
+                test=record[SKIP_REPORT_TEST_FIELD],
+                switch=record[SKIP_REPORT_SWITCH_FIELD],
+            )
+            + "\n"
+        )
     if records:
         sink.flush()
 
@@ -297,7 +310,12 @@ def _write_failure_details(
     elapsed: int,
     log_path: Path,
 ) -> None:
-    sink.write(f"{STEP_FAIL_STATUS}  {step.label}  {elapsed}s  exit {status}\n")
+    sink.write(
+        STEP_FAILURE_LINE_FORM.format(
+            status=STEP_FAIL_STATUS, label=step.label, elapsed=elapsed, exit_code=status
+        )
+        + "\n"
+    )
     excerpt = _read_failure_excerpt(log_path)
     if excerpt:
         sink.write(f"━━━ {step.label} failure excerpt ━━━\n")
@@ -503,7 +521,12 @@ def _execute_recipe(
                         skipped=skipped,
                     )
                 )
-                sink.write(f"{STEP_PASS_STATUS}  {step.label}  {elapsed}s\n")
+                sink.write(
+                    STEP_STATUS_LINE_FORM.format(
+                        status=STEP_PASS_STATUS, label=step.label, elapsed=elapsed
+                    )
+                    + "\n"
+                )
                 sink.flush()
                 _write_skip_lines(sink, skipped)
             if failed_step is not None:

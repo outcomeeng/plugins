@@ -22,6 +22,7 @@ from outcomeeng.validation import (
     POST_KILL_REAP_ATTEMPTS,
     PURPOSE_CONFORMANCE,
     PYRIGHT_ARGV,
+    PYTEST_STEP_LABEL,
     PURPOSE_CORRECTNESS,
     PYTEST_ARGV,
     RECIPE_CHECK,
@@ -32,8 +33,10 @@ from outcomeeng.validation import (
     RUN_PASS_STATUS,
     SIGNAL_GRACE_SECONDS,
     SIGNAL_POLL_INTERVAL_SECONDS,
+    SKIP_LINE_FORM,
     SPX_MARKDOWN_ARGV,
     STEP_SKIP_STATUS,
+    STEP_STATUS_PREFIX_FORM,
     SUMMARY_KEY_PURPOSE,
     SUMMARY_KEY_RECIPE,
     SUMMARY_KEY_SKIPPED,
@@ -86,7 +89,7 @@ def test_the_full_gate_carries_every_required_step() -> None:
     assert EVAL_LINKS_ARGV in step_argvs
     assert HOOK_SAFETY_ARGV in step_argvs
     assert PYTEST_ARGV not in step_argvs
-    assert TEST_STEPS == (Step(label="pytest", argv=PYTEST_ARGV),)
+    assert TEST_STEPS == (Step(label=PYTEST_STEP_LABEL, argv=PYTEST_ARGV),)
 
 
 def test_recipe_types_and_purposes_match_the_verification_taxonomy() -> None:
@@ -112,7 +115,7 @@ def test_recipe_types_and_purposes_match_the_verification_taxonomy() -> None:
     assert targeted.purpose == TEST_RECIPE.purpose
     assert targeted.preflight_steps == TEST_RECIPE.preflight_steps
     assert targeted.steps == (
-        Step(label="pytest", argv=(*PYTEST_ARGV, PYTEST_TARGET_ARG)),
+        Step(label=PYTEST_STEP_LABEL, argv=(*PYTEST_ARGV, PYTEST_TARGET_ARG)),
     )
 
 
@@ -233,12 +236,19 @@ def test_declared_skips_are_named_in_the_summary_and_after_the_status_line() -> 
         list(observation.written_records)
     ] * observation.recording_steps
     assert all(step[SUMMARY_KEY_STATUS] == RUN_PASS_STATUS for step in recorded)
+    status_at = observation.output.index(
+        STEP_STATUS_PREFIX_FORM.format(
+            status=RUN_PASS_STATUS.upper(), label=PYTEST_STEP_LABEL
+        )
+    )
     for record in observation.written_records:
-        line = (
-            f"{STEP_SKIP_STATUS}  {record[SKIP_REPORT_TEST_FIELD]}  "
-            f"{record[SKIP_REPORT_SWITCH_FIELD]}"
+        line = SKIP_LINE_FORM.format(
+            status=STEP_SKIP_STATUS,
+            test=record[SKIP_REPORT_TEST_FIELD],
+            switch=record[SKIP_REPORT_SWITCH_FIELD],
         )
         assert line in observation.output
+        assert observation.output.index(line) > status_at
 
 
 def test_a_run_without_declared_skips_carries_no_skipped_entry() -> None:

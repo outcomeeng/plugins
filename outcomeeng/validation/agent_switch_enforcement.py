@@ -24,6 +24,9 @@ PYTHON_SUFFIX: Final = ".py"
 DECLARING_MODULE_NAME: Final = agent_disable.__name__
 """The dotted name a reader would import the predicate from."""
 
+ACQUIRED_EXECUTABLE_LEVELS: Final = ("l2", "l3")
+"""The execution-level cells whose rows reach an acquired agent executable."""
+
 
 def modules_naming_a_switch(roots: Iterable[Path]) -> tuple[Path, ...]:
     """Return every Python file under `roots`, bar the declaring module, naming a switch.
@@ -33,14 +36,35 @@ def modules_naming_a_switch(roots: Iterable[Path]) -> tuple[Path, ...]:
     """
     offenders: list[Path] = []
     for root in roots:
-        for path in sorted(root.rglob(f"*{PYTHON_SUFFIX}")):
-            resolved = path.resolve()
-            if resolved == DECLARING_MODULE:
+        for path in python_modules(root):
+            if path.resolve() == DECLARING_MODULE:
                 continue
             text = path.read_text(encoding="utf-8")
             if any(switch in text for switch in AGENT_SWITCHES):
                 offenders.append(path)
     return tuple(offenders)
+
+
+class NotAPythonSource(ValueError):
+    """A scanned path is neither a directory nor a Python module."""
+
+    def __init__(self, path: Path) -> None:
+        super().__init__(f"neither a directory nor a Python module: {path}")
+        self.path = path
+
+
+def python_modules(root: Path) -> tuple[Path, ...]:
+    """Return the Python modules `root` names, whether it is a directory or one file.
+
+    A path that is neither is refused rather than scanned as empty, because a
+    rule handed such a path would otherwise report no violation and read as a
+    pass.
+    """
+    if root.is_dir():
+        return tuple(sorted(root.rglob(f"*{PYTHON_SUFFIX}")))
+    if root.is_file() and root.suffix == PYTHON_SUFFIX:
+        return (root,)
+    raise NotAPythonSource(root)
 
 
 def rows_without_their_projection(
@@ -111,10 +135,11 @@ def modules_reading_the_switch_predicate(paths: Iterable[Path]) -> tuple[Path, .
     reads no switch.
     """
     readers: list[Path] = []
-    for path in sorted(paths):
-        module = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
-        if any(_imports_the_declaration(node) for node in ast.walk(module)):
-            readers.append(path)
+    for root in sorted(paths):
+        for path in python_modules(root):
+            module = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+            if any(_imports_the_declaration(node) for node in ast.walk(module)):
+                readers.append(path)
     return tuple(readers)
 
 
