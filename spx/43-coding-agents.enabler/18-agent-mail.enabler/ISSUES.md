@@ -49,3 +49,17 @@ The compliance assertion `NEVER: another shipped coding-agents script constructs
 **Settlement condition**: the successor Change that relocates raw-command and project-key detection to one home outside the shipped adapters lands, this node's compliance test imports the detector from that home, and an isolated test-evidence audit of this node returns no `source-ownership` finding for this assertion. Until then the rejection is expected and is not evidence of a defect in the changeset under audit.
 
 **Evidence**: `spec-tree:test-evidence-auditor` finding `f-001`, rule `source-ownership`, on head `fc7619c0cd4224bb6fd6e25f5f02f0509aff2ba3`, naming the relocation as its remediation target; the same rule on the two earlier heads above.
+
+## Two verifier rules collide on naming the evidence location in a shipped skill
+
+`instructions:skill-auditor` reads the `<testing>` section of `src/plugins/coding-agents/skills/operate-agent-mail/SKILL.md` as an abstract testing record and asks it to name a runnable target — this node's `tests/` directory, or the repository's declared node-test invocation — so a reader can re-establish the claim from the skill alone. `spec-tree:changes-reviewer` reads that same directory, named in that same sentence, as a portability defect: the skill ships verbatim to every consumer install, where no `spx/` tree exists, and every other shipped skill that spells an `spx/` node path uses the synthetic `spx/55-example.…` form.
+
+Each rule is right about its own subject, and shipped content cannot satisfy both. The tests that cover the adapter live in this repository; a consumer install carries the skill without them, so any runnable target the skill names is unreachable wherever the skill actually runs. The portability constraint governs, because `CLAUDE.md` `## Plugin Portability Constraints` states that a consumer checkout contains no `spx/`: the coverage stays recorded as domains with no address, and the auditor's warning is dropped as unbacked for shipped skill content.
+
+**Impact**: the warning recurs on every audit of a shipped skill whose `<testing>` section records coverage, costing a round each time to answer with the same reasoning. No edit satisfies both readings at once.
+
+**Settlement condition**: the skill-authoring standard states how a shipped skill records its coverage when the evidence lives only in the producing repository — either that a domain list carrying no address satisfies the testing rule for shipped content, or that the address belongs in a form the build strips from the consumer render — and `instructions:audit-skill` applies that rule.
+
+**Why separate**: the fix belongs to the `instructions` plugin's audit skill and its standards, which no agent-mail changeset touches.
+
+**Evidence**: `instructions:skill-auditor` finding `f-006`, rule `abstract_testing_record`, against the skill surface committed at `b3b1b32a068e2e492567f2bb3e6f5ce148c6914d`; the `spec-tree:changes-reviewer` warning on `src/plugins/coding-agents/skills/operate-agent-mail/SKILL.md` line 107 that required removing the same address.

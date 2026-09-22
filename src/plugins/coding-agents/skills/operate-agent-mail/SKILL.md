@@ -92,7 +92,9 @@ This form answers `{"projectKey": "<absolute path>"}` and exits zero, or `{"stat
 
 <constraints>
 
-- ALWAYS execute the bundled script through `${CLAUDE_SKILL_DIR}`; never import it from another filesystem location or manufacture a path outside this skill directory, because the skill loader substitutes that expression into this body before the command runs, so only this spelling reaches the shell as this skill's real directory; it is no shell variable, and copying it into an agent definition or exporting it yields an empty prefix rather than an error.
+- ALWAYS execute the bundled script through `${CLAUDE_SKILL_DIR}` — the skill loader substitutes that expression into this body before the command runs, so only this spelling reaches the shell as this skill's real directory.
+- NEVER import the script from another filesystem location or manufacture a path outside this skill directory — the substituted expression is the only route that resolves.
+- NEVER copy `${CLAUDE_SKILL_DIR}` into an agent definition or export it — it is no shell variable, so outside this body it yields an empty prefix rather than an error.
 - ALWAYS preserve store identities verbatim: message ids, thread ids, agent names, and timestamps, because downstream skills index on the literal and the operator compares it against the store.
 - ALWAYS supply arguments under the field names in `<operation_surface>` and leave the mapping to the adapter: it alone turns a field into an `am` option or a store field and reads it back, and it rejects an argument outside the operation's shape as `invalid-schema` rather than dropping it.
 - NEVER invoke raw `am` commands, `am` command help, or read the store's database.
