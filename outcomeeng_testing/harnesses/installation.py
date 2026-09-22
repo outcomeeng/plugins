@@ -14,7 +14,6 @@ from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from dataclasses import dataclass, field
 from functools import cache
-from itertools import takewhile
 from io import StringIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -29,6 +28,9 @@ from outcomeeng.distribution.agents import (
     AGENT_SKILL_ENABLED_FIELD,
 )
 from outcomeeng.distribution.build import render_text
+from outcomeeng.distribution.instruction_block import JUSTFILE_NAME
+from outcomeeng.validation._steps import PYTHON_SOURCE_PATHS
+from outcomeeng.validation.infrastructure_index import SPEC_TREE_ROOT
 from outcomeeng.validation.agent_switch_enforcement import (
     ACQUIRED_EXECUTABLE_LEVELS,
 )
@@ -49,6 +51,7 @@ from outcomeeng.distribution.contracts import (
     CLAUDE_DIST_RELATIVE,
     DIST_CODEX_PLUGINS_DIR,
     PLUGIN_NAME_VARIABLE,
+    SOURCE_ROOT_NAME,
     Target,
 )
 from outcomeeng.distribution.installation import (
@@ -4541,28 +4544,34 @@ def committed_catalog_plugin_names() -> frozenset[str]:
     )
 
 
-REAL_PROCESS_ENTRY_POINTS = (
-    observe_real_first_install.__name__,
-    observe_real_installation.__name__,
-    observe_real_record_refresh.__name__,
-    observe_codex_subagent_discovery.__name__,
-    read_absent_native_thread.__name__,
-    read_absent_native_child.__name__,
-)
-"""Every entry point that starts a real agent process, named by the functions."""
+CLAUDE_PROJECTION = "runs_real_claude"
+"""This home's projection of the Claude switch, declared as it declares any name."""
+CODEX_PROJECTION = "runs_real_codex"
+"""This home's projection of the Codex switch, declared as it declares any name."""
+SWITCH_PROJECTIONS = (CLAUDE_PROJECTION, CODEX_PROJECTION)
+"""Both projection markers this home publishes, in reporting order."""
 
-SWITCH_PROJECTIONS = ("runs_real_claude", "runs_real_codex")
-"""This home's own projection markers, declared as it declares any public name."""
+REAL_PROCESS_PROJECTIONS: Mapping[str, tuple[str, ...]] = {
+    observe_real_first_install.__name__: SWITCH_PROJECTIONS,
+    observe_real_installation.__name__: SWITCH_PROJECTIONS,
+    observe_real_record_refresh.__name__: SWITCH_PROJECTIONS,
+    observe_codex_subagent_discovery.__name__: SWITCH_PROJECTIONS,
+    read_absent_native_thread.__name__: (CODEX_PROJECTION,),
+    read_absent_native_child.__name__: (CODEX_PROJECTION,),
+}
+"""Every entry point that starts a real agent process, bound to the projections
+of the agents it starts. The three installation observers and the discovery probe
+each run both agents' CLIs — installation refreshes Claude Code and Codex in one
+run — while the two native-state reads start a Codex process alone."""
 
-SWITCH_SCAN_ROOTS = (
-    repository_root() / "outcomeeng",
-    repository_root() / "outcomeeng_testing",
-    repository_root() / "outcomeeng_evals",
-    repository_root() / "spx",
-    repository_root() / "src",
+SWITCH_SCAN_ROOTS = tuple(
+    repository_root() / name
+    for name in (*PYTHON_SOURCE_PATHS, SPEC_TREE_ROOT, SOURCE_ROOT_NAME)
 )
 """Every source root the repository carries, so the rule reaches the co-located
-tests it most directly protects as well as the packages."""
+tests it most directly protects as well as the packages. Each root is named by
+the module that owns that name: the Python packages by the gate's own source
+list, the spec tree and the authored source tree by their declaring modules."""
 
 
 def real_process_row_files(node_tests: Path) -> tuple[Path, ...]:
@@ -4583,19 +4592,35 @@ NATIVE_PROFILE_RECIPE = "verify-native-profile-execution"
 """The recipe whose only caller is release acceptance."""
 
 
-def native_profile_execution_recipe() -> str:
-    """Return the recipe's declaration together with its complete body.
+def recipe_block(justfile_text: str, recipe: str) -> str:
+    """Return one recipe's declaration together with its complete body.
 
-    A justfile recipe body is every indented line following its declaration, so
-    the reader returns all of them rather than a fixed window: a rule over the
-    recipe must see every line the recipe carries.
+    A justfile recipe body runs to the first line that is neither indented nor
+    blank, so a blank line inside a body continues it rather than ending it.
+    The block carries every line the recipe delimits — a rule over a recipe must
+    see them all, and a reader that stopped at the first blank line would leave
+    every later line of the same recipe unread. A pure function of the text it
+    receives, so a rule's reach is verifiable against a supplied justfile.
     """
-    lines = (repository_root() / "justfile").read_text(encoding="utf-8").splitlines()
+    lines = justfile_text.splitlines()
     for index, line in enumerate(lines):
-        if not line.startswith(f"{NATIVE_PROFILE_RECIPE} "):
+        if not line.startswith(f"{recipe} "):
             continue
-        body = list(
-            takewhile(lambda item: item.startswith((" ", "\t")), lines[index + 1 :])
-        )
+        body: list[str] = []
+        for item in lines[index + 1 :]:
+            if item.startswith((" ", "\t")) or not item.strip():
+                body.append(item)
+                continue
+            break
+        while body and not body[-1].strip():
+            body.pop()
         return "\n".join([line, *body])
-    raise RuntimeError(f"recipe {NATIVE_PROFILE_RECIPE} is absent from the justfile")
+    raise RuntimeError(f"recipe {recipe} is absent from the justfile")
+
+
+def native_profile_execution_recipe() -> str:
+    """Return the release-acceptance recipe's block from the repository justfile."""
+    return recipe_block(
+        (repository_root() / JUSTFILE_NAME).read_text(encoding="utf-8"),
+        NATIVE_PROFILE_RECIPE,
+    )

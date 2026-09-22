@@ -48,7 +48,7 @@ from outcomeeng.validation.agent_switch_enforcement import (
 )
 from outcomeeng.validation.ci_gate import CODEX_API_KEY_ENVIRONMENT, JUST_BINARY
 from outcomeeng_testing.harnesses.installation import (
-    REAL_PROCESS_ENTRY_POINTS,
+    REAL_PROCESS_PROJECTIONS,
     SWITCH_PROJECTIONS,
     SWITCH_SCAN_ROOTS,
     agent_switch_value_property,
@@ -1225,42 +1225,84 @@ def test_every_real_process_row_projects_its_agent_switch() -> None:
     assert (
         rows_without_their_projection(
             in_scope,
-            entry_points=REAL_PROCESS_ENTRY_POINTS,
-            projections=SWITCH_PROJECTIONS,
+            projections=REAL_PROCESS_PROJECTIONS,
         )
         == ()
     )
 
 
-def test_an_unprojected_real_process_row_is_reported(tmp_path: Path) -> None:
-    violating = tmp_path / "test_violating.compliance.l1.py"
+@pytest.mark.parametrize(
+    ("entry_point", "projections"),
+    tuple(REAL_PROCESS_PROJECTIONS.items()),
+)
+def test_an_unprojected_real_process_row_is_reported(
+    entry_point: str,
+    projections: tuple[str, ...],
+    tmp_path: Path,
+) -> None:
+    violating = tmp_path / f"test_unprojected_{entry_point}.compliance.l1.py"
     violating.write_text(
-        f"def test_row() -> None:\n    {REAL_PROCESS_ENTRY_POINTS[0]}()\n",
+        f"def test_row() -> None:\n    {entry_point}()\n",
         encoding="utf-8",
     )
 
     reported = rows_without_their_projection(
         (violating,),
-        entry_points=REAL_PROCESS_ENTRY_POINTS,
-        projections=SWITCH_PROJECTIONS,
+        projections=REAL_PROCESS_PROJECTIONS,
     )
 
+    assert projections
     assert reported == (f"{violating}::test_row",)
 
 
-def test_a_projected_real_process_row_is_not_reported(tmp_path: Path) -> None:
-    conforming = tmp_path / "test_conforming.compliance.l1.py"
+@pytest.mark.parametrize(
+    ("entry_point", "projections"),
+    tuple(REAL_PROCESS_PROJECTIONS.items()),
+)
+def test_a_row_omitting_one_of_its_agents_projections_is_reported(
+    entry_point: str,
+    projections: tuple[str, ...],
+    tmp_path: Path,
+) -> None:
+    for omitted in projections:
+        carried = [
+            projection for projection in SWITCH_PROJECTIONS if projection != omitted
+        ]
+        violating = tmp_path / f"test_without_{omitted}_{entry_point}.compliance.l1.py"
+        violating.write_text(
+            "".join(f"@{projection}\n" for projection in carried)
+            + f"def test_row() -> None:\n    {entry_point}()\n",
+            encoding="utf-8",
+        )
+
+        reported = rows_without_their_projection(
+            (violating,),
+            projections=REAL_PROCESS_PROJECTIONS,
+        )
+
+        assert reported == (f"{violating}::test_row",), omitted
+
+
+@pytest.mark.parametrize(
+    ("entry_point", "projections"),
+    tuple(REAL_PROCESS_PROJECTIONS.items()),
+)
+def test_a_projected_real_process_row_is_not_reported(
+    entry_point: str,
+    projections: tuple[str, ...],
+    tmp_path: Path,
+) -> None:
+    conforming = tmp_path / f"test_projected_{entry_point}.compliance.l1.py"
     conforming.write_text(
-        f"@{SWITCH_PROJECTIONS[0]}\n"
-        f"def test_row() -> None:\n    {REAL_PROCESS_ENTRY_POINTS[0]}()\n",
+        "".join(f"@{projection}\n" for projection in projections)
+        + f"def test_row() -> None:\n    {entry_point}()\n",
         encoding="utf-8",
     )
 
     assert (
         rows_without_their_projection(
             (conforming,),
-            entry_points=REAL_PROCESS_ENTRY_POINTS,
-            projections=SWITCH_PROJECTIONS,
+            projections=REAL_PROCESS_PROJECTIONS,
         )
         == ()
     )

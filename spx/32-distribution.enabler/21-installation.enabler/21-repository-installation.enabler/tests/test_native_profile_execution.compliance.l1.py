@@ -9,7 +9,9 @@ from outcomeeng_testing.harnesses import (
     native_profile_execution as profile_execution_harness,
 )
 from outcomeeng_testing.harnesses.installation import (
+    NATIVE_PROFILE_RECIPE,
     native_profile_execution_recipe,
+    recipe_block,
 )
 from outcomeeng_testing.harnesses.native_profile_failures import native_profile_failure
 
@@ -179,6 +181,27 @@ def test_the_profile_execution_recipe_reads_no_disable_switch() -> None:
     assert not any(
         switch in native_profile_execution_recipe() for switch in AGENT_SWITCHES
     ), native_profile_execution_recipe()
+
+
+def test_the_recipe_block_carries_every_line_the_recipe_delimits() -> None:
+    switch_line = f"    @echo ${{{AGENT_SWITCHES[0]}}}"
+    justfile_text = "\n".join(
+        (
+            f"{NATIVE_PROFILE_RECIPE} artifact_directory:",
+            "    @first-line",
+            "",
+            switch_line,
+            "",
+            "next-recipe:",
+            "    @unrelated",
+        )
+    )
+
+    block = recipe_block(justfile_text, NATIVE_PROFILE_RECIPE)
+
+    assert switch_line in block
+    assert "next-recipe:" not in block
+    assert any(switch in block for switch in AGENT_SWITCHES)
 
 
 def test_a_module_importing_the_predicate_is_reported(tmp_path: Path) -> None:
