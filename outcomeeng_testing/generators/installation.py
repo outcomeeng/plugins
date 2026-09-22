@@ -372,7 +372,7 @@ def generated_other_checkout_records(
     )
 
 
-def generated_bootstrap_records(
+def generated_no_target_records(
     marketplace: str,
     plugin: str,
     checkout: Path,
@@ -381,10 +381,11 @@ def generated_bootstrap_records(
 ) -> tuple[tuple[dict[str, str], RecordDisposition], ...]:
     """One record of the invocation checkout beside one of another checkout.
 
-    A run that registers the marketplace itself reaches no target, so this
-    pair is the minimal listing carrying both dispositions such a run still
-    reports: the record its native update moves, and the record it leaves
-    unmoved.
+    A run that reaches no target still reports both dispositions a listing
+    can carry — the record its native update moves, and the record it leaves
+    unmoved — so this pair is the minimal listing for every such run:
+    registering the marketplace itself, a withheld registration, and a head
+    read that resolves nothing.
     """
     identifier = marketplace_plugin_identifier(plugin, marketplace)
     return tuple(
@@ -726,6 +727,7 @@ __all__ = [
     "generated_catalog_subset",
     "generated_claude_install_records",
     "generated_claude_listing_entries",
+    "generated_no_target_records",
     "generated_marketplace_registry_entries",
     "foreign_marketplace_name",
     "MOVED_DISPOSITIONS",

@@ -21,6 +21,7 @@ from outcomeeng.distribution.installation import (
     PATHLESS_LISTING_ENTRY_WARNING,
     PATHLESS_OUT_OF_SCOPE_RECORD_WARNING,
     PLUGIN_OPERATIONS,
+    REPORTED_FAILURE_OPERATIONS,
     ReportField,
     SourceAction,
     UNCATALOGED_RECORD_WARNING,
@@ -107,6 +108,15 @@ def test_every_planned_operation_reports_its_failure_and_stops_installation() ->
     for operation in observe_planned_operations():
         observation = observe_first_failure(operation)
         attempted = observation.attempted
+
+        if operation in REPORTED_FAILURE_OPERATIONS:
+            # The head read's failure is a reported disposition, so the run
+            # performs every later operation instead of ending here; the
+            # scenario and compliance evidence own what it then reports.
+            assert observation.stdout != ""
+            assert attempted == observation.command_sequence
+            continue
+
         document = json.loads(observation.stderr)
 
         assert observation.exit_code != 0
@@ -145,6 +155,11 @@ def test_absent_plugin_wording_is_pending_only_for_persistent_plugin_operations(
         assert plugin in {
             entry.plugin for entry in observation.report.pending_publication
         }
+    elif operation in REPORTED_FAILURE_OPERATIONS:
+        assert observation.failure is None
+        assert observation.report is not None
+        assert observation.report.target is None
+        assert observation.calls[-1].operation is Operation.PLUGIN_LIST
     else:
         assert observation.report is None
         assert observation.failure is not None

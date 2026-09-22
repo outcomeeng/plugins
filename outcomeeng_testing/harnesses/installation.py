@@ -152,7 +152,7 @@ from outcomeeng_testing.generators.installation import (
     generated_agent_subsets,
     generated_claude_install_records,
     generated_other_checkout_records,
-    generated_bootstrap_records,
+    generated_no_target_records,
     generated_listing_defect_records,
     generated_unresolved_target_records,
     generated_invalid_catalog_subsets,
@@ -1566,7 +1566,7 @@ def _unreadable_source_case(
     preflight = build_persistent_preflight(mirror, environment)
     marketplace = preflight.roots.marketplace
     records = (
-        generated_bootstrap_records(
+        generated_no_target_records(
             marketplace, SPEC_TREE_PLUGIN, mirror, other, LISTED_VERSION
         )
         if state.recorded
@@ -1875,7 +1875,7 @@ def observe_bootstrap_record_drift() -> BootstrapDriftObservation:
         _prepare_agent_state(environment)
         preflight = build_persistent_preflight(mirror, environment)
         marketplace = preflight.roots.marketplace
-        cases = generated_bootstrap_records(
+        cases = generated_no_target_records(
             marketplace,
             SPEC_TREE_PLUGIN,
             preflight.roots.checkout,
@@ -1913,6 +1913,94 @@ def observe_bootstrap_record_drift() -> BootstrapDriftObservation:
         other_checkout=other.resolve(),
         listed_version=LISTED_VERSION,
         target_version=target_version,
+        document=document,
+        exit_code=exit_code,
+    )
+
+
+@dataclass(frozen=True)
+class UnreadableHeadObservation:
+    """A persistent run whose head read of the registered location resolved nothing.
+
+    The run's report, its exit code, and the commands it issued are the
+    observations; the linked test owns every predicate over them.
+    """
+
+    checkout: Path
+    other_checkout: Path
+    plugin: str
+    listed_version: str
+    served_version: str
+    operations: tuple[Operation, ...]
+    """Every operation the run issued, in order, across both agents."""
+    document: dict[str, object]
+    """The run's JSON report, parsed from the one execution's own output."""
+    exit_code: int
+
+
+def observe_unreadable_head_record() -> UnreadableHeadObservation:
+    """Run a persistent refresh whose head read of the registered location fails.
+
+    Stage 5 Failure simulation: a registered location that is no git working
+    tree makes the read exit nonzero, which a run against a real clone cannot
+    produce on demand. The listing names one record of the invocation
+    checkout and one of another checkout, so the run carries both
+    dispositions a no-target run reports.
+    """
+    checkout = repository_root()
+    with TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory).resolve()
+        mirror = temporary_root / "checkout"
+        other = temporary_root / "other-checkout"
+        other.mkdir()
+        mirror_installation_inputs(checkout, mirror)
+        _write_project_marketplace(mirror, DECLARED_CLAUDE_SOURCE)
+        clone = temporary_root / "clone"
+        mirror_installation_inputs(checkout, clone)
+        environment = _persistent_environment(temporary_root)
+        _prepare_agent_state(environment)
+        preflight = build_persistent_preflight(mirror, environment)
+        marketplace = preflight.roots.marketplace
+        cases = generated_no_target_records(
+            marketplace,
+            SPEC_TREE_PLUGIN,
+            preflight.roots.checkout,
+            other,
+            LISTED_VERSION,
+        )
+        target_version = served_version(len(cases))
+        _serve_clone_versions(clone, (SPEC_TREE_PLUGIN,), target_version)
+        cache_root = (
+            preflight.roots.claude_config / CLAUDE_PLUGIN_CACHE_RELATIVE / marketplace
+        )
+        (cache_root / SPEC_TREE_PLUGIN / target_version).mkdir(parents=True)
+        record_file = preflight.roots.claude_config / CLAUDE_INSTALLED_PLUGINS_RELATIVE
+        record_file.parent.mkdir(parents=True, exist_ok=True)
+        record_file.write_text(
+            json.dumps(_record_file_from_cases(cases, cache_root), indent=2)
+        )
+        runner = RecordingRunner(
+            record_file=record_file,
+            clone=clone,
+            served_version=target_version,
+            failed_operation=Operation.MARKETPLACE_HEAD,
+        )
+        stdout = StringIO()
+        stderr = StringIO()
+        with redirect_stdout(stdout), redirect_stderr(stderr):
+            exit_code = main(
+                [CHECKOUT_OPTION, str(mirror), JSON_OUTPUT_OPTION],
+                base_environment=environment,
+                runner=runner,
+            )
+        document = cast("dict[str, object]", json.loads(stdout.getvalue()))
+    return UnreadableHeadObservation(
+        checkout=preflight.roots.checkout,
+        other_checkout=other.resolve(),
+        plugin=SPEC_TREE_PLUGIN,
+        listed_version=LISTED_VERSION,
+        served_version=target_version,
+        operations=tuple(command.operation for command in runner.calls),
         document=document,
         exit_code=exit_code,
     )
@@ -2812,6 +2900,7 @@ class RealRecordRefreshObservation:
     records_after_second: tuple[ListedInstallRecord, ...]
 
 
+@cache
 def observe_real_record_refresh() -> RealRecordRefreshObservation:
     """Seed three checkouts' records with the real Claude Code CLI, then run the recipe.
 
@@ -2821,6 +2910,10 @@ def observe_real_record_refresh() -> RealRecordRefreshObservation:
     checkout records it at project scope, is aged the same way, and then has
     its directory removed. The persistent recipe runs twice from the
     invocation checkout against the same disposable agent state.
+
+    Cached like every other real-CLI observer here: one call runs two full
+    recipe invocations over three real plugin installs, and the linked cases
+    read the one frozen result rather than paying that again for each.
     """
     checkout = repository_root()
     _require_binaries(REQUIRED_BINARIES)
@@ -3890,6 +3983,8 @@ __all__ = [
     "RecordRefreshObservation",
     "RecordRewriteObservation",
     "RegistryShapeObservation",
+    "UnreadableHeadObservation",
+    "observe_unreadable_head_record",
     "observe_registry_shape_plan",
     "observe_install_record_rewrite",
     "install_record_fixture_path",

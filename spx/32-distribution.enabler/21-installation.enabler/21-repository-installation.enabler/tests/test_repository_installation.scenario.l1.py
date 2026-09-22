@@ -22,6 +22,7 @@ from outcomeeng.distribution.installation import (
     ReportField,
     SPEC_TREE_PLUGIN,
     UNREADABLE_SETTINGS_WARNING,
+    UNREADABLE_HEAD_RECORD_WARNING,
     UNRESOLVED_TARGET_RECORD_WARNING,
     WITHHELD_REGISTRATION_WARNING,
     marketplace_plugin_identifier,
@@ -47,6 +48,7 @@ from outcomeeng_testing.harnesses.installation import (
     observe_invalid_persistent_selection,
     observe_persistent_plan,
     observe_bootstrap_record_drift,
+    observe_unreadable_head_record,
     observe_unresolved_target_record,
     observe_defective_record_listing,
     observe_unreadable_source,
@@ -452,6 +454,66 @@ def test_a_bootstrap_run_reports_the_records_it_moved_and_the_records_it_did_not
     }
     assert unrefreshed == {
         (SPEC_TREE_PLUGIN, CLAUDE_PROJECT_SCOPE, str(observation.other_checkout)): (
+            observation.listed_version
+        )
+    }
+    assert observation.document[ReportField.OFF_TARGET_RECORDS] == []
+    assert observation.exit_code != 0
+
+
+def test_a_run_whose_head_read_fails_reports_every_record_against_no_target() -> None:
+    observation = observe_unreadable_head_record()
+    warnings = {
+        warning[ReportField.MESSAGE]
+        for warning in cast(
+            "list[dict[str, str]]", observation.document[ReportField.WARNINGS]
+        )
+    }
+    moved = {
+        (
+            record[ReportField.PLUGIN],
+            record[ReportField.SCOPE],
+            record[ReportField.PROJECT_PATH],
+        ): (record[ReportField.VERSION_BEFORE], record[ReportField.VERSION_AFTER])
+        for record in cast(
+            "list[dict[str, str]]", observation.document[ReportField.CLAUDE_RECORDS]
+        )
+    }
+    unrefreshed = {
+        (
+            record[ReportField.PLUGIN],
+            record[ReportField.SCOPE],
+            record[ReportField.PROJECT_PATH],
+        ): record[ReportField.VERSION]
+        for record in cast(
+            "list[dict[str, str]]",
+            observation.document[ReportField.UNREFRESHED_RECORDS],
+        )
+    }
+
+    assert (
+        Operation.PLUGIN_LIST
+        in observation.operations[
+            observation.operations.index(Operation.MARKETPLACE_HEAD) :
+        ]
+    )
+    assert observation.document[ReportField.TARGET] is None
+    assert warnings >= {
+        UNREADABLE_HEAD_RECORD_WARNING.format(
+            plugin=observation.plugin,
+            scope=CLAUDE_PROJECT_SCOPE,
+            project_path=path,
+        )
+        for path in (observation.checkout, observation.other_checkout)
+    }
+    assert moved == {
+        (observation.plugin, CLAUDE_PROJECT_SCOPE, str(observation.checkout)): (
+            observation.listed_version,
+            observation.served_version,
+        )
+    }
+    assert unrefreshed == {
+        (observation.plugin, CLAUDE_PROJECT_SCOPE, str(observation.other_checkout)): (
             observation.listed_version
         )
     }

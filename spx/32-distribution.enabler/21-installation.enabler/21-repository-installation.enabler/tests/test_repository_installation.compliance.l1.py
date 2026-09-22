@@ -28,6 +28,8 @@ from outcomeeng.distribution.installation import (
     FIRST_INSTALL_WARNING,
     SPEC_TREE_PLUGIN,
     Operation,
+    UNREADABLE_HEAD_RECORD_WARNING,
+    CLAUDE_PROJECT_SCOPE,
 )
 from outcomeeng.validation.ci_gate import CODEX_API_KEY_ENVIRONMENT, JUST_BINARY
 from outcomeeng_testing.harnesses.discovery_auth import (
@@ -68,6 +70,7 @@ from outcomeeng_testing.harnesses.installation import (
     observe_interrupted_reconciliation,
     observe_local_record_bootstrap_plan,
     observe_persistent_execution,
+    observe_unreadable_head_record,
     observe_persistent_plan,
     observe_record_refresh_plan,
     ScopeSplitClassification,
@@ -824,6 +827,33 @@ def test_a_persistent_run_reads_the_listing_once_before_and_once_after_execution
         if command.agent is Agent.CLAUDE
     ]
     assert trailing == []
+
+
+def test_a_failed_head_read_reports_every_carried_record_instead_of_stopping() -> None:
+    observation = observe_unreadable_head_record()
+    after_head = observation.operations[
+        observation.operations.index(Operation.MARKETPLACE_HEAD) + 1 :
+    ]
+    warnings = [
+        warning[ReportField.MESSAGE]
+        for warning in cast(
+            "list[dict[str, str]]", observation.document[ReportField.WARNINGS]
+        )
+    ]
+
+    assert Operation.PLUGIN_LIST in after_head
+    assert observation.document[ReportField.TARGET] is None
+    assert sorted(
+        warning for warning in warnings if warning.startswith("Claude Code records")
+    ) == sorted(
+        UNREADABLE_HEAD_RECORD_WARNING.format(
+            plugin=observation.plugin,
+            scope=CLAUDE_PROJECT_SCOPE,
+            project_path=path,
+        )
+        for path in (observation.checkout, observation.other_checkout)
+    )
+    assert observation.exit_code != 0
 
 
 def test_a_record_the_closing_listing_leaves_stale_fails_the_run() -> None:

@@ -156,6 +156,21 @@ UNWRITTEN_RECORD_WARNING = (
     "{plugin} at {project_path} that the rewrite could address, so the record "
     "the run planned to move is left unchanged."
 )
+UNREADABLE_HEAD_RECORD_WARNING = (
+    "Claude Code records {plugin} at {scope} scope for {project_path}, but the "
+    "location the registry records for the marketplace resolves no head commit "
+    "— it is no git working tree, or the read of it failed; the run reaches no "
+    "target."
+)
+"""The absent-head disposition, worded for every record the run carries.
+
+The head read presupposes a git working tree, which a directory registration
+added from a plain directory is not. No target exists for any plugin, so the
+drift comparison judges nothing and this warning is the whole domain's path to
+the exit code; the message claims nothing about a record's version, because the
+invocation checkout's own records have already received their native update
+while every other record is left where the rewrite found it.
+"""
 UNRESOLVED_TARGET_RECORD_WARNING = (
     "Claude Code records {plugin} at {scope} scope for {project_path}, but the "
     "registered clone resolves no target version for {plugin} — its catalog "
@@ -348,6 +363,18 @@ operation it builds; the marketplace refresh it builds takes none. The
 marketplace and plugin inspections and the closing plugin listing are the fixed
 tuples `CLAUDE_MARKETPLACE_LIST_COMMAND` and `CLAUDE_LIST_COMMAND`, which carry
 no scope.
+"""
+REPORTED_FAILURE_OPERATIONS: frozenset[Operation] = frozenset(
+    {Operation.MARKETPLACE_HEAD}
+)
+"""Planned operations whose nonzero exit is a reported disposition, not a failure.
+
+The head read is the run's only non-agent command and the only one whose
+failure names a machine state the decision already gives a disposition: a run
+with no head reaches no target, exactly as a bootstrap run and a withheld
+registration do. Raising there would abandon the machine-wide refresh with
+nothing reported about any record on the machine, so the run continues, plans
+no rewrite, and reports every record it carries against no target.
 """
 CLAUDE_SCOPELESS_OPERATIONS: frozenset[Operation] = frozenset(
     {Operation.MARKETPLACE_REFRESH, Operation.MARKETPLACE_HEAD, Operation.PLUGIN_LIST}
@@ -2483,7 +2510,7 @@ def execute_installation(
     for command in plan.commands:
         result = _run_command(plan, command, runner, results, pending)
         if command.operation is Operation.MARKETPLACE_HEAD:
-            head = result.stdout.strip()
+            head = result.stdout.strip() if result.exit_code == 0 else None
     target: MarketplaceTarget | None = None
     rewrites: tuple[RecordRewrite, ...] = ()
     rewrite_warnings: tuple[InstallationWarning, ...] = ()
@@ -2514,7 +2541,7 @@ def _run_command(
 ) -> CommandResult:
     result = _checked_result(command, runner(command))
     result = _agent_adapter(command.agent).normalize_result(command, result)
-    if result.exit_code != 0:
+    if result.exit_code != 0 and command.operation not in REPORTED_FAILURE_OPERATIONS:
         if not _is_pending_publication(plan, command, result):
             raise InstallationFailure(command, result, tuple(results))
         if command.plugin is not None:
@@ -2547,14 +2574,31 @@ def _rewrite_records(
     record the run carries, the invocation checkout's native records
     included, because the supply defect is the plugin's rather than one
     record's. A plugin whose absence from the registered source is
-    established is pending publication instead — the one condition this run
-    continues past — so its records stay out of both dispositions.
+    established is pending publication instead — one of the two conditions
+    this run continues past — so its records stay out of every disposition.
+
+    The other is a head the read resolved nothing for: the registered
+    location is no git working tree, or the read failed. That leaves the
+    whole run without a target rather than one plugin without a version, so
+    every carried record is reported against no target and none is rewritten.
     """
-    if plan.claude_clone is None or head is None:
+    if plan.claude_clone is None:
         return None, (), ()
     unpublished = frozenset(
         entry.plugin for entry in pending if entry.agent is Agent.CLAUDE
     )
+    if head is None:
+        return (
+            None,
+            (),
+            unreadable_head_warnings(
+                tuple(
+                    record
+                    for record in (*plan.claude_records, *plan.rewrite_records)
+                    if record.plugin not in unpublished
+                )
+            ),
+        )
     target = marketplace_target(plan.claude_clone, head, plan.claude_catalog)
     cache_root = (
         plan.roots.claude_config / CLAUDE_PLUGIN_CACHE_RELATIVE / plan.roots.marketplace
@@ -3058,6 +3102,36 @@ def marketplace_target(
     return MarketplaceTarget(commit=commit, versions=versions)
 
 
+def unreadable_head_warnings(
+    records: Sequence[ClaudeInstallRecord],
+) -> tuple[InstallationWarning, ...]:
+    """One blocking warning per record a run whose head read resolved nothing carries.
+
+    The domain is every project- or local-scope record of a cataloged plugin
+    the run carries — the invocation checkout's own, which the native update
+    has already moved, beside every record the rewrite would have moved —
+    because no head means no target for any plugin rather than a defect in
+    one plugin's supply.
+
+    This is the whole domain's only path to the exit code. The drift
+    comparison judges a record against its plugin's target version, and this
+    run has none for any plugin, so a run that left the disposition to the
+    comparison would exit zero having refreshed nothing.
+    """
+    return tuple(
+        InstallationWarning(
+            agent=Agent.CLAUDE,
+            message=UNREADABLE_HEAD_RECORD_WARNING.format(
+                plugin=record.plugin,
+                scope=record.scope,
+                project_path=record.project_path,
+            ),
+            blocking=True,
+        )
+        for record in records
+    )
+
+
 def unresolved_target_warnings(
     records: Sequence[ClaudeInstallRecord],
     target: MarketplaceTarget,
@@ -3512,6 +3586,7 @@ __all__ = [
     "UNDECLARED_SOURCE_DIAGNOSTIC",
     "UNLOCATED_REGISTRY_DIAGNOSTIC",
     "UNREFRESHABLE_RECORD_WARNING",
+    "UNREADABLE_HEAD_RECORD_WARNING",
     "UNRESOLVED_TARGET_RECORD_WARNING",
     "UNWRITTEN_RECORD_WARNING",
     "cached_plugin_versions",
@@ -3526,6 +3601,7 @@ __all__ = [
     "codex_source_form",
     "marketplace_target",
     "plan_install_record_rewrite",
+    "unreadable_head_warnings",
     "unresolved_target_warnings",
     "render_claude_source",
     "rewrite_install_records",
@@ -3545,6 +3621,7 @@ __all__ = [
     "AgentHomeResult",
     "AgentOwnership",
     "PLUGIN_OPERATIONS",
+    "REPORTED_FAILURE_OPERATIONS",
     "UNPUBLISHED_PLUGIN_FRAGMENT",
     "CATALOG_PLUGIN_NAME_FIELD",
     "CATALOG_PLUGINS_FIELD",
