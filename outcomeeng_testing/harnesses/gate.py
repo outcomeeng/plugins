@@ -66,6 +66,7 @@ from outcomeeng.validation.agent_disable import (
     AgentDisableStates,
     read_agent_disable_states,
 )
+from outcomeeng.validation import skip_report
 from outcomeeng.validation.skip_report import (
     SKIP_REPORT_OPTION,
     SKIP_REPORT_SWITCH_FIELD,
@@ -95,7 +96,6 @@ from outcomeeng_testing.generators.gate import (
     selected_gate_changed_paths,
     step_lists,
 )
-from outcomeeng_testing.harnesses import skip_report
 from outcomeeng_testing.harnesses.changeset_scope import build_repo_without_origin
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
 

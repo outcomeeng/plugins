@@ -238,34 +238,12 @@ prose rather than behavior, so no evidence changes with it.
 **Evidence**: the gate node's test-evidence audit recorded it as finding `f-008`, INFO,
 against the stale-evidence-reference rule.
 
-## The skip-report recorder still lives in the test-infrastructure package
+## The skip-report channel's split home is closed
 
-`outcomeeng/validation/skip_report.py` now states the skip-report channel as its subject
-and declares the option, its configuration name, the two record fields, the report file's
-prefix and suffix, the recorded row's status, and the printed line form together. Both
-ends read those names from it.
+`outcomeeng/validation/skip_report.py` states the skip-report channel as its subject and declares the option, its configuration name, the two record fields, the report file's prefix and suffix, the recorded row's status, the printed line form, and the recorder that writes the records. Both ends read every name from it, and the repository's pytest configuration registers the plugin from there.
 
-`DeclaredSkipRecorder` and the two pytest hooks that register it remain in
-`outcomeeng_testing/harnesses/skip_report.py`, which `pyproject.toml` loads for every
-pytest run. The recorder is the producing half of the skip-recording assertion's
-production subject, so it belongs beside the channel it writes into rather than in the
-package whose other members mediate evidence.
+Before this, the option and the record fields were declared in the module whose subject is the per-agent switches, the file naming and the printed line in the orchestrator, and the recorder in the test-infrastructure package — one channel with three homes and no module stating it as its subject.
 
-**Resolution shape**: move the recorder and its two hooks into
-`outcomeeng/validation/skip_report.py` and point the pytest configuration's plugin
-option at that module. The move requires removing
-`outcomeeng_testing/harnesses/skip_report.py`, because a re-export shim would be the
-backward compatibility this repository forbids.
+The move removed `outcomeeng_testing/harnesses/skip_report.py` rather than leaving a re-export, which this repository forbids.
 
-**Why separate**: the removal is the whole of the remaining work and it is outside this
-session's authority, which admits no file removal. Leaving both modules in place would
-put two registerable recorders in the tree, which is worse than the placement.
-
-**Settlement condition**: authority to remove that file, after which the move is
-mechanical — one module, one configuration line, and the harness import that reaches the
-recorder.
-
-**Evidence**: the gate node's test-evidence audit finding `f-007` on the recorder's
-placement, and the implementation audit's debt finding on the channel vocabulary split
-between `outcomeeng/validation/agent_disable.py` and `outcomeeng/validation/_engine.py`,
-which the new module closes.
+**Evidence**: the gate node's test-evidence audit finding `f-007` on the recorder's placement, and the implementation audit's debt finding on the vocabulary split between `outcomeeng/validation/agent_disable.py` and `outcomeeng/validation/_engine.py`. Both are closed.
