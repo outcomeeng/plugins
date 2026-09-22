@@ -114,7 +114,7 @@ The bundled adapter is covered over generated request, record, and repository-lo
 
 - every registry operation's argument vector is read against the store CLI's captured usage text under the resolved project key;
 - a real pool's linked worktree, bare repository, main checkout, and a symlinked route to one of them each resolve one key, while the pool's parent directory resolves none;
-- each of those routes, and a directory nested inside one of them, resolves that same key while the caller carries every environment variable Git's own behaviour confirms redirects a repository lookup — one naming another repository, one bounding discovery above the working directory — each alone and all together, and the parent directory still resolves none;
+- every environment variable Git's own behaviour confirms redirects a repository lookup — one naming another repository, one bounding discovery above the working directory — leaves the key unchanged, each alone and all together, read from the pool shape whose lookup Git confirmed it redirects, while the parent directory still resolves none;
 - generated records round-trip through the store field mapping;
 - an `order`, its `delegation-request`, and its one correlated terminal handback are delivered through this capability's own send path;
 - repeated and conflicting terminal handbacks reduce to one result;
