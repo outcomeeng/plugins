@@ -60,6 +60,8 @@ from outcomeeng_testing.harnesses.discovery_auth_cases import (
 )
 from outcomeeng_testing.generators.installation import ClosingDisposition
 from outcomeeng_testing.harnesses.installation import (
+    RegistryState,
+    observe_unreadable_source,
     CONCURRENT_EDIT_CONTENT,
     EXTERNAL_DEFINITION_CONTENT,
     FOREIGN_DEFINITION_CONTENT,
@@ -1059,3 +1061,35 @@ def test_a_record_written_between_the_writers_read_and_its_replace_survives(
             assert entry[CLAUDE_INSTALLED_RECORD_PATH_FIELD] == str(
                 rewrite.install_path
             )
+
+
+def test_no_agent_announces_a_first_install_its_plan_does_not_carry() -> None:
+    observation = observe_unreadable_source(
+        (
+            RegistryState(claude=True, codex=True),
+            RegistryState(claude=True, codex=True, recorded=True),
+            RegistryState(claude=True, codex=False),
+            RegistryState(claude=False, codex=True),
+            RegistryState(claude=False, codex=True, recorded=True),
+        )
+    )
+
+    for case in observation.cases:
+        messages = [warning.message for warning in case.warnings]
+        for agent in (Agent.CLAUDE, Agent.CODEX):
+            announced = (
+                FIRST_INSTALL_WARNING.format(
+                    marketplace=case.plan.roots.marketplace,
+                    agent=agent.value,
+                    plugin=SPEC_TREE_PLUGIN,
+                )
+                in messages
+            )
+            installs = [
+                command
+                for command in case.plan.commands
+                if command.agent is agent
+                and command.operation is Operation.PLUGIN_INSTALL
+            ]
+            if announced:
+                assert installs, (case.state, agent)
