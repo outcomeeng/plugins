@@ -109,6 +109,11 @@ POOL_MAIN_CHECKOUT_NAME = "main"
 POOL_LINKED_WORKTREE_NAME = "linked"
 POOL_SEED_NAME = "seed"
 POOL_SYMLINK_NAME = "linked-by-symlink"
+# A directory inside the main checkout, so a shape exists whose repository lies
+# strictly above its working directory. A variable that bounds where Git may
+# discover a repository reaches only such a shape: at a checkout's own root the
+# repository is found before any ceiling above it applies.
+POOL_NESTED_RELATIVE = ("workspace", "package")
 # A second repository beside the pool, no checkout of it. A caller carrying
 # one of Git's location variables can name it, so the pool can be read from
 # an environment that points away from the working directory.
@@ -823,18 +828,32 @@ class MailPool:
     """One real repository reached through its three checkout shapes.
 
     ``bare`` is the repository every shape shares, so it is the key the
-    resolver must return from each of them. ``outside`` is the pool's parent
-    directory, which is no repository. ``foreign`` is a second repository no
-    shape belongs to, so a key that followed a caller's environment rather than
-    its working directory would return it.
+    resolver must return from each of them. ``nested`` is a directory inside the
+    main checkout, the shape whose repository lies strictly above its working
+    directory. ``outside`` is the pool's parent directory, which is no
+    repository. ``foreign`` is a second repository no shape belongs to, so a key
+    that followed a caller's environment rather than its working directory would
+    return it.
     """
 
     bare: Path
     main_checkout: Path
     linked_worktree: Path
     symlinked_worktree: Path
+    nested: Path
     outside: Path
     foreign: Path
+
+    @property
+    def checkout_shapes(self) -> dict[str, Path]:
+        """Every working directory that belongs to this pool, by name."""
+        return {
+            "bare": self.bare,
+            "main-checkout": self.main_checkout,
+            "linked-worktree": self.linked_worktree,
+            "symlinked-worktree": self.symlinked_worktree,
+            "nested-directory": self.nested,
+        }
 
 
 def _git_in(directory: Path, *arguments: str) -> None:
@@ -884,6 +903,8 @@ def mail_pool() -> Iterator[MailPool]:
         _git_in(bare, "worktree", "add", "--quiet", "--detach", str(linked_worktree))
         symlinked_worktree = outside / POOL_SYMLINK_NAME
         symlinked_worktree.symlink_to(linked_worktree)
+        nested = main_checkout.joinpath(*POOL_NESTED_RELATIVE)
+        nested.mkdir(parents=True)
         foreign = outside / f"{FOREIGN_REPOSITORY_NAME}.git"
         subprocess.run(
             ["git", "init", "--quiet", "--bare", str(foreign)],
@@ -895,6 +916,7 @@ def mail_pool() -> Iterator[MailPool]:
             main_checkout=main_checkout,
             linked_worktree=linked_worktree,
             symlinked_worktree=symlinked_worktree,
+            nested=nested,
             outside=outside,
             foreign=foreign,
         )
@@ -921,6 +943,165 @@ def run_cli_project_key(
         env=None if environment is None else {**os.environ, **environment},
     )
     return completed.returncode, cast(dict[str, object], json.loads(completed.stdout))
+
+
+@dataclass(frozen=True)
+class GitLocationProbe:
+    """One environment variable Git's own behaviour shows redirects a lookup.
+
+    ``environment`` is the caller's environment that produced ``outcome`` from
+    ``working_directory``: ``misdirected`` when raw Git answered with another
+    repository's common directory, ``unresolved`` when raw Git gave the same
+    answer it gives in a directory that is no repository at all.
+    """
+
+    variable: str
+    shape: str
+    working_directory: Path
+    environment: dict[str, str]
+    outcome: str
+
+
+MISDIRECTED_OUTCOME = "misdirected"
+UNRESOLVED_OUTCOME = "unresolved"
+
+# Git's own question about which repository a working directory belongs to,
+# spelled here rather than read from the adapter: the adapter's argv is the
+# subject under test, so a probe that borrowed it would confirm nothing the
+# adapter did not already agree with.
+GIT_COMMON_DIR_QUESTION = (
+    "git",
+    "rev-parse",
+    "--path-format=absolute",
+    "--git-common-dir",
+)
+# Git's own report of the environment variables local to a repository. It is
+# the candidate space, not the answer.
+GIT_LOCAL_ENV_VARS_QUESTION = ("git", "rev-parse", "--local-env-vars")
+# Candidate names beyond that report: Git's discovery-bounding variables, which
+# answer a location question by limiting where a repository may be found rather
+# than by naming one. This list only widens the search — a candidate joins the
+# confirmed domain solely where Git's behaviour shows it redirects the lookup,
+# so a name that changes nothing costs one probe and confirms nothing.
+GIT_DISCOVERY_CANDIDATES: tuple[str, ...] = (
+    "GIT_CEILING_DIRECTORIES",
+    "GIT_DISCOVERY_ACROSS_FILESYSTEM",
+)
+GIT_PROBE_TIMEOUT_SECONDS = 30
+
+
+def _ask_git(
+    argv: tuple[str, ...], cwd: Path, extra: Mapping[str, str]
+) -> tuple[int, str, str]:
+    """Ask Git one question from ``cwd``, carrying only ``extra`` of `GIT_*`."""
+    inherited = {
+        name: value for name, value in os.environ.items() if not name.startswith("GIT_")
+    }
+    completed = subprocess.run(
+        list(argv),
+        cwd=cwd,
+        env={**inherited, **extra},
+        capture_output=True,
+        text=True,
+        timeout=GIT_PROBE_TIMEOUT_SECONDS,
+        check=False,
+    )
+    return completed.returncode, completed.stdout.strip(), completed.stderr.strip()
+
+
+def _probe_value_pairs(
+    working_directory: Path, pool: MailPool
+) -> list[tuple[str, str]]:
+    """Redirecting values paired with an inert control of the same shape.
+
+    A candidate is confirmed only where the first value redirects Git and the
+    second leaves its answer untouched, so a variable that rejects any value of
+    this shape — a count, a config specification — fails the control and stays
+    out of the domain.
+    """
+    return [
+        (str(pool.foreign), str(pool.bare)),
+        (str(working_directory.parent), str(pool.foreign)),
+        ("0", "1"),
+        ("1", "0"),
+    ]
+
+
+def git_location_variables(pool: MailPool) -> list[GitLocationProbe]:
+    """The location variables Git itself confirms, with the case confirming each.
+
+    The candidate space is Git's own `rev-parse --local-env-vars` report widened
+    by `GIT_DISCOVERY_CANDIDATES`; the oracle is Git's behaviour in ``pool``. A
+    candidate is confirmed where one value makes raw Git answer with another
+    repository, or gives the answer Git gives where no repository exists, while
+    an inert value of the same shape leaves the answer unchanged.
+    """
+    reported = _ask_git(GIT_LOCAL_ENV_VARS_QUESTION, pool.main_checkout, {})
+    if reported[0] != 0 or not reported[1].split():
+        raise CaptureError(f"Git reports no repository-local variables: {reported}")
+    candidates = list(dict.fromkeys([*reported[1].split(), *GIT_DISCOVERY_CANDIDATES]))
+
+    unresolved = _ask_git(GIT_COMMON_DIR_QUESTION, pool.outside, {})
+    if unresolved[0] == 0:
+        raise CaptureError(
+            f"The pool's parent directory resolves a repository: {unresolved}"
+        )
+    shapes = pool.checkout_shapes
+    baselines = {
+        name: _ask_git(GIT_COMMON_DIR_QUESTION, directory, {})
+        for name, directory in shapes.items()
+    }
+    for name, answer in baselines.items():
+        if answer[0] != 0 or answer[1] != str(pool.bare):
+            raise CaptureError(f"Shape {name} does not resolve the pool: {answer}")
+
+    confirmed: list[GitLocationProbe] = []
+    for variable in candidates:
+        probe = _confirm_variable(variable, pool, shapes, baselines, unresolved)
+        if probe is not None:
+            confirmed.append(probe)
+    outcomes = {probe.outcome for probe in confirmed}
+    if outcomes != {MISDIRECTED_OUTCOME, UNRESOLVED_OUTCOME}:
+        raise CaptureError(
+            "Git confirms no variable of each redirection class; "
+            f"the probe found {sorted(outcomes)} over {sorted(p.variable for p in confirmed)}"
+        )
+    return confirmed
+
+
+def _confirm_variable(
+    variable: str,
+    pool: MailPool,
+    shapes: Mapping[str, Path],
+    baselines: Mapping[str, tuple[int, str, str]],
+    unresolved: tuple[int, str, str],
+) -> GitLocationProbe | None:
+    for shape, directory in shapes.items():
+        baseline = baselines[shape]
+        for redirecting, inert in _probe_value_pairs(directory, pool):
+            environment = {variable: redirecting}
+            answer = _ask_git(GIT_COMMON_DIR_QUESTION, directory, environment)
+            if answer == baseline:
+                continue
+            if answer[0] == 0 and answer[1] != baseline[1]:
+                outcome = MISDIRECTED_OUTCOME
+            elif answer == unresolved:
+                outcome = UNRESOLVED_OUTCOME
+            else:
+                continue
+            if (
+                _ask_git(GIT_COMMON_DIR_QUESTION, directory, {variable: inert})
+                != baseline
+            ):
+                continue
+            return GitLocationProbe(
+                variable=variable,
+                shape=shape,
+                working_directory=directory,
+                environment=environment,
+                outcome=outcome,
+            )
+    return None
 
 
 def requests_over_every_operation(module: ModuleType) -> list[dict[str, object]]:

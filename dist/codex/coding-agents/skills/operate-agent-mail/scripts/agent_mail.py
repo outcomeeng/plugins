@@ -49,13 +49,19 @@ PATH_FORMAT_ABSOLUTE_OPTION = "--path-format=absolute"
 GIT_COMMON_DIR_OPTION = "--git-common-dir"
 
 # The variables Git answers a location question from when the caller carries
-# one. Git exports the first into every hook and into the commands it runs
-# itself, so an inherited value would name a repository the adapter's working
-# directory does not belong to.
+# one: the three that name a repository directly, and the two that bound where
+# Git may discover one. Git exports GIT_DIR into every hook and into the
+# commands it runs itself, so an inherited value would name a repository the
+# adapter's working directory does not belong to; a caller carrying a ceiling
+# above that directory instead hides the repository it does belong to. Both
+# answer a location question from the caller rather than from the working
+# directory, so the lookup runs without either class.
 GIT_LOCATION_VARIABLES: Final[tuple[str, ...]] = (
     "GIT_DIR",
     "GIT_COMMON_DIR",
     "GIT_WORK_TREE",
+    "GIT_CEILING_DIRECTORIES",
+    "GIT_DISCOVERY_ACROSS_FILESYSTEM",
 )
 
 # The separator the project key's absolute path is written with.
@@ -667,7 +673,7 @@ def record_from_inbox_item(item: object, *, recipient: str) -> dict[str, object]
     )
 
 
-def project_key_from_common_dir(text: object) -> str:
+def project_key_from_common_dir(text: str) -> str:
     """Return the project key the repository's common Git directory names.
 
     The directory is the identity every checkout of one repository shares, so a
@@ -677,7 +683,7 @@ def project_key_from_common_dir(text: object) -> str:
     no trailing separator. Text naming no absolute directory resolves no
     repository.
     """
-    candidate = text.strip() if isinstance(text, str) else ""
+    candidate = text.strip()
     if not candidate.startswith(PATH_SEPARATOR):
         raise AgentMailError(
             ExecutionStatus.REPOSITORY_UNRESOLVED,
@@ -687,21 +693,19 @@ def project_key_from_common_dir(text: object) -> str:
     return PATH_SEPARATOR + normalized.lstrip(PATH_SEPARATOR)
 
 
-def repository_lookup_environment(
-    source: Mapping[str, str] | None = None,
-) -> dict[str, str]:
+def repository_lookup_environment() -> dict[str, str]:
     """Return the environment the repository lookup runs in.
 
     Every variable in `GIT_LOCATION_VARIABLES` is removed, so the lookup
-    answers from its own working directory and an inherited value naming
-    another repository reaches no answer. Without that removal the key would
-    follow whatever the caller carried, and a mail operation invoked from a
-    hook would key the store to the repository that ran the hook.
+    answers from its own working directory and no value the caller inherited
+    redirects it. Without that removal the key would follow whatever the caller
+    carried: a mail operation invoked from a hook would key the store to the
+    repository that ran the hook, and one invoked under a ceiling above its own
+    working directory would resolve no repository at all.
     """
-    inherited = os.environ if source is None else source
     return {
         name: value
-        for name, value in inherited.items()
+        for name, value in os.environ.items()
         if name not in GIT_LOCATION_VARIABLES
     }
 

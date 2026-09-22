@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 from types import ModuleType
 from typing import cast
 
@@ -9,6 +10,7 @@ from outcomeeng_testing.harnesses.agent_mail import (
     common_dir_seeded_absent_store_runner,
     common_dir_seeded_runner,
     failed_command_result,
+    git_location_variables,
     load_agent_mail,
     mail_pool,
     run_cli_project_key,
@@ -297,47 +299,43 @@ def test_every_checkout_shape_of_one_pool_maps_to_one_project_key() -> None:
 
 
 def test_git_location_variables_leave_the_project_key_on_its_own_repository() -> None:
-    # Git answers a location question from GIT_DIR, GIT_COMMON_DIR, or
-    # GIT_WORK_TREE whenever the caller carries one, and exports GIT_DIR into
-    # every hook and into the commands it runs itself. The domain is the
-    # adapter's own set of those variables: each one alone, then all together.
+    # The domain is the set Git itself confirms: every candidate Git's own
+    # `rev-parse --local-env-vars` reports, widened by its discovery-bounding
+    # variables, that redirects raw Git away from the working directory's own
+    # repository. Each confirmed case carries the working directory and the
+    # caller's environment that redirected raw Git, so the adapter is read
+    # against Git's behaviour rather than against its own removal list, and the
+    # complete set together follows as one further case.
     module = load_agent_mail()
-    combined = "every-location-variable"
+    combined = "every-confirmed-variable"
 
     with mail_pool() as pool:
-        foreign_repository = str(pool.foreign)
-        environments: dict[str, dict[str, str]] = {
-            variable: {variable: foreign_repository}
-            for variable in module.GIT_LOCATION_VARIABLES
+        confirmed = git_location_variables(pool)
+        cases: list[tuple[str, Path, dict[str, str]]] = [
+            (probe.variable, probe.working_directory, probe.environment)
+            for probe in confirmed
+        ]
+        every_variable = {
+            variable: value
+            for probe in confirmed
+            for variable, value in probe.environment.items()
         }
-        environments[combined] = {
-            variable: foreign_repository for variable in module.GIT_LOCATION_VARIABLES
-        }
-        shapes = {
-            "bare": pool.bare,
-            "main-checkout": pool.main_checkout,
-            "linked-worktree": pool.linked_worktree,
-            "symlinked-worktree": pool.symlinked_worktree,
-        }
+        cases += [
+            (combined, probe.working_directory, every_variable) for probe in confirmed
+        ]
         inside = {
-            (case, shape): run_cli_project_key(directory, environment)
-            for case, environment in environments.items()
-            for shape, directory in shapes.items()
+            (case, str(directory)): run_cli_project_key(directory, environment)
+            for case, directory, environment in cases
         }
         outside = {
             case: run_cli_project_key(pool.outside, environment)
-            for case, environment in environments.items()
+            for case, _, environment in cases
         }
         expected_key = str(pool.bare)
-
-    assert combined not in module.GIT_LOCATION_VARIABLES
-    assert len(environments) == len(module.GIT_LOCATION_VARIABLES) + 1
-    # The value every row carries names a repository no shape belongs to, so a
-    # key that followed the environment would return it from each of them.
-    assert foreign_repository != expected_key
+        redirections = {probe.variable: probe.outcome for probe in confirmed}
 
     for case, (exit_code, payload) in inside.items():
-        assert exit_code == 0, (case, payload)
+        assert exit_code == 0, (case, payload, redirections)
         assert payload[module.PROJECT_KEY_FIELD] == expected_key, (case, payload)
 
     for case, (exit_code, payload) in outside.items():
@@ -346,6 +344,11 @@ def test_git_location_variables_leave_the_project_key_on_its_own_repository() ->
         assert (
             payload[module.STATUS_FIELD] == module.ExecutionStatus.REPOSITORY_UNRESOLVED
         ), (case, payload)
+
+    # Git confirmed each of these against its own answer, so a removal list that
+    # dropped one would leave the shape that confirmed it resolving the wrong
+    # repository or none at all.
+    assert set(redirections) <= set(module.GIT_LOCATION_VARIABLES), redirections
 
 
 def test_store_responses_map_to_results_without_rewriting() -> None:
