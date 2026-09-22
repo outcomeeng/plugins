@@ -154,6 +154,54 @@ as the only non-Python reading. Raised as finding `F-003` of changeset review ru
 `2026-09-22_14-07-16-429-851b4a371443`, filed there against `repository-installation.md`
 line 55.
 
+## The live-discovery clause claims two surfaces this node does not own
+
+The compliance assertion in `selected-gate.md` reads:
+
+> ALWAYS: local selection includes live discovery for installation, subagent-definition
+> generation and placement, discovery, and their governing contracts and verification
+> infrastructure; explicit full verification and CI include it
+
+Its first clause is this node's own subject and is reached: `build_selected_gate_plan`
+selects the live rows for each declared surface, and `test_each_declared_discovery_surface_requires_the_live_check`
+drives it. The second clause names two surfaces the selection layer never touches.
+
+**What the second clause would have to read.** Explicit full verification is the
+`check-full` branch of `outcomeeng/validation/__main__.py`, which calls
+`run_check(recipes=CHECK_RECIPES)` and bypasses `run_selected_check` entirely, so no code
+path can apply `LIVE_DISCOVERY_EXCLUSION` to it. CI is the full-gate invocation in
+`.github/workflows/check.yml`. No linked test in this node references either; the four
+full-gate cases drive `full_gate=True` inside `build_selected_gate_plan`, which is the
+selected full-gate plan rather than either named surface. Applying the exclusion on either
+path leaves all seven linked files passing.
+
+**Why this is a declaration defect rather than an evidence gap.** Both surfaces are governed
+elsewhere — `outcomeeng/validation/__main__.py` is one of the six modules
+`spx/15-validation.enabler/21-subprocess-execution.adr.md` enumerates as the gate
+orchestrator, and the workflow belongs to the CI-gate decision under
+`spx/13-infrastructure.enabler/21-test-infrastructure.enabler`. Evidence under this node
+reading either would assert a contract another node declares. The clause claims more than the
+node's subject carries, so narrowing it or rehoming it is the repair, and the same sentence
+appears in `15-live-discovery.pdr.md`, which only the operator amends.
+
+**Settlement condition**: either both enumerations narrow the clause to the selection layer's
+own full-gate plan, or each named surface carries evidence under the node that governs it —
+the `check-full` dispatch under the gate node, the workflow under the CI-gate node.
+
+**Related entries.** Two entries above already record halves of the same sentence's trouble
+from other directions: the premise-to-conclusion step is recorded under "The live-discovery
+decision's premise does not support its conclusion locally", which establishes that the
+`check-full` path reads no switch; the workflow's absence from every scanned root is recorded
+under "The no-switch rule binds four subjects and its evidence sees one". This entry is the
+spec assertion's own scope, which neither covers, and all three wait on the same operator
+amendment.
+
+**Evidence**: the quoted assertion against the `check-full` branch of
+`outcomeeng/validation/__main__.py`; the four full-gate cases in
+`tests/test_selected_gate.compliance.l1.py`, each driving `build_selected_gate_plan`; and a
+search over this node's seven linked files returning no reference to the dispatch or the
+workflow. Raised as finding `f-001`, REJECT, by the node's test-evidence audit.
+
 ## The import-form domain names five forms and the reader carries a sixth
 
 Two surfaces declare the import forms the static index resolves, and both enumerate
