@@ -160,8 +160,16 @@ UNRESOLVED_TARGET_RECORD_WARNING = (
     "Claude Code records {plugin} at {scope} scope for {project_path}, but the "
     "registered clone resolves no target version for {plugin} — its catalog "
     "names no source, or the manifest that source names carries no readable "
-    "version; the record is left unchanged."
+    "version; the record reaches no target."
 )
+"""The unresolved-target disposition, worded for every record it covers.
+
+A record outside the invocation checkout is left where it was, because the
+rewrite is what would have moved it; the invocation checkout's own record has
+already received its native update by the time the clone is read. Neither
+reaches a target, which is what the warning says and what makes the exit
+nonzero, so the message claims nothing about the record's version.
+"""
 OUT_OF_SCOPE_RECORD_WARNING = (
     "Claude Code records {plugin} at {scope} scope for {project_path}; persistent "
     "installation refreshes only project and local scope, so the record is left "
@@ -2534,6 +2542,13 @@ def _rewrite_records(
     registered before this run — carries no target and no rewrite record, so
     the drift comparison reports every record that run left unmoved as
     unrefreshed and the plan's blocking warning names each of them.
+
+    A plugin the clone resolves no target version for is reported over every
+    record the run carries, the invocation checkout's native records
+    included, because the supply defect is the plugin's rather than one
+    record's. A plugin whose absence from the registered source is
+    established is pending publication instead — the one condition this run
+    continues past — so its records stay out of both dispositions.
     """
     if plan.claude_clone is None or head is None:
         return None, (), ()
@@ -2544,9 +2559,15 @@ def _rewrite_records(
     cache_root = (
         plan.roots.claude_config / CLAUDE_PLUGIN_CACHE_RELATIVE / plan.roots.marketplace
     )
+    carried = tuple(
+        record
+        for record in (*plan.claude_records, *plan.rewrite_records)
+        if record.plugin not in unpublished
+    )
     candidates = tuple(
         record for record in plan.rewrite_records if record.plugin not in unpublished
     )
+    unresolved = unresolved_target_warnings(carried, target)
     rewrites, warnings = plan_install_record_rewrite(
         candidates,
         target,
@@ -2558,7 +2579,7 @@ def _rewrite_records(
         rewrites,
         plan.roots.marketplace,
     )
-    return target, written, (*warnings, *write_warnings)
+    return target, written, (*unresolved, *warnings, *write_warnings)
 
 
 def _record_drift(
@@ -2987,7 +3008,8 @@ def marketplace_target(
     clone, found through the clone's own catalog entry for that plugin. A
     plugin the clone's catalog names no source for, or whose manifest the
     clone cannot supply or does not version, resolves to no target version
-    and is left out; each of its records is reported as unresolved and the
+    and is left out; every project- or local-scope record of it — the
+    invocation checkout's own included — is reported as unresolved and the
     run continues, because one plugin's supply defect settles nothing about
     the rest of the machine's records. A clone catalog the run cannot read at
     all resolves no plugin, so it stops the run.
@@ -3036,6 +3058,38 @@ def marketplace_target(
     return MarketplaceTarget(commit=commit, versions=versions)
 
 
+def unresolved_target_warnings(
+    records: Sequence[ClaudeInstallRecord],
+    target: MarketplaceTarget,
+) -> tuple[InstallationWarning, ...]:
+    """One blocking warning per record whose plugin resolves to no target version.
+
+    The domain is every project- or local-scope record of a cataloged plugin
+    the run carries — the invocation checkout's own, which the native update
+    moves, beside every record the rewrite would have moved — because the
+    condition belongs to the plugin's supply in the registered clone rather
+    than to the way one record would have moved.
+
+    This is the only path such a record has to the exit code. The drift
+    comparison judges a record against the target version of its plugin, and
+    for these records there is none, so a run that left the disposition to
+    the comparison would exit zero on a plugin it could not resolve.
+    """
+    return tuple(
+        InstallationWarning(
+            agent=Agent.CLAUDE,
+            message=UNRESOLVED_TARGET_RECORD_WARNING.format(
+                plugin=record.plugin,
+                scope=record.scope,
+                project_path=record.project_path,
+            ),
+            blocking=True,
+        )
+        for record in records
+        if record.plugin not in target.versions
+    )
+
+
 def plan_install_record_rewrite(
     records: Sequence[ClaudeInstallRecord],
     target: MarketplaceTarget,
@@ -3047,23 +3101,17 @@ def plan_install_record_rewrite(
     `cached_versions` names, per plugin, the versions the plugin cache holds;
     a record whose plugin has no cached target version cannot be pointed at
     a tree the session could load, so it is reported instead of rewritten.
+
+    A record whose plugin resolves to no target version is passed over
+    without a warning here: its disposition covers a domain wider than the
+    rewrite's, so `unresolved_target_warnings` raises it over every record
+    the run carries rather than this function over the subset it plans.
     """
     rewrites: list[RecordRewrite] = []
     warnings: list[InstallationWarning] = []
     for record in records:
         version = target.versions.get(record.plugin)
         if version is None:
-            warnings.append(
-                InstallationWarning(
-                    agent=Agent.CLAUDE,
-                    message=UNRESOLVED_TARGET_RECORD_WARNING.format(
-                        plugin=record.plugin,
-                        scope=record.scope,
-                        project_path=record.project_path,
-                    ),
-                    blocking=True,
-                )
-            )
             continue
         if version not in cached_versions.get(record.plugin, frozenset()):
             warnings.append(
@@ -3478,6 +3526,7 @@ __all__ = [
     "codex_source_form",
     "marketplace_target",
     "plan_install_record_rewrite",
+    "unresolved_target_warnings",
     "render_claude_source",
     "rewrite_install_records",
     "AGENT_OWNERSHIP_FILENAME",

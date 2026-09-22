@@ -404,6 +404,49 @@ def generated_bootstrap_records(
     )
 
 
+def generated_unresolved_target_records(
+    marketplace: str,
+    resolved_plugin: str,
+    unresolved_plugin: str,
+    checkout: Path,
+    other_checkout: Path,
+    version: str,
+) -> tuple[tuple[dict[str, str], RecordDisposition], ...]:
+    """One record of an unresolvable plugin in the invocation checkout alone.
+
+    A plugin the registered clone resolves no target version for is a
+    plugin-wide condition, and the invocation checkout is the one place a
+    record of it escapes both of the run's other reaches: the rewrite plans
+    no entry for a record of the invocation checkout, and the drift
+    comparison judges a record only against a target version its plugin has.
+    Recording that plugin nowhere else is therefore the shape that separates
+    the plugin-wide disposition from the rewrite's.
+
+    The resolved plugin is recorded in the invocation checkout, so the
+    selection the plan validates carries `spec-tree`, and in another
+    checkout, so the run that reports the unresolved plugin is observed
+    moving another plugin's record through the rewrite beside it.
+    """
+    return tuple(
+        (
+            {
+                CLAUDE_PLUGIN_ID_FIELD: marketplace_plugin_identifier(
+                    plugin, marketplace
+                ),
+                CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
+                CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(path.resolve()),
+                CLAUDE_PLUGIN_VERSION_FIELD: version,
+            },
+            disposition,
+        )
+        for plugin, path, disposition in (
+            (resolved_plugin, checkout, RecordDisposition.INVOCATION_NATIVE),
+            (unresolved_plugin, checkout, RecordDisposition.INVOCATION_NATIVE),
+            (resolved_plugin, other_checkout, RecordDisposition.FILE_REWRITE),
+        )
+    )
+
+
 def generated_claude_install_records(
     catalog: Sequence[str],
     marketplace: str,

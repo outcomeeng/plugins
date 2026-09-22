@@ -22,6 +22,7 @@ from outcomeeng.distribution.installation import (
     ReportField,
     SPEC_TREE_PLUGIN,
     UNREADABLE_SETTINGS_WARNING,
+    UNRESOLVED_TARGET_RECORD_WARNING,
     WITHHELD_REGISTRATION_WARNING,
     marketplace_plugin_identifier,
     marketplace_plugin_name,
@@ -46,6 +47,7 @@ from outcomeeng_testing.harnesses.installation import (
     observe_invalid_persistent_selection,
     observe_persistent_plan,
     observe_bootstrap_record_drift,
+    observe_unresolved_target_record,
     observe_defective_record_listing,
     observe_unreadable_source,
     observe_record_refresh_plan,
@@ -454,6 +456,50 @@ def test_a_bootstrap_run_reports_the_records_it_moved_and_the_records_it_did_not
         )
     }
     assert observation.document[ReportField.OFF_TARGET_RECORDS] == []
+    assert observation.exit_code != 0
+
+
+def test_a_plugin_with_no_resolved_target_is_reported_in_the_invocation_checkout() -> (
+    None
+):
+    observation = observe_unresolved_target_record()
+    warnings = {
+        warning[ReportField.MESSAGE]
+        for warning in cast(
+            "list[dict[str, str]]", observation.document[ReportField.WARNINGS]
+        )
+    }
+    moved = {
+        (
+            record[ReportField.PLUGIN],
+            record[ReportField.SCOPE],
+            record[ReportField.PROJECT_PATH],
+        ): (record[ReportField.VERSION_BEFORE], record[ReportField.VERSION_AFTER])
+        for record in cast(
+            "list[dict[str, str]]", observation.document[ReportField.CLAUDE_RECORDS]
+        )
+    }
+    target = cast("dict[str, object]", observation.document[ReportField.TARGET])
+    versions = cast("dict[str, str]", target[ReportField.VERSIONS])
+
+    assert (
+        UNRESOLVED_TARGET_RECORD_WARNING.format(
+            plugin=observation.unresolved_plugin,
+            scope=CLAUDE_PROJECT_SCOPE,
+            project_path=observation.checkout,
+        )
+        in warnings
+    )
+    assert observation.unresolved_plugin not in versions
+    assert versions[observation.resolved_plugin] == observation.target_version
+    assert observation.document[ReportField.OFF_TARGET_RECORDS] == []
+    assert moved[
+        (
+            observation.resolved_plugin,
+            CLAUDE_PROJECT_SCOPE,
+            str(observation.other_checkout),
+        )
+    ] == (observation.listed_version, observation.target_version)
     assert observation.exit_code != 0
 
 

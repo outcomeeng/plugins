@@ -154,6 +154,7 @@ from outcomeeng_testing.generators.installation import (
     generated_other_checkout_records,
     generated_bootstrap_records,
     generated_listing_defect_records,
+    generated_unresolved_target_records,
     generated_invalid_catalog_subsets,
     generated_persistent_catalog_selections,
 )
@@ -1716,6 +1717,126 @@ def observe_defective_record_listing() -> DefectiveListingObservation:
         attempted=tuple(runner.calls),
         record_file_after=record_file_after,
         target_version=target_version,
+    )
+
+
+def _unversion_clone_manifest(clone: Path, plugin: str) -> None:
+    """Strip the version field from one cataloged plugin's manifest in a clone.
+
+    The clone keeps its catalog entry for the plugin, so the plugin is still
+    a member the run plans records for; only the manifest the target version
+    would be read from stops carrying one. That is the supply defect the
+    unresolved-target disposition names, reproduced without removing the
+    plugin from the marketplace the run refreshes from.
+    """
+    catalog_document = cast(
+        "dict[str, object]",
+        json.loads((clone / CLAUDE_CATALOG_PATH).read_text(encoding="utf-8")),
+    )
+    source = next(
+        cast(str, entry[CATALOG_PLUGIN_SOURCE_FIELD])
+        for entry in cast(
+            "list[dict[str, object]]", catalog_document[CATALOG_PLUGINS_FIELD]
+        )
+        if entry[CATALOG_PLUGIN_NAME_FIELD] == plugin
+    )
+    manifest_path = clone / source / PLUGIN_MANIFEST_RELATIVE
+    manifest = cast(
+        "dict[str, object]", json.loads(manifest_path.read_text(encoding="utf-8"))
+    )
+    del manifest[PLUGIN_MANIFEST_VERSION_FIELD]
+    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+
+
+@dataclass(frozen=True)
+class UnresolvedTargetObservation:
+    """A persistent run whose clone resolves no target version for one plugin.
+
+    The run's report, its exit code, and the cases its listing carried are
+    the observations; the linked test owns every predicate over them.
+    """
+
+    checkout: Path
+    other_checkout: Path
+    resolved_plugin: str
+    unresolved_plugin: str
+    cases: tuple[tuple[dict[str, str], RecordDisposition], ...]
+    listed_version: str
+    target_version: str
+    document: dict[str, object]
+    """The run's JSON report, parsed from the one execution's own output."""
+    exit_code: int
+
+
+def observe_unresolved_target_record() -> UnresolvedTargetObservation:
+    """Run a persistent refresh whose clone cannot version one cataloged plugin.
+
+    The listing records the unresolved plugin in the invocation checkout
+    alone, and the resolved plugin in the invocation checkout and in another
+    checkout, so the run carries one record of each disposition it can still
+    move beside the record neither its rewrite nor its drift comparison
+    reaches. The report and the exit code come from that one execution.
+    """
+    checkout = repository_root()
+    with TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory).resolve()
+        mirror = temporary_root / "checkout"
+        other = temporary_root / "other-checkout"
+        other.mkdir()
+        mirror_installation_inputs(checkout, mirror)
+        _write_project_marketplace(mirror, DECLARED_CLAUDE_SOURCE)
+        clone = temporary_root / "clone"
+        mirror_installation_inputs(checkout, clone)
+        environment = _persistent_environment(temporary_root)
+        _prepare_agent_state(environment)
+        preflight = build_persistent_preflight(mirror, environment)
+        marketplace = preflight.roots.marketplace
+        catalog = _catalogs_from_documents(mirror)[Agent.CLAUDE]
+        unresolved_plugin = next(
+            plugin for plugin in catalog if plugin != SPEC_TREE_PLUGIN
+        )
+        cases = generated_unresolved_target_records(
+            marketplace,
+            SPEC_TREE_PLUGIN,
+            unresolved_plugin,
+            preflight.roots.checkout,
+            other,
+            LISTED_VERSION,
+        )
+        target_version = served_version(len(cases))
+        _serve_clone_versions(clone, (SPEC_TREE_PLUGIN,), target_version)
+        _unversion_clone_manifest(clone, unresolved_plugin)
+        cache_root = (
+            preflight.roots.claude_config / CLAUDE_PLUGIN_CACHE_RELATIVE / marketplace
+        )
+        (cache_root / SPEC_TREE_PLUGIN / target_version).mkdir(parents=True)
+        record_file = preflight.roots.claude_config / CLAUDE_INSTALLED_PLUGINS_RELATIVE
+        record_file.parent.mkdir(parents=True, exist_ok=True)
+        record_file.write_text(
+            json.dumps(_record_file_from_cases(cases, cache_root), indent=2)
+        )
+        runner = RecordingRunner(
+            record_file=record_file, clone=clone, served_version=target_version
+        )
+        stdout = StringIO()
+        stderr = StringIO()
+        with redirect_stdout(stdout), redirect_stderr(stderr):
+            exit_code = main(
+                [CHECKOUT_OPTION, str(mirror), JSON_OUTPUT_OPTION],
+                base_environment=environment,
+                runner=runner,
+            )
+        document = cast("dict[str, object]", json.loads(stdout.getvalue()))
+    return UnresolvedTargetObservation(
+        checkout=preflight.roots.checkout,
+        other_checkout=other.resolve(),
+        resolved_plugin=SPEC_TREE_PLUGIN,
+        unresolved_plugin=unresolved_plugin,
+        cases=cases,
+        listed_version=LISTED_VERSION,
+        target_version=target_version,
+        document=document,
+        exit_code=exit_code,
     )
 
 
