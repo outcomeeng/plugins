@@ -65,18 +65,18 @@ released.
 
 ## Limitations
 
-An ordinary run does not force the conditions required to settle these `[probe]`
-assertions, which remain Declared:
+This protocol reaches exactly the assertions whose own `[probe]` tag names this
+file. Every other assertion of the node is settled by the verification its own
+tag names, which this protocol neither supplies nor withholds; the node spec is
+the only authority on which assertions those are, and none of them is a
+limitation of this protocol.
 
-- "NEVER: a third round": a second rejected round and attempted third pass
-- "ALWAYS: mutating a pane requires": every guarded, unexpected, stalled, and
-  Verifier-time prompt condition
-- "ALWAYS: the orchestrating session assumes": all three autonomous decisions
-  and all four operator-held decisions
+Within that reach, an ordinary run does not force these conditions, so an
+assertion depending on one of them stays Declared after the run:
 
-The node's remaining assertions carry `[audit]` rather than `[probe]`. The node
-spec is authoritative for which assertions those are; an audit verdict settles
-each, so none depends on this protocol and none is a limitation of it.
+- a second rejected round and an attempted third pass on one Change
+- the guarded, unexpected, stalled, and Verifier-time pane-prompt conditions
+- each autonomous decision class and each operator-held decision class
 
 No probe pin exists yet. A future run must retain, at minimum, the mail-thread
 export, inventories before launch and after stop, the pane transcript, sealed

@@ -50,11 +50,11 @@ the methodology's published probe-evidence mechanism.
 ## The shipped ledger script is unproven generic logic past the size bound
 
 `src/plugins/coding-agents/skills/orchestrate-officers/scripts/derive_ledger.py`
-runs to 319 lines — the source-owned field vocabulary, per-event parsing for
-passes, heads, verdicts, decisions, failures, finding provenance and reads,
-decimal spend accumulation across currencies, wall-time totalling, source
-provenance on every entry, and the versioned entry point with its success and
-invalid-input result contracts. None of that is agent-specific: it derives a
+runs to 339 lines — the source-owned field vocabulary and scalar-event registry,
+per-event parsing for passes, heads, verdicts, decisions, failures, finding
+provenance and reads, decimal spend accumulation across currencies, wall-time
+totalling, source provenance on every entry, and the versioned entry point with
+its success and invalid-input result contracts. None of that is agent-specific: it derives a
 record from durable inputs and would behave identically for any coding agent, so
 `spx/12-shipped-scripting.adr.md` governs it as a generic shipped script and
 states that past fifty lines such a script "is debt awaiting extraction once
@@ -71,11 +71,11 @@ asserted rather than observed, and the ADR's removal branch remains live.
 
 **Evidence**: `spx/12-shipped-scripting.adr.md` `## Verification` carries
 "NEVER: a generic shipped script beyond fifty lines stands as settled" and
-"NEVER: retain an unproven shipped script"; the file is 319 lines against a
+"NEVER: retain an unproven shipped script"; the file is 339 lines against a
 fifty-line bound; `probes/officer-run/probe.md` records `Artifacts: none` and no
 attested run of the skill that invokes it.
 
-**Impact**: a consumer repository carries 319 lines of generic derivation logic
+**Impact**: a consumer repository carries 339 lines of generic derivation logic
 it cannot version independently and cannot repair without a marketplace release,
 for a capability no observed run has yet shown is wanted.
 
