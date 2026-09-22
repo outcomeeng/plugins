@@ -25,6 +25,7 @@ from outcomeeng.validation.infrastructure_index import (
     index_test_infrastructure,
 )
 from outcomeeng.validation.selected_gate import (
+    DELETED_GIT_STATUS_PREFIX,
     FULL_GATE_REASON,
     GIT_DISCOVERY_ERROR_PREFIX,
     GIT_DISCOVERY_FAILURE_EXIT_CODE,
@@ -121,7 +122,7 @@ def test_a_full_gate_path_runs_the_complete_wrapper() -> None:
 def test_a_deleted_test_path_selects_no_pytest_run() -> None:
     run = run_check_observation(
         branch_path=SELECTED_GATE_PYTHON_TEST_PATH,
-        branch_status="D",
+        branch_status=DELETED_GIT_STATUS_PREFIX,
     )
 
     assert run.exit_code == 0

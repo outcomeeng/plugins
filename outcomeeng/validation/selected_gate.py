@@ -255,9 +255,16 @@ GIT_DIFF_UNSTAGED_ARGV: Final = (
     "--diff-filter=ACDMRT",
 )
 GIT_LS_UNTRACKED_ARGV: Final = ("git", "ls-files", "--others", "--exclude-standard")
+ADDED_GIT_STATUS_PREFIX: Final = "A"
+"""The status this module records for a path git reports as untracked."""
+MODIFIED_GIT_STATUS_PREFIX: Final = "M"
+"""The status the parser carries through unchanged, naming one path and no other."""
 DELETED_GIT_STATUS_PREFIX: Final = "D"
+"""The status whose path the plan resolves as removed rather than selected."""
 RENAMED_GIT_STATUS_PREFIX: Final = "R"
+"""The status prefix whose line names the old path and then the new one."""
 COPIED_GIT_STATUS_PREFIX: Final = "C"
+"""The status prefix whose line names the source path and then the copy."""
 
 
 @dataclass(frozen=True)
@@ -758,7 +765,7 @@ def _changed_path_entries_from_output(
         if status_output:
             entries.extend(_parse_name_status_line(line))
         else:
-            entries.append(ChangedPath(path=line, status="A"))
+            entries.append(ChangedPath(path=line, status=ADDED_GIT_STATUS_PREFIX))
     return tuple(entries)
 
 

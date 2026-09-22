@@ -28,6 +28,7 @@ from outcomeeng.validation.infrastructure_index import (
 )
 from outcomeeng.validation.selected_gate import (
     ChangedPath,
+    DELETED_GIT_STATUS_PREFIX,
     EVAL_REASON,
     EVIDENCE_LINK_REASON,
     FULL_GATE_REASON,
@@ -36,6 +37,7 @@ from outcomeeng.validation.selected_gate import (
     LIVE_DISCOVERY_INCLUDED_REASON,
     LIVE_DISCOVERY_TEST,
     MARKDOWN_REASON,
+    MODIFIED_GIT_STATUS_PREFIX,
     PYTHON_REASON,
     REACHED_TESTS_REASON,
     SHARED_TEST_INFRASTRUCTURE_REASON,
@@ -67,7 +69,9 @@ from outcomeeng_testing.generators.gate import (
 )
 from outcomeeng_testing.harnesses import gate as gate_harness
 from outcomeeng_testing.harnesses.gate import (
+    COPIED_GIT_STATUS,
     PYTEST_TARGET_ARG,
+    RENAMED_GIT_STATUS,
     SELECTED_GATE_RENAMED_TARGET_ARG,
     SELECTED_GATE_WHITESPACE_PATH,
     collected_paths_observation,
@@ -260,8 +264,8 @@ def test_deleted_assertion_tests_never_select_pytest() -> None:
 
     deleted_paths = deleted_paths_after_status_resolution(
         (
-            ChangedPath(path=test_path, status="M"),
-            ChangedPath(path=test_path, status="D"),
+            ChangedPath(path=test_path, status=MODIFIED_GIT_STATUS_PREFIX),
+            ChangedPath(path=test_path, status=DELETED_GIT_STATUS_PREFIX),
         )
     )
     plan = build_selected_gate_plan((test_path,), deleted_paths=deleted_paths)
@@ -455,7 +459,7 @@ def test_a_rename_collects_both_sides() -> None:
     observation = collected_paths_observation(
         branch_old_path=SELECTED_GATE_PYTHON_TEST_PATH,
         branch_path=SELECTED_GATE_RENAMED_TARGET_ARG,
-        branch_status="R100",
+        branch_status=RENAMED_GIT_STATUS,
     )
 
     assert observation.collected == tuple(
@@ -467,7 +471,7 @@ def test_a_renamed_test_source_never_reaches_pytest() -> None:
     run = run_check_observation(
         branch_old_path=SELECTED_GATE_PYTHON_TEST_PATH,
         branch_path=SELECTED_GATE_RENAMED_TARGET_ARG,
-        branch_status="R100",
+        branch_status=RENAMED_GIT_STATUS,
     )
 
     assert run.exit_code == 0
@@ -478,9 +482,9 @@ def test_a_renamed_test_source_never_reaches_pytest() -> None:
 def test_a_deleted_then_modified_test_still_runs_when_present() -> None:
     run = run_check_observation(
         branch_path=SELECTED_GATE_PYTHON_TEST_PATH,
-        branch_status="D",
+        branch_status=DELETED_GIT_STATUS_PREFIX,
         staged_path=SELECTED_GATE_PYTHON_TEST_PATH,
-        staged_status="M",
+        staged_status=MODIFIED_GIT_STATUS_PREFIX,
         create_repo_file=SELECTED_GATE_PYTHON_TEST_PATH,
     )
 
@@ -498,7 +502,7 @@ def test_a_copy_collects_both_sides() -> None:
     observation = collected_paths_observation(
         branch_old_path=SELECTED_GATE_PYTHON_TEST_PATH,
         branch_path=SELECTED_GATE_RENAMED_TARGET_ARG,
-        branch_status="C100",
+        branch_status=COPIED_GIT_STATUS,
     )
 
     assert observation.collected == tuple(
@@ -510,7 +514,7 @@ def test_a_copied_test_selects_pytest_for_the_surviving_source() -> None:
     run = run_check_observation(
         branch_old_path=SELECTED_GATE_PYTHON_TEST_PATH,
         branch_path=SELECTED_GATE_RENAMED_TARGET_ARG,
-        branch_status="C100",
+        branch_status=COPIED_GIT_STATUS,
     )
 
     report_arguments = skip_report_arguments(run.spawn_calls)

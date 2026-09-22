@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import json
 from pathlib import Path
 import math
 import signal
@@ -35,6 +36,7 @@ from outcomeeng.validation import (
     SIGNAL_POLL_INTERVAL_SECONDS,
     SKIP_LINE_FORM,
     SPX_MARKDOWN_ARGV,
+    STEP_PASS_STATUS,
     STEP_SKIP_STATUS,
     STEP_STATUS_PREFIX_FORM,
     SUMMARY_KEY_PURPOSE,
@@ -59,6 +61,7 @@ from outcomeeng.validation.agent_disable import (
 )
 from outcomeeng_testing.harnesses.gate import (
     HIGH_VOLUME_CHILD_OUTPUT,
+    declared_skip_recording,
     skip_report_observation,
     PASS_EXIT_CODE,
     PYTEST_TARGET_ARG,
@@ -237,9 +240,7 @@ def test_declared_skips_are_named_in_the_summary_and_after_the_status_line() -> 
     ] * observation.recording_steps
     assert all(step[SUMMARY_KEY_STATUS] == RUN_PASS_STATUS for step in recorded)
     status_at = observation.output.index(
-        STEP_STATUS_PREFIX_FORM.format(
-            status=RUN_PASS_STATUS.upper(), label=PYTEST_STEP_LABEL
-        )
+        STEP_STATUS_PREFIX_FORM.format(status=STEP_PASS_STATUS, label=PYTEST_STEP_LABEL)
     )
     for record in observation.written_records:
         line = SKIP_LINE_FORM.format(
@@ -249,6 +250,34 @@ def test_declared_skips_are_named_in_the_summary_and_after_the_status_line() -> 
         )
         assert line in observation.output
         assert observation.output.index(line) > status_at
+
+
+def test_a_real_child_records_each_declared_skip_with_its_own_switch() -> None:
+    recording = declared_skip_recording()
+
+    records = [json.loads(line) for line in recording.recorded_lines]
+
+    assert recording.exit_code == PASS_EXIT_CODE, recording.output
+    assert [sorted(record) for record in records] == [
+        sorted((SKIP_REPORT_TEST_FIELD, SKIP_REPORT_SWITCH_FIELD))
+    ] * len(recording.switch_rows)
+    assert {
+        (record[SKIP_REPORT_TEST_FIELD], record[SKIP_REPORT_SWITCH_FIELD])
+        for record in records
+    } == set(recording.switch_rows)
+    assert not [
+        record
+        for record in records
+        if record[SKIP_REPORT_TEST_FIELD] in recording.other_rows
+    ]
+
+
+def test_a_real_child_records_nothing_when_no_destination_is_named() -> None:
+    recording = declared_skip_recording(name_destination=False)
+
+    assert recording.exit_code == PASS_EXIT_CODE, recording.output
+    assert recording.recorded_lines == ()
+    assert not recording.destination.exists()
 
 
 def test_a_run_without_declared_skips_carries_no_skipped_entry() -> None:

@@ -8,7 +8,7 @@ violating fixtures without touching the real tree.
 from __future__ import annotations
 
 import ast
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
 from typing import Final
 
@@ -70,24 +70,32 @@ def python_modules(root: Path) -> tuple[Path, ...]:
 def rows_without_their_projection(
     test_files: Iterable[Path],
     *,
-    entry_points: Sequence[str],
-    projections: Sequence[str],
+    projections: Mapping[str, Sequence[str]],
 ) -> tuple[str, ...]:
-    """Return every row that reaches a real-process entry point without a projection.
+    """Return every row that reaches a real-process entry point without its projection.
 
-    A row is a test function; it projects its agent's switch by carrying one of
-    `projections` as a decorator. `entry_points` names the harness entry points
-    that start a real agent process.
+    A row is a test function; it projects an agent's switch by carrying that
+    agent's projection as a decorator. `projections` binds each entry point that
+    starts a real agent process to the projections of the agents it starts, so a
+    row reaching that entry point carries every one of them. A row that starts
+    one agent's process while projecting only another agent's switch is
+    therefore reported: a projection of an agent the row never starts declares
+    nothing about the process it does start.
     """
-    entry_point_set = frozenset(entry_points)
-    projection_set = frozenset(projections)
+    entry_points = frozenset(projections)
     offenders: list[str] = []
     for path in sorted(test_files):
         module = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         for node in _rows(module):
-            if not _reaches(node, entry_point_set):
+            reached = _reached(node, entry_points)
+            if not reached:
                 continue
-            if _decorator_names(node) & projection_set:
+            required = frozenset(
+                projection
+                for entry_point in reached
+                for projection in projections[entry_point]
+            )
+            if required <= _decorator_names(node):
                 continue
             offenders.append(f"{path}::{node.name}")
     return tuple(offenders)
@@ -106,14 +114,15 @@ def _rows(module: ast.Module) -> tuple[_Row, ...]:
     )
 
 
-def _reaches(node: _Row, entry_points: frozenset[str]) -> bool:
-    """Report whether the row names an entry point, bare or through a module."""
+def _reached(node: _Row, entry_points: frozenset[str]) -> frozenset[str]:
+    """Return every entry point the row names, bare or through a module."""
+    reached: set[str] = set()
     for inner in ast.walk(node):
         if isinstance(inner, ast.Name) and inner.id in entry_points:
-            return True
-        if isinstance(inner, ast.Attribute) and inner.attr in entry_points:
-            return True
-    return False
+            reached.add(inner.id)
+        elif isinstance(inner, ast.Attribute) and inner.attr in entry_points:
+            reached.add(inner.attr)
+    return frozenset(reached)
 
 
 def _decorator_names(node: _Row) -> frozenset[str]:

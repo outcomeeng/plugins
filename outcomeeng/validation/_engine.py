@@ -72,8 +72,13 @@ STEP_FAILURE_LINE_FORM: Final = STEP_STATUS_LINE_FORM + "  exit {exit_code}"
 """A failing step's line: the status line followed by the child's exit code."""
 SKIP_LINE_FORM: Final = "{status}  {test}  {switch}"
 """One declared skip's line: the skipped status, the row, and its switch."""
-_TIMING_ROW_VALUE: Final = re.compile(r"\s+(\d+)s$")
-"""The engine's one reading of its own timing-row value."""
+_TIMING_ROW_VALUE: Final = re.compile(r"(\d+)s$", re.MULTILINE)
+"""The engine's one reading of a row's value, applied inside the timing block.
+
+The value is read per line of the block rather than per line of the run,
+because a step's status line ends in the same elapsed seconds and only the
+block's bounds tell the two apart.
+"""
 FULL_LOG_LABEL: Final = "Full log:"
 SUMMARY_PATH_LABEL: Final = "Summary:"
 FAILURE_EXCERPT_LINE_LIMIT: Final = 80
@@ -170,14 +175,22 @@ def _write_timing_summary(
     sink.flush()
 
 
-def timing_row_value(line: str) -> int | None:
-    """Return the elapsed seconds a timing row carries, or `None` for other lines.
+def timing_row_values(output: str) -> tuple[int, ...]:
+    """Return the elapsed seconds the run's per-step timing rows carry, in order.
 
-    Published beside `TIMING_ROW_FORM` so a reader that needs to parse a row
-    has one, and no reader has cause to spell a second reading of the form.
+    The rows are the lines the timing block holds — the text the banner opens
+    and the divider closes — so nothing else the run writes to the same sink is
+    read as a row: a step's status line ends in the same elapsed seconds, and a
+    failing step's excerpt carries the child's own text. The total and failed
+    rows follow the divider and are outside the block by the same rule.
+
+    Published beside `TIMING_SUMMARY_BANNER`, `TIMING_DIVIDER`, and
+    `TIMING_ROW_FORM`, so no reader spells the block's bounds or the row's form
+    a second time.
     """
-    match = _TIMING_ROW_VALUE.search(line)
-    return int(match.group(1)) if match is not None else None
+    _, _, after_banner = output.partition(f"{TIMING_SUMMARY_BANNER}\n")
+    block, _, _ = after_banner.partition(f"{TIMING_DIVIDER}\n")
+    return tuple(int(match.group(1)) for match in _TIMING_ROW_VALUE.finditer(block))
 
 
 def _create_summary_path(recipe_name: str) -> Path:

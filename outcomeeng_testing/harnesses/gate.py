@@ -18,6 +18,8 @@ import io
 import json
 import math
 import os
+import subprocess
+import sys
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -50,15 +52,22 @@ from outcomeeng.validation import (
     run_recipe,
     terminate_process_group,
 )
+from outcomeeng.validation._engine import SKIP_REPORT_FILE_SUFFIX
 from outcomeeng.validation._git import GitCommandResult
 from outcomeeng.validation.agent_disable import (
+    DISABLE_CLAUDE_ENV,
+    DISABLE_CODEX_ENV,
+    DISABLE_VALUE,
     SKIP_REPORT_OPTION,
     SKIP_REPORT_SWITCH_FIELD,
     SKIP_REPORT_TEST_FIELD,
 )
 from outcomeeng.validation.selected_gate import (
+    COPIED_GIT_STATUS_PREFIX,
+    MODIFIED_GIT_STATUS_PREFIX,
     PLAN_LINE_FORM,
     PLAN_STEP_LINE_FORM,
+    RENAMED_GIT_STATUS_PREFIX,
     DEFAULT_BASE_REF,
     GIT_DISCOVERY_FAILURE_EXIT_CODE,
     GIT_DIFF_BRANCH_ARGV_PREFIX,
@@ -76,6 +85,7 @@ from outcomeeng_testing.generators.gate import (
     SELECTED_GATE_WORKFLOW_PATH,
     selected_gate_changed_paths,
 )
+from outcomeeng_testing.harnesses import skip_report
 from outcomeeng_testing.harnesses.changeset_scope import build_repo_without_origin
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
 
@@ -98,6 +108,16 @@ PYTEST_TARGET_ARG = (
 )
 SELECTED_GATE_RENAMED_TARGET_ARG = "docs/renamed-selected-gate.py"
 SELECTED_GATE_WHITESPACE_PATH = " docs/selected gate edge spaces.py "
+GIT_SIMILARITY_SCORE = "100"
+"""The similarity score git appends to a rename or copy status in a fixture line.
+
+The planner reads the status prefix alone, so the score is a shape detail of the
+stimulus this harness writes rather than a token the planner owns.
+"""
+RENAMED_GIT_STATUS = f"{RENAMED_GIT_STATUS_PREFIX}{GIT_SIMILARITY_SCORE}"
+"""A complete rename status, composed from the prefix the planner declares."""
+COPIED_GIT_STATUS = f"{COPIED_GIT_STATUS_PREFIX}{GIT_SIMILARITY_SCORE}"
+"""A complete copy status, composed from the prefix the planner declares."""
 
 
 def selected_check_plan_block(*, labels: Sequence[str], reason: str) -> str:
@@ -175,9 +195,9 @@ def selected_gate_runner_for_paths(
     unstaged_path: str = "",
     unstaged_old_path: str = "",
     untracked_path: str = "",
-    branch_status: str = "M",
-    staged_status: str = "M",
-    unstaged_status: str = "M",
+    branch_status: str = MODIFIED_GIT_STATUS_PREFIX,
+    staged_status: str = MODIFIED_GIT_STATUS_PREFIX,
+    unstaged_status: str = MODIFIED_GIT_STATUS_PREFIX,
     branch_returncode: int = 0,
     branch_stderr: str = "",
 ) -> RecordingGitRunner:
@@ -597,7 +617,7 @@ def collected_paths_observation(
     *,
     branch_path: str = "",
     branch_old_path: str = "",
-    branch_status: str = "M",
+    branch_status: str = MODIFIED_GIT_STATUS_PREFIX,
     staged_path: str = "",
     unstaged_path: str = "",
     untracked_path: str = "",
@@ -701,11 +721,11 @@ def run_check_observation(
     *,
     branch_path: str = "",
     branch_old_path: str = "",
-    branch_status: str = "M",
+    branch_status: str = MODIFIED_GIT_STATUS_PREFIX,
     branch_returncode: int = 0,
     branch_stderr: str = "",
     staged_path: str = "",
-    staged_status: str = "M",
+    staged_status: str = MODIFIED_GIT_STATUS_PREFIX,
     child_output: str = "",
     create_repo_file: str | None = None,
 ) -> RunObservation:
@@ -1000,9 +1020,13 @@ class SkipReportingSpawner(RecordingSpawner):
     """A recording spawner that also writes the child's declared-skip records.
 
     Stands in for a pytest child under the `/test` Stage 5 interaction-protocols
-    exception: it performs the same side effect the real child performs — writing
-    one record per declared skip to the file the orchestrator names — and owns no
-    predicate over what the orchestrator then does with those records.
+    exception, so the orchestrator's own half — reading the records, carrying
+    them into the step summary, and printing them after the status line — is
+    observable without a real child's cost. It performs the same side effect the
+    real child performs and owns no predicate over what the orchestrator then
+    does with those records. The producer's half — the predicate that attributes
+    a skip to a switch and the recorder that writes one record per declared skip
+    — is driven by `declared_skip_recording`, which runs a real pytest child.
     """
 
     skip_records: Sequence[Mapping[str, str]] = ()
@@ -1060,3 +1084,166 @@ def skip_report_observation(
             1 for call in spawner.spawn_calls if _skip_report_destination(call)
         ),
     )
+
+
+DECLARED_SKIP_MODULE_NAME = "test_declared_skip_rows.py"
+"""The generated module the recording child collects; a harness handle value."""
+CODEX_ROW_NAME = "test_codex_row"
+"""The generated row whose body reads the Codex predicate."""
+CLAUDE_ROW_NAME = "test_claude_row"
+"""The generated row whose body reads the Claude predicate."""
+UNRELATED_SKIP_ROW_NAME = "test_unrelated_skip_row"
+"""The generated row that skips for a cause no switch declared."""
+RUNNING_ROW_NAME = "test_running_row"
+"""The generated row that runs to completion."""
+UNRELATED_SKIP_REASON_FORM = "{switch} is named here, and another cause skipped it"
+"""A skip reason naming a switch without carrying that switch's declared reason."""
+PYTEST_MODULE_OPTION = "-m"
+"""The interpreter option that runs a module as the child's main program."""
+PYTEST_MODULE_ARGS = (PYTEST_MODULE_OPTION, PYTEST_ARGV[-1])
+"""The interpreter arguments that run pytest, named from the gate's own argv."""
+PYTEST_PLUGIN_OPTION = "-p"
+"""The pytest option that loads one plugin by module name."""
+PYTEST_NO_CACHE_PLUGIN = "no:cacheprovider"
+"""The plugin spelling that keeps the child from writing a cache directory."""
+PYTHONPATH_ENV = "PYTHONPATH"
+"""The interpreter's own import-path variable, set so the child reaches this tree."""
+DECLARED_SKIP_CHILD_TIMEOUT_SECONDS = 120.0
+"""The bound on the recording child's run, so no observation waits without end."""
+REPOSITORY_ROOT = Path(validation_pkg.__file__).resolve().parents[2]
+"""The tree the child imports the product and this harness from."""
+
+DECLARED_SKIP_MODULE_FORM = '''"""Generated rows for the declared-skip recording observation."""
+
+import os
+
+import pytest
+
+from outcomeeng.validation.agent_disable import (
+    claude_disabled_reason,
+    codex_disabled_reason,
+)
+
+
+def {codex_row}() -> None:
+    reason = codex_disabled_reason(os.environ)
+    if reason is not None:
+        pytest.skip(reason)
+
+
+def {claude_row}() -> None:
+    reason = claude_disabled_reason(os.environ)
+    if reason is not None:
+        pytest.skip(reason)
+
+
+def {unrelated_row}() -> None:
+    pytest.skip({unrelated_reason!r})
+
+
+def {running_row}() -> None:
+    return None
+'''
+"""The rows the recording child collects, each reading its own agent's predicate."""
+
+
+@dataclass(frozen=True)
+class DeclaredSkipRecording:
+    """One real pytest child run over rows the switches declared optional.
+
+    `switch_rows` and `other_rows` describe the stimulus the harness generated —
+    which row reads which switch's predicate, and which rows no switch declared
+    — never an expected result. Every predicate over the recorded lines belongs
+    to the linked test.
+    """
+
+    exit_code: int
+    output: str
+    destination: Path
+    recorded_lines: tuple[str, ...]
+    switch_rows: tuple[tuple[str, str], ...]
+    """Each generated row's nodeid paired with the switch its body reads."""
+    other_rows: tuple[str, ...]
+    """The generated rows' nodeids that no switch declared optional."""
+
+
+def declared_skip_recording(*, name_destination: bool = True) -> DeclaredSkipRecording:
+    """Run a real pytest child whose rows both switches declare optional.
+
+    The child runs the product's own predicates over an environment holding both
+    switches, skips through pytest, and loads the recorder the gate registers, so
+    the records read back are the ones a real gate step would leave. With
+    `name_destination` false the child receives no destination option, which is
+    how every step outside a reporting run is spawned.
+    """
+
+    with TemporaryDirectory() as temporary_directory:
+        working = Path(temporary_directory)
+        module = working / DECLARED_SKIP_MODULE_NAME
+        module.write_text(
+            DECLARED_SKIP_MODULE_FORM.format(
+                codex_row=CODEX_ROW_NAME,
+                claude_row=CLAUDE_ROW_NAME,
+                unrelated_row=UNRELATED_SKIP_ROW_NAME,
+                running_row=RUNNING_ROW_NAME,
+                unrelated_reason=UNRELATED_SKIP_REASON_FORM.format(
+                    switch=DISABLE_CODEX_ENV
+                ),
+            ),
+            encoding="utf-8",
+        )
+        destination = working / f"{DECLARED_SKIP_MODULE_NAME}{SKIP_REPORT_FILE_SUFFIX}"
+        argv = [
+            sys.executable,
+            *PYTEST_MODULE_ARGS,
+            PYTEST_PLUGIN_OPTION,
+            skip_report.__name__,
+            PYTEST_PLUGIN_OPTION,
+            PYTEST_NO_CACHE_PLUGIN,
+            DECLARED_SKIP_MODULE_NAME,
+        ]
+        if name_destination:
+            argv.append(f"{SKIP_REPORT_OPTION}={destination}")
+        completed = subprocess.run(  # noqa: S603 — fixed argv around this interpreter.
+            argv,
+            cwd=working,
+            env={
+                **os.environ,
+                PYTHONPATH_ENV: str(REPOSITORY_ROOT),
+                DISABLE_CODEX_ENV: DISABLE_VALUE,
+                DISABLE_CLAUDE_ENV: DISABLE_VALUE,
+            },
+            capture_output=True,
+            text=True,
+            timeout=DECLARED_SKIP_CHILD_TIMEOUT_SECONDS,
+            check=False,
+        )
+        recorded_lines = (
+            tuple(destination.read_text(encoding="utf-8").splitlines())
+            if destination.exists()
+            else ()
+        )
+        return DeclaredSkipRecording(
+            exit_code=completed.returncode,
+            output=f"{completed.stdout}{completed.stderr}",
+            destination=destination,
+            recorded_lines=recorded_lines,
+            switch_rows=(
+                (
+                    SKIPPED_ROW_ID_SHAPE.format(
+                        path=DECLARED_SKIP_MODULE_NAME, name=CODEX_ROW_NAME
+                    ),
+                    DISABLE_CODEX_ENV,
+                ),
+                (
+                    SKIPPED_ROW_ID_SHAPE.format(
+                        path=DECLARED_SKIP_MODULE_NAME, name=CLAUDE_ROW_NAME
+                    ),
+                    DISABLE_CLAUDE_ENV,
+                ),
+            ),
+            other_rows=tuple(
+                SKIPPED_ROW_ID_SHAPE.format(path=DECLARED_SKIP_MODULE_NAME, name=name)
+                for name in (UNRELATED_SKIP_ROW_NAME, RUNNING_ROW_NAME)
+            ),
+        )

@@ -23,24 +23,10 @@ from outcomeeng.validation import (
     run,
 )
 from outcomeeng_testing.generators.gate import step_lists
-from outcomeeng.validation._engine import (
-    TIMING_DIVIDER,
-    TIMING_SUMMARY_BANNER,
-    timing_row_value,
-)
+from outcomeeng.validation._engine import timing_row_values
 from outcomeeng_testing.harnesses.gate import PASS_EXIT_CODE, RecordingSpawner
 
 MAX_EXAMPLES: Final = 50
-
-
-def _timing_summary_elapsed_values(output: str) -> list[int]:
-    summary_text = output.split(f"{TIMING_SUMMARY_BANNER}\n", maxsplit=1)[1]
-    rows_text = summary_text.split(f"{TIMING_DIVIDER}\n", maxsplit=1)[0]
-    return [
-        value
-        for value in (timing_row_value(line) for line in rows_text.splitlines())
-        if value is not None
-    ]
 
 
 @given(steps=step_lists())
@@ -69,7 +55,11 @@ def test_elapsed_time_is_non_negative_for_completed_steps(
     run(spawner=spawner, sink=sink, steps=steps)
 
     output = sink.getvalue()
-    elapsed_values = _timing_summary_elapsed_values(output)
+    # Every line of the run reaches one sink, and a step's status line ends in
+    # the same elapsed seconds as its timing row, so a reader that took the
+    # run's lines rather than its timing block would return one value per step
+    # twice over.
+    elapsed_values = timing_row_values(output)
     assert len(elapsed_values) == len(steps)
     for elapsed in elapsed_values:
         assert elapsed >= 0
