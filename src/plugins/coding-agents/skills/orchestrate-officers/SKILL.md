@@ -13,22 +13,18 @@ event boundary.
 
 </objective>
 
-Use skill `coding-agents:operate-herdr`.
-
-Use skill `coding-agents:operate-agent-mail`.
-
-Use skill `spec-tree:project-run-journal`.
-
 <essential_principles>
 
-Use only these composed capabilities:
+Use only these composed capabilities, each invoked by name and used for the
+operations it owns:
 
-- `coding-agents:operate-herdr` for inventory, read, bounded wait, prompt,
-  start, relaunch, stop, and other pane operations it owns
-- `coding-agents:operate-agent-mail` for registration, message records, inbox
-  reads, and receipts
-- `spec-tree:project-run-journal` for read-only inspection of each sealed
-  verification run whose complete identity a durable mail record supplies
+- Use skill `coding-agents:operate-herdr`. It owns inventory, read, bounded
+  wait, prompt, start, relaunch, stop, and the other pane operations.
+- Use skill `coding-agents:operate-agent-mail`. It owns the mail project key,
+  registration, message records, inbox reads, and receipts.
+- Use skill `spec-tree:project-run-journal`. It owns read-only inspection of
+  each sealed verification run whose complete identity a durable mail record
+  supplies.
 
 Beyond them, the one executable this skill runs is its own bundled ledger entry
 point, governed by `<ledger_derivation>`; `printf` appears only as the shell
@@ -39,15 +35,27 @@ Neither infer nor reproduce their underlying command grammar. This skill has no
 daemon, watcher, or polling loop. Carry out exactly one routed operation per
 invocation, then return to the event boundary.
 
-For either coding-agents capability, accept proof only from a result carrying
-`schemaVersion: 1`, `status: "succeeded"`, and `commandExitCode: 0`. An
-agent-mail result additionally carries a non-empty `projectKey`, `response`,
-and `data`; a delivered record carries its integer store-assigned `id`. A herdr
-JSON operation carries `response.result`, while a read carries terminal text in
-`response.output`. Require the operation-specific identity and state fields
-named by the routed workflow before relying on the result. Preserve and return
-any other status and detail as a failed operation without inferring success or
-trying a fallback.
+A capability result that reports a store or environment command is accepted as
+proof only when it carries `schemaVersion: 1`, `status: "succeeded"`, and
+`commandExitCode: 0`. Every herdr result is of that kind: a JSON operation
+carries `response.result`, while a read carries terminal text in
+`response.output`. An agent-mail result of that kind additionally carries a
+non-empty `projectKey`, `response`, and `data`; a delivered record carries its
+integer store-assigned `id`.
+
+The agent-mail project-key answer is the one result the rule above does not
+govern. It runs no store command, so it proves the key on a zero exit and a
+non-empty `projectKey` alone, and carries no `schemaVersion`, no success
+`status`, no `commandExitCode`, no `response`, and no `data`. Judging that
+answer by the versioned rule converts a real success into a failed operation
+and leaves the workflows that need the key — the officer's exact inbox
+instruction and the read-only store instruction for the affected project —
+without it. Its own failure carries `status: "repository-unresolved"` with
+`detail` and a non-zero exit.
+
+Require the operation-specific identity and state fields named by the routed
+workflow before relying on either result. Preserve and return every other
+answer as a failed operation without inferring success or trying a fallback.
 
 </essential_principles>
 
@@ -77,13 +85,13 @@ accepted operation names.
 
 <reference_index>
 
-| Reference                                                  | Purpose                                                     |
-| ---------------------------------------------------------- | ----------------------------------------------------------- |
-| `${CLAUDE_SKILL_DIR}/references/officer-order.md`          | Complete launch-and-order contract                          |
-| `${CLAUDE_SKILL_DIR}/references/standing-rules.md`         | Fleet-wide autonomy, durability, event, and lifecycle rules |
-| `${CLAUDE_SKILL_DIR}/references/ledger-contract.md`        | Ledger input document, derived ledger, and refused sources  |
-| `${CLAUDE_SKILL_DIR}/references/ledger-reconstruction.md`  | Ledger input acquisition after a compaction or restart      |
-| `${CLAUDE_SKILL_DIR}/references/ledger-script-coverage.md` | Tested cases and inputs for the bundled ledger entry point  |
+| Reference                                                  | Purpose                                                           |
+| ---------------------------------------------------------- | ----------------------------------------------------------------- |
+| `${CLAUDE_SKILL_DIR}/references/officer-order.md`          | Complete launch-and-order contract                                |
+| `${CLAUDE_SKILL_DIR}/references/standing-rules.md`         | Fleet-wide autonomy, durability, event, and lifecycle rules       |
+| `${CLAUDE_SKILL_DIR}/references/ledger-contract.md`        | Ledger input document, derived ledger, and refused sources        |
+| `${CLAUDE_SKILL_DIR}/references/ledger-reconstruction.md`  | Ledger input acquisition after a compaction or restart            |
+| `${CLAUDE_SKILL_DIR}/references/ledger-script-coverage.md` | Tested cases, inputs, and executing evidence for that entry point |
 
 </reference_index>
 
@@ -157,8 +165,9 @@ procedure lives in `${CLAUDE_SKILL_DIR}/references/ledger-reconstruction.md`.
 <script_validation>
 
 The executed cases for the bundled ledger entry point — reachability, populated
-derivation, and each documented rejection, with the inputs each uses — are
-recorded in `${CLAUDE_SKILL_DIR}/references/ledger-script-coverage.md`.
+derivation, and each documented rejection, with the inputs each uses and the
+evidence that executes it — are recorded in
+`${CLAUDE_SKILL_DIR}/references/ledger-script-coverage.md`.
 
 </script_validation>
 
