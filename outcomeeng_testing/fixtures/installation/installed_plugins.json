@@ -1,0 +1,46 @@
+{
+  "version": 2,
+  "plugins": {
+    "spec-tree@outcomeeng": [
+      {
+        "scope": "project",
+        "projectPath": "/private/fixture-root/checkout-a",
+        "installPath": "/fixture-root/claude/plugins/cache/outcomeeng/spec-tree/0.96.0",
+        "version": "0.96.0",
+        "installedAt": "2026-09-16T18:47:57.173Z",
+        "lastUpdated": "2026-09-16T18:47:57.173Z",
+        "gitCommitSha": "b3a167d1597bb5379075bf467b8e852d521a155d"
+      },
+      {
+        "scope": "local",
+        "installPath": "/fixture-root/claude/plugins/cache/outcomeeng/spec-tree/0.96.0",
+        "version": "0.96.0",
+        "installedAt": "2026-09-16T18:47:58.557Z",
+        "lastUpdated": "2026-09-16T18:47:58.557Z",
+        "gitCommitSha": "b3a167d1597bb5379075bf467b8e852d521a155d",
+        "projectPath": "/private/fixture-root/checkout-b"
+      }
+    ],
+    "coding-agents@outcomeeng": [
+      {
+        "scope": "project",
+        "projectPath": "/private/fixture-root/checkout-a",
+        "installPath": "/fixture-root/claude/plugins/cache/outcomeeng/coding-agents/0.6.3",
+        "version": "0.6.3",
+        "installedAt": "2026-09-16T18:47:57.517Z",
+        "lastUpdated": "2026-09-16T18:47:57.517Z",
+        "gitCommitSha": "b3a167d1597bb5379075bf467b8e852d521a155d"
+      }
+    ],
+    "prose@fixture-other": [
+      {
+        "scope": "project",
+        "projectPath": "/private/fixture-root/checkout-a",
+        "installPath": "/fixture-root/claude/plugins/cache/fixture-other/prose/0.12.1",
+        "version": "0.12.1",
+        "installedAt": "2026-09-16T18:47:57.880Z",
+        "lastUpdated": "2026-09-16T18:47:57.880Z"
+      }
+    ]
+  }
+}

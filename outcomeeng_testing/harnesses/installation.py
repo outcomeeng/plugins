@@ -48,20 +48,24 @@ from outcomeeng.distribution.installation import (
     AgentHomeCollisionError,
     AgentHomeResult,
     ClaudeInstallRecord,
-    CANONICAL_CODEX_SOURCE,
-    CANONICAL_MARKETPLACE_SOURCE,
     CATALOG_PLUGIN_NAME_FIELD,
     CATALOG_PLUGINS_FIELD,
     CHECKOUT_OPTION,
     CLAUDE_CATALOG_PATH,
     CLAUDE_MARKETPLACE_LIST_COMMAND,
     CLAUDE_CONFIG_ENV,
+    CLAUDE_INSTALLED_PLUGINS_FIELD,
+    CLAUDE_INSTALLED_PLUGINS_RELATIVE,
+    CLAUDE_INSTALLED_RECORD_COMMIT_FIELD,
+    CLAUDE_INSTALLED_RECORD_PATH_FIELD,
+    CLAUDE_INSTALLED_RECORD_VERSION_FIELD,
     CLAUDE_ENABLED_PLUGINS_FIELD,
     CLAUDE_LOCAL_SCOPE,
     CLAUDE_PLUGIN_ENABLED_FIELD,
     CLAUDE_PLUGIN_ID_FIELD,
     CLAUDE_PLUGIN_PROJECT_PATH_FIELD,
     CLAUDE_PLUGIN_SCOPE_FIELD,
+    CLAUDE_PLUGIN_VERSION_FIELD,
     CLAUDE_PROJECT_SCOPE,
     CLAUDE_PROJECT_SETTINGS_PATH,
     CODEX_AGENTS_PATH,
@@ -69,7 +73,6 @@ from outcomeeng.distribution.installation import (
     CLAUDE_LIST_COMMAND,
     CLAUDE_LOCAL_SETTINGS_PATH,
     CLAUDE_SCOPE_FLAG,
-    CODEX_LIST_COMMAND,
     CODEX_EXEC_SUBCOMMAND,
     CODEX_EXECUTABLE,
     CODEX_MARKETPLACES_FIELD,
@@ -92,15 +95,13 @@ from outcomeeng.distribution.installation import (
     InstallationPlan,
     InstallationReport,
     JSON_OUTPUT_OPTION,
-    MARKETPLACE_NAME,
     Operation,
-    PathlessInstallRecord,
+    ListedInstallRecord,
     PersistentPreflight,
     PLUGIN_OPERATIONS,
     ScopeSplitClassification,
     ScopeSplitEntry,
     ScopeSplitError,
-    SourceAction,
     SPEC_TREE_PLUGIN,
     STATE_ENV_NAMES,
     STATE_ROOT_OPTION,
@@ -111,8 +112,28 @@ from outcomeeng.distribution.installation import (
     claude_marketplace_listing_payload,
     claude_marketplace_settings,
     codex_marketplace_listing_payload,
-    codex_source_action,
+    codex_list_command,
+    CLAUDE_REFRESH_SCOPES,
+    SourceAction,
+    InstallationWarning,
+    MARKETPLACE_IDENTIFIER_JOINER,
+    codex_registered_marketplace,
+    claude_registered_marketplace,
+    catalog_marketplace_name,
+    declared_claude_source,
+    declared_codex_source,
+    MarketplaceTarget,
+    RecordRewrite,
+    cached_plugin_versions,
+    plan_install_record_rewrite,
+    read_install_record_document,
+    rewrite_install_records,
+    CLAUDE_PLUGIN_CACHE_RELATIVE,
+    CATALOG_PLUGIN_SOURCE_FIELD,
+    PLUGIN_MANIFEST_RELATIVE,
+    PLUGIN_MANIFEST_VERSION_FIELD,
     execute_installation,
+    installation_exit_code,
     report_document,
     execute_persistent_installation,
     main,
@@ -120,11 +141,23 @@ from outcomeeng.distribution.installation import (
     marketplace_plugin_name,
 )
 from outcomeeng_testing.generators.installation import (
+    ClosingDisposition,
     RecordDisposition,
+    RegistryShape,
+    generated_marketplace_registry_entries,
+    generated_unlocated_registry_entry,
+    served_version,
+    generated_closing_listing,
+    recorded_version,
     UNCATALOGED_PLUGIN,
     catalog_plugin_names_from_document,
     generated_agent_subsets,
+    generated_concurrent_record_entry,
     generated_claude_install_records,
+    generated_other_checkout_records,
+    generated_no_target_records,
+    generated_listing_defect_records,
+    generated_unresolved_target_records,
     generated_invalid_catalog_subsets,
     generated_persistent_catalog_selections,
 )
@@ -153,7 +186,20 @@ MALFORMED_SETTINGS_CONTENT = "{ not json"
 """A settings document no reader can parse, standing for a foreign checkout's defect."""
 REQUIRED_BINARIES: tuple[str, ...] = (JUST_BINARY, CLAUDE_EXECUTABLE, CODEX_EXECUTABLE)
 _RECORDED_JUST_INVOCATION_ENV = "OUTCOMEENG_RECORDED_JUST_INVOCATION"
-NONCANONICAL_MARKETPLACE_SOURCE = "outcomeeng/plugins-fork"
+MARKETPLACE = catalog_marketplace_name(
+    Path(__file__).resolve().parents[2] / CLAUDE_CATALOG_PATH
+)
+"""The marketplace's name as this checkout's committed catalog declares it."""
+DECLARED_CLAUDE_SOURCE = declared_claude_source(
+    Path(__file__).resolve().parents[2], MARKETPLACE
+)
+"""The source this checkout's own settings declare for the marketplace, as Claude Code adds it."""
+DECLARED_CODEX_SOURCE = declared_codex_source(
+    Path(__file__).resolve().parents[2], MARKETPLACE
+)
+"""The same declared source in the form Codex adds it."""
+EMPTY_CODEX_MARKETPLACE_LISTING = json.dumps({CODEX_MARKETPLACES_FIELD: []})
+"""A Codex registry listing carrying no marketplace, as a home with none reports."""
 CODEX_CONFIG_PLUGINS_TABLE = "plugins"
 """The trusted-product `config.toml` table carrying plugin activation overrides."""
 CODEX_CONFIG_PLUGIN_ENABLED_KEY = "enabled"
@@ -257,15 +303,6 @@ class FailureObservation:
     exit_code: int
     stdout: str
     stderr: str
-
-
-@dataclass(frozen=True)
-class CollisionObservation:
-    """A user-scope collision, absent when the run was not rejected."""
-
-    settings_path: Path
-    error: str | None
-    attempted: tuple[InstallationCommand, ...]
 
 
 @dataclass(frozen=True)
@@ -569,8 +606,9 @@ class RealInstallationObservation:
     persistent_selection: frozenset[str]
     persistent_settings_before: bytes
     persistent_settings_after: bytes
-    persistent_claude_source_action: SourceAction
-    persistent_codex_source_action: SourceAction
+    persistent_claude_registered: bool
+    persistent_codex_registered: bool
+    """Whether each agent's registry carried the marketplace when the persistent run planned."""
     persistent_stdout: str
     persistent_stderr: str
     first_exit_code: int
@@ -622,12 +660,57 @@ class RecordingRunner:
     injected runner boundary. Failing one designated operation — narrowed to
     one agent when `failed_agent` is set — is the Stage 5 Failure simulation
     case, because a real CLI does not fail an arbitrary operation on demand.
-    It returns observations only.
+    Serving a version through `served_version` is the Stage 5 Combinatorial
+    cost case, documented on that field. It returns observations only.
     """
 
     failed_operation: Operation | None = None
     installed: Mapping[Agent, frozenset[str]] | None = None
     failed_agent: Agent | None = None
+    unpublished: frozenset[str] = frozenset()
+    """Plugins whose plugin operations fail with the captured unpublished wording.
+
+    Stage 5 Failure simulation: a registered marketplace source lacks a plugin
+    only while it is unpublished, a state that cannot be produced on demand.
+    """
+    closing_listing: str | None = None
+    """The Claude listing returned after execution; None repeats the inventory listing.
+
+    Stage 5 Time and concurrency: a record another session writes between
+    the two listing reads, or an update that leaves a record's version where
+    it was, cannot be produced by a real CLI on demand, so the closing
+    listing is supplied as an observation for the linked test to judge.
+    """
+    record_file: Path | None = None
+    """A disposable install-record document the Claude listing is rendered from.
+
+    When set and no closing listing is supplied, every Claude listing reads
+    the document as the real CLI would, so a rewrite the run performs is
+    observed through the listing rather than assumed.
+    """
+    registered: bool = True
+    """Whether the Claude registry lists the marketplace; False lists no entry."""
+    codex_registered: bool = True
+    """Whether the Codex registry lists the marketplace; False lists no entry.
+
+    The two registries move independently on a real machine, so the state each
+    run meets is a case dimension rather than a fixed value.
+    """
+    clone: Path | None = None
+    """The marketplace clone the registry entry names, when the entry carries one."""
+    head_commit: str = "0" * 40
+    """The commit the clone's head read reports."""
+    served_version: str | None = None
+    """The version a native update writes into the record file, as the real CLI would.
+
+    Stage 5 Combinatorial cost: the real update needs a registered marketplace
+    and a network fetch for every generated case, so this configurable fake
+    reproduces the one effect of `plugin update` the run observes afterwards
+    — the record's version, commit, and install path in the document — and
+    preserves the runner boundary; the closing listing then reflects the
+    native path beside the rewrite, and the real CLI proves the native path
+    itself at `l3`.
+    """
     calls: list[InstallationCommand] = field(default_factory=list)
 
     def __call__(self, command: InstallationCommand) -> CommandResult:
@@ -638,7 +721,69 @@ class RecordingRunner:
         exit_code = (
             1 if command.operation is self.failed_operation and designated_agent else 0
         )
-        stdout = _successful_command_payload(command, self.installed)
+        if (
+            command.operation in PLUGIN_OPERATIONS
+            and command.plugin in self.unpublished
+        ):
+            return CommandResult(
+                argv=command.argv,
+                exit_code=1,
+                stdout="",
+                stderr=captured_unpublished_plugin_stderr(
+                    command.agent, command.plugin
+                ),
+            )
+        if (
+            self.record_file is not None
+            and self.served_version is not None
+            and command.agent is Agent.CLAUDE
+            and command.operation is Operation.PLUGIN_UPDATE
+            and command.plugin is not None
+            and command.plugin not in self.unpublished
+        ):
+            _apply_native_update(
+                self.record_file,
+                command.plugin,
+                _command_scope(command),
+                command.cwd,
+                self.served_version,
+                self.head_commit,
+            )
+        if (
+            self.closing_listing is not None
+            and command.agent is Agent.CLAUDE
+            and command.operation is Operation.PLUGIN_LIST
+        ):
+            stdout = self.closing_listing
+        elif (
+            self.record_file is not None
+            and command.agent is Agent.CLAUDE
+            and command.operation in {Operation.PLUGIN_INSPECT, Operation.PLUGIN_LIST}
+        ):
+            stdout = _listing_from_record_file(self.record_file)
+        elif command.operation is Operation.MARKETPLACE_HEAD:
+            stdout = self.head_commit + "\n"
+        elif (
+            command.agent is Agent.CLAUDE
+            and command.operation is Operation.MARKETPLACE_INSPECT
+        ):
+            stdout = (
+                claude_marketplace_listing_payload(
+                    DECLARED_CLAUDE_SOURCE,
+                    MARKETPLACE,
+                    command.cwd if self.clone is None else self.clone,
+                )
+                if self.registered
+                else "[]"
+            )
+        elif (
+            command.agent is Agent.CODEX
+            and command.operation is Operation.MARKETPLACE_INSPECT
+            and not self.codex_registered
+        ):
+            stdout = EMPTY_CODEX_MARKETPLACE_LISTING
+        else:
+            stdout = _successful_command_payload(command, self.installed)
         return CommandResult(
             argv=command.argv,
             exit_code=exit_code,
@@ -649,6 +794,17 @@ class RecordingRunner:
 
 BASE_REF_BRANCH = "main"
 BASE_REF = "origin/main"
+LISTED_VERSION = recorded_version(0)
+"""The one version every entry of a catalog-wide controlled listing carries."""
+SEEDED_OLDER_COMMIT_DISTANCE = 1
+"""How many first-parent commits behind the checkout head the seeded record is placed.
+
+One is the depth every gate checkout carries: the CI checkout fetches two
+commits so the first parent stays reachable, and any commit other than the
+marketplace's current one is enough to age the record.
+"""
+SEEDED_OLDER_VERSION = recorded_version(0)
+"""The version a seeded stale install record is rewritten to before a real refresh."""
 
 
 def repository_root() -> Path:
@@ -694,10 +850,13 @@ def _plugin_listing_payload(
         return json.dumps(
             [
                 {
-                    CLAUDE_PLUGIN_ID_FIELD: marketplace_plugin_identifier(plugin),
+                    CLAUDE_PLUGIN_ID_FIELD: marketplace_plugin_identifier(
+                        plugin, MARKETPLACE
+                    ),
                     CLAUDE_PLUGIN_ENABLED_FIELD: index % 2 == 0,
                     CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
                     CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(checkout.resolve()),
+                    CLAUDE_PLUGIN_VERSION_FIELD: LISTED_VERSION,
                 }
                 for index, plugin in enumerate(identifiers)
             ]
@@ -706,9 +865,11 @@ def _plugin_listing_payload(
         {
             CODEX_PLUGIN_ENTRIES_FIELD: [
                 {
-                    CODEX_PLUGIN_ID_FIELD: marketplace_plugin_identifier(plugin),
+                    CODEX_PLUGIN_ID_FIELD: marketplace_plugin_identifier(
+                        plugin, MARKETPLACE
+                    ),
                     CODEX_PLUGIN_ENABLED_FIELD: index % 2 == 0,
-                    CODEX_PLUGIN_MARKETPLACE_FIELD: MARKETPLACE_NAME,
+                    CODEX_PLUGIN_MARKETPLACE_FIELD: MARKETPLACE,
                 }
                 for index, plugin in enumerate(identifiers)
             ]
@@ -716,11 +877,159 @@ def _plugin_listing_payload(
     )
 
 
-def _marketplace_listing_payload(agent: Agent) -> str:
-    """One agent's marketplace listing carrying the canonical registration."""
+def _marketplace_listing_payload(agent: Agent, checkout: Path) -> str:
+    """One agent's marketplace listing carrying the checkout's declared registration.
+
+    The Claude entry names the mirrored checkout itself as the registered
+    clone: it carries the same catalog and plugin manifests a real clone
+    would, so the run reads its target from it.
+    """
     if agent is Agent.CLAUDE:
-        return claude_marketplace_listing_payload(CANONICAL_MARKETPLACE_SOURCE)
-    return codex_marketplace_listing_payload(CANONICAL_MARKETPLACE_SOURCE)
+        return claude_marketplace_listing_payload(
+            DECLARED_CLAUDE_SOURCE, MARKETPLACE, checkout
+        )
+    return codex_marketplace_listing_payload(DECLARED_CODEX_SOURCE, MARKETPLACE)
+
+
+def _apply_native_update(
+    record_file: Path,
+    plugin: str,
+    scope: str,
+    project_path: Path,
+    version: str,
+    commit: str,
+) -> None:
+    """Write the effect of one native update into a disposable record document."""
+    document = cast("dict[str, object]", json.loads(record_file.read_text()))
+    records = cast(
+        "dict[str, list[dict[str, object]]]", document[CLAUDE_INSTALLED_PLUGINS_FIELD]
+    )
+    for entry in records.get(marketplace_plugin_identifier(plugin, MARKETPLACE), []):
+        if (
+            entry.get(CLAUDE_PLUGIN_SCOPE_FIELD) == scope
+            and Path(cast(str, entry.get(CLAUDE_PLUGIN_PROJECT_PATH_FIELD, "")))
+            == project_path
+        ):
+            entry[CLAUDE_INSTALLED_RECORD_VERSION_FIELD] = version
+            entry[CLAUDE_INSTALLED_RECORD_COMMIT_FIELD] = commit
+            entry[CLAUDE_INSTALLED_RECORD_PATH_FIELD] = str(
+                Path(cast(str, entry[CLAUDE_INSTALLED_RECORD_PATH_FIELD])).with_name(
+                    version
+                )
+            )
+    record_file.write_text(json.dumps(document, indent=2) + "\n")
+
+
+def _listing_from_record_file(record_file: Path) -> str:
+    """Render the Claude plugin listing the CLI reports for one install-record document."""
+    document = cast("dict[str, object]", json.loads(record_file.read_text()))
+    records = cast(
+        "dict[str, list[dict[str, object]]]", document[CLAUDE_INSTALLED_PLUGINS_FIELD]
+    )
+    entries: list[dict[str, object]] = []
+    for identifier, items in records.items():
+        for item in items:
+            entry: dict[str, object] = {
+                CLAUDE_PLUGIN_ID_FIELD: identifier,
+                CLAUDE_PLUGIN_ENABLED_FIELD: True,
+                CLAUDE_PLUGIN_SCOPE_FIELD: item[CLAUDE_PLUGIN_SCOPE_FIELD],
+            }
+            # A document entry carrying no version renders a listing entry
+            # carrying none, which is the listing defect under observation.
+            if CLAUDE_INSTALLED_RECORD_VERSION_FIELD in item:
+                entry[CLAUDE_PLUGIN_VERSION_FIELD] = item[
+                    CLAUDE_INSTALLED_RECORD_VERSION_FIELD
+                ]
+            if CLAUDE_PLUGIN_PROJECT_PATH_FIELD in item:
+                entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD] = item[
+                    CLAUDE_PLUGIN_PROJECT_PATH_FIELD
+                ]
+            entries.append(entry)
+    return json.dumps(entries)
+
+
+def _record_file_from_cases(
+    cases: Sequence[tuple[dict[str, str], RecordDisposition]],
+    cache_root: Path,
+) -> dict[str, object]:
+    """Build one install-record document whose entries are the generated cases.
+
+    The document's shape — its top-level fields and the fields Claude Code
+    writes beside the ones production names — is taken from the captured
+    real document, so no key outside production's vocabulary is declared
+    here; each entry then receives the case's scope, project path, recorded
+    version, the cache directory that version names, and a commit. A case the
+    listing reports without a version leaves the version and install-path
+    fields unset, so the document carries exactly what the listing carries.
+    """
+    captured = cast(
+        "dict[str, object]",
+        json.loads(install_record_fixture_path().read_text(encoding="utf-8")),
+    )
+    captured_plugins = cast(
+        "dict[str, list[dict[str, object]]]", captured[CLAUDE_INSTALLED_PLUGINS_FIELD]
+    )
+    template = next(item for items in captured_plugins.values() for item in items)
+    plugins: dict[str, list[dict[str, object]]] = {}
+    for entry, _ in cases:
+        item = dict(template)
+        item.pop(CLAUDE_PLUGIN_PROJECT_PATH_FIELD, None)
+        item[CLAUDE_PLUGIN_SCOPE_FIELD] = entry[CLAUDE_PLUGIN_SCOPE_FIELD]
+        version = entry.get(CLAUDE_PLUGIN_VERSION_FIELD)
+        if version is None:
+            item.pop(CLAUDE_INSTALLED_RECORD_PATH_FIELD, None)
+            item.pop(CLAUDE_INSTALLED_RECORD_VERSION_FIELD, None)
+        else:
+            item[CLAUDE_INSTALLED_RECORD_PATH_FIELD] = str(
+                cache_root
+                / entry[CLAUDE_PLUGIN_ID_FIELD].split(MARKETPLACE_IDENTIFIER_JOINER)[0]
+                / version
+            )
+            item[CLAUDE_INSTALLED_RECORD_VERSION_FIELD] = version
+        item[CLAUDE_INSTALLED_RECORD_COMMIT_FIELD] = "1" * 40
+        if CLAUDE_PLUGIN_PROJECT_PATH_FIELD in entry:
+            item[CLAUDE_PLUGIN_PROJECT_PATH_FIELD] = entry[
+                CLAUDE_PLUGIN_PROJECT_PATH_FIELD
+            ]
+        plugins.setdefault(entry[CLAUDE_PLUGIN_ID_FIELD], []).append(item)
+    return {
+        **{
+            key: value
+            for key, value in captured.items()
+            if key != CLAUDE_INSTALLED_PLUGINS_FIELD
+        },
+        CLAUDE_INSTALLED_PLUGINS_FIELD: plugins,
+    }
+
+
+def _serve_clone_versions(clone: Path, catalog: Sequence[str], version: str) -> None:
+    """Rewrite every cataloged plugin manifest in a mirrored clone to one version.
+
+    The mirror carries this checkout's real manifests; the served version is
+    the generator's, so the target every record moves to differs from every
+    recorded version.
+    """
+    catalog_document = cast(
+        "dict[str, object]",
+        json.loads((clone / CLAUDE_CATALOG_PATH).read_text(encoding="utf-8")),
+    )
+    for plugin in cast(
+        "list[dict[str, object]]", catalog_document[CATALOG_PLUGINS_FIELD]
+    ):
+        if plugin[CATALOG_PLUGIN_NAME_FIELD] not in catalog:
+            continue
+        manifest_path = (
+            clone
+            / cast(str, plugin[CATALOG_PLUGIN_SOURCE_FIELD])
+            / PLUGIN_MANIFEST_RELATIVE
+        )
+        manifest = cast(
+            "dict[str, object]", json.loads(manifest_path.read_text(encoding="utf-8"))
+        )
+        manifest[PLUGIN_MANIFEST_VERSION_FIELD] = version
+        manifest_path.write_text(
+            json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
+        )
 
 
 def _successful_command_payload(
@@ -728,8 +1037,8 @@ def _successful_command_payload(
     installed: Mapping[Agent, frozenset[str]] | None,
 ) -> str:
     if command.operation is Operation.MARKETPLACE_INSPECT:
-        return _marketplace_listing_payload(command.agent)
-    if command.operation is Operation.PLUGIN_INSPECT:
+        return _marketplace_listing_payload(command.agent, command.cwd)
+    if command.operation in {Operation.PLUGIN_INSPECT, Operation.PLUGIN_LIST}:
         inventories = _installed_or_catalog_plugins(command.cwd, installed)
         return _plugin_listing_payload(
             command.agent,
@@ -748,7 +1057,9 @@ def _persistent_plan_with_catalog_inventories(
     return build_persistent_installation_plan(
         preflight,
         claude_marketplace_payload=(
-            claude_marketplace_listing_payload(CANONICAL_MARKETPLACE_SOURCE)
+            claude_marketplace_listing_payload(
+                DECLARED_CLAUDE_SOURCE, MARKETPLACE, preflight.roots.checkout
+            )
             if codex_source is not None
             else json.dumps([])
         ),
@@ -758,9 +1069,9 @@ def _persistent_plan_with_catalog_inventories(
             inventories[Agent.CLAUDE],
         ),
         codex_marketplace_payload=(
-            codex_marketplace_listing_payload(codex_source)
+            codex_marketplace_listing_payload(codex_source, MARKETPLACE)
             if codex_source is not None
-            else json.dumps({CODEX_MARKETPLACES_FIELD: []})
+            else EMPTY_CODEX_MARKETPLACE_LISTING
         ),
         codex_plugins_payload=_plugin_listing_payload(
             Agent.CODEX,
@@ -800,24 +1111,21 @@ def observe_repository_plan() -> PlanObservation:
 
 def observe_persistent_plan(
     *,
-    claude_repository: str | None = CANONICAL_MARKETPLACE_SOURCE,
     claude_marketplace_listed: bool = True,
-    codex_source: str = CANONICAL_CODEX_SOURCE,
     installed: Mapping[Agent, frozenset[str]] | None = None,
 ) -> PersistentPlanObservation:
     """Build a persistent plan in caller-selected temporary homes.
 
-    `claude_repository` is the marketplace source the mirrored checkout's
-    project settings declare; `None` leaves the checkout declaring none, the
-    registration-bootstrap case.
+    The mirrored checkout declares the marketplace source every observer
+    uses; `claude_marketplace_listed` selects whether the agent's registry
+    already carries that source or the run registers it.
     """
     checkout = repository_root()
     with TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory)
         mirror = temporary_root / "checkout"
         mirror_installation_inputs(checkout, mirror)
-        if claude_repository is not None:
-            _write_project_marketplace(mirror, claude_repository)
+        _write_project_marketplace(mirror, DECLARED_CLAUDE_SOURCE)
         environment = _persistent_environment(temporary_root)
         claude_catalog = (mirror / CLAUDE_CATALOG_PATH).read_bytes()
         codex_catalog = (mirror / CODEX_CATALOG_PATH).read_bytes()
@@ -826,7 +1134,9 @@ def observe_persistent_plan(
         plan = build_persistent_installation_plan(
             preflight,
             claude_marketplace_payload=(
-                claude_marketplace_listing_payload(CANONICAL_MARKETPLACE_SOURCE)
+                claude_marketplace_listing_payload(
+                    DECLARED_CLAUDE_SOURCE, MARKETPLACE, mirror
+                )
                 if claude_marketplace_listed
                 else json.dumps([])
             ),
@@ -835,7 +1145,9 @@ def observe_persistent_plan(
                 mirror,
                 inventories[Agent.CLAUDE],
             ),
-            codex_marketplace_payload=codex_marketplace_listing_payload(codex_source),
+            codex_marketplace_payload=codex_marketplace_listing_payload(
+                DECLARED_CODEX_SOURCE, MARKETPLACE
+            ),
             codex_plugins_payload=_plugin_listing_payload(
                 Agent.CODEX,
                 mirror,
@@ -852,278 +1164,1028 @@ def observe_persistent_plan(
 
 @dataclass(frozen=True)
 class RecordRefreshObservation:
-    """One persistent plan built from a generated machine-wide Claude listing.
+    """One persistent run over a generated machine-wide Claude listing.
 
     Each generated record is paired with the disposition its construction
-    implies; the plan's update commands, warnings, and checkout are the
-    observations the linked test judges against those dispositions.
+    implies; the plan's commands, the report, the install-record document
+    before and after, the closing listing, and the exit code are the
+    observations the linked test judges against those dispositions. One
+    execution produces every one of them, so each observation describes the
+    same run over the same unconverged records.
     """
 
     checkout: Path
     other_checkout: Path
     absent_path: Path
     file_path: Path
-    forked_checkout: Path
-    forked_local_checkout: Path
-    local_forked_checkout: Path
-    local_canonical_checkout: Path
-    malformed_checkout: Path
-    denied_checkout: Path
     cases: tuple[tuple[dict[str, str], RecordDisposition], ...]
+    closing_cases: tuple[tuple[dict[str, str], ClosingDisposition], ...]
+    appearing_checkout: Path
     plan: InstallationPlan
     catalog: tuple[str, ...]
+    marketplace: str
+    target_version: str
     report: InstallationReport
     document: dict[str, object]
     attempted: tuple[InstallationCommand, ...]
+    record_file_before: dict[str, object]
+    record_file_after: dict[str, object]
+    exit_code: int
 
 
-def observe_record_refresh_plan() -> RecordRefreshObservation:
-    """Plan a persistent run against records spread across scopes and paths."""
-    checkout = repository_root()
-    with TemporaryDirectory() as temporary_directory:
-        temporary_root = Path(temporary_directory)
-        mirror = temporary_root / "checkout"
-        other = temporary_root / "other-checkout"
-        other.mkdir()
-        absent = temporary_root / "removed-checkout"
-        forked = temporary_root / "forked-checkout"
-        forked.mkdir()
-        _write_project_marketplace(forked, NONCANONICAL_MARKETPLACE_SOURCE)
-        forked_local = temporary_root / "forked-local-checkout"
-        forked_local.mkdir()
-        _write_project_marketplace(
-            forked_local, NONCANONICAL_MARKETPLACE_SOURCE, local=True
-        )
-        local_forked = temporary_root / "local-forked-checkout"
-        local_forked.mkdir()
-        _write_project_marketplace(local_forked, CANONICAL_MARKETPLACE_SOURCE)
-        _write_project_marketplace(
-            local_forked, NONCANONICAL_MARKETPLACE_SOURCE, local=True
-        )
-        local_canonical = temporary_root / "local-canonical-checkout"
-        local_canonical.mkdir()
-        _write_project_marketplace(local_canonical, NONCANONICAL_MARKETPLACE_SOURCE)
-        _write_project_marketplace(
-            local_canonical, CANONICAL_MARKETPLACE_SOURCE, local=True
-        )
-        regular_file = temporary_root / "regular-file"
-        regular_file.write_text("", encoding="utf-8")
-        malformed = temporary_root / "malformed-checkout"
-        malformed_settings = malformed / CLAUDE_PROJECT_SETTINGS_PATH
-        malformed_settings.parent.mkdir(parents=True)
-        malformed_settings.write_text(MALFORMED_SETTINGS_CONTENT, encoding="utf-8")
-        denied = temporary_root / "denied-checkout"
-        denied.mkdir()
-        _write_project_marketplace(denied, CANONICAL_MARKETPLACE_SOURCE)
-        mirror_installation_inputs(checkout, mirror)
-        _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
-        environment = _persistent_environment(temporary_root)
-        preflight = build_persistent_preflight(mirror, environment)
-        catalog = _catalogs_from_documents(mirror)[Agent.CLAUDE]
-        groups = generated_claude_install_records(
-            catalog,
-            preflight.roots.checkout,
-            other.resolve(),
-            absent.resolve(),
-            regular_file.resolve(),
-            forked.resolve(),
-            forked_local.resolve(),
-            local_forked.resolve(),
-            local_canonical.resolve(),
-            malformed.resolve(),
-            denied.resolve(),
-        )
-        cases = tuple(case for group in groups for case in group)
-        with _blocked_directory(denied / CLAUDE_PROJECT_SETTINGS_PATH.parent):
-            plan = build_persistent_installation_plan(
-                preflight,
-                claude_marketplace_payload=claude_marketplace_listing_payload(
-                    CANONICAL_MARKETPLACE_SOURCE
-                ),
-                claude_plugins_payload=json.dumps([entry for entry, _ in cases]),
-                codex_marketplace_payload=codex_marketplace_listing_payload(
-                    CANONICAL_CODEX_SOURCE
-                ),
-                codex_plugins_payload=_plugin_listing_payload(
-                    Agent.CODEX,
-                    mirror,
-                    frozenset(catalog),
-                ),
-            )
-        runner = RecordingRunner()
-        report = execute_installation(plan, runner)
-        return RecordRefreshObservation(
-            checkout=preflight.roots.checkout,
-            other_checkout=other.resolve(),
-            absent_path=absent.resolve(),
-            file_path=regular_file.resolve(),
-            forked_checkout=forked.resolve(),
-            forked_local_checkout=forked_local.resolve(),
-            local_forked_checkout=local_forked.resolve(),
-            local_canonical_checkout=local_canonical.resolve(),
-            malformed_checkout=malformed.resolve(),
-            denied_checkout=denied.resolve(),
-            cases=cases,
-            plan=plan,
-            catalog=catalog,
-            report=report,
-            document=report_document(report),
-            attempted=tuple(runner.calls),
-        )
+def observe_record_refresh_plan(
+    unpublished: frozenset[str] = frozenset(),
+    *,
+    supplied_closing_listing: bool = False,
+) -> RecordRefreshObservation:
+    """Run a persistent refresh against records spread across scopes and paths.
 
-
-@dataclass(frozen=True)
-class UnreadableSourceObservation:
-    """Persistent preflight against an invocation checkout whose settings cannot be read."""
-
-    settings_path: Path
-    error: str | None
-
-
-def observe_unreadable_source() -> UnreadableSourceObservation:
-    """Run persistent preflight with the invocation checkout's own settings unreadable.
-
-    The mirrored checkout's project settings carry malformed JSON, which
-    preflight reads before any plan; the rejection message, if any, is the
-    observation beside the path it names.
+    The disposable Claude Code state carries an install-record document built
+    from the generated cases, a plugin cache holding the target version for
+    every cataloged plugin, and a mirrored clone whose manifests serve that
+    version. `unpublished` names plugins whose native update fails with the
+    captured unpublished wording. With `supplied_closing_listing` the
+    generated closing listing — with its stale and appearing records — is
+    returned instead of the listing the rewritten document renders (Stage 5
+    Time and concurrency); otherwise the run's effect is observed through
+    the document as the real CLI would list it. The pipeline executes once:
+    a second execution would face records the first already brought to the
+    target, so the exit code it reported would answer for converged records
+    rather than the generated ones.
     """
     checkout = repository_root()
     with TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory).resolve()
         mirror = temporary_root / "checkout"
+        other = temporary_root / "other-checkout"
+        other.mkdir()
+        absent = temporary_root / "removed-checkout"
+        regular_file = temporary_root / "regular-file"
+        regular_file.write_text("", encoding="utf-8")
+        appearing = temporary_root / "appearing-checkout"
+        appearing.mkdir()
+        mirror_installation_inputs(checkout, mirror)
+        _write_project_marketplace(mirror, DECLARED_CLAUDE_SOURCE)
+        clone = temporary_root / "clone"
+        mirror_installation_inputs(checkout, clone)
+        environment = _persistent_environment(temporary_root)
+        _prepare_agent_state(environment)
+        preflight = build_persistent_preflight(mirror, environment)
+        marketplace = preflight.roots.marketplace
+        catalog = _catalogs_from_documents(mirror)[Agent.CLAUDE]
+        groups = generated_claude_install_records(
+            catalog,
+            marketplace,
+            preflight.roots.checkout,
+            other.resolve(),
+            absent.resolve(),
+            regular_file.resolve(),
+        )
+        cases = tuple(case for group in groups for case in group)
+        target_version = served_version(len(cases))
+        _serve_clone_versions(clone, catalog, target_version)
+        cache_root = (
+            preflight.roots.claude_config / CLAUDE_PLUGIN_CACHE_RELATIVE / marketplace
+        )
+        for plugin in catalog:
+            (cache_root / plugin / target_version).mkdir(parents=True)
+        record_file = preflight.roots.claude_config / CLAUDE_INSTALLED_PLUGINS_RELATIVE
+        record_file.parent.mkdir(parents=True, exist_ok=True)
+        record_file_before = _record_file_from_cases(cases, cache_root)
+        record_file.write_text(json.dumps(record_file_before, indent=2) + "\n")
+        closing_cases = generated_closing_listing(cases, appearing.resolve())
+        runner = RecordingRunner(
+            unpublished=unpublished,
+            record_file=record_file,
+            clone=clone,
+            served_version=target_version,
+            closing_listing=(
+                json.dumps([entry for entry, _ in closing_cases])
+                if supplied_closing_listing
+                else None
+            ),
+        )
+        plan = build_persistent_installation_plan(
+            preflight,
+            claude_marketplace_payload=claude_marketplace_listing_payload(
+                DECLARED_CLAUDE_SOURCE, marketplace, clone
+            ),
+            claude_plugins_payload=json.dumps([entry for entry, _ in cases]),
+            codex_marketplace_payload=codex_marketplace_listing_payload(
+                DECLARED_CODEX_SOURCE, marketplace
+            ),
+            codex_plugins_payload=_plugin_listing_payload(
+                Agent.CODEX,
+                mirror,
+                frozenset(catalog),
+            ),
+        )
+        report = execute_installation(plan, runner)
+        record_file_after = cast(
+            "dict[str, object]", json.loads(record_file.read_text())
+        )
+        return RecordRefreshObservation(
+            checkout=preflight.roots.checkout,
+            other_checkout=other.resolve(),
+            absent_path=absent.resolve(),
+            file_path=regular_file.resolve(),
+            cases=cases,
+            closing_cases=closing_cases,
+            appearing_checkout=appearing.resolve(),
+            plan=plan,
+            catalog=catalog,
+            marketplace=marketplace,
+            target_version=target_version,
+            report=report,
+            document=report_document(report),
+            attempted=tuple(runner.calls),
+            record_file_before=record_file_before,
+            record_file_after=record_file_after,
+            exit_code=installation_exit_code(report),
+        )
+
+
+@dataclass(frozen=True)
+class RegistryShapeObservation:
+    """One persistent plan per registry-entry shape the generator produces."""
+
+    rows: tuple[tuple[str, RegistryShape, str | None, SourceAction], ...]
+    plans: Mapping[RegistryShape, InstallationPlan]
+    documents: Mapping[RegistryShape, dict[str, object]]
+    """Each plan's report document after execution through the recording runner."""
+    marketplace: str
+    declared_source: str
+    clone: Path
+
+
+@dataclass(frozen=True)
+class UnlocatedRegistryObservation:
+    """The planning outcome for a registry entry that locates no clone."""
+
+    error: str | None
+    """The diagnostic planning raised, or None when planning returned a plan."""
+
+
+def observe_unlocated_registry_plan() -> UnlocatedRegistryObservation:
+    """Plan a persistent run against a registry entry that names no install location."""
+    checkout = repository_root()
+    with TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory).resolve()
+        mirror = temporary_root / "checkout"
+        mirror_installation_inputs(checkout, mirror)
+        _write_project_marketplace(mirror, DECLARED_CLAUDE_SOURCE)
+        environment = _persistent_environment(temporary_root)
+        _prepare_agent_state(environment)
+        preflight = build_persistent_preflight(mirror, environment)
+        marketplace = preflight.roots.marketplace
+        error: str | None = None
+        try:
+            build_persistent_installation_plan(
+                preflight,
+                claude_marketplace_payload=generated_unlocated_registry_entry(
+                    marketplace
+                ),
+                claude_plugins_payload=_plugin_listing_payload(
+                    Agent.CLAUDE, mirror, frozenset({SPEC_TREE_PLUGIN})
+                ),
+                codex_marketplace_payload=codex_marketplace_listing_payload(
+                    DECLARED_CODEX_SOURCE, marketplace
+                ),
+                codex_plugins_payload=_plugin_listing_payload(
+                    Agent.CODEX, mirror, frozenset({SPEC_TREE_PLUGIN})
+                ),
+            )
+        except ValueError as raised:
+            error = str(raised)
+    return UnlocatedRegistryObservation(error=error)
+
+
+def observe_registry_shape_plan() -> RegistryShapeObservation:
+    """Plan a persistent run once for every shape the registry entry can take."""
+    checkout = repository_root()
+    with TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory).resolve()
+        mirror = temporary_root / "checkout"
+        mirror_installation_inputs(checkout, mirror)
+        _write_project_marketplace(mirror, DECLARED_CLAUDE_SOURCE)
+        clone = temporary_root / "clone"
+        mirror_installation_inputs(checkout, clone)
+        environment = _persistent_environment(temporary_root)
+        _prepare_agent_state(environment)
+        preflight = build_persistent_preflight(mirror, environment)
+        marketplace = preflight.roots.marketplace
+        rows = generated_marketplace_registry_entries(marketplace, clone, mirror)
+        plans: dict[RegistryShape, InstallationPlan] = {}
+        documents: dict[RegistryShape, dict[str, object]] = {}
+        for payload, shape, _, _ in rows:
+            plans[shape] = build_persistent_installation_plan(
+                preflight,
+                claude_marketplace_payload=payload,
+                claude_plugins_payload=_plugin_listing_payload(
+                    Agent.CLAUDE, mirror, frozenset({SPEC_TREE_PLUGIN})
+                ),
+                codex_marketplace_payload=codex_marketplace_listing_payload(
+                    DECLARED_CODEX_SOURCE, marketplace
+                ),
+                codex_plugins_payload=_plugin_listing_payload(
+                    Agent.CODEX, mirror, frozenset({SPEC_TREE_PLUGIN})
+                ),
+            )
+            documents[shape] = report_document(
+                execute_installation(
+                    plans[shape],
+                    RecordingRunner(
+                        installed={
+                            Agent.CLAUDE: frozenset({SPEC_TREE_PLUGIN}),
+                            Agent.CODEX: frozenset({SPEC_TREE_PLUGIN}),
+                        },
+                        clone=clone,
+                    ),
+                )
+            )
+    return RegistryShapeObservation(
+        rows=rows,
+        plans=plans,
+        documents=documents,
+        marketplace=marketplace,
+        declared_source=DECLARED_CLAUDE_SOURCE,
+        clone=clone,
+    )
+
+
+INSTALLATION_FIXTURES = (
+    Path(__file__).resolve().parents[1] / "fixtures" / "installation"
+)
+"""Whole-payload artifacts captured from real agent state, read by path and never imported."""
+
+
+def install_record_fixture_path() -> Path:
+    """The real Claude Code install-record document captured from a disposable home.
+
+    Two marketplaces, project and local scopes, and the fields Claude Code
+    writes beside the three a rewrite sets.
+    """
+    return INSTALLATION_FIXTURES / "installed_plugins.json"
+
+
+@dataclass(frozen=True)
+class RecordRewriteObservation:
+    """One rewrite over a copy of a real install-record document.
+
+    The document before and after, the planned rewrites, and the temporary
+    files left beside the document are the observations.
+    """
+
+    document_before: dict[str, object]
+    document_after: dict[str, object]
+    text_before: str
+    text_after: str
+    rewrites: tuple[RecordRewrite, ...]
+    warnings: tuple[InstallationWarning, ...]
+    marketplace: str
+    target: MarketplaceTarget
+    cache_root: Path
+    sibling_files: tuple[str, ...]
+    inode_before: int
+    inode_after: int
+    """The document's inode before and after: a replace yields a new inode, an in-place write keeps it."""
+
+
+def _planned_document_rewrite(
+    document_path: Path, tmp_path: Path
+) -> tuple[
+    tuple[RecordRewrite, ...],
+    tuple[InstallationWarning, ...],
+    MarketplaceTarget,
+    Path,
+]:
+    """Plan every project- and local-scope entry of one document to one target version.
+
+    The document's own entries select the records, so the plan is a pure
+    function of the opening listing and the target: a target version no entry
+    carries, with a cache directory for that version created so every record
+    is rewritable.
+    """
+    records = tuple(
+        record
+        for record in claude_install_records(
+            _listing_from_record_file(document_path), MARKETPLACE
+        )
+        if isinstance(record, ClaudeInstallRecord)
+        and record.scope in CLAUDE_REFRESH_SCOPES
+    )
+    plugins = tuple(sorted({record.plugin for record in records}))
+    target_version = served_version(len(records))
+    cache_root = tmp_path / "cache" / MARKETPLACE
+    for plugin in plugins:
+        (cache_root / plugin / target_version).mkdir(parents=True)
+    target = MarketplaceTarget(
+        commit="2" * 40, versions={plugin: target_version for plugin in plugins}
+    )
+    rewrites, warnings = plan_install_record_rewrite(
+        records, target, cache_root, cached_plugin_versions(cache_root, plugins)
+    )
+    return rewrites, warnings, target, cache_root
+
+
+def observe_install_record_rewrite(
+    fixture: Path, tmp_path: Path
+) -> RecordRewriteObservation:
+    """Copy a real install-record document and rewrite its project- and local-scope entries.
+
+    The fixture's own entries select the records: every entry of the
+    marketplace named by this checkout's catalog at project or local scope is
+    planned to a target version no entry carries, with a cache directory for
+    that version created so every record is rewritable.
+    """
+    document_path = tmp_path / CLAUDE_INSTALLED_PLUGINS_RELATIVE
+    document_path.parent.mkdir(parents=True)
+    shutil.copy2(fixture, document_path)
+    text_before = document_path.read_text(encoding="utf-8")
+    inode_before = document_path.stat().st_ino
+    document_before = cast("dict[str, object]", json.loads(text_before))
+    rewrites, warnings, target, cache_root = _planned_document_rewrite(
+        document_path, tmp_path
+    )
+    written, write_warnings = rewrite_install_records(
+        document_path, rewrites, MARKETPLACE
+    )
+    text_after = document_path.read_text(encoding="utf-8")
+    inode_after = document_path.stat().st_ino
+    return RecordRewriteObservation(
+        document_before=document_before,
+        document_after=cast("dict[str, object]", json.loads(text_after)),
+        text_before=text_before,
+        text_after=text_after,
+        rewrites=written,
+        warnings=(*warnings, *write_warnings),
+        marketplace=MARKETPLACE,
+        target=target,
+        cache_root=cache_root,
+        inode_before=inode_before,
+        inode_after=inode_after,
+        sibling_files=tuple(
+            sorted(entry.name for entry in document_path.parent.iterdir())
+        ),
+    )
+
+
+@dataclass(frozen=True)
+class RacingRewriteObservation:
+    """One rewrite over a document another agent session writes into mid-write.
+
+    The document after the replace, the entry the other session wrote, the
+    rewrites the writer reports as written, and how many times the writer read
+    the document are the observations.
+    """
+
+    document_after: dict[str, object]
+    concurrent_identifier: str
+    concurrent_entry: dict[str, object]
+    rewrites: tuple[RecordRewrite, ...]
+    warnings: tuple[InstallationWarning, ...]
+    marketplace: str
+    target: MarketplaceTarget
+    reads: int
+
+
+def racing_document_reader(
+    target: Path,
+    inject: Callable[[], None],
+    real: Callable[[Path], str],
+) -> Callable[[Path], str]:
+    """Document reader whose first read of ``target`` runs ``inject`` after returning.
+
+    Controlled collaborator under `/test` Stage 5 exception 3 (Time and
+    concurrency): a session writing into the install-record document after the
+    writer has read it and before the writer replaces it cannot be scheduled
+    deterministically against the real filesystem. The injection runs on the
+    content the first read already returned, so the writer holds the document
+    as it stood before that write and only a read at the write boundary can
+    carry the write into the replacement.
+    """
+    calls: dict[Path, int] = {}
+
+    def reader(path: Path) -> str:
+        calls[path] = calls.get(path, 0) + 1
+        content = real(path)
+        if path == target and calls[path] == 1:
+            inject()
+        return content
+
+    return reader
+
+
+def observe_racing_install_record_rewrite(
+    fixture: Path, tmp_path: Path
+) -> RacingRewriteObservation:
+    """Rewrite a document another agent session writes a record into mid-write.
+
+    The plan is built from the document as the run's opening listing finds it.
+    The injected reader then writes one further record of the catalog-bounded
+    marketplace — at a project path no plan carries — into the document after
+    the writer's first read has returned, which is the interval a writer that
+    replaced the document from the copy it read would erase.
+    """
+    document_path = tmp_path / CLAUDE_INSTALLED_PLUGINS_RELATIVE
+    document_path.parent.mkdir(parents=True)
+    shutil.copy2(fixture, document_path)
+    rewrites, warnings, target, _ = _planned_document_rewrite(document_path, tmp_path)
+    document = cast(
+        "dict[str, dict[str, list[dict[str, object]]]]",
+        json.loads(document_path.read_text(encoding="utf-8")),
+    )
+    identifier = next(
+        key
+        for key in document[CLAUDE_INSTALLED_PLUGINS_FIELD]
+        if marketplace_plugin_name(key, MARKETPLACE) is not None
+    )
+    entry = generated_concurrent_record_entry(
+        document[CLAUDE_INSTALLED_PLUGINS_FIELD][identifier], tmp_path
+    )
+
+    def inject() -> None:
+        written_document = cast(
+            "dict[str, dict[str, list[dict[str, object]]]]",
+            json.loads(document_path.read_text(encoding="utf-8")),
+        )
+        written_document[CLAUDE_INSTALLED_PLUGINS_FIELD][identifier].append(dict(entry))
+        document_path.write_text(
+            json.dumps(written_document, indent=2) + "\n", encoding="utf-8"
+        )
+
+    reads: list[Path] = []
+
+    def counted(path: Path) -> str:
+        reads.append(path)
+        return read_install_record_document(path)
+
+    written, write_warnings = rewrite_install_records(
+        document_path,
+        rewrites,
+        MARKETPLACE,
+        read_document=racing_document_reader(document_path, inject, counted),
+    )
+    return RacingRewriteObservation(
+        document_after=cast(
+            "dict[str, object]",
+            json.loads(document_path.read_text(encoding="utf-8")),
+        ),
+        concurrent_identifier=identifier,
+        concurrent_entry=entry,
+        rewrites=written,
+        warnings=(*warnings, *write_warnings),
+        marketplace=MARKETPLACE,
+        target=target,
+        reads=len(reads),
+    )
+
+
+@dataclass(frozen=True)
+class RegistryState:
+    """One run's registry and invocation-checkout starting state.
+
+    `claude` and `codex` say whether each agent's marketplace registry
+    carries the marketplace at run start. `recorded` says whether the
+    invocation checkout itself holds an install record of the plugin, which
+    is what gives the Claude plan a native update to issue; the two
+    dimensions are independent, so a withheld registration meeting a
+    recorded invocation checkout is a case of its own.
+    """
+
+    claude: bool
+    codex: bool
+    recorded: bool = False
+
+
+@dataclass(frozen=True)
+class UnreadableSourceCase:
+    """One persistent run under unreadable invocation settings at one registry state."""
+
+    state: RegistryState
+    plan: InstallationPlan
+    warnings: tuple[InstallationWarning, ...]
+    attempted: tuple[InstallationCommand, ...]
+    """Every command the run issued, closing listing included."""
+    document: dict[str, object]
+    """The JSON report the public CLI printed for this run."""
+    record_file_after: dict[str, object]
+    target_version: str
+    exit_code: int
+
+
+@dataclass(frozen=True)
+class UnreadableSourceObservation:
+    """Persistent runs from an invocation checkout whose own settings cannot be read."""
+
+    settings_path: Path
+    invocation_checkout: Path
+    other_checkout: Path
+    listed_version: str
+    """The version every generated record carries before the run."""
+    cases: tuple[UnreadableSourceCase, ...]
+    """One case per caller-supplied registry state, in the order supplied."""
+
+
+def observe_unreadable_source(
+    states: Sequence[RegistryState],
+) -> UnreadableSourceObservation:
+    """Run persistent installation with the invocation checkout's settings malformed.
+
+    The checkout's own settings are the source a bootstrap registration reads,
+    and each agent's registry either carries the marketplace or does not, so
+    the caller supplies the registry states the runs range over. Every run
+    faces the same malformed settings and the same other checkout recording
+    `spec-tree` at an older version, in its own disposable agent state; a
+    state that asks for it also records `spec-tree` for the invocation
+    checkout itself. Each run's plan, warnings, commands, install-record
+    document, target version, and exit code are the observations.
+    """
+    checkout = repository_root()
+    with TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory).resolve()
+        mirror = temporary_root / "checkout"
+        other = temporary_root / "other-checkout"
+        other.mkdir()
         mirror_installation_inputs(checkout, mirror)
         settings = mirror / CLAUDE_PROJECT_SETTINGS_PATH
         settings.parent.mkdir(parents=True, exist_ok=True)
         settings.write_text(MALFORMED_SETTINGS_CONTENT, encoding="utf-8")
-        environment = _persistent_environment(temporary_root)
-        try:
-            build_persistent_preflight(mirror, environment)
-        except ValueError as error:
-            return UnreadableSourceObservation(settings_path=settings, error=str(error))
-    return UnreadableSourceObservation(settings_path=settings, error=None)
-
-
-def observe_noncanonical_registry_plan() -> str | None:
-    """Plan a persistent run whose machine registry names a noncanonical source.
-
-    The invocation checkout declares the canonical source, so the registry
-    entry alone carries the mismatch; the rejection message, if any, is the
-    observation.
-    """
-    checkout = repository_root()
-    with TemporaryDirectory() as temporary_directory:
-        temporary_root = Path(temporary_directory)
-        mirror = temporary_root / "checkout"
-        mirror_installation_inputs(checkout, mirror)
-        _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
-        environment = _persistent_environment(temporary_root)
-        preflight = build_persistent_preflight(mirror, environment)
-        try:
-            build_persistent_installation_plan(
-                preflight,
-                claude_marketplace_payload=claude_marketplace_listing_payload(
-                    NONCANONICAL_MARKETPLACE_SOURCE
-                ),
-                claude_plugins_payload=_plugin_listing_payload(
-                    Agent.CLAUDE, mirror, frozenset({SPEC_TREE_PLUGIN})
-                ),
-                codex_marketplace_payload=codex_marketplace_listing_payload(
-                    CANONICAL_CODEX_SOURCE
-                ),
-                codex_plugins_payload=_plugin_listing_payload(
-                    Agent.CODEX, mirror, frozenset({SPEC_TREE_PLUGIN})
-                ),
+        clone = temporary_root / "clone"
+        mirror_installation_inputs(checkout, clone)
+        cases = tuple(
+            _unreadable_source_case(
+                mirror,
+                clone,
+                other,
+                temporary_root / f"state-{index}",
+                state,
             )
-        except ValueError as error:
-            return str(error)
-    return None
-
-
-def observe_noncanonical_source(agent: Agent) -> str | None:
-    """Run persistent planning with one agent's own source noncanonical.
-
-    For Claude Code the mirrored checkout's project settings declare the
-    noncanonical source, which preflight reads; for Codex the selected home's
-    live marketplace listing carries it, which planning reads. The rejection
-    message, if any, is the observation.
-    """
-    checkout = repository_root()
-    with TemporaryDirectory() as temporary_directory:
-        temporary_root = Path(temporary_directory)
-        mirror = temporary_root / "checkout"
-        mirror_installation_inputs(checkout, mirror)
-        _write_project_marketplace(
-            mirror,
-            NONCANONICAL_MARKETPLACE_SOURCE
-            if agent is Agent.CLAUDE
-            else CANONICAL_MARKETPLACE_SOURCE,
+            for index, state in enumerate(states)
         )
-        environment = _persistent_environment(temporary_root)
-        try:
-            preflight = build_persistent_preflight(mirror, environment)
-            build_persistent_installation_plan(
-                preflight,
-                claude_marketplace_payload=claude_marketplace_listing_payload(
-                    CANONICAL_MARKETPLACE_SOURCE
-                ),
-                claude_plugins_payload=_plugin_listing_payload(
-                    Agent.CLAUDE, mirror, frozenset({SPEC_TREE_PLUGIN})
-                ),
-                codex_marketplace_payload=codex_marketplace_listing_payload(
-                    NONCANONICAL_MARKETPLACE_SOURCE
-                    if agent is Agent.CODEX
-                    else CANONICAL_CODEX_SOURCE
-                ),
-                codex_plugins_payload=_plugin_listing_payload(
-                    Agent.CODEX, mirror, frozenset({SPEC_TREE_PLUGIN})
-                ),
+    return UnreadableSourceObservation(
+        settings_path=settings,
+        invocation_checkout=mirror.resolve(),
+        other_checkout=other.resolve(),
+        listed_version=LISTED_VERSION,
+        cases=cases,
+    )
+
+
+def _unreadable_source_case(
+    mirror: Path,
+    clone: Path,
+    other: Path,
+    state_root: Path,
+    state: RegistryState,
+) -> UnreadableSourceCase:
+    """One persistent run against one registry state in its own disposable agent state."""
+    environment = _persistent_environment(state_root)
+    _prepare_agent_state(environment)
+    preflight = build_persistent_preflight(mirror, environment)
+    marketplace = preflight.roots.marketplace
+    records = (
+        generated_no_target_records(
+            marketplace, SPEC_TREE_PLUGIN, mirror, other, LISTED_VERSION
+        )
+        if state.recorded
+        else generated_other_checkout_records(
+            marketplace, SPEC_TREE_PLUGIN, other, LISTED_VERSION
+        )
+    )
+    target_version = served_version(len(records))
+    _serve_clone_versions(clone, (SPEC_TREE_PLUGIN,), target_version)
+    cache_root = (
+        preflight.roots.claude_config / CLAUDE_PLUGIN_CACHE_RELATIVE / marketplace
+    )
+    (cache_root / SPEC_TREE_PLUGIN / target_version).mkdir(parents=True)
+    record_file = preflight.roots.claude_config / CLAUDE_INSTALLED_PLUGINS_RELATIVE
+    record_file.parent.mkdir(parents=True, exist_ok=True)
+    record_file.write_text(
+        json.dumps(_record_file_from_cases(records, cache_root), indent=2)
+    )
+    plan = build_persistent_installation_plan(
+        preflight,
+        claude_marketplace_payload=(
+            claude_marketplace_listing_payload(
+                DECLARED_CLAUDE_SOURCE, marketplace, clone
             )
-        except ValueError as error:
-            return str(error)
-    return None
+            if state.claude
+            else json.dumps([])
+        ),
+        claude_plugins_payload=json.dumps([entry for entry, _ in records]),
+        codex_marketplace_payload=(
+            codex_marketplace_listing_payload(DECLARED_CODEX_SOURCE, marketplace)
+            if state.codex
+            else EMPTY_CODEX_MARKETPLACE_LISTING
+        ),
+        codex_plugins_payload=_plugin_listing_payload(
+            Agent.CODEX, mirror, frozenset({SPEC_TREE_PLUGIN})
+        ),
+    )
+    runner = RecordingRunner(
+        record_file=record_file,
+        clone=clone,
+        served_version=target_version,
+        registered=state.claude,
+        codex_registered=state.codex,
+    )
+    stdout = StringIO()
+    with redirect_stdout(stdout):
+        exit_code = main(
+            [CHECKOUT_OPTION, str(mirror), JSON_OUTPUT_OPTION],
+            base_environment=environment,
+            runner=runner,
+        )
+    return UnreadableSourceCase(
+        state=state,
+        plan=plan,
+        warnings=plan.warnings,
+        attempted=tuple(runner.calls),
+        document=cast("dict[str, object]", json.loads(stdout.getvalue())),
+        record_file_after=cast(
+            "dict[str, object]", json.loads(record_file.read_text())
+        ),
+        target_version=target_version,
+        exit_code=exit_code,
+    )
 
 
-def observe_pathless_record_listing() -> str | None:
-    """Plan a persistent run whose Claude listing names a project-scope record with no path.
+@dataclass(frozen=True)
+class DefectiveListingObservation:
+    """A persistent run whose Claude listing carries each refresh-scope defect."""
 
-    The rejection message, if any, is the observation.
+    plan: InstallationPlan
+    exit_code: int
+    warnings: tuple[str, ...]
+    other_checkout: Path
+    defect_checkout: Path
+    """The project path the versionless entry names."""
+    attempted: tuple[InstallationCommand, ...]
+    """Every command the run issued, closing listing included."""
+    record_file_after: dict[str, object]
+    target_version: str
+
+
+def observe_defective_record_listing() -> DefectiveListingObservation:
+    """Run a persistent refresh whose listing names each refresh-scope defect.
+
+    One project-scope entry names no project path and one reports no
+    version; a well-formed record in another checkout is listed beside them,
+    so the run's continuation past either defect is observable. The plan,
+    the warnings, every command the run issues, the install-record document
+    after the run, and the exit code are the observations.
     """
     checkout = repository_root()
     with TemporaryDirectory() as temporary_directory:
-        temporary_root = Path(temporary_directory)
+        temporary_root = Path(temporary_directory).resolve()
         mirror = temporary_root / "checkout"
+        other = temporary_root / "other-checkout"
+        other.mkdir()
+        defective = temporary_root / "defective-checkout"
+        defective.mkdir()
         mirror_installation_inputs(checkout, mirror)
-        _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
+        _write_project_marketplace(mirror, DECLARED_CLAUDE_SOURCE)
+        clone = temporary_root / "clone"
+        mirror_installation_inputs(checkout, clone)
         environment = _persistent_environment(temporary_root)
+        _prepare_agent_state(environment)
         preflight = build_persistent_preflight(mirror, environment)
-        listing = json.dumps(
-            [
-                {
-                    CLAUDE_PLUGIN_ID_FIELD: marketplace_plugin_identifier(
-                        SPEC_TREE_PLUGIN
-                    ),
-                    CLAUDE_PLUGIN_ENABLED_FIELD: True,
-                    CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
-                }
-            ]
+        marketplace = preflight.roots.marketplace
+        cases = generated_listing_defect_records(
+            marketplace, SPEC_TREE_PLUGIN, other, defective, LISTED_VERSION
         )
-        try:
-            build_persistent_installation_plan(
-                preflight,
-                claude_marketplace_payload=claude_marketplace_listing_payload(
-                    CANONICAL_MARKETPLACE_SOURCE
-                ),
-                claude_plugins_payload=listing,
-                codex_marketplace_payload=codex_marketplace_listing_payload(
-                    CANONICAL_CODEX_SOURCE
-                ),
-                codex_plugins_payload=_plugin_listing_payload(
-                    Agent.CODEX, mirror, frozenset({SPEC_TREE_PLUGIN})
-                ),
+        target_version = served_version(len(cases))
+        _serve_clone_versions(clone, (SPEC_TREE_PLUGIN,), target_version)
+        cache_root = (
+            preflight.roots.claude_config / CLAUDE_PLUGIN_CACHE_RELATIVE / marketplace
+        )
+        (cache_root / SPEC_TREE_PLUGIN / target_version).mkdir(parents=True)
+        record_file = preflight.roots.claude_config / CLAUDE_INSTALLED_PLUGINS_RELATIVE
+        record_file.parent.mkdir(parents=True, exist_ok=True)
+        record_file.write_text(
+            json.dumps(_record_file_from_cases(cases, cache_root), indent=2)
+        )
+        runner = RecordingRunner(
+            record_file=record_file, clone=clone, served_version=target_version
+        )
+        plan = build_persistent_installation_plan(
+            preflight,
+            claude_marketplace_payload=claude_marketplace_listing_payload(
+                DECLARED_CLAUDE_SOURCE, marketplace, clone
+            ),
+            claude_plugins_payload=json.dumps([entry for entry, _ in cases]),
+            codex_marketplace_payload=codex_marketplace_listing_payload(
+                DECLARED_CODEX_SOURCE, marketplace
+            ),
+            codex_plugins_payload=_plugin_listing_payload(
+                Agent.CODEX, mirror, frozenset({SPEC_TREE_PLUGIN})
+            ),
+        )
+        exit_code = main(
+            [CHECKOUT_OPTION, str(mirror), JSON_OUTPUT_OPTION],
+            base_environment=environment,
+            runner=runner,
+        )
+        record_file_after = cast(
+            "dict[str, object]", json.loads(record_file.read_text())
+        )
+    return DefectiveListingObservation(
+        plan=plan,
+        exit_code=exit_code,
+        warnings=tuple(warning.message for warning in plan.warnings),
+        other_checkout=other.resolve(),
+        defect_checkout=defective.resolve(),
+        attempted=tuple(runner.calls),
+        record_file_after=record_file_after,
+        target_version=target_version,
+    )
+
+
+def _unversion_clone_manifest(clone: Path, plugin: str) -> None:
+    """Strip the version field from one cataloged plugin's manifest in a clone.
+
+    The clone keeps its catalog entry for the plugin, so the plugin is still
+    a member the run plans records for; only the manifest the target version
+    would be read from stops carrying one. That is the supply defect the
+    unresolved-target disposition names, reproduced without removing the
+    plugin from the marketplace the run refreshes from.
+    """
+    catalog_document = cast(
+        "dict[str, object]",
+        json.loads((clone / CLAUDE_CATALOG_PATH).read_text(encoding="utf-8")),
+    )
+    source = next(
+        cast(str, entry[CATALOG_PLUGIN_SOURCE_FIELD])
+        for entry in cast(
+            "list[dict[str, object]]", catalog_document[CATALOG_PLUGINS_FIELD]
+        )
+        if entry[CATALOG_PLUGIN_NAME_FIELD] == plugin
+    )
+    manifest_path = clone / source / PLUGIN_MANIFEST_RELATIVE
+    manifest = cast(
+        "dict[str, object]", json.loads(manifest_path.read_text(encoding="utf-8"))
+    )
+    del manifest[PLUGIN_MANIFEST_VERSION_FIELD]
+    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+
+
+@dataclass(frozen=True)
+class UnresolvedTargetObservation:
+    """A persistent run whose clone resolves no target version for one plugin.
+
+    The run's report, its exit code, and the cases its listing carried are
+    the observations; the linked test owns every predicate over them.
+    """
+
+    checkout: Path
+    other_checkout: Path
+    resolved_plugin: str
+    unresolved_plugin: str
+    cases: tuple[tuple[dict[str, str], RecordDisposition], ...]
+    listed_version: str
+    target_version: str
+    document: dict[str, object]
+    """The run's JSON report, parsed from the one execution's own output."""
+    exit_code: int
+
+
+def observe_unresolved_target_record() -> UnresolvedTargetObservation:
+    """Run a persistent refresh whose clone cannot version one cataloged plugin.
+
+    The listing records the unresolved plugin in the invocation checkout
+    alone, and the resolved plugin in the invocation checkout and in another
+    checkout, so the run carries one record of each disposition it can still
+    move beside the record neither its rewrite nor its drift comparison
+    reaches. The report and the exit code come from that one execution.
+    """
+    checkout = repository_root()
+    with TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory).resolve()
+        mirror = temporary_root / "checkout"
+        other = temporary_root / "other-checkout"
+        other.mkdir()
+        mirror_installation_inputs(checkout, mirror)
+        _write_project_marketplace(mirror, DECLARED_CLAUDE_SOURCE)
+        clone = temporary_root / "clone"
+        mirror_installation_inputs(checkout, clone)
+        environment = _persistent_environment(temporary_root)
+        _prepare_agent_state(environment)
+        preflight = build_persistent_preflight(mirror, environment)
+        marketplace = preflight.roots.marketplace
+        catalog = _catalogs_from_documents(mirror)[Agent.CLAUDE]
+        unresolved_plugin = next(
+            plugin for plugin in catalog if plugin != SPEC_TREE_PLUGIN
+        )
+        cases = generated_unresolved_target_records(
+            marketplace,
+            SPEC_TREE_PLUGIN,
+            unresolved_plugin,
+            preflight.roots.checkout,
+            other,
+            LISTED_VERSION,
+        )
+        target_version = served_version(len(cases))
+        _serve_clone_versions(clone, (SPEC_TREE_PLUGIN,), target_version)
+        _unversion_clone_manifest(clone, unresolved_plugin)
+        cache_root = (
+            preflight.roots.claude_config / CLAUDE_PLUGIN_CACHE_RELATIVE / marketplace
+        )
+        (cache_root / SPEC_TREE_PLUGIN / target_version).mkdir(parents=True)
+        record_file = preflight.roots.claude_config / CLAUDE_INSTALLED_PLUGINS_RELATIVE
+        record_file.parent.mkdir(parents=True, exist_ok=True)
+        record_file.write_text(
+            json.dumps(_record_file_from_cases(cases, cache_root), indent=2)
+        )
+        runner = RecordingRunner(
+            record_file=record_file, clone=clone, served_version=target_version
+        )
+        stdout = StringIO()
+        stderr = StringIO()
+        with redirect_stdout(stdout), redirect_stderr(stderr):
+            exit_code = main(
+                [CHECKOUT_OPTION, str(mirror), JSON_OUTPUT_OPTION],
+                base_environment=environment,
+                runner=runner,
             )
-        except ValueError as error:
-            return str(error)
-    return None
+        document = cast("dict[str, object]", json.loads(stdout.getvalue()))
+    return UnresolvedTargetObservation(
+        checkout=preflight.roots.checkout,
+        other_checkout=other.resolve(),
+        resolved_plugin=SPEC_TREE_PLUGIN,
+        unresolved_plugin=unresolved_plugin,
+        cases=cases,
+        listed_version=LISTED_VERSION,
+        target_version=target_version,
+        document=document,
+        exit_code=exit_code,
+    )
+
+
+@dataclass(frozen=True)
+class BootstrapDriftObservation:
+    """A persistent run that registers the marketplace itself, with its report."""
+
+    checkout: Path
+    other_checkout: Path
+    listed_version: str
+    target_version: str
+    document: dict[str, object]
+    """The run's JSON report, parsed from the one execution's own output."""
+    exit_code: int
+
+
+def observe_bootstrap_record_drift() -> BootstrapDriftObservation:
+    """Run a persistent refresh whose Claude registry carries no marketplace entry.
+
+    The listing names one record of the invocation checkout and one of
+    another checkout, so the run has both a record its native update moves
+    and a record it cannot move without a registered clone. The report and
+    the exit code come from that one execution.
+    """
+    checkout = repository_root()
+    with TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory).resolve()
+        mirror = temporary_root / "checkout"
+        other = temporary_root / "other-checkout"
+        other.mkdir()
+        mirror_installation_inputs(checkout, mirror)
+        _write_project_marketplace(mirror, DECLARED_CLAUDE_SOURCE)
+        clone = temporary_root / "clone"
+        mirror_installation_inputs(checkout, clone)
+        environment = _persistent_environment(temporary_root)
+        _prepare_agent_state(environment)
+        preflight = build_persistent_preflight(mirror, environment)
+        marketplace = preflight.roots.marketplace
+        cases = generated_no_target_records(
+            marketplace,
+            SPEC_TREE_PLUGIN,
+            preflight.roots.checkout,
+            other,
+            LISTED_VERSION,
+        )
+        target_version = served_version(len(cases))
+        _serve_clone_versions(clone, (SPEC_TREE_PLUGIN,), target_version)
+        cache_root = (
+            preflight.roots.claude_config / CLAUDE_PLUGIN_CACHE_RELATIVE / marketplace
+        )
+        (cache_root / SPEC_TREE_PLUGIN / target_version).mkdir(parents=True)
+        record_file = preflight.roots.claude_config / CLAUDE_INSTALLED_PLUGINS_RELATIVE
+        record_file.parent.mkdir(parents=True, exist_ok=True)
+        record_file.write_text(
+            json.dumps(_record_file_from_cases(cases, cache_root), indent=2)
+        )
+        runner = RecordingRunner(
+            record_file=record_file,
+            clone=clone,
+            served_version=target_version,
+            registered=False,
+        )
+        stdout = StringIO()
+        stderr = StringIO()
+        with redirect_stdout(stdout), redirect_stderr(stderr):
+            exit_code = main(
+                [CHECKOUT_OPTION, str(mirror), JSON_OUTPUT_OPTION],
+                base_environment=environment,
+                runner=runner,
+            )
+        document = cast("dict[str, object]", json.loads(stdout.getvalue()))
+    return BootstrapDriftObservation(
+        checkout=preflight.roots.checkout,
+        other_checkout=other.resolve(),
+        listed_version=LISTED_VERSION,
+        target_version=target_version,
+        document=document,
+        exit_code=exit_code,
+    )
+
+
+@dataclass(frozen=True)
+class UnreadableHeadObservation:
+    """A persistent run whose head read of the registered location resolved nothing.
+
+    The run's report, its exit code, and the commands it issued are the
+    observations; the linked test owns every predicate over them.
+    """
+
+    checkout: Path
+    other_checkout: Path
+    plugin: str
+    listed_version: str
+    served_version: str
+    operations: tuple[Operation, ...]
+    """Every operation the run issued, in order, across both agents."""
+    document: dict[str, object]
+    """The run's JSON report, parsed from the one execution's own output."""
+    exit_code: int
+
+
+def observe_unreadable_head_record() -> UnreadableHeadObservation:
+    """Run a persistent refresh whose head read of the registered location fails.
+
+    Stage 5 Failure simulation: a registered location that is no git working
+    tree makes the read exit nonzero, which a run against a real clone cannot
+    produce on demand. The listing names one record of the invocation
+    checkout and one of another checkout, so the run carries both
+    dispositions a no-target run reports.
+    """
+    checkout = repository_root()
+    with TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory).resolve()
+        mirror = temporary_root / "checkout"
+        other = temporary_root / "other-checkout"
+        other.mkdir()
+        mirror_installation_inputs(checkout, mirror)
+        _write_project_marketplace(mirror, DECLARED_CLAUDE_SOURCE)
+        clone = temporary_root / "clone"
+        mirror_installation_inputs(checkout, clone)
+        environment = _persistent_environment(temporary_root)
+        _prepare_agent_state(environment)
+        preflight = build_persistent_preflight(mirror, environment)
+        marketplace = preflight.roots.marketplace
+        cases = generated_no_target_records(
+            marketplace,
+            SPEC_TREE_PLUGIN,
+            preflight.roots.checkout,
+            other,
+            LISTED_VERSION,
+        )
+        target_version = served_version(len(cases))
+        _serve_clone_versions(clone, (SPEC_TREE_PLUGIN,), target_version)
+        cache_root = (
+            preflight.roots.claude_config / CLAUDE_PLUGIN_CACHE_RELATIVE / marketplace
+        )
+        (cache_root / SPEC_TREE_PLUGIN / target_version).mkdir(parents=True)
+        record_file = preflight.roots.claude_config / CLAUDE_INSTALLED_PLUGINS_RELATIVE
+        record_file.parent.mkdir(parents=True, exist_ok=True)
+        record_file.write_text(
+            json.dumps(_record_file_from_cases(cases, cache_root), indent=2)
+        )
+        runner = RecordingRunner(
+            record_file=record_file,
+            clone=clone,
+            served_version=target_version,
+            failed_operation=Operation.MARKETPLACE_HEAD,
+        )
+        stdout = StringIO()
+        stderr = StringIO()
+        with redirect_stdout(stdout), redirect_stderr(stderr):
+            exit_code = main(
+                [CHECKOUT_OPTION, str(mirror), JSON_OUTPUT_OPTION],
+                base_environment=environment,
+                runner=runner,
+            )
+        document = cast("dict[str, object]", json.loads(stdout.getvalue()))
+    return UnreadableHeadObservation(
+        checkout=preflight.roots.checkout,
+        other_checkout=other.resolve(),
+        plugin=SPEC_TREE_PLUGIN,
+        listed_version=LISTED_VERSION,
+        served_version=target_version,
+        operations=tuple(command.operation for command in runner.calls),
+        document=document,
+        exit_code=exit_code,
+    )
 
 
 def observe_local_record_bootstrap_plan() -> PersistentPlanObservation:
@@ -1139,7 +2201,7 @@ def observe_local_record_bootstrap_plan() -> PersistentPlanObservation:
         temporary_root = Path(temporary_directory)
         mirror = temporary_root / "checkout"
         mirror_installation_inputs(checkout, mirror)
-        _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
+        _write_project_marketplace(mirror, DECLARED_CLAUDE_SOURCE)
         environment = _persistent_environment(temporary_root)
         claude_catalog = (mirror / CLAUDE_CATALOG_PATH).read_bytes()
         codex_catalog = (mirror / CODEX_CATALOG_PATH).read_bytes()
@@ -1148,22 +2210,23 @@ def observe_local_record_bootstrap_plan() -> PersistentPlanObservation:
             [
                 {
                     CLAUDE_PLUGIN_ID_FIELD: marketplace_plugin_identifier(
-                        SPEC_TREE_PLUGIN
+                        SPEC_TREE_PLUGIN, MARKETPLACE
                     ),
                     CLAUDE_PLUGIN_ENABLED_FIELD: True,
                     CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_LOCAL_SCOPE,
                     CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(preflight.roots.checkout),
+                    CLAUDE_PLUGIN_VERSION_FIELD: LISTED_VERSION,
                 }
             ]
         )
         plan = build_persistent_installation_plan(
             preflight,
             claude_marketplace_payload=claude_marketplace_listing_payload(
-                CANONICAL_MARKETPLACE_SOURCE
+                DECLARED_CLAUDE_SOURCE, MARKETPLACE, mirror
             ),
             claude_plugins_payload=listing,
             codex_marketplace_payload=codex_marketplace_listing_payload(
-                CANONICAL_CODEX_SOURCE
+                DECLARED_CODEX_SOURCE, MARKETPLACE
             ),
             codex_plugins_payload=_plugin_listing_payload(
                 Agent.CODEX, mirror, frozenset({SPEC_TREE_PLUGIN})
@@ -1177,21 +2240,19 @@ def observe_local_record_bootstrap_plan() -> PersistentPlanObservation:
     )
 
 
-def observe_persistent_execution(
-    installed: Mapping[Agent, frozenset[str]] | None = None,
-) -> PersistentExecutionObservation:
+def observe_persistent_execution() -> PersistentExecutionObservation:
     """Execute the persistent path through a recording command collaborator."""
     checkout = repository_root()
     with TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory)
         mirror = temporary_root / "checkout"
         mirror_installation_inputs(checkout, mirror)
-        _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
+        _write_project_marketplace(mirror, DECLARED_CLAUDE_SOURCE)
         environment = _persistent_environment(temporary_root)
         claude_catalog = (mirror / CLAUDE_CATALOG_PATH).read_bytes()
         codex_catalog = (mirror / CODEX_CATALOG_PATH).read_bytes()
         preflight = build_persistent_preflight(mirror, environment)
-        runner = RecordingRunner(installed=installed)
+        runner = RecordingRunner()
         report = execute_persistent_installation(mirror, environment, runner)
     return PersistentExecutionObservation(
         preflight=preflight,
@@ -1217,7 +2278,7 @@ def observe_persistent_catalog_subset_plans() -> tuple[
         temporary_root = Path(temporary_directory)
         mirror = temporary_root / "checkout"
         mirror_installation_inputs(checkout, mirror)
-        _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
+        _write_project_marketplace(mirror, DECLARED_CLAUDE_SOURCE)
         environment = _persistent_environment(temporary_root)
         preflight = build_persistent_preflight(mirror, environment)
         catalogs = _catalogs_from_documents(mirror)
@@ -1234,7 +2295,7 @@ def observe_persistent_catalog_subset_plans() -> tuple[
                 plan = build_persistent_installation_plan(
                     preflight,
                     claude_marketplace_payload=claude_marketplace_listing_payload(
-                        CANONICAL_MARKETPLACE_SOURCE
+                        DECLARED_CLAUDE_SOURCE, MARKETPLACE, mirror
                     ),
                     claude_plugins_payload=_plugin_listing_payload(
                         Agent.CLAUDE,
@@ -1242,7 +2303,7 @@ def observe_persistent_catalog_subset_plans() -> tuple[
                         installed[Agent.CLAUDE],
                     ),
                     codex_marketplace_payload=codex_marketplace_listing_payload(
-                        CANONICAL_CODEX_SOURCE
+                        DECLARED_CODEX_SOURCE, MARKETPLACE
                     ),
                     codex_plugins_payload=_plugin_listing_payload(
                         Agent.CODEX,
@@ -1297,7 +2358,7 @@ def observe_first_persistent_cli() -> PersistentCliObservation:
         temporary_root = Path(temporary_directory)
         mirror = temporary_root / "checkout"
         mirror_installation_inputs(checkout, mirror)
-        _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
+        _write_project_marketplace(mirror, DECLARED_CLAUDE_SOURCE)
         environment = _persistent_environment(temporary_root)
         runner = RecordingRunner(installed={agent: frozenset() for agent in Agent})
         stdout = StringIO()
@@ -1323,7 +2384,7 @@ def observe_agent_home_reconciliation() -> AgentHomeReconciliationObservation:
         temporary_root = Path(temporary_directory)
         mirror = temporary_root / "checkout"
         mirror_installation_inputs(checkout, mirror)
-        _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
+        _write_project_marketplace(mirror, DECLARED_CLAUDE_SOURCE)
         environment = _persistent_environment(temporary_root)
         agents_root = Path(environment[CODEX_HOME_ENV]) / CODEX_HOME_AGENTS_PATH
         foreign = agents_root / UNOWNED_AGENT_FILENAME
@@ -1393,7 +2454,7 @@ def observe_interrupted_reconciliation() -> InterruptedReconciliationObservation
         temporary_root = Path(temporary_directory)
         mirror = temporary_root / "checkout"
         mirror_installation_inputs(checkout, mirror)
-        _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
+        _write_project_marketplace(mirror, DECLARED_CLAUDE_SOURCE)
         environment = _persistent_environment(temporary_root)
         agents_root = Path(environment[CODEX_HOME_ENV]) / CODEX_HOME_AGENTS_PATH
 
@@ -1435,12 +2496,12 @@ def observe_agent_home_collision() -> AgentHomeCollisionObservation:
         temporary_root = Path(temporary_directory)
         mirror = temporary_root / "checkout"
         mirror_installation_inputs(checkout, mirror)
-        _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
+        _write_project_marketplace(mirror, DECLARED_CLAUDE_SOURCE)
         environment = _persistent_environment(temporary_root)
         preflight = build_persistent_preflight(mirror, environment)
         destination = preflight.codex_agents[0].destination
         destination.parent.mkdir(parents=True, exist_ok=True)
-        destination.write_text('name = "foreign-definition"\n', encoding="utf-8")
+        destination.write_bytes(FOREIGN_DEFINITION_CONTENT)
         home_before = _agent_snapshot(Path(environment[CODEX_HOME_ENV]))
         runner = RecordingRunner()
         collisions: tuple[AgentHomeCollision, ...] = ()
@@ -1474,7 +2535,7 @@ def observe_scope_split() -> ScopeSplitObservation:
         temporary_root = Path(temporary_directory)
         mirror = temporary_root / "checkout"
         mirror_installation_inputs(checkout, mirror)
-        _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
+        _write_project_marketplace(mirror, DECLARED_CLAUDE_SOURCE)
         environment = _persistent_environment(temporary_root)
         preflight = build_persistent_preflight(mirror, environment)
         exact = preflight.codex_agents[0]
@@ -1505,34 +2566,6 @@ def observe_scope_split() -> ScopeSplitObservation:
     )
 
 
-def observe_claude_user_collision() -> CollisionObservation:
-    """Expose user-scope collision rejection before command execution."""
-    checkout = repository_root()
-    with TemporaryDirectory() as temporary_directory:
-        temporary_root = Path(temporary_directory)
-        mirror = temporary_root / "checkout"
-        mirror_installation_inputs(checkout, mirror)
-        _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
-        environment = _persistent_environment(temporary_root)
-        settings_path = temporary_root / "claude" / "settings.json"
-        settings_path.parent.mkdir(parents=True, exist_ok=True)
-        settings_path.write_text(
-            json.dumps(claude_marketplace_settings(CANONICAL_MARKETPLACE_SOURCE)),
-            encoding="utf-8",
-        )
-        runner = RecordingRunner()
-        rejection: str | None = None
-        try:
-            execute_persistent_installation(mirror, environment, runner)
-        except ValueError as error:
-            rejection = str(error)
-        return CollisionObservation(
-            settings_path=settings_path,
-            error=rejection,
-            attempted=tuple(runner.calls),
-        )
-
-
 def observe_invalid_persistent_selection() -> SelectionRejectionObservation:
     """Expose nonempty selections without spec-tree at the mutation boundary."""
     checkout = repository_root()
@@ -1540,7 +2573,7 @@ def observe_invalid_persistent_selection() -> SelectionRejectionObservation:
         temporary_root = Path(temporary_directory)
         mirror = temporary_root / "checkout"
         mirror_installation_inputs(checkout, mirror)
-        _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
+        _write_project_marketplace(mirror, DECLARED_CLAUDE_SOURCE)
         environment = _persistent_environment(temporary_root)
         installed = generated_agent_subsets(mirror, include_spec_tree=False)
         runner = RecordingRunner(installed=installed)
@@ -1564,7 +2597,7 @@ def observe_invalid_persistent_selections() -> tuple[
         temporary_root = Path(temporary_directory)
         mirror = temporary_root / "checkout"
         mirror_installation_inputs(checkout, mirror)
-        _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
+        _write_project_marketplace(mirror, DECLARED_CLAUDE_SOURCE)
         environment = _persistent_environment(temporary_root)
         catalogs = _catalogs_from_documents(mirror)
         observations: list[SelectionRejectionObservation] = []
@@ -1653,7 +2686,7 @@ def observe_missing_codex_home() -> str | None:
         temporary_root = Path(temporary_directory)
         mirror = temporary_root / "checkout"
         mirror_installation_inputs(checkout, mirror)
-        _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
+        _write_project_marketplace(mirror, DECLARED_CLAUDE_SOURCE)
         environment = _persistent_environment(temporary_root)
         del environment[CODEX_HOME_ENV]
         try:
@@ -1666,7 +2699,7 @@ def observe_missing_codex_home() -> str | None:
 def _installation_plans(temporary_root: Path) -> tuple[InstallationPlan, ...]:
     """Build every plan repository installation performs across its modes.
 
-    A persistent plan against an already-canonical source refreshes it, while
+    A persistent plan against a registered source refreshes it, while
     an absent registration is added, so both persistent variants are needed to
     cover the marketplace operation vocabulary.
     """
@@ -1679,11 +2712,10 @@ def _installation_plans(temporary_root: Path) -> tuple[InstallationPlan, ...]:
         os.environ,
     )
     plans = [isolated]
-    for index, source in enumerate((None, CANONICAL_MARKETPLACE_SOURCE)):
+    for index, source in enumerate((None, DECLARED_CLAUDE_SOURCE)):
         mirror = temporary_root / f"checkout-{index}"
         mirror_installation_inputs(checkout, mirror)
-        if source is not None:
-            _write_project_marketplace(mirror, source)
+        _write_project_marketplace(mirror, DECLARED_CLAUDE_SOURCE)
         environment = _persistent_environment(temporary_root / f"state-{index}")
         preflight = build_persistent_preflight(mirror, environment)
         plans.append(_persistent_plan_with_catalog_inventories(preflight, source))
@@ -1702,7 +2734,11 @@ def observe_planned_operations() -> tuple[Operation, ...]:
     with TemporaryDirectory() as temporary_directory:
         plans = _installation_plans(Path(temporary_directory))
     return tuple(
-        dict.fromkeys(command.operation for plan in plans for command in plan.commands)
+        dict.fromkeys(
+            command.operation
+            for plan in plans
+            for command in (*plan.commands, *plan.closing)
+        )
     )
 
 
@@ -1741,7 +2777,7 @@ class SettingsMutatingRunner:
                 "dict[str, object]",
                 document.setdefault(CLAUDE_ENABLED_PLUGINS_FIELD, {}),
             )
-            enabled[marketplace_plugin_identifier(command.plugin)] = True
+            enabled[marketplace_plugin_identifier(command.plugin, MARKETPLACE)] = True
             self._write(document)
         if (
             command.agent is Agent.CLAUDE
@@ -1749,7 +2785,7 @@ class SettingsMutatingRunner:
         ):
             document = self._document()
             document[EXTRA_MARKETPLACES_FIELD] = claude_marketplace_settings(
-                CANONICAL_MARKETPLACE_SOURCE
+                DECLARED_CLAUDE_SOURCE, MARKETPLACE
             )[EXTRA_MARKETPLACES_FIELD]
             self._write(document)
         if command.operation is self.failed_operation:
@@ -1767,51 +2803,6 @@ class SettingsMutatingRunner:
             json.dumps(document, indent=2) + "\n",
             encoding="utf-8",
         )
-
-
-@dataclass(frozen=True)
-class ReconciliationObservation:
-    """Selection and marketplace source around a reconciling persistent run."""
-
-    selection_before: object
-    selection_after: object
-    marketplace_before: object
-    marketplace_after: object
-    canonical_marketplace: object
-    source_action: SourceAction
-
-
-def observe_missing_registration_reconciliation() -> ReconciliationObservation:
-    """Run the persistent path from a checkout declaring no marketplace source."""
-    checkout = repository_root()
-    with TemporaryDirectory() as temporary_directory:
-        temporary_root = Path(temporary_directory)
-        mirror = temporary_root / "checkout"
-        mirror_installation_inputs(checkout, mirror)
-        settings = mirror / CLAUDE_PROJECT_SETTINGS_PATH
-        _copy_committed_project_settings(checkout, settings)
-        document = _settings_json(settings)
-        document.pop(EXTRA_MARKETPLACES_FIELD, None)
-        settings.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
-        before = _settings_json(settings)
-        environment = _persistent_environment(temporary_root)
-        preflight = build_persistent_preflight(mirror, environment)
-        execute_persistent_installation(
-            mirror,
-            environment,
-            SettingsMutatingRunner(settings=settings),
-        )
-        after = _settings_json(settings)
-    return ReconciliationObservation(
-        selection_before=before.get(CLAUDE_ENABLED_PLUGINS_FIELD),
-        selection_after=after.get(CLAUDE_ENABLED_PLUGINS_FIELD),
-        marketplace_before=before.get(EXTRA_MARKETPLACES_FIELD),
-        marketplace_after=after.get(EXTRA_MARKETPLACES_FIELD),
-        canonical_marketplace=claude_marketplace_settings(CANONICAL_MARKETPLACE_SOURCE)[
-            EXTRA_MARKETPLACES_FIELD
-        ],
-        source_action=preflight.claude_source_action,
-    )
 
 
 def observe_failed_run_restore(operation: Operation) -> RestoreObservation:
@@ -1847,12 +2838,12 @@ def observe_inspection_failure() -> FailureObservation:
         temporary_root = Path(temporary_directory)
         mirror = temporary_root / "checkout"
         mirror_installation_inputs(checkout, mirror)
-        _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
+        _write_project_marketplace(mirror, DECLARED_CLAUDE_SOURCE)
         environment = _persistent_environment(temporary_root)
         preflight = build_persistent_preflight(mirror, environment)
         plan = _persistent_plan_with_catalog_inventories(
             preflight,
-            CANONICAL_MARKETPLACE_SOURCE,
+            DECLARED_CLAUDE_SOURCE,
         )
         runner = RecordingRunner(failed_operation=Operation.MARKETPLACE_INSPECT)
         stdout = StringIO()
@@ -1865,7 +2856,7 @@ def observe_inspection_failure() -> FailureObservation:
             )
         return FailureObservation(
             plan=plan,
-            command_sequence=(*preflight.inspections, *plan.commands),
+            command_sequence=(*preflight.inspections, *plan.commands, *plan.closing),
             attempted=tuple(runner.calls),
             exit_code=exit_code,
             stdout=stdout.getvalue(),
@@ -1887,20 +2878,28 @@ def observe_first_failure(
             if any(
                 command.operation is operation
                 and (agent is None or command.agent is agent)
-                for command in candidate.commands
+                for command in (*candidate.commands, *candidate.closing)
             )
         )
-        runner = RecordingRunner(failed_operation=operation, failed_agent=agent)
+        runner = RecordingRunner(
+            failed_operation=operation,
+            failed_agent=agent,
+            registered=not any(
+                command.agent is Agent.CLAUDE
+                and command.operation is Operation.MARKETPLACE_ADD
+                for command in plan.commands
+            ),
+        )
         environment = dict(plan.commands[0].environment)
         arguments = [CHECKOUT_OPTION, str(plan.roots.checkout), JSON_OUTPUT_OPTION]
         if plan.mode is InstallationMode.ISOLATED:
             if plan.roots.state is None:
                 raise RuntimeError("isolated plan must declare its state root")
             arguments.extend((STATE_ROOT_OPTION, str(plan.roots.state)))
-            command_sequence = plan.commands
+            command_sequence = (*plan.commands, *plan.closing)
         else:
             preflight = build_persistent_preflight(plan.roots.checkout, environment)
-            command_sequence = (*preflight.inspections, *plan.commands)
+            command_sequence = (*preflight.inspections, *plan.commands, *plan.closing)
         stdout = StringIO()
         stderr = StringIO()
         with redirect_stdout(stdout), redirect_stderr(stderr):
@@ -1926,7 +2925,7 @@ def observe_codex_config_independence() -> ConfigObservation:
         temporary_root = Path(temporary_directory)
         mirror = temporary_root / "checkout"
         mirror_installation_inputs(checkout, mirror)
-        _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
+        _write_project_marketplace(mirror, DECLARED_CLAUDE_SOURCE)
         state = temporary_root / "state"
         before = build_isolated_installation_plan(mirror, state, os.environ)
         environment = _persistent_environment(temporary_root / "persistent")
@@ -2065,21 +3064,46 @@ class RealRecordRefreshObservation:
     stderr: str
     invocation_checkout: Path
     other_checkout: Path
-    records_before: tuple[ClaudeInstallRecord | PathlessInstallRecord, ...]
-    records_after: tuple[ClaudeInstallRecord | PathlessInstallRecord, ...]
+    records_before: tuple[ListedInstallRecord, ...]
+    records_after: tuple[ListedInstallRecord, ...]
     invocation_activation_before: object
     invocation_activation_after: object
     other_activation_before: object
     other_activation_after: object
+    seeded_record: ClaudeInstallRecord
+    """The record rewritten to an older version in the agent state before the run."""
+    gone_checkout: Path
+    """A checkout whose record exists in the agent state while its directory does not."""
+    gone_checkout_present_at_run: bool
+    """Whether that checkout's directory existed when the recipe ran.
+
+    Read inside the temporary root's lifetime, because every path in this
+    observation is removed when that root closes: a presence test taken from
+    the returned path answers for the cleanup rather than for the removal the
+    run is observed against.
+    """
+    report: dict[str, object]
+    """The first run's JSON report, parsed."""
+    second_exit_code: int
+    second_stdout: str
+    second_stderr: str
+    records_after_second: tuple[ListedInstallRecord, ...]
 
 
+@cache
 def observe_real_record_refresh() -> RealRecordRefreshObservation:
-    """Seed two checkouts' records with the real Claude Code CLI, then run the recipe.
+    """Seed three checkouts' records with the real Claude Code CLI, then run the recipe.
 
-    The invocation checkout records `spec-tree` at project scope and a second
-    checkout records it at local scope with the canonical source declared in
-    its local settings; the persistent recipe then runs from the invocation
-    checkout against the same disposable agent state.
+    The invocation checkout records `spec-tree` at project scope and is aged
+    to an older version; a second checkout records it at local scope at the
+    current version, declaring the marketplace in its local settings; a third
+    checkout records it at project scope, is aged the same way, and then has
+    its directory removed. The persistent recipe runs twice from the
+    invocation checkout against the same disposable agent state.
+
+    Cached like every other real-CLI observer here: one call runs two full
+    recipe invocations over three real plugin installs, and the linked cases
+    read the one frozen result rather than paying that again for each.
     """
     checkout = repository_root()
     _require_binaries(REQUIRED_BINARIES)
@@ -2087,28 +3111,42 @@ def observe_real_record_refresh() -> RealRecordRefreshObservation:
         temporary_root = Path(temporary_directory).resolve()
         invocation = temporary_root / "invocation-checkout"
         other = temporary_root / "other-checkout"
+        gone = temporary_root / "gone-checkout"
         mirror_installation_inputs(checkout, invocation)
         mirror_installation_inputs(checkout, other)
+        mirror_installation_inputs(checkout, gone)
         environment = _persistent_environment(temporary_root / "agent-state")
         _prepare_agent_state(environment)
         _register_persistent_claude_marketplace(invocation, environment)
         _register_persistent_codex_marketplace(invocation, environment)
-        _write_project_marketplace(other, CANONICAL_MARKETPLACE_SOURCE, local=True)
+        _write_project_marketplace(other, DECLARED_CLAUDE_SOURCE, local=True)
+        _write_project_marketplace(gone, DECLARED_CLAUDE_SOURCE)
         _install_claude_plugin(invocation, environment, CLAUDE_PROJECT_SCOPE)
         _install_claude_plugin(other, environment, CLAUDE_LOCAL_SCOPE)
+        _install_claude_plugin(gone, environment, CLAUDE_PROJECT_SCOPE)
+        seeded_record = _seed_older_record_version(
+            environment, SPEC_TREE_PLUGIN, invocation
+        )
+        _seed_older_record_version(environment, SPEC_TREE_PLUGIN, gone)
+        shutil.rmtree(gone)
         invocation_settings = invocation / CLAUDE_PROJECT_SETTINGS_PATH
         other_settings = other / CLAUDE_LOCAL_SETTINGS_PATH
         invocation_activation_before = _declared_activation(invocation_settings)
         other_activation_before = _declared_activation(other_settings)
         records_before = claude_install_records(
-            _run_listing(Agent.CLAUDE, invocation, environment).stdout
+            _run_listing(Agent.CLAUDE, invocation, environment).stdout, MARKETPLACE
         )
+        gone_checkout_present_at_run = gone.exists()
         result = _run_persistent_recipe(checkout, invocation, environment)
         records_after = claude_install_records(
-            _run_listing(Agent.CLAUDE, invocation, environment).stdout
+            _run_listing(Agent.CLAUDE, invocation, environment).stdout, MARKETPLACE
         )
         invocation_activation_after = _declared_activation(invocation_settings)
         other_activation_after = _declared_activation(other_settings)
+        second = _run_persistent_recipe(checkout, invocation, environment)
+        records_after_second = claude_install_records(
+            _run_listing(Agent.CLAUDE, invocation, environment).stdout, MARKETPLACE
+        )
     return RealRecordRefreshObservation(
         exit_code=result.returncode,
         stdout=result.stdout,
@@ -2121,6 +3159,73 @@ def observe_real_record_refresh() -> RealRecordRefreshObservation:
         invocation_activation_after=invocation_activation_after,
         other_activation_before=other_activation_before,
         other_activation_after=other_activation_after,
+        seeded_record=seeded_record,
+        gone_checkout=gone,
+        gone_checkout_present_at_run=gone_checkout_present_at_run,
+        report=cast("dict[str, object]", json.loads(result.stdout))
+        if result.returncode == 0
+        else {},
+        second_exit_code=second.returncode,
+        second_stdout=second.stdout,
+        second_stderr=second.stderr,
+        records_after_second=records_after_second,
+    )
+
+
+def _seed_older_record_version(
+    environment: Mapping[str, str],
+    plugin: str,
+    checkout: Path,
+) -> ClaudeInstallRecord:
+    """Rewrite one project-scope record's version in the agent's own state.
+
+    A record installed at an earlier marketplace state carries an older
+    version, an older marketplace commit, and a cache directory named for
+    that older version; rewriting all three in the invocation checkout's
+    record of the disposable install-record document, with the current cache
+    copied to the older version's directory, is how the harness produces
+    that history without a second marketplace. The older commit is the
+    checkout head's first parent, read through git, which the shallowest
+    gate checkout still carries.
+    """
+    older_commit = subprocess.run(
+        ("git", "rev-parse", f"HEAD~{SEEDED_OLDER_COMMIT_DISTANCE}"),
+        cwd=repository_root(),
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+    document_path = (
+        Path(environment[CLAUDE_CONFIG_ENV]) / CLAUDE_INSTALLED_PLUGINS_RELATIVE
+    )
+    document = cast("dict[str, object]", json.loads(document_path.read_text()))
+    records = cast(
+        "dict[str, list[dict[str, object]]]", document[CLAUDE_INSTALLED_PLUGINS_FIELD]
+    )
+    resolved = checkout.resolve()
+    for entry in records[marketplace_plugin_identifier(plugin, MARKETPLACE)]:
+        if (
+            entry.get(CLAUDE_PLUGIN_SCOPE_FIELD) == CLAUDE_PROJECT_SCOPE
+            and Path(cast("str", entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD])).resolve()
+            == resolved
+        ):
+            current_cache = Path(cast("str", entry[CLAUDE_INSTALLED_RECORD_PATH_FIELD]))
+            older_cache = current_cache.with_name(SEEDED_OLDER_VERSION)
+            if not older_cache.exists():
+                shutil.copytree(current_cache, older_cache)
+            entry[CLAUDE_INSTALLED_RECORD_VERSION_FIELD] = SEEDED_OLDER_VERSION
+            entry[CLAUDE_INSTALLED_RECORD_COMMIT_FIELD] = older_commit
+            entry[CLAUDE_INSTALLED_RECORD_PATH_FIELD] = str(older_cache)
+            document_path.write_text(json.dumps(document, indent=2) + "\n")
+            return ClaudeInstallRecord(
+                plugin=plugin,
+                scope=CLAUDE_PROJECT_SCOPE,
+                project_path=resolved,
+                version=SEEDED_OLDER_VERSION,
+            )
+    raise RuntimeError(
+        f"no {CLAUDE_PROJECT_SCOPE}-scope {plugin} record for {resolved} "
+        f"in {document_path}"
     )
 
 
@@ -2133,7 +3238,7 @@ def _install_claude_plugin(
             CLAUDE_EXECUTABLE,
             "plugin",
             "install",
-            marketplace_plugin_identifier(SPEC_TREE_PLUGIN),
+            marketplace_plugin_identifier(SPEC_TREE_PLUGIN, MARKETPLACE),
             CLAUDE_SCOPE_FLAG,
             scope,
         ),
@@ -2181,12 +3286,12 @@ def observe_real_installation() -> RealInstallationObservation:
             persistent_mirror,
             selected_environment,
         )
-        # The seed installs from the canonical marketplace, so it can seed only
-        # the plugins that marketplace publishes. A checkout plugin the
-        # marketplace has not published can never be installed state, so the
+        # The seed installs from the registered marketplace source, so it can
+        # seed only the plugins that source publishes. A checkout plugin the
+        # source has not published can never be installed state, so the
         # persistent run never selects it; the pending-publication carve-out is
         # exercised by the l1 scenario evidence with simulated agent output.
-        published = canonical_catalog_plugin_names()
+        published = published_catalog_plugin_names()
         persistent_subsets = {
             agent: subset & published
             for agent, subset in generated_agent_subsets(
@@ -2336,15 +3441,21 @@ def observe_real_installation() -> RealInstallationObservation:
         persistent_claude_selected=persistent_subsets[Agent.CLAUDE],
         persistent_codex_selected=persistent_subsets[Agent.CODEX],
         persistent_planned_operations=(
-            len(persistent_preflight.inspections) + len(persistent_plan.commands)
+            len(persistent_preflight.inspections)
+            + len(persistent_plan.commands)
+            + len(persistent_plan.closing)
         ),
         persistent_selection=persistent_selection,
         persistent_settings_before=persistent_settings_before,
         persistent_settings_after=persistent_settings_after,
-        persistent_claude_source_action=persistent_preflight.claude_source_action,
-        persistent_codex_source_action=codex_source_action(
-            persistent_codex_marketplaces.stdout
-        ),
+        persistent_claude_registered=claude_registered_marketplace(
+            persistent_claude_marketplaces.stdout, MARKETPLACE
+        )
+        is not None,
+        persistent_codex_registered=codex_registered_marketplace(
+            persistent_codex_marketplaces.stdout, MARKETPLACE
+        )
+        is not None,
         persistent_stdout=persistent.stdout,
         persistent_stderr=persistent.stderr,
         first_exit_code=first.returncode,
@@ -2581,7 +3692,7 @@ def _listed_plugins(agent: Agent, payload: str) -> PluginListing:
     enabled_names: set[str] = set()
     for entry in _listing_entries(agent, payload):
         plugin_id, enabled = _listed_identity(agent, entry)
-        name = marketplace_plugin_name(plugin_id)
+        name = marketplace_plugin_name(plugin_id, MARKETPLACE)
         if name is None:
             continue
         installed.add(name)
@@ -2635,7 +3746,7 @@ def _declared_selection(settings: Path) -> frozenset[str]:
         plugin
         for identifier, active in enabled.items()
         if active is True
-        and (plugin := marketplace_plugin_name(identifier)) is not None
+        and (plugin := marketplace_plugin_name(identifier, MARKETPLACE)) is not None
     )
 
 
@@ -2648,7 +3759,7 @@ def _write_project_marketplace(
     )
     settings.parent.mkdir(parents=True, exist_ok=True)
     settings.write_text(
-        json.dumps(claude_marketplace_settings(repository)),
+        json.dumps(claude_marketplace_settings(repository, MARKETPLACE)),
         encoding="utf-8",
     )
 
@@ -2672,13 +3783,28 @@ def _prepare_agent_state(environment: Mapping[str, str]) -> None:
         Path(environment[name]).mkdir(parents=True, exist_ok=True)
 
 
+def _command_scope(command: InstallationCommand) -> str:
+    """The install-record scope a scope-bearing command names.
+
+    The command publishes its scope, so the recording collaborator reads it
+    by name rather than by a position in the argv production builds.
+    """
+    scope = command.scope
+    if scope is None:
+        raise RuntimeError(f"{command.operation.value} names no install-record scope")
+    return scope
+
+
 def _registration_target(plan: InstallationPlan, agent: Agent) -> str:
     command = next(
         command
         for command in plan.commands
         if command.agent is agent and command.operation is Operation.MARKETPLACE_ADD
     )
-    return command.argv[4]
+    source = command.source
+    if source is None:
+        raise RuntimeError(f"{agent.value} registration command names no source")
+    return source
 
 
 def _state_roots(plan: InstallationPlan) -> tuple[Path, ...]:
@@ -2761,7 +3887,7 @@ def _register_persistent_claude_marketplace(
             "plugin",
             "marketplace",
             "add",
-            CANONICAL_MARKETPLACE_SOURCE,
+            DECLARED_CLAUDE_SOURCE,
             CLAUDE_SCOPE_FLAG,
             CLAUDE_PROJECT_SCOPE,
         ),
@@ -2788,7 +3914,7 @@ def _register_persistent_codex_marketplace(
             "plugin",
             "marketplace",
             "add",
-            CANONICAL_CODEX_SOURCE,
+            DECLARED_CODEX_SOURCE,
             "--json",
         ),
         cwd=checkout,
@@ -2816,7 +3942,7 @@ def _seed_persistent_plugins(
                 CLAUDE_EXECUTABLE,
                 "plugin",
                 "install",
-                marketplace_plugin_identifier(plugin),
+                marketplace_plugin_identifier(plugin, MARKETPLACE),
                 CLAUDE_SCOPE_FLAG,
                 CLAUDE_PROJECT_SCOPE,
             ),
@@ -2829,7 +3955,7 @@ def _seed_persistent_plugins(
                 CODEX_EXECUTABLE,
                 "plugin",
                 "add",
-                marketplace_plugin_identifier(plugin),
+                marketplace_plugin_identifier(plugin, MARKETPLACE),
                 "--json",
             ),
         )
@@ -2856,7 +3982,11 @@ def _run_listing_unchecked(
     checkout: Path,
     environment: Mapping[str, str],
 ) -> subprocess.CompletedProcess[str]:
-    argv = CLAUDE_LIST_COMMAND if agent is Agent.CLAUDE else CODEX_LIST_COMMAND
+    argv = (
+        CLAUDE_LIST_COMMAND
+        if agent is Agent.CLAUDE
+        else codex_list_command(MARKETPLACE)
+    )
     result = subprocess.run(
         argv,
         cwd=checkout,
@@ -2946,7 +4076,7 @@ def _shipped_agent_snapshot(checkout: Path) -> tuple[tuple[str, bytes], ...]:
 
 
 # Transcribed verbatim from each real agent CLI's install failure against a
-# canonical marketplace that had not published the named plugin; independent of
+# registered marketplace source that had not published the named plugin; independent of
 # the production fragment constant so a drifted constant fails the linked tests.
 _CAPTURED_UNPUBLISHED_PLUGIN_STDERR: Mapping[Agent, str] = {
     Agent.CLAUDE: (
@@ -2963,7 +4093,7 @@ def captured_unpublished_plugin_stderr(agent: Agent, plugin: str) -> str:
     """One agent CLI's observed unpublished-plugin install failure wording."""
     return _CAPTURED_UNPUBLISHED_PLUGIN_STDERR[agent].format(
         plugin=plugin,
-        marketplace=MARKETPLACE_NAME,
+        marketplace=MARKETPLACE,
     )
 
 
@@ -3005,7 +4135,6 @@ __all__ = [
     "InterruptedReconciliationObservation",
     "AgentHomeReconciliationObservation",
     "CodexSubagentDiscoveryObservation",
-    "CollisionObservation",
     "ConfigObservation",
     "FailureObservation",
     "PersistentExecutionObservation",
@@ -3022,12 +4151,11 @@ __all__ = [
     "UnpublishedPluginObservation",
     "UnpublishedPluginRunner",
     "VerificationRecipeObservation",
-    "canonical_catalog_plugin_names",
+    "published_catalog_plugin_names",
     "committed_catalog_plugin_names",
     "observe_agent_home_collision",
     "observe_interrupted_reconciliation",
     "observe_agent_home_reconciliation",
-    "observe_claude_user_collision",
     "observe_codex_config_independence",
     "observe_codex_subagent_discovery",
     "observe_designated_failure",
@@ -3044,8 +4172,31 @@ __all__ = [
     "observe_persistent_plan",
     "observe_record_refresh_plan",
     "observe_local_record_bootstrap_plan",
-    "observe_noncanonical_registry_plan",
     "RecordRefreshObservation",
+    "RecordRewriteObservation",
+    "RegistryShapeObservation",
+    "UnlocatedRegistryObservation",
+    "observe_unlocated_registry_plan",
+    "UnreadableHeadObservation",
+    "observe_unreadable_head_record",
+    "observe_registry_shape_plan",
+    "observe_install_record_rewrite",
+    "observe_racing_install_record_rewrite",
+    "racing_document_reader",
+    "RacingRewriteObservation",
+    "install_record_fixture_path",
+    "DefectiveListingObservation",
+    "observe_defective_record_listing",
+    "BootstrapDriftObservation",
+    "observe_bootstrap_record_drift",
+    "RegistryState",
+    "UnreadableSourceCase",
+    "UnreadableSourceObservation",
+    "observe_unreadable_source",
+    "EMPTY_CODEX_MARKETPLACE_LISTING",
+    "MARKETPLACE",
+    "DECLARED_CLAUDE_SOURCE",
+    "DECLARED_CODEX_SOURCE",
     "observe_planned_operations",
     "observe_real_first_install",
     "observe_real_installation",
@@ -3066,6 +4217,20 @@ __all__ = [
 ]
 
 
+def _inspection_or_empty_payload(command: InstallationCommand) -> str:
+    """A marketplace listing for an inspection, an empty record listing for the closing read.
+
+    Runners that simulate one failure carry no install-record inventory, so
+    their closing listing reports no records at all — a valid listing the
+    run compares its plan against.
+    """
+    if command.operation is Operation.MARKETPLACE_INSPECT:
+        return _marketplace_listing_payload(command.agent, command.cwd)
+    if command.operation is Operation.PLUGIN_LIST:
+        return json.dumps([])
+    return ""
+
+
 @dataclass
 class UnpublishedPluginRunner:
     """Installation runner whose marketplace has not published a named plugin set.
@@ -3073,7 +4238,7 @@ class UnpublishedPluginRunner:
     Controlled under `/test` Stage 5 Failure simulation: a real marketplace
     reports a plugin absent only while that plugin is genuinely unpublished, a
     state that disappears the moment the plugin merges, so it cannot be produced
-    on demand against the canonical source.
+    on demand against the registered source.
     """
 
     unpublished: Mapping[Agent, frozenset[str]]
@@ -3093,11 +4258,7 @@ class UnpublishedPluginRunner:
                     command.plugin,
                 ),
             )
-        stdout = (
-            _marketplace_listing_payload(command.agent)
-            if command.operation is Operation.MARKETPLACE_INSPECT
-            else ""
-        )
+        stdout = _inspection_or_empty_payload(command)
         return CommandResult(argv=command.argv, exit_code=0, stdout=stdout, stderr="")
 
 
@@ -3137,11 +4298,7 @@ class DesignatedFailureRunner:
             return CommandResult(
                 argv=command.argv, exit_code=1, stdout="", stderr=self.stderr
             )
-        stdout = (
-            _marketplace_listing_payload(command.agent)
-            if command.operation is Operation.MARKETPLACE_INSPECT
-            else ""
-        )
+        stdout = _inspection_or_empty_payload(command)
         return CommandResult(argv=command.argv, exit_code=0, stdout=stdout, stderr="")
 
 
@@ -3150,8 +4307,9 @@ def _build_run_plan(
 ) -> InstallationPlan:
     """One installation plan of the selected mode and configured source.
 
-    `None` is the registration-bootstrap variant: the checkout declares no
-    marketplace and neither agent's live listing carries it.
+    `None` is the registration-bootstrap variant: the checkout declares the
+    marketplace but neither agent's live listing carries it, so both plans
+    add it from that declaration.
     """
     mirror = temporary_root / "checkout"
     mirror_installation_inputs(repository_root(), mirror)
@@ -3159,13 +4317,10 @@ def _build_run_plan(
         return build_isolated_installation_plan(
             mirror, temporary_root / "state", os.environ
         )
-    if source is not None:
-        _write_project_marketplace(mirror, source)
+    _write_project_marketplace(mirror, DECLARED_CLAUDE_SOURCE)
     environment = _persistent_environment(temporary_root)
     preflight = build_persistent_preflight(mirror, environment)
-    codex_source = (
-        CANONICAL_CODEX_SOURCE if source == CANONICAL_MARKETPLACE_SOURCE else source
-    )
+    codex_source = DECLARED_CODEX_SOURCE if source == DECLARED_CLAUDE_SOURCE else source
     return _persistent_plan_with_catalog_inventories(preflight, codex_source)
 
 
@@ -3175,9 +4330,9 @@ def observe_failure_operation_domains() -> tuple[
     """Expose reachable operations for every mode and source plan variant.
 
     The persistent variants are an absent registration, which the plan adds,
-    and the canonical source, which it refreshes.
+    and a registered source, which it refreshes.
     """
-    sources: tuple[str | None, ...] = (None, CANONICAL_MARKETPLACE_SOURCE)
+    sources: tuple[str | None, ...] = (None, DECLARED_CLAUDE_SOURCE)
     with TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory)
         domains = []
@@ -3189,7 +4344,9 @@ def observe_failure_operation_domains() -> tuple[
                     source=source,
                 )
                 operations = tuple(
-                    dict.fromkeys(command.operation for command in plan.commands)
+                    dict.fromkeys(
+                        command.operation for command in (*plan.commands, *plan.closing)
+                    )
                 )
                 domains.append((mode, source, operations))
     return tuple(domains)
@@ -3199,7 +4356,7 @@ def _observe_installation_run(
     runner: UnpublishedPluginRunner | DesignatedFailureRunner,
     *,
     isolated: bool,
-    source: str | None = CANONICAL_MARKETPLACE_SOURCE,
+    source: str | None = DECLARED_CLAUDE_SOURCE,
 ) -> UnpublishedPluginObservation:
     """Execute one installation plan of the selected mode through `runner`."""
     with TemporaryDirectory() as temporary_directory:
@@ -3246,7 +4403,7 @@ def observe_designated_failure(
     operation: Operation,
     stderr: str,
     plugin: str | None = None,
-    source: str | None = CANONICAL_MARKETPLACE_SOURCE,
+    source: str | None = DECLARED_CLAUDE_SOURCE,
 ) -> UnpublishedPluginObservation:
     """Run one installation in which the designated command fails with `stderr`."""
     return _observe_installation_run(
@@ -3256,8 +4413,8 @@ def observe_designated_failure(
     )
 
 
-def canonical_catalog_plugin_names() -> frozenset[str]:
-    """Plugins the canonical marketplace publishes, read from the base ref.
+def published_catalog_plugin_names() -> frozenset[str]:
+    """Plugins the registered marketplace source publishes, read from the base ref.
 
     An independent oracle: the published branch's own committed catalogs, read
     through git rather than through the installation run whose classification is

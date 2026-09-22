@@ -73,7 +73,7 @@ def test_persistent_installation_requires_selected_codex_home() -> None:
 
 def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None:
     refreshing = observe_persistent_execution()
-    registering = observe_persistent_plan(claude_repository=None)
+    registering = observe_persistent_plan(claude_marketplace_listed=False)
     bootstrapping = observe_persistent_plan(
         installed={agent: frozenset() for agent in Agent},
     )
@@ -81,13 +81,13 @@ def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None
     claude_commands = [
         command
         for plan in plans
-        for command in plan.commands
+        for command in (*plan.commands, *plan.closing)
         if command.agent is Agent.CLAUDE
     ]
     codex_commands = [
         command
         for plan in plans
-        for command in plan.commands
+        for command in (*plan.commands, *plan.closing)
         if command.agent is Agent.CODEX
     ]
 
@@ -115,12 +115,22 @@ def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None
     spread = observe_record_refresh_plan()
     expected_updates = {
         (
-            marketplace_plugin_name(entry[CLAUDE_PLUGIN_ID_FIELD]),
+            marketplace_plugin_name(entry[CLAUDE_PLUGIN_ID_FIELD], spread.marketplace),
             entry[CLAUDE_PLUGIN_SCOPE_FIELD],
             Path(entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD]),
         )
         for entry, disposition in spread.cases
-        if disposition is RecordDisposition.UPDATE
+        if disposition is RecordDisposition.INVOCATION_NATIVE
+    }
+    expected_rewrites = {
+        (
+            marketplace_plugin_name(entry[CLAUDE_PLUGIN_ID_FIELD], spread.marketplace),
+            entry[CLAUDE_PLUGIN_SCOPE_FIELD],
+            Path(entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD]),
+        )
+        for entry, disposition in spread.cases
+        if disposition
+        in {RecordDisposition.FILE_REWRITE, RecordDisposition.MISSING_DIRECTORY}
     }
     observed_updates = [
         (command.plugin, command.argv[-1], command.cwd)
@@ -129,9 +139,16 @@ def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None
         and command.operation is Operation.PLUGIN_UPDATE
     ]
     assert {scope for _, scope, _ in expected_updates} == CLAUDE_REFRESH_SCOPES
-    assert {path for _, _, path in expected_updates} > {spread.checkout}
+    assert {path for _, _, path in expected_updates} == {spread.checkout}
+    assert {path for _, _, path in expected_rewrites} > set()
+    assert spread.checkout not in {path for _, _, path in expected_rewrites}
     assert set(observed_updates) == expected_updates
     assert len(observed_updates) == len(expected_updates)
+    assert {
+        (record.plugin, record.scope, record.project_path)
+        for record in spread.plan.rewrite_records
+    } == expected_rewrites
+    assert all(command.cwd == spread.checkout for command in spread.attempted)
     assert all(
         command.argv[-2] == CLAUDE_SCOPE_FLAG
         for command in spread.plan.commands
@@ -150,9 +167,9 @@ def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None
         for command in plan.commands
         if command.agent is Agent.CODEX
     )
-    assert (
-        refreshing.attempted[len(refreshing.preflight.inspections) :]
-        == refreshing.report.plan.commands
+    assert refreshing.attempted[len(refreshing.preflight.inspections) :] == (
+        *refreshing.report.plan.commands,
+        *refreshing.report.plan.closing,
     )
     inspections = refreshing.preflight.inspections
     assert {command.operation for command in inspections} == {

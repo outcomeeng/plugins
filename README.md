@@ -139,14 +139,22 @@ disposable homes. The command also rejects an invalid subset that omits `spec-tr
 each installed plugin's generated Codex agent definitions in the disposable
 home's `agents/` directory and leaves persistent plugin state unchanged.
 
-After merged distribution changes, `just install-marketplace` refreshes the
-project-scoped Claude Code marketplace, every project- or local-scope Claude Code
-`outcomeeng` install record on the machine for a cataloged plugin whose project path is an existing directory and whose project declares no noncanonical source, at that record's own scope
-and project path, and the selected `$CODEX_HOME`; a record outside project and local scope,
-outside the catalog, at a path that is no directory, in a project declaring a noncanonical source,
-or in a project whose settings cannot be read is reported and left unchanged.
-A noncanonical source in the invocation checkout's own settings, or settings it
-cannot read, stops the run before any plan.
+After merged distribution changes, `just install-marketplace` reads the
+marketplace's name from the committed catalog and its source from the machine's
+own registry, refreshes the registered clone, and brings every project- or
+local-scope Claude Code install record of a cataloged plugin on the machine to
+the head of that source's default branch: the invocation checkout's own records
+through the native plugin update, every other such record by rewriting its
+`installed_plugins.json` entry to the head's install path, version, and commit,
+whether or not the record's directory still exists. No command runs with any
+other checkout as its working directory, and no other checkout's settings or
+project directory is inspected. A record outside project and local scope or
+outside the catalog is reported and left unchanged. The invocation checkout's
+own settings matter only to bootstrap: settings it cannot read stop bootstrap
+and nothing else. The run also refreshes the selected `$CODEX_HOME`, plans from
+one listing read, reads the listing again after execution, reports each record's
+version before and after, and exits nonzero when any project- or local-scope
+record of a cataloged plugin is off the head afterwards.
 The declared refresh selection uses Claude Code's install records
 and Codex's raw selected-home plugin declarations, including disabled and uncached plugins.
 Committed catalogs bound membership; trusted product configuration controls activation separately.

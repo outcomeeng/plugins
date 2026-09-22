@@ -3,50 +3,84 @@
 import json
 from typing import cast
 
-import pytest
-
 from outcomeeng.distribution.installation import (
     Agent,
-    CANONICAL_MARKETPLACE_SOURCE,
-    CODEX_SOURCE_DIAGNOSTIC,
-    PATHLESS_LISTING_ENTRY_DIAGNOSTIC,
-    PROJECT_SOURCE_DIAGNOSTIC,
+    UNLOCATED_REGISTRY_DIAGNOSTIC,
+    CLAUDE_INSTALLED_PLUGINS_FIELD,
+    CLAUDE_INSTALLED_RECORD_COMMIT_FIELD,
+    CLAUDE_INSTALLED_RECORD_PATH_FIELD,
+    CLAUDE_INSTALLED_RECORD_VERSION_FIELD,
     CLAUDE_PLUGIN_ID_FIELD,
     CLAUDE_PLUGIN_PROJECT_PATH_FIELD,
     CLAUDE_PLUGIN_SCOPE_FIELD,
+    CLAUDE_PLUGIN_VERSION_FIELD,
     CLAUDE_PROJECT_SCOPE,
     CLAUDE_SCOPE_FLAG,
-    REGISTRY_SOURCE_DIAGNOSTIC,
     FIRST_INSTALL_WARNING,
     Operation,
+    PATHLESS_LISTING_ENTRY_WARNING,
+    VERSIONLESS_LISTING_ENTRY_WARNING,
     ReportField,
     SPEC_TREE_PLUGIN,
-    UNREADABLE_SETTINGS_DIAGNOSTIC,
-    USER_SCOPE_COLLISION_DIAGNOSTIC,
+    UNREADABLE_SETTINGS_WARNING,
+    UNREADABLE_HEAD_RECORD_WARNING,
+    UNRESOLVED_TARGET_RECORD_WARNING,
+    WITHHELD_REGISTRATION_WARNING,
+    marketplace_plugin_identifier,
     marketplace_plugin_name,
     report_document,
 )
 from pathlib import Path
 
-from outcomeeng_testing.generators.installation import RecordDisposition
+from outcomeeng_testing.generators.installation import (
+    ClosingDisposition,
+    MOVED_DISPOSITIONS,
+    RecordDisposition,
+)
 from outcomeeng_testing.harnesses.installation import (
-    NONCANONICAL_MARKETPLACE_SOURCE,
+    observe_unlocated_registry_plan,
+    MARKETPLACE,
+    RegistryState,
+    UnreadableSourceCase,
     absent_from_every_agent,
     committed_catalog_plugin_names,
-    observe_claude_user_collision,
     observe_first_persistent_cli,
     observe_inspection_failure,
     observe_invalid_isolated_selection,
     observe_invalid_persistent_selection,
     observe_persistent_plan,
-    observe_noncanonical_registry_plan,
-    observe_noncanonical_source,
-    observe_pathless_record_listing,
+    observe_bootstrap_record_drift,
+    observe_unreadable_head_record,
+    observe_unresolved_target_record,
+    observe_defective_record_listing,
     observe_unreadable_source,
     observe_record_refresh_plan,
     observe_unpublished_plugin,
     observe_verification_recipe,
 )
+
+
+def _first_install_warning(agent: Agent) -> str:
+    """The bootstrap warning for one agent, named for this checkout's marketplace."""
+    return FIRST_INSTALL_WARNING.format(
+        marketplace=MARKETPLACE, agent=agent.value, plugin=SPEC_TREE_PLUGIN
+    )
+
+
+def _announced_first_installs(
+    case: UnreadableSourceCase, marketplace: str
+) -> frozenset[Agent]:
+    """The agents whose first install one run announced."""
+    return frozenset(
+        warning.agent
+        for warning in case.warnings
+        if warning.message
+        == FIRST_INSTALL_WARNING.format(
+            marketplace=marketplace,
+            agent=warning.agent.value,
+            plugin=SPEC_TREE_PLUGIN,
+        )
+    )
 
 
 def test_verification_recipe_uses_pytest_discovery_for_the_node() -> None:
@@ -84,12 +118,12 @@ def test_first_persistent_run_installs_only_spec_tree_and_warns() -> None:
     assert document[ReportField.WARNINGS] == [
         {
             ReportField.AGENT: agent.value,
-            ReportField.MESSAGE: FIRST_INSTALL_WARNING.format(agent=agent.value),
+            ReportField.MESSAGE: _first_install_warning(agent),
         }
         for agent in Agent
     ]
     assert observation.stderr.splitlines() == [
-        f"warning: {FIRST_INSTALL_WARNING.format(agent=agent.value)}" for agent in Agent
+        f"warning: {_first_install_warning(agent)}" for agent in Agent
     ]
 
 
@@ -113,25 +147,6 @@ def test_invalid_isolated_subset_is_rejected_before_mutation() -> None:
     assert observation.attempted == ()
 
 
-@pytest.mark.parametrize(
-    ("agent", "diagnostic"),
-    [
-        (Agent.CLAUDE, PROJECT_SOURCE_DIAGNOSTIC),
-        (Agent.CODEX, CODEX_SOURCE_DIAGNOSTIC),
-    ],
-    ids=str,
-)
-def test_a_noncanonical_source_stops_either_agent_before_any_plan(
-    agent: Agent, diagnostic: str
-) -> None:
-    error = observe_noncanonical_source(agent)
-
-    assert error is not None
-    assert error.startswith(diagnostic)
-    assert NONCANONICAL_MARKETPLACE_SOURCE in error
-    assert CANONICAL_MARKETPLACE_SOURCE in error
-
-
 def test_marketplace_inspection_failure_stops_before_any_plan_operation() -> None:
     observation = observe_inspection_failure()
     document = json.loads(observation.stderr)
@@ -148,15 +163,6 @@ def test_marketplace_inspection_failure_stops_before_any_plan_operation() -> Non
     assert not any(
         command in observation.attempted for command in observation.plan.commands
     )
-
-
-def test_claude_user_scope_collision_stops_before_mutation() -> None:
-    observation = observe_claude_user_collision()
-
-    assert observation.error is not None
-    assert str(observation.settings_path) in observation.error
-    assert USER_SCOPE_COLLISION_DIAGNOSTIC in observation.error
-    assert observation.attempted == ()
 
 
 def test_persistent_installation_reports_an_unpublished_plugin_and_completes() -> None:
@@ -250,7 +256,7 @@ def test_fresh_home_plan_adds_the_declared_marketplace() -> None:
     assert source_operations == [Operation.MARKETPLACE_ADD]
 
 
-def test_persistent_run_updates_every_recorded_checkout_and_reinstalls_nothing() -> (
+def test_persistent_run_moves_every_record_without_a_command_in_another_checkout() -> (
     None
 ):
     observation = observe_record_refresh_plan()
@@ -264,60 +270,526 @@ def test_persistent_run_updates_every_recorded_checkout_and_reinstalls_nothing()
         for command in claude_commands
         if command.operation is Operation.PLUGIN_UPDATE
     ]
-    expected = {
+    native = {
         (
-            marketplace_plugin_name(entry[CLAUDE_PLUGIN_ID_FIELD]),
+            marketplace_plugin_name(
+                entry[CLAUDE_PLUGIN_ID_FIELD], observation.marketplace
+            ),
+            entry[CLAUDE_PLUGIN_SCOPE_FIELD],
+        )
+        for entry, disposition in observation.cases
+        if disposition is RecordDisposition.INVOCATION_NATIVE
+    }
+    rewritten = {
+        (
+            marketplace_plugin_name(
+                entry[CLAUDE_PLUGIN_ID_FIELD], observation.marketplace
+            ),
             entry[CLAUDE_PLUGIN_SCOPE_FIELD],
             Path(entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD]),
         )
         for entry, disposition in observation.cases
-        if disposition is RecordDisposition.UPDATE
+        if disposition
+        in {RecordDisposition.FILE_REWRITE, RecordDisposition.MISSING_DIRECTORY}
     }
 
     assert not any(
         command.operation in {Operation.PLUGIN_INSTALL, Operation.PLUGIN_ENABLE}
         for command in claude_commands
     )
-    assert {(command.plugin, command.argv[-1], command.cwd) for command in updates} == (
-        expected
-    )
-    assert len(updates) == len(expected)
+    assert {(command.plugin, command.argv[-1]) for command in updates} == native
+    assert len(updates) == len(native)
     assert all(command.argv[-2] == CLAUDE_SCOPE_FLAG for command in updates)
-    assert observation.attempted[-len(observation.plan.commands) :] == (
-        observation.plan.commands
-    )
+    assert all(command.cwd == observation.checkout for command in observation.attempted)
     assert {
+        (rewrite.record.plugin, rewrite.record.scope, rewrite.record.project_path)
+        for rewrite in observation.report.rewrites
+    } == rewritten
+    assert observation.report.rewrite_warnings == ()
+    moved = {
+        (
+            marketplace_plugin_name(
+                entry[CLAUDE_PLUGIN_ID_FIELD], observation.marketplace
+            ),
+            entry[CLAUDE_PLUGIN_SCOPE_FIELD],
+            Path(entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD]),
+        )
+        for entry, disposition in observation.cases
+        if disposition in MOVED_DISPOSITIONS
+    }
+    reported = {
         (
             record[ReportField.PLUGIN],
             record[ReportField.SCOPE],
             Path(cast(str, record[ReportField.PROJECT_PATH])),
-        )
+        ): (record[ReportField.VERSION_BEFORE], record[ReportField.VERSION_AFTER])
         for record in cast(
             list[dict[str, str]], observation.document[ReportField.CLAUDE_RECORDS]
         )
-    } == expected
+    }
+    assert set(reported) == moved
+    for entry, disposition in observation.cases:
+        if disposition not in MOVED_DISPOSITIONS:
+            continue
+        plugin = marketplace_plugin_name(
+            entry[CLAUDE_PLUGIN_ID_FIELD], observation.marketplace
+        )
+        assert plugin is not None
+        key = (
+            plugin,
+            entry[CLAUDE_PLUGIN_SCOPE_FIELD],
+            Path(entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD]),
+        )
+        assert reported[key][0] == entry[CLAUDE_PLUGIN_VERSION_FIELD], key
+        if disposition is not RecordDisposition.INVOCATION_NATIVE:
+            assert reported[key][1] == observation.target_version, key
+    assert observation.document[ReportField.OFF_TARGET_RECORDS] == []
+    assert observation.exit_code == 0
 
 
-def test_a_pathless_refresh_scope_entry_stops_before_any_plan() -> None:
-    error = observe_pathless_record_listing()
-
-    assert error == PATHLESS_LISTING_ENTRY_DIAGNOSTIC.format(
-        index=0, scope=CLAUDE_PROJECT_SCOPE
+def test_a_record_whose_directory_is_gone_is_rewritten_and_never_named_by_a_command() -> (
+    None
+):
+    observation = observe_record_refresh_plan()
+    gone = [
+        entry
+        for entry, disposition in observation.cases
+        if disposition is RecordDisposition.MISSING_DIRECTORY
+        and Path(entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD]) == observation.absent_path
+    ]
+    assert gone
+    for entry in gone:
+        plugin = marketplace_plugin_name(
+            entry[CLAUDE_PLUGIN_ID_FIELD], observation.marketplace
+        )
+        rewrite = next(
+            rewrite
+            for rewrite in observation.report.rewrites
+            if rewrite.record.plugin == plugin
+            and rewrite.record.scope == entry[CLAUDE_PLUGIN_SCOPE_FIELD]
+            and rewrite.record.project_path == observation.absent_path
+        )
+        after = next(
+            item
+            for item in cast(
+                "dict[str, list[dict[str, object]]]",
+                observation.record_file_after[CLAUDE_INSTALLED_PLUGINS_FIELD],
+            )[entry[CLAUDE_PLUGIN_ID_FIELD]]
+            if item.get(CLAUDE_PLUGIN_SCOPE_FIELD) == entry[CLAUDE_PLUGIN_SCOPE_FIELD]
+            and item.get(CLAUDE_PLUGIN_PROJECT_PATH_FIELD)
+            == str(observation.absent_path)
+        )
+        assert (
+            after[CLAUDE_INSTALLED_RECORD_VERSION_FIELD] == observation.target_version
+        )
+        assert after[CLAUDE_INSTALLED_RECORD_PATH_FIELD] == str(rewrite.install_path)
+        assert after[CLAUDE_INSTALLED_RECORD_COMMIT_FIELD] == rewrite.commit
+    assert not any(
+        str(observation.absent_path) in argument
+        for command in observation.attempted
+        for argument in (*command.argv, str(command.cwd))
     )
 
 
-def test_unreadable_invocation_settings_stop_before_any_plan() -> None:
-    observation = observe_unreadable_source()
+def test_a_defective_refresh_scope_entry_is_reported_and_the_run_continues() -> None:
+    observation = observe_defective_record_listing()
+
+    assert (
+        PATHLESS_LISTING_ENTRY_WARNING.format(
+            plugin=SPEC_TREE_PLUGIN, scope=CLAUDE_PROJECT_SCOPE
+        )
+        in observation.warnings
+    )
+    assert (
+        VERSIONLESS_LISTING_ENTRY_WARNING.format(
+            plugin=SPEC_TREE_PLUGIN,
+            scope=CLAUDE_PROJECT_SCOPE,
+            project_path=observation.defect_checkout,
+        )
+        in observation.warnings
+    )
+    assert [record.project_path for record in observation.plan.rewrite_records] == [
+        observation.other_checkout
+    ]
+    assert [
+        command.operation
+        for command in observation.attempted
+        if command.agent is Agent.CLAUDE
+    ] == [
+        Operation.MARKETPLACE_INSPECT,
+        Operation.PLUGIN_INSPECT,
+        Operation.MARKETPLACE_REFRESH,
+        Operation.PLUGIN_INSTALL,
+        Operation.PLUGIN_ENABLE,
+        Operation.MARKETPLACE_HEAD,
+        Operation.PLUGIN_LIST,
+    ]
+    assert (
+        _recorded_version(
+            observation.record_file_after,
+            SPEC_TREE_PLUGIN,
+            observation.plan.roots.marketplace,
+            observation.other_checkout,
+        )
+        == observation.target_version
+    )
+    assert observation.exit_code != 0
+
+
+def test_a_bootstrap_run_reports_the_records_it_moved_and_the_records_it_did_not() -> (
+    None
+):
+    observation = observe_bootstrap_record_drift()
+    moved = {
+        (
+            record[ReportField.PLUGIN],
+            record[ReportField.SCOPE],
+            record[ReportField.PROJECT_PATH],
+        ): (record[ReportField.VERSION_BEFORE], record[ReportField.VERSION_AFTER])
+        for record in cast(
+            "list[dict[str, str]]",
+            observation.document[ReportField.CLAUDE_RECORDS],
+        )
+    }
+    unrefreshed = {
+        (
+            record[ReportField.PLUGIN],
+            record[ReportField.SCOPE],
+            record[ReportField.PROJECT_PATH],
+        ): record[ReportField.VERSION]
+        for record in cast(
+            "list[dict[str, str]]",
+            observation.document[ReportField.UNREFRESHED_RECORDS],
+        )
+    }
+
+    assert observation.document[ReportField.TARGET] is None
+    assert moved == {
+        (SPEC_TREE_PLUGIN, CLAUDE_PROJECT_SCOPE, str(observation.checkout)): (
+            observation.listed_version,
+            observation.target_version,
+        )
+    }
+    assert unrefreshed == {
+        (SPEC_TREE_PLUGIN, CLAUDE_PROJECT_SCOPE, str(observation.other_checkout)): (
+            observation.listed_version
+        )
+    }
+    assert observation.document[ReportField.OFF_TARGET_RECORDS] == []
+    assert observation.exit_code != 0
+
+
+def test_a_run_whose_head_read_fails_reports_every_record_against_no_target() -> None:
+    observation = observe_unreadable_head_record()
+    warnings = {
+        warning[ReportField.MESSAGE]
+        for warning in cast(
+            "list[dict[str, str]]", observation.document[ReportField.WARNINGS]
+        )
+    }
+    moved = {
+        (
+            record[ReportField.PLUGIN],
+            record[ReportField.SCOPE],
+            record[ReportField.PROJECT_PATH],
+        ): (record[ReportField.VERSION_BEFORE], record[ReportField.VERSION_AFTER])
+        for record in cast(
+            "list[dict[str, str]]", observation.document[ReportField.CLAUDE_RECORDS]
+        )
+    }
+    unrefreshed = {
+        (
+            record[ReportField.PLUGIN],
+            record[ReportField.SCOPE],
+            record[ReportField.PROJECT_PATH],
+        ): record[ReportField.VERSION]
+        for record in cast(
+            "list[dict[str, str]]",
+            observation.document[ReportField.UNREFRESHED_RECORDS],
+        )
+    }
+
+    assert (
+        Operation.PLUGIN_LIST
+        in observation.operations[
+            observation.operations.index(Operation.MARKETPLACE_HEAD) :
+        ]
+    )
+    assert observation.document[ReportField.TARGET] is None
+    assert warnings >= {
+        UNREADABLE_HEAD_RECORD_WARNING.format(
+            plugin=observation.plugin,
+            scope=CLAUDE_PROJECT_SCOPE,
+            project_path=path,
+        )
+        for path in (observation.checkout, observation.other_checkout)
+    }
+    assert moved == {
+        (observation.plugin, CLAUDE_PROJECT_SCOPE, str(observation.checkout)): (
+            observation.listed_version,
+            observation.served_version,
+        )
+    }
+    assert unrefreshed == {
+        (observation.plugin, CLAUDE_PROJECT_SCOPE, str(observation.other_checkout)): (
+            observation.listed_version
+        )
+    }
+    assert observation.document[ReportField.OFF_TARGET_RECORDS] == []
+    assert observation.exit_code != 0
+
+
+def test_a_plugin_with_no_resolved_target_is_reported_in_the_invocation_checkout() -> (
+    None
+):
+    observation = observe_unresolved_target_record()
+    warnings = {
+        warning[ReportField.MESSAGE]
+        for warning in cast(
+            "list[dict[str, str]]", observation.document[ReportField.WARNINGS]
+        )
+    }
+    moved = {
+        (
+            record[ReportField.PLUGIN],
+            record[ReportField.SCOPE],
+            record[ReportField.PROJECT_PATH],
+        ): (record[ReportField.VERSION_BEFORE], record[ReportField.VERSION_AFTER])
+        for record in cast(
+            "list[dict[str, str]]", observation.document[ReportField.CLAUDE_RECORDS]
+        )
+    }
+    target = cast("dict[str, object]", observation.document[ReportField.TARGET])
+    versions = cast("dict[str, str]", target[ReportField.VERSIONS])
+
+    assert (
+        UNRESOLVED_TARGET_RECORD_WARNING.format(
+            plugin=observation.unresolved_plugin,
+            scope=CLAUDE_PROJECT_SCOPE,
+            project_path=observation.checkout,
+        )
+        in warnings
+    )
+    assert observation.unresolved_plugin not in versions
+    assert versions[observation.resolved_plugin] == observation.target_version
+    assert observation.document[ReportField.OFF_TARGET_RECORDS] == []
+    assert moved[
+        (
+            observation.resolved_plugin,
+            CLAUDE_PROJECT_SCOPE,
+            str(observation.other_checkout),
+        )
+    ] == (observation.listed_version, observation.target_version)
+    assert observation.exit_code != 0
+
+
+def test_unreadable_invocation_settings_stop_bootstrap_and_nothing_else() -> None:
+    both_registered = RegistryState(claude=True, codex=True)
+    both_registered_with_record = RegistryState(claude=True, codex=True, recorded=True)
+    codex_unregistered = RegistryState(claude=True, codex=False)
+    claude_unregistered = RegistryState(claude=False, codex=True)
+    claude_unregistered_with_record = RegistryState(
+        claude=False, codex=True, recorded=True
+    )
+    observation = observe_unreadable_source(
+        (
+            both_registered,
+            both_registered_with_record,
+            codex_unregistered,
+            claude_unregistered,
+            claude_unregistered_with_record,
+        )
+    )
+
+    by_state = {case.state: case for case in observation.cases}
+    marketplace = by_state[both_registered].plan.roots.marketplace
+    settings_suffix = UNREADABLE_SETTINGS_WARNING.format(diagnostic="")
+    withheld_suffix = WITHHELD_REGISTRATION_WARNING.format(
+        diagnostic="", marketplace=marketplace
+    )
+    for state, case in by_state.items():
+        settings_warnings = [
+            warning
+            for warning in case.warnings
+            if warning.message.endswith(settings_suffix)
+        ]
+        assert len(settings_warnings) == 1, state
+        assert str(observation.settings_path) in settings_warnings[0].message, state
+        assert settings_warnings[0].blocking is not state.recorded, state
+        claude_operations = _agent_operations(case, Agent.CLAUDE)
+        assert Operation.PLUGIN_INSTALL not in claude_operations, state
+        assert Operation.PLUGIN_ENABLE not in claude_operations, state
+        assert {
+            warning.agent
+            for warning in case.warnings
+            if warning.message.endswith(withheld_suffix)
+        } == {
+            agent
+            for agent, registered in (
+                (Agent.CLAUDE, state.claude),
+                (Agent.CODEX, state.codex),
+            )
+            if not registered
+        }, state
+        # Unreadable settings stop bootstrap and nothing else, so the run that
+        # stops nothing — every registry carrying the marketplace and the
+        # invocation checkout already recording the plugin — exits zero.
+        stopped = not (state.claude and state.codex and state.recorded)
+        assert (case.exit_code != 0) is stopped, state
+        # The empty invocation inventory proposes the bootstrap; the plan
+        # decides it. No run here carries a Claude install, and the Codex
+        # home already declares the plugin, so no run announces a first
+        # install for either agent.
+        assert _announced_first_installs(case, marketplace) == frozenset(), state
+        # The report names what the run performed. Claude reaches the plugin
+        # only through the native update of a record the invocation checkout
+        # already holds, which the withheld registration takes with it; Codex
+        # reaches it only where its own registration stands.
+        assert case.document[ReportField.CLAUDE_PLUGINS] == (
+            [SPEC_TREE_PLUGIN] if state.claude and state.recorded else []
+        ), state
+        codex_named = case.document[ReportField.CODEX_PLUGINS]
+        if state.codex:
+            assert SPEC_TREE_PLUGIN in codex_named, state
+        else:
+            assert codex_named == [], state
+
+    for state in (both_registered, both_registered_with_record, codex_unregistered):
+        case = by_state[state]
+        # A record the invocation checkout already holds is refreshed by its
+        # own native update even though the settings that would have carried a
+        # bootstrap cannot be read.
+        native_update = (Operation.PLUGIN_UPDATE,) if state.recorded else ()
+        assert _agent_operations(case, Agent.CLAUDE) == (
+            Operation.MARKETPLACE_INSPECT,
+            Operation.PLUGIN_INSPECT,
+            Operation.MARKETPLACE_REFRESH,
+            *native_update,
+            Operation.MARKETPLACE_HEAD,
+            Operation.PLUGIN_LIST,
+        ), state
+        assert [record.project_path for record in case.plan.claude_records] == (
+            [observation.invocation_checkout] if state.recorded else []
+        ), state
+        assert [record.project_path for record in case.plan.rewrite_records] == [
+            observation.other_checkout
+        ], state
+        moved = (
+            (observation.invocation_checkout, observation.other_checkout)
+            if state.recorded
+            else (observation.other_checkout,)
+        )
+        for project_path in moved:
+            assert (
+                _recorded_version(
+                    case.record_file_after,
+                    SPEC_TREE_PLUGIN,
+                    marketplace,
+                    project_path,
+                )
+                == case.target_version
+            ), (state, project_path)
+
+    assert _agent_operations(by_state[codex_unregistered], Agent.CODEX) == (
+        Operation.MARKETPLACE_INSPECT,
+        Operation.PLUGIN_INSPECT,
+    )
+    for state in (claude_unregistered, claude_unregistered_with_record):
+        case = by_state[state]
+        # The closing listing names no marketplace, so the withheld Claude
+        # registration leaves it in place while withholding every command
+        # that names the marketplace — the native update of the invocation
+        # checkout's own record among them.
+        assert _agent_operations(case, Agent.CLAUDE) == (
+            Operation.MARKETPLACE_INSPECT,
+            Operation.PLUGIN_INSPECT,
+            Operation.PLUGIN_LIST,
+        ), state
+        assert case.plan.claude_records == (), state
+        assert case.plan.rewrite_records == (), state
+        moved = (
+            (observation.invocation_checkout, observation.other_checkout)
+            if state.recorded
+            else (observation.other_checkout,)
+        )
+        for project_path in moved:
+            assert (
+                _recorded_version(
+                    case.record_file_after,
+                    SPEC_TREE_PLUGIN,
+                    marketplace,
+                    project_path,
+                )
+                == observation.listed_version
+            ), (state, project_path)
+
+
+def _agent_operations(
+    case: UnreadableSourceCase, agent: Agent
+) -> tuple[Operation, ...]:
+    return tuple(
+        command.operation for command in case.attempted if command.agent is agent
+    )
+
+
+def _recorded_version(
+    document: dict[str, object], plugin: str, marketplace: str, project_path: Path
+) -> object:
+    entries = cast(
+        "dict[str, list[dict[str, object]]]",
+        document[CLAUDE_INSTALLED_PLUGINS_FIELD],
+    )[marketplace_plugin_identifier(plugin, marketplace)]
+    return next(
+        item[CLAUDE_INSTALLED_RECORD_VERSION_FIELD]
+        for item in entries
+        if item.get(CLAUDE_PLUGIN_PROJECT_PATH_FIELD) == str(project_path)
+    )
+
+
+def test_a_record_written_between_the_listing_reads_is_reported_and_fails_the_run() -> (
+    None
+):
+    observation = observe_record_refresh_plan(supplied_closing_listing=True)
+    appeared = [
+        entry
+        for entry, disposition in observation.closing_cases
+        if disposition is ClosingDisposition.APPEARED
+    ]
+    assert len(appeared) == 1
+    (entry,) = appeared
+    plugin = marketplace_plugin_name(
+        entry[CLAUDE_PLUGIN_ID_FIELD], observation.marketplace
+    )
+    appeared_report = {
+        ReportField.PLUGIN: plugin,
+        ReportField.SCOPE: entry[CLAUDE_PLUGIN_SCOPE_FIELD],
+        ReportField.PROJECT_PATH: str(observation.appearing_checkout),
+        ReportField.VERSION: entry[CLAUDE_PLUGIN_VERSION_FIELD],
+    }
+
+    assert appeared_report in cast(
+        "list[dict[str, str]]", observation.document[ReportField.UNREFRESHED_RECORDS]
+    )
+    assert appeared_report in cast(
+        "list[dict[str, str]]", observation.document[ReportField.OFF_TARGET_RECORDS]
+    )
+    assert not any(
+        str(observation.appearing_checkout) in argument
+        for command in observation.attempted
+        for argument in (*command.argv, str(command.cwd))
+    )
+    claude_operations = [
+        command.operation
+        for command in observation.attempted
+        if command.agent is Agent.CLAUDE
+    ]
+    assert claude_operations.count(Operation.PLUGIN_LIST) == 1
+    assert claude_operations[-1] is Operation.PLUGIN_LIST
+    assert observation.exit_code != 0
+
+
+def test_a_registry_entry_naming_no_install_location_stops_planning() -> None:
+    observation = observe_unlocated_registry_plan()
 
     assert observation.error is not None
-    assert observation.error.startswith(UNREADABLE_SETTINGS_DIAGNOSTIC)
-    assert str(observation.settings_path) in observation.error
-
-
-def test_a_noncanonical_registry_source_stops_before_any_plan() -> None:
-    error = observe_noncanonical_registry_plan()
-
-    assert error is not None
-    assert error.startswith(REGISTRY_SOURCE_DIAGNOSTIC)
-    assert NONCANONICAL_MARKETPLACE_SOURCE in error
-    assert CANONICAL_MARKETPLACE_SOURCE in error
+    assert UNLOCATED_REGISTRY_DIAGNOSTIC in observation.error
