@@ -92,6 +92,7 @@ from outcomeeng_testing.generators.gate import (
     SELECTED_GATE_SKILL_PATH,
     SELECTED_GATE_WORKFLOW_PATH,
     selected_gate_changed_paths,
+    step_lists,
 )
 from outcomeeng_testing.harnesses import skip_report
 from outcomeeng_testing.harnesses.changeset_scope import build_repo_without_origin
@@ -105,6 +106,11 @@ SELECTED_GATE_PROPERTY_REPLAY_PATH = (
     "test_selection_is_deterministic_for_path_order_and_duplicates"
 )
 SELECTED_GATE_PROPERTY_EXAMPLES = 40
+GATE_PROPERTY_SEED = 20260922
+GATE_PROPERTY_EXAMPLES = 50
+GATE_PROPERTY_TEST_PATH = (
+    "spx/15-validation.enabler/65-gate.enabler/tests/test_gate.property.l1.py"
+)
 FAIL_EXIT_CODE = 2
 PASSING_CHILD_OUTPUT = "passing validator output"
 FAILING_CHILD_OUTPUT_PREFIX = "failing validator output line"
@@ -333,6 +339,32 @@ def selected_gate_property(
             configured,
             seed_value=SELECTED_GATE_PROPERTY_SEED,
             replay_path=SELECTED_GATE_PROPERTY_REPLAY_PATH,
+        )
+
+    return wrapper
+
+
+def gate_property(
+    test_func: Callable[[tuple[Step, ...]], None],
+) -> Callable[[], None]:
+    """Run a gate step-list property with reproducible failure diagnostics.
+
+    The replay command names the decorated property function, so each property
+    in the file reports the invocation that replays that property alone.
+    """
+
+    configured = seed(GATE_PROPERTY_SEED)(
+        settings(max_examples=GATE_PROPERTY_EXAMPLES, deadline=None)(
+            given(steps=step_lists())(test_func)
+        )
+    )
+    replay_path = f"just test {GATE_PROPERTY_TEST_PATH}::{test_func.__name__}"
+
+    def wrapper() -> None:
+        run_replayable_property(
+            configured,
+            seed_value=GATE_PROPERTY_SEED,
+            replay_path=replay_path,
         )
 
     return wrapper
