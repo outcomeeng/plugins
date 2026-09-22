@@ -127,11 +127,13 @@ def test_every_total_is_emitted_as_exact_decimal_text() -> None:
 def test_a_document_the_parser_refuses_becomes_the_invalid_input_result() -> None:
     """A source the JSON parser cannot read reaches the caller as a result.
 
-    The parser refuses more than malformed syntax: an integer literal wider
-    than the interpreter converts refuses a document whose every other byte is
-    well formed. Each such refusal is the versioned result on stdout with an
-    empty error stream, so one parse reads every outcome and no source shape
-    reaches the caller as a traceback.
+    The parser refuses more than malformed syntax. An integer literal wider
+    than the interpreter converts, and nesting past the scanner's recursion
+    guard, each refuse a document whose every other byte is well formed; a byte
+    no codec decodes refuses one before a JSON production is read at all. Each
+    such refusal is the versioned result on stdout with an empty error stream,
+    so one parse reads every outcome and no source shape reaches the caller as
+    a traceback.
     """
 
     def assert_refusal(

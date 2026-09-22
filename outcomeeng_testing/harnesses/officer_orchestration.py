@@ -47,6 +47,11 @@ LEDGER_SCRIPT_PATH = (
     / "src/plugins/coding-agents/skills/orchestrate-officers/scripts/derive_ledger.py"
 )
 LEDGER_MODULE_NAME = "coding_agents_officer_ledger"
+# The codec the byte-carrying input stream decodes through. It is this
+# harness's own resource setting, chosen to match the encoding a process's
+# standard input carries by default, so an undecodable byte is refused by a
+# codec rather than by an encoding this harness invented for the occasion.
+SOURCE_ENCODING = "utf-8"
 PROPERTY_REPLAY_PATH = (
     "spx/43-coding-agents.enabler/32-officer-orchestration.enabler/tests/"
     "test_ledger_derivation.property.l1.py"
@@ -168,8 +173,22 @@ def load_ledger_module() -> LedgerModule:
     return cast(LedgerModule, module)
 
 
+def _input_stream(payload: Mapping[str, object] | str | bytes) -> TextIO:
+    """The text stream one source document reaches the entry point through.
+
+    A byte payload is wrapped in the same decoding stream the process's own
+    standard input is — a text reader over a byte buffer — so a byte no codec
+    decodes meets the codec at the seam the entry point reads from, rather than
+    being decoded by this harness first. Text and mapping payloads carry only
+    characters, so they need no codec to reach the entry point.
+    """
+    if isinstance(payload, bytes):
+        return io.TextIOWrapper(io.BytesIO(payload), encoding=SOURCE_ENCODING)
+    return io.StringIO(payload if isinstance(payload, str) else json.dumps(payload))
+
+
 def run_ledger(
-    arguments: Sequence[str], payload: Mapping[str, object] | str
+    arguments: Sequence[str], payload: Mapping[str, object] | str | bytes
 ) -> LedgerEntrypointObservation:
     """Execute the ledger entry point and capture its observations.
 
@@ -180,11 +199,10 @@ def run_ledger(
     module = load_ledger_module()
     standard_output = io.StringIO()
     standard_error = io.StringIO()
-    standard_input = payload if isinstance(payload, str) else json.dumps(payload)
     with contextlib.redirect_stderr(standard_error):
         exit_code = module.main(
             arguments,
-            stdin=io.StringIO(standard_input),
+            stdin=_input_stream(payload),
             stdout=standard_output,
         )
     return LedgerEntrypointObservation(
@@ -532,9 +550,10 @@ def run_parser_refusal_property(
 ) -> None:
     """Drive documents the JSON parser refuses; the test owns the refusal law.
 
-    Each generated document reaches the entry point as raw stdin text, so the
-    parser meets exactly the bytes the domain produced rather than a document
-    this harness re-encoded.
+    Each generated document reaches the entry point as its own stdin content,
+    so the parser meets exactly what the domain produced rather than a document
+    this harness re-encoded: a text document as characters, and a byte document
+    through the decoding stream the entry point reads its source from.
     """
     module = load_ledger_module()
 
@@ -543,7 +562,7 @@ def run_parser_refusal_property(
         max_examples=PARSER_REFUSAL_PROPERTY_EXAMPLES, deadline=None, print_blob=True
     )
     @given(document=parser_refused_documents(load_ledger_module()))
-    def generated_refusal(document: str) -> None:
+    def generated_refusal(document: str | bytes) -> None:
         assert_refusal(module, run_ledger([module.DERIVE_OPERATION], document))
 
     run_replayable_property(

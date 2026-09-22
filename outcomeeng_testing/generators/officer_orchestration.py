@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import decimal
+import functools
 import json
 import sys
 from dataclasses import dataclass
@@ -14,6 +15,22 @@ from hypothesis import strategies as st
 # prefix is a non-JSON document by construction rather than by filtering.
 NON_JSON_PREFIX = "~"
 DIGITS = "0123456789"
+# How far the nesting probe descends before it reports that this interpreter's
+# scanner guards no depth it can reach. A document past this width says more
+# about the machine's memory than about the scanner, so the probe stops here.
+NESTING_PROBE_CEILING = 1 << 20
+# How far past the probed refusal depth a generated document may nest. Every
+# width in the band refuses, and the band keeps the domain from collapsing onto
+# the single depth the probe returned.
+NESTING_OVERSHOOT = 64
+# Bytes UTF-8 assigns to no position: `0xC0` and `0xC1` encode only overlong
+# forms, and `0xF5` through `0xFF` lie past the last code point UTF-8 reaches.
+# One of them anywhere in a stream refuses the decode wherever it falls, so a
+# document carrying one is undecodable by construction rather than by position.
+UNDECODABLE_BYTES = (0xC0, 0xC1, *range(0xF5, 0x100))
+# The widest ASCII run placed either side of the undecodable byte, so the
+# refusal is reached from a document whose every other byte decodes.
+MAX_DECODABLE_RUN = 16
 # The significant-digit limit the default decimal context rounds a total to.
 # The generated decimal widths straddle it so the domain reaches the precision
 # where an exact accumulation and a default-context one disagree.
@@ -159,14 +176,85 @@ def _oversized_integer_literals() -> st.SearchStrategy[str]:
     )
 
 
-def parser_refused_documents(module: LedgerVocabulary) -> st.SearchStrategy[str]:
+@functools.cache
+def _nesting_refusal_depth() -> int | None:
+    """The shallowest probed nesting depth the running scanner refuses.
+
+    No interpreter publishes the depth at which its JSON scanner's recursion
+    guard trips — the figure moves with the feature release and with the stack
+    the caller descends from — so the depth is read from the running scanner by
+    doubling a nesting run until it refuses, exactly as the oversized-integer
+    domain reads its width from `sys.get_int_max_str_digits()`. A deeper stack
+    trips the guard sooner, so a depth this probe reaches from its own shallow
+    stack still refuses from the deeper one a test runner descends from.
+
+    A `None` result means the probe reached `NESTING_PROBE_CEILING` without a
+    refusal, and the domain then holds no member at all.
+    """
+    depth = 1
+    while depth <= NESTING_PROBE_CEILING:
+        try:
+            json.loads("[" * depth)
+        except RecursionError:
+            return depth
+        except ValueError:
+            # The run is unterminated, so every depth below the guard refuses
+            # for want of a value rather than for want of stack. That refusal
+            # is the ordinary syntax one, not the guard this probe looks for.
+            pass
+        depth *= 2
+    return None
+
+
+def _deeply_nested_documents() -> st.SearchStrategy[str]:
+    """Documents nested past the running scanner's recursion guard.
+
+    The run is left unterminated: the scanner descends through every opening
+    bracket before it reads anything else, so the guard is what refuses and the
+    document stays half the width a balanced one would need.
+    """
+    depth = _nesting_refusal_depth()
+    if depth is None:
+        return st.nothing()
+    return st.integers(min_value=depth, max_value=depth + NESTING_OVERSHOOT).map(
+        lambda width: "[" * width
+    )
+
+
+def _undecodable_byte_documents() -> st.SearchStrategy[bytes]:
+    """Byte sequences no codec decodes, surrounded by bytes that do.
+
+    A source arrives at the entry point as a stream of bytes a codec turns into
+    text, so a byte the codec assigns to nothing refuses the document before a
+    JSON production is ever read. The undecodable byte is placed between two
+    decodable runs, so the refusal is reached from a document the codec would
+    otherwise have carried whole.
+    """
+    ascii_runs = st.binary(max_size=MAX_DECODABLE_RUN).map(
+        lambda raw: bytes(byte & 0x7F for byte in raw)
+    )
+    return st.builds(
+        lambda prefix, byte, suffix: prefix + bytes([byte]) + suffix,
+        prefix=ascii_runs,
+        byte=st.sampled_from(UNDECODABLE_BYTES),
+        suffix=ascii_runs,
+    )
+
+
+def parser_refused_documents(
+    module: LedgerVocabulary,
+) -> st.SearchStrategy[str | bytes]:
     """Source documents the JSON parser refuses to read at all.
 
-    Two shapes the document's own text controls: text no JSON production can
-    open, and an integer literal past the interpreter's conversion limit — the
-    second carried both alone and inside an otherwise well-formed envelope, so
+    Four shapes, one per class the refusal contract names. Text no JSON
+    production can open. An integer literal past the interpreter's conversion
+    limit, carried both alone and inside an otherwise well-formed envelope, so
     the domain reaches a refusal the document's opening character does not
-    announce.
+    announce. Nesting past the scanner's own recursion guard, whose depth the
+    running interpreter supplies. And bytes no codec decodes, which refuse the
+    document before any JSON production is read — the one class the document's
+    text cannot express, because text is already decoded, so it reaches the
+    entry point as the bytes a stream still has to decode.
     """
     oversized = _oversized_integer_literals()
     return st.one_of(
@@ -175,6 +263,8 @@ def parser_refused_documents(module: LedgerVocabulary) -> st.SearchStrategy[str]
         oversized.map(
             lambda literal: f'{{"{module.SCHEMA_VERSION_FIELD}": {literal}}}'
         ),
+        _deeply_nested_documents(),
+        _undecodable_byte_documents(),
     )
 
 
