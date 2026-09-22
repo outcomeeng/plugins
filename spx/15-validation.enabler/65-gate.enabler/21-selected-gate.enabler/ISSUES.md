@@ -184,6 +184,13 @@ reading either would assert a contract another node declares. The clause claims 
 node's subject carries, so narrowing it or rehoming it is the repair, and the same sentence
 appears in `15-live-discovery.pdr.md`, which only the operator amends.
 
+**Impact.** A reader of the assertion takes it for a guarantee that the two runs which are
+supposed to prove every live row do include them. Neither run is observed, so the guarantee
+rests on nothing: the exclusion could be applied to the `check-full` dispatch or to the CI
+invocation and every linked file would still pass. The surfaces the clause claims are exactly
+the two the live-discovery decision leans on to justify letting a local selected run skip a
+row, so an unobserved clause here is what a switched-off local row is traded against.
+
 **Settlement condition**: either both enumerations narrow the clause to the selection layer's
 own full-gate plan, or each named surface carries evidence under the node that governs it —
 the `check-full` dispatch under the gate node, the workflow under the CI-gate node.
