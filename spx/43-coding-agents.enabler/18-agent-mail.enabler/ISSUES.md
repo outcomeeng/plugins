@@ -35,3 +35,17 @@ Every skill in this marketplace that grants a bundled script names it as `Bash(p
 **Why separate**: the question belongs to the `instructions` plugin's standard and its answer changes fifteen grants across six plugins at once. Diverging this one skill from its fourteen peers on an unsettled question would make the convention harder to fix, not easier.
 
 **Evidence**: `instructions:skill-auditor` finding `f-008`, rule `tool_restriction_specificity`, on head `1d7a14a2998039feec89d7ff19de82baaa4a30a8`, with the fifteen-of-fifteen count from a sweep over `src/plugins/*/skills/*/SKILL.md`.
+
+## DEBT: the test-evidence gate rejects this node until the detectors move
+
+`spx/43-coding-agents.enabler/ISSUES.md` records that the raw-command and project-key detectors ship inside the adapters with no production consumer, and names one home for that detection outside them as its settlement condition. The consequence for this node's gate is stated here, because it recurs every round.
+
+The compliance assertion `NEVER: another shipped coding-agents script constructs a raw mail command or derives the project key from Git state` links a test whose only reachable enforcement is `raw_mail_command_violations`, `git_project_key_violations`, and their pattern tables in the shipped adapter. No adapter execution path reaches them, so the evidence couples to a declaration only the tests read.
+
+**Impact**: an isolated test-evidence audit of this node returns `REJECTED` on rule `source-ownership` for that assertion, on every subject, regardless of what else the node carries. Three runs have now done so — heads `d6d1b5458af190ac9d1f05775c869c08ab206c95`, `18903ace30be971b041eba9e74606e97bf0182ae`, and `fc7619c0cd4224bb6fd6e25f5f02f0509aff2ba3` — the first two as a finding among others, the third as the round's only rejection.
+
+**Why it does not block a `spec`-malleable changeset**: Passing at this node's declared malleability is Validate, the reachability tests, and a result for every tagged assertion. Evidence that passes audit is the `implementation` requirement. A Change whose Frame names the test-evidence audit meets that obligation by running it and disposing every finding, and the remediation this finding names is chartered to a successor Change, not to the Change that runs the audit.
+
+**Settlement condition**: the successor Change that relocates raw-command and project-key detection to one home outside the shipped adapters lands, this node's compliance test imports the detector from that home, and an isolated test-evidence audit of this node returns no `source-ownership` finding for this assertion. Until then the rejection is expected and is not evidence of a defect in the changeset under audit.
+
+**Evidence**: `spec-tree:test-evidence-auditor` finding `f-001`, rule `source-ownership`, on head `fc7619c0cd4224bb6fd6e25f5f02f0509aff2ba3`, naming the relocation as its remediation target; the same rule on the two earlier heads above.
