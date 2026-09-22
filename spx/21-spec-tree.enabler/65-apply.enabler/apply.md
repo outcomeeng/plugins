@@ -26,7 +26,7 @@ The assertions below govern the lifecycle as a whole — how the work queue is f
   the calling skill never appends an author-written context packet ([audit]).
 - ALWAYS: invocation guidance requires exactly one native launch and analysis and
   reporting of a failed launch or unusable result without retry or substitution.
-  Completed audit verdicts follow the existing gate and repair workflows ([audit]).
+  Completed audit verdicts follow the gate and repair workflows ([audit]).
 - ALWAYS: with a canonical full `spx/...` node-path argument the work queue is that single node, and with no argument it is derived from the conversation, falling back to the paths stored relative to `spx/` in `spx/EXCLUDE` after converting each one to its canonical full `spx/...` address ([audit])
 - ALWAYS: the main conversation runs per-node authoring and implementation, delegates the declared behavior-preserving simplification stage, and dispatches the auditors and reviewers its gates require ([audit])
 - ALWAYS: a multi-node work queue runs in ascending numeric-index order, removing each node from `spx/EXCLUDE` before its flow and preserving each stabilized gate subject in a local checkpoint commit whose recorded verification state is `passing`, `failing`, or `not-run`; agentic gate dispatch still requires deterministic passing, and a node whose flow cannot converge stops the queue with the remaining nodes left in `spx/EXCLUDE` ([audit])
