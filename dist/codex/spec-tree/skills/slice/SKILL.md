@@ -61,7 +61,7 @@ Confirm that delivering the slice makes one real invocation more useful and insp
 </step>
 
 <step number="6" name="Hand off to apply">
-Hand the selected slice's node set to `/apply` as its work queue. `/apply` runs the per-node TDD flow over each node in ascending index order, then carries the changeset through `/merge`.
+Hand the selected slice's node set to `/apply` as its work queue. `/apply` runs the per-node apply flow over each node in ascending index order, then carries the changeset through `/merge`.
 </step>
 
 </workflow>
