@@ -4,7 +4,7 @@ from outcomeeng_testing.generators.coding_agents import mail_record_input
 from outcomeeng_testing.harnesses.agent_mail import load_agent_mail
 from outcomeeng_testing.harnesses.coding_agents import (
     load_agent_message,
-    observe_absent_diagnosis_mail_send,
+    observe_unresolved_repository_mail_send,
     observe_absent_store_mail_send,
     observe_mail_send,
     observe_rejected_mail_send,
@@ -73,7 +73,7 @@ def test_checked_send_results_map_to_delivery_results() -> None:
     for failed_capability in (
         observe_rejected_mail_send(message, record),
         observe_absent_store_mail_send(message, record),
-        observe_absent_diagnosis_mail_send(message, record),
+        observe_unresolved_repository_mail_send(message, record),
         observe_unreadable_store_reply_mail_send(message, record),
         observe_unsupported_operation_mail_send(message, record),
     ):

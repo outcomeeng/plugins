@@ -150,40 +150,92 @@ def operation_requests(module: ModuleType) -> list[dict[str, object]]:
 
 
 def project_key_paths() -> st.SearchStrategy[str]:
-    return st.from_regex(r"/[a-z0-9]{1,12}(?:/[a-z0-9._-]{1,16}){0,5}", fullmatch=True)
+    """Absolute paths a repository's common Git directory takes.
+
+    Every segment opens with an alphanumeric, so no generated path carries a
+    `.` or `..` segment and each one is already the key its shapes resolve.
+    """
+    return st.from_regex(
+        r"/[a-z0-9]{1,12}(?:/[a-z0-9][a-z0-9._-]{0,15}){0,5}", fullmatch=True
+    )
 
 
-# The diagnosis shapes the adapter decision names, each a variant of the
-# captured `spx diagnose --format json` response: the capture with a generated
-# absolute main checkout path resolves the key; no worktree-pool record, a
-# record under another name, two records, empty readings, a relative path, a
-# payload that is not an object, no check list, and a check list that is not
-# an array each yield the unavailable result.
-DIAGNOSIS_WITH_PATH = "with-path"
-DIAGNOSIS_NO_RECORD = "no-record"
-DIAGNOSIS_OTHER_RECORD = "other-record"
-DIAGNOSIS_TWO_RECORDS = "two-records"
-DIAGNOSIS_EMPTY_READINGS = "empty-readings"
-DIAGNOSIS_RELATIVE_PATH = "relative-path"
-DIAGNOSIS_NOT_OBJECT = "not-object"
-DIAGNOSIS_NO_CHECKS = "no-checks"
-DIAGNOSIS_CHECKS_NOT_ARRAY = "checks-not-array"
-DIAGNOSIS_SHAPES = (
-    DIAGNOSIS_WITH_PATH,
-    DIAGNOSIS_NO_RECORD,
-    DIAGNOSIS_OTHER_RECORD,
-    DIAGNOSIS_TWO_RECORDS,
-    DIAGNOSIS_EMPTY_READINGS,
-    DIAGNOSIS_RELATIVE_PATH,
-    DIAGNOSIS_NOT_OBJECT,
-    DIAGNOSIS_NO_CHECKS,
-    DIAGNOSIS_CHECKS_NOT_ARRAY,
+# The shapes the repository lookup's output takes, each built from a generated
+# canonical key so the key the shape must resolve is its construction input
+# rather than a second derivation: the bare value, the value the lookup prints
+# with its trailing newline, a trailing separator, a repeated separator, a
+# `.` segment, and a detour through a `..` segment each resolve that key; empty
+# output, blank output, a `.` alone, and a relative path resolve no repository.
+COMMON_DIR_EXACT = "exact"
+COMMON_DIR_TRAILING_NEWLINE = "trailing-newline"
+COMMON_DIR_TRAILING_SEPARATOR = "trailing-separator"
+COMMON_DIR_REPEATED_SEPARATOR = "repeated-separator"
+COMMON_DIR_DOT_SEGMENT = "dot-segment"
+COMMON_DIR_PARENT_DETOUR = "parent-detour"
+COMMON_DIR_EMPTY = "empty"
+COMMON_DIR_BLANK = "blank"
+COMMON_DIR_DOT_ALONE = "dot-alone"
+COMMON_DIR_RELATIVE = "relative"
+COMMON_DIR_SHAPES = (
+    COMMON_DIR_EXACT,
+    COMMON_DIR_TRAILING_NEWLINE,
+    COMMON_DIR_TRAILING_SEPARATOR,
+    COMMON_DIR_REPEATED_SEPARATOR,
+    COMMON_DIR_DOT_SEGMENT,
+    COMMON_DIR_PARENT_DETOUR,
+    COMMON_DIR_EMPTY,
+    COMMON_DIR_BLANK,
+    COMMON_DIR_DOT_ALONE,
+    COMMON_DIR_RELATIVE,
 )
-# The one shape whose key resolves; every other shape maps to no key.
-RESOLVING_DIAGNOSIS_SHAPES = frozenset({DIAGNOSIS_WITH_PATH})
+# The shapes whose key resolves; every other shape names no repository.
+RESOLVING_COMMON_DIR_SHAPES = frozenset(
+    {
+        COMMON_DIR_EXACT,
+        COMMON_DIR_TRAILING_NEWLINE,
+        COMMON_DIR_TRAILING_SEPARATOR,
+        COMMON_DIR_REPEATED_SEPARATOR,
+        COMMON_DIR_DOT_SEGMENT,
+        COMMON_DIR_PARENT_DETOUR,
+    }
+)
+DETOUR_SEGMENT = "detour"
+
+
+class CommonDirShapeError(RuntimeError):
+    """The named output shape is outside the generated domain."""
+
+
+def common_dir_output(shape: str, path: str) -> str:
+    """Build the lookup's printed output for one shape around ``path``.
+
+    Every resolving shape is ``path`` written differently, so ``path`` is the
+    key each must resolve without any normalization being restated here.
+    """
+    if shape == COMMON_DIR_EXACT:
+        return path
+    if shape == COMMON_DIR_TRAILING_NEWLINE:
+        return f"{path}\n"
+    if shape == COMMON_DIR_TRAILING_SEPARATOR:
+        return f"{path}/"
+    if shape == COMMON_DIR_REPEATED_SEPARATOR:
+        return f"/{path}"
+    if shape == COMMON_DIR_DOT_SEGMENT:
+        return f"{path}/."
+    if shape == COMMON_DIR_PARENT_DETOUR:
+        head, _, tail = path.rpartition("/")
+        return f"{head}/{DETOUR_SEGMENT}/../{tail}"
+    if shape == COMMON_DIR_EMPTY:
+        return ""
+    if shape == COMMON_DIR_BLANK:
+        return " \n\t "
+    if shape == COMMON_DIR_DOT_ALONE:
+        return "."
+    if shape == COMMON_DIR_RELATIVE:
+        return path.lstrip("/")
+    raise CommonDirShapeError(f"No common-directory shape named {shape!r}")
 
 
 def expected_project_key(shape: str, path: str) -> str | None:
-    """The key the adapter decision derives for one shape: the absolute main
-    checkout path of the one worktree-pool record, or none."""
-    return path if shape in RESOLVING_DIAGNOSIS_SHAPES else None
+    """The key one shape resolves: the path it was built around, or none."""
+    return path if shape in RESOLVING_COMMON_DIR_SHAPES else None

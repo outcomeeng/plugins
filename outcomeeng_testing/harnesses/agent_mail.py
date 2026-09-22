@@ -4,9 +4,13 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
+import re
+import shlex
 import subprocess
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Iterator, Mapping
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -16,17 +20,10 @@ from typing import Protocol, cast
 from hypothesis import given, seed, settings
 
 from outcomeeng_testing.generators.agent_mail import (
-    DIAGNOSIS_CHECKS_NOT_ARRAY,
-    DIAGNOSIS_EMPTY_READINGS,
-    DIAGNOSIS_NO_CHECKS,
-    DIAGNOSIS_NO_RECORD,
-    DIAGNOSIS_NOT_OBJECT,
-    DIAGNOSIS_OTHER_RECORD,
-    DIAGNOSIS_RELATIVE_PATH,
-    DIAGNOSIS_SHAPES,
-    DIAGNOSIS_TWO_RECORDS,
-    DIAGNOSIS_WITH_PATH,
+    COMMON_DIR_EXACT,
+    COMMON_DIR_SHAPES,
     agent_names,
+    common_dir_output,
     capture_row_ordinals,
     coordination_references,
     expected_project_key,
@@ -60,12 +57,10 @@ OPERATE_AGENT_MAIL_RELATIVE = Path("skills/operate-agent-mail")
 FIXTURE_ROOT = ROOT / "outcomeeng_testing/fixtures/agent_mail"
 # Captured `am <command> --help` texts: the store CLI's own grammar declaration.
 USAGE_FIXTURE_ROOT = FIXTURE_ROOT / "usage"
-# Captured `am` responses for each operation's public command, and the
-# captured `spx diagnose --format json` response the adapter reads the project
-# key from (taken with `@outcomeeng/spx` 0.7.1; the `worktree-pool` record
-# introduced in 0.7.0 carries the same readings).
+# Captured `am` responses for each operation's public command. The project key
+# has no captured oracle: the checkout shapes a real repository takes are what
+# the resolver is read against.
 RESPONSE_FIXTURE_ROOT = FIXTURE_ROOT / "responses"
-DIAGNOSIS_FIXTURE = RESPONSE_FIXTURE_ROOT / "spx-diagnose.json"
 RAW_MAIL_VIOLATION_FIXTURE = FIXTURE_ROOT / "raw_am_command.py.txt"
 GIT_PROJECT_KEY_VIOLATION_FIXTURE = FIXTURE_ROOT / "git_project_key.py.txt"
 RECORD_ROUNDTRIP_SEED = 2026091801
@@ -74,9 +69,12 @@ RECORD_ROUNDTRIP_REPLAY_PATH = (
     "spx/43-coding-agents.enabler/18-agent-mail.enabler/tests/"
     "test_agent_mail.property.l1.py"
 )
+DELEGATION_CHAIN_SEED = 2026092201
+DELEGATION_CHAIN_EXAMPLES = 20
 TERMINAL_PROPERTY_SEED = 2026091802
 TERMINAL_PROPERTY_EXAMPLES = 40
 TERMINAL_PROPERTY_REPLAY_PATH = RECORD_ROUNDTRIP_REPLAY_PATH
+DELEGATION_CHAIN_REPLAY_PATH = RECORD_ROUNDTRIP_REPLAY_PATH
 PROJECT_KEY_MAPPING_SEED = 2026091803
 PROJECT_KEY_MAPPING_EXAMPLES = 20
 PROJECT_KEY_MAPPING_REPLAY_PATH = (
@@ -101,10 +99,28 @@ COMPLIANCE_REPLAY_PATH = (
     "spx/43-coding-agents.enabler/18-agent-mail.enabler/tests/"
     "test_agent_mail.compliance.l1.py"
 )
-# The store CLI's own project fallback; the adapter never reads it, and the
-# compliance probe sets it as the fallback the adapter must ignore.
-STORE_PROJECT_ENV = "AGENT_MAIL_PROJECT"
+# The token a captured usage line opens with, before the program name.
+USAGE_LINE_PREFIX = "Usage:"
 CLI_TIMEOUT_SECONDS = 60
+# The pool one probe builds: a bare repository, the main checkout beside it,
+# and one linked worktree, so the resolver is read from all three shapes.
+POOL_REPOSITORY_NAME = "pool"
+POOL_MAIN_CHECKOUT_NAME = "main"
+POOL_LINKED_WORKTREE_NAME = "linked"
+POOL_SEED_NAME = "seed"
+POOL_SYMLINK_NAME = "linked-by-symlink"
+# A directory inside the main checkout, so a shape exists whose repository lies
+# strictly above its working directory. A variable that bounds where Git may
+# discover a repository reaches only such a shape: at a checkout's own root the
+# repository is found before any ceiling above it applies.
+POOL_NESTED_RELATIVE = ("workspace", "package")
+# A second repository beside the pool, no checkout of it. A caller carrying a
+# variable that names a repository can name it, so the pool can be read from an
+# environment that points away from the working directory.
+FOREIGN_REPOSITORY_NAME = "foreign"
+# One absolute key for probes that need a repository but do not vary it.
+SHARED_PROJECT_KEY = "/repository/pool.git"
+POOL_DEFAULT_BRANCH = "main"
 
 
 class CommandResultContract(Protocol):
@@ -136,13 +152,22 @@ class CapturedInboxResponse:
 
 @dataclass
 class RecordingRunner:
-    """Interaction-protocol collaborator: records every argv, replays results."""
+    """Interaction-protocol collaborator: records every argv, replays results.
+
+    ``env`` is accepted because the runner boundary carries it and dropped
+    because a replayed result depends on no environment; what the repository
+    lookup removes from it is read end to end, through the shipped CLI in a
+    real repository, not from a recorded call.
+    """
 
     results: list[CommandResultContract]
     calls: list[tuple[tuple[str, ...], str | None]] = field(default_factory=list)
 
     def run(
-        self, argv: tuple[str, ...], stdin: str | None = None
+        self,
+        argv: tuple[str, ...],
+        stdin: str | None = None,
+        env: Mapping[str, str] | None = None,
     ) -> CommandResultContract:
         self.calls.append((argv, stdin))
         if not self.results:
@@ -159,7 +184,10 @@ class AbsentExecutableRunner:
     calls: list[tuple[tuple[str, ...], str | None]] = field(default_factory=list)
 
     def run(
-        self, argv: tuple[str, ...], stdin: str | None = None
+        self,
+        argv: tuple[str, ...],
+        stdin: str | None = None,
+        env: Mapping[str, str] | None = None,
     ) -> CommandResultContract:
         self.calls.append((argv, stdin))
         if argv[0] == self.absent_executable:
@@ -184,11 +212,6 @@ def _load() -> ModuleType:
 def load_agent_mail() -> ModuleType:
     """Load the shipped adapter so linked tests can inspect its public contract."""
     return _load()
-
-
-def json_command_result(module: ModuleType, payload: object) -> CommandResultContract:
-    """Return one controlled JSON response from a public command boundary."""
-    return cast(CommandResultContract, module.CommandResult(0, json.dumps(payload), ""))
 
 
 def text_command_result(module: ModuleType, text: str) -> CommandResultContract:
@@ -274,6 +297,15 @@ def store_response_payload(
     return result.stdout.strip()
 
 
+def store_response_text(
+    module: ModuleType,
+    operation: object,
+    arguments: dict[str, object] | None = None,
+) -> str:
+    """The captured response exactly as the store printed it."""
+    return store_response_result(module, operation, arguments).stdout
+
+
 def _inbox_captures_with_bodies(module: ModuleType) -> list[Path]:
     """Every captured inbox response taken with `--include-bodies`, in path
     order: the store answered the same command while a receipt was pending and
@@ -346,121 +378,36 @@ def inbox_response_without_thread(
     )
 
 
-def captured_diagnosis(module: ModuleType) -> dict[str, object]:
-    """The captured `spx diagnose --format json` response, decoded."""
-    payload = json.loads(DIAGNOSIS_FIXTURE.read_text(encoding="utf-8"))
-    if not isinstance(payload, dict):
-        raise CaptureError(f"{DIAGNOSIS_FIXTURE} is not a JSON object")
-    return cast(dict[str, object], payload)
+def common_dir_reply(module: ModuleType) -> CommandResultContract:
+    """The repository lookup's reply naming one generated project key."""
+    return text_command_result(
+        module, common_dir_output(COMMON_DIR_EXACT, SHARED_PROJECT_KEY)
+    )
 
 
-def _captured_pool_record(
-    module: ModuleType, payload: dict[str, object]
-) -> tuple[list[dict[str, object]], dict[str, object]]:
-    """The captured check list and its one worktree-pool record. A capture
-    without the keys the adapter reads is a capture gap, never a passing case."""
-    checks = payload.get(module.CHECKS_FIELD)
-    if not isinstance(checks, list):
-        raise CaptureError(
-            f"{DIAGNOSIS_FIXTURE} carries no {module.CHECKS_FIELD} array"
-        )
-    records = [
-        cast(dict[str, object], record)
-        for record in cast(list[object], checks)
-        if isinstance(record, dict)
-        and record.get(module.NAME_FIELD) == module.WORKTREE_POOL_CHECK
-    ]
-    if len(records) != 1:
-        raise CaptureError(
-            f"{DIAGNOSIS_FIXTURE} carries {len(records)} {module.WORKTREE_POOL_CHECK} "
-            "records"
-        )
-    readings = records[0].get(module.READINGS_FIELD)
-    if not isinstance(readings, dict) or module.MAIN_CHECKOUT_PATH_FIELD not in cast(
-        dict[str, object], readings
-    ):
-        raise CaptureError(
-            f"{DIAGNOSIS_FIXTURE} {module.WORKTREE_POOL_CHECK} record carries no "
-            f"{module.READINGS_FIELD}.{module.MAIN_CHECKOUT_PATH_FIELD}"
-        )
-    return [cast(dict[str, object], check) for check in checks], records[0]
-
-
-def diagnosis_variant(module: ModuleType, shape: str, path: str) -> object:
-    """One diagnosis payload of the named shape: the captured response with the
-    generated path in place of the machine's, varied only in what the shape
-    names. Every key comes from the capture."""
-    payload = captured_diagnosis(module)
-    checks, record = _captured_pool_record(module, payload)
-    readings = cast(dict[str, object], record[module.READINGS_FIELD])
-    with_path = {
-        **record,
-        module.READINGS_FIELD: {**readings, module.MAIN_CHECKOUT_PATH_FIELD: path},
-    }
-    others = [check for check in checks if check is not record]
-    if shape == DIAGNOSIS_WITH_PATH:
-        return {**payload, module.CHECKS_FIELD: [*others, with_path]}
-    if shape == DIAGNOSIS_NO_RECORD:
-        return {**payload, module.CHECKS_FIELD: others}
-    if shape == DIAGNOSIS_OTHER_RECORD:
-        renamed = {**with_path, module.NAME_FIELD: f"other-{path.strip('/')}"}
-        return {**payload, module.CHECKS_FIELD: [*others, renamed]}
-    if shape == DIAGNOSIS_TWO_RECORDS:
-        return {**payload, module.CHECKS_FIELD: [*others, with_path, with_path]}
-    if shape == DIAGNOSIS_EMPTY_READINGS:
-        emptied = {**record, module.READINGS_FIELD: {}}
-        return {**payload, module.CHECKS_FIELD: [*others, emptied]}
-    if shape == DIAGNOSIS_RELATIVE_PATH:
-        relative = {
-            **record,
-            module.READINGS_FIELD: {
-                **readings,
-                module.MAIN_CHECKOUT_PATH_FIELD: path.lstrip("/"),
-            },
-        }
-        return {**payload, module.CHECKS_FIELD: [*others, relative]}
-    if shape == DIAGNOSIS_NOT_OBJECT:
-        return [*others, with_path]
-    if shape == DIAGNOSIS_NO_CHECKS:
-        return {
-            key: value for key, value in payload.items() if key != module.CHECKS_FIELD
-        }
-    if shape == DIAGNOSIS_CHECKS_NOT_ARRAY:
-        return {**payload, module.CHECKS_FIELD: with_path}
-    raise CaptureError(f"No diagnosis shape named {shape!r}")
-
-
-def diagnosis_with_main_checkout(module: ModuleType, main_checkout_path: str) -> object:
-    return diagnosis_variant(module, DIAGNOSIS_WITH_PATH, main_checkout_path)
-
-
-def diagnosis_seeded_runner(
+def common_dir_seeded_runner(
     module: ModuleType, project_key: str, *results: CommandResultContract
 ) -> RecordingRunner:
-    """A recording runner whose first reply is the diagnosis resolving
+    """A recording runner whose first reply is the repository lookup printing
     `project_key`, followed by the store replies in order."""
     return RecordingRunner(
         [
-            json_command_result(
-                module, diagnosis_with_main_checkout(module, project_key)
+            text_command_result(
+                module, common_dir_output(COMMON_DIR_EXACT, project_key)
             ),
             *results,
         ]
     )
 
 
-def diagnosis_seeded_absent_store_runner(
+def common_dir_seeded_absent_store_runner(
     module: ModuleType, project_key: str
 ) -> AbsentExecutableRunner:
-    """A runner that resolves `project_key` from the diagnosis and then finds
+    """A runner that resolves `project_key` from the repository and then finds
     no store executable."""
     return AbsentExecutableRunner(
         module.AM_COMMAND,
-        [
-            json_command_result(
-                module, diagnosis_with_main_checkout(module, project_key)
-            )
-        ],
+        [text_command_result(module, common_dir_output(COMMON_DIR_EXACT, project_key))],
     )
 
 
@@ -532,6 +479,77 @@ def run_record_roundtrip_property(
     )
 
 
+def run_delegation_chain_property(
+    assert_chain: Callable[
+        [ModuleType, str, list[dict[str, object]], RecordingRunner], None
+    ],
+) -> None:
+    """Drive an order, its delegation request, and its one correlated terminal
+    handback through the capability's own send path under one reference.
+
+    The three records share a correlation, and each is delivered by the same
+    `send` operation a caller uses, so the chain is evidenced where it happens
+    rather than at the reduction that follows it.
+    """
+    module = _load()
+
+    @seed(DELEGATION_CHAIN_SEED)
+    @settings(max_examples=DELEGATION_CHAIN_EXAMPLES, deadline=None, print_blob=True)
+    @given(
+        reference=coordination_references(),
+        terminal_kind=terminal_record_kinds(module),
+        sender=agent_names(),
+        recipient=agent_names(),
+        subject=message_texts(),
+        body=message_texts(),
+        project_key=project_key_paths(),
+    )
+    def generated_chain(
+        reference: str,
+        terminal_kind: object,
+        sender: str,
+        recipient: str,
+        subject: str,
+        body: str,
+        project_key: str,
+    ) -> None:
+        def record(kind: object, from_agent: str, to_agent: str) -> dict[str, object]:
+            return cast(
+                dict[str, object],
+                module.message_record(
+                    kind=kind,
+                    correlation=reference,
+                    sender=from_agent,
+                    recipient=to_agent,
+                    subject=subject,
+                    body=body,
+                ),
+            )
+
+        chain = [
+            record(module.RecordKind.ORDER, sender, recipient),
+            record(module.RecordKind.DELEGATION_REQUEST, sender, recipient),
+            record(terminal_kind, recipient, sender),
+        ]
+        # Each operation resolves the key before it reaches the store, so the
+        # repository answers once per send rather than once per chain.
+        replies: list[CommandResultContract] = []
+        for _ in chain:
+            replies.append(
+                text_command_result(
+                    module, common_dir_output(COMMON_DIR_EXACT, project_key)
+                )
+            )
+            replies.append(store_response_result(module, module.Operation.SEND))
+        assert_chain(module, reference, chain, RecordingRunner(replies))
+
+    run_replayable_property(
+        generated_chain,
+        seed_value=DELEGATION_CHAIN_SEED,
+        replay_path=DELEGATION_CHAIN_REPLAY_PATH,
+    )
+
+
 def run_terminal_property(
     assert_terminal: Callable[[ModuleType, str, object, object, dict[str, str]], None],
 ) -> None:
@@ -576,8 +594,8 @@ def run_terminal_property(
 def run_project_key_mapping(
     assert_key: Callable[[ModuleType, str, object, str | None, str], None],
 ) -> None:
-    """Drive every diagnosis shape as a variant of the captured response, with
-    generated paths inside each."""
+    """Drive every shape the repository lookup's output takes, each built
+    around a generated absolute path."""
     module = _load()
 
     def drive(shape: str) -> Callable[[], None]:
@@ -587,12 +605,12 @@ def run_project_key_mapping(
         )
         @given(path=project_key_paths(), agent=agent_names())
         def generated_key_mapping(path: str, agent: str) -> None:
-            payload = diagnosis_variant(module, shape, path)
-            assert_key(module, shape, payload, expected_project_key(shape, path), agent)
+            output = common_dir_output(shape, path)
+            assert_key(module, shape, output, expected_project_key(shape, path), agent)
 
         return generated_key_mapping
 
-    for shape in DIAGNOSIS_SHAPES:
+    for shape in COMMON_DIR_SHAPES:
         run_replayable_property(
             drive(shape),
             seed_value=PROJECT_KEY_MAPPING_SEED,
@@ -794,11 +812,6 @@ def mail_command_source_texts() -> dict[str, str]:
     return _source_texts(script_paths)
 
 
-def agent_mail_source_texts() -> dict[str, str]:
-    """Return the authoritative adapter source observation."""
-    return _source_texts((AGENT_MAIL_PATH,))
-
-
 def raw_mail_violation_source() -> tuple[str, dict[str, str]]:
     return (
         str(RAW_MAIL_VIOLATION_FIXTURE.relative_to(ROOT)),
@@ -813,6 +826,428 @@ def git_project_key_violation_source() -> tuple[str, dict[str, str]]:
     )
 
 
+@dataclass(frozen=True)
+class MailPool:
+    """One real repository reached through its three checkout shapes.
+
+    ``bare`` is the repository every shape shares, so it is the key the
+    resolver must return from each of them. ``nested`` is a directory inside the
+    main checkout, the shape whose repository lies strictly above its working
+    directory. ``outside`` is the pool's parent directory, which is no
+    repository. ``foreign`` is a second repository no shape belongs to, so a key
+    that followed a caller's environment rather than its working directory would
+    return it.
+    """
+
+    bare: Path
+    main_checkout: Path
+    linked_worktree: Path
+    symlinked_worktree: Path
+    nested: Path
+    outside: Path
+    foreign: Path
+
+    @property
+    def checkout_shapes(self) -> dict[str, Path]:
+        """Every working directory that belongs to this pool, by name."""
+        return {
+            "bare": self.bare,
+            "main-checkout": self.main_checkout,
+            "linked-worktree": self.linked_worktree,
+            "symlinked-worktree": self.symlinked_worktree,
+            "nested-directory": self.nested,
+        }
+
+
+def _git_in(directory: Path, *arguments: str) -> None:
+    subprocess.run(
+        ["git", "-C", str(directory), *arguments],
+        check=True,
+        capture_output=True,
+    )
+
+
+@contextmanager
+def mail_pool() -> Iterator[MailPool]:
+    """Yield a throwaway pool: a bare repository and two worktrees attached to
+    it — the main checkout and one linked worktree — under a parent directory
+    that is no repository.
+
+    The main checkout is a worktree of the bare repository, the shape a
+    provisioned pool takes, rather than its own clone. A symlink to the linked
+    worktree gives one checkout a second route, so a key that varied with the
+    path a caller typed would differ from the key its physical route returns.
+    """
+    with TemporaryDirectory(ignore_cleanup_errors=True) as raw:
+        outside = Path(raw).resolve()
+        seed_checkout = outside / POOL_SEED_NAME
+        subprocess.run(
+            ["git", "init", "--quiet", "-b", POOL_DEFAULT_BRANCH, str(seed_checkout)],
+            check=True,
+            capture_output=True,
+        )
+        _git_in(seed_checkout, "config", "user.email", "test@example.invalid")
+        _git_in(seed_checkout, "config", "user.name", "Spec Tree Test")
+        _git_in(seed_checkout, "config", "commit.gpgsign", "false")
+        (seed_checkout / "README.md").write_text("seed\n", encoding="utf-8")
+        _git_in(seed_checkout, "add", "README.md")
+        _git_in(seed_checkout, "commit", "--quiet", "-m", "seed")
+        bare = outside / f"{POOL_REPOSITORY_NAME}.git"
+        subprocess.run(
+            ["git", "clone", "--quiet", "--bare", str(seed_checkout), str(bare)],
+            check=True,
+            capture_output=True,
+        )
+        main_checkout = outside / POOL_MAIN_CHECKOUT_NAME
+        _git_in(
+            bare, "worktree", "add", "--quiet", str(main_checkout), POOL_DEFAULT_BRANCH
+        )
+        linked_worktree = outside / POOL_LINKED_WORKTREE_NAME
+        _git_in(bare, "worktree", "add", "--quiet", "--detach", str(linked_worktree))
+        symlinked_worktree = outside / POOL_SYMLINK_NAME
+        symlinked_worktree.symlink_to(linked_worktree)
+        nested = main_checkout.joinpath(*POOL_NESTED_RELATIVE)
+        nested.mkdir(parents=True)
+        foreign = outside / f"{FOREIGN_REPOSITORY_NAME}.git"
+        subprocess.run(
+            ["git", "init", "--quiet", "--bare", str(foreign)],
+            check=True,
+            capture_output=True,
+        )
+        yield MailPool(
+            bare=bare,
+            main_checkout=main_checkout,
+            linked_worktree=linked_worktree,
+            symlinked_worktree=symlinked_worktree,
+            nested=nested,
+            outside=outside,
+            foreign=foreign,
+        )
+
+
+def run_cli_project_key(
+    working_directory: Path,
+    environment: Mapping[str, str] | None = None,
+) -> tuple[int, dict[str, object]]:
+    """Run the shipped CLI's project-key operation in ``working_directory``.
+
+    ``environment`` names variables to add to the inherited environment for
+    this run, so the variables a caller could answer a location question from
+    are carried into the process the way a hook carries them.
+    """
+    module = _load()
+    completed = subprocess.run(
+        [sys.executable, str(AGENT_MAIL_PATH), module.CliOperation.PROJECT_KEY],
+        cwd=working_directory,
+        capture_output=True,
+        text=True,
+        timeout=CLI_TIMEOUT_SECONDS,
+        check=False,
+        env=None if environment is None else {**os.environ, **environment},
+    )
+    return completed.returncode, cast(dict[str, object], json.loads(completed.stdout))
+
+
+@dataclass(frozen=True)
+class GitLocationProbe:
+    """One variable Git's own behaviour shows moves a lookup's answer off the
+    invoking working directory.
+
+    ``environment`` is the caller's environment that produced ``outcome`` from
+    ``working_directory``: ``misdirected`` when raw Git answered with another
+    repository's common directory, ``unresolved`` when raw Git gave the same
+    answer it gives in a directory that is no repository at all.
+    """
+
+    variable: str
+    shape: str
+    working_directory: Path
+    environment: dict[str, str]
+    outcome: str
+
+
+MISDIRECTED_OUTCOME = "misdirected"
+UNRESOLVED_OUTCOME = "unresolved"
+
+# Git's own question about which repository a working directory belongs to,
+# spelled here rather than read from the adapter: the adapter's argv is the
+# subject under test, so a probe that borrowed it would confirm nothing the
+# adapter did not already agree with.
+GIT_COMMON_DIR_QUESTION = (
+    "git",
+    "rev-parse",
+    "--path-format=absolute",
+    "--git-common-dir",
+)
+# Git's own report of the environment variables local to a repository. It is
+# the candidate space, not the answer.
+GIT_LOCAL_ENV_VARS_QUESTION = ("git", "rev-parse", "--local-env-vars")
+# Candidate names beyond that report: the discovery-bounding variables, which
+# move the answer off the working directory by hiding the repository it belongs
+# to. A variable that only widens the search
+# toward the repository genuinely there is not a candidate, because it cannot
+# move the answer off the working directory at all. This list only widens the
+# search — a candidate joins the confirmed domain solely where Git's behaviour
+# shows the answer moved, so a name that changes nothing confirms nothing.
+GIT_DISCOVERY_CANDIDATES: tuple[str, ...] = ("GIT_CEILING_DIRECTORIES",)
+GIT_PROBE_TIMEOUT_SECONDS = 30
+
+
+def _ask_git(
+    argv: tuple[str, ...], cwd: Path, extra: Mapping[str, str]
+) -> tuple[int, str, str]:
+    """Ask Git one question from ``cwd``, carrying only ``extra`` of `GIT_*`."""
+    inherited = {
+        name: value for name, value in os.environ.items() if not name.startswith("GIT_")
+    }
+    completed = subprocess.run(
+        list(argv),
+        cwd=cwd,
+        env={**inherited, **extra},
+        capture_output=True,
+        text=True,
+        timeout=GIT_PROBE_TIMEOUT_SECONDS,
+        check=False,
+    )
+    return completed.returncode, completed.stdout.strip(), completed.stderr.strip()
+
+
+def _probe_value_pairs(
+    working_directory: Path, pool: MailPool
+) -> list[tuple[str, str]]:
+    """Redirecting values paired with an inert control of the same shape.
+
+    A candidate is confirmed only where the first value redirects Git and the
+    second leaves its answer untouched, so a variable that rejects any value of
+    this shape — a count, a config specification — fails the control and stays
+    out of the domain.
+    """
+    return [
+        (str(pool.foreign), str(pool.bare)),
+        (str(working_directory.parent), str(pool.foreign)),
+        ("0", "1"),
+        ("1", "0"),
+    ]
+
+
+def git_location_variables(pool: MailPool) -> list[GitLocationProbe]:
+    """The variables Git itself confirms move a lookup's answer off the invoking
+    working directory, with the case confirming each.
+
+    The candidate space is Git's own `rev-parse --local-env-vars` report widened
+    by `GIT_DISCOVERY_CANDIDATES`; the oracle is Git's behaviour in ``pool``. A
+    candidate is confirmed where one value makes raw Git answer with another
+    repository, or gives the answer Git gives where no repository exists, while
+    an inert value of the same shape leaves the answer unchanged. A variable
+    that only widens discovery toward the repository genuinely there confirms
+    under neither outcome, which is why the claim leaves it out of the class.
+    """
+    reported = _ask_git(GIT_LOCAL_ENV_VARS_QUESTION, pool.main_checkout, {})
+    if reported[0] != 0 or not reported[1].split():
+        raise CaptureError(f"Git reports no repository-local variables: {reported}")
+    candidates = list(dict.fromkeys([*reported[1].split(), *GIT_DISCOVERY_CANDIDATES]))
+
+    unresolved = _ask_git(GIT_COMMON_DIR_QUESTION, pool.outside, {})
+    if unresolved[0] == 0:
+        raise CaptureError(
+            f"The pool's parent directory resolves a repository: {unresolved}"
+        )
+    shapes = pool.checkout_shapes
+    baselines = {
+        name: _ask_git(GIT_COMMON_DIR_QUESTION, directory, {})
+        for name, directory in shapes.items()
+    }
+    for name, answer in baselines.items():
+        if answer[0] != 0 or answer[1] != str(pool.bare):
+            raise CaptureError(f"Shape {name} does not resolve the pool: {answer}")
+
+    confirmed: list[GitLocationProbe] = []
+    for variable in candidates:
+        probe = _confirm_variable(variable, pool, shapes, baselines, unresolved)
+        if probe is not None:
+            confirmed.append(probe)
+    outcomes = {probe.outcome for probe in confirmed}
+    if outcomes != {MISDIRECTED_OUTCOME, UNRESOLVED_OUTCOME}:
+        raise CaptureError(
+            "Git confirms no variable of each redirection class; "
+            f"the probe found {sorted(outcomes)} over {sorted(p.variable for p in confirmed)}"
+        )
+    return confirmed
+
+
+def _confirm_variable(
+    variable: str,
+    pool: MailPool,
+    shapes: Mapping[str, Path],
+    baselines: Mapping[str, tuple[int, str, str]],
+    unresolved: tuple[int, str, str],
+) -> GitLocationProbe | None:
+    for shape, directory in shapes.items():
+        baseline = baselines[shape]
+        for redirecting, inert in _probe_value_pairs(directory, pool):
+            environment = {variable: redirecting}
+            answer = _ask_git(GIT_COMMON_DIR_QUESTION, directory, environment)
+            if answer == baseline:
+                continue
+            if answer[0] == 0 and answer[1] != baseline[1]:
+                outcome = MISDIRECTED_OUTCOME
+            elif answer == unresolved:
+                outcome = UNRESOLVED_OUTCOME
+            else:
+                continue
+            if (
+                _ask_git(GIT_COMMON_DIR_QUESTION, directory, {variable: inert})
+                != baseline
+            ):
+                continue
+            return GitLocationProbe(
+                variable=variable,
+                shape=shape,
+                working_directory=directory,
+                environment=environment,
+                outcome=outcome,
+            )
+    return None
+
+
+def requests_over_every_operation(module: ModuleType) -> list[dict[str, object]]:
+    """Exactly one request per source-owned operation.
+
+    A rule quantified over operations is read against every member, so a
+    program or fallback reached only from one operation's path still falsifies
+    it. Record kind is no dimension of those rules, so the send request is one
+    record rather than one per kind: the operation enumeration is what the
+    rules range over, and repeating a launch per kind buys no falsification.
+    """
+    operations = {operation.value for operation in module.Operation}
+    chosen: dict[str, dict[str, object]] = {}
+    for request in operation_requests(module):
+        name = cast(str, request[module.OPERATION_FIELD])
+        if name not in chosen and _minimal_request(module, request):
+            chosen[name] = request
+    if set(chosen) != operations:
+        raise CaptureError(
+            f"The generated requests cover {sorted(chosen)}, not every operation"
+        )
+    return [chosen[name] for name in sorted(chosen)]
+
+
+def _minimal_request(module: ModuleType, request: dict[str, object]) -> bool:
+    """Whether the request carries only its operation's required fields."""
+    operation = module.Operation(request[module.OPERATION_FIELD])
+    arguments = cast(dict[str, object], request[module.ARGUMENTS_FIELD])
+    return any(
+        set(arguments) == set(shape.required_fields)
+        for shape in module.OPERATION_CONTRACTS[operation].request_shapes
+    )
+
+
+def adapter_programs(module: ModuleType) -> frozenset[str]:
+    """The external programs the adapter's own command vectors name."""
+    return frozenset(
+        {prefix[0] for prefix in module.PUBLIC_AM_COMMAND_PREFIXES.values()}
+        | {module.PUBLIC_GIT_COMMON_DIR_COMMAND[0]}
+    )
+
+
+def run_cli_with_only_adapter_programs(
+    request: dict[str, object], *, project_key: str, store_response: str
+) -> CommandResultContract:
+    """Run the shipped CLI where only the adapter's own programs resolve.
+
+    Every program the adapter names gets a stub on an otherwise empty ``PATH``:
+    the repository lookup prints ``project_key`` and the store prints
+    ``store_response``. An operation that reached any other program would find
+    it absent and could not succeed.
+    """
+    module = _load()
+    programs = adapter_programs(module)
+    replies = {
+        module.PUBLIC_GIT_COMMON_DIR_COMMAND[0]: project_key,
+        module.AM_COMMAND: store_response,
+    }
+    missing = sorted(programs - set(replies))
+    if missing:
+        raise CaptureError(
+            f"The adapter names programs this probe stubs no reply for: {missing}"
+        )
+    with TemporaryDirectory() as raw:
+        stub_path = Path(raw)
+        for program in sorted(programs):
+            stub = stub_path / program
+            stub.write_text(
+                f"#!/bin/sh\nprintf '%s' {shlex.quote(replies[program])}\n",
+                encoding="utf-8",
+            )
+            stub.chmod(0o755)
+        completed = subprocess.run(
+            [sys.executable, str(AGENT_MAIL_PATH), module.CliOperation.RUN],
+            input=json.dumps(request),
+            env={"PATH": str(stub_path)},
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            timeout=CLI_TIMEOUT_SECONDS,
+            check=False,
+        )
+    return cast(
+        CommandResultContract,
+        module.CommandResult(completed.returncode, completed.stdout, completed.stderr),
+    )
+
+
+def store_program_names(module: ModuleType) -> frozenset[str]:
+    """The program name every captured usage line opens with.
+
+    The store declares its own program in the first token of each usage line,
+    which the usage-contract reader discards. Reading it here gives the
+    adapter's store constant an oracle outside the source it is checked
+    against, so renaming that constant to another program fails the read.
+    """
+    names: set[str] = set()
+    for operation in module.Operation:
+        capture = USAGE_FIXTURE_ROOT / f"{_command_fixture_name(module, operation)}.txt"
+        for line in capture.read_text(encoding="utf-8").splitlines():
+            stripped = line.strip()
+            if stripped.startswith(USAGE_LINE_PREFIX):
+                tokens = stripped[len(USAGE_LINE_PREFIX) :].split()
+                if not tokens:
+                    raise CaptureError(f"{capture} usage line names no program")
+                names.add(tokens[0])
+                break
+        else:
+            raise CaptureError(f"{capture} carries no usage line")
+    return frozenset(names)
+
+
+def store_project_fallback_variable(module: ModuleType) -> str:
+    """The environment variable the store CLI falls back to for its project.
+
+    The adapter never reads it; the compliance probe sets it as the fallback
+    the adapter must ignore.
+
+    Read from the captured usage text that declares it, so the probe's fallback
+    is the store's own statement rather than a token restated beside the
+    adapter, and a capture whose wording drifts fails the read.
+    """
+    capture = USAGE_FIXTURE_ROOT / (
+        f"{_command_fixture_name(module, module.Operation.INBOX)}.txt"
+    )
+    names = {
+        match.group(1)
+        for line in capture.read_text(encoding="utf-8").splitlines()
+        if line.lstrip().startswith(module.PROJECT_OPTION)
+        for match in [re.search(r"\b([A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+)\b", line)]
+        if match
+    }
+    if len(names) != 1:
+        raise CaptureError(
+            f"{capture} declares {len(names)} project fallback variables for "
+            f"{module.PROJECT_OPTION}; one is required"
+        )
+    return names.pop()
+
+
 def run_cli_without_executables(
     request: dict[str, object], *, fallback_project: str
 ) -> CommandResultContract:
@@ -822,7 +1257,10 @@ def run_cli_without_executables(
         completed = subprocess.run(
             [sys.executable, str(AGENT_MAIL_PATH), module.CliOperation.RUN],
             input=json.dumps(request),
-            env={"PATH": empty_path, STORE_PROJECT_ENV: fallback_project},
+            env={
+                "PATH": empty_path,
+                store_project_fallback_variable(module): fallback_project,
+            },
             cwd=ROOT,
             capture_output=True,
             text=True,

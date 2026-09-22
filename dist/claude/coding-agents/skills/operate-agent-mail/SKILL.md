@@ -1,18 +1,18 @@
 ---
 name: operate-agent-mail
 description: >-
-  ALWAYS invoke this skill when a workflow registers a mail identity, sends a message record, reads an inbox, or records a receipt in the agent-mail store. NEVER construct an `am` command or derive the mail project key from Git state when this capability is available.
+  ALWAYS invoke this skill when a workflow registers a mail identity, sends a message record, reads an inbox, or records a receipt in the agent-mail store. NEVER construct an `am` command or derive the mail project key without this skill.
 argument-hint: "<operation or JSON request>"
 allowed-tools: Bash(printf:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/agent_mail.py":*)
 ---
 
 <objective>
-A versioned JSON agent-mail operation result — a registered identity, a delivered record with its store-assigned id, the recipient's records, or a receipt — under the project key the SPX diagnosis names, with every store identity preserved verbatim.
+A versioned JSON agent-mail operation result — a registered identity, a delivered record with its store-assigned id, the recipient's records, or a receipt — under the project key the repository names, or that key alone as an unversioned `projectKey` answer, with every store identity preserved verbatim.
 </objective>
 
 <operation_surface>
 
-The source-owned operation names are:
+The source-owned request operations, each submitted as a JSON request to `run`:
 
 | Operation  | Arguments                                                | Result data                                  |
 | ---------- | -------------------------------------------------------- | -------------------------------------------- |
@@ -21,38 +21,50 @@ The source-owned operation names are:
 | `inbox`    | `agent`; optional `unreadOnly`, `includeBodies`, `limit` | `records` read back for that recipient       |
 | `receipt`  | `agent`, `messageId`                                     | the `agent` and `messageId` the store marked |
 
-A `record` carries exactly `schema` (`1`), `kind`, `correlation`, `sender`, `recipient`, `subject`, `body`, and `ackRequired`; the store assigns `id` on delivery. The kinds a sender writes are `order`, `fact`, `question`, `answer`, `delegation-request`, and the four terminal handbacks `delegation-completed`, `delegation-failed`, `delegation-rejected`, and `delegation-unavailable`. A read-back record whose subject carries no kind prefix reports `unclassified`. The adapter maps `correlation` onto the store's thread, `kind` onto a subject prefix, and `ackRequired` onto the store's acknowledgement requirement, and reads each back; a store limit never shapes the record. `recipient` names one agent: a value carrying the store's `,` separator is rejected with `invalid-schema` before any command runs. A row another sender wrote reads back rather than failing the inbox read: without a thread it reads as `unclassified` with `correlation: null` and its subject verbatim, and an acknowledgement status other than `pending` or `acked` reads as `ackRequired: false`; a row without the store's `id`, `from`, or `subject` key is a malformed store response and fails the read as `invalid-schema`.
+One further form answers outside the request shape, so it takes no JSON request and the request-building steps of `<workflow>` do not reach it. A `run` request naming it is rejected as `operation-unavailable`; its command is in `<invocation_forms>`.
 
-The project key is the pool's main checkout path from `spx diagnose --format json`'s `worktree-pool` record, so every worktree of one pool resolves one mail project. The adapter runs that diagnosis itself before every operation and reads no Git state, working directory, or environment variable in its place.
+| CLI form      | Arguments | Result data  |
+| ------------- | --------- | ------------ |
+| `project-key` | none      | `projectKey` |
+
+The record and its delivery rules:
+
+- **Fields.** A `record` carries exactly `schema` (`1`), `kind`, `correlation`, `sender`, `recipient`, `subject`, `body`, and `ackRequired`; the store assigns `id` on delivery.
+- **Kinds a sender writes.** `order`, `fact`, `question`, `answer`, `delegation-request`, and the four terminal handbacks `delegation-completed`, `delegation-failed`, `delegation-rejected`, and `delegation-unavailable`. On read-back the adapter reports each record's kind as one of those or as `unclassified`, and `subject` carries the text to use in either case. Never derive a kind from a subject: the adapter owns the prefix it writes and the conditions a row meets to classify, and a row missing any of them reads as `unclassified` with its subject verbatim.
+- **Mapping.** The adapter maps `correlation` onto the store's thread, `kind` onto a subject prefix, and `ackRequired` onto the store's acknowledgement requirement, and reads each back; a store limit never shapes the record.
+- **One recipient.** `recipient` names one agent. A value carrying the store's `,` separator is rejected with `invalid-schema` before any command runs.
+- **Foreign rows.** A row another sender wrote reads back rather than failing the inbox read: without a thread it reads with `correlation: null`, classified by the kind rule above, and an acknowledgement status other than `pending` or `acked` reads as `ackRequired: false`. A row without the store's `id`, `from`, or `subject` key is a malformed store response and fails the read as `invalid-schema`.
+
+The project key is the repository's own common Git directory, so every worktree of one pool, the pool's bare repository, and the pool's main checkout resolve one mail project, and no checkout's deletion removes it. The adapter reads that directory for its own working directory before every operation and reads no working directory, environment variable, or parent path in its place. The lookup drops every variable that could make Git answer from something other than that directory — one naming a repository and one bounding where Git may look are known cases, not the only ones — and carries every other through, so a repository reachable only across a mount boundary still resolves. A working directory that is no repository yields `repository-unresolved`.
 
 </operation_surface>
 
 <workflow>
 
-1. Interpret `$ARGUMENTS` as one operation with its arguments, or as a complete JSON request. When it is empty, run nothing and report to the invoking workflow that one operation from `<operation_surface>` is required; the adapter has no default operation.
+1. Interpret `$ARGUMENTS` as one request operation with its arguments, or as a complete JSON request. When it is empty, run nothing and report that one operation from `<operation_surface>` is required; the adapter has no default operation. When it names `project-key`, take the CLI form in `<invocation_forms>` and stop; steps 2 to 4 govern request operations only.
 2. Build this source-owned request shape and set only the arguments the operation accepts:
 
-```json
-{
-  "schemaVersion": 1,
-  "operation": "send",
-  "arguments": {
-    "record": {
-      "schema": 1,
-      "kind": "fact",
-      "correlation": "change-88-exec",
-      "sender": "AmberGull",
-      "recipient": "PeachFrog",
-      "subject": "changeset pushed",
-      "body": "Full commit SHA and branch, verbatim.",
-      "ackRequired": true
-    }
-  }
-}
-```
+   ```json
+   {
+     "schemaVersion": 1,
+     "operation": "send",
+     "arguments": {
+       "record": {
+         "schema": 1,
+         "kind": "fact",
+         "correlation": "change-88-exec",
+         "sender": "AmberGull",
+         "recipient": "PeachFrog",
+         "subject": "changeset pushed",
+         "body": "Full commit SHA and branch, verbatim.",
+         "ackRequired": true
+       }
+     }
+   }
+   ```
 
 3. Submit the request over stdin in one of the forms in `<invocation_forms>`.
-4. Accept only `status: "succeeded"`. Preserve the complete versioned result: `commandExitCode`, `projectKey`, the store's `response`, and `data`. A delivered message is the `record` in `data` carrying its store-assigned `id`. Stop with the exact `status` and `detail` on `command-failed`, `invalid-schema`, `store-unavailable`, `diagnosis-unavailable`, or `operation-unavailable`; none of them admits a fallback command, key, or store.
+4. For a `run` request, accept only `status: "succeeded"`, which exits zero and carries exactly seven fields, every one of them preserved: `schemaVersion`, `operation`, `status`, `commandExitCode`, `projectKey`, the store's `response`, and `data`. A delivered message is the `record` in `data` carrying its store-assigned `id`. A request the adapter read and rejected answers instead with `schemaVersion`, `operation` — the requested operation, or `unknown` where the request named none — `status` (`command-failed`, `invalid-schema`, `store-unavailable`, `repository-unresolved`, or `operation-unavailable`), `detail`, and `commandExitCode` where a store command returned an exit code, and exits 1. Stdin the adapter cannot read as a JSON object is rejected before any operation is read, so that answer carries `status: "invalid-schema"` and `detail` alone — no `schemaVersion`, no `operation`, no `commandExitCode` — and exits 2; read it by those two fields rather than as a versioned result. Stop on the exact `status` and `detail` of every failing form; none of them admits a fallback command, key, or store. The `project-key` operation answers in its own shape, stated with its form below.
 
 </workflow>
 
@@ -78,15 +90,19 @@ To read the project key alone:
 python3 "${CLAUDE_SKILL_DIR}/scripts/agent_mail.py" project-key
 ```
 
+This form answers `{"projectKey": "<absolute path>"}` and exits zero, or `{"status": "repository-unresolved", "detail": "<reason>"}` and exits non-zero. It carries no `schemaVersion`, `status` on success, `commandExitCode`, `response`, or `data`, because it runs no store command.
+
 </invocation_forms>
 
 <constraints>
 
-- ALWAYS execute the bundled script through `${CLAUDE_SKILL_DIR}`; never import it from another filesystem location or manufacture a path outside this skill directory, because that expression is the only one that resolves to this skill's directory under the Bash tool, and a manufactured path breaks silently when the plugin cache moves.
+- ALWAYS execute the bundled script through `${CLAUDE_SKILL_DIR}` — the skill loader substitutes that expression into this body before the command runs, so only this spelling reaches the shell as this skill's real directory.
+- NEVER import the script from another filesystem location or manufacture a path outside this skill directory — the substituted expression is the only route that resolves.
+- NEVER copy `${CLAUDE_SKILL_DIR}` into an agent definition or export it — it is no shell variable, so outside this body it yields an empty prefix rather than an error.
 - ALWAYS preserve store identities verbatim: message ids, thread ids, agent names, and timestamps, because downstream skills index on the literal and the operator compares it against the store.
 - ALWAYS supply arguments under the field names in `<operation_surface>` and leave the mapping to the adapter: it alone turns a field into an `am` option or a store field and reads it back, and it rejects an argument outside the operation's shape as `invalid-schema` rather than dropping it.
 - NEVER invoke raw `am` commands, `am` command help, or read the store's database.
-- NEVER derive the project key from Git state, the working directory, or an environment variable; the diagnosis is its only source.
+- NEVER derive the project key outside the adapter; it reads the key from the repository, and no working directory, environment variable, or parent path stands in for it.
 - NEVER treat a receipt as agreement, ownership, authorization, or the acknowledgement of a proposal; it records only that the recipient read one message.
 - NEVER report or relay the registration token the store returns; the adapter removes it from every result.
 
@@ -94,15 +110,31 @@ python3 "${CLAUDE_SKILL_DIR}/scripts/agent_mail.py" project-key
 
 <testing>
 
-The bundled adapter is covered by tests over generated request, record, and diagnosis domains with controlled `CommandRunner` implementations at the store boundary: every registry operation's argument vector is read against the store CLI's captured usage text under the diagnosed project key; generated records round-trip through the store field mapping; repeated and conflicting terminal handbacks reduce to one result; the CLI run where no executable resolves returns `diagnosis-unavailable` with no fallback; and a captured registration response reaches the result without its token.
+The bundled adapter is covered over generated request, record, and repository-lookup domains, with controlled `CommandRunner` implementations at the command boundary and real repositories behind the repository lookup:
+
+- every registry operation's argument vector is read against the store CLI's captured usage text under the resolved project key;
+- a real pool's linked worktree, bare repository, main checkout, and a symlinked route to one of them each resolve one key, while the pool's parent directory resolves none;
+- every environment variable Git's own behaviour confirms moves the answer off the working directory — by answering with another repository, or with none — leaves the key unchanged, each alone and all together, read from the pool shape whose lookup Git confirmed it moves, while the parent directory still resolves none;
+- generated records round-trip through the store field mapping;
+- an `order`, its `delegation-request`, and its one correlated terminal handback are delivered through this capability's own send path;
+- repeated and conflicting terminal handbacks reduce to one result;
+- the CLI run where no executable resolves returns `repository-unresolved` with no fallback, for every operation;
+- every operation completes where only the adapter's own programs resolve;
+- a captured registration response reaches the result without its token.
 
 </testing>
 
+<failure_modes>
+
+**A store keyed under the earlier derivation read back as an empty inbox.** Claude read an inbox for an agent that had been registered before the project key moved from the pool's main checkout path to the repository's own common Git directory, and took the empty result as "no messages". The registrations and message records were still in the store under the previous key, so the read was addressing a different project. An inbox that reads back empty for an agent known to be registered is a key mismatch rather than an absent-message state: re-register the agent under the current key with `register` before reading an empty result as an answer. Carrying the earlier project's records into the current key is no operation in `<operation_surface>`; it is a store-side change, so report the mismatch and the two keys and leave that change to whoever operates the store.
+
+</failure_modes>
+
 <success_criteria>
 
-- A successful operation is established only when the bundled script exits zero and emits `schemaVersion: 1`, `status: "succeeded"`, `commandExitCode: 0`, `projectKey`, `response`, and `data` without exposing `am` command grammar.
-- Every record sent and read back carries the same `kind`, `correlation`, `sender`, `recipient`, `subject`, `body`, and `ackRequired`, plus the store-assigned `id` on read.
-- An absent store or an unavailable diagnosis yields its named unavailable result and no fallback.
+- A successful `run` operation is established only when the bundled script exits zero and emits exactly the seven fields of the versioned success result — `schemaVersion: 1`, `operation`, `status: "succeeded"`, `commandExitCode: 0`, `projectKey`, `response`, and `data` — without exposing `am` command grammar; a successful `project-key` operation is established only when it exits zero and emits `projectKey`.
+- Every record sent and read back carries the same `schema`, `kind`, `correlation`, `sender`, `recipient`, `subject`, `body`, and `ackRequired`, plus the store-assigned `id` on read.
+- An absent store or an unresolvable repository yields its named unavailable result and no fallback.
 - No registration result carries the store's registration token.
 
 </success_criteria>

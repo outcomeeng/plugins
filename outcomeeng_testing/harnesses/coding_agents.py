@@ -24,10 +24,8 @@ from outcomeeng_testing.generators.prowl_environment import (
 )
 from outcomeeng_testing.harnesses.agent_mail import (
     AbsentExecutableRunner,
-    CommandResultContract,
-    captured_diagnosis,
+    common_dir_reply,
     failed_command_result,
-    json_command_result,
     load_agent_mail,
     store_response_result,
     text_command_result,
@@ -280,10 +278,6 @@ def _mail_send_result(
     )
 
 
-def _diagnosis_reply(agent_mail: ModuleType) -> CommandResultContract:
-    return json_command_result(agent_mail, captured_diagnosis(agent_mail))
-
-
 def observe_mail_send(
     message: ModuleType, record: dict[str, object]
 ) -> dict[str, object]:
@@ -291,7 +285,7 @@ def observe_mail_send(
     agent_mail = load_agent_mail()
     runner = MailRecordingRunner(
         [
-            _diagnosis_reply(agent_mail),
+            common_dir_reply(agent_mail),
             store_response_result(agent_mail, agent_mail.Operation.SEND),
         ]
     )
@@ -305,7 +299,7 @@ def observe_rejected_mail_send(
     agent_mail = load_agent_mail()
     runner = MailRecordingRunner(
         [
-            _diagnosis_reply(agent_mail),
+            common_dir_reply(agent_mail),
             failed_command_result(
                 agent_mail, STORE_REJECTION_EXIT_CODE, STORE_REJECTION_DETAIL
             ),
@@ -314,12 +308,13 @@ def observe_rejected_mail_send(
     return _mail_send_result(message, record, runner)
 
 
-def observe_absent_diagnosis_mail_send(
+def observe_unresolved_repository_mail_send(
     message: ModuleType, record: dict[str, object]
 ) -> dict[str, object]:
-    """The capability's result when no diagnosis executable exists (failure simulation)."""
+    """The capability's result when the repository lookup's program is absent
+    (failure simulation)."""
     agent_mail = load_agent_mail()
-    runner = AbsentExecutableRunner(agent_mail.SPX_COMMAND, [])
+    runner = AbsentExecutableRunner(agent_mail.PUBLIC_GIT_COMMON_DIR_COMMAND[0], [])
     return _mail_send_result(message, record, runner)
 
 
@@ -331,7 +326,7 @@ def observe_unreadable_store_reply_mail_send(
     agent_mail = load_agent_mail()
     runner = MailRecordingRunner(
         [
-            _diagnosis_reply(agent_mail),
+            common_dir_reply(agent_mail),
             text_command_result(agent_mail, STORE_UNREADABLE_REPLY),
         ]
     )
@@ -348,7 +343,7 @@ def observe_unsupported_operation_mail_send(
         **message.mail_send_request(record),
         message.TRANSPORT_OPERATION_FIELD: unsupported_capability_operation(agent_mail),
     }
-    runner = MailRecordingRunner([_diagnosis_reply(agent_mail)])
+    runner = MailRecordingRunner([common_dir_reply(agent_mail)])
     return cast(dict[str, object], agent_mail.execute(request, runner))
 
 
@@ -358,7 +353,7 @@ def observe_absent_store_mail_send(
     """The capability's result when no store executable exists (failure simulation)."""
     agent_mail = load_agent_mail()
     runner = AbsentExecutableRunner(
-        agent_mail.AM_COMMAND, [_diagnosis_reply(agent_mail)]
+        agent_mail.AM_COMMAND, [common_dir_reply(agent_mail)]
     )
     return _mail_send_result(message, record, runner)
 

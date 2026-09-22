@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 from types import ModuleType
 from typing import cast
 
@@ -6,11 +7,13 @@ from outcomeeng_testing.harnesses.agent_mail import (
     AbsentExecutableRunner,
     CapturedInboxResponse,
     RecordingRunner,
-    diagnosis_seeded_absent_store_runner,
-    diagnosis_seeded_runner,
+    common_dir_seeded_absent_store_runner,
+    common_dir_seeded_runner,
     failed_command_result,
-    json_command_result,
+    git_location_variables,
     load_agent_mail,
+    mail_pool,
+    run_cli_project_key,
     run_inbox_row_mapping,
     run_operation_mapping,
     run_project_key_mapping,
@@ -109,13 +112,13 @@ def test_agent_mail_operation_mappings() -> None:
             )
 
         payload = store_response_payload(module, operation, arguments)
-        runner = diagnosis_seeded_runner(
+        runner = common_dir_seeded_runner(
             module, project_key, store_response_result(module, operation, arguments)
         )
         result = module.execute(request, runner)
 
         assert runner.calls == [
-            (module.PUBLIC_SPX_DIAGNOSE_COMMAND, None),
+            (module.PUBLIC_GIT_COMMON_DIR_COMMAND, None),
             (argv, None),
         ]
         assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
@@ -174,7 +177,7 @@ def test_inbox_rows_map_totally_onto_records() -> None:
         captured: CapturedInboxResponse,
     ) -> None:
         result = module.execute(
-            request, diagnosis_seeded_runner(module, project_key, captured.result)
+            request, common_dir_seeded_runner(module, project_key, captured.result)
         )
 
         assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED, (
@@ -219,7 +222,7 @@ def test_send_rejects_a_recipient_the_store_reads_as_several_agents() -> None:
         else:
             raise AssertionError("a fan-out recipient reached the store fields")
 
-        runner = diagnosis_seeded_runner(module, project_key)
+        runner = common_dir_seeded_runner(module, project_key)
         request = {
             module.SCHEMA_VERSION_FIELD: module.SCHEMA_VERSION,
             module.OPERATION_FIELD: module.Operation.SEND.value,
@@ -236,30 +239,116 @@ def test_project_key_mapping() -> None:
     def assert_key(
         module: ModuleType,
         shape: str,
-        payload: object,
+        output: str,
         expected_key: str | None,
         agent: str,
     ) -> None:
-        runner = RecordingRunner([json_command_result(module, payload)])
+        runner = RecordingRunner([text_command_result(module, output)])
         request = module.operation_request(module.Operation.INBOX, agent=agent)
         if expected_key is None:
             try:
-                module.project_key_from_diagnosis(payload)
+                module.project_key_from_common_dir(output)
             except module.AgentMailError as error:
-                assert error.status == module.ExecutionStatus.DIAGNOSIS_UNAVAILABLE
+                assert error.status == module.ExecutionStatus.REPOSITORY_UNRESOLVED
             else:
-                raise AssertionError(f"shape {shape} resolved a key without a path")
+                raise AssertionError(f"shape {shape} resolved a key from no directory")
             result = module.execute(request, runner)
             assert (
                 result[module.STATUS_FIELD]
-                == module.ExecutionStatus.DIAGNOSIS_UNAVAILABLE
+                == module.ExecutionStatus.REPOSITORY_UNRESOLVED
             )
-            assert runner.calls == [(module.PUBLIC_SPX_DIAGNOSE_COMMAND, None)]
+            assert runner.calls == [(module.PUBLIC_GIT_COMMON_DIR_COMMAND, None)]
         else:
-            assert module.project_key_from_diagnosis(payload) == expected_key
+            assert module.project_key_from_common_dir(output) == expected_key
             assert module.resolve_project_key(runner) == expected_key
 
     run_project_key_mapping(assert_key)
+
+
+def test_every_checkout_shape_of_one_pool_maps_to_one_project_key() -> None:
+    module = load_agent_mail()
+
+    with mail_pool() as pool:
+        shapes = (
+            pool.bare,
+            pool.main_checkout,
+            pool.linked_worktree,
+            pool.symlinked_worktree,
+        )
+        keys = {shape.name: run_cli_project_key(shape) for shape in shapes}
+        outside_code, outside_payload = run_cli_project_key(pool.outside)
+        expected_key = str(pool.bare)
+        symlinked_route = str(pool.symlinked_worktree)
+        physical_route = str(pool.linked_worktree)
+
+    assert len(keys) == len(shapes)
+    for name, (exit_code, payload) in keys.items():
+        assert exit_code == 0, (name, payload)
+        assert payload[module.PROJECT_KEY_FIELD] == expected_key, (name, payload)
+
+    # The symlinked route is a second spelling of one checkout, so a key that
+    # carried the path a caller typed would differ from its physical route's.
+    assert symlinked_route != physical_route
+
+    assert outside_code != 0
+    assert module.PROJECT_KEY_FIELD not in outside_payload
+    assert (
+        outside_payload[module.STATUS_FIELD]
+        == module.ExecutionStatus.REPOSITORY_UNRESOLVED
+    )
+
+
+def test_git_location_variables_leave_the_project_key_on_its_own_repository() -> None:
+    # The domain is the set Git itself confirms: every candidate Git's own
+    # `rev-parse --local-env-vars` reports, widened by its discovery-bounding
+    # variables, that redirects raw Git away from the working directory's own
+    # repository. Each confirmed case carries the working directory and the
+    # caller's environment that redirected raw Git, so the adapter is read
+    # against Git's behaviour rather than against its own removal list, and the
+    # complete set together follows as one further case.
+    module = load_agent_mail()
+    combined = "every-confirmed-variable"
+
+    with mail_pool() as pool:
+        confirmed = git_location_variables(pool)
+        cases: list[tuple[str, Path, dict[str, str]]] = [
+            (probe.variable, probe.working_directory, probe.environment)
+            for probe in confirmed
+        ]
+        every_variable = {
+            variable: value
+            for probe in confirmed
+            for variable, value in probe.environment.items()
+        }
+        cases += [
+            (combined, probe.working_directory, every_variable) for probe in confirmed
+        ]
+        inside = {
+            (case, str(directory)): run_cli_project_key(directory, environment)
+            for case, directory, environment in cases
+        }
+        outside = {
+            case: run_cli_project_key(pool.outside, environment)
+            for case, _, environment in cases
+        }
+        expected_key = str(pool.bare)
+        redirections = {probe.variable: probe.outcome for probe in confirmed}
+
+    for case, (exit_code, payload) in inside.items():
+        assert exit_code == 0, (case, payload, redirections)
+        assert payload[module.PROJECT_KEY_FIELD] == expected_key, (case, payload)
+
+    for case, (exit_code, payload) in outside.items():
+        assert exit_code != 0, (case, payload)
+        assert module.PROJECT_KEY_FIELD not in payload, (case, payload)
+        assert (
+            payload[module.STATUS_FIELD] == module.ExecutionStatus.REPOSITORY_UNRESOLVED
+        ), (case, payload)
+
+    # Git confirmed each of these against its own answer, so a removal list that
+    # dropped one would leave the shape that confirmed it resolving the wrong
+    # repository or none at all.
+    assert set(redirections) <= set(module.GIT_LOCATION_VARIABLES), redirections
 
 
 def test_store_responses_map_to_results_without_rewriting() -> None:
@@ -276,7 +365,7 @@ def test_store_responses_map_to_results_without_rewriting() -> None:
 
         failed = module.execute(
             request,
-            diagnosis_seeded_runner(
+            common_dir_seeded_runner(
                 module, project_key, failed_command_result(module, exit_code, detail)
             ),
         )
@@ -286,7 +375,7 @@ def test_store_responses_map_to_results_without_rewriting() -> None:
 
         malformed = module.execute(
             request,
-            diagnosis_seeded_runner(
+            common_dir_seeded_runner(
                 module, project_key, text_command_result(module, malformed_text)
             ),
         )
@@ -301,15 +390,16 @@ def test_store_responses_map_to_results_without_rewriting() -> None:
         )
         assert json.loads(json.dumps(unsupported)) == unsupported
 
-        no_diagnosis = module.execute(
-            request, AbsentExecutableRunner(module.SPX_COMMAND)
+        no_repository = module.execute(
+            request,
+            AbsentExecutableRunner(module.PUBLIC_GIT_COMMON_DIR_COMMAND[0]),
         )
         assert (
-            no_diagnosis[module.STATUS_FIELD]
-            == module.ExecutionStatus.DIAGNOSIS_UNAVAILABLE
+            no_repository[module.STATUS_FIELD]
+            == module.ExecutionStatus.REPOSITORY_UNRESOLVED
         )
         no_store = module.execute(
-            request, diagnosis_seeded_absent_store_runner(module, project_key)
+            request, common_dir_seeded_absent_store_runner(module, project_key)
         )
         assert no_store[module.STATUS_FIELD] == module.ExecutionStatus.STORE_UNAVAILABLE
 
