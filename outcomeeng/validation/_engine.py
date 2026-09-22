@@ -175,21 +175,44 @@ def _write_timing_summary(
     sink.flush()
 
 
+class TimingBlockNotBounded(ValueError):
+    """The text handed to the row reader carries no complete timing block."""
+
+    def __init__(self, missing: str) -> None:
+        super().__init__(f"the timing block is not bounded: {missing!r} is absent")
+        self.missing = missing
+
+
 def timing_row_values(output: str) -> tuple[int, ...]:
     """Return the elapsed seconds the run's per-step timing rows carry, in order.
 
-    The rows are the lines the timing block holds — the text the banner opens
-    and the divider closes — so nothing else the run writes to the same sink is
-    read as a row: a step's status line ends in the same elapsed seconds, and a
-    failing step's excerpt carries the child's own text. The total and failed
-    rows follow the divider and are outside the block by the same rule.
+    The rows are the lines a complete timing block holds — the text between the
+    banner that opens it and the divider that closes it. Every other line the
+    engine writes lies outside those bounds, so none of them is read as a row:
+    a step's status line ends in the same elapsed seconds, and the total and
+    failed rows follow the divider.
+
+    Both bounds are required. Text carrying one without the other is refused
+    with `TimingBlockNotBounded` naming the absent bound rather than read:
+    without the banner the reader would answer the empty tuple, which reads as
+    a run that had no steps, and without the divider the block would run on
+    past the rows until the total's own seconds were read as a step's.
+
+    Each bound is found at its first occurrence, so the caller supplies the
+    run's own output: a captured child excerpt reproducing the banner line
+    verbatim would move the opening bound, and that line is the child's rather
+    than the engine's.
 
     Published beside `TIMING_SUMMARY_BANNER`, `TIMING_DIVIDER`, and
     `TIMING_ROW_FORM`, so no reader spells the block's bounds or the row's form
     a second time.
     """
-    _, _, after_banner = output.partition(f"{TIMING_SUMMARY_BANNER}\n")
-    block, _, _ = after_banner.partition(f"{TIMING_DIVIDER}\n")
+    _, banner, after_banner = output.partition(f"{TIMING_SUMMARY_BANNER}\n")
+    if not banner:
+        raise TimingBlockNotBounded(TIMING_SUMMARY_BANNER)
+    block, divider, _ = after_banner.partition(f"{TIMING_DIVIDER}\n")
+    if not divider:
+        raise TimingBlockNotBounded(TIMING_DIVIDER)
     return tuple(int(match.group(1)) for match in _TIMING_ROW_VALUE.finditer(block))
 
 

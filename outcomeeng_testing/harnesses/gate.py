@@ -52,7 +52,11 @@ from outcomeeng.validation import (
     run_recipe,
     terminate_process_group,
 )
-from outcomeeng.validation._engine import SKIP_REPORT_FILE_SUFFIX
+from outcomeeng.validation._engine import (
+    SKIP_REPORT_FILE_SUFFIX,
+    TIMING_DIVIDER,
+    TIMING_SUMMARY_BANNER,
+)
 from outcomeeng.validation._git import GitCommandResult
 from outcomeeng.validation.agent_disable import (
     DISABLE_CLAUDE_ENV,
@@ -1083,6 +1087,41 @@ def skip_report_observation(
         recording_steps=sum(
             1 for call in spawner.spawn_calls if _skip_report_destination(call)
         ),
+    )
+
+
+@dataclass(frozen=True)
+class TimingBlockObservation:
+    """One real run's output, and that output with one block bound withheld.
+
+    Every line in all three texts is a line the engine itself wrote; the two
+    malformed texts differ only by the removal of one bound. The observation
+    judges nothing about what a reader does with them.
+    """
+
+    output: str
+    without_banner: str
+    without_divider: str
+    step_count: int
+
+
+def _output_without_line(output: str, line: str) -> str:
+    return "".join(f"{item}\n" for item in output.splitlines() if item != line)
+
+
+def timing_block_observation() -> TimingBlockObservation:
+    """Run a step list, then withhold each of the timing block's own bounds."""
+
+    steps = three_no_op_steps()
+    spawner = RecordingSpawner(exit_codes=[PASS_EXIT_CODE] * len(steps))
+    sink = io.StringIO()
+    run(spawner=spawner, sink=sink, steps=steps)
+    output = sink.getvalue()
+    return TimingBlockObservation(
+        output=output,
+        without_banner=_output_without_line(output, TIMING_SUMMARY_BANNER),
+        without_divider=_output_without_line(output, TIMING_DIVIDER),
+        step_count=len(steps),
     )
 
 

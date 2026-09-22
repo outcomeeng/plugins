@@ -8,6 +8,14 @@ from pathlib import Path
 import math
 import signal
 
+import pytest
+
+from outcomeeng.validation._engine import (
+    TIMING_DIVIDER,
+    TIMING_SUMMARY_BANNER,
+    TimingBlockNotBounded,
+    timing_row_values,
+)
 from outcomeeng.validation._spawner import _restore_child_signal_mask
 from outcomeeng.validation.polling_enforcement import (
     SLEEP_ATTRIBUTE,
@@ -62,6 +70,7 @@ from outcomeeng.validation.agent_disable import (
 from outcomeeng_testing.harnesses.gate import (
     HIGH_VOLUME_CHILD_OUTPUT,
     declared_skip_recording,
+    timing_block_observation,
     skip_report_observation,
     PASS_EXIT_CODE,
     PYTEST_TARGET_ARG,
@@ -250,6 +259,28 @@ def test_declared_skips_are_named_in_the_summary_and_after_the_status_line() -> 
         )
         assert line in observation.output
         assert observation.output.index(line) > status_at
+
+
+def test_the_row_reader_reads_every_step_row_of_a_complete_block() -> None:
+    observation = timing_block_observation()
+
+    values = timing_row_values(observation.output)
+
+    assert len(values) == observation.step_count
+    assert all(value >= 0 for value in values)
+
+
+def test_the_row_reader_refuses_a_block_missing_either_bound() -> None:
+    observation = timing_block_observation()
+
+    for text, missing in (
+        (observation.without_banner, TIMING_SUMMARY_BANNER),
+        (observation.without_divider, TIMING_DIVIDER),
+    ):
+        with pytest.raises(TimingBlockNotBounded) as raised:
+            timing_row_values(text)
+
+        assert raised.value.missing == missing
 
 
 def test_a_real_child_records_each_declared_skip_with_its_own_switch() -> None:
