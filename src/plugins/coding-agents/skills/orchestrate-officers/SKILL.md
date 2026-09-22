@@ -18,11 +18,11 @@ event boundary.
 Use only these composed capabilities, each invoked by name and used for the
 operations it owns:
 
-- Use skill `coding-agents:operate-herdr`. It owns inventory, read, bounded
+- {!% require_skill 'coding-agents:operate-herdr' %!} It owns inventory, read, bounded
   wait, prompt, start, relaunch, stop, and the other pane operations.
-- Use skill `coding-agents:operate-agent-mail`. It owns the mail project key,
+- {!% require_skill 'coding-agents:operate-agent-mail' %!} It owns the mail project key,
   registration, message records, inbox reads, and receipts.
-- Use skill `spec-tree:project-run-journal`. It owns read-only inspection of
+- {!% require_skill 'spec-tree:project-run-journal' %!} It owns read-only inspection of
   each sealed verification run whose complete identity a durable mail record
   supplies.
 
