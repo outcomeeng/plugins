@@ -65,3 +65,13 @@ Each rule is right about its own subject, and shipped content cannot satisfy bot
 **Evidence**: `instructions:skill-auditor` finding `f-006`, rule `abstract_testing_record`, against the skill surface committed at `b3b1b32a068e2e492567f2bb3e6f5ce148c6914d`; the `spec-tree:changes-reviewer` warning on `src/plugins/coding-agents/skills/operate-agent-mail/SKILL.md` line 107 that required removing the same address.
 
 **Recurrence**: the same rule returned as `f-008` against the surface committed at `b6ce460eab6ac1401eecdf652b1b631e868d4144`, this time proposing a remedy that keeps the address out — record which input each domain was exercised with and which result it must return. That remedy does not collide with the portability constraint, so it is a live option for the settlement above rather than a second contradiction; the reviewer's own reading, that the domain bullets already satisfy the script-testing rule, is the competing one.
+
+## A constraint's rationale rests on facts about sibling skills
+
+The verbatim-identity constraint in `src/plugins/coding-agents/skills/operate-agent-mail/SKILL.md` justifies itself with "downstream skills index on the literal and the operator compares it against the store", so the reason a value must not be transformed is stated as a fact about the skills that consume this one. `/skill-standards` `<skill_organization>` requires the one-way dependency to hold in the other direction: a skill's own rules stand without knowledge of its consumers.
+
+**Impact**: the rationale stops being true in a composition that has no such downstream reader, and a reader weighing whether the rule still applies has to reason about surrounding skills rather than about the output.
+
+**Settlement condition**: the constraint states the property of the value itself — store identities are the store's own lookup keys, so any transformation makes the value address nothing — and the skill surface passes the typed skill auditor.
+
+**Evidence**: `instructions:skill-auditor` finding `f-008`, rule `caller_independence`, against the surface committed at `dce2ced56b7bceefe265f668d0d458a9a0bbecc0`; the line predates this changeset, which reached the file for three unrelated findings.
