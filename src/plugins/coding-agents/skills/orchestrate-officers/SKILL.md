@@ -7,8 +7,9 @@ allowed-tools: Read, {{! tool('use_skill') !}}, Bash(printf:*), Bash(python3 "${
 ---
 
 <objective>
-A supervised officer fleet whose Changes advance through bounded, durable,
-event-driven execution.
+The result of one routed supervision operation over an officer fleet, carrying
+that operation's validated capability results, the ledger change, and the next
+event boundary.
 
 </objective>
 
