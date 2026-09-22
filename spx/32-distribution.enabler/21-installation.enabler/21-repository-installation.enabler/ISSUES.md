@@ -234,41 +234,63 @@ since that is the event that leaves a stale owned definition in consumer homes.
 
 **Evidence**: raised by changeset review `2026-08-17_01-03-44-668-0ddd9fe582a1`.
 
-## The unresolved-target and unrefreshable record dispositions reach no evidence
+## The unrefreshable record disposition, and the rewrite half of the unresolved one, reach no evidence
 
 `plan_install_record_rewrite` in `outcomeeng/distribution/installation.py`
-reports a record whose plugin resolves to no target version with
-`UNRESOLVED_TARGET_RECORD_WARNING`, and a record whose target version has no
-cache directory with `UNREFRESHABLE_RECORD_WARNING`; both are blocking, and
-`21-installation-architecture.adr.md` declares both in prose. Every observer in
-`outcomeeng_testing/harnesses/installation.py` serves the target version for the
-whole catalog through `_serve_clone_versions` and creates a cache directory for
-every cataloged plugin, so neither branch is ever entered. Removing either
-warning, or rewriting such a record to a tree no session can load, leaves every
+reports a record whose target version has no cache directory with
+`UNREFRESHABLE_RECORD_WARNING`, and `unresolved_target_warnings` reports a
+record whose plugin resolves to no target version with
+`UNRESOLVED_TARGET_RECORD_WARNING`; both are blocking, and
+`21-installation-architecture.adr.md` declares both in prose.
+
+The unresolved disposition now reaches a declaration and a case in the shape
+where its domain and the rewrite's diverge: the scenario assertion linking
+`tests/test_repository_installation.scenario.l1.py` drives a clone whose
+manifest for one cataloged plugin carries no version, with that plugin
+recorded only in the invocation checkout, and asserts the report's warning,
+the absent target version, the empty off-target set, another plugin's record
+still moving, and the nonzero exit. Two gaps survive that case.
+
+The unrefreshable disposition is still never entered. Every observer in
+`outcomeeng_testing/harnesses/installation.py` serves the target version for
+the whole catalog through `_serve_clone_versions` and creates a cache
+directory for every cataloged plugin, so removing that warning leaves every
 linked test passing.
 
-Neither disposition reaches a tagged assertion either: the record-mapping
-assertion enumerates the out-of-catalog and out-of-scope warnings only, so the
-gap is a declaration gap before it is an evidence gap.
+The unresolved disposition's other half is likewise undriven: the new case
+records the unresolved plugin in the invocation checkout alone, so no case
+carries such a plugin recorded in another checkout, where the record is left
+unchanged rather than natively updated.
 
-**Resolution shape**: give the record-mapping assertion the two remaining
-dispositions, then drive each from the harness — a clone whose catalog names no
-source for one cataloged plugin, or whose manifest carries no version, for the
-unresolved target, and a served target version with no cache directory for the
-unrefreshable record — asserting that the named record is left unchanged while
-every other plugin's records still move.
+Neither disposition is a member of the record-mapping assertion's domain
+either: that assertion enumerates the out-of-catalog and out-of-scope
+warnings only, so for the mapping lane the gap is a declaration gap before it
+is an evidence gap.
 
-**Why separate**: each disposition needs a clone or cache shape no present
-observer builds, so the pair is a new evidence lane with its own harness
-support, and the assertion it verifies is a decision amendment rather than a
-predicate over the assertions this changeset carries.
+**Resolution shape**: give the record-mapping assertion both dispositions,
+then drive each from the harness — a served target version with no cache
+directory for the unrefreshable record, and a clone that cannot version a
+plugin another checkout records for the rewrite half of the unresolved one —
+asserting that the named record is left unchanged while every other plugin's
+records still move.
 
-**Settlement condition**: the record-mapping assertion names both dispositions
-and a case drives each with another plugin's records moving beside it.
+**Why separate**: each needs a clone or cache shape no present observer
+builds, so the pair is a new evidence lane with its own harness support, and
+carrying either into the mapping assertion's finite domain is a decision
+amendment rather than a predicate over the assertions this changeset carries.
 
-**Evidence**: found by this changeset's sweep for states the spec declares whose
-linked evidence carries no invocation-checkout record; both warnings are
-introduced by this changeset and are referenced only at their emission site.
+**Settlement condition**: the record-mapping assertion names both
+dispositions and a case drives each with another plugin's records moving
+beside it.
+
+**Evidence**: found by this changeset's sweep for states the spec declares
+whose linked evidence carries no invocation-checkout record; both warnings
+are introduced by this changeset. The invocation-checkout reach of the
+unresolved disposition was a defect rather than a gap — the disposition was
+computed over the rewrite candidates alone, so a run whose only record of an
+unresolvable plugin belonged to the invocation checkout exited zero — and is
+repaired in this changeset against the architecture decision's exit-code and
+coverage assertions.
 
 ## The listing-defect evidence never pairs a defect with an invocation-checkout record
 
