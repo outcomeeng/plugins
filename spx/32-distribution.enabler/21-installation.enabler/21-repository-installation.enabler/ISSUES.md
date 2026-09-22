@@ -400,3 +400,80 @@ predicate that reads the verdict.
 while the 2026-09-22T12:40:10Z conversation comment carried three unaddressed
 DEBT findings. Both were found by reading the surfaces against what they
 claimed, not by any gate.
+
+## Codex 0.155.1 poisons a fresh home during the marketplace listing, then refuses it
+
+`codex plugin marketplace list --json` against a `CODEX_HOME` that is a freshly
+created empty directory succeeds and writes `tmp/arg0` into that home, writing no
+`config.toml`. The next command against the same home is then refused, because the
+home now exists, holds no `config.toml`, and holds more than provisioned agent
+definitions — the state the listing itself produced.
+
+The defect is the CLI's and the exposure is every caller that runs those two
+commands in that order against a fresh home. This repository's persistent preflight
+is one such caller, not the subject: it builds four inspections in a fixed tuple —
+Claude marketplace inspect, Claude plugin inspect, Codex marketplace inspect, Codex
+plugin inspect — and the third poisons the home the fourth is refused for.
+
+**Reproduction**, two commands and a control, needing nothing from this repository.
+With `codex-cli 0.155.1`:
+
+```bash
+home="$(mktemp -d)"
+CODEX_HOME="$home" codex plugin marketplace list --json   # exit 0; writes tmp/arg0
+CODEX_HOME="$home" codex plugin list --marketplace outcomeeng --json
+```
+
+The second command prints:
+
+```text
+codex: CODEX_HOME is not a Codex home: it exists, holds no config.toml, and holds more than provisioned agent definitions; got <home>. Set CODEX_HOME to an existing Codex home, an empty or freshly provisioned directory, or a path Codex may create, then retry.
+```
+
+The control — the same `plugin list` as the first command against a pristine
+`mktemp -d` home — exits zero with empty `installed` and `available` sets, so the
+poisoning is what the marketplace listing leaves behind rather than a property of
+the second command.
+
+**What this blocks here**: `test_real_agent_clis_bootstrap_empty_persistent_state`
+in `tests/test_repository_installation.scenario.l3.py` fails at the fourth
+inspection with that exact rejection, three operations completed.
+
+**Settlement condition**: a Codex release whose marketplace listing does not leave a
+fresh home in a state its own next command refuses. There is no repair in this tree:
+the ordering is preflight's contract, the four inspections are reads that must
+precede planning, and the home is the operator's selected `CODEX_HOME`.
+
+**Evidence**: established against pull request 601. The failing run's own record
+carries the argv `codex plugin list --marketplace outcomeeng --json` and
+`completed_operations: 3`. The inspection tuple is identical in order, agent, and
+operation at the base `dca260ec8ef9a19803096b028be21dd700c05fa5`, so neither the
+prefix nor its membership moved; position four's argv is byte-identical to the
+retired constant's. The load waiter released `ready` before the run with normalized
+averages 0.17, 0.47 and 0.91 of capacity, so the failure is not starvation. This
+lane's earlier recorded Codex defect was observed at `0.147.0`, eight minor versions
+below the version that produces this one.
+
+## Subscription discovery reports the Codex credential writer cannot preserve the saved-login link
+
+`test_fresh_codex_session_discovers_every_placed_canonical_subagent` fails before any
+agent process runs: `_check_write_through` in
+`outcomeeng_testing/harnesses/discovery_auth.py` raises
+`DiscoveryAuthenticationError` — the CLI credential writer cannot preserve the
+saved-login link, so subscription discovery is unsupported by this CLI. The
+compatibility preflight is doing its declared job: it fabricates credentials in
+temporary homes and checks write-through before the real saved login is ever
+exposed, and it refused.
+
+**Settlement condition**: a Codex release whose credential writer preserves a linked
+`auth.json` through a refresh, or a decision here to select a different
+authentication mode for this evidence. The preflight is not to be relaxed — it is
+what keeps the operator's real saved login out of a CLI that would replace rather
+than update it.
+
+**Evidence**: established against pull request 601 with `codex-cli 0.155.1`. The
+raising module has zero changed lines in that changeset, so the failure lies wholly
+outside the diff. The Codex quota on the account this lane authenticates against is
+exhausted until 2026-09-28, which is separate from this failure — this one fails on
+the write-through check before authentication — but it is why the lane has been
+unreliable all week and why a green run here needs both conditions cleared.
