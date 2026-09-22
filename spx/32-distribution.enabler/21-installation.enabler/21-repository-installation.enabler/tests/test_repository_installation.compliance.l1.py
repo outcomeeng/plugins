@@ -785,9 +785,11 @@ def test_a_local_scope_record_for_the_checkout_suppresses_the_bootstrap_install(
     assert [(command.plugin, command.argv[-1], command.cwd) for command in updates] == [
         (SPEC_TREE_PLUGIN, CLAUDE_LOCAL_SCOPE, observation.plan.roots.checkout)
     ]
-    assert FIRST_INSTALL_WARNING.format(agent=Agent.CLAUDE.value) not in [
-        warning.message for warning in observation.plan.warnings
-    ]
+    assert FIRST_INSTALL_WARNING.format(
+        marketplace=observation.plan.roots.marketplace,
+        agent=Agent.CLAUDE.value,
+        plugin=SPEC_TREE_PLUGIN,
+    ) not in [warning.message for warning in observation.plan.warnings]
 
 
 def test_a_persistent_run_reads_the_listing_once_before_and_once_after_execution() -> (

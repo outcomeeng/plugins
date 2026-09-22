@@ -143,8 +143,8 @@ CODEX_PLUGIN_ENABLED_FIELD = "enabled"
 CODEX_PLUGIN_MARKETPLACE_FIELD = "marketplaceName"
 SPEC_TREE_PLUGIN = "spec-tree"
 FIRST_INSTALL_WARNING = (
-    "No outcomeeng plugins are installed for {agent}; installing only spec-tree. "
-    "You probably want to install more plugins."
+    "No {marketplace} plugins are installed for {agent}; installing only "
+    "{plugin}. You probably want to install more plugins."
 )
 UNREFRESHABLE_RECORD_WARNING = (
     "Claude Code records {plugin} at {scope} scope for {project_path}, but the "
@@ -180,6 +180,11 @@ UNREGISTERED_TARGET_WARNING = (
     "Claude Code records {plugin} at {scope} scope for {project_path} at version "
     "{version}, but this run registers the marketplace itself, so no target "
     "exists yet; the record is left unchanged and the next run refreshes it."
+)
+WITHHELD_TARGET_RECORD_WARNING = (
+    "Claude Code records {plugin} at {scope} scope for {project_path} at version "
+    "{version}, but this run withholds the registration a target would be read "
+    "from; the record is left unchanged."
 )
 PATHLESS_LISTING_ENTRY_WARNING = (
     "Claude Code lists {plugin} at {scope} scope with no project path; the entry "
@@ -846,15 +851,21 @@ class ClaudeInstallationAdapter:
             mode is InstallationMode.PERSISTENT and source_action is SourceAction.ADD
         )
         source = bootstrap_source if registering else str(roots.checkout)
-        commands: list[InstallationCommand] = []
-        if source is not None:
-            commands.extend(
-                _claude_source_commands(
-                    source_action, source, scope, roots, environment
-                )
-            )
+        if source is None:
+            # The registration this run would perform has no source, and every
+            # command below names the marketplace that registration would
+            # carry: the source commands, the bootstrap install and enable,
+            # and the native update of each record the invocation checkout
+            # holds. The whole Claude plan is therefore withheld and the
+            # caller reports it. The install-record rewrite and the closing
+            # listing name no marketplace, so the machine-wide refresh runs
+            # on without them.
+            return ()
+        commands: list[InstallationCommand] = list(
+            _claude_source_commands(source_action, source, scope, roots, environment)
+        )
         for plugin in plugins:
-            if plugin in recorded or not bootstrap or source is None:
+            if plugin in recorded or not bootstrap:
                 continue
             plugin_id = marketplace_plugin_identifier(plugin, roots.marketplace)
             commands.append(
@@ -1174,6 +1185,26 @@ def build_persistent_preflight(
     )
 
 
+def _unmoved_record_warnings(
+    records: Sequence[ClaudeInstallRecord],
+    template: str,
+) -> tuple[InstallationWarning, ...]:
+    """One blocking warning per install record the run leaves where it found it."""
+    return tuple(
+        InstallationWarning(
+            agent=Agent.CLAUDE,
+            message=template.format(
+                plugin=record.plugin,
+                scope=record.scope,
+                project_path=record.project_path,
+                version=record.version,
+            ),
+            blocking=True,
+        )
+        for record in records
+    )
+
+
 def build_persistent_installation_plan(
     preflight: PersistentPreflight,
     *,
@@ -1246,6 +1277,7 @@ def build_persistent_installation_plan(
         Agent.CLAUDE,
         preflight.claude_plugins,
         claude_installed,
+        marketplace,
     )
     codex_selection, codex_warning = _persistent_selection(
         Agent.CODEX,
@@ -1256,28 +1288,30 @@ def build_persistent_installation_plan(
             checkout=preflight.roots.checkout,
             marketplace=marketplace,
         ),
+        marketplace,
     )
     native_records, rewrite_records, record_warnings = claude_refresh_records(
         claude_install_records(claude_plugins_payload, marketplace),
         preflight.claude_plugins,
         preflight.roots.checkout,
     )
-    if claude_registered is None:
+    if claude_source is None:
+        # The withheld registration withholds the native update of every
+        # record the invocation checkout holds, because that command names
+        # the marketplace this run never registers; with no registration
+        # there is also no clone to read a target from, so no record moves.
         record_warnings = (
             *record_warnings,
-            *(
-                InstallationWarning(
-                    agent=Agent.CLAUDE,
-                    message=UNREGISTERED_TARGET_WARNING.format(
-                        plugin=record.plugin,
-                        scope=record.scope,
-                        project_path=record.project_path,
-                        version=record.version,
-                    ),
-                    blocking=True,
-                )
-                for record in rewrite_records
+            *_unmoved_record_warnings(
+                (*native_records, *rewrite_records), WITHHELD_TARGET_RECORD_WARNING
             ),
+        )
+        native_records = ()
+        rewrite_records = ()
+    elif claude_registered is None:
+        record_warnings = (
+            *record_warnings,
+            *_unmoved_record_warnings(rewrite_records, UNREGISTERED_TARGET_WARNING),
         )
         rewrite_records = ()
     settings_error = invocation_settings_error(preflight.roots.checkout)
@@ -1737,7 +1771,7 @@ def installed_plugin_names(
     checkout: Path,
     marketplace: str,
 ) -> frozenset[str]:
-    """Parse one agent's installed outcomeeng inventory for its selected scope.
+    """Parse one agent's installed inventory of the marketplace for its scope.
 
     Claude Code's inventory is every record at project or local scope for the
     invocation checkout, the two scopes persistent refresh updates natively,
@@ -1812,6 +1846,7 @@ def _persistent_selection(
     agent: Agent,
     catalog: tuple[str, ...],
     installed: frozenset[str],
+    marketplace: str,
 ) -> tuple[tuple[str, ...], InstallationWarning | None]:
     if SPEC_TREE_PLUGIN not in catalog:
         raise ValueError(
@@ -1822,12 +1857,16 @@ def _persistent_selection(
             (SPEC_TREE_PLUGIN,),
             InstallationWarning(
                 agent=agent,
-                message=FIRST_INSTALL_WARNING.format(agent=agent.value),
+                message=FIRST_INSTALL_WARNING.format(
+                    marketplace=marketplace,
+                    agent=agent.value,
+                    plugin=SPEC_TREE_PLUGIN,
+                ),
             ),
         )
     if SPEC_TREE_PLUGIN not in installed:
         raise ValueError(
-            f"invalid {agent.value} installed selection: nonempty outcomeeng "
+            f"invalid {agent.value} installed selection: nonempty {marketplace} "
             f"inventory must include `{SPEC_TREE_PLUGIN}`"
         )
     return (
@@ -3559,6 +3598,7 @@ __all__ = [
     "UNREADABLE_SETTINGS_WARNING",
     "WITHHELD_REGISTRATION_WARNING",
     "UNREGISTERED_TARGET_WARNING",
+    "WITHHELD_TARGET_RECORD_WARNING",
     "marketplace_plugin_identifier",
     "marketplace_plugin_name",
     "CODEX_EXEC_SUBCOMMAND",

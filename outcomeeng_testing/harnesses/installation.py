@@ -1465,10 +1465,19 @@ def observe_install_record_rewrite(
 
 @dataclass(frozen=True)
 class RegistryState:
-    """Whether each agent's marketplace registry carries the marketplace at run start."""
+    """One run's registry and invocation-checkout starting state.
+
+    `claude` and `codex` say whether each agent's marketplace registry
+    carries the marketplace at run start. `recorded` says whether the
+    invocation checkout itself holds an install record of the plugin, which
+    is what gives the Claude plan a native update to issue; the two
+    dimensions are independent, so a withheld registration meeting a
+    recorded invocation checkout is a case of its own.
+    """
 
     claude: bool
     codex: bool
+    recorded: bool = False
 
 
 @dataclass(frozen=True)
@@ -1490,7 +1499,10 @@ class UnreadableSourceObservation:
     """Persistent runs from an invocation checkout whose own settings cannot be read."""
 
     settings_path: Path
+    invocation_checkout: Path
     other_checkout: Path
+    listed_version: str
+    """The version every generated record carries before the run."""
     cases: tuple[UnreadableSourceCase, ...]
     """One case per caller-supplied registry state, in the order supplied."""
 
@@ -1503,11 +1515,11 @@ def observe_unreadable_source(
     The checkout's own settings are the source a bootstrap registration reads,
     and each agent's registry either carries the marketplace or does not, so
     the caller supplies the registry states the runs range over. Every run
-    faces the same malformed settings, the same invocation checkout recording
-    nothing, and the same other checkout recording `spec-tree` at an older
-    version, in its own disposable agent state; each run's plan, warnings,
-    commands, install-record document, target version, and exit code are the
-    observations.
+    faces the same malformed settings and the same other checkout recording
+    `spec-tree` at an older version, in its own disposable agent state; a
+    state that asks for it also records `spec-tree` for the invocation
+    checkout itself. Each run's plan, warnings, commands, install-record
+    document, target version, and exit code are the observations.
     """
     checkout = repository_root()
     with TemporaryDirectory() as temporary_directory:
@@ -1533,7 +1545,9 @@ def observe_unreadable_source(
         )
     return UnreadableSourceObservation(
         settings_path=settings,
+        invocation_checkout=mirror.resolve(),
         other_checkout=other.resolve(),
+        listed_version=LISTED_VERSION,
         cases=cases,
     )
 
@@ -1550,8 +1564,14 @@ def _unreadable_source_case(
     _prepare_agent_state(environment)
     preflight = build_persistent_preflight(mirror, environment)
     marketplace = preflight.roots.marketplace
-    records = generated_other_checkout_records(
-        marketplace, SPEC_TREE_PLUGIN, other, LISTED_VERSION
+    records = (
+        generated_bootstrap_records(
+            marketplace, SPEC_TREE_PLUGIN, mirror, other, LISTED_VERSION
+        )
+        if state.recorded
+        else generated_other_checkout_records(
+            marketplace, SPEC_TREE_PLUGIN, other, LISTED_VERSION
+        )
     )
     target_version = served_version(len(records))
     _serve_clone_versions(clone, (SPEC_TREE_PLUGIN,), target_version)

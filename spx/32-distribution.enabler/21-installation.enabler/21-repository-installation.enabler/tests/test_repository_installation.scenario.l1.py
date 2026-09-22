@@ -35,6 +35,7 @@ from outcomeeng_testing.generators.installation import (
     RecordDisposition,
 )
 from outcomeeng_testing.harnesses.installation import (
+    MARKETPLACE,
     RegistryState,
     UnreadableSourceCase,
     absent_from_every_agent,
@@ -51,6 +52,13 @@ from outcomeeng_testing.harnesses.installation import (
     observe_unpublished_plugin,
     observe_verification_recipe,
 )
+
+
+def _first_install_warning(agent: Agent) -> str:
+    """The bootstrap warning for one agent, named for this checkout's marketplace."""
+    return FIRST_INSTALL_WARNING.format(
+        marketplace=MARKETPLACE, agent=agent.value, plugin=SPEC_TREE_PLUGIN
+    )
 
 
 def test_verification_recipe_uses_pytest_discovery_for_the_node() -> None:
@@ -88,12 +96,12 @@ def test_first_persistent_run_installs_only_spec_tree_and_warns() -> None:
     assert document[ReportField.WARNINGS] == [
         {
             ReportField.AGENT: agent.value,
-            ReportField.MESSAGE: FIRST_INSTALL_WARNING.format(agent=agent.value),
+            ReportField.MESSAGE: _first_install_warning(agent),
         }
         for agent in Agent
     ]
     assert observation.stderr.splitlines() == [
-        f"warning: {FIRST_INSTALL_WARNING.format(agent=agent.value)}" for agent in Agent
+        f"warning: {_first_install_warning(agent)}" for agent in Agent
     ]
 
 
@@ -451,10 +459,20 @@ def test_a_bootstrap_run_reports_the_records_it_moved_and_the_records_it_did_not
 
 def test_unreadable_invocation_settings_stop_bootstrap_and_nothing_else() -> None:
     both_registered = RegistryState(claude=True, codex=True)
+    both_registered_with_record = RegistryState(claude=True, codex=True, recorded=True)
     codex_unregistered = RegistryState(claude=True, codex=False)
     claude_unregistered = RegistryState(claude=False, codex=True)
+    claude_unregistered_with_record = RegistryState(
+        claude=False, codex=True, recorded=True
+    )
     observation = observe_unreadable_source(
-        (both_registered, codex_unregistered, claude_unregistered)
+        (
+            both_registered,
+            both_registered_with_record,
+            codex_unregistered,
+            claude_unregistered,
+            claude_unregistered_with_record,
+        )
     )
 
     by_state = {case.state: case for case in observation.cases}
@@ -471,7 +489,7 @@ def test_unreadable_invocation_settings_stop_bootstrap_and_nothing_else() -> Non
         ]
         assert len(settings_warnings) == 1, state
         assert str(observation.settings_path) in settings_warnings[0].message, state
-        assert settings_warnings[0].blocking, state
+        assert settings_warnings[0].blocking is not state.recorded, state
         claude_operations = _agent_operations(case, Agent.CLAUDE)
         assert Operation.PLUGIN_INSTALL not in claude_operations, state
         assert Operation.PLUGIN_ENABLE not in claude_operations, state
@@ -487,40 +505,80 @@ def test_unreadable_invocation_settings_stop_bootstrap_and_nothing_else() -> Non
             )
             if not registered
         }, state
-        assert case.exit_code != 0, state
+        # Unreadable settings stop bootstrap and nothing else, so the run that
+        # stops nothing — every registry carrying the marketplace and the
+        # invocation checkout already recording the plugin — exits zero.
+        stopped = not (state.claude and state.codex and state.recorded)
+        assert (case.exit_code != 0) is stopped, state
 
-    for state in (both_registered, codex_unregistered):
+    for state in (both_registered, both_registered_with_record, codex_unregistered):
         case = by_state[state]
+        # A record the invocation checkout already holds is refreshed by its
+        # own native update even though the settings that would have carried a
+        # bootstrap cannot be read.
+        native_update = (Operation.PLUGIN_UPDATE,) if state.recorded else ()
         assert _agent_operations(case, Agent.CLAUDE) == (
             Operation.MARKETPLACE_INSPECT,
             Operation.PLUGIN_INSPECT,
             Operation.MARKETPLACE_REFRESH,
+            *native_update,
             Operation.MARKETPLACE_HEAD,
             Operation.PLUGIN_LIST,
+        ), state
+        assert [record.project_path for record in case.plan.claude_records] == (
+            [observation.invocation_checkout] if state.recorded else []
         ), state
         assert [record.project_path for record in case.plan.rewrite_records] == [
             observation.other_checkout
         ], state
-        assert (
-            _recorded_version(
-                case.record_file_after,
-                SPEC_TREE_PLUGIN,
-                marketplace,
-                observation.other_checkout,
-            )
-            == case.target_version
-        ), state
+        moved = (
+            (observation.invocation_checkout, observation.other_checkout)
+            if state.recorded
+            else (observation.other_checkout,)
+        )
+        for project_path in moved:
+            assert (
+                _recorded_version(
+                    case.record_file_after,
+                    SPEC_TREE_PLUGIN,
+                    marketplace,
+                    project_path,
+                )
+                == case.target_version
+            ), (state, project_path)
 
     assert _agent_operations(by_state[codex_unregistered], Agent.CODEX) == (
         Operation.MARKETPLACE_INSPECT,
         Operation.PLUGIN_INSPECT,
     )
-    assert _agent_operations(by_state[claude_unregistered], Agent.CLAUDE) == (
-        Operation.MARKETPLACE_INSPECT,
-        Operation.PLUGIN_INSPECT,
-        Operation.PLUGIN_LIST,
-    )
-    assert by_state[claude_unregistered].plan.rewrite_records == ()
+    for state in (claude_unregistered, claude_unregistered_with_record):
+        case = by_state[state]
+        # The closing listing names no marketplace, so the withheld Claude
+        # registration leaves it in place while withholding every command
+        # that names the marketplace — the native update of the invocation
+        # checkout's own record among them.
+        assert _agent_operations(case, Agent.CLAUDE) == (
+            Operation.MARKETPLACE_INSPECT,
+            Operation.PLUGIN_INSPECT,
+            Operation.PLUGIN_LIST,
+        ), state
+        assert case.plan.claude_records == (), state
+        assert case.plan.rewrite_records == (), state
+        moved = (
+            (observation.invocation_checkout, observation.other_checkout)
+            if state.recorded
+            else (observation.other_checkout,)
+        )
+        for project_path in moved:
+            assert (
+                _recorded_version(
+                    case.record_file_after,
+                    SPEC_TREE_PLUGIN,
+                    marketplace,
+                    project_path,
+                )
+                == observation.listed_version
+            ), (state, project_path)
 
 
 def _agent_operations(

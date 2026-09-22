@@ -14,11 +14,19 @@ from outcomeeng.distribution.installation import (
     SPEC_TREE_PLUGIN,
 )
 from outcomeeng_testing.harnesses.installation import (
+    MARKETPLACE,
     observe_codex_subagent_discovery,
     observe_real_first_install,
     observe_real_installation,
     observe_real_record_refresh,
 )
+
+
+def _first_install_warning(agent: Agent) -> str:
+    """The bootstrap warning for one agent, named for this checkout's marketplace."""
+    return FIRST_INSTALL_WARNING.format(
+        marketplace=MARKETPLACE, agent=agent.value, plugin=SPEC_TREE_PLUGIN
+    )
 
 
 def test_real_agent_clis_bootstrap_empty_persistent_state() -> None:
@@ -33,12 +41,12 @@ def test_real_agent_clis_bootstrap_empty_persistent_state() -> None:
     assert document[ReportField.WARNINGS] == [
         {
             ReportField.AGENT: agent.value,
-            ReportField.MESSAGE: FIRST_INSTALL_WARNING.format(agent=agent.value),
+            ReportField.MESSAGE: _first_install_warning(agent),
         }
         for agent in Agent
     ]
     assert observation.stderr.splitlines() == [
-        f"warning: {FIRST_INSTALL_WARNING.format(agent=agent.value)}" for agent in Agent
+        f"warning: {_first_install_warning(agent)}" for agent in Agent
     ]
     assert observation.claude_listing_exit_code == 0, observation.claude_listing_stderr
     assert observation.codex_listing_exit_code == 0, observation.codex_listing_stderr
