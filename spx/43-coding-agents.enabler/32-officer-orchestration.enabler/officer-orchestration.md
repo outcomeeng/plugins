@@ -18,6 +18,21 @@ The orchestrating session is an agent session that holds none of the five Roles 
 - Given Change `owner/changes#123` with empty mail records and empty verification-journal runs, when the ledger derivation entry point executes, then its versioned result has the complete minimum ledger shape with empty passes, heads, verdicts, decisions, failures, finding provenance, reads, running spend, and zero wall time [test](tests/test_ledger_derivation.scenario.l1.py)
 - Given Change `owner/changes#123` with schema version `2`, empty mail records, and empty verification-journal runs, when the ledger derivation entry point executes, then it exits 2 and returns its versioned invalid-input result with the required schema version in the detail [test](tests/test_ledger_derivation.scenario.l1.py)
 - Given the exact malformed JSON document `{` on stdin for the ledger derivation entry point, when the entry point executes, then it exits 2 and returns its versioned invalid-input result [test](tests/test_ledger_derivation.scenario.l1.py)
+- Given one mail record whose body carries a `ledger` object holding a pass, head, verdict, decision, failure, finding provenance, read, spend, and wall time, when the ledger derivation entry point executes, then each value enters its own ledger collection stamped with that record's mail provenance, the running spend carries the amount under its currency, and wall time carries the duration [test](tests/test_ledger_derivation.scenario.l1.py)
+
+### Mappings
+
+- Each cause in the derivation's declared read-cause set maps to one recorded read carrying that cause and its payload, stamped with its record's mail provenance [test](tests/test_ledger_derivation.mapping.l1.py)
+
+### Properties
+
+- A mail record whose body carries no `ledger` object contributes no entry, so the derived ledger is the one the same document derives carrying no record at all [test](tests/test_ledger_derivation.property.l1.py)
+- Running spend totals each currency's amounts independently, at the amounts' own decimal precision [test](tests/test_ledger_derivation.property.l1.py)
+- Wall time totals every event's duration across mail records and journal runs [test](tests/test_ledger_derivation.property.l1.py)
+- Journal runs sharing one run token contribute once: the derived ledger equals the ledger of the same runs with every repeated token dropped [test](tests/test_ledger_derivation.property.l1.py)
+- Every derived entry carries the provenance of the record it came from — the mail record's integer store identity, or the journal run's token [test](tests/test_ledger_derivation.property.l1.py)
+- A read whose cause lies outside the declared set refuses the document, naming the admitted causes and the position of the record that carried it [test](tests/test_ledger_derivation.property.l1.py)
+- An argument vector other than the declared derive operation refuses the document, naming the required operation and every token received [test](tests/test_ledger_derivation.property.l1.py)
 
 ### Compliance
 
@@ -39,4 +54,4 @@ The orchestrating session is an agent session that holds none of the five Roles 
 - ALWAYS: an agent holding a worktree is accountable for what it does there, and while that worktree is assigned to it, it owns it; the removal verb is among the acts open to it, because a removal there loses nothing another session holds and nothing Git cannot restore ([audit])
 - ALWAYS: accountability to the operator for the agreed outcome stays with the orchestrating session and never transfers, while responsibility for the work transfers to the officer holding the Change, so what that officer does inside its worktree is its own under the order's boundary and ceiling; the order therefore sets that boundary and ceiling and the orchestrating session then monitors, rather than approving each act ([audit])
 - ALWAYS: the delegation is bounded by isolation and the merge guardrails — each officer works in a worktree of its own, where a local act is contained and recoverable, and reaching the default branch is the one consequential act, standing behind the gates, audits, review, and readiness predicates ([audit])
-- ALWAYS: the launch sets the officer's permission posture; a Claude officer starts with the structured-question tool withheld through the harness's disallowed-tools argument, and the equivalent Codex mechanism is declared open and unresolved ([audit])
+- ALWAYS: the launch sets the officer's permission posture; a Claude officer starts with the structured-question tool withheld through the harness's disallowed-tools argument, while the Codex surface provides no argument that withholds that tool from a launched session, so a Codex officer carries no such posture and its structured-question boundary rests on its order alone ([audit])
