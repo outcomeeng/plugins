@@ -153,3 +153,49 @@ line 34; `python_modules` and `modules_naming_a_switch` in
 as the only non-Python reading. Raised as finding `F-003` of changeset review run
 `2026-09-22_14-07-16-429-851b4a371443`, filed there against `repository-installation.md`
 line 55.
+
+## The import-form domain names five forms and the reader carries a sixth
+
+Two surfaces declare the import forms the static index resolves, and both enumerate
+exactly five. The mapping assertion in `selected-gate.md` reads:
+
+> Every import statement form an executed test or test-infrastructure module can carry —
+> `import a.b`, `from a.b import c` naming a submodule, `from a.b import c` naming an
+> attribute, `from . import c`, and `from .c import d` — maps to the test-infrastructure
+> module names the static import index records for it
+
+and the testing verification in `21-test-infrastructure-reach.adr.md` reads:
+
+> ALWAYS: every import statement form — `import a.b`, `from a.b import c` naming a
+> submodule, `from a.b import c` naming an attribute, `from . import c`, and
+> `from .c import d` — resolves to the test-infrastructure module names it depends on
+
+Every one of the five is level 0 or level 1. `_resolve_import_from_base` in
+`outcomeeng/validation/infrastructure_index.py` carries two branches neither enumeration
+names: the multi-level ascend for `node.level >= 2`, reached by a form such as
+`from .. import c`, and its `ascend >= len(base_parts)` refusal for an import climbing
+above the package.
+
+**What the evidence reaches.** The test-evidence audit of this node states that the five
+declared forms are all reached, and that the two branches are reached by no linked test:
+`import_statement_cases()` in `outcomeeng_testing/generators/infrastructure_index.py`
+supplies only level 0 and level 1 forms, and no module under `outcomeeng_testing/`
+carries a relative import, so the real-checkout index in `repository_reach` never reaches
+them either.
+
+**Why this is not a coverage gap of the declaration.** Reality exceeds the declaration
+here rather than the evidence falling short of it. Supplying the generator case alone
+would make the evidence the only statement of a branch no assertion declares, which
+inverts the truth hierarchy from the declaring side.
+
+**Resolution shape**: widen both enumerations to name the multi-level relative form, then
+supply the generator case for it and for the refusal. The enumerations are a decision and
+a spec assertion, so the amendment is the operator's; the generator case follows it.
+
+**Settlement condition**: the two enumerations name the form, and
+`import_statement_cases()` supplies it along with an import climbing above its package.
+
+**Evidence**: the two quotations above against `_resolve_import_from_base`'s
+`node.level >= 2` and `ascend >= len(base_parts)` branches; and the test-evidence audit's
+finding `f-001`, WARNING, whose own words separate the two routes — "widening the declared
+domain is a spec change while supplying the case is a generator change".

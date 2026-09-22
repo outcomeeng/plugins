@@ -679,3 +679,51 @@ outcomeeng/changes#180.
 **Impact**: no artifact shows the Claude Code `sonnet` configuration at high effort, or any gpt-6 Codex configuration, loading and executing as a native subagent. A combined acceptance claim for either harness is therefore incomplete.
 
 **Settlement condition**: `just verify-native-profile-execution` retains passing `claude-executor`, `codex-standard`, `codex-strong`, `codex-executor`, and `codex-fast` rows.
+
+## The discovery-recipe case transcribes a path its own location supplies
+
+`tests/test_repository_installation.scenario.l1.py` builds the expected argv for the
+verification recipe with this node's tests-directory path written as a string literal,
+while the executing file's own location supplies that path. The oracle stays independent
+of the justfile, so the evidence holds and the recipe's own value is still read from the
+justfile rather than from the test; what the literal duplicates is a value the test can
+derive from itself.
+
+**Resolution shape**: derive the directory from the test file's own location, as the
+projection cases in the sibling compliance file do.
+
+**Why separate**: the file lies outside this changeset's diff, and the transcription is a
+value the test could derive rather than a name another module owns, so it is not an
+instance of the ownership sweep recorded above.
+
+**Evidence**: the node's test-evidence audit finding `f-008`, WARNING, against the
+source-ownership rule, whose message records that the evidence holds.
+
+## The real-process entry-point map is hand-maintained with no guard
+
+`REAL_PROCESS_PROJECTIONS` in `outcomeeng_testing/harnesses/installation.py` binds six
+entry-point names to the projections of the agents each starts, and
+`rows_without_their_projection` reports a row only when it names an entry point present
+in that mapping. The reading now covers every executed test file in the tree at the cells
+an acquired executable reaches, so a real-process row outside this node is no longer
+invisible. The map itself is still hand-written: a new entry point that starts a real
+agent process and never reaches the map makes every row calling it conform.
+
+No case asserts that the map holds every such entry point.
+`test_every_declared_projection_resolves_in_its_home` asserts only that each projection
+name resolves in its home module.
+
+**Resolution shape**: give the entry points a source-owned declaration of the agent each
+starts — the map derived from that declaration rather than maintained beside it — so an
+undeclared entry point is reported instead of silently conforming. Deriving the set by
+inspecting which functions name an agent executable was rejected: helpers that name an
+executable without starting a row's process would be reported, and the guard would fail
+on legitimate code.
+
+**Settlement condition**: `REAL_PROCESS_PROJECTIONS` is derived from a declaration each
+entry point carries, and a case drives an entry point that declares an agent and is
+absent from the map.
+
+**Evidence**: the implementation audit's debt finding
+`rule-subject-narrower-than-its-assertion` under run token
+`2026-09-22_15-12-00-805-5176b12acfb1`, whose file-set half this changeset closed.
