@@ -1,8 +1,8 @@
 # Plan Slice
 
 PROVIDES selection of the next executable observable slice from an implementation plan — a coherent set of changesets, spanning one or more merges, that delivers demonstrable business and user value
-SO THAT the per-node apply flow (`spx/21-spec-tree.enabler/65-apply.enabler/54-node-flow.enabler`)
-CAN run against a work queue scoped to a value-bearing increment rather than an ad hoc node selection
+SO THAT all implementation agents
+CAN run the per-node apply flow against a work queue scoped to a value-bearing increment rather than an ad hoc node selection
 
 ## Assertions
 
