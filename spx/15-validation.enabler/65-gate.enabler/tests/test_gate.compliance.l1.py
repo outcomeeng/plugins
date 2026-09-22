@@ -28,6 +28,7 @@ from outcomeeng.validation import (
     FMT_CHECK_ARGV,
     HOOK_SAFETY_ARGV,
     MYPY_ARGV,
+    ORCHESTRATOR_MODULE_NAMES,
     POST_KILL_REAP_ATTEMPTS,
     PURPOSE_CONFORMANCE,
     PYRIGHT_ARGV,
@@ -69,6 +70,9 @@ from outcomeeng.validation.agent_disable import (
 )
 from outcomeeng_testing.harnesses.gate import (
     HIGH_VOLUME_CHILD_OUTPUT,
+    OrchestratorModuleAbsent,
+    UnconfinedDisposableState,
+    confined_to,
     declared_skip_recording,
     timing_block_observation,
     skip_report_observation,
@@ -185,6 +189,14 @@ def test_subprocess_lives_only_in_the_production_spawner() -> None:
 
 def test_no_gate_module_polls_without_bound() -> None:
     assert unbounded_polling_sites(validation_package_modules()) == ()
+
+
+def test_an_absent_enumerated_orchestrator_module_is_refused(tmp_path: Path) -> None:
+    with pytest.raises(OrchestratorModuleAbsent) as raised:
+        validation_package_modules(package_dir=tmp_path)
+
+    assert raised.value.path.parent == tmp_path
+    assert raised.value.path.name in ORCHESTRATOR_MODULE_NAMES
 
 
 def test_a_while_true_sleep_is_reported(tmp_path: Path) -> None:
@@ -309,6 +321,26 @@ def test_a_real_child_records_nothing_when_no_destination_is_named() -> None:
     assert recording.exit_code == PASS_EXIT_CODE, recording.output
     assert recording.recorded_lines == ()
     assert not recording.destination.exists()
+
+
+def test_a_confined_recording_run_proceeds_inside_its_own_disposable_root() -> None:
+    recording = declared_skip_recording()
+
+    assert recording.exit_code == PASS_EXIT_CODE, recording.output
+    assert recording.destination.parent == recording.state_root
+    assert recording.child_directory == recording.state_root
+
+
+def test_an_unconfined_target_is_refused_by_name(tmp_path: Path) -> None:
+    root = tmp_path / "root"
+    root.mkdir()
+    outside = tmp_path / "outside"
+
+    with pytest.raises(UnconfinedDisposableState) as raised:
+        confined_to(root, outside)
+
+    assert raised.value.path == outside.resolve()
+    assert raised.value.root == root.resolve()
 
 
 def test_a_run_without_declared_skips_carries_no_skipped_entry() -> None:

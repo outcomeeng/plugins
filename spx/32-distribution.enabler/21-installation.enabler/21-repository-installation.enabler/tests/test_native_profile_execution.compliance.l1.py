@@ -10,19 +10,26 @@ from outcomeeng_testing.harnesses import (
 )
 from outcomeeng_testing.harnesses.installation import (
     NATIVE_PROFILE_RECIPE,
+    RecipeAbsent,
     native_profile_execution_recipe,
+    package_positioned_module,
     recipe_block,
+    repository_justfile_text,
 )
 from outcomeeng_testing.harnesses.native_profile_failures import native_profile_failure
 
 from pathlib import Path
 
+from outcomeeng.distribution.instruction_block import INSTRUCTIONS_CHECK_RECIPE
 from outcomeeng.distribution.native_profile_execution import native_profile_rows
 from outcomeeng.distribution.profiles import AGENT_PROFILES
-from outcomeeng.validation.agent_disable import AGENT_SWITCHES
+from outcomeeng.validation.agent_disable import AGENT_SWITCHES, codex_disabled_reason
 from outcomeeng.validation.agent_switch_enforcement import (
+    DECLARING_MODULE_LEAF,
     DECLARING_MODULE_NAME,
+    DECLARING_PACKAGE_NAME,
     NotAPythonSource,
+    UnresolvableRelativeImport,
     modules_naming_a_switch,
     modules_reading_the_switch_predicate,
 )
@@ -204,21 +211,77 @@ def test_the_recipe_block_carries_every_line_the_recipe_delimits() -> None:
     assert any(switch in block for switch in AGENT_SWITCHES)
 
 
-def test_a_module_importing_the_predicate_is_reported(tmp_path: Path) -> None:
-    reader = tmp_path / "reader.py"
-    reader.write_text(
-        f"from {DECLARING_MODULE_NAME} import codex_disabled_reason\n",
-        encoding="utf-8",
-    )
+@pytest.mark.parametrize(
+    "recipe",
+    (NATIVE_PROFILE_RECIPE, INSTRUCTIONS_CHECK_RECIPE),
+)
+def test_each_declaration_form_the_justfile_carries_is_found(recipe: str) -> None:
+    block = recipe_block(repository_justfile_text(), recipe).splitlines()
+
+    assert block[0].startswith(recipe)
+    assert block[1:]
+
+
+def test_a_recipe_the_text_does_not_declare_is_reported_absent() -> None:
+    one_recipe_only = f"{NATIVE_PROFILE_RECIPE}:\n    @only-line\n"
+
+    with pytest.raises(RecipeAbsent) as raised:
+        recipe_block(one_recipe_only, INSTRUCTIONS_CHECK_RECIPE)
+
+    assert raised.value.recipe == INSTRUCTIONS_CHECK_RECIPE
+
+
+@pytest.mark.parametrize(
+    ("statement", "package"),
+    (
+        (
+            f"from {DECLARING_MODULE_NAME} import {codex_disabled_reason.__name__}",
+            "",
+        ),
+        (f"import {DECLARING_MODULE_NAME}", ""),
+        (f"from {DECLARING_PACKAGE_NAME} import {DECLARING_MODULE_LEAF}", ""),
+        (f"from . import {DECLARING_MODULE_LEAF}", DECLARING_PACKAGE_NAME),
+        (
+            f"from .{DECLARING_MODULE_LEAF} import {codex_disabled_reason.__name__}",
+            DECLARING_PACKAGE_NAME,
+        ),
+    ),
+)
+def test_every_import_form_binding_the_declaration_is_reported(
+    statement: str,
+    package: str,
+    tmp_path: Path,
+) -> None:
+    reader = package_positioned_module(tmp_path, statement, package=package)
 
     assert modules_reading_the_switch_predicate((reader,)) == (reader,)
 
 
-def test_a_module_reading_no_predicate_is_not_reported(tmp_path: Path) -> None:
-    quiet = tmp_path / "quiet.py"
-    quiet.write_text("VALUE = 1\n", encoding="utf-8")
+@pytest.mark.parametrize(
+    "statement",
+    (
+        f"import {DECLARING_PACKAGE_NAME}",
+        f"{DECLARING_MODULE_LEAF} = 1",
+    ),
+)
+def test_a_module_binding_no_declaration_is_not_reported(
+    statement: str,
+    tmp_path: Path,
+) -> None:
+    quiet = package_positioned_module(tmp_path, statement)
 
     assert modules_reading_the_switch_predicate((quiet,)) == ()
+
+
+def test_an_unresolvable_relative_import_is_refused(tmp_path: Path) -> None:
+    unpositioned = package_positioned_module(
+        tmp_path, f"from . import {DECLARING_MODULE_LEAF}"
+    )
+
+    with pytest.raises(UnresolvableRelativeImport) as raised:
+        modules_reading_the_switch_predicate((unpositioned,))
+
+    assert raised.value.path == unpositioned
 
 
 def test_profile_execution_rows_cover_every_central_profile() -> None:

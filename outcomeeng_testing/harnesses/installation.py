@@ -18,7 +18,7 @@ from io import StringIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import ModuleType
-from typing import cast
+from typing import Final, cast
 
 import pytest
 from hypothesis import given, seed, settings
@@ -33,6 +33,9 @@ from outcomeeng.validation._steps import PYTHON_SOURCE_PATHS
 from outcomeeng.validation.infrastructure_index import SPEC_TREE_ROOT
 from outcomeeng.validation.agent_switch_enforcement import (
     ACQUIRED_EXECUTABLE_LEVELS,
+    INIT_MODULE_NAME,
+    MODULE_SEPARATOR,
+    PYTHON_SUFFIX,
 )
 from outcomeeng.validation.agent_disable import (
     claude_disabled_reason,
@@ -4591,6 +4594,33 @@ def real_process_row_files(node_tests: Path) -> tuple[Path, ...]:
 NATIVE_PROFILE_RECIPE = "verify-native-profile-execution"
 """The recipe whose only caller is release acceptance."""
 
+RECIPE_DECLARATION_TERMINATOR: Final = ":"
+"""What ends a recipe's declaration line, after its parameters when it takes any."""
+
+
+class RecipeAbsent(RuntimeError):
+    """The justfile text carries no declaration of the named recipe."""
+
+    def __init__(self, recipe: str) -> None:
+        super().__init__(f"recipe {recipe} is absent from the justfile")
+        self.recipe = recipe
+
+
+def _declares_recipe(line: str, recipe: str) -> bool:
+    """Whether the line declares this recipe, parameterless or parameter-bearing.
+
+    A declaration begins at column zero, and the name is followed by the
+    terminator that ends a parameterless declaration or by the whitespace before
+    its parameters. Requiring one of the two is what separates this recipe from a
+    longer one whose name begins with the same text.
+    """
+    if not line.startswith(recipe):
+        return False
+    remainder = line[len(recipe) :]
+    return remainder.startswith(RECIPE_DECLARATION_TERMINATOR) or (
+        remainder[:1].isspace()
+    )
+
 
 def recipe_block(justfile_text: str, recipe: str) -> str:
     """Return one recipe's declaration together with its complete body.
@@ -4601,10 +4631,14 @@ def recipe_block(justfile_text: str, recipe: str) -> str:
     see them all, and a reader that stopped at the first blank line would leave
     every later line of the same recipe unread. A pure function of the text it
     receives, so a rule's reach is verifiable against a supplied justfile.
+
+    A declaration is matched whether it is parameterless or parameter-bearing,
+    so absence is raised only for a recipe the text does not declare rather than
+    for one whose declaration takes the form the reader does not recognise.
     """
     lines = justfile_text.splitlines()
     for index, line in enumerate(lines):
-        if not line.startswith(f"{recipe} "):
+        if not _declares_recipe(line, recipe):
             continue
         body: list[str] = []
         for item in lines[index + 1 :]:
@@ -4615,12 +4649,37 @@ def recipe_block(justfile_text: str, recipe: str) -> str:
         while body and not body[-1].strip():
             body.pop()
         return "\n".join([line, *body])
-    raise RuntimeError(f"recipe {recipe} is absent from the justfile")
+    raise RecipeAbsent(recipe)
+
+
+def repository_justfile_text() -> str:
+    """Return the repository justfile's text, the subject a recipe rule reads."""
+    return (repository_root() / JUSTFILE_NAME).read_text(encoding="utf-8")
 
 
 def native_profile_execution_recipe() -> str:
     """Return the release-acceptance recipe's block from the repository justfile."""
-    return recipe_block(
-        (repository_root() / JUSTFILE_NAME).read_text(encoding="utf-8"),
-        NATIVE_PROFILE_RECIPE,
-    )
+    return recipe_block(repository_justfile_text(), NATIVE_PROFILE_RECIPE)
+
+
+SWITCH_READER_MODULE_NAME: Final = f"reader{PYTHON_SUFFIX}"
+"""The filename this harness gives each module it writes for a switch-rule scan."""
+
+
+def package_positioned_module(root: Path, source: str, *, package: str = "") -> Path:
+    """Write one module carrying `source` at `package`'s position under `root`.
+
+    A relative import resolves against the file's own package position, so a
+    module carrying one is written inside a package tree mirroring `package`,
+    each directory carrying the marker that makes it a package. With no package
+    the module sits directly under `root`, where no such position exists. The
+    written module is a stimulus and carries no expected result.
+    """
+    directory = root
+    for segment in package.split(MODULE_SEPARATOR) if package else []:
+        directory = directory / segment
+        directory.mkdir(exist_ok=True)
+        (directory / INIT_MODULE_NAME).write_text("", encoding="utf-8")
+    reader = directory / SWITCH_READER_MODULE_NAME
+    reader.write_text(f"{source}\n", encoding="utf-8")
+    return reader

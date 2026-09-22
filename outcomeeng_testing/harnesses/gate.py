@@ -33,6 +33,7 @@ from outcomeeng.validation import (
     SUMMARY_KEY_RECIPES,
     SUMMARY_KEY_STEPS,
     CHECK_RECIPES,
+    ORCHESTRATOR_MODULE_NAMES,
     POST_KILL_REAP_ATTEMPTS,
     PURPOSE_CONFORMANCE,
     PREFLIGHT_STEPS,
@@ -352,11 +353,37 @@ def expected_full_check_spawn_calls(
     return tuple(calls)
 
 
-def validation_package_modules() -> list[Path]:
-    """Return the gate orchestrator's own modules."""
+class OrchestratorModuleAbsent(RuntimeError):
+    """An enumerated orchestrator module is absent from the package directory."""
 
-    package_dir = Path(inspect.getfile(validation_pkg)).parent
-    return sorted(p for p in package_dir.glob("*.py") if p.name.startswith("_"))
+    def __init__(self, path: Path) -> None:
+        super().__init__(f"enumerated orchestrator module is absent: {path}")
+        self.path = path
+
+
+def validation_package_modules(*, package_dir: Path | None = None) -> list[Path]:
+    """Return the gate orchestrator's own modules, as the package enumerates them.
+
+    The subject is `ORCHESTRATOR_MODULE_NAMES`, the enumeration the orchestrator
+    publishes, so a rule over the orchestrator's source reads the same files its
+    governing decision names. A pattern over the package directory would read a
+    naming shape instead: it takes in every later module whose name matches and
+    leaves out a public orchestrator module the package adds. An enumerated
+    module the directory does not carry is refused by name rather than handed on
+    as a path nothing reads, because a subject short one file reads as a pass.
+
+    `package_dir` defaults to the installed orchestrator's own directory and is
+    the seam a linked test drives the refusal through.
+    """
+
+    directory = package_dir or Path(inspect.getfile(validation_pkg)).parent
+    modules: list[Path] = []
+    for name in ORCHESTRATOR_MODULE_NAMES:
+        path = directory / name
+        if not path.is_file():
+            raise OrchestratorModuleAbsent(path)
+        modules.append(path)
+    return sorted(modules)
 
 
 def validation_subprocess_importers() -> list[Path]:
@@ -382,14 +409,6 @@ def validation_subprocess_importers() -> list[Path]:
             ):
                 importers.append(module_path)
     return importers
-
-
-def validation_package_source_text() -> str:
-    """Return concatenated validation package module source text."""
-
-    return "\n".join(
-        path.read_text(encoding="utf-8") for path in validation_package_modules()
-    )
 
 
 def popen_calls_from(module_path: Path) -> list[ast.Call]:
@@ -1186,20 +1205,52 @@ def {running_row}() -> None:
 """The rows the recording child collects, each reading its own agent's predicate."""
 
 
+class UnconfinedDisposableState(RuntimeError):
+    """A path this harness would write to or run in lies outside its own root."""
+
+    def __init__(self, root: Path, path: Path) -> None:
+        super().__init__(f"{path} lies outside the disposable root {root}")
+        self.root = root
+        self.path = path
+
+
+def confined_to(root: Path, *paths: Path) -> None:
+    """Refuse unless every path is `root` itself or lies beneath it.
+
+    The recording child writes a report and runs with a working directory this
+    harness chooses, and it holds both disable switches in its environment. Both
+    paths are therefore confined to the disposable root the harness created, so
+    the child collects only the rows that run generated in that root and no row
+    of the repository it runs inside. The confinement is enforced here rather
+    than asserted elsewhere, and a path outside the root is refused by name.
+    """
+
+    resolved_root = root.resolve()
+    for path in paths:
+        candidate = path.resolve()
+        if candidate != resolved_root and resolved_root not in candidate.parents:
+            raise UnconfinedDisposableState(resolved_root, candidate)
+
+
 @dataclass(frozen=True)
 class DeclaredSkipRecording:
     """One real pytest child run over rows the switches declared optional.
 
     `switch_rows` and `other_rows` describe the stimulus the harness generated —
     which row reads which switch's predicate, and which rows no switch declared
-    — never an expected result. Every predicate over the recorded lines belongs
-    to the linked test.
+    — never an expected result. `state_root` and `child_directory` report where
+    the run wrote and where its child ran. Every predicate over the recorded
+    lines and those paths belongs to the linked test.
     """
 
     exit_code: int
     output: str
     destination: Path
     recorded_lines: tuple[str, ...]
+    state_root: Path
+    """The disposable root this run created and confined every path to."""
+    child_directory: Path
+    """The working directory the recording child ran in."""
     switch_rows: tuple[tuple[str, str], ...]
     """Each generated row's nodeid paired with the switch its body reads."""
     other_rows: tuple[str, ...]
@@ -1214,11 +1265,22 @@ def declared_skip_recording(*, name_destination: bool = True) -> DeclaredSkipRec
     the records read back are the ones a real gate step would leave. With
     `name_destination` false the child receives no destination option, which is
     how every step outside a reporting run is spawned.
+
+    Both switches are set for the child alone, over rows this run generates in
+    the disposable root it creates. `confined_to` refuses before the child
+    starts unless the report target and the child's working directory lie in
+    that root, so no selected live row of the surrounding repository is in
+    reach of the environment this run writes.
     """
 
     with TemporaryDirectory() as temporary_directory:
-        working = Path(temporary_directory)
-        module = working / DECLARED_SKIP_MODULE_NAME
+        state_root = Path(temporary_directory)
+        module = state_root / DECLARED_SKIP_MODULE_NAME
+        destination = (
+            state_root / f"{DECLARED_SKIP_MODULE_NAME}{SKIP_REPORT_FILE_SUFFIX}"
+        )
+        child_directory = state_root
+        confined_to(state_root, module, destination, child_directory)
         module.write_text(
             DECLARED_SKIP_MODULE_FORM.format(
                 codex_row=CODEX_ROW_NAME,
@@ -1231,7 +1293,6 @@ def declared_skip_recording(*, name_destination: bool = True) -> DeclaredSkipRec
             ),
             encoding="utf-8",
         )
-        destination = working / f"{DECLARED_SKIP_MODULE_NAME}{SKIP_REPORT_FILE_SUFFIX}"
         argv = [
             sys.executable,
             *PYTEST_MODULE_ARGS,
@@ -1245,7 +1306,7 @@ def declared_skip_recording(*, name_destination: bool = True) -> DeclaredSkipRec
             argv.append(f"{SKIP_REPORT_OPTION}={destination}")
         completed = subprocess.run(  # noqa: S603 — fixed argv around this interpreter.
             argv,
-            cwd=working,
+            cwd=child_directory,
             env={
                 **os.environ,
                 PYTHONPATH_ENV: str(REPOSITORY_ROOT),
@@ -1267,6 +1328,8 @@ def declared_skip_recording(*, name_destination: bool = True) -> DeclaredSkipRec
             output=f"{completed.stdout}{completed.stderr}",
             destination=destination,
             recorded_lines=recorded_lines,
+            state_root=state_root,
+            child_directory=child_directory,
             switch_rows=(
                 (
                     SKIPPED_ROW_ID_SHAPE.format(

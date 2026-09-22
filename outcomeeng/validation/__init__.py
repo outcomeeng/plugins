@@ -5,12 +5,15 @@ Public surface:
 - `Step` and `Recipe` — frozen dataclasses naming steps and recipe metadata
 - `VALIDATION_RECIPE`, `TEST_RECIPE`, `CHECK_RECIPES` — declared recipe surfaces
 - `*_ARGV` and output-label constants — source-owned values imported by tests
+- `ORCHESTRATOR_MODULE_NAMES` — the modules a rule over the orchestrator's source reads
 - `ProcessHandle`, `ProcessSpawner` — DI Protocols for subprocess creation
 - `ProductionSpawner` — real `subprocess.Popen` adapter
 - `run_recipe`, `run_check`, `run` — orchestration entry points
 """
 
 from __future__ import annotations
+
+from typing import Final
 
 from outcomeeng.validation._engine import (
     FAILURE_EXCERPT_LINE_LIMIT,
@@ -111,6 +114,22 @@ from outcomeeng.validation.selected_gate import (
     run_selected_check,
 )
 
+ORCHESTRATOR_MODULE_NAMES: Final = (
+    "_engine.py",
+    "_model.py",
+    "_spawner.py",
+    "_steps.py",
+    "__init__.py",
+    "__main__.py",
+)
+"""The modules composing the gate orchestrator, in their governing decision's order.
+
+A rule whose subject is the orchestrator's source reads this tuple. A pattern
+over the package directory reads a shape instead of the subject: every later
+module whose name happens to match joins the subject silently, and a public
+orchestrator module added here never joins it at all.
+"""
+
 __all__ = [
     "ACTIONLINT_ARGV",
     "AD_HOC_SUMMARY_SCHEMA",
@@ -127,6 +146,7 @@ __all__ = [
     "GATE_SUMMARY_SCHEMA",
     "HOOK_SAFETY_ARGV",
     "MYPY_ARGV",
+    "ORCHESTRATOR_MODULE_NAMES",
     "PHASE_COMPLETE",
     "PHASE_PREFLIGHT",
     "PREFLIGHT_STEPS",

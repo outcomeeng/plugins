@@ -17,12 +17,21 @@ SLEEP_ATTRIBUTE: Final = "sleep"
 """The call whose presence inside an unbounded loop makes it a polling wait."""
 WATCH_INVOCATION: Final = "gh run watch"
 """The blocking watch invocation no gate module may carry."""
+DECLARING_MODULE: Final = Path(__file__).resolve()
+"""This module, the one file exempt because it publishes the forbidden invocation."""
 
 
 def unbounded_polling_sites(paths: Iterable[Path]) -> tuple[str, ...]:
-    """Return every unbounded polling site among `paths`, named by file and kind."""
+    """Return every unbounded polling site among `paths`, named by file and kind.
+
+    This module is exempt by declaration rather than by any subject's shape: it
+    publishes the watch invocation as `WATCH_INVOCATION`, so a subject that
+    included it would report the rule's own declaration as a violation.
+    """
     sites: list[str] = []
     for path in sorted(paths):
+        if path.resolve() == DECLARING_MODULE:
+            continue
         text = path.read_text(encoding="utf-8")
         if WATCH_INVOCATION in text:
             sites.append(f"{path}::{WATCH_INVOCATION}")
