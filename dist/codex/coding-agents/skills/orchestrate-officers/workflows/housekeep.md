@@ -8,11 +8,14 @@ Read `${SKILL_DIR}/references/standing-rules.md`.
 
 1. Select one housekeeping action: compact an officer idle beyond its bound,
    relaunch an ended session, or report fleet state.
-2. Before compaction, require durable mail records for every commit and verdict
-   with complete identities, every verification run identity required to read
-   a sealed journal, and every orchestrating-session ledger event. Require the
-   complete positively identified participant set needed for correlation-closed
-   reconstruction after restart.
+2. Before compaction, prove the durability that reconstruction depends on.
+   Use skill `coding-agents:operate-agent-mail`. Ask it for the
+   Change-correlated records, and require durable mail records for every commit
+   and verdict with complete identities, every verification run identity
+   required to read a sealed journal, and every orchestrating-session ledger
+   event. Require the complete positively identified participant set needed for
+   correlation-closed reconstruction after restart. Refuse the compaction while
+   any of them is absent.
 3. Use skill `coding-agents:operate-herdr`. Run the selected operation through
    it and validate its result under the parent skill's
    `<essential_principles>`. When that operation is `key`, `start`,

@@ -114,11 +114,19 @@ standing authority recorded below, so every filled order carries it.
 - Standing authority: `<the orchestrating-session standing rules in force for
   this order, recorded as the authority governing the officer's execution>`
 
-When a checked store observation proves records exist after the adapter inbox
-returned zero, every bell line to the officer carries the message id and the
-orchestrating session's read-only authorization for the store's exact inbox
-command. The bell is a pointer and authorization only; it never carries the
-order text.
+The `Exact inbox instruction` field above is the orchestrating session's
+read-only authorization for the store's exact inbox command. It is recorded once
+and stands for every record placed under this Change's correlation, so an
+officer that finds zero records in the adapter inbox after a checked store
+observation proves records exist reads them under that recorded instruction
+rather than waiting to be told again.
+
+The orchestrating session delivers exactly two things to an officer: the launch
+prompt, which names only the Change and the mail name to register, and this
+order as one durable message record. The order text lives in that record alone
+and never travels in the launch prompt. The one-line doorbell that announces a
+placed record is sent by `coding-agents:message-agents` and carries a pointer
+and nothing else, so no field of this order sets what a bell line carries.
 
 ## Change lifecycle
 

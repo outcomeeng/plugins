@@ -44,7 +44,7 @@ class EventPayload:
     """The values one generated ledger event carries.
 
     This module builds the payload, so it owns the payload's shape: every
-    consumer reaches the four values through these attributes rather than
+    consumer reaches each value through these attributes rather than
     re-typing a key. The names are this domain's own — the document field each
     value lands under is the derivation's to name, and a consumer reads that
     name from the derivation module.
@@ -246,13 +246,13 @@ def parser_refused_documents(
 ) -> st.SearchStrategy[str | bytes]:
     """Source documents the JSON parser refuses to read at all.
 
-    Four shapes, one per class the refusal contract names. Text no JSON
-    production can open. An integer literal past the interpreter's conversion
-    limit, carried both alone and inside an otherwise well-formed envelope, so
-    the domain reaches a refusal the document's opening character does not
+    One shape per class the refusal contract names. Text no JSON production
+    can open. An integer literal past the interpreter's conversion limit,
+    carried both alone and inside an otherwise well-formed envelope, so the
+    domain reaches a refusal the document's opening character does not
     announce. Nesting past the scanner's own recursion guard, whose depth the
     running interpreter supplies. And bytes no codec decodes, which refuse the
-    document before any JSON production is read — the one class the document's
+    document before any JSON production is read — the class the document's
     text cannot express, because text is already decoded, so it reaches the
     entry point as the bytes a stream still has to decode.
     """

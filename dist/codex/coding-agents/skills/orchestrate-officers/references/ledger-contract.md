@@ -67,28 +67,52 @@ record lists twice is recorded twice.
 
 ## Refused sources
 
-Three classes refuse the whole invocation, and each refusal names its cause in
-the result's `detail`:
+A refusal ends the whole invocation: no ledger is derived, the result carries
+the invalid-input status in place of one, and its `detail` names the cause. A
+refusal a single record or run provokes names that position, so a document
+holding many of them identifies the offending one.
 
-- an argument vector other than the declared derive operation, whose detail
-  names the required operation and every token received
-- a document the JSON parser cannot read: malformed syntax, an integer literal
-  wider than the interpreter converts from a digit string, nesting past its
-  recursion guard, or bytes no codec decodes
-- a document the parser reads whose content the derivation refuses: a schema
-  version other than the declared one, a structural field of the wrong shape, a
-  read whose cause lies outside the declared set, an empty change, run token, or
-  spend currency, a spend amount that does not read as a finite decimal, or a
-  `wallTimeSeconds` that does not read as a finite decimal at or above zero
+The invocation refuses an argument vector other than the declared derive
+operation, and that detail names the required operation and every token
+received.
+
+The document refuses when the parser cannot read it: syntax no JSON production
+admits, an integer literal wider than the interpreter converts from a digit
+string, nesting past the parser's own recursion guard, or bytes no codec
+decodes.
+
+A document the parser reads whole refuses when:
+
+- the document is not a JSON object
+- `schemaVersion` is absent, or is a boolean, a float, a string, null, or an
+  integer other than the declared one
+- `change` is not a non-empty string
+- `mailRecords` or `journalRuns` is absent or is not an array
+- a mail record is not an object, or its `id` is not an integer
+- a mail record's `body` is not a string — a record repeating an `id` an earlier
+  record already carried is passed over before its body is read
+- a journal run is not an object, or its `runToken` is not a non-empty string
+- `findingProvenance` is not an array, or one of its entries is not an object
+- `read` is neither an object nor an array of objects, or a read's `cause` lies
+  outside the declared set, whose detail names the admitted causes
+- `spend` is not an object, its `currency` is not a non-empty string, or its
+  `amount` is not a number or a string that reads as a finite decimal
+- `wallTimeSeconds` is not a number or a string that reads as a finite decimal
+  at or above zero
+
+Every event field is optional: a record omitting one contributes nothing to that
+collection and refuses nothing. The scalar event fields — `pass`, `head`,
+`verdict`, `decision`, and `failure` — carry no gate of their own: whatever
+value a record places under one of them becomes that collection's entry.
 
 A value refusal turns on the value rather than on its shape: a `wallTimeSeconds`
 of `-1` is well-formed text and still refuses the whole document, so one
 record's out-of-range value costs every entry the derivation would have
 produced.
 
-A refusal caused by one record names that record's position, so a document
-holding many records identifies the offending one.
-
 A mail body the parser cannot read is not a refused document. That body carries
 no `ledger` object, so its record stays a durable mail fact and contributes
-nothing, exactly as a body whose JSON carries no such object does.
+nothing, exactly as a body whose JSON carries no such object does. A body whose
+`ledger` value is read whole and is not an object stays a durable mail fact for
+the same reason: the `ledger` key's shape decides membership, never admission.
+Once a record is admitted as a ledger event, the gates above apply to it.

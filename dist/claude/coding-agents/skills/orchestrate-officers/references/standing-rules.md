@@ -70,20 +70,34 @@ what reaches the default branch, the Frame, or the spend is not.
 The orchestrating session assumes the operator is away. One escalation holds
 one decision while the rest of the fleet continues.
 
-Proceed autonomously in exactly these three decision classes, recording the
-reasoning in the per-Change ledger:
+A decision is a choice the loaded truth leaves open. An act whose trigger the
+order, these standing rules, the governing decisions and specs, or the checked
+state already fixes is no decision at all: perform it and report it. Compacting
+an officer idle past its bound, restarting a session that has ended, ordering
+`/close-change Applied` on terminal work, dismissing a guarded prompt no officer
+fact supports, and answering an officer's question the loaded truth settles are
+acts of that kind, and none of them reaches the classes below.
+
+Proceed autonomously in exactly these decision classes and no others, recording
+the class, the choice, and the reasoning as a ledger event:
 
 1. At the two-round ceiling, choose among splitting the changeset, tracking the
    branch and findings while resuming the next Activity, or stopping.
 2. Hold a deploy or release whose required external state is absent.
 3. Order reversion of an edit outside the Change Frame.
+4. Order one fresh Verifier dispatch after a launch that produced no usable
+   verdict, on the conditions the next section states.
 
-Wait for the operator's word in exactly these four decision classes:
+Admitting a class to the autonomy or withdrawing one moves this enumeration.
 
-1. a third Verifier pass
-2. a raised expense ceiling
-3. a Change Frame amendment
-4. a product-intent conflict
+Every decision this enumeration does not name waits for the operator's word, so
+an unforeseen one is held rather than taken. These recur and are never decided
+in this session:
+
+- a third Verifier pass
+- a raised expense ceiling
+- a Change Frame amendment
+- a product-intent conflict
 
 A held decision and every escalation are written as text in this session's own
 pane, never raised through the structured-question tool. The operator is assumed
@@ -102,14 +116,21 @@ waiting at a prompt.
 ## Verifier launch failures
 
 A Verifier result of `BLOCKED` is unusable unless it carries command evidence:
-an exit code and stderr, a named termination, or a harness-tool failure. Report
-an unusable result and never relaunch the Verifier. One fresh dispatch occurs
-only on the orchestrating session's word.
+an exit code and stderr, a named termination, or a harness-tool failure. A
+harness denial of a Verifier launch is unusable too. Report the unusable result
+or the denial, and never relaunch the Verifier on that report alone.
 
-A harness denial of a Verifier launch is also unusable. Report the denial. The
-orchestrating session performs no Change work from its own checkout; after
-capacity changes, it may order the officer Executor to make one fresh dispatch
-from the officer's frozen worktree.
+A launch that produced no usable verdict produced no Verifier pass, so ordering
+one fresh dispatch is the fresh-dispatch class enumerated above and never a
+third pass: it proceeds on the orchestrating session's word and carries that
+class's ledger event. A pass that returned a usable verdict is spent, and a
+further pass past the round ceiling remains the operator's to grant.
+
+The orchestrating session performs no Change work from its own checkout, so it
+orders the officer Executor to make that one fresh dispatch from the officer's
+frozen worktree, and orders it after capacity changes when a harness denial
+caused the failure. One fresh dispatch answers one unusable launch; a second
+waits for the operator's word.
 
 ## Durable facts and the `filed` disposition
 
@@ -128,15 +149,21 @@ establishes an unchanged branch diff, unrelated base movement, and every extra
 condition in the merge overlay; run the narrower validation required for the
 base delta.
 
-Every orchestrating-session ledger event is a durable `fact` record addressed
-to the orchestrating mail identity under the Change's correlation before the
-session relies on it across compaction. This includes each autonomous decision,
-read cause, and orchestrating-session failure. A missing, ambiguous,
-unavailable, or unsealed source refuses reconstruction; a partial ledger is
-never reported.
+Recording a ledger event is sending one durable `fact` record through
+`coding-agents:operate-agent-mail`, addressed to the orchestrating mail identity
+under the Change's correlation, before the session relies on that event across
+compaction. The ledger is derived from those records, so an event never sent is
+an event the ledger cannot hold. Every orchestrating-session ledger event is
+recorded that way: each autonomous decision with its class, choice, and
+reasoning, each read cause, and each orchestrating-session failure. A missing,
+ambiguous, unavailable, or unsealed source refuses reconstruction; a partial
+ledger is never reported.
 
-Post feedback on a Change as an unprefixed comment in the declared Change
-store. Mail carries the bell and record pointer, never the feedback body.
+Feedback on a Change belongs in the declared Change store as an unprefixed
+comment. This skill composes no Change-store capability and writes no comment;
+the message record it sends carries the pointer to that comment and never the
+feedback body. The one-line doorbell that announces a placed record belongs to
+`coding-agents:message-agents`, which this skill does not compose.
 
 A repair never weakens a spec assertion to fit its evidence. When evidence does
 not reach one clause, preserve the clause as its own assertion rather than

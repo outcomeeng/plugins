@@ -49,21 +49,23 @@ executes it.
   pass, head, verdict, decision, failure, finding provenance, read, spend, and
   wall time places each value in its own collection under that record's mail
   provenance, totals the spend under its currency, and totals the duration
-- `property` — a body carrying no `ledger` object derives the ledger of a
-  document with no record, over unparseable text, a body that is a JSON scalar,
-  a body that is a JSON array, a body that is an object carrying other keys, a
-  body carrying event fields at its top level rather than under `ledger`, a
-  `ledger` key whose value is an integer literal wider than the interpreter
-  converts, and a `ledger` key whose value the parser reads whole and is no
-  object — a string, an array, null, a number, or a boolean
+- `property` — a mail record whose body carries no `ledger` object derives the
+  ledger of a document with no record, over text no JSON production opens, a
+  body that is a JSON scalar — an integer, a boolean, null, or text — a body
+  that is a JSON array of integers, a body that is an object whose keys are all
+  other than `ledger`, a body carrying scalar event fields at its own top level
+  rather than under `ledger`, a `ledger` key whose value is an integer literal
+  wider than the interpreter converts from a digit string, and a `ledger` key
+  whose value the parser reads whole and is no object — text, an array, null, an
+  integer, a float, or a boolean
 - `mapping` — every declared read cause records one read carrying that cause and
   payload
 - `property` — amounts across several currencies total per currency at their own
   decimal precision, and durations across mail records and journal runs total
-  together, over amounts and durations whose precision ranges from absent
-  through widths no double represents to coefficients longer than the default
-  decimal context carries, each total compared against a sum taken with no
-  rounding
+  together, over amounts carrying either sign and durations carrying none, whose
+  precision ranges from absent through widths no double represents to
+  coefficients longer than the default decimal context carries, each total
+  compared against a sum taken with no rounding
 - `property` — both totals are emitted as decimal text carrying every digit of
   the amount and duration the record supplied
 - `property` — mail records repeating one store `id` and journal runs repeating
@@ -90,10 +92,13 @@ Each exits two with empty stderr and a result carrying exactly `detail`,
   rather than fixed here, and each document is answered with a non-empty detail
   rather than a traceback
 - `property` — every schema version other than the declared integer, generated
-  as booleans, floats carrying the declared version's own value, other integers,
-  text, and null, each detail naming the schema-version field and the required
-  version
-- `property` — a read whose cause lies outside the declared set, whose detail
-  names the admitted causes and the offending record's position
-- `property` — an argument vector other than `derive`, whose detail names the
+  as booleans, a float carrying the declared version's own value, other finite
+  floats, other integers, text, and null, each detail naming the schema-version
+  field and the required version
+- `property` — a read whose cause lies outside the declared set, generated as
+  text, an integer, a boolean, and null, whose detail names the admitted causes
+  and the offending record's position
+- `property` — an argument vector other than the declared derive operation,
+  generated as a token run that reaches from the empty vector through runs
+  carrying the declared operation among other tokens, whose detail names the
   required operation and every token received
