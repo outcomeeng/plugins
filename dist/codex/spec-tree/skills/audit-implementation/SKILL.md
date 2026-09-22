@@ -441,9 +441,10 @@ approved`, or `REJECTED` for `terminalStatus: rejected`, followed by the exact
 run token and rendered `spx verification run render` projection. The projection
 remains authoritative; the canonical verdict label only exposes its determination.
 
-Return BLOCKED when preparation fails before a command starts, SPX rejects a
-command, or a failed command after run start prevents a required unit from
-reaching a final status. It may instead name the absent prerequisite that the
+Return BLOCKED when preparation fails before a command starts, a preparation
+command runs and fails — the scope resolver's stale-base refusal included —
+SPX rejects a command, or a failed command after run start prevents a required
+unit from reaching a final status. It may instead name the absent prerequisite that the
 failed command established. After a run starts, record a missing required
 concern skill as `missing-skill`, finish `rejected`, render, and return REJECTED
 with the run token and projection.
