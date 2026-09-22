@@ -14,6 +14,7 @@ the ADR's bounded-deadline exception.
 from __future__ import annotations
 
 import json
+import os
 import re
 import signal
 import tempfile
@@ -46,6 +47,14 @@ STEP_PASS_STATUS: Final = "PASS"
 STEP_FAIL_STATUS: Final = "FAIL"
 RUN_PASS_STATUS: Final = "pass"
 RUN_FAIL_STATUS: Final = "fail"
+SUCCESS_EXIT_CODE: Final = os.EX_OK
+"""The exit code this orchestrator returns when every step it ran passed.
+
+The value comes from the platform, which owns what a successful process exit
+is, and the orchestrator's contract is that it returns exactly that code. A
+child's own passing exit code is the same platform value, so the step loop
+reads this constant for both.
+"""
 SPAWN_FAILURE_EXIT_CODE: Final = 1
 PHASE_PREFLIGHT: Final = "preflight"
 PHASE_RECIPE: Final = "recipe"
@@ -517,7 +526,7 @@ def _execute_recipe(
                 skipped = _read_skip_records(skip_report_path)
                 elapsed = round(time.monotonic() - step_start)
                 timings.append((step.label, elapsed))
-                if exit_code != 0:
+                if exit_code != SUCCESS_EXIT_CODE:
                     excerpt = _read_failure_excerpt(log_path)
                     retained_log_path = log_path
                     failed_step = step
@@ -570,11 +579,11 @@ def _execute_recipe(
         total = round(time.monotonic() - total_start)
         if failed_step is None:
             _write_timing_summary(sink, timings, total=total)
-            return 0, _recipe_summary(
+            return SUCCESS_EXIT_CODE, _recipe_summary(
                 recipe=recipe,
                 phase=PHASE_COMPLETE,
                 status=RUN_PASS_STATUS,
-                exit_code=0,
+                exit_code=SUCCESS_EXIT_CODE,
                 elapsed=total,
                 steps=step_records,
             )
@@ -653,21 +662,25 @@ def run_check(
     old_handlers = _install_signal_handlers()
     recipe_summaries: list[dict[str, object]] = []
     total_start = time.monotonic()
-    exit_code = 0
+    exit_code = SUCCESS_EXIT_CODE
     try:
         try:
             for recipe in recipes:
                 exit_code, summary = _execute_recipe(spawner, sink, recipe)
                 recipe_summaries.append(summary)
-                if exit_code != 0:
+                if exit_code != SUCCESS_EXIT_CODE:
                     break
-            status = RUN_PASS_STATUS if exit_code == 0 else RUN_FAIL_STATUS
+            status = (
+                RUN_PASS_STATUS if exit_code == SUCCESS_EXIT_CODE else RUN_FAIL_STATUS
+            )
             failed_phase = (
                 recipe_summaries[-1][SUMMARY_KEY_PHASE]
-                if recipe_summaries and exit_code != 0
+                if recipe_summaries and exit_code != SUCCESS_EXIT_CODE
                 else PHASE_COMPLETE
             )
-            phase = PHASE_COMPLETE if exit_code == 0 else str(failed_phase)
+            phase = (
+                PHASE_COMPLETE if exit_code == SUCCESS_EXIT_CODE else str(failed_phase)
+            )
         except _ForwardedSignal as interrupt:
             exit_code = interrupt.exit_code
             status = RUN_FAIL_STATUS

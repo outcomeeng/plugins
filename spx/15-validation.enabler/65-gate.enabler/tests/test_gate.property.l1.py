@@ -16,6 +16,7 @@ from typing import Final
 from hypothesis import given, settings
 
 from outcomeeng.validation import (
+    SUCCESS_EXIT_CODE,
     SUMMARY_KEY_DURATION_SECONDS,
     SUMMARY_KEY_STEPS,
     SUMMARY_PATH_LABEL,
@@ -24,7 +25,7 @@ from outcomeeng.validation import (
 )
 from outcomeeng_testing.generators.gate import step_lists
 from outcomeeng.validation._engine import timing_row_values
-from outcomeeng_testing.harnesses.gate import PASS_EXIT_CODE, RecordingSpawner
+from outcomeeng_testing.harnesses.gate import RecordingSpawner
 
 MAX_EXAMPLES: Final = 50
 
@@ -33,7 +34,7 @@ MAX_EXAMPLES: Final = 50
 @settings(max_examples=MAX_EXAMPLES, deadline=None)
 def test_spawn_order_matches_step_list_order(steps: tuple[Step, ...]) -> None:
     """The order in which subprocesses are started equals the step-list order."""
-    spawner = RecordingSpawner(exit_codes=[PASS_EXIT_CODE] * len(steps))
+    spawner = RecordingSpawner(exit_codes=[SUCCESS_EXIT_CODE] * len(steps))
     sink = io.StringIO()
 
     run(spawner=spawner, sink=sink, steps=steps)
@@ -49,7 +50,7 @@ def test_elapsed_time_is_non_negative_for_completed_steps(
     steps: tuple[Step, ...],
 ) -> None:
     """Every per-step summary record carries a non-negative elapsed value."""
-    spawner = RecordingSpawner(exit_codes=[PASS_EXIT_CODE] * len(steps))
+    spawner = RecordingSpawner(exit_codes=[SUCCESS_EXIT_CODE] * len(steps))
     sink = io.StringIO()
 
     run(spawner=spawner, sink=sink, steps=steps)

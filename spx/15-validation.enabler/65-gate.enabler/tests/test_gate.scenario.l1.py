@@ -29,6 +29,7 @@ from outcomeeng.validation import (
     SPAWN_FAILURE_EXIT_CODE,
     STEP_FAIL_STATUS,
     STEP_PASS_STATUS,
+    SUCCESS_EXIT_CODE,
     SUMMARY_KEY_ARGV,
     SUMMARY_KEY_EXCERPT,
     SUMMARY_KEY_EXIT_CODE,
@@ -51,7 +52,6 @@ from outcomeeng_testing.harnesses.gate import (
     skip_report_arguments,
     FAIL_EXIT_CODE,
     FAILING_CHILD_OUTPUT_PREFIX,
-    PASS_EXIT_CODE,
     PASSING_CHILD_OUTPUT,
     SPAWN_FAILURE_MESSAGE,
     check_run_observation,
@@ -69,11 +69,11 @@ from outcomeeng_testing.harnesses.gate import (
 def test_the_validation_recipe_runs_preflight_first_and_reports_conformance() -> None:
     run = recipe_run_observation(
         recipe=VALIDATION_RECIPE,
-        exit_codes=[PASS_EXIT_CODE]
+        exit_codes=[SUCCESS_EXIT_CODE]
         * (len(VALIDATION_RECIPE.preflight_steps) + len(VALIDATION_RECIPE.steps)),
     )
 
-    assert run.exit_code == PASS_EXIT_CODE
+    assert run.exit_code == SUCCESS_EXIT_CODE
     assert run.spawn_calls[0] == VALIDATION_RECIPE.preflight_steps[0].argv
     assert PYTEST_ARGV not in run.spawn_calls
     assert run.summary[SUMMARY_KEY_RECIPE] == RECIPE_VALIDATION
@@ -91,13 +91,13 @@ def test_the_validation_recipe_runs_preflight_first_and_reports_conformance() ->
 def test_the_test_recipe_runs_pytest_after_preflight() -> None:
     run = recipe_run_observation(
         recipe=TEST_RECIPE,
-        exit_codes=[PASS_EXIT_CODE]
+        exit_codes=[SUCCESS_EXIT_CODE]
         * (len(TEST_RECIPE.preflight_steps) + len(TEST_RECIPE.steps)),
     )
 
     report_arguments = skip_report_arguments(run.spawn_calls)
 
-    assert run.exit_code == PASS_EXIT_CODE
+    assert run.exit_code == SUCCESS_EXIT_CODE
     assert len(report_arguments) == 1
     assert run.spawn_calls == (
         TEST_RECIPE.preflight_steps[0].argv,
@@ -118,11 +118,11 @@ def test_a_passing_pipeline_prints_headers_in_order_and_removes_logs() -> None:
 
     run = pipeline_run_observation(
         steps=steps,
-        exit_codes=[PASS_EXIT_CODE] * len(steps),
+        exit_codes=[SUCCESS_EXIT_CODE] * len(steps),
         outputs=[PASSING_CHILD_OUTPUT] * len(steps),
     )
 
-    assert run.exit_code == PASS_EXIT_CODE
+    assert run.exit_code == SUCCESS_EXIT_CODE
     assert TIMING_SUMMARY_BANNER in run.output
     summary = run.output[run.output.index(TIMING_SUMMARY_BANNER) :]
     assert TIMING_TOTAL_LABEL in summary
@@ -150,7 +150,7 @@ def test_a_failing_step_stops_the_pipeline_and_retains_its_log() -> None:
 
     run = pipeline_run_observation(
         steps=steps,
-        exit_codes=[PASS_EXIT_CODE, FAIL_EXIT_CODE, PASS_EXIT_CODE],
+        exit_codes=[SUCCESS_EXIT_CODE, FAIL_EXIT_CODE, SUCCESS_EXIT_CODE],
         outputs=[PASSING_CHILD_OUTPUT, failing_output, PASSING_CHILD_OUTPUT],
     )
 
@@ -182,7 +182,7 @@ def test_a_failing_recipe_step_records_excerpt_and_log_path() -> None:
 
     run = recipe_run_observation(
         recipe=recipe,
-        exit_codes=[PASS_EXIT_CODE, FAIL_EXIT_CODE],
+        exit_codes=[SUCCESS_EXIT_CODE, FAIL_EXIT_CODE],
         outputs=[PASSING_CHILD_OUTPUT, failing_output],
     )
 
@@ -228,7 +228,12 @@ def test_the_check_wrapper_stops_at_the_first_failing_recipe() -> None:
 
     run = check_run_observation(
         recipes=(validation, test),
-        exit_codes=[PASS_EXIT_CODE, FAIL_EXIT_CODE, PASS_EXIT_CODE, PASS_EXIT_CODE],
+        exit_codes=[
+            SUCCESS_EXIT_CODE,
+            FAIL_EXIT_CODE,
+            SUCCESS_EXIT_CODE,
+            SUCCESS_EXIT_CODE,
+        ],
     )
 
     recipes = summary_recipes(run.summary)
@@ -249,11 +254,11 @@ def test_the_check_wrapper_runs_both_recipes_when_validation_passes() -> None:
 
     run = check_run_observation(
         recipes=(validation, test),
-        exit_codes=[PASS_EXIT_CODE] * 4,
+        exit_codes=[SUCCESS_EXIT_CODE] * 4,
     )
 
     recipes = summary_recipes(run.summary)
-    assert run.exit_code == PASS_EXIT_CODE
+    assert run.exit_code == SUCCESS_EXIT_CODE
     assert run.spawn_calls == (
         validation.preflight_steps[0].argv,
         validation.steps[0].argv,
@@ -284,8 +289,8 @@ def test_the_production_step_lists_run_end_to_end() -> None:
 
     run = pipeline_run_observation(
         steps=steps,
-        exit_codes=[PASS_EXIT_CODE] * len(steps),
+        exit_codes=[SUCCESS_EXIT_CODE] * len(steps),
     )
 
-    assert run.exit_code == PASS_EXIT_CODE
+    assert run.exit_code == SUCCESS_EXIT_CODE
     assert len(run.spawn_calls) == len(steps)

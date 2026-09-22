@@ -20,6 +20,7 @@ from outcomeeng.validation import (
     SUMMARY_KEY_SKIPPED,
     SUMMARY_KEY_STEPS,
     SUMMARY_KEY_SUMMARY_PATH,
+    SUCCESS_EXIT_CODE,
     SUMMARY_PATH_LABEL,
     TEST_RECIPE,
     Step,
@@ -32,7 +33,6 @@ from outcomeeng.validation.agent_disable import AGENT_SWITCHES
 from outcomeeng_testing.harnesses.gate import (
     FAIL_EXIT_CODE,
     FAILING_CHILD_OUTPUT_PREFIX,
-    PASS_EXIT_CODE,
     RecordingSpawner,
     read_summary,
     single_step_recipe,
@@ -45,7 +45,7 @@ def test_check_summary_conforms_to_schema_for_primitive_and_wrapper(
 ) -> None:
     summary_path = tmp_path / "summary.json"
     recipe = single_step_recipe(RECIPE_VALIDATION)
-    spawner = RecordingSpawner(exit_codes=[PASS_EXIT_CODE, PASS_EXIT_CODE])
+    spawner = RecordingSpawner(exit_codes=[SUCCESS_EXIT_CODE, SUCCESS_EXIT_CODE])
     sink = io.StringIO()
 
     exit_code = run_check(
@@ -57,14 +57,14 @@ def test_check_summary_conforms_to_schema_for_primitive_and_wrapper(
 
     summary = read_summary(summary_path)
     assert_json_schema(summary, CHECK_SUMMARY_SCHEMA)
-    assert exit_code == PASS_EXIT_CODE
+    assert exit_code == SUCCESS_EXIT_CODE
 
 
 def test_failed_primitive_summary_conforms_to_schema(tmp_path: Path) -> None:
     summary_path = tmp_path / "failure-summary.json"
     recipe = single_step_recipe(RECIPE_VALIDATION)
     spawner = RecordingSpawner(
-        exit_codes=[PASS_EXIT_CODE, FAIL_EXIT_CODE],
+        exit_codes=[SUCCESS_EXIT_CODE, FAIL_EXIT_CODE],
         outputs=["", FAILING_CHILD_OUTPUT_PREFIX],
     )
     sink = io.StringIO()
@@ -82,7 +82,7 @@ def test_failed_primitive_summary_conforms_to_schema(tmp_path: Path) -> None:
 
 
 def test_ad_hoc_run_summary_conforms_to_gate_schema(tmp_path: Path) -> None:
-    spawner = RecordingSpawner(exit_codes=[PASS_EXIT_CODE])
+    spawner = RecordingSpawner(exit_codes=[SUCCESS_EXIT_CODE])
     sink = io.StringIO()
 
     exit_code = run(
@@ -96,13 +96,13 @@ def test_ad_hoc_run_summary_conforms_to_gate_schema(tmp_path: Path) -> None:
     assert_json_schema(summary, AD_HOC_SUMMARY_SCHEMA)
     assert_json_schema(summary, GATE_SUMMARY_SCHEMA)
     assert summary[SUMMARY_KEY_RECIPE] == RECIPE_AD_HOC
-    assert exit_code == PASS_EXIT_CODE
+    assert exit_code == SUCCESS_EXIT_CODE
 
 
 def test_primitive_summary_schema_requires_summary_path(tmp_path: Path) -> None:
     summary_path = tmp_path / "summary-path-required.json"
     recipe = single_step_recipe(RECIPE_VALIDATION)
-    spawner = RecordingSpawner(exit_codes=[PASS_EXIT_CODE, PASS_EXIT_CODE])
+    spawner = RecordingSpawner(exit_codes=[SUCCESS_EXIT_CODE, SUCCESS_EXIT_CODE])
     sink = io.StringIO()
 
     exit_code = run_recipe(
@@ -116,7 +116,7 @@ def test_primitive_summary_schema_requires_summary_path(tmp_path: Path) -> None:
     summary.pop(SUMMARY_KEY_SUMMARY_PATH)
     with pytest.raises(AssertionError, match=SUMMARY_KEY_SUMMARY_PATH):
         assert_json_schema(summary, PRIMITIVE_SUMMARY_SCHEMA)
-    assert exit_code == PASS_EXIT_CODE
+    assert exit_code == SUCCESS_EXIT_CODE
 
 
 def test_failed_preflight_primitive_summary_conforms_to_schema(
@@ -170,7 +170,7 @@ def test_failed_preflight_wrapper_summary_conforms_to_schema(
 def test_summary_with_declared_skips_conforms_to_schema() -> None:
     observation = skip_report_observation(
         recipe=TEST_RECIPE,
-        exit_codes=[PASS_EXIT_CODE]
+        exit_codes=[SUCCESS_EXIT_CODE]
         * (len(TEST_RECIPE.preflight_steps) + len(TEST_RECIPE.steps)),
         switches=AGENT_SWITCHES,
     )
@@ -179,4 +179,4 @@ def test_summary_with_declared_skips_conforms_to_schema() -> None:
 
     assert_json_schema(observation.summary, PRIMITIVE_SUMMARY_SCHEMA)
     assert any(SUMMARY_KEY_SKIPPED in step for step in steps)
-    assert observation.exit_code == PASS_EXIT_CODE
+    assert observation.exit_code == SUCCESS_EXIT_CODE

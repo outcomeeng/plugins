@@ -40,6 +40,7 @@ from outcomeeng.validation import (
     PYTEST_ARGV,
     SIGNAL_GRACE_SECONDS,
     SIGNAL_POLL_INTERVAL_SECONDS,
+    SUCCESS_EXIT_CODE,
     TEST_STEPS,
     VALIDATION_RECIPE,
     VALIDATION_STEPS,
@@ -102,7 +103,6 @@ SELECTED_GATE_PROPERTY_REPLAY_PATH = (
     "test_selection_is_deterministic_for_path_order_and_duplicates"
 )
 SELECTED_GATE_PROPERTY_EXAMPLES = 40
-PASS_EXIT_CODE = 0
 FAIL_EXIT_CODE = 2
 PASSING_CHILD_OUTPUT = "passing validator output"
 FAILING_CHILD_OUTPUT_PREFIX = "failing validator output line"
@@ -591,11 +591,21 @@ class ShutdownObservation:
     sleep_budget: int
 
 
-def bounded_shutdown_observation() -> ShutdownObservation:
-    """Terminate a hanging child under a clock that rejects unbounded waits."""
+def bounded_shutdown_observation(
+    *, sleep_budget: int | None = None
+) -> ShutdownObservation:
+    """Terminate a hanging child under a clock bounded by a sleep budget.
+
+    `sleep_budget` defaults to the bound the orchestrator's own grace-period and
+    reap constants allow. A caller naming a smaller budget drives the clock past
+    it, which is the seam a linked test drives the refusal through; the clock
+    then raises `SleepBudgetExhausted` carrying the budget and the sleeps it had
+    served, and the test owns every predicate over the shutdown's boundedness.
+    """
 
     grace_sleep_calls = math.ceil(SIGNAL_GRACE_SECONDS / SIGNAL_POLL_INTERVAL_SECONDS)
-    sleep_budget = grace_sleep_calls + POST_KILL_REAP_ATTEMPTS
+    if sleep_budget is None:
+        sleep_budget = grace_sleep_calls + POST_KILL_REAP_ATTEMPTS
     clock = BoundedAdvancingClock(max_sleep_calls=sleep_budget)
     handle = HangingHandle(pid=10_000, exit_on_kill=False)
     terminate_process_group(
@@ -985,9 +995,26 @@ class HangingHandle:
             self._killed = True
 
 
+class SleepBudgetExhausted(RuntimeError):
+    """A shutdown asked this clock for a sleep beyond the budget it was given."""
+
+    def __init__(self, budget: int, sleep_calls: int) -> None:
+        super().__init__(
+            f"shutdown asked for sleep {sleep_calls + 1} "
+            f"against a sleep budget of {budget}"
+        )
+        self.budget = budget
+        self.sleep_calls = sleep_calls
+
+
 @dataclass
 class BoundedAdvancingClock:
-    """A clock that advances on sleep and rejects an unbounded wait."""
+    """A clock that advances on sleep and refuses one past its budget.
+
+    The refusal is this clock's own execution limit, not a verdict: it reports
+    the budget it was given and the sleeps it had already served, and the linked
+    test decides what an exhausted budget means for the shutdown's boundedness.
+    """
 
     max_sleep_calls: int
     current: float = 0.0
@@ -1000,7 +1027,7 @@ class BoundedAdvancingClock:
 
     def sleep(self, seconds: float) -> None:
         if len(self.sleep_calls) >= self.max_sleep_calls:
-            raise AssertionError("signal shutdown exceeded its bounded sleep budget")
+            raise SleepBudgetExhausted(self.max_sleep_calls, len(self.sleep_calls))
         self.sleep_calls.append(seconds)
         self.current += seconds
 
@@ -1132,7 +1159,7 @@ def timing_block_observation() -> TimingBlockObservation:
     """Run a step list, then withhold each of the timing block's own bounds."""
 
     steps = three_no_op_steps()
-    spawner = RecordingSpawner(exit_codes=[PASS_EXIT_CODE] * len(steps))
+    spawner = RecordingSpawner(exit_codes=[SUCCESS_EXIT_CODE] * len(steps))
     sink = io.StringIO()
     run(spawner=spawner, sink=sink, steps=steps)
     output = sink.getvalue()

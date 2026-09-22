@@ -48,6 +48,7 @@ from outcomeeng.validation import (
     STEP_PASS_STATUS,
     STEP_SKIP_STATUS,
     STEP_STATUS_PREFIX_FORM,
+    SUCCESS_EXIT_CODE,
     SUMMARY_KEY_PURPOSE,
     SUMMARY_KEY_RECIPE,
     SUMMARY_KEY_SKIPPED,
@@ -71,12 +72,12 @@ from outcomeeng.validation.agent_disable import (
 from outcomeeng_testing.harnesses.gate import (
     HIGH_VOLUME_CHILD_OUTPUT,
     OrchestratorModuleAbsent,
+    SleepBudgetExhausted,
     UnconfinedDisposableState,
     confined_to,
     declared_skip_recording,
     timing_block_observation,
     skip_report_observation,
-    PASS_EXIT_CODE,
     PYTEST_TARGET_ARG,
     bounded_shutdown_observation,
     call_keyword_map,
@@ -138,11 +139,11 @@ def test_recipe_types_and_purposes_match_the_verification_taxonomy() -> None:
 def test_the_check_wrapper_reports_no_verification_type() -> None:
     run = check_run_observation(
         recipes=(VALIDATION_RECIPE,),
-        exit_codes=[PASS_EXIT_CODE]
+        exit_codes=[SUCCESS_EXIT_CODE]
         * (len(VALIDATION_RECIPE.preflight_steps) + len(VALIDATION_RECIPE.steps)),
     )
 
-    assert run.exit_code == PASS_EXIT_CODE
+    assert run.exit_code == SUCCESS_EXIT_CODE
     assert run.summary[SUMMARY_KEY_RECIPE] == RECIPE_CHECK
     assert run.summary[SUMMARY_KEY_VERIFICATION_TYPE] is None
     assert run.summary[SUMMARY_KEY_PURPOSE] is None
@@ -151,11 +152,11 @@ def test_the_check_wrapper_reports_no_verification_type() -> None:
 def test_child_output_is_captured_never_streamed() -> None:
     run = recipe_run_observation(
         recipe=TEST_RECIPE,
-        exit_codes=[PASS_EXIT_CODE, PASS_EXIT_CODE],
+        exit_codes=[SUCCESS_EXIT_CODE, SUCCESS_EXIT_CODE],
         outputs=[HIGH_VOLUME_CHILD_OUTPUT, HIGH_VOLUME_CHILD_OUTPUT],
     )
 
-    assert run.exit_code == PASS_EXIT_CODE
+    assert run.exit_code == SUCCESS_EXIT_CODE
     assert HIGH_VOLUME_CHILD_OUTPUT not in run.output
     assert len(run.output.splitlines()) < len(HIGH_VOLUME_CHILD_OUTPUT.splitlines())
 
@@ -243,10 +244,20 @@ def test_signal_shutdown_waits_are_bounded() -> None:
     assert shutdown.poll_calls == grace_sleep_calls + POST_KILL_REAP_ATTEMPTS
 
 
+def test_a_shutdown_past_its_sleep_budget_is_refused_by_name() -> None:
+    short_budget = bounded_shutdown_observation().sleep_budget - 1
+
+    with pytest.raises(SleepBudgetExhausted) as raised:
+        bounded_shutdown_observation(sleep_budget=short_budget)
+
+    assert raised.value.budget == short_budget
+    assert raised.value.sleep_calls == short_budget
+
+
 def test_declared_skips_are_named_in_the_summary_and_after_the_status_line() -> None:
     observation = skip_report_observation(
         recipe=TEST_RECIPE,
-        exit_codes=[PASS_EXIT_CODE] * (len(TEST_RECIPE.preflight_steps) + 1),
+        exit_codes=[SUCCESS_EXIT_CODE] * (len(TEST_RECIPE.preflight_steps) + 1),
         switches=AGENT_SWITCHES,
     )
     steps = observation.summary[SUMMARY_KEY_STEPS]
@@ -300,7 +311,7 @@ def test_a_real_child_records_each_declared_skip_with_its_own_switch() -> None:
 
     records = [json.loads(line) for line in recording.recorded_lines]
 
-    assert recording.exit_code == PASS_EXIT_CODE, recording.output
+    assert recording.exit_code == SUCCESS_EXIT_CODE, recording.output
     assert [sorted(record) for record in records] == [
         sorted((SKIP_REPORT_TEST_FIELD, SKIP_REPORT_SWITCH_FIELD))
     ] * len(recording.switch_rows)
@@ -318,7 +329,7 @@ def test_a_real_child_records_each_declared_skip_with_its_own_switch() -> None:
 def test_a_real_child_records_nothing_when_no_destination_is_named() -> None:
     recording = declared_skip_recording(name_destination=False)
 
-    assert recording.exit_code == PASS_EXIT_CODE, recording.output
+    assert recording.exit_code == SUCCESS_EXIT_CODE, recording.output
     assert recording.recorded_lines == ()
     assert not recording.destination.exists()
 
@@ -326,7 +337,7 @@ def test_a_real_child_records_nothing_when_no_destination_is_named() -> None:
 def test_a_confined_recording_run_proceeds_inside_its_own_disposable_root() -> None:
     recording = declared_skip_recording()
 
-    assert recording.exit_code == PASS_EXIT_CODE, recording.output
+    assert recording.exit_code == SUCCESS_EXIT_CODE, recording.output
     assert recording.destination.parent == recording.state_root
     assert recording.child_directory == recording.state_root
 
@@ -346,7 +357,7 @@ def test_an_unconfined_target_is_refused_by_name(tmp_path: Path) -> None:
 def test_a_run_without_declared_skips_carries_no_skipped_entry() -> None:
     observation = recipe_run_observation(
         recipe=TEST_RECIPE,
-        exit_codes=[PASS_EXIT_CODE] * (len(TEST_RECIPE.preflight_steps) + 1),
+        exit_codes=[SUCCESS_EXIT_CODE] * (len(TEST_RECIPE.preflight_steps) + 1),
     )
     steps = observation.summary[SUMMARY_KEY_STEPS]
     assert isinstance(steps, list)

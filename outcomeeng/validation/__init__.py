@@ -6,6 +6,7 @@ Public surface:
 - `VALIDATION_RECIPE`, `TEST_RECIPE`, `CHECK_RECIPES` — declared recipe surfaces
 - `*_ARGV` and output-label constants — source-owned values imported by tests
 - `ORCHESTRATOR_MODULE_NAMES` — the modules a rule over the orchestrator's source reads
+- `SUCCESS_EXIT_CODE`, `SPAWN_FAILURE_EXIT_CODE` — the exit codes this orchestrator returns
 - `ProcessHandle`, `ProcessSpawner` — DI Protocols for subprocess creation
 - `ProductionSpawner` — real `subprocess.Popen` adapter
 - `run_recipe`, `run_check`, `run` — orchestration entry points
@@ -28,6 +29,7 @@ from outcomeeng.validation._engine import (
     SIGNAL_GRACE_SECONDS,
     SIGNAL_POLL_INTERVAL_SECONDS,
     SPAWN_FAILURE_EXIT_CODE,
+    SUCCESS_EXIT_CODE,
     SUMMARY_KEY_ARGV,
     SUMMARY_KEY_DURATION_SECONDS,
     SUMMARY_KEY_EXIT_CODE,
@@ -170,6 +172,7 @@ __all__ = [
     "SIGNAL_GRACE_SECONDS",
     "SIGNAL_POLL_INTERVAL_SECONDS",
     "SPAWN_FAILURE_EXIT_CODE",
+    "SUCCESS_EXIT_CODE",
     "SHELLCHECK_ARGV",
     "SPX_MARKDOWN_ARGV",
     "SUMMARY_KEY_ARGV",
