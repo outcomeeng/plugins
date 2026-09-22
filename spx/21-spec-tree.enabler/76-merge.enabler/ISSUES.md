@@ -20,6 +20,8 @@ The rule that a receipt never satisfies `CLOSE` and a prior same-conversation Ch
 
 **Revisit condition**: when a changeset next restructures `merging-standards` rather than editing one of its sections. Surfaced by `skill-auditor` on the release-overlay changeset as finding `f-006`, rule `progressive_disclosure_token_cost`, severity `WARNING` in the `worth-improving` row. That role returns a JSON verdict and no journal run token, so the finding identifier and rule are its whole citable identity.
 
+Raised again by `skill-auditor` on the audit-command-evidence changeset as finding `f-008`, rule `progressive_disclosure_granularity`, severity `WARNING` in the `worth-improving` row, against the file at 593 lines and 26 sections. That run proposes splitting along the five bullet classes `SKILL.md`'s index already enumerates — overlay and safety; delivered value and close; worktree, branch, push and base sync; deterministic scope, review, gates and verdicts; inspection, classification, waits and failure modes — which names concrete boundaries the earlier finding left open. The deferral reason is unchanged.
+
 ## The overlay's base-checkout fast-forward has no deterministic coverage
 
 `spx/local/merging.md` declares a deploy-phase fast-forward of the designated main checkout with four outcomes — advanced, `held-by-live-session`, `uncommitted-work`, `not-fast-forwardable` — and no `[test]` or `[eval]` exercises any of them. The behavior reaches the spec tree through its own `[audit]`-backed assertion in `spx/21-spec-tree.enabler/76-merge.enabler/merge.md`, alongside the product-local overlay assertion, so the gap is consistent with its neighbours rather than an unbacked claim.
@@ -174,3 +176,23 @@ Impact: every load of these skills pays for restated payload, and one rule edite
 Successor: a Proposed Change filed after outcomeeng/changes#91 merges, carrying the CLOSE-teaching consolidation entry above as well.
 
 Revisit and settlement condition: each rule stated once with cross-references, semantic tag names in `manage-pr`, distinct trigger terms in the two descriptions, and one typed skill audit per revised skill approving with no `conciseness` finding.
+
+## The action-token contract cites tags without naming the reference that defines them
+
+`src/plugins/spec-tree/skills/merging-standards/references/action-tokens.md` cites `<base_sync>` (line 3) and `<pr_check_wait>` (lines 7, 8, 10) without naming the file that owns them; both are sections of `references/merge-policy.md`. `SKILL.md` instructs reading `action-tokens.md` standalone before emitting a merge-lifecycle action token, so a consumer that follows that instruction is told to run the exact wait command from `<pr_check_wait>` with no way to resolve the tag from the file it was sent to.
+
+**Why separate**: the repair is a cross-reference convention across the bundle rather than two line edits — every tag citation that crosses a reference boundary needs the owning file named, and the convention then applies to `merge-cleanup.md` and to `merge-policy.md`'s own outbound citations, so the sweep is bundle-wide and gated by `skill-auditor` on the whole surface.
+
+**Revisit condition**: the next changeset that restructures the `merging-standards` reference topology, including the section split recorded above, which changes which file owns each tag.
+
+**Evidence**: `skill-auditor` finding `f-007`, rule `unresolvable_cross_reference`, severity `WARNING` in the `worth-improving` row, on the audit-command-evidence changeset. That role returns a JSON verdict and no journal run token, so the finding identifier and rule are its whole citable identity.
+
+## Composed capabilities in the merge policy are directed by bare slash mention
+
+`src/plugins/spec-tree/skills/merging-standards/references/merge-policy.md` directs composed capabilities by bare slash mention — sync through `/sync-base` (line 231), checkpoint through `/commit-changes` (line 233), inspect a token through `/project-run-journal` (line 305) — while `/skill-standards` `<reference_skills>` states that a `/skill-name` mention records a dependency and never loads it, and declares the load form. A consuming workflow reading the policy infers which installed skill to load from prose.
+
+**Why separate**: choosing between the declared load form and naming the capability while leaving invocation to the composing workflow that holds the grant is a decision about how a `Read`-only standards reference may direct execution at all. It binds every standards reference in the marketplace, not this one, so it belongs with the plugin's reference-authoring convention rather than inside a changeset editing one section of this file.
+
+**Revisit condition**: when the reference-skill dependency-declaration convention is next settled for the standards references as a class.
+
+**Evidence**: `skill-auditor` finding `f-009`, rule `dependency_declaration_form`, severity `WARNING` in the `worth-improving` row, on the audit-command-evidence changeset.
