@@ -76,8 +76,15 @@ the result's `detail`:
   wider than the interpreter converts from a digit string, nesting past its
   recursion guard, or bytes no codec decodes
 - a document the parser reads whose content the derivation refuses: a schema
-  version other than the declared one, a structural field of the wrong shape, or
-  a read whose cause lies outside the declared set
+  version other than the declared one, a structural field of the wrong shape, a
+  read whose cause lies outside the declared set, an empty change, run token, or
+  spend currency, a spend amount that does not read as a finite decimal, or a
+  `wallTimeSeconds` that does not read as a finite decimal at or above zero
+
+A value refusal turns on the value rather than on its shape: a `wallTimeSeconds`
+of `-1` is well-formed text and still refuses the whole document, so one
+record's out-of-range value costs every entry the derivation would have
+produced.
 
 A refusal caused by one record names that record's position, so a document
 holding many records identifies the offending one.

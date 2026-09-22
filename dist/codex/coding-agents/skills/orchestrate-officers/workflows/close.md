@@ -21,14 +21,19 @@ Read `${SKILL_DIR}/references/standing-rules.md`.
    identity.
 5. Relaunch the selected officer definition in the same proven pane before the
    next order, passing the standing pane authorization as
-   `"mutationAuthorized": true`, and validate its pane, worktree, and
-   interactive-ready state.
+   `"mutationAuthorized": true` and the officer's recorded permission posture as
+   `agentArguments` on that same relaunch request, and validate its pane,
+   worktree, and interactive-ready state. The fresh session carries the posture
+   only when the relaunch request carries it, as the launch workflow's
+   `<permission_posture>` states.
 
 </process>
 
 <success_criteria>
 
 The result preserves the order, successful lifecycle fact, stop, and relaunch
-capability results and proves the same pane hosts a fresh officer session.
+capability results, including the permission posture the relaunch request
+carried or the recorded absence of such an argument on the officer's agent
+surface, and proves the same pane hosts a fresh officer session.
 
 </success_criteria>

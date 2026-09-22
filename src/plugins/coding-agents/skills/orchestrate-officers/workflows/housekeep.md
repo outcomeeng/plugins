@@ -17,7 +17,10 @@ Read `${CLAUDE_SKILL_DIR}/references/standing-rules.md`.
    it and validate its result under the parent skill's
    `<essential_principles>`. When that operation is `key`, `start`,
    `relaunch`, `stop`, or `open-worktree`, pass the standing pane authorization
-   as `"mutationAuthorized": true`.
+   as `"mutationAuthorized": true`. A `start` or `relaunch` also passes the
+   officer's recorded permission posture as `agentArguments` on that same
+   request, as the launch workflow's `<permission_posture>` states; the fresh
+   session carries the posture only when its own request carries it.
 4. Report every affected officer by absolute worktree and Change; keep internal
    state and verification-run identities with that officer.
 
@@ -26,6 +29,8 @@ Read `${CLAUDE_SKILL_DIR}/references/standing-rules.md`.
 <success_criteria>
 
 The result contains one validated herdr action, complete officer identity,
-absolute worktree, Change, and the pre-compaction durability proof when used.
+absolute worktree, Change, the permission posture a start or relaunch request
+carried or the recorded absence of such an argument on the officer's agent
+surface, and the pre-compaction durability proof when used.
 
 </success_criteria>

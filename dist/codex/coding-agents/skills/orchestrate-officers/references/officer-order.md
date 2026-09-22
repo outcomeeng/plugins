@@ -128,7 +128,8 @@ order text.
   hazards
 - Session lifecycle: `after a validated durable lifecycle-result fact reports
   that the Change operation succeeded, stop the officer and relaunch the same
-  agent kind in the same pane before its next order`
+  agent kind in the same pane before its next order, carrying the officer's
+  recorded permission posture as agentArguments on that same relaunch request`
 - Lifecycle result report: `after the Change operation succeeds, mail one fact
   carrying the standing rules' officerLifecycleResult object with the exact
   Change, triggering order store id, operation, status, resulting lifecycle,

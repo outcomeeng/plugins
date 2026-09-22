@@ -49,11 +49,13 @@ executes it.
   pass, head, verdict, decision, failure, finding provenance, read, spend, and
   wall time places each value in its own collection under that record's mail
   provenance, totals the spend under its currency, and totals the duration
-- `property` — a body carrying no `ledger` object — unparseable text, a `ledger`
-  key whose value is an integer literal wider than the interpreter converts, a
-  JSON scalar, a JSON array, an object with other keys, and event fields carried
-  at the top level rather than under `ledger` — derives the ledger of a document
-  with no record
+- `property` — a body carrying no `ledger` object derives the ledger of a
+  document with no record, over unparseable text, a body that is a JSON scalar,
+  a body that is a JSON array, a body that is an object carrying other keys, a
+  body carrying event fields at its top level rather than under `ledger`, a
+  `ledger` key whose value is an integer literal wider than the interpreter
+  converts, and a `ledger` key whose value the parser reads whole and is no
+  object — a string, an array, null, a number, or a boolean
 - `mapping` — every declared read cause records one read carrying that cause and
   payload
 - `property` — amounts across several currencies total per currency at their own
