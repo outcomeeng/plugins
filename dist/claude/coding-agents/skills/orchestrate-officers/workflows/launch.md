@@ -38,10 +38,12 @@ harness's disallowed-tools argument:
 tool rather than the order asking the officer not to reach for it — an order
 that only forbids the tool leaves it callable, and an officer called it.
 
-The equivalent Codex mechanism is an OPEN QUESTION. No Codex argument is known
-to withhold that tool from a launched session, so a Codex officer starts without
-this posture and its structured-question boundary rests on the order alone. The
-question is unresolved; never substitute an invented Codex argument for it.
+The Codex surface provides no argument that withholds that tool from a launched
+session. A Codex officer therefore starts without this posture, and its
+structured-question boundary rests on its order alone — the weaker of the two
+boundaries, because an order forbids a tool the session still carries. Record
+the absence as the officer's posture; never substitute an invented Codex
+argument for it.
 
 </permission_posture>
 
@@ -50,6 +52,7 @@ question is unresolved; never substitute an invented Codex argument for it.
 The result preserves the validated inventory, start or relaunch, bounded wait,
 and registration facts with the exact worktree, pane, frozen HEAD, Change,
 effective mail identity, and the permission posture the start or relaunch
-request carried, or records that the officer's agent has no such mechanism.
+request carried, or records that the officer's agent surface provides no such
+argument.
 
 </success_criteria>

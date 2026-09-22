@@ -74,10 +74,12 @@ eight accepted operation names.
 
 <reference_index>
 
-| Reference                                   | Purpose                                                     |
-| ------------------------------------------- | ----------------------------------------------------------- |
-| `${SKILL_DIR}/references/officer-order.md`  | Complete launch-and-order contract                          |
-| `${SKILL_DIR}/references/standing-rules.md` | Fleet-wide autonomy, durability, event, and lifecycle rules |
+| Reference                                           | Purpose                                                     |
+| --------------------------------------------------- | ----------------------------------------------------------- |
+| `${SKILL_DIR}/references/officer-order.md`          | Complete launch-and-order contract                          |
+| `${SKILL_DIR}/references/standing-rules.md`         | Fleet-wide autonomy, durability, event, and lifecycle rules |
+| `${SKILL_DIR}/references/ledger-reconstruction.md`  | Ledger input acquisition after a compaction or restart      |
+| `${SKILL_DIR}/references/ledger-script-coverage.md` | Tested cases and inputs for the bundled ledger entry point  |
 
 </reference_index>
 
@@ -151,46 +153,24 @@ printf '%s\n' '{"schemaVersion":1,"change":"owner/changes#123","mailRecords":[],
 Accept only `schemaVersion: 1` with `status: "succeeded"`. The ledger carries
 exactly `change`, `passes`, `heads`, `verdicts`, `decisions`, `failures`,
 `findingProvenance`, `reads`, `runningSpend`, and `wallTimeSeconds`, with source
-provenance on every event. Every rejection — a malformed document, a refused
-schema version, or a wrong argument vector — exits two and writes one
-`status: "invalid-input"` result carrying `schemaVersion`, `status`, and
-`detail` on stdout, leaving stderr empty, so one parse reads every outcome.
+provenance on every entry: the mail record's integer store `id`, or the journal
+run's `runToken`. Runs repeating one `runToken` contribute once. Every rejection
+— a malformed document, a refused schema version, or a wrong argument vector —
+exits two and writes one `status: "invalid-input"` result carrying
+`schemaVersion`, `status`, and `detail` on stdout, leaving stderr empty, so one
+parse reads every outcome. A rejection caused by one record names that record's
+position, so a document holding many records identifies the offending one.
 
-After compaction or restart, acquire the inputs before invoking the entry
-point. Begin with the orchestrating and officer mail identities proven by the
-launch result. Read each positively identified participant's inbox exactly once
-through `coding-agents:operate-agent-mail`, select records carrying the exact
-per-Change correlation, and add any positively identified sender or recipient
-from those records to the finite read set. Finish when one pass adds no unread
-identity. Deduplicate the selected records by integer store `id`. Collect every
-complete verification run identity from those records and inspect it through
-`spec-tree:project-run-journal`, accepting only a sealed run whose recorded
-identity equals the requested identity. Missing, ambiguous, unavailable, or
-unsealed input makes reconstruction incomplete and produces a failed read;
-never derive or report a partial ledger.
+Reconstruction after a compaction or restart runs only then, and its acquisition
+procedure lives in `${SKILL_DIR}/references/ledger-reconstruction.md`.
 
 </ledger_derivation>
 
 <script_validation>
 
-Three reachability cases execute the ledger entry point:
-
-- `{"schemaVersion":1,"change":"owner/changes#123","mailRecords":[],"journalRuns":[]}`
-  exits zero with empty stderr and writes a result carrying exactly `ledger`,
-  `schemaVersion`, and `status: "succeeded"`, whose ledger carries exactly the
-  ten keys named in `<ledger_derivation>` with empty collections, an empty
-  running spend, and zero wall time
-- the same document with `schemaVersion` `2` exits two with empty stderr and
-  writes a result carrying exactly `detail`, `schemaVersion`, and
-  `status: "invalid-input"`, whose detail names the schema-version field and
-  the required version
-- the malformed stdin document `{` exits two with empty stderr and writes the
-  same three-field invalid-input result with a non-empty detail
-
-These cases pin the entry point's reachability and result shape. They exercise
-no non-empty mail record and no journal run, so they establish nothing about
-derivation from populated inputs, and no executed case covers the wrong-argument
-rejection `<ledger_derivation>` describes.
+The executed cases for the bundled ledger entry point — reachability, populated
+derivation, and each documented rejection, with the inputs each uses — are
+recorded in `${SKILL_DIR}/references/ledger-script-coverage.md`.
 
 </script_validation>
 
@@ -220,9 +200,11 @@ session, message, commit, and verification-run identities.
 - Every mutating herdr operation the result reports carries the standing pane
   authorization for a pane this skill launched, and no pane outside that set is
   mutated.
-- After compaction or restart, running the documented ledger derivation over
-  the durable mail and sealed journal inputs produces the exact ledger keys in
-  `<ledger_derivation>`, including decision reasoning and session failures.
+- After compaction or restart, the acquisition in
+  `${SKILL_DIR}/references/ledger-reconstruction.md` reaches correlation
+  closure over the durable mail and sealed journal inputs, and running the
+  documented derivation over them produces the ledger keys in
+  `<ledger_derivation>`, each entry carrying the source that supplied it.
 
 </success_criteria>
 

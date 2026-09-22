@@ -20,8 +20,8 @@ An unfilled field refuses the order.
 - Activity: `<exact Activity identifier and text>`
 - Officer mail identity: `<registered store-assigned word-list name>`
 - Officer permission posture: `<the disallowed-tools argument the launch carried
-  on this officer's session, or the recorded absence of that mechanism for this
-  officer's agent>`
+  on this officer's session, or the recorded absence of such an argument on this
+  officer's agent surface>`
 - Exact inbox instruction: `<verbatim instruction supplied by the orchestrating session for this repository's mail project>`
 - Mail correlation: `<stable per-Change correlation>`
 - Absolute worktree: `<absolute path>`

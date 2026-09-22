@@ -116,9 +116,10 @@ Every orchestrating-session ledger event is a durable `fact` record addressed
 to the orchestrating mail identity under the Change's correlation before the
 session relies on it across compaction. This includes each autonomous decision,
 read cause, and orchestrating-session failure. The skill's
-`<ledger_derivation>` states how those records and the sealed journal runs are
-reacquired after a compaction or restart. A missing, ambiguous, unavailable, or
-unsealed source refuses reconstruction; a partial ledger is never reported.
+`references/ledger-reconstruction.md` states how those records and the sealed
+journal runs are reacquired after a compaction or restart. A missing, ambiguous,
+unavailable, or unsealed source refuses reconstruction; a partial ledger is
+never reported.
 
 Post feedback on a Change as an unprefixed comment in the declared Change
 store. Mail carries the bell and record pointer, never the feedback body.

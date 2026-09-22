@@ -1,6 +1,7 @@
 <required_reading>
 
-Read `${CLAUDE_SKILL_DIR}/references/standing-rules.md`.
+Read `${CLAUDE_SKILL_DIR}/references/standing-rules.md`. After a compaction or
+restart, also read `${CLAUDE_SKILL_DIR}/references/ledger-reconstruction.md`.
 
 </required_reading>
 
@@ -14,10 +15,8 @@ Read `${CLAUDE_SKILL_DIR}/references/standing-rules.md`.
    identified recipient that raised the event and select the exact per-Change
    correlation.
 4. After compaction or restart, acquire the complete derivation input through
-   the parent skill's `<ledger_derivation>` procedure: read every positively
-   identified Change participant's inbox once to correlation closure,
-   deduplicate records by store id, and inspect every mailed verification run
-   identity through `spec-tree:project-run-journal`. Refuse a partial input.
+   `${CLAUDE_SKILL_DIR}/references/ledger-reconstruction.md`. Refuse a partial
+   input.
 5. Rebuild the ledger from the acquired records and sealed journal runs.
 6. Compare the checked state with the prior state. Produce no report when it is
    unchanged unless operator cadence requested one.

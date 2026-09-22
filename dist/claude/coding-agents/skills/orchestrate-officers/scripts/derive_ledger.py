@@ -46,12 +46,31 @@ INVALID_INPUT_EXIT_CODE: Final = 2
 READ_CAUSES: Final = frozenset(
     {"message", "officer-state-change", "bound-crossed", "operator-cadence"}
 )
+MAIL_SOURCE_KIND: Final = "mail"
+JOURNAL_SOURCE_KIND: Final = "journal"
+MAIL_POSITION_LABEL: Final = "mail record"
+JOURNAL_POSITION_LABEL: Final = "journal run"
 PASSES_FIELD: Final = "passes"
 HEADS_FIELD: Final = "heads"
 VERDICTS_FIELD: Final = "verdicts"
 DECISIONS_FIELD: Final = "decisions"
 FAILURES_FIELD: Final = "failures"
 READS_FIELD: Final = "reads"
+# Every scalar ledger event field with the collection it contributes to. The
+# derivation folds each event through this registry, so the pairing is declared
+# once rather than repeated per event kind.
+SCALAR_EVENT_COLLECTIONS: Final = (
+    (PASS_FIELD, PASSES_FIELD),
+    (HEAD_FIELD, HEADS_FIELD),
+    (VERDICT_FIELD, VERDICTS_FIELD),
+    (DECISION_FIELD, DECISIONS_FIELD),
+    (FAILURE_FIELD, FAILURES_FIELD),
+)
+COLLECTION_FIELDS: Final = (
+    *(collection for _, collection in SCALAR_EVENT_COLLECTIONS),
+    FINDING_PROVENANCE_FIELD,
+    READS_FIELD,
+)
 
 
 class LedgerInputError(ValueError):
@@ -76,20 +95,20 @@ def _source(kind: str, source_id: int | str) -> dict[str, object]:
     return {SOURCE_KIND_FIELD: kind, SOURCE_ID_FIELD: source_id}
 
 
-def _mail_source(source_id: object) -> dict[str, object]:
+def _mail_source(source_id: object, where: str) -> dict[str, object]:
     if isinstance(source_id, bool) or not isinstance(source_id, int):
-        raise LedgerInputError("mail source identity must be an integer")
-    return _source("mail", source_id)
+        raise LedgerInputError(f"{where} source identity must be an integer")
+    return _source(MAIL_SOURCE_KIND, source_id)
 
 
-def _journal_run_token(run_token: object) -> str:
+def _journal_run_token(run_token: object, where: str) -> str:
     if not isinstance(run_token, str) or not run_token:
-        raise LedgerInputError("journal runToken must be a non-empty string")
+        raise LedgerInputError(f"{where} runToken must be a non-empty string")
     return run_token
 
 
 def _journal_source(run_token: str) -> dict[str, object]:
-    return _source("journal", run_token)
+    return _source(JOURNAL_SOURCE_KIND, run_token)
 
 
 def _append_entry(
@@ -108,11 +127,12 @@ def _append_findings(
     findings: list[dict[str, object]],
     value: object,
     source: Mapping[str, object],
+    where: str,
 ) -> None:
     if value is None:
         return
-    for finding in _sequence(value, "findingProvenance"):
-        finding_data = dict(_mapping(finding, "finding provenance entry"))
+    for finding in _sequence(value, f"{where} findingProvenance"):
+        finding_data = dict(_mapping(finding, f"{where} finding provenance entry"))
         entry: dict[str, object] = {
             VALUE_FIELD: finding_data,
             SOURCE_FIELD: dict(source),
@@ -125,51 +145,54 @@ def _append_reads(
     reads: list[dict[str, object]],
     value: object,
     source: Mapping[str, object],
+    where: str,
 ) -> None:
     if value is None:
         return
     values = value if isinstance(value, list) else [value]
     for item in values:
-        read = dict(_mapping(item, "read"))
+        read = dict(_mapping(item, f"{where} read"))
         cause = read.get(CAUSE_FIELD)
         if cause not in READ_CAUSES:
             allowed = ", ".join(sorted(READ_CAUSES))
-            raise LedgerInputError(f"read cause must be one of: {allowed}")
+            raise LedgerInputError(f"{where} read cause must be one of: {allowed}")
         entry: dict[str, object] = {VALUE_FIELD: read, SOURCE_FIELD: dict(source)}
         if entry not in reads:
             reads.append(entry)
 
 
-def _add_spend(totals: dict[str, Decimal], value: object) -> None:
+def _add_spend(totals: dict[str, Decimal], value: object, where: str) -> None:
     if value is None:
         return
-    spend = _mapping(value, "spend")
+    spend = _mapping(value, f"{where} spend")
     currency = spend.get(CURRENCY_FIELD)
     amount = spend.get(AMOUNT_FIELD)
     if not isinstance(currency, str) or not currency:
-        raise LedgerInputError("spend currency must be a non-empty string")
+        raise LedgerInputError(f"{where} spend currency must be a non-empty string")
     if isinstance(amount, bool) or not isinstance(amount, (int, float, str)):
-        raise LedgerInputError("spend amount must be numeric")
+        raise LedgerInputError(f"{where} spend amount must be numeric")
     try:
         decimal_amount = Decimal(str(amount))
     except InvalidOperation as error:
-        raise LedgerInputError("spend amount must be numeric") from error
+        raise LedgerInputError(f"{where} spend amount must be numeric") from error
     if not decimal_amount.is_finite():
-        raise LedgerInputError("spend amount must be finite")
+        raise LedgerInputError(f"{where} spend amount must be finite")
     totals[currency] = totals.get(currency, Decimal()) + decimal_amount
 
 
-def _wall_time(value: object) -> Decimal:
+def _wall_time(value: object, where: str) -> Decimal:
     if value is None:
         return Decimal()
     if isinstance(value, bool) or not isinstance(value, (int, float, str)):
-        raise LedgerInputError("wallTimeSeconds must be numeric")
+        raise LedgerInputError(f"{where} wallTimeSeconds must be numeric")
     try:
         duration = Decimal(str(value))
     except InvalidOperation as error:
-        raise LedgerInputError("wallTimeSeconds must be numeric") from error
+        raise LedgerInputError(f"{where} wallTimeSeconds must be numeric") from error
     if not duration.is_finite() or duration < 0:
-        raise LedgerInputError("wallTimeSeconds must be finite and non-negative")
+        raise LedgerInputError(
+            f"{where} wallTimeSeconds must be finite and non-negative"
+        )
     return duration
 
 
@@ -182,17 +205,39 @@ def _json_number(value: Decimal) -> int | float:
 
 def _event_from_record(
     record: Mapping[str, object],
+    where: str,
 ) -> Mapping[str, object] | None:
     body = record.get(BODY_FIELD)
     if not isinstance(body, str):
-        raise LedgerInputError("mail record body must be a string")
+        raise LedgerInputError(f"{where} body must be a string")
     try:
         payload = json.loads(body)
     except json.JSONDecodeError:
         return None
     if not isinstance(payload, Mapping) or LEDGER_FIELD not in payload:
         return None
-    return _mapping(payload[LEDGER_FIELD], "mail ledger event")
+    return _mapping(payload[LEDGER_FIELD], f"{where} ledger event")
+
+
+def _absorb(
+    collected: dict[str, list[dict[str, object]]],
+    spend_totals: dict[str, Decimal],
+    event: Mapping[str, object],
+    source: Mapping[str, object],
+    where: str,
+) -> Decimal:
+    """Fold one event into the collected entries and report its wall time."""
+    for event_field, collection in SCALAR_EVENT_COLLECTIONS:
+        _append_entry(collected[collection], event.get(event_field), source)
+    _append_findings(
+        collected[FINDING_PROVENANCE_FIELD],
+        event.get(FINDING_PROVENANCE_FIELD),
+        source,
+        where,
+    )
+    _append_reads(collected[READS_FIELD], event.get(READ_FIELD), source, where)
+    _add_spend(spend_totals, event.get(SPEND_FIELD), where)
+    return _wall_time(event.get(WALL_TIME_SECONDS_FIELD), where)
 
 
 def derive_ledger(payload: Mapping[str, object]) -> dict[str, object]:
@@ -203,61 +248,37 @@ def derive_ledger(payload: Mapping[str, object]) -> dict[str, object]:
     if not isinstance(change, str) or not change:
         raise LedgerInputError("change must be a non-empty string")
 
-    passes: list[dict[str, object]] = []
-    heads: list[dict[str, object]] = []
-    verdicts: list[dict[str, object]] = []
-    decisions: list[dict[str, object]] = []
-    failures: list[dict[str, object]] = []
-    findings: list[dict[str, object]] = []
-    reads: list[dict[str, object]] = []
+    collected: dict[str, list[dict[str, object]]] = {
+        collection: [] for collection in COLLECTION_FIELDS
+    }
     spend_totals: dict[str, Decimal] = {}
     wall_time = Decimal()
 
     mail_records = _sequence(payload.get(MAIL_RECORDS_FIELD), MAIL_RECORDS_FIELD)
-    for raw_record in mail_records:
-        record = _mapping(raw_record, "mail record")
-        source = _mail_source(record.get(ID_FIELD))
-        event = _event_from_record(record)
+    for index, raw_record in enumerate(mail_records):
+        where = f"{MAIL_POSITION_LABEL} {index}"
+        record = _mapping(raw_record, where)
+        source = _mail_source(record.get(ID_FIELD), where)
+        event = _event_from_record(record, where)
         if event is None:
             continue
-        _append_entry(passes, event.get(PASS_FIELD), source)
-        _append_entry(heads, event.get(HEAD_FIELD), source)
-        _append_entry(verdicts, event.get(VERDICT_FIELD), source)
-        _append_entry(decisions, event.get(DECISION_FIELD), source)
-        _append_entry(failures, event.get(FAILURE_FIELD), source)
-        _append_findings(findings, event.get(FINDING_PROVENANCE_FIELD), source)
-        _append_reads(reads, event.get(READ_FIELD), source)
-        _add_spend(spend_totals, event.get(SPEND_FIELD))
-        wall_time += _wall_time(event.get(WALL_TIME_SECONDS_FIELD))
+        wall_time += _absorb(collected, spend_totals, event, source, where)
 
     journal_runs = _sequence(payload.get(JOURNAL_RUNS_FIELD), JOURNAL_RUNS_FIELD)
     seen_run_tokens: set[str] = set()
-    for raw_run in journal_runs:
-        run = _mapping(raw_run, "journal run")
-        run_token = _journal_run_token(run.get(RUN_TOKEN_FIELD))
+    for index, raw_run in enumerate(journal_runs):
+        where = f"{JOURNAL_POSITION_LABEL} {index}"
+        run = _mapping(raw_run, where)
+        run_token = _journal_run_token(run.get(RUN_TOKEN_FIELD), where)
         if run_token in seen_run_tokens:
             continue
         seen_run_tokens.add(run_token)
         source = _journal_source(run_token)
-        _append_entry(passes, run.get(PASS_FIELD), source)
-        _append_entry(heads, run.get(HEAD_FIELD), source)
-        _append_entry(verdicts, run.get(VERDICT_FIELD), source)
-        _append_entry(decisions, run.get(DECISION_FIELD), source)
-        _append_entry(failures, run.get(FAILURE_FIELD), source)
-        _append_findings(findings, run.get(FINDING_PROVENANCE_FIELD), source)
-        _append_reads(reads, run.get(READ_FIELD), source)
-        _add_spend(spend_totals, run.get(SPEND_FIELD))
-        wall_time += _wall_time(run.get(WALL_TIME_SECONDS_FIELD))
+        wall_time += _absorb(collected, spend_totals, run, source, where)
 
     ledger = {
         CHANGE_FIELD: change,
-        PASSES_FIELD: passes,
-        HEADS_FIELD: heads,
-        VERDICTS_FIELD: verdicts,
-        DECISIONS_FIELD: decisions,
-        FAILURES_FIELD: failures,
-        FINDING_PROVENANCE_FIELD: findings,
-        READS_FIELD: reads,
+        **collected,
         RUNNING_SPEND_FIELD: {
             currency: _json_number(amount)
             for currency, amount in sorted(spend_totals.items())
