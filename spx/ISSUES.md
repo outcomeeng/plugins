@@ -182,7 +182,7 @@ Harness modules under `outcomeeng_testing/harnesses/` and a generator under `out
 
 `spx/outcomeeng.product.md` lists "TDD flow orchestration (`/apply`) with language-specific delegation" among the product's included scope. The node that flow names, `spx/21-spec-tree.enabler/65-apply.enabler/54-node-flow.enabler`, declares the per-node apply flow composing an authoring, deterministic-verification, and artifact-audit lane for every Output kind present, and only its Code lane carries a test-before-implementation sequence. A skill-only or spec-only slice runs no TDD sequence at all, so the product line describes a flow the declaration no longer provides.
 
-**Evidence.** Raised as a consistency finding by review run `2026-09-22_00-01-42-556-7c7bb37033f0`. Its same-class sweep found the same retired term in the consumers inside the apply subtree, which that changeset corrected.
+**Evidence.** Raised as a consistency finding by review run `2026-09-22_00-01-42-556-7c7bb37033f0`, and the incomplete retirement re-raised by run `2026-09-22_02-38-19-474-b3b4be548528`. The changeset that surfaced it corrected the sites inside the apply subtree and the two spec-tree plugin manifests. Two sites naming the flow remain outside it: this one, and the managed router template recorded at `spx/21-spec-tree.enabler/43-instruction-block.enabler/ISSUES.md`. `TDD` as a general practice term stands correctly elsewhere — the TDD-red opener in the merge policy and the TypeScript code lane's TDD phases are not this class.
 
 **Settlement condition**: the product spec's scope line names the composed per-node apply flow rather than a TDD flow.
 
