@@ -116,7 +116,12 @@ FAIL_EXIT_CODE = 2
 PASSING_CHILD_OUTPUT = "passing validator output"
 FAILING_CHILD_OUTPUT_PREFIX = "failing validator output line"
 SPAWN_FAILURE_MESSAGE = "missing executable"
-HIGH_VOLUME_CHILD_OUTPUT = "\n".join("captured child output" for _ in range(200))
+CHILD_OUTPUT_LINE = "captured child output"
+HIGH_VOLUME_CHILD_LINES = 200
+LOW_VOLUME_CHILD_OUTPUT = CHILD_OUTPUT_LINE
+HIGH_VOLUME_CHILD_OUTPUT = "\n".join(
+    CHILD_OUTPUT_LINE for _ in range(HIGH_VOLUME_CHILD_LINES)
+)
 PYTEST_TARGET_ARG = (
     "spx/15-validation.enabler/65-gate.enabler/tests/test_gate.compliance.l1.py"
 )

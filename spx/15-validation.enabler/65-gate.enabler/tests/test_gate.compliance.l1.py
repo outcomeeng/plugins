@@ -21,6 +21,7 @@ from outcomeeng.validation import (
     CHECK_RECIPES,
     EVAL_LINKS_ARGV,
     FMT_CHECK_ARGV,
+    FORWARDED_SIGNALS,
     HOOK_SAFETY_ARGV,
     MYPY_ARGV,
     ORCHESTRATOR_MODULE_NAMES,
@@ -69,7 +70,10 @@ from outcomeeng.validation.skip_report import (
     SKIP_REPORT_TEST_FIELD,
 )
 from outcomeeng_testing.harnesses.gate import (
+    CHILD_OUTPUT_LINE,
+    HIGH_VOLUME_CHILD_LINES,
     HIGH_VOLUME_CHILD_OUTPUT,
+    LOW_VOLUME_CHILD_OUTPUT,
     UNDECLARED_SWITCH,
     OrchestratorModuleAbsent,
     SleepBudgetExhausted,
@@ -161,6 +165,34 @@ def test_child_output_is_captured_never_streamed() -> None:
     assert len(run.output.splitlines()) < len(HIGH_VOLUME_CHILD_OUTPUT.splitlines())
 
 
+def test_live_output_grows_with_step_count_not_child_output_volume() -> None:
+    quiet = recipe_run_observation(
+        recipe=TEST_RECIPE,
+        exit_codes=[SUCCESS_EXIT_CODE, SUCCESS_EXIT_CODE],
+        outputs=[LOW_VOLUME_CHILD_OUTPUT, LOW_VOLUME_CHILD_OUTPUT],
+    )
+    loud = recipe_run_observation(
+        recipe=TEST_RECIPE,
+        exit_codes=[SUCCESS_EXIT_CODE, SUCCESS_EXIT_CODE],
+        outputs=[HIGH_VOLUME_CHILD_OUTPUT, HIGH_VOLUME_CHILD_OUTPUT],
+    )
+
+    assert CHILD_OUTPUT_LINE not in loud.output, (
+        "no child output line reaches the live sink, capped prefix included"
+    )
+    quiet_lines = len(quiet.output.splitlines())
+    loud_lines = len(loud.output.splitlines())
+    assert quiet_lines == loud_lines, (
+        f"{HIGH_VOLUME_CHILD_LINES}x the child output changed the live output "
+        f"from {quiet_lines} lines to {loud_lines}"
+    )
+    steps = len(TEST_RECIPE.preflight_steps) + len(TEST_RECIPE.steps)
+    assert (
+        sum(line.startswith(STEP_PASS_STATUS) for line in quiet.output.splitlines())
+        == steps
+    )
+
+
 def test_subprocess_lives_only_in_the_production_spawner() -> None:
     importers = validation_subprocess_importers()
 
@@ -184,8 +216,8 @@ def test_subprocess_lives_only_in_the_production_spawner() -> None:
         assert isinstance(preexec_fn, ast.Name)
         assert preexec_fn.id == _restore_child_signal_mask.__name__
     assert f"signal.{signal.pthread_sigmask.__name__}(signal.SIG_UNBLOCK" in source
-    for signal_name in ("SIGTERM", "SIGINT", "SIGHUP"):
-        assert f"signal.{signal_name}" in source
+    for forwarded in FORWARDED_SIGNALS:
+        assert f"signal.{forwarded.name}" in source
 
 
 def test_no_gate_module_polls_without_bound() -> None:
