@@ -99,30 +99,28 @@ def _reasons(plan: SelectedGatePlan) -> tuple[str, ...]:
     return tuple(item.reason for item in plan.selected_steps)
 
 
-@pytest.mark.parametrize(
-    ("patterns", "required_argvs"),
+_LANE_ROWS = (
     (
-        (
-            selection_source.PYTHON_FORMAT_LINT_PATTERNS,
-            (RUFF_FORMAT_ARGV, RUFF_CHECK_ARGV),
-        ),
-        (selection_source.PYTHON_TYPECHECK_PATTERNS, (MYPY_ARGV, PYRIGHT_ARGV)),
-        (selection_source.MARKDOWN_PATTERNS, (FMT_CHECK_ARGV, SPX_MARKDOWN_ARGV)),
-        (selection_source.WORKFLOW_PATTERNS, (ACTIONLINT_ARGV, SHELLCHECK_ARGV)),
-        (selection_source.INSTRUCTION_BLOCK_PATTERNS, (INSTRUCTION_BLOCK_ARGV,)),
-        (selection_source.EVAL_TRIGGER_PATTERNS, (EVAL_TRIGGERS_ARGV,)),
-        (selection_source.EVAL_PROMPT_PATTERNS, (EVAL_PROMPTS_ARGV,)),
-        (selection_source.EVIDENCE_LINK_PATTERNS, (EVAL_LINKS_ARGV,)),
-        (
-            selection_source.SKILL_PATTERNS,
-            tuple(
-                step.argv
-                for step in VALIDATION_STEPS
-                if step.label in SKILL_STEP_LABELS
-            ),
+        selection_source.PYTHON_FORMAT_LINT_PATTERNS,
+        (RUFF_FORMAT_ARGV, RUFF_CHECK_ARGV),
+    ),
+    (selection_source.PYTHON_TYPECHECK_PATTERNS, (MYPY_ARGV, PYRIGHT_ARGV)),
+    (selection_source.MARKDOWN_PATTERNS, (FMT_CHECK_ARGV, SPX_MARKDOWN_ARGV)),
+    (selection_source.WORKFLOW_PATTERNS, (ACTIONLINT_ARGV, SHELLCHECK_ARGV)),
+    (selection_source.INSTRUCTION_BLOCK_PATTERNS, (INSTRUCTION_BLOCK_ARGV,)),
+    (selection_source.EVAL_TRIGGER_PATTERNS, (EVAL_TRIGGERS_ARGV,)),
+    (selection_source.EVAL_PROMPT_PATTERNS, (EVAL_PROMPTS_ARGV,)),
+    (selection_source.EVIDENCE_LINK_PATTERNS, (EVAL_LINKS_ARGV,)),
+    (
+        selection_source.SKILL_PATTERNS,
+        tuple(
+            step.argv for step in VALIDATION_STEPS if step.label in SKILL_STEP_LABELS
         ),
     ),
 )
+
+
+@pytest.mark.parametrize(("patterns", "required_argvs"), _LANE_ROWS)
 def test_every_declared_path_category_selects_its_validation_lane(
     patterns: tuple[str, ...], required_argvs: tuple[tuple[str, ...], ...]
 ) -> None:
@@ -141,6 +139,40 @@ def test_every_declared_path_category_selects_its_validation_lane(
         )
         assert selected_argvs[: len(validation_argvs)] == validation_argvs
         assert all(reason.strip() for reason in _reasons(plan))
+
+
+_CATEGORIES_VERIFIED_ELSEWHERE = {
+    selection_source.FULL_GATE_PATTERNS: (
+        "test_full_gate_paths_select_the_complete_recipe_set"
+    ),
+    selection_source.TEST_INFRASTRUCTURE_PATTERNS: (
+        "test_test_infrastructure_reach_maps_to_gate_steps"
+    ),
+    selection_source.PYTHON_ASSERTION_TEST_PATTERNS: (
+        "test_every_assertion_path_category_maps_presence_to_targeted_execution"
+    ),
+    selection_source.LIVE_DISCOVERY_PATTERNS: (
+        "test_each_declared_discovery_surface_requires_the_live_check"
+    ),
+}
+
+
+def test_every_enumerated_category_reaches_a_case() -> None:
+    """Each category the source enumerates is verified by a named case.
+
+    The lane rows carry the categories whose whole claim is the lane they
+    select; the rest select something else and are named with the case that
+    carries them. A category added to the source enumeration and to neither
+    list fails here rather than escaping selection evidence.
+    """
+    by_lane_row = {patterns for patterns, _ in _LANE_ROWS}
+    enumerated = set(selection_source.SELECTION_CATEGORY_PATTERNS)
+    unreached = enumerated - by_lane_row - set(_CATEGORIES_VERIFIED_ELSEWHERE)
+    assert not unreached, (
+        f"{len(unreached)} of {len(enumerated)} enumerated categories reach "
+        "neither a lane row nor a named case"
+    )
+    assert not by_lane_row & set(_CATEGORIES_VERIFIED_ELSEWHERE)
 
 
 @pytest.mark.parametrize("pattern", selection_source.PYTHON_ASSERTION_TEST_PATTERNS)
