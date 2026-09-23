@@ -68,6 +68,68 @@ MODULE_INVOCATION: Final = "outcomeeng.distribution.instruction_block"
 LEFTHOOK_PATH: Final = Path("lefthook.yml")
 PRECOMMIT_BUILD_INSTRUCTIONS_COMMAND: Final = "run: just build-instructions"
 LEGACY_DIRECT_TEMPLATE_ARGUMENT: Final = "--template src/plugins"
+
+NATIVE_PROFILE_RECIPE: Final = "verify-native-profile-execution"
+"""The recipe whose only caller is release acceptance."""
+
+RECIPE_DECLARATION_TERMINATOR: Final = ":"
+"""What ends a recipe's declaration line, after its parameters when it takes any."""
+
+
+class RecipeAbsent(RuntimeError):
+    """The justfile text carries no declaration of the named recipe."""
+
+    def __init__(self, recipe: str) -> None:
+        super().__init__(f"recipe {recipe} is absent from the justfile")
+        self.recipe = recipe
+
+
+def _declares_recipe(line: str, recipe: str) -> bool:
+    """Whether the line declares this recipe, parameterless or parameter-bearing.
+
+    A declaration begins at column zero, and the name is followed by the
+    terminator that ends a parameterless declaration or by the whitespace before
+    its parameters. Requiring one of the two is what separates this recipe from a
+    longer one whose name begins with the same text.
+    """
+    if not line.startswith(recipe):
+        return False
+    remainder = line[len(recipe) :]
+    return remainder.startswith(RECIPE_DECLARATION_TERMINATOR) or (
+        remainder[:1].isspace()
+    )
+
+
+def recipe_block(justfile_text: str, recipe: str) -> str:
+    """Return one recipe's declaration together with its complete body.
+
+    A justfile recipe body runs to the first line that is neither indented nor
+    blank, so a blank line inside a body continues it rather than ending it.
+    The block carries every line the recipe delimits — a rule over a recipe must
+    see them all, and a reader that stopped at the first blank line would leave
+    every later line of the same recipe unread. A pure function of the text it
+    receives, so a rule's reach is verifiable against a supplied justfile.
+
+    A declaration is matched whether it is parameterless or parameter-bearing,
+    so absence is raised only for a recipe the text does not declare rather than
+    for one whose declaration takes the form the reader does not recognise.
+    """
+    lines = justfile_text.splitlines()
+    for index, line in enumerate(lines):
+        if not _declares_recipe(line, recipe):
+            continue
+        body: list[str] = []
+        for item in lines[index + 1 :]:
+            if item.startswith((" ", "\t")) or not item.strip():
+                body.append(item)
+                continue
+            break
+        while body and not body[-1].strip():
+            body.pop()
+        return "\n".join([line, *body])
+    raise RecipeAbsent(recipe)
+
+
 LEGACY_DIRECT_REPO_ROOT_ARGUMENT: Final = "--repo-root ."
 # Each *_POLICY_REQUIREMENTS tuple below asserts literal substrings of one authored
 # template section in

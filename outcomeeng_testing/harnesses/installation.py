@@ -28,7 +28,11 @@ from outcomeeng.distribution.agents import (
     AGENT_SKILL_ENABLED_FIELD,
 )
 from outcomeeng.distribution.build import render_text
-from outcomeeng.distribution.instruction_block import JUSTFILE_NAME
+from outcomeeng.distribution.instruction_block import (
+    JUSTFILE_NAME,
+    NATIVE_PROFILE_RECIPE,
+    recipe_block,
+)
 from outcomeeng.validation._steps import PYTHON_SOURCE_PATHS
 from outcomeeng.validation.infrastructure_index import SPEC_TREE_ROOT
 from outcomeeng.validation.agent_switch_enforcement import (
@@ -4606,67 +4610,6 @@ def real_process_row_files(node_tests: Path) -> tuple[Path, ...]:
         for path in sorted(node_tests.glob("test_*.py"))
         if any(f".{level}." in path.name for level in ACQUIRED_EXECUTABLE_LEVELS)
     )
-
-
-NATIVE_PROFILE_RECIPE = "verify-native-profile-execution"
-"""The recipe whose only caller is release acceptance."""
-
-RECIPE_DECLARATION_TERMINATOR: Final = ":"
-"""What ends a recipe's declaration line, after its parameters when it takes any."""
-
-
-class RecipeAbsent(RuntimeError):
-    """The justfile text carries no declaration of the named recipe."""
-
-    def __init__(self, recipe: str) -> None:
-        super().__init__(f"recipe {recipe} is absent from the justfile")
-        self.recipe = recipe
-
-
-def _declares_recipe(line: str, recipe: str) -> bool:
-    """Whether the line declares this recipe, parameterless or parameter-bearing.
-
-    A declaration begins at column zero, and the name is followed by the
-    terminator that ends a parameterless declaration or by the whitespace before
-    its parameters. Requiring one of the two is what separates this recipe from a
-    longer one whose name begins with the same text.
-    """
-    if not line.startswith(recipe):
-        return False
-    remainder = line[len(recipe) :]
-    return remainder.startswith(RECIPE_DECLARATION_TERMINATOR) or (
-        remainder[:1].isspace()
-    )
-
-
-def recipe_block(justfile_text: str, recipe: str) -> str:
-    """Return one recipe's declaration together with its complete body.
-
-    A justfile recipe body runs to the first line that is neither indented nor
-    blank, so a blank line inside a body continues it rather than ending it.
-    The block carries every line the recipe delimits — a rule over a recipe must
-    see them all, and a reader that stopped at the first blank line would leave
-    every later line of the same recipe unread. A pure function of the text it
-    receives, so a rule's reach is verifiable against a supplied justfile.
-
-    A declaration is matched whether it is parameterless or parameter-bearing,
-    so absence is raised only for a recipe the text does not declare rather than
-    for one whose declaration takes the form the reader does not recognise.
-    """
-    lines = justfile_text.splitlines()
-    for index, line in enumerate(lines):
-        if not _declares_recipe(line, recipe):
-            continue
-        body: list[str] = []
-        for item in lines[index + 1 :]:
-            if item.startswith((" ", "\t")) or not item.strip():
-                body.append(item)
-                continue
-            break
-        while body and not body[-1].strip():
-            body.pop()
-        return "\n".join([line, *body])
-    raise RecipeAbsent(recipe)
 
 
 def repository_justfile_text() -> str:

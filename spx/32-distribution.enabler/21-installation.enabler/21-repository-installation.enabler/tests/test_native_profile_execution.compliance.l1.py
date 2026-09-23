@@ -9,18 +9,20 @@ from outcomeeng_testing.harnesses import (
     native_profile_execution as profile_execution_harness,
 )
 from outcomeeng_testing.harnesses.installation import (
-    NATIVE_PROFILE_RECIPE,
-    RecipeAbsent,
     native_profile_execution_recipe,
     package_positioned_module,
-    recipe_block,
     repository_justfile_text,
 )
 from outcomeeng_testing.harnesses.native_profile_failures import native_profile_failure
 
 from pathlib import Path
 
-from outcomeeng.distribution.instruction_block import INSTRUCTIONS_CHECK_RECIPE
+from outcomeeng.distribution.instruction_block import (
+    INSTRUCTIONS_CHECK_RECIPE,
+    NATIVE_PROFILE_RECIPE,
+    RecipeAbsent,
+    recipe_block,
+)
 from outcomeeng.distribution.native_profile_execution import native_profile_rows
 from outcomeeng.distribution.profiles import AGENT_PROFILES
 from outcomeeng.validation.agent_disable import AGENT_SWITCHES, codex_disabled_reason
@@ -308,7 +310,6 @@ def test_a_non_python_path_is_refused_rather_than_scanned_as_empty(
 
 
 def test_a_single_offending_file_is_reported(tmp_path: Path) -> None:
-    offender = tmp_path / "second_spelling.py"
-    offender.write_text(f'VALUE = "{AGENT_SWITCHES[0]}"\n', encoding="utf-8")
+    offender = package_positioned_module(tmp_path, f'VALUE = "{AGENT_SWITCHES[0]}"')
 
     assert modules_naming_a_switch((offender,)) == (offender,)
