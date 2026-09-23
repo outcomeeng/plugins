@@ -36,6 +36,7 @@ from outcomeeng.distribution.native_thread_evidence import (
     THREAD_READ_TIMEOUT_SECONDS,
     read_native_child,
 )
+from outcomeeng_evals.runner import CLAUDECODE_ENV
 from outcomeeng_testing.harnesses.discovery_auth import (
     DISCOVERY_TIMEOUT_SECONDS,
     FILE_STORE_ARGS,
@@ -185,7 +186,7 @@ def _isolated_environment(environment: Mapping[str, str]) -> dict[str, str]:
         for name, value in credential_free_environment(environment).items()
         if name not in CLAUDE_CREDENTIAL_VARIABLES
         and name not in NATIVE_PROFILE_OVERRIDE_ENVIRONMENT_VARIABLES
-        and name != "CLAUDECODE"
+        and name != CLAUDECODE_ENV
     }
 
 
