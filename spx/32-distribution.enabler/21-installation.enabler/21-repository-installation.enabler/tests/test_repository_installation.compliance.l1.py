@@ -120,6 +120,7 @@ from outcomeeng_testing.harnesses.installation import (
     observe_install_record_rewrite,
     observe_racing_install_record_rewrite,
     observe_scope_split,
+    package_positioned_module,
     skill_enabling_definition,
 )
 
@@ -1316,8 +1317,7 @@ def test_only_the_declaring_module_names_a_switch() -> None:
 
 
 def test_a_second_module_naming_a_switch_is_reported(tmp_path: Path) -> None:
-    offender = tmp_path / "offender.py"
-    offender.write_text(f'VALUE = "{AGENT_SWITCHES[0]}"\n', encoding="utf-8")
+    offender = package_positioned_module(tmp_path, f'VALUE = "{AGENT_SWITCHES[0]}"')
 
     assert modules_naming_a_switch((tmp_path,)) == (offender,)
 
