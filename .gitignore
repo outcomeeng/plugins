@@ -28,6 +28,10 @@ methodology/memories/
 # Per-eval run transcripts (ephemeral; history.jsonl is the committed trend record)
 **/evals/*/runs/
 
+# Per-probe working runs (ephemeral; an attested run's retained artifacts sit
+# beside probe.md, never under runs/)
+**/probes/*/runs/
+
 # Editor and IDE
 .vscode/
 .idea/

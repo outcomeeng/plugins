@@ -116,7 +116,7 @@ decomposition can carry.
 
 ## Plugin changelog titles use two forms
 
-Ten plugin changelogs open with "# Changelog — {plugin} plugin"; the prose changelog opens with "# Prose plugin changelog", the form the prose canon's em dash rule requires. One sweep renames the other ten titles to the dash-free form. Surfaced by the CI changeset review on the chat-voice branch; deferred there because the sweep touches ten plugins outside that changeset.
+Most plugin changelogs open with "# Changelog — {plugin} plugin"; a minority open with the dash-free "# {Plugin} plugin changelog", the form the prose canon's em dash rule requires. `head -1` over every `src/plugins/*/CHANGELOG.md` derives which titles stand in which form, so this entry names that relation and never a count. The count it first carried was falsified twice over — once when a plugin was added after the sentence was written, and once when a changeset renamed a single title — and neither edit was in view of the sentence holding the figure. One sweep renames every title still carrying the dash, and the entry closes when that derivation yields the dash-free form for every plugin. Surfaced by the CI changeset review on the chat-voice branch; deferred there because the sweep touches every plugin whose title still carries the dash, all of them outside that changeset.
 
 ## Two verifier rules collide on pinning a spec-declared tuning value
 
@@ -177,3 +177,89 @@ Harness modules under `outcomeeng_testing/harnesses/` and a generator under `out
 **Resolution shape.** Decide where the guard lives: a Verifier-mode context load that reads the committed subject without `/sync-base`, or a `/sync-base` result that reports behind-base without moving the checkout when the caller is a Verifier. Amend the audit skills that load context to select it, so the dispatch-readiness record's clean committed head stays the audited head.
 
 **Why separate.** The fix amends the context-loading, base-sync, and audit skills, none of which the host-readiness changeset touches.
+
+## A skill-directory token inside an `allowed-tools` pattern may never match
+
+`/skill-standards` `references/command-capabilities.md` `<file_references>` documents `${CLAUDE_SKILL_DIR}`
+for the skill **body**, where the loader substitutes the absolute path before the agent sees the command.
+It states no substitution behavior for an `allowed-tools` frontmatter pattern. Skill surfaces across three
+plugins nonetheless spell the token inside a permission entry — `Bash(python3
+"${CLAUDE_SKILL_DIR}/scripts/<name>.py":*)` — so each grant is written against a string the loader may never
+produce. Two readings are open, and no amount of reading separates them: either the loader expands the token
+in the pattern as it does in the body, and the grant means what it says, or the pattern is matched literally
+against a command whose path is already expanded, and the grant matches nothing. The question is the token's
+behavior in a permission pattern across every surface that uses it, not the correctness of one line.
+
+**Evidence**: `instructions:skill-auditor` finding `f-007`, severity `WARNING`, against
+`src/plugins/coding-agents/skills/orchestrate-officers/SKILL.md:6`; then a sweep of the `allowed-tools`
+frontmatter across `src/plugins/*/skills/*/SKILL.md`, which examined 113 surfaces and found the token in a
+permission entry on 17 of them, spanning `coding-agents` (6), `spec-tree` (10), and `contribute` (1). That
+grep over the frontmatter derives the current population, so this entry names the sweep rather than a list
+every new script-invoking skill would falsify.
+
+**Impact**: a grant that never matches does not fail — it degrades. The declared containment stops being the
+real approval boundary, and every invocation of the script falls back to a per-call permission prompt, which
+strands an unattended run. The degradation is silent in both directions: nothing in the skill surface, the
+build, or the deterministic gate distinguishes a grant that matches from one that never will, and a session
+running interactively sees only a prompt it would answer anyway.
+
+**Settlement condition**: an executed invocation is the only evidence that closes this. A session runs one of
+the surfaces the sweep names to the point where it issues its `python3` command, and records whether the
+harness admits the command under the declared grant or prompts for it; the established behavior then fixes
+one spelling across the whole swept population. Reading the loader's documentation, the skill body, or the
+frontmatter settles nothing.
+
+**Related**: `The non-interactive git guard sits on the command that cannot prompt` above asks the adjacent
+question — whether Claude Code's Bash grant matcher tolerates an `ENV=value` prefix on the command string.
+Both turn on how that matcher treats a grant pattern that is not a literal prefix of the command the harness
+issues, so one executed invocation that reports the matcher's behavior on an unexpanded token and on an
+environment-variable prefix answers both.
+
+## An implementation audit and a changeset review read one shipped executable to opposite verdicts
+
+Two Verifier types judged one artifact at one head and reached opposite readings. On head
+`ccaef088c98007c963125af0fc621040d1f6b51b`, `spec-tree:implementation-auditor` run
+`2026-09-22_20-40-39-797-98d0f564dc05` returned `approved` with zero findings, having audited
+`src/plugins/coding-agents/skills/orchestrate-officers/scripts/derive_ledger.py` as a required scope
+unit under `implementation:python:code` and again under `implementation:python:architecture`, with 72
+of 72 recorded units reconciled. On that same head, `spec-tree:changes-reviewer` run
+`2026-09-22_20-40-26-221-404eea4ba809` raised one finding at severity `reject` against line 181 of
+that same file, and established it by executing the shipped entry point rather than by reading it: a
+JSON array under a read's `cause` is unhashable, so the frozenset membership test raised `TypeError`,
+which lies outside the entry point's refused-source handler, and the script printed a traceback on
+stderr and exited 1 against a contract under which every refusal writes one versioned invalid-input
+result on stdout, exits two, and leaves stderr empty. The defect was real and was repaired at
+`1ea3cf1567a963c6466366098155fcaa3a04d01a`.
+
+**Impact**: an implementation audit that reads code approves a contract violation that executing the
+code exposes, so that audit's approval carries no claim about behaviour the code's own declared
+contract makes. A reader who takes `approved` on an `implementation:python:code` unit as evidence
+that the file honours the result contract it declares takes more than the verdict establishes, and
+the two verdicts on one subject cannot both stand as gate evidence for the same claim. The
+divergence is not a disagreement between two readings of one rule, which amending a decision would
+settle; it is a difference in what each Verifier looked at.
+
+**Settlement condition**: a decision states whether an implementation audit of a shipped executable
+is expected to execute it — in which case that audit's scope and the claim its verdict makes say so —
+or whether the verdict about executed behaviour belongs only to a Verifier that executes, in which
+case the implementation audit's approval is scoped to what reading establishes and the executing
+verdict names its owner. Repairing this instance closes nothing, because the repair already landed.
+`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` bars an agentic run from
+running deterministic verification — validate, test, evaluate — and whether a one-off execution of
+the subject is that, or is reading of another kind, is part of what is unsettled.
+
+**Evidence**: the two sealed runs named above, both on head
+`ccaef088c98007c963125af0fc621040d1f6b51b` against base
+`da1d29a7d854f1004d63ea944f30aa28b63df4b7` over the same 72 changed files; the audit run's terminal
+status `approved` with no finding event, and the review run's terminal status `rejected` carrying one
+`blocking` finding whose message records the executed document and the `TypeError` it produced; and
+the repair at `1ea3cf1567a963c6466366098155fcaa3a04d01a`, which type-guards the cause before the
+membership test.
+
+**Related**: `Two verifier rules collide on pinning a spec-declared tuning value` above records two
+Verifiers reading two decisions to opposite verdicts, which amending one decision resolves;
+`Auditors read a conforming absent <failure_modes> section as a gap` records one auditor raising a
+finding no edit satisfies; and `The skill auditor returns opposite verdicts on unchanged skill text`
+in `spx/43-instructions.enabler/21-skills.enabler/ISSUES.md` records one Verifier definition
+contradicting itself on unchanged input. This entry is the remaining shape: two Verifier types whose
+verdicts diverge because one executed the subject and the other did not.

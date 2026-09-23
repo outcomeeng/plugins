@@ -244,7 +244,7 @@ Skills are available in both Claude Code and Codex, with generated plugin surfac
 
 ### coding-agents
 
-Coding-agent environments and coordination: /operate-prowl, /message-agents, /coordinate-agents, /recover-prowl-agents
+Coding-agent environments, coordination, and officer supervision: /operate-prowl, /operate-herdr, /operate-agent-mail, /message-agents, /coordinate-agents, /recover-prowl-agents, /orchestrate-officers
 
 | Type  | Name                    | Purpose                                                                                                                                                                                                                                          |
 | ----- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -253,6 +253,7 @@ Coding-agent environments and coordination: /operate-prowl, /message-agents, /co
 | Skill | `/operate-agent-mail`   | A workflow registers a mail identity, sends a message record, reads an inbox, or records a receipt in the agent-mail store                                                                                                                       |
 | Skill | `/operate-herdr`        | A workflow needs a public herdr operation — agent inventory, read, bounded wait, prompt, start, relaunch, stop, keystroke, or worktree open — on agent sessions herdr hosts                                                                      |
 | Skill | `/operate-prowl`        | A workflow needs a public Prowl operation or a correlated delegation handback between Prowl coding agents                                                                                                                                        |
+| Skill | `/orchestrate-officers` | One operator-facing session supervises officer sessions that each execute one Change through herdr and agent-mail                                                                                                                                |
 | Skill | `/recover-prowl-agents` | Preparing for or recovering coding-agent sessions after a Prowl restart                                                                                                                                                                          |
 
 ### contribute

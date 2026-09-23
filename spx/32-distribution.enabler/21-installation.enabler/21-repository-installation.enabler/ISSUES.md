@@ -477,3 +477,5 @@ outside the diff. The Codex quota on the account this lane authenticates against
 exhausted until 2026-09-28, which is separate from this failure — this one fails on
 the write-through check before authentication — but it is why the lane has been
 unreliable all week and why a green run here needs both conditions cleared.
+
+The same refusal was reached independently from a separate changeset and lane, against the same `codex-cli 0.155.1`, with the raising module again carrying zero changed lines there. Two sessions converging on the same environmental verdict from different subjects is why this is recorded as an environment condition rather than a defect of either changeset.
