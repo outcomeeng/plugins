@@ -1,5 +1,88 @@
 # Issues: Selected Gate
 
+## Changed-path collection has evidence and no assertion
+
+Seven cases in `tests/test_selected_gate.mapping.l1.py` and one in the sibling compliance file
+verify how the node collects changed paths before it selects anything:
+`test_changed_paths_collect_from_all_four_git_surfaces`,
+`test_whitespace_paths_survive_collection`, `test_a_rename_collects_both_sides`,
+`test_a_copy_collects_both_sides`, `test_a_deleted_then_modified_test_still_runs_when_present`,
+`test_deleted_assertion_tests_never_select_pytest`,
+`test_a_renamed_test_source_never_reaches_pytest`, and
+`test_an_empty_changeset_selects_no_steps`.
+
+`selected-gate.md` declares no assertion about collection. Its five mapping assertions all
+take a changed-path set as given and declare what that set selects; nothing declares where
+the set comes from, which git surfaces contribute to it, or how a rename, a copy, a deletion,
+or a path carrying whitespace resolves into it. So eight cases verify behavior the spec does
+not claim, and the node's declared assertions would all still hold if collection changed
+under them.
+
+**The assertion the evidence implies.** A changed-path set is collected from the four git
+surfaces the module reads — the branch diff against the resolved base, the staged diff, the
+unstaged diff, and untracked files — as the union of their paths, with a rename and a copy
+each contributing both sides, a path preserved verbatim including surrounding whitespace, and
+a deleted path present in the set while absent from the working tree. Two of the eight cases
+are about what collection then selects rather than collection itself
+(`test_deleted_assertion_tests_never_select_pytest`,
+`test_a_renamed_test_source_never_reaches_pytest`), so they may belong under the existing
+assertion-path mapping rather than a new one.
+
+**Which node owns it.** This one. Collection is `collect_changed_paths`,
+`collect_changed_path_entries`, `deleted_paths_after_status_resolution`, and the
+`GIT_DIFF_*` argv constants in `outcomeeng/validation/selected_gate.py`, which this node
+declares, and the canonical changeset-scope helper they call is already the subject of this
+node's git-discovery-failure assertion. No other node's spec reaches the collection path.
+
+**Why this is filed rather than repaired.** The evidence is correct and the cases are worth
+keeping; what is missing is the declaration above them. Writing that assertion from the
+evidence would derive the declaration from the test, which inverts the layer order the
+methodology exists to hold. Deleting the evidence would lose real verification of real
+behavior. So the assertion is the operator's to author, and the evidence waits for it.
+
+**Settlement condition**: `selected-gate.md` declares collection — the four surfaces, the
+union, and the rename, copy, deletion, and verbatim-path resolutions — and each of the eight
+cases links that assertion or the existing one it properly belongs to.
+
+**Evidence**: the eight case names above against the five mapping assertions and eight
+compliance assertions in `selected-gate.md`, none of which names collection; and the node's
+test-evidence audit on head `3d1dbffd76393c71dbbaf455f5c81c81bf015064`, whose finding
+`f-001` recorded the same absence as an assertion-type mismatch.
+
+## Two harness case inputs carry an unstated property
+
+`SELECTED_GATE_RENAMED_TARGET_ARG` and `SELECTED_GATE_WHITESPACE_PATH` in
+`outcomeeng_testing/harnesses/gate.py` are the inputs three rename cases, one copy case, and
+the whitespace case in `tests/test_selected_gate.mapping.l1.py` are driven with. Each carries
+a property the case depends on and nothing declares.
+
+The rename target's value is load-bearing only because it matches no selection pattern: that
+is what makes `test_a_renamed_test_source_never_reaches_pytest` prove the renamed source
+reaches no pytest step rather than proving nothing. Change it to a path under one of the
+source's categories and the case passes for the wrong reason. The whitespace path's value is
+load-bearing because it carries leading and trailing spaces that collection must preserve
+verbatim. Neither property is stated in the harness, in the cases, or in any assertion.
+
+**The assertion the evidence implies.** The same collection assertion the entry above needs,
+whose verbatim-path clause states what the whitespace input is for; and, for the rename
+target, that a renamed path matching no selection category selects no step, which is the
+negative half of the category mapping this node already declares.
+
+**Why this is filed rather than repaired.** The fix is not moving the two values into a
+generator: a generated value cannot carry "matches no source category" unless something
+declares that property, and once it is declared the value derives from the declaration. So
+the declaration comes first and the derivation follows it, in that order.
+
+**Settlement condition**: both properties are declared — the verbatim-path clause in the
+collection assertion, and the no-category-match clause beside the category mapping — and each
+input is then derived from the source category set rather than chosen, as
+`changed_path_domain` in `outcomeeng_testing/generators/gate.py` now derives its own domain.
+
+**Evidence**: the two constants and their five call sites in
+`tests/test_selected_gate.mapping.l1.py`; and the node's test-evidence audit on head
+`3d1dbffd76393c71dbbaf455f5c81c81bf015064`, finding `f-004`, whose message records that the
+rename target's load-bearing property is stated nowhere.
+
 ## Full-gate selection runs untargeted pytest
 
 `just check` treats any path matching the selected-gate full-gate surface as
