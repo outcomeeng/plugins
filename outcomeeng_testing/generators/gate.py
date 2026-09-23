@@ -7,10 +7,10 @@ from hypothesis.strategies import SearchStrategy
 
 from outcomeeng.validation import EVAL_TRIGGER_WORKFLOW, Step
 from outcomeeng.validation.selected_gate import (
-    CHECK_WORKFLOW_PATH,
     INSTRUCTION_BLOCK_SOURCE_PATH,
     PYPROJECT_PATH,
     ROOT_README_PATH,
+    SELECTION_CATEGORY_PATTERNS,
     SPX_CONFIG_PATH,
 )
 
@@ -40,25 +40,24 @@ SELECTED_GATE_EVAL_WORKFLOW_PATH = EVAL_TRIGGER_WORKFLOW
 SELECTED_GATE_EVAL_DEFINITION_PATH = (
     "spx/21-spec-tree.enabler/76-merge.enabler/evals/transport-selection/eval.toml"
 )
-SELECTED_GATE_CHECK_WORKFLOW_PATH = CHECK_WORKFLOW_PATH
 SELECTED_GATE_FULL_GATE_PATH = PYPROJECT_PATH
 
-SELECTED_GATE_CHANGED_PATH_EXAMPLES = (
-    SELECTED_GATE_PYTHON_SOURCE_PATH,
-    SELECTED_GATE_PYTHON_TEST_PATH,
-    SELECTED_GATE_MARKDOWN_PATH,
-    SELECTED_GATE_README_PATH,
-    SELECTED_GATE_SPX_CONFIG_PATH,
-    SELECTED_GATE_INSTRUCTION_BLOCK_SOURCE_PATH,
-    SELECTED_GATE_SKILL_PATH,
-    SELECTED_GATE_PLUGIN_SCRIPT_PATH,
-    SELECTED_GATE_SHARED_SOURCE_PATH,
-    SELECTED_GATE_WORKFLOW_PATH,
-    SELECTED_GATE_EVAL_WORKFLOW_PATH,
-    SELECTED_GATE_EVAL_DEFINITION_PATH,
-    SELECTED_GATE_CHECK_WORKFLOW_PATH,
-    SELECTED_GATE_FULL_GATE_PATH,
-)
+
+def changed_path_domain() -> tuple[str, ...]:
+    """One path per pattern of every category the selection source enumerates.
+
+    The domain is derived rather than chosen, so a category added to
+    `SELECTION_CATEGORY_PATTERNS` enters it without an edit here. Wildcard
+    contents stay incidental: the property this domain feeds is insensitivity
+    to path order and duplication, not any one path's shape.
+    """
+    return tuple(
+        dict.fromkeys(
+            path_from_pattern(pattern)
+            for patterns in SELECTION_CATEGORY_PATTERNS
+            for pattern in patterns
+        )
+    )
 
 
 def argvs() -> SearchStrategy[tuple[str, ...]]:
@@ -86,7 +85,7 @@ def selected_gate_changed_paths() -> SearchStrategy[list[str]]:
     """Changed-path lists that exercise selected local gate routing."""
 
     return st.lists(
-        st.sampled_from(SELECTED_GATE_CHANGED_PATH_EXAMPLES),
+        st.sampled_from(changed_path_domain()),
         min_size=1,
     )
 

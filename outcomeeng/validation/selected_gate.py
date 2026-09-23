@@ -236,6 +236,29 @@ LIVE_DISCOVERY_PATTERNS: Final = (
     "spx/15-validation.enabler/65-gate.enabler/21-selected-gate.enabler/selected-gate.md",
 )
 
+SELECTION_CATEGORY_PATTERNS: Final = (
+    FULL_GATE_PATTERNS,
+    TEST_INFRASTRUCTURE_PATTERNS,
+    PYTHON_FORMAT_LINT_PATTERNS,
+    PYTHON_TYPECHECK_PATTERNS,
+    PYTHON_ASSERTION_TEST_PATTERNS,
+    MARKDOWN_PATTERNS,
+    WORKFLOW_PATTERNS,
+    SKILL_PATTERNS,
+    EVAL_TRIGGER_PATTERNS,
+    EVAL_PROMPT_PATTERNS,
+    EVIDENCE_LINK_PATTERNS,
+    INSTRUCTION_BLOCK_PATTERNS,
+    LIVE_DISCOVERY_PATTERNS,
+)
+"""Every changed-path category this module's selection reads, enumerated here.
+
+A rule or a generated domain over the categories reads this tuple rather than a
+naming pattern over the module's own constants, so a category added above and
+left out here is reported by the evidence that ranges over it instead of
+escaping selection silently.
+"""
+
 GIT_DIFF_BRANCH_ARGV_PREFIX: Final = (
     "git",
     "diff",
