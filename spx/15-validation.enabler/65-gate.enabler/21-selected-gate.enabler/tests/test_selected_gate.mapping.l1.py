@@ -141,38 +141,29 @@ def test_every_declared_path_category_selects_its_validation_lane(
         assert all(reason.strip() for reason in _reasons(plan))
 
 
-_CATEGORIES_VERIFIED_ELSEWHERE = {
-    selection_source.FULL_GATE_PATTERNS: (
-        "test_full_gate_paths_select_the_complete_recipe_set"
-    ),
-    selection_source.TEST_INFRASTRUCTURE_PATTERNS: (
-        "test_test_infrastructure_reach_maps_to_gate_steps"
-    ),
-    selection_source.PYTHON_ASSERTION_TEST_PATTERNS: (
-        "test_every_assertion_path_category_maps_presence_to_targeted_execution"
-    ),
-    selection_source.LIVE_DISCOVERY_PATTERNS: (
-        "test_each_declared_discovery_surface_requires_the_live_check"
-    ),
-}
-
-
 def test_every_enumerated_category_reaches_a_case() -> None:
-    """Each category the source enumerates is verified by a named case.
+    """Each category the source enumerates is covered by the lane rows or exempt.
 
-    The lane rows carry the categories whose whole claim is the lane they
-    select; the rest select something else and are named with the case that
-    carries them. A category added to the source enumeration and to neither
-    list fails here rather than escaping selection evidence.
+    The source partitions its own enumeration: a category outside
+    `BEYOND_LANE_CATEGORY_PATTERNS` selects a validation lane, so the lane rows
+    above must range over exactly that half. The exemption is the source's
+    declaration rather than a set chosen here, so a category added to the
+    enumeration and placed in neither half fails, and a category placed in one
+    half while its evidence sits in the other fails too.
     """
     by_lane_row = {patterns for patterns, _ in _LANE_ROWS}
     enumerated = set(selection_source.SELECTION_CATEGORY_PATTERNS)
-    unreached = enumerated - by_lane_row - set(_CATEGORIES_VERIFIED_ELSEWHERE)
-    assert not unreached, (
-        f"{len(unreached)} of {len(enumerated)} enumerated categories reach "
-        "neither a lane row nor a named case"
+    beyond_lane = set(selection_source.BEYOND_LANE_CATEGORY_PATTERNS)
+
+    assert beyond_lane <= enumerated, (
+        "the exemption names a category the enumeration no longer carries"
     )
-    assert not by_lane_row & set(_CATEGORIES_VERIFIED_ELSEWHERE)
+    assert by_lane_row == enumerated - beyond_lane, (
+        f"{len(enumerated - beyond_lane - by_lane_row)} of {len(enumerated)} "
+        "enumerated categories reach neither a lane row nor the source's "
+        f"exemption, and {len(by_lane_row & beyond_lane)} lane rows claim a "
+        "category the source exempts from the lane rule"
+    )
 
 
 @pytest.mark.parametrize("pattern", selection_source.PYTHON_ASSERTION_TEST_PATTERNS)

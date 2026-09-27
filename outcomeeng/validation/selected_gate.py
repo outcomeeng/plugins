@@ -259,6 +259,29 @@ left out here is reported by the evidence that ranges over it instead of
 escaping selection silently.
 """
 
+BEYOND_LANE_CATEGORY_PATTERNS: Final = (
+    FULL_GATE_PATTERNS,
+    TEST_INFRASTRUCTURE_PATTERNS,
+    PYTHON_ASSERTION_TEST_PATTERNS,
+    LIVE_DISCOVERY_PATTERNS,
+)
+"""The enumerated categories whose selection is not a validation lane.
+
+Every other category in `SELECTION_CATEGORY_PATTERNS` maps its changed path to a
+fixed set of validation steps, so the lane it selects is its whole claim. These
+four select something else, and each names the reason here rather than in the
+evidence that ranges over the enumeration: the full-gate category replaces the
+step set with the complete recipe set, the test-infrastructure category selects
+by the reach the static import index reports rather than by its pattern, the
+assertion-test category selects a pytest step targeted at the changed paths
+themselves, and the live-discovery category decides one row's inclusion inside a
+step other categories already selected.
+
+The partition is this module's own, so a category added to the enumeration falls
+outside both halves until it is placed in one, and the completeness rule over the
+categories reads the placement here instead of choosing it.
+"""
+
 GIT_DIFF_BRANCH_ARGV_PREFIX: Final = (
     "git",
     "diff",
