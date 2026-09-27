@@ -38,7 +38,7 @@ The operation rules:
 - **Read.** `read` records that the recipient judged one message, visible to the recipient alone.
 - **Acknowledge.** `acknowledge` is a read the sender can observe.
 - **Only two operations change read state.** `read` and `acknowledge` change a record's read state; no other operation does.
-- **Bounds.** `limit` is an integer from 1 to 1000, and `messageId` is the positive integer `id` a record carries.
+- **Bounds.** `limit` is an integer from 1 to 1000, and `messageId` is the integer `id` a record carries, from 1 to 1000000000; a value outside either range is rejected with `invalid-schema` before any command runs.
 - **No NUL character.** A text argument or record field carrying a NUL character is rejected with `invalid-schema` before any command runs.
 
 The record rules:
@@ -54,11 +54,9 @@ The record rules:
 
 The project-key rules:
 
-- **The key.** The project key is the normalized absolute path of the repository's own common Git directory.
+- **The key.** The project key is the normalized absolute path of the repository's own common Git directory, the one `projectKey` every result carries.
 - **One project per repository.** Every worktree of one pool, the pool's bare repository, and the pool's main checkout resolve one key, and no checkout's deletion removes it.
-- **Own working directory only.** The adapter reads that directory for its own working directory before every operation, and reads no other working directory, environment variable, or parent path in its place.
-- **Redirecting variables dropped.** The lookup runs without every environment variable that could make Git answer from something other than that directory. A variable naming a repository and a variable bounding where Git may look are two known cases, not the only ones: membership is decided by that effect, whatever produces it.
-- **Other variables kept.** Every other variable is carried through, so a repository reachable only across a mount boundary still resolves.
+- **Own working directory only.** The adapter reads the key for its own working directory before every operation, so run it from a checkout of the repository whose mail project is meant; no environment variable, parent path, or other working directory redirects it to another project.
 - **Unresolved.** A working directory that is no repository, an absent Git executable, and a lookup reporting no absolute directory each yield `repository-unresolved`, with no fallback.
 
 </operation_surface>
