@@ -1,0 +1,67 @@
+{
+  "tool": "agent_mail.py run",
+  "adapterCommit": "f3d2576ae2fccb88987516b49b67a4116a560f9b",
+  "store": {
+    "tool": "am",
+    "version": "am 0.3.36"
+  },
+  "observedAt": "2026-09-27T15:48:51.599418+00:00",
+  "cwd": "/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.Y82hcB",
+  "request": {
+    "schemaVersion": 1,
+    "operation": "register",
+    "arguments": {
+      "program": "claude-code",
+      "model": "opus",
+      "task": "installed-store probe recipient"
+    }
+  },
+  "storeInvocations": [
+    {
+      "argv": [
+        "am",
+        "agents",
+        "register",
+        "--project",
+        "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.Y82hcB/.git",
+        "--program=claude-code",
+        "--model=opus",
+        "--task=installed-store probe recipient",
+        "--json"
+      ],
+      "exitCode": 0
+    }
+  ],
+  "adapterExitCode": 0,
+  "result": {
+    "schemaVersion": 1,
+    "operation": "register",
+    "status": "succeeded",
+    "commandExitCode": 0,
+    "projectKey": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.Y82hcB/.git",
+    "response": {
+      "id": 192,
+      "name": "BlackSummit",
+      "program": "claude-code",
+      "model": "opus",
+      "task_description": "installed-store probe recipient",
+      "inception_ts": "2026-09-27T15:48:51.809163Z",
+      "last_active_ts": "2026-09-27T15:48:51.809163Z",
+      "project_id": 18,
+      "attachments_policy": "auto",
+      "reaper_exempt": false,
+      "capabilities": [
+        "send_message",
+        "fetch_inbox",
+        "file_reservation_paths",
+        "acknowledge_message"
+      ]
+    },
+    "data": {
+      "agent": "BlackSummit",
+      "id": 192
+    }
+  },
+  "adapterStderr": "",
+  "redactedFields": []
+}

@@ -1,0 +1,170 @@
+{
+  "tool": "agent_mail.py run",
+  "adapterCommit": "f3d2576ae2fccb88987516b49b67a4116a560f9b",
+  "store": {
+    "tool": "am",
+    "version": "am 0.3.36"
+  },
+  "observedAt": "2026-09-27T15:48:54.437198+00:00",
+  "cwd": "/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.Y82hcB",
+  "request": {
+    "schemaVersion": 1,
+    "operation": "list",
+    "arguments": {
+      "agent": "BlackSummit",
+      "includeBodies": true
+    }
+  },
+  "storeInvocations": [
+    {
+      "argv": [
+        "am",
+        "robot",
+        "inbox",
+        "--project",
+        "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.Y82hcB/.git",
+        "--agent=BlackSummit",
+        "--unread",
+        "--include-bodies",
+        "--json"
+      ],
+      "exitCode": 0
+    }
+  ],
+  "adapterExitCode": 0,
+  "result": {
+    "schemaVersion": 1,
+    "operation": "list",
+    "status": "succeeded",
+    "commandExitCode": 0,
+    "projectKey": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.Y82hcB/.git",
+    "response": {
+      "_meta": {
+        "command": "robot inbox",
+        "timestamp": "2026-09-27T15:48:54.808648+00:00",
+        "format": "json",
+        "version": "1.0",
+        "project": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.Y82hcB/.git",
+        "agent": "BlackSummit"
+      },
+      "_actions": [
+        "am robot thread --project /private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.Y82hcB/.git probe-installed-store"
+      ],
+      "_diagnostics": {
+        "schema": "tail_latency_phase_ledger.v1",
+        "operation": "robot_inbox",
+        "total_us": 249969,
+        "phases": [
+          {
+            "name": "queue_wait",
+            "elapsed_us": 2
+          },
+          {
+            "name": "server_fetch",
+            "elapsed_us": 249956
+          }
+        ],
+        "rows_returned": 4,
+        "include_bodies": true,
+        "outcome": "pre_render"
+      },
+      "count": 4,
+      "inbox": [
+        {
+          "id": 2803,
+          "priority": "ack-required",
+          "from": "MistySparrow",
+          "subject": "[question] probe acknowledgement-required message",
+          "thread": "probe-installed-store",
+          "age": "2s ago",
+          "ack_status": "required",
+          "importance": "normal",
+          "body_md": "First probe record; the recipient acknowledges it."
+        },
+        {
+          "id": 2805,
+          "priority": "unread",
+          "from": "MistySparrow",
+          "subject": "[order] probe encoded correlation",
+          "thread": "xc-outcomeeng_2fchanges_23132",
+          "age": "1s ago",
+          "ack_status": "none",
+          "importance": "normal",
+          "body_md": "Third probe record; its correlation lies outside the thread alphabet."
+        },
+        {
+          "id": 2804,
+          "priority": "unread",
+          "from": "MistySparrow",
+          "subject": "[fact] probe plain message",
+          "thread": "probe-installed-store",
+          "age": "1s ago",
+          "ack_status": "none",
+          "importance": "normal",
+          "body_md": "Second probe record; the recipient reads it."
+        },
+        {
+          "id": 2802,
+          "priority": "unread",
+          "from": "MistySparrow",
+          "subject": "Contact approved: MistySparrow -> BlackSummit",
+          "thread": "2802",
+          "age": "2s ago",
+          "ack_status": "none",
+          "importance": "normal",
+          "body_md": "MistySparrow requested permission to contact BlackSummit; the request was approved on MistySparrow's behalf (auto_accept), so no action is required.\n\nApproved link: MistySparrow (project /private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.Y82hcB/.git) -> BlackSummit (project /private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.Y82hcB/.git).\n\nTo revoke it, call respond_contact(project_key='/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.Y82hcB/.git', to_agent='BlackSummit', from_agent='MistySparrow', from_project='/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.Y82hcB/.git', accept=false)."
+        }
+      ]
+    },
+    "data": {
+      "records": [
+        {
+          "schema": 1,
+          "kind": "question",
+          "ackRequired": true,
+          "correlation": "probe-installed-store",
+          "sender": "MistySparrow",
+          "recipient": "BlackSummit",
+          "subject": "probe acknowledgement-required message",
+          "body": "First probe record; the recipient acknowledges it.",
+          "id": 2803
+        },
+        {
+          "schema": 1,
+          "kind": "order",
+          "ackRequired": false,
+          "correlation": "outcomeeng/changes#132",
+          "sender": "MistySparrow",
+          "recipient": "BlackSummit",
+          "subject": "probe encoded correlation",
+          "body": "Third probe record; its correlation lies outside the thread alphabet.",
+          "id": 2805
+        },
+        {
+          "schema": 1,
+          "kind": "fact",
+          "ackRequired": false,
+          "correlation": "probe-installed-store",
+          "sender": "MistySparrow",
+          "recipient": "BlackSummit",
+          "subject": "probe plain message",
+          "body": "Second probe record; the recipient reads it.",
+          "id": 2804
+        },
+        {
+          "schema": 1,
+          "kind": "unclassified",
+          "ackRequired": false,
+          "correlation": "2802",
+          "sender": "MistySparrow",
+          "recipient": "BlackSummit",
+          "subject": "Contact approved: MistySparrow -> BlackSummit",
+          "body": "MistySparrow requested permission to contact BlackSummit; the request was approved on MistySparrow's behalf (auto_accept), so no action is required.\n\nApproved link: MistySparrow (project /private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.Y82hcB/.git) -> BlackSummit (project /private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.Y82hcB/.git).\n\nTo revoke it, call respond_contact(project_key='/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.Y82hcB/.git', to_agent='BlackSummit', from_agent='MistySparrow', from_project='/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.Y82hcB/.git', accept=false).",
+          "id": 2802
+        }
+      ]
+    }
+  },
+  "adapterStderr": "",
+  "redactedFields": []
+}

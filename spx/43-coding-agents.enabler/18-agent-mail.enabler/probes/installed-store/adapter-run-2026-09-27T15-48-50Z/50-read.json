@@ -1,0 +1,49 @@
+{
+  "tool": "agent_mail.py run",
+  "adapterCommit": "f3d2576ae2fccb88987516b49b67a4116a560f9b",
+  "store": {
+    "tool": "am",
+    "version": "am 0.3.36"
+  },
+  "observedAt": "2026-09-27T15:48:55.296479+00:00",
+  "cwd": "/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.Y82hcB",
+  "request": {
+    "schemaVersion": 1,
+    "operation": "read",
+    "arguments": {
+      "agent": "BlackSummit",
+      "messageId": 2804
+    }
+  },
+  "storeInvocations": [
+    {
+      "argv": [
+        "am",
+        "mail",
+        "read",
+        "--project",
+        "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.Y82hcB/.git",
+        "--agent=BlackSummit",
+        "2804"
+      ],
+      "exitCode": 0
+    }
+  ],
+  "adapterExitCode": 0,
+  "result": {
+    "schemaVersion": 1,
+    "operation": "read",
+    "status": "succeeded",
+    "commandExitCode": 0,
+    "projectKey": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.Y82hcB/.git",
+    "response": {
+      "output": "Message 2804 marked as read at 2026-09-27T15:48:55.539549Z"
+    },
+    "data": {
+      "agent": "BlackSummit",
+      "messageId": 2804
+    }
+  },
+  "adapterStderr": "",
+  "redactedFields": []
+}

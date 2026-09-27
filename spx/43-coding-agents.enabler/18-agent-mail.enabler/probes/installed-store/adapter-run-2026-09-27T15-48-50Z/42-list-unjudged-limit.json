@@ -1,0 +1,104 @@
+{
+  "tool": "agent_mail.py run",
+  "adapterCommit": "f3d2576ae2fccb88987516b49b67a4116a560f9b",
+  "store": {
+    "tool": "am",
+    "version": "am 0.3.36"
+  },
+  "observedAt": "2026-09-27T15:48:54.838931+00:00",
+  "cwd": "/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.Y82hcB",
+  "request": {
+    "schemaVersion": 1,
+    "operation": "list",
+    "arguments": {
+      "agent": "BlackSummit",
+      "limit": 1
+    }
+  },
+  "storeInvocations": [
+    {
+      "argv": [
+        "am",
+        "robot",
+        "inbox",
+        "--project",
+        "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.Y82hcB/.git",
+        "--agent=BlackSummit",
+        "--unread",
+        "--limit",
+        "1",
+        "--json"
+      ],
+      "exitCode": 0
+    }
+  ],
+  "adapterExitCode": 0,
+  "result": {
+    "schemaVersion": 1,
+    "operation": "list",
+    "status": "succeeded",
+    "commandExitCode": 0,
+    "projectKey": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.Y82hcB/.git",
+    "response": {
+      "_meta": {
+        "command": "robot inbox",
+        "timestamp": "2026-09-27T15:48:55.279848+00:00",
+        "format": "json",
+        "version": "1.0",
+        "project": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.Y82hcB/.git",
+        "agent": "BlackSummit"
+      },
+      "_actions": [
+        "am robot thread --project /private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.Y82hcB/.git xc-outcomeeng_2fchanges_23132"
+      ],
+      "_diagnostics": {
+        "schema": "tail_latency_phase_ledger.v1",
+        "operation": "robot_inbox",
+        "total_us": 328662,
+        "phases": [
+          {
+            "name": "queue_wait",
+            "elapsed_us": 2
+          },
+          {
+            "name": "server_fetch",
+            "elapsed_us": 328645
+          }
+        ],
+        "rows_returned": 1,
+        "include_bodies": false,
+        "outcome": "pre_render"
+      },
+      "count": 1,
+      "inbox": [
+        {
+          "id": 2805,
+          "priority": "unread",
+          "from": "MistySparrow",
+          "subject": "[order] probe encoded correlation",
+          "thread": "xc-outcomeeng_2fchanges_23132",
+          "age": "1s ago",
+          "ack_status": "none",
+          "importance": "normal"
+        }
+      ]
+    },
+    "data": {
+      "records": [
+        {
+          "schema": 1,
+          "kind": "order",
+          "ackRequired": false,
+          "correlation": "outcomeeng/changes#132",
+          "sender": "MistySparrow",
+          "recipient": "BlackSummit",
+          "subject": "probe encoded correlation",
+          "body": "",
+          "id": 2805
+        }
+      ]
+    }
+  },
+  "adapterStderr": "",
+  "redactedFields": []
+}

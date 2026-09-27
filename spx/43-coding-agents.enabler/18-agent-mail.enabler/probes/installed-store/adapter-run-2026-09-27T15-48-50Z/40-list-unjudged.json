@@ -1,0 +1,164 @@
+{
+  "tool": "agent_mail.py run",
+  "adapterCommit": "f3d2576ae2fccb88987516b49b67a4116a560f9b",
+  "store": {
+    "tool": "am",
+    "version": "am 0.3.36"
+  },
+  "observedAt": "2026-09-27T15:48:54.066896+00:00",
+  "cwd": "/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.Y82hcB",
+  "request": {
+    "schemaVersion": 1,
+    "operation": "list",
+    "arguments": {
+      "agent": "BlackSummit"
+    }
+  },
+  "storeInvocations": [
+    {
+      "argv": [
+        "am",
+        "robot",
+        "inbox",
+        "--project",
+        "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.Y82hcB/.git",
+        "--agent=BlackSummit",
+        "--unread",
+        "--json"
+      ],
+      "exitCode": 0
+    }
+  ],
+  "adapterExitCode": 0,
+  "result": {
+    "schemaVersion": 1,
+    "operation": "list",
+    "status": "succeeded",
+    "commandExitCode": 0,
+    "projectKey": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.Y82hcB/.git",
+    "response": {
+      "_meta": {
+        "command": "robot inbox",
+        "timestamp": "2026-09-27T15:48:54.419890+00:00",
+        "format": "json",
+        "version": "1.0",
+        "project": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.Y82hcB/.git",
+        "agent": "BlackSummit"
+      },
+      "_actions": [
+        "am robot thread --project /private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.Y82hcB/.git probe-installed-store"
+      ],
+      "_diagnostics": {
+        "schema": "tail_latency_phase_ledger.v1",
+        "operation": "robot_inbox",
+        "total_us": 243995,
+        "phases": [
+          {
+            "name": "queue_wait",
+            "elapsed_us": 2
+          },
+          {
+            "name": "server_fetch",
+            "elapsed_us": 243969
+          }
+        ],
+        "rows_returned": 4,
+        "include_bodies": false,
+        "outcome": "pre_render"
+      },
+      "count": 4,
+      "inbox": [
+        {
+          "id": 2803,
+          "priority": "ack-required",
+          "from": "MistySparrow",
+          "subject": "[question] probe acknowledgement-required message",
+          "thread": "probe-installed-store",
+          "age": "1s ago",
+          "ack_status": "required",
+          "importance": "normal"
+        },
+        {
+          "id": 2805,
+          "priority": "unread",
+          "from": "MistySparrow",
+          "subject": "[order] probe encoded correlation",
+          "thread": "xc-outcomeeng_2fchanges_23132",
+          "age": "0s ago",
+          "ack_status": "none",
+          "importance": "normal"
+        },
+        {
+          "id": 2804,
+          "priority": "unread",
+          "from": "MistySparrow",
+          "subject": "[fact] probe plain message",
+          "thread": "probe-installed-store",
+          "age": "1s ago",
+          "ack_status": "none",
+          "importance": "normal"
+        },
+        {
+          "id": 2802,
+          "priority": "unread",
+          "from": "MistySparrow",
+          "subject": "Contact approved: MistySparrow -> BlackSummit",
+          "thread": "2802",
+          "age": "2s ago",
+          "ack_status": "none",
+          "importance": "normal"
+        }
+      ]
+    },
+    "data": {
+      "records": [
+        {
+          "schema": 1,
+          "kind": "question",
+          "ackRequired": true,
+          "correlation": "probe-installed-store",
+          "sender": "MistySparrow",
+          "recipient": "BlackSummit",
+          "subject": "probe acknowledgement-required message",
+          "body": "",
+          "id": 2803
+        },
+        {
+          "schema": 1,
+          "kind": "order",
+          "ackRequired": false,
+          "correlation": "outcomeeng/changes#132",
+          "sender": "MistySparrow",
+          "recipient": "BlackSummit",
+          "subject": "probe encoded correlation",
+          "body": "",
+          "id": 2805
+        },
+        {
+          "schema": 1,
+          "kind": "fact",
+          "ackRequired": false,
+          "correlation": "probe-installed-store",
+          "sender": "MistySparrow",
+          "recipient": "BlackSummit",
+          "subject": "probe plain message",
+          "body": "",
+          "id": 2804
+        },
+        {
+          "schema": 1,
+          "kind": "unclassified",
+          "ackRequired": false,
+          "correlation": "2802",
+          "sender": "MistySparrow",
+          "recipient": "BlackSummit",
+          "subject": "Contact approved: MistySparrow -> BlackSummit",
+          "body": "",
+          "id": 2802
+        }
+      ]
+    }
+  },
+  "adapterStderr": "",
+  "redactedFields": []
+}

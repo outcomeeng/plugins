@@ -1,0 +1,80 @@
+{
+  "tool": "agent_mail.py run",
+  "adapterCommit": "f3d2576ae2fccb88987516b49b67a4116a560f9b",
+  "store": {
+    "tool": "am",
+    "version": "am 0.3.36"
+  },
+  "observedAt": "2026-09-27T15:48:52.869730+00:00",
+  "cwd": "/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.Y82hcB",
+  "request": {
+    "schemaVersion": 1,
+    "operation": "send",
+    "arguments": {
+      "record": {
+        "schema": 1,
+        "kind": "fact",
+        "correlation": "probe-installed-store",
+        "sender": "MistySparrow",
+        "recipient": "BlackSummit",
+        "subject": "probe plain message",
+        "body": "Second probe record; the recipient reads it.",
+        "ackRequired": false
+      }
+    }
+  },
+  "storeInvocations": [
+    {
+      "argv": [
+        "am",
+        "mail",
+        "send",
+        "--project",
+        "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.Y82hcB/.git",
+        "--from=MistySparrow",
+        "--to=BlackSummit",
+        "--thread-id=probe-installed-store",
+        "--subject=[fact] probe plain message",
+        "--body=Second probe record; the recipient reads it.",
+        "--json"
+      ],
+      "exitCode": 0
+    }
+  ],
+  "adapterExitCode": 0,
+  "result": {
+    "schemaVersion": 1,
+    "operation": "send",
+    "status": "succeeded",
+    "commandExitCode": 0,
+    "projectKey": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.Y82hcB/.git",
+    "response": {
+      "id": 2804,
+      "subject": "[fact] probe plain message",
+      "body_md": "Second probe record; the recipient reads it.",
+      "importance": "normal",
+      "ack_required": false,
+      "thread_id": "probe-installed-store",
+      "created_ts": "2026-09-27T15:48:53.161327Z",
+      "from": "MistySparrow",
+      "to": [
+        "BlackSummit"
+      ]
+    },
+    "data": {
+      "record": {
+        "schema": 1,
+        "kind": "fact",
+        "ackRequired": false,
+        "correlation": "probe-installed-store",
+        "sender": "MistySparrow",
+        "recipient": "BlackSummit",
+        "subject": "probe plain message",
+        "body": "Second probe record; the recipient reads it.",
+        "id": 2804
+      }
+    }
+  },
+  "adapterStderr": "",
+  "redactedFields": []
+}

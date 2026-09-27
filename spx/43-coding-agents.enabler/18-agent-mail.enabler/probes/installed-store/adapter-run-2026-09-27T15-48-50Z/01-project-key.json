@@ -1,0 +1,16 @@
+{
+  "tool": "agent_mail.py",
+  "adapterCommit": "f3d2576ae2fccb88987516b49b67a4116a560f9b",
+  "observedAt": "2026-09-27T15:48:50.604310+00:00",
+  "cwd": "/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.Y82hcB",
+  "argv": [
+    "python3",
+    "agent_mail.py",
+    "project-key"
+  ],
+  "exitCode": 0,
+  "result": {
+    "projectKey": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.Y82hcB/.git"
+  },
+  "stderr": ""
+}

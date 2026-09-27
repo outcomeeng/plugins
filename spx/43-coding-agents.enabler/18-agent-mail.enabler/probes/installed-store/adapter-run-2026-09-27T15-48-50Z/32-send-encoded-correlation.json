@@ -1,0 +1,80 @@
+{
+  "tool": "agent_mail.py run",
+  "adapterCommit": "f3d2576ae2fccb88987516b49b67a4116a560f9b",
+  "store": {
+    "tool": "am",
+    "version": "am 0.3.36"
+  },
+  "observedAt": "2026-09-27T15:48:53.485789+00:00",
+  "cwd": "/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.Y82hcB",
+  "request": {
+    "schemaVersion": 1,
+    "operation": "send",
+    "arguments": {
+      "record": {
+        "schema": 1,
+        "kind": "order",
+        "correlation": "outcomeeng/changes#132",
+        "sender": "MistySparrow",
+        "recipient": "BlackSummit",
+        "subject": "probe encoded correlation",
+        "body": "Third probe record; its correlation lies outside the thread alphabet.",
+        "ackRequired": false
+      }
+    }
+  },
+  "storeInvocations": [
+    {
+      "argv": [
+        "am",
+        "mail",
+        "send",
+        "--project",
+        "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.Y82hcB/.git",
+        "--from=MistySparrow",
+        "--to=BlackSummit",
+        "--thread-id=xc-outcomeeng_2fchanges_23132",
+        "--subject=[order] probe encoded correlation",
+        "--body=Third probe record; its correlation lies outside the thread alphabet.",
+        "--json"
+      ],
+      "exitCode": 0
+    }
+  ],
+  "adapterExitCode": 0,
+  "result": {
+    "schemaVersion": 1,
+    "operation": "send",
+    "status": "succeeded",
+    "commandExitCode": 0,
+    "projectKey": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.Y82hcB/.git",
+    "response": {
+      "id": 2805,
+      "subject": "[order] probe encoded correlation",
+      "body_md": "Third probe record; its correlation lies outside the thread alphabet.",
+      "importance": "normal",
+      "ack_required": false,
+      "thread_id": "xc-outcomeeng_2fchanges_23132",
+      "created_ts": "2026-09-27T15:48:53.749894Z",
+      "from": "MistySparrow",
+      "to": [
+        "BlackSummit"
+      ]
+    },
+    "data": {
+      "record": {
+        "schema": 1,
+        "kind": "order",
+        "ackRequired": false,
+        "correlation": "outcomeeng/changes#132",
+        "sender": "MistySparrow",
+        "recipient": "BlackSummit",
+        "subject": "probe encoded correlation",
+        "body": "Third probe record; its correlation lies outside the thread alphabet.",
+        "id": 2805
+      }
+    }
+  },
+  "adapterStderr": "",
+  "redactedFields": []
+}

@@ -1,0 +1,81 @@
+{
+  "tool": "agent_mail.py run",
+  "adapterCommit": "f3d2576ae2fccb88987516b49b67a4116a560f9b",
+  "store": {
+    "tool": "am",
+    "version": "am 0.3.36"
+  },
+  "observedAt": "2026-09-27T15:48:51.992204+00:00",
+  "cwd": "/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.Y82hcB",
+  "request": {
+    "schemaVersion": 1,
+    "operation": "send",
+    "arguments": {
+      "record": {
+        "schema": 1,
+        "kind": "question",
+        "correlation": "probe-installed-store",
+        "sender": "MistySparrow",
+        "recipient": "BlackSummit",
+        "subject": "probe acknowledgement-required message",
+        "body": "First probe record; the recipient acknowledges it.",
+        "ackRequired": true
+      }
+    }
+  },
+  "storeInvocations": [
+    {
+      "argv": [
+        "am",
+        "mail",
+        "send",
+        "--project",
+        "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.Y82hcB/.git",
+        "--from=MistySparrow",
+        "--to=BlackSummit",
+        "--thread-id=probe-installed-store",
+        "--subject=[question] probe acknowledgement-required message",
+        "--body=First probe record; the recipient acknowledges it.",
+        "--ack-required",
+        "--json"
+      ],
+      "exitCode": 0
+    }
+  ],
+  "adapterExitCode": 0,
+  "result": {
+    "schemaVersion": 1,
+    "operation": "send",
+    "status": "succeeded",
+    "commandExitCode": 0,
+    "projectKey": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.Y82hcB/.git",
+    "response": {
+      "id": 2803,
+      "subject": "[question] probe acknowledgement-required message",
+      "body_md": "First probe record; the recipient acknowledges it.",
+      "importance": "normal",
+      "ack_required": true,
+      "thread_id": "probe-installed-store",
+      "created_ts": "2026-09-27T15:48:52.508242Z",
+      "from": "MistySparrow",
+      "to": [
+        "BlackSummit"
+      ]
+    },
+    "data": {
+      "record": {
+        "schema": 1,
+        "kind": "question",
+        "ackRequired": true,
+        "correlation": "probe-installed-store",
+        "sender": "MistySparrow",
+        "recipient": "BlackSummit",
+        "subject": "probe acknowledgement-required message",
+        "body": "First probe record; the recipient acknowledges it.",
+        "id": 2803
+      }
+    }
+  },
+  "adapterStderr": "",
+  "redactedFields": []
+}
