@@ -101,7 +101,7 @@ Rejected:
 
 ## Property
 
-A property proves an invariant over an open domain. The case set comes from a generator over the declared domain with meaningful variation, composition, and shrinking; the invariant stays lexically in the linked test; a spec-governed harness owns seed selection, run count, replay input, and failure diagnostics, and a failing run is reproducible from its reported evidence.
+A property proves an invariant over an open product-owned domain. The case set comes from a generator that meaningfully varies the product behavior under assertion, with composition and shrinking; the invariant stays lexically in the linked test; a spec-governed harness owns seed selection, run count, replay input, and failure diagnostics, and a failing run is reproducible from its reported evidence. An execution level permits the dependencies available to a test, but that permission does not make a filesystem, Git repository, or full CLI invocation part of the generated domain. When one of those boundaries only wires generated input into the product behavior, it stays outside the per-case loop and separately typed finite evidence exercises the real boundary. A property crosses a real boundary only when that boundary is itself part of the product-owned variable behavior and the generated cases meaningfully vary it.
 
 Property evidence is permitted at every level. The absence of a level restriction is decided, not overlooked: the lowest-level rule and the Stage 5 combinatorial-cost exception govern property cost at heavier levels.
 
@@ -110,7 +110,7 @@ Valid:
 36. `l1` — a round-trip invariant over a shrinking generator; the harness owns seed and replay; the invariant sits in the test.
 37. `l1` — a constant boundary branch inside a larger generator expands boundary coverage while every source-owned value is imported from its owner.
 38. `l1` — expectations derive from a construction law the generator carries, tracing to a spec-declared relationship or source-owned contract, which production does not reuse.
-39. `l2` — an invariant over a real local service; the harness owns service lifecycle plus seed and replay.
+39. `l2` — an invariant whose product-owned variable behavior spans a real local service; the harness owns service lifecycle plus seed and replay, and the service is not merely wiring repeated around a separately testable rule.
 
 Rejected:
 
@@ -120,6 +120,7 @@ Rejected:
 43. Seed or run count set in the test file — test-owned run configuration (the property-harness assertion in `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/test-verification.md`).
 44. Failure output lacking seed and replay path — the failing run is not reproducible from its evidence.
 45. The expected output computed by calling the function under test on the generated input — oracle equals the production path.
+46. Filesystem, Git, or full CLI work repeated for every generated case when the boundary only wires input into a separately testable product rule — dependency permission was mistaken for the generated domain; separately typed finite evidence exercises the real boundary.
 
 ## Compliance
 
@@ -127,19 +128,19 @@ A compliance case proves a deterministic ALWAYS/NEVER boundary by exercising rea
 
 Valid:
 
-46. `l1` — an enforcement rule runs against a violating source fixture by path; the test asserts detection with the rule identifier imported from the rule's registry.
-47. `l1` — a NEVER-rule exercised with a real violating input; disabling the enforcement fails the test.
-48. `l1` — violating and conforming fixtures together, the conforming cases proving no false positive alongside the required violating cases.
-49. `l2` — enforcement shipped in a product-specific binary — an installed or bootstrapped artifact per the executable discriminator — exercised against a violating fixture.
+47. `l1` — an enforcement rule runs against a violating source fixture by path; the test asserts detection with the rule identifier imported from the rule's registry.
+48. `l1` — a NEVER-rule exercised with a real violating input; disabling the enforcement fails the test.
+49. `l1` — violating and conforming fixtures together, the conforming cases proving no false positive alongside the required violating cases.
+50. `l2` — enforcement shipped in a product-specific binary — an installed or bootstrapped artifact per the executable discriminator — exercised against a violating fixture.
 
 Rejected:
 
-50. Conforming-only evidence — nothing proves the boundary rejects anything (the violating-case rules in `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`).
-51. A test that still passes with the enforcement disabled — no falsifiability.
-52. A fixture file exporting violating token strings — the isolated-strings fixture `NEVER` assertion in `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/test-verification.md`.
-53. Violating cases invented as an author's edge bag rather than derived from the rule's stated boundary — case provenance fails.
-54. A complete finite source-owned invalid set written as compliance — that correspondence is a mapping.
-55. Detection claimed from a green validation-pipeline run — registration conflated with detection.
+51. Conforming-only evidence — nothing proves the boundary rejects anything (the violating-case rules in `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`).
+52. A test that still passes with the enforcement disabled — no falsifiability.
+53. A fixture file exporting violating token strings — the isolated-strings fixture `NEVER` assertion in `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/test-verification.md`.
+54. Violating cases invented as an author's edge bag rather than derived from the rule's stated boundary — case provenance fails.
+55. A complete finite source-owned invalid set written as compliance — that correspondence is a mapping.
+56. Detection claimed from a green validation-pipeline run — registration conflated with detection.
 
 ## Language Narrowing
 
@@ -147,18 +148,19 @@ Language deltas are expression only. A language test-standards node realizes eve
 
 ## Rationale
 
-Per-type and per-level permission decided once, language-neutrally, is what keeps three language plugins from re-deriving divergent answers — the same drift the superset node exists to remove — and the corpus cases make each boundary concrete enough to compare candidate renderings of the standard against one fixed subject. The rejected alternative, per-language permission tables, re-opens divergence-by-subtraction with no gate that compares siblings.
+Per-type and per-level permission decided once, language-neutrally, is what keeps three language plugins from re-deriving divergent answers — the same drift the superset node exists to remove — and the corpus cases make each boundary concrete enough to compare candidate renderings of the standard against one fixed subject. Per-language permission tables re-open divergence-by-subtraction with no gate that compares siblings.
 
 ## Product properties
 
-1. Every executed test file declares exactly one assertion type and one execution level through the canonical filename model, and its evidence satisfies that cell's artifact permissions.
+1. Every executed test file declares exactly one assertion type and one execution level through the canonical filename model, and its evidence satisfies that cell's artifact permissions; a Property cell generates product-owned variable behavior rather than boundary-only wiring.
 2. Every corpus case in this decision decides acceptance identically in every language rendering; a language delta changes expression, never a verdict.
-3. Execution level derives from dependency class alone — the lowest level that proves the assertion, floored by the heaviest dependency among behavior, oracle, and enforcement mechanism.
+3. Execution level derives from dependency class alone — the lowest level that proves the assertion, floored by the heaviest dependency among behavior, oracle, and enforcement mechanism — and permission to use that dependency does not select the generated domain.
 
 ## Verification
 
 ### Audit
 
+- ALWAYS: property evidence generates meaningful variation in product-owned behavior; filesystem, Git, and full CLI work stays outside the generated case loop when it only supplies boundary wiring, and separately typed finite evidence exercises that real boundary ([audit])
 - ALWAYS: each executed test file declares exactly one assertion type and one execution level through the canonical filename model `<subject>.<evidence>.<level>[.<runner>]` ([audit])
 - ALWAYS: each language test-standards node declares exactly one filename instantiation of the canonical model as part of its language delta, citing this decision by full path, and declares or deterministically derives the default runner an omitted runner token names ([audit])
 - ALWAYS: evidence level derives from the heaviest dependency class among the behavior under test, the oracle, and the enforcement mechanism, and evidence uses the lowest level that proves the assertion ([audit])

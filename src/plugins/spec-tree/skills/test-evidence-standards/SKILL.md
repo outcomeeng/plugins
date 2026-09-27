@@ -2,7 +2,7 @@
 name: test-evidence-standards
 user-invocable: false
 description: >-
-  Test-evidence seam, case-provenance, oracle-independence, execution-level, per-assertion-type artifact-permission, and pre-authoring assertion-design-record standards enforced across test authoring and auditing. Loaded by other skills, not invoked directly.
+  Shared test-evidence standards — seam, case provenance, oracle independence, execution level, per-assertion-type artifact permissions, and the pre-authoring assertion-design record. Loaded by other skills, not invoked directly.
 allowed-tools: Read
 ---
 
@@ -11,12 +11,14 @@ The shared test-evidence standards that keep predicates in linked tests, cases i
 </objective>
 
 <repo_local_overlay>
-When another skill loads this reference inside a repository, it must also check for `spx/local/test-evidence.md` at the repository root. Read that file after this reference if it exists and apply it as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth, and it never weakens a seam, provenance, oracle, level, or permission rule this reference states.
+When another skill loads this reference inside a repository, check for `spx/local/test-evidence.md` at the repository root. Read that file after this reference if it exists and apply it as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth, and it never weakens a seam, provenance, oracle, level, or permission rule this reference states.
 </repo_local_overlay>
 
 <execution_levels>
 
 Execution level measures execution pain and environment dependence. It is an axis independent of assertion type and of tooling.
+
+Execution-level permission and generated-domain selection are separate decisions. Permission to use temporary filesystems, Git, or standard subprocesses at `l1` does not make those boundaries part of a property's generated domain.
 
 - `l1` — deterministic local evidence: pure logic, cheap temporary filesystem work, standard repository-required tools and subprocesses, and dependency-injected controlled implementations under a recorded exception case.
 - `l2` — real local infrastructure: local services, containers, browsers against local services, product-specific binaries, and other heavier local dependencies.
@@ -41,7 +43,7 @@ In both steps the level floor stays `l3` where the evidence run itself must reac
 
 **Controlled-implementation relief.** A controlled implementation enters evidence only under the test methodology's exception set — the seven named cases from failure simulation through contract probes, declared by the generic test workflow that both authoring and auditing load — and the evidence names the matching case. The combinatorial-cost exception is that set's member for broad evidence a real dependency makes prohibitively expensive.
 
-**Cell composition.** Every assertion type × execution level cell is decided by composition: the type's artifact rules in `<type_level_permissions>` hold at every level unchanged, and the level contributes only the harness obligations, the level floor, the availability rule, and the controlled-implementation relief above, identically for every type. A per-type per-level delta exists only where the type changes the answer. A permission undecidable from this composition is an amendment to the product's governing evidence decision, never an author's or auditor's inference.
+**Cell composition.** Every assertion type × execution level cell is decided by composition: the type's artifact rules in `<type_level_permissions>` hold at every level unchanged, and the level contributes only the harness obligations, the level floor, the availability rule, and the controlled-implementation relief above, identically for every type. Dependency permission never selects the assertion's case domain. A per-type per-level delta exists only where the type changes the answer. A permission undecidable from this composition is an amendment to the product's governing evidence decision, never an author's or auditor's inference.
 
 **Filename declaration.** The canonical filename model `<subject>.<evidence>.<level>[.<runner>]` declares each executed test file's cell: exactly one assertion type and exactly one execution level per file, with a runner token only for a non-default runner. The product's language test standard declares the language's filename instantiation and the default runner an omitted runner token names — or the deterministic rule, including any repository override, by which that default is derived; the instantiation is expression and changes no token semantics.
 
@@ -149,7 +151,7 @@ The artifact set each assertion type permits and requires, per level where the t
 
 **Conformance.** The oracle is separately owned from the implementation under test: an external standard, schema, validator tool, reference implementation, or separately owned internal contract. Expectations come from the oracle; neither test nor infrastructure re-implements the oracle's logic, and the case set covers the contract surface the assertion claims. The discriminator in `<execution_levels>` classifies the oracle tool: a repository-standard validator or compiler is `l1` (a compile-fail harness passing a violating source fixture by path is the canonical shape), a product-specific installed or bootstrapped validator is `l2`, and a remote reference implementation reached through credentialed harnesses is `l3`, selected by necessity. A spec-declared value and the source complying with it admit no conformance evidence: every candidate oracle for that agreement is a second declaration of the same value, so the agreement is audit evidence, not test evidence.
 
-**Property.** The case set comes from a generator over the declared open domain with meaningful variation, composition, and shrinking; the invariant stays lexically in the linked test; a spec-governed harness owns seed selection, run count, replay input, and failure diagnostics, and a failing run is reproducible from its reported evidence. Property evidence is permitted at every level — the absence of a level restriction is decided, not overlooked; the lowest-level rule and the combinatorial-cost exception govern property cost at heavier levels. A constant boundary branch inside a larger generator is valid when it expands boundary coverage and every source-owned value is imported from its owner; a generator that is a constant-only wrapper of a source-owned singleton is not a generator. A generator never filters candidates through the production acceptance predicate, and property-framework syntax around one example is scenario evidence impersonating property.
+**Property.** The case set comes from a generator over the declared open product-owned domain with meaningful variation, composition, and shrinking; the invariant stays lexically in the linked test; a spec-governed harness owns seed selection, run count, replay input, and failure diagnostics, and a failing run is reproducible from its reported evidence. Filesystem, Git, and full CLI work stays outside the generated case loop when it only wires generated input into the behavior under assertion; separately typed finite evidence exercises that real boundary. A property may cross a real boundary when the boundary itself is part of the product-owned variable behavior and the generator meaningfully varies it. Property evidence is permitted at every level — the absence of a level restriction is decided, not overlooked; the lowest-level rule and the combinatorial-cost exception govern property cost at heavier levels. A constant boundary branch inside a larger generator is valid when it expands boundary coverage and every source-owned value is imported from its owner; a generator that is a constant-only wrapper of a source-owned singleton is not a generator. A generator never filters candidates through the production acceptance predicate, and property-framework syntax around one example is scenario evidence impersonating property.
 
 **Compliance.** The evidence exercises real violating input: a whole-payload fixture passed by path — a source artifact that violates the rule — never a fixture exporting violating tokens. At least one real violating case is present, and disabling or weakening the enforcement makes the linked test fail; conforming cases alongside the violating ones prove no false positive. Detection is the test's subject; pipeline registration is separate operational evidence, so a green validation-pipeline run proves nothing about detection. Enforcement shipped in a product-specific binary — an installed or bootstrapped artifact per the executable discriminator — classifies `l2`; the same enforcement exercised through the in-cycle checkout build classifies `l1`. A complete finite source-owned invalid set is a mapping, not compliance — the correspondence's quantifier decides.
 
@@ -167,18 +169,19 @@ Apply every question while authoring and auditing:
 6. Does infrastructure raise only setup, dependency, lifecycle, or execution errors rather than assertion failures?
 7. Does mutating the assertion-relevant production behavior make the test fail?
 8. What semantic choice does each test-file binding make? If it only receives or projects an owned observation or handle, rejecting it is syntax-based rather than ownership-based.
+9. For property evidence, does each generated case vary product-owned behavior, or repeat boundary wiring that separately typed finite evidence can exercise outside the generated loop?
 
 </common_litmus_questions>
 
 <assertion_type_litmus>
 
-| Assertion type | Required source and oracle                                                                                             | Reject when                                                                                            |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| Scenario       | The exact Given/When/Then interaction from the spec, or a real whole-payload artifact whose complete shape is the case | The case is one member of an author-invented “typical” or “edge” bag                                   |
-| Mapping        | The complete finite source-owned domain; expected mappings derive independently from the production mapping            | Rows are hand-extended, incomplete, or copied from the implementation table                            |
-| Property       | A generator over the declared open domain; the invariant remains in the linked test                                    | The generator reuses the production acceptance predicate, collapses to examples, or owns the predicate |
-| Conformance    | An external standard, schema, validator, reference implementation, or separately owned contract                        | The implementation validates itself or the oracle is another copy of its logic                         |
-| Compliance     | The governing ALWAYS/NEVER rule plus real violating cases                                                              | Evidence uses only conforming cases or still passes when enforcement is disabled                       |
+| Assertion type | Required source and oracle                                                                                             | Reject when                                                                                                                                   |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Scenario       | The exact Given/When/Then interaction from the spec, or a real whole-payload artifact whose complete shape is the case | The case is one member of an author-invented “typical” or “edge” bag                                                                          |
+| Mapping        | The complete finite source-owned domain; expected mappings derive independently from the production mapping            | Rows are hand-extended, incomplete, or copied from the implementation table                                                                   |
+| Property       | A generator over the declared open product-owned domain; the invariant remains in the linked test                      | The generator reuses the production acceptance predicate, collapses to examples, owns the predicate, or repeats boundary-only wiring per case |
+| Conformance    | An external standard, schema, validator, reference implementation, or separately owned contract                        | The implementation validates itself or the oracle is another copy of its logic                                                                |
+| Compliance     | The governing ALWAYS/NEVER rule plus real violating cases                                                              | Evidence uses only conforming cases or still passes when enforcement is disabled                                                              |
 
 For every type, ask whether the selected cases cover the quantifier the assertion states. A universal claim never becomes scenario evidence through a larger example bag.
 
@@ -230,6 +233,7 @@ Language test standards are expression only. A language test standard cites its 
 - Relocating a case or expected value preserves its provenance and never converts an author-invented or implementation-derived value into an independent oracle.
 - Every executed test file declares exactly one assertion type and one execution level through the canonical filename model, and its evidence satisfies that cell's permissions in `<type_level_permissions>` composed with `<execution_levels>`.
 - Execution level derives from dependency class alone, floored by the heaviest dependency among behavior, oracle, and enforcement mechanism.
+- Every property generator varies product-owned behavior; filesystem, Git, and full CLI work appears inside each generated case only when that boundary is part of the variable behavior under assertion.
 - Controlled implementations and recording collaborators preserve the real boundary and expose observations only.
 - Predicate inversion changes only the linked test, and production mutation makes the evidence fail.
 

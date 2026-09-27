@@ -35,6 +35,7 @@ Spec-tree assertion tests and decision Testing rules that are canonically assert
 - Name tests by subject, assertion type, execution level, and optional runner.
 - Derive the assertion type from the assertion's quantifier and evidence shape, never from the section containing the rule.
 - Verification routing selects the verification type. This test specialist owns assertion-type selection, execution-level selection, and controlled-implementation exceptions after test evidence is selected.
+- For property evidence, generate product-owned variable behavior. Keep filesystem, Git, and full CLI work outside each generated case when it only supplies boundary wiring, and exercise that real boundary through a separately typed finite assertion.
 
 </non_negotiable_rules>
 
@@ -111,6 +112,8 @@ Keep evidence, execution pain, and tool choice independent:
 
 A temporary-directory test can be `L1` when the filesystem is available, setup is trivial, and runtime is cheap. A Playwright test can be `L2` or `L3` depending on whether it uses local infrastructure or remote systems and credentials. Runner never defines level, and level never defines runner.
 
+An execution level permits a dependency; it never selects the case domain. Classify each assertion from its own quantifier before composing its level with the dependency it exercises.
+
 </independent_axes>
 
 <assertion_types>
@@ -176,6 +179,8 @@ Within the universal branch:
 
 For boundary validation, classify by the invalid set: an open or infinite invalid set is `property`; a closed, finite, source-owned invalid set is `mapping`. A hand-picked bag of invalid values establishes neither an open property nor a complete mapping.
 
+For each property, name the product-owned behavior the generator varies and classify every filesystem, Git, or full CLI interaction. When an interaction only wires generated input into separately testable behavior, move it outside the generated case loop and add finite real-boundary evidence whose assertion type follows that boundary claim's quantifier. Keep the interaction inside the property only when the boundary itself is part of the product-owned variable behavior.
+
 </stage_one>
 
 <stage_two>
@@ -204,6 +209,8 @@ Choose the level from operational reality:
 
 Test product-owned algorithms, parsers, and rules thoroughly at `L1`. Trust mature library behavior and test product-owned wiring, mappings, invariants, failure handling, and boundaries. Add lower-level evidence when it materially narrows diagnosis. Place confidence where it is achievable: math at `L1`, SQL against a database at `L2`, and live user flows at `L3`.
 
+Filesystem, Git, and standard subprocess availability at `L1` permits finite real-boundary evidence there.
+
 When evidence lives at `L2` or `L3`, use real dependencies there and stop. Continue to Stage 3 only for `L1` evidence.
 
 </stage_two>
@@ -211,7 +218,7 @@ When evidence lives at `L2` or `L3`, use real dependencies there and stop. Conti
 <stage_three>
 
 - **Pure computation**: test directly at `L1` with no doubles.
-- **Extractable pure part**: extract and test the computation at `L1`; cover dependency interaction at the correct outer level.
+- **Extractable pure part**: extract and test the computation at `L1`; cover dependency interaction with separately typed finite evidence at the correct outer level.
 - **Glue or orchestration**: continue to Stage 4 because the behavior is the dependency interaction.
 
 </stage_three>
@@ -236,24 +243,13 @@ Only these controlled-implementation exceptions permit avoiding the real depende
 | 6. Observability         | Required signal is hidden by the real dependency                              | Spy recording boundary details            |
 | 7. Contract probes       | Need controlled verification at a contract boundary                           | Contract stub                             |
 
+When one exception matches, read `${CLAUDE_SKILL_DIR}/references/test-double-taxonomy.md` and select the controlled implementation it names for that exception.
+
 If no exception applies, move outward to the lowest real level that proves the behavior.
 
 </stage_five>
 
 </router>
-
-<test_double_taxonomy>
-
-| Type  | Purpose                           | Use for                                     |
-| ----- | --------------------------------- | ------------------------------------------- |
-| Stub  | Returns predetermined responses   | Failure simulation, safety, contract probes |
-| Spy   | Records calls for verification    | Interaction protocols, observability        |
-| Fake  | Simplified working implementation | Time control, combinatorial cost            |
-| Dummy | Placeholder that is never called  | Satisfying type requirements                |
-
-Framework mocks remain forbidden. Supply a recording collaborator or spy through dependency injection when call recording is required.
-
-</test_double_taxonomy>
 
 <four_part_progression>
 
@@ -285,6 +281,7 @@ Small pure functions often need phases 1 and 2. Complex algorithms often need al
 - Treating browser coverage as inherently remote or credentialed
 - Treating runner choice as a proxy for cost or realism
 - Adding doubles when the real dependency is cheap, deterministic, and observable
+- Repeating filesystem setup, Git initialization, or full CLI execution for every generated property case when the boundary only wires input into a separately testable rule
 - Writing tests that cannot name the production failure they catch
 
 </anti_patterns>
@@ -293,7 +290,7 @@ Small pure functions often need phases 1 and 2. Complex algorithms often need al
 
 Keep tests beside the governing spec and name them for what they prove and how painful they are to run.
 
-Canonical filename model:
+Canonical filename model — the subject token, the evidence token, the level token, and the optional runner token, composed as `<subject>.<evidence>.<level>[.<runner>]` and rendered into the language's own test-file convention, which supplies the prefix, separator, and extension around them; the four renderings below instantiate that one model:
 
 - TypeScript and JavaScript: `<subject>.<evidence>.<level>[.<runner>].test.ts`
 - Python: `test_<subject>.<evidence>.<level>[.<runner>].py`
@@ -322,7 +319,7 @@ Examples:
 
 Abort when `$ARGUMENTS` is empty: "A canonical spec node or ADR/PDR target is required." Otherwise parse it as one canonical target followed by an optional JSON array of exact assertion texts already selected for test. Preserve each array string verbatim; it identifies the untagged spec assertion this workflow may type. Reject malformed JSON or non-string array members before reading the target. A decision target uses decision-rule mode and accepts no assertion-text array.
 
-Check for `<SPEC_TREE_FOUNDATION>` and `<SPEC_TREE_CONTEXT>` markers. If absent, invoke `/understand` and `/contextualize` first.
+Check for `<SPEC_TREE_FOUNDATION>` and `<SPEC_TREE_CONTEXT>` markers. When either is absent: {!% require_skill 'spec-tree:understand' %!} {!% require_skill 'spec-tree:contextualize' %!}
 
 For a spec target, this loads:
 
@@ -422,11 +419,20 @@ For each assertion needing a new test:
 4. Name the file using `<naming_and_co_location>`.
 5. Scaffold the test structure based on assertion type and language-specific patterns.
 
-Delegate language-specific structure to `/test-go` or `/test-python` or `/test-rust` or `/test-typescript`.
+Load the test skill for the node's language before scaffolding and apply its structure, execution-level, and reusable-pattern rules. Determine the language from the node's implementation and existing tests, then load exactly the matching skill:
+
+| Node language | Skill                                              |
+| ------------- | -------------------------------------------------- |
+| Go            | {!% require_skill 'go:test-go' %!}                 |
+| Python        | {!% require_skill 'python:test-python' %!}         |
+| Rust          | {!% require_skill 'rust:test-rust' %!}             |
+| TypeScript    | {!% require_skill 'typescript:test-typescript' %!} |
+
+When the node's language has no installed test skill, scaffold from `<naming_and_co_location>` and report the missing language skill with the scaffolds.
 
 In decision-rule mode, update each `### Testing` rule with exactly one selected assertion-type tag and create no test scaffold. Continue directly to the report step.
 
-**Specified nodes:** If the implementation module doesn't exist yet, test files will fail on import. This is expected — the test is a declaration of what the implementation must satisfy. Add the node's path to `spx/EXCLUDE`. The `spx` CLI skips excluded nodes when running `spx test passing`. Remove the entry when implementation begins. Use `/understand`'s excluded-node guidance for the convention.
+**Specified nodes:** If the implementation module doesn't exist yet, test files will fail on import. This is expected — the test is a declaration of what the implementation must satisfy. Add the node to `spx/EXCLUDE` as one entry per line, each the canonical node path with its leading `spx/` stripped; blank lines and `#` comment lines carry no entry. The `spx` CLI skips excluded nodes when running `spx test passing`. Remove the exact line when implementation begins.
 
 </step>
 
@@ -459,65 +465,19 @@ Report which assertions have tests, which do not, and which are stale:
 
 <cross_cutting_assertions>
 
-When an assertion lives in an ancestor node, determine where the test evidence should go:
+Place an ancestor node's test evidence by the assertion's reach:
 
-- If the assertion is about behavior that a specific child node implements, the test belongs in that child's `tests/` directory.
-- If the assertion spans multiple children, the test belongs in the ancestor's `tests/` directory at a higher level.
-- If an ancestor accumulates too many cross-cutting assertions, flag it for `/decompose`; the decomposition workflow owns shared-enabler extraction and index placement.
+- Place the test in the implementing child's `tests/` directory when the assertion is about behavior that one child node implements.
+- Place the test in the ancestor's `tests/` directory when the assertion spans several children.
+- Flag the ancestor for `/decompose` when it accumulates too many cross-cutting assertions; the decomposition workflow owns shared-enabler extraction and index placement.
 
 </cross_cutting_assertions>
 
-<failure_modes>
+<diagnostic_reference>
 
-**Infrastructure encoded the verdict**
+When diagnosing a rejected or ineffective test workflow, read `${CLAUDE_SKILL_DIR}/references/failure-modes.md`. Skip this conditional diagnostic catalog during routine evidence design.
 
-- **What happened:** A harness returned booleans whose names and implementations already decided whether each requirement passed, leaving the linked test to assert only that boolean.
-- **Why it failed:** The predicate moved out of the linked test, so reversing the linked assertion no longer changed the harness behavior and the spec-to-test evidence chain became indirect.
-- **How to avoid:** Infrastructure exposes observations, resources, and recording collaborators. The linked test alone applies assertion APIs and owns the behavioral predicate.
-
-**Implementation logic generated both actual and expected values**
-
-- **What happened:** Expected outputs came from the same table, parser, branch logic, or collaborator verdict method that produced the actual output.
-- **Why it failed:** The oracle repeated the implementation; the same defect changed both sides and the test stayed green.
-- **How to avoid:** Derive expectations from an independent contract, source-owned finite mapping, generated invariant, or real-system response.
-
-**Test-local bindings laundered domain truth**
-
-- **What happened:** Constants, local functions, fixture parameters, or renamed variables stored expected outputs, boundary bags, runner settings, or source-owned singleton values in the executed test file.
-- **Why it failed:** Renaming the declaration preserved test ownership of data and configuration, hiding an invalid seam instead of correcting it.
-- **How to avoid:** Move source truth to the production contract, variable domains to generators, execution policy to harnesses, and whole payloads to inert fixtures. Keep only the assertion flow in the test.
-
-**A heading selected the assertion type**
-
-- **What happened:** An `ALWAYS` or `NEVER` rule under a Compliance section was labeled `compliance`, or a universal rule was labeled `scenario`, without examining its quantifier and evidence domain.
-- **Why it failed:** Section organization replaced semantic classification, producing an evidence strategy that could not prove the claim.
-- **How to avoid:** Read the quantifier first, then select mapping, conformance, compliance, or property from the universal domain, oracle, or violating boundary.
-
-**A finite example bag impersonated stronger evidence**
-
-- **What happened:** A few hand-picked cases were presented as a mapping over a complete domain or as a property over an open domain.
-- **Why it failed:** The examples established only those cases; they provided neither source-owned finite completeness nor generated open-domain coverage.
-- **How to avoid:** Import the complete finite domain from its source owner for mapping, or use a meaningful shrinking generator for property evidence.
-
-**A mock replaced the behavior under assertion**
-
-- **What happened:** A framework mock, fake repository, monkeypatch, intercepted response, or stub replaced persistence, transport, or another boundary while the test claimed that boundary worked.
-- **Why it failed:** The test proved the replacement's configured response instead of production behavior.
-- **How to avoid:** Use the real system at the lowest viable level. Permit a controlled implementation only after one Stage 5 exception matches, and preserve the real behavior boundary the assertion claims.
-
-**Tool choice determined execution level**
-
-- **What happened:** Filesystem, subprocess, browser, or runner labels automatically promoted a cheap local test to a heavier level.
-- **Why it failed:** Runner identity and dependency category replaced measured execution pain, availability, safety, determinism, and observability.
-- **How to avoid:** Classify level from operational reality. Temporary files and standard local tools remain `L1` when cheap and dependable; remote or credentialed systems remain `L3` regardless of runner.
-
-**Property syntax wrapped a constant domain**
-
-- **What happened:** A property framework generated one constant or selected from a copied handful of literals while the test claimed an open-domain invariant.
-- **Why it failed:** Framework syntax added no domain variation, shrinking value, or systematic exploration.
-- **How to avoid:** Generate a meaningful variable domain with replayable seeds and shrinking, or reclassify the evidence to the finite assertion type it actually supports.
-
-</failure_modes>
+</diagnostic_reference>
 
 <success_criteria>
 
@@ -528,6 +488,7 @@ Testing output is sound when:
 - Every test file name encodes the assertion type and execution level; it includes a runner token only when the canonical model requires one.
 - Every test asserts source-coupled behavior with no test-owned data or configuration in the assertion file.
 - Every property test uses a meaningful generated domain and reports both the seed and replay path on failure.
+- Every property test generates product-owned variable behavior and separates finite real-boundary wiring unless the boundary itself is part of that variable behavior.
 - Every test double maps to one of the seven exception cases and preserves the behavior boundary the assertion claims.
 - Every spec assertion that receives test evidence links to the evidence file that verifies it.
 
