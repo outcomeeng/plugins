@@ -243,24 +243,13 @@ Only these controlled-implementation exceptions permit avoiding the real depende
 | 6. Observability         | Required signal is hidden by the real dependency                              | Spy recording boundary details            |
 | 7. Contract probes       | Need controlled verification at a contract boundary                           | Contract stub                             |
 
+When one exception matches, read `${SKILL_DIR}/references/test-double-taxonomy.md` and select the controlled implementation it names for that exception.
+
 If no exception applies, move outward to the lowest real level that proves the behavior.
 
 </stage_five>
 
 </router>
-
-<test_double_taxonomy>
-
-| Type  | Purpose                           | Use for                                     |
-| ----- | --------------------------------- | ------------------------------------------- |
-| Stub  | Returns predetermined responses   | Failure simulation, safety, contract probes |
-| Spy   | Records calls for verification    | Interaction protocols, observability        |
-| Fake  | Simplified working implementation | Time control, combinatorial cost            |
-| Dummy | Placeholder that is never called  | Satisfying type requirements                |
-
-Framework mocks remain forbidden. Supply a recording collaborator or spy through dependency injection when call recording is required.
-
-</test_double_taxonomy>
 
 <four_part_progression>
 
@@ -430,11 +419,20 @@ For each assertion needing a new test:
 4. Name the file using `<naming_and_co_location>`.
 5. Scaffold the test structure based on assertion type and language-specific patterns.
 
-Delegate language-specific structure to `/test-go` or `/test-python` or `/test-rust` or `/test-typescript`.
+Load the test skill for the node's language before scaffolding and apply its structure, execution-level, and reusable-pattern rules. Determine the language from the node's implementation and existing tests, then load exactly the matching skill:
+
+| Node language | Skill                                   |
+| ------------- | --------------------------------------- |
+| Go            | Use skill `go:test-go`.                 |
+| Python        | Use skill `python:test-python`.         |
+| Rust          | Use skill `rust:test-rust`.             |
+| TypeScript    | Use skill `typescript:test-typescript`. |
+
+When the node's language has no installed test skill, scaffold from `<naming_and_co_location>` and report the missing language skill with the scaffolds.
 
 In decision-rule mode, update each `### Testing` rule with exactly one selected assertion-type tag and create no test scaffold. Continue directly to the report step.
 
-**Specified nodes:** If the implementation module doesn't exist yet, test files will fail on import. This is expected — the test is a declaration of what the implementation must satisfy. Add the node's path to `spx/EXCLUDE`. The `spx` CLI skips excluded nodes when running `spx test passing`. Remove the entry when implementation begins. Use `/understand`'s excluded-node guidance for the convention.
+**Specified nodes:** If the implementation module doesn't exist yet, test files will fail on import. This is expected — the test is a declaration of what the implementation must satisfy. Add the node to `spx/EXCLUDE` as one entry per line, each the canonical node path with its leading `spx/` stripped; blank lines and `#` comment lines carry no entry. The `spx` CLI skips excluded nodes when running `spx test passing`. Remove the exact line when implementation begins.
 
 </step>
 
