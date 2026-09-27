@@ -19,9 +19,14 @@ from typing import Final
 
 from outcomeeng.distribution.contracts import (
     BUILD_COMMAND_ARGV,
+    CLAUDE_DIST_RELATIVE,
+    DIST_CODEX_PLUGINS_DIR,
     DIST_DIFF_ARGV,
     INSTRUCTION_BLOCK_ARGV as _INSTRUCTION_BLOCK_ARGV,
     ORCHESTRATION_VALIDATION_ARGV,
+    PLUGINS_DIR_NAME,
+    SKILL_FILENAME,
+    SOURCE_ROOT_NAME,
     TEXT_FILE_SUFFIXES,
 )
 from outcomeeng.validation._model import Recipe, Step
@@ -123,22 +128,22 @@ _REFERENCE_SUFFIXES: Final = (".md", ".py", ".json", ".toml", ".yaml", ".yml")
 
 def _skill_files() -> tuple[str, ...]:
     roots = (
-        _REPO_ROOT / "src" / "plugins",
-        _REPO_ROOT / "dist" / "claude",
-        _REPO_ROOT / "dist" / "codex",
+        _REPO_ROOT / SOURCE_ROOT_NAME / PLUGINS_DIR_NAME,
+        _REPO_ROOT / CLAUDE_DIST_RELATIVE,
+        _REPO_ROOT / DIST_CODEX_PLUGINS_DIR,
     )
     return tuple(
         sorted(
             str(path)
             for root in roots
             if root.is_dir()
-            for path in root.rglob("SKILL.md")
+            for path in root.rglob(SKILL_FILENAME)
         )
     )
 
 
 def _reference_files() -> tuple[str, ...]:
-    root = _REPO_ROOT / "src" / "plugins"
+    root = _REPO_ROOT / SOURCE_ROOT_NAME / PLUGINS_DIR_NAME
     if not root.is_dir():
         return ()
     return tuple(
@@ -160,9 +165,9 @@ def _authored_text_files() -> tuple[str, ...]:
     once so a new root or suffix cannot reach one rule and miss another.
     """
     roots = (
-        _REPO_ROOT / "src" / "plugins",
-        _REPO_ROOT / "src" / "_shared",
-        _REPO_ROOT / "src" / "templates",
+        _REPO_ROOT / SOURCE_ROOT_NAME / PLUGINS_DIR_NAME,
+        _REPO_ROOT / SOURCE_ROOT_NAME / "_shared",
+        _REPO_ROOT / SOURCE_ROOT_NAME / "templates",
     )
     return tuple(
         sorted(
@@ -175,7 +180,7 @@ def _authored_text_files() -> tuple[str, ...]:
     )
 
 
-def runtime_token_files(root: Path = Path("src")) -> tuple[str, ...]:
+def runtime_token_files(root: Path = Path(SOURCE_ROOT_NAME)) -> tuple[str, ...]:
     # A raw runtime token in authored content ships into a generated target.
     return tuple(str(path) for path in sorted(root.rglob("*")) if path.is_file())
 

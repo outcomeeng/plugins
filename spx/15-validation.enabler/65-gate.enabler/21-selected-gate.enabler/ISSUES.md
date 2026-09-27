@@ -266,3 +266,66 @@ a spec assertion, so the amendment is the operator's; the generator case follows
 `node.level >= 2` and `ascend >= len(base_parts)` branches; and the test-evidence audit's
 finding `f-001`, WARNING, whose own words separate the two routes — "widening the declared
 domain is a spec change while supplying the case is a generator change".
+
+## Two pytest-convention values each have two homes in the validation package
+
+The collectable-test filename prefix `test_` is declared twice: `TEST_FILE_PREFIX` in
+`outcomeeng/validation/link_integrity.py` and `EXECUTED_TEST_PREFIX` in
+`outcomeeng/validation/infrastructure_index.py`. The Python source suffix `.py` is
+declared twice as well: `PYTHON_SUFFIX` in `outcomeeng/validation/agent_switch_enforcement.py`
+and `PYTHON_SUFFIX` in `outcomeeng/validation/infrastructure_index.py`. Both pairs are the
+same role — the prefix pytest collects by, and the suffix a Python source file carries — and
+consumers read whichever home is nearest: the installation harness imports
+`agent_switch_enforcement.PYTHON_SUFFIX`, the infrastructure-index harness imports
+`infrastructure_index.PYTHON_SUFFIX`, and this node's mapping evidence now imports
+`link_integrity.TEST_FILE_PREFIX`.
+
+`link_integrity.py` also spells `.py` twice itself rather than reading either home — once in
+the collectability predicate of `validate_test_links` and once inside the
+`REASON_TEST_NOT_COLLECTABLE` wording that reports it — so the suffix has three statements
+in one package and the reason text can drift from the predicate that raises it.
+
+**Why this is filed rather than repaired.** Each pair needs one of its two homes chosen, and
+choosing moves every consumer of the other. Adding a third declaration in `link_integrity.py`
+to remove its internal duplication would make the suffix worse, not better, and importing one
+of the two existing homes into it picks the winner by side effect. Which module owns each
+value is a declaration, so it is the operator's; the source contract comes first and the
+consumers follow it.
+
+**Settlement condition**: one module declares the collectable-test filename prefix and one
+declares the Python source suffix, every other site in `outcomeeng/validation/` imports it,
+and `link_integrity.py` reads the suffix at both its predicate and its reason wording.
+
+**Evidence**: `TEST_FILE_PREFIX` at `outcomeeng/validation/link_integrity.py:32` against
+`EXECUTED_TEST_PREFIX` at `outcomeeng/validation/infrastructure_index.py:25`; `PYTHON_SUFFIX`
+at `outcomeeng/validation/agent_switch_enforcement.py:23` against `PYTHON_SUFFIX` at
+`outcomeeng/validation/infrastructure_index.py:24`; and the two bare `.py` spellings in
+`link_integrity.py`. Found by the widened whole-file source-ownership sweep over every file
+this Change's changeset touches.
+
+## The selected gate's skill-step labels restate the step list's own labels
+
+`SKILL_STEP_LABELS` in `outcomeeng/validation/selected_gate.py` names twelve step labels so
+the skill lane can select those steps out of `VALIDATION_STEPS`. `outcomeeng/validation/_steps.py`
+builds the same twelve labels inline in its `Step(label=..., argv=...)` constructions, and
+publishes a name for exactly one of them, `DIST_DIFF_STEP_LABEL`. That one is now imported
+rather than spelled, following `outcomeeng_testing/harnesses/build_orchestration.py`, which
+already reads it. The other eleven are stated in both files, and a label renamed in the step
+list leaves the skill lane selecting nothing for that step while every linked test passes —
+the lane silently narrows.
+
+**Why this is filed rather than repaired.** Publishing eleven label constants in `_steps.py`
+widens the producer's declared surface, and the same label vocabulary is enumerated a third
+time by the step-list compliance assertion in
+`spx/15-validation.enabler/65-gate.enabler/gate.md`. Which surface owns the label vocabulary —
+the step list, the selection tuple, or the assertion that enumerates the steps — is a
+declaration rather than a repair, so it is the operator's.
+
+**Settlement condition**: `outcomeeng/validation/_steps.py` publishes a name for every label
+the skill lane selects, `SKILL_STEP_LABELS` reads those names, and the gate node's step-list
+assertion cites them rather than restating the strings.
+
+**Evidence**: `SKILL_STEP_LABELS` at `outcomeeng/validation/selected_gate.py` against the
+`Step(label=...)` constructions in `outcomeeng/validation/_steps.py`, and
+`DIST_DIFF_STEP_LABEL` as the one label already published and now read. Found by the widened
+whole-file source-ownership sweep over every file this Change's changeset touches.

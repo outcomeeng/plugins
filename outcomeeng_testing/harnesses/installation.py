@@ -27,7 +27,7 @@ from outcomeeng.distribution.agents import (
     AGENT_NAME_FIELD,
     AGENT_SKILL_ENABLED_FIELD,
 )
-from outcomeeng.distribution.build import render_text
+from outcomeeng.distribution.build import LIFECYCLE_TEMPLATE_NAME, render_text
 from outcomeeng.distribution.instruction_block import (
     JUSTFILE_NAME,
     NATIVE_PROFILE_RECIPE,
@@ -54,10 +54,13 @@ from outcomeeng_testing.harnesses.native_thread_evidence import (
 )
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
 from outcomeeng.distribution.contracts import (
+    AGENTS_SUBDIR_NAME,
     BUILD_TARGET_VARIABLE,
     CLAUDE_DIST_RELATIVE,
     DIST_CODEX_PLUGINS_DIR,
     PLUGIN_NAME_VARIABLE,
+    SCRIPTS_SUBDIR_NAME,
+    SKILLS_SUBDIR_NAME,
     SOURCE_ROOT_NAME,
     Target,
 )
@@ -109,6 +112,7 @@ from outcomeeng.distribution.installation import (
     CODEX_CONFIG_PATH,
     CODEX_HOME_ENV,
     CODEX_HOME_AGENTS_PATH,
+    ISOLATED_CODEX_HOME_DIR,
     CODEX_MARKETPLACE_LIST_COMMAND,
     CODEX_PLUGIN_ENABLED_FIELD,
     CODEX_PLUGIN_ENTRIES_FIELD,
@@ -473,15 +477,20 @@ class PluginLifecycleHarness:
 
     @property
     def skill_root(self) -> Path:
-        return self.root / "plugin" / "skills" / f"{self.plugin_name}-plugin"
+        return (
+            self.root
+            / LIFECYCLE_TEMPLATE_NAME
+            / SKILLS_SUBDIR_NAME
+            / f"{self.plugin_name}-{LIFECYCLE_TEMPLATE_NAME}"
+        )
 
     @property
     def script_path(self) -> Path:
-        return self.skill_root / "scripts" / "place_agents.py"
+        return self.skill_root / SCRIPTS_SUBDIR_NAME / "place_agents.py"
 
     @property
     def shipped_agents(self) -> Path:
-        return self.skill_root / "agents"
+        return self.skill_root / AGENTS_SUBDIR_NAME
 
     @property
     def home(self) -> Path:
@@ -489,7 +498,7 @@ class PluginLifecycleHarness:
 
     @property
     def home_agents(self) -> Path:
-        return self.home / "agents"
+        return self.home / CODEX_HOME_AGENTS_PATH
 
     @property
     def ownership_path(self) -> Path:
@@ -3455,11 +3464,16 @@ def observe_real_installation() -> RealInstallationObservation:
         persistent_environment = _persistent_environment(persistent_root)
         _seed_persistent_state(persistent_root)
         persistent_initial = _tree_snapshot(persistent_root)
-        unowned = state / "codex" / CODEX_HOME_AGENTS_PATH / UNOWNED_AGENT_FILENAME
+        unowned = (
+            state
+            / ISOLATED_CODEX_HOME_DIR
+            / CODEX_HOME_AGENTS_PATH
+            / UNOWNED_AGENT_FILENAME
+        )
         unowned.parent.mkdir(parents=True, exist_ok=True)
         unowned.write_text(UNOWNED_AGENT_CONTENT, encoding="utf-8")
         unowned_initial = unowned.read_bytes()
-        placed_initial = _agent_snapshot(state / "codex")
+        placed_initial = _agent_snapshot(state / ISOLATED_CODEX_HOME_DIR)
         plan = build_isolated_installation_plan(mirror, state, persistent_environment)
         environment = dict(plan.commands[0].environment)
         claude_target = _registration_target(plan, Agent.CLAUDE)
@@ -3470,7 +3484,7 @@ def observe_real_installation() -> RealInstallationObservation:
             persistent_mode_first = read_blocked_mode()
         claude_first = _run_listing(Agent.CLAUDE, mirror, environment)
         codex_first = _run_listing(Agent.CODEX, mirror, environment)
-        placed_first = _agent_snapshot(state / "codex")
+        placed_first = _agent_snapshot(state / ISOLATED_CODEX_HOME_DIR)
         unowned_first = unowned.read_bytes()
         persistent_first = _tree_snapshot(persistent_root)
         with _blocked_directory(persistent_root) as read_blocked_mode:
@@ -3478,7 +3492,7 @@ def observe_real_installation() -> RealInstallationObservation:
             persistent_mode_second = read_blocked_mode()
         claude_second = _run_listing(Agent.CLAUDE, mirror, environment)
         codex_second = _run_listing(Agent.CODEX, mirror, environment)
-        placed_second = _agent_snapshot(state / "codex")
+        placed_second = _agent_snapshot(state / ISOLATED_CODEX_HOME_DIR)
         unowned_second = unowned.read_bytes()
         persistent_second = _tree_snapshot(persistent_root)
         subset_mirror = temporary_root / "subset-checkout"
@@ -3652,7 +3666,7 @@ def observe_codex_subagent_discovery(
             raise DiscoveryAuthenticationError(
                 f"Discovery installation failed ({install.returncode}): {install.stderr}"
             )
-        codex_home = state / "codex"
+        codex_home = state / ISOLATED_CODEX_HOME_DIR
         placed_subagent_names = _placed_subagent_names(codex_home)
         schema_path = temporary_root / "subagent-discovery-schema.json"
         schema_path.write_text(

@@ -11,6 +11,13 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Final, Protocol, TextIO, cast
 
+from outcomeeng.distribution.contracts import (
+    PLUGINS_DIR_NAME,
+    SCRIPTS_SUBDIR_NAME,
+    SKILLS_SUBDIR_NAME,
+    SOURCE_ROOT_NAME,
+)
+from outcomeeng.distribution.instruction_block import AUTHORED_TEMPLATE_RELATIVE_PATH
 from outcomeeng.validation._engine import run_check, run_recipe
 from outcomeeng.validation.agent_disable import (
     AgentDisableStates,
@@ -21,6 +28,7 @@ from outcomeeng.validation._model import ProcessSpawner, Recipe, Step
 from outcomeeng.validation._steps import (
     ACTIONLINT_ARGV,
     CHECK_RECIPES,
+    DIST_DIFF_STEP_LABEL,
     EVAL_LINKS_ARGV,
     EVAL_PROMPTS_ARGV,
     EVAL_TRIGGER_WORKFLOW,
@@ -50,12 +58,12 @@ RECIPE_CHECK_FULL: Final = "check-full"
 DEFAULT_BASE_REF: Final = "origin/main"
 CHANGESET_SCOPE_SCRIPT: Final = (
     Path(__file__).resolve().parents[2]
-    / "src"
-    / "plugins"
+    / SOURCE_ROOT_NAME
+    / PLUGINS_DIR_NAME
     / "spec-tree"
-    / "skills"
+    / SKILLS_SUBDIR_NAME
     / "scope-changeset"
-    / "scripts"
+    / SCRIPTS_SUBDIR_NAME
     / "changeset_scope.py"
 )
 SELECTED_CHECK_PLAN_HEADER: Final = "━━━ Selected check plan ━━━"
@@ -108,10 +116,10 @@ SPX_CONFIG_PATH: Final = "spx.config.yaml"
 # than recopying the path.
 CHECK_WORKFLOW_PATH: Final = ".github/workflows/check.yml"
 PYPROJECT_PATH: Final = "pyproject.toml"
-INSTRUCTION_BLOCK_SOURCE_PATH: Final = "src/plugins/spec-tree/skills/update-instruction-block/templates/instruction-block.md"
+INSTRUCTION_BLOCK_SOURCE_PATH: Final = AUTHORED_TEMPLATE_RELATIVE_PATH.as_posix()
 SKILL_STEP_LABELS: Final = (
     "build-skills",
-    "dist-diff",
+    DIST_DIFF_STEP_LABEL,
     "manifests",
     "skills",
     "skill-injection",

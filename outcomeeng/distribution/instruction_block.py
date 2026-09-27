@@ -64,7 +64,6 @@ BUILD_INSTRUCTIONS_RECIPE: Final = "build-instructions"
 INSTRUCTIONS_CHECK_RECIPE: Final = "instructions-check"
 WRITE_FLAG: Final = "--write"
 JUSTFILE_NAME: Final = "justfile"
-MODULE_INVOCATION: Final = "outcomeeng.distribution.instruction_block"
 LEFTHOOK_PATH: Final = Path("lefthook.yml")
 PRECOMMIT_BUILD_INSTRUCTIONS_COMMAND: Final = "run: just build-instructions"
 LEGACY_DIRECT_TEMPLATE_ARGUMENT: Final = "--template src/plugins"

@@ -20,6 +20,7 @@ the validation recipe as its ``eval-links`` step.
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
@@ -50,8 +51,36 @@ REASON_TEST_NOT_COLLECTABLE: Final = (
     f"(filename starts with {TEST_FILE_PREFIX!r} and ends in .py)"
 )
 
-_EVAL_LINK_PATTERN = re.compile(r"\[eval\]\(([^)]+)\)")
-_TEST_LINK_PATTERN = re.compile(r"\[test\]\(([^)]+)\)")
+# The rendered evidence-link forms have one home each. The parser derives
+# its pattern from the same renderer that writes the form, so a change to a
+# form moves the writer and the reader together, and evidence that imports
+# the renderer stays coupled to what this module actually matches.
+_TARGET_PLACEHOLDER = "EVIDENCELINKTARGET"
+
+
+def render_test_link(target: str) -> str:
+    """Render the ``[test](path)`` form a spec assertion carries for TARGET."""
+    return f"[test]({target})"
+
+
+def _render_eval_link(target: str) -> str:
+    """Render the ``[eval](path)`` form a spec assertion carries for TARGET."""
+    return f"[eval]({target})"
+
+
+def _link_target_pattern(render: Callable[[str], str]) -> re.Pattern[str]:
+    """Compile the pattern matching RENDER's form and capturing its target.
+
+    Rendering the form around an alphanumeric placeholder, escaping the
+    result, then substituting the capture group keeps the pattern derived
+    from the renderer rather than stated a second time beside it.
+    """
+    escaped = re.escape(render(_TARGET_PLACEHOLDER))
+    return re.compile(escaped.replace(_TARGET_PLACEHOLDER, r"([^)]+)"))
+
+
+_EVAL_LINK_PATTERN = _link_target_pattern(_render_eval_link)
+_TEST_LINK_PATTERN = _link_target_pattern(render_test_link)
 # A fence opens with three or more backticks or tildes at the start of a
 # line and closes with a run of the same character, at least as long as
 # the opening run, at the start of a later line; an unterminated fence

@@ -15,6 +15,7 @@ from tempfile import TemporaryDirectory, TemporaryFile
 
 from outcomeeng.distribution.contracts import Target
 from outcomeeng.distribution.installation import (
+    ISOLATED_CODEX_HOME_DIR,
     CommandResult,
     InstallationCommand,
     InstallationFailure,
@@ -36,7 +37,11 @@ from outcomeeng.distribution.native_thread_evidence import (
     THREAD_READ_TIMEOUT_SECONDS,
     read_native_child,
 )
-from outcomeeng_evals.runner import CLAUDECODE_ENV
+from outcomeeng_evals.runner import (
+    ANTHROPIC_API_KEY_ENV,
+    CLAUDE_CODE_OAUTH_TOKEN_ENV,
+    CLAUDECODE_ENV,
+)
 from outcomeeng_testing.harnesses.discovery_auth import (
     DISCOVERY_TIMEOUT_SECONDS,
     FILE_STORE_ARGS,
@@ -49,7 +54,7 @@ from outcomeeng_testing.harnesses.discovery_auth import (
 )
 from outcomeeng_testing.harnesses.installation import mirror_installation_inputs
 
-CLAUDE_CREDENTIAL_VARIABLES = ("ANTHROPIC_API_KEY", "CLAUDE_CODE_OAUTH_TOKEN")
+CLAUDE_CREDENTIAL_VARIABLES = (ANTHROPIC_API_KEY_ENV, CLAUDE_CODE_OAUTH_TOKEN_ENV)
 
 
 def run_profile_process(
@@ -210,7 +215,9 @@ def _execute_row(
     )
     if interval.authentication is not None:
         with interval.authentication.authenticated_home(
-            row.state_root / "codex", cwd=checkout, env=child_environment
+            row.state_root / ISOLATED_CODEX_HOME_DIR,
+            cwd=checkout,
+            env=child_environment,
         ):
             return run_native_profile_row(
                 row, checkout=checkout, environment=child_environment, runners=runners

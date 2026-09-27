@@ -40,6 +40,13 @@ CLAUDE_LOCAL_SETTINGS_PATH = Path(".claude/settings.local.json")
 CODEX_CONFIG_PATH = Path(".codex/config.toml")
 CODEX_AGENTS_PATH = Path(".codex/agents")
 CODEX_HOME_AGENTS_PATH = Path("agents")
+# The disposable-state layout an isolated plan resolves beneath the caller's
+# state root. A consumer that has to reach one of these homes reads the name
+# from here rather than rebuilding the path, so the layout has one home.
+ISOLATED_HOME_DIR = "home"
+ISOLATED_CLAUDE_CONFIG_DIR = "claude"
+ISOLATED_CODEX_HOME_DIR = "codex"
+ISOLATED_CODEX_SQLITE_HOME_DIR = "codex-sqlite"
 AGENT_OWNERSHIP_FILENAME = ".outcomeeng-marketplace-ownership.json"
 AGENT_OWNERSHIP_SCHEMA_VERSION = 1
 AGENT_OWNERSHIP_SCHEMA_FIELD = "schema_version"
@@ -1158,10 +1165,10 @@ def build_isolated_installation_plan(
         checkout=resolved_checkout,
         marketplace=catalog_marketplace_name(resolved_checkout / CLAUDE_CATALOG_PATH),
         state=resolved_state,
-        home=resolved_state / "home",
-        claude_config=resolved_state / "claude",
-        codex_home=resolved_state / "codex",
-        codex_sqlite_home=resolved_state / "codex-sqlite",
+        home=resolved_state / ISOLATED_HOME_DIR,
+        claude_config=resolved_state / ISOLATED_CLAUDE_CONFIG_DIR,
+        codex_home=resolved_state / ISOLATED_CODEX_HOME_DIR,
+        codex_sqlite_home=resolved_state / ISOLATED_CODEX_SQLITE_HOME_DIR,
     )
     environment = isolated_environment(roots, base_environment)
     claude_catalog = catalog_plugin_names(roots.checkout / CLAUDE_CATALOG_PATH)
@@ -3840,6 +3847,10 @@ __all__ = [
     "CODEX_GIT_SOURCE_TYPE",
     "CODEX_HOME_ENV",
     "CODEX_HOME_AGENTS_PATH",
+    "ISOLATED_HOME_DIR",
+    "ISOLATED_CLAUDE_CONFIG_DIR",
+    "ISOLATED_CODEX_HOME_DIR",
+    "ISOLATED_CODEX_SQLITE_HOME_DIR",
     "CODEX_LOCAL_SOURCE_TYPE",
     "CODEX_MARKETPLACES_FIELD",
     "CLAUDE_MARKETPLACE_LIST_COMMAND",

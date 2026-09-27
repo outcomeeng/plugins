@@ -29,6 +29,11 @@ from outcomeeng.validation.infrastructure_index import (
     SPEC_TREE_ROOT,
     index_test_infrastructure,
 )
+from outcomeeng.validation.link_integrity import (
+    TESTS_DIRNAME,
+    TEST_FILE_PREFIX,
+    render_test_link,
+)
 from outcomeeng.validation.agent_disable import (
     AGENT_SWITCHES,
     DISABLE_VALUE,
@@ -228,13 +233,14 @@ def test_a_dangling_evidence_link_decides_the_selected_link_step(
     # in the other — a reading that answered the same either way fails one of
     # the two.
     node = tmp_path / "10-example.enabler"
-    tests = node / "tests"
+    tests = node / TESTS_DIRNAME
     tests.mkdir(parents=True)
-    target = tests / "test_example.compliance.l1.py"
+    target = tests / f"{TEST_FILE_PREFIX}example.compliance.l1.py"
     if not dangling:
         target.write_text("", encoding="utf-8")
     (node / "example.md").write_text(
-        f"- ALWAYS: the example holds ([test]({target.relative_to(node)}))\n",
+        f"- ALWAYS: the example holds "
+        f"({render_test_link(str(target.relative_to(node)))})\n",
         encoding="utf-8",
     )
 
