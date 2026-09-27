@@ -246,15 +246,15 @@ Skills are available in both Claude Code and Codex, with generated plugin surfac
 
 Coding-agent environments, coordination, and change orchestration: /operate-prowl, /operate-herdr, /operate-agent-mail, /message-agents, /coordinate-agents, /recover-prowl-agents, /orchestrate-change
 
-| Type  | Name                    | Purpose                                                                                                                                                                                                                                          |
-| ----- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Skill | `/coordinate-agents`    | Coding agents in separate worktrees may overlap, depend on each other, share an external blocker, or need ownership coordination                                                                                                                 |
-| Skill | `/message-agents`       | Sending a message record to a registered agent-mail name with its one-line doorbell, discovering a Prowl coding-agent recipient, or sending facts, ownership proposals, state reports, authorizations, or acknowledgements to another agent pane |
-| Skill | `/operate-agent-mail`   | A workflow registers a mail identity, sends a message record, lists a recipient's records, or reads or acknowledges a message in the agent-mail store                                                                                            |
-| Skill | `/operate-herdr`        | Running a public herdr operation — agent inventory, read, bounded wait, prompt, start, relaunch, stop, keystroke, worktree create, or worktree open — on agent sessions herdr hosts                                                              |
-| Skill | `/operate-prowl`        | A workflow needs a public Prowl operation or a correlated delegation handback between Prowl coding agents                                                                                                                                        |
-| Skill | `/orchestrate-change`   | Starting the Executor session for a Change, or checking, restarting, or answering a running Executor                                                                                                                                             |
-| Skill | `/recover-prowl-agents` | Preparing for or recovering coding-agent sessions after a Prowl restart                                                                                                                                                                          |
+| Type  | Name                    | Purpose                                                                                                                                                                             |
+| ----- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Skill | `/coordinate-agents`    | Coding agents in separate worktrees may overlap, depend on each other, share an external blocker, or need ownership coordination                                                    |
+| Skill | `/message-agents`       | Messaging another coding agent                                                                                                                                                      |
+| Skill | `/operate-agent-mail`   | A workflow registers a mail identity, sends a message record, lists a recipient's records, or reads or acknowledges a message in the agent-mail store                               |
+| Skill | `/operate-herdr`        | Running a public herdr operation — agent inventory, read, bounded wait, prompt, start, relaunch, stop, keystroke, worktree create, or worktree open — on agent sessions herdr hosts |
+| Skill | `/operate-prowl`        | A workflow needs a public Prowl operation or a correlated delegation handback between Prowl coding agents                                                                           |
+| Skill | `/orchestrate-change`   | Starting the Executor session for a Change, or checking, restarting, or answering a running Executor                                                                                |
+| Skill | `/recover-prowl-agents` | Preparing for or recovering coding-agent sessions after a Prowl restart                                                                                                             |
 
 ### contribute
 
