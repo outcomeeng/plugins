@@ -2,7 +2,7 @@
 name: test-evidence-standards
 user-invocable: false
 description: >-
-  Test-evidence seam, case-provenance, oracle-independence, execution-level, per-assertion-type artifact-permission, and pre-authoring assertion-design-record standards enforced across test authoring and auditing. Loaded by other skills, not invoked directly.
+  Shared test-evidence standards — seam, case provenance, oracle independence, execution level, per-assertion-type artifact permissions, and the pre-authoring assertion-design record. Loaded by other skills, not invoked directly.
 allowed-tools: Read
 ---
 
@@ -11,7 +11,7 @@ The shared test-evidence standards that keep predicates in linked tests, cases i
 </objective>
 
 <repo_local_overlay>
-When another skill loads this reference inside a repository, it must also check for `spx/local/test-evidence.md` at the repository root. Read that file after this reference if it exists and apply it as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth, and it never weakens a seam, provenance, oracle, level, or permission rule this reference states.
+When another skill loads this reference inside a repository, check for `spx/local/test-evidence.md` at the repository root. Read that file after this reference if it exists and apply it as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth, and it never weakens a seam, provenance, oracle, level, or permission rule this reference states.
 </repo_local_overlay>
 
 <execution_levels>

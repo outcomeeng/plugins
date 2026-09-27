@@ -209,7 +209,7 @@ Choose the level from operational reality:
 
 Test product-owned algorithms, parsers, and rules thoroughly at `L1`. Trust mature library behavior and test product-owned wiring, mappings, invariants, failure handling, and boundaries. Add lower-level evidence when it materially narrows diagnosis. Place confidence where it is achievable: math at `L1`, SQL against a database at `L2`, and live user flows at `L3`.
 
-Filesystem, Git, and standard subprocess availability at `L1` permits finite real-boundary evidence there. It does not justify repeating that boundary for every generated property case when the generator varies only a product-owned rule behind it.
+Filesystem, Git, and standard subprocess availability at `L1` permits finite real-boundary evidence there.
 
 When evidence lives at `L2` or `L3`, use real dependencies there and stop. Continue to Stage 3 only for `L1` evidence.
 
@@ -330,7 +330,7 @@ Examples:
 
 Abort when `$ARGUMENTS` is empty: "A canonical spec node or ADR/PDR target is required." Otherwise parse it as one canonical target followed by an optional JSON array of exact assertion texts already selected for test. Preserve each array string verbatim; it identifies the untagged spec assertion this workflow may type. Reject malformed JSON or non-string array members before reading the target. A decision target uses decision-rule mode and accepts no assertion-text array.
 
-Check for `<SPEC_TREE_FOUNDATION>` and `<SPEC_TREE_CONTEXT>` markers. If absent, invoke `/understand` and `/contextualize` first.
+Check for `<SPEC_TREE_FOUNDATION>` and `<SPEC_TREE_CONTEXT>` markers. When either is absent: Use skill `spec-tree:understand`. Use skill `spec-tree:contextualize`.
 
 For a spec target, this loads:
 
@@ -467,11 +467,11 @@ Report which assertions have tests, which do not, and which are stale:
 
 <cross_cutting_assertions>
 
-When an assertion lives in an ancestor node, determine where the test evidence should go:
+Place an ancestor node's test evidence by the assertion's reach:
 
-- If the assertion is about behavior that a specific child node implements, the test belongs in that child's `tests/` directory.
-- If the assertion spans multiple children, the test belongs in the ancestor's `tests/` directory at a higher level.
-- If an ancestor accumulates too many cross-cutting assertions, flag it for `/decompose`; the decomposition workflow owns shared-enabler extraction and index placement.
+- Place the test in the implementing child's `tests/` directory when the assertion is about behavior that one child node implements.
+- Place the test in the ancestor's `tests/` directory when the assertion spans several children.
+- Flag the ancestor for `/decompose` when it accumulates too many cross-cutting assertions; the decomposition workflow owns shared-enabler extraction and index placement.
 
 </cross_cutting_assertions>
 
