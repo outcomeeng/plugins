@@ -21,8 +21,8 @@ Validated spec assertions and decision verification rules routed to test, evalua
 - For spec assertions, recognize only an absent tag, `[test](path)`, `[eval](path)`, `[probe](path)`, `[audit:{rule-slug}]`, and the pathless `[audit]` a repository whose toolchain has not adopted the slug form still carries. For ADR/PDR rules, recognize an absent tag awaiting classification or the decision grammar: one assertion-type tag under `### Testing`, `[eval]` under `### Eval`, and `[audit]` under `### Audit`. Treat every other tag shape as invalid input without naming, aliasing, or translating it.
 - Derive evidence shape from the target artifact and selected verification type regardless of specialist availability: spec test, eval, and probe assertions are path-bearing; spec audit assertions carry a rule slug and no path, or the pathless form while the toolchain admits only that; decision rules carry requirements whose implementing specs own executable evidence links. A capability gap never changes the selected route's evidence shape.
 - Check the runtime skill catalog before invoking a selected path-bearing specialist — `/test`, `/eval`, or `/probe`. An absent specialist produces `capability-required`, never `routed`, and the result still names the selected specialist and evidence shape; `null` values belong only to the blocked shape.
-- Keep routing acyclic: `/verify` invokes specialists; specialists never invoke `/verify`.
-- Keep judgment isolated: selecting audit records the audit requirement and leaves the verdict to the applicable auditor context; selecting probe records the protocol link and leaves the attested run to the Author.
+- Keep routing one-directional: invoke each selected specialist once per owning target and never re-enter this workflow from a specialist result.
+- Keep judgment out of routing: selecting audit records the audit requirement and never produces the audit verdict; selecting probe records the protocol link and never executes or attests the run.
 
 </essential_principles>
 
@@ -32,7 +32,7 @@ Validated spec assertions and decision verification rules routed to test, evalua
 
 When `$ARGUMENTS` is empty, abort before checking markers: "A canonical spec-tree target is required. Supply `spx/`, one full `spx/...` node path, or one full `spx/.../*.adr.md` or `spx/.../*.pdr.md` decision path."
 
-Require a live `<SPEC_TREE_FOUNDATION>` marker. Invoke `/understand` when it is absent. For a node or product-root target, require a `<SPEC_TREE_CONTEXT>` marker matching `$ARGUMENTS`. For a decision target, require the marker for its containing node, or `spx/` for a product-level decision. Invoke `/contextualize` for that canonical context target when its marker is absent.
+Require a live `<SPEC_TREE_FOUNDATION>` marker. When it is absent: Use skill `spec-tree:understand`. For a node or product-root target, require a `<SPEC_TREE_CONTEXT>` marker matching `$ARGUMENTS`. For a decision target, require the marker for its containing node, or `spx/` for a product-level decision. When that marker is absent: Use skill `spec-tree:contextualize`. Pass that canonical context target.
 
 Accept only `spx/`, one canonical full `spx/...` node path, or one canonical full decision path ending in `.adr.md` or `.pdr.md`. Read spec assertions from a spec target and `## Verification` rules from a decision target. For a product-root or aggregate target, walk the declared scope deterministically rather than selecting files by keyword, then partition the selected subjects by their owning canonical node or decision path. Each specialist invocation receives one supported node or decision target, never the aggregate target.
 
@@ -69,9 +69,9 @@ Ignore an existing current tag or decision subsection as classification authorit
 
 Route each classified assertion exactly once:
 
-- **test** — invoke `/test`; it owns test assertion typing, execution level, source-contract checks, generic test ceremony, and language delegation. For each spec node, pass that canonical node target plus a JSON array containing the exact text of every untagged assertion selected for test in that node so `/test` can distinguish routed work from unrelated untagged assertions. Pass each decision target separately in decision-rule mode with no assertion array so `/test` selects the rule's assertion-type tag without creating a test file or evidence link inside the ADR/PDR. An aggregate scope fans out through these per-owner invocations.
-- **evaluate** — for each spec node carrying selected eval assertions, invoke `/eval` with that canonical node target plus a JSON array containing the exact text of every untagged assertion selected for evaluate in that node. This filtered set prevents `/eval` from consuming unrelated untagged assertions. `/eval` owns product command binding and producer-specialized eval authoring. For a decision rule, preserve the implementing-spec eval requirement under `### Eval` without writing an evidence path in the decision, and invoke `/eval` with that decision target only when it supports decision-rule mode. When the required capability is unavailable, preserve the target artifact's evaluate evidence shape and report `EVAL_CAPABILITY_REQUIRED` with the subject and required producer kind. Never pass an aggregate target to `/eval` or implement eval behavior inside `/verify`.
-- **probe** — invoke `/probe` with the canonical node target and the exact text of every assertion selected for probe in that node when the runtime skill catalog carries it; it owns the protocol at `probes/{probe-slug}/probe.md`, and the assertion records that link with routing status `routed`. When `/probe` is not installed, preserve the probe evidence shape and report `capability-required` with the subject and the protocol path. Never author a protocol or attest a run inside `/verify`.
+- **test** — Use skill `spec-tree:test`. It owns test assertion typing, execution level, source-contract checks, generic test ceremony, and language delegation. For each spec node, pass that canonical node target plus a JSON array containing the exact text of every untagged assertion selected for test in that node, so the test specialist distinguishes routed work from unrelated untagged assertions. Pass each decision target separately in decision-rule mode with no assertion array, so it selects the rule's assertion-type tag without creating a test file or evidence link inside the ADR/PDR. An aggregate scope fans out through these per-owner invocations.
+- **evaluate** — when the runtime skill catalog carries the eval specialist: Use skill `spec-tree:eval`. For each spec node carrying selected eval assertions, pass that canonical node target plus a JSON array containing the exact text of every untagged assertion selected for evaluate in that node; this filtered set keeps the eval specialist from consuming unrelated untagged assertions. That specialist owns product command binding and producer-specialized eval authoring. For a decision rule, preserve the implementing-spec eval requirement under `### Eval` without writing an evidence path in the decision, and pass that decision target only when the specialist supports decision-rule mode. When the catalog does not carry it, preserve the target artifact's evaluate evidence shape and report `capability-required` with the subject and required producer kind. Never pass an aggregate target to the eval specialist, and never implement eval behavior in this workflow.
+- **probe** — when the runtime skill catalog carries the probe specialist: Use skill `spec-tree:probe`. Pass the canonical node target and the exact text of every assertion selected for probe in that node. That specialist owns the protocol at `probes/{probe-slug}/probe.md`, and the assertion records that link with routing status `routed`. When the catalog does not carry it, preserve the probe evidence shape and report `capability-required` with the subject and the protocol path. Never author a protocol, and never execute or attest a run, in this workflow.
 - **audit** — record the `[audit:{rule-slug}]` tag with a rule slug unique within its spec — or the pathless `[audit]` tag where the toolchain admits only that form — and the applicable isolated-verifier requirement with routing status `routed`. The pending isolated-verifier verdict does not make evidence routing blocked. Never produce the audit verdict in this workflow.
 
 Validate the specialist result before updating the subject. A path-bearing spec assertion requires the specialist's canonical co-located evidence path. A decision rule requires the canonical subsection and tag, while its implementing specs own evidence paths. Spec audit assertions carry no path.
@@ -80,7 +80,7 @@ Validate the specialist result before updating the subject. A path-bearing spec 
 
 <step name="record-result">
 
-Update each successfully routed spec assertion with exactly one current tag. Update each decision rule with the selected verification subsection and that subsection's canonical tag shape. Leave blocked unsupported input unchanged; its owning workflow must correct invalid input before invoking `/verify` again.
+Update each successfully routed spec assertion with exactly one current tag. Update each decision rule with the selected verification subsection and that subsection's canonical tag shape. Leave blocked unsupported input unchanged, and write no tag, subsection, or evidence link for it.
 
 Report one row per subject:
 
@@ -108,10 +108,10 @@ For the terminal unsupported-input guard, record no verification type, specialis
 <success_criteria>
 
 - Every validated spec assertion or decision rule has exactly one selected current verification type derived from its real verdict; unsupported input has none and returns the terminal blocked shape.
-- Test work routes through `/test`, eval work routes through `/eval`, probe work records the protocol link or the missing capability, and audit work records an isolated-verifier requirement.
+- Test work routes to the test specialist; eval and probe work either routes to its specialist or records `capability-required` with the evidence shape preserved; audit work records an isolated-verifier requirement.
 - Every path-bearing spec evidence link is canonical and co-located with its governing node; decision rules carry no executable evidence links.
 - Unsupported tags block the subject and receive no compatibility behavior or vocabulary in the workflow output.
-- Specialist dependency direction is acyclic and no agentic verdict is produced in the authoring context.
+- Each selected specialist is invoked once per owning target, this workflow is never re-entered from a specialist result, and it produces no agentic verdict and no attested run.
 
 </success_criteria>
 
@@ -119,7 +119,7 @@ For the terminal unsupported-input guard, record no verification type, specialis
 
 **Claude passed an aggregate target to a specialist**
 
-- **What happened:** Claude accepted `spx/` as a `/verify` target, then forwarded that aggregate target unchanged to `/test`, whose contract accepts one node or decision.
+- **What happened:** Claude accepted `spx/` as this workflow's target, then forwarded that aggregate target unchanged to the test specialist, whose contract accepts one node or decision.
 - **Why it failed:** The router advertised a broader scope than its specialist interface could consume, so aggregate test work had no valid delegation path.
 - **How to avoid:** Partition aggregate subjects by owning canonical node or decision and invoke each path-bearing specialist once per owner.
 
