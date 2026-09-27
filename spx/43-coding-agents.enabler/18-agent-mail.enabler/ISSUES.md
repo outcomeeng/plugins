@@ -179,3 +179,19 @@ The workflow's first step admits two input forms — one request operation with 
 **The ground for deferring is measured, not preferred.** Of the last five defects found in this body, four were introduced by rewriting prose that was already correct. The fifth was introduced this round, by a pass that verified its factual claims against the adapter and still left a false conditional in a sentence it rewrote — step 4's `commandExitCode` clause, which stated the field's presence as whether a store command ran and so was false on the timeout path, where a store command runs and returns no exit code; the repair narrows the predicate to what the command produced. Both findings are presentation findings against exactly the part of the body whose restatements keep going wrong — step 4 and the project-key paragraph — so applying them means rewriting the sentences with the worst track record on this surface. A later reader who counts differently, or who counts a longer run, can overturn this judgment on the count rather than on preference.
 
 **Evidence**: `instructions:skill-auditor` findings under rule `dense_contract_paragraph` at SKILL.md lines 67 and 38 on head `8765ad41a173bad9437970b794a9c7143165085c`. The five are re-derivable from the entries above: three from the record-mapping entry, whose paragraph split, consolidated sentence, and enumeration each dropped a different condition of a predicate the adapter owns; one from the operation-surface entry's reading 2, where the row added on reading 1 led a caller to submit a `run` request the registry rejects as `operation-unavailable`; and the `commandExitCode` clause named above. A reader who counts a different run, or reads one of these as something other than a rewrite of correct prose, should restate the count here rather than treat the deferral as settled.
+
+## The installed markdown validator rejects a dangling `[probe]` link the foundation admits
+
+The Spec Tree foundation, in the `spec-tree:understand` skill's `<verification_types>`, states that a dangling `[test]`, `[eval]`, or `[probe]` link derives Declared without a structural defect. The markdown validator of the installed `@outcomeeng/spx` 0.7.2 reads the same link as an invalid relative link and fails Validate on it. The defect lies in the SPX CLI's validator, not in this node: line 39 of `agent-mail.md` carries the `[probe](probes/installed-store/probe.md)` assertion in the form the foundation admits.
+
+**Impact**: a spec assertion's `[probe]` link cannot stand in a head ahead of its probe protocol without failing Validate. For this node, a head that carries the link without `probes/installed-store/probe.md` fails the deterministic floor, so the probe protocol lands in the same head as the link, or in an earlier one, before any verification dispatch that requires passing deterministic verification.
+
+**Settlement condition**: an `@outcomeeng/spx` release whose markdown validator admits a dangling path-bearing evidence link as the foundation describes is adopted at this repository's declared spx version floor.
+
+**Evidence**: on committed head `dc9db09166ebc0658f577d7297f3d3ca389ff98e`, where `agent-mail.md` carries the `[probe](probes/installed-store/probe.md)` assertion and the probe file does not exist, `spx validation markdown`, run at the repository root with the installed `@outcomeeng/spx` 0.7.2, exits 1 with one error:
+
+```text
+agent-mail.md:39 error relative-links Relative links should be valid ["probes/installed-store/probe.md" should exist in the file system]
+```
+
+On the same head, `just eval-links` and `spx spec status --format json` each exit 0, and spec status reports this node's state as `specified`.
