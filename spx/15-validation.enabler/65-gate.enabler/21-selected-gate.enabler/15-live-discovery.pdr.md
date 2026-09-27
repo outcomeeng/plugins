@@ -14,13 +14,13 @@ Live discovery proves that a fresh session can discover the installed definition
 
 ## Verification
 
-- ALWAYS: a declared per-agent disable switch makes a selected live row optional for that one local run — the row is selected, runs its own skip, and reports a reason naming the switch, rather than leaving the plan.
 - ALWAYS: a run carrying rows skipped by a declared switch names each skipped row and the switch that declared it, under a status distinct from a pass, so a summary carrying skipped rows never reads as all-green without them.
 - ALWAYS: the execution plan names each agent's disable-switch state before the selected steps run, so a reader sees a declared skip before it happens.
 - NEVER: a harness, a skill, a generated instruction surface, or the CI workflow sets a disable switch — explicit full verification and CI require the successful execution of every selected live row with their own credential.
 
 ### Testing
 
+- ALWAYS: a declared per-agent disable switch makes a selected live row optional for that one local run — the row is selected, runs its own skip, and reports a reason naming the switch, rather than leaving the plan. ([mapping])
 - ALWAYS: local changed-path selection includes live discovery for installation, definition generation and placement, discovery, and their directly governing contracts and verification infrastructure. ([compliance])
 - ALWAYS: explicit full verification, direct execution covering the live check, and CI full verification include live discovery. ([compliance])
 - NEVER: automatic full-suite escalation for an unrelated local change selects live discovery or reduces the selected deterministic verification scope. ([compliance])
