@@ -1,0 +1,21 @@
+{
+  "tool": "am",
+  "version": "0.3.36",
+  "observedAt": "2026-09-27T14:11:39.998621+00:00",
+  "argv": [
+    "am",
+    "mail",
+    "send",
+    "--project",
+    "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.oKeA0V/.git",
+    "--from=BeigeTiger",
+    "--to=CreamSpring",
+    "--thread-id=outcomeeng/changes#132",
+    "--subject=[fact] probe correlation outside the thread alphabet",
+    "--body=Third probe send; its thread id is a canonical Change identity.",
+    "--json"
+  ],
+  "exitCode": 1,
+  "stdout": "",
+  "stderr": "error: send_message via server failed: {\"error\":{\"type\":\"INVALID_THREAD_ID\",\"message\":\"Invalid thread_id: 'outcomeeng/changes#132'. Thread IDs must start with an alphanumeric character and contain only letters, numbers, '.', '_', or '-' (max 128). Examples: 'TKT-123', 'bd-42', 'feature-xyz'.\",\"recoverable\":true,\"data\":{\"provided\":\"outcomeeng/changes#132\",\"examples\":[\"TKT-123\",\"bd-42\",\"feature-xyz\"],\"reason\":\"Thread IDs must start with an alphanumeric character and contain only letters, numbers, '.', '_', or '-' (max 128).\"}}}\n"
+}

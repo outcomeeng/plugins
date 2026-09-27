@@ -1,0 +1,14 @@
+{
+  "tool": "am",
+  "version": "0.3.36",
+  "observedAt": "2026-09-27T14:11:15.726322+00:00",
+  "argv": [
+    "am",
+    "agents",
+    "list",
+    "--help"
+  ],
+  "exitCode": 0,
+  "stdout": "List agents registered in a project\n\nUsage: am agents list [OPTIONS] [PROJECT_KEY]\n\nArguments:\n  [PROJECT_KEY]  Project key (slug or human_key / absolute path). Positional alternative to -p/--project; defaults to the current directory when both are omitted (GH#209)\n\nOptions:\n  -p, --project <PROJECT_KEY>  Project key (slug or human_key / absolute path)\n      --format <FORMAT>        Output format: table, json, or toon (default: auto-detect)\n      --json                   Output JSON (shorthand for --format json)\n  -h, --help                   Print help\n",
+  "stderr": ""
+}

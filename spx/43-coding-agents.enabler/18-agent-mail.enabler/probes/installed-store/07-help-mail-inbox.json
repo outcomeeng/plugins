@@ -1,0 +1,14 @@
+{
+  "tool": "am",
+  "version": "0.3.36",
+  "observedAt": "2026-09-27T14:11:02.708104+00:00",
+  "argv": [
+    "am",
+    "mail",
+    "inbox",
+    "--help"
+  ],
+  "exitCode": 0,
+  "stdout": "Fetch inbox messages for an agent\n\nUsage: am mail inbox [OPTIONS] --project <PROJECT_KEY> --agent <AGENT_NAME>\n\nOptions:\n  -p, --project <PROJECT_KEY>  Project key\n  -a, --agent <AGENT_NAME>     Agent name\n      --urgent-only            Only high/urgent messages\n      --since <SINCE>          Messages after this ISO-8601 timestamp\n  -l, --limit <LIMIT>          Max results [default: 20]\n      --include-bodies         Include message bodies\n      --format <FORMAT>        Output format: table, json, or toon (default: auto-detect)\n      --json                   Output JSON (shorthand for --format json)\n  -h, --help                   Print help\n",
+  "stderr": ""
+}

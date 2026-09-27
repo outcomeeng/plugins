@@ -1,0 +1,18 @@
+{
+  "tool": "am",
+  "version": "0.3.36",
+  "observedAt": "2026-09-27T14:12:11.059463+00:00",
+  "argv": [
+    "am",
+    "robot",
+    "message",
+    "--project",
+    "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.oKeA0V/.git",
+    "--agent=BeigeTiger",
+    "2640",
+    "--json"
+  ],
+  "exitCode": 0,
+  "stdout": "{\n  \"_meta\": {\n    \"command\": \"robot message\",\n    \"timestamp\": \"2026-09-27T14:12:11.413390+00:00\",\n    \"format\": \"json\",\n    \"version\": \"1.0\",\n    \"project\": \"private-var-folders-vg-stx1n5ys4-lgr08v49lg6t880000gp-t-am-probe-okea0v-git\"\n  },\n  \"id\": 2640,\n  \"from\": \"BeigeTiger\",\n  \"from_program\": \"claude-code\",\n  \"from_model\": \"opus\",\n  \"to\": [\n    \"CreamSpring\"\n  ],\n  \"subject\": \"[fact] probe plain message\",\n  \"body\": \"Second probe record; the recipient reads it.\",\n  \"thread\": \"probe-installed-store\",\n  \"position\": 2,\n  \"total_in_thread\": 2,\n  \"importance\": \"normal\",\n  \"ack_status\": \"none\",\n  \"created\": \"2026-09-27T14:11:33.219774Z\",\n  \"age\": \"38s ago\",\n  \"previous\": \"#2639 BeigeTiger: [fact] probe ack-required message\"\n}\n",
+  "stderr": ""
+}

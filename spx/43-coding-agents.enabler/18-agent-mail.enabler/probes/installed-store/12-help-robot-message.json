@@ -1,0 +1,14 @@
+{
+  "tool": "am",
+  "version": "0.3.36",
+  "observedAt": "2026-09-27T14:11:15.785116+00:00",
+  "argv": [
+    "am",
+    "robot",
+    "message",
+    "--help"
+  ],
+  "exitCode": 0,
+  "stdout": "Single message with thread position, adjacent messages, sender info\n\nUsage: am robot message [OPTIONS] <ID>\n\nArguments:\n  <ID>  Message ID\n\nOptions:\n      --format <FORMAT>    Output format: toon (default at TTY), json (default when piped), md (for thread/message)\n      --json               Output JSON (shorthand for --format json)\n      --project <PROJECT>  Project key (absolute path or slug). Falls back to AGENT_MAIL_PROJECT, then CWD\n      --agent <AGENT>      Agent name. Falls back to AGENT_MAIL_AGENT, then AGENT_NAME\n  -h, --help               Print help\n",
+  "stderr": ""
+}

@@ -1,0 +1,21 @@
+{
+  "tool": "am",
+  "version": "0.3.36",
+  "observedAt": "2026-09-27T14:11:33.066249+00:00",
+  "argv": [
+    "am",
+    "mail",
+    "send",
+    "--project",
+    "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.oKeA0V/.git",
+    "--from=BeigeTiger",
+    "--to=CreamSpring",
+    "--thread-id=probe-installed-store",
+    "--subject=[fact] probe plain message",
+    "--body=Second probe record; the recipient reads it.",
+    "--json"
+  ],
+  "exitCode": 0,
+  "stdout": "{\n  \"id\": 2640,\n  \"subject\": \"[fact] probe plain message\",\n  \"body_md\": \"Second probe record; the recipient reads it.\",\n  \"importance\": \"normal\",\n  \"ack_required\": false,\n  \"thread_id\": \"probe-installed-store\",\n  \"created_ts\": \"2026-09-27T14:11:33.219774Z\",\n  \"from\": \"BeigeTiger\",\n  \"to\": [\n    \"CreamSpring\"\n  ]\n}\n",
+  "stderr": ""
+}

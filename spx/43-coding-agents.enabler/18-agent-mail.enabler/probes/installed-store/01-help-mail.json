@@ -1,0 +1,13 @@
+{
+  "tool": "am",
+  "version": "0.3.36",
+  "observedAt": "2026-09-27T14:10:56.614284+00:00",
+  "argv": [
+    "am",
+    "mail",
+    "--help"
+  ],
+  "exitCode": 0,
+  "stdout": "Send, read, search, reply to, and replay mailbox messages\n\nUsage: am mail <COMMAND>\n\nCommands:\n  ack               Acknowledge a message (also marks as read)\n  discard-queued    Discard a queued UNSENT message artifact without sending it\n  inbox             Fetch inbox messages for an agent\n  read              Mark a message as read\n  replay-queued     Replay a previously queued UNSENT message artifact\n  reply             Reply to an existing message\n  search            Full-text search over messages\n  send              Send a message to one or more agents\n  status            \n  summarize-thread  Summarize a thread (requires LLM API key)\n  help              Print this message or the help of the given subcommand(s)\n\nOptions:\n  -h, --help  Print help\n",
+  "stderr": ""
+}

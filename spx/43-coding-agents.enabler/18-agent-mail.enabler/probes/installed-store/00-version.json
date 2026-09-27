@@ -1,0 +1,12 @@
+{
+  "tool": "am",
+  "version": "0.3.36",
+  "observedAt": "2026-09-27T14:10:56.556563+00:00",
+  "argv": [
+    "am",
+    "--version"
+  ],
+  "exitCode": 0,
+  "stdout": "am 0.3.36\n",
+  "stderr": ""
+}

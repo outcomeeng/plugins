@@ -1,0 +1,16 @@
+{
+  "tool": "am",
+  "version": "0.3.36",
+  "observedAt": "2026-09-27T14:12:29.468045+00:00",
+  "argv": [
+    "am",
+    "agents",
+    "list",
+    "--project",
+    "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.oKeA0V/.git",
+    "--json"
+  ],
+  "exitCode": 0,
+  "stdout": "[\n  {\n    \"name\": \"CreamSpring\",\n    \"program\": \"claude-code\",\n    \"model\": \"opus\",\n    \"task_description\": \"installed-store probe recipient\",\n    \"inception_ts\": \"2026-09-27T14:11:23.315382Z\",\n    \"last_active_ts\": \"2026-09-27T14:11:23.315382Z\",\n    \"contact_policy\": \"auto\"\n  },\n  {\n    \"name\": \"BeigeTiger\",\n    \"program\": \"claude-code\",\n    \"model\": \"opus\",\n    \"task_description\": \"installed-store probe sender\",\n    \"inception_ts\": \"2026-09-27T14:11:23.041976Z\",\n    \"last_active_ts\": \"2026-09-27T14:11:23.041976Z\",\n    \"contact_policy\": \"auto\"\n  }\n]\n",
+  "stderr": ""
+}

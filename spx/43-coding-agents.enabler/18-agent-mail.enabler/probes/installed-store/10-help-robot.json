@@ -1,0 +1,13 @@
+{
+  "tool": "am",
+  "version": "0.3.36",
+  "observedAt": "2026-09-27T14:11:09.532497+00:00",
+  "argv": [
+    "am",
+    "robot",
+    "--help"
+  ],
+  "exitCode": 0,
+  "stdout": "Agent-optimized commands with TOON/JSON/Markdown output\n\nUsage: am robot [OPTIONS] <COMMAND>\n\nCommands:\n  agents        Agent roster with activity status, program, model\n  analytics     Anomaly insights with severity, confidence, remediation commands\n  atc           ATC snapshot: live server state with local DB fallback when unavailable\n  attachments   Attachment inventory with type, size, provenance, storage mode\n  contacts      Contact graph with policy surface, pending requests\n  handoff       Stale bead ownership handoff dashboard with dry-run reopen recommendations\n  health        System diagnostics synthesis (probes, DB pool, disk, anomalies)\n  inbox         Actionable inbox with priority ordering, urgency/ack synthesis\n  message       Single message with thread position, adjacent messages, sender info\n  metrics       Tool performance summary (calls, errors, error%, latency percentiles)\n  navigate      Resolve any resource:// URI and return in robot format\n  overview      Cross-project unified summary (per-project unread/urgent/ack counts)\n  projects      Project summary with per-project agent/message/reservation counts\n  reservations  File reservations with TTL warnings, expiring-soon alerts, conflict detection\n  search        Full-text search with facets and relevance scores\n  status        Dashboard synthesis: health, inbox counts, activity, anomalies, reservations, top threads\n  thread        Full conversation rendering for a thread\n  timeline      Events since last check with temporal filters\n  tui-dump      Non-interactive TUI snapshot dump — the I6 freeze escape hatch\n  help          Print this message or the help of the given subcommand(s)\n\nOptions:\n      --format <FORMAT>    Output format: toon (default at TTY), json (default when piped), md (for thread/message)\n      --json               Output JSON (shorthand for --format json)\n      --project <PROJECT>  Project key (absolute path or slug). Falls back to AGENT_MAIL_PROJECT, then CWD\n      --agent <AGENT>      Agent name. Falls back to AGENT_MAIL_AGENT, then AGENT_NAME\n  -h, --help               Print help\n",
+  "stderr": ""
+}

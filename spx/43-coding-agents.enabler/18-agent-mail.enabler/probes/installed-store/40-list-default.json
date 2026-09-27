@@ -1,0 +1,17 @@
+{
+  "tool": "am",
+  "version": "0.3.36",
+  "observedAt": "2026-09-27T14:11:47.637805+00:00",
+  "argv": [
+    "am",
+    "robot",
+    "inbox",
+    "--project",
+    "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.oKeA0V/.git",
+    "--agent=CreamSpring",
+    "--json"
+  ],
+  "exitCode": 0,
+  "stdout": "{\n  \"_meta\": {\n    \"command\": \"robot inbox\",\n    \"timestamp\": \"2026-09-27T14:11:47.938194+00:00\",\n    \"format\": \"json\",\n    \"version\": \"1.0\",\n    \"project\": \"/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.oKeA0V/.git\",\n    \"agent\": \"CreamSpring\"\n  },\n  \"_actions\": [\n    \"am robot thread --project /private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.oKeA0V/.git probe-installed-store\"\n  ],\n  \"_diagnostics\": {\n    \"schema\": \"tail_latency_phase_ledger.v1\",\n    \"operation\": \"robot_inbox\",\n    \"total_us\": 289636,\n    \"phases\": [\n      {\n        \"name\": \"queue_wait\",\n        \"elapsed_us\": 3\n      },\n      {\n        \"name\": \"server_fetch\",\n        \"elapsed_us\": 289619\n      }\n    ],\n    \"rows_returned\": 3,\n    \"include_bodies\": false,\n    \"outcome\": \"pre_render\"\n  },\n  \"count\": 3,\n  \"inbox\": [\n    {\n      \"id\": 2639,\n      \"priority\": \"ack-required\",\n      \"from\": \"BeigeTiger\",\n      \"subject\": \"[fact] probe ack-required message\",\n      \"thread\": \"probe-installed-store\",\n      \"age\": \"15s ago\",\n      \"ack_status\": \"required\",\n      \"importance\": \"normal\"\n    },\n    {\n      \"id\": 2640,\n      \"priority\": \"unread\",\n      \"from\": \"BeigeTiger\",\n      \"subject\": \"[fact] probe plain message\",\n      \"thread\": \"probe-installed-store\",\n      \"age\": \"14s ago\",\n      \"ack_status\": \"none\",\n      \"importance\": \"normal\"\n    },\n    {\n      \"id\": 2638,\n      \"priority\": \"unread\",\n      \"from\": \"BeigeTiger\",\n      \"subject\": \"Contact approved: BeigeTiger -> CreamSpring\",\n      \"thread\": \"2638\",\n      \"age\": \"15s ago\",\n      \"ack_status\": \"none\",\n      \"importance\": \"normal\"\n    }\n  ]\n}\n",
+  "stderr": ""
+}
