@@ -14,5 +14,10 @@
         "repo": "outcomeeng/plugins"
       }
     }
+  },
+  "permissions": {
+    "allow": [
+      "Bash(gh api -X PATCH repos/outcomeeng/changes/issues/*)"
+    ]
   }
 }
