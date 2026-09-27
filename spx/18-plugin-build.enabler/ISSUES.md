@@ -49,7 +49,7 @@ Revisit condition: before claiming cost-bounded verifier-agent execution, identi
 
 ## 4. The build ADR restates rules its spec nodes already own
 
-`15-build-architecture.adr.md` carries nine `[audit]`-tagged rules that a child or sibling node already declares with a `[test]` link. `spx/15-spec-coverage.adr.md` forbids exactly that: "use `[test]` evidence for assertions about executable code — audit is not a substitute for automated verification."
+`15-build-architecture.adr.md` carries nine `[audit]`-tagged rules that a child or sibling node already declares with a `[test]` link. `spx/15-spec-coverage.adr.md` forbids exactly that: "use `[test]` evidence for assertions about deterministic executable behavior, including CLI state exposed through an LLM used solely as a readout; compare structured observations against independent expectations, with the test owning the verdict."
 
 | ADR rule                                            | Already declared with `[test]` at                              |
 | --------------------------------------------------- | -------------------------------------------------------------- |
