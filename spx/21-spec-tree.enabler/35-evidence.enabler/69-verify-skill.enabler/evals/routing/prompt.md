@@ -62,7 +62,7 @@ Accept only `spx/`, one canonical full `spx/...` node path, or one canonical ful
 
 Inspect only the existing tag shape before reading the subject or its verdict. For spec assertions, an absent tag or one current verification tag proceeds to classification. For decision rules, an absent tag proceeds to classification regardless of its current subsection; a present tag proceeds only when the enclosing subsection and tag match the decision grammar: `### Testing` carries exactly one of `[scenario]`, `[mapping]`, `[conformance]`, `[property]`, or `[compliance]`; `### Eval` carries `[eval]`; `### Audit` carries `[audit]`.
 
-Any other tag shape triggers an immediate terminal return for that assertion. Return before reading the `subject` field or applying any rule from `classify-subject`, `route-specialist`, or `record-result`. Do not inspect or classify the subject, repeat the tag text, select a specialist, or derive an evidence shape. The assertion has no selected verification type. Report `blocked` with the generic reason `unsupported-tag-shape`; in structured output, set `verification_type`, `specialist`, and `evidence_shape` to `null`.
+Any other tag shape triggers an immediate terminal return for that assertion. Return before reading the `subject` field or applying any rule from `classify-subject`, `route-specialist`, or `record-result`. Do not inspect or classify the subject, repeat the tag text, select a specialist, or derive an evidence path or requirement. The assertion has no selected verification type. Record one `record-result` row for it: the subject names it as unsupported input without repeating the tag text, the verification-type, specialist, and evidence-path-or-requirement columns each carry the em dash, and the status is `blocked`.
 
 </step>
 
@@ -119,7 +119,7 @@ Example:
 | Node C unsupported input | — | — | — | blocked |
 ```
 
-For the terminal unsupported-input guard, record no verification type, specialist, or evidence shape. Classification output must never accompany that blocked result.
+A `blocked` row carries the em dash in its verification-type, specialist, and evidence-path-or-requirement columns, and no classification output accompanies it.
 
 </step>
 
@@ -198,7 +198,7 @@ Accept only `spx/`, one canonical full `spx/...` node path, or one canonical ful
 
 Inspect only the existing tag shape before reading the subject or its verdict. For spec assertions, an absent tag or one current verification tag proceeds to classification. For decision rules, an absent tag proceeds to classification regardless of its current subsection; a present tag proceeds only when the enclosing subsection and tag match the decision grammar: `### Testing` carries exactly one of `[scenario]`, `[mapping]`, `[conformance]`, `[property]`, or `[compliance]`; `### Eval` carries `[eval]`; `### Audit` carries `[audit]`.
 
-Any other tag shape triggers an immediate terminal return for that assertion. Return before reading the `subject` field or applying any rule from `classify-subject`, `route-specialist`, or `record-result`. Do not inspect or classify the subject, repeat the tag text, select a specialist, or derive an evidence shape. The assertion has no selected verification type. Report `blocked` with the generic reason `unsupported-tag-shape`; in structured output, set `verification_type`, `specialist`, and `evidence_shape` to `null`.
+Any other tag shape triggers an immediate terminal return for that assertion. Return before reading the `subject` field or applying any rule from `classify-subject`, `route-specialist`, or `record-result`. Do not inspect or classify the subject, repeat the tag text, select a specialist, or derive an evidence path or requirement. The assertion has no selected verification type. Record one `record-result` row for it: the subject names it as unsupported input without repeating the tag text, the verification-type, specialist, and evidence-path-or-requirement columns each carry the em dash, and the status is `blocked`.
 
 </step>
 
@@ -255,7 +255,7 @@ Example:
 | Node C unsupported input | — | — | — | blocked |
 ```
 
-For the terminal unsupported-input guard, record no verification type, specialist, or evidence shape. Classification output must never accompany that blocked result.
+A `blocked` row carries the em dash in its verification-type, specialist, and evidence-path-or-requirement columns, and no classification output accompanies it.
 
 </step>
 

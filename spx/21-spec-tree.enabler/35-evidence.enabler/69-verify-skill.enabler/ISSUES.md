@@ -20,25 +20,6 @@ on a head that carries the current producer, with its row committed to
 `history.jsonl`, followed by an independent eval-evidence audit accepting that
 evidence.
 
-## The blocked result names structured fields the declared output does not carry
-
-**Evidence**: `instructions:skill-auditor` finding `f-006`, severity `WARNING`, rule
-`undefined_output_contract_reference`, against
-`src/plugins/spec-tree/skills/verify/SKILL.md` on head
-`acf15245ac7d9ef4d2fa40b79431041d27974d61`. The `validate-input` step instructs
-setting `verification_type`, `specialist`, and `evidence_shape` to `null` in
-structured output, and two later lines reference an evidence shape and a terminal
-blocked shape, while the skill's only declared output is a five-column text table
-carrying none of those field names.
-
-**Impact**: a normative instruction stands against an output contract the skill
-never declares, so two runs can emit different blocked payloads and the first
-success criterion cannot be falsified.
-
-**Settlement condition**: the skill declares the structured shape whose field
-names those instructions use, or states the blocked result solely in the declared
-table's terms, and an independent skill audit accepts the result contract.
-
 ## Four principles restate rules the workflow already states in full
 
 **Evidence**: `instructions:skill-auditor` finding `f-007`, severity `WARNING`,
