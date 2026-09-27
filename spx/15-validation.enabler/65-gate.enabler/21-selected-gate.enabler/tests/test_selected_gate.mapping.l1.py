@@ -18,6 +18,7 @@ from outcomeeng.validation import (
     RUFF_FORMAT_ARGV,
     SHELLCHECK_ARGV,
     SPX_MARKDOWN_ARGV,
+    SUCCESS_EXIT_CODE,
     TEST_STEPS,
     VALIDATION_STEPS,
 )
@@ -25,6 +26,10 @@ from outcomeeng.validation.infrastructure_index import (
     InfrastructureReach,
     SPEC_TREE_ROOT,
     index_test_infrastructure,
+)
+from outcomeeng.validation.agent_disable import (
+    AGENT_SWITCHES,
+    DISABLE_VALUE,
 )
 from outcomeeng.validation.selected_gate import (
     ChangedPath,
@@ -53,6 +58,7 @@ from outcomeeng.validation.selected_gate import (
 from outcomeeng.validation import selected_gate as selection_source
 from outcomeeng_testing.generators.gate import (
     SELECTED_GATE_EVAL_DEFINITION_PATH,
+    agent_switch_states,
     SELECTED_GATE_EVAL_WORKFLOW_PATH,
     SELECTED_GATE_INSTRUCTION_BLOCK_SOURCE_PATH,
     SELECTED_GATE_MARKDOWN_PATH,
@@ -72,8 +78,11 @@ from outcomeeng_testing.harnesses.gate import (
     COPIED_GIT_STATUS,
     PYTEST_TARGET_ARG,
     RENAMED_GIT_STATUS,
+    ROW_RAN,
+    ROW_SKIPPED,
     SELECTED_GATE_RENAMED_TARGET_ARG,
     SELECTED_GATE_WHITESPACE_PATH,
+    declared_skip_recording,
     collected_paths_observation,
     resolved_base_observation,
     run_check_observation,
@@ -718,3 +727,44 @@ def test_template_script_maps_to_skill_and_lint_steps() -> None:
         else SKILL_REASON
         for step in expected
     )
+
+
+@pytest.mark.parametrize("state", agent_switch_states())
+def test_each_switch_state_maps_a_marked_row_to_its_outcome(state: str | None) -> None:
+    # The child runs rows carrying the shipped projections, under a switch state
+    # this case sets in that child's environment itself. A marked row's outcome
+    # follows its own agent's switch; the unmarked row runs under every state,
+    # so a difference between the states is the projection's decision rather
+    # than a child that stopped working. None of the rows starts an agent
+    # process, so no state spends an agent's quota.
+    declaring = state == DISABLE_VALUE
+    with declared_skip_recording(
+        through_markers=True,
+        switch_values={} if state is None else dict.fromkeys(AGENT_SWITCHES, state),
+    ) as recording:
+        assert recording.exit_code == SUCCESS_EXIT_CODE, recording.output
+        assert dict(recording.row_outcomes) == {
+            **{
+                nodeid: ROW_SKIPPED if declaring else ROW_RAN
+                for nodeid, _switch in recording.switch_rows
+            },
+            **dict.fromkeys(recording.other_rows, ROW_RAN),
+        }
+
+
+def test_a_marked_row_reads_its_switch_where_the_row_itself_starts() -> None:
+    # The child starts with no switch in its environment and the generated
+    # module sets both after importing the projections and before defining any
+    # row. A projection that read the switch when it was imported would leave
+    # every marked row running; reading it where the row starts is what the
+    # skips establish. The unmarked row runs, so the child itself still works.
+    with declared_skip_recording(
+        through_markers=True,
+        switch_values={},
+        switches_set_after_import=dict.fromkeys(AGENT_SWITCHES, DISABLE_VALUE),
+    ) as recording:
+        assert recording.exit_code == SUCCESS_EXIT_CODE, recording.output
+        assert dict(recording.row_outcomes) == {
+            **{nodeid: ROW_SKIPPED for nodeid, _switch in recording.switch_rows},
+            **dict.fromkeys(recording.other_rows, ROW_RAN),
+        }

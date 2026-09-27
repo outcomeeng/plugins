@@ -6,6 +6,7 @@ from hypothesis import strategies as st
 from hypothesis.strategies import SearchStrategy
 
 from outcomeeng.validation import EVAL_TRIGGER_WORKFLOW, Step
+from outcomeeng.validation.agent_disable import DISABLE_VALUE
 from outcomeeng.validation.selected_gate import (
     INSTRUCTION_BLOCK_SOURCE_PATH,
     PYPROJECT_PATH,
@@ -41,6 +42,29 @@ SELECTED_GATE_EVAL_DEFINITION_PATH = (
     "spx/21-spec-tree.enabler/76-merge.enabler/evals/transport-selection/eval.toml"
 )
 SELECTED_GATE_FULL_GATE_PATH = PYPROJECT_PATH
+
+NON_DISABLING_SWITCH_VALUE = DISABLE_VALUE * 2
+"""One value a switch can hold that declares no row optional.
+
+Derived by repeating the source-owned disable value rather than written beside
+it, so the value differs from it by construction — its length alone settles the
+non-membership the domain below depends on — and it moves with the declaration
+instead of standing next to it.
+"""
+
+SWITCH_ABSENT = None
+"""The state of a switch the environment does not carry at all."""
+
+
+def agent_switch_states() -> tuple[str | None, ...]:
+    """The states an agent's switch can hold for one run.
+
+    The three the run-versus-skip mapping ranges over: the source-owned disable
+    value, a value derived to differ from it, and the switch absent. The value
+    a state carries is derived from the declaration; what each state maps a row
+    to belongs to the case that reads this domain.
+    """
+    return (DISABLE_VALUE, NON_DISABLING_SWITCH_VALUE, SWITCH_ABSENT)
 
 
 def changed_path_domain() -> tuple[str, ...]:

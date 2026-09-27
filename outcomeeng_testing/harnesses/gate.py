@@ -25,7 +25,8 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import TextIO, cast
+from typing import Final, TextIO, cast
+from xml.etree import ElementTree
 
 from hypothesis import given, seed, settings
 
@@ -60,6 +61,7 @@ from outcomeeng.validation import (
 )
 from outcomeeng.validation._git import GitCommandResult
 from outcomeeng.validation.agent_disable import (
+    AGENT_SWITCHES,
     DISABLE_CLAUDE_ENV,
     DISABLE_CODEX_ENV,
     DISABLE_VALUE,
@@ -1280,6 +1282,24 @@ CHILD_DIRECTORY_REPORT_ENV = "OE_DECLARED_SKIP_CHILD_DIRECTORY"
 """The variable naming that file, so the child writes it wherever it runs."""
 DECLARED_SKIP_CHILD_TIMEOUT_SECONDS = 120.0
 """The bound on the recording child's run, so no observation waits without end."""
+ROW_REPORT_NAME = "declared-skip-rows.xml"
+"""The file pytest writes its own per-row report of the recording child's run to."""
+ROW_REPORT_OPTION = "--junit-xml"
+"""The pytest option naming that file; pytest's own, so its spelling is required."""
+ROW_REPORT_ROW_TAG = "testcase"
+"""The element pytest's report carries one of per collected row."""
+ROW_REPORT_NAME_ATTRIBUTE = "name"
+"""The attribute on that element carrying the row's own name."""
+ROW_REPORT_SKIPPED_TAG = "skipped"
+"""The child element pytest adds to a row it skipped."""
+ROW_REPORT_FAILURE_TAGS = ("failure", "error")
+"""The child elements pytest adds to a row that failed or errored."""
+ROW_RAN = "ran"
+"""The outcome of a row pytest collected and carried to completion."""
+ROW_SKIPPED = "skipped"
+"""The outcome of a row pytest skipped."""
+ROW_FAILED = "failed"
+"""The outcome of a row that failed or errored, so a broken child reads as broken."""
 REPOSITORY_ROOT = Path(validation_pkg.__file__).resolve().parents[2]
 """The tree the child imports the product and this harness from."""
 
@@ -1348,13 +1368,23 @@ def {claude_row}() -> None:
 
 def {running_row}() -> None:
     return None
+
+
+os.environ.update({late_switches})
 '''
 """The rows the recording child collects through the markers the real rows carry.
 
-The rows carry no predicate call of their own: the markers decide the skip and
-the reason, exactly as a row that starts a real agent process does. The step
-from the marker's reason to an attributable record is what these rows drive, so
-a marker built without its declared reason leaves the recorder nothing to write.
+The rows carry no predicate call of their own: the projections decide the skip
+and the reason, exactly as a row that starts a real agent process does. The step
+from the projection's reason to an attributable record is what these rows drive,
+so a projection built without its declared reason leaves the recorder nothing to
+write.
+
+The update runs last, after the projections are imported and after every row is
+defined, so switches a caller supplies there are visible only to a reading taken
+where a row itself starts — neither the import of the projections nor the
+decoration of a row can see them. An empty mapping leaves the child's environment
+exactly as the harness handed it over.
 """
 
 
@@ -1423,29 +1453,85 @@ class DeclaredSkipRecording:
     """Each generated row's nodeid paired with the switch its body reads."""
     other_rows: tuple[str, ...]
     """The generated rows' nodeids that no switch declared optional."""
+    row_outcomes: Mapping[str, str]
+    """Each collected row's nodeid paired with the outcome pytest reported for it.
+
+    Read from pytest's own per-row report of this child, so a row that ran, one
+    that skipped, and one that failed are three readings rather than two. A row
+    the child never collected appears here not at all, which is distinct from
+    every outcome it could carry.
+    """
+
+
+def _row_outcome(row: ElementTree.Element) -> str:
+    """Return this row's outcome from the elements pytest's report gave it."""
+    if any(row.find(tag) is not None for tag in ROW_REPORT_FAILURE_TAGS):
+        return ROW_FAILED
+    if row.find(ROW_REPORT_SKIPPED_TAG) is not None:
+        return ROW_SKIPPED
+    return ROW_RAN
+
+
+def _reported_row_outcomes(report: Path) -> Mapping[str, str]:
+    """Read pytest's own per-row report, keyed by the nodeids the child collected.
+
+    The report is the one pytest wrote for this run, inside the disposable root
+    this harness created, so nothing outside the run reaches the parse.
+    """
+    if not report.exists():
+        return {}
+    document = ElementTree.parse(report)
+    return {
+        SKIPPED_ROW_ID_SHAPE.format(
+            path=DECLARED_SKIP_MODULE_NAME,
+            name=row.attrib[ROW_REPORT_NAME_ATTRIBUTE],
+        ): _row_outcome(row)
+        for row in document.iter(ROW_REPORT_ROW_TAG)
+    }
+
+
+BOTH_SWITCHES_DECLARING: Final[Mapping[str, str]] = {
+    DISABLE_CODEX_ENV: DISABLE_VALUE,
+    DISABLE_CLAUDE_ENV: DISABLE_VALUE,
+}
+"""Both switches holding the declared disable value, the recording default."""
 
 
 @contextmanager
 def declared_skip_recording(
-    *, name_destination: bool = True, through_markers: bool = False
+    *,
+    name_destination: bool = True,
+    through_markers: bool = False,
+    switch_values: Mapping[str, str] | None = None,
+    switches_set_after_import: Mapping[str, str] | None = None,
 ) -> Iterator[DeclaredSkipRecording]:
-    """Run a real pytest child whose rows both switches declare optional.
+    """Run a real pytest child over rows a caller-chosen switch state reaches.
 
-    The child runs the product's own predicates over an environment holding both
-    switches, skips through pytest, and loads the recorder the gate registers, so
-    the records read back are the ones a real gate step would leave. With
-    `name_destination` false the child receives no destination option, which is
-    how every step outside a reporting run is spawned. With `through_markers`
-    true the generated rows carry the production markers instead of calling the
-    predicates themselves, so the child drives the same marker step a real
-    live row does.
+    The child runs the product's own predicates or projections, skips through
+    pytest, and loads the recorder the gate registers, so the records read back
+    are the ones a real gate step would leave. With `name_destination` false the
+    child receives no destination option, which is how every step outside a
+    reporting run is spawned. With `through_markers` true the generated rows
+    carry the production projections instead of calling the predicates
+    themselves, so the child drives the same projected step a real live row
+    does.
 
-    Both switches are set for the child alone, over rows this run generates in
-    the disposable root it creates. `confined_to` refuses before the child
-    starts unless the report target and the child's working directory lie in
-    that root, so no selected live row of the surrounding repository is in
-    reach of the environment this run writes; the paths it accepted are carried
-    in the observation.
+    `switch_values` is the switch state the child starts under. Both switches
+    are removed from the inherited environment first, so the state the child
+    reads is exactly what this argument supplies and nothing the surrounding run
+    happens to carry; omitting it leaves the recording default, both switches at
+    the declared disable value. `switches_set_after_import` is written into the
+    child's own environment by the generated module, after the projections are
+    imported and after every row is defined, so a caller can place a switch where
+    only a reading taken at a row's own start reaches it.
+
+    Every path the child writes to or runs in lies in the disposable root this
+    run creates, and the child's pytest invocation names that root's one
+    generated module, so the only rows it collects are the ones generated here
+    and no row of the surrounding repository is in reach of the environment this
+    run writes. `confined_to` refuses before the child starts unless the report
+    target, the row report, and the child's working directory lie in that root;
+    the paths it accepted are carried in the observation.
 
     This harness owns the root's lifetime. The root exists throughout the
     `with` body, so a predicate there reads the run's real filesystem state, and
@@ -1460,9 +1546,15 @@ def declared_skip_recording(
             state_root / f"{DECLARED_SKIP_MODULE_NAME}{SKIP_REPORT_FILE_SUFFIX}"
         )
         directory_report = state_root / CHILD_DIRECTORY_REPORT_NAME
+        row_report = state_root / ROW_REPORT_NAME
         child_directory = state_root
         confinement_checked = confined_to(
-            state_root, module, destination, directory_report, child_directory
+            state_root,
+            module,
+            destination,
+            directory_report,
+            row_report,
+            child_directory,
         )
         module.write_text(
             DECLARED_SKIP_MARKER_MODULE_FORM.format(
@@ -1470,6 +1562,7 @@ def declared_skip_recording(
                 claude_row=CLAUDE_ROW_NAME,
                 running_row=RUNNING_ROW_NAME,
                 directory_report_env=CHILD_DIRECTORY_REPORT_ENV,
+                late_switches=dict(switches_set_after_import or {}),
             )
             if through_markers
             else DECLARED_SKIP_MODULE_FORM.format(
@@ -1491,19 +1584,24 @@ def declared_skip_recording(
             skip_report.__name__,
             PYTEST_PLUGIN_OPTION,
             PYTEST_NO_CACHE_PLUGIN,
+            f"{ROW_REPORT_OPTION}={row_report}",
             DECLARED_SKIP_MODULE_NAME,
         ]
         if name_destination:
             argv.append(f"{SKIP_REPORT_OPTION}={destination}")
+        inherited = {
+            name: value
+            for name, value in os.environ.items()
+            if name not in AGENT_SWITCHES
+        }
         completed = subprocess.run(  # noqa: S603 — fixed argv around this interpreter.
             argv,
             cwd=child_directory,
             env={
-                **os.environ,
+                **inherited,
                 PYTHONPATH_ENV: str(REPOSITORY_ROOT),
                 CHILD_DIRECTORY_REPORT_ENV: str(directory_report),
-                DISABLE_CODEX_ENV: DISABLE_VALUE,
-                DISABLE_CLAUDE_ENV: DISABLE_VALUE,
+                **(BOTH_SWITCHES_DECLARING if switch_values is None else switch_values),
             },
             capture_output=True,
             text=True,
@@ -1550,4 +1648,5 @@ def declared_skip_recording(
                     else (UNRELATED_SKIP_ROW_NAME, RUNNING_ROW_NAME)
                 )
             ),
+            row_outcomes=_reported_row_outcomes(row_report),
         )
