@@ -1,32 +1,45 @@
 from types import ModuleType
 from typing import cast
 
+import pytest
+
 from outcomeeng_testing.harnesses.agent_mail import (
     RecordingRunner,
+    TerminalCase,
+    argv_option_values,
     run_delegation_chain_property,
     run_record_roundtrip_property,
     run_terminal_property,
-    store_inbox_echo,
+    store_listing_echo,
+    usage_contract_for,
 )
 
 
 def test_message_records_round_trip_through_the_store_fields() -> None:
     def assert_roundtrip(
-        module: ModuleType, record: dict[str, object], message_id: int, row_ordinal: int
+        module: ModuleType,
+        record: dict[str, object],
+        message_id: int,
+        row_ordinal: int,
+        store_rejected: frozenset[str],
     ) -> None:
         send_fields = module.store_fields_for(record)
-        subject = cast(str, send_fields[module.STORE_SUBJECT_FIELD])
+        thread = cast(str, send_fields[module.STORE_THREAD_ID_FIELD])
         read_back = module.record_from_inbox_item(
-            store_inbox_echo(module, send_fields, message_id, row_ordinal),
+            store_listing_echo(module, send_fields, message_id, row_ordinal),
             recipient=cast(str, record[module.RECIPIENT_FIELD]),
         )
 
         assert read_back == {**record, module.RECORD_ID_FIELD: message_id}
-        assert subject.count(module.KIND_PREFIX_CLOSE) >= 1
         assert (
             send_fields[module.STORE_ACK_REQUIRED_FIELD]
             is record[module.ACK_REQUIRED_FIELD]
         )
+        # Every thread the adapter writes is one the store's alphabet admits, and
+        # a correlation the store refused as a thread never reaches it verbatim.
+        assert module.THREAD_ID_PATTERN.fullmatch(thread), thread
+        if record[module.CORRELATION_FIELD] in store_rejected:
+            assert thread != record[module.CORRELATION_FIELD]
 
     run_record_roundtrip_property(assert_roundtrip)
 
@@ -59,25 +72,27 @@ def test_an_order_its_delegation_request_and_its_handback_are_delivered() -> Non
             data = cast(dict[str, object], result[module.DATA_FIELD])
             delivered.append(cast(dict[str, object], data[module.RECORD_FIELD]))
 
-        # Every record reached the store through this capability's own command.
+        # Every record reached the store through this capability's own command,
+        # all three under one thread that reads back as the reference.
+        contract = usage_contract_for(module, module.Operation.SEND)
         sent = [argv for argv, _ in runner.calls if argv[0] == module.AM_COMMAND]
         assert len(sent) == len(chain)
+        threads: set[str | None] = set()
         for record, argv in zip(chain, sent, strict=True):
-            assert (
-                module.attached_option(
-                    module.PUBLIC_AM_RECORD_OPTIONS[module.CORRELATION_FIELD],
-                    reference,
-                )
-                in argv
+            bound = argv_option_values(contract, argv)
+            threads.update(
+                bound[module.PUBLIC_AM_RECORD_OPTIONS[module.CORRELATION_FIELD]]
             )
-            assert (
-                module.attached_option(
-                    module.PUBLIC_AM_RECORD_OPTIONS[module.RECORD_SUBJECT_FIELD],
-                    f"{module.KIND_PREFIX_OPEN}{record[module.KIND_FIELD]}"
-                    f"{module.KIND_PREFIX_CLOSE}{record[module.RECORD_SUBJECT_FIELD]}",
-                )
-                in argv
-            )
+            assert bound[
+                module.PUBLIC_AM_RECORD_OPTIONS[module.RECORD_SUBJECT_FIELD]
+            ] == [
+                f"{module.KIND_PREFIX_OPEN}{record[module.KIND_FIELD]}"
+                f"{module.KIND_PREFIX_CLOSE}{record[module.RECORD_SUBJECT_FIELD]}"
+            ]
+        assert len(threads) == 1
+        (thread,) = threads
+        assert thread is not None
+        assert module.correlation_for(thread) == reference
 
         # The delivered handback carries the store's id and the reference the
         # order opened; reduction runs over the record the sender wrote, which
@@ -93,35 +108,78 @@ def test_an_order_its_delegation_request_and_its_handback_are_delivered() -> Non
 
 
 def test_terminal_handbacks_reduce_to_exactly_one_result() -> None:
-    def assert_terminal(
-        module: ModuleType,
-        reference: str,
-        first_kind: object,
-        second_kind: object,
-        content: dict[str, str],
-    ) -> None:
-        first = module.terminal_handback(
-            kind=first_kind,
-            correlation=reference,
-            sender=content[module.SENDER_FIELD],
-            recipient=content[module.RECIPIENT_FIELD],
-            subject=content[module.RECORD_SUBJECT_FIELD],
-            body=content[module.BODY_FIELD],
-        )
-        second = {**first, module.KIND_FIELD: second_kind}
+    def assert_terminal(module: ModuleType, case: TerminalCase) -> None:
+        def handback(kind: object, reference: str, content: dict[str, str]) -> object:
+            return module.terminal_handback(
+                kind=kind,
+                correlation=reference,
+                sender=content[module.SENDER_FIELD],
+                recipient=content[module.RECIPIENT_FIELD],
+                subject=content[module.RECORD_SUBJECT_FIELD],
+                body=content[module.BODY_FIELD],
+            )
 
-        assert first[module.CORRELATION_FIELD] == reference
+        first = cast(
+            dict[str, object], handback(case.first_kind, case.reference, case.content)
+        )
+        rejection = module.TerminalHandbackRejected
+
+        # The first handback is the result; a matching repeat is idempotent.
+        assert first[module.CORRELATION_FIELD] == case.reference
         assert module.reduce_terminal(None, first) == first
         assert module.reduce_terminal(first, first) == first
-        if second_kind == first_kind:
-            return
-        try:
-            module.reduce_terminal(first, second)
-        except module.AgentMailError as error:
-            assert error.status == module.ExecutionStatus.INVALID_SCHEMA
-        else:
-            raise AssertionError(
-                "conflicting terminal kinds for one reference were accepted"
+
+        # Another terminal kind for the reference is a kind conflict.
+        if case.second_kind != case.first_kind:
+            with pytest.raises(rejection) as conflict:
+                module.reduce_terminal(
+                    first, {**first, module.KIND_FIELD: case.second_kind}
+                )
+            assert conflict.value.rejection == module.HandbackRejection.KIND_CONFLICT
+            assert conflict.value.status == module.ExecutionStatus.INVALID_SCHEMA
+            assert conflict.value.differing_fields == (module.KIND_FIELD,)
+
+        # The same kind with other content is a conflicting handback naming
+        # exactly the fields the second handback changed.
+        changed = handback(case.first_kind, case.reference, case.other_content)
+        differing = tuple(
+            sorted(
+                name
+                for name, value in case.other_content.items()
+                if case.content[name] != value
             )
+        )
+        if differing:
+            with pytest.raises(rejection) as conflicting:
+                module.reduce_terminal(first, changed)
+            assert (
+                conflicting.value.rejection
+                == module.HandbackRejection.CONFLICTING_HANDBACK
+            )
+            assert conflicting.value.status == module.ExecutionStatus.INVALID_SCHEMA
+            assert conflicting.value.differing_fields == differing
+            for name in differing:
+                assert name in str(conflicting.value)
+        else:
+            assert module.reduce_terminal(first, changed) == first
+
+        # A handback for another reference never reduces onto this one's state.
+        elsewhere = handback(case.first_kind, case.other_reference, case.content)
+        with pytest.raises(rejection) as mismatch:
+            module.reduce_terminal(first, elsewhere)
+        assert mismatch.value.rejection == module.HandbackRejection.REFERENCE_MISMATCH
+
+        # A kind that closes no delegation is no terminal handback, whether it
+        # arrives or is the state it would reduce onto.
+        with pytest.raises(rejection) as built:
+            handback(case.non_terminal_kind, case.reference, case.content)
+        assert built.value.rejection == module.HandbackRejection.NOT_TERMINAL
+        open_record = {**first, module.KIND_FIELD: case.non_terminal_kind}
+        with pytest.raises(rejection) as arriving:
+            module.reduce_terminal(first, open_record)
+        assert arriving.value.rejection == module.HandbackRejection.NOT_TERMINAL
+        with pytest.raises(rejection) as current:
+            module.reduce_terminal(open_record, first)
+        assert current.value.rejection == module.HandbackRejection.NOT_TERMINAL
 
     run_terminal_property(assert_terminal)

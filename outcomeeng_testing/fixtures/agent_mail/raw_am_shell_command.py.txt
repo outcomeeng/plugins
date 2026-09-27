@@ -1,0 +1,5 @@
+"""Violating shipped-script payload for raw store command detection in shell-string form."""
+
+import subprocess
+
+subprocess.run("am robot inbox --json", shell=True, check=True)

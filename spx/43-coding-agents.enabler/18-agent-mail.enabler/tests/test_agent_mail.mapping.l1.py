@@ -3,22 +3,35 @@ from pathlib import Path
 from types import ModuleType
 from typing import cast
 
+import pytest
+
+from outcomeeng_testing.generators.agent_mail import SUBJECT_BRANCHES, SubjectShape
 from outcomeeng_testing.harnesses.agent_mail import (
     AbsentExecutableRunner,
-    CapturedInboxResponse,
+    CapturedStoreResponse,
+    ListingReplay,
     RecordingRunner,
+    acknowledgement_requirements,
+    argv_option_values,
     common_dir_seeded_absent_store_runner,
     common_dir_seeded_runner,
     failed_command_result,
     git_location_variables,
+    listing_captures,
     load_agent_mail,
     mail_pool,
+    registration_response_named,
     run_cli_project_key,
-    run_inbox_row_mapping,
+    run_listing_mapping,
+    run_listing_row_mapping,
     run_operation_mapping,
     run_project_key_mapping,
     run_recipient_boundary,
+    run_registration_cases,
+    run_store_error_cases,
     run_store_response_cases,
+    run_subject_classification,
+    store_error_capture_names,
     store_response_payload,
     store_response_result,
     text_command_result,
@@ -32,6 +45,8 @@ def test_agent_mail_operation_mappings() -> None:
     operations = {operation.value for operation in module.Operation}
     seen_operations: set[str] = set()
     seen_kinds: set[str] = set()
+    seen_booleans: set[tuple[str, object]] = set()
+    command_paths: dict[str, tuple[str, ...]] = {}
 
     def assert_operation(
         module: ModuleType, request: dict[str, object], project_key: str
@@ -42,74 +57,64 @@ def test_agent_mail_operation_mappings() -> None:
         argv = module.command_for(request, project_key)
         contract = usage_contract_for(module, operation)
         reading = read_argv(contract, argv)
+        bound = argv_option_values(contract, argv)
+        command_paths[operation.value] = reading.command_path
 
         assert reading.command_path == (module.AM_COMMAND, *contract.command_path)
         assert reading.unknown_options == ()
         assert contract.required_options <= set(reading.options_seen)
-        assert module.PROJECT_OPTION in reading.options_seen
-        assert argv[argv.index(module.PROJECT_OPTION) + 1] == project_key
-        assert len(reading.positionals) == len(contract.required_positionals)
-        assert (module.JSON_OPTION in reading.options_seen) == (
-            operation in module.JSON_OPERATIONS
-        )
-        for option, count in reading.options_seen.items():
-            assert count == 1 or option in contract.repeatable_options
+
+        # The mapping law, option by option: each request field binds its own
+        # option to its own value, a true boolean binds its flag and a false
+        # one binds nothing, and no option appears that no field binds.
+        expected: dict[str, list[str | None]] = {module.PROJECT_OPTION: [project_key]}
+        if operation in module.JSON_OPERATIONS:
+            expected[module.JSON_OPTION] = [None]
+        positionals: tuple[str, ...] = ()
         if operation is module.Operation.SEND:
             record = cast(dict[str, object], arguments[module.RECORD_FIELD])
             seen_kinds.add(str(record[module.KIND_FIELD]))
+            seen_booleans.add(
+                (module.ACK_REQUIRED_FIELD, record[module.ACK_REQUIRED_FIELD])
+            )
             for field_name in (
                 module.SENDER_FIELD,
                 module.RECIPIENT_FIELD,
                 module.CORRELATION_FIELD,
                 module.BODY_FIELD,
             ):
-                assert (
-                    module.attached_option(
-                        module.PUBLIC_AM_RECORD_OPTIONS[field_name], record[field_name]
-                    )
-                    in argv
-                )
-            assert (
-                module.attached_option(
-                    module.PUBLIC_AM_RECORD_OPTIONS[module.RECORD_SUBJECT_FIELD],
-                    f"{module.KIND_PREFIX_OPEN}{record[module.KIND_FIELD]}"
-                    f"{module.KIND_PREFIX_CLOSE}{record[module.RECORD_SUBJECT_FIELD]}",
-                )
-                in argv
-            )
-            assert (module.ACK_REQUIRED_OPTION in reading.options_seen) is (
-                record[module.ACK_REQUIRED_FIELD]
-            )
-        elif operation is module.Operation.REGISTER:
-            assert (
-                module.attached_option(
-                    module.NAME_OPTION, arguments[module.AGENT_FIELD]
-                )
-                in argv
-            )
-            for field_name in (
-                module.PROGRAM_FIELD,
-                module.MODEL_FIELD,
-                module.TASK_FIELD,
-            ):
-                if field_name in arguments:
-                    assert (
-                        module.attached_option(
-                            module.PUBLIC_AM_ARGUMENT_OPTIONS[field_name],
-                            arguments[field_name],
-                        )
-                        in argv
-                    )
+                expected[module.PUBLIC_AM_RECORD_OPTIONS[field_name]] = [
+                    cast(str, record[field_name])
+                ]
+            expected[module.PUBLIC_AM_RECORD_OPTIONS[module.RECORD_SUBJECT_FIELD]] = [
+                f"{module.KIND_PREFIX_OPEN}{record[module.KIND_FIELD]}"
+                f"{module.KIND_PREFIX_CLOSE}{record[module.RECORD_SUBJECT_FIELD]}"
+            ]
+            if record[module.ACK_REQUIRED_FIELD] is True:
+                expected[module.PUBLIC_AM_RECORD_OPTIONS[module.ACK_REQUIRED_FIELD]] = [
+                    None
+                ]
         else:
-            if operation is module.Operation.RECEIPT:
-                assert reading.positionals == (str(arguments[module.MESSAGE_ID_FIELD]),)
-            assert (
-                module.attached_option(
-                    module.PUBLIC_AM_ARGUMENT_OPTIONS[module.AGENT_FIELD],
-                    arguments[module.AGENT_FIELD],
+            for field_name, value in arguments.items():
+                option = module.PUBLIC_AM_ARGUMENT_OPTIONS.get(field_name)
+                if isinstance(value, bool):
+                    seen_booleans.add((field_name, value))
+                    if value:
+                        expected[option] = [None]
+                elif field_name == module.MESSAGE_ID_FIELD:
+                    positionals = (str(value),)
+                else:
+                    expected[option] = [str(value)]
+            if operation is module.Operation.LIST:
+                mode = (
+                    module.PUBLIC_AM_ARGUMENT_OPTIONS[module.ALL_RECORDS_FIELD]
+                    if arguments.get(module.ALL_RECORDS_FIELD) is True
+                    else module.UNJUDGED_LISTING_OPTION
                 )
-                in argv
-            )
+                expected[mode] = [None]
+        assert bound == expected
+        assert reading.positionals == positionals
+        assert len(reading.positionals) == len(contract.required_positionals)
 
         payload = store_response_payload(module, operation, arguments)
         runner = common_dir_seeded_runner(
@@ -125,12 +130,13 @@ def test_agent_mail_operation_mappings() -> None:
         assert result[module.PROJECT_KEY_FIELD] == project_key
         response = cast(dict[str, object], result[module.RESPONSE_FIELD])
         data = cast(dict[str, object], result[module.DATA_FIELD])
-        if operation is module.Operation.RECEIPT:
+        if operation in module.MESSAGE_OPERATIONS:
             assert response[module.OUTPUT_FIELD] == payload
             assert data[module.MESSAGE_ID_FIELD] == arguments[module.MESSAGE_ID_FIELD]
+            assert data[module.AGENT_FIELD] == arguments[module.AGENT_FIELD]
             return
         store = cast(dict[str, object], payload)
-        if operation is module.Operation.INBOX:
+        if operation is module.Operation.LIST:
             items = cast(list[dict[str, object]], store[module.STORE_INBOX_FIELD])
             records = cast(list[dict[str, object]], data[module.RECORDS_FIELD])
             assert response == store
@@ -143,13 +149,11 @@ def test_agent_mail_operation_mappings() -> None:
             assert [record[module.SENDER_FIELD] for record in records] == [
                 item[module.STORE_FROM_FIELD] for item in items
             ]
+            assert [record[module.RECIPIENT_FIELD] for record in records] == [
+                arguments[module.AGENT_FIELD] for _ in items
+            ]
             assert [record[module.BODY_FIELD] for record in records] == [
                 item.get(module.STORE_BODY_FIELD, "") for item in items
-            ]
-            assert [record[module.ACK_REQUIRED_FIELD] for record in records] == [
-                item[module.STORE_ACK_STATUS_FIELD]
-                in module.STORE_ACK_REQUIRED_STATUSES
-                for item in items
             ]
         elif operation is module.Operation.SEND:
             assert response == store
@@ -162,27 +166,98 @@ def test_agent_mail_operation_mappings() -> None:
                 if key != module.STORE_REGISTRATION_TOKEN_FIELD
             }
             assert data[module.AGENT_FIELD] == store[module.STORE_NAME_FIELD]
+            assert data[module.RECORD_ID_FIELD] == store[module.STORE_ID_FIELD]
 
     run_operation_mapping(assert_operation)
 
     assert seen_operations == operations
     assert seen_kinds == {kind.value for kind in module.SENT_KINDS}
+    for field_name in (*module.BOOLEAN_ARGUMENT_FIELDS, module.ACK_REQUIRED_FIELD):
+        assert {(field_name, True), (field_name, False)} <= seen_booleans, field_name
+    # Every operation binds its own store command; read and acknowledgement in
+    # particular never share one.
+    assert len(set(command_paths.values())) == len(operations)
 
 
-def test_inbox_rows_map_totally_onto_records() -> None:
-    def assert_rows(
-        module: ModuleType,
-        request: dict[str, object],
-        project_key: str,
-        captured: CapturedInboxResponse,
+def test_listing_requests_map_to_the_non_marking_surface_in_their_mode() -> None:
+    module = load_agent_mail()
+    captures = listing_captures(module)
+    contract = usage_contract_for(module, module.Operation.LIST)
+    # Options other listing fields bind, so what remains of a vector's flags is
+    # the mode it lists in.
+    bound_elsewhere = frozenset(
+        {
+            module.JSON_OPTION,
+            module.PUBLIC_AM_ARGUMENT_OPTIONS[module.INCLUDE_BODIES_FIELD],
+        }
+    )
+
+    def mode_flags(argv: tuple[str, ...]) -> frozenset[str]:
+        seen = read_argv(contract, argv).options_seen
+        return frozenset(o for o in seen if not contract.options[o]) - bound_elsewhere
+
+    # The store's own vectors: the probe's complete listing names one mode
+    # flag, its unjudged listings name another or leave the store's default.
+    complete_modes = {mode_flags(captured.argv) for captured in captures.complete}
+    unjudged_modes = {mode_flags(captured.argv) for captured in captures.unjudged} - {
+        frozenset()
+    }
+    assert len(complete_modes) == 1
+    assert len(unjudged_modes) == 1
+    complete_mode = complete_modes.pop()
+    unjudged_mode = unjudged_modes.pop()
+    assert complete_mode and unjudged_mode
+    assert not complete_mode & unjudged_mode
+    listing_paths = {
+        read_argv(contract, captured.argv).command_path
+        for captured in (*captures.unjudged, *captures.complete)
+    }
+    assert len(listing_paths) == 1
+    seen_modes: set[frozenset[str]] = set()
+
+    def assert_request(
+        module: ModuleType, request: dict[str, object], project_key: str
     ) -> None:
+        arguments = cast(dict[str, object], request[module.ARGUMENTS_FIELD])
+        argv = module.command_for(request, project_key)
+        reading = read_argv(contract, argv)
+
+        assert reading.command_path in listing_paths
+        assert reading.unknown_options == ()
+        expected_mode = (
+            complete_mode
+            if arguments.get(module.ALL_RECORDS_FIELD) is True
+            else unjudged_mode
+        )
+        assert mode_flags(argv) == expected_mode, (arguments, argv)
+        seen_modes.add(mode_flags(argv))
+
+    run_listing_mapping(assert_request)
+
+    assert seen_modes == {complete_mode, unjudged_mode}
+
+
+def test_listing_rows_map_totally_onto_records() -> None:
+    module = load_agent_mail()
+    requirements = acknowledgement_requirements(module)
+    captures = listing_captures(module)
+    observed_requirements: dict[object, set[object]] = {}
+    replayed: set[str] = set()
+
+    def assert_rows(
+        module: ModuleType, replay: ListingReplay, project_key: str
+    ) -> None:
+        captured = replay.captured
+        arguments = cast(dict[str, object], replay.request[module.ARGUMENTS_FIELD])
         result = module.execute(
-            request, common_dir_seeded_runner(module, project_key, captured.result)
+            replay.request,
+            common_dir_seeded_runner(module, project_key, captured.result),
         )
 
         assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED, (
             captured.capture
         )
+        replayed.add(captured.capture)
         items = cast(
             list[dict[str, object]], captured.payload[module.STORE_INBOX_FIELD]
         )
@@ -192,10 +267,10 @@ def test_inbox_rows_map_totally_onto_records() -> None:
         for record, item in zip(records, items, strict=True):
             assert record[module.RECORD_ID_FIELD] == item[module.STORE_ID_FIELD]
             assert record[module.SENDER_FIELD] == item[module.STORE_FROM_FIELD]
-            assert record[module.BODY_FIELD] == item[module.STORE_BODY_FIELD]
-            assert record[module.ACK_REQUIRED_FIELD] is (
-                item[module.STORE_ACK_STATUS_FIELD]
-                in module.STORE_ACK_REQUIRED_STATUSES
+            assert record[module.RECIPIENT_FIELD] == arguments[module.AGENT_FIELD]
+            assert record[module.BODY_FIELD] == item.get(module.STORE_BODY_FIELD, "")
+            observed_requirements.setdefault(item[module.STORE_ID_FIELD], set()).add(
+                record[module.ACK_REQUIRED_FIELD]
             )
             thread = item.get(module.STORE_THREAD_FIELD)
             if thread:
@@ -203,24 +278,113 @@ def test_inbox_rows_map_totally_onto_records() -> None:
             else:
                 assert record[module.CORRELATION_FIELD] is None
                 assert record[module.KIND_FIELD] == module.RecordKind.UNCLASSIFIED
+            if record[module.KIND_FIELD] == module.RecordKind.UNCLASSIFIED:
                 assert (
                     record[module.RECORD_SUBJECT_FIELD]
                     == item[module.STORE_SUBJECT_FIELD]
                 )
+            else:
+                assert item[module.STORE_SUBJECT_FIELD] == (
+                    f"{module.KIND_PREFIX_OPEN}{record[module.KIND_FIELD]}"
+                    f"{module.KIND_PREFIX_CLOSE}{record[module.RECORD_SUBJECT_FIELD]}"
+                )
 
-    run_inbox_row_mapping(assert_rows)
+    run_listing_row_mapping(assert_rows)
+
+    assert {
+        captured.capture for captured in (*captures.unjudged, *captures.complete)
+    } <= replayed
+    # One message's acknowledgement requirement is one fact, whatever status a
+    # listing reports it under before or after the acknowledgement; and it is
+    # the requirement the store answered for that message when it was sent and
+    # acknowledged, not a reading of the listing status.
+    for message_id, values in observed_requirements.items():
+        assert len(values) == 1, (message_id, values)
+    for message_id, required in requirements.items():
+        assert observed_requirements[message_id] == {required}, message_id
+
+
+def test_listing_rows_classify_kind_and_subject_on_every_branch() -> None:
+    seen: set[str] = set()
+
+    def assert_case(
+        module: ModuleType,
+        branch: str,
+        item: dict[str, object],
+        recipient: str,
+        shape: SubjectShape,
+        threadless: bool,
+    ) -> None:
+        record = module.record_from_inbox_item(item, recipient=recipient)
+        seen.add(branch)
+
+        if threadless:
+            assert record[module.KIND_FIELD] == module.RecordKind.UNCLASSIFIED
+            assert record[module.RECORD_SUBJECT_FIELD] == shape.subject
+            assert record[module.CORRELATION_FIELD] is None
+        else:
+            assert record[module.KIND_FIELD] == shape.kind, (branch, shape.subject)
+            assert record[module.RECORD_SUBJECT_FIELD] == shape.record_subject, (
+                branch,
+                shape.subject,
+            )
+            assert record[module.CORRELATION_FIELD] == item[module.STORE_THREAD_FIELD]
+        assert record[module.RECIPIENT_FIELD] == recipient
+
+    run_subject_classification(assert_case)
+
+    assert seen == set(SUBJECT_BRANCHES)
+
+
+def test_registration_carries_no_name_and_returns_the_assigned_name() -> None:
+    def assert_case(
+        module: ModuleType,
+        request: dict[str, object],
+        requested: str,
+        assigned: str,
+        project_key: str,
+    ) -> None:
+        arguments = cast(dict[str, object], request[module.ARGUMENTS_FIELD])
+        contract = usage_contract_for(module, module.Operation.REGISTER)
+        argv = module.command_for(request, project_key)
+
+        # The vector binds exactly the options the request's own fields bind,
+        # so the store's name option is absent and the store assigns the name.
+        assert set(argv_option_values(contract, argv)) == {
+            module.PROJECT_OPTION,
+            module.JSON_OPTION,
+            *(module.PUBLIC_AM_ARGUMENT_OPTIONS[name] for name in arguments),
+        }
+
+        named = {
+            **request,
+            module.ARGUMENTS_FIELD: {**arguments, module.AGENT_FIELD: requested},
+        }
+        refusing = RecordingRunner([])
+        refused = module.execute(named, refusing)
+        assert refused[module.STATUS_FIELD] == module.ExecutionStatus.INVALID_SCHEMA
+        assert refusing.calls == []
+
+        runner = common_dir_seeded_runner(
+            module, project_key, registration_response_named(module, assigned)
+        )
+        result = module.execute(request, runner)
+        assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
+        data = cast(dict[str, object], result[module.DATA_FIELD])
+        response = cast(dict[str, object], result[module.RESPONSE_FIELD])
+        assert data[module.AGENT_FIELD] == assigned
+        assert response[module.STORE_NAME_FIELD] == assigned
+
+    run_registration_cases(assert_case)
 
 
 def test_send_rejects_a_recipient_the_store_reads_as_several_agents() -> None:
     def assert_case(
         module: ModuleType, record: dict[str, object], project_key: str
     ) -> None:
-        try:
+        with pytest.raises(module.AgentMailError) as rejection:
             module.store_fields_for(record)
-        except module.AgentMailError as error:
-            assert error.status == module.ExecutionStatus.INVALID_SCHEMA
-        else:
-            raise AssertionError("a fan-out recipient reached the store fields")
+        assert rejection.value.status == module.ExecutionStatus.INVALID_SCHEMA
 
         runner = common_dir_seeded_runner(module, project_key)
         request = {
@@ -244,14 +408,13 @@ def test_project_key_mapping() -> None:
         agent: str,
     ) -> None:
         runner = RecordingRunner([text_command_result(module, output)])
-        request = module.operation_request(module.Operation.INBOX, agent=agent)
+        request = module.operation_request(module.Operation.LIST, agent=agent)
         if expected_key is None:
-            try:
+            with pytest.raises(module.AgentMailError) as unresolved:
                 module.project_key_from_common_dir(output)
-            except module.AgentMailError as error:
-                assert error.status == module.ExecutionStatus.REPOSITORY_UNRESOLVED
-            else:
-                raise AssertionError(f"shape {shape} resolved a key from no directory")
+            assert (
+                unresolved.value.status == module.ExecutionStatus.REPOSITORY_UNRESOLVED
+            ), shape
             result = module.execute(request, runner)
             assert (
                 result[module.STATUS_FIELD]
@@ -338,12 +501,12 @@ def test_git_location_variables_leave_the_project_key_on_its_own_repository() ->
         assert exit_code == 0, (case, payload, redirections)
         assert payload[module.PROJECT_KEY_FIELD] == expected_key, (case, payload)
 
-    for case, (exit_code, payload) in outside.items():
-        assert exit_code != 0, (case, payload)
-        assert module.PROJECT_KEY_FIELD not in payload, (case, payload)
+    for outside_case, (exit_code, payload) in outside.items():
+        assert exit_code != 0, (outside_case, payload)
+        assert module.PROJECT_KEY_FIELD not in payload, (outside_case, payload)
         assert (
             payload[module.STATUS_FIELD] == module.ExecutionStatus.REPOSITORY_UNRESOLVED
-        ), (case, payload)
+        ), (outside_case, payload)
 
     # Git confirmed each of these against its own answer, so a removal list that
     # dropped one would leave the shape that confirmed it resolving the wrong
@@ -361,7 +524,7 @@ def test_store_responses_map_to_results_without_rewriting() -> None:
         malformed_text: str,
         unsupported_name: str,
     ) -> None:
-        request = module.operation_request(module.Operation.INBOX, agent=agent)
+        request = module.operation_request(module.Operation.LIST, agent=agent)
 
         failed = module.execute(
             request,
@@ -404,3 +567,28 @@ def test_store_responses_map_to_results_without_rewriting() -> None:
         assert no_store[module.STATUS_FIELD] == module.ExecutionStatus.STORE_UNAVAILABLE
 
     run_store_response_cases(assert_case)
+
+
+def test_captured_store_failures_map_to_named_failures_verbatim() -> None:
+    replayed: set[str] = set()
+
+    def assert_case(
+        module: ModuleType,
+        request: dict[str, object],
+        project_key: str,
+        captured: CapturedStoreResponse,
+    ) -> None:
+        result = module.execute(
+            request, common_dir_seeded_runner(module, project_key, captured.result)
+        )
+        replayed.add(captured.capture)
+
+        assert result[module.STATUS_FIELD] == module.ExecutionStatus.COMMAND_FAILED
+        assert result[module.OPERATION_FIELD] == request[module.OPERATION_FIELD]
+        assert result[module.COMMAND_EXIT_CODE_FIELD] == captured.result.returncode
+        assert result[module.DETAIL_FIELD] == captured.result.stderr.strip()
+        assert module.PROJECT_KEY_FIELD not in result
+
+    run_store_error_cases(assert_case)
+
+    assert replayed == store_error_capture_names()

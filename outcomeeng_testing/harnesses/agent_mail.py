@@ -12,37 +12,54 @@ import sys
 from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass, field
+from datetime import datetime
 from functools import cache
+from io import StringIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import ModuleType
 from typing import Protocol, cast
 
 from hypothesis import given, seed, settings
+from hypothesis import strategies as st
 
 from outcomeeng_testing.generators.agent_mail import (
     COMMON_DIR_EXACT,
     COMMON_DIR_SHAPES,
+    SUBJECT_BRANCHES,
+    SubjectShape,
+    activity_moments,
     agent_names,
     common_dir_output,
     capture_row_ordinals,
     coordination_references,
+    correlations,
     expected_project_key,
+    handback_contents,
     message_records,
     message_texts,
+    non_terminal_record_kinds,
+    nul_carrying_requests,
+    nul_positions,
     operation_requests,
     program_names,
     project_key_paths,
+    runner_errors,
     sent_record_kinds,
     store_exit_codes,
     store_message_ids,
+    subject_shapes,
     terminal_record_kinds,
+    UNREADABLE_INPUT_FAMILIES,
+    unreadable_request_texts,
     unsupported_operation_names,
 )
 from outcomeeng_testing.harnesses.cli_usage import (
     OPTIONS_HEADING,
+    ATTACHED_VALUE_SEPARATOR,
     USAGE_PREFIX,
     UsageContract,
+    read_argv,
     usage_contract,
 )
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
@@ -89,10 +106,17 @@ ENVIRONMENT_NAME_PATTERN = re.compile(r"\b[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+\b")
 OPTION_ENTRY_HEAD = re.compile(
     r"^\s*(?:-[A-Za-z],\s*)?(?P<long>--[a-z][a-z0-9-]*)(?:\s+<[^>]+>)?(?P<rest>.*)$"
 )
+# The probe's listing observations, grouped by the mode the probe took each
+# in: protocol step 6 took the unjudged listing — once in the store's default
+# form and once naming the mode — and step 8 took the complete listing.
+UNJUDGED_LISTING_CAPTURES = ("robot-inbox.json", "robot-inbox.include-bodies.json")
+COMPLETE_LISTING_CAPTURES = ("robot-inbox.all.json",)
 RAW_MAIL_VIOLATION_FIXTURE = FIXTURE_ROOT / "raw_am_command.py.txt"
+RAW_MAIL_SHELL_VIOLATION_FIXTURE = FIXTURE_ROOT / "raw_am_shell_command.py.txt"
 GIT_PROJECT_KEY_VIOLATION_FIXTURE = FIXTURE_ROOT / "git_project_key.py.txt"
 RECORD_ROUNDTRIP_SEED = 2026091801
 RECORD_ROUNDTRIP_EXAMPLES = 60
+STORE_REJECTED_ROUNDTRIP_EXAMPLES = 20
 RECORD_ROUNDTRIP_REPLAY_PATH = (
     "spx/43-coding-agents.enabler/18-agent-mail.enabler/tests/"
     "test_agent_mail.property.l1.py"
@@ -117,16 +141,36 @@ COMPLIANCE_EXAMPLES = 10
 STORE_RESPONSE_SEED = 2026091806
 STORE_RESPONSE_EXAMPLES = 10
 STORE_RESPONSE_REPLAY_PATH = PROJECT_KEY_MAPPING_REPLAY_PATH
-INBOX_ROW_SEED = 2026091807
-INBOX_ROW_EXAMPLES = 10
-INBOX_ROW_REPLAY_PATH = PROJECT_KEY_MAPPING_REPLAY_PATH
+LISTING_ROW_SEED = 2026091807
+LISTING_ROW_EXAMPLES = 10
+LISTING_ROW_REPLAY_PATH = PROJECT_KEY_MAPPING_REPLAY_PATH
 RECIPIENT_BOUNDARY_SEED = 2026091808
 RECIPIENT_BOUNDARY_EXAMPLES = 20
 RECIPIENT_BOUNDARY_REPLAY_PATH = PROJECT_KEY_MAPPING_REPLAY_PATH
+LISTING_MAPPING_SEED = 2026092701
+LISTING_MAPPING_EXAMPLES = 10
+LISTING_MAPPING_REPLAY_PATH = PROJECT_KEY_MAPPING_REPLAY_PATH
+REGISTRATION_SEED = 2026092702
+REGISTRATION_EXAMPLES = 20
+REGISTRATION_REPLAY_PATH = PROJECT_KEY_MAPPING_REPLAY_PATH
+SUBJECT_CLASSIFICATION_SEED = 2026092703
+SUBJECT_CLASSIFICATION_EXAMPLES = 30
+SUBJECT_CLASSIFICATION_REPLAY_PATH = PROJECT_KEY_MAPPING_REPLAY_PATH
+STORE_ERROR_SEED = 2026092704
+STORE_ERROR_EXAMPLES = 5
+STORE_ERROR_REPLAY_PATH = PROJECT_KEY_MAPPING_REPLAY_PATH
 COMPLIANCE_REPLAY_PATH = (
     "spx/43-coding-agents.enabler/18-agent-mail.enabler/tests/"
     "test_agent_mail.compliance.l1.py"
 )
+ACTIVITY_TIMESTAMP_SEED = 2026092705
+ACTIVITY_TIMESTAMP_EXAMPLES = 30
+UNREADABLE_INPUT_SEED = 2026092706
+UNREADABLE_INPUT_EXAMPLES = 15
+RUNNER_ERROR_SEED = 2026092707
+RUNNER_ERROR_EXAMPLES = 60
+NUL_ARGUMENT_SEED = 2026092708
+NUL_ARGUMENT_EXAMPLES = 5
 CLI_TIMEOUT_SECONDS = 60
 # The pool one probe builds: a bare repository, the main checkout beside it,
 # and one linked worktree, so the resolver is read from all three shapes.
@@ -160,20 +204,39 @@ class CaptureError(RuntimeError):
 
 
 @dataclass(frozen=True)
-class CapturedInboxRow:
-    """One row of a captured `am robot inbox` response, with the capture's path."""
+class CapturedListingRow:
+    """One row of a captured listing response, with the capture's path."""
 
     capture: str
     item: dict[str, object]
 
 
 @dataclass(frozen=True)
-class CapturedInboxResponse:
-    """One captured inbox response, or a named variant of one, replayable by path."""
+class CapturedListingResponse:
+    """One captured listing response, or a named variant of one, replayable by
+    path, with the argument vector the store answered it for."""
 
     capture: str
+    argv: tuple[str, ...]
     result: CommandResultContract
     payload: dict[str, object]
+
+
+@dataclass(frozen=True)
+class ListingCaptures:
+    """The captured listing responses, by the mode the probe took each in."""
+
+    unjudged: tuple[CapturedListingResponse, ...]
+    complete: tuple[CapturedListingResponse, ...]
+
+
+@dataclass(frozen=True)
+class ListingReplay:
+    """A listing request paired with the captured response the store gave in
+    the same mode and row shape."""
+
+    request: dict[str, object]
+    captured: CapturedListingResponse
 
 
 @dataclass(frozen=True)
@@ -242,6 +305,30 @@ class AbsentExecutableRunner:
         self.calls.append((argv, stdin))
         if argv[0] == self.absent_executable:
             raise FileNotFoundError(argv[0])
+        if not self.results:
+            raise RuntimeError(f"Unexpected command: {argv}")
+        return self.results.pop(0)
+
+
+@dataclass
+class RaisingRunner:
+    """Failure-simulation collaborator: running the named program raises
+    ``error``; every other program replays ``results`` in order."""
+
+    failing_program: str
+    error: Exception
+    results: list[CommandResultContract] = field(default_factory=list)
+    calls: list[tuple[tuple[str, ...], str | None]] = field(default_factory=list)
+
+    def run(
+        self,
+        argv: tuple[str, ...],
+        stdin: str | None = None,
+        env: Mapping[str, str] | None = None,
+    ) -> CommandResultContract:
+        self.calls.append((argv, stdin))
+        if argv[0] == self.failing_program:
+            raise self.error
         if not self.results:
             raise RuntimeError(f"Unexpected command: {argv}")
         return self.results.pop(0)
@@ -478,47 +565,111 @@ def store_error_responses(
     ]
 
 
-def _inbox_captures_with_bodies(module: ModuleType) -> list[Path]:
-    """Every captured inbox response taken with `--include-bodies`, in path
-    order."""
-    base = _response_fixture_path(
-        module, _listing_operation(module), {module.INCLUDE_BODIES_FIELD: True}
+def store_error_capture_names() -> frozenset[str]:
+    """Every captured store failure, by its path."""
+    return frozenset(
+        str(path.relative_to(ROOT))
+        for path in ERROR_FIXTURE_ROOT.glob(f"*{CAPTURE_SUFFIX}")
     )
-    return sorted(RESPONSE_FIXTURE_ROOT.glob(f"{base.stem}*{CAPTURE_SUFFIX}"))
 
 
-def captured_inbox_responses_with_bodies(
-    module: ModuleType,
-) -> list[CapturedInboxResponse]:
-    """Each captured `--include-bodies` inbox response, replayable by path."""
-    command_path = _command_path(module, _listing_operation(module))
-    responses: list[CapturedInboxResponse] = []
-    for path in _inbox_captures_with_bodies(module):
-        capture = _read_capture(path, command_path)
-        payload = json.loads(capture.stdout)
-        if not isinstance(payload, dict):
-            raise CaptureError(f"{path} answered no inbox object")
-        responses.append(
-            CapturedInboxResponse(
-                str(path.relative_to(ROOT)),
-                _result_from_capture(module, capture),
-                cast(dict[str, object], payload),
-            )
+# The store error type naming the capture of a send the store refused for its
+# thread id, in the `<command>.<store error type>.json` convention.
+THREAD_REJECTION_ERROR_TYPE = "invalid_thread_id"
+
+
+def store_rejected_threads(module: ModuleType) -> tuple[str, ...]:
+    """Every thread id the store refused a send under, read from the argument
+    vector of each captured thread rejection."""
+    operation = module.Operation.SEND
+    name = _command_fixture_name(module, operation)
+    prefix = f"{module.THREAD_ID_OPTION}{module.ATTACHED_OPTION_SEPARATOR}"
+    threads: list[str] = []
+    for path in sorted(
+        ERROR_FIXTURE_ROOT.glob(
+            f"{name}.{THREAD_REJECTION_ERROR_TYPE}*{CAPTURE_SUFFIX}"
         )
-    return responses
+    ):
+        capture = _read_capture(path, _command_path(module, operation))
+        threads.extend(
+            token[len(prefix) :] for token in capture.argv if token.startswith(prefix)
+        )
+    if not threads:
+        raise CaptureError("no captured send failure names a rejected thread id")
+    return tuple(threads)
 
 
-def captured_inbox_rows_with_bodies(module: ModuleType) -> list[CapturedInboxRow]:
-    """Every row across the captured `--include-bodies` inbox responses."""
+def _listing_capture(module: ModuleType, name: str) -> CapturedListingResponse:
+    path = RESPONSE_FIXTURE_ROOT / name
+    capture = _read_capture(path, _command_path(module, _listing_operation(module)))
+    payload = json.loads(capture.stdout)
+    if not isinstance(payload, dict):
+        raise CaptureError(f"{path} answered no listing object")
+    return CapturedListingResponse(
+        str(path.relative_to(ROOT)),
+        capture.argv,
+        _result_from_capture(module, capture),
+        cast(dict[str, object], payload),
+    )
+
+
+def listing_captures(module: ModuleType) -> ListingCaptures:
+    """Every captured listing response, by the mode the probe took it in.
+
+    Every listing capture belongs to exactly one mode, so a capture added
+    without a mode fails the read rather than going unexamined.
+    """
+    listed = {
+        path.name
+        for path in RESPONSE_FIXTURE_ROOT.glob(
+            f"{_command_fixture_name(module, _listing_operation(module))}*{CAPTURE_SUFFIX}"
+        )
+    }
+    grouped = set(UNJUDGED_LISTING_CAPTURES) | set(COMPLETE_LISTING_CAPTURES)
+    if listed != grouped or set(UNJUDGED_LISTING_CAPTURES) & set(
+        COMPLETE_LISTING_CAPTURES
+    ):
+        raise CaptureError(
+            f"listing captures {sorted(listed)} are not each in exactly one mode "
+            f"of {sorted(grouped)}"
+        )
+    return ListingCaptures(
+        unjudged=tuple(
+            _listing_capture(module, name) for name in UNJUDGED_LISTING_CAPTURES
+        ),
+        complete=tuple(
+            _listing_capture(module, name) for name in COMPLETE_LISTING_CAPTURES
+        ),
+    )
+
+
+def _carries_bodies(module: ModuleType, argv: tuple[str, ...]) -> bool:
+    return module.PUBLIC_AM_ARGUMENT_OPTIONS[module.INCLUDE_BODIES_FIELD] in argv
+
+
+def captured_listing_responses_with_bodies(
+    module: ModuleType,
+) -> list[CapturedListingResponse]:
+    """Each captured listing response the store answered with bodies."""
+    captures = listing_captures(module)
     return [
-        CapturedInboxRow(response.capture, cast(dict[str, object], item))
-        for response in captured_inbox_responses_with_bodies(module)
+        captured
+        for captured in (*captures.unjudged, *captures.complete)
+        if _carries_bodies(module, captured.argv)
+    ]
+
+
+def captured_listing_rows_with_bodies(module: ModuleType) -> list[CapturedListingRow]:
+    """Every row across the captured listing responses with bodies."""
+    return [
+        CapturedListingRow(response.capture, cast(dict[str, object], item))
+        for response in captured_listing_responses_with_bodies(module)
         for item in cast(list[object], response.payload[module.STORE_INBOX_FIELD])
     ]
 
 
 def _row_variant(
-    row: CapturedInboxRow, changes: dict[str, object]
+    row: CapturedListingRow, changes: dict[str, object]
 ) -> dict[str, object]:
     """The captured row with the named values replaced. A variant changes only
     values the capture carries; a key the store never wrote is a capture gap."""
@@ -531,16 +682,16 @@ def _row_variant(
     return {**row.item, **changes}
 
 
-def inbox_response_without_thread(
-    module: ModuleType, response: CapturedInboxResponse
-) -> CapturedInboxResponse:
-    """The captured inbox response with the thread removed from its first row:
-    the variant ranges over the thread value alone, and names the capture it
-    varies."""
+def listing_response_without_thread(
+    module: ModuleType, response: CapturedListingResponse
+) -> CapturedListingResponse:
+    """The captured listing response with the thread removed from its first
+    row: the variant ranges over the thread value alone, and names the capture
+    it varies."""
     items = cast(list[dict[str, object]], response.payload[module.STORE_INBOX_FIELD])
     if not items:
-        raise CaptureError(f"{response.capture} lists no inbox row to vary")
-    first = CapturedInboxRow(response.capture, items[0])
+        raise CaptureError(f"{response.capture} lists no row to vary")
+    first = CapturedListingRow(response.capture, items[0])
     if module.STORE_THREAD_FIELD not in first.item:
         raise CaptureError(f"{response.capture} carries no thread on its first row")
     varied = {
@@ -549,11 +700,44 @@ def inbox_response_without_thread(
         if key != module.STORE_THREAD_FIELD
     }
     payload = {**response.payload, module.STORE_INBOX_FIELD: [varied, *items[1:]]}
-    return CapturedInboxResponse(
+    return CapturedListingResponse(
         f"{response.capture} (first row without {module.STORE_THREAD_FIELD})",
+        response.argv,
         cast(CommandResultContract, module.CommandResult(0, json.dumps(payload), "")),
         payload,
     )
+
+
+def acknowledgement_requirements(module: ModuleType) -> dict[int, bool]:
+    """Whether each message the probe sent required an acknowledgement, read
+    from the store's own answers rather than from any listing status.
+
+    The captured send answers with the message's id and the store's own
+    `ack_required` flag. The captured acknowledgement names the message the
+    probe acknowledged, which protocol step 5 sent with `--ack-required` and
+    step 8 acknowledged, so that message required one.
+    """
+    sent = store_response_payload(module, module.Operation.SEND)
+    if not isinstance(sent, dict):
+        raise CaptureError("the captured send answered no message object")
+    sent_id = sent.get(module.STORE_ID_FIELD)
+    sent_flag = sent.get(module.STORE_ACK_REQUIRED_FIELD)
+    if not isinstance(sent_id, int) or not isinstance(sent_flag, bool):
+        raise CaptureError("the captured send carries no id and acknowledgement flag")
+    operation = module.Operation.ACKNOWLEDGE
+    capture = _read_capture(
+        _response_fixture_path(module, operation, None),
+        _command_path(module, operation),
+    )
+    positionals = read_argv(
+        usage_contract_for(module, operation), capture.argv
+    ).positionals
+    if len(positionals) != 1 or not positionals[0].isdigit():
+        raise CaptureError(f"{capture.path} names no one acknowledged message")
+    acknowledged = int(positionals[0])
+    if acknowledged == sent_id and not sent_flag:
+        raise CaptureError("the acknowledged message was sent requiring none")
+    return {sent_id: sent_flag, acknowledged: True}
 
 
 def common_dir_reply(module: ModuleType) -> CommandResultContract:
@@ -589,35 +773,33 @@ def common_dir_seeded_absent_store_runner(
     )
 
 
-def store_inbox_echo(
+def store_listing_echo(
     module: ModuleType,
     send_fields: dict[str, object],
     message_id: int,
     row_ordinal: int,
 ) -> dict[str, object]:
-    """Render a sent message the way the store's inbox surface returned one of
-    the same acknowledgement class.
+    """Render a sent message the way the store's listing surface returned a
+    message of the same acknowledgement requirement.
 
-    The row is a captured `--include-bodies` inbox row whose acknowledgement
-    status matches the send's requirement — `row_ordinal` selects among the
-    matching rows, so a required acknowledgement is echoed in every status the
-    captures show one in — with the sender, subject, thread, body, and id the
-    send wrote and the store assigned in place of the captured values. The status, the
-    body field, and every other key stay the store's own bytes.
+    The row is a captured listing row with bodies whose message the store
+    answered as requiring an acknowledgement exactly when the send does — read
+    from `acknowledgement_requirements`, never from the row's status — with
+    the sender, subject, thread, body, and id the send wrote and the store
+    assigned in place of the captured values. `row_ordinal` selects among the
+    matching rows. The status, and every other key, stay the store's own bytes.
     """
     ack_required = send_fields[module.STORE_ACK_REQUIRED_FIELD] is True
+    requirements = acknowledgement_requirements(module)
     rows = [
         row
-        for row in captured_inbox_rows_with_bodies(module)
-        if (
-            row.item.get(module.STORE_ACK_STATUS_FIELD)
-            in module.STORE_ACK_REQUIRED_STATUSES
-        )
+        for row in captured_listing_rows_with_bodies(module)
+        if requirements.get(cast(int, row.item.get(module.STORE_ID_FIELD)))
         is ack_required
     ]
     if not rows:
         raise CaptureError(
-            "no captured inbox row with bodies shows a message whose "
+            "no captured listing row with bodies shows a message whose "
             f"acknowledgement requirement is {ack_required}"
         )
     return _row_variant(
@@ -633,28 +815,47 @@ def store_inbox_echo(
 
 
 def run_record_roundtrip_property(
-    assert_roundtrip: Callable[[ModuleType, dict[str, object], int, int], None],
+    assert_roundtrip: Callable[
+        [ModuleType, dict[str, object], int, int, frozenset[str]], None
+    ],
 ) -> None:
-    """Drive generated records while the linked test owns the round-trip predicate."""
+    """Drive generated records while the linked test owns the round-trip predicate.
+
+    Two runs share the predicate: records over the open correlation domain,
+    and records whose correlation is one the store was observed rejecting as a
+    thread id. The linked test receives those rejected correlations as the
+    store's own observation.
+    """
     module = _load()
-
-    @seed(RECORD_ROUNDTRIP_SEED)
-    @settings(max_examples=RECORD_ROUNDTRIP_EXAMPLES, deadline=None, print_blob=True)
-    @given(
-        record=message_records(module),
-        message_id=store_message_ids(),
-        row_ordinal=capture_row_ordinals(),
+    rejected = store_rejected_threads(module)
+    domains = (
+        (correlations(module, rejected), RECORD_ROUNDTRIP_EXAMPLES),
+        (st.sampled_from(rejected), STORE_REJECTED_ROUNDTRIP_EXAMPLES),
     )
-    def generated_roundtrip(
-        record: dict[str, object], message_id: int, row_ordinal: int
-    ) -> None:
-        assert_roundtrip(module, record, message_id, row_ordinal)
 
-    run_replayable_property(
-        generated_roundtrip,
-        seed_value=RECORD_ROUNDTRIP_SEED,
-        replay_path=RECORD_ROUNDTRIP_REPLAY_PATH,
-    )
+    def drive(correlation: st.SearchStrategy[str], examples: int) -> Callable[[], None]:
+        @seed(RECORD_ROUNDTRIP_SEED)
+        @settings(max_examples=examples, deadline=None, print_blob=True)
+        @given(
+            record=message_records(module, correlation),
+            message_id=store_message_ids(),
+            row_ordinal=capture_row_ordinals(),
+        )
+        def generated_roundtrip(
+            record: dict[str, object], message_id: int, row_ordinal: int
+        ) -> None:
+            assert_roundtrip(
+                module, record, message_id, row_ordinal, frozenset(rejected)
+            )
+
+        return generated_roundtrip
+
+    for correlation, examples in domains:
+        run_replayable_property(
+            drive(correlation, examples),
+            seed_value=RECORD_ROUNDTRIP_SEED,
+            replay_path=RECORD_ROUNDTRIP_REPLAY_PATH,
+        )
 
 
 def run_delegation_chain_property(
@@ -674,7 +875,7 @@ def run_delegation_chain_property(
     @seed(DELEGATION_CHAIN_SEED)
     @settings(max_examples=DELEGATION_CHAIN_EXAMPLES, deadline=None, print_blob=True)
     @given(
-        reference=coordination_references(),
+        reference=correlations(module, store_rejected_threads(module)),
         terminal_kind=terminal_record_kinds(module),
         sender=agent_names(),
         recipient=agent_names(),
@@ -728,39 +929,65 @@ def run_delegation_chain_property(
     )
 
 
+@dataclass(frozen=True)
+class TerminalCase:
+    """One generated terminal-handback case.
+
+    ``reference`` and ``other_reference`` are distinct coordination
+    references; ``first_kind`` and ``second_kind`` are terminal kinds, equal
+    or not; ``non_terminal_kind`` closes no delegation; ``content`` and
+    ``other_content`` are independently generated sender, recipient, subject,
+    and body values.
+    """
+
+    reference: str
+    other_reference: str
+    first_kind: object
+    second_kind: object
+    non_terminal_kind: object
+    content: dict[str, str]
+    other_content: dict[str, str]
+
+
 def run_terminal_property(
-    assert_terminal: Callable[[ModuleType, str, object, object, dict[str, str]], None],
+    assert_terminal: Callable[[ModuleType, TerminalCase], None],
 ) -> None:
     """Drive generated terminal handbacks while the linked test owns the predicate."""
     module = _load()
+    references = correlations(module, store_rejected_threads(module))
 
     @seed(TERMINAL_PROPERTY_SEED)
     @settings(max_examples=TERMINAL_PROPERTY_EXAMPLES, deadline=None, print_blob=True)
     @given(
-        reference=coordination_references(),
+        reference_pair=st.tuples(references, references).filter(
+            lambda pair: pair[0] != pair[1]
+        ),
         first_kind=terminal_record_kinds(module),
         second_kind=terminal_record_kinds(module),
-        sender=agent_names(),
-        recipient=agent_names(),
-        subject=message_texts(),
-        body=message_texts(),
+        non_terminal_kind=non_terminal_record_kinds(module),
+        content=handback_contents(module),
+        other_content=handback_contents(module),
     )
     def generated_terminal(
-        reference: str,
+        reference_pair: tuple[str, str],
         first_kind: object,
         second_kind: object,
-        sender: str,
-        recipient: str,
-        subject: str,
-        body: str,
+        non_terminal_kind: object,
+        content: dict[str, str],
+        other_content: dict[str, str],
     ) -> None:
-        content = {
-            module.SENDER_FIELD: sender,
-            module.RECIPIENT_FIELD: recipient,
-            module.RECORD_SUBJECT_FIELD: subject,
-            module.BODY_FIELD: body,
-        }
-        assert_terminal(module, reference, first_kind, second_kind, content)
+        assert_terminal(
+            module,
+            TerminalCase(
+                reference=reference_pair[0],
+                other_reference=reference_pair[1],
+                first_kind=first_kind,
+                second_kind=second_kind,
+                non_terminal_kind=non_terminal_kind,
+                content=content,
+                other_content=other_content,
+            ),
+        )
 
     run_replayable_property(
         generated_terminal,
@@ -770,7 +997,7 @@ def run_terminal_property(
 
 
 def run_project_key_mapping(
-    assert_key: Callable[[ModuleType, str, object, str | None, str], None],
+    assert_key: Callable[[ModuleType, str, str, str | None, str], None],
 ) -> None:
     """Drive every shape the repository lookup's output takes, each built
     around a generated absolute path."""
@@ -817,47 +1044,236 @@ def run_operation_mapping(
     )
 
 
-def inbox_request_with_bodies(module: ModuleType) -> dict[str, object]:
-    """The first registry inbox request that asks the store for bodies."""
-    listing = _listing_operation(module)
-    for request in operation_requests(module):
-        arguments = cast(dict[str, object], request[module.ARGUMENTS_FIELD])
-        if (
-            module.Operation(request[module.OPERATION_FIELD]) is listing
-            and arguments.get(module.INCLUDE_BODIES_FIELD) is True
-        ):
-            return request
-    raise CaptureError("the registry declares no inbox request with bodies")
-
-
-def run_inbox_row_mapping(
-    assert_rows: Callable[
-        [ModuleType, dict[str, object], str, CapturedInboxResponse], None
-    ],
+def run_listing_mapping(
+    assert_request: Callable[[ModuleType, dict[str, object], str], None],
 ) -> None:
-    """Drive every captured `--include-bodies` inbox response, and the variant
-    of each without a thread on its first row, through the inbox request under
-    generated project keys."""
+    """Drive every registry listing request by construction under generated
+    project keys."""
     module = _load()
-    request = inbox_request_with_bodies(module)
-    responses: list[CapturedInboxResponse] = []
-    for captured in captured_inbox_responses_with_bodies(module):
-        responses.append(captured)
-        responses.append(inbox_response_without_thread(module, captured))
-    if not responses:
-        raise CaptureError("no captured inbox response with bodies exists")
+    listing = _listing_operation(module)
+    requests = [
+        request
+        for request in operation_requests(module)
+        if module.Operation(request[module.OPERATION_FIELD]) is listing
+    ]
 
-    @seed(INBOX_ROW_SEED)
-    @settings(max_examples=INBOX_ROW_EXAMPLES, deadline=None, print_blob=True)
+    @seed(LISTING_MAPPING_SEED)
+    @settings(max_examples=LISTING_MAPPING_EXAMPLES, deadline=None, print_blob=True)
     @given(project_key=project_key_paths())
-    def generated_rows(project_key: str) -> None:
-        for response in responses:
-            assert_rows(module, request, project_key, response)
+    def generated_listing(project_key: str) -> None:
+        for request in requests:
+            assert_request(module, request, project_key)
+
+    run_replayable_property(
+        generated_listing,
+        seed_value=LISTING_MAPPING_SEED,
+        replay_path=LISTING_MAPPING_REPLAY_PATH,
+    )
+
+
+def _listing_request_for(
+    module: ModuleType, agent: str, *, complete: bool, bodies: bool
+) -> dict[str, object]:
+    return cast(
+        dict[str, object],
+        module.operation_request(
+            _listing_operation(module),
+            agent=agent,
+            all_records=True if complete else None,
+            include_bodies=True if bodies else None,
+        ),
+    )
+
+
+def run_listing_row_mapping(
+    assert_rows: Callable[[ModuleType, ListingReplay, str], None],
+) -> None:
+    """Drive every captured listing response, and the variant of each without
+    a thread on its first row, through the listing request of the same mode
+    and row shape, under generated project keys and recipients."""
+    module = _load()
+    captures = listing_captures(module)
+    modes = [(captured, False) for captured in captures.unjudged] + [
+        (captured, True) for captured in captures.complete
+    ]
+    responses = [
+        (response, complete)
+        for captured, complete in modes
+        for response in (captured, listing_response_without_thread(module, captured))
+    ]
+
+    @seed(LISTING_ROW_SEED)
+    @settings(max_examples=LISTING_ROW_EXAMPLES, deadline=None, print_blob=True)
+    @given(project_key=project_key_paths(), agent=agent_names())
+    def generated_rows(project_key: str, agent: str) -> None:
+        for response, complete in responses:
+            request = _listing_request_for(
+                module,
+                agent,
+                complete=complete,
+                bodies=_carries_bodies(module, response.argv),
+            )
+            assert_rows(module, ListingReplay(request, response), project_key)
 
     run_replayable_property(
         generated_rows,
-        seed_value=INBOX_ROW_SEED,
-        replay_path=INBOX_ROW_REPLAY_PATH,
+        seed_value=LISTING_ROW_SEED,
+        replay_path=LISTING_ROW_REPLAY_PATH,
+    )
+
+
+def _threaded_listing_rows(module: ModuleType) -> list[CapturedListingRow]:
+    captures = listing_captures(module)
+    rows = [
+        CapturedListingRow(response.capture, cast(dict[str, object], item))
+        for response in (*captures.unjudged, *captures.complete)
+        for item in cast(list[object], response.payload[module.STORE_INBOX_FIELD])
+    ]
+    threaded = [row for row in rows if row.item.get(module.STORE_THREAD_FIELD)]
+    if not threaded:
+        raise CaptureError("no captured listing row carries a thread")
+    return threaded
+
+
+def run_subject_classification(
+    assert_case: Callable[
+        [ModuleType, str, dict[str, object], str, SubjectShape, bool], None
+    ],
+) -> None:
+    """Drive every subject shape through a captured listing row, threaded and
+    threadless, for a generated recipient.
+
+    The row is a captured row with a thread, its subject replaced by the
+    generated one; the threadless variant also drops the thread.
+    """
+    module = _load()
+    rows = _threaded_listing_rows(module)
+
+    def drive(branch: str) -> Callable[[], None]:
+        @seed(SUBJECT_CLASSIFICATION_SEED)
+        @settings(
+            max_examples=SUBJECT_CLASSIFICATION_EXAMPLES,
+            deadline=None,
+            print_blob=True,
+        )
+        @given(
+            shape=subject_shapes(module, branch),
+            threadless=st.booleans(),
+            recipient=agent_names(),
+            row_ordinal=capture_row_ordinals(),
+        )
+        def generated_subject(
+            shape: SubjectShape, threadless: bool, recipient: str, row_ordinal: int
+        ) -> None:
+            item = _row_variant(
+                rows[row_ordinal % len(rows)],
+                {module.STORE_SUBJECT_FIELD: shape.subject},
+            )
+            if threadless:
+                item = {
+                    key: value
+                    for key, value in item.items()
+                    if key != module.STORE_THREAD_FIELD
+                }
+            assert_case(module, branch, item, recipient, shape, threadless)
+
+        return generated_subject
+
+    for branch in SUBJECT_BRANCHES:
+        run_replayable_property(
+            drive(branch),
+            seed_value=SUBJECT_CLASSIFICATION_SEED,
+            replay_path=SUBJECT_CLASSIFICATION_REPLAY_PATH,
+        )
+
+
+def registration_response_named(module: ModuleType, name: str) -> CommandResultContract:
+    """The captured registration response with the store-assigned name
+    replaced by ``name``; every other byte of the answer stays the store's."""
+    payload = store_response_payload(module, module.Operation.REGISTER)
+    if not isinstance(payload, dict) or module.STORE_NAME_FIELD not in payload:
+        raise CaptureError("the captured registration answered no agent name")
+    return text_command_result(
+        module, json.dumps({**payload, module.STORE_NAME_FIELD: name})
+    )
+
+
+def run_registration_cases(
+    assert_case: Callable[[ModuleType, dict[str, object], str, str, str], None],
+) -> None:
+    """Drive generated registration requests, a name a caller might try to
+    give, and a name the store assigns, under generated project keys.
+
+    The callback receives the request, the name the caller would give, the
+    name the store assigns, and the project key.
+    """
+    module = _load()
+
+    @seed(REGISTRATION_SEED)
+    @settings(max_examples=REGISTRATION_EXAMPLES, deadline=None, print_blob=True)
+    @given(
+        program=program_names(),
+        model=agent_names(),
+        task=st.one_of(st.none(), program_names()),
+        requested=agent_names(),
+        assigned=agent_names(),
+        project_key=project_key_paths(),
+    )
+    def generated_registration(
+        program: str,
+        model: str,
+        task: str | None,
+        requested: str,
+        assigned: str,
+        project_key: str,
+    ) -> None:
+        request = cast(
+            dict[str, object],
+            module.operation_request(
+                module.Operation.REGISTER,
+                program=program,
+                agent_model=model,
+                task=task,
+            ),
+        )
+        assert_case(module, request, requested, assigned, project_key)
+
+    run_replayable_property(
+        generated_registration,
+        seed_value=REGISTRATION_SEED,
+        replay_path=REGISTRATION_REPLAY_PATH,
+    )
+
+
+def run_store_error_cases(
+    assert_case: Callable[
+        [ModuleType, dict[str, object], str, CapturedStoreResponse], None
+    ],
+) -> None:
+    """Drive every captured store failure through a request of the operation
+    whose command failed, under generated project keys."""
+    module = _load()
+    cases = [
+        (request, captured)
+        for request in requests_over_every_operation(module)
+        for captured in store_error_responses(
+            module, module.Operation(request[module.OPERATION_FIELD])
+        )
+    ]
+    if not cases:
+        raise CaptureError("no captured store failure matches an operation")
+
+    @seed(STORE_ERROR_SEED)
+    @settings(max_examples=STORE_ERROR_EXAMPLES, deadline=None, print_blob=True)
+    @given(project_key=project_key_paths())
+    def generated_errors(project_key: str) -> None:
+        for request, captured in cases:
+            assert_case(module, request, project_key, captured)
+
+    run_replayable_property(
+        generated_errors,
+        seed_value=STORE_ERROR_SEED,
+        replay_path=STORE_ERROR_REPLAY_PATH,
     )
 
 
@@ -973,6 +1389,213 @@ def run_store_response_cases(
     )
 
 
+def _is_timestamp(value: object) -> bool:
+    if not isinstance(value, str):
+        return False
+    try:
+        datetime.fromisoformat(value)
+    except ValueError:
+        return False
+    return True
+
+
+def registration_timestamp_fields(module: ModuleType) -> tuple[str, ...]:
+    """The fields of the captured registration answer that carry a timestamp —
+    among them the per-agent activity timestamp the store reports — read from
+    the answer's values rather than named here."""
+    payload = store_response_payload(module, module.Operation.REGISTER)
+    if not isinstance(payload, dict):
+        raise CaptureError("the captured registration answered no agent object")
+    fields = tuple(
+        sorted(name for name, value in payload.items() if _is_timestamp(value))
+    )
+    if not fields:
+        raise CaptureError("the captured registration reports no timestamp")
+    return fields
+
+
+def run_activity_timestamp_cases(
+    assert_case: Callable[
+        [ModuleType, dict[str, object], str, CommandResultContract, dict[str, str]],
+        None,
+    ],
+) -> None:
+    """Drive the captured registration answer with every timestamp it reports
+    moved to a generated moment, from long past to far future.
+
+    The callback receives the request, the project key, the varied answer as
+    the runner returns it, and the moment each timestamp field now carries.
+    """
+    module = _load()
+    fields = registration_timestamp_fields(module)
+    captured = store_response_payload(module, module.Operation.REGISTER)
+    if not isinstance(captured, dict):
+        raise CaptureError("the captured registration answered no agent object")
+
+    @seed(ACTIVITY_TIMESTAMP_SEED)
+    @settings(max_examples=ACTIVITY_TIMESTAMP_EXAMPLES, deadline=None, print_blob=True)
+    @given(
+        moments=st.lists(
+            activity_moments(), min_size=len(fields), max_size=len(fields)
+        ),
+        program=program_names(),
+        model=agent_names(),
+        project_key=project_key_paths(),
+    )
+    def generated_case(
+        moments: list[str], program: str, model: str, project_key: str
+    ) -> None:
+        moved = dict(zip(fields, moments, strict=True))
+        request = cast(
+            dict[str, object],
+            module.operation_request(
+                module.Operation.REGISTER, program=program, agent_model=model
+            ),
+        )
+        varied = text_command_result(module, json.dumps({**captured, **moved}))
+        assert_case(module, request, project_key, varied, moved)
+
+    run_replayable_property(
+        generated_case,
+        seed_value=ACTIVITY_TIMESTAMP_SEED,
+        replay_path=COMPLIANCE_REPLAY_PATH,
+    )
+
+
+def run_cli_in_process(
+    module: ModuleType, stdin_text: str, runner: object
+) -> tuple[int, str]:
+    """Run the adapter's request form in process on ``stdin_text`` through
+    ``runner``, returning its exit code and everything it wrote to stdout."""
+    stdout = StringIO()
+    exit_code = module.main(
+        [module.CliOperation.RUN.value],
+        stdin=StringIO(stdin_text),
+        stdout=stdout,
+        runner=runner,
+    )
+    return cast(int, exit_code), stdout.getvalue()
+
+
+def run_unreadable_input_cases(
+    assert_case: Callable[[ModuleType, str, str], None],
+) -> None:
+    """Drive every family of request input that names no request — text that
+    does not parse as JSON, JSON nested past the reader's reach, JSON that is
+    no object — through a linked predicate; the callback receives the family
+    and the input."""
+    module = _load()
+
+    def drive(family: str) -> Callable[[], None]:
+        @seed(UNREADABLE_INPUT_SEED)
+        @settings(
+            max_examples=UNREADABLE_INPUT_EXAMPLES, deadline=None, print_blob=True
+        )
+        @given(text=unreadable_request_texts(family))
+        def generated_case(text: str) -> None:
+            assert_case(module, family, text)
+
+        return generated_case
+
+    for family in UNREADABLE_INPUT_FAMILIES:
+        run_replayable_property(
+            drive(family),
+            seed_value=UNREADABLE_INPUT_SEED,
+            replay_path=COMPLIANCE_REPLAY_PATH,
+        )
+
+
+def run_runner_error_cases(
+    assert_case: Callable[
+        [ModuleType, dict[str, object], str, Exception, RaisingRunner], None
+    ],
+) -> None:
+    """Drive a generated runner error at each program the adapter runs, for a
+    request of every operation, under generated project keys.
+
+    The callback receives the request, the program whose run raises, the
+    error, and the runner: a lookup reply precedes the store's run, so an
+    error at the store is reached only after the key resolves.
+    """
+    module = _load()
+    requests = requests_over_every_operation(module)
+    programs = sorted(adapter_programs(module))
+
+    @seed(RUNNER_ERROR_SEED)
+    @settings(max_examples=RUNNER_ERROR_EXAMPLES, deadline=None, print_blob=True)
+    @given(error=runner_errors(), project_key=project_key_paths())
+    def generated_case(error: Exception, project_key: str) -> None:
+        for request in requests:
+            for program in programs:
+                runner = RaisingRunner(
+                    program,
+                    error,
+                    [
+                        text_command_result(
+                            module, common_dir_output(COMMON_DIR_EXACT, project_key)
+                        )
+                    ],
+                )
+                assert_case(module, request, program, error, runner)
+
+    run_replayable_property(
+        generated_case,
+        seed_value=RUNNER_ERROR_SEED,
+        replay_path=COMPLIANCE_REPLAY_PATH,
+    )
+
+
+def run_nul_argument_cases(
+    assert_case: Callable[[ModuleType, str, dict[str, object]], None],
+) -> None:
+    """Drive every registry request with each text value it carries holding a
+    NUL at a generated position; the callback receives the varied value's
+    location and the varied request."""
+    module = _load()
+    requests = operation_requests(module)
+
+    @seed(NUL_ARGUMENT_SEED)
+    @settings(max_examples=NUL_ARGUMENT_EXAMPLES, deadline=None, print_blob=True)
+    @given(position=nul_positions())
+    def generated_case(position: int) -> None:
+        for request in requests:
+            for location, varied in nul_carrying_requests(module, request, position):
+                assert_case(module, location, varied)
+
+    run_replayable_property(
+        generated_case,
+        seed_value=NUL_ARGUMENT_SEED,
+        replay_path=COMPLIANCE_REPLAY_PATH,
+    )
+
+
+def argv_option_values(
+    contract: UsageContract, argv: tuple[str, ...]
+) -> dict[str, list[str | None]]:
+    """Every option an argument vector carries, with the value each occurrence
+    binds: an attached `--option=value` value, the next token for an option the
+    usage declares as taking one, or none for a flag. The vector is read the
+    way `read_argv` reads it; this records what it binds rather than counting."""
+    values: dict[str, list[str | None]] = {}
+    index = len(contract.command_path) + 1
+    while index < len(argv):
+        token = argv[index]
+        if token.startswith("--"):
+            option, attached, value = token.partition(ATTACHED_VALUE_SEPARATOR)
+            if attached:
+                values.setdefault(option, []).append(value)
+                index += 1
+            elif contract.options.get(option) and index + 1 < len(argv):
+                values.setdefault(option, []).append(argv[index + 1])
+                index += 2
+            else:
+                values.setdefault(option, []).append(None)
+                index += 1
+            continue
+        index += 1
+    return values
+
+
 def _source_texts(paths: tuple[Path, ...]) -> dict[str, str]:
     return {
         str(path.relative_to(ROOT)): path.read_text(encoding="utf-8")
@@ -995,6 +1618,13 @@ def raw_mail_violation_source() -> tuple[str, dict[str, str]]:
     return (
         str(RAW_MAIL_VIOLATION_FIXTURE.relative_to(ROOT)),
         _source_texts((RAW_MAIL_VIOLATION_FIXTURE,)),
+    )
+
+
+def raw_mail_shell_violation_source() -> tuple[str, dict[str, str]]:
+    return (
+        str(RAW_MAIL_SHELL_VIOLATION_FIXTURE.relative_to(ROOT)),
+        _source_texts((RAW_MAIL_SHELL_VIOLATION_FIXTURE,)),
     )
 
 
