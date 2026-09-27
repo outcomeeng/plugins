@@ -16,7 +16,8 @@ CAN route every assertion to test, evaluate, probe, or audit before a specialist
 - ALWAYS: test assertion typing occurs only after test is selected ([audit])
 - ALWAYS: report a missing selected specialist as an explicit capability gap ([eval](evals/routing/eval.toml))
 - NEVER: recognize, name, alias, or translate any tag outside the verification-type set ([eval](evals/routing/eval.toml))
-- ALWAYS: emit one structured result per assertion carrying `verification_type`, `specialist`, `status`, `evidence_shape`, and `reason`, with `status` one of `routed`, `capability-required`, or `blocked`; a blocked result carries the reason `unsupported-tag-shape` with `verification_type`, `specialist`, and `evidence_shape` null, and the human report table renders from that same result with an em dash for each null field ([eval](evals/routing/eval.toml))
+- ALWAYS: report a blocked assertion with `status` `blocked`, `reason` `unsupported-tag-shape`, and null `verification_type`, `specialist`, and `evidence_shape`, and name the selected verification type, specialist, and evidence shape in every routed or capability-required result ([eval](evals/routing/eval.toml))
 
+- ALWAYS: emit one structured result per assertion carrying `verification_type`, `specialist`, `status`, `evidence_shape`, and `reason`, with `status` one of `routed`, `capability-required`, or `blocked`, and render the human report table from that same result with an em dash for each null field ([audit])
 - ALWAYS: every workflow that delegates verification-type selection invokes `/verify` rather than a type-specific specialist ([audit])
 - NEVER: duplicate test assertion typing, language expression, eval producer specialization, or audit judgment inside `/verify` ([audit])
