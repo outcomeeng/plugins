@@ -794,3 +794,61 @@ absent from the map.
 **Evidence**: the implementation audit's debt finding
 `rule-subject-narrower-than-its-assertion` under run token
 `2026-09-22_15-12-00-805-5176b12acfb1`, whose file-set half this changeset closed.
+
+## Two implementation-audit runs name opposite homes for the recipe name and the justfile reader
+
+Two runs of `spec-tree:implementation-auditor`, one round apart on this branch, name opposite
+homes for the same five symbols: `NATIVE_PROFILE_RECIPE`, `RECIPE_DECLARATION_TERMINATOR`,
+`RecipeAbsent`, `_declares_recipe`, and `recipe_block`.
+
+The earlier run, `2026-09-22_23-21-00-406-86e7068248ea` through `python:audit-python-tests`,
+raised them as a `source-ownership` debt finding at
+`outcomeeng_testing/harnesses/installation.py:4611 (NATIVE_PROFILE_RECIPE), :4614-4653
+(RECIPE_DECLARATION_TERMINATOR, _declares_recipe, recipe_block, repository_justfile_text,
+native_profile_execution_recipe)`. It expects the recipe name and the justfile recipe-block
+reader to live in the production module that consumes the justfile, beside `JUSTFILE_NAME` and
+`INSTRUCTIONS_CHECK_RECIPE` in `outcomeeng/distribution/instruction_block.py`, with the harness
+and the linked test importing them. The symbols moved there.
+
+The later run, `2026-09-23_01-56-58-981-0c36eae59330` through `python:audit-python-code`, raised
+that home as a `single-responsibility-per-module` debt finding at
+`outcomeeng/distribution/instruction_block.py:72-130 (NATIVE_PROFILE_RECIPE, RecipeAbsent,
+_declares_recipe, recipe_block)`. It expects the release-acceptance recipe name to be owned by
+the module whose subject is native-profile release acceptance, and a reusable justfile
+recipe-body reader to be owned by a module whose subject is reading the repository justfile. It
+reads the module's own docstring, "root-instruction-block writer and drift reporter", as the
+subject the insertion departs from, and records that no instruction-block code path reads either
+symbol.
+
+**The two readings do not compose.** The product carries no module whose subject is reading the
+repository justfile, so the later run's home for the reader names a module that does not exist.
+The only module whose subject is native-profile release acceptance is
+`outcomeeng_testing/harnesses/native_profile_execution.py`, and the recipe name's home before
+the move was `outcomeeng_testing/harnesses/installation.py`; both are test infrastructure, the
+home the earlier run rejected.
+`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`
+requires a value the evidence depends on to come from the source complying with the declaration,
+and `spx/12-shipped-scripting.adr.md` makes that declaration-to-source agreement audit evidence
+rather than a value a harness may hold. Each reading is coherent against the rule it cites.
+Together they leave no home the product has.
+
+**What the symbols serve.** The node's compliance assertion `NEVER: the native profile-execution
+recipe reads a disable switch` links `tests/test_native_profile_execution.compliance.l1.py`,
+whose subject is a justfile recipe. `outcomeeng_testing/harnesses/installation.py` imports
+`NATIVE_PROFILE_RECIPE` and `recipe_block` at lines 33 and 34 and composes them in
+`native_profile_execution_recipe` at line 4620, which supplies that test its recipe text. The
+containing module is governed by `spx/21-spec-tree.enabler/43-instruction-block.enabler` as well,
+whose five compliance tests reach it, and a reader of that node meets neither finding.
+
+Nothing moved. Both findings carry `debt` severity, so neither blocks a merge under
+`spx/15-merging.pdr.md`, and the symbols stand where the earlier reading placed them.
+
+**Settlement condition**: a decision names the home. Either
+`outcomeeng/distribution/instruction_block.py` owns the recipe name and the justfile reader and
+the single-responsibility reading is dropped for them, or a production module whose subject is
+reading the repository justfile is authored and both move there with their consumers' imports.
+
+**Evidence**: the two sealed audit runs named above, both under branch slug
+`work-change-126-agent-disable-switch-4c0c25b3`, each carrying its finding's rule, `debt`
+severity, and location; the module docstring at `outcomeeng/distribution/instruction_block.py:1`;
+and the consumer sites at `outcomeeng_testing/harnesses/installation.py:33-34` and `:4620`.
