@@ -13,7 +13,7 @@ import tomllib
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from dataclasses import dataclass, field
-from functools import cache
+from functools import cache, wraps
 from io import StringIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -216,15 +216,36 @@ MALFORMED_SETTINGS_CONTENT = "{ not json"
 REQUIRED_BINARIES: tuple[str, ...] = (JUST_BINARY, CLAUDE_EXECUTABLE, CODEX_EXECUTABLE)
 
 
-def _disable_marker(reason: str | None) -> pytest.MarkDecorator:
-    """Project one predicate reading of the process environment onto a marker."""
-    return pytest.mark.skipif(reason is not None, reason=reason or "")
+@dataclass(frozen=True)
+class _AgentGate:
+    """One agent's projection: a row that carries it reads that agent's predicate.
+
+    The reading happens at the row's own start, over the process environment as
+    it stands then, so importing this module reads no switch and every carrying
+    row answers for itself. A gate holds the predicate it projects and nothing
+    else; the skip it raises carries that predicate's own declared reason, which
+    is what attributes the skip to the switch that declared it.
+    """
+
+    reason_of: Callable[[Mapping[str, str]], str | None]
+
+    def __call__[**P, R](self, row: Callable[P, R]) -> Callable[P, R]:
+        """Return the row guarded by its agent's predicate, read when it starts."""
+
+        @wraps(row)
+        def guarded(*arguments: P.args, **keywords: P.kwargs) -> R:
+            reason = self.reason_of(os.environ)
+            if reason is not None:
+                pytest.skip(reason)
+            return row(*arguments, **keywords)
+
+        return guarded
 
 
-runs_real_codex = _disable_marker(codex_disabled_reason(os.environ))
-"""Marker for a row that starts a real Codex process, from that agent's switch."""
-runs_real_claude = _disable_marker(claude_disabled_reason(os.environ))
-"""Marker for a row that starts a real Claude process, from that agent's switch."""
+runs_real_codex = _AgentGate(codex_disabled_reason)
+"""Projection for a row that starts a real Codex process, from that agent's switch."""
+runs_real_claude = _AgentGate(claude_disabled_reason)
+"""Projection for a row that starts a real Claude process, from that agent's switch."""
 
 AGENT_SWITCH_PROPERTY_SEED = 20260921
 """The seed the switch-value property replays from."""
