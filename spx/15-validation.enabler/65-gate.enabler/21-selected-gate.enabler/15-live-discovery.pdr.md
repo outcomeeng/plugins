@@ -1,6 +1,6 @@
 # Local Live Discovery Selection
 
-Local verification includes live subagent discovery for installation, subagent-definition generation and placement, discovery, and their governing contracts or verification infrastructure. Explicit full verification and CI include it. Automatic widening of unrelated local deterministic verification does not add a live-model requirement. A selected row that starts a real coding-agent process is declared optional for one local run by that agent's own disable switch, and then skips with a reason naming that switch while the run's report carries the skip; nothing in the product sets a switch, so explicit full verification and CI prove every selected live row with their own credential.
+Local verification includes live subagent discovery for installation, subagent-definition generation and placement, discovery, and their governing contracts or verification infrastructure. Explicit full verification and CI include it. Automatic widening of unrelated local deterministic verification does not add a live-model requirement. A selected row that starts a real coding-agent process is declared optional for one local run by that agent's own disable switch, and then skips with a reason naming that switch while the run's report carries the skip. Nothing in the product sets a switch, so CI, whose environment carries none, proves every selected live row with its own credential, while any local run, explicit full verification included, proves only the rows the environment it inherits leaves unswitched.
 
 ## Rationale
 
@@ -16,7 +16,7 @@ Live discovery proves that a fresh session can discover the installed definition
 
 - ALWAYS: a run carrying rows skipped by a declared switch names each skipped row and the switch that declared it, under a status distinct from a pass, so a summary carrying skipped rows never reads as all-green without them.
 - ALWAYS: the execution plan names each agent's disable-switch state before the selected steps run, so a reader sees a declared skip before it happens.
-- NEVER: a harness, a skill, a generated instruction surface, or the CI workflow sets a disable switch — explicit full verification and CI require the successful execution of every selected live row with their own credential.
+- NEVER: a harness, a skill, a generated instruction surface, or the CI workflow sets a disable switch over this repository's own selected live rows, the proof no switch suppresses — CI, whose environment carries no switch, requires the successful execution of every selected live row with its own credential. A harness that sets both switches in the environment of a disposable child, over rows that child's own run generates and confines to the state it creates, reaches none of this repository's selected live rows and falls outside this rule's subject.
 
 ### Testing
 

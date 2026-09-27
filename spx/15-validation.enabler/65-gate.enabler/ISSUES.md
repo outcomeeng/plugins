@@ -2,47 +2,6 @@
 
 Known follow-ups for the gate node. Coordination note; not spec truth.
 
-## The no-harness-sets-a-switch rule is scoped to this repository's own selected live rows
-
-`spx/15-validation.enabler/65-gate.enabler/21-selected-gate.enabler/15-live-discovery.pdr.md`
-states without qualification: `NEVER: a harness, a skill, a generated instruction surface, or the
-CI workflow sets a disable switch — explicit full verification and CI require the successful
-execution of every selected live row with their own credential.`
-
-**Settled scope.** The operator ruled on 2026-09-22 that the NEVER is scoped rather than literal:
-it binds this repository's own selected live rows, which are the proof a switch must never be
-allowed to suppress. A disposable child collecting rows a run generates in a temporary directory is
-not this repository's live discovery, so `declared_skip_recording` in
-`outcomeeng_testing/harnesses/gate.py` — which sets both switches in the environment of a pytest
-child it spawns over four rows it generates itself — was never within the rule's subject. The
-unqualified phrasing over-reached into a case the decision did not contemplate.
-
-**Why the scope holds.** `confined_to` in `outcomeeng_testing/harnesses/gate.py` refuses before the
-child starts unless the report target and the child's working directory lie in the disposable root
-that run created, raising `UnconfinedDisposableState` with the offending path. That enforcement is
-what makes "not this repository's live discovery" a checkable fact about every run rather than a
-claim about one: a target outside the root never reaches a child at all, so no selected live row of
-the surrounding repository is in reach of the environment the harness writes. The confinement is
-the reason the scope holds, not a precaution held in case the ruling went the other way, and both
-its branches are driven from this node's linked evidence in
-`spx/15-validation.enabler/65-gate.enabler/tests/test_gate.compliance.l1.py`: a confined run that
-proceeds, and an unconfined target that is refused by name.
-
-**Disposition of the audit finding.** The implementation audit under run token
-`2026-09-22_03-49-57-231-897034592bcc` raised the harness's switch write against the rule's text.
-That finding is disposed on the settled scope rather than held pending an amendment: it read the
-decision's text correctly, and the text is what is wrong.
-
-**Settlement condition.** The PDR's own wording is unchanged and still states the rule without the
-scope it carries, so what remains is amending that text to say what the rule now means. Only the
-operator amends a decision, and that amendment is refinement held elsewhere rather than work for
-this Change. Until it lands, a reader who reaches the unqualified sentence reads this entry for the
-scope in force.
-
-**Evidence.** The rule text quoted above against the `env=` mapping `declared_skip_recording`
-passes to its child, and against the `confined_to` refusal that bounds every path that mapping can
-reach.
-
 ## The no-polling rule's subject was read as the whole validation package
 
 The implementation audit under run token `2026-09-22_03-49-57-231-897034592bcc` raised a third
