@@ -114,7 +114,7 @@ Example:
 
 ```text
 | Subject | Verification type | Specialist | Evidence path or requirement | Status |
-| Node A deterministic rule | test | /test | tests/test_rule.compliance.l1.py | routed |
+| Node A deterministic rule | test | /test | tests/{canonical-evidence-filename} | routed |
 | Node B producer rule | evaluate | /eval | structured eval capability required | capability-required |
 | Node C unsupported input | — | — | — | blocked |
 ```
@@ -250,7 +250,7 @@ Example:
 
 ```text
 | Subject | Verification type | Specialist | Evidence path or requirement | Status |
-| Node A deterministic rule | test | /test | tests/test_rule.compliance.l1.py | routed |
+| Node A deterministic rule | test | /test | tests/{canonical-evidence-filename} | routed |
 | Node B producer rule | evaluate | /eval | structured eval capability required | capability-required |
 | Node C unsupported input | — | — | — | blocked |
 ```
