@@ -290,7 +290,7 @@ Small pure functions often need phases 1 and 2. Complex algorithms often need al
 
 Keep tests beside the governing spec and name them for what they prove and how painful they are to run.
 
-Canonical filename model:
+Canonical filename model — the subject token, the evidence token, the level token, and the optional runner token, composed as `<subject>.<evidence>.<level>[.<runner>]` and rendered into the language's own test-file convention, which supplies the prefix, separator, and extension around them; the four renderings below instantiate that one model:
 
 - TypeScript and JavaScript: `<subject>.<evidence>.<level>[.<runner>].test.ts`
 - Python: `test_<subject>.<evidence>.<level>[.<runner>].py`
