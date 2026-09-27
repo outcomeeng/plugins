@@ -753,10 +753,12 @@ def test_each_switch_state_maps_a_marked_row_to_its_outcome(state: str | None) -
 
 
 def test_a_marked_row_reads_its_switch_where_the_row_itself_starts() -> None:
-    # The child starts with no switch in its environment and the generated
-    # module sets both after importing the projections and before defining any
-    # row. A projection that read the switch when it was imported would leave
-    # every marked row running; reading it where the row starts is what the
+    # The child starts with no switch in its environment, and the generated
+    # module sets both last: after the projections are imported and after every
+    # row is defined. That placement leaves two earlier readings unable to see
+    # them — one taken when the projections are imported, and one taken when a
+    # row is decorated — so either would leave every marked row running. Only a
+    # reading taken where the row itself starts sees them, which is what the
     # skips establish. The unmarked row runs, so the child itself still works.
     with declared_skip_recording(
         through_markers=True,
