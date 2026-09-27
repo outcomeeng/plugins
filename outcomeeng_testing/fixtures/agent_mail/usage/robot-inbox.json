@@ -1,0 +1,14 @@
+{
+  "tool": "am",
+  "version": "0.3.36",
+  "observedAt": "2026-09-27T14:11:02.548061+00:00",
+  "argv": [
+    "am",
+    "robot",
+    "inbox",
+    "--help"
+  ],
+  "exitCode": 0,
+  "stdout": "Actionable inbox with priority ordering, urgency/ack synthesis.\n\nDefaults to UNREAD messages only (as if --unread were passed) unless --urgent, --ack-overdue, or --all is given. Listing never marks messages read: read state changes only via explicit `am mail read` or acknowledgement (GH#229).\n\nUsage: am robot inbox [OPTIONS]\n\nOptions:\n      --format <FORMAT>\n          Output format: toon (default at TTY), json (default when piped), md (for thread/message)\n\n      --urgent\n          Show only urgent messages\n\n      --ack-overdue\n          Show only ack-overdue messages\n\n      --json\n          Output JSON (shorthand for --format json)\n\n      --project <PROJECT>\n          Project key (absolute path or slug). Falls back to AGENT_MAIL_PROJECT, then CWD\n\n      --unread\n          Show only unread messages\n\n      --agent <AGENT>\n          Agent name. Falls back to AGENT_MAIL_AGENT, then AGENT_NAME\n\n      --all\n          Show all messages (no filtering)\n\n      --limit <LIMIT>\n          Maximum messages to return\n\n      --include-bodies\n          Include message bodies in output\n\n  -h, --help\n          Print help (see a summary with '-h')\n",
+  "stderr": ""
+}

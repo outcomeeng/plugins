@@ -1,19 +1,19 @@
 {
-  "id": 15,
-  "name": "AmberGull",
-  "program": "claude-code",
-  "model": "opus",
-  "task_description": "herdr probe",
-  "inception_ts": "2026-09-18T01:35:29.565493Z",
-  "last_active_ts": "2026-09-18T08:20:55.739874Z",
-  "project_id": 9,
-  "attachments_policy": "auto",
-  "reaper_exempt": false,
-  "capabilities": [
-    "send_message",
-    "fetch_inbox",
-    "file_reservation_paths",
-    "acknowledge_message"
+  "tool": "am",
+  "version": "0.3.36",
+  "observedAt": "2026-09-27T14:11:22.647854+00:00",
+  "argv": [
+    "am",
+    "agents",
+    "register",
+    "--project",
+    "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.oKeA0V/.git",
+    "--program=claude-code",
+    "--model=opus",
+    "--task=installed-store probe sender",
+    "--json"
   ],
-  "registration_token": "REDACTED-registration-token"
+  "exitCode": 0,
+  "stdout": "{\n  \"id\": 186,\n  \"name\": \"BeigeTiger\",\n  \"program\": \"claude-code\",\n  \"model\": \"opus\",\n  \"task_description\": \"installed-store probe sender\",\n  \"inception_ts\": \"2026-09-27T14:11:23.041976Z\",\n  \"last_active_ts\": \"2026-09-27T14:11:23.041976Z\",\n  \"project_id\": 17,\n  \"attachments_policy\": \"auto\",\n  \"reaper_exempt\": false,\n  \"capabilities\": [\n    \"send_message\",\n    \"fetch_inbox\",\n    \"file_reservation_paths\",\n    \"acknowledge_message\"\n  ],\n  \"registration_token\": \"REDACTED-registration-token\"\n}\n",
+  "stderr": ""
 }

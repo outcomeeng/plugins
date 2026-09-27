@@ -1,0 +1,14 @@
+{
+  "tool": "am",
+  "version": "0.3.36",
+  "observedAt": "2026-09-27T14:11:02.493297+00:00",
+  "argv": [
+    "am",
+    "mail",
+    "send",
+    "--help"
+  ],
+  "exitCode": 0,
+  "stdout": "Send a message to one or more agents\n\nUsage: am mail send [OPTIONS] --project <PROJECT_KEY> --from <SENDER> --to <TO> --subject <SUBJECT> --body <BODY>\n\nOptions:\n  -p, --project <PROJECT_KEY>     Project key (slug or human_key)\n      --from <SENDER>             Sender agent name\n      --to <TO>                   Primary recipients (comma-separated agent names)\n  -s, --subject <SUBJECT>         Subject line\n  -b, --body <BODY>               Message body (Markdown)\n      --cc <CC>                   CC recipients (comma-separated)\n      --importance <IMPORTANCE>   Importance: low, normal, high, urgent [default: normal]\n      --ack-required              Require acknowledgement\n      --thread-id <THREAD_ID>     Thread ID to associate with\n      --topic <TOPIC>             Optional case-insensitive topic tag (1-64 safe ASCII characters)\n      --sender-token <TOKEN>      Sender token proving ownership of --from (DISCOURAGED: visible in shell history/process list — prefer --sender-token-file or the AGENT_MAIL_SENDER_TOKEN env var). If --from was registered via `am agents register` / `am macros start-session`, the token is reused automatically and none of these flags are needed\n      --sender-token-file <PATH>  Read the sender token from this file (contents trimmed). Avoids echoing the raw token on the command line. Overrides AGENT_MAIL_SENDER_TOKEN and any persisted identity token\n      --format <FORMAT>           Output format: table, json, or toon (default: auto-detect)\n      --json                      Output JSON (shorthand for --format json, default true for detect)\n  -h, --help                      Print help\n",
+  "stderr": ""
+}

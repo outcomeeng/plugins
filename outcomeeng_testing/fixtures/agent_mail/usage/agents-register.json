@@ -1,0 +1,14 @@
+{
+  "tool": "am",
+  "version": "0.3.36",
+  "observedAt": "2026-09-27T14:11:02.431412+00:00",
+  "argv": [
+    "am",
+    "agents",
+    "register",
+    "--help"
+  ],
+  "exitCode": 0,
+  "stdout": "Register or update an agent identity in a project (idempotent)\n\nUsage: am agents register [OPTIONS] --project <PROJECT_KEY> --program <PROGRAM> --model <MODEL>\n\nOptions:\n  -p, --project <PROJECT_KEY>\n          Project key (slug or human_key / absolute path)\n      --program <PROGRAM>\n          Agent program (e.g. \"claude-code\", \"codex-cli\")\n      --model <MODEL>\n          Underlying model (e.g. \"opus-4.6\", \"gpt-5-turbo\")\n  -n, --name <NAME>\n          Agent name (adjective+noun, e.g. \"BlueLake\"). Auto-generated if omitted\n  -t, --task <TASK>\n          Short description of the agent's current task\n      --attachments-policy <ATTACHMENTS_POLICY>\n          Attachments policy: auto, inline, file, none [default: auto]\n      --format <FORMAT>\n          Output format: table, json, or toon (default: auto-detect)\n      --json\n          Output JSON (shorthand for --format json)\n  -h, --help\n          Print help\n",
+  "stderr": ""
+}

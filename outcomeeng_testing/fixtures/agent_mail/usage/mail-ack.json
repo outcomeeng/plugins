@@ -1,0 +1,14 @@
+{
+  "tool": "am",
+  "version": "0.3.36",
+  "observedAt": "2026-09-27T14:11:02.653989+00:00",
+  "argv": [
+    "am",
+    "mail",
+    "ack",
+    "--help"
+  ],
+  "exitCode": 0,
+  "stdout": "Acknowledge a message (also marks as read)\n\nUsage: am mail ack --project <PROJECT_KEY> --agent <AGENT_NAME> <MESSAGE_ID>\n\nArguments:\n  <MESSAGE_ID>  Message ID\n\nOptions:\n  -p, --project <PROJECT_KEY>  Project key\n  -a, --agent <AGENT_NAME>     Agent name\n  -h, --help                   Print help\n",
+  "stderr": ""
+}

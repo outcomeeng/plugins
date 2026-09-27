@@ -1,0 +1,17 @@
+{
+  "tool": "am",
+  "version": "0.3.36",
+  "observedAt": "2026-09-27T14:12:29.059899+00:00",
+  "argv": [
+    "am",
+    "mail",
+    "read",
+    "--project",
+    "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/am-probe.oKeA0V/.git",
+    "--agent=BeigeTiger",
+    "2640"
+  ],
+  "exitCode": 1,
+  "stdout": "",
+  "stderr": "error: mark_message_read via server failed: {\"error\":{\"type\":\"NOT_FOUND\",\"message\":\"MessageRecipient not found: 186:2640\",\"recoverable\":true,\"data\":{\"entity\":\"MessageRecipient\",\"identifier\":\"186:2640\",\"db_error_classification\":{\"class\":\"request_semantic_error\",\"severity\":\"P3\",\"repairable\":false,\"safe_to_retry\":false,\"safe_to_continue_read_only\":true,\"blocks_edits\":false,\"recommended_command\":\"correct the request arguments; no database remediation is needed\"},\"failure_envelope\":{\"schema_version\":\"am.db_failure_envelope.v1\",\"class\":\"request_semantic_error\",\"severity\":\"P3\",\"error_code\":\"NOT_FOUND\",\"error_detail\":\"MessageRecipient not found: 186:2640\",\"effective_db_path\":\"/Users/shz/.local/share/mcp-agent-mail/git_mailbox_repo/storage.sqlite3\",\"effective_storage_root\":\"/Users/shz/.local/share/mcp-agent-mail/git_mailbox_repo\",\"process\":{\"pid\":1402,\"binary_path\":\"/opt/homebrew/Cellar/mcp-agent-mail/0.3.36/bin/am\",\"binary_version\":\"0.3.36\"},\"wal_mode\":{\"status\":\"not_collected\",\"detail\":\"error-path envelope does not open SQLite; run `am doctor health` for live WAL mode\"},\"sidecars\":{\"wal\":{\"path\":\"/Users/shz/.local/share/mcp-agent-mail/git_mailbox_repo/storage.sqlite3-wal\",\"exists\":true,\"len_bytes\":10847992,\"modified_unix_ms\":1790518339972,\"modified_age_ms\":9445,\"inspect_error\":null},\"shm\":{\"path\":\"/Users/shz/.local/share/mcp-agent-mail/git_mailbox_repo/storage.sqlite3-shm\",\"exists\":true,\"len_bytes\":32768,\"modified_unix_ms\":1790513680745,\"modified_age_ms\":4668671,\"inspect_error\":null}},\"canonical_sqlite_probe\":{\"status\":\"not_collected\",\"detail\":\"canonical SQLite probe is intentionally side-effect-free in this formatter\"},\"frankensqlite_probe\":{\"status\":\"classified_from_error\",\"detail\":\"MessageRecipient not found: 186:2640\"},\"last_successful_health_ts\":null,\"last_successful_write_ts\":null,\"legacy_python_present\":null,\"tui_polling_active\":null,\"host\":{\"loadavg\":null,\"disk_summary\":null,\"inspect_error\":null},\"policy\":{\"repairable\":false,\"safe_to_retry\":false,\"safe_to_continue_read_only\":true,\"blocks_edits\":false,\"recommended_command\":\"correct the request arguments; no database remediation is needed\"},\"retry\":null,\"lock_owner\":null,\"fd_pressure\":null}}}}\n"
+}

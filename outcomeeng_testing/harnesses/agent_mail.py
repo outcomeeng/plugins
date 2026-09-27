@@ -12,6 +12,7 @@ import sys
 from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass, field
+from functools import cache
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import ModuleType
@@ -39,8 +40,10 @@ from outcomeeng_testing.generators.agent_mail import (
     unsupported_operation_names,
 )
 from outcomeeng_testing.harnesses.cli_usage import (
+    OPTIONS_HEADING,
+    USAGE_PREFIX,
     UsageContract,
-    usage_contract_from_path,
+    usage_contract,
 )
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
 
@@ -55,12 +58,37 @@ CODING_AGENTS_RUNTIME_ROOTS = (
 )
 OPERATE_AGENT_MAIL_RELATIVE = Path("skills/operate-agent-mail")
 FIXTURE_ROOT = ROOT / "outcomeeng_testing/fixtures/agent_mail"
-# Captured `am <command> --help` texts: the store CLI's own grammar declaration.
+# Every usage and response capture is one observation envelope the installed-
+# store probe committed, copied byte for byte: the tool and version that
+# answered, the argument vector it answered, its exit code, and its verbatim
+# stdout and stderr. The envelope is the capture's provenance, so a capture from
+# another release names that release in the file that carries it.
+# Captured `am <command> --help` envelopes: the store CLI's own grammar
+# declaration.
 USAGE_FIXTURE_ROOT = FIXTURE_ROOT / "usage"
 # Captured `am` responses for each operation's public command. The project key
 # has no captured oracle: the checkout shapes a real repository takes are what
 # the resolver is read against.
 RESPONSE_FIXTURE_ROOT = FIXTURE_ROOT / "responses"
+# Captured failures, one per condition the probe drove, named
+# `<command>.<store error type>.json`.
+ERROR_FIXTURE_ROOT = RESPONSE_FIXTURE_ROOT / "errors"
+CAPTURE_SUFFIX = ".json"
+# The fields of one observation envelope, as the probe protocol records them.
+CAPTURE_TOOL_FIELD = "tool"
+CAPTURE_VERSION_FIELD = "version"
+CAPTURE_ARGV_FIELD = "argv"
+CAPTURE_EXIT_CODE_FIELD = "exitCode"
+CAPTURE_STDOUT_FIELD = "stdout"
+CAPTURE_STDERR_FIELD = "stderr"
+# The shape of an environment-variable name inside a usage description; the
+# names themselves are the store's, read from its captured declaration.
+ENVIRONMENT_NAME_PATTERN = re.compile(r"\b[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+\b")
+# A usage option entry's head: its short and long spelling, then its value
+# placeholder, then the start of its description.
+OPTION_ENTRY_HEAD = re.compile(
+    r"^\s*(?:-[A-Za-z],\s*)?(?P<long>--[a-z][a-z0-9-]*)(?:\s+<[^>]+>)?(?P<rest>.*)$"
+)
 RAW_MAIL_VIOLATION_FIXTURE = FIXTURE_ROOT / "raw_am_command.py.txt"
 GIT_PROJECT_KEY_VIOLATION_FIXTURE = FIXTURE_ROOT / "git_project_key.py.txt"
 RECORD_ROUNDTRIP_SEED = 2026091801
@@ -99,8 +127,6 @@ COMPLIANCE_REPLAY_PATH = (
     "spx/43-coding-agents.enabler/18-agent-mail.enabler/tests/"
     "test_agent_mail.compliance.l1.py"
 )
-# The token a captured usage line opens with, before the program name.
-USAGE_LINE_PREFIX = "Usage:"
 CLI_TIMEOUT_SECONDS = 60
 # The pool one probe builds: a bare repository, the main checkout beside it,
 # and one linked worktree, so the resolver is read from all three shapes.
@@ -148,6 +174,30 @@ class CapturedInboxResponse:
     capture: str
     result: CommandResultContract
     payload: dict[str, object]
+
+
+@dataclass(frozen=True)
+class StoreCapture:
+    """One committed observation of the store, read from its envelope: the tool
+    and version that answered, the argument vector it answered, and what it
+    returned."""
+
+    path: Path
+    tool: str
+    version: str
+    argv: tuple[str, ...]
+    exit_code: int
+    stdout: str
+    stderr: str
+
+
+@dataclass(frozen=True)
+class CapturedStoreResponse:
+    """One captured store response replayable as a command result, with the
+    capture's path."""
+
+    capture: str
+    result: CommandResultContract
 
 
 @dataclass
@@ -224,16 +274,116 @@ def failed_command_result(
     return cast(CommandResultContract, module.CommandResult(returncode, "", stderr))
 
 
+def _command_path(module: ModuleType, operation: object) -> tuple[str, ...]:
+    return tuple(module.PUBLIC_AM_COMMAND_PREFIXES[operation])
+
+
 def _command_fixture_name(module: ModuleType, operation: object) -> str:
-    prefix = module.PUBLIC_AM_COMMAND_PREFIXES[operation]
-    return "-".join(prefix[1:])
+    return "-".join(_command_path(module, operation)[1:])
+
+
+def _listing_operation(module: ModuleType) -> object:
+    """The one operation whose request can ask the store for message bodies."""
+    listing = [
+        operation
+        for operation, contract in module.OPERATION_CONTRACTS.items()
+        if module.INCLUDE_BODIES_FIELD in contract.allowed_fields
+    ]
+    if len(listing) != 1:
+        raise CaptureError(
+            f"the registry declares {len(listing)} operations that take bodies; "
+            "one is required"
+        )
+    return listing[0]
+
+
+def _envelope_text(envelope: Mapping[str, object], name: str, path: Path) -> str:
+    value = envelope.get(name)
+    if not isinstance(value, str):
+        raise CaptureError(f"{path} carries no text {name}")
+    return value
+
+
+def _read_envelope(path: Path) -> StoreCapture:
+    """One observation envelope, read as the probe recorded it."""
+    try:
+        envelope = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise CaptureError(f"{path} is no readable observation envelope") from error
+    if not isinstance(envelope, dict):
+        raise CaptureError(f"{path} is no observation envelope")
+    argv = envelope.get(CAPTURE_ARGV_FIELD)
+    exit_code = envelope.get(CAPTURE_EXIT_CODE_FIELD)
+    if not isinstance(argv, list) or not all(isinstance(token, str) for token in argv):
+        raise CaptureError(f"{path} carries no argument vector")
+    if not isinstance(exit_code, int) or isinstance(exit_code, bool):
+        raise CaptureError(f"{path} carries no exit code")
+    capture = StoreCapture(
+        path=path,
+        tool=_envelope_text(envelope, CAPTURE_TOOL_FIELD, path),
+        version=_envelope_text(envelope, CAPTURE_VERSION_FIELD, path),
+        argv=tuple(argv),
+        exit_code=exit_code,
+        stdout=_envelope_text(envelope, CAPTURE_STDOUT_FIELD, path),
+        stderr=_envelope_text(envelope, CAPTURE_STDERR_FIELD, path),
+    )
+    if not capture.tool or not capture.version:
+        raise CaptureError(f"{path} names no tool and version")
+    if not capture.argv or capture.argv[0] != capture.tool:
+        raise CaptureError(f"{path} records a command its tool did not run")
+    return capture
+
+
+@cache
+def _capture_family_provenance() -> tuple[str, str]:
+    """The one tool and version every committed capture was answered by.
+
+    The captures are one probe run's observations, so a family whose members
+    name different releases holds a stale oracle beside a current one.
+    """
+    paths = sorted(
+        path
+        for root in (USAGE_FIXTURE_ROOT, RESPONSE_FIXTURE_ROOT)
+        for path in root.rglob(f"*{CAPTURE_SUFFIX}")
+    )
+    provenance = {
+        (capture.tool, capture.version)
+        for capture in (_read_envelope(path) for path in paths)
+    }
+    if len(provenance) != 1:
+        raise CaptureError(
+            f"the captures name {sorted(provenance)}; one tool and version is required"
+        )
+    return provenance.pop()
+
+
+def _read_capture(path: Path, command_path: tuple[str, ...]) -> StoreCapture:
+    """The capture at ``path``, which must record the subcommand path its name
+    carries, answered by the release every other capture names.
+
+    Only the subcommands are compared: the program the capture ran is the
+    capture's own record, which the linked tests read against the adapter.
+    """
+    capture = _read_envelope(path)
+    if (capture.tool, capture.version) != _capture_family_provenance():
+        raise CaptureError(f"{path} was answered by another release than its family")
+    subcommands = command_path[1:]
+    if capture.argv[1 : 1 + len(subcommands)] != subcommands:
+        raise CaptureError(f"{path} records {capture.argv}, not {subcommands}")
+    return capture
+
+
+def _usage_capture(module: ModuleType, operation: object) -> StoreCapture:
+    name = _command_fixture_name(module, operation)
+    return _read_capture(
+        USAGE_FIXTURE_ROOT / f"{name}{CAPTURE_SUFFIX}",
+        _command_path(module, operation),
+    )
 
 
 def usage_contract_for(module: ModuleType, operation: object) -> UsageContract:
     """The store CLI's captured usage declaration for one operation's command."""
-    return usage_contract_from_path(
-        USAGE_FIXTURE_ROOT / f"{_command_fixture_name(module, operation)}.txt"
-    )
+    return usage_contract(_usage_capture(module, operation).stdout)
 
 
 def _response_shaping_fields(module: ModuleType) -> tuple[str, ...]:
@@ -259,16 +409,20 @@ def _response_fixture_path(
     module: ModuleType, operation: object, arguments: dict[str, object] | None
 ) -> Path:
     name = _command_fixture_name(module, operation)
-    suffix = "json" if operation in module.JSON_OPERATIONS else "txt"
     return (
-        RESPONSE_FIXTURE_ROOT / f"{name}{_shaping_suffix(module, arguments)}.{suffix}"
+        RESPONSE_FIXTURE_ROOT
+        / f"{name}{_shaping_suffix(module, arguments)}{CAPTURE_SUFFIX}"
     )
 
 
-def _result_from_path(module: ModuleType, path: Path) -> CommandResultContract:
+def _result_from_capture(
+    module: ModuleType, capture: StoreCapture
+) -> CommandResultContract:
+    """The captured answer as the runner boundary returns one: the recorded
+    exit code, stdout, and stderr, unchanged."""
     return cast(
         CommandResultContract,
-        module.CommandResult(0, path.read_text(encoding="utf-8"), ""),
+        module.CommandResult(capture.exit_code, capture.stdout, capture.stderr),
     )
 
 
@@ -280,9 +434,11 @@ def store_response_result(
     """The store's captured response for one operation's request shape, by path:
     the capture taken under the same response-shaping options the request
     carries."""
-    return _result_from_path(
-        module, _response_fixture_path(module, operation, arguments)
+    capture = _read_capture(
+        _response_fixture_path(module, operation, arguments),
+        _command_path(module, operation),
     )
+    return _result_from_capture(module, capture)
 
 
 def store_response_payload(
@@ -306,28 +462,50 @@ def store_response_text(
     return store_response_result(module, operation, arguments).stdout
 
 
+def store_error_responses(
+    module: ModuleType, operation: object
+) -> list[CapturedStoreResponse]:
+    """Every captured failure of one operation's command, in path order, each
+    replayable with the exit code and stderr the store answered."""
+    name = _command_fixture_name(module, operation)
+    command_path = _command_path(module, operation)
+    return [
+        CapturedStoreResponse(
+            str(path.relative_to(ROOT)),
+            _result_from_capture(module, _read_capture(path, command_path)),
+        )
+        for path in sorted(ERROR_FIXTURE_ROOT.glob(f"{name}.*{CAPTURE_SUFFIX}"))
+    ]
+
+
 def _inbox_captures_with_bodies(module: ModuleType) -> list[Path]:
     """Every captured inbox response taken with `--include-bodies`, in path
-    order: the store answered the same command while a receipt was pending and
-    again after it was recorded."""
+    order."""
     base = _response_fixture_path(
-        module, module.Operation.INBOX, {module.INCLUDE_BODIES_FIELD: True}
+        module, _listing_operation(module), {module.INCLUDE_BODIES_FIELD: True}
     )
-    return sorted(RESPONSE_FIXTURE_ROOT.glob(f"{base.stem}*.json"))
+    return sorted(RESPONSE_FIXTURE_ROOT.glob(f"{base.stem}*{CAPTURE_SUFFIX}"))
 
 
 def captured_inbox_responses_with_bodies(
     module: ModuleType,
 ) -> list[CapturedInboxResponse]:
     """Each captured `--include-bodies` inbox response, replayable by path."""
-    return [
-        CapturedInboxResponse(
-            str(path.relative_to(ROOT)),
-            _result_from_path(module, path),
-            json.loads(path.read_text(encoding="utf-8")),
+    command_path = _command_path(module, _listing_operation(module))
+    responses: list[CapturedInboxResponse] = []
+    for path in _inbox_captures_with_bodies(module):
+        capture = _read_capture(path, command_path)
+        payload = json.loads(capture.stdout)
+        if not isinstance(payload, dict):
+            raise CaptureError(f"{path} answered no inbox object")
+        responses.append(
+            CapturedInboxResponse(
+                str(path.relative_to(ROOT)),
+                _result_from_capture(module, capture),
+                cast(dict[str, object], payload),
+            )
         )
-        for path in _inbox_captures_with_bodies(module)
-    ]
+    return responses
 
 
 def captured_inbox_rows_with_bodies(module: ModuleType) -> list[CapturedInboxRow]:
@@ -422,9 +600,9 @@ def store_inbox_echo(
 
     The row is a captured `--include-bodies` inbox row whose acknowledgement
     status matches the send's requirement — `row_ordinal` selects among the
-    matching rows, so a required acknowledgement is echoed both pending and
-    recorded — with the sender, subject, thread, body, and id the send wrote
-    and the store assigned in place of the captured values. The status, the
+    matching rows, so a required acknowledgement is echoed in every status the
+    captures show one in — with the sender, subject, thread, body, and id the
+    send wrote and the store assigned in place of the captured values. The status, the
     body field, and every other key stay the store's own bytes.
     """
     ack_required = send_fields[module.STORE_ACK_REQUIRED_FIELD] is True
@@ -641,10 +819,11 @@ def run_operation_mapping(
 
 def inbox_request_with_bodies(module: ModuleType) -> dict[str, object]:
     """The first registry inbox request that asks the store for bodies."""
+    listing = _listing_operation(module)
     for request in operation_requests(module):
         arguments = cast(dict[str, object], request[module.ARGUMENTS_FIELD])
         if (
-            module.Operation(request[module.OPERATION_FIELD]) is module.Operation.INBOX
+            module.Operation(request[module.OPERATION_FIELD]) is listing
             and arguments.get(module.INCLUDE_BODIES_FIELD) is True
         ):
             return request
@@ -1206,18 +1385,46 @@ def store_program_names(module: ModuleType) -> frozenset[str]:
     """
     names: set[str] = set()
     for operation in module.Operation:
-        capture = USAGE_FIXTURE_ROOT / f"{_command_fixture_name(module, operation)}.txt"
-        for line in capture.read_text(encoding="utf-8").splitlines():
+        capture = _usage_capture(module, operation)
+        for line in capture.stdout.splitlines():
             stripped = line.strip()
-            if stripped.startswith(USAGE_LINE_PREFIX):
-                tokens = stripped[len(USAGE_LINE_PREFIX) :].split()
+            if stripped.startswith(USAGE_PREFIX):
+                tokens = stripped[len(USAGE_PREFIX) :].split()
                 if not tokens:
-                    raise CaptureError(f"{capture} usage line names no program")
+                    raise CaptureError(f"{capture.path} usage line names no program")
                 names.add(tokens[0])
                 break
         else:
-            raise CaptureError(f"{capture} carries no usage line")
+            raise CaptureError(f"{capture.path} carries no usage line")
     return frozenset(names)
+
+
+def _option_descriptions(usage_text: str) -> dict[str, str]:
+    """Each option of a usage text's options section with its whole description.
+
+    An entry opens on the line naming the option and runs to the next such
+    line, so a description the store prints beneath its option belongs to it
+    as fully as one printed beside it.
+    """
+    entries: dict[str, list[str]] = {}
+    current: list[str] | None = None
+    in_options = False
+    for line in usage_text.splitlines():
+        stripped = line.strip()
+        if stripped == OPTIONS_HEADING:
+            in_options = True
+            continue
+        if not in_options:
+            continue
+        if stripped and not line.startswith((" ", "\t")):
+            break
+        head = OPTION_ENTRY_HEAD.match(line)
+        if head is not None and stripped.startswith("-"):
+            current = entries.setdefault(head.group("long"), [])
+            current.append(head.group("rest"))
+        elif current is not None:
+            current.append(line)
+    return {option: " ".join(lines) for option, lines in entries.items()}
 
 
 def store_project_fallback_variable(module: ModuleType) -> str:
@@ -1226,24 +1433,22 @@ def store_project_fallback_variable(module: ModuleType) -> str:
     The adapter never reads it; the compliance probe sets it as the fallback
     the adapter must ignore.
 
-    Read from the captured usage text that declares it, so the probe's fallback
-    is the store's own statement rather than a token restated beside the
-    adapter, and a capture whose wording drifts fails the read.
+    Read from the captured usage of every operation's command, where the store
+    describes its project option, so the probe's fallback is the store's own
+    statement in the observation that carries its tool and version rather than
+    a token restated beside the adapter. Exactly one name must be declared
+    across those descriptions; a capture whose wording drifts fails the read.
     """
-    capture = USAGE_FIXTURE_ROOT / (
-        f"{_command_fixture_name(module, module.Operation.INBOX)}.txt"
-    )
-    names = {
-        match.group(1)
-        for line in capture.read_text(encoding="utf-8").splitlines()
-        if line.lstrip().startswith(module.PROJECT_OPTION)
-        for match in [re.search(r"\b([A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+)\b", line)]
-        if match
-    }
+    names: set[str] = set()
+    for operation in module.Operation:
+        capture = _usage_capture(module, operation)
+        description = _option_descriptions(capture.stdout).get(module.PROJECT_OPTION)
+        if description is not None:
+            names.update(ENVIRONMENT_NAME_PATTERN.findall(description))
     if len(names) != 1:
         raise CaptureError(
-            f"{capture} declares {len(names)} project fallback variables for "
-            f"{module.PROJECT_OPTION}; one is required"
+            f"the captured usage declares {sorted(names)} as project fallback "
+            f"variables for {module.PROJECT_OPTION}; one is required"
         )
     return names.pop()
 
