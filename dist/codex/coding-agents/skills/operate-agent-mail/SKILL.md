@@ -134,7 +134,7 @@ Neither shape carries `schemaVersion`, `operation`, `commandExitCode`, `response
 
 - ALWAYS execute the bundled script exactly as `<invocation_forms>` spells it.
 - NEVER import the script from another filesystem location, manufacture a path to it outside this skill directory, or copy its path spelling into an agent definition or an exported variable — only the spelling in `<invocation_forms>` resolves.
-- ALWAYS preserve store identities verbatim: message ids, thread ids, agent names, and timestamps — each is the store's own lookup key, so a transformed value addresses nothing.
+- ALWAYS preserve store identities verbatim: message ids, thread ids, agent names, and timestamps — each is a value the store holds, and a transformed copy matches no stored value, so an id, thread id, or name addresses nothing and a timestamp misstates the store's record.
 - ALWAYS supply arguments under the field names in `<operation_surface>` and leave the mapping to the adapter: it alone turns a field into an `am` option or a store field and reads it back, and it rejects an argument outside the operation's shape as `invalid-schema` rather than dropping it.
 - NEVER invoke raw `am` commands, `am` command help, or read the store's database.
 - NEVER derive the project key outside the adapter; it reads the key from the repository, and no working directory, environment variable, or parent path stands in for it.
