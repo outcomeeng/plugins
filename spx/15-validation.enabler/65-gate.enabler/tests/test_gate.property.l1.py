@@ -17,11 +17,36 @@ from outcomeeng.validation import (
     SUMMARY_KEY_DURATION_SECONDS,
     SUMMARY_KEY_STEPS,
     SUMMARY_PATH_LABEL,
+    TIMING_DIVIDER,
+    TIMING_SUMMARY_BANNER,
     Step,
     run,
-    timing_row_values,
 )
 from outcomeeng_testing.harnesses.gate import RecordingSpawner, gate_property
+
+
+def _row_elapsed_values(output: str) -> tuple[int, ...]:
+    """Read each timing row's elapsed value without the engine's own reader.
+
+    The engine's `timing_row_values` matches a run of digits, so it reports a
+    negative elapsed value as its magnitude and the sign never reaches the
+    assertion. This reader takes each row's whole trailing token, drops only
+    its one-character unit, and parses the rest as a signed integer, so a
+    negative value arrives negative. The block's bounds come from the engine's
+    published constants, which the reader reads rather than respells; what it
+    does not borrow is the engine's parse of a row's value, the step this
+    property has to judge for itself.
+    """
+    _, banner, after_banner = output.partition(f"{TIMING_SUMMARY_BANNER}\n")
+    assert banner, "the run writes a timing block"
+    block, divider, _ = after_banner.partition(f"{TIMING_DIVIDER}\n")
+    assert divider, "the timing block is closed by its divider"
+    # The block is split on its own line separator rather than by `splitlines`,
+    # which also breaks on a carriage return — a step label may carry one, and a
+    # row split through its label leaves a fragment with no value to read.
+    return tuple(
+        int(line.split()[-1][:-1]) for line in block.split("\n") if line.strip()
+    )
 
 
 @gate_property
@@ -52,7 +77,7 @@ def test_elapsed_time_is_non_negative_for_completed_steps(
     # the same elapsed seconds as its timing row, so a reader that took the
     # run's lines rather than its timing block would return one value per step
     # twice over.
-    elapsed_values = timing_row_values(output)
+    elapsed_values = _row_elapsed_values(output)
     assert len(elapsed_values) == len(steps)
     for elapsed in elapsed_values:
         assert elapsed >= 0

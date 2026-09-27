@@ -26,7 +26,7 @@ CAN run the deterministic gate steps that prove the current slice without spendi
 
 ### Compliance
 
-- ALWAYS: local selection includes live discovery for installation, subagent-definition generation and placement, discovery, and their governing contracts and verification infrastructure; explicit full verification and CI include it, as governed by `spx/15-validation.enabler/65-gate.enabler/21-selected-gate.enabler/15-live-discovery.pdr.md`. ([test](tests/test_selected_gate.compliance.l1.py))
+- ALWAYS: local selection includes live discovery for installation, subagent-definition generation and placement, discovery, and their governing contracts and verification infrastructure, and the selection layer's own full-gate plan includes it, as governed by `spx/15-validation.enabler/65-gate.enabler/21-selected-gate.enabler/15-live-discovery.pdr.md`. ([test](tests/test_selected_gate.compliance.l1.py))
 - NEVER: an unrelated local change acquires a live-discovery requirement through automatic full-suite escalation; the complete selected deterministic scope remains intact. ([test](tests/test_selected_gate.compliance.l1.py))
 - ALWAYS: the plan explains live-discovery inclusion or exclusion before execution, independently of credential availability. ([test](tests/test_selected_gate.compliance.l1.py))
 - ALWAYS: the plan explanation names each agent's disable switch state before running the selected steps, so a reader sees a declared skip before it happens ([test](tests/test_selected_gate.compliance.l1.py))

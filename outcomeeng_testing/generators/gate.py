@@ -2,11 +2,21 @@
 
 from __future__ import annotations
 
+import signal
+
 from hypothesis import strategies as st
 from hypothesis.strategies import SearchStrategy
 
-from outcomeeng.validation import EVAL_TRIGGER_WORKFLOW, Step
+from outcomeeng.validation import EVAL_TRIGGER_WORKFLOW, FORWARDED_SIGNALS, Step
 from outcomeeng.validation.agent_disable import DISABLE_VALUE
+from outcomeeng.validation.spawn_enforcement import (
+    PREEXEC_KEYWORD,
+    SESSION_KEYWORD,
+    SPAWN_CALL,
+    SPAWN_MODULE,
+    UNBLOCK_ACTION,
+    UNBLOCK_CALL,
+)
 from outcomeeng.validation.selected_gate import (
     INSTRUCTION_BLOCK_SOURCE_PATH,
     PYPROJECT_PATH,
@@ -42,6 +52,12 @@ SELECTED_GATE_EVAL_DEFINITION_PATH = (
     "spx/21-spec-tree.enabler/76-merge.enabler/evals/transport-selection/eval.toml"
 )
 SELECTED_GATE_FULL_GATE_PATH = PYPROJECT_PATH
+
+SPAWNER_ABSENT_KEYWORD = _ABSENT = object()
+"""Passed for a keyword the generated spawn omits rather than gives a value."""
+
+_CHILD_FUNCTION_NAME = "restore_child_signal_mask"
+"""The name the generated spawn gives its child-side function."""
 
 NON_DISABLING_SWITCH_VALUE = DISABLE_VALUE * 2
 """One value a switch can hold that declares no row optional.
@@ -121,3 +137,36 @@ def path_from_pattern(pattern: str) -> str:
     source-owned category set instead of choosing representative categories.
     """
     return pattern.replace("**", "generated/nested").replace("*", "generated")
+
+
+def spawner_shaped_source(
+    *,
+    session: object = True,
+    preexec: bool = True,
+    unblocked: tuple[signal.Signals, ...] = FORWARDED_SIGNALS,
+) -> str:
+    """A whole spawner-shaped module, conforming or violating as the caller asks.
+
+    Every token comes from the declaration that owns it — the spawn module and
+    call, both keywords, the unblock call and its action, and each signal's own
+    name — so a rename in any owner changes what this source says rather than
+    leaving it asserting a shape production no longer has. What the caller
+    chooses is only where the source departs from the contract: the session
+    keyword's value or its absence, whether the spawn names a child-side
+    function at all, and which signals that function unblocks.
+    """
+    unblock_set = "".join(f"{signal.__name__}.{sig.name}, " for sig in unblocked)
+    keywords = [] if session is _ABSENT else [f"{SESSION_KEYWORD}={session!r}"]
+    if preexec:
+        keywords.append(f"{PREEXEC_KEYWORD}={_CHILD_FUNCTION_NAME}")
+    return (
+        f"import {signal.__name__}\n"
+        f"import {SPAWN_MODULE}\n"
+        f"\n\n"
+        f"def {_CHILD_FUNCTION_NAME}() -> None:\n"
+        f"    {signal.__name__}.{UNBLOCK_CALL}("
+        f"{signal.__name__}.{UNBLOCK_ACTION}, ({unblock_set}))\n"
+        f"\n\n"
+        f"def spawn() -> None:\n"
+        f"    {SPAWN_MODULE}.{SPAWN_CALL}([], {', '.join(keywords)})\n"
+    )

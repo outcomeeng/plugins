@@ -17,6 +17,7 @@ from outcomeeng.validation import (
     RECIPE_VALIDATION,
     SUMMARY_KEY_PHASE,
     SUMMARY_KEY_RECIPE,
+    SUMMARY_KEY_ARGV,
     SUMMARY_KEY_SKIPPED,
     SUMMARY_KEY_STEPS,
     SUMMARY_KEY_SUMMARY_PATH,
@@ -182,6 +183,19 @@ def test_summary_with_declared_skips_conforms_to_schema() -> None:
     assert_json_schema(observation.summary, PRIMITIVE_SUMMARY_SCHEMA)
     assert any(SUMMARY_KEY_SKIPPED in step for step in steps)
     assert observation.exit_code == SUCCESS_EXIT_CODE
+    # The schema fixes the field's shape; what a command argv means is the
+    # command the run spawned. A pytest step is spawned with the skip-report
+    # option appended, so a record naming the argv before that append would
+    # conform to the schema while citing a command no child ran.
+    assert observation.recording_argvs
+    assert [
+        step[SUMMARY_KEY_ARGV]
+        for step in steps
+        if isinstance(step, dict) and SUMMARY_KEY_SKIPPED in step
+    ] == [list(argv) for argv in observation.recording_argvs]
+    assert [list(argv) for argv in observation.spawned_argvs] == [
+        step[SUMMARY_KEY_ARGV] for step in steps if isinstance(step, dict)
+    ]
 
 
 def test_a_report_line_outside_the_declared_switches_leaves_the_summary_conforming() -> (

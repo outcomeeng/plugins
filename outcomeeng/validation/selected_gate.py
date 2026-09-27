@@ -13,7 +13,6 @@ from typing import Final, Protocol, TextIO, cast
 
 from outcomeeng.validation._engine import run_check, run_recipe
 from outcomeeng.validation.agent_disable import (
-    AGENT_SWITCHES,
     AgentDisableStates,
     read_agent_disable_states,
 )
@@ -400,23 +399,6 @@ class InfrastructureIndexRequired(ValueError):
         )
 
 
-class AgentDisableStatesRequired(ValueError):
-    """A plan was requested without the switch readings its explanation names.
-
-    The plan explanation names each switch's state before the selected steps
-    run, so a plan built without that reading would omit a declared line. The
-    reading has no default: a caller supplies what it observed, and a caller
-    that observed nothing is refused here rather than served that plan.
-    """
-
-    def __init__(self) -> None:
-        self.switches: tuple[str, ...] = AGENT_SWITCHES
-        super().__init__(
-            "a plan needs each agent's disable-switch reading: "
-            + ", ".join(self.switches)
-        )
-
-
 class ChangesetScopeModule(Protocol):
     """Typed subset of the canonical changeset-scope helper."""
 
@@ -500,7 +482,7 @@ def collect_changed_path_entries(
 def build_selected_gate_plan(
     changed_paths: tuple[str, ...],
     *,
-    agent_disable: AgentDisableStates | None,
+    agent_disable: AgentDisableStates,
     deleted_paths: tuple[str, ...] = (),
     test_infrastructure: InfrastructureIndex | None = None,
 ) -> SelectedGatePlan:
@@ -508,15 +490,13 @@ def build_selected_gate_plan(
 
     ``agent_disable`` is required of every caller: the plan explanation names
     each switch's state, so a plan carries the reading its caller observed and
-    a caller supplying none raises `AgentDisableStatesRequired`.
+    the parameter admits no ``None`` for the type checker to let through.
 
     ``test_infrastructure`` is required whenever a changed path lies under
     the test-infrastructure package; its reach decides between the tests that
     import the changed module and the full surface.
     """
 
-    if agent_disable is None:
-        raise AgentDisableStatesRequired
     normalized = tuple(sorted(set(changed_paths)))
     if not normalized:
         return SelectedGatePlan(

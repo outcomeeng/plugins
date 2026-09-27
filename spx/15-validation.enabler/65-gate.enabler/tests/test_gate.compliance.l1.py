@@ -11,6 +11,11 @@ import signal
 import pytest
 
 from outcomeeng.validation._spawner import _restore_child_signal_mask
+from outcomeeng.validation.spawn_enforcement import (
+    PREEXEC_KEYWORD,
+    sessionless_spawn_sites,
+    unmasked_child_spawn_sites,
+)
 from outcomeeng.validation.polling_enforcement import (
     SLEEP_ATTRIBUTE,
     SLEEP_MODULE,
@@ -68,6 +73,10 @@ from outcomeeng.validation.agent_disable import AGENT_SWITCHES
 from outcomeeng.validation.skip_report import (
     SKIP_REPORT_SWITCH_FIELD,
     SKIP_REPORT_TEST_FIELD,
+)
+from outcomeeng_testing.generators.gate import (
+    SPAWNER_ABSENT_KEYWORD,
+    spawner_shaped_source,
 )
 from outcomeeng_testing.harnesses.gate import (
     CHILD_OUTPUT_LINE,
@@ -201,23 +210,73 @@ def test_subprocess_lives_only_in_the_production_spawner() -> None:
         f"(the production adapter); found: {importers}"
     )
     spawner_path = importers[0]
-    source = spawner_path.read_text(encoding="utf-8")
     popen_calls = popen_calls_from(spawner_path)
     assert popen_calls, "production spawner must call subprocess.Popen"
     for call in popen_calls:
-        kwargs = call_keyword_map(call)
-        assert "start_new_session" in kwargs, "Popen call must pass start_new_session"
-        value = kwargs["start_new_session"]
-        assert isinstance(value, ast.Constant) and value.value is True, (
-            "start_new_session must be the literal True"
-        )
-        assert "preexec_fn" in kwargs, "Popen call must pass preexec_fn"
-        preexec_fn = kwargs["preexec_fn"]
-        assert isinstance(preexec_fn, ast.Name)
-        assert preexec_fn.id == _restore_child_signal_mask.__name__
-    assert f"signal.{signal.pthread_sigmask.__name__}(signal.SIG_UNBLOCK" in source
-    for forwarded in FORWARDED_SIGNALS:
-        assert f"signal.{forwarded.name}" in source
+        named = call_keyword_map(call)[PREEXEC_KEYWORD]
+        assert isinstance(named, ast.Name)
+        assert named.id == _restore_child_signal_mask.__name__
+
+    assert sessionless_spawn_sites(importers) == ()
+    assert unmasked_child_spawn_sites(importers) == ()
+
+
+@pytest.mark.parametrize(
+    "session", (SPAWNER_ABSENT_KEYWORD, False), ids=("absent", "false")
+)
+def test_a_spawn_outside_its_own_session_is_reported(
+    tmp_path: Path, session: object
+) -> None:
+    offender = tmp_path / "sessionless_spawner.py"
+    offender.write_text(spawner_shaped_source(session=session), encoding="utf-8")
+
+    reported = sessionless_spawn_sites((offender,))
+
+    assert len(reported) == 1
+    assert str(offender) in reported[0]
+
+
+def test_a_spawn_in_its_own_session_is_not_reported(tmp_path: Path) -> None:
+    conforming = tmp_path / "session_spawner.py"
+    conforming.write_text(spawner_shaped_source(), encoding="utf-8")
+
+    assert sessionless_spawn_sites((conforming,)) == ()
+
+
+def test_a_spawn_naming_no_child_side_function_is_reported(tmp_path: Path) -> None:
+    offender = tmp_path / "unmasked_spawner.py"
+    offender.write_text(spawner_shaped_source(preexec=False), encoding="utf-8")
+
+    reported = unmasked_child_spawn_sites((offender,))
+
+    assert len(reported) == 1
+    assert str(offender) in reported[0]
+
+
+@pytest.mark.parametrize(
+    "unblocked",
+    tuple(FORWARDED_SIGNALS[:index] for index in range(len(FORWARDED_SIGNALS))),
+    ids=lambda value: f"unblocks-{len(value)}",
+)
+def test_a_child_leaving_a_forwarded_signal_blocked_is_reported(
+    tmp_path: Path, unblocked: tuple[signal.Signals, ...]
+) -> None:
+    offender = tmp_path / "partial_mask_spawner.py"
+    offender.write_text(spawner_shaped_source(unblocked=unblocked), encoding="utf-8")
+
+    reported = unmasked_child_spawn_sites((offender,))
+
+    assert len(reported) == 1
+    assert str(offender) in reported[0]
+
+
+def test_a_child_unblocking_every_forwarded_signal_is_not_reported(
+    tmp_path: Path,
+) -> None:
+    conforming = tmp_path / "masked_spawner.py"
+    conforming.write_text(spawner_shaped_source(), encoding="utf-8")
+
+    assert unmasked_child_spawn_sites((conforming,)) == ()
 
 
 def test_no_gate_module_polls_without_bound() -> None:

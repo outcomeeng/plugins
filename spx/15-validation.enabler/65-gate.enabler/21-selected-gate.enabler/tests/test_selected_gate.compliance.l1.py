@@ -26,7 +26,6 @@ from outcomeeng.validation.infrastructure_index import (
     index_test_infrastructure,
 )
 from outcomeeng.validation.selected_gate import (
-    AgentDisableStatesRequired,
     DELETED_GIT_STATUS_PREFIX,
     FULL_GATE_REASON,
     GIT_DISCOVERY_ERROR_PREFIX,
@@ -292,18 +291,6 @@ def test_the_plan_explanation_names_each_switch_state(value: str | None) -> None
         )
         for switch in AGENT_SWITCHES
     )
-
-
-def test_a_plan_without_the_switch_reading_is_refused_by_name() -> None:
-    with pytest.raises(AgentDisableStatesRequired) as caught:
-        build_selected_gate_plan(
-            (SELECTED_GATE_PYTHON_SOURCE_PATH,),
-            agent_disable=None,
-        )
-
-    assert caught.value.switches == AGENT_SWITCHES
-    for switch in AGENT_SWITCHES:
-        assert switch in str(caught.value)
 
 
 def test_each_switch_state_is_printed_before_the_selected_steps_run() -> None:

@@ -1184,6 +1184,10 @@ class SkipReportObservation:
     written_records: tuple[dict[str, str], ...]
     recording_steps: int
     """How many steps the child wrote records for, counted from its own calls."""
+    spawned_argvs: tuple[tuple[str, ...], ...]
+    """Every argv the run actually spawned, in call order, as the spawner saw it."""
+    recording_argvs: tuple[tuple[str, ...], ...]
+    """The spawned argvs that named a skip-report destination, in call order."""
 
 
 def skip_report_observation(
@@ -1215,6 +1219,12 @@ def skip_report_observation(
         written_records=records,
         recording_steps=sum(
             1 for call in spawner.spawn_calls if _skip_report_destination(call)
+        ),
+        spawned_argvs=tuple(tuple(call) for call in spawner.spawn_calls),
+        recording_argvs=tuple(
+            tuple(call)
+            for call in spawner.spawn_calls
+            if _skip_report_destination(call)
         ),
     )
 
@@ -1266,10 +1276,13 @@ RUNNING_ROW_NAME = "test_running_row"
 """The generated row that runs to completion."""
 UNRELATED_SKIP_REASON_FORM = "{switch} is named here, and another cause skipped it"
 """A skip reason naming a switch without carrying that switch's declared reason."""
-PYTEST_MODULE_OPTION = "-m"
-"""The interpreter option that runs a module as the child's main program."""
-PYTEST_MODULE_ARGS = (PYTEST_MODULE_OPTION, PYTEST_ARGV[-1])
-"""The interpreter arguments that run pytest, named from the gate's own argv."""
+PYTEST_MODULE_ARGS = PYTEST_ARGV[-2:]
+"""The interpreter arguments that run pytest, taken from the gate's own argv.
+
+Both halves come from the argv the gate spawns — the interpreter option that
+runs a module as the child's main program and the module it names — so neither
+is spelled here and a change to either end of that argv reaches this child.
+"""
 PYTEST_PLUGIN_OPTION = "-p"
 """The pytest option that loads one plugin by module name."""
 PYTEST_NO_CACHE_PLUGIN = "no:cacheprovider"

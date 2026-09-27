@@ -1320,10 +1320,3 @@ def test_a_second_module_naming_a_switch_is_reported(tmp_path: Path) -> None:
     offender = package_positioned_module(tmp_path, f'VALUE = "{AGENT_SWITCHES[0]}"')
 
     assert modules_naming_a_switch((tmp_path,)) == (offender,)
-
-
-def test_every_declared_projection_resolves_in_its_home() -> None:
-    import outcomeeng_testing.harnesses.installation as home
-
-    for projection in SWITCH_PROJECTIONS:
-        assert hasattr(home, projection), projection

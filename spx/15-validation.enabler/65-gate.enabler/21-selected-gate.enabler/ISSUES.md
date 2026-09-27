@@ -83,6 +83,54 @@ input is then derived from the source category set rather than chosen, as
 `3d1dbffd76393c71dbbaf455f5c81c81bf015064`, finding `f-004`, whose message records that the
 rename target's load-bearing property is stated nowhere.
 
+## The category representatives are chosen where their categories are declared
+
+`outcomeeng_testing/generators/gate.py` opens with a block of `SELECTED_GATE_*_PATH`
+constants that the mapping cases drive the planner with, one per selection category. Some
+are derived from the source that owns them — `SELECTED_GATE_README_PATH`,
+`SELECTED_GATE_SPX_CONFIG_PATH`, `SELECTED_GATE_INSTRUCTION_BLOCK_SOURCE_PATH`,
+`SELECTED_GATE_EVAL_WORKFLOW_PATH`, and `SELECTED_GATE_FULL_GATE_PATH` each read a constant
+of `outcomeeng/validation/selected_gate.py`, because each is an exact-match target. The rest
+are hand-typed paths, and the block's own comment states why: they are "arbitrary
+representatives of a glob domain" and "own their own values". The relation that derives the
+current set is the block's assignments — a right-hand side that reads a
+`selected_gate` constant is derived, and a string literal is hand-typed — so this entry
+names that relation rather than a count, which a category added or converted would falsify.
+
+**What is unstated.** Each hand-typed value is load-bearing in one direction: it must match
+the glob of its own category and no other category's, or the case proves the wrong mapping.
+`SELECTION_CATEGORY_PATTERNS` in `outcomeeng/validation/selected_gate.py` declares those
+globs, and `changed_path_domain()` in this same generator already derives one path per
+pattern from that declaration. Nothing states that the named representatives carry the
+matching property, so a pattern narrowed in the source leaves each representative matching
+nothing while its case still passes on the negative half.
+
+**Which node owns it.** This one. The categories are `SELECTION_CATEGORY_PATTERNS`, which
+this node declares, and the cases the representatives feed are this node's mapping evidence.
+
+**Why this is filed rather than repaired.** The same order the two entries above turn on: a
+value derived from the category set cannot carry "matches this category and no other" until
+something declares that property, and once it is declared the value follows from the
+declaration. `changed_path_domain()` shows the derivation is available; what is missing is
+the assertion that makes the per-category representative's property a claim rather than a
+choice. That assertion is the operator's.
+
+**Settlement condition**: the per-category matching property is declared beside the category
+mapping in `selected-gate.md`, and each hand-typed representative is then derived from
+`SELECTION_CATEGORY_PATTERNS` rather than chosen, as `changed_path_domain()` derives its own
+domain.
+
+**Related entries.** "Two harness case inputs carry an unstated property" above records the
+same shape for the two inputs in `outcomeeng_testing/harnesses/gate.py` whose load-bearing
+property is non-membership; this entry is the positive half, over the generator's
+per-category representatives.
+
+**Evidence**: the hand-typed assignments in the opening block of
+`outcomeeng_testing/generators/gate.py` against the derived ones beside them and against
+`SELECTION_CATEGORY_PATTERNS` in `outcomeeng/validation/selected_gate.py`; and
+`changed_path_domain()` in the same generator as the derivation the settlement condition
+asks these to follow.
+
 ## Full-gate selection runs untargeted pytest
 
 `just check` treats any path matching the selected-gate full-gate surface as
@@ -172,57 +220,6 @@ line 34; `python_modules` and `modules_naming_a_switch` in
 as the only non-Python reading. Raised as finding `F-003` of changeset review run
 `2026-09-22_14-07-16-429-851b4a371443`, filed there against `repository-installation.md`
 line 55.
-
-## The live-discovery clause claims two surfaces this node does not own
-
-The compliance assertion in `selected-gate.md` reads:
-
-> ALWAYS: local selection includes live discovery for installation, subagent-definition
-> generation and placement, discovery, and their governing contracts and verification
-> infrastructure; explicit full verification and CI include it
-
-Its first clause is this node's own subject and is reached: `build_selected_gate_plan`
-selects the live rows for each declared surface, and `test_each_declared_discovery_surface_requires_the_live_check`
-drives it. The second clause names two surfaces the selection layer never touches.
-
-**What the second clause would have to read.** Explicit full verification is the
-`check-full` branch of `outcomeeng/validation/__main__.py`, which calls
-`run_check(recipes=CHECK_RECIPES)` and bypasses `run_selected_check` entirely, so no code
-path can apply `LIVE_DISCOVERY_EXCLUSION` to it. CI is the full-gate invocation in
-`.github/workflows/check.yml`. No linked test in this node references either; the four
-full-gate cases drive `full_gate=True` inside `build_selected_gate_plan`, which is the
-selected full-gate plan rather than either named surface. Applying the exclusion on either
-path leaves all seven linked files passing.
-
-**Why this is a declaration defect rather than an evidence gap.** Both surfaces are governed
-elsewhere — `outcomeeng/validation/__main__.py` is one of the six modules
-`spx/15-validation.enabler/21-subprocess-execution.adr.md` enumerates as the gate
-orchestrator, and the workflow belongs to the CI-gate decision under
-`spx/13-infrastructure.enabler/21-test-infrastructure.enabler`. Evidence under this node
-reading either would assert a contract another node declares. The clause claims more than the
-node's subject carries, so narrowing it or rehoming it is the repair, and the same sentence
-appears in `15-live-discovery.pdr.md`, which only the operator amends.
-
-**Impact.** A reader of the assertion takes it for a guarantee that the two runs which are
-supposed to prove every live row do include them. Neither run is observed, so the guarantee
-rests on nothing: the exclusion could be applied to the `check-full` dispatch or to the CI
-invocation and every linked file would still pass. The surfaces the clause claims are exactly
-the two the live-discovery decision leans on to justify letting a local selected run skip a
-row, so an unobserved clause here is what a switched-off local row is traded against.
-
-**Settlement condition**: either both enumerations narrow the clause to the selection layer's
-own full-gate plan, or each named surface carries evidence under the node that governs it —
-the `check-full` dispatch under the gate node, the workflow under the CI-gate node.
-
-**Related entries.** The workflow's absence from every scanned root is recorded above under
-"The no-switch rule binds four subjects and its evidence sees one". This entry is the spec
-assertion's own scope, which that entry does not cover.
-
-**Evidence**: the quoted assertion against the `check-full` branch of
-`outcomeeng/validation/__main__.py`; the four full-gate cases in
-`tests/test_selected_gate.compliance.l1.py`, each driving `build_selected_gate_plan`; and a
-search over this node's seven linked files returning no reference to the dispatch or the
-workflow. Raised as finding `f-001`, REJECT, by the node's test-evidence audit.
 
 ## The import-form domain names five forms and the reader carries a sixth
 

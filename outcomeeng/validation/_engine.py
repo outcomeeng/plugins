@@ -546,7 +546,7 @@ def _execute_recipe(
                         _step_record(
                             recipe=recipe,
                             phase=phase,
-                            step=step,
+                            step=spawn_step,
                             status=RUN_FAIL_STATUS,
                             elapsed=elapsed,
                             exit_code=exit_code,
@@ -557,7 +557,7 @@ def _execute_recipe(
                     )
                     _write_failure_details(
                         sink,
-                        step=step,
+                        step=spawn_step,
                         status=exit_code,
                         elapsed=elapsed,
                         log_path=log_path,
@@ -569,7 +569,7 @@ def _execute_recipe(
                     _step_record(
                         recipe=recipe,
                         phase=phase,
-                        step=step,
+                        step=spawn_step,
                         status=RUN_PASS_STATUS,
                         elapsed=elapsed,
                         exit_code=exit_code,

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from outcomeeng.distribution.contracts import INSTRUCTION_BLOCK_ARGV
@@ -55,6 +57,7 @@ from outcomeeng.validation.selected_gate import (
     build_selected_gate_plan,
     deleted_paths_after_status_resolution,
 )
+from outcomeeng.validation import eval_links
 from outcomeeng.validation import selected_gate as selection_source
 from outcomeeng_testing.generators.gate import (
     SELECTED_GATE_EVAL_DEFINITION_PATH,
@@ -211,6 +214,33 @@ def test_every_evidence_link_path_category_selects_link_validation(
 
     assert EVAL_LINKS_ARGV in _argvs(inside)
     assert EVAL_LINKS_ARGV not in _argvs(outside)
+
+
+@pytest.mark.parametrize("dangling", (False, True))
+def test_a_dangling_evidence_link_decides_the_selected_link_step(
+    tmp_path: Path, dangling: bool
+) -> None:
+    # Selecting the step proves only that it is planned. What the assertion
+    # claims past that is the step's own outcome: the spec edit whose `[test]`
+    # link resolves passes it and the one whose link dangles fails it. The step
+    # the plan carries is this entry point, so the case drives it over a spec
+    # tree written here, with the link's target present in one state and absent
+    # in the other — a reading that answered the same either way fails one of
+    # the two.
+    node = tmp_path / "10-example.enabler"
+    tests = node / "tests"
+    tests.mkdir(parents=True)
+    target = tests / "test_example.compliance.l1.py"
+    if not dangling:
+        target.write_text("", encoding="utf-8")
+    (node / "example.md").write_text(
+        f"- ALWAYS: the example holds ([test]({target.relative_to(node)}))\n",
+        encoding="utf-8",
+    )
+
+    exit_code = eval_links.main([str(tmp_path)])
+
+    assert (exit_code != SUCCESS_EXIT_CODE) is dangling
 
 
 def test_a_python_source_path_selects_lint_and_type_steps() -> None:
@@ -729,44 +759,63 @@ def test_template_script_maps_to_skill_and_lint_steps() -> None:
     )
 
 
+@pytest.mark.parametrize("declared", AGENT_SWITCHES)
 @pytest.mark.parametrize("state", agent_switch_states())
-def test_each_switch_state_maps_a_marked_row_to_its_outcome(state: str | None) -> None:
+def test_each_switch_state_maps_a_marked_row_to_its_outcome(
+    state: str | None, declared: str
+) -> None:
     # The child runs rows carrying the shipped projections, under a switch state
-    # this case sets in that child's environment itself. A marked row's outcome
-    # follows its own agent's switch; the unmarked row runs under every state,
-    # so a difference between the states is the projection's decision rather
-    # than a child that stopped working. None of the rows starts an agent
+    # this case sets in that child's environment itself. Exactly one agent's
+    # switch carries the state and the other stays absent, so each marked row's
+    # outcome follows its own agent's switch and nothing else: driving both to
+    # one state at once would leave the two projections interchangeable, since a
+    # row wired to the other agent's predicate would reach the same outcome and
+    # the case would pass over the swap. The unmarked row runs under every
+    # state, so a difference between the states is the projection's decision
+    # rather than a child that stopped working. None of the rows starts an agent
     # process, so no state spends an agent's quota.
-    declaring = state == DISABLE_VALUE
     with declared_skip_recording(
         through_markers=True,
-        switch_values={} if state is None else dict.fromkeys(AGENT_SWITCHES, state),
+        switch_values={} if state is None else {declared: state},
     ) as recording:
         assert recording.exit_code == SUCCESS_EXIT_CODE, recording.output
         assert dict(recording.row_outcomes) == {
             **{
-                nodeid: ROW_SKIPPED if declaring else ROW_RAN
-                for nodeid, _switch in recording.switch_rows
+                nodeid: (
+                    ROW_SKIPPED
+                    if switch == declared and state == DISABLE_VALUE
+                    else ROW_RAN
+                )
+                for nodeid, switch in recording.switch_rows
             },
             **dict.fromkeys(recording.other_rows, ROW_RAN),
         }
 
 
-def test_a_marked_row_reads_its_switch_where_the_row_itself_starts() -> None:
+@pytest.mark.parametrize("declared", AGENT_SWITCHES)
+def test_a_marked_row_reads_its_switch_where_the_row_itself_starts(
+    declared: str,
+) -> None:
     # The child starts with no switch in its environment, and the generated
-    # module sets both last: after the projections are imported and after every
+    # module sets one last: after the projections are imported and after every
     # row is defined. That placement leaves two earlier readings unable to see
-    # them — one taken when the projections are imported, and one taken when a
+    # it — one taken when the projections are imported, and one taken when a
     # row is decorated — so either would leave every marked row running. Only a
-    # reading taken where the row itself starts sees them, which is what the
-    # skips establish. The unmarked row runs, so the child itself still works.
+    # reading taken where the row itself starts sees it, which is what the skip
+    # establishes. One switch is set per case and the other stays absent, so the
+    # row that skips is the one whose own agent was declared; setting both would
+    # make the two projections interchangeable here too. The unmarked row runs,
+    # so the child itself still works.
     with declared_skip_recording(
         through_markers=True,
         switch_values={},
-        switches_set_after_import=dict.fromkeys(AGENT_SWITCHES, DISABLE_VALUE),
+        switches_set_after_import={declared: DISABLE_VALUE},
     ) as recording:
         assert recording.exit_code == SUCCESS_EXIT_CODE, recording.output
         assert dict(recording.row_outcomes) == {
-            **{nodeid: ROW_SKIPPED for nodeid, _switch in recording.switch_rows},
+            **{
+                nodeid: ROW_SKIPPED if switch == declared else ROW_RAN
+                for nodeid, switch in recording.switch_rows
+            },
             **dict.fromkeys(recording.other_rows, ROW_RAN),
         }

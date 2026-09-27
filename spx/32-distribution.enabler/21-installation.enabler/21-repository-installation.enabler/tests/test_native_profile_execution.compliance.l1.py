@@ -1,5 +1,6 @@
 """Compliance evidence for deterministic native-profile probe planning."""
 
+from collections.abc import Mapping
 from dataclasses import replace
 
 import pytest
@@ -23,8 +24,6 @@ from outcomeeng.distribution.instruction_block import (
     RecipeAbsent,
     recipe_block,
 )
-from outcomeeng.distribution.native_profile_execution import native_profile_rows
-from outcomeeng.distribution.profiles import AGENT_PROFILES
 from outcomeeng.validation.agent_disable import AGENT_SWITCHES, codex_disabled_reason
 from outcomeeng.validation.agent_switch_enforcement import (
     DECLARING_MODULE_LEAF,
@@ -78,7 +77,8 @@ def test_native_child_read_retains_correlated_configuration_and_completion() -> 
         assert result.terminal_condition is None
         assert result.thread == case.thread
         assert len(reader.calls) == 1
-        assert reader.calls[0][0] == case.thread["parentThreadId"]
+        identity: Mapping[str, object] = case.thread
+        assert reader.calls[0][0] == identity[ChildIdentityField.PARENT]
         assert reader.calls[0][1] == context.cwd
         assert reader.calls[0][2] == context.environment
 
@@ -284,16 +284,6 @@ def test_an_unresolvable_relative_import_is_refused(tmp_path: Path) -> None:
         modules_reading_the_switch_predicate((unpositioned,))
 
     assert raised.value.path == unpositioned
-
-
-def test_profile_execution_rows_cover_every_central_profile() -> None:
-    selected = {(row.target, row.profile) for row in native_profile_rows()}
-
-    assert selected == {
-        (target, profile)
-        for target, profiles in AGENT_PROFILES.items()
-        for profile in profiles
-    }
 
 
 def test_a_non_python_path_is_refused_rather_than_scanned_as_empty(

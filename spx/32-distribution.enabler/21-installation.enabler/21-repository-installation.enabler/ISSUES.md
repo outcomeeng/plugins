@@ -4,7 +4,7 @@ Known defects in the repository-installation evidence. Each entry names the arti
 
 ## Native-profile evidence restates protocol vocabulary the owning modules hold
 
-`tests/test_native_profile_execution.compliance.l1.py` indexes the child-thread document with the literal `parentThreadId` while `outcomeeng/distribution/native_thread_evidence.py` owns that key as `ChildIdentityField.PARENT`, and `tests/test_native_profile_execution.compliance.l2.py` asserts the retained child-listing artifact through the literals `childIds`, `pages`, and `result`, which that module publishes no constant for — the producer-side gap the next entry records. Both are source-ownership defects: a rename in the owning module leaves the evidence asserting a contract production no longer emits.
+Both test-side halves of this class have landed. `tests/test_native_profile_execution.compliance.l1.py` read the child-thread document with the literal `parentThreadId` and now reads `ChildIdentityField.PARENT` over the mapping production reads that payload as, recorded under "The child-identity literal now reads its key from the producer's own enum" below; `tests/test_native_profile_execution.compliance.l2.py` asserted the retained child-listing artifact through the literals `childIds`, `pages`, and `result` and now reads all three against declarations the owning module publishes, recorded under "The child-listing artifact's `pages` and `result` keys are published, `childIds` is not" below. What the class was: a rename in the owning module left the evidence asserting a contract production no longer emits. The harness and falsifiability halves below remain.
 
 `outcomeeng_testing/harnesses/native_thread_evidence.py` repeats the class in `RecordingThreadReader`: its failure-shaping methods hand-write `childIds`, `thread`, `turns`, `status`, and `items` while the same harness builds the payloads through `NativeChildLookupPayload`, `NativeChildThread`, and `NativeTurn` elsewhere. Its `_read_empty_native_state` builds the child environment from the literals `HOME`, `CODEX_HOME`, and `CODEX_SQLITE_HOME` while `outcomeeng/distribution/installation.py` publishes those names and the `STATE_ENV_NAMES` tuple.
 
@@ -12,52 +12,44 @@ Two clauses of the same assertion are also unfalsified: removing the ambient mod
 
 The mapping assertion's identifier and disposable-state-root derivation is unfalsified in the same way: collapsing `identifier` in `native_profile_rows` to a constant makes every row share one `state_root` and one artifact directory, while `test_native_profile_rows_cover_the_central_configuration_matrix` still keys on target and profile and `test_native_profile_artifacts_are_separate_from_disposable_state` checks only parent-directory relations, so no predicate observes that the identifier and state root derive from the registry entry or are distinct per row.
 
-**Resolution shape**: import every key the test and the recording reader index from the module that owns it, which for the three listing-artifact keys waits on the publication the next entry records, add predicates over the recorded child environment that reject an ambient override or a second credential, and assert that every row's identifier and state root derive from its registry entry and differ from every other row's.
+**Resolution shape**: import every key the recording reader indexes from the module that owns it, and every environment name `_read_empty_native_state` builds from `outcomeeng/distribution/installation.py`, which publishes them; add predicates over the recorded child environment that reject an ambient override or a second credential; and assert that every row's identifier and state root derive from its registry entry and differ from every other row's.
 
 **Evidence**: test-evidence audit findings `f-001` and `f-002` against `06b86db6b31704c58203929603bb2f2ceea237cb`, `f-001` through `f-004` against `3e1ba91c9ec059d96dcd2007a2fe371681599df2`, `f-001` through `f-003` against `548f8cc7b598a30969b0e68c243acb17d387f1ef`, `f-001` through `f-003` against `d84b4d2cb433059d995e6271d33551e30deb306d`, `f-001` through `f-005` with `f-008` against `f689b9b25cdd37f5e57545d313f30d29ad9cbd35`, `f-001` through `f-007` against `be286e7e32cdfbb0cc782f6175ed0f274e428e8d`, `f-001` through `f-005` against `b9ee9c2ca56d3341f03ea81abb1ec2f4cd8df57b`, `f-005` through `f-009` against `ef8b057ab649bc3da5c642cc4a18fc6745023718`, `f-003` through `f-008` against `841e864a9759eae04c8988c2931aa44b1ca21c74`, `f-001` through `f-006` against `f011edcdd33c0fdec41d8ccfbcdfe1393fc6b35a`, `f-001` through `f-006` with `f-008` against `c3b42a5514452b1b71e01c77467e7e45abfad048`, and `f-001` through `f-006` against each of `9ab0fc92c2f5c673edbfb2c73eea42502cef68e5` and `c2f6d8e1c3bc87f24d775fcbc62451b9c2ff6322`, the last nine rounds naming the execution-level mismatch and the last five naming the environment literals; the unfalsified row identifier and state root reached a finding of its own in the last round; the cited test and harness files lie outside every changeset's diff. The round against `05a7165277750d69c88bc8abbece2c4f6a96bb7c` raised the same six as `f-001` through `f-006`: `f-001` the literal `parentThreadId` where `ChildIdentityField.PARENT` owns the key; `f-002` the literals `childIds`, `pages` and `result`, for which production publishes no field constant; `f-003` the hand-written keys in `RecordingThreadReader` and the environment names in `_read_empty_native_state`; `f-004` the two `l1` cases that start the installed Codex CLI, whose floor is `l2`; `f-005` the unfalsified override and credential clauses; `f-006` the unfalsified row identifier and state root. The round against `cc5f3e86be4dbcc2c727c46f5c96593bab02b680` raised the same six again as `f-001` through `f-006`.
 
-## The child-listing artifact's keys are written as literals and published nowhere
+## The child-listing artifact's `pages` and `result` keys are published, `childIds` is not
 
-`outcomeeng/distribution/native_thread_evidence.py` builds and reads the retained
+`outcomeeng/distribution/native_thread_evidence.py` built and read the retained
 child-listing artifact through the bare literals `childIds`, `pages`, and `result`, and
-publishes a constant for none of them. It publishes `ChildIdentityField` for the
-thread/read identity fields (lines 27-35) and `NativeChildLookupPayload` for the payload's
-shape, so the module already states which of its keys are a contract; these three are a
-contract it emits and does not name.
+published a constant for none of them. It published `ChildIdentityField` for the
+thread/read identity fields and `NativeChildLookupPayload` for the payload's shape, so the
+module already stated which of its keys are a contract; these three were a contract it
+emitted and did not name.
 
-**The eleven sites.** `childIds` at lines 139, 326, and 369; `pages` at lines 326, 368,
-374, and 382; `result` at lines 254, 286, 334, 361, and 437 — twelve occurrences across
-eleven lines, since line 326 carries two. Line 139 reads the key back out of a document the
-same module wrote at 326, so a rename reaches both halves of one round trip through two
-independently spelled literals.
+**Landed.** The module now publishes `ChildListingField`, a field enum beside
+`NativeChildLookupPayload`, carrying `PAGES` and `RESULT`, and every site in the module that
+wrote or read either key reads it from that enum — the listing document it builds, the three
+listing-failure returns, the children-branch response envelope, the result the read unwraps,
+the page each listing response carries, and the response-envelope check in the exchange.
+`tests/test_native_profile_execution.compliance.l2.py` imports the enum for both keys and
+narrows the parsed document to `NativeChildLookupPayload` for `childIds`, so all three keys
+are now read against a declaration the module owns rather than spelled.
 
-**What it blocks.** `tests/test_native_profile_execution.compliance.l2.py` indexes the same
-three keys at lines 24 and 25 and is a source-ownership defect for doing so, recorded in the
-entry above. That defect cannot be repaired while this one stands: the rule requires the
-evidence to import the name from the source complying with the declaration, and there is no
-published name to import. The evidence half waits on this half.
+**What remains.** `childIds` has two declarations and one of them is still a literal: the
+`NativeChildLookupPayload` field types the payload, and the module's own construction and
+read-back sites spell the key rather than reading a name. A TypedDict field cannot serve as
+a dict key at those sites, and adding an enum member for `childIds` beside the existing
+field would give the module a third statement of one key, so closing this half is a choice
+between the two declarations rather than an addition to either.
 
-**Resolution shape**: publish the three keys from this module beside
-`NativeChildLookupPayload` — a field enum in the shape of `ChildIdentityField`, or module
-constants — and read every one of the eleven sites from it, so the writer and the reader at
-lines 326 and 139 spell the key once.
+**Settlement condition**: `outcomeeng/distribution/native_thread_evidence.py` states the
+`childIds` key once — either as a field the construction sites build through, or as a
+published name they read — and its construction and read-back sites spell it no longer.
 
-**Why separate**: the module lies outside this changeset's diff while the evidence file lies
-inside it. Publishing a contract from a production module no Frame here names is a change to
-the producer, which is neither the Author's to make nor the Executor's to authorise, so the
-evidence half stays unrepaired until a Change carries the producer. Every round that audits
-this node raises the evidence half again while that holds; the re-raise is this entry doing
-its work, and each one is another reading for the Change that closes it.
-
-**Settlement condition**: `outcomeeng/distribution/native_thread_evidence.py` publishes a
-constant for each of `childIds`, `pages`, and `result`, every site in that module reads it,
-and `tests/test_native_profile_execution.compliance.l2.py` imports the three names rather
-than spelling them.
-
-**Evidence**: the literal sites above against the module's own published
-`ChildIdentityField` and `NativeChildLookupPayload`; and the test-evidence audit rounds
+**Evidence**: `ChildListingField` and its call sites in
+`outcomeeng/distribution/native_thread_evidence.py`; the remaining `childIds` literals in
+the same module's listing document and its read-back; and the test-evidence audit rounds
 recorded in the entry above, whose finding on the evidence half named these keys as the ones
-the owning module publishes no constant for.
+the owning module published no constant for.
 
 ## The ambient-marker entry was wrong on its premise, and the import landed
 
@@ -82,33 +74,42 @@ said did not exist. The rounds against `05a7165277750d69c88bc8abbece2c4f6a96bb7c
 `cc5f3e86be4dbcc2c727c46f5c96593bab02b680` raised the same claim again as `f-018` and `f-016`
 (INFO).
 
-## The child-identity literal is checked by the type that declares it
+## The child-identity literal now reads its key from the producer's own enum
 
 An audit round raised `case.thread["parentThreadId"]` in
 `tests/test_native_profile_execution.compliance.l1.py` as a source-ownership defect, on the
 ground that `outcomeeng/distribution/native_thread_evidence.py` owns that key as
-`ChildIdentityField.PARENT` and the same file already imports the enum.
+`ChildIdentityField.PARENT` and the same file already imports the enum. This entry recorded
+the finding as wrong on its premise, because `case.thread` is the TypedDict
+`NativeChildThread`, which declares `parentThreadId` as one of its fields, and a TypedDict
+admits only a literal key: `case.thread[ChildIdentityField.PARENT]` fails `mypy --strict`
+with `typeddict-item`, since the enum cannot index the payload at all.
 
-The finding is wrong on its premise. `case.thread` is the TypedDict `NativeChildThread`,
-which declares `parentThreadId` as one of its fields, so the literal is read against the type
-that owns it and the type checker enforces the agreement: renaming the field makes this site
-a `typeddict-item` error rather than a passing test over a key production no longer emits.
-That is the guarantee the source-ownership rule asks for, supplied by the checker.
+That half of the premise holds and is confirmed by running the checker on both forms. What
+it does not settle is the choice between the module's two declarations of the key, and the
+operator ruled for the enum: the key the test reads is the one production's own correlation
+reads, and `collect_native_child_evidence` reaches it through `ChildIdentityField.PARENT`
+over a `Mapping[str, object]`.
 
-Substituting the enum makes it worse, not better. A TypedDict admits only a literal key, so
-`case.thread[ChildIdentityField.PARENT]` fails `mypy --strict` with exactly that error — the
-enum cannot index the payload at all. The two declarations coexist for different jobs: the
-TypedDict field types the payload, and the enum keys the identity fields the reader iterates,
-which is how lines 88 and 98 of the same test use it.
+**Landed.** The site widens the payload to the mapping production reads it as —
+`identity: Mapping[str, object] = case.thread` — and indexes it with
+`ChildIdentityField.PARENT`. The enum cannot index a TypedDict, so the widening is what the
+enum form requires rather than a way around the checker. The site stays falsifiable under
+either rename: renaming the enum member breaks the test at import, and renaming the field or
+the enum's value raises `KeyError` where the key is read.
 
-**Settlement condition.** None. A later round raising this site reads this entry first. If the
-module's two declarations of the same key are themselves the defect, that is a change to the
-producer and belongs with the entry on its unpublished listing keys.
+**What the widening costs.** The read no longer carries the checker's field-name guarantee
+for that one site; it carries the producer's enum instead. The two declarations of one key
+are what force the choice, and that is the subject of the entry above.
 
-**Evidence.** `NativeChildThread` at `outcomeeng/distribution/native_thread_evidence.py:61-69`
-declaring `parentThreadId`; the `typeddict-item` error `mypy --strict` reports for the enum
-form; and `ChildIdentityField` iterated at lines 88 and 98 of the test, which is the use the
-enum is for.
+**Settlement condition.** None here; it follows the `childIds` half above, which is where the
+module's two declarations of one key are recorded.
+
+**Evidence.** `NativeChildThread` in `outcomeeng/distribution/native_thread_evidence.py`
+declaring `parentThreadId`; the `typeddict-item` error `mypy --strict` reports for the direct
+enum form and its silence on the widened form; `ChildIdentityField` iterated by the two
+identity cases in the same test file, which is the other use the enum is for; and the
+operator ruling that the test read the key from the enum.
 
 ## The installation harness restates names its product modules own
 

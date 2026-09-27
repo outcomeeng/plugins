@@ -97,60 +97,72 @@ harness is already in context.
 
 **Evidence**: the gate node's test-evidence audit recorded it as a warning against the execution-level rule.
 
-## Two compliance cells read the conforming spawner source with no violating case
+## The signal scenarios' termination deadline leaves no margin over full-suite load
 
-Two compliance assertions in `spx/15-validation.enabler/65-gate.enabler/gate.md` are exercised by
-reading the production spawner's own source and nothing else:
+`TERMINATION_DEADLINE_SECONDS` in `outcomeeng_testing/harnesses/gate_signal.py` bounds the wait
+for a real orchestrator subprocess to die after a forwarded signal at six seconds, over a
+grace period of `SIGNAL_GRACE_SECONDS`. Run alone the four scenarios of
+`tests/test_gate.scenario.l2.py` finish in about twenty-four seconds and pass. Inside the
+full pytest surface, where the same run drives real subprocess groups for the whole
+repository, the deadline is reachable: one full-gate run reported
+`test_signal_terminates_process_group_within_grace` failing with `TimeoutExpired` after 6.0
+seconds, and the next run of the same surface on the same tree passed every case.
 
-> ALWAYS: each child subprocess is started with `start_new_session=True` so signal forwarding
-> targets a process group, never a single PID — prevents orphaned grandchildren when the
-> orchestrator is interrupted ([test](tests/test_gate.compliance.l1.py))
+The deadline is a wall-clock bound on a process the host schedules, so it measures the host's
+scheduling latency alongside the orchestrator's own escalation. Under a loaded run the two are
+not separable, and the case reports the sum against a budget sized for the second alone.
 
-> ALWAYS: each production child subprocess unblocks SIGTERM, SIGINT, and SIGHUP before exec so the
-> orchestrator's protected spawn window does not make validators inherit a blocked
-> forwarded-signal mask ([test](tests/test_gate.compliance.l1.py))
+**Impact.** A starved run reads as a defect in signal forwarding, which is the one claim the
+scenario exists to make. The cost lands on whoever next reads a red full gate: the failure
+names the grace period, so the first reading is that escalation regressed, and separating that
+from scheduling latency costs a second full-surface run.
 
-**What each reads.** `test_subprocess_lives_only_in_the_production_spawner` in
-`spx/15-validation.enabler/65-gate.enabler/tests/test_gate.compliance.l1.py` parses
-`outcomeeng/validation/_spawner.py`, the one module that imports `subprocess`, and requires of
-every `subprocess.Popen` call in it that `start_new_session` be the literal `True` and that
-`preexec_fn` name `_restore_child_signal_mask`; it then requires the module's text to carry the
-`signal.pthread_sigmask(signal.SIG_UNBLOCK` call and each of the three forwarded signal names.
-Every input is the conforming source. Neither rule has a source that violates it passed to the
-reading by path.
+**Resolution shape**: bound the wait by the orchestrator's own observable progress rather than
+by wall-clock alone — or size the deadline from the grace period plus a margin the harness
+derives, and record the host-load observation alongside a timeout so a starved run is
+distinguishable from a regression without re-running the surface.
 
-**Deferrable rather than unfalsifiable.** Production mutation still breaks each assertion: dropping
-`start_new_session=True` from the `Popen` call fails the first, and removing the `preexec_fn`
-argument or the child-side unblock call fails the second, so the evidence can falsify the behavior
-it names. What is absent is the compliance cell's own requirement — at least one real violating
-case, a whole source artifact that breaks the rule, handed to the reading by path. A reading that
-returned nothing on a violating source would pass here unnoticed, so the cell proves the conforming
-source conforms without proving the rule is detected.
+**Why separate**: the deadline belongs to `outcomeeng_testing/harnesses/gate_signal.py`, whose
+seam this node already records as needing restructuring under "The signal harness owns the
+predicates its linked tests should own" above. Both changes rewrite the same harness entry
+points against real subprocess signal delivery, so they belong on one reviewed diff rather
+than inside an unrelated repair.
 
-**The shape to reach.** The no-polling evidence in the same file already has it.
-`unbounded_polling_sites` is a reader the validation package owns, and
-`test_a_while_true_sleep_is_reported`, `test_a_watch_invocation_is_reported`, and
-`test_a_bounded_loop_is_not_reported` each write a real source file under `tmp_path` and hand it to
-that reader by path — two violating and one conforming, so a reader reporting everything or nothing
-fails. The two cells above have no reader separable from the test to hand a fixture to.
+**Evidence**: two runs of `just check` over the same tree, the first reporting
+`subprocess.TimeoutExpired` after 6.0 seconds at
+`outcomeeng_testing/harnesses/gate_signal.py:270` with 1721 other cases passing, the second
+passing the whole pytest step in 743 seconds; and the same four cases passing in 23.61 seconds
+when that file is run alone. The load waiter observed the host at 0.41 normalized before each
+run, so neither started above capacity.
 
-**Settlement condition.** Each cell reaches a reader the validation package owns over the spawn
-call's arguments, exercised against a violating source fixture passed by path: for the session
-rule, a spawner-shaped source whose `subprocess.Popen` call omits `start_new_session` and one that
-passes it `False`; for the signal-mask rule, a spawner-shaped source whose `Popen` call carries no
-`preexec_fn`, and one whose child-side function omits the `SIG_UNBLOCK` of the three forwarded
-signals. Conforming sources beside them establish that the reader raises no false positive, as the
-no-polling cases do.
+## The skipped-row nodeid shape is built in two places and published in neither
 
-**Why separate.** Both cells lie outside the Output this changeset carries — the per-agent disable
-switch and the declared skip its report names. Reaching the settlement condition extracts a
-spawn-argument reader out of the test into the validation package and authors its violating
-fixtures, which rewrites evidence the switch work does not touch.
+`SKIPPED_ROW_ID_SHAPE` in `outcomeeng_testing/harnesses/gate.py` states the nodeid shape
+`{path}::{name}` that the harness builds each generated row's identity from, and
+`modules_naming_a_switch`'s caller in `outcomeeng/validation/agent_switch_enforcement.py`
+builds the same shape inline as `f"{path}::{node.name}"`. The production module publishes
+no constant for it, so the harness states a shape production also states, and the two are
+free to drift: a change to the separator in the validation package leaves the harness
+shaping a nodeid the recorder no longer writes, with nothing failing.
 
-**Evidence.** The two assertions' text against the inputs of
-`test_subprocess_lives_only_in_the_production_spawner`, which are the conforming spawner source
-alone; and the same file's no-polling cases as the violating-source shape the compliance cell
-requires.
+**Resolution shape**: publish the nodeid shape from the validation module that builds it,
+read it at that module's own site, and import it in the harness in place of
+`SKIPPED_ROW_ID_SHAPE`.
+
+**Why this is filed rather than repaired**: `agent_switch_enforcement.py` builds the shape
+for its own report, and publishing a contract from it is a change to the producer for a
+claim no assertion of this node makes. The harness half cannot be repaired first — the
+source-ownership rule requires the name to be imported from the source complying with the
+declaration, and there is no published name to import — so the harness keeps its own
+constant until a Change carries the producer.
+
+**Settlement condition**: `outcomeeng/validation/agent_switch_enforcement.py` publishes the
+nodeid shape, its own site reads it, and `outcomeeng_testing/harnesses/gate.py` imports it.
+
+**Evidence**: `SKIPPED_ROW_ID_SHAPE` in `outcomeeng_testing/harnesses/gate.py` against the
+inline `f"{path}::{node.name}"` in `outcomeeng/validation/agent_switch_enforcement.py`;
+surfaced by the source-ownership sweep over this Change's changed evidence and harness
+lines, which found no other unpublished shape among them.
 
 ## The summary-schema interpreter tolerates a keyword it does not evaluate
 

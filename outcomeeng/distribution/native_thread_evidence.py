@@ -76,6 +76,13 @@ class NativeChildLookupPayload(TypedDict):
     thread: NativeChildThread
 
 
+class ChildListingField(StrEnum):
+    """Keys of the retained child-listing artifact this module emits and reads."""
+
+    PAGES = "pages"
+    RESULT = "result"
+
+
 class NativeParentEvent(TypedDict):
     """Parent identity supplied by the exec JSONL stream."""
 
@@ -251,7 +258,11 @@ def _read_native_record(
                     else:
                         exchange.send({"method": "initialized"})
                         if children:
-                            response = {"result": _read_child(exchange, thread_id)}
+                            response = {
+                                ChildListingField.RESULT: _read_child(
+                                    exchange, thread_id
+                                )
+                            }
                         else:
                             response = exchange.request(
                                 1,
@@ -283,7 +294,7 @@ def _read_native_record(
     return CommandResult(
         tuple(command),
         int(condition is not None),
-        json.dumps(response.get("result", response)),
+        json.dumps(response.get(ChildListingField.RESULT, response)),
         diagnostic + (f"\n{condition}" if condition is not None else ""),
     )
 
@@ -323,7 +334,10 @@ def _read_child(exchange: _Exchange, parent_id: str) -> Mapping[str, object]:
         failure = _list_children(exchange, parent_id, archived, pages, child_ids)
         if failure is not None:
             return failure
-    document: dict[str, object] = {"pages": pages, "childIds": child_ids}
+    document: dict[str, object] = {
+        ChildListingField.PAGES: pages,
+        "childIds": child_ids,
+    }
     if len(child_ids) == 1:
         response = exchange.request(
             len(pages) + 1,
@@ -331,7 +345,7 @@ def _read_child(exchange: _Exchange, parent_id: str) -> Mapping[str, object]:
             {"threadId": child_ids[0], "includeTurns": True},
         )
         document["read"] = response
-        result = response.get("result")
+        result = response.get(ChildListingField.RESULT)
         if isinstance(result, dict):
             document["thread"] = result.get("thread")
     return document
@@ -358,20 +372,20 @@ def _list_children(
             },
         )
         pages.append(response)
-        page = response.get("result")
+        page = response.get(ChildListingField.RESULT)
         if (
             not isinstance(page, dict)
             or not isinstance(page.get("data"), list)
             or "nextCursor" not in page
         ):
             return {
-                "pages": pages,
+                ChildListingField.PAGES: pages,
                 "childIds": child_ids,
                 "error": "native child listing failed",
             }
         if not _append_child_ids(page["data"], parent_id, child_ids):
             return {
-                "pages": pages,
+                ChildListingField.PAGES: pages,
                 "error": "native child listing identity is invalid",
             }
         cursor = page.get("nextCursor")
@@ -379,7 +393,7 @@ def _list_children(
             return None
         if not isinstance(cursor, str) or not cursor or cursor in seen:
             return {
-                "pages": pages,
+                ChildListingField.PAGES: pages,
                 "error": "native child listing cursor is invalid",
             }
         seen.add(cursor)
@@ -434,7 +448,7 @@ class _Exchange:
             line, self.pending = self.pending.split(b"\n", 1)
             document = json.loads(line)
             if isinstance(document, dict) and document.get("id") == identifier:
-                if "result" not in document and "error" not in document:
+                if ChildListingField.RESULT not in document and "error" not in document:
                     raise ValueError(
                         "native app-server response has no result or error"
                     )

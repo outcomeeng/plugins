@@ -1,6 +1,6 @@
 # Local Live Discovery Selection
 
-Local verification includes live subagent discovery for installation, subagent-definition generation and placement, discovery, and their governing contracts or verification infrastructure. Explicit full verification and CI include it. Automatic widening of unrelated local deterministic verification does not add a live-model requirement. A selected row that starts a real coding-agent process is declared optional for one local run by that agent's own disable switch, and then skips with a reason naming that switch while the run's report carries the skip. Nothing in the product sets a switch, so CI, whose environment carries none, proves every selected live row with its own credential, while any local run, explicit full verification included, proves only the rows the environment it inherits leaves unswitched.
+Local verification includes live subagent discovery for installation, subagent-definition generation and placement, discovery, and their governing contracts or verification infrastructure. The selection layer's own full-gate plan includes it. Automatic widening of unrelated local deterministic verification does not add a live-model requirement. A selected row that starts a real coding-agent process is declared optional for one local run by that agent's own disable switch, and then skips with a reason naming that switch while the run's report carries the skip. Nothing in the product sets a switch, so CI, whose environment carries none, proves every selected live row with its own credential, while any local run, explicit full verification included, proves only the rows the environment it inherits leaves unswitched.
 
 ## Rationale
 
@@ -8,7 +8,7 @@ Live discovery proves that a fresh session can discover the installed definition
 
 ## Product properties
 
-1. Relevant local changes and explicit full verification include live discovery, with the selection reason visible before execution.
+1. Relevant local changes and the selection layer's own full-gate plan include live discovery, with the selection reason visible before execution.
 2. Unrelated local changes retain their complete selected deterministic scope while excluding live discovery, including when that scope widens automatically to the full deterministic suite.
 3. A selected live check requires a successful execution unless its agent's disable switch declares that row optional for the run, in which case the row skips with a reason naming the switch and the report carries that skip by name; missing or invalid credentials fail visibly without skipping or switching authentication mode.
 
@@ -22,7 +22,7 @@ Live discovery proves that a fresh session can discover the installed definition
 
 - ALWAYS: a declared per-agent disable switch makes a selected live row optional for that one local run — the row is selected, runs its own skip, and reports a reason naming the switch, rather than leaving the plan. ([mapping])
 - ALWAYS: local changed-path selection includes live discovery for installation, definition generation and placement, discovery, and their directly governing contracts and verification infrastructure. ([compliance])
-- ALWAYS: explicit full verification, direct execution covering the live check, and CI full verification include live discovery. ([compliance])
+- ALWAYS: the selection layer's own full-gate plan and direct execution covering the live check include live discovery. ([compliance])
 - NEVER: automatic full-suite escalation for an unrelated local change selects live discovery or reduces the selected deterministic verification scope. ([compliance])
 - ALWAYS: the execution plan displays the reason for including or excluding live discovery before running selected steps. ([compliance])
 - NEVER: credential availability determines change relevance or turns selected required evidence into a passing skip. ([compliance])
