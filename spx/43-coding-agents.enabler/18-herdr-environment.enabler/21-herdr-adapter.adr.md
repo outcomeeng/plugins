@@ -34,13 +34,6 @@ Herdr 0.9.1, the pinned source-tool version, offers no command that ends an agen
 
 ## Verification
 
-- ALWAYS: a create-worktree or open-worktree request without a workspace fails as an invalid request before any herdr command runs
-- ALWAYS: create-worktree returns the created worktree's path, its workspace, and its root pane
-- NEVER: create-worktree records a worktree-occupancy claim
-- NEVER: one agent's incomplete evidence rejects the inventory, or a read or prompt addressed to that agent's pane; the result carries the named incomplete item in place of the complete projection
-- ALWAYS: start, relaunch, and wait return the named incomplete result, never a readiness verdict, when the agent's evidence lacks a field their readiness judgment needs
-- ALWAYS: stop ends the agent session by submitting the agent's own `/exit` command through `herdr agent prompt` and leaves its pane open at its shell
-
 ### Testing
 
 - ALWAYS: each source-owned operation maps a valid versioned request to the exact herdr argument vector for that operation ([mapping])
@@ -49,6 +42,12 @@ Herdr 0.9.1, the pinned source-tool version, offers no command that ends an agen
 - ALWAYS: requests for start, relaunch, stop, key, open-worktree, and create-worktree fail before command execution when mutation authorization is absent ([compliance])
 - NEVER: a wait-bearing request is accepted without an explicit timeout, and the default runner never runs a command without a bound ([compliance])
 - NEVER: a shipped coding-agents Python script outside `/operate-herdr` constructs a herdr argument vector or invokes herdr command help ([compliance])
+- ALWAYS: a create-worktree or open-worktree request without a workspace fails as an invalid request before any herdr command runs ([mapping])
+- ALWAYS: create-worktree returns the created worktree's path, its workspace, and its root pane ([mapping])
+- NEVER: create-worktree records a worktree-occupancy claim ([compliance])
+- NEVER: one agent's incomplete evidence rejects the inventory, or a read or prompt addressed to that agent's pane; the result carries the named incomplete item in place of the complete projection ([mapping])
+- ALWAYS: start, relaunch, and wait return the named incomplete result, never a readiness verdict, when the agent's evidence lacks a field their readiness judgment needs ([mapping])
+- ALWAYS: stop ends the agent session by submitting the agent's own `/exit` command through `herdr agent prompt` and leaves its pane open at its shell ([mapping])
 
 ### Audit
 

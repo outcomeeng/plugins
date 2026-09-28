@@ -1,9 +1,11 @@
 import json
+from pathlib import PurePath
 from types import ModuleType
 from typing import cast
 
 from outcomeeng_testing.generators.herdr_environment import (
     agent_item_variant,
+    incomplete_agent_variants,
     operation_requests,
 )
 from outcomeeng_testing.harnesses.cli_usage import read_argv
@@ -13,16 +15,23 @@ from outcomeeng_testing.harnesses.herdr_environment import (
     RecordingRunner,
     captured_error_message,
     captured_error_responses,
+    captured_incomplete_agents,
+    captured_incomplete_response,
     captured_payload,
     captured_responses,
+    captured_session_agent,
+    captured_stopped_panes,
     captured_success_response,
+    evidence_usage_contract_for,
     inventory_envelope,
     load_herdr_environment,
     projected_error_variants,
+    replay,
     request_for,
     run_inventory_mapping,
     run_option_prefix_rejections,
     run_unknown_operation_mapping,
+    session_envelope,
     usage_contract_for,
 )
 
@@ -70,6 +79,29 @@ def test_herdr_operation_mappings() -> None:
             assert reading.trailing == tuple(
                 cast(list[str], arguments[module.AGENT_ARGUMENTS_FIELD])
             )
+        for field_name, option in module.PUBLIC_HERDR_ARGUMENT_OPTIONS.items():
+            value = arguments.get(field_name)
+            if (
+                isinstance(value, str | int)
+                and not isinstance(value, bool)
+                and option in argv
+            ):
+                assert argv[argv.index(option) + 1] == str(value)
+        evidence_argv = module.evidence_command_for(request)
+        if operation in module.EVIDENCE_COMMAND_PREFIXES:
+            evidence_contract = evidence_usage_contract_for(module, operation)
+            evidence_reading = read_argv(evidence_contract, evidence_argv)
+            assert evidence_reading.command_path == (
+                module.HERDR_COMMAND,
+                *evidence_contract.command_path,
+            )
+            assert evidence_reading.unknown_options == ()
+            assert len(evidence_reading.positionals) == len(
+                evidence_contract.required_positionals
+            )
+            assert argv[len(contract.command_path) + 1] in evidence_reading.positionals
+        else:
+            assert evidence_argv is None
 
         captured = captured_success_response(module, operation, arguments)
         if captured is None:
@@ -77,7 +109,7 @@ def test_herdr_operation_mappings() -> None:
             # response mapping below covers it with that envelope.
             assert captured_error_responses(module, operation) != []
             continue
-        runner = RecordingRunner([captured.result])
+        runner = RecordingRunner(replay(captured))
         result = module.execute(request, runner)
 
         assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
@@ -87,7 +119,10 @@ def test_herdr_operation_mappings() -> None:
             assert response == {module.OUTPUT_FIELD: captured_payload(captured)}
         else:
             assert response == captured_payload(captured)
-        assert len(runner.calls) == 1
+        assert [call[0] for call in runner.calls] == [
+            argv,
+            *([] if evidence_argv is None else [evidence_argv]),
+        ]
         called_argv, stdin, bound = runner.calls[0]
         assert (called_argv, stdin) == (argv, None)
         assert bound == module.command_bound_seconds(request)
@@ -105,7 +140,7 @@ def test_captured_responses_map_to_results_without_rewriting() -> None:
         operation = module.Operation(captured.operation)
         covered.add(operation)
         request = request_for(module, operation, captured.shaping_fields)
-        result = module.execute(request, RecordingRunner([captured.result]))
+        result = module.execute(request, RecordingRunner(replay(captured)))
 
         assert json.loads(json.dumps(result)) == result
         if captured.error_code is None:
@@ -121,7 +156,7 @@ def test_captured_responses_map_to_results_without_rewriting() -> None:
         )
         assert result[module.ERROR_CODE_FIELD] == captured.error_code
         assert result[module.DETAIL_FIELD] == captured_error_message(module, captured)
-        assert result[module.COMMAND_EXIT_CODE_FIELD] == captured.result.returncode
+        assert result[module.COMMAND_EXIT_CODE_FIELD] == replay(captured)[-1].returncode
 
     assert covered == set(module.Operation)
 
@@ -137,12 +172,10 @@ def test_start_and_wait_map_to_the_session_identity_and_state() -> None:
             module, operation, cast(dict[str, object], request[module.ARGUMENTS_FIELD])
         )
         assert captured is not None, f"no captured {operation} response"
-        envelope = cast(dict[str, object], captured_payload(captured))
-        result = cast(dict[str, object], envelope[module.RESULT_FIELD])
-        emitted = cast(dict[str, object], result[module.SESSION_FIELD])
-        executed = module.execute(request, RecordingRunner([captured.result]))
+        emitted = captured_session_agent(module, captured)
+        executed = module.execute(request, RecordingRunner(replay(captured)))
         assert executed[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
-        return emitted, module.session_from_response(executed[module.RESPONSE_FIELD])
+        return emitted, cast(dict[str, object], executed[module.SESSION_RESULT_FIELD])
 
     # Every session-bearing operation, and the prompt under both of its
     # response shapes: submitted alone, and observed after `--wait`.
@@ -185,14 +218,17 @@ def test_start_and_wait_map_to_the_session_identity_and_state() -> None:
     for captured in timed_out:
         result = module.execute(
             request_for(module, module.Operation.WAIT),
-            RecordingRunner([captured.result]),
+            RecordingRunner(replay(captured)),
         )
         assert result[module.STATUS_FIELD] == module.ExecutionStatus.WAIT_TIMEOUT
         assert result[module.ERROR_CODE_FIELD] == captured.error_code
 
     not_ready = [
         captured
-        for captured in projected_error_variants(module)
+        for captured in [
+            *captured_error_responses(module, module.Operation.START),
+            *projected_error_variants(module),
+        ]
         if module.HERDR_ERROR_STATUSES.get(captured.error_code or "")
         is module.ExecutionStatus.AGENT_NOT_READY
     ]
@@ -200,7 +236,7 @@ def test_start_and_wait_map_to_the_session_identity_and_state() -> None:
     for captured in not_ready:
         result = module.execute(
             request_for(module, module.Operation.START),
-            RecordingRunner([captured.result]),
+            RecordingRunner(replay(captured)),
         )
         assert result[module.STATUS_FIELD] == module.ExecutionStatus.AGENT_NOT_READY
         assert result[module.ERROR_CODE_FIELD] == captured.error_code
@@ -277,7 +313,7 @@ def test_herdr_error_codes_project_to_named_statuses() -> None:
 
     for code, captured in projected.items():
         result = module.execute(
-            request_for(module, captured.operation), RecordingRunner([captured.result])
+            request_for(module, captured.operation), RecordingRunner(replay(captured))
         )
         assert result[module.STATUS_FIELD] == module.HERDR_ERROR_STATUSES[code]
         assert result[module.STATUS_FIELD] != module.ExecutionStatus.COMMAND_FAILED
@@ -286,7 +322,7 @@ def test_herdr_error_codes_project_to_named_statuses() -> None:
 
     for captured in verbatim:
         result = module.execute(
-            request_for(module, captured.operation), RecordingRunner([captured.result])
+            request_for(module, captured.operation), RecordingRunner(replay(captured))
         )
         assert result[module.STATUS_FIELD] == module.ExecutionStatus.COMMAND_FAILED
         assert result[module.ERROR_CODE_FIELD] == captured.error_code
@@ -328,7 +364,7 @@ def test_absent_server_and_unsupported_operation_map_to_unavailable_results() ->
     ]
     assert not_running != []
     for captured in not_running:
-        result = module.execute(request, RecordingRunner([captured.result]))
+        result = module.execute(request, RecordingRunner(replay(captured)))
         assert result[module.STATUS_FIELD] == module.ExecutionStatus.SERVER_NOT_RUNNING
         assert result[module.ERROR_CODE_FIELD] == captured.error_code
 
@@ -340,3 +376,280 @@ def test_absent_server_and_unsupported_operation_map_to_unavailable_results() ->
         )
 
     run_unknown_operation_mapping(assert_unknown)
+
+
+def test_worktree_requests_map_to_the_worktree_path_workspace_and_root_pane() -> None:
+    module = load_herdr_environment()
+    worktree_operations = (
+        module.Operation.CREATE_WORKTREE,
+        module.Operation.OPEN_WORKTREE,
+    )
+
+    for request in operation_requests(module):
+        operation = module.Operation(request[module.OPERATION_FIELD])
+        if operation not in worktree_operations:
+            continue
+        arguments = cast(dict[str, object], request[module.ARGUMENTS_FIELD])
+        argv = module.command_for(request)
+        assert (
+            argv[argv.index(module.WORKSPACE_OPTION) + 1]
+            == arguments[module.WORKSPACE_FIELD]
+        )
+
+        captured = captured_success_response(module, operation, arguments)
+        assert captured is not None, f"no captured {operation} response"
+        runner = RecordingRunner(replay(captured))
+        result = module.execute(request, runner)
+
+        assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
+        assert [call[0] for call in runner.calls] == [argv]
+        envelope = cast(dict[str, object], captured_payload(captured))
+        emitted = cast(dict[str, object], envelope[module.RESULT_FIELD])
+        worktree = cast(dict[str, object], emitted[module.WORKTREE_RESPONSE_FIELD])
+        workspace = cast(dict[str, object], emitted[module.WORKSPACE_RESPONSE_FIELD])
+        root_pane = cast(dict[str, object], emitted[module.ROOT_PANE_RESPONSE_FIELD])
+        projected = cast(dict[str, object], result[module.WORKTREE_RESULT_FIELD])
+        assert projected == {
+            module.PATH_FIELD: worktree[module.WORKTREE_PATH_RESPONSE_FIELD],
+            module.WORKSPACE_FIELD: workspace[module.WORKSPACE_ID_FIELD],
+            module.ROOT_PANE_RESULT_FIELD: root_pane[module.PANE_ID_FIELD],
+        }
+        assert root_pane[module.WORKSPACE_ID_FIELD] == projected[module.WORKSPACE_FIELD]
+        assert (
+            PurePath(cast(str, root_pane[module.CWD_FIELD])).name
+            == PurePath(cast(str, projected[module.PATH_FIELD])).name
+        )
+
+        without_workspace = {
+            **request,
+            module.ARGUMENTS_FIELD: {
+                field_name: value
+                for field_name, value in arguments.items()
+                if field_name != module.WORKSPACE_FIELD
+            },
+        }
+        refusing = RecordingRunner([])
+        refused = module.execute(without_workspace, refusing)
+        assert refused[module.STATUS_FIELD] == module.ExecutionStatus.INVALID_SCHEMA
+        assert refusing.calls == []
+
+
+def test_inventory_maps_every_agent_in_full_or_to_its_named_incomplete_item() -> None:
+    module = load_herdr_environment()
+    captured = captured_incomplete_response(module, module.Operation.INVENTORY)
+    agents = captured_incomplete_agents(module)
+    missing = [
+        {
+            field_name
+            for field_name in module.PARTICIPANT_FIELDS
+            if field_name not in agent
+        }
+        for agent in agents
+    ]
+    assert set() in missing
+    assert any(module.NAME_FIELD in fields for fields in missing)
+    assert any(module.INTERACTIVE_READY_FIELD in fields for fields in missing)
+
+    result = module.execute(
+        request_for(module, module.Operation.INVENTORY),
+        RecordingRunner(replay(captured)),
+    )
+
+    assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
+    items = cast(list[dict[str, object]], result[module.AGENTS_RESULT_FIELD])
+    assert len(items) == len(agents)
+    for item, agent, absent in zip(items, agents, missing, strict=True):
+        carried = {
+            field_name: agent[field_name]
+            for field_name in module.PARTICIPANT_FIELDS
+            if field_name in agent
+        }
+        if absent:
+            assert set(cast(list[str], item[module.MISSING_FIELDS_FIELD])) == absent
+            assert {
+                field_name: value
+                for field_name, value in item.items()
+                if field_name != module.MISSING_FIELDS_FIELD
+            } == carried
+        else:
+            assert item == carried
+    for item, agent in zip(items, agents, strict=True):
+        assert (
+            module.participant_for(items, cast(str, agent[module.PANE_ID_FIELD]))
+            == item
+        )
+
+    template = next(agent for agent, absent in zip(agents, missing) if not absent)
+    for dropped, variant in incomplete_agent_variants(module, template):
+        complete, incomplete = module.participants_from_inventory(
+            inventory_envelope(module, [template, variant])
+        )
+        assert complete == {
+            field_name: template[field_name] for field_name in module.PARTICIPANT_FIELDS
+        }
+        assert set(cast(list[str], incomplete[module.MISSING_FIELDS_FIELD])) == dropped
+        assert {
+            field_name: value
+            for field_name, value in incomplete.items()
+            if field_name != module.MISSING_FIELDS_FIELD
+        } == {
+            field_name: template[field_name]
+            for field_name in module.PARTICIPANT_FIELDS
+            if field_name not in dropped
+        }
+
+
+def test_readiness_judgments_return_the_incomplete_result_on_missing_evidence() -> None:
+    module = load_herdr_environment()
+    judged = set()
+
+    def assert_judgment(
+        operation: object, captured: CapturedResponse, dropped: frozenset[str]
+    ) -> None:
+        result = module.execute(
+            request_for(module, operation), RecordingRunner(replay(captured))
+        )
+        session = cast(dict[str, object], result[module.SESSION_RESULT_FIELD])
+        assert set(cast(list[str], session.get(module.MISSING_FIELDS_FIELD, []))) == (
+            dropped
+        )
+        if dropped & module.READINESS_FIELDS[operation]:
+            assert (
+                result[module.STATUS_FIELD]
+                == module.ExecutionStatus.AGENT_EVIDENCE_INCOMPLETE
+            )
+            assert module.RESPONSE_FIELD not in result
+        else:
+            assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
+
+    for operation in module.READINESS_FIELDS:
+        judged.add(operation)
+        captured = captured_success_response(module, operation)
+        assert captured is not None, f"no captured {operation} response"
+        agent = captured_session_agent(module, captured)
+        for dropped, variant in incomplete_agent_variants(module, agent):
+            assert_judgment(
+                operation, session_envelope(module, captured, variant), dropped
+            )
+        for listed in captured_incomplete_agents(module):
+            assert_judgment(
+                operation,
+                session_envelope(module, captured, listed),
+                frozenset(
+                    field_name
+                    for field_name in module.PARTICIPANT_FIELDS
+                    if field_name not in listed
+                ),
+            )
+
+    assert judged == {
+        module.Operation.START,
+        module.Operation.RELAUNCH,
+        module.Operation.WAIT,
+    }
+    waited = captured_incomplete_response(module, module.Operation.WAIT)
+    unnamed = captured_session_agent(module, waited)
+    assert module.NAME_FIELD not in unnamed
+    assert_judgment(
+        module.Operation.WAIT,
+        waited,
+        frozenset(
+            field_name
+            for field_name in module.PARTICIPANT_FIELDS
+            if field_name not in unnamed
+        ),
+    )
+
+
+def test_read_and_prompt_to_an_incomplete_agent_carry_the_incomplete_item() -> None:
+    module = load_herdr_environment()
+
+    for operation in (module.Operation.READ, module.Operation.PROMPT):
+        captured = captured_incomplete_response(module, operation)
+        agent = captured_session_agent(module, captured)
+        absent = {
+            field_name
+            for field_name in module.PARTICIPANT_FIELDS
+            if field_name not in agent
+        }
+        assert absent != set()
+
+        result = module.execute(
+            request_for(module, operation), RecordingRunner(replay(captured))
+        )
+
+        assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
+        response = cast(dict[str, object], result[module.RESPONSE_FIELD])
+        if operation in module.TEXT_OPERATIONS:
+            assert response == {module.OUTPUT_FIELD: captured_payload(captured)}
+        else:
+            assert response == captured_payload(captured)
+        session = cast(dict[str, object], result[module.SESSION_RESULT_FIELD])
+        assert set(cast(list[str], session[module.MISSING_FIELDS_FIELD])) == absent
+        assert {
+            field_name: value
+            for field_name, value in session.items()
+            if field_name != module.MISSING_FIELDS_FIELD
+        } == {
+            field_name: agent[field_name]
+            for field_name in module.PARTICIPANT_FIELDS
+            if field_name in agent
+        }
+
+        complete = captured_success_response(module, operation)
+        assert complete is not None, f"no captured {operation} response"
+        for dropped, variant in incomplete_agent_variants(
+            module, captured_session_agent(module, complete)
+        ):
+            varied = module.execute(
+                request_for(module, operation),
+                RecordingRunner(replay(session_envelope(module, complete, variant))),
+            )
+            assert varied[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
+            carried = cast(dict[str, object], varied[module.SESSION_RESULT_FIELD])
+            assert set(cast(list[str], carried[module.MISSING_FIELDS_FIELD])) == dropped
+
+
+def test_stop_submits_the_agents_exit_and_keeps_its_pane_for_a_relaunch() -> None:
+    module = load_herdr_environment()
+    stopped = captured_success_response(module, module.Operation.STOP)
+    assert stopped is not None, "no captured stop response"
+    pane = cast(str, captured_session_agent(module, stopped)[module.PANE_ID_FIELD])
+    request = module.operation_request(
+        module.Operation.STOP, pane=pane, mutation_authorized=True
+    )
+
+    argv = module.command_for(request)
+    assert argv == module.command_for(
+        module.operation_request(
+            module.Operation.PROMPT, pane=pane, text=module.AGENT_EXIT_TEXT
+        )
+    )
+    runner = RecordingRunner(replay(stopped))
+    result = module.execute(request, runner)
+    assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
+    assert [call[0] for call in runner.calls] == [argv]
+
+    kept = [
+        listed
+        for listed in captured_stopped_panes(module)
+        if listed[module.PANE_ID_FIELD] == pane
+    ]
+    assert len(kept) == 1
+    assert module.AGENT_KIND_FIELD not in kept[0]
+
+    relaunched = captured_success_response(module, module.Operation.RELAUNCH)
+    assert relaunched is not None, "no captured relaunch response"
+    generated = request_for(module, module.Operation.RELAUNCH)
+    relaunch = {
+        **generated,
+        module.ARGUMENTS_FIELD: {
+            **cast(dict[str, object], generated[module.ARGUMENTS_FIELD]),
+            module.PANE_FIELD: pane,
+        },
+    }
+    relaunch_result = module.execute(relaunch, RecordingRunner(replay(relaunched)))
+    assert relaunch_result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
+    session = cast(dict[str, object], relaunch_result[module.SESSION_RESULT_FIELD])
+    assert session[module.PANE_ID_FIELD] == pane
+    assert module.MISSING_FIELDS_FIELD not in session
