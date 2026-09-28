@@ -169,25 +169,6 @@ satisfy and defines or drops "subject field", and an isolated skill audit of
 `src/plugins/spec-tree/skills/verify/SKILL.md` raises no finding under the rule
 `internal-consistency-read-order`.
 
-## The audit input rule hands subjects to a specialist the workflow never runs
-
-**Evidence**: `instructions:skill-auditor` warning `f-011`, severity `WARNING`, rule `internal-consistency-audit-route`,
-against `src/plugins/spec-tree/skills/verify/SKILL.md` line 83, verbatim: "the audit
-bullet opens with \"the route hands its specialist every subject selected for
-audit\", then says the specialist is the isolated verifier, \"which this workflow
-never runs\". Change to: wording that says the audit route hands nothing to a
-specialist and writes the tag itself." The cited line holds that text at head
-`0c5ea733221d272f571005528ec87bcb7fb1e1dc`.
-
-**Impact**: the audit bullet's input rule and its next sentence contradict each
-other on whether anything is handed off, so a reader can take the audit route as a
-specialist dispatch and look for a hand-off result the workflow never produces.
-
-**Settlement condition**: the audit bullet states that the audit route hands nothing
-to a specialist and writes the tag itself, and an isolated skill audit of
-`src/plugins/spec-tree/skills/verify/SKILL.md` raises no finding under the rule
-`internal-consistency-audit-route`.
-
 ## The report-table rule covers a blocked assertion but not a blocked decision rule
 
 **Evidence**: `instructions:skill-auditor` warning `f-012`, severity `WARNING`, rule `coverage-gap-blocked-decision-rule`,
