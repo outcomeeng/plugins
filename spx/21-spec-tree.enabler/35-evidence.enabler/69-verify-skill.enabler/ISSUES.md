@@ -30,11 +30,11 @@ bullets repeating the tag grammar, the evidence-shape derivation, the
 runtime-catalog check, and the judgment boundary; warning `f-011` on head
 `5f9bb8e6200221bbe3b812b947b2f96dbeb686df` added the blocked-result shape and the
 `capability-required` semantics. The reduction has been applied: at head
-`0c5ea733221d272f571005528ec87bcb7fb1e1dc`, and in the unchanged skill since,
-`<essential_principles>` is six bullets at lines 18–23 and states no tag grammar,
-evidence-shape derivation, runtime-catalog check, or `capability-required`
-semantics; those live only in `validate-input`, `route-specialist`, and
-`record-result`. Two restatements remain:
+`5887001573e291dc8689b1f80510d75cab374880`, where every line number and quotation
+in this entry holds, `<essential_principles>` is six bullets at lines 18–23 and
+states no tag grammar, evidence-shape derivation, runtime-catalog check, or
+`capability-required` semantics; those live only in `validate-input`,
+`route-specialist`, and `record-result`. Two restatements remain:
 
 - The blocked-result sentence, line 18: "unsupported input takes the blocked
   result and nothing else", which `validate-input` states in full at line 45:
@@ -46,7 +46,7 @@ semantics; those live only in `validate-input`, `route-specialist`, and
   verdict", which the `route-specialist` bullets at lines 80–83 state route by
   route — each path-bearing specialist owns and writes its own evidence, and the
   audit bullet names "the isolated verifier, which this workflow never runs" —
-  and which success criterion line 156 restates as "it produces no agentic
+  and which success criterion line 158 restates as "it produces no agentic
   verdict and no attested run".
 
 **Impact**: each of these two rules lives in a principle and in a workflow step,
@@ -222,6 +222,59 @@ an edit to one sentence can silently change another rule sharing the paragraph.
 and snapshot coverage each stand as a separate rule, and an isolated skill audit of
 `src/plugins/spec-tree/skills/verify/SKILL.md` raises no finding under the rule
 `readability-dense-paragraph`.
+
+## The evaluate and probe routes invoke skills the plugin does not ship, far from their catalog gate
+
+**Evidence**: `instructions:skill-auditor` warning `f-009`, severity `WARNING`, rule
+`composed_skill_reference_resolution`, against
+`src/plugins/spec-tree/skills/verify/SKILL.md` line 81 on head
+`5887001573e291dc8689b1f80510d75cab374880` — a later audit than the one whose `f-009`
+the read-order entry above records — verbatim: "the evaluate and probe routes (lines
+81-82) instruct `Use skill`spec-tree:eval`.` and `Use skill`spec-tree:probe`.`.
+Neither skill exists in the spec-tree plugin at this commit:
+`src/plugins/spec-tree/skills/` holds `test` but no `eval` or `probe`. The only guard is
+the catalog gate at line 70, far from these bullets. Change to: make the
+catalog-listing condition visible where each of those dependency instructions
+appears." The cited lines hold that text at that head.
+
+**Impact**: each of the two bullets reads as an unconditional instruction to invoke a
+skill the plugin does not ship. Only the catalog gate at line 70, which ends a route
+whose specialist the runtime skill catalog does not list as `capability-required`
+before any continuing route reaches these bullets, keeps the invocation off a missing
+skill, so a reader who applies either bullet without carrying that gate forward
+invokes a skill no catalog lists.
+
+**Settlement condition**: the evaluate and probe bullets each state, where they
+instruct the invocation, that the route reaches it only when the runtime skill catalog
+lists that specialist, and an isolated skill audit of
+`src/plugins/spec-tree/skills/verify/SKILL.md` raises no finding under the rule
+`composed_skill_reference_resolution`.
+
+## Evaluate and probe specialists receive the test specialist's argument form
+
+**Evidence**: `instructions:skill-auditor` warning `f-010`, severity `WARNING`, rule
+`specialist_contract_assumption`, against
+`src/plugins/spec-tree/skills/verify/SKILL.md` line 85 on head
+`5887001573e291dc8689b1f80510d75cab374880`, verbatim: "'Each path-bearing specialist
+runs once per owning target and receives the argument form the test specialist
+declares.' This applies `spec-tree:test`'s argument contract
+(`<full-spx-node-or-decision-path> [selected-assertions-json-array]`) to eval and probe
+specialists whose contracts the skill cannot inspect. Meanwhile line 70 requires
+reading each specialist's own catalog argument contract for decision-rule mode. Change
+to: state which argument contract governs a non-test specialist's invocation." The
+cited lines hold that text at that head.
+
+**Impact**: line 85 fixes one argument form for every path-bearing specialist, while
+line 70 decides decision-rule mode from each specialist's own catalog argument
+contract and line 74 anticipates an eval contract that names only node targets. The
+skill therefore names two contracts for one invocation, and an eval or probe
+specialist whose declared contract differs from the test specialist's receives an
+argument form it never declared.
+
+**Settlement condition**: the skill states which argument contract governs an eval or
+probe specialist's invocation, consistent with the catalog-contract reading at line
+70, and an isolated skill audit of `src/plugins/spec-tree/skills/verify/SKILL.md`
+raises no finding under the rule `specialist_contract_assumption`.
 
 ## Language code skills count every audit routing row and match only the pathless tag
 
