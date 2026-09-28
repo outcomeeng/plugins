@@ -36,7 +36,7 @@ A Proposed Change is ready when:
 - `title`, `product`, `maturity`, and `lifecycle` identify one intended Output, one owning Product, `Proposed` Maturity, and a valid Lifecycle;
 - `refined_from` is `[]` for a root or the complete immutable predecessor set for a successor, and `blocked_by` names every known blocker;
 - `# Output` and `# Value` preserve the proposal in the proposer's terms and state why the operator conditionally prioritizes it for Build refinement; and
-- the operator has reviewed the proposal.
+- the record's audit against the Proposed Definition of Ready approves it.
 
 ### Framed
 
