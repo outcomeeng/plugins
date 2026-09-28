@@ -1147,18 +1147,18 @@ def main(
     runner: CommandRunner | None = None,
 ) -> int:
     _parser().parse_args(argv)
-    stdin = sys.stdin if stdin is None else stdin
-    stdout = sys.stdout if stdout is None else stdout
-    runner = SubprocessRunner() if runner is None else runner
+    request_stream: TextIO = sys.stdin if stdin is None else stdin
+    result_stream: TextIO = sys.stdout if stdout is None else stdout
+    command_runner: CommandRunner = SubprocessRunner() if runner is None else runner
     try:
-        request = _json_input(stdin, "request")
+        request = _json_input(request_stream, "request")
     except HerdrEnvironmentError as error:
-        json.dump({STATUS_FIELD: error.status, DETAIL_FIELD: str(error)}, stdout)
-        stdout.write("\n")
+        json.dump({STATUS_FIELD: error.status, DETAIL_FIELD: str(error)}, result_stream)
+        result_stream.write("\n")
         return 2
-    result = execute(request, runner)
-    json.dump(result, stdout)
-    stdout.write("\n")
+    result = execute(request, command_runner)
+    json.dump(result, result_stream)
+    result_stream.write("\n")
     return 0 if result[STATUS_FIELD] is ExecutionStatus.SUCCEEDED else 1
 
 
