@@ -321,18 +321,76 @@ rounds running.
 ## The implementation-auditor wrapper lacks a successful exact-role invocation
 
 The configured-agent audit of
-`src/plugins/spec-tree/agents/implementation-auditor.md` during Change #76
-approved the wrapper's profile, capability, thin-delegation, and result-contract
-shape, then rejected its execution evidence. The retained Codex composition
-probe ended before a child session started, and later commits changed the
-generated definition, so no successful minimal isolated invocation exists for
-the current emitted role.
+`src/plugins/spec-tree/agents/implementation-auditor.md` has no retained
+successful minimal isolated invocation of the current emitted role. The public
+`just verify-native-profile-execution <artifact-directory>` route accepts only
+an optional `--target` harness selector. Its row source is the complete central
+Standard, Strong, and Fast profile registry, and each row materializes and
+invokes a generated `profile-probe-{harness}-{profile}` definition. It exposes
+no exact-role or single-row selector and never loads or invokes the emitted
+`spec-tree_implementation-auditor` definition, so its retained profile-probe
+artifacts cannot establish execution evidence for that role.
 
-**Settlement condition**: one retained minimal isolated invocation of the
-exact emitted role that starts a child session and returns the terminal
-`spx verification run` result. A loader or authentication failure remains a
-failed invocation rather than approval evidence.
+**Impact:** the current generated definition can be audited structurally and
+loaded by ordinary sessions, while its independently isolated execution and
+result contract remain unproved.
 
-**Evidence**: `instructions:subagent-auditor` finding `f-001` against
-`src/plugins/spec-tree/agents/implementation-auditor.md` on Change #76 head
+**Settlement condition:** a sanctioned disposable-installation route accepts
+one exact emitted role and one profile row, opens a fresh native session, invokes
+that role once with a minimal target, and retains the definition, native load
+result, launch result, and final response. A loader, authentication, launch, or
+result failure remains evidence of its actual boundary rather than approval.
+
+**Evidence:** `outcomeeng_testing/harnesses/native_profile_execution.py` exposes
+only `artifact_directory` and `--target`; `native_profile_rows()` in
+`outcomeeng/distribution/native_profile_execution.py` enumerates the full
+central registry and `_render_definition()` creates profile-probe definitions.
+The earlier retained Codex composition probe ended before a child session
+started, and later commits changed the generated implementation-auditor
+definition. `instructions:subagent-auditor` first recorded the gap as finding
+`f-001` against Change #76 head
 `843ddd709b058970d414ec755cc10121ff6bb5ff`.
+
+## Journal-writing auditor policy conflicts with the subagent sandbox standard
+
+`instructions:subagent-standards` requires material restrictions to be enforceable and forbids treating prompt-only restrictions as a permission boundary. The governing native-artifact declaration at `spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/54-native-artifact.enabler/native-artifact.md` deliberately requires the Change auditor and implementation auditor Codex artifacts to omit native sandbox and approval overrides so verification-journal persistence inherits the invoking Codex policy.
+
+**Impact:** a typed subagent audit requires an enforceable sandbox boundary, while adding a sandbox override would contradict the product's native-artifact declaration and its deterministic evidence. The implementation-auditor wrapper can restrict its prose and command contract, yet those instructions do not establish the enforcement the higher-authority standard requires.
+
+**Settlement condition:** amend one governing authority. Either `instructions:subagent-standards` defines an explicit policy-inheritance case for journal-writing auditors, or the product's native-artifact governance defines and adopts an enforceable sandbox boundary that preserves required shared verification-journal writes. Reconcile the wrapper, emitted Codex definition, and native-artifact evidence to the selected authority.
+
+## The completed-run verdict envelope is declared but no decision adopts it
+
+`spx/21-spec-tree.enabler/68-audit.enabler/audit.md` assertions 48 and 49 declare that a completed implementation-audit run returns an `APPROVED` or `REJECTED` verdict envelope preceding the exact `spx verification run` token and rendered projection, and `src/plugins/spec-tree/skills/audit-implementation/SKILL.md`, `src/plugins/spec-tree/agents/implementation-auditor.md`, and the generated Codex definition all carry it.
+
+No decision record holds the judgment that the envelope is wanted. It entered as a repair, not a decision: a changeset review found the audit skill requiring the envelope while the wrapper agent's `<output_format>` forbade prose outside the token and projection, and the contradiction was resolved by changing the wrapper to admit it. The assertions above then ratified a shipped contract rather than recording a judgment that it should exist. Before them the contract shipped with no governing assertion at all, which is how it crossed three integration reviews unremarked — each compared the shipped surfaces against one another, and agreement between two surfaces is reached whatever they agree about.
+
+**Why separate**: whether a thin projection relay should prepend a prose verdict to an authoritative rendered projection is a product judgment about the audit output contract, not a wording fix. It belongs in the decision that governs the implementation-audit surface, and deciding it against the envelope reverses shipped behavior across four authored files and a generated definition.
+
+**Settlement condition**: a decision record under this node either adopts the verdict envelope as the completed-run output contract, or removes it — after which the assertions, the skill, the wrapper, and the generated definition reconcile to that decision.
+
+**Evidence**: `changes-reviewer` run `2026-09-22_15-22-41-245-7ab8f6feae3c`'s first `warning consistency` finding on head `ce2609a0474e5d7771ca3fa9a07d16ef0b14f154`, whose own sweep across the four release entries of the changeset that shipped the envelope found three had gained governing assertions and the envelope entry had gained none.
+
+## `audit-implementation/SKILL.md` has one line of headroom against its ceiling
+
+`src/plugins/spec-tree/skills/audit-implementation/SKILL.md` stands at 499 lines against the 500-line skill ceiling, and the skill invokes no eager-foundation exception. The next one-line addition puts it over. Its bundled file inventory is enforced and admits no new reference file, so the ordinary remedy — moving a block out to a new reference — is unavailable without changing that inventory.
+
+The typed skill audit names two self-contained blocks whose content is conditional rather than eager: the stdin command-form pair, and the payload-key rules. Either would move to a cited reference if the inventory admitted one, or the skill declares and justifies the eager-foundation exception instead.
+
+**Why separate**: the choice is between widening an enforced file inventory and declaring an exception to progressive disclosure, and both are decisions about this skill's bundled shape rather than edits to its content. Either one is gated by a typed skill audit of the restructured bundle.
+
+**Settlement condition**: the skill sits below the ceiling with headroom for ordinary edits, through an inventory that admits the destination reference or a declared and justified eager-foundation exception.
+
+**Evidence**: `skill-auditor` finding `f-008`, rule `progressive_disclosure_headroom`, severity `WARNING` in the `worth-improving` row. Raised as a hazard in an earlier continuation record at 498 lines; a command-evidence repair has since consumed one of the two remaining lines.
+
+## The scope resolver reaches a sibling skill's layout by constructed path
+
+`src/plugins/spec-tree/skills/audit-implementation/scripts/resolve_scope.py` imports the changeset-scope provider through a `__file__`-relative path naming the sibling skill's directory and filename, so that provider's layout is load-bearing for this consumer at run time. The standards direct a skill needing a file another skill owns to name the owning workflow or capability rather than a constructed filesystem path. The script's docstring records the layout as a build contract, and both skills ship in one plugin, so the coupling holds today.
+
+It fails late. Renaming or relocating the provider module surfaces as an import error during an audit run, which the run reports as a preparation command failure rather than as the build-time breakage it is.
+
+**Why separate**: the repair places the provider module on a declared import location or records the contract where the distribution build enforces it — a change to how the build lays out shipped scripts, owned by the build rather than by either skill.
+
+**Settlement condition**: relocating or renaming the provider module fails the build rather than an audit run.
+
+**Evidence**: `skill-auditor` finding `f-009`, rule `cross_skill_file_reference`, severity `WARNING` in the `worth-improving` row.

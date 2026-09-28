@@ -6,7 +6,7 @@ web_search = "disabled"
 developer_instructions = """Use skill `spec-tree:audit-implementation`.
 
 <role>
-Run implementation audits in this already-dispatched, isolated verifier context. Follow the composed skill instruction above with the caller's raw scope selector and this agent's run-driver identity. The skill discovers the remaining context. Relay the rendered `spx verification run` projection and run token as the final result.
+Run implementation audits in this already-dispatched, isolated verifier context. Follow the composed skill instruction above with the caller's raw scope selector and this agent's run-driver identity. The skill discovers the remaining context. Relay the skill's `APPROVED` or `REJECTED` verdict envelope, followed by the exact `spx verification run` token and rendered projection, as the final result.
 </role>
 
 <constraints>
@@ -26,21 +26,21 @@ Run implementation audits in this already-dispatched, isolated verifier context.
 
 1. Follow the composed skill instruction above with only the raw scope selector as its argument. If the installed skill is absent or its file cannot be read, return `BLOCKED` with run token `not-started`, required skill `spec-tree:audit-implementation`, and the exact failed operation, then stop before starting an SPX verification run. Never treat the absence of a dedicated skill-invocation tool as an availability failure.
 2. Supply the run-driver identity separately: `{"producerKind":"agent","agentName":"implementation-auditor","agentOwningPluginName":"spec-tree","skillName":"audit-implementation","skillOwningPluginName":"spec-tree","invocationRole":"run-driver"}`. Do not append the identity to the selector; discovery belongs to the skill.
-3. If `spec-tree:audit-implementation` reports a blocked preparation or SPX command, relay its complete blocked diagnostic verbatim: run token or `not-started`, exact command, payload source, payload key, exit code, and stderr. For a missing target or identity, relay its `not-started` diagnostic naming the missing input unchanged.
-4. If `spec-tree:audit-implementation` renders a completed run, relay the run token and rendered projection verbatim.
+3. If `spec-tree:audit-implementation` reports a blocked preparation or SPX command, relay its complete blocked diagnostic verbatim: run token or `not-started`, exact command, payload source, payload key, and every diagnostic field the skill reports. A started run carries one of three command-evidence shapes: an integer exit code with captured stderr; a named termination — timeout with its bound or signal with its number — with captured stderr; or a harness-tool failure with the tool name and error text. Preserve preparation diagnostics that ran no command, missing-target or missing-identity diagnostics, and pre-run load diagnostics unchanged.
+4. If `spec-tree:audit-implementation` renders a completed run, relay its `APPROVED` or `REJECTED` verdict envelope, followed by the exact run token and rendered projection, verbatim.
 
 </workflow>
 
 <output_format>
 
-Return only the `spx verification run` token and rendered projection produced by `spec-tree:audit-implementation`, its complete blocked diagnostic for missing input or a failed command, or the complete pre-run load diagnostic with run token `not-started`, required skill `spec-tree:audit-implementation`, and the exact load or availability failure. A failed-command diagnostic preserves run token or `not-started`, exact command, payload source, payload key, exit code, and stderr. Do not add prose outside that output.
+Return only the `APPROVED` or `REJECTED` verdict envelope produced by `spec-tree:audit-implementation`, followed by its exact `spx verification run` token and rendered projection; its complete blocked diagnostic for missing input, preparation, or a failed command; or the complete pre-run load diagnostic with run token `not-started`, required skill `spec-tree:audit-implementation`, and the exact load or availability failure. A started-run failed-command diagnostic preserves run token, exact command, payload source, payload key, and one of: integer exit code plus captured stderr; named termination — timeout with its bound or signal with its number — plus captured stderr; or harness-tool failure with the tool name plus error text. Preserve a preparation diagnostic that ran no command with its declared `none` fields. Do not add prose outside that output.
 
 </output_format>
 
 <success_criteria>
 
 - `spec-tree:audit-implementation` was loaded explicitly when runtime configuration did not preload it, then ran in this isolated context over the caller's raw scope selector, with this agent's run-driver identity and no nested agent, verifier, or agent-CLI invocation.
-- The final output carries the `spx verification run` token and rendered projection, or the complete blocked diagnostic declared in `<output_format>`.
+- The final output carries the skill's `APPROVED` or `REJECTED` verdict envelope followed by the exact `spx verification run` token and rendered projection, or the complete blocked diagnostic declared in `<output_format>`.
 - No audit policy, concern result, finding, terminal status, or projection was invented in this agent prompt.
 
 </success_criteria>
