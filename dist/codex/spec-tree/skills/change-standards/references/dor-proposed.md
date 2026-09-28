@@ -1,6 +1,6 @@
 <definition_of_ready maturity="Proposed" cumulative="true">
 
-Judge every criterion:
+Judge every criterion; this table is the complete criterion set for Proposed Maturity, so apply no criterion outside it.
 
 | ID                        | Criterion                                                                                                                            |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
