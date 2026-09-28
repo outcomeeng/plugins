@@ -6,20 +6,19 @@ CAN route every assertion to test, evaluate, probe, or audit before a specialist
 
 ## Assertions
 
-### Scenarios
-
-- Given an assertion whose real subject produces deterministic behavior, structured producer output, a claim only an executed observation of the running node settles, or no deterministic verdict, when `/verify` classifies it, then the assertion routes respectively to `/test`, `/eval`, a probe protocol link, or an audit requirement ([eval](evals/routing/eval.toml))
-
 ### Mappings
 
-- The verification types map to one specialist result: test maps to `/test`, evaluate maps to `/eval`, probe maps to the protocol link or the missing probe-authoring capability, and audit maps to the applicable isolated-verifier requirement ([eval](evals/routing/eval.toml))
+- Every supported subject capability maps to one verification type and specialist result: deterministic behavior maps to test and `/test`, model-generated behavior with structured output maps to evaluate and `/eval`, a claim only an executed observation of the running node settles maps to probe and its protocol link or missing authoring capability, and a semantic constraint with no deterministic or attested verdict maps to audit and its isolated-verifier requirement ([eval](evals/routing/eval.toml))
 
 ### Compliance
 
-- ALWAYS: select from exactly test, evaluate, probe, and audit by the verdict the real assertion subject can produce ([eval](evals/routing/eval.toml))
+- ALWAYS: select from exactly test, evaluate, probe, and audit by the verdict the real assertion subject can produce; deterministic CLI state routes to test when an LLM only reports that state for an independent comparison, while model-generated behavior routes to evaluate even when a CLI exposes it ([eval](evals/routing/eval.toml))
 - ALWAYS: test assertion typing occurs only after test is selected ([audit])
 - ALWAYS: report a missing selected specialist as an explicit capability gap ([eval](evals/routing/eval.toml))
 - NEVER: recognize, name, alias, or translate any tag outside the verification-type set ([eval](evals/routing/eval.toml))
+- ALWAYS: report a blocked assertion with `status` `blocked`, `reason` `unsupported-tag-shape`, and null `verification_type`, `specialist`, and `evidence_shape`, and name the selected verification type, specialist, and evidence shape in every routed or capability-required result ([eval](evals/routing/eval.toml))
 
+- ALWAYS: emit one structured result per assertion carrying `verification_type`, `specialist`, `status`, `evidence_shape`, and `reason`, with `status` one of `routed`, `capability-required`, or `blocked`, and render the human report table from that same result with an em dash for each null field ([audit])
+- ALWAYS: revert a decision rule placed in its selected subsection before its specialist runs unless its route ends `routed`, and when the closing `spx validation markdown` exits non-zero, restore every durable edit of the run and report each subject whose route had ended `routed` as `capability-required` with its selected verification type, specialist, and evidence shape and a `reason` naming the failed validation ([audit])
 - ALWAYS: every workflow that delegates verification-type selection invokes `/verify` rather than a type-specific specialist ([audit])
 - NEVER: duplicate test assertion typing, language expression, eval producer specialization, or audit judgment inside `/verify` ([audit])

@@ -10,11 +10,20 @@ owned_paths = [
 ]
 smoke_cases = [
   "routes-deterministic-behavior-to-test",
+  "routes-cli-state-readout-to-test",
+  "routes-cli-model-behavior-to-evaluate",
   "routes-structured-producer-to-evaluate",
   "routes-semantic-constraint-to-audit",
   "routes-observation-claim-to-probe",
   "routes-observation-claim-to-probe-specialist",
   "rejects-unsupported-tag",
+  "rejects-validation-tag",
+  "rejects-verification-type-name-as-tag",
+  "rejects-test-assertion-type-as-tag",
+  "rejects-unknown-tag",
+  "rejects-test-tag-without-path",
+  "rejects-audit-tag-with-path",
+  "rejects-multiple-verification-tags",
   "accepts-slugged-audit-tag",
 ]
 threshold = 1.0
