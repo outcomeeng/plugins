@@ -40,33 +40,29 @@ principles and the workflow steps.
 that hold across steps, each workflow step owns its own grammar and shape detail,
 and an independent skill audit accepts the reduced principles.
 
-## Routed eval cases mirror the producer's classification wording
+## Capability-gap and blocked eval cases keep the producer's classification wording
 
-**Evidence**: eval-evidence auditor warning `f-002`, class `oracle-leakage`,
-against `evals/routing/cases.jsonl`. Six cases describe the subject in wording that
-mirrors the producer's `classify-subject` table: in
-`routes-semantic-constraint-to-audit`, `accepts-slugged-audit-tag`,
-`routes-structured-producer-to-evaluate`, `routes-observation-claim-to-probe`,
-`routes-observation-claim-to-probe-specialist`, and
-`routes-deterministic-behavior-to-test`, the `subject.kind` and `subject.verdict`
-inputs are nearly readable from keywords. A later eval-evidence audit finding states
-the same defect, verbatim: "In routes-semantic-constraint-to-audit,
-accepts-slugged-audit-tag, routes-structured-producer-to-evaluate,
-routes-observation-claim-to-probe, routes-observation-claim-to-probe-specialist and
-routes-deterministic-behavior-to-test, the subject.kind and subject.verdict inputs
-nearly restate the producer's classify-subject table rows (for example 'no
-deterministic or structurally scored verdict', 'attested observation of the running
-node through an executed protocol', 'structured JSON projection scored by fixed
-cases'). Given the enum values listed in prompt.template.md, the answer is visible
-without applying the producer's methodology."
+**Evidence**: eval-evidence auditor warning `f-002`, class `oracle-leakage`, named
+six routed cases of `evals/routing/cases.jsonl` whose `subject.kind` and
+`subject.verdict` inputs restated the producer's `classify-subject` table rows.
+Those six now describe each subject by what it is, what it emits, and what settles
+it, and share no phrase of three or more words with that table. Three cases outside
+the audited six still carry the retired wording: `reports-test-capability-gap`
+("executable parser", "finite command exit and parsed output"),
+`reports-eval-capability-gap` ("LLM-driven skill", "structured JSON projection
+scored by fixed cases", which shares "scored by fixed" with the table), and
+`rejects-unsupported-tag` ("semantic constraint", "no deterministic or structurally
+scored verdict"). No eval-evidence audit has yet judged the reworded cases.
 
 **Impact**: a producer that matches keywords instead of classifying the verdict
-the subject can produce passes those cases, so they supply weak evidence for the
-routing assertions they back.
+the subject can produce still passes the two capability-gap cases, so they supply
+weak evidence for the capability-gap assertion they back. The blocked case's
+subject is never classified by a conforming producer, so its wording carries no
+routing signal but still restates the table.
 
-**Settlement condition**: the `subject.kind` and `subject.verdict` wording of all
-six cases above no longer mirrors the `classify-subject` table, and an
-eval-evidence audit reports no `oracle-leakage` warning.
+**Settlement condition**: the `subject.kind` and `subject.verdict` wording of the
+three cases above no longer mirrors the `classify-subject` table, and an
+eval-evidence audit of `evals/routing` reports no `oracle-leakage` warning.
 
 ## Routed path-bearing cases cannot observe the specialist-result validation
 
