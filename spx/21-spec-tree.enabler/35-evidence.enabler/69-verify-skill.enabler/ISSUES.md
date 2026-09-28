@@ -222,3 +222,32 @@ an edit to one sentence can silently change another rule sharing the paragraph.
 and snapshot coverage each stand as a separate rule, and an isolated skill audit of
 `src/plugins/spec-tree/skills/verify/SKILL.md` raises no finding under the rule
 `readability-dense-paragraph`.
+
+## Language code skills count every audit routing row and match only the pathless tag
+
+**Evidence**: `src/plugins/go/skills/code-go/SKILL.md:95`,
+`src/plugins/typescript/skills/code-typescript/SKILL.md:241`,
+`src/plugins/rust/skills/code-rust/SKILL.md:89`, and
+`src/plugins/python/skills/code-python/SKILL.md` lines 49, 53, 61, and 309 count every
+`/verify` row whose verification type is audit with no status filter, require each
+reported `preserved`, and match only the literal `([audit])`. The Go line, which the
+TypeScript and Rust lines repeat word for word, reads verbatim: "For each `/verify`
+routing row whose verification type is audit, re-read the routed spec or decision
+artifact and confirm the exact subject still carries `([audit])`. The completion report
+includes one `Audit requirements` row per audit routing row with the full `spx/...`
+source path, exact subject text, and status `preserved`. The row count must equal the
+routing result's audit-row count; when that count is zero, report
+`Audit requirements: none selected`." Python line 49 reads verbatim: "For every `/verify` routing row whose
+verification type is audit, the authoritative requirement is the exact
+assertion or decision-rule text in the routed spec or decision artifact carrying
+`([audit])`." `/verify`'s `record-result` reports an audit subject `capability-required`
+after restoring it from the snapshot when the closing `spx validation markdown` exits
+other than 0, and its audit route writes `[audit:{rule-slug}]` into a spec that already
+carries a slugged audit tag.
+
+**Impact**: when the closing `spx validation markdown` fails, the audit rows `/verify`
+reports as `capability-required` are miscounted, and slugged `[audit:{rule-slug}]` rows
+are missed whatever their status.
+
+**Settlement condition**: the four skills count only routed audit rows and match both the
+slugged and the pathless audit tag forms. A follow-up Change owns that repair.
