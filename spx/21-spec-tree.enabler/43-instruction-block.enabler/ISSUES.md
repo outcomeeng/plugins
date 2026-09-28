@@ -28,7 +28,7 @@ it from blocking that corrective merge; its rejected verdict remains recorded.
 The isolated test-evidence audit of this node on head `df87dc4ffbe8f209a10f75aa86874b7503ef60a0` rejected five artifacts the router-narrowing changeset did not touch, beside the topology-table finding recorded above:
 
 - `tests/test_instruction_block.scenario.l1.py` hand-writes the status tokens `absent`, `stale`, and `current` that `InstructionStatus` in the shipped generator owns, and passes the harness keys `claude` and `codex` as literals where the generator's `AGENT_HARNESS_INSTRUCTION_FILENAMES` mapping and the harness constants already own them.
-- `tests/test_instruction_block.compliance.l1.py` copies the module invocation, the lefthook path, the pre-commit build command, and the two retired direct-template arguments that `outcomeeng/distribution/instruction_block.py` declares as named constants, and its refresh-workflow tests choose their shell tokens and the digest width themselves, so no production behavior exists whose mutation fails them.
+- `tests/test_instruction_block.compliance.l1.py` copies the module invocation, the lefthook path, the pre-commit build command, and the two retired direct-template arguments, and its refresh-workflow tests choose their shell tokens and the digest width themselves, so no production behavior exists whose mutation fails them. `outcomeeng/distribution/instruction_block.py` declares the lefthook path, the pre-commit build command, and the two retired arguments as named constants; the module invocation's owner is `INSTRUCTION_BLOCK_MODULE_NAME` in `outcomeeng/distribution/contracts.py`, which `INSTRUCTION_BLOCK_ARGV` there composes, so that one token is imported from the contracts module rather than from the gate module.
 - `outcomeeng_testing/fixtures/instruction_block/near-identical-shared.md` stores the author's own computation of the expected common span over the two near-identical inputs and is consumed as a mapping expectation; the node's property harness already carries the independent oracle for that span.
 
 **Evidence.** Findings `f-002` through `f-006` of that audit; each subject lies outside the changeset's diff, so the merging decision routes them here rather than to the merge.
@@ -148,3 +148,63 @@ The typed skill audit that approved `src/plugins/spec-tree/skills/update-instruc
 - The success criteria require the no-verb render to reproduce each written router block, but Step 5 never runs that render; `--check` alone passes a hand-edit inside the router.
 
 **Settlement condition**: the never-rerun rule names the `--from` exception where it is stated, the `dirty` report states that the run ends with nothing written, Step 5 runs the no-verb render comparison, and a typed skill audit approves the surface without these warnings.
+
+## The gate module restates values another node's module publishes
+
+`outcomeeng/distribution/instruction_block.py` carries values whose published owner sits in a
+module a different spec node governs, so replacing each restatement with an import would add a
+dependency edge whose direction this node cannot decide on its own:
+
+- `JUSTFILE_NAME` (`"justfile"`) and `LEFTHOOK_PATH` (`Path("lefthook.yml")`) are declared again in
+  `outcomeeng/distribution/orchestration.py` as `JUSTFILE_PATH` and `LEFTHOOK_PATH`. The two
+  declarations differ in name and in type while naming one repository artifact each, so neither
+  module reads as the other's owner.
+- `"just build-skills"` in `REFRESH_WORKFLOW.build_commands`, and the same command inside the
+  unresolved-macro diagnostic, restate `BUILD_RECIPE_NAME` in that same orchestration module, which
+  composes `LEFTHOOK_BUILD_COMMAND` from it.
+- The `spec-tree` plugin slug in `UPDATE_SKILL_PLUGIN_RELATIVE_PATH` restates `SPEC_TREE_PLUGIN` in
+  `outcomeeng/distribution/installation.py`, and the `templates` directory name in
+  `TEMPLATE_PLUGIN_RELATIVE_PATH` restates `TEMPLATES_DIR_NAME` in
+  `outcomeeng/distribution/build.py`.
+
+**Impact.** Each value has two homes, so a change to the owner leaves this module asserting a
+string the repository no longer uses, and no import graph, type checker, or test follows the
+agreement. The gate module's own `src`, `plugins`, `skills`, and `scripts` segments and its
+generated-output target keys now come from `outcomeeng/distribution/contracts.py`, which this
+module already imports, and its spec-tree root directory from `outcomeeng/spec_tree_structure.py`;
+these four are the values left over, each owned elsewhere.
+
+**Settlement condition.** A decision names the owner of the repository-artifact paths and recipe
+names this package shares — either the build-orchestration module for every reader, or the
+package's shared `outcomeeng/distribution/contracts.py`, whose governing node is the product root
+because tests under nine nodes reach it — and every restating module imports from that one owner.
+Choosing the owner decides whether the instruction-block gate may depend on the build-orchestration
+contract, which is why a single-module repair cannot settle it.
+
+**Why separate.** The repair edits modules governed by `spx/18-plugin-build.enabler`,
+`spx/32-distribution.enabler/21-installation.enabler`, and the product root, none of which the
+changeset that found this touches; a partial fix inside the gate module alone would pick the owner
+by accident.
+
+## The budget baseline derives the default branch instead of reading it from the shared primitive
+
+`_budget_baseline_commit` in `outcomeeng/distribution/instruction_block.py` resolves the default
+branch itself, running `git symbolic-ref --short refs/remotes/origin/HEAD` and then
+`git merge-base` against it.
+`spx/21-spec-tree.enabler/14-version-control.enabler/version-control.md` asserts that every
+version-control operation resolves the base ref and its remote-tracking ref through the single
+changeset-scope module and that no sibling re-implements base-ref or branch derivation.
+
+**Impact.** The gate's baseline commit and the changeset scope every verification surface uses can
+disagree about which commit the changeset starts from, and a change to the shared derivation leaves
+this one behind.
+
+**Settlement condition.** A decision states whether that assertion reaches this repository's own
+product-internal Python modules or only the methodology's shipped version-control primitives. If it
+reaches them, the baseline resolution moves behind the shared derivation; if it does not, the
+assertion says so and this module keeps its own reader.
+
+**Why it needs the operator.** The changeset-scope primitive is a shipped plugin script rather than
+an importable product module, so honouring the assertion here means either loading that script the
+way this module already loads the instruction-block generator, or publishing the derivation as
+product code — an architecture choice this node cannot make against a sibling node's assertion.

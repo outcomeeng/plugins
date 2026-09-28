@@ -28,22 +28,54 @@ from typing import Final, Protocol, cast
 
 from outcomeeng.distribution.contracts import (
     DIST_DIR_NAME,
+    PLUGINS_DIR_NAME,
+    SCRIPTS_SUBDIR_NAME,
+    SKILLS_SUBDIR_NAME,
+    SOURCE_ROOT_NAME,
+    Target,
 )
+from outcomeeng.spec_tree_structure import SPEC_TREE_ROOT_DIRECTORY
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[2]
-GENERATOR_RELATIVE_PATH: Final = Path(
-    "src/plugins/spec-tree/skills/update-instruction-block/scripts/instruction_block.py"
+SOURCE_PLUGINS_RELATIVE_PATH: Final = Path(SOURCE_ROOT_NAME) / PLUGINS_DIR_NAME
+"""Where authored plugin trees live; a rendered tree replaces it with ``dist/<target>/``."""
+
+UPDATE_SKILL_PLUGIN_RELATIVE_PATH: Final = (
+    Path("spec-tree") / SKILLS_SUBDIR_NAME / "update-instruction-block"
+)
+"""The update skill's path inside a plugin tree, the same authored and rendered."""
+
+GENERATOR_RELATIVE_PATH: Final = (
+    SOURCE_PLUGINS_RELATIVE_PATH
+    / UPDATE_SKILL_PLUGIN_RELATIVE_PATH
+    / SCRIPTS_SUBDIR_NAME
+    / "instruction_block.py"
 )
 GENERATOR_PATH: Final = REPO_ROOT / GENERATOR_RELATIVE_PATH
-AUTHORED_TEMPLATE_RELATIVE_PATH: Final = Path(
-    "src/plugins/spec-tree/skills/update-instruction-block/templates/instruction-block.md"
+GENERATOR_MODULE_NAME: Final = GENERATOR_RELATIVE_PATH.stem
+"""The name the loader registers the shipped generator under, read from its filename."""
+
+TEMPLATE_PLUGIN_RELATIVE_PATH: Final = (
+    UPDATE_SKILL_PLUGIN_RELATIVE_PATH / "templates" / "instruction-block.md"
+)
+"""The harness template's path inside a plugin tree, authored and rendered alike."""
+
+AUTHORED_TEMPLATE_RELATIVE_PATH: Final = (
+    SOURCE_PLUGINS_RELATIVE_PATH / TEMPLATE_PLUGIN_RELATIVE_PATH
 )
 AUTHORED_TEMPLATE_PATH: Final = REPO_ROOT / AUTHORED_TEMPLATE_RELATIVE_PATH
-DIST_TEMPLATE_RELATIVE_PATH: Final = Path(
-    "spec-tree/skills/update-instruction-block/templates/instruction-block.md"
-)
+DIST_TEMPLATE_RELATIVE_PATH: Final = TEMPLATE_PLUGIN_RELATIVE_PATH
+BUILD_INSTRUCTIONS_RECIPE: Final = "build-instructions"
+INSTRUCTIONS_CHECK_RECIPE: Final = "instructions-check"
+WRITE_FLAG: Final = "--write"
+BUILD_INSTRUCTIONS_COMMAND: Final = f"just {BUILD_INSTRUCTIONS_RECIPE}"
+"""The writer recipe's operator-facing invocation, composed from the recipe's own name."""
+
 HEADER: Final = "root instruction blocks differ from a fresh render."
-REMEDIATION: Final = "Run `just build-instructions` and commit the regenerated root CLAUDE.md and AGENTS.md."
+REMEDIATION: Final = (
+    f"Run `{BUILD_INSTRUCTIONS_COMMAND}` and commit the regenerated root "
+    "CLAUDE.md and AGENTS.md."
+)
 SHARED_DRIFT_HEADER: Final = "root instruction blocks carry a shared region that diverges or is present in only one file."
 SHARED_DRIFT_REMEDIATION: Final = (
     "Reconcile the shared region with `/update-instruction-block`, which takes the "
@@ -60,13 +92,11 @@ FORBIDDEN_ROUTER_TOKENS: Final = (
     "Before archiving a claimed session",
     "`result`",
 )
-BUILD_INSTRUCTIONS_RECIPE: Final = "build-instructions"
-INSTRUCTIONS_CHECK_RECIPE: Final = "instructions-check"
-WRITE_FLAG: Final = "--write"
 JUSTFILE_NAME: Final = "justfile"
 LEFTHOOK_PATH: Final = Path("lefthook.yml")
-PRECOMMIT_BUILD_INSTRUCTIONS_COMMAND: Final = "run: just build-instructions"
+PRECOMMIT_BUILD_INSTRUCTIONS_COMMAND: Final = f"run: {BUILD_INSTRUCTIONS_COMMAND}"
 LEGACY_DIRECT_TEMPLATE_ARGUMENT: Final = "--template src/plugins"
+"""A retired argument form, frozen as the historical text the lefthook check rejects."""
 
 NATIVE_PROFILE_RECIPE: Final = "verify-native-profile-execution"
 """The recipe whose only caller is release acceptance."""
@@ -371,8 +401,11 @@ WAIT_FOR_LOAD_POLICY_CONTRADICTIONS: Final = (
         ),
     ),
 )
-CODEX_HARNESS: Final = "codex"
-CLAUDE_HARNESS: Final = "claude"
+# A harness key is the generated-output target whose ``dist/`` tree carries that
+# harness's rendered template, so the key and the directory name are one value —
+# which is what lets ``dist_template_path`` join the key straight under ``dist/``.
+CODEX_HARNESS: Final = Target.CODEX.value
+CLAUDE_HARNESS: Final = Target.CLAUDE.value
 # The dispatch mechanics each harness block owns. The authorization section is
 # harness-neutral, so each marker below belongs to exactly one rendered router.
 HARNESS_DISPATCH_MECHANICS_MARKERS: Final = {
@@ -590,7 +623,7 @@ REFRESH_WORKFLOW: Final = RefreshWorkflowContract(
     install_dprint_step="Install dprint",
     dprint_version_env="DPRINT_VERSION",
     regenerate_step="Regenerate instruction blocks",
-    build_commands=("just build-skills", "just build-instructions"),
+    build_commands=("just build-skills", BUILD_INSTRUCTIONS_COMMAND),
     open_pr_step="Open instruction-block refresh pull request",
     drift_probe="git status --porcelain",
     automation_branch="automation/refresh-instruction-blocks",
@@ -716,15 +749,15 @@ def _run(
 
 def load_instruction_block_module() -> InstructionBlockModule:
     """Load the shipped instruction-block generator to reuse its pure render contract."""
-    cached = sys.modules.get("instruction_block")
+    cached = sys.modules.get(GENERATOR_MODULE_NAME)
     if cached is not None:
         return cast(InstructionBlockModule, cached)
-    spec = importlib.util.spec_from_file_location("instruction_block", GENERATOR_PATH)
+    spec = importlib.util.spec_from_file_location(GENERATOR_MODULE_NAME, GENERATOR_PATH)
     if spec is None or spec.loader is None:
-        raise RuntimeError(f"cannot load instruction_block from {GENERATOR_PATH}")
+        raise RuntimeError(f"cannot load {GENERATOR_MODULE_NAME} from {GENERATOR_PATH}")
     module = importlib.util.module_from_spec(spec)
     # Register before exec so dataclass type introspection can resolve the module by name.
-    sys.modules["instruction_block"] = module
+    sys.modules[GENERATOR_MODULE_NAME] = module
     spec.loader.exec_module(module)
     return cast(InstructionBlockModule, module)
 
@@ -846,7 +879,8 @@ def obsolete_spx_instruction_paths(
     """Return retired spx instruction-file paths that may still be tracked."""
     instruction_module = module or load_instruction_block_module()
     return tuple(
-        f"spx/{name}" for name in instruction_module.OBSOLETE_SPX_INSTRUCTION_FILENAMES
+        f"{SPEC_TREE_ROOT_DIRECTORY}/{name}"
+        for name in instruction_module.OBSOLETE_SPX_INSTRUCTION_FILENAMES
     )
 
 
@@ -1325,7 +1359,7 @@ OPERATIVE_POLICY_VALIDATIONS: Final = (
 def regenerate_instruction_blocks(*, repo_root: Path = REPO_ROOT) -> None:
     """Render both root instruction files in place from committed harness dist templates."""
     module = load_instruction_block_module()
-    spx_dir = repo_root / "spx"
+    spx_dir = repo_root / SPEC_TREE_ROOT_DIRECTORY
     templates = load_harness_templates(module, repo_root=repo_root)
     paths = {
         harness: dist_template_path(harness, repo_root=repo_root)
@@ -1420,8 +1454,10 @@ def main(
     parser = argparse.ArgumentParser(
         description="Regenerate root instruction blocks from rendered dist templates."
     )
-    parser.add_argument(
-        "--write",
+    # The parser reads the published flag, and the destination comes back from the
+    # parser's own derivation of it, so the flag every caller passes is spelled once.
+    write_option = parser.add_argument(
+        WRITE_FLAG,
         action="store_true",
         help="Write instruction blocks without checking git drift.",
     )
@@ -1431,7 +1467,7 @@ def main(
         budget_lines, budget_regressions = budget()
         for line in budget_lines:
             print(line, file=sys.stderr)
-        if args.write:
+        if getattr(args, write_option.dest):
             return 0
         drift = drift_files()
         shared_drift = shared_regions()
