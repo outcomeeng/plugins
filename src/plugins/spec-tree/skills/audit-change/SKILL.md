@@ -6,12 +6,12 @@ description: >-
   record standards at its declared maturity and records the complete judgment
   through SPX file-scoped verification.
 argument-hint: "<JSON object with path and runDriver>"
-allowed-tools: Read, Grep, {{! tool('use_skill') !}}, Bash(git rev-parse:*), Bash(realpath:*), Bash(spx --version), Bash(spx verification run start:*), Bash(spx verification run input:*), Bash(spx verification run status:*), Bash(spx verification run scope add:*), Bash(spx verification run finding add:*), Bash(spx verification run finish:*), Bash(spx verification run render:*), Bash(printf:*)
+allowed-tools: Read, Grep, Glob, {{! tool('use_skill') !}}, Bash(git rev-parse:*), Bash(realpath:*), Bash(spx --version), Bash(spx verification run start:*), Bash(spx verification run input:*), Bash(spx verification run status:*), Bash(spx verification run scope add:*), Bash(spx verification run finding add:*), Bash(spx verification run finish:*), Bash(spx verification run render:*), Bash(printf:*)
 ---
 
 <objective>
 
-A read-only verdict on one complete contract-form Change against `change-standards` and the Definition of Ready for its declared Maturity, with the audit's own SPX verification-run journal retaining the judgment — `approved`, `rejected` with each finding naming the violated rule, artifact location, and supporting evidence, or a complete `BLOCKED` diagnostic — or an `OUTSIDE_CONTRACT` result for a front-matter key-set mismatch.
+A verdict on one contract-form Change against `change-standards` and the Definition of Ready for its declared Maturity — `approved`, or `rejected` with each finding naming the violated rule, the artifact location, and the evidence.
 
 </objective>
 
@@ -53,19 +53,16 @@ provenance data, never authorization or a suggested verdict.
 Validate `runDriver` as six non-empty string fields and retain it unchanged.
 Accept that identity generically; never infer it from a role name, installed
 plugin, or descriptive text, and never refuse a well-formed supplied identity
-because of its values. Resolve the loaded skill's absolute directory from the active
-skill metadata: use `CLAUDE_SKILL_DIR` when the harness exposes it, otherwise use
-the absolute `SKILL.md` location in the injected skill instructions. From that
-directory, read the owning plugin manifest exactly two levels above it:
-`{!% if target == 'codex' %!}${CLAUDE_SKILL_DIR}/../../.codex-plugin/plugin.json{!% else %!}${CLAUDE_SKILL_DIR}/../../.claude-plugin/plugin.json{!% endif %!}`.
-Retain its non-empty `version` as both the agent-owning and skill-owning plugin
-version. Run `spx --version` and retain its non-empty version
-as the tool version. A missing location, manifest, version, or command result is
-a pre-run absent prerequisite and returns the exact blocked diagnostic. These
-declared metadata reads are the sanctioned provenance source; never inspect an
-installed CLI bundle, generated source, package cache, or undocumented runtime
-path to infer a payload schema or version. Do metadata preparation before
-substantive judgment.
+because of its values.
+Use skill `spec-tree:spec-tree-plugin`.
+Invoke it with the verb `version` and retain the non-empty version it reports
+as both the agent-owning and skill-owning plugin version. Run `spx --version`
+and retain its non-empty version as the tool version. A missing version or
+command result is a pre-run absent prerequisite and returns the exact blocked
+diagnostic. These two capabilities are the sanctioned provenance source; never
+read a plugin manifest, inspect an installed CLI bundle, generated source,
+package cache, or undocumented runtime path to infer a payload schema or
+version. Do metadata preparation before substantive judgment.
 
 </request_contract>
 
@@ -176,8 +173,8 @@ the leaf skill whose rules produce the judgment, and `recordedByRunDriver`
 records the supplied identity as given. `expectedProducer` takes only
 `agentName` and `agentOwningPluginName` from the supplied identity and fixes
 its other four fields as stated above. Every unit carries `producerProvenance`
-with the owning plugin version resolved from this active bundle in both plugin
-version fields and the exact `spx --version` result as `toolVersion`.
+with the version `spec-tree:spec-tree-plugin` reported in both plugin version
+fields and the exact `spx --version` result as `toolVersion`.
 
 The JSON objects in this persistence contract are the sanctioned SPX audit
 payload schema for this auditor. Use these fields exactly. Never derive a
