@@ -40,28 +40,67 @@ principles and the workflow steps.
 that hold across steps, each workflow step owns its own grammar and shape detail,
 and an independent skill audit accepts the reduced principles.
 
-## Capability-gap and blocked eval cases keep the producer's classification wording
+## Eval cases outside the audited six keep the producer's classification wording
 
 **Evidence**: eval-evidence auditor warning `f-002`, class `oracle-leakage`, named
 six routed cases of `evals/routing/cases.jsonl` whose `subject.kind` and
 `subject.verdict` inputs restated the producer's `classify-subject` table rows.
 Those six now describe each subject by what it is, what it emits, and what settles
-it, and share no phrase of three or more words with that table. Three cases outside
-the audited six still carry the retired wording: `reports-test-capability-gap`
-("executable parser", "finite command exit and parsed output"),
-`reports-eval-capability-gap` ("LLM-driven skill", "structured JSON projection
-scored by fixed cases", which shares "scored by fixed" with the table), and
-`rejects-unsupported-tag` ("semantic constraint", "no deterministic or structurally
-scored verdict"). No eval-evidence audit has yet judged the reworded cases.
+it, and share no phrase of two or more words with that table. A changes-review
+`debt` finding showed that the entry's first enumeration of the remaining cases was
+not exhaustive. A sweep of every case's `subject.kind` and `subject.verdict`
+against the `classify-subject` table and the classification-boundary principle of
+`src/plugins/spec-tree/skills/verify/SKILL.md` finds the retired wording in each
+case below:
+
+- Routed:
+  - `routes-cli-state-readout-to-test` — the kind "deterministic CLI registry"
+    names the test row's deciding word in a case that expects test; the verdict's
+    "LLM" is the evaluate-side word the case exists to exercise.
+  - `routes-cli-model-behavior-to-evaluate` — the kind "CLI exposing
+    model-generated recommendations" carries the principle's "model-generated", and
+    the verdict's "An LLM interprets" carries the evaluate row's "LLM", in a case
+    that expects evaluate; the verdict's "fixed cases deterministically grade" is
+    the fixed-expectations and deterministic-grader boundary the case exists to
+    exercise.
+- Capability-gap:
+  - `reports-test-capability-gap` — "executable parser" and "finite command exit
+    and parsed output", which shares "finite command" with the test row.
+  - `reports-eval-capability-gap` — "LLM-driven skill" and "structured JSON
+    projection scored by fixed cases", which share "LLM-driven", "structured", and
+    "scored by fixed" with the evaluate row.
+- Blocked, rejected by `validate-input` before the subject is read:
+  - `rejects-unsupported-tag` — "semantic constraint" and "no deterministic or
+    structurally scored verdict", which share "semantic constraint" and "no
+    deterministic" with the audit row.
+  - `rejects-validation-tag`, `rejects-verification-type-name-as-tag`,
+    `rejects-test-assertion-type-as-tag`, `rejects-unknown-tag`,
+    `rejects-test-tag-without-path`, `rejects-audit-tag-with-path`, and
+    `rejects-multiple-verification-tags` — each "deterministic CLI" and "finite
+    command exit and parsed output", the latter byte-identical to the retired
+    verdict of `reports-test-capability-gap`.
+
+The sweep's other hits are single words that name what a subject is or emits and
+share no table phrase: "command" in `routes-deterministic-behavior-to-test`, the
+"model" of "language model" in `routes-structured-producer-to-evaluate`, and
+"emits", "output", and "settles" in `routes-semantic-constraint-to-audit` and
+`accepts-slugged-audit-tag`. The two probe cases carry none. No eval-evidence audit
+has yet judged the reworded cases.
 
 **Impact**: a producer that matches keywords instead of classifying the verdict
-the subject can produce still passes the two capability-gap cases, so they supply
-weak evidence for the capability-gap assertion they back. The blocked case's
-subject is never classified by a conforming producer, so its wording carries no
-routing signal but still restates the table.
+the subject can produce still passes each routed and capability-gap case above,
+because each names the deciding word of the type it expects, so those cases supply
+weak evidence for the classification and capability-gap assertions they back. A
+conforming producer never classifies a blocked case's subject, so that wording
+carries no routing signal but still restates the table.
 
-**Settlement condition**: the `subject.kind` and `subject.verdict` wording of the
-three cases above no longer mirrors the `classify-subject` table, and an
+**Settlement condition**: in every case enumerated above, `subject.kind` and
+`subject.verdict` share no phrase of two or more words with the `classify-subject`
+table and carry no deciding word of the verification type the case expects — such
+as "deterministic" or "finite command" for test, "LLM", "structured", "scored by
+fixed", or "model-generated" for evaluate, and "semantic" or "structural" for
+audit; a routed boundary case keeps only the opposing type's wording it exists to
+exercise; a blocked case carries no deciding word of any type; and an
 eval-evidence audit of `evals/routing` reports no `oracle-leakage` warning.
 
 ## Routed path-bearing cases cannot observe the specialist-result validation
