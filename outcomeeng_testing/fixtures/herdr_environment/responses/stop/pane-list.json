@@ -1,0 +1,22 @@
+{
+  "id": "cli:pane:list",
+  "result": {
+    "panes": [
+      {
+        "agent_status": "unknown",
+        "cwd": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/herdr-capture-164/wt-create",
+        "focused": false,
+        "foreground_cwd": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/herdr-capture-164/wt-create",
+        "pane_id": "w2J:p1",
+        "revision": 5,
+        "scroll": { "max_offset_from_bottom": 0, "offset_from_bottom": 0, "viewport_rows": 54 },
+        "tab_id": "w2J:t1",
+        "terminal_id": "term_65c7ec7a446da1d",
+        "terminal_title": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/herdr-capture-164/wt-create",
+        "terminal_title_stripped": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/herdr-capture-164/wt-create",
+        "workspace_id": "w2J"
+      }
+    ],
+    "type": "pane_list"
+  }
+}

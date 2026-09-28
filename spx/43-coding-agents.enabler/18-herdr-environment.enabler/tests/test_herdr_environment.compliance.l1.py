@@ -2,10 +2,13 @@ from typing import cast
 
 from outcomeeng_testing.generators.herdr_environment import operation_requests
 from outcomeeng_testing.harnesses.herdr_environment import (
+    RecordingRunner,
+    captured_success_response,
     herdr_command_source_texts,
     herdr_help_violation_source,
     load_herdr_environment,
     raw_herdr_violation_source,
+    replay,
     request_for,
     run_bound_through_execute,
 )
@@ -90,3 +93,30 @@ def test_no_other_shipped_script_constructs_herdr_commands() -> None:
     assert module.raw_herdr_command_violations(raw_source) == [raw_path]
     help_path, help_source = herdr_help_violation_source()
     assert module.herdr_help_violations(help_source) == [help_path]
+
+
+def test_create_worktree_records_no_occupancy_claim() -> None:
+    module = load_herdr_environment()
+    created = 0
+
+    for request in operation_requests(module):
+        if (
+            module.Operation(request[module.OPERATION_FIELD])
+            is not module.Operation.CREATE_WORKTREE
+        ):
+            continue
+        created += 1
+        arguments = cast(dict[str, object], request[module.ARGUMENTS_FIELD])
+        captured = captured_success_response(
+            module, module.Operation.CREATE_WORKTREE, arguments
+        )
+        assert captured is not None, "no captured create-worktree response"
+        runner = RecordingRunner(replay(captured))
+
+        result = module.execute(request, runner)
+
+        assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
+        assert [call[0] for call in runner.calls] == [module.command_for(request)]
+        assert module.evidence_command_for(request) is None
+
+    assert created > 0

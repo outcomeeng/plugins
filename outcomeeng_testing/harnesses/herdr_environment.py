@@ -44,8 +44,23 @@ USAGE_FIXTURE_ROOT = FIXTURE_ROOT / "usage"
 # Captured herdr responses, by command: what herdr wrote to stdout on success
 # (`<command>.json`, or `<command>.txt` for a text command) and, under
 # `errors/`, the envelope it wrote to stderr on failure (`<command>.<code>.json`).
+# A capture under `<operation>/` is the one that operation's own run produced
+# where operations share a command: stop's exit prompt, and the relaunch into
+# the pane that stop kept.
 RESPONSE_FIXTURE_ROOT = FIXTURE_ROOT / "responses"
 ERROR_FIXTURE_ROOT = RESPONSE_FIXTURE_ROOT / "errors"
+# Responses herdr wrote for agent sessions whose evidence lacks projected
+# fields: a session started by a shell command outside the adapter, which
+# carries no name and no interactive_ready, and a start blocked during startup,
+# which carries no interactive_ready. The inventory lists both beside one
+# complete session.
+INCOMPLETE_FIXTURE_ROOT = RESPONSE_FIXTURE_ROOT / "incomplete"
+# The pane list herdr wrote for the stopped pane's workspace once the exit
+# prompt ended its session.
+STOPPED_PANE_LIST_FIXTURE = RESPONSE_FIXTURE_ROOT / "stop" / "pane-list.json"
+# Herdr's pane-list envelope field listing the panes; the adapter never reads a
+# pane list, so this field is the capture's own shape.
+PANE_LIST_FIELD = "panes"
 RAW_HERDR_VIOLATION_FIXTURE = FIXTURE_ROOT / "raw_herdr_command.py.txt"
 HERDR_HELP_VIOLATION_FIXTURE = FIXTURE_ROOT / "herdr_help_command.py.txt"
 # herdr's exit code on every captured error envelope.
@@ -164,6 +179,16 @@ class CapturedResponse:
     result: CommandResultContract
     error_code: str | None
     shaping_fields: frozenset[str] = frozenset()
+    # The captured response of the evidence command the operation runs after its
+    # own, when it runs one.
+    evidence: CommandResultContract | None = None
+
+
+def replay(captured: CapturedResponse) -> list[CommandResultContract]:
+    """The command results a run of the captured operation receives, in order."""
+    if captured.evidence is None:
+        return [captured.result]
+    return [captured.result, captured.evidence]
 
 
 class CaptureError(RuntimeError):
@@ -187,9 +212,12 @@ def load_herdr_environment() -> ModuleType:
     return _load()
 
 
-def _command_fixture_name(module: ModuleType, operation: object) -> str:
-    prefix = module.PUBLIC_HERDR_COMMAND_PREFIXES[operation]
+def _prefix_fixture_name(prefix: tuple[str, ...]) -> str:
     return "-".join(prefix[1:])
+
+
+def _command_fixture_name(module: ModuleType, operation: object) -> str:
+    return _prefix_fixture_name(module.PUBLIC_HERDR_COMMAND_PREFIXES[operation])
 
 
 def usage_contract_for(module: ModuleType, operation: object) -> UsageContract:
@@ -197,6 +225,33 @@ def usage_contract_for(module: ModuleType, operation: object) -> UsageContract:
     return usage_contract_from_path(
         USAGE_FIXTURE_ROOT / f"{_command_fixture_name(module, operation)}.txt"
     )
+
+
+def evidence_usage_contract_for(module: ModuleType, operation: object) -> UsageContract:
+    """Herdr's captured usage declaration for one operation's evidence command."""
+    prefix = module.EVIDENCE_COMMAND_PREFIXES[operation]
+    return usage_contract_from_path(
+        USAGE_FIXTURE_ROOT / f"{_prefix_fixture_name(prefix)}.txt"
+    )
+
+
+def _capture_path(root: Path, operation: object, file_name: str) -> Path:
+    """The operation's own capture of a command when one exists, else the
+    command's capture."""
+    own = root / str(operation) / file_name
+    return own if own.is_file() else root / file_name
+
+
+def _evidence_result(
+    module: ModuleType, operation: object, root: Path
+) -> CommandResultContract | None:
+    prefix = module.EVIDENCE_COMMAND_PREFIXES.get(operation)
+    if prefix is None:
+        return None
+    path = _capture_path(root, operation, f"{_prefix_fixture_name(prefix)}.json")
+    if not path.is_file():
+        raise CaptureError(f"no captured evidence response at {path}")
+    return _success_result(module, path)
 
 
 def _success_result(module: ModuleType, path: Path) -> CommandResultContract:
@@ -260,10 +315,19 @@ def captured_success_response(
     """Herdr's captured success response for one operation's request shape,
     when one exists: the capture taken under the same response-shaping options
     the request carries."""
+    return _captured_success_under(
+        module, operation, RESPONSE_FIXTURE_ROOT, _shaping_fields_of(module, arguments)
+    )
+
+
+def _captured_success_under(
+    module: ModuleType, operation: object, root: Path, fields: frozenset[str]
+) -> CapturedResponse | None:
     name = _command_fixture_name(module, operation)
     suffix = "txt" if operation in module.TEXT_OPERATIONS else "json"
-    fields = _shaping_fields_of(module, arguments)
-    path = RESPONSE_FIXTURE_ROOT / f"{name}{_shaping_suffix(module, fields)}.{suffix}"
+    path = _capture_path(
+        root, operation, f"{name}{_shaping_suffix(module, fields)}.{suffix}"
+    )
     if not path.is_file():
         return None
     return CapturedResponse(
@@ -272,15 +336,97 @@ def captured_success_response(
         _success_result(module, path),
         None,
         fields,
+        _evidence_result(module, operation, root),
     )
+
+
+def captured_incomplete_response(
+    module: ModuleType, operation: object
+) -> CapturedResponse:
+    """Herdr's captured response of one operation's command for an agent session
+    whose evidence lacks projected fields."""
+    captured = _captured_success_under(
+        module, operation, INCOMPLETE_FIXTURE_ROOT, frozenset()
+    )
+    if captured is None:
+        raise CaptureError(f"no captured incomplete-evidence response for {operation}")
+    return captured
+
+
+def captured_session_payload(captured: CapturedResponse) -> dict[str, object]:
+    """The captured JSON envelope carrying the session a result projects: the
+    evidence command's when the operation runs one, else the operation's own.
+    Only a success capture carries a session."""
+    if captured.evidence is not None:
+        return cast(dict[str, object], json.loads(captured.evidence.stdout))
+    return cast(dict[str, object], captured_payload(captured))
+
+
+def captured_session_agent(
+    module: ModuleType, captured: CapturedResponse
+) -> dict[str, object]:
+    """The hosted agent session herdr wrote into a captured session envelope."""
+    envelope = captured_session_payload(captured)
+    result = cast(dict[str, object], envelope[module.RESULT_FIELD])
+    return cast(dict[str, object], result[module.SESSION_FIELD])
+
+
+def session_envelope(
+    module: ModuleType, captured: CapturedResponse, agent: dict[str, object]
+) -> CapturedResponse:
+    """A captured session response with only its agent replaced, so the
+    envelope's shape, stream, and exit code stay what herdr wrote."""
+    envelope = captured_session_payload(captured)
+    result = cast(dict[str, object], envelope[module.RESULT_FIELD])
+    varied = json.dumps(
+        {**envelope, module.RESULT_FIELD: {**result, module.SESSION_FIELD: agent}}
+    )
+    result_varied = cast(CommandResultContract, module.CommandResult(0, varied, ""))
+    if captured.evidence is not None:
+        return CapturedResponse(
+            captured.operation,
+            f"{captured.path} with its evidence agent varied",
+            captured.result,
+            None,
+            captured.shaping_fields,
+            result_varied,
+        )
+    return CapturedResponse(
+        captured.operation,
+        f"{captured.path} with its agent varied",
+        result_varied,
+        None,
+        captured.shaping_fields,
+    )
+
+
+def captured_incomplete_agents(module: ModuleType) -> list[dict[str, object]]:
+    """The hosted agent sessions herdr listed in the captured inventory that
+    carries incomplete evidence."""
+    captured = captured_incomplete_response(module, module.Operation.INVENTORY)
+    envelope = cast(dict[str, object], captured_payload(captured))
+    result = cast(dict[str, object], envelope[module.RESULT_FIELD])
+    return cast(list[dict[str, object]], result[module.AGENTS_FIELD])
+
+
+def captured_stopped_panes(module: ModuleType) -> list[dict[str, object]]:
+    """The panes herdr listed in the stopped pane's workspace after stop."""
+    envelope = json.loads(STOPPED_PANE_LIST_FIXTURE.read_text(encoding="utf-8"))
+    result = cast(dict[str, object], envelope[module.RESULT_FIELD])
+    return cast(list[dict[str, object]], result[PANE_LIST_FIELD])
 
 
 def _captured_success_variants(
     module: ModuleType, operation: object
 ) -> list[CapturedResponse]:
     """Every captured success response of one operation: the base command's and
-    each option-shaped one."""
-    shaping = _response_shaping_fields(module)
+    each option-shaped one its own request shapes admit."""
+    allowed = module.OPERATION_CONTRACTS[operation].allowed_fields
+    shaping = tuple(
+        field_name
+        for field_name in _response_shaping_fields(module)
+        if field_name in allowed
+    )
     variants: list[CapturedResponse] = []
     for size in range(len(shaping) + 1):
         for chosen in combinations(shaping, size):
@@ -295,9 +441,10 @@ def _captured_success_variants(
 def captured_error_responses(
     module: ModuleType, operation: object
 ) -> list[CapturedResponse]:
-    """Every error envelope herdr emitted for one operation's command."""
+    """Every error envelope herdr emitted for one operation's command, and for
+    its evidence command after the operation's own command succeeded."""
     name = _command_fixture_name(module, operation)
-    return [
+    responses = [
         CapturedResponse(
             operation,
             str(path.relative_to(ROOT)),
@@ -306,6 +453,22 @@ def captured_error_responses(
         )
         for path in sorted(ERROR_FIXTURE_ROOT.glob(f"{name}.*.json"))
     ]
+    prefix = module.EVIDENCE_COMMAND_PREFIXES.get(operation)
+    own = _captured_success_under(module, operation, RESPONSE_FIXTURE_ROOT, frozenset())
+    if prefix is not None and own is not None:
+        evidence_name = _prefix_fixture_name(prefix)
+        responses.extend(
+            CapturedResponse(
+                operation,
+                str(path.relative_to(ROOT)),
+                own.result,
+                _error_code(module, path),
+                own.shaping_fields,
+                _error_result(module, path),
+            )
+            for path in sorted(ERROR_FIXTURE_ROOT.glob(f"{evidence_name}.*.json"))
+        )
+    return responses
 
 
 def captured_responses(module: ModuleType) -> list[CapturedResponse]:
@@ -320,7 +483,8 @@ def captured_responses(module: ModuleType) -> list[CapturedResponse]:
 def captured_payload(response: CapturedResponse) -> object:
     """The captured response decoded: the JSON envelope, or the text verbatim."""
     if response.error_code is not None:
-        return json.loads(response.result.stderr)
+        failing = response.evidence or response.result
+        return json.loads(failing.stderr)
     try:
         return json.loads(response.result.stdout)
     except json.JSONDecodeError:
