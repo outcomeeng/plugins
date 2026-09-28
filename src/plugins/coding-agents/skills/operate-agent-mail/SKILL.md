@@ -145,7 +145,7 @@ Neither shape carries `schemaVersion`, `operation`, `commandExitCode`, `response
 
 <testing>
 
-The evidence for the bundled adapter lives in the repository that ships this skill, `https://github.com/outcomeeng/plugins`, under `spx/43-coding-agents.enabler/18-agent-mail.enabler/`; a consumer install carries the skill without it. The deterministic tests run over generated requests, records, and repository shapes, with controlled `CommandRunner` implementations at the command boundary and real Git repositories behind the lookup.
+The evidence for the bundled adapter lives in the repository that ships this skill, `https://github.com/outcomeeng/plugins`, in the spec node whose front matter carries `id: 01a0b229-e718-7996-988b-d465e39f898d`, and the paths below are relative to that node's directory; a consumer install carries the skill without it. The deterministic tests run over generated requests, records, and repository shapes, with controlled `CommandRunner` implementations at the command boundary and real Git repositories behind the lookup.
 
 `tests/test_agent_mail.mapping.l1.py`:
 
