@@ -32,6 +32,7 @@ from outcomeeng_testing.generators.agent_mail import (
     agent_names,
     common_dir_output,
     capture_row_ordinals,
+    conflicting_handback_contents,
     coordination_references,
     correlations,
     expected_project_key,
@@ -126,6 +127,9 @@ DELEGATION_CHAIN_EXAMPLES = 20
 TERMINAL_PROPERTY_SEED = 2026091802
 TERMINAL_PROPERTY_EXAMPLES = 40
 TERMINAL_PROPERTY_REPLAY_PATH = RECORD_ROUNDTRIP_REPLAY_PATH
+CONFLICTING_HANDBACK_SEED = 2026092801
+CONFLICTING_HANDBACK_EXAMPLES = 40
+CONFLICTING_HANDBACK_REPLAY_PATH = RECORD_ROUNDTRIP_REPLAY_PATH
 DELEGATION_CHAIN_REPLAY_PATH = RECORD_ROUNDTRIP_REPLAY_PATH
 PROJECT_KEY_MAPPING_SEED = 2026091803
 PROJECT_KEY_MAPPING_EXAMPLES = 20
@@ -935,9 +939,8 @@ class TerminalCase:
 
     ``reference`` and ``other_reference`` are distinct coordination
     references; ``first_kind`` and ``second_kind`` are terminal kinds, equal
-    or not; ``non_terminal_kind`` closes no delegation; ``content`` and
-    ``other_content`` are independently generated sender, recipient, subject,
-    and body values.
+    or not; ``non_terminal_kind`` closes no delegation; ``content`` is a
+    generated sender, recipient, subject, and body.
     """
 
     reference: str
@@ -946,7 +949,6 @@ class TerminalCase:
     second_kind: object
     non_terminal_kind: object
     content: dict[str, str]
-    other_content: dict[str, str]
 
 
 def run_terminal_property(
@@ -966,7 +968,6 @@ def run_terminal_property(
         second_kind=terminal_record_kinds(module),
         non_terminal_kind=non_terminal_record_kinds(module),
         content=handback_contents(module),
-        other_content=handback_contents(module),
     )
     def generated_terminal(
         reference_pair: tuple[str, str],
@@ -974,7 +975,6 @@ def run_terminal_property(
         second_kind: object,
         non_terminal_kind: object,
         content: dict[str, str],
-        other_content: dict[str, str],
     ) -> None:
         assert_terminal(
             module,
@@ -985,7 +985,6 @@ def run_terminal_property(
                 second_kind=second_kind,
                 non_terminal_kind=non_terminal_kind,
                 content=content,
-                other_content=other_content,
             ),
         )
 
@@ -993,6 +992,59 @@ def run_terminal_property(
         generated_terminal,
         seed_value=TERMINAL_PROPERTY_SEED,
         replay_path=TERMINAL_PROPERTY_REPLAY_PATH,
+    )
+
+
+@dataclass(frozen=True)
+class ConflictingHandbackCase:
+    """One generated pair of same-kind terminal handbacks for one reference.
+
+    ``kind`` is a terminal kind both handbacks carry; ``content`` and
+    ``other_content`` are sender, recipient, subject, and body values that
+    differ in a generated nonempty set of those fields.
+    """
+
+    reference: str
+    kind: object
+    content: dict[str, str]
+    other_content: dict[str, str]
+
+
+def run_conflicting_handback_property(
+    assert_conflicting: Callable[[ModuleType, ConflictingHandbackCase], None],
+) -> None:
+    """Drive generated same-kind handback pairs while the linked test owns the predicate."""
+    module = _load()
+
+    @seed(CONFLICTING_HANDBACK_SEED)
+    @settings(
+        max_examples=CONFLICTING_HANDBACK_EXAMPLES, deadline=None, print_blob=True
+    )
+    @given(
+        reference=correlations(module, store_rejected_threads(module)),
+        kind=terminal_record_kinds(module),
+        contents=conflicting_handback_contents(module),
+    )
+    def generated_conflicting(
+        reference: str,
+        kind: object,
+        contents: tuple[dict[str, str], dict[str, str]],
+    ) -> None:
+        content, other_content = contents
+        assert_conflicting(
+            module,
+            ConflictingHandbackCase(
+                reference=reference,
+                kind=kind,
+                content=content,
+                other_content=other_content,
+            ),
+        )
+
+    run_replayable_property(
+        generated_conflicting,
+        seed_value=CONFLICTING_HANDBACK_SEED,
+        replay_path=CONFLICTING_HANDBACK_REPLAY_PATH,
     )
 
 

@@ -134,15 +134,46 @@ def message_records(
     )
 
 
+def _handback_content_domains(
+    module: ModuleType,
+) -> dict[str, st.SearchStrategy[str]]:
+    return {
+        module.SENDER_FIELD: agent_names(),
+        module.RECIPIENT_FIELD: agent_names(),
+        module.RECORD_SUBJECT_FIELD: message_texts(),
+        module.BODY_FIELD: message_texts(),
+    }
+
+
 def handback_contents(module: ModuleType) -> st.SearchStrategy[dict[str, str]]:
     """The content fields of a terminal handback, each generated independently."""
-    return st.fixed_dictionaries(
-        {
-            module.SENDER_FIELD: agent_names(),
-            module.RECIPIENT_FIELD: agent_names(),
-            module.RECORD_SUBJECT_FIELD: message_texts(),
-            module.BODY_FIELD: message_texts(),
-        }
+    return st.fixed_dictionaries(_handback_content_domains(module))
+
+
+def conflicting_handback_contents(
+    module: ModuleType,
+) -> st.SearchStrategy[tuple[dict[str, str], dict[str, str]]]:
+    """A handback's content and a second content that differs from it.
+
+    The second content replaces a generated nonempty set of the content fields
+    with other values drawn from each field's own domain and keeps the rest, so
+    every combination of changed fields is reachable.
+    """
+    domains = _handback_content_domains(module)
+
+    def other_value(content: dict[str, str], name: str) -> st.SearchStrategy[str]:
+        held = content[name]
+        return domains[name].filter(lambda value: value != held)
+
+    def changed(content: dict[str, str]) -> st.SearchStrategy[dict[str, str]]:
+        return st.sets(st.sampled_from(sorted(domains)), min_size=1).flatmap(
+            lambda names: st.fixed_dictionaries(
+                {name: other_value(content, name) for name in names}
+            ).map(lambda replaced: {**content, **replaced})
+        )
+
+    return handback_contents(module).flatmap(
+        lambda content: st.tuples(st.just(content), changed(content))
     )
 
 

@@ -399,6 +399,18 @@ class AgentMailError(RuntimeError):
         self.status = status
 
 
+@dataclass(frozen=True)
+class FieldDifference:
+    """One record field whose value a second terminal handback changes."""
+
+    name: str
+    current: object
+    incoming: object
+
+    def describe(self) -> str:
+        return f"{self.name} {self.current!r} then {self.incoming!r}"
+
+
 class TerminalHandbackRejected(AgentMailError):
     """A terminal handback the reduction for its coordination reference rejects."""
 
@@ -406,11 +418,11 @@ class TerminalHandbackRejected(AgentMailError):
         self,
         rejection: HandbackRejection,
         message: str,
-        differing_fields: tuple[str, ...] = (),
+        differences: tuple[FieldDifference, ...] = (),
     ) -> None:
         super().__init__(ExecutionStatus.INVALID_SCHEMA, message)
         self.rejection = rejection
-        self.differing_fields = differing_fields
+        self.differences = differences
 
 
 @dataclass(frozen=True)
@@ -661,7 +673,8 @@ def reduce_terminal(current: object | None, incoming: object) -> dict[str, objec
     A repeat identical to the current state is idempotent. A second handback
     for the reference with another terminal kind is a kind conflict; one with
     the same kind and different content is a conflicting handback whose detail
-    names every field that differs.
+    names every field that differs, with the value the current state holds and
+    the value the second handback carries.
     """
     terminal = _terminal_record(
         validate_record(incoming, location=TERMINAL_KINDS_LOCATION, with_id=False)
@@ -683,18 +696,20 @@ def reduce_terminal(current: object | None, incoming: object) -> dict[str, objec
             HandbackRejection.KIND_CONFLICT,
             f"Conflicting terminal kinds for {reference}: "
             f"{existing[KIND_FIELD]} then {terminal[KIND_FIELD]}.",
-            (KIND_FIELD,),
+            (FieldDifference(KIND_FIELD, existing[KIND_FIELD], terminal[KIND_FIELD]),),
         )
-    differing = tuple(
-        sorted(name for name in existing if existing[name] != terminal[name])
+    differences = tuple(
+        FieldDifference(name, existing[name], terminal[name])
+        for name in sorted(existing)
+        if existing[name] != terminal[name]
     )
-    if not differing:
+    if not differences:
         return existing
     raise TerminalHandbackRejected(
         HandbackRejection.CONFLICTING_HANDBACK,
         f"Conflicting {terminal[KIND_FIELD]} handbacks for {reference}: "
-        f"they differ in {', '.join(differing)}.",
-        differing,
+        f"{'; '.join(difference.describe() for difference in differences)}.",
+        differences,
     )
 
 

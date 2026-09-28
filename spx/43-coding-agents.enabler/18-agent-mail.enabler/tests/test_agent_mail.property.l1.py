@@ -4,9 +4,11 @@ from typing import cast
 import pytest
 
 from outcomeeng_testing.harnesses.agent_mail import (
+    ConflictingHandbackCase,
     RecordingRunner,
     TerminalCase,
     argv_option_values,
+    run_conflicting_handback_property,
     run_delegation_chain_property,
     run_record_roundtrip_property,
     run_terminal_property,
@@ -137,31 +139,10 @@ def test_terminal_handbacks_reduce_to_exactly_one_result() -> None:
                 )
             assert conflict.value.rejection == module.HandbackRejection.KIND_CONFLICT
             assert conflict.value.status == module.ExecutionStatus.INVALID_SCHEMA
-            assert conflict.value.differing_fields == (module.KIND_FIELD,)
-
-        # The same kind with other content is a conflicting handback naming
-        # exactly the fields the second handback changed.
-        changed = handback(case.first_kind, case.reference, case.other_content)
-        differing = tuple(
-            sorted(
-                name
-                for name, value in case.other_content.items()
-                if case.content[name] != value
-            )
-        )
-        if differing:
-            with pytest.raises(rejection) as conflicting:
-                module.reduce_terminal(first, changed)
-            assert (
-                conflicting.value.rejection
-                == module.HandbackRejection.CONFLICTING_HANDBACK
-            )
-            assert conflicting.value.status == module.ExecutionStatus.INVALID_SCHEMA
-            assert conflicting.value.differing_fields == differing
-            for name in differing:
-                assert name in str(conflicting.value)
-        else:
-            assert module.reduce_terminal(first, changed) == first
+            assert {
+                change.name: (change.current, change.incoming)
+                for change in conflict.value.differences
+            } == {module.KIND_FIELD: (case.first_kind, case.second_kind)}
 
         # A handback for another reference never reduces onto this one's state.
         elsewhere = handback(case.first_kind, case.other_reference, case.content)
@@ -183,3 +164,52 @@ def test_terminal_handbacks_reduce_to_exactly_one_result() -> None:
         assert current.value.rejection == module.HandbackRejection.NOT_TERMINAL
 
     run_terminal_property(assert_terminal)
+
+
+def test_a_same_kind_handback_with_other_content_is_a_conflicting_handback() -> None:
+    def assert_conflicting(module: ModuleType, case: ConflictingHandbackCase) -> None:
+        def handback(content: dict[str, str]) -> dict[str, object]:
+            return cast(
+                dict[str, object],
+                module.terminal_handback(
+                    kind=case.kind,
+                    correlation=case.reference,
+                    sender=content[module.SENDER_FIELD],
+                    recipient=content[module.RECIPIENT_FIELD],
+                    subject=content[module.RECORD_SUBJECT_FIELD],
+                    body=content[module.BODY_FIELD],
+                ),
+            )
+
+        first = handback(case.content)
+        second = handback(case.other_content)
+        # The content difference is read from the two generated contents,
+        # never from the records the adapter built from them.
+        difference = {
+            name: (value, case.other_content[name])
+            for name, value in case.content.items()
+            if case.other_content[name] != value
+        }
+
+        with pytest.raises(module.TerminalHandbackRejected) as conflicting:
+            module.reduce_terminal(first, second)
+        rejected = conflicting.value
+
+        # Rejected as a conflicting handback, never as a kind conflict.
+        assert rejected.rejection == module.HandbackRejection.CONFLICTING_HANDBACK
+
+        # The detail names every changed field with the value it held and the
+        # value the second handback carries, and names no unchanged field.
+        named = {
+            change.name: (change.current, change.incoming)
+            for change in rejected.differences
+        }
+        assert len(named) == len(rejected.differences)
+        assert named == difference
+        detail = str(rejected)
+        for name, (current, incoming) in difference.items():
+            assert name in detail
+            assert repr(current) in detail
+            assert repr(incoming) in detail
+
+    run_conflicting_handback_property(assert_conflicting)
