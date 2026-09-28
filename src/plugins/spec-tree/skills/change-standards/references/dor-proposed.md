@@ -10,7 +10,6 @@ Judge every criterion:
 | `proposed-output`         | `# Output` preserves the proposal in the proposer's terms and makes the intended Output clear.                                       |
 | `proposed-value`          | `# Value` states the established reason the operator conditionally prioritizes the Output for Build refinement.                      |
 | `proposed-questions`      | Consequential unresolved questions remain explicit in `# Frame`; no answer is invented.                                              |
-| `proposed-authority`      | `# Frame` carries `Proposal review: reviewed by the operator on <date>.` after operator review.                                      |
 | `proposed-input-boundary` | No provider conversation, transcript, prompt copy, or received conversation input appears in the record.                             |
 
 </definition_of_ready>

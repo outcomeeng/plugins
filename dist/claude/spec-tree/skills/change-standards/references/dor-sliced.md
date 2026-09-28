@@ -1,6 +1,6 @@
 <definition_of_ready maturity="Sliced" cumulative="true">
 
-Judge every criterion; this table includes the complete Proposed and Framed requirements.
+Judge every criterion; this table includes the complete Proposed and Framed requirements and is the complete criterion set for Sliced Maturity, so apply no criterion outside it.
 
 | ID                     | Criterion                                                                                                                                                                                                                             |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

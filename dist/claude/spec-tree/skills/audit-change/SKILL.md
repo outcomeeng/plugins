@@ -113,7 +113,7 @@ substantive judgment.
    closed key set. Judge front-matter types, values, immutable
    root-or-successor lineage, and mutable blockers. Then read all body
    content and judge the exact four-section order, Output, Value, per-node target
-   malleability, the in-Frame review statement or Intent attestation,
+   malleability, the in-Frame Intent attestation,
    accountable person, required node states,
    evidence obligations, Decisions, repository boundary, dependencies, and
    Activities together. Assess every common rule and selected DoR criterion.
