@@ -56,3 +56,24 @@ routing assertions they back.
 **Settlement condition**: routed-case wording no longer mirrors the
 `classify-subject` table, and an eval-evidence audit reports no
 `oracle-leakage` warning.
+
+## Routed path-bearing cases cannot observe the specialist-result validation
+
+**Evidence**: eval-evidence auditor warning `f-003` against `evals/routing/cases.jsonl`,
+verbatim: "The routed path-bearing cases (routes-deterministic-behavior-to-test,
+routes-cli-state-readout-to-test, routes-cli-model-behavior-to-evaluate,
+routes-structured-producer-to-evaluate, routes-observation-claim-to-probe-specialist)
+expect status 'routed'. The producer's record-result table ends a path-bearing route
+'routed' only after the specialist result passes validation. The case input supplies
+no specialist result, so these cases cannot tell a producer that follows the
+validation rule from one that reports 'routed' once the catalog lists the specialist."
+
+**Impact**: a producer that reports `routed` as soon as the runtime skill catalog
+lists the selected specialist, without validating that specialist's result, passes
+every routed path-bearing case, so those cases supply no evidence for the
+validation row that separates `routed` from `capability-required` on a failed check.
+
+**Settlement condition**: the routing eval's case input carries a specialist result
+for each routed path-bearing case, a case whose specialist result fails validation
+expects `capability-required` with the failed check, and an eval-evidence audit
+reports no `f-003`-class warning against the routed cases.
