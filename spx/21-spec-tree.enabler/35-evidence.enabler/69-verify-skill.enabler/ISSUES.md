@@ -20,25 +20,48 @@ on a head that carries the current producer, with its row committed to
 `history.jsonl`, followed by an independent eval-evidence audit accepting that
 evidence.
 
-## Four principles restate rules the workflow already states in full
+## Two principles still restate rules the workflow states in full
 
 **Evidence**: `instructions:skill-auditor` finding `f-007`, severity `WARNING`,
 rule `conciseness_duplication`, against
 `src/plugins/spec-tree/skills/verify/SKILL.md` on head
-`acf15245ac7d9ef4d2fa40b79431041d27974d61`. Four `<essential_principles>` bullets
-repeat the tag grammar, the evidence-shape derivation, the runtime-catalog check,
-and the judgment boundary that individual workflow steps already state.
+`acf15245ac7d9ef4d2fa40b79431041d27974d61` named four `<essential_principles>`
+bullets repeating the tag grammar, the evidence-shape derivation, the
+runtime-catalog check, and the judgment boundary; warning `f-011` on head
+`5f9bb8e6200221bbe3b812b947b2f96dbeb686df` added the blocked-result shape and the
+`capability-required` semantics. The reduction has been applied: at head
+`0c5ea733221d272f571005528ec87bcb7fb1e1dc`, and in the unchanged skill since,
+`<essential_principles>` is six bullets at lines 18–23 and states no tag grammar,
+evidence-shape derivation, runtime-catalog check, or `capability-required`
+semantics; those live only in `validate-input`, `route-specialist`, and
+`record-result`. Two restatements remain:
 
-**Impact**: the tag grammar and the evidence-shape rule each live in two places,
-so the next grammar change has two sites to keep in step, and the duplicated
-bullets add no capability at trigger time. The skill auditor's warning `f-011` on
-head `5f9bb8e6200221bbe3b812b947b2f96dbeb686df` also names the blocked-result
-shape and the `capability-required` semantics, each stated in both the
-principles and the workflow steps.
+- The blocked-result sentence, line 18: "unsupported input takes the blocked
+  result and nothing else", which `validate-input` states in full at line 45:
+  "Its only output is the blocked row of `record-result`." The same bullet's
+  first clause is the subject of the read-order entry below.
+- The judgment boundary, line 23: "Construct no evidence and render no verdict:
+  the selected specialist owns test evidence, eval evidence, or the probe
+  protocol and its attested run, and the isolated verifier owns the audit
+  verdict", which the `route-specialist` bullets at lines 80–83 state route by
+  route — each path-bearing specialist owns and writes its own evidence, and the
+  audit bullet names "the isolated verifier, which this workflow never runs" —
+  and which success criterion line 156 restates as "it produces no agentic
+  verdict and no attested run".
 
-**Settlement condition**: `<essential_principles>` retains only the invariants
-that hold across steps, each workflow step owns its own grammar and shape detail,
-and an independent skill audit accepts the reduced principles.
+**Impact**: each of these two rules lives in a principle and in a workflow step,
+so a change to the blocked result or to specialist ownership has two sites to
+keep in step. The other four bullets — selection before specialization, the
+classification boundary that `classify-subject` cites at line 60 instead of
+restating, edit retention across `route-specialist` and `record-result`, and
+one-directional routing — are not among the restatements `f-007` and `f-011`
+named.
+
+**Settlement condition**: an independent skill audit of the current
+`src/plugins/spec-tree/skills/verify/SKILL.md` raises no `conciseness_duplication`
+finding against `<essential_principles>`, either accepting the blocked-result
+sentence and the judgment boundary as invariants that hold across steps, or after
+each is reduced to its invariant with the detail left to the step that owns it.
 
 ## Eval cases outside the audited six keep the producer's classification wording
 
