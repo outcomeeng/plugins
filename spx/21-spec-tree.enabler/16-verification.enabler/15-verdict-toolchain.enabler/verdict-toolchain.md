@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f60-7102-bb17-8d39b70510fd
+malleability: spec
+---
+
 # Verification Run Payload Validation
 
 PROVIDES the SPX-owned verification-run payload and projection contract consumed by audit and review skills

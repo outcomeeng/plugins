@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f5e-76b3-b374-5b0485b18ce2
+malleability: spec
+---
+
 # Workflow Review
 
 PROVIDES static and semantic audit of existing workflow files against the design model, safety policy, and observed repository state

@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f69-7623-91a6-11e59f85cb78
+malleability: spec
+---
+
 # GitHub PR Transport
 
 PROVIDES the GitHub-PR merge transport — the `/manage-github-pr` lifecycle orchestration that takes a ready changeset from intent through pull-request publication, merge, declared deploy, declared release, and close, invoked by `/merge` when it selects this transport

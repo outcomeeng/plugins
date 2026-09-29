@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f5d-74d8-8630-9dd82f35ecdf
+malleability: spec
+---
+
 # GitHub Actions
 
 PROVIDES GitHub Actions platform guidance, workflow safety policy, workflow design guidance, and Python-driven runtime observability

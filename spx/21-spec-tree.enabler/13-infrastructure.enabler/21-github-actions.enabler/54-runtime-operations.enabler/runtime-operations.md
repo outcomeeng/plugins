@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f5e-76b3-b374-5b039ebb9a5c
+malleability: spec
+---
+
 # Runtime Operations
 
 PROVIDES failure triage and explicitly-requested run-control operations using observed runs, jobs, logs, check rollups, and the mutation gate from `32-workflow-safety`

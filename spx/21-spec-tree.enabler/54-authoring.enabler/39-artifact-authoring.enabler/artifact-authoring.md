@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f64-73f1-8795-b5570b08d1bb
+malleability: spec
+---
+
 # Artifact Authoring
 
 PROVIDES deterministic creation and modification of decision-ready Spec Tree artifacts

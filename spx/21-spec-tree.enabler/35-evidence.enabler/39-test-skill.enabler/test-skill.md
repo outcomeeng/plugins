@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f63-709a-9097-ebfebf5123f6
+malleability: spec
+---
+
 # Test Skill
 
 PROVIDES generic deterministic-test routing, assertion typing, execution-level selection, evidence integrity checks, and shared test workflow ceremony before language-specific expression

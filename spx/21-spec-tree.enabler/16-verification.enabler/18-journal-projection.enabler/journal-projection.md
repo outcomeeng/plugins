@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f60-7102-bb17-8d3ab5f35e49
+malleability: spec
+---
+
 # Journal Projection
 
 PROVIDES the consumer-side run-journal projection — per-event builders a streaming verification run appends as it advances (scope-entered, scope-advanced, finding-reported, run-completed), and computing the rollup and rendering the human-readable surface from any event prefix, including a partial in-flight prefix

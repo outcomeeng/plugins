@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f64-73f1-8795-b558904c3b31
+malleability: spec
+---
+
 # Spec Workflow
 
 PROVIDES an operator-driven `/spec` lifecycle for creating and modifying durable declarations whose ownership is unambiguous

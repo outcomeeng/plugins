@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f66-7099-bada-7c713792e692
+malleability: spec
+---
+
 # Verification Run State Surface
 
 PROVIDES individual audit-run state as an SPX verification-run projection keyed by audit verification type, changeset scope, coverage units, producer identity, producer provenance, prior-context selector fields, and finding content

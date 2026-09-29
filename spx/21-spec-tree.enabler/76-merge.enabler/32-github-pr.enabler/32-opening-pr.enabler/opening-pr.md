@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f69-7623-91a6-11e684c72c78
+malleability: spec
+---
+
 # PR Opening Protocol
 
 PROVIDES the pull-request opening protocol — `VERIFICATION_READINESS` evaluation, branch push with an explicit destination ref, ready pull-request creation, and the first management pass

@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f6a-71a9-ae8b-72f51b9b5926
+malleability: spec
+---
+
 # Diagnostics
 
 PROVIDES a portable environment-diagnostics capability — the `diagnose` skill — that runs the deterministic `spx diagnose` pipeline with a plugin-shipped manifest and reports the resulting per-check verdicts with remediation judgment

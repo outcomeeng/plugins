@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f64-73f1-8795-b559993aadbc
+malleability: spec
+---
+
 # Bootstrapping
 
 PROVIDES an interactive bootstrapping flow that scaffolds a product-root spec tree from user interviews

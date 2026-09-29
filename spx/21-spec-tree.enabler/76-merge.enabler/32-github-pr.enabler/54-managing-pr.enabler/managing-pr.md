@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f69-7623-91a6-11e79816a105
+malleability: spec
+---
+
 # PR Managing Protocol
 
 PROVIDES the open pull-request management protocol — three-surface review and check inspection, two-severity finding triage, follow-up pushes, `MERGE_READINESS` evaluation, the worktree-safe merge with branch cleanup, and continuation through any declared deploy and release phases

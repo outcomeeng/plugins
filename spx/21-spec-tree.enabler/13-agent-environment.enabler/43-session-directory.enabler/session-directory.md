@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f5c-71b2-a30a-3a534aa618f8
+malleability: spec
+---
+
 # Session Directory
 
 PROVIDES the per-runtime session directory convention keyed on the agent session identity

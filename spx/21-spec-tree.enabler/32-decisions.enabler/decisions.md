@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f61-73ed-9937-4479d0d25e40
+malleability: spec
+---
+
 # Decisions
 
 PROVIDES the decision record lifecycle — creation and auditing of ADRs and PDRs

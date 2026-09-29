@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f62-706c-86af-c6337868ced9
+malleability: spec
+---
+
 # Evidence
 
 PROVIDES the assertion-evidence lifecycle that selects a verification type, delegates evidence construction to the matching specialist, and subjects authored evidence to the same standards its auditor enforces

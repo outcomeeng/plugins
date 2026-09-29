@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f69-7623-91a6-11e4ba331225
+malleability: spec
+---
+
 # Direct-push Transport
 
 PROVIDES the direct-push merge transport — publishing a verified changeset straight to the default branch on origin without a pull request

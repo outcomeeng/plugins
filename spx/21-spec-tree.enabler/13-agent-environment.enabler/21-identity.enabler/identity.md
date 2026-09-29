@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f5b-7111-b282-4325525e3a75
+malleability: spec
+---
+
 # Identity
 
 PROVIDES a stable per-agent session identity written into the agent's environment at session start

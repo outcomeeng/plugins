@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f5e-76b3-b374-5b028ea0417f
+malleability: spec
+---
+
 # Workflow Design
 
 PROVIDES the architectural vocabulary for authoring GitHub Actions workflows: triggers, jobs, matrices, reusable workflows, composite actions, repository scripts, caches, artifacts, environments, validation commands, and the boundary between workflow code and repository code

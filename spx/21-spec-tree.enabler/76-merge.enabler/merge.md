@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f68-71ca-ab5a-263e35b0dc4b
+malleability: spec
+---
+
 # Merging
 
 PROVIDES the transport-neutral delivery policy — the ordered `VERIFY -> PREVIEW -> MERGE -> DEPLOY -> RELEASE -> CLOSE` lifecycle, the four readiness gates, the finding-disposition rule, and the delivered-value boundary — and the `/merge` transport dispatcher

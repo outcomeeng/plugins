@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f63-709a-9097-ebfd37f6750c
+malleability: spec
+---
+
 # Skill Eval
 
 PROVIDES producer-coupled eval evidence for LLM-driven skill behavior, including source-derived prompts, independently selected case oracles, and one-case convergence

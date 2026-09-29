@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f5f-742b-b02e-ad53749f5da2
+malleability: spec
+---
+
 # Changeset Scope
 
 PROVIDES the canonical git-derived changeset primitives — branch identity, addressing slug, base-ref resolution, concrete commit-OID resolution, and merge-base diff scope

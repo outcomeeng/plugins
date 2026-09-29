@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f66-7099-bada-7c70351f20db
+malleability: spec
+---
+
 # Audit
 
 PROVIDES implementation-audit orchestration through one spec-tree-owned `implementation-auditor` wrapper agent that records audit coverage, findings, terminal state, and the rendered projection through `spx verification run`

@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f68-71ca-ab5a-263d47246823
+malleability: spec
+---
+
 # Committing
 
 PROVIDES a commit workflow enforcing Conventional Commits with selective staging for local verification checkpoints and publication-ready changes

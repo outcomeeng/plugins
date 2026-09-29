@@ -1,5 +1,6 @@
 ---
 tier: prototype
+malleability: spec
 ---
 
 # Reviewing Changes

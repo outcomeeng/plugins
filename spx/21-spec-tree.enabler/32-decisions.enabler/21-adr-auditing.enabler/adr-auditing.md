@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f62-706c-86af-c631392a9d61
+malleability: spec
+---
+
 # ADR Auditing
 
 PROVIDES an audit methodology verifying ADRs declare well-formed architecture decisions in authoring or routed verification form

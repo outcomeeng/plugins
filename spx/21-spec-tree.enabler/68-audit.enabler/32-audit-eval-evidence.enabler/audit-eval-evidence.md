@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f66-7099-bada-7c7269176a77
+malleability: spec
+---
+
 # Audit Eval Evidence
 
 PROVIDES an audit methodology verifying eval evidence proves the behavior claimed by `[eval]` spec assertions

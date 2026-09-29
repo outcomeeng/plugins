@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f63-709a-9097-ec003c9fd339
+malleability: spec
+---
+
 # Instruction Block
 
 PROVIDES deterministic generation and validation of a managed Spec Tree instruction surface in a product's root agent-harness instruction files — `CLAUDE.md` for Claude Code and `AGENTS.md` for Codex — composed of a generated router block rendered from the harness templates committed under `dist/`, `shared` regions kept byte-identical across both files, and independent product content free to differ per file, scoped to the project's enabled languages and rendered per agent harness

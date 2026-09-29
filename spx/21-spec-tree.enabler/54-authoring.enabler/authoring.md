@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f64-73f1-8795-b556d633527b
+malleability: spec
+---
+
 # Authoring
 
 PROVIDES an operator-facing specification workflow backed by a decision-ready artifact-writing protocol
