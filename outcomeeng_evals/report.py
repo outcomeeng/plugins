@@ -12,7 +12,7 @@ import json
 import statistics
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Final
 
 from outcomeeng_evals.case import Case
 from outcomeeng_evals.definition import DEFAULT_PROFILE, profile_model_selection
@@ -33,6 +33,10 @@ EMBEDDED_RESULTS_SCRIPT_OPEN = (
 )
 EMBEDDED_RESULTS_SCRIPT_CLOSE = "</script>"
 DEFAULT_REPORT_MODEL = str(profile_model_selection(DEFAULT_PROFILE).model)
+# Results-document keys carrying the run's model and configured ceilings.
+RESULT_MODEL_KEY: Final = "model"
+RESULT_MAX_BUDGET_USD_KEY: Final = "max_budget_usd"
+RESULT_TIMEOUT_SECONDS_KEY: Final = "timeout_seconds"
 
 
 def serialize_result(
@@ -49,9 +53,9 @@ def serialize_result(
     return {
         "schema_version": JSON_SCHEMA_VERSION,
         "title": title,
-        "model": model,
-        "max_budget_usd": max_budget_usd,
-        "timeout_seconds": timeout_seconds,
+        RESULT_MODEL_KEY: model,
+        RESULT_MAX_BUDGET_USD_KEY: max_budget_usd,
+        RESULT_TIMEOUT_SECONDS_KEY: timeout_seconds,
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "suite": {
             "passed": result.passed,

@@ -1,0 +1,9 @@
+title = "producer"
+cases = "cases.jsonl"
+prompt = "prompt.md"
+
+[prompt_source]
+kind = "producer-section"
+producer = "outcomeeng_testing/fixtures/evals/producer_section_recipe/producer.md"
+section = "recipe_selected_step"
+template = "prompt.template.md"

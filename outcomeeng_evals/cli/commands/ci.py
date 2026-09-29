@@ -16,6 +16,8 @@ from outcomeeng_evals.ci_execution import (
 )
 from outcomeeng_evals.ci_plan import (
     CHANGED_PATHS_FILE_HELP,
+    CHANGED_PATHS_FILE_OPTION,
+    MODE_OPTION,
     CiMode,
     build_ci_plan,
     read_changed_paths_file,
@@ -28,14 +30,14 @@ from outcomeeng_evals.ci_plan import (
     type=click.Path(exists=True, file_okay=False, path_type=Path),
 )
 @click.option(
-    "--mode",
+    MODE_OPTION,
     type=click.Choice([mode.value for mode in CiMode]),
     default=CiMode.FULL.value,
     show_default=True,
     help="CI selection mode.",
 )
 @click.option(
-    "--changed-paths-file",
+    CHANGED_PATHS_FILE_OPTION,
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
     help=CHANGED_PATHS_FILE_HELP,
 )

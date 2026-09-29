@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Final
 
 import click
 
@@ -10,6 +11,11 @@ from outcomeeng_evals.producer_prompt import (
     ProducerPromptError,
     materialize_prompts,
 )
+
+# The action word that opens each reported prompt line, and its separator.
+MATERIALIZED_ACTION: Final = "materialized"
+CHECKED_ACTION: Final = "checked"
+ACTION_SEPARATOR: Final = ": "
 
 
 @click.command(name="materialize-prompts")
@@ -35,6 +41,6 @@ def materialize_prompts_command(root: Path, repo_root: Path, check: bool) -> Non
         paths = materialize_prompts(root, repo_root=repo_root, check=check)
     except ProducerPromptError as exc:
         raise click.ClickException(str(exc)) from exc
-    action = "checked" if check else "materialized"
+    action = CHECKED_ACTION if check else MATERIALIZED_ACTION
     for path in paths:
-        click.echo(f"{action}: {path}")
+        click.echo(f"{action}{ACTION_SEPARATOR}{path}")

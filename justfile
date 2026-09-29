@@ -16,34 +16,26 @@ test-v *args:
 eval eval_toml:
     #!/usr/bin/env bash
     set -euo pipefail
-    plugin_dir="${PLUGIN_DIR:-$(uv run python -c 'import sys, tomllib; from pathlib import Path; data = tomllib.loads(Path(sys.argv[1]).read_text(encoding="utf-8")); print(data.get("plugin_dir", "dist/claude/spec-tree"))' "{{eval_toml}}")}"
+    plugin_dir="${PLUGIN_DIR:-$(uv run python -c 'import sys, tomllib; from pathlib import Path; from outcomeeng_evals.definition import PLUGIN_DIR_FIELD; from outcomeeng_evals.recipes import DEFAULT_RECIPE_PLUGIN_DIR; data = tomllib.loads(Path(sys.argv[1]).read_text(encoding="utf-8")); print(data.get(PLUGIN_DIR_FIELD, DEFAULT_RECIPE_PLUGIN_DIR))' "{{eval_toml}}")}"
     profile="${EVAL_PROFILE:-$(uv run python -c 'import sys; from pathlib import Path; from outcomeeng_evals.definition import load_definition; print(load_definition(Path(sys.argv[1])).profile)' "{{eval_toml}}")}"
-    selection="$(uv run python -c 'import sys; from outcomeeng_evals.definition import parse_profile, profile_model_selection; selection = profile_model_selection(parse_profile(sys.argv[1], "EVAL_PROFILE")); print(selection.model, selection.effort)' "$profile")"
-    read -r model effort <<< "$selection"
     workers="${WORKERS:-$(uv run python -c 'from outcomeeng_evals.ci_execution import DEFAULT_CI_WORKERS; print(DEFAULT_CI_WORKERS)')}"
     max_budget_usd="${MAX_BUDGET_USD:-$(uv run python -c 'from outcomeeng_evals.ci_execution import DEFAULT_CI_MAX_BUDGET_USD; print(DEFAULT_CI_MAX_BUDGET_USD)')}"
     timeout_seconds="${TIMEOUT_SECONDS:-$(uv run python -c 'from outcomeeng_evals.ci_execution import DEFAULT_CI_TIMEOUT_SECONDS; print(DEFAULT_CI_TIMEOUT_SECONDS)')}"
     command=(uv run outcomeeng-evals run "{{eval_toml}}" --plugin-dir "$plugin_dir" --workers "$workers" --max-budget-usd "$max_budget_usd" --profile "$profile" --timeout-seconds "$timeout_seconds")
-    printf 'Running:'
-    printf ' %q' "${command[@]}"
-    printf '  # profile %s: model %s, effort %s\n' "$profile" "$model" "$effort"
+    uv run python -c 'import sys; from outcomeeng_evals.recipes import render_running_line; print(render_running_line(sys.argv[2:], sys.argv[1]))' "$profile" "${command[@]}"
     "${command[@]}"
 
 # Run one [eval] case by id using plugin_dir and profile from eval.toml unless PLUGIN_DIR or EVAL_PROFILE is set
 eval-case eval_toml case_id:
     #!/usr/bin/env bash
     set -euo pipefail
-    plugin_dir="${PLUGIN_DIR:-$(uv run python -c 'import sys, tomllib; from pathlib import Path; data = tomllib.loads(Path(sys.argv[1]).read_text(encoding="utf-8")); print(data.get("plugin_dir", "dist/claude/spec-tree"))' "{{eval_toml}}")}"
+    plugin_dir="${PLUGIN_DIR:-$(uv run python -c 'import sys, tomllib; from pathlib import Path; from outcomeeng_evals.definition import PLUGIN_DIR_FIELD; from outcomeeng_evals.recipes import DEFAULT_RECIPE_PLUGIN_DIR; data = tomllib.loads(Path(sys.argv[1]).read_text(encoding="utf-8")); print(data.get(PLUGIN_DIR_FIELD, DEFAULT_RECIPE_PLUGIN_DIR))' "{{eval_toml}}")}"
     profile="${EVAL_PROFILE:-$(uv run python -c 'import sys; from pathlib import Path; from outcomeeng_evals.definition import load_definition; print(load_definition(Path(sys.argv[1])).profile)' "{{eval_toml}}")}"
-    selection="$(uv run python -c 'import sys; from outcomeeng_evals.definition import parse_profile, profile_model_selection; selection = profile_model_selection(parse_profile(sys.argv[1], "EVAL_PROFILE")); print(selection.model, selection.effort)' "$profile")"
-    read -r model effort <<< "$selection"
     workers="${WORKERS:-$(uv run python -c 'from outcomeeng_evals.ci_execution import DEFAULT_CI_WORKERS; print(DEFAULT_CI_WORKERS)')}"
     max_budget_usd="${MAX_BUDGET_USD:-$(uv run python -c 'from outcomeeng_evals.ci_execution import DEFAULT_CI_MAX_BUDGET_USD; print(DEFAULT_CI_MAX_BUDGET_USD)')}"
     timeout_seconds="${TIMEOUT_SECONDS:-$(uv run python -c 'from outcomeeng_evals.ci_execution import DEFAULT_CI_TIMEOUT_SECONDS; print(DEFAULT_CI_TIMEOUT_SECONDS)')}"
     command=(uv run outcomeeng-evals run "{{eval_toml}}" --plugin-dir "$plugin_dir" --workers "$workers" --max-budget-usd "$max_budget_usd" --profile "$profile" --timeout-seconds "$timeout_seconds" --case-id "{{case_id}}")
-    printf 'Running:'
-    printf ' %q' "${command[@]}"
-    printf '  # profile %s: model %s, effort %s\n' "$profile" "$model" "$effort"
+    uv run python -c 'import sys; from outcomeeng_evals.recipes import render_running_line; print(render_running_line(sys.argv[2:], sys.argv[1]))' "$profile" "${command[@]}"
     "${command[@]}"
 
 # Run every eval.toml under a node's evals/ directory serially

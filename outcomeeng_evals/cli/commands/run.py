@@ -39,6 +39,10 @@ PLUGIN_DIR_OPTION: Final = "--plugin-dir"
 MAX_BUDGET_USD_OPTION: Final = "--max-budget-usd"
 TIMEOUT_SECONDS_OPTION: Final = "--timeout-seconds"
 PROFILE_OPTION: Final = "--profile"
+WORKERS_OPTION: Final = "--workers"
+CASE_ID_OPTION: Final = "--case-id"
+CASE_ID_PLACEHOLDER: Final = "{case_id}"
+INPUT_JSON_PLACEHOLDER: Final = "{input_json}"
 
 
 class RunnerFactory(Protocol):
@@ -66,7 +70,7 @@ class RunnerFactory(Protocol):
     help="Path to a Claude Code plugin directory to load for the eval.",
 )
 @click.option(
-    "--workers",
+    WORKERS_OPTION,
     type=click.IntRange(min=MIN_WORKERS, max=MAX_WORKERS),
     default=MIN_WORKERS,
     show_default=True,
@@ -101,7 +105,7 @@ class RunnerFactory(Protocol):
     help="Per-invocation timeout for the Claude subprocess.",
 )
 @click.option(
-    "--case-id",
+    CASE_ID_OPTION,
     "case_ids",
     multiple=True,
     help="Run only the named case id. Repeat to select multiple cases.",
@@ -216,8 +220,8 @@ def _render_prompt(template: str, case: Case) -> str:
     # literal run up to the next ``{`` in one append rather than copying a
     # character at a time.
     substitutions = {
-        "{case_id}": case.id,
-        "{input_json}": json.dumps(case.input, indent=2),
+        CASE_ID_PLACEHOLDER: case.id,
+        INPUT_JSON_PLACEHOLDER: json.dumps(case.input, indent=2),
     }
     parts: list[str] = []
     index = 0

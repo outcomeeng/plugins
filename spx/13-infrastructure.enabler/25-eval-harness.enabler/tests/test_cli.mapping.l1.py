@@ -10,6 +10,12 @@ import pytest
 from click.testing import CliRunner
 
 from outcomeeng.models import EVAL_PROFILE_MODELS
+from outcomeeng_evals.ci_execution import (
+    DEFAULT_CI_MAX_BUDGET_USD,
+    DEFAULT_CI_TIMEOUT_SECONDS,
+    DEFAULT_CI_WORKERS,
+    UV_RUN_EVALS_ARGV_PREFIX,
+)
 from outcomeeng_evals.ci_plan import CiMode, EvalPlanItem, plan_to_jsonable
 from outcomeeng_evals.cli import (
     EXIT_GENERAL_ERROR,
@@ -29,11 +35,14 @@ from outcomeeng_evals.cli.commands.materialize_prompts import (
 )
 from outcomeeng_evals.cli.commands.plan import plan_command
 from outcomeeng_evals.cli.commands.run import (
+    CASE_ID_OPTION,
     MAX_BUDGET_USD_OPTION,
     MAX_WORKERS,
     MIN_WORKERS,
+    PLUGIN_DIR_OPTION,
     PROFILE_OPTION,
     TIMEOUT_SECONDS_OPTION,
+    WORKERS_OPTION,
     _FORMAT_SUFFIX,
     _history_row,
     _runner_factory_from_context,
@@ -56,7 +65,12 @@ from outcomeeng_evals.history import (
     HISTORY_TIMESTAMP_FIELD,
     HISTORY_TRANSCRIPT_FIELD,
 )
-from outcomeeng_evals.report import JSON_SCHEMA_VERSION
+from outcomeeng_evals.report import (
+    JSON_SCHEMA_VERSION,
+    RESULT_MAX_BUDGET_USD_KEY,
+    RESULT_MODEL_KEY,
+    RESULT_TIMEOUT_SECONDS_KEY,
+)
 from outcomeeng_testing.evals.cli import (
     DISCOVER_RULE,
     HISTORY_ROWS_FIXTURE,
@@ -98,8 +112,6 @@ from outcomeeng_testing.evals.factories import (
     run_default_ci_subcommand,
 )
 
-CASE_ID_OPTION = "--case-id"
-
 
 def test_main_group_exposes_documented_subcommands() -> None:
     result = CliRunner().invoke(main, ["--help"])
@@ -139,7 +151,7 @@ def test_run_subcommand_rejects_workers_outside_range(
     result = invoke_run_with_workers(tmp_path, workers)
 
     assert result.exit_code == EXIT_INVOCATION_ERROR
-    assert "workers" in result.output.lower()
+    assert WORKERS_OPTION in result.output
 
 
 def test_run_command_uses_default_runner_factory_without_injected_context() -> None:
@@ -217,7 +229,25 @@ def test_ci_subcommand_executes_selected_plan(tmp_path: Path) -> None:
     run = run_default_ci_subcommand(tmp_path)
 
     assert run.result.exit_code == EXIT_SUCCESS
-    assert run.commands == (run.expected_command,)
+    assert run.commands == (
+        (
+            *UV_RUN_EVALS_ARGV_PREFIX,
+            str(run.eval_toml),
+            PLUGIN_DIR_OPTION,
+            str(run.plugin_dir),
+            WORKERS_OPTION,
+            DEFAULT_CI_WORKERS,
+            MAX_BUDGET_USD_OPTION,
+            DEFAULT_CI_MAX_BUDGET_USD,
+            TIMEOUT_SECONDS_OPTION,
+            DEFAULT_CI_TIMEOUT_SECONDS,
+            *(
+                token
+                for case_id in run.smoke_case_ids
+                for token in (CASE_ID_OPTION, case_id)
+            ),
+        ),
+    )
 
 
 def test_run_command_appends_format_suffix_to_every_prompt(tmp_path: Path) -> None:
@@ -320,9 +350,9 @@ def test_run_command_records_selected_model_in_artifacts(tmp_path: Path) -> None
     selected_model = EVAL_PROFILE_MODELS[RUN_OVERRIDE_PROFILE].model
     (result_payload,) = harness.result_payloads()
     (history_row,) = harness.history_rows()
-    assert result_payload["model"] == selected_model
-    assert result_payload["max_budget_usd"] == RUN_CONFIGURED_MAX_BUDGET_USD
-    assert result_payload["timeout_seconds"] == RUN_CONFIGURED_TIMEOUT_SECONDS
+    assert result_payload[RESULT_MODEL_KEY] == selected_model
+    assert result_payload[RESULT_MAX_BUDGET_USD_KEY] == RUN_CONFIGURED_MAX_BUDGET_USD
+    assert result_payload[RESULT_TIMEOUT_SECONDS_KEY] == RUN_CONFIGURED_TIMEOUT_SECONDS
     assert history_row[HISTORY_MODEL_FIELD] == selected_model
     assert history_row[HISTORY_MAX_BUDGET_USD_FIELD] == RUN_CONFIGURED_MAX_BUDGET_USD
     assert history_row[HISTORY_TIMEOUT_SECONDS_FIELD] == RUN_CONFIGURED_TIMEOUT_SECONDS

@@ -8,7 +8,7 @@ from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Final
 
 from outcomeeng_evals.case import Case, load_cases
 from outcomeeng_evals.grader import GradeResult, grade, parse_verdict
@@ -17,6 +17,9 @@ from outcomeeng_evals.runner import ModelRunner, RunMetadata
 
 PromptBuilder = Callable[[Case], str]
 TIMEOUT_ERROR_PREFIX = "[timeout] "
+# The report line that opens every suite report, and the format of its rates.
+SUITE_PASS_RATE_PREFIX: Final = "suite pass_rate="
+PASS_RATE_FORMAT: Final = ".2%"
 
 
 @dataclass(frozen=True)
@@ -286,7 +289,8 @@ def _pass_rate(outcomes: list[CaseOutcome]) -> float:
 def format_report(result: SuiteResult) -> str:
     """Format a one-line-per-case report; suitable for CI log capture."""
     lines = [
-        f"suite pass_rate={result.pass_rate:.2%} threshold={result.threshold:.2%} "
+        f"{SUITE_PASS_RATE_PREFIX}{result.pass_rate:{PASS_RATE_FORMAT}} "
+        f"threshold={result.threshold:{PASS_RATE_FORMAT}} "
         f"verdict={'PASS' if result.passed else 'FAIL'}",
     ]
     for outcome in result.outcomes:

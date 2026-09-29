@@ -9,8 +9,10 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import stat
 import subprocess
+import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
@@ -21,8 +23,12 @@ from outcomeeng_evals.case import (
     CASE_INPUT_FIELD,
     EXPECTED_VERDICT_FIELD,
     MUST_CONTAIN_FIELD,
-    MUST_NOT_CONTAIN_FIELD,
 )
+from outcomeeng_evals.cli.commands.run import (
+    CASE_ID_PLACEHOLDER,
+    INPUT_JSON_PLACEHOLDER,
+)
+from outcomeeng_evals.cli.wiring import CLAUDE_BIN_ENV
 from outcomeeng_evals.definition import (
     CASES_FIELD,
     DEFAULT_PROFILE,
@@ -34,47 +40,34 @@ from outcomeeng_evals.definition import (
     TITLE_FIELD,
     TRIALS_FIELD,
 )
-from outcomeeng_evals.producer_prompt import (
-    KIND_FIELD,
-    PRODUCER_FIELD,
-    PRODUCER_PATH_PLACEHOLDER,
-    PRODUCER_SECTION_KIND,
-    PRODUCER_SECTION_NAME_PLACEHOLDER,
-    PRODUCER_SECTION_PLACEHOLDER,
-    PROMPT_SOURCE_TABLE,
-    SECTION_FIELD,
-    TEMPLATE_FIELD,
+from outcomeeng_evals.producer_prompt import PROMPT_SOURCE_TABLE, SECTION_FIELD
+from outcomeeng_evals.recipes import (
+    EVAL_CASE_RECIPE,
+    EVAL_NODE_RECIPE,
+    EVAL_PROFILE_ENV,
+    EVAL_RECIPE,
+    MATERIALIZE_PROMPTS_CHECK_RECIPE,
+    MATERIALIZE_PROMPTS_RECIPE,
+    PLUGIN_DIR_ENV,
+    RUNNING_LINE_PREFIX,
 )
-from outcomeeng_evals.runner import (
-    ENVELOPE_DURATION_MS_KEY,
-    ENVELOPE_NUM_TURNS_KEY,
-    ENVELOPE_RESULT_KEY,
-    ENVELOPE_STOP_REASON_KEY,
-    ENVELOPE_TOTAL_COST_USD_KEY,
-    ENVELOPE_USAGE_KEY,
-    USAGE_CACHE_CREATION_INPUT_TOKENS_KEY,
-    USAGE_CACHE_READ_INPUT_TOKENS_KEY,
-    USAGE_INPUT_TOKENS_KEY,
-    USAGE_OUTPUT_TOKENS_KEY,
-)
+from outcomeeng_evals.runner import ENVELOPE_RESULT_KEY
+from outcomeeng_testing.harnesses.eval_runner import captured_process_fixture
 from outcomeeng_testing.harnesses.eval_workspaces import temporary_workspace
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[2]
-EVAL_RECIPE: Final = "eval"
-EVAL_CASE_RECIPE: Final = "eval-case"
-EVAL_NODE_RECIPE: Final = "eval-node"
-MATERIALIZE_PROMPTS_RECIPE: Final = "eval-materialize-prompts"
-MATERIALIZE_PROMPTS_CHECK_RECIPE: Final = "eval-materialize-prompts-check"
-RUNNING_LINE_PREFIX: Final = "Running:"
-EVAL_PROFILE_ENV: Final = "EVAL_PROFILE"
-PLUGIN_DIR_ENV: Final = "PLUGIN_DIR"
 RECIPE_CASE_ID: Final = "case-pass"
 NODE_SUITE_NAMES: Final = ("alpha", "beta")
-PRODUCER_SECTION_NAME: Final = "pr_wait_and_reentry_policy"
-_PRODUCER_PATH: Final = "src/plugins/spec-tree/skills/manage-pr/SKILL.md"
+# A whole producer-section eval definition, its template, and the producer it
+# names by repository-relative path.
+_PRODUCER_SECTION_FIXTURE: Final = (
+    Path(__file__).parents[1] / "fixtures/evals/producer_section_recipe"
+)
 _RECIPE_TIMEOUT_SECONDS: Final = 90
-_PASSING_VERDICT: Final = {"overall": "PASS"}
-_FAILING_VERDICT: Final = {"overall": "FAIL"}
+# The verdict every recipe case expects and the fake ``claude`` answers with.
+_VERDICT_FIXTURE: Final = (
+    Path(__file__).parents[1] / "fixtures/evals/verdict_approved.json"
+)
 
 DEFINITION_PROFILE: Final = next(
     profile for profile in AgentProfile if profile is not DEFAULT_PROFILE
@@ -115,6 +108,7 @@ class MaterializePromptsRecipeRun:
     completed: subprocess.CompletedProcess[str]
     prompt_path: Path
     prompt_text: str
+    section_name: str
 
 
 def run_eval_recipe(
@@ -203,7 +197,7 @@ def run_materialize_prompts_recipe(*, check: bool) -> MaterializePromptsRecipeRu
     """Run prompt materialization, then with ``check`` the drift check, in-repo."""
 
     with temporary_workspace(REPO_ROOT) as workspace:
-        eval_root, prompt_path = write_producer_prompt_fixture(workspace)
+        eval_root, prompt_path, section_name = copy_producer_prompt_fixture(workspace)
         fake_claude = write_fake_claude(workspace)
         completed = _run_just(
             workspace, fake_claude, MATERIALIZE_PROMPTS_RECIPE, str(eval_root)
@@ -221,6 +215,7 @@ def run_materialize_prompts_recipe(*, check: bool) -> MaterializePromptsRecipeRu
             prompt_text=(
                 prompt_path.read_text(encoding="utf-8") if prompt_path.exists() else ""
             ),
+            section_name=section_name,
         )
 
 
@@ -231,7 +226,7 @@ def _run_just(
     env_overrides: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
     env = os.environ.copy()
-    env["CLAUDE_BIN"] = str(fake_claude)
+    env[CLAUDE_BIN_ENV] = str(fake_claude)
     env["XDG_CACHE_HOME"] = str(workspace / "xdg-cache")
     env.pop(EVAL_PROFILE_ENV, None)
     env.pop(PLUGIN_DIR_ENV, None)
@@ -276,7 +271,7 @@ def write_eval_suite(
         encoding="utf-8",
     )
     (eval_dir / "prompt.md").write_text(
-        "Case {case_id}\n\n{input_json}\n",
+        f"Case {CASE_ID_PLACEHOLDER}\n\n{INPUT_JSON_PLACEHOLDER}\n",
         encoding="utf-8",
     )
     (eval_dir / "cases.jsonl").write_text(
@@ -285,8 +280,9 @@ def write_eval_suite(
                 CASE_ID_FIELD: case_id,
                 CASE_INPUT_FIELD: {"subject": suite_name},
                 EXPECTED_VERDICT_FIELD: {
-                    MUST_CONTAIN_FIELD: [_PASSING_VERDICT],
-                    MUST_NOT_CONTAIN_FIELD: [_FAILING_VERDICT],
+                    MUST_CONTAIN_FIELD: [
+                        json.loads(_VERDICT_FIXTURE.read_text(encoding="utf-8"))
+                    ],
                 },
             }
         )
@@ -296,54 +292,36 @@ def write_eval_suite(
     return eval_toml
 
 
-def write_producer_prompt_fixture(tmp_path: Path) -> tuple[Path, Path]:
+def copy_producer_prompt_fixture(tmp_path: Path) -> tuple[Path, Path, str]:
+    """Copy the producer-section eval fixture under ``tmp_path``.
+
+    Returns the eval root to materialize, the prompt path the copied definition
+    declares, and the section name that definition selects.
+    """
+
     eval_root = tmp_path / "node"
-    eval_dir = eval_root / "evals" / "producer"
-    eval_dir.mkdir(parents=True)
-    prompt_path = eval_dir / "prompt.md"
-    template_name = "prompt.template.md"
-    (eval_dir / template_name).write_text(
-        f"Producer: {PRODUCER_PATH_PLACEHOLDER}\n"
-        f"Section: {PRODUCER_SECTION_NAME_PLACEHOLDER}\n"
-        f"{PRODUCER_SECTION_PLACEHOLDER}\n",
-        encoding="utf-8",
+    eval_dir = eval_root / "evals" / _PRODUCER_SECTION_FIXTURE.name
+    shutil.copytree(_PRODUCER_SECTION_FIXTURE, eval_dir)
+    definition = tomllib.loads(
+        (eval_dir / EVAL_TOML_FILENAME).read_text(encoding="utf-8")
     )
-    (eval_dir / EVAL_TOML_FILENAME).write_text(
-        "\n".join(
-            [
-                f'{TITLE_FIELD} = "producer"',
-                f'{CASES_FIELD} = "cases.jsonl"',
-                f'{PROMPT_FIELD} = "prompt.md"',
-                "",
-                f"[{PROMPT_SOURCE_TABLE}]",
-                f'{KIND_FIELD} = "{PRODUCER_SECTION_KIND}"',
-                f'{PRODUCER_FIELD} = "{_PRODUCER_PATH}"',
-                f'{SECTION_FIELD} = "{PRODUCER_SECTION_NAME}"',
-                f'{TEMPLATE_FIELD} = "{template_name}"',
-                "",
-            ]
-        ),
-        encoding="utf-8",
+    return (
+        eval_root,
+        eval_dir / definition[PROMPT_FIELD],
+        definition[PROMPT_SOURCE_TABLE][SECTION_FIELD],
     )
-    (eval_dir / "cases.jsonl").write_text("", encoding="utf-8")
-    return eval_root, prompt_path
 
 
 def write_fake_claude(tmp_path: Path) -> Path:
-    """Write a ``claude`` stand-in that answers every prompt with a passing verdict."""
+    """Write a ``claude`` stand-in that answers every prompt with the verdict fixture.
+
+    The answer is the captured ``claude`` envelope with its result replaced by
+    the verdict every recipe case expects.
+    """
 
     envelope = {
-        ENVELOPE_RESULT_KEY: json.dumps({"schema_version": 1, **_PASSING_VERDICT}),
-        ENVELOPE_DURATION_MS_KEY: 1,
-        ENVELOPE_TOTAL_COST_USD_KEY: 0,
-        ENVELOPE_USAGE_KEY: {
-            USAGE_INPUT_TOKENS_KEY: 1,
-            USAGE_OUTPUT_TOKENS_KEY: 1,
-            USAGE_CACHE_READ_INPUT_TOKENS_KEY: 0,
-            USAGE_CACHE_CREATION_INPUT_TOKENS_KEY: 0,
-        },
-        ENVELOPE_NUM_TURNS_KEY: 1,
-        ENVELOPE_STOP_REASON_KEY: "end_turn",
+        **captured_process_fixture().envelope,
+        ENVELOPE_RESULT_KEY: _VERDICT_FIXTURE.read_text(encoding="utf-8"),
     }
     fake_claude = tmp_path / "fake-claude"
     fake_claude.write_text(

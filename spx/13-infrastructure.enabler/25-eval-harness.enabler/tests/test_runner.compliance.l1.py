@@ -14,6 +14,7 @@ from outcomeeng_evals.runner import (
     JSON_OUTPUT_FORMAT,
     MAX_BUDGET_FLAG,
     MODEL_FLAG,
+    NONZERO_EXIT_DIAGNOSTIC_PREFIX,
     NO_SESSION_PERSISTENCE_FLAG,
     OUTPUT_FORMAT_FLAG,
     PLUGIN_DIR_FLAG,
@@ -105,7 +106,9 @@ def test_claude_runner_raises_diagnostic_on_nonzero_exit() -> None:
     fixture = captured_process_fixture()
     runner, _recorder = recording_runner(fixture, returncode=os.EX_USAGE)
 
-    with pytest.raises(RuntimeError, match=f"claude exited {os.EX_USAGE}"):
+    with pytest.raises(
+        RuntimeError, match=f"{NONZERO_EXIT_DIAGNOSTIC_PREFIX}{os.EX_USAGE}"
+    ):
         runner.run(fixture.prompt)
 
 

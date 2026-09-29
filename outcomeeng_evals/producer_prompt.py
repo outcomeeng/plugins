@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Final
 
-from outcomeeng_evals.definition import EVAL_TOML_FILENAME
+from outcomeeng_evals.definition import EVAL_TOML_FILENAME, PROMPT_FIELD
 
 
 PROMPT_SOURCE_TABLE: Final = "prompt_source"
@@ -20,7 +20,6 @@ TEMPLATE_FIELD: Final = "template"
 PRODUCER_SECTION_KIND: Final = "producer-section"
 PRODUCER_FILE_KIND: Final = "producer-file"
 PRODUCER_FILES_KIND: Final = "producer-files"
-PROMPT_FIELD: Final = "prompt"
 MATERIALIZED_PROMPT_FILENAME: Final = "prompt.md"
 PRODUCER_PATH_PLACEHOLDER: Final = "{producer_path}"
 PRODUCER_SECTION_NAME_PLACEHOLDER: Final = "{producer_section_name}"

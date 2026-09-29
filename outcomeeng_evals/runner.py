@@ -57,6 +57,8 @@ MODEL_FLAG = "--model"
 EFFORT_FLAG = "--effort"
 PLUGIN_DIR_FLAG = "--plugin-dir"
 MAX_BUDGET_FLAG = "--max-budget-usd"
+# Opens the diagnostic raised when the claude process exits nonzero.
+NONZERO_EXIT_DIAGNOSTIC_PREFIX = "claude exited "
 
 # Keys of the ``claude --output-format json`` envelope the runner reads.
 ENVELOPE_RESULT_KEY = "result"
@@ -200,8 +202,7 @@ class ClaudeCliRunner:
         )
         if completed.returncode != 0:
             raise RuntimeError(
-                "claude exited "
-                f"{completed.returncode}: "
+                f"{NONZERO_EXIT_DIAGNOSTIC_PREFIX}{completed.returncode}: "
                 f"{completed.stderr.strip() or completed.stdout.strip()}"
             )
         envelope = json.loads(completed.stdout)

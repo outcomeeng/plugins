@@ -23,12 +23,15 @@ from outcomeeng_evals.case import (
     EXPECTED_VERDICT_FIELD,
     MUST_CONTAIN_FIELD,
 )
-from outcomeeng_evals.ci_plan import CiMode
+from outcomeeng_evals.ci_plan import CHANGED_PATHS_FILE_OPTION, MODE_OPTION, CiMode
 from outcomeeng_evals.cli import main
 from outcomeeng_evals.cli.commands.plan import plan_command
 from outcomeeng_evals.cli.commands.run import (
+    CASE_ID_PLACEHOLDER,
+    INPUT_JSON_PLACEHOLDER,
     PLUGIN_DIR_OPTION,
     RUNNER_FACTORY_KEY,
+    WORKERS_OPTION,
     run_command,
 )
 from outcomeeng_evals.definition import (
@@ -76,7 +79,9 @@ PLAN_CHANGED_PATHS_FILENAME: Final = "changed.txt"
 DISCOVER_RULE: Final = "rule-one"
 
 RUN_PROMPT_PREFIX: Final = "Case "
-RUN_PROMPT_TEMPLATE: Final = f"{RUN_PROMPT_PREFIX}{{case_id}}: {{input_json}}"
+RUN_PROMPT_TEMPLATE: Final = (
+    f"{RUN_PROMPT_PREFIX}{CASE_ID_PLACEHOLDER}: {INPUT_JSON_PLACEHOLDER}"
+)
 RUN_STUB_RESPONSE: Final = '{"ok": true}'
 RUN_CASE_ALPHA_ID: Final = "alpha"
 RUN_CASE_BETA_ID: Final = "beta"
@@ -241,7 +246,7 @@ def invoke_run_with_workers(tmp_path: Path, workers: int) -> Result:
             str(eval_toml),
             PLUGIN_DIR_OPTION,
             str(plugin_dir),
-            "--workers",
+            WORKERS_OPTION,
             str(workers),
         ],
     )
@@ -305,13 +310,19 @@ def invoke_plan(
     """Invoke ``plan`` over ``root`` in ``mode`` with optional changed paths."""
 
     changed_paths_args = (
-        ("--changed-paths-file", str(changed_paths_file))
+        (CHANGED_PATHS_FILE_OPTION, str(changed_paths_file))
         if changed_paths_file is not None
         else ()
     )
     return CliRunner().invoke(
         main,
-        [str(plan_command.name), str(root), "--mode", mode.value, *changed_paths_args],
+        [
+            str(plan_command.name),
+            str(root),
+            MODE_OPTION,
+            mode.value,
+            *changed_paths_args,
+        ],
     )
 
 

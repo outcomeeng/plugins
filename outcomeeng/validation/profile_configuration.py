@@ -15,12 +15,8 @@ from typing import Final
 
 from outcomeeng.distribution.profiles import NATIVE_CONFIGURATION_FIELDS
 from outcomeeng.models import MODEL_IDENTIFIER_PATTERN
-from outcomeeng_evals.definition import EVAL_TOML_FILENAME
-from outcomeeng_evals.producer_prompt import (
-    PROMPT_FIELD,
-    PROMPT_SOURCE_TABLE,
-    TEMPLATE_FIELD,
-)
+from outcomeeng_evals.definition import EVAL_TOML_FILENAME, PROMPT_FIELD
+from outcomeeng_evals.producer_prompt import PROMPT_SOURCE_TABLE, TEMPLATE_FIELD
 
 # Command-line marker: every file argument after it receives the configuration
 # guard alone, without the authored-source checks that apply only under src/.

@@ -16,21 +16,14 @@ from typing import Any, cast
 from click.testing import CliRunner, Result
 
 from outcomeeng_evals.case import Case
-from outcomeeng_evals.ci_execution import (
-    CASE_ID_FLAG,
-    DEFAULT_CI_MAX_BUDGET_USD,
-    DEFAULT_CI_TIMEOUT_SECONDS,
-    DEFAULT_CI_WORKERS,
-    PLUGIN_DIR_FLAG,
-    UV_RUN_EVALS_ARGV_PREFIX,
+from outcomeeng_evals.ci_plan import (
+    CHANGED_PATHS_FILE_OPTION,
+    MODE_OPTION,
+    CiMode,
+    EvalPlanItem,
 )
-from outcomeeng_evals.ci_plan import CiMode, EvalPlanItem
 from outcomeeng_evals.cli import main
 from outcomeeng_evals.cli.commands.ci import ci_command
-from outcomeeng_evals.cli.commands.run import (
-    MAX_BUDGET_USD_OPTION,
-    TIMEOUT_SECONDS_OPTION,
-)
 from outcomeeng.models import AgentProfile
 from outcomeeng_evals.definition import (
     CASES_FIELD,
@@ -92,21 +85,29 @@ DEFAULT_CI_EXPLICIT_PROFILE = next(
 
 @dataclass(frozen=True)
 class DefaultCiCommandHarness:
-    """Harness-owned CI command setup with expected command evidence."""
+    """Harness-owned CI command setup: one owned-path suite and its changed path."""
 
     eval_root: Path
+    eval_toml: Path
+    plugin_dir: Path
+    smoke_case_ids: tuple[str, ...]
     changed_paths_file: Path
     fake_uv: RecordingUvExecutable
-    expected_command: tuple[str, ...]
 
 
 @dataclass(frozen=True)
 class DefaultCiCommandRun:
-    """Observations from one ``ci`` subcommand run over the default CI suite."""
+    """Observations from one ``ci`` subcommand run over the default CI suite.
+
+    ``eval_toml``, ``plugin_dir``, and ``smoke_case_ids`` describe the suite the
+    run planned from; ``commands`` holds every argv the run launched.
+    """
 
     result: Result
     commands: tuple[tuple[str, ...], ...]
-    expected_command: tuple[str, ...]
+    eval_toml: Path
+    plugin_dir: Path
+    smoke_case_ids: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -434,25 +435,6 @@ def make_eval_plan_item(
     )
 
 
-def expected_default_ci_command(eval_toml: Path) -> tuple[str, ...]:
-    return (
-        *UV_RUN_EVALS_ARGV_PREFIX[1:],
-        str(eval_toml),
-        PLUGIN_DIR_FLAG,
-        str(DEFAULT_CI_PLUGIN_DIR),
-        "--workers",
-        DEFAULT_CI_WORKERS,
-        MAX_BUDGET_USD_OPTION,
-        DEFAULT_CI_MAX_BUDGET_USD,
-        TIMEOUT_SECONDS_OPTION,
-        DEFAULT_CI_TIMEOUT_SECONDS,
-        CASE_ID_FLAG,
-        *DEFAULT_PLAN_CASE_IDS[:1],
-        CASE_ID_FLAG,
-        *DEFAULT_PLAN_CASE_IDS[1:],
-    )
-
-
 def write_default_ci_changed_paths_file(tmp_path: Path) -> Path:
     changed_paths_file = tmp_path / "changed-paths.txt"
     changed_paths_file.write_text(
@@ -583,9 +565,11 @@ def make_default_ci_command_harness(tmp_path: Path) -> DefaultCiCommandHarness:
     fake_uv = make_recording_uv_executable(tmp_path)
     return DefaultCiCommandHarness(
         eval_root=eval_root,
+        eval_toml=eval_toml,
+        plugin_dir=DEFAULT_CI_PLUGIN_DIR,
+        smoke_case_ids=DEFAULT_PLAN_CASE_IDS,
         changed_paths_file=changed_paths_file,
         fake_uv=fake_uv,
-        expected_command=expected_default_ci_command(eval_toml),
     )
 
 
@@ -598,9 +582,9 @@ def run_default_ci_subcommand(tmp_path: Path) -> DefaultCiCommandRun:
         [
             str(ci_command.name),
             str(harness.eval_root),
-            "--mode",
+            MODE_OPTION,
             CiMode.PR.value,
-            "--changed-paths-file",
+            CHANGED_PATHS_FILE_OPTION,
             str(harness.changed_paths_file),
         ],
         env=harness.fake_uv.env,
@@ -608,7 +592,9 @@ def run_default_ci_subcommand(tmp_path: Path) -> DefaultCiCommandRun:
     return DefaultCiCommandRun(
         result=result,
         commands=harness.fake_uv.commands(),
-        expected_command=harness.expected_command,
+        eval_toml=harness.eval_toml,
+        plugin_dir=harness.plugin_dir,
+        smoke_case_ids=harness.smoke_case_ids,
     )
 
 

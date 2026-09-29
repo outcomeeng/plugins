@@ -19,6 +19,8 @@ UNIVERSAL_OWNED_PATHS = (
     "outcomeeng_testing/generators/**",
     "outcomeeng_testing/harnesses/**",
 )
+MODE_OPTION: Final = "--mode"
+CHANGED_PATHS_FILE_OPTION: Final = "--changed-paths-file"
 CHANGED_PATHS_FILE_HELP = (
     "File containing git diff --name-status rows, or one repository-relative "
     "path per line. Mixed formats are rejected."

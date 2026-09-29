@@ -10,6 +10,7 @@ from string import printable
 import pytest
 
 from outcomeeng.models import EVAL_PROFILE_MODELS, AgentProfile
+from outcomeeng_evals.ci_plan import UNIVERSAL_OWNED_PATHS
 from outcomeeng_evals.definition import (
     CASES_FIELD,
     DEFAULT_PROFILE,
@@ -216,23 +217,35 @@ def test_rejects_nonexistent_prompt_file(tmp_path: Path) -> None:
 def test_accepts_owned_path_shapes_ci_matches_identically(tmp_path: Path) -> None:
     """An exact path and a trailing recursive glob both load.
 
-    Both shapes are built from the source-owned alphabet and recursive suffix,
-    so narrowing either contract reaches this evidence rather than passing
-    beside it.
+    The cases are the universal owned paths CI planning itself matches, which
+    carry both shapes, so narrowing either contract reaches this evidence
+    rather than passing beside it.
     """
 
-    exact = "AGENTS.md"
-    recursive = f"src/plugins/spec-tree/skills/merge{OWNED_PATH_RECURSIVE_SUFFIX}"
-    assert OWNED_PATH_ALPHABET.fullmatch(exact)
-    assert OWNED_PATH_ALPHABET.fullmatch(
-        recursive.removesuffix(OWNED_PATH_RECURSIVE_SUFFIX)
+    exact_paths = tuple(
+        path
+        for path in UNIVERSAL_OWNED_PATHS
+        if not path.endswith(OWNED_PATH_RECURSIVE_SUFFIX)
     )
-    accepted = (exact, recursive)
-    toml_path = write_eval_definition(tmp_path, fields={OWNED_PATHS_FIELD: accepted})
+    recursive_paths = tuple(
+        path
+        for path in UNIVERSAL_OWNED_PATHS
+        if path.endswith(OWNED_PATH_RECURSIVE_SUFFIX)
+    )
+    assert exact_paths
+    assert recursive_paths
+    assert all(OWNED_PATH_ALPHABET.fullmatch(path) for path in exact_paths)
+    assert all(
+        OWNED_PATH_ALPHABET.fullmatch(path.removesuffix(OWNED_PATH_RECURSIVE_SUFFIX))
+        for path in recursive_paths
+    )
+    toml_path = write_eval_definition(
+        tmp_path, fields={OWNED_PATHS_FIELD: UNIVERSAL_OWNED_PATHS}
+    )
 
     definition = load_definition(toml_path)
 
-    assert definition.owned_paths == accepted
+    assert definition.owned_paths == UNIVERSAL_OWNED_PATHS
 
 
 def test_owned_path_alphabet_excludes_every_glob_magic_character(

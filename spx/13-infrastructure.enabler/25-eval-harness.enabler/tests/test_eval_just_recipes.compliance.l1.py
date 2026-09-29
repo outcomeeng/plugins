@@ -4,22 +4,29 @@ from __future__ import annotations
 
 from outcomeeng.models import EVAL_PROFILE_MODELS
 from outcomeeng_evals.ci_execution import DEFAULT_CI_WORKERS, UV_RUN_EVALS_ARGV_PREFIX
+from outcomeeng_evals.cli.commands.materialize_prompts import (
+    ACTION_SEPARATOR,
+    CHECKED_ACTION,
+    MATERIALIZED_ACTION,
+)
 from outcomeeng_evals.cli.commands.run import (
+    CASE_ID_OPTION,
     MAX_BUDGET_USD_OPTION,
     PLUGIN_DIR_OPTION,
     PROFILE_OPTION,
     TIMEOUT_SECONDS_OPTION,
+    WORKERS_OPTION,
 )
 from outcomeeng_evals.definition import DEFAULT_PROFILE
+from outcomeeng_evals.recipes import PROFILE_SELECTION_SEGMENT, RUNNING_LINE_PREFIX
 from outcomeeng_evals.settings import (
     DEFAULT_MAX_BUDGET_USD_TEXT,
     DEFAULT_TIMEOUT_SECONDS_TEXT,
 )
+from outcomeeng_evals.suite import PASS_RATE_FORMAT, SUITE_PASS_RATE_PREFIX
 from outcomeeng_testing.evals.just_recipes import (
     DEFINITION_PROFILE,
     OVERRIDE_PROFILE,
-    PRODUCER_SECTION_NAME,
-    RUNNING_LINE_PREFIX,
     UNSUPPORTED_PROFILE,
     run_eval_node_recipe,
     run_eval_recipe,
@@ -27,10 +34,7 @@ from outcomeeng_testing.evals.just_recipes import (
 )
 
 EVAL_RUN_COMMAND = " ".join(UV_RUN_EVALS_ARGV_PREFIX)
-WORKERS_OPTION = "--workers"
-CASE_ID_OPTION = "--case-id"
-SUITE_RESULT_PREFIX = "suite pass_rate="
-SUITE_PASSED_LINE = f"{SUITE_RESULT_PREFIX}100.00%"
+SUITE_PASSED_LINE = f"{SUITE_PASS_RATE_PREFIX}{1:{PASS_RATE_FORMAT}}"
 
 
 def test_eval_recipe_runs_suite_with_toml_plugin_dir() -> None:
@@ -44,8 +48,14 @@ def test_eval_recipe_runs_suite_with_toml_plugin_dir() -> None:
     assert f"{MAX_BUDGET_USD_OPTION} {DEFAULT_MAX_BUDGET_USD_TEXT}" in stdout
     (running_line,) = run.running_lines
     assert f"{PROFILE_OPTION} {DEFAULT_PROFILE}" in running_line
-    assert f"model {EVAL_PROFILE_MODELS[DEFAULT_PROFILE].model}" in running_line
-    assert f"effort {EVAL_PROFILE_MODELS[DEFAULT_PROFILE].effort}" in running_line
+    assert (
+        PROFILE_SELECTION_SEGMENT.format(
+            profile=DEFAULT_PROFILE,
+            model=EVAL_PROFILE_MODELS[DEFAULT_PROFILE].model,
+            effort=EVAL_PROFILE_MODELS[DEFAULT_PROFILE].effort,
+        )
+        in running_line
+    )
     assert f"{TIMEOUT_SECONDS_OPTION} {DEFAULT_TIMEOUT_SECONDS_TEXT}" in stdout
     assert CASE_ID_OPTION not in stdout
     assert SUITE_PASSED_LINE in stdout
@@ -63,8 +73,14 @@ def test_eval_case_recipe_runs_selected_case_with_toml_plugin_dir() -> None:
     assert f"{MAX_BUDGET_USD_OPTION} {DEFAULT_MAX_BUDGET_USD_TEXT}" in stdout
     (running_line,) = run.running_lines
     assert f"{PROFILE_OPTION} {DEFAULT_PROFILE}" in running_line
-    assert f"model {EVAL_PROFILE_MODELS[DEFAULT_PROFILE].model}" in running_line
-    assert f"effort {EVAL_PROFILE_MODELS[DEFAULT_PROFILE].effort}" in running_line
+    assert (
+        PROFILE_SELECTION_SEGMENT.format(
+            profile=DEFAULT_PROFILE,
+            model=EVAL_PROFILE_MODELS[DEFAULT_PROFILE].model,
+            effort=EVAL_PROFILE_MODELS[DEFAULT_PROFILE].effort,
+        )
+        in running_line
+    )
     assert f"{TIMEOUT_SECONDS_OPTION} {DEFAULT_TIMEOUT_SECONDS_TEXT}" in stdout
     assert f"{CASE_ID_OPTION} {run.case_id}" in stdout
     assert SUITE_PASSED_LINE in stdout
@@ -89,8 +105,14 @@ def test_eval_recipe_uses_toml_profile() -> None:
     assert run.completed.returncode == 0, stdout + run.completed.stderr
     (running_line,) = run.running_lines
     assert f"{PROFILE_OPTION} {DEFINITION_PROFILE}" in running_line
-    assert f"model {EVAL_PROFILE_MODELS[DEFINITION_PROFILE].model}" in running_line
-    assert f"effort {EVAL_PROFILE_MODELS[DEFINITION_PROFILE].effort}" in running_line
+    assert (
+        PROFILE_SELECTION_SEGMENT.format(
+            profile=DEFINITION_PROFILE,
+            model=EVAL_PROFILE_MODELS[DEFINITION_PROFILE].model,
+            effort=EVAL_PROFILE_MODELS[DEFINITION_PROFILE].effort,
+        )
+        in running_line
+    )
     assert SUITE_PASSED_LINE in stdout
     assert stdout.index(RUNNING_LINE_PREFIX) < stdout.index(SUITE_PASSED_LINE)
 
@@ -104,8 +126,14 @@ def test_eval_recipe_uses_profile_env_override() -> None:
     assert run.completed.returncode == 0, stdout + run.completed.stderr
     (running_line,) = run.running_lines
     assert f"{PROFILE_OPTION} {OVERRIDE_PROFILE}" in running_line
-    assert f"model {EVAL_PROFILE_MODELS[OVERRIDE_PROFILE].model}" in running_line
-    assert f"effort {EVAL_PROFILE_MODELS[OVERRIDE_PROFILE].effort}" in running_line
+    assert (
+        PROFILE_SELECTION_SEGMENT.format(
+            profile=OVERRIDE_PROFILE,
+            model=EVAL_PROFILE_MODELS[OVERRIDE_PROFILE].model,
+            effort=EVAL_PROFILE_MODELS[OVERRIDE_PROFILE].effort,
+        )
+        in running_line
+    )
     assert f"{PROFILE_OPTION} {DEFINITION_PROFILE}" not in stdout
     assert SUITE_PASSED_LINE in stdout
     assert stdout.index(RUNNING_LINE_PREFIX) < stdout.index(SUITE_PASSED_LINE)
@@ -122,8 +150,14 @@ def test_eval_case_recipe_uses_profile_env_override() -> None:
     assert run.completed.returncode == 0, stdout + run.completed.stderr
     (running_line,) = run.running_lines
     assert f"{PROFILE_OPTION} {OVERRIDE_PROFILE}" in running_line
-    assert f"model {EVAL_PROFILE_MODELS[OVERRIDE_PROFILE].model}" in running_line
-    assert f"effort {EVAL_PROFILE_MODELS[OVERRIDE_PROFILE].effort}" in running_line
+    assert (
+        PROFILE_SELECTION_SEGMENT.format(
+            profile=OVERRIDE_PROFILE,
+            model=EVAL_PROFILE_MODELS[OVERRIDE_PROFILE].model,
+            effort=EVAL_PROFILE_MODELS[OVERRIDE_PROFILE].effort,
+        )
+        in running_line
+    )
     assert f"{PROFILE_OPTION} {DEFINITION_PROFILE}" not in stdout
     assert f"{CASE_ID_OPTION} {run.case_id}" in stdout
     assert SUITE_PASSED_LINE in stdout
@@ -137,7 +171,7 @@ def test_eval_recipe_refuses_unsupported_profile_override() -> None:
 
     assert run.completed.returncode != 0
     assert run.running_lines == ()
-    assert SUITE_RESULT_PREFIX not in run.completed.stdout
+    assert SUITE_PASS_RATE_PREFIX not in run.completed.stdout
 
 
 def test_eval_case_recipe_refuses_unsupported_profile_override() -> None:
@@ -149,7 +183,7 @@ def test_eval_case_recipe_refuses_unsupported_profile_override() -> None:
 
     assert run.completed.returncode != 0
     assert run.running_lines == ()
-    assert SUITE_RESULT_PREFIX not in run.completed.stdout
+    assert SUITE_PASS_RATE_PREFIX not in run.completed.stdout
 
 
 def test_eval_node_recipe_runs_all_node_evals_serially() -> None:
@@ -168,12 +202,17 @@ def test_eval_materialize_prompts_recipe_writes_producer_prompt() -> None:
     run = run_materialize_prompts_recipe(check=False)
 
     assert run.completed.returncode == 0, run.completed.stdout + run.completed.stderr
-    assert f"materialized: {run.prompt_path}" in run.completed.stdout
-    assert PRODUCER_SECTION_NAME in run.prompt_text
+    assert (
+        f"{MATERIALIZED_ACTION}{ACTION_SEPARATOR}{run.prompt_path}"
+        in run.completed.stdout
+    )
+    assert run.section_name in run.prompt_text
 
 
 def test_eval_materialize_prompts_check_recipe_accepts_current_prompt() -> None:
     run = run_materialize_prompts_recipe(check=True)
 
     assert run.completed.returncode == 0, run.completed.stdout + run.completed.stderr
-    assert f"checked: {run.prompt_path}" in run.completed.stdout
+    assert (
+        f"{CHECKED_ACTION}{ACTION_SEPARATOR}{run.prompt_path}" in run.completed.stdout
+    )

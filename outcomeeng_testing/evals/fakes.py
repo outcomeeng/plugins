@@ -31,7 +31,7 @@ from pathlib import Path
 
 record_path = Path(os.environ["OUTCOMEENG_EVALS_RECORDING_UV_COMMANDS"])
 with record_path.open("a", encoding="utf-8") as output:
-    output.write(json.dumps(sys.argv[1:]) + "\\n")
+    output.write(json.dumps([Path(sys.argv[0]).name, *sys.argv[1:]]) + "\\n")
 raise SystemExit(int(os.environ.get("OUTCOMEENG_EVALS_RECORDING_UV_EXIT_CODE", "0")))
 """
 
@@ -156,6 +156,8 @@ class RecordingUvExecutable:
     env: dict[str, str]
 
     def commands(self) -> tuple[tuple[str, ...], ...]:
+        """Return every recorded argv, program name first, in launch order."""
+
         if not self.record_path.exists():
             return ()
         return tuple(

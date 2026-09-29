@@ -13,7 +13,7 @@ from tempfile import TemporaryDirectory
 
 from hypothesis import seed, settings
 
-from outcomeeng_evals.definition import EVAL_TOML_FILENAME
+from outcomeeng_evals.definition import EVAL_TOML_FILENAME, PROMPT_FIELD
 from outcomeeng_evals.producer_prompt import (
     KIND_FIELD,
     MATERIALIZED_PROMPT_FILENAME,
@@ -22,7 +22,6 @@ from outcomeeng_evals.producer_prompt import (
     PRODUCER_FILES_KIND,
     PRODUCER_FILES_PLACEHOLDER,
     PRODUCER_PATHS_PLACEHOLDER,
-    PROMPT_FIELD,
     PROMPT_SOURCE_TABLE,
     SECTION_FIELD,
     TEMPLATE_FIELD,
