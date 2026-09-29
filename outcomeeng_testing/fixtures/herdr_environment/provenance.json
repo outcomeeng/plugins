@@ -1,0 +1,200 @@
+{
+  "pin": {
+    "tool": "herdr",
+    "version": "0.9.1"
+  },
+  "artifacts": [
+    {
+      "path": "responses/agent-get.json",
+      "tool": "herdr",
+      "version": "0.9.1"
+    },
+    {
+      "path": "responses/agent-list.json",
+      "tool": "herdr",
+      "version": "0.9.1"
+    },
+    {
+      "path": "responses/agent-prompt.json",
+      "tool": "herdr",
+      "version": "0.9.1"
+    },
+    {
+      "path": "responses/agent-prompt.wait.json",
+      "tool": "herdr",
+      "version": "0.9.1"
+    },
+    {
+      "path": "responses/agent-read.txt",
+      "tool": "herdr",
+      "version": "0.9.1"
+    },
+    {
+      "path": "responses/agent-send-keys.json",
+      "tool": "herdr",
+      "version": "0.9.1"
+    },
+    {
+      "path": "responses/agent-start.json",
+      "tool": "herdr",
+      "version": "0.9.1"
+    },
+    {
+      "path": "responses/agent-wait.json",
+      "tool": "herdr",
+      "version": "0.9.1"
+    },
+    {
+      "path": "responses/errors/agent-get.agent_not_found.json",
+      "tool": "herdr",
+      "version": "0.9.1",
+      "exitCode": 1
+    },
+    {
+      "path": "responses/errors/agent-list.server_not_running.json",
+      "tool": "herdr",
+      "version": "0.9.1",
+      "exitCode": 1
+    },
+    {
+      "path": "responses/errors/agent-prompt.timeout.json",
+      "tool": "herdr",
+      "version": "0.9.1"
+    },
+    {
+      "path": "responses/errors/agent-read.agent_not_found.json",
+      "tool": "herdr",
+      "version": "0.9.1",
+      "exitCode": 1
+    },
+    {
+      "path": "responses/errors/agent-start.agent_not_ready.json",
+      "tool": "herdr",
+      "version": "0.9.1"
+    },
+    {
+      "path": "responses/errors/agent-start.agent_pane_not_found.json",
+      "tool": "herdr",
+      "version": "0.9.1",
+      "exitCode": 1
+    },
+    {
+      "path": "responses/errors/agent-wait.agent_not_found.json",
+      "tool": "herdr",
+      "version": "0.9.1",
+      "exitCode": 1
+    },
+    {
+      "path": "responses/errors/agent-wait.timeout.json",
+      "tool": "herdr",
+      "version": "0.9.1",
+      "exitCode": 1
+    },
+    {
+      "path": "responses/errors/worktree-open.not_git_worktree.json",
+      "tool": "herdr",
+      "version": "0.9.1",
+      "exitCode": 1
+    },
+    {
+      "path": "responses/incomplete/agent-get.json",
+      "tool": "herdr",
+      "version": "0.9.1"
+    },
+    {
+      "path": "responses/incomplete/agent-list.json",
+      "tool": "herdr",
+      "version": "0.9.1"
+    },
+    {
+      "path": "responses/incomplete/agent-prompt.json",
+      "tool": "herdr",
+      "version": "0.9.1"
+    },
+    {
+      "path": "responses/incomplete/agent-read.txt",
+      "tool": "herdr",
+      "version": "0.9.1"
+    },
+    {
+      "path": "responses/incomplete/agent-wait.json",
+      "tool": "herdr",
+      "version": "0.9.1"
+    },
+    {
+      "path": "responses/relaunch/agent-start.json",
+      "tool": "herdr",
+      "version": "0.9.1"
+    },
+    {
+      "path": "responses/stop/agent-prompt.json",
+      "tool": "herdr",
+      "version": "0.9.1"
+    },
+    {
+      "path": "responses/stop/pane-list.json",
+      "tool": "herdr",
+      "version": "0.9.1"
+    },
+    {
+      "path": "responses/worktree-create.json",
+      "tool": "herdr",
+      "version": "0.9.1"
+    },
+    {
+      "path": "responses/worktree-list.json",
+      "tool": "herdr",
+      "version": "0.9.1"
+    },
+    {
+      "path": "responses/worktree-open.json",
+      "tool": "herdr",
+      "version": "0.9.1"
+    },
+    {
+      "path": "usage/agent-get.txt",
+      "tool": "herdr",
+      "version": "0.9.1"
+    },
+    {
+      "path": "usage/agent-list.txt",
+      "tool": "herdr",
+      "version": "0.9.1"
+    },
+    {
+      "path": "usage/agent-prompt.txt",
+      "tool": "herdr",
+      "version": "0.9.1"
+    },
+    {
+      "path": "usage/agent-read.txt",
+      "tool": "herdr",
+      "version": "0.9.1"
+    },
+    {
+      "path": "usage/agent-send-keys.txt",
+      "tool": "herdr",
+      "version": "0.9.1"
+    },
+    {
+      "path": "usage/agent-start.txt",
+      "tool": "herdr",
+      "version": "0.9.1"
+    },
+    {
+      "path": "usage/agent-wait.txt",
+      "tool": "herdr",
+      "version": "0.9.1"
+    },
+    {
+      "path": "usage/worktree-create.txt",
+      "tool": "herdr",
+      "version": "0.9.1"
+    },
+    {
+      "path": "usage/worktree-open.txt",
+      "tool": "herdr",
+      "version": "0.9.1"
+    }
+  ]
+}

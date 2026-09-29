@@ -4,6 +4,7 @@ from outcomeeng_testing.generators.herdr_environment import operation_requests
 from outcomeeng_testing.harnesses.herdr_environment import (
     RecordingRunner,
     captured_success_response,
+    disposable_worktree,
     herdr_command_source_texts,
     herdr_help_violation_source,
     load_herdr_environment,
@@ -11,6 +12,7 @@ from outcomeeng_testing.harnesses.herdr_environment import (
     replay,
     request_for,
     run_bound_through_execute,
+    worktree_envelope,
 )
 
 
@@ -99,24 +101,40 @@ def test_create_worktree_records_no_occupancy_claim() -> None:
     module = load_herdr_environment()
     created = 0
 
-    for request in operation_requests(module):
-        if (
-            module.Operation(request[module.OPERATION_FIELD])
-            is not module.Operation.CREATE_WORKTREE
-        ):
-            continue
-        created += 1
-        arguments = cast(dict[str, object], request[module.ARGUMENTS_FIELD])
-        captured = captured_success_response(
-            module, module.Operation.CREATE_WORKTREE, arguments
-        )
-        assert captured is not None, "no captured create-worktree response"
-        runner = RecordingRunner(replay(captured))
+    with disposable_worktree() as worktree:
+        unclaimed = worktree.occupancy()
+        untouched = worktree.files()
 
-        result = module.execute(request, runner)
+        for request in operation_requests(module):
+            if (
+                module.Operation(request[module.OPERATION_FIELD])
+                is not module.Operation.CREATE_WORKTREE
+            ):
+                continue
+            created += 1
+            arguments = cast(dict[str, object], request[module.ARGUMENTS_FIELD])
+            captured = captured_success_response(
+                module, module.Operation.CREATE_WORKTREE, arguments
+            )
+            assert captured is not None, "no captured create-worktree response"
+            runner = RecordingRunner(
+                replay(worktree_envelope(module, captured, worktree.path))
+            )
 
-        assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
-        assert [call[0] for call in runner.calls] == [module.command_for(request)]
-        assert module.evidence_command_for(request) is None
+            result = module.execute(request, runner)
+
+            assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
+            projected = cast(dict[str, object], result[module.WORKTREE_RESULT_FIELD])
+            assert projected[module.PATH_FIELD] == str(worktree.path)
+            assert [call[0] for call in runner.calls] == [module.command_for(request)]
+            assert module.evidence_command_for(request) is None
+            assert worktree.occupancy() == unclaimed
+            assert worktree.files() == untouched
+
+        # The violating case: the same created worktree once an occupancy claim
+        # is recorded on it. Spx's own report and the repository both show it.
+        worktree.record_claim()
+        assert worktree.occupancy() != unclaimed
+        assert worktree.files() != untouched
 
     assert created > 0
