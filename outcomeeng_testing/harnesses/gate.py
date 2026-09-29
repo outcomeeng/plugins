@@ -35,6 +35,7 @@ from outcomeeng.validation import (
     POST_KILL_REAP_ATTEMPTS,
     PREFLIGHT_STEPS,
     RECIPE_CHECK,
+    RECIPE_TEST,
     SIGNAL_GRACE_SECONDS,
     SIGNAL_POLL_INTERVAL_SECONDS,
     SUMMARY_KEY_RECIPES,
@@ -52,6 +53,7 @@ from outcomeeng.validation import (
     run_recipe,
     terminate_process_group,
 )
+from outcomeeng.validation.__main__ import RECIPE_ARGS_SEPARATOR
 from outcomeeng.validation.__main__ import main as validation_main
 from outcomeeng.validation._git import GitCommandResult
 from outcomeeng.validation.ci_gate import (
@@ -764,6 +766,26 @@ def check_full_observation() -> RunObservation:
         exit_codes=[os.EX_OK] * _CHILD_OUTPUT_BUDGET, observed_sink=sink
     )
     exit_code = validation_main([RECIPE_CHECK_FULL], spawner=spawner, sink=sink)
+    return _run_observation(
+        exit_code=exit_code,
+        sink=sink,
+        spawner=spawner,
+        runner_calls=(),
+    )
+
+
+def entry_point_test_observation(pytest_args: Sequence[str]) -> RunObservation:
+    """Run the entry point's test recipe forwarding ``pytest_args``, with scripted children."""
+
+    sink = io.StringIO()
+    spawner = RecordingSpawner(
+        exit_codes=[os.EX_OK] * _CHILD_OUTPUT_BUDGET, observed_sink=sink
+    )
+    exit_code = validation_main(
+        [RECIPE_TEST, RECIPE_ARGS_SEPARATOR, *pytest_args],
+        spawner=spawner,
+        sink=sink,
+    )
     return _run_observation(
         exit_code=exit_code,
         sink=sink,

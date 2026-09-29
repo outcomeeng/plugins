@@ -39,6 +39,13 @@ from itertools import islice
 from tempfile import TemporaryDirectory
 from types import ModuleType
 
+from outcomeeng.distribution.contracts import (
+    PLUGINS_DIR_NAME,
+    SCRIPTS_SUBDIR_NAME,
+    SKILLS_SUBDIR_NAME,
+    SOURCE_ROOT_NAME,
+)
+from outcomeeng.validation.audit_artifacts import SPEC_TREE_PLUGIN_NAME
 from outcomeeng_testing.generators.changeset_scope import (
     ChangesetScopeCase,
     changeset_scope_cases,
@@ -47,12 +54,12 @@ from outcomeeng_testing.generators.changeset_scope import (
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 CHANGESET_SCOPE_SCRIPTS_DIR = (
     REPO_ROOT
-    / "src"
-    / "plugins"
-    / "spec-tree"
-    / "skills"
+    / SOURCE_ROOT_NAME
+    / PLUGINS_DIR_NAME
+    / SPEC_TREE_PLUGIN_NAME
+    / SKILLS_SUBDIR_NAME
     / "scope-changeset"
-    / "scripts"
+    / SCRIPTS_SUBDIR_NAME
 )
 CHANGESET_SCOPE_MODULE_PATH = CHANGESET_SCOPE_SCRIPTS_DIR / "changeset_scope.py"
 CHANGESET_SCOPE_CONTRACT_MODULE_PATH = (
@@ -60,23 +67,23 @@ CHANGESET_SCOPE_CONTRACT_MODULE_PATH = (
 )
 MERGE_CLASSIFIER_MODULE_PATH = (
     REPO_ROOT
-    / "src"
-    / "plugins"
-    / "spec-tree"
-    / "skills"
+    / SOURCE_ROOT_NAME
+    / PLUGINS_DIR_NAME
+    / SPEC_TREE_PLUGIN_NAME
+    / SKILLS_SUBDIR_NAME
     / "merge"
-    / "scripts"
+    / SCRIPTS_SUBDIR_NAME
     / "classify_changeset.py"
 )
 MERGE_CONTRACT_MODULE_PATH = MERGE_CLASSIFIER_MODULE_PATH.with_name("merge_contract.py")
 COHERENCE_SCOPE_MODULE_PATH = (
     REPO_ROOT
-    / "src"
-    / "plugins"
-    / "spec-tree"
-    / "skills"
+    / SOURCE_ROOT_NAME
+    / PLUGINS_DIR_NAME
+    / SPEC_TREE_PLUGIN_NAME
+    / SKILLS_SUBDIR_NAME
     / "audit-changeset-coherence"
-    / "scripts"
+    / SCRIPTS_SUBDIR_NAME
     / "resolve_scope.py"
 )
 CHANGESET_SCOPE_FIXTURES_DIR = (

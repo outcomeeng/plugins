@@ -57,6 +57,7 @@ from outcomeeng_testing.harnesses.gate import (
     check_full_observation,
     collect_selected_gate_paths,
     entry_point_check_observation,
+    entry_point_test_observation,
     failing_discovery_runner,
     production_check_observation,
     repository_without_origin,
@@ -359,4 +360,24 @@ def test_explicit_full_verification_runs_live_discovery() -> None:
         assert all(
             call[-len(LIVE_DISCOVERY_EXCLUSION) :] != LIVE_DISCOVERY_EXCLUSION
             for call in run.spawn_calls
+        )
+
+
+def test_direct_execution_of_live_check_runs_live_discovery() -> None:
+    runs = across_credential_availability(
+        lambda: entry_point_test_observation((LIVE_DISCOVERY_TEST,))
+    )
+
+    assert set(runs) == set(CredentialAvailability)
+    for run in runs.values():
+        pytest_calls = [
+            call for call in run.spawn_calls if call[: len(PYTEST_ARGV)] == PYTEST_ARGV
+        ]
+        assert run.exit_code == 0
+        assert pytest_calls == [(*PYTEST_ARGV, LIVE_DISCOVERY_TEST)]
+        assert all(
+            call[index : index + len(LIVE_DISCOVERY_EXCLUSION)]
+            != LIVE_DISCOVERY_EXCLUSION
+            for call in pytest_calls
+            for index in range(len(call))
         )

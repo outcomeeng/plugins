@@ -18,7 +18,7 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
-from typing import TextIO
+from typing import Final, TextIO
 
 from outcomeeng.validation import (
     ProcessSpawner,
@@ -36,6 +36,10 @@ from outcomeeng.validation._steps import (
     test_recipe,
 )
 
+# The token that ends the entry point's own arguments; every argument after it
+# is forwarded to the selected recipe.
+RECIPE_ARGS_SEPARATOR: Final = "--"
+
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="python3 -m outcomeeng.validation")
@@ -50,7 +54,7 @@ def _parser() -> argparse.ArgumentParser:
 
 
 def _recipe_args(args: list[str]) -> tuple[str, ...]:
-    if args and args[0] == "--":
+    if args and args[0] == RECIPE_ARGS_SEPARATOR:
         return tuple(args[1:])
     return tuple(args)
 
