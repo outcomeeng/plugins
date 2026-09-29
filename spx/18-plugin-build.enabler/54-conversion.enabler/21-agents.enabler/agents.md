@@ -27,7 +27,7 @@ CAN run one canonical marketplace role per authored agent, which a Codex plugin 
 ### Properties
 
 - For every profile name outside the central profile domain, resolution rejects
-  the selection without fallback or changes to generated state
+  the selection without fallback
   ([test](tests/test_profiles.property.l1.py)).
 - For all plugin and authored-role names, a flat target's definition and dispatch names preserve both components as `<plugin>_<unchanged-authored-role>`, including when the role begins with the plugin name; namespaced targets preserve the bare definition name and dispatch as `<plugin>:<authored-role>` ([test](tests/test_agent_names.property.l1.py))
 
@@ -36,6 +36,7 @@ CAN run one canonical marketplace role per authored agent, which a Codex plugin 
 - ALWAYS: independent native field overrides, including template-generated
   values in agent or skill frontmatter, fail before the build deletes or writes
   any generated file ([test](tests/test_profile_build.compliance.l1.py)).
+- ALWAYS: an unknown profile selection fails before the build deletes or writes any generated file ([test](tests/test_profile_build.compliance.l1.py))
 - ALWAYS: converted agents set the agent-type environment marker in `shell_environment_policy.set` to `<plugin>/<authored-agent-slug>`, separating plugin ownership from the authored role even when both components contain the same word, so local Codex policy surfaces can distinguish agents without matching prompt text or filenames ([test](tests/test_agents.compliance.l1.py))
 - NEVER: an agent whose source path resolves to no `<plugin>/agents` ancestor receives a marker - the marker namespaces every generated agent by its owning plugin, so a source outside that namespace fails conversion rather than emitting an unnamespaced marker ([test](tests/test_agents.compliance.l1.py))
 - ALWAYS: two sources whose outputs claim the same path in a target's generated tree fail the build before it writes any generated file ([test](tests/test_agents.compliance.l1.py))
