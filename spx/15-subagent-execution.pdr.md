@@ -70,9 +70,9 @@ definitions a plugin ships and audits without adding behavior the skills lack.
    | Codex  | Standard | `model = "gpt-5.6-terra"`, `model_reasoning_effort = "high"` |
    | Codex  | Strong   | `model = "gpt-5.6-sol"`, `model_reasoning_effort = "high"`   |
    | Codex  | Fast     | `model = "gpt-5.6-luna"`, `model_reasoning_effort = "high"`  |
-   | Claude | Standard | `model: opus`, `effort: medium`                              |
-   | Claude | Strong   | `model: opus`, `effort: high`                                |
-   | Claude | Fast     | `model: haiku`; no effort field                              |
+   | Claude | Standard | `model: claude-opus-5-5`, `effort: medium`                   |
+   | Claude | Strong   | `model: claude-opus-5-5`, `effort: high`                     |
+   | Claude | Fast     | `model: claude-sonnet-5-5`, `effort: low`                    |
 
    Release acceptance is established independently for each agent harness and
    requires evidence for all three profiles of that harness. Evidence for one
@@ -139,6 +139,14 @@ definitions a plugin ships and audits without adding behavior the skills lack.
 - ALWAYS: derive agent definitions, configuration examples, and model descriptions
   from the same centrally owned Standard, Strong, and Fast profiles; each
   supported harness receives its complete native configuration ([audit])
+- ALWAYS: one module in the `outcomeeng` package defines every model identity,
+  holding a subagent-profile definition with the Claude and Codex models and an
+  eval definition with the same Claude models and efforts; the profile registry
+  and the eval harness read their models from it, and no other authored source,
+  test, or test-infrastructure module spells a model identity. This decision's
+  own profile table, generated output, captured fixture payloads that record
+  the model of the run they captured, and files no spec node governs lie
+  outside the rule ([audit])
 - NEVER: impose a universal reasoning-effort field, value domain, or translation
   between harnesses; a profile uses only the controls its harness supports ([audit])
 - NEVER: let task difficulty infer a profile selection; Standard is the default

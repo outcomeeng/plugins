@@ -24,10 +24,12 @@ CAN keep each generated target's output naming only its own native tools and ins
 ### Compliance
 
 - ALWAYS: the configuration guard scans every file under `src/`, including
-  conditional blocks and files exempted from other token checks, and reports
-  the path and line of each literal model identifier or authored native model
-  or reasoning assignment; profile selection and generated configuration
-  requests pass ([test](tests/test_profile_configuration.compliance.l1.py)).
+  conditional blocks and files exempted from other token checks, and every
+  eval definition and eval prompt template under `spx/`, and reports the path
+  and line of each literal model identifier or authored native model or
+  reasoning assignment, so no authored template names a model; profile
+  selection and generated configuration requests pass
+  ([test](tests/test_profile_configuration.compliance.l1.py)).
 - ALWAYS: the configuration guard derives model identifiers and native fields
   from their owning configuration definitions, detecting both independent
   configuration overrides and model identifiers absent from the selected
