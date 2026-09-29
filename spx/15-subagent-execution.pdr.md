@@ -34,7 +34,7 @@ definitions a plugin ships and audits without adding behavior the skills lack.
    neither selects a task nor independently triggers a call.
 2. The calling skill selects the configured subagent and supplies only its target
    path or scope, such as `HEAD`; the invoked skill discovers the remaining
-   context and performs its existing workflow. The subagent's task message is
+   context and performs its own workflow. The subagent's task message is
    that target and is the invoked skill's selector: a skill argument the harness
    substitutes when it preloads the skill into the subagent never stands for the
    target, an empty substitution binds nothing, and only an empty task message
@@ -139,7 +139,7 @@ definitions a plugin ships and audits without adding behavior the skills lack.
   unusable result without retry, another subagent, a model override, an alternative
   launch mechanism, or a replacement audit in the authoring conversation ([audit])
 - NEVER: change audit verdict handling, output contracts, finding disposition,
-  or repair workflows as part of simplifying subagent invocation ([audit])
+  or repair workflows through a change to subagent invocation ([audit])
 - ALWAYS: derive agent definitions, configuration examples, and model descriptions
   from the same centrally owned Standard, Strong, and Fast profiles; each
   supported harness receives its complete native configuration ([audit])
