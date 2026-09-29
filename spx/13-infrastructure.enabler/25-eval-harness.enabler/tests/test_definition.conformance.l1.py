@@ -5,23 +5,24 @@ from __future__ import annotations
 from outcomeeng_testing.evals.factories import (
     assert_definition_accepts_owned_path_shapes_ci_matches_identically,
     assert_definition_accepts_trials_at_cap,
-    assert_definition_applies_default_model_when_omitted,
+    assert_definition_applies_default_profile_when_omitted,
     assert_definition_applies_default_threshold_when_omitted,
     assert_definition_applies_default_trials_when_omitted,
     assert_definition_loads_optional_ci_metadata,
     assert_definition_loads_required_fields,
-    assert_definition_rejects_inherit_model,
+    assert_definition_rejects_model,
+    assert_definition_rejects_model_name_as_profile,
     assert_definition_rejects_missing_cases,
     assert_definition_rejects_missing_prompt,
     assert_definition_rejects_missing_title,
-    assert_definition_rejects_non_string_model,
+    assert_definition_rejects_non_string_profile,
     assert_definition_rejects_nonexistent_cases_file,
     assert_definition_rejects_nonexistent_prompt_file,
     assert_definition_rejects_trials_above_cap,
     assert_definition_rejects_trials_below_one,
     assert_definition_resolves_cases_path_relative_to_toml_directory,
     assert_definition_resolves_prompt_path_relative_to_toml_directory,
-    assert_definition_uses_explicit_model_when_set,
+    assert_definition_uses_explicit_profile_when_set,
     assert_definition_uses_explicit_threshold_when_set,
     assert_definition_uses_explicit_trials_when_set,
     assert_owned_path_alphabet_excludes_every_glob_magic_character,
@@ -48,8 +49,8 @@ def test_applies_default_trials_when_omitted() -> None:
     assert_definition_applies_default_trials_when_omitted()
 
 
-def test_applies_default_model_when_omitted() -> None:
-    assert_definition_applies_default_model_when_omitted()
+def test_applies_default_profile_when_omitted() -> None:
+    assert_definition_applies_default_profile_when_omitted()
 
 
 def test_uses_explicit_threshold_when_set() -> None:
@@ -64,16 +65,20 @@ def test_loads_optional_ci_metadata() -> None:
     assert_definition_loads_optional_ci_metadata()
 
 
-def test_uses_explicit_model_when_set() -> None:
-    assert_definition_uses_explicit_model_when_set()
+def test_uses_explicit_profile_when_set() -> None:
+    assert_definition_uses_explicit_profile_when_set()
 
 
-def test_rejects_inherit_model() -> None:
-    assert_definition_rejects_inherit_model()
+def test_rejects_model() -> None:
+    assert_definition_rejects_model()
 
 
-def test_rejects_non_string_model() -> None:
-    assert_definition_rejects_non_string_model()
+def test_rejects_model_name_as_profile() -> None:
+    assert_definition_rejects_model_name_as_profile()
+
+
+def test_rejects_non_string_profile() -> None:
+    assert_definition_rejects_non_string_profile()
 
 
 def test_accepts_trials_at_cap() -> None:

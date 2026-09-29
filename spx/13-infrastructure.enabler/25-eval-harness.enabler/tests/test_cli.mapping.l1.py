@@ -23,12 +23,13 @@ from outcomeeng_testing.evals.cli import (
     assert_run_command_appends_format_suffix_to_every_prompt,
     assert_run_command_filters_cases_by_case_id,
     assert_run_command_filters_repeated_case_ids_in_case_file_order,
-    assert_run_command_model_option_overrides_eval_definition_model,
+    assert_run_command_profile_option_overrides_eval_definition_profile,
     assert_run_command_records_selected_model_in_artifacts,
-    assert_run_command_rejects_inherit_model_option,
+    assert_run_command_rejects_model_name_as_profile_option,
     assert_run_command_rejects_unknown_case_id,
+    assert_run_command_uses_default_profile_when_definition_omits_it,
     assert_run_command_uses_default_runner_factory_without_injected_context,
-    assert_run_command_uses_eval_definition_model,
+    assert_run_command_uses_eval_definition_profile,
     assert_run_subcommand_rejects_missing_eval_toml,
     assert_run_subcommand_rejects_workers_above_cap,
     assert_run_subcommand_rejects_workers_below_minimum,
@@ -101,20 +102,24 @@ def test_run_command_filters_repeated_case_ids_in_case_file_order() -> None:
     assert_run_command_filters_repeated_case_ids_in_case_file_order()
 
 
-def test_run_command_uses_eval_definition_model() -> None:
-    assert_run_command_uses_eval_definition_model()
+def test_run_command_uses_default_profile_when_definition_omits_it() -> None:
+    assert_run_command_uses_default_profile_when_definition_omits_it()
 
 
-def test_run_command_model_option_overrides_eval_definition_model() -> None:
-    assert_run_command_model_option_overrides_eval_definition_model()
+def test_run_command_uses_eval_definition_profile() -> None:
+    assert_run_command_uses_eval_definition_profile()
+
+
+def test_run_command_profile_option_overrides_eval_definition_profile() -> None:
+    assert_run_command_profile_option_overrides_eval_definition_profile()
 
 
 def test_run_command_records_selected_model_in_artifacts() -> None:
     assert_run_command_records_selected_model_in_artifacts()
 
 
-def test_run_command_rejects_inherit_model_option() -> None:
-    assert_run_command_rejects_inherit_model_option()
+def test_run_command_rejects_model_name_as_profile_option() -> None:
+    assert_run_command_rejects_model_name_as_profile_option()
 
 
 def test_plan_subcommand_selects_smoke_cases_for_owned_path_change() -> None:

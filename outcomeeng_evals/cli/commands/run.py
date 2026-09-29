@@ -14,7 +14,13 @@ import click
 
 from outcomeeng_evals.case import Case
 from outcomeeng_evals.cli.wiring import build_claude_runner
-from outcomeeng_evals.definition import RUNS_DIRNAME, load_definition, validate_model
+from outcomeeng.models import AgentProfile
+from outcomeeng_evals.definition import (
+    RUNS_DIRNAME,
+    load_definition,
+    parse_profile,
+    profile_model_selection,
+)
 from outcomeeng_evals.history import HISTORY_FILENAME, HistoryRow, append_history_row
 from outcomeeng_evals.report import JSON_SCHEMA_VERSION, write_run_reports
 from outcomeeng_evals.runner import ModelRunner, RunMetadata
@@ -32,6 +38,7 @@ RUNNER_FACTORY_KEY: Final = "runner_factory"
 PLUGIN_DIR_OPTION: Final = "--plugin-dir"
 MAX_BUDGET_USD_OPTION: Final = "--max-budget-usd"
 TIMEOUT_SECONDS_OPTION: Final = "--timeout-seconds"
+PROFILE_OPTION: Final = "--profile"
 
 
 class RunnerFactory(Protocol):
@@ -41,7 +48,7 @@ class RunnerFactory(Protocol):
         self,
         *,
         plugin_dir: Path,
-        model: str,
+        profile: AgentProfile,
         max_budget_usd: float,
         timeout_seconds: int,
     ) -> ModelRunner: ...
@@ -76,10 +83,15 @@ class RunnerFactory(Protocol):
     help="Per-invocation budget passed through to the Claude CLI.",
 )
 @click.option(
-    "--model",
+    PROFILE_OPTION,
+    "profile",
     type=str,
     default=None,
-    help="Model passed through to the Claude CLI. Defaults to eval.toml model.",
+    help=(
+        "Eval profile whose Claude model and effort the run uses "
+        f"({', '.join(profile.value for profile in AgentProfile)}). "
+        "Defaults to the eval.toml profile."
+    ),
 )
 @click.option(
     TIMEOUT_SECONDS_OPTION,
@@ -99,22 +111,25 @@ def run_command(
     plugin_dir: Path,
     workers: int,
     max_budget_usd: float,
-    model: str | None,
+    profile: str | None,
     timeout_seconds: int,
     case_ids: tuple[str, ...],
 ) -> None:
     """Replay one eval against Claude and write transcripts + history."""
     definition = load_definition(eval_toml)
     try:
-        selected_model = (
-            validate_model(model, "--model") if model is not None else definition.model
+        selected_profile = (
+            parse_profile(profile, PROFILE_OPTION)
+            if profile is not None
+            else definition.profile
         )
     except ValueError as exc:
         raise click.ClickException(str(exc)) from exc
+    selected_model = str(profile_model_selection(selected_profile).model)
     runner_factory = _runner_factory_from_context()
     runner = runner_factory(
         plugin_dir=plugin_dir,
-        model=selected_model,
+        profile=selected_profile,
         max_budget_usd=max_budget_usd,
         timeout_seconds=timeout_seconds,
     )

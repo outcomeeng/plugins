@@ -2,8 +2,10 @@
 
 Each per-eval directory carries an ``eval.toml`` declaring the title,
 relative paths to ``cases.jsonl`` and ``prompt.md``, and (optionally) a
-suite threshold and trial count. Paths in the TOML are resolved relative
-to the TOML file's directory.
+suite threshold, a trial count, and the profile whose Claude model and effort
+the runner uses. Paths in the TOML are resolved relative to the TOML file's
+directory. An eval selects a profile and never names a model: the eval
+definition in ``outcomeeng.models`` owns every model identity.
 """
 
 from __future__ import annotations
@@ -13,13 +15,15 @@ import tomllib
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
-from typing import Any
+from typing import Any, Final
+
+from outcomeeng.models import EVAL_PROFILE_MODELS, AgentProfile, ClaudeModelSelection
 
 
 DEFAULT_SUITE_THRESHOLD = 0.85
 DEFAULT_TRIALS_PER_CASE = 1
 DEFAULT_CI_POLICY = "full"
-DEFAULT_MODEL = "sonnet"
+DEFAULT_PROFILE: Final = AgentProfile.STANDARD
 # Upper bound on ``trials`` from an ``eval.toml``: a misconfigured value
 # like ``trials = 10000`` would otherwise fire that many subprocesses.
 # Mirrors the ``--workers`` CLI cap (16); 100 leaves ample headroom for
@@ -43,11 +47,12 @@ _REQUIRED_PROMPT = "prompt"
 _OPTIONAL_THRESHOLD = "threshold"
 _OPTIONAL_TRIALS = "trials"
 _OPTIONAL_PLUGIN_DIR = "plugin_dir"
-_OPTIONAL_MODEL = "model"
+PROFILE_FIELD: Final = "profile"
+# An eval selects a profile; a definition naming a model is rejected.
+MODEL_FIELD: Final = "model"
 _OPTIONAL_OWNED_PATHS = "owned_paths"
 _OPTIONAL_SMOKE_CASES = "smoke_cases"
 _OPTIONAL_CI_POLICY = "ci_policy"
-_INHERIT_MODEL = "inherit"
 
 
 class CiPolicy(StrEnum):
@@ -67,7 +72,7 @@ class EvalDefinition:
     threshold: float
     trials: int
     plugin_dir: Path | None
-    model: str
+    profile: AgentProfile
     owned_paths: tuple[str, ...]
     smoke_case_ids: tuple[str, ...]
     ci_policy: CiPolicy
@@ -111,7 +116,8 @@ def load_definition(toml_path: Path) -> EvalDefinition:
         max_value=MAX_TRIALS_PER_CASE,
     )
     plugin_dir = _optional_path(raw, _OPTIONAL_PLUGIN_DIR)
-    model = _optional_model(raw, _OPTIONAL_MODEL)
+    _reject_model(raw, toml_path)
+    profile = _optional_profile(raw, PROFILE_FIELD)
     owned_paths = _optional_owned_paths(raw, _OPTIONAL_OWNED_PATHS)
     smoke_case_ids = _optional_str_tuple(raw, _OPTIONAL_SMOKE_CASES)
     ci_policy = _optional_ci_policy(raw, _OPTIONAL_CI_POLICY)
@@ -123,7 +129,7 @@ def load_definition(toml_path: Path) -> EvalDefinition:
         threshold=threshold,
         trials=trials,
         plugin_dir=plugin_dir,
-        model=model,
+        profile=profile,
         owned_paths=owned_paths,
         smoke_case_ids=smoke_case_ids,
         ci_policy=ci_policy,
@@ -208,21 +214,37 @@ def _optional_path(data: dict[str, Any], key: str) -> Path | None:
     return Path(value)
 
 
-def _optional_model(data: dict[str, Any], key: str) -> str:
+def profile_model_selection(profile: AgentProfile) -> ClaudeModelSelection:
+    """Return the Claude model and effort the eval definition holds for ``profile``."""
+    return EVAL_PROFILE_MODELS[profile]
+
+
+def parse_profile(value: object, key: str) -> AgentProfile:
+    """Validate a profile name from a durable or CLI-owned configuration field."""
+    if not isinstance(value, str):
+        msg = f"field {key!r} must be a string, got {type(value).__name__}"
+        raise ValueError(msg)
+    try:
+        return AgentProfile(value)
+    except ValueError as exc:
+        allowed = ", ".join(profile.value for profile in AgentProfile)
+        msg = f"field {key!r} must be one of: {allowed}"
+        raise ValueError(msg) from exc
+
+
+def _optional_profile(data: dict[str, Any], key: str) -> AgentProfile:
     if key not in data:
-        return DEFAULT_MODEL
-    return validate_model(data[key], key)
+        return DEFAULT_PROFILE
+    return parse_profile(data[key], key)
 
 
-def validate_model(value: Any, key: str) -> str:
-    """Validate a model name from a durable or CLI-owned configuration field."""
-    if not isinstance(value, str) or not value:
-        msg = f"field {key!r} must be a non-empty string, got {type(value).__name__}"
+def _reject_model(data: dict[str, Any], toml_path: Path) -> None:
+    if MODEL_FIELD in data:
+        msg = (
+            f"{toml_path}: field {MODEL_FIELD!r} is not supported — an eval "
+            f"selects a {PROFILE_FIELD!r} and never names a model"
+        )
         raise ValueError(msg)
-    if value == _INHERIT_MODEL:
-        msg = f"field {key!r} must not be {_INHERIT_MODEL!r}"
-        raise ValueError(msg)
-    return value
 
 
 def _optional_str_tuple(data: dict[str, Any], key: str) -> tuple[str, ...]:

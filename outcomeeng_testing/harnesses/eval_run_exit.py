@@ -12,6 +12,7 @@ from tempfile import TemporaryDirectory
 
 from click.testing import CliRunner
 
+from outcomeeng.models import AgentProfile
 from outcomeeng_evals.cli import EXIT_SUCCESS
 from outcomeeng_evals.cli.commands.run import (
     MAX_BUDGET_USD_OPTION,
@@ -129,11 +130,11 @@ def _invoke(
     def runner_factory(
         *,
         plugin_dir: Path,
-        model: str,
+        profile: AgentProfile,
         max_budget_usd: float,
         timeout_seconds: int,
     ) -> ModelRunner:
-        del plugin_dir, model, max_budget_usd, timeout_seconds
+        del plugin_dir, profile, max_budget_usd, timeout_seconds
         return StubModelRunner(responder=lambda _prompt: next(responses))
 
     args = [str(eval_toml), PLUGIN_DIR_OPTION, str(plugin_dir)]

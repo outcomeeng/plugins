@@ -8,6 +8,13 @@ import stat
 import subprocess
 from pathlib import Path
 
+from outcomeeng.models import AgentProfile
+from outcomeeng_evals.cli.commands.run import PROFILE_OPTION
+from outcomeeng_evals.definition import (
+    DEFAULT_PROFILE,
+    PROFILE_FIELD,
+    profile_model_selection,
+)
 from outcomeeng_evals.settings import (
     DEFAULT_MAX_BUDGET_USD_TEXT,
     DEFAULT_TIMEOUT_SECONDS_TEXT,
@@ -18,6 +25,15 @@ from outcomeeng_testing.harnesses.eval_workspaces import (
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+EVAL_PROFILE_ENV = "EVAL_PROFILE"
+DEFINITION_PROFILE = next(
+    profile for profile in AgentProfile if profile is not DEFAULT_PROFILE
+)
+OVERRIDE_PROFILE = next(
+    profile
+    for profile in AgentProfile
+    if profile not in (DEFAULT_PROFILE, DEFINITION_PROFILE)
+)
 
 
 @with_temp_workspace
@@ -36,7 +52,7 @@ def assert_eval_recipe_runs_suite_with_toml_plugin_dir(tmp_path: Path) -> None:
     assert f"--plugin-dir {plugin_dir}" in completed.stdout
     assert "--workers 1" in completed.stdout
     assert f"--max-budget-usd {DEFAULT_MAX_BUDGET_USD_TEXT}" in completed.stdout
-    assert "--model sonnet" in completed.stdout
+    assert_running_line_shows_profile_selection(completed, DEFAULT_PROFILE)
     assert f"--timeout-seconds {DEFAULT_TIMEOUT_SECONDS_TEXT}" in completed.stdout
     assert "--case-id" not in completed.stdout
     assert "suite pass_rate=100.00%" in completed.stdout
@@ -62,7 +78,7 @@ def assert_eval_case_recipe_runs_selected_case_with_toml_plugin_dir(
     assert f"--plugin-dir {plugin_dir}" in completed.stdout
     assert "--workers 1" in completed.stdout
     assert f"--max-budget-usd {DEFAULT_MAX_BUDGET_USD_TEXT}" in completed.stdout
-    assert "--model sonnet" in completed.stdout
+    assert_running_line_shows_profile_selection(completed, DEFAULT_PROFILE)
     assert f"--timeout-seconds {DEFAULT_TIMEOUT_SECONDS_TEXT}" in completed.stdout
     assert "--case-id case-pass" in completed.stdout
     assert "suite pass_rate=100.00%" in completed.stdout
@@ -91,26 +107,50 @@ def assert_eval_recipe_uses_plugin_dir_env_override(tmp_path: Path) -> None:
 
 
 @with_temp_workspace
-def assert_eval_recipe_uses_model_env_override(tmp_path: Path) -> None:
-    eval_toml, _plugin_dir, fake_claude = write_eval_fixture(tmp_path)
+def assert_eval_recipe_uses_toml_profile(tmp_path: Path) -> None:
+    eval_toml, _plugin_dir, fake_claude = write_eval_fixture(
+        tmp_path, profile=DEFINITION_PROFILE
+    )
 
     completed = run_just_eval(
         tmp_path,
         fake_claude,
         "eval",
         str(eval_toml),
-        env_overrides={"EVAL_MODEL": "claude-sonnet-4-5"},
     )
 
     assert completed.returncode == 0, completed.stdout + completed.stderr
-    assert "--model claude-sonnet-4-5" in completed.stdout
+    assert_running_line_shows_profile_selection(completed, DEFINITION_PROFILE)
     assert "suite pass_rate=100.00%" in completed.stdout
     assert_printed_command_precedes_suite_result(completed)
 
 
 @with_temp_workspace
-def assert_eval_case_recipe_uses_model_env_override(tmp_path: Path) -> None:
-    eval_toml, _plugin_dir, fake_claude = write_eval_fixture(tmp_path)
+def assert_eval_recipe_uses_profile_env_override(tmp_path: Path) -> None:
+    eval_toml, _plugin_dir, fake_claude = write_eval_fixture(
+        tmp_path, profile=DEFINITION_PROFILE
+    )
+
+    completed = run_just_eval(
+        tmp_path,
+        fake_claude,
+        "eval",
+        str(eval_toml),
+        env_overrides={EVAL_PROFILE_ENV: OVERRIDE_PROFILE},
+    )
+
+    assert completed.returncode == 0, completed.stdout + completed.stderr
+    assert_running_line_shows_profile_selection(completed, OVERRIDE_PROFILE)
+    assert f"{PROFILE_OPTION} {DEFINITION_PROFILE}" not in completed.stdout
+    assert "suite pass_rate=100.00%" in completed.stdout
+    assert_printed_command_precedes_suite_result(completed)
+
+
+@with_temp_workspace
+def assert_eval_case_recipe_uses_profile_env_override(tmp_path: Path) -> None:
+    eval_toml, _plugin_dir, fake_claude = write_eval_fixture(
+        tmp_path, profile=DEFINITION_PROFILE
+    )
 
     completed = run_just_eval(
         tmp_path,
@@ -118,11 +158,12 @@ def assert_eval_case_recipe_uses_model_env_override(tmp_path: Path) -> None:
         "eval-case",
         str(eval_toml),
         "case-pass",
-        env_overrides={"EVAL_MODEL": "claude-sonnet-4-5"},
+        env_overrides={EVAL_PROFILE_ENV: OVERRIDE_PROFILE},
     )
 
     assert completed.returncode == 0, completed.stdout + completed.stderr
-    assert "--model claude-sonnet-4-5" in completed.stdout
+    assert_running_line_shows_profile_selection(completed, OVERRIDE_PROFILE)
+    assert f"{PROFILE_OPTION} {DEFINITION_PROFILE}" not in completed.stdout
     assert "--case-id case-pass" in completed.stdout
     assert "suite pass_rate=100.00%" in completed.stdout
     assert_printed_command_precedes_suite_result(completed)
@@ -227,6 +268,20 @@ def run_just_eval(
     )
 
 
+def assert_running_line_shows_profile_selection(
+    completed: subprocess.CompletedProcess[str], profile: AgentProfile
+) -> None:
+    """Assert the printed command names the profile with its resolved model and effort."""
+
+    selection = profile_model_selection(profile)
+    (running_line,) = (
+        line for line in completed.stdout.splitlines() if line.startswith("Running:")
+    )
+    assert f"{PROFILE_OPTION} {profile}" in running_line
+    assert f"model {selection.model}" in running_line
+    assert f"effort {selection.effort}" in running_line
+
+
 def assert_printed_command_precedes_suite_result(
     completed: subprocess.CompletedProcess[str],
 ) -> None:
@@ -235,7 +290,9 @@ def assert_printed_command_precedes_suite_result(
     )
 
 
-def write_eval_fixture(tmp_path: Path) -> tuple[Path, Path, Path]:
+def write_eval_fixture(
+    tmp_path: Path, *, profile: AgentProfile | None = None
+) -> tuple[Path, Path, Path]:
     plugin_dir = tmp_path / "plugin"
     plugin_dir.mkdir()
     eval_toml = write_eval_suite(
@@ -243,6 +300,7 @@ def write_eval_fixture(tmp_path: Path) -> tuple[Path, Path, Path]:
         plugin_dir,
         suite_name="recipe",
         case_id="case-pass",
+        profile=profile,
     )
     fake_claude = write_fake_claude(tmp_path)
     return eval_toml, plugin_dir, fake_claude
@@ -254,10 +312,12 @@ def write_eval_suite(
     *,
     suite_name: str,
     case_id: str,
+    profile: AgentProfile | None = None,
 ) -> Path:
     eval_dir = node_dir / "evals" / suite_name
     eval_dir.mkdir(parents=True)
     eval_toml = eval_dir / "eval.toml"
+    profile_lines = [f'{PROFILE_FIELD} = "{profile}"'] if profile is not None else []
     eval_toml.write_text(
         "\n".join(
             [
@@ -265,6 +325,7 @@ def write_eval_suite(
                 'cases = "cases.jsonl"',
                 'prompt = "prompt.md"',
                 f'plugin_dir = "{plugin_dir.as_posix()}"',
+                *profile_lines,
                 "threshold = 1.0",
                 "trials = 1",
                 "",

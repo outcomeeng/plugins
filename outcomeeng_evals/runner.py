@@ -1,6 +1,8 @@
 """Model runners that produce assistant messages for an eval prompt.
 
-``ClaudeCliRunner`` shells out to ``claude --print --output-format json``.
+``ClaudeCliRunner`` shells out to ``claude --print --output-format json``
+with the Claude model and effort the eval definition holds for its selected
+profile.
 The runner follows the auth mode already provisioned in the inherited
 environment: when ``ANTHROPIC_API_KEY`` is set to a non-empty value it passes
 ``--bare``; when ``ANTHROPIC_API_KEY`` is unset or empty it omits ``--bare``
@@ -32,7 +34,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Protocol
 
-from outcomeeng_evals.definition import DEFAULT_MODEL
+from outcomeeng.models import AgentProfile
+from outcomeeng_evals.definition import DEFAULT_PROFILE, profile_model_selection
 from outcomeeng_evals.settings import (
     ADVISOR_MODEL_SETTING,
     DEFAULT_MAX_BUDGET_USD,
@@ -51,6 +54,7 @@ JSON_OUTPUT_FORMAT = "json"
 NO_SESSION_PERSISTENCE_FLAG = "--no-session-persistence"
 SETTINGS_FLAG = "--settings"
 MODEL_FLAG = "--model"
+EFFORT_FLAG = "--effort"
 PLUGIN_DIR_FLAG = "--plugin-dir"
 MAX_BUDGET_FLAG = "--max-budget-usd"
 
@@ -138,7 +142,7 @@ class ClaudeCliRunner:
     """Spawn ``claude`` in non-interactive print mode and return the response."""
 
     plugin_dir: Path
-    model: str = DEFAULT_MODEL
+    profile: AgentProfile = DEFAULT_PROFILE
     binary: str = DEFAULT_CLAUDE_BINARY
     max_budget_usd: float | None = DEFAULT_MAX_BUDGET_USD
     timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS
@@ -148,6 +152,7 @@ class ClaudeCliRunner:
 
     def run(self, prompt: str) -> RunResult:
         environment = _subprocess_env(self.environment)
+        selection = profile_model_selection(self.profile)
         argv = [self.binary]
         if self._effective_bare(environment):
             argv.append(BARE_FLAG)
@@ -163,7 +168,9 @@ class ClaudeCliRunner:
                     separators=(",", ":"),
                 ),
                 MODEL_FLAG,
-                self.model,
+                str(selection.model),
+                EFFORT_FLAG,
+                str(selection.effort),
                 PLUGIN_DIR_FLAG,
                 str(self.plugin_dir),
             ]

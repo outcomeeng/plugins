@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from outcomeeng_evals.case import Case
-from outcomeeng_evals.definition import DEFAULT_MODEL
+from outcomeeng_evals.definition import DEFAULT_PROFILE, profile_model_selection
 from outcomeeng_evals.runner import RunMetadata
 from outcomeeng_evals.settings import DEFAULT_MAX_BUDGET_USD, DEFAULT_TIMEOUT_SECONDS
 from outcomeeng_evals.suite import SuiteResult, TrialResult
@@ -32,13 +32,14 @@ EMBEDDED_RESULTS_SCRIPT_OPEN = (
     f'<script id="{EMBEDDED_RESULTS_SCRIPT_ID}" type="{EMBEDDED_RESULTS_SCRIPT_TYPE}">'
 )
 EMBEDDED_RESULTS_SCRIPT_CLOSE = "</script>"
+DEFAULT_REPORT_MODEL = str(profile_model_selection(DEFAULT_PROFILE).model)
 
 
 def serialize_result(
     result: SuiteResult,
     title: str,
     *,
-    model: str = DEFAULT_MODEL,
+    model: str = DEFAULT_REPORT_MODEL,
     max_budget_usd: float = DEFAULT_MAX_BUDGET_USD,
     timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
 ) -> dict[str, Any]:
@@ -211,7 +212,7 @@ def write_json_report(
     output_path: Path,
     title: str,
     *,
-    model: str = DEFAULT_MODEL,
+    model: str = DEFAULT_REPORT_MODEL,
     max_budget_usd: float = DEFAULT_MAX_BUDGET_USD,
     timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
 ) -> Path:
@@ -235,7 +236,7 @@ def write_run_reports(
     html_path: Path,
     title: str,
     *,
-    model: str = DEFAULT_MODEL,
+    model: str = DEFAULT_REPORT_MODEL,
     max_budget_usd: float = DEFAULT_MAX_BUDGET_USD,
     timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
 ) -> Path:

@@ -8,8 +8,6 @@ An eval definition is the single authored source of its suite's CI ownership. A 
 
 ## Assertions
 
-- ALWAYS: each eval profile — `fast`, `standard`, and `strong` — maps to the Claude model and effort that the eval definition in the central model module holds for it, per `spx/15-subagent-execution.pdr.md`, and the runner invokes Claude with that model through `--model` and that effort through `--effort`
-
 ### Conformance
 
 - ALWAYS: each per-eval directory declares its contract through an `eval.toml` carrying `title`, `cases`, `prompt`, optional `threshold`, optional `trials`, and an optional `profile` of `fast`, `standard`, or `strong` defaulting to `standard`; a `model` key is rejected because an eval selects a profile rather than naming a model, so eval evidence never depends on a model name or on the interactive session model, and the loader resolves `cases` and `prompt` paths relative to the TOML file's directory ([test](tests/test_definition.conformance.l1.py))
@@ -24,6 +22,7 @@ An eval definition is the single authored source of its suite's CI ownership. A 
 
 ### Mappings
 
+- ALWAYS: each eval profile — `fast`, `standard`, and `strong` — maps to the Claude model and effort that the eval definition in the central model module holds for it, per `spx/15-subagent-execution.pdr.md`, and the runner invokes Claude with that model through `--model` and that effort through `--effort` ([test](tests/test_eval_profiles.mapping.l1.py))
 - ALWAYS: the `run` CLI appends a format-instruction suffix to every rendered prompt before passing it to the model — the suffix declares the grader's two-step JSON-parse contract so the model's structured-output behavior matches what the grader accepts ([test](tests/test_cli.mapping.l1.py))
 - ALWAYS: suite-level pass rate gates an exit-0 result against a configurable threshold whose default sits next to the case set — CI consumes the exit code, not transcript text ([test](tests/test_run_exit.mapping.l1.py))
 - ALWAYS: the `run` CLI rejects a `--workers` value outside the range `[1, 16]` with a usage error — the upper bound caps concurrent `claude` subprocesses so a misconfigured worker count cannot fork-burst the Claude API, per `spx/13-plugin-and-runtime-conventions.adr.md` ([test](tests/test_cli.mapping.l1.py))

@@ -35,9 +35,12 @@ from outcomeeng_evals.ci_plan import (
     build_ci_plan,
     read_changed_paths_file,
 )
+from outcomeeng.models import AgentProfile
 from outcomeeng_evals.definition import (
     CiPolicy,
-    DEFAULT_MODEL,
+    DEFAULT_PROFILE,
+    MODEL_FIELD,
+    PROFILE_FIELD,
     DEFAULT_SUITE_THRESHOLD,
     DEFAULT_TRIALS_PER_CASE,
     MAX_TRIALS_PER_CASE,
@@ -45,6 +48,7 @@ from outcomeeng_evals.definition import (
     OWNED_PATH_RECURSIVE_SUFFIX,
     EvalDefinition,
     load_definition,
+    profile_model_selection,
 )
 from outcomeeng_evals.grader import GradeResult
 from outcomeeng_evals.history import HistoryRow
@@ -85,7 +89,9 @@ DEFAULT_CI_HARNESS_PATH = "outcomeeng_evals/suite.py"
 DEFAULT_CI_WHITESPACE_PATH = " docs/has edge spaces.md "
 DEFAULT_CI_TABBED_PATH = "docs/plain\tpath.md"
 DEFAULT_CI_MALFORMED_STATUS_ROW = "M\tdocs/plain\tpath.md"
-DEFAULT_CI_EXPLICIT_MODEL = "claude-sonnet-4-5"
+DEFAULT_CI_EXPLICIT_PROFILE = next(
+    profile for profile in AgentProfile if profile is not DEFAULT_PROFILE
+)
 
 
 @dataclass(frozen=True)
@@ -119,7 +125,7 @@ class CiMetadataDefinitionCase:
 
     eval_toml: Path
     plugin_dir: Path
-    model: str
+    profile: AgentProfile
     owned_paths: tuple[str, ...]
     smoke_case_ids: tuple[str, ...]
     ci_policy: CiPolicy
@@ -140,7 +146,6 @@ class ModelProcessFixture:
     """A captured model-process envelope and its independent expectations."""
 
     prompt: str
-    explicit_model: str
     envelope: dict[str, Any]
     expected_text: str
     expected_metadata: RunMetadata
@@ -173,7 +178,6 @@ def load_model_process_fixture(path: Path) -> ModelProcessFixture:
     expected = payload["expected"]
     return ModelProcessFixture(
         prompt=payload["prompt"],
-        explicit_model=payload["explicit_model"],
         envelope=payload["envelope"],
         expected_text=expected["text"],
         expected_metadata=RunMetadata(
@@ -515,7 +519,7 @@ def make_ci_metadata_definition_case(tmp_path: Path) -> CiMetadataDefinitionCase
     eval_toml = make_eval_dir(
         tmp_path / "eval",
         plugin_dir=str(_DEFAULT_PLUGIN_DIR),
-        model=DEFAULT_CI_EXPLICIT_MODEL,
+        profile=DEFAULT_CI_EXPLICIT_PROFILE,
         owned_paths=(DEFAULT_CI_OWNED_PATH,),
         smoke_case_ids=DEFAULT_PLAN_CASE_IDS[:1],
         ci_policy=CiPolicy.MANUAL.value,
@@ -523,7 +527,7 @@ def make_ci_metadata_definition_case(tmp_path: Path) -> CiMetadataDefinitionCase
     return CiMetadataDefinitionCase(
         eval_toml=eval_toml,
         plugin_dir=_DEFAULT_PLUGIN_DIR,
-        model=DEFAULT_CI_EXPLICIT_MODEL,
+        profile=DEFAULT_CI_EXPLICIT_PROFILE,
         owned_paths=(DEFAULT_CI_OWNED_PATH,),
         smoke_case_ids=DEFAULT_PLAN_CASE_IDS[:1],
         ci_policy=CiPolicy.MANUAL,
@@ -632,11 +636,11 @@ def assert_definition_applies_default_trials_when_omitted() -> None:
         assert definition.trials == DEFAULT_TRIALS_PER_CASE
 
 
-def assert_definition_applies_default_model_when_omitted() -> None:
+def assert_definition_applies_default_profile_when_omitted() -> None:
     with TemporaryDirectory() as tmp:
         definition = load_definition(_write_eval_definition(Path(tmp)))
 
-        assert definition.model == DEFAULT_MODEL
+        assert definition.profile is DEFAULT_PROFILE
 
 
 def assert_definition_uses_explicit_threshold_when_set() -> None:
@@ -670,30 +674,48 @@ def assert_definition_loads_optional_ci_metadata() -> None:
         definition = load_definition(case.eval_toml)
 
         assert definition.plugin_dir == case.plugin_dir
-        assert definition.model == case.model
+        assert definition.profile is case.profile
         assert definition.owned_paths == case.owned_paths
         assert definition.smoke_case_ids == case.smoke_case_ids
         assert definition.ci_policy is case.ci_policy
 
 
-def assert_definition_uses_explicit_model_when_set() -> None:
-    with TemporaryDirectory() as tmp:
-        toml_path = _write_eval_definition(
-            Path(tmp),
-            lines=(f'model = "{DEFAULT_CI_EXPLICIT_MODEL}"',),
+def assert_definition_uses_explicit_profile_when_set() -> None:
+    for profile in AgentProfile:
+        with TemporaryDirectory() as tmp:
+            toml_path = _write_eval_definition(
+                Path(tmp),
+                lines=(f'{PROFILE_FIELD} = "{profile}"',),
+            )
+
+            definition = load_definition(toml_path)
+
+            assert definition.profile is profile
+
+
+def assert_definition_rejects_model() -> None:
+    """Assert a definition naming a model is rejected, even the default's model."""
+
+    default_model = profile_model_selection(DEFAULT_PROFILE).model
+    _assert_definition_raises(
+        lines=(f'{MODEL_FIELD} = "{default_model}"',),
+        match=MODEL_FIELD,
+    )
+
+
+def assert_definition_rejects_model_name_as_profile() -> None:
+    """Assert a model name is not a profile."""
+
+    for profile in AgentProfile:
+        model = profile_model_selection(profile).model
+        _assert_definition_raises(
+            lines=(f'{PROFILE_FIELD} = "{model}"',),
+            match=PROFILE_FIELD,
         )
 
-        definition = load_definition(toml_path)
 
-        assert definition.model == DEFAULT_CI_EXPLICIT_MODEL
-
-
-def assert_definition_rejects_inherit_model() -> None:
-    _assert_definition_raises(lines=('model = "inherit"',), match="model")
-
-
-def assert_definition_rejects_non_string_model() -> None:
-    _assert_definition_raises(lines=("model = 1",), match="model")
+def assert_definition_rejects_non_string_profile() -> None:
+    _assert_definition_raises(lines=(f"{PROFILE_FIELD} = 1",), match=PROFILE_FIELD)
 
 
 def assert_definition_accepts_owned_path_shapes_ci_matches_identically() -> None:
@@ -1000,7 +1022,7 @@ def make_eval_dir(
     with_cases: bool = True,
     with_prompt: bool = True,
     plugin_dir: str | None = None,
-    model: str | None = None,
+    profile: str | None = None,
     owned_paths: tuple[str, ...] = (),
     smoke_case_ids: tuple[str, ...] = (),
     ci_policy: str | None = None,
@@ -1022,8 +1044,8 @@ def make_eval_dir(
         lines.append(f"trials = {trials}")
     if plugin_dir is not None:
         lines.append(f'plugin_dir = "{plugin_dir}"')
-    if model is not None:
-        lines.append(f'model = "{model}"')
+    if profile is not None:
+        lines.append(f'{PROFILE_FIELD} = "{profile}"')
     if owned_paths:
         rendered_owned_paths = ", ".join(f'"{path}"' for path in owned_paths)
         lines.append(f"owned_paths = [{rendered_owned_paths}]")

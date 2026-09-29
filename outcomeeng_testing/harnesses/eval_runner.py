@@ -8,9 +8,12 @@ from pathlib import Path
 
 import pytest
 
+from outcomeeng.models import AgentProfile
+from outcomeeng_evals.definition import DEFAULT_PROFILE, profile_model_selection
 from outcomeeng_evals.runner import (
     BARE_FLAG,
     CLAUDECODE_ENV,
+    EFFORT_FLAG,
     JSON_OUTPUT_FORMAT,
     MAX_BUDGET_FLAG,
     MODEL_FLAG,
@@ -20,6 +23,7 @@ from outcomeeng_evals.runner import (
     PRINT_FLAG,
     SETTINGS_FLAG,
     ClaudeCliRunner,
+    ModelProcessInvocation,
     RunResult,
     _metadata_from_envelope,
     _subprocess_env,
@@ -90,8 +94,12 @@ def assert_claude_runner_replays_captured_process_contract() -> None:
     assert result.metadata == fixture.expected_metadata
     invocation = recorder.invocations[0]
     assert invocation.prompt == fixture.prompt
+    default_selection = profile_model_selection(DEFAULT_PROFILE)
     assert invocation.argv[invocation.argv.index(MODEL_FLAG) + 1] == (
-        fixture.explicit_model
+        default_selection.model
+    )
+    assert invocation.argv[invocation.argv.index(EFFORT_FLAG) + 1] == (
+        default_selection.effort
     )
     assert invocation.argv[0] == runner.binary
     assert PRINT_FLAG in invocation.argv
@@ -140,6 +148,22 @@ def assert_claude_runner_auth_mapping_matches_fixture() -> None:
         assert has_bare is auth_case.expected_bare, auth_case.name
 
 
+def record_profile_invocation(profile: AgentProfile) -> ModelProcessInvocation:
+    """Run a Claude runner for ``profile`` and return its one recorded invocation."""
+
+    fixture = _fixture()
+    recorder = make_recording_model_process_launcher(fixture)
+    runner = ClaudeCliRunner(
+        plugin_dir=Path.cwd(),
+        profile=profile,
+        environment={},
+        process_launcher=recorder,
+    )
+    runner.run(fixture.prompt)
+    (invocation,) = recorder.invocations
+    return invocation
+
+
 def _fixture() -> ModelProcessFixture:
     return load_model_process_fixture(_FIXTURE_PATH)
 
@@ -153,7 +177,6 @@ def _recording_runner(
     recorder = make_recording_model_process_launcher(fixture)
     runner = ClaudeCliRunner(
         plugin_dir=Path.cwd(),
-        model=fixture.explicit_model,
         environment={} if environment is None else environment,
         bare=bare,
         process_launcher=recorder,

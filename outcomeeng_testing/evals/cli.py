@@ -22,13 +22,20 @@ from outcomeeng_evals.cli.commands.history import HISTORY_PASS_VERDICT
 from outcomeeng_evals.cli.commands.run import (
     MAX_WORKERS,
     MIN_WORKERS,
+    PROFILE_OPTION,
     RUNNER_FACTORY_KEY,
     _FORMAT_SUFFIX,
     _history_row,
     _runner_factory_from_context,
 )
 from outcomeeng_evals.cli.wiring import build_claude_runner
-from outcomeeng_evals.definition import EVAL_TOML_FILENAME
+from outcomeeng.models import AgentProfile
+from outcomeeng_evals.definition import (
+    DEFAULT_PROFILE,
+    EVAL_TOML_FILENAME,
+    PROFILE_FIELD,
+    profile_model_selection,
+)
 from outcomeeng_evals.history import (
     HISTORY_CASES_PASSED_FIELD,
     HISTORY_CASES_TOTAL_FIELD,
@@ -81,8 +88,14 @@ RUN_CASE_BETA: Final = (
 RUN_CASE_GAMMA: Final = (
     '{"id":"gamma","input":{"x":3},"expected_verdict":{"must_contain":[{"ok":true}]}}'
 )
-RUN_DEFAULT_MODEL: Final = "claude-sonnet-4-5"
-RUN_OVERRIDE_MODEL: Final = "sonnet"
+RUN_DEFINITION_PROFILE: Final = next(
+    profile for profile in AgentProfile if profile is not DEFAULT_PROFILE
+)
+RUN_OVERRIDE_PROFILE: Final = next(
+    profile
+    for profile in AgentProfile
+    if profile not in (DEFAULT_PROFILE, RUN_DEFINITION_PROFILE)
+)
 HISTORY_VERSION_1_COMPATIBILITY_FIXTURE: Final = (
     Path(__file__).parents[2]
     / "outcomeeng_testing/fixtures/evals/history_version_1_compatibility.jsonl"
@@ -100,7 +113,7 @@ class RunCliHarness:
     plugin_dir: Path
     runner: CliRunner
     recorder: RecordingRunner
-    models: list[str] = field(default_factory=list)
+    profiles: list[AgentProfile] = field(default_factory=list)
     max_budgets_usd: list[float] = field(default_factory=list)
     timeouts_seconds: list[int] = field(default_factory=list)
 
@@ -109,12 +122,12 @@ class RunCliHarness:
         def runner_factory(
             *,
             plugin_dir: Path,
-            model: str,
+            profile: AgentProfile,
             max_budget_usd: float,
             timeout_seconds: int,
         ) -> ModelRunner:
             del plugin_dir
-            self.models.append(model)
+            self.profiles.append(profile)
             self.max_budgets_usd.append(max_budget_usd)
             self.timeouts_seconds.append(timeout_seconds)
             return self.recorder
@@ -127,14 +140,14 @@ def build_run_cli_harness(
     *,
     cases_jsonl: str,
     prompt_template: str = "Case {case_id}: {input_json}",
-    model: str | None = None,
+    profile: AgentProfile | None = None,
 ) -> RunCliHarness:
     """Create a temporary eval suite wired to a recording model runner."""
     eval_dir = tmp_path / "evals" / "rule"
     eval_dir.mkdir(parents=True)
-    model_line = f'model = "{model}"\n' if model is not None else ""
+    profile_line = f'{PROFILE_FIELD} = "{profile}"\n' if profile is not None else ""
     (eval_dir / EVAL_TOML_FILENAME).write_text(
-        f'title = "rule"\ncases = "cases.jsonl"\nprompt = "prompt.md"\n{model_line}',
+        f'title = "rule"\ncases = "cases.jsonl"\nprompt = "prompt.md"\n{profile_line}',
         encoding="utf-8",
     )
     (eval_dir / "cases.jsonl").write_text(cases_jsonl, encoding="utf-8")
@@ -399,14 +412,30 @@ def assert_run_command_filters_repeated_case_ids_in_case_file_order() -> None:
         )
 
 
-def assert_run_command_uses_eval_definition_model() -> None:
-    """Assert run uses the model declared by the eval definition."""
+def assert_run_command_uses_default_profile_when_definition_omits_it() -> None:
+    """Assert run selects the default profile when the eval definition names none."""
+
+    with TemporaryDirectory() as tmp:
+        harness = build_run_cli_harness(Path(tmp), cases_jsonl=f"{RUN_CASE_ALPHA}\n")
+
+        result = harness.runner.invoke(
+            main,
+            _run_argv(harness),
+            obj=harness.runner_context,
+        )
+
+        assert result.exit_code == EXIT_SUCCESS
+        assert harness.profiles == [DEFAULT_PROFILE]
+
+
+def assert_run_command_uses_eval_definition_profile() -> None:
+    """Assert run uses the profile declared by the eval definition."""
 
     with TemporaryDirectory() as tmp:
         harness = build_run_cli_harness(
             Path(tmp),
             cases_jsonl=f"{RUN_CASE_ALPHA}\n",
-            model=RUN_DEFAULT_MODEL,
+            profile=RUN_DEFINITION_PROFILE,
         )
 
         result = harness.runner.invoke(
@@ -416,37 +445,37 @@ def assert_run_command_uses_eval_definition_model() -> None:
         )
 
         assert result.exit_code == EXIT_SUCCESS
-        assert harness.models == [RUN_DEFAULT_MODEL]
+        assert harness.profiles == [RUN_DEFINITION_PROFILE]
 
 
-def assert_run_command_model_option_overrides_eval_definition_model() -> None:
-    """Assert --model overrides the model declared by the eval definition."""
+def assert_run_command_profile_option_overrides_eval_definition_profile() -> None:
+    """Assert --profile overrides the profile declared by the eval definition."""
 
     with TemporaryDirectory() as tmp:
         harness = build_run_cli_harness(
             Path(tmp),
             cases_jsonl=f"{RUN_CASE_ALPHA}\n",
-            model=RUN_DEFAULT_MODEL,
+            profile=RUN_DEFINITION_PROFILE,
         )
 
         result = harness.runner.invoke(
             main,
-            _run_argv(harness, "--model", RUN_OVERRIDE_MODEL),
+            _run_argv(harness, PROFILE_OPTION, RUN_OVERRIDE_PROFILE),
             obj=harness.runner_context,
         )
 
         assert result.exit_code == EXIT_SUCCESS
-        assert harness.models == [RUN_OVERRIDE_MODEL]
+        assert harness.profiles == [RUN_OVERRIDE_PROFILE]
 
 
 def assert_run_command_records_selected_model_in_artifacts() -> None:
-    """Assert run artifacts record the selected model and budget."""
+    """Assert run artifacts record the selected profile's model and the budget."""
 
     with TemporaryDirectory() as tmp:
         harness = build_run_cli_harness(
             Path(tmp),
             cases_jsonl=f"{RUN_CASE_ALPHA}\n",
-            model=RUN_DEFAULT_MODEL,
+            profile=RUN_DEFINITION_PROFILE,
         )
 
         configured_budget = DEFAULT_MAX_BUDGET_USD * 2
@@ -455,8 +484,8 @@ def assert_run_command_records_selected_model_in_artifacts() -> None:
             main,
             _run_argv(
                 harness,
-                "--model",
-                RUN_OVERRIDE_MODEL,
+                PROFILE_OPTION,
+                RUN_OVERRIDE_PROFILE,
                 "--max-budget-usd",
                 str(configured_budget),
                 "--timeout-seconds",
@@ -466,37 +495,39 @@ def assert_run_command_records_selected_model_in_artifacts() -> None:
         )
 
         assert result.exit_code == EXIT_SUCCESS
+        selected_model = profile_model_selection(RUN_OVERRIDE_PROFILE).model
         runs_dir = harness.eval_toml.parent / "runs"
         result_json = next(runs_dir.glob("*.json"))
         history_row = json.loads(
             (harness.eval_toml.parent / "history.jsonl").read_text(encoding="utf-8")
         )
         result_payload = json.loads(result_json.read_text(encoding="utf-8"))
-        assert result_payload["model"] == RUN_OVERRIDE_MODEL
+        assert result_payload["model"] == selected_model
         assert result_payload["max_budget_usd"] == configured_budget
         assert result_payload["timeout_seconds"] == configured_timeout
-        assert history_row["model"] == RUN_OVERRIDE_MODEL
+        assert history_row["model"] == selected_model
         assert history_row["max_budget_usd"] == configured_budget
         assert history_row["timeout_seconds"] == configured_timeout
         assert harness.max_budgets_usd == [configured_budget]
         assert harness.timeouts_seconds == [configured_timeout]
 
 
-def assert_run_command_rejects_inherit_model_option() -> None:
-    """Assert run rejects inherit as an explicit model option."""
+def assert_run_command_rejects_model_name_as_profile_option() -> None:
+    """Assert run rejects a model name passed where a profile belongs."""
 
     with TemporaryDirectory() as tmp:
         harness = build_run_cli_harness(Path(tmp), cases_jsonl=f"{RUN_CASE_ALPHA}\n")
+        model = profile_model_selection(DEFAULT_PROFILE).model
 
         result = harness.runner.invoke(
             main,
-            _run_argv(harness, "--model", "inherit"),
+            _run_argv(harness, PROFILE_OPTION, model),
             obj=harness.runner_context,
         )
 
         assert result.exit_code == EXIT_GENERAL_ERROR
-        assert "inherit" in result.output
-        assert harness.models == []
+        assert PROFILE_OPTION in result.output
+        assert harness.profiles == []
 
 
 def assert_plan_selects_smoke_cases_for_owned_path_change() -> None:
