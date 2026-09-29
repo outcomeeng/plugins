@@ -78,11 +78,11 @@ and its system prompt in the body. Keep operational settings such as `tools`,
   subagent invokes it; `/skill-standards` owns the rule that skill
   frontmatter carries no model or reasoning override.
 
-| Profile  | Native configuration             |
-| -------- | -------------------------------- |
-| Standard | `model=opus`, `effort=medium`    |
-| Strong   | `model=opus`, `effort=high`      |
-| Fast     | `model=haiku`, no `effort` field |
+| Profile  | Native configuration                     |
+| -------- | ---------------------------------------- |
+| Standard | `model=claude-opus-5-5`, `effort=medium` |
+| Strong   | `model=claude-opus-5-5`, `effort=high`   |
+| Fast     | `model=claude-sonnet-5-5`, `effort=low`  |
 
 </profiles>
 

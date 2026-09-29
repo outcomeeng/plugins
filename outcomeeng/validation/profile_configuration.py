@@ -3,10 +3,8 @@
 import re
 from typing import Final
 
-from outcomeeng.distribution.profiles import (
-    MODEL_IDENTIFIER_PATTERN,
-    NATIVE_CONFIGURATION_FIELDS,
-)
+from outcomeeng.distribution.profiles import NATIVE_CONFIGURATION_FIELDS
+from outcomeeng.models import MODEL_IDENTIFIER_PATTERN
 
 _ASSIGNMENT: Final = re.compile(
     r"(?:^|[\s{,])['\"]?(?P<field>"

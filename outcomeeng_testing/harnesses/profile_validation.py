@@ -4,7 +4,8 @@ from pathlib import Path
 import json
 
 from outcomeeng.distribution.contracts import BUILD_TARGET_VARIABLE, Target
-from outcomeeng.distribution.profiles import AgentProfile, NATIVE_CONFIGURATION_FIELDS
+from outcomeeng.distribution.profiles import NATIVE_CONFIGURATION_FIELDS
+from outcomeeng.models import AgentProfile
 from outcomeeng_testing.harnesses.src_tree import SrcTreeBuilder
 
 _AUTHORED_SOURCE_DIRECTORIES = (

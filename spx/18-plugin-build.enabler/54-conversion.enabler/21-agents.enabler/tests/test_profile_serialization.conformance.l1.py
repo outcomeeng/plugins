@@ -10,10 +10,10 @@ from outcomeeng.distribution.build import make_jinja_environment
 from outcomeeng.distribution.contracts import Target
 from outcomeeng.distribution.profiles import (
     AGENT_PROFILES,
-    AgentProfile,
     ProfileSyntax,
     render_profile_configuration,
 )
+from outcomeeng.models import AgentProfile
 
 
 def test_native_serialization_preserves_every_present_control() -> None:

@@ -9,14 +9,11 @@ from outcomeeng.distribution.profiles import (
     AGENT_PROFILES,
     NATIVE_CONFIGURATION_FIELDS,
     NATIVE_CONFIGURATION_TYPES,
-    AgentProfile,
-    ClaudeConfiguration,
-    ClaudeEffort,
-    ClaudeModel,
     ProfileConfigurationError,
     reject_configuration_overrides,
     resolve_profile,
 )
+from outcomeeng.models import AgentProfile
 
 
 def test_every_profile_resolves_directly_in_its_native_harness() -> None:
@@ -77,12 +74,11 @@ def test_every_native_field_is_rejected_as_an_authored_override() -> None:
             reject_configuration_overrides({field: None})
 
 
-def test_native_effort_absence_matches_the_model_capability() -> None:
-    for effort in ClaudeEffort:
+def test_absent_native_effort_is_rejected_for_every_model() -> None:
+    for configuration in AGENT_PROFILES[Target.CLAUDE].values():
         with pytest.raises(ProfileConfigurationError):
-            ClaudeConfiguration(ClaudeModel.HAIKU, effort)
-    with pytest.raises(ProfileConfigurationError):
-        ClaudeConfiguration(ClaudeModel.OPUS, None)
+            # Deliberately violate the constructor type to exercise runtime rejection.
+            replace(configuration, effort=None)  # type: ignore[arg-type]
     for configuration in AGENT_PROFILES[Target.CODEX].values():
         with pytest.raises(ProfileConfigurationError):
             # Deliberately violate the constructor type to exercise runtime rejection.

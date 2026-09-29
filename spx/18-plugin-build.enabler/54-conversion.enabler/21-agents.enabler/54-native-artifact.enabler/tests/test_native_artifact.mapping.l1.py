@@ -11,7 +11,8 @@ from outcomeeng.distribution.agents import (
 )
 from dataclasses import asdict
 from outcomeeng.distribution.contracts import Target
-from outcomeeng.distribution.profiles import AGENT_PROFILES, AgentProfile
+from outcomeeng.distribution.profiles import AGENT_PROFILES
+from outcomeeng.models import AgentProfile
 from outcomeeng_testing.harnesses.agent_conversion import (
     converted_instruction_value,
     converted_skill_config,

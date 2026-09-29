@@ -2,7 +2,7 @@
 
 from hypothesis import strategies as st
 
-from outcomeeng.distribution.profiles import AgentProfile
+from outcomeeng.models import AgentProfile
 
 
 def unknown_profile_names() -> st.SearchStrategy[str]:

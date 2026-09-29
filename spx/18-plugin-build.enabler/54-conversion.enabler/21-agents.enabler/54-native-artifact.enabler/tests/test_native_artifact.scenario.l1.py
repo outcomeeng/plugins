@@ -18,7 +18,8 @@ from outcomeeng.distribution.agents import (
     convert_agent,
 )
 from outcomeeng.distribution.contracts import Target
-from outcomeeng.distribution.profiles import AGENT_PROFILES, AgentProfile
+from outcomeeng.distribution.profiles import AGENT_PROFILES
+from outcomeeng.models import AgentProfile
 from outcomeeng_testing.harnesses.agent_conversion import (
     CODEX_BLOCK_MCP_AGENT_FIXTURE,
     CODEX_FLOW_MCP_AGENT_FIXTURE,

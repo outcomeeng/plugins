@@ -22,11 +22,11 @@ from outcomeeng.distribution.native_thread_evidence import (
 )
 from outcomeeng.distribution.profiles import (
     AGENT_PROFILES,
-    AgentProfile,
     CodexConfiguration,
     NativeConfiguration,
     native_configuration_values,
 )
+from outcomeeng.models import AgentProfile
 
 NATIVE_PROFILE_ARTIFACTS_DIRECTORY: Final = Path("native-profile-execution")
 NATIVE_PROFILE_OVERRIDE_ENVIRONMENT_VARIABLES: Final = frozenset(

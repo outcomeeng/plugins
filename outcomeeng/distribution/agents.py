@@ -15,10 +15,10 @@ from pathlib import Path
 from typing import Final
 
 from outcomeeng.distribution.contracts import Target
+from outcomeeng.models import AgentProfile
 from outcomeeng.distribution.profiles import (
     AGENT_PROFILES,
     PROFILE_FIELD,
-    AgentProfile,
     ProfileConfigurationError,
     ProfileRegistry,
     native_configuration_values,

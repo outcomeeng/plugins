@@ -4,12 +4,11 @@ from pathlib import Path
 
 from outcomeeng.distribution.contracts import Target
 from outcomeeng.distribution.profiles import (
-    AgentProfile,
-    MODEL_IDENTIFIERS,
     PROFILE_FIELD,
     native_configuration_values,
     resolve_profile,
 )
+from outcomeeng.models import MODEL_IDENTIFIERS, AgentProfile
 from outcomeeng.validation._steps import runtime_token_files
 from outcomeeng.validation.runtime_tokens import (
     PROFILE_CONFIGURATION_REMEDIATION,

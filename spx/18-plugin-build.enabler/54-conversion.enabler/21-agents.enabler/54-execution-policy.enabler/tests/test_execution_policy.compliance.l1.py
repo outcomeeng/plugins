@@ -15,7 +15,8 @@ from outcomeeng.distribution.agents import (
     UNSUPPORTED_FIELDS_LIMITATION,
 )
 from outcomeeng.distribution.contracts import Target
-from outcomeeng.distribution.profiles import AGENT_PROFILES, AgentProfile
+from outcomeeng.distribution.profiles import AGENT_PROFILES
+from outcomeeng.models import AgentProfile
 from outcomeeng_testing.harnesses.agent_conversion import (
     installed_guarded_writer_toml,
     oracle_string,

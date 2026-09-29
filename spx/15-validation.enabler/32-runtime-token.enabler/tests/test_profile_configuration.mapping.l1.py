@@ -1,9 +1,7 @@
 """Complete native configuration domains remain forbidden as authored literals."""
 
-from outcomeeng.distribution.profiles import (
-    MODEL_IDENTIFIERS,
-    NATIVE_CONFIGURATION_FIELDS,
-)
+from outcomeeng.distribution.profiles import NATIVE_CONFIGURATION_FIELDS
+from outcomeeng.models import MODEL_IDENTIFIERS
 from outcomeeng.validation.profile_configuration import find_profile_literals
 
 

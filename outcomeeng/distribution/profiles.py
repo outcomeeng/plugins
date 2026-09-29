@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import re
 from collections.abc import Mapping
 from dataclasses import asdict, dataclass, fields
 from enum import StrEnum
@@ -11,57 +10,16 @@ from types import MappingProxyType
 from typing import Final
 
 from outcomeeng.distribution.contracts import Target
+from outcomeeng.models import (
+    SUBAGENT_PROFILE_MODELS,
+    AgentProfile,
+    ClaudeEffort,
+    ClaudeModel,
+    CodexModel,
+    CodexReasoningEffort,
+)
 
 PROFILE_FIELD: Final = "profile"
-
-
-class AgentProfile(StrEnum):
-    """The closed set of centrally selected capability and cost profiles."""
-
-    STANDARD = "standard"
-    STRONG = "strong"
-    FAST = "fast"
-
-
-class CodexModel(StrEnum):
-    """Model identities available to the central native profiles."""
-
-    TERRA = "gpt-5.6-terra"
-    SOL = "gpt-5.6-sol"
-    LUNA = "gpt-5.6-luna"
-
-
-class ClaudeModel(StrEnum):
-    """Model identities available to the central native profiles."""
-
-    OPUS = "opus"
-    HAIKU = "haiku"
-
-
-class CodexReasoningEffort(StrEnum):
-    """Native reasoning controls used by the supported profiles."""
-
-    HIGH = "high"
-
-
-class ClaudeEffort(StrEnum):
-    """Native effort controls used by the supported profiles."""
-
-    MEDIUM = "medium"
-    HIGH = "high"
-
-
-MODEL_IDENTIFIERS: Final = frozenset(
-    str(model) for models in (CodexModel, ClaudeModel) for model in models
-)
-MODEL_IDENTIFIER_PATTERN: Final = re.compile(
-    r"(?<![\w-])(?:"
-    + "|".join(re.escape(model) for model in sorted(MODEL_IDENTIFIERS))
-    + r"|gpt-\d[\w.-]*|claude-(?:"
-    + "|".join(re.escape(model) for model in ClaudeModel)
-    + r")(?:-[\w.-]+)?|claude-[a-z]+-\d[\w.-]*)(?![\w-])",
-    re.IGNORECASE,
-)
 
 
 class ProfileSyntax(StrEnum):
@@ -92,21 +50,16 @@ class CodexConfiguration:
 
 @dataclass(frozen=True)
 class ClaudeConfiguration:
-    """A complete native configuration, including intentional control absence."""
+    """A complete native configuration with mandatory effort selection."""
 
     model: ClaudeModel
-    effort: ClaudeEffort | None
+    effort: ClaudeEffort
 
     def __post_init__(self) -> None:
-        if not isinstance(self.model, ClaudeModel):
-            raise ProfileConfigurationError("invalid native Claude model")
-        if self.model is ClaudeModel.HAIKU:
-            if self.effort is not None:
-                raise ProfileConfigurationError(
-                    "the selected model has no effort control"
-                )
-        elif not isinstance(self.effort, ClaudeEffort):
-            raise ProfileConfigurationError("the selected model requires native effort")
+        if not isinstance(self.model, ClaudeModel) or not isinstance(
+            self.effort, ClaudeEffort
+        ):
+            raise ProfileConfigurationError("invalid native Claude configuration")
 
 
 type NativeConfiguration = CodexConfiguration | ClaudeConfiguration
@@ -124,26 +77,16 @@ AGENT_PROFILES: Final[ProfileRegistry] = MappingProxyType(
     {
         Target.CODEX: MappingProxyType(
             {
-                AgentProfile.STANDARD: CodexConfiguration(
-                    CodexModel.TERRA, CodexReasoningEffort.HIGH
-                ),
-                AgentProfile.STRONG: CodexConfiguration(
-                    CodexModel.SOL, CodexReasoningEffort.HIGH
-                ),
-                AgentProfile.FAST: CodexConfiguration(
-                    CodexModel.LUNA, CodexReasoningEffort.HIGH
-                ),
+                profile: CodexConfiguration(
+                    models.codex.model, models.codex.reasoning_effort
+                )
+                for profile, models in SUBAGENT_PROFILE_MODELS.items()
             }
         ),
         Target.CLAUDE: MappingProxyType(
             {
-                AgentProfile.STANDARD: ClaudeConfiguration(
-                    ClaudeModel.OPUS, ClaudeEffort.MEDIUM
-                ),
-                AgentProfile.STRONG: ClaudeConfiguration(
-                    ClaudeModel.OPUS, ClaudeEffort.HIGH
-                ),
-                AgentProfile.FAST: ClaudeConfiguration(ClaudeModel.HAIKU, None),
+                profile: ClaudeConfiguration(models.claude.model, models.claude.effort)
+                for profile, models in SUBAGENT_PROFILE_MODELS.items()
             }
         ),
     }
