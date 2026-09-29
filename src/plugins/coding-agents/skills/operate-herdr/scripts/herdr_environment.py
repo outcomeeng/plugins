@@ -289,12 +289,17 @@ def _selector_shapes(
 
 
 def _prompt_shapes() -> tuple[RequestShape, ...]:
+    # A prompt may carry mutation authorization: it needs it exactly when its
+    # text is the exit command stop submits, which ends the agent session.
     shapes: list[RequestShape] = []
     for selector in SELECTOR_FIELDS:
         base = frozenset({selector, TEXT_FIELD})
-        shapes.append(RequestShape(base))
+        shapes.append(RequestShape(base, frozenset({MUTATION_AUTHORIZED_FIELD})))
         shapes.append(
-            RequestShape(base | {WAIT_FIELD, TIMEOUT_FIELD}, frozenset({UNTIL_FIELD}))
+            RequestShape(
+                base | {WAIT_FIELD, TIMEOUT_FIELD},
+                frozenset({UNTIL_FIELD, MUTATION_AUTHORIZED_FIELD}),
+            )
         )
     return tuple(shapes)
 
@@ -595,6 +600,19 @@ def _validated_request(request: object) -> tuple[Operation, dict[str, object]]:
         raise HerdrEnvironmentError(
             ExecutionStatus.MUTATION_UNAUTHORIZED,
             f"{operation.value} requires {MUTATION_AUTHORIZED_FIELD}: true before command construction.",
+        )
+    # A prompt carrying the exit command is stop's own vector and ends the agent
+    # session, so it is gated as stop is.
+    if (
+        operation is Operation.PROMPT
+        and arguments.get(TEXT_FIELD) == AGENT_EXIT_TEXT
+        and arguments.get(MUTATION_AUTHORIZED_FIELD) is not True
+    ):
+        raise HerdrEnvironmentError(
+            ExecutionStatus.MUTATION_UNAUTHORIZED,
+            f"{operation.value} carrying {AGENT_EXIT_TEXT!r} ends the agent session "
+            f"as {Operation.STOP.value} does and requires "
+            f"{MUTATION_AUTHORIZED_FIELD}: true before command construction.",
         )
     if (
         operation in WAIT_BEARING_OPERATIONS

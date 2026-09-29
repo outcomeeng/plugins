@@ -643,7 +643,10 @@ def test_stop_submits_the_agents_exit_and_keeps_its_pane_for_a_relaunch() -> Non
     argv = module.command_for(request)
     assert argv == module.command_for(
         module.operation_request(
-            module.Operation.PROMPT, pane=pane, text=module.AGENT_EXIT_TEXT
+            module.Operation.PROMPT,
+            pane=pane,
+            text=module.AGENT_EXIT_TEXT,
+            mutation_authorized=True,
         )
     )
     runner = RecordingRunner(replay(stopped))

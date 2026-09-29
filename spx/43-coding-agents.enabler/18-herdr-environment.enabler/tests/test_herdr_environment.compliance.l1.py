@@ -49,6 +49,69 @@ def test_mutating_operations_fail_before_execution_without_authorization() -> No
     assert gated == set(module.MUTATING_OPERATIONS)
 
 
+def test_a_prompt_carrying_the_stop_exit_runs_no_command_without_authorization() -> (
+    None
+):
+    module = load_herdr_environment()
+    prompts = [
+        request
+        for request in operation_requests(module)
+        if module.Operation(request[module.OPERATION_FIELD]) is module.Operation.PROMPT
+    ]
+    assert prompts
+
+    for request in prompts:
+        arguments = dict(cast(dict[str, object], request[module.ARGUMENTS_FIELD]))
+        arguments.pop(module.MUTATION_AUTHORIZED_FIELD, None)
+        captured = captured_success_response(module, module.Operation.PROMPT, arguments)
+        assert captured is not None, "no captured prompt response"
+
+        # Conforming: a prompt carrying any other text needs no authorization.
+        ordinary = {**request, module.ARGUMENTS_FIELD: arguments}
+        runner = RecordingRunner(replay(captured))
+        result = module.execute(ordinary, runner)
+        assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
+        assert [call[0] for call in runner.calls] == [module.command_for(ordinary)]
+
+        # Violating: the stop vector's exit text, authorization absent or false.
+        exiting = {**arguments, module.TEXT_FIELD: module.AGENT_EXIT_TEXT}
+        absent = {**request, module.ARGUMENTS_FIELD: exiting}
+        withheld = {
+            **request,
+            module.ARGUMENTS_FIELD: {
+                **exiting,
+                module.MUTATION_AUTHORIZED_FIELD: False,
+            },
+        }
+        for unauthorized in (absent, withheld):
+            runner = RecordingRunner(replay(captured))
+            result = module.execute(unauthorized, runner)
+            assert (
+                result[module.STATUS_FIELD]
+                == module.ExecutionStatus.MUTATION_UNAUTHORIZED
+            )
+            assert runner.calls == []
+
+        # Conforming: the same exit text under authorization runs its command.
+        authorized = {
+            **request,
+            module.ARGUMENTS_FIELD: {**exiting, module.MUTATION_AUTHORIZED_FIELD: True},
+        }
+        runner = RecordingRunner(replay(captured))
+        result = module.execute(authorized, runner)
+        assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
+        assert [call[0] for call in runner.calls] == [module.command_for(authorized)]
+
+        # The refused request is stop's own vector, not a lookalike.
+        if module.PANE_FIELD in arguments and module.WAIT_FIELD not in arguments:
+            stop = module.operation_request(
+                module.Operation.STOP,
+                pane=arguments[module.PANE_FIELD],
+                mutation_authorized=True,
+            )
+            assert module.command_for(stop) == module.command_for(authorized)
+
+
 def test_wait_bearing_requests_carry_a_bound_and_the_runner_is_bounded() -> None:
     module = load_herdr_environment()
     bounded = set()
