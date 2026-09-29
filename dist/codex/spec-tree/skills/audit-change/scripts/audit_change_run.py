@@ -29,21 +29,27 @@ anywhere and every process it starts:
 - every operation of a complete rejected audit over a captured Change record;
 - two such audits started at once from one worktree;
 - a candidate edited before ``start``, and after it before ``reconcile``;
-- an edit landing between the runner's read and SPX's retention;
 - a scope payload SPX rejects, which blocks with SPX's exit code and stderr;
-- invalid requests part-way through a run, each blocking with its declared
-  reason and the run token the request names: a request that is not UTF-8, a
-  truncated JSON request, a JSON array, an unknown operation, a missing field,
-  an extra field, an absolute, parent-traversing, or unnormalized candidate
-  path, a candidate or reference path carrying a NUL character, a run token or
-  ``unitId`` carrying a NUL character, a candidate linked outside the
-  repository, an absent candidate, an existing candidate the process cannot
-  read, a Windows-1252 candidate, a finding ordinal above the maximum, a
-  finding rule that is not a lowercase rule ID, a scope payload with no
-  ``unitId``, and an undeclared terminal status.
+- a request that is not UTF-8 text;
+- a candidate that is absent, a directory, unreadable, linked outside the
+  repository, or Windows-1252 text;
+- for each operation that takes a ``runToken``, a request naming a started
+  run with fields its operation does not take, which blocks with that
+  operation and run token;
+- generated request texts that are not one JSON object: a truncated request
+  object, or a JSON value of another type;
+- generated request objects outside the request contract: an absent or
+  unlisted operation; a missing field or one the operation does not take; a
+  ``path``, ``candidateSha256``, ``runToken``, or ``terminalStatus`` that is
+  not a non-empty string; a path, ``runToken``, or payload ``unitId`` carrying
+  a NUL character or text with no UTF-8 encoding; an absolute,
+  parent-traversing, or unnormalized candidate path; a payload that is not an
+  object with a non-empty ``unitId``; a finding rule that is not a lowercase
+  hyphenated ID; an ordinal that is not an integer from the minimum to the
+  maximum; and an unlisted terminal status. Each blocks on stdout.
 
 None of these writes a file outside the SPX store, and none starts a process
-other than ``git`` and ``spx``.
+other than ``git`` and ``spx``; the generated requests start none.
 """
 
 from __future__ import annotations
