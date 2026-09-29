@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from outcomeeng.distribution.contracts import INSTRUCTION_BLOCK_ARGV
@@ -21,13 +23,16 @@ from outcomeeng.validation import (
     TEST_STEPS,
     VALIDATION_STEPS,
 )
+from outcomeeng.validation._steps import EVALS_ROOT, RUNTIME_TOKEN_STEP
 from outcomeeng.validation.infrastructure_index import (
     InfrastructureReach,
     SPEC_TREE_ROOT,
     index_test_infrastructure,
 )
+from outcomeeng.validation.profile_configuration import eval_configuration_files
 from outcomeeng.validation.selected_gate import (
     ChangedPath,
+    EVAL_CONFIGURATION_REASON,
     EVAL_REASON,
     EVIDENCE_LINK_REASON,
     FULL_GATE_REASON,
@@ -38,6 +43,7 @@ from outcomeeng.validation.selected_gate import (
     MARKDOWN_REASON,
     PYTHON_REASON,
     REACHED_TESTS_REASON,
+    REASON_SEPARATOR,
     SHARED_TEST_INFRASTRUCTURE_REASON,
     SKILL_REASON,
     SKILL_STEP_LABELS,
@@ -192,15 +198,20 @@ def test_the_eval_workflow_selects_the_trigger_currency_check() -> None:
     assert _reasons(plan) == (WORKFLOW_REASON, WORKFLOW_REASON, EVAL_REASON)
 
 
-def test_an_eval_definition_selects_both_currency_checks() -> None:
+def test_an_eval_definition_selects_both_currency_checks_and_the_configuration_guard() -> (
+    None
+):
     # An eval definition generates both the CI trigger list and, for a
     # producer-coupled suite, the materialized prompt — so it selects both
     # currency checks, alongside the markdown lane its `spx/**` path matches.
+    # The runtime-token step's configuration guard reads the definition for a
+    # literal model identifier, so the definition selects that step as well.
     plan = build_selected_gate_plan((SELECTED_GATE_EVAL_DEFINITION_PATH,))
 
     assert plan.full_gate is False
     assert _argvs(plan) == (
         FMT_CHECK_ARGV,
+        RUNTIME_TOKEN_STEP.argv,
         EVAL_TRIGGERS_ARGV,
         EVAL_PROMPTS_ARGV,
         SPX_MARKDOWN_ARGV,
@@ -208,11 +219,53 @@ def test_an_eval_definition_selects_both_currency_checks() -> None:
     )
     assert _reasons(plan) == (
         MARKDOWN_REASON,
+        EVAL_CONFIGURATION_REASON,
         EVAL_REASON,
         EVAL_REASON,
         MARKDOWN_REASON,
         EVIDENCE_LINK_REASON,
     )
+
+
+@pytest.mark.parametrize(
+    "path", tuple(str(path) for path in eval_configuration_files(Path(EVALS_ROOT)))
+)
+def test_every_file_the_configuration_guard_reads_selects_the_runtime_token_step(
+    path: str,
+) -> None:
+    # The guard reads every eval definition under the spec tree and each prompt
+    # template it declares; a change to any of them selects the step that runs
+    # the guard, without widening to the full gate.
+    plan = build_selected_gate_plan((path,))
+
+    reason_by_argv = {item.step.argv: item.reason for item in plan.selected_steps}
+    assert plan.full_gate is False
+    assert reason_by_argv[RUNTIME_TOKEN_STEP.argv] == EVAL_CONFIGURATION_REASON
+
+
+@pytest.mark.parametrize(
+    "path", tuple(str(path) for path in eval_configuration_files(Path(EVALS_ROOT)))
+)
+def test_a_guarded_eval_file_beside_a_skill_path_names_both_runtime_token_reasons(
+    path: str,
+) -> None:
+    plan = build_selected_gate_plan((SELECTED_GATE_SKILL_PATH, path))
+
+    reason_by_argv = {item.step.argv: item.reason for item in plan.selected_steps}
+    assert reason_by_argv[RUNTIME_TOKEN_STEP.argv] == REASON_SEPARATOR.join(
+        (SKILL_REASON, EVAL_CONFIGURATION_REASON)
+    )
+
+
+@pytest.mark.parametrize(
+    "path", (SELECTED_GATE_MARKDOWN_PATH, SELECTED_GATE_PYTHON_TEST_PATH)
+)
+def test_spec_tree_paths_the_configuration_guard_does_not_read_leave_it_unselected(
+    path: str,
+) -> None:
+    plan = build_selected_gate_plan((path,))
+
+    assert RUNTIME_TOKEN_STEP.argv not in _argvs(plan)
 
 
 def test_combined_paths_merge_lanes_in_validation_step_order() -> None:

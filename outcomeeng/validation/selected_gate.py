@@ -29,6 +29,7 @@ from outcomeeng.validation._steps import (
     RECIPE_CHECK,
     RUFF_CHECK_ARGV,
     RUFF_FORMAT_ARGV,
+    RUNTIME_TOKEN_STEP,
     SHELLCHECK_ARGV,
     SPX_MARKDOWN_ARGV,
     TEST_RECIPE,
@@ -40,6 +41,7 @@ from outcomeeng.validation.infrastructure_index import (
     InfrastructureReach,
     index_test_infrastructure,
 )
+from outcomeeng.validation.profile_configuration import CONFIGURATION_ONLY_OPTION
 
 RECIPE_CHECK_FULL: Final = "check-full"
 DEFAULT_BASE_REF: Final = "origin/main"
@@ -66,6 +68,7 @@ WORKFLOW_REASON: Final = "workflow or shell surface changed"
 SKILL_REASON: Final = "plugin skill, shared fragment, or generated runtime changed"
 INSTRUCTION_BLOCK_REASON: Final = "managed instruction-block source changed"
 EVAL_REASON: Final = "eval definition, producer, or trigger surface changed"
+EVAL_CONFIGURATION_REASON: Final = "eval definition or eval prompt template changed"
 EVIDENCE_LINK_REASON: Final = "spec-tree evidence link surface changed"
 TEST_REASON: Final = "changed python assertion tests"
 REACHED_TESTS_REASON: Final = "tests reaching changed test infrastructure"
@@ -90,8 +93,9 @@ SHARED_TEST_INFRASTRUCTURE_REASON: Final = "shared test infrastructure changed"
 UNTRACEABLE_TEST_INFRASTRUCTURE_REASON: Final = (
     "test-infrastructure artifact reached by path changed"
 )
-# One pytest step can carry paths selected for different reasons; its label
-# names every reason that contributed a path.
+# One step can be selected for different reasons — the pytest step by the
+# paths it carries, the runtime-token step by skill and eval paths alike — and
+# its reason names every reason that contributed.
 REASON_SEPARATOR: Final = "; "
 ROOT_README_PATH: Final = "README.md"
 SPX_CONFIG_PATH: Final = "spx.config.yaml"
@@ -178,6 +182,16 @@ EVAL_TRIGGER_PATTERNS: Final = (
 EVAL_PROMPT_PATTERNS: Final = (
     "spx/**/evals/**",
     "src/plugins/**",
+)
+# The runtime-token step's configuration guard reads, after its
+# configuration-only marker, every eval definition under the spec tree and each
+# prompt template a definition declares. A template path is declared per eval,
+# not by a pattern, so the set is the step's own guarded files: a change to one
+# of them selects the step, and no other spec-tree path does.
+EVAL_CONFIGURATION_PATHS: Final = frozenset(
+    RUNTIME_TOKEN_STEP.argv[
+        RUNTIME_TOKEN_STEP.argv.index(CONFIGURATION_ONLY_OPTION) + 1 :
+    ]
 )
 # A `[test]` or `[eval]` link lives only in spec markdown, and its target is a
 # file under the same node, so any changed spec-tree path can dangle one.
@@ -502,6 +516,15 @@ def build_selected_gate_plan(
             if step.label in SKILL_STEP_LABELS:
                 selected_argvs.add(step.argv)
                 reasons[step.argv] = SKILL_REASON
+    if any(path in EVAL_CONFIGURATION_PATHS for path in normalized):
+        runtime_token_argv = RUNTIME_TOKEN_STEP.argv
+        selected_argvs.add(runtime_token_argv)
+        prior_reason = reasons.get(runtime_token_argv)
+        reasons[runtime_token_argv] = (
+            EVAL_CONFIGURATION_REASON
+            if prior_reason is None
+            else REASON_SEPARATOR.join((prior_reason, EVAL_CONFIGURATION_REASON))
+        )
     if _matches_any(normalized, INSTRUCTION_BLOCK_PATTERNS):
         selected_argvs.add(INSTRUCTION_BLOCK_ARGV)
         reasons[INSTRUCTION_BLOCK_ARGV] = INSTRUCTION_BLOCK_REASON
