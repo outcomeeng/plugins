@@ -69,9 +69,14 @@ _FIXTURES_DIR: Final = (
 )
 #: An abridged capture of Change outcomeeng/changes#162, an Executable record.
 CAPTURED_CHANGE_RECORD: Final = _FIXTURES_DIR / "change-record.md.txt"
-#: The same capture as an editor applying typographic apostrophes saves it in
-#: Windows-1252, which is not UTF-8 text.
-WINDOWS_1252_CHANGE_RECORD: Final = _FIXTURES_DIR / "windows-1252-change-record.md.txt"
+
+# An editor applying typographic apostrophes and saving in Windows-1252 writes
+# U+2019 as a byte no UTF-8 sequence starts with, so the saved record is not
+# UTF-8 text. The re-encoded record exists only inside a disposable workspace.
+_WINDOWS_1252_CODEC: Final = "cp1252"
+_WINDOWS_1252_PREFIX: Final = "windows-1252-"
+_TYPEWRITER_APOSTROPHE: Final = "'"
+_TYPOGRAPHIC_APOSTROPHE: Final = "\N{RIGHT SINGLE QUOTATION MARK}"
 
 #: Directory the SPX CLI keeps its run journals and verification contexts in.
 SPX_STORE_DIRNAME: Final = ".spx"
@@ -218,6 +223,31 @@ class AuditWorkspace:
         target = self.root / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(source, target)
+        return relative
+
+    def place_windows_1252(self, source: Path) -> str:
+        """Place ``source`` as an editor saving it in Windows-1252 would.
+
+        The UTF-8 record's apostrophes become typographic apostrophes and the
+        text is encoded in Windows-1252, so the placed candidate is the same
+        record in bytes that are not UTF-8 text. Return its relative path.
+        """
+        text = source.read_text(encoding="utf-8")
+        if _TYPEWRITER_APOSTROPHE not in text:
+            raise RuntimeError(
+                f"{source} carries no apostrophe to re-encode as Windows-1252"
+            )
+        name = source.name.removesuffix(_FIXTURE_SUFFIX)
+        relative = (
+            Path(_CANDIDATE_DIRNAME) / f"{_WINDOWS_1252_PREFIX}{name}"
+        ).as_posix()
+        target = self.root / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(
+            text.replace(_TYPEWRITER_APOSTROPHE, _TYPOGRAPHIC_APOSTROPHE).encode(
+                _WINDOWS_1252_CODEC
+            )
+        )
         return relative
 
     def place_link_outside(self, source: Path) -> str:
