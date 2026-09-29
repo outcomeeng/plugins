@@ -57,20 +57,10 @@
       "exitCode": 1
     },
     {
-      "path": "responses/errors/agent-prompt.timeout.json",
-      "tool": "herdr",
-      "version": "0.9.1"
-    },
-    {
       "path": "responses/errors/agent-read.agent_not_found.json",
       "tool": "herdr",
       "version": "0.9.1",
       "exitCode": 1
-    },
-    {
-      "path": "responses/errors/agent-start.agent_not_ready.json",
-      "tool": "herdr",
-      "version": "0.9.1"
     },
     {
       "path": "responses/errors/agent-start.agent_pane_not_found.json",

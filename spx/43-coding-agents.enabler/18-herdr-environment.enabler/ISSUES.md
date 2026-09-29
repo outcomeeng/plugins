@@ -12,10 +12,10 @@
 
 ## Captured responses whose run's exit code is not recorded
 
-`outcomeeng_testing/fixtures/herdr_environment/provenance.json` records the exit code herdr exited with for each error envelope recaptured together with it. Two error envelopes, `responses/errors/agent-prompt.timeout.json` and `responses/errors/agent-start.agent_not_ready.json`, carry no recorded exit code: recapturing either needs a live agent session in a pane, a prompt whose wait times out or a start blocked during startup. The harness does not replay them. The `timeout` code reaches the evidence through the recaptured wait timeout, and `agent_not_ready` through a captured envelope varied to that code. No success capture records its run's exit code either; the harness replays each at zero, the status the adapter reads as success, and the operation mapping test compares a success result's exit code with that zero.
+`outcomeeng_testing/fixtures/herdr_environment/provenance.json` records the exit code herdr exited with for every error envelope in the family. No success capture records its run's exit code; the harness replays each at zero, the status the adapter reads as success, and the operation mapping test compares a success result's exit code with that zero.
 
-**Impact**: two real herdr envelopes serve no evidence, and the process status every success replay carries has no captured source.
+**Impact**: the process status every success replay carries has no captured source.
 
-**Settlement condition**: every response artifact in the family records its run's exit code in the provenance manifest, the two error envelopes and the success captures recaptured with it, and the harness replays no response without a recorded exit code.
+**Settlement condition**: every response artifact in the family records its run's exit code in the provenance manifest, the success captures recaptured with it, and the harness replays no response without a recorded exit code.
 
 **Evidence**: `spec-tree:test-evidence-auditor` finding `f-003` on head `7ad28895500e40c4c106c1c510a175a6b52ddda9`, rule `source-ownership`, which the recapture of seven error envelopes with their exit codes repaired for every error envelope the harness replays.
