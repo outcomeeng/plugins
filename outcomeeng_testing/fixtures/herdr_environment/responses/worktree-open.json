@@ -4,15 +4,19 @@
     "already_open": false,
     "root_pane": {
       "agent_status": "unknown",
-      "cwd": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/herdr-capture-164/wt-open",
+      "cwd": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/herdr-capture-164-grouped/wt-open",
       "focused": false,
-      "foreground_cwd": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/herdr-capture-164/wt-open",
-      "pane_id": "w2K:p1",
+      "foreground_cwd": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/herdr-capture-164-grouped/wt-open",
+      "pane_id": "w20:p1",
       "revision": 0,
-      "scroll": { "max_offset_from_bottom": 0, "offset_from_bottom": 0, "viewport_rows": 54 },
-      "tab_id": "w2K:t1",
-      "terminal_id": "term_65c7ec82584271e",
-      "workspace_id": "w2K"
+      "scroll": {
+        "max_offset_from_bottom": 0,
+        "offset_from_bottom": 0,
+        "viewport_rows": 40
+      },
+      "tab_id": "w20:t1",
+      "terminal_id": "term_65c916d1a3c1a2b",
+      "workspace_id": "w20"
     },
     "tab": {
       "agent_status": "unknown",
@@ -20,25 +24,25 @@
       "label": "1",
       "number": 1,
       "pane_count": 1,
-      "tab_id": "w2K:t1",
-      "workspace_id": "w2K"
+      "tab_id": "w20:t1",
+      "workspace_id": "w20"
     },
     "type": "worktree_opened",
     "workspace": {
-      "active_tab_id": "w2K:t1",
+      "active_tab_id": "w20:t1",
       "agent_status": "unknown",
       "focused": false,
       "label": "wt-open",
-      "number": 18,
+      "number": 17,
       "pane_count": 1,
       "tab_count": 1,
-      "workspace_id": "w2K",
+      "workspace_id": "w20",
       "worktree": {
-        "checkout_path": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/herdr-capture-164/wt-open",
+        "checkout_path": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/herdr-capture-164-grouped/wt-open",
         "is_linked_worktree": true,
-        "repo_key": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/herdr-capture-164/repo/.git",
+        "repo_key": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/herdr-capture-164-grouped/repo/.git",
         "repo_name": "repo",
-        "repo_root": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/herdr-capture-164/repo"
+        "repo_root": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/herdr-capture-164-grouped/repo"
       }
     },
     "worktree": {
@@ -48,8 +52,8 @@
       "is_linked_worktree": true,
       "is_prunable": false,
       "label": "repo",
-      "open_workspace_id": "w2K",
-      "path": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/herdr-capture-164/wt-open"
+      "open_workspace_id": "w20",
+      "path": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/herdr-capture-164-grouped/wt-open"
     }
   }
 }

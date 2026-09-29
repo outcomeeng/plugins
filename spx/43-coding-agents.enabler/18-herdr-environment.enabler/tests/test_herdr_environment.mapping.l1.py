@@ -22,6 +22,7 @@ from outcomeeng_testing.harnesses.herdr_environment import (
     captured_session_agent,
     captured_stopped_panes,
     captured_success_response,
+    captured_worktree_list,
     evidence_usage_contract_for,
     inventory_envelope,
     load_herdr_environment,
@@ -378,18 +379,22 @@ def test_absent_server_and_unsupported_operation_map_to_unavailable_results() ->
     run_unknown_operation_mapping(assert_unknown)
 
 
-def test_worktree_requests_map_to_the_worktree_path_workspace_and_root_pane() -> None:
+def test_worktree_requests_map_to_a_workspace_grouped_with_the_named_one() -> None:
     module = load_herdr_environment()
-    worktree_operations = (
-        module.Operation.CREATE_WORKTREE,
-        module.Operation.OPEN_WORKTREE,
-    )
+    listed = captured_worktree_list(module)
+    grouped: set[object] = set()
 
-    for request in operation_requests(module):
-        operation = module.Operation(request[module.OPERATION_FIELD])
-        if operation not in worktree_operations:
+    for generated in operation_requests(module):
+        operation = module.Operation(generated[module.OPERATION_FIELD])
+        if operation not in module.WORKTREE_OPERATIONS:
             continue
-        arguments = cast(dict[str, object], request[module.ARGUMENTS_FIELD])
+        # The captured responses answer a request naming the workspace herdr's
+        # captured worktree list was taken for.
+        arguments = {
+            **cast(dict[str, object], generated[module.ARGUMENTS_FIELD]),
+            module.WORKSPACE_FIELD: listed.named_workspace,
+        }
+        request = {**generated, module.ARGUMENTS_FIELD: arguments}
         argv = module.command_for(request)
         assert (
             argv[argv.index(module.WORKSPACE_OPTION) + 1]
@@ -420,6 +425,20 @@ def test_worktree_requests_map_to_the_worktree_path_workspace_and_root_pane() ->
             == PurePath(cast(str, projected[module.PATH_FIELD])).name
         )
 
+        # Grouping, as herdr records it: the named workspace's worktree list
+        # names the new checkout as a linked worktree open in the workspace the
+        # result returns, which is not the named workspace itself.
+        assert projected[module.WORKSPACE_FIELD] != listed.named_workspace
+        entries = [
+            entry
+            for entry in listed.worktrees
+            if entry.path == projected[module.PATH_FIELD]
+        ]
+        assert len(entries) == 1
+        assert entries[0].open_workspace == projected[module.WORKSPACE_FIELD]
+        assert entries[0].linked is True
+        grouped.add(operation)
+
         without_workspace = {
             **request,
             module.ARGUMENTS_FIELD: {
@@ -432,6 +451,8 @@ def test_worktree_requests_map_to_the_worktree_path_workspace_and_root_pane() ->
         refused = module.execute(without_workspace, refusing)
         assert refused[module.STATUS_FIELD] == module.ExecutionStatus.INVALID_SCHEMA
         assert refusing.calls == []
+
+    assert grouped == set(module.WORKTREE_OPERATIONS)
 
 
 def test_inventory_maps_every_agent_in_full_or_to_its_named_incomplete_item() -> None:

@@ -61,6 +61,17 @@ STOPPED_PANE_LIST_FIXTURE = RESPONSE_FIXTURE_ROOT / "stop" / "pane-list.json"
 # Herdr's pane-list envelope field listing the panes; the adapter never reads a
 # pane list, so this field is the capture's own shape.
 PANE_LIST_FIELD = "panes"
+# The worktree list herdr wrote for the workspace the captured create-worktree
+# and open-worktree requests named, taken once after both ran: herdr's own
+# record of the worktrees grouped with that workspace and the workspace each is
+# open in. The adapter never lists worktrees, so these fields are the capture's
+# own shape.
+WORKTREE_LIST_FIXTURE = RESPONSE_FIXTURE_ROOT / "worktree-list.json"
+WORKTREE_LIST_SOURCE_FIELD = "source"
+WORKTREE_LIST_SOURCE_WORKSPACE_FIELD = "source_workspace_id"
+WORKTREE_LIST_FIELD = "worktrees"
+LISTED_OPEN_WORKSPACE_FIELD = "open_workspace_id"
+LISTED_LINKED_WORKTREE_FIELD = "is_linked_worktree"
 RAW_HERDR_VIOLATION_FIXTURE = FIXTURE_ROOT / "raw_herdr_command.py.txt"
 HERDR_HELP_VIOLATION_FIXTURE = FIXTURE_ROOT / "herdr_help_command.py.txt"
 # herdr's exit code on every captured error envelope.
@@ -414,6 +425,46 @@ def captured_stopped_panes(module: ModuleType) -> list[dict[str, object]]:
     envelope = json.loads(STOPPED_PANE_LIST_FIXTURE.read_text(encoding="utf-8"))
     result = cast(dict[str, object], envelope[module.RESULT_FIELD])
     return cast(list[dict[str, object]], result[PANE_LIST_FIELD])
+
+
+@dataclass(frozen=True)
+class ListedWorktree:
+    """One Git worktree herdr's worktree list names: its checkout path, the
+    workspace herdr has it open in, if any, and whether it is a linked worktree
+    rather than the repository's primary checkout."""
+
+    path: str
+    open_workspace: str | None
+    linked: bool
+
+
+@dataclass(frozen=True)
+class CapturedWorktreeList:
+    """Herdr's captured worktree list: the workspace the list was taken for —
+    the one the captured worktree requests named — and every worktree it lists."""
+
+    named_workspace: str
+    worktrees: tuple[ListedWorktree, ...]
+
+
+def captured_worktree_list(module: ModuleType) -> CapturedWorktreeList:
+    """The worktree list herdr wrote for the workspace the captured
+    create-worktree and open-worktree requests named."""
+    envelope = json.loads(WORKTREE_LIST_FIXTURE.read_text(encoding="utf-8"))
+    result = cast(dict[str, object], envelope[module.RESULT_FIELD])
+    source = cast(dict[str, object], result[WORKTREE_LIST_SOURCE_FIELD])
+    listed = cast(list[dict[str, object]], result[WORKTREE_LIST_FIELD])
+    return CapturedWorktreeList(
+        str(source[WORKTREE_LIST_SOURCE_WORKSPACE_FIELD]),
+        tuple(
+            ListedWorktree(
+                str(entry[module.WORKTREE_PATH_RESPONSE_FIELD]),
+                cast(str | None, entry.get(LISTED_OPEN_WORKSPACE_FIELD)),
+                cast(bool, entry[LISTED_LINKED_WORKTREE_FIELD]),
+            )
+            for entry in listed
+        ),
+    )
 
 
 def _captured_success_variants(
