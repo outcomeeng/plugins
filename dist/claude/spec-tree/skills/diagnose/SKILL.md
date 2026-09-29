@@ -19,7 +19,7 @@ non-healthy verdict.
 
 <workflow>
 
-1. Run `spx diagnose --manifest "${CLAUDE_SKILL_DIR}/manifest.json" --format json`.
+1. Run `spx diagnose --manifest "${CLAUDE_SKILL_DIR}/manifest.json"`.
 2. Preserve stdout, stderr, and the exit code exactly. Session identifiers,
    version strings, paths, verdict names, and status values are identity values;
    report them verbatim.
@@ -59,7 +59,7 @@ the installed plugin asks `spx diagnose` to evaluate.
 
 <success_criteria>
 
-- `spx diagnose --manifest "${CLAUDE_SKILL_DIR}/manifest.json" --format json`
+- `spx diagnose --manifest "${CLAUDE_SKILL_DIR}/manifest.json"`
   ran, or its startup failure was reported verbatim.
 - The deterministic report was relayed without rewriting check verdicts,
   readings, or the overall verdict.
