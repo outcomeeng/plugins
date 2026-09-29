@@ -36,8 +36,9 @@ anywhere and every process it starts:
 - for each operation that takes a ``runToken``, a request naming a started
   run with fields its operation does not take, which blocks with that
   operation and run token;
-- generated request texts that are not one JSON object: a truncated request
-  object, or a JSON value of another type;
+- generated request texts the runner cannot parse as one JSON object: a
+  truncated request object, a JSON value of another type, or an object
+  carrying an integer literal longer than the interpreter converts;
 - generated request objects outside the request contract: an absent or
   unlisted operation; a missing field or one the operation does not take; a
   ``path``, ``candidateSha256``, ``runToken``, or ``terminalStatus`` that is
@@ -383,6 +384,12 @@ def _json_lines(
             raise Blocked(
                 BlockReason.UNREADABLE_OUTPUT,
                 f"command output is not JSON: {exc.msg}",
+                run_token=run_token,
+            ) from exc
+        except ValueError as exc:
+            raise Blocked(
+                BlockReason.UNREADABLE_OUTPUT,
+                f"command output cannot be parsed: {exc}",
                 run_token=run_token,
             ) from exc
         except RecursionError as exc:
@@ -936,6 +943,10 @@ def _parse_request(text: str) -> dict[str, object]:
     except json.JSONDecodeError as exc:
         raise Blocked(
             BlockReason.INVALID_REQUEST, f"request is not JSON: {exc.msg}"
+        ) from exc
+    except ValueError as exc:
+        raise Blocked(
+            BlockReason.INVALID_REQUEST, f"request cannot be parsed: {exc}"
         ) from exc
     except RecursionError as exc:
         raise Blocked(
