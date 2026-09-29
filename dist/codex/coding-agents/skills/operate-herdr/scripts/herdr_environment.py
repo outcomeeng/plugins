@@ -51,6 +51,10 @@ LONG_OPTION_PREFIX = "--"
 # The command Claude Code and Codex, the agents start launches, each end their
 # session on; submitted as a prompt, it returns the pane to its shell.
 AGENT_EXIT_TEXT = "/exit"
+# Every command either agent start launches ends its session on: stop's own
+# command and the alias both agents accept for it. A prompt whose text, stripped
+# of surrounding whitespace, is one of these ends the session as stop does.
+AGENT_SESSION_ENDING_TEXTS = frozenset({AGENT_EXIT_TEXT, "/quit"})
 
 # Fields of herdr's public JSON envelope.
 RESULT_FIELD = "result"
@@ -601,16 +605,18 @@ def _validated_request(request: object) -> tuple[Operation, dict[str, object]]:
             ExecutionStatus.MUTATION_UNAUTHORIZED,
             f"{operation.value} requires {MUTATION_AUTHORIZED_FIELD}: true before command construction.",
         )
-    # A prompt carrying the exit command is stop's own vector and ends the agent
-    # session, so it is gated as stop is.
+    # A prompt whose text, stripped of surrounding whitespace, is a session-ending
+    # command ends the agent session as stop does, so it is gated as stop is.
+    text = arguments.get(TEXT_FIELD)
     if (
         operation is Operation.PROMPT
-        and arguments.get(TEXT_FIELD) == AGENT_EXIT_TEXT
+        and isinstance(text, str)
+        and text.strip() in AGENT_SESSION_ENDING_TEXTS
         and arguments.get(MUTATION_AUTHORIZED_FIELD) is not True
     ):
         raise HerdrEnvironmentError(
             ExecutionStatus.MUTATION_UNAUTHORIZED,
-            f"{operation.value} carrying {AGENT_EXIT_TEXT!r} ends the agent session "
+            f"{operation.value} carrying {text.strip()!r} ends the agent session "
             f"as {Operation.STOP.value} does and requires "
             f"{MUTATION_AUTHORIZED_FIELD}: true before command construction.",
         )

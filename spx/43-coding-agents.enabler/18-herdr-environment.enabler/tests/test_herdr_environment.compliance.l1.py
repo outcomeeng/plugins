@@ -1,3 +1,4 @@
+import string
 from typing import cast
 
 from outcomeeng_testing.generators.herdr_environment import operation_requests
@@ -73,43 +74,83 @@ def test_a_prompt_carrying_the_stop_exit_runs_no_command_without_authorization()
         assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
         assert [call[0] for call in runner.calls] == [module.command_for(ordinary)]
 
-        # Violating: the stop vector's exit text, authorization absent or false.
-        exiting = {**arguments, module.TEXT_FIELD: module.AGENT_EXIT_TEXT}
-        absent = {**request, module.ARGUMENTS_FIELD: exiting}
-        withheld = {
-            **request,
-            module.ARGUMENTS_FIELD: {
-                **exiting,
-                module.MUTATION_AUTHORIZED_FIELD: False,
-            },
-        }
-        for unauthorized in (absent, withheld):
+        # Conforming: a longer message that mentions a session-ending command
+        # inside it ends no session and needs no authorization.
+        for member in module.AGENT_SESSION_ENDING_TEXTS:
+            mentioning = {
+                **request,
+                module.ARGUMENTS_FIELD: {
+                    **arguments,
+                    module.TEXT_FIELD: f"{arguments[module.TEXT_FIELD]}{member}",
+                },
+            }
             runner = RecordingRunner(replay(captured))
-            result = module.execute(unauthorized, runner)
-            assert (
-                result[module.STATUS_FIELD]
-                == module.ExecutionStatus.MUTATION_UNAUTHORIZED
+            result = module.execute(mentioning, runner)
+            assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
+            assert [call[0] for call in runner.calls] == [
+                module.command_for(mentioning)
+            ]
+
+        # Violating: every session-ending command, bare or padded with any
+        # whitespace character, with authorization absent or false.
+        ending_texts = [
+            variant
+            for member in module.AGENT_SESSION_ENDING_TEXTS
+            for variant in (
+                member,
+                *(f"{padding}{member}{padding}" for padding in string.whitespace),
             )
-            assert runner.calls == []
+        ]
+        for text in ending_texts:
+            ending = {**arguments, module.TEXT_FIELD: text}
+            absent = {**request, module.ARGUMENTS_FIELD: ending}
+            withheld = {
+                **request,
+                module.ARGUMENTS_FIELD: {
+                    **ending,
+                    module.MUTATION_AUTHORIZED_FIELD: False,
+                },
+            }
+            for unauthorized in (absent, withheld):
+                runner = RecordingRunner(replay(captured))
+                result = module.execute(unauthorized, runner)
+                assert (
+                    result[module.STATUS_FIELD]
+                    == module.ExecutionStatus.MUTATION_UNAUTHORIZED
+                ), text
+                assert runner.calls == [], text
 
-        # Conforming: the same exit text under authorization runs its command.
-        authorized = {
-            **request,
-            module.ARGUMENTS_FIELD: {**exiting, module.MUTATION_AUTHORIZED_FIELD: True},
-        }
-        runner = RecordingRunner(replay(captured))
-        result = module.execute(authorized, runner)
-        assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
-        assert [call[0] for call in runner.calls] == [module.command_for(authorized)]
+            # Conforming: the same text under authorization runs its command.
+            authorized = {
+                **request,
+                module.ARGUMENTS_FIELD: {
+                    **ending,
+                    module.MUTATION_AUTHORIZED_FIELD: True,
+                },
+            }
+            runner = RecordingRunner(replay(captured))
+            result = module.execute(authorized, runner)
+            assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
+            assert [call[0] for call in runner.calls] == [
+                module.command_for(authorized)
+            ]
 
-        # The refused request is stop's own vector, not a lookalike.
+        # The refused exit text is stop's own vector, not a lookalike.
         if module.PANE_FIELD in arguments and module.WAIT_FIELD not in arguments:
             stop = module.operation_request(
                 module.Operation.STOP,
                 pane=arguments[module.PANE_FIELD],
                 mutation_authorized=True,
             )
-            assert module.command_for(stop) == module.command_for(authorized)
+            exit_request = {
+                **request,
+                module.ARGUMENTS_FIELD: {
+                    **arguments,
+                    module.TEXT_FIELD: module.AGENT_EXIT_TEXT,
+                    module.MUTATION_AUTHORIZED_FIELD: True,
+                },
+            }
+            assert module.command_for(stop) == module.command_for(exit_request)
 
 
 def test_wait_bearing_requests_carry_a_bound_and_the_runner_is_bounded() -> None:

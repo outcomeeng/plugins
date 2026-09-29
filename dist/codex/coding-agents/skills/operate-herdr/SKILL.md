@@ -14,22 +14,22 @@ One versioned JSON result per herdr operation — `status: "succeeded"` with her
 
 The source-owned operation names are:
 
-| Operation         | Arguments                                                        | Mutation authorization |
-| ----------------- | ---------------------------------------------------------------- | ---------------------- |
-| `inventory`       | none                                                             | no                     |
-| `read`            | one selector; optional `source`, `lines`                         | no                     |
-| `wait`            | one selector, `timeout`; optional `until`                        | no                     |
-| `prompt`          | one selector, `text`; optional `wait` with `timeout` and `until` | when `text` is `/exit` |
-| `key`             | one selector, `keys`                                             | required               |
-| `start`           | `name`, `kind`, `pane`, `timeout`; optional `agentArguments`     | required               |
-| `relaunch`        | as `start`, for a pane whose earlier agent session ended         | required               |
-| `stop`            | `pane`                                                           | required               |
-| `create-worktree` | `workspace`; optional `branch`, `base`, `path`                   | required               |
-| `open-worktree`   | `workspace`, `path`                                              | required               |
+| Operation         | Arguments                                                        | Mutation authorization            |
+| ----------------- | ---------------------------------------------------------------- | --------------------------------- |
+| `inventory`       | none                                                             | no                                |
+| `read`            | one selector; optional `source`, `lines`                         | no                                |
+| `wait`            | one selector, `timeout`; optional `until`                        | no                                |
+| `prompt`          | one selector, `text`; optional `wait` with `timeout` and `until` | when `text` is `/exit` or `/quit` |
+| `key`             | one selector, `keys`                                             | required                          |
+| `start`           | `name`, `kind`, `pane`, `timeout`; optional `agentArguments`     | required                          |
+| `relaunch`        | as `start`, for a pane whose earlier agent session ended         | required                          |
+| `stop`            | `pane`                                                           | required                          |
+| `create-worktree` | `workspace`; optional `branch`, `base`, `path`                   | required                          |
+| `open-worktree`   | `workspace`, `path`                                              | required                          |
 
 A selector is exactly one of `agent` (a live agent name) or `pane` (a pane id such as `w1:p1`). `timeout` is milliseconds and is required on every wait: `wait`, `prompt` with `wait: true`, `start`, and `relaunch`; the adapter's subprocess bound always exceeds it. `until` lists the server's states `idle`, `working`, `blocked`, `done`, and `unknown`. `source` is one of `visible`, `recent`, `recent-unwrapped`, and `detection`. `workspace` is the id of the herdr workspace a new worktree groups with, such as `w1F`; a `create-worktree` or `open-worktree` request without it returns `invalid-schema` before any herdr command runs. Every text argument — `agent`, `pane`, `text`, `name`, `kind`, `path`, `workspace`, `branch`, `base` — and every item of `keys` and `until` is non-empty and never begins with `--`, which herdr would read as one of its options; such a request returns `invalid-schema` before any herdr command runs. Items of `agentArguments` are exempt: they pass after herdr's `--` separator to the launched agent. The adapter owns every herdr command token and flag.
 
-`read` returns the session's terminal text, not a JSON envelope. `start` launches the named agent kind into a pane at its shell prompt and succeeds only when herdr reports the session ready for input within the bound. `stop` submits the agent's own `/exit` to the pane: Claude Code and Codex, the agents `start` launches, end their session on it, and the pane stays open at its shell, so `relaunch` into the same pane follows. A `prompt` whose `text` is `/exit` is `stop`'s own command and ends the session the same way, so it requires mutation authorization as `stop` does; without it the adapter returns `mutation-unauthorized` before any herdr command runs.
+`read` returns the session's terminal text, not a JSON envelope. `start` launches the named agent kind into a pane at its shell prompt and succeeds only when herdr reports the session ready for input within the bound. `stop` submits the agent's own `/exit` to the pane: Claude Code and Codex, the agents `start` launches, end their session on it, and the pane stays open at its shell, so `relaunch` into the same pane follows. A `prompt` whose `text`, stripped of surrounding whitespace, is `/exit` — `stop`'s own command — or `/quit`, the alias Claude Code and Codex both accept for it, ends the session the same way, so it requires mutation authorization as `stop` does; without it the adapter returns `mutation-unauthorized` before any herdr command runs. A longer message that only mentions either command inside it ends no session and needs no authorization.
 
 `create-worktree` creates a Git worktree — on `branch` from `base` where the request names them, herdr's defaults otherwise, at `path` — and opens it as its own herdr workspace in one operation; `open-worktree` does the same for the existing worktree at `path`. Neither takes focus. Herdr groups the new workspace with the one the request names as a linked-worktree workspace; the new workspace is never the named one. The result's `worktree` object carries the checkout's `path`, the new `workspace`, and that workspace's `rootPane`, which is the `pane` a `start` into the worktree takes. `create-worktree` records no worktree-occupancy claim; the agent session `start` launches in the worktree claims it at its own start.
 
@@ -86,7 +86,7 @@ Every named status ends the operation. Report the exact `status`, `errorCode` wh
 }
 ```
 
-3. For `key`, `start`, `relaunch`, `stop`, `create-worktree`, `open-worktree`, or a `prompt` whose `text` is `/exit`, run the request only when it names its exact target and carries `"mutationAuthorized": true` inside `arguments`, which states the operator's authorization for that target. The target is one selector for `key`; the `pane` for `start`, `relaunch`, and `stop`; the session its selector names for that `prompt`; the workspace and the existing worktree at `path` for `open-worktree`; and for `create-worktree` the workspace and the absolute path of the checkout it writes, which the request carries as `path`. A `create-worktree` authorization that states no absolute destination authorizes no checkout: obtain one that states it, and never omit `path` or choose a destination the operator did not name. One authorization covers one checkout. Set the flag only when the request arrived with it or the operator authorized that exact target; never add it while interpreting a plain-text request. A request without it is not run.
+3. For `key`, `start`, `relaunch`, `stop`, `create-worktree`, `open-worktree`, or a `prompt` whose `text`, stripped of surrounding whitespace, is `/exit` or `/quit`, run the request only when it names its exact target and carries `"mutationAuthorized": true` inside `arguments`, which states the operator's authorization for that target. The target is one selector for `key`; the `pane` for `start`, `relaunch`, and `stop`; the session its selector names for that `prompt`; the workspace and the existing worktree at `path` for `open-worktree`; and for `create-worktree` the workspace and the absolute path of the checkout it writes, which the request carries as `path`. A `create-worktree` authorization that states no absolute destination authorizes no checkout: obtain one that states it, and never omit `path` or choose a destination the operator did not name. One authorization covers one checkout. Set the flag only when the request arrived with it or the operator authorized that exact target; never add it while interpreting a plain-text request. A request without it is not run.
 4. Submit the request over stdin in one of the forms in `<invocation_forms>`.
 5. Accept only `status: "succeeded"`. Preserve the complete versioned result, `commandExitCode`, and the public `response`: herdr's own JSON envelope for every operation but `read`, and for `read` herdr's terminal text verbatim under `output`. Read the projection the operation adds:
    - `inventory` carries `agents`, one item per hosted session with `name`, `agent`, `agent_status`, `pane_id`, `tab_id`, `workspace_id`, `cwd`, and `interactive_ready`. An agent whose evidence lacks any of those fields is an incomplete item: the fields its evidence carries, verbatim, and the missing names under `missingFields`. Every other agent stays complete.
@@ -124,7 +124,7 @@ The single-line request opens with `{"schemaVersion":1,`, the prefix this skill'
 - ALWAYS address a worktree's agent session through the `rootPane` and `workspace` its worktree result returns, never through a pane of the workspace the request named.
 - NEVER invoke raw herdr commands, herdr command help, or `herdr --skill`, the skill text herdr prints for agents; the adapter owns the grammar, and that text would put a second, unversioned grammar into the conversation.
 - NEVER create a worktree for a herdr-hosted agent session with `git worktree add` — `create-worktree` creates the checkout and its grouped workspace in one authorized operation.
-- NEVER run `key`, `start`, `relaunch`, `stop`, `create-worktree`, `open-worktree`, or a `prompt` whose `text` is `/exit` without authorization for its exact target in the request — that prompt ends the session exactly as `stop` does.
+- NEVER run `key`, `start`, `relaunch`, `stop`, `create-worktree`, `open-worktree`, or a `prompt` whose `text`, stripped of surrounding whitespace, is `/exit` or `/quit` without authorization for its exact target in the request — that prompt ends the session exactly as `stop` does.
 - NEVER run `create-worktree` without an absolute `path` its authorization names — herdr's default location stays unstated until the checkout exists, so the write would land where no one confirmed it.
 - NEVER produce or expect a pane-borne handback block; the environment surface carries prompts and keystrokes only, and message records travel through the agent-mail capability.
 
@@ -149,7 +149,7 @@ Tested over the generated request domain and herdr's captured responses, with co
 - `stop` → runs the prompt vector carrying `/exit`; herdr's captured pane list keeps the pane at its shell; a relaunch into it succeeds ✓
 - Every projected error code → its named status; an unprojected code → `command-failed` with the code verbatim ✓
 - Every mutating request with authorization absent or `false` → fails ✓
-- A `prompt` carrying `/exit` with authorization absent or `false` → `mutation-unauthorized` and no command; with authorization → `stop`'s own vector; any other text → runs unauthorized ✓
+- A `prompt` whose `text` is `/exit` or `/quit`, bare or padded with whitespace, with authorization absent or `false` → `mutation-unauthorized` and no command; with authorization → runs its command, `/exit` as `stop`'s own vector; a longer message mentioning either command, or any other text → runs unauthorized ✓
 - Every wait-bearing request without a timeout → fails ✓
 - A request against a child that outlives the derived bound → `command-failed` ✓
 
@@ -162,7 +162,7 @@ Tested over the generated request domain and herdr's captured responses, with co
 - A worktree result names the checkout's path, a workspace herdr grouped with the named one, and that workspace's root pane.
 - A stop's own result establishes only that herdr accepted `/exit`; its pane's return to the shell is established when a following `relaunch` into that pane, under that relaunch's own authorization, succeeds.
 - Every projected herdr error code reaches the caller as its named status with the code and message verbatim.
-- No mutating operation and no `prompt` carrying `/exit` reaches herdr without authorization, and no worktree request without a workspace or unbounded wait reaches herdr.
+- No mutating operation and no `prompt` whose `text`, stripped of surrounding whitespace, is `/exit` or `/quit` reaches herdr without authorization, and no worktree request without a workspace or unbounded wait reaches herdr.
 - No `create-worktree` reaches herdr without an absolute `path` its authorization names.
 
 </success_criteria>
