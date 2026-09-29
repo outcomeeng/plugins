@@ -20,6 +20,7 @@ from hypothesis import given, seed, settings
 from outcomeeng import validation as validation_pkg
 from outcomeeng.validation.infrastructure_index import (
     CONFTEST_FILENAME,
+    EXECUTED_TEST_PREFIX,
     PACKAGE_INIT_FILENAME,
     PYTHON_SUFFIX,
     SPEC_TREE_ROOT,
@@ -65,7 +66,11 @@ class SyntheticRepository:
     def write_test(self, node: str, name: str, source: str) -> str:
         """Write an executed test under ``node``; return its repository-relative path."""
 
-        relative = Path(node) / TESTS_DIRECTORY_NAME / f"test_{name}.scenario.l1.py"
+        relative = (
+            Path(node)
+            / TESTS_DIRECTORY_NAME
+            / f"{EXECUTED_TEST_PREFIX}{name}{PYTHON_SUFFIX}"
+        )
         target = self.root / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(source, encoding="utf-8")

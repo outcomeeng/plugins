@@ -19,6 +19,7 @@ from outcomeeng.validation.infrastructure_index import (
     index_test_infrastructure,
 )
 from outcomeeng.validation.selected_gate import (
+    DEFAULT_BASE_REF,
     FULL_GATE_REASON,
     GIT_DISCOVERY_ERROR_PREFIX,
     GIT_DISCOVERY_FAILURE_EXIT_CODE,
@@ -34,29 +35,30 @@ from outcomeeng.validation.selected_gate import (
     LIVE_DISCOVERY_TEST,
     SELECTED_CHECK_PLAN_HEADER,
     TEST_REASON,
+    branch_diff_argv,
     build_selected_gate_plan,
     load_changeset_scope,
 )
 from outcomeeng_testing.generators.gate import (
-    SELECTED_GATE_FULL_GATE_PATH,
-    SELECTED_GATE_PYTHON_SOURCE_PATH,
-    SELECTED_GATE_PYTHON_TEST_PATH,
-    path_from_pattern,
-)
-from outcomeeng_testing.harnesses.gate import (
+    DELETED_GIT_STATUS,
     GIT_DISCOVERY_FAILURE_STDERR,
     GIT_DISCOVERY_FAILURE_STDOUT,
-    HIGH_VOLUME_CHILD_OUTPUT,
+    assertion_test_paths,
+    discovery_full_gate_paths,
+    high_volume_child_output,
+    lane_paths,
+    path_from_pattern,
+    required_domain,
+    unrelated_full_gate_paths,
+)
+from outcomeeng_testing.harnesses.gate import (
     collect_selected_gate_paths,
-    expected_full_check_spawn_calls,
     failing_discovery_runner,
     production_check_observation,
     repository_without_origin,
     run_check_observation,
-    selected_gate_branch_discovery_argv,
     summary_recipes,
     summary_steps,
-    unrelated_validation_source_path,
 )
 from outcomeeng_testing.harnesses.infrastructure_index import (
     reach_layout,
@@ -71,9 +73,14 @@ def test_an_empty_changeset_selects_no_steps() -> None:
     assert plan.full_gate is False
 
 
-def test_the_plan_prints_before_the_recipes_run() -> None:
-    run = run_check_observation(branch_path=SELECTED_GATE_PYTHON_SOURCE_PATH)
-    plan = build_selected_gate_plan((SELECTED_GATE_PYTHON_SOURCE_PATH,))
+@pytest.mark.parametrize("path", lane_paths())
+def test_the_plan_prints_before_the_recipes_run(path: str) -> None:
+    run = run_check_observation(branch_path=path)
+    with synthetic_repository() as repo:
+        plan = build_selected_gate_plan(
+            (path,), test_infrastructure=index_test_infrastructure(repo.root)
+        )
+    preflight_argvs = {step.argv for step in PREFLIGHT_STEPS}
     announced = run.output_before_first_spawn.splitlines()
     # One shared cursor over the announced lines: each selected step must name
     # its label and reason on a line after the previous step's line.
@@ -94,9 +101,11 @@ def test_the_plan_prints_before_the_recipes_run() -> None:
     assert plan.selected_steps
     assert announced[0] == SELECTED_CHECK_PLAN_HEADER
     assert None not in announcing_lines, announcing_lines
-    assert run.spawn_calls == (
-        *(step.argv for step in PREFLIGHT_STEPS),
-        *(step.argv for step in plan.steps),
+    assert run.spawn_calls[: len(PREFLIGHT_STEPS)] == tuple(
+        step.argv for step in PREFLIGHT_STEPS
+    )
+    assert tuple(call for call in run.spawn_calls if call not in preflight_argvs) == (
+        tuple(step.argv for step in plan.steps)
     )
     assert run.summary is not None
     assert run.summary[SUMMARY_KEY_RECIPE] == RECIPE_CHECK
@@ -105,22 +114,27 @@ def test_the_plan_prints_before_the_recipes_run() -> None:
     ]
 
 
-def test_child_output_never_streams_to_the_live_sink() -> None:
-    run = run_check_observation(
-        branch_path=SELECTED_GATE_PYTHON_SOURCE_PATH,
-        child_output=HIGH_VOLUME_CHILD_OUTPUT,
+@pytest.mark.parametrize("path", lane_paths())
+def test_child_output_never_streams_to_the_live_sink(path: str) -> None:
+    child_output = high_volume_child_output()
+
+    run = run_check_observation(branch_path=path, child_output=child_output)
+
+    assert run.exit_code == 0
+    assert child_output not in run.output
+    assert len(run.output.splitlines()) < len(child_output.splitlines())
+
+
+@pytest.mark.parametrize("path", discovery_full_gate_paths())
+def test_a_full_gate_path_runs_the_complete_wrapper(path: str) -> None:
+    run = run_check_observation(branch_path=path)
+
+    assert run.exit_code == 0
+    assert run.spawn_calls == tuple(
+        step.argv
+        for recipe in CHECK_RECIPES
+        for step in (*recipe.preflight_steps, *recipe.steps)
     )
-
-    assert run.exit_code == 0
-    assert HIGH_VOLUME_CHILD_OUTPUT not in run.output
-    assert len(run.output.splitlines()) < len(HIGH_VOLUME_CHILD_OUTPUT.splitlines())
-
-
-def test_a_full_gate_path_runs_the_complete_wrapper() -> None:
-    run = run_check_observation(branch_path=SELECTED_GATE_FULL_GATE_PATH)
-
-    assert run.exit_code == 0
-    assert run.spawn_calls == expected_full_check_spawn_calls()
     assert FULL_GATE_REASON in run.output_before_first_spawn
     assert run.summary is not None
     assert [recipe[SUMMARY_KEY_RECIPE] for recipe in summary_recipes(run.summary)] == [
@@ -130,10 +144,9 @@ def test_a_full_gate_path_runs_the_complete_wrapper() -> None:
 
 
 def test_a_deleted_test_path_selects_no_pytest_run() -> None:
-    run = run_check_observation(
-        branch_path=SELECTED_GATE_PYTHON_TEST_PATH,
-        branch_status="D",
-    )
+    (test_path,) = assertion_test_paths(1)
+
+    run = run_check_observation(branch_path=test_path, branch_status=DELETED_GIT_STATUS)
 
     assert run.exit_code == 0
     assert all(PYTEST_ARGV != call[: len(PYTEST_ARGV)] for call in run.spawn_calls)
@@ -149,7 +162,7 @@ def test_git_discovery_failure_stops_before_any_spawn() -> None:
 
     assert run.exit_code == GIT_DISCOVERY_FAILURE_EXIT_CODE
     assert run.spawn_calls == ()
-    assert run.runner_calls == (selected_gate_branch_discovery_argv(),)
+    assert run.runner_calls == (branch_diff_argv(DEFAULT_BASE_REF),)
     assert GIT_DISCOVERY_ERROR_PREFIX in run.output
     assert GIT_DISCOVERY_STDOUT_LABEL in run.output
     assert GIT_DISCOVERY_STDERR_LABEL in run.output
@@ -172,7 +185,9 @@ def test_a_repo_without_origin_reports_the_unset_head() -> None:
 
 
 def test_collection_propagates_git_failure_as_a_typed_error() -> None:
-    runner = failing_discovery_runner()
+    runner = failing_discovery_runner(
+        stdout=GIT_DISCOVERY_FAILURE_STDOUT, stderr=GIT_DISCOVERY_FAILURE_STDERR
+    )
 
     with pytest.raises(GitDiscoveryError) as caught:
         with synthetic_repository() as repo:
@@ -180,7 +195,7 @@ def test_collection_propagates_git_failure_as_a_typed_error() -> None:
 
     assert GIT_DISCOVERY_ERROR_PREFIX in str(caught.value)
     assert GIT_DISCOVERY_FAILURE_STDERR in str(caught.value)
-    assert runner.calls == [selected_gate_branch_discovery_argv()]
+    assert runner.calls == [branch_diff_argv(DEFAULT_BASE_REF)]
 
 
 def test_infrastructure_path_without_an_index_is_rejected_by_name() -> None:
@@ -202,7 +217,9 @@ def test_definition_guidance_changes_require_the_live_check() -> None:
     assert plan.live_discovery_reason == LIVE_DISCOVERY_INCLUDED_REASON
 
 
-@pytest.mark.parametrize("pattern", LIVE_DISCOVERY_PATTERNS)
+@pytest.mark.parametrize(
+    "pattern", required_domain(LIVE_DISCOVERY_PATTERNS, "live-discovery patterns")
+)
 def test_each_declared_discovery_surface_requires_the_live_check(pattern: str) -> None:
     with synthetic_repository() as repo:
         plan = build_selected_gate_plan(
@@ -251,8 +268,9 @@ def test_unrelated_automatic_full_gate_excludes_only_the_live_check() -> None:
     )
 
 
-def test_unrelated_full_gate_execution_honors_its_exclusion() -> None:
-    run = run_check_observation(branch_path=unrelated_validation_source_path())
+@pytest.mark.parametrize("path", unrelated_full_gate_paths())
+def test_unrelated_full_gate_execution_honors_its_exclusion(path: str) -> None:
+    run = run_check_observation(branch_path=path)
 
     assert run.exit_code == 0
     assert any(
@@ -263,8 +281,9 @@ def test_unrelated_full_gate_execution_honors_its_exclusion() -> None:
     assert LIVE_DISCOVERY_EXCLUDED_REASON in run.output_before_first_spawn
 
 
-def test_relevant_full_gate_keeps_live_discovery_enabled() -> None:
-    plan = build_selected_gate_plan((SELECTED_GATE_FULL_GATE_PATH,))
+@pytest.mark.parametrize("path", discovery_full_gate_paths())
+def test_relevant_full_gate_keeps_live_discovery_enabled(path: str) -> None:
+    plan = build_selected_gate_plan((path,))
 
     assert plan.full_gate
     assert plan.live_discovery

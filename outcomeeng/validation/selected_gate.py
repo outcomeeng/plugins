@@ -266,6 +266,93 @@ COPIED_GIT_STATUS_PREFIX: Final = "C"
 
 
 @dataclass(frozen=True)
+class SelectionLane:
+    """One changed-path category, the validation steps that check it, and why.
+
+    A lane matches a changed-path set when any path matches one of its glob
+    ``patterns`` or equals one of its exact ``paths``.
+    """
+
+    reason: str
+    argvs: tuple[tuple[str, ...], ...]
+    patterns: tuple[str, ...] = ()
+    paths: frozenset[str] = frozenset()
+
+    def matches(self, changed_paths: tuple[str, ...]) -> bool:
+        return _matches_any(changed_paths, self.patterns) or any(
+            path in self.paths for path in changed_paths
+        )
+
+
+# The path-category lanes the planner selects validation steps from. A step
+# several matching lanes contribute names each lane's reason, in lane order.
+MARKDOWN_LANE: Final = SelectionLane(
+    reason=MARKDOWN_REASON,
+    argvs=(FMT_CHECK_ARGV, SPX_MARKDOWN_ARGV),
+    patterns=MARKDOWN_PATTERNS,
+)
+WORKFLOW_LANE: Final = SelectionLane(
+    reason=WORKFLOW_REASON,
+    argvs=(ACTIONLINT_ARGV, SHELLCHECK_ARGV),
+    patterns=WORKFLOW_PATTERNS,
+)
+PYTHON_FORMAT_LINT_LANE: Final = SelectionLane(
+    reason=PYTHON_REASON,
+    argvs=(RUFF_FORMAT_ARGV, RUFF_CHECK_ARGV),
+    patterns=PYTHON_FORMAT_LINT_PATTERNS,
+)
+PYTHON_TYPECHECK_LANE: Final = SelectionLane(
+    reason=PYTHON_REASON,
+    argvs=(MYPY_ARGV, PYRIGHT_ARGV),
+    patterns=PYTHON_TYPECHECK_PATTERNS,
+)
+SKILL_LANE: Final = SelectionLane(
+    reason=SKILL_REASON,
+    argvs=tuple(
+        step.argv for step in VALIDATION_STEPS if step.label in SKILL_STEP_LABELS
+    ),
+    patterns=SKILL_PATTERNS,
+)
+EVAL_CONFIGURATION_LANE: Final = SelectionLane(
+    reason=EVAL_CONFIGURATION_REASON,
+    argvs=(RUNTIME_TOKEN_STEP.argv,),
+    paths=EVAL_CONFIGURATION_PATHS,
+)
+INSTRUCTION_BLOCK_LANE: Final = SelectionLane(
+    reason=INSTRUCTION_BLOCK_REASON,
+    argvs=(INSTRUCTION_BLOCK_ARGV,),
+    patterns=INSTRUCTION_BLOCK_PATTERNS,
+)
+EVAL_TRIGGER_LANE: Final = SelectionLane(
+    reason=EVAL_REASON,
+    argvs=(EVAL_TRIGGERS_ARGV,),
+    patterns=EVAL_TRIGGER_PATTERNS,
+)
+EVAL_PROMPT_LANE: Final = SelectionLane(
+    reason=EVAL_REASON,
+    argvs=(EVAL_PROMPTS_ARGV,),
+    patterns=EVAL_PROMPT_PATTERNS,
+)
+EVIDENCE_LINK_LANE: Final = SelectionLane(
+    reason=EVIDENCE_LINK_REASON,
+    argvs=(EVAL_LINKS_ARGV,),
+    patterns=EVIDENCE_LINK_PATTERNS,
+)
+SELECTION_LANES: Final = (
+    MARKDOWN_LANE,
+    WORKFLOW_LANE,
+    PYTHON_FORMAT_LINT_LANE,
+    PYTHON_TYPECHECK_LANE,
+    SKILL_LANE,
+    EVAL_CONFIGURATION_LANE,
+    INSTRUCTION_BLOCK_LANE,
+    EVAL_TRIGGER_LANE,
+    EVAL_PROMPT_LANE,
+    EVIDENCE_LINK_LANE,
+)
+
+
+@dataclass(frozen=True)
 class SelectedGateStep:
     """One selected gate step and the reason it is present."""
 
@@ -416,7 +503,7 @@ def collect_changed_path_entries(
     resolver = base_ref_resolver or resolve_default_base_ref
     resolved_base_ref = base_ref if base_ref is not None else resolver(repo)
     commands = (
-        (*GIT_DIFF_BRANCH_ARGV_PREFIX, f"{resolved_base_ref}...HEAD"),
+        branch_diff_argv(resolved_base_ref),
         GIT_DIFF_STAGED_ARGV,
         GIT_DIFF_UNSTAGED_ARGV,
         GIT_LS_UNTRACKED_ARGV,
@@ -428,6 +515,12 @@ def collect_changed_path_entries(
             raise GitDiscoveryError(command, completed)
         entries.update(_changed_path_entries_from_output(command, completed.stdout))
     return tuple(sorted(entries, key=lambda entry: (entry.path, entry.status)))
+
+
+def branch_diff_argv(base_ref: str) -> tuple[str, ...]:
+    """Return the branch-discovery command comparing ``base_ref`` with HEAD."""
+
+    return (*GIT_DIFF_BRANCH_ARGV_PREFIX, f"{base_ref}...HEAD")
 
 
 def build_selected_gate_plan(
@@ -481,68 +574,16 @@ def build_selected_gate_plan(
                 )
             reached_tests.update(report.tests)
 
-    selected_argvs: set[tuple[str, ...]] = set()
-    reasons: dict[tuple[str, ...], str] = {}
-    if _matches_any(normalized, MARKDOWN_PATTERNS):
-        markdown_argvs: tuple[tuple[str, ...], ...] = (
-            FMT_CHECK_ARGV,
-            SPX_MARKDOWN_ARGV,
-        )
-        for argv in markdown_argvs:
-            selected_argvs.add(argv)
-            reasons[argv] = MARKDOWN_REASON
-    if _matches_any(normalized, WORKFLOW_PATTERNS):
-        workflow_argvs: tuple[tuple[str, ...], ...] = (ACTIONLINT_ARGV, SHELLCHECK_ARGV)
-        for argv in workflow_argvs:
-            selected_argvs.add(argv)
-            reasons[argv] = WORKFLOW_REASON
-    if _matches_any(normalized, PYTHON_FORMAT_LINT_PATTERNS):
-        python_lint_argvs: tuple[tuple[str, ...], ...] = (
-            RUFF_FORMAT_ARGV,
-            RUFF_CHECK_ARGV,
-        )
-        for argv in python_lint_argvs:
-            selected_argvs.add(argv)
-            reasons[argv] = PYTHON_REASON
-    if _matches_any(normalized, PYTHON_TYPECHECK_PATTERNS):
-        python_typecheck_argvs: tuple[tuple[str, ...], ...] = (
-            MYPY_ARGV,
-            PYRIGHT_ARGV,
-        )
-        for argv in python_typecheck_argvs:
-            selected_argvs.add(argv)
-            reasons[argv] = PYTHON_REASON
-    if _matches_any(normalized, SKILL_PATTERNS):
-        for step in VALIDATION_STEPS:
-            if step.label in SKILL_STEP_LABELS:
-                selected_argvs.add(step.argv)
-                reasons[step.argv] = SKILL_REASON
-    if any(path in EVAL_CONFIGURATION_PATHS for path in normalized):
-        runtime_token_argv = RUNTIME_TOKEN_STEP.argv
-        selected_argvs.add(runtime_token_argv)
-        prior_reason = reasons.get(runtime_token_argv)
-        reasons[runtime_token_argv] = (
-            EVAL_CONFIGURATION_REASON
-            if prior_reason is None
-            else REASON_SEPARATOR.join((prior_reason, EVAL_CONFIGURATION_REASON))
-        )
-    if _matches_any(normalized, INSTRUCTION_BLOCK_PATTERNS):
-        selected_argvs.add(INSTRUCTION_BLOCK_ARGV)
-        reasons[INSTRUCTION_BLOCK_ARGV] = INSTRUCTION_BLOCK_REASON
-    if _matches_any(normalized, EVAL_TRIGGER_PATTERNS):
-        selected_argvs.add(EVAL_TRIGGERS_ARGV)
-        reasons[EVAL_TRIGGERS_ARGV] = EVAL_REASON
-    if _matches_any(normalized, EVAL_PROMPT_PATTERNS):
-        selected_argvs.add(EVAL_PROMPTS_ARGV)
-        reasons[EVAL_PROMPTS_ARGV] = EVAL_REASON
-    if _matches_any(normalized, EVIDENCE_LINK_PATTERNS):
-        selected_argvs.add(EVAL_LINKS_ARGV)
-        reasons[EVAL_LINKS_ARGV] = EVIDENCE_LINK_REASON
+    reasons: dict[tuple[str, ...], list[str]] = {}
+    for lane in SELECTION_LANES:
+        if lane.matches(normalized):
+            for argv in lane.argvs:
+                reasons.setdefault(argv, []).append(lane.reason)
 
     selected_steps = [
-        SelectedGateStep(step=step, reason=reasons[step.argv])
+        SelectedGateStep(step=step, reason=REASON_SEPARATOR.join(reasons[step.argv]))
         for step in VALIDATION_STEPS
-        if step.argv in selected_argvs
+        if step.argv in reasons
     ]
     deleted_path_set = set(deleted_paths)
     changed_test_paths = tuple(

@@ -45,6 +45,13 @@ PHASE_RECIPE: Final = "recipe"
 PHASE_COMPLETE: Final = "complete"
 FULL_LOG_LABEL: Final = "Full log:"
 SUMMARY_PATH_LABEL: Final = "Summary:"
+STEP_HEADER_FORMAT: Final = "━━━ {label} ━━━"
+TIMING_SUMMARY_HEADER: Final = STEP_HEADER_FORMAT.format(label="Timing Summary")
+TIMING_SUMMARY_RULE: Final = "────────────────────────"
+TIMING_TOTAL_LABEL: Final = "TOTAL"
+TIMING_FAILED_LABEL: Final = "FAILED"
+TIMING_ELAPSED_UNIT: Final = "s"
+STATUS_FIELD_SEPARATOR: Final = "  "
 FAILURE_EXCERPT_LINE_LIMIT: Final = 80
 FAILURE_EXCERPT_CHAR_LIMIT: Final = 12_000
 SUMMARY_KEY_RECIPE: Final = "recipe"
@@ -119,14 +126,14 @@ def _write_timing_summary(
     total: int | None = None,
     failed_label: str | None = None,
 ) -> None:
-    sink.write("\n━━━ Timing Summary ━━━\n")
+    sink.write(f"\n{TIMING_SUMMARY_HEADER}\n")
     for label, elapsed in timings:
-        sink.write(f"  {label:<20} {elapsed:>3}s\n")
-    sink.write("  ────────────────────────\n")
+        sink.write(f"  {label:<20} {elapsed:>3}{TIMING_ELAPSED_UNIT}\n")
+    sink.write(f"  {TIMING_SUMMARY_RULE}\n")
     if total is not None:
-        sink.write(f"  {'TOTAL':<20} {total:>3}s\n")
+        sink.write(f"  {TIMING_TOTAL_LABEL:<20} {total:>3}{TIMING_ELAPSED_UNIT}\n")
     if failed_label is not None:
-        sink.write(f"  {'FAILED':<20} {failed_label}\n")
+        sink.write(f"  {TIMING_FAILED_LABEL:<20} {failed_label}\n")
     sink.flush()
 
 
@@ -197,10 +204,22 @@ def _write_failure_details(
     elapsed: int,
     log_path: Path,
 ) -> None:
-    sink.write(f"{STEP_FAIL_STATUS}  {step.label}  {elapsed}s  exit {status}\n")
+    sink.write(
+        STATUS_FIELD_SEPARATOR.join(
+            (
+                STEP_FAIL_STATUS,
+                step.label,
+                f"{elapsed}{TIMING_ELAPSED_UNIT}",
+                f"exit {status}",
+            )
+        )
+        + "\n"
+    )
     excerpt = _read_failure_excerpt(log_path)
     if excerpt:
-        sink.write(f"━━━ {step.label} failure excerpt ━━━\n")
+        sink.write(
+            f"{STEP_HEADER_FORMAT.format(label=f'{step.label} failure excerpt')}\n"
+        )
         sink.write(f"{excerpt}\n")
     sink.write(f"{FULL_LOG_LABEL} {log_path}\n")
     sink.flush()
@@ -318,7 +337,7 @@ def _execute_recipe(
     failed_status = 0
     total_start = time.monotonic()
     step_index = 0
-    sink.write(f"━━━ Recipe {recipe.name} ━━━\n")
+    sink.write(f"{STEP_HEADER_FORMAT.format(label=f'Recipe {recipe.name}')}\n")
     sink.flush()
     try:
         for phase, steps in (
@@ -327,7 +346,7 @@ def _execute_recipe(
         ):
             for step in steps:
                 step_index += 1
-                sink.write(f"━━━ {step.label} ━━━\n")
+                sink.write(f"{STEP_HEADER_FORMAT.format(label=step.label)}\n")
                 sink.flush()
                 step_start = time.monotonic()
                 log_path = _create_log_path(step_index, step.label)
@@ -387,7 +406,16 @@ def _execute_recipe(
                         exit_code=exit_code,
                     )
                 )
-                sink.write(f"{STEP_PASS_STATUS}  {step.label}  {elapsed}s\n")
+                sink.write(
+                    STATUS_FIELD_SEPARATOR.join(
+                        (
+                            STEP_PASS_STATUS,
+                            step.label,
+                            f"{elapsed}{TIMING_ELAPSED_UNIT}",
+                        )
+                    )
+                    + "\n"
+                )
                 sink.flush()
             if failed_step is not None:
                 break

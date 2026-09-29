@@ -40,21 +40,30 @@ from outcomeeng.validation import (
     VERIFICATION_TYPE_TESTING,
     VERIFICATION_TYPE_VALIDATION,
 )
-from outcomeeng_testing.harnesses.gate import (
+from outcomeeng.validation._engine import (
+    STATUS_FIELD_SEPARATOR,
+    STEP_HEADER_FORMAT,
+    TIMING_FAILED_LABEL,
+    TIMING_SUMMARY_HEADER,
+    TIMING_TOTAL_LABEL,
+)
+from outcomeeng_testing.generators.gate import (
     FAIL_EXIT_CODE,
     FAILING_CHILD_OUTPUT_PREFIX,
     PASS_EXIT_CODE,
     PASSING_CHILD_OUTPUT,
     SPAWN_FAILURE_MESSAGE,
+    single_step_recipe,
+    three_no_op_steps,
+)
+from outcomeeng_testing.harnesses.gate import (
     check_run_observation,
     pipeline_run_observation,
     recipe_run_observation,
     signal_interrupt_observation,
-    single_step_recipe,
     spawn_failure_observation,
     summary_recipes,
     summary_steps,
-    three_no_op_steps,
 )
 
 
@@ -112,16 +121,18 @@ def test_a_passing_pipeline_prints_headers_in_order_and_removes_logs() -> None:
     )
 
     assert run.exit_code == PASS_EXIT_CODE
-    assert "━━━ Timing Summary ━━━" in run.output
-    summary = run.output[run.output.index("━━━ Timing Summary ━━━") :]
-    assert "TOTAL" in summary
+    assert TIMING_SUMMARY_HEADER in run.output
+    summary = run.output[run.output.index(TIMING_SUMMARY_HEADER) :]
+    assert TIMING_TOTAL_LABEL in summary
     assert PASSING_CHILD_OUTPUT not in run.output
     assert run.written_outputs == (PASSING_CHILD_OUTPUT,) * len(steps)
-    header_positions = [run.output.index(f"━━━ {step.label} ━━━") for step in steps]
+    header_positions = [
+        run.output.index(STEP_HEADER_FORMAT.format(label=step.label)) for step in steps
+    ]
     assert header_positions == sorted(header_positions)
     for step in steps:
         assert step.label in summary
-        assert f"{STEP_PASS_STATUS}  {step.label}" in run.output
+        assert f"{STEP_PASS_STATUS}{STATUS_FIELD_SEPARATOR}{step.label}" in run.output
     assert run.retained_logs == (None,) * len(steps)
 
 
@@ -138,15 +149,15 @@ def test_a_failing_step_stops_the_pipeline_and_retains_its_log() -> None:
         outputs=[PASSING_CHILD_OUTPUT, failing_output, PASSING_CHILD_OUTPUT],
     )
 
-    summary = run.output[run.output.index("━━━ Timing Summary ━━━") :]
+    summary = run.output[run.output.index(TIMING_SUMMARY_HEADER) :]
     assert run.exit_code == FAIL_EXIT_CODE
     assert len(run.spawn_calls) == 2
     assert steps[0].label in summary
     assert steps[1].label in summary
     assert steps[2].label not in summary
-    assert "FAILED" in summary
-    assert steps[1].label in summary[summary.index("FAILED") :]
-    assert f"{STEP_FAIL_STATUS}  {steps[1].label}" in run.output
+    assert TIMING_FAILED_LABEL in summary
+    assert steps[1].label in summary[summary.index(TIMING_FAILED_LABEL) :]
+    assert f"{STEP_FAIL_STATUS}{STATUS_FIELD_SEPARATOR}{steps[1].label}" in run.output
     assert FULL_LOG_LABEL in run.output
     assert run.log_paths[1] in run.output
     assert f"{FAILING_CHILD_OUTPUT_PREFIX} 0" not in run.output
@@ -183,11 +194,14 @@ def test_a_failing_recipe_step_records_excerpt_and_log_path() -> None:
 def test_a_spawn_failure_is_recorded_with_its_message() -> None:
     recipe = single_step_recipe(RECIPE_VALIDATION)
 
-    run = spawn_failure_observation(recipe=recipe)
+    run = spawn_failure_observation(recipe=recipe, message=SPAWN_FAILURE_MESSAGE)
 
     steps = summary_steps(run.summary)
     assert run.exit_code == SPAWN_FAILURE_EXIT_CODE
-    assert f"{STEP_FAIL_STATUS}  {recipe.preflight_steps[0].label}" in run.output
+    assert (
+        f"{STEP_FAIL_STATUS}{STATUS_FIELD_SEPARATOR}{recipe.preflight_steps[0].label}"
+        in run.output
+    )
     assert run.summary[SUMMARY_KEY_STATUS] == RUN_FAIL_STATUS
     assert run.summary[SUMMARY_KEY_PHASE] == PHASE_PREFLIGHT
     assert run.summary[SUMMARY_KEY_EXIT_CODE] == SPAWN_FAILURE_EXIT_CODE

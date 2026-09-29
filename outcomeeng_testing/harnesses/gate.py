@@ -18,6 +18,7 @@ import io
 import json
 import math
 import os
+import signal
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -29,20 +30,16 @@ from hypothesis import given, seed, settings
 
 from outcomeeng import validation as validation_pkg
 from outcomeeng.validation import (
-    CHECK_RECIPES,
-    MYPY_ARGV,
     POST_KILL_REAP_ATTEMPTS,
-    PURPOSE_CONFORMANCE,
     PREFLIGHT_STEPS,
-    PYRIGHT_ARGV,
-    RUFF_CHECK_ARGV,
     SIGNAL_GRACE_SECONDS,
     SIGNAL_POLL_INTERVAL_SECONDS,
+    SUMMARY_KEY_RECIPES,
+    SUMMARY_KEY_STEPS,
     SUMMARY_PATH_LABEL,
     TEST_STEPS,
     VALIDATION_RECIPE,
     VALIDATION_STEPS,
-    VERIFICATION_TYPE_VALIDATION,
     ProcessHandle,
     ProcessSpawner,
     Recipe,
@@ -53,22 +50,26 @@ from outcomeeng.validation import (
     terminate_process_group,
 )
 from outcomeeng.validation._git import GitCommandResult
+from outcomeeng.validation.infrastructure_index import (
+    InfrastructureIndex,
+    index_test_infrastructure,
+)
 from outcomeeng.validation.selected_gate import (
     DEFAULT_BASE_REF,
     GIT_DISCOVERY_FAILURE_EXIT_CODE,
-    GIT_DIFF_BRANCH_ARGV_PREFIX,
     GIT_DIFF_STAGED_ARGV,
     GIT_DIFF_UNSTAGED_ARGV,
     GIT_LS_UNTRACKED_ARGV,
+    branch_diff_argv,
     collect_changed_paths,
     run_selected_check as production_run_selected_check,
 )
 from outcomeeng_testing.generators.gate import (
-    SELECTED_GATE_PYTHON_SOURCE_PATH,
-    SELECTED_GATE_PYTHON_TEST_PATH,
-    SELECTED_GATE_SKILL_PATH,
-    SELECTED_GATE_WORKFLOW_PATH,
+    MODIFIED_GIT_STATUS,
+    REPOSITORY_ROOT,
+    infrastructure_module_paths,
     selected_gate_changed_paths,
+    step_lists,
 )
 from outcomeeng_testing.harnesses.changeset_scope import build_repo_without_origin
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
@@ -81,68 +82,51 @@ SELECTED_GATE_PROPERTY_REPLAY_PATH = (
     "test_selection_is_deterministic_for_path_order_and_duplicates"
 )
 SELECTED_GATE_PROPERTY_EXAMPLES = 40
-STATIC_ANALYSIS_ARGVS = (RUFF_CHECK_ARGV, MYPY_ARGV, PYRIGHT_ARGV)
-PASS_EXIT_CODE = 0
-FAIL_EXIT_CODE = 2
-PASSING_CHILD_OUTPUT = "passing validator output"
-FAILING_CHILD_OUTPUT_PREFIX = "failing validator output line"
-SPAWN_FAILURE_MESSAGE = "missing executable"
-HIGH_VOLUME_CHILD_OUTPUT = "\n".join("captured child output" for _ in range(200))
-PYTEST_TARGET_ARG = (
-    "spx/15-validation.enabler/65-gate.enabler/tests/test_gate.compliance.l1.py"
+GATE_STEP_PROPERTY_SEED = 20260706
+GATE_STEP_PROPERTY_REPLAY_PATH = (
+    "just test spx/15-validation.enabler/65-gate.enabler/tests/test_gate.property.l1.py"
 )
-SELECTED_GATE_RENAMED_TARGET_ARG = "docs/renamed-selected-gate.py"
-SELECTED_GATE_WHITESPACE_PATH = " docs/selected gate edge spaces.py "
+GATE_STEP_PROPERTY_EXAMPLES = 50
+# A killed process reports the conventional shell exit status for its signal.
+KILLED_EXIT_CODE = 128 + signal.SIGKILL
 
 
-def three_no_op_steps() -> tuple[Step, ...]:
-    """Stable three-step recipe domain for orchestrator scenario tests."""
+class GateSummaryDecodeError(ValueError):
+    """A structured summary file does not decode to the JSON shape being read."""
 
-    return (
-        Step(label="alpha", argv=("noop-alpha",)),
-        Step(label="beta", argv=("noop-beta",)),
-        Step(label="gamma", argv=("noop-gamma",)),
-    )
+    def __init__(self, location: str, expected: str) -> None:
+        self.location = location
+        self.expected = expected
+        super().__init__(f"summary {location} is not a JSON {expected}")
 
 
-def single_step_recipe(name: str) -> Recipe:
-    """Recipe with one preflight and one recipe step."""
-
-    return Recipe(
-        name=name,
-        verification_type=VERIFICATION_TYPE_VALIDATION,
-        purpose=PURPOSE_CONFORMANCE,
-        preflight_steps=(Step(label=f"{name}-preflight", argv=(f"{name}-preflight",)),),
-        steps=(Step(label=f"{name}-step", argv=(f"{name}-step",)),),
-    )
+def _json_records(value: object, location: str) -> list[dict[str, object]]:
+    if not isinstance(value, list) or not all(
+        isinstance(record, dict) for record in value
+    ):
+        raise GateSummaryDecodeError(location, "array of objects")
+    return cast("list[dict[str, object]]", value)
 
 
 def read_summary(path: Path) -> dict[str, object]:
-    """Read a validation summary JSON object."""
+    """Decode a validation summary JSON object."""
 
     data = json.loads(path.read_text(encoding="utf-8"))
-    assert isinstance(data, dict)
+    if not isinstance(data, dict):
+        raise GateSummaryDecodeError(str(path), "object")
     return cast("dict[str, object]", data)
 
 
 def summary_steps(summary: dict[str, object]) -> list[dict[str, object]]:
-    """Return typed step summaries."""
+    """Decode the step records of a summary."""
 
-    steps = summary["steps"]
-    assert isinstance(steps, list)
-    for step in steps:
-        assert isinstance(step, dict)
-    return cast("list[dict[str, object]]", steps)
+    return _json_records(summary.get(SUMMARY_KEY_STEPS), SUMMARY_KEY_STEPS)
 
 
 def summary_recipes(summary: dict[str, object]) -> list[dict[str, object]]:
-    """Return typed recipe summaries."""
+    """Decode the primitive recipe records of a wrapper summary."""
 
-    recipes = summary["recipes"]
-    assert isinstance(recipes, list)
-    for recipe in recipes:
-        assert isinstance(recipe, dict)
-    return cast("list[dict[str, object]]", recipes)
+    return _json_records(summary.get(SUMMARY_KEY_RECIPES), SUMMARY_KEY_RECIPES)
 
 
 def selected_gate_runner_for_paths(
@@ -155,9 +139,9 @@ def selected_gate_runner_for_paths(
     unstaged_path: str = "",
     unstaged_old_path: str = "",
     untracked_path: str = "",
-    branch_status: str = "M",
-    staged_status: str = "M",
-    unstaged_status: str = "M",
+    branch_status: str = MODIFIED_GIT_STATUS,
+    staged_status: str = MODIFIED_GIT_STATUS,
+    unstaged_status: str = MODIFIED_GIT_STATUS,
     branch_returncode: int = 0,
     branch_stderr: str = "",
 ) -> RecordingGitRunner:
@@ -165,7 +149,7 @@ def selected_gate_runner_for_paths(
 
     return RecordingGitRunner(
         outputs={
-            (*GIT_DIFF_BRANCH_ARGV_PREFIX, f"{base_ref}...HEAD"): (
+            branch_diff_argv(base_ref): (
                 GitCommandResult(
                     returncode=branch_returncode,
                     stdout=_selected_gate_name_status_output(
@@ -239,37 +223,57 @@ def _selected_gate_name_status_output(
     return f"{status}\t{path}\n"
 
 
-def selected_gate_branch_discovery_argv(
-    base_ref: str = DEFAULT_BASE_REF,
-) -> tuple[str, ...]:
-    """Return the branch discovery argv used first by changed-path collection."""
-
-    return (*GIT_DIFF_BRANCH_ARGV_PREFIX, f"{base_ref}...HEAD")
-
-
-def selected_gate_changed_path_domain() -> tuple[str, str, str, str]:
-    """Representative changed paths for selected local gate routing."""
-
-    return (
-        SELECTED_GATE_PYTHON_SOURCE_PATH,
-        SELECTED_GATE_WORKFLOW_PATH,
-        SELECTED_GATE_SKILL_PATH,
-        SELECTED_GATE_PYTHON_TEST_PATH,
-    )
-
-
-def selected_gate_property(
-    test_func: Callable[[list[str]], None],
+def gate_step_property(
+    test_func: Callable[[tuple[Step, ...]], None],
 ) -> Callable[[], None]:
-    """Run the selected-gate property with reproducible failure diagnostics."""
+    """Run a step-list property with reproducible failure diagnostics."""
 
-    configured = seed(SELECTED_GATE_PROPERTY_SEED)(
-        settings(max_examples=SELECTED_GATE_PROPERTY_EXAMPLES, deadline=None)(
-            given(paths=selected_gate_changed_paths())(test_func)
+    configured = seed(GATE_STEP_PROPERTY_SEED)(
+        settings(max_examples=GATE_STEP_PROPERTY_EXAMPLES, deadline=None)(
+            given(steps=step_lists())(test_func)
         )
     )
 
     def wrapper() -> None:
+        run_replayable_property(
+            configured,
+            seed_value=GATE_STEP_PROPERTY_SEED,
+            replay_path=GATE_STEP_PROPERTY_REPLAY_PATH,
+        )
+
+    return wrapper
+
+
+def repository_index() -> InfrastructureIndex:
+    """Build the static import index over this checkout."""
+
+    return index_test_infrastructure(REPOSITORY_ROOT)
+
+
+def selected_gate_property(
+    test_func: Callable[[list[str], InfrastructureIndex], None],
+) -> Callable[[], None]:
+    """Run the selected-gate property with reproducible failure diagnostics.
+
+    The checkout's import index is built once per run, outside the generated
+    cases, and handed to every case beside its generated changed paths.
+    """
+
+    def wrapper() -> None:
+        index = repository_index()
+
+        def bound(paths: list[str]) -> None:
+            test_func(paths, index)
+
+        configured = seed(SELECTED_GATE_PROPERTY_SEED)(
+            settings(max_examples=SELECTED_GATE_PROPERTY_EXAMPLES, deadline=None)(
+                given(
+                    paths=selected_gate_changed_paths(
+                        infrastructure_module_paths(index)
+                    )
+                )(bound)
+            )
+        )
         run_replayable_property(
             configured,
             seed_value=SELECTED_GATE_PROPERTY_SEED,
@@ -277,16 +281,6 @@ def selected_gate_property(
         )
 
     return wrapper
-
-
-def expected_full_check_spawn_calls() -> tuple[tuple[str, ...], ...]:
-    """Expected argv calls when selected-check escalates to the full wrapper."""
-
-    return tuple(
-        step.argv
-        for recipe in CHECK_RECIPES
-        for step in (*PREFLIGHT_STEPS, *recipe.steps)
-    )
 
 
 def validation_package_modules() -> list[Path]:
@@ -360,6 +354,7 @@ class PipelineRunObservation:
     written_outputs: tuple[str, ...]
     retained_logs: tuple[str | None, ...]
     log_paths: tuple[str, ...]
+    summary: dict[str, object] | None
 
 
 def pipeline_run_observation(
@@ -373,9 +368,10 @@ def pipeline_run_observation(
     spawner = RecordingSpawner(exit_codes=list(exit_codes), outputs=list(outputs))
     sink = io.StringIO()
     exit_code = run(spawner=spawner, sink=sink, steps=steps)
+    output = sink.getvalue()
     return PipelineRunObservation(
         exit_code=exit_code,
-        output=sink.getvalue(),
+        output=output,
         spawn_calls=tuple(spawner.spawn_calls),
         written_outputs=tuple(spawner.written_outputs),
         retained_logs=tuple(
@@ -383,6 +379,7 @@ def pipeline_run_observation(
             for path in spawner.output_paths
         ),
         log_paths=tuple(str(path) for path in spawner.output_paths),
+        summary=_reported_summary(output),
     )
 
 
@@ -411,10 +408,10 @@ def recipe_run_observation(
     return _observe_recipe_run(recipe=recipe, spawner=spawner)
 
 
-def spawn_failure_observation(*, recipe: Recipe) -> RecipeRunObservation:
-    """Run one recipe whose spawner fails before returning a handle."""
+def spawn_failure_observation(*, recipe: Recipe, message: str) -> RecipeRunObservation:
+    """Run one recipe whose spawner fails with ``message`` before returning a handle."""
 
-    spawner = SpawnFailingSpawner(message=SPAWN_FAILURE_MESSAGE)
+    spawner = SpawnFailingSpawner(message=message)
     return _observe_recipe_run(recipe=recipe, spawner=spawner)
 
 
@@ -558,7 +555,7 @@ def collected_paths_observation(
     *,
     branch_path: str = "",
     branch_old_path: str = "",
-    branch_status: str = "M",
+    branch_status: str = MODIFIED_GIT_STATUS,
     staged_path: str = "",
     unstaged_path: str = "",
     untracked_path: str = "",
@@ -609,21 +606,19 @@ class ResolvedBaseObservation:
     first_runner_call: tuple[str, ...]
 
 
-RESOLVED_BASE_REF = "origin/release"
+def resolved_base_observation(
+    *, base_ref: str, branch_path: str
+) -> ResolvedBaseObservation:
+    """Collect ``branch_path`` through a resolver that answers ``base_ref``."""
 
-
-def resolved_base_observation() -> ResolvedBaseObservation:
-    """Collect one branch path through a recording base-ref resolver."""
-
-    branch_path = SELECTED_GATE_PYTHON_SOURCE_PATH
     resolver_repos: list[Path] = []
 
     def resolve_base_ref(candidate_repo: Path) -> str:
         resolver_repos.append(candidate_repo)
-        return RESOLVED_BASE_REF
+        return base_ref
 
     runner = selected_gate_runner_for_paths(
-        base_ref=RESOLVED_BASE_REF,
+        base_ref=base_ref,
         branch_path=branch_path,
     )
     with TemporaryDirectory() as tmp:
@@ -635,7 +630,7 @@ def resolved_base_observation() -> ResolvedBaseObservation:
         )
     return ResolvedBaseObservation(
         branch_path=branch_path,
-        base_ref=RESOLVED_BASE_REF,
+        base_ref=base_ref,
         collected=collected,
         resolver_repos=tuple(resolver_repos),
         repo=repo,
@@ -669,11 +664,11 @@ def run_check_observation(
     *,
     branch_path: str = "",
     branch_old_path: str = "",
-    branch_status: str = "M",
+    branch_status: str = MODIFIED_GIT_STATUS,
     branch_returncode: int = 0,
     branch_stderr: str = "",
     staged_path: str = "",
-    staged_status: str = "M",
+    staged_status: str = MODIFIED_GIT_STATUS,
     child_output: str = "",
     create_repo_file: str | None = None,
 ) -> RunObservation:
@@ -746,15 +741,6 @@ def _reported_summary(output: str) -> dict[str, object] | None:
     return read_summary(Path(reported[-1]))
 
 
-def unrelated_validation_source_path() -> str:
-    """Return the real git adapter's repository path for selection input."""
-    from outcomeeng.validation import _git
-
-    return (
-        Path(_git.__file__).relative_to(Path(__file__).resolve().parents[2]).as_posix()
-    )
-
-
 @contextmanager
 def repository_without_origin() -> Iterator[Path]:
     """Yield a real git repository that has no origin remote."""
@@ -783,17 +769,13 @@ def production_check_observation(repo: Path) -> RunObservation:
     )
 
 
-GIT_DISCOVERY_FAILURE_STDOUT = "fatal: bad revision"
-GIT_DISCOVERY_FAILURE_STDERR = "fatal: ambiguous argument"
-
-
-def failing_discovery_runner() -> RecordingGitRunner:
-    """A git runner whose branch discovery fails with scripted diagnostics."""
+def failing_discovery_runner(*, stdout: str, stderr: str) -> RecordingGitRunner:
+    """A git runner whose branch discovery fails with ``stdout`` and ``stderr``."""
 
     return selected_gate_runner_for_paths(
-        branch_path=GIT_DISCOVERY_FAILURE_STDOUT,
+        branch_path=stdout,
         branch_returncode=GIT_DISCOVERY_FAILURE_EXIT_CODE,
-        branch_stderr=GIT_DISCOVERY_FAILURE_STDERR,
+        branch_stderr=stderr,
     )
 
 
@@ -804,7 +786,7 @@ def captured_property_failure_notes(
 
     try:
         failing_property()
-    except AssertionError as error:
+    except Exception as error:  # noqa: BLE001 - the notes of any failure are the observation
         return tuple(getattr(error, "__notes__", ()))
     return ()
 
@@ -928,8 +910,8 @@ class HangingHandle:
     poll() always returns None. wait() blocks indefinitely (tests should not
     call wait directly on this; the signal handler escalates to SIGKILL after
     the grace period). send_signal_to_group records the signal; if
-    `exit_on_kill=True`, a subsequent poll() returns 137 after SIGKILL (9)
-    is received.
+    `exit_on_kill=True`, a subsequent poll() returns the killed exit status
+    after SIGKILL is received.
     """
 
     pid: int
@@ -941,24 +923,34 @@ class HangingHandle:
     def poll(self) -> int | None:
         self.poll_calls += 1
         if self._killed:
-            return 137
+            return KILLED_EXIT_CODE
         return None
 
     def wait(self) -> int:
         if self._killed:
-            return 137
+            return KILLED_EXIT_CODE
         msg = "HangingHandle.wait would block indefinitely"
         raise RuntimeError(msg)
 
     def send_signal_to_group(self, sig: int) -> None:
         self.received_signals.append(sig)
-        if self.exit_on_kill and sig == 9:
+        if self.exit_on_kill and sig == signal.SIGKILL:
             self._killed = True
+
+
+class SleepBudgetExceeded(RuntimeError):
+    """A controlled clock received more sleep calls than its budget allows."""
+
+    def __init__(self, max_sleep_calls: int) -> None:
+        self.max_sleep_calls = max_sleep_calls
+        super().__init__(
+            f"signal shutdown exceeded its bounded sleep budget of {max_sleep_calls}"
+        )
 
 
 @dataclass
 class BoundedAdvancingClock:
-    """A clock that advances on sleep and rejects an unbounded wait."""
+    """A clock that advances on sleep and stops an unbounded wait."""
 
     max_sleep_calls: int
     current: float = 0.0
@@ -971,7 +963,7 @@ class BoundedAdvancingClock:
 
     def sleep(self, seconds: float) -> None:
         if len(self.sleep_calls) >= self.max_sleep_calls:
-            raise AssertionError("signal shutdown exceeded its bounded sleep budget")
+            raise SleepBudgetExceeded(self.max_sleep_calls)
         self.sleep_calls.append(seconds)
         self.current += seconds
 

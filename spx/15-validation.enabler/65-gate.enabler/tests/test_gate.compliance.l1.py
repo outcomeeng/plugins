@@ -13,6 +13,7 @@ from outcomeeng.validation import (
     HOOK_SAFETY_ARGV,
     MYPY_ARGV,
     POST_KILL_REAP_ATTEMPTS,
+    PYRIGHT_ARGV,
     PURPOSE_CONFORMANCE,
     PURPOSE_CORRECTNESS,
     PYTEST_ARGV,
@@ -36,11 +37,16 @@ from outcomeeng.validation import (
     VERIFICATION_TYPE_VALIDATION,
     test_recipe as build_test_recipe,
 )
-from outcomeeng_testing.harnesses.gate import (
-    HIGH_VOLUME_CHILD_OUTPUT,
+from outcomeeng.validation._spawner import (
+    _restore_child_signal_mask as restore_child_signal_mask,  # pyright: ignore[reportPrivateUsage]
+)
+from outcomeeng.validation._steps import PYTEST_STEP_LABEL
+from outcomeeng_testing.generators.gate import (
     PASS_EXIT_CODE,
-    PYTEST_TARGET_ARG,
-    STATIC_ANALYSIS_ARGVS,
+    assertion_test_paths,
+    high_volume_child_output,
+)
+from outcomeeng_testing.harnesses.gate import (
     bounded_shutdown_observation,
     call_keyword_map,
     check_run_observation,
@@ -63,13 +69,13 @@ def test_the_full_gate_carries_every_required_step() -> None:
     assert FMT_CHECK_ARGV in step_argvs
     assert RUFF_FORMAT_ARGV in step_argvs
     assert RUFF_CHECK_ARGV in step_argvs
-    assert set(STATIC_ANALYSIS_ARGVS).issubset(step_argvs)
+    assert {RUFF_CHECK_ARGV, MYPY_ARGV, PYRIGHT_ARGV} <= step_argvs
     assert "--strict" in MYPY_ARGV
     assert SPX_MARKDOWN_ARGV in step_argvs
     assert EVAL_LINKS_ARGV in step_argvs
     assert HOOK_SAFETY_ARGV in step_argvs
     assert PYTEST_ARGV not in step_argvs
-    assert TEST_STEPS == (Step(label="pytest", argv=PYTEST_ARGV),)
+    assert TEST_STEPS == (Step(label=PYTEST_STEP_LABEL, argv=PYTEST_ARGV),)
 
 
 def test_recipe_types_and_purposes_match_the_verification_taxonomy() -> None:
@@ -89,13 +95,14 @@ def test_recipe_types_and_purposes_match_the_verification_taxonomy() -> None:
     }
 
     assert build_test_recipe() == TEST_RECIPE
-    targeted = build_test_recipe((PYTEST_TARGET_ARG,))
+    (target,) = assertion_test_paths(1)
+    targeted = build_test_recipe((target,))
     assert targeted.name == TEST_RECIPE.name
     assert targeted.verification_type == TEST_RECIPE.verification_type
     assert targeted.purpose == TEST_RECIPE.purpose
     assert targeted.preflight_steps == TEST_RECIPE.preflight_steps
     assert targeted.steps == (
-        Step(label="pytest", argv=(*PYTEST_ARGV, PYTEST_TARGET_ARG)),
+        Step(label=PYTEST_STEP_LABEL, argv=(*PYTEST_ARGV, target)),
     )
 
 
@@ -113,15 +120,17 @@ def test_the_check_wrapper_reports_no_verification_type() -> None:
 
 
 def test_child_output_is_captured_never_streamed() -> None:
+    child_output = high_volume_child_output()
+
     run = recipe_run_observation(
         recipe=TEST_RECIPE,
         exit_codes=[PASS_EXIT_CODE, PASS_EXIT_CODE],
-        outputs=[HIGH_VOLUME_CHILD_OUTPUT, HIGH_VOLUME_CHILD_OUTPUT],
+        outputs=[child_output, child_output],
     )
 
     assert run.exit_code == PASS_EXIT_CODE
-    assert HIGH_VOLUME_CHILD_OUTPUT not in run.output
-    assert len(run.output.splitlines()) < len(HIGH_VOLUME_CHILD_OUTPUT.splitlines())
+    assert child_output not in run.output
+    assert len(run.output.splitlines()) < len(child_output.splitlines())
 
 
 def test_subprocess_lives_only_in_the_production_spawner() -> None:
@@ -145,7 +154,7 @@ def test_subprocess_lives_only_in_the_production_spawner() -> None:
         assert "preexec_fn" in kwargs, "Popen call must pass preexec_fn"
         preexec_fn = kwargs["preexec_fn"]
         assert isinstance(preexec_fn, ast.Name)
-        assert preexec_fn.id == "_restore_child_signal_mask"
+        assert preexec_fn.id == restore_child_signal_mask.__name__
     assert "signal.pthread_sigmask(signal.SIG_UNBLOCK" in source
     for signal_name in ("SIGTERM", "SIGINT", "SIGHUP"):
         assert f"signal.{signal_name}" in source
