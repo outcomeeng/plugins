@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f5a-7087-83a1-d6243fe349c7
+malleability: spec
+---
+
 # Spec Tree
 
 PROVIDES the Spec Tree methodology — context loading, spec authoring, testing, implementation, and commit workflows

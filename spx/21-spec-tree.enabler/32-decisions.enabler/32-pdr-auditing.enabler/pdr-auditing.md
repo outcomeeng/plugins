@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f62-706c-86af-c632b5d38e2f
+malleability: spec
+---
+
 # PDR Auditing
 
 PROVIDES an audit methodology verifying PDRs declare well-formed, observable product decisions

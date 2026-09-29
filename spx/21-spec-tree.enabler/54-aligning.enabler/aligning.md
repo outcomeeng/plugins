@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f63-709a-9097-ec02c48d7e3a
+malleability: spec
+---
+
 # Aligning
 
 PROVIDES systematic consistency checking across the spec tree — structural conformance, atemporal voice, and content placement

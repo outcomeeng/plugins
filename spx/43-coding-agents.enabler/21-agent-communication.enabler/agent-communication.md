@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f6c-761e-9e77-8eefdf42d793
+malleability: spec
+---
+
 # Agent Communication
 
 PROVIDES a source-owned message record, message vocabulary, and deterministic delivery requests for supported coding-agent environments

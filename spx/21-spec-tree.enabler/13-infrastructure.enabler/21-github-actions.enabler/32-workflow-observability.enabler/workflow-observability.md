@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f5e-76b3-b374-5b002c6b5572
+malleability: spec
+---
+
 # Workflow Observability
 
 PROVIDES Python-driven inspection of repository identity, host authentication state, workflow files, workflow runs, jobs, logs, check rollups, and artifacts — packaged as three helper modules (`gh_access.py`, `workflow_inspect.py`, `mutation_gate.py`) under the github-actions skill's `scripts/` directory

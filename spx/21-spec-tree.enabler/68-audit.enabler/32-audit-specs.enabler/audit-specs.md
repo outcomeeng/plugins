@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f66-7099-bada-7c732ce43af8
+malleability: spec
+---
+
 # Audit Specs
 
 PROVIDES an audit methodology verifying a spec node's authoring declarations and routed assertions conform to their respective forms, with each selected verification type fitting its claim — including that a claim about authored prose or documentation content never carries `[test]`

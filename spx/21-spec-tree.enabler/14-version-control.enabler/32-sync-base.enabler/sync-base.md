@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f60-7102-bb17-8d378999bc6f
+malleability: spec
+---
+
 # Sync Base
 
 PROVIDES automatic base synchronization with authorized checkpoint recovery, a deterministic Git primitive, and a completed currency result

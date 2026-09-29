@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f65-7730-9254-ec87675ece98
+malleability: spec
+---
+
 # Interview
 
 PROVIDES a domain-agnostic structured interview methodology — pre-analysis, decide-first reasoning, one-question-at-a-time coverage tracking, pushback, and structured options

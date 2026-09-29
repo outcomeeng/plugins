@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f6d-71d9-a3a7-2364c2d1219e
+malleability: spec
+---
+
 # Native Agent Recovery
 
 PROVIDES two-phase native-agent preparation and recovery through exact pre-restart identity and launch evidence, visible exact-root post-restart Prowl activation, pane rebinding, serialized exact native-session launch, exact correlation verification, and separately submitted continuation delivery

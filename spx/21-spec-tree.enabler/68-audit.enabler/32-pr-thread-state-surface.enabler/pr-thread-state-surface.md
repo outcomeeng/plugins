@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f67-715d-9403-9f5d8388dd5e
+malleability: spec
+---
+
 # Pull-Request Verification Run State Surface
 
 PROVIDES pull-request audit run state through the SPX verification-run persistence mechanism, with individual run projections preserving selector fields for later run-set restoration

@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f5f-742b-b02e-ad5252aaf1c4
+malleability: spec
+---
+
 # Version Control
 
 PROVIDES the git version-control primitives — changeset derivation (branch identity, addressing slug, base-ref resolution, merge-base diff scope) and automatic base synchronization (rebasing a branch behind its fetched base back onto that base)

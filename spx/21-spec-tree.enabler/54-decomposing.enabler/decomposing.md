@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f64-73f1-8795-b55a3cecafd6
+malleability: spec
+---
+
 # Decomposing
 
 PROVIDES structured composition analysis from a target address, durable spec content, and node-local coordination notes

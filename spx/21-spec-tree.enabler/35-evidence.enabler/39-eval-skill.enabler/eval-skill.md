@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f62-706c-86af-c634f0298f6f
+malleability: spec
+---
+
 # Eval Skill
 
 PROVIDES generic structured-eval routing, product command binding, case-result freshness, and deterministic completion across producer-specific eval workflows

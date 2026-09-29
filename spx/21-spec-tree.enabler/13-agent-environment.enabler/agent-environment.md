@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f5b-7111-b282-43243ce96573
+malleability: spec
+---
+
 # Agent Environment
 
 PROVIDES a stable per-agent session identity and a per-runtime session directory keyed on it

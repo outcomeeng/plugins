@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f5c-71b2-a30a-3a541ed7507d
+malleability: spec
+---
+
 # Infrastructure
 
 PROVIDES the host-platform bridging surfaces — repository hosting authentication state and external workflow observability — packaged as structured agent-callable APIs

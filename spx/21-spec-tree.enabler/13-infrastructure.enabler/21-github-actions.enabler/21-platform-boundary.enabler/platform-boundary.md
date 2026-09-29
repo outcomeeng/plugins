@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f5d-74d8-8630-9dd9c617cce1
+malleability: spec
+---
+
 # Platform Boundary
 
 PROVIDES the fit/rejection policy for choosing GitHub Actions over local hooks, repository scripts, scheduled services, or alternative CI platforms

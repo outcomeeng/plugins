@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f63-709a-9097-ebffc7dad16b
+malleability: spec
+---
+
 # Verify Skill
 
 PROVIDES verification-type selection and evidence-work orchestration from one assertion or canonical spec-tree scope

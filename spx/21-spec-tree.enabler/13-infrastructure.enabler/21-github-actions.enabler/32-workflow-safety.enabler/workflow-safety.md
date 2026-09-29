@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f5e-76b3-b374-5b012c648ba1
+malleability: spec
+---
+
 # Workflow Safety
 
 PROVIDES the security and mutation policy for any workflow running on GitHub Actions: permissions, event trust, OIDC, secrets, third-party action pinning, cache boundaries, runner trust, concurrency controls, and run-control gates

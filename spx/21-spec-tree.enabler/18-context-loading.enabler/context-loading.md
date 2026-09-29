@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f61-73ed-9937-44768f6d2055
+malleability: spec
+---
+
 # Context Loading
 
 PROVIDES deterministic context loading that walks the tree from product root to target, collecting all ancestor specs, lower-index sibling specs, ADRs/PDRs, cited methodology-governance decisions, coordination notes, guides, and local overlays

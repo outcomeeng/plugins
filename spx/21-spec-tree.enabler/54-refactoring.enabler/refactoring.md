@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f65-7730-9254-ec88ba8d41af
+malleability: spec
+---
+
 # Refactoring
 
 PROVIDES safe tree restructuring operations that apply composition decisions from `/decompose`

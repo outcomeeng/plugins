@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f65-7730-9254-ec8aa9df296f
+malleability: spec
+---
+
 # Plan Slice
 
 PROVIDES selection of the next executable observable slice from an implementation plan — a coherent set of changesets, spanning one or more merges, that delivers demonstrable business and user value

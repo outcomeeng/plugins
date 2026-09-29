@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f60-7102-bb17-8d38194fe02c
+malleability: spec
+---
+
 # Verification
 
 PROVIDES the run-journal architecture shared by the agentic verification types — review and audit — under which their skills and thin wrapper agents record changeset-scoped runs

@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f63-709a-9097-ec016db33218
+malleability: spec
+---
+
 # Instruction Block Harness
 
 PROVIDES reusable root-instruction-file topology materialization backed by inert whole-document payload fixtures

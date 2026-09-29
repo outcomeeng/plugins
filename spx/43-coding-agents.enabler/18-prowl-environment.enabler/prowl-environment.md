@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f6c-761e-9e77-8eee635b4b7b
+malleability: spec
+---
+
 # Prowl Environment
 
 PROVIDES a source-owned, versioned abstraction over the complete public Prowl command surface and correlated delegation handbacks

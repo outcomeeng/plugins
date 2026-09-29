@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f61-73ed-9937-447739c39701
+malleability: spec
+---
+
 # Worktree Occupancy
 
 PROVIDES the `SessionStart` hook's and the Change Lifecycle skills' coordination of bare-repository pool worktree occupancy through the `spx worktree` CLI

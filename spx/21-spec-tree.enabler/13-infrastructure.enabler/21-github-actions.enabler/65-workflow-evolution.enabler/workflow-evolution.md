@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f5f-742b-b02e-ad51a46ab329
+malleability: spec
+---
+
 # Workflow Evolution
 
 PROVIDES maintenance and rearchitecture decisions for existing automation, grounded in lower-index evidence of drift, fragility, or bad structure

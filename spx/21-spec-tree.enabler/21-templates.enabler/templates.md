@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f61-73ed-9937-44782e89f16e
+malleability: spec
+---
+
 # Templates
 
 PROVIDES the artifact type templates — product spec, ADR, PDR, the five output-kind specs, the variant spec, the outcome record, and the probe protocol — that define what each spec-tree artifact must contain

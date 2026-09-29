@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f65-7730-9254-ec8b09b3a9cd
+malleability: spec
+---
+
 # Node Flow
 
 PROVIDES the per-node 8-phase TDD flow — architect, test, code, and the three audit gates — driven by spec assertions and run for each node in a selected slice's work queue
