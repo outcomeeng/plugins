@@ -77,9 +77,14 @@ A claim held by another holder blocks takeover. Terminal Lifecycle blocks ordina
 
 1. Stabilize and read back the complete local candidate. Inventory all six front-matter keys first, then all four ordered top-level body sections. Resolve contradictions and remove template guidance.
 2. Dispatch `spec-tree_change-auditor` once through the native subagent capability with only the normalized repository-relative candidate path. Start without authoring history or a suggested verdict.
-3. Preserve the candidate unchanged while the audit runs. Collect the same invocation until it returns its SPX run token and rendered projection.
-4. Require `terminalStatus: approved`, zero findings, complete common-rule and declared-DoR coverage, and retained input equal to the unchanged candidate. An outside-contract result, failed launch, unusable result, rejected verdict, or blocked diagnostic withholds publication.
-5. For a completed rejection, sweep the complete candidate for the cited defect class, batch repairs, read affected sections together, and dispatch a new audit only after the repaired candidate stabilizes. Ask the operator when repair reopens judgment. Stop after three consecutive completed non-approvals at this gate and report the outstanding class.
+3. Preserve the candidate unchanged while the audit runs. Collect the same invocation until it returns one result: the `finish` result object, `OUTSIDE_CONTRACT`, or `BLOCKED`.
+4. Judge a `finish` result from its own fields. Approval requires `run.terminalStatus: approved`, `run.sealed: true`, `run.findingCount: 0`, an empty `findings` array, and a `renderCommand` whose `--scope` equals the dispatched candidate path and whose `--run` equals `runToken`. `run.terminalStatus: rejected` is a completed rejection whose `findings` payloads are the repair input and needs no projection. An `OUTSIDE_CONTRACT` result, `BLOCKED` diagnostic, failed launch, or result missing any of these fields withholds publication.
+5. Before accepting an approval, establish coverage and retained-input equality from the sealed run. Run each command below once from the repository root and read its stdout directly; NEVER redirect it to a file.
+   - Run `renderCommand` exactly as the result names it. Require every run-level field of the rendered projection to equal the result's `run`, and require `auditScopeUnits` to hold exactly one root unit with no `parentUnitId` whose `subject` is the candidate path, plus one child naming that root for each common rule and each declared-Maturity Definition of Ready criterion that `spec-tree:change-standards` loads, each `audited` or `not-applicable`.
+   - Run `spx verification run input` with the `--verification-type`, `--scope-type`, `--scope`, and `--run` values `renderCommand` carries. Require its `content` to equal the unchanged candidate byte for byte; the rendered projection carries no retained input.
+
+   A failed command or any mismatch withholds publication.
+6. For a completed rejection, sweep the complete candidate for the cited defect class, batch repairs, read affected sections together, and dispatch a new audit only after the repaired candidate stabilizes. Ask the operator when repair reopens judgment. Stop after three consecutive completed non-approvals at this gate and report the outstanding class.
 
 Audit results remain in SPX and the conversation. NEVER write audit bookkeeping into the Change body, comments, or project fields.
 
