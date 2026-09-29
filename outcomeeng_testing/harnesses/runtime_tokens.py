@@ -10,9 +10,10 @@ from tempfile import TemporaryDirectory
 
 from outcomeeng.distribution.build import RUNTIME_TOKEN_REGISTRY, RuntimeTokenKind
 from outcomeeng.distribution.contracts import SKILL_FILENAME, SOURCE_ROOT_NAME
+from outcomeeng.validation._git import run_git_command
 from outcomeeng.validation._steps import (
     RUNTIME_TOKEN_COMMAND_ARGV,
-    RUNTIME_TOKEN_STEP,
+    runtime_token_step,
 )
 from outcomeeng.validation.profile_configuration import CONFIGURATION_ONLY_OPTION
 from outcomeeng.validation.runtime_tokens import (
@@ -91,7 +92,8 @@ def authored_tree_enforcement() -> AuthoredTreeEnforcement:
     """Return the authored-tree enforcement observations, undecided.
 
     The gate files are the arguments the gate's runtime-token step passes
-    before its configuration-only marker, read from the step itself.
+    before its configuration-only marker, read from the step as the gate
+    builds it at the moment the inventory is taken.
     """
     repo_root = Path.cwd().resolve()
     source_root = repo_root / SOURCE_ROOT_NAME
@@ -103,7 +105,7 @@ def authored_tree_enforcement() -> AuthoredTreeEnforcement:
         for path in root.rglob("*")
         if path.is_file()
     }
-    argv = RUNTIME_TOKEN_STEP.argv
+    argv = runtime_token_step().argv
     full_scan_arguments = argv[
         len(RUNTIME_TOKEN_COMMAND_ARGV) : argv.index(CONFIGURATION_ONLY_OPTION)
     ]
@@ -119,4 +121,29 @@ def authored_tree_enforcement() -> AuthoredTreeEnforcement:
             for path in gate_files
             if path.relative_to(repo_root).as_posix() in RUNTIME_TOKEN_IGNORE
         ),
+    )
+
+
+# Git's listing of the tracked files under one pathspec, NUL-separated so a
+# path carrying whitespace or a newline stays one entry.
+_TRACKED_FILES_ARGV = ("git", "ls-files", "-z", "--")
+
+
+class TrackedFilesUnavailable(RuntimeError):
+    """Git could not list the checkout's tracked files."""
+
+
+def tracked_source_files() -> frozenset[Path]:
+    """Return every tracked file under the checkout's source root, resolved.
+
+    The tracked set is fixed for the whole session, so it bounds from below a
+    file list captured at import time even while the session writes untracked
+    files, such as bytecode caches, beneath the same root.
+    """
+    repo_root = Path.cwd().resolve()
+    result = run_git_command((*_TRACKED_FILES_ARGV, SOURCE_ROOT_NAME), repo_root)
+    if result.returncode != 0:
+        raise TrackedFilesUnavailable(result.stderr or result.stdout)
+    return frozenset(
+        (repo_root / entry).resolve() for entry in result.stdout.split("\0") if entry
     )

@@ -35,7 +35,10 @@ from outcomeeng_testing.harnesses.profile_validation import (
     write_eval_configuration_overrides,
     write_guarded_repository,
 )
-from outcomeeng_testing.harnesses.runtime_tokens import observe_source
+from outcomeeng_testing.harnesses.runtime_tokens import (
+    observe_source,
+    tracked_source_files,
+)
 
 
 def test_overrides_are_rejected_in_frontmatter_and_ignored_conditionals(
@@ -164,7 +167,26 @@ def test_gate_step_reports_source_and_eval_findings_through_its_arguments(
 
 
 def test_gate_runs_the_guard_step_over_the_repository_source_and_spec_roots() -> None:
+    built = runtime_token_step(Path(SOURCE_ROOT_NAME), Path(EVALS_ROOT))
+    gate_boundary = RUNTIME_TOKEN_STEP.argv.index(CONFIGURATION_ONLY_OPTION)
+    built_boundary = built.argv.index(CONFIGURATION_ONLY_OPTION)
+    gate_full_scan = {
+        Path(argument).resolve()
+        for argument in RUNTIME_TOKEN_STEP.argv[
+            len(RUNTIME_TOKEN_COMMAND_ARGV) : gate_boundary
+        ]
+    }
+    built_full_scan = {
+        Path(argument).resolve()
+        for argument in built.argv[len(RUNTIME_TOKEN_COMMAND_ARGV) : built_boundary]
+    }
+
     assert RUNTIME_TOKEN_STEP in VALIDATION_STEPS
-    assert RUNTIME_TOKEN_STEP == runtime_token_step(
-        Path(SOURCE_ROOT_NAME), Path(EVALS_ROOT)
+    assert RUNTIME_TOKEN_STEP.label == built.label
+    assert (
+        RUNTIME_TOKEN_STEP.argv[: len(RUNTIME_TOKEN_COMMAND_ARGV)]
+        == built.argv[: len(RUNTIME_TOKEN_COMMAND_ARGV)]
     )
+    assert RUNTIME_TOKEN_STEP.argv[gate_boundary:] == built.argv[built_boundary:]
+    assert tracked_source_files() <= gate_full_scan
+    assert gate_full_scan <= built_full_scan

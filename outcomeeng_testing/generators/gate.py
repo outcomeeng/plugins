@@ -25,6 +25,7 @@ from outcomeeng.validation import (
 from outcomeeng.validation._steps import EVALS_ROOT
 from outcomeeng.validation.infrastructure_index import (
     EXECUTED_TEST_PREFIX,
+    PYTHON_SUFFIX,
     SPEC_TREE_ROOT,
     InfrastructureIndex,
 )
@@ -338,7 +339,7 @@ def infrastructure_module_paths(index: InfrastructureIndex) -> tuple[str, ...]:
         tuple(
             sorted(
                 path.relative_to(REPOSITORY_ROOT).as_posix()
-                for path in (REPOSITORY_ROOT / index.package).rglob("*.py")
+                for path in (REPOSITORY_ROOT / index.package).rglob(f"*{PYTHON_SUFFIX}")
                 if index.module_for_path(path.relative_to(REPOSITORY_ROOT).as_posix())
                 in index.modules
             )

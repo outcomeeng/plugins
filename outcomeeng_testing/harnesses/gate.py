@@ -868,7 +868,9 @@ def repository_without_origin() -> Iterator[Path]:
     """Yield a real git repository that has no origin remote."""
 
     with TemporaryDirectory() as tmp:
-        repo = Path(tmp)
+        # The canonical path, which every process working inside the repository
+        # reports as its working directory.
+        repo = Path(tmp).resolve()
         build_repo_without_origin(repo)
         yield repo
 
