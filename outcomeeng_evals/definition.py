@@ -41,18 +41,18 @@ RUNS_DIRNAME = "runs"
 OWNED_PATH_RECURSIVE_SUFFIX = "/**"
 OWNED_PATH_ALPHABET = re.compile(r"[A-Za-z0-9._/-]+")
 
-_REQUIRED_TITLE = "title"
-_REQUIRED_CASES = "cases"
-_REQUIRED_PROMPT = "prompt"
-_OPTIONAL_THRESHOLD = "threshold"
-_OPTIONAL_TRIALS = "trials"
-_OPTIONAL_PLUGIN_DIR = "plugin_dir"
+TITLE_FIELD: Final = "title"
+CASES_FIELD: Final = "cases"
+PROMPT_FIELD: Final = "prompt"
+THRESHOLD_FIELD: Final = "threshold"
+TRIALS_FIELD: Final = "trials"
+PLUGIN_DIR_FIELD: Final = "plugin_dir"
 PROFILE_FIELD: Final = "profile"
 # An eval selects a profile; a definition naming a model is rejected.
 MODEL_FIELD: Final = "model"
-_OPTIONAL_OWNED_PATHS = "owned_paths"
-_OPTIONAL_SMOKE_CASES = "smoke_cases"
-_OPTIONAL_CI_POLICY = "ci_policy"
+OWNED_PATHS_FIELD: Final = "owned_paths"
+SMOKE_CASES_FIELD: Final = "smoke_cases"
+CI_POLICY_FIELD: Final = "ci_policy"
 
 
 class CiPolicy(StrEnum):
@@ -86,9 +86,9 @@ def load_definition(toml_path: Path) -> EvalDefinition:
     target files raise ``ValueError``.
     """
     raw = _load_toml(toml_path)
-    title = _required_str(raw, _REQUIRED_TITLE)
-    cases_rel = _required_str(raw, _REQUIRED_CASES)
-    prompt_rel = _required_str(raw, _REQUIRED_PROMPT)
+    title = _required_str(raw, TITLE_FIELD)
+    cases_rel = _required_str(raw, CASES_FIELD)
+    prompt_rel = _required_str(raw, PROMPT_FIELD)
 
     eval_dir = toml_path.parent
     cases_path = (eval_dir / cases_rel).resolve()
@@ -103,24 +103,24 @@ def load_definition(toml_path: Path) -> EvalDefinition:
 
     threshold = _optional_float(
         raw,
-        _OPTIONAL_THRESHOLD,
+        THRESHOLD_FIELD,
         DEFAULT_SUITE_THRESHOLD,
         min_value=0.0,
         max_value=1.0,
     )
     trials = _optional_int(
         raw,
-        _OPTIONAL_TRIALS,
+        TRIALS_FIELD,
         DEFAULT_TRIALS_PER_CASE,
         min_value=1,
         max_value=MAX_TRIALS_PER_CASE,
     )
-    plugin_dir = _optional_path(raw, _OPTIONAL_PLUGIN_DIR)
+    plugin_dir = _optional_path(raw, PLUGIN_DIR_FIELD)
     _reject_model(raw, toml_path)
     profile = _optional_profile(raw, PROFILE_FIELD)
-    owned_paths = _optional_owned_paths(raw, _OPTIONAL_OWNED_PATHS)
-    smoke_case_ids = _optional_str_tuple(raw, _OPTIONAL_SMOKE_CASES)
-    ci_policy = _optional_ci_policy(raw, _OPTIONAL_CI_POLICY)
+    owned_paths = _optional_owned_paths(raw, OWNED_PATHS_FIELD)
+    smoke_case_ids = _optional_str_tuple(raw, SMOKE_CASES_FIELD)
+    ci_policy = _optional_ci_policy(raw, CI_POLICY_FIELD)
 
     return EvalDefinition(
         title=title,

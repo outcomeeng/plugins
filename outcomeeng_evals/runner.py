@@ -58,6 +58,19 @@ EFFORT_FLAG = "--effort"
 PLUGIN_DIR_FLAG = "--plugin-dir"
 MAX_BUDGET_FLAG = "--max-budget-usd"
 
+# Keys of the ``claude --output-format json`` envelope the runner reads.
+ENVELOPE_RESULT_KEY = "result"
+ENVELOPE_TEXT_KEYS = (ENVELOPE_RESULT_KEY, "response", "content")
+ENVELOPE_USAGE_KEY = "usage"
+ENVELOPE_DURATION_MS_KEY = "duration_ms"
+ENVELOPE_TOTAL_COST_USD_KEY = "total_cost_usd"
+ENVELOPE_NUM_TURNS_KEY = "num_turns"
+ENVELOPE_STOP_REASON_KEY = "stop_reason"
+USAGE_INPUT_TOKENS_KEY = "input_tokens"
+USAGE_OUTPUT_TOKENS_KEY = "output_tokens"
+USAGE_CACHE_READ_INPUT_TOKENS_KEY = "cache_read_input_tokens"
+USAGE_CACHE_CREATION_INPUT_TOKENS_KEY = "cache_creation_input_tokens"
+
 
 @dataclass(frozen=True)
 class RunMetadata:
@@ -240,7 +253,7 @@ def _assistant_text(envelope: object) -> str:
         raise ValueError(
             f"expected JSON object envelope, got {type(envelope).__name__}"
         )
-    for key in ("result", "response", "content"):
+    for key in ENVELOPE_TEXT_KEYS:
         value = envelope.get(key)
         if isinstance(value, str):
             return value
@@ -252,19 +265,21 @@ def _assistant_text(envelope: object) -> str:
 def _metadata_from_envelope(envelope: dict[str, object]) -> RunMetadata:
     """Pull optional cost and timing fields out of a Claude JSON envelope."""
 
-    raw_usage = envelope.get("usage")
+    raw_usage = envelope.get(ENVELOPE_USAGE_KEY)
     usage: dict[str, object] = raw_usage if isinstance(raw_usage, dict) else {}
     return RunMetadata(
-        duration_ms=_coerce_float(envelope.get("duration_ms")),
-        total_cost_usd=_coerce_float(envelope.get("total_cost_usd")),
-        input_tokens=_coerce_int(usage.get("input_tokens")),
-        output_tokens=_coerce_int(usage.get("output_tokens")),
-        cache_read_input_tokens=_coerce_int(usage.get("cache_read_input_tokens")),
-        cache_creation_input_tokens=_coerce_int(
-            usage.get("cache_creation_input_tokens")
+        duration_ms=_coerce_float(envelope.get(ENVELOPE_DURATION_MS_KEY)),
+        total_cost_usd=_coerce_float(envelope.get(ENVELOPE_TOTAL_COST_USD_KEY)),
+        input_tokens=_coerce_int(usage.get(USAGE_INPUT_TOKENS_KEY)),
+        output_tokens=_coerce_int(usage.get(USAGE_OUTPUT_TOKENS_KEY)),
+        cache_read_input_tokens=_coerce_int(
+            usage.get(USAGE_CACHE_READ_INPUT_TOKENS_KEY)
         ),
-        num_turns=_coerce_int(envelope.get("num_turns")),
-        stop_reason=_coerce_str(envelope.get("stop_reason")),
+        cache_creation_input_tokens=_coerce_int(
+            usage.get(USAGE_CACHE_CREATION_INPUT_TOKENS_KEY)
+        ),
+        num_turns=_coerce_int(envelope.get(ENVELOPE_NUM_TURNS_KEY)),
+        stop_reason=_coerce_str(envelope.get(ENVELOPE_STOP_REASON_KEY)),
     )
 
 
