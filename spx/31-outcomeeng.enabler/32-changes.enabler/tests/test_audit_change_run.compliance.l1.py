@@ -4,31 +4,36 @@ Every request passes to the shipped runner on stdin and every result returns on
 stdout; the SPX run journal is the only store the audit leaves behind. The
 violating inputs are the conditions that made auditors write working files: a
 rendered projection far larger than a result, two audits started at once from
-one worktree, and a failure part-way through a run.
+one worktree, and a failure part-way through a run — a candidate that changes,
+a payload SPX rejects, a request the runner refuses, and a candidate it cannot
+take.
 
-Each invocation is observed for every file the runner process writes wherever
-the path lies — a fixed temporary path, the home directory, or the SPX store
-included — and for every process it starts, alongside snapshots of the
-repository, the SPX store, and the runner's temporary and home directories.
+Each subprocess invocation is observed for every file the runner process
+writes wherever the path lies — a fixed temporary path, the home directory, or
+the SPX store included — and for every process it starts, alongside snapshots
+of the repository, the SPX store, and the runner's temporary and home
+directories. Generated requests enter the runner's entry point in the test
+process under the same audit-hook observation.
 """
 
 from __future__ import annotations
 
 import json
-from collections.abc import Callable
-from dataclasses import dataclass
-from pathlib import PurePosixPath
+from collections.abc import Mapping
 
 import pytest
 
 from outcomeeng_testing.harnesses.audit_change_run import (
     CAPTURED_CHANGE_RECORD,
     CHANGE_TEMPLATE,
-    AuditPayloads,
     AuditWorkspace,
+    CandidateCondition,
+    EntryPointCall,
     RunnerCall,
     audit_payloads,
     audit_workspace,
+    exercise_malformed_request_objects,
+    exercise_non_object_request_texts,
     json_strings,
     load_runner,
     run_in_parallel,
@@ -273,38 +278,6 @@ def test_a_candidate_edited_during_the_run_blocks_reconciliation_without_a_file(
         assert changes.in_runner_home_directory == ()
 
 
-def test_a_retained_input_that_differs_from_the_candidate_read_blocks_without_a_file() -> (
-    None
-):
-    # /test Stage 5 exception 3 (time and concurrency): the harness times an
-    # edit between the runner's read and SPX's retention of the candidate.
-    with audit_workspace() as workspace:
-        relative = workspace.place(CAPTURED_CHANGE_RECORD)
-        read = workspace.invoke(
-            {Field.OPERATION: Operation.READ_CANDIDATE, Field.PATH: relative}
-        )
-        before = workspace.snapshot()
-
-        started = workspace.invoke_racing_start(
-            {
-                Field.OPERATION: Operation.START,
-                Field.PATH: relative,
-                Field.CANDIDATE_SHA256: read.result[Result.SHA256],
-            }
-        )
-        changes = workspace.changes_since(before)
-
-        assert started.exit_code == ExitCode.BLOCKED
-        assert started.result[Result.REASON] == Reason.RETAINED_INPUT_MISMATCH
-        assert started.result[Result.RUN_TOKEN] != runner.NOT_STARTED
-        assert changes.in_spx_store != ()
-        assert started.runner_writes == ()
-        assert _started_executables([started]) <= PERMITTED_EXECUTABLES
-        assert changes.in_repository_outside_store == (relative,)
-        assert changes.in_runner_temporary_directory == ()
-        assert changes.in_runner_home_directory == ()
-
-
 def test_a_payload_spx_rejects_blocks_with_its_command_diagnostic_and_no_file() -> None:
     with audit_workspace() as workspace:
         relative = workspace.place(CAPTURED_CHANGE_RECORD)
@@ -346,152 +319,94 @@ def test_a_payload_spx_rejects_blocks_with_its_command_diagnostic_and_no_file() 
         assert changes.in_runner_home_directory == ()
 
 
-@dataclass(frozen=True)
-class _OpenRun:
-    """A started run over the captured record, and payloads a request can carry."""
+def test_a_generated_refused_request_object_blocks_on_stdout_without_a_file() -> None:
+    def assert_blocked_without_a_file(
+        request: Mapping[str, object], call: EntryPointCall
+    ) -> None:
+        try:
+            accepted = runner.validate_request(request)
+        except runner.Blocked:
+            accepted = None
+        assert accepted is None
+        # The observation covers the runner's own process; a started process
+        # would write outside it.
+        assert call.spawned_commands == ()
+        assert call.runner_writes == ()
+        assert len(call.stdout_lines) == 1
+        assert json.loads(call.stdout_lines[0])[Result.STATUS] == Status.BLOCKED
 
-    workspace: AuditWorkspace
-    relative: str
-    run_token: str
-    payloads: AuditPayloads
-
-
-def _read_request(path: str) -> str:
-    return json.dumps({Field.OPERATION: Operation.READ_CANDIDATE, Field.PATH: path})
-
-
-def _finding_request(run: _OpenRun, ordinal: object, rule: object) -> str:
-    finding = run.payloads.findings[0]
-    return json.dumps(
-        {
-            Field.OPERATION: Operation.ADD_FINDING,
-            Field.PATH: run.relative,
-            Field.RUN_TOKEN: run.run_token,
-            Field.ORDINAL: ordinal,
-            Field.PAYLOAD: {**finding, SpxField.RULE: rule},
-        }
-    )
+    exercise_malformed_request_objects(assert_blocked_without_a_file)
 
 
-# The refusals the runner contract in the audit-change SKILL.md declares, one
-# request per declared refusal, each paired with the reason the contract names.
-_DECLARED_REFUSALS: dict[str, tuple[Callable[[_OpenRun], str], object]] = {
-    "truncated-json": (
-        lambda run: _read_request(run.relative)[:-1],
-        Reason.INVALID_REQUEST,
-    ),
-    "json-array": (
-        lambda run: f"[{_read_request(run.relative)}]",
-        Reason.INVALID_REQUEST,
-    ),
-    "unlisted-operation": (
-        lambda run: json.dumps(
-            {
-                Field.OPERATION: Operation.READ_CANDIDATE.upper(),
-                Field.PATH: run.relative,
-            }
-        ),
-        Reason.INVALID_REQUEST,
-    ),
-    "missing-field": (
-        lambda run: json.dumps({Field.OPERATION: Operation.READ_CANDIDATE}),
-        Reason.INVALID_REQUEST,
-    ),
-    "extra-field": (
-        lambda run: json.dumps(
-            {
-                Field.OPERATION: Operation.READ_CANDIDATE,
-                Field.PATH: run.relative,
-                Field.RUN_TOKEN: run.run_token,
-            }
-        ),
-        Reason.INVALID_REQUEST,
-    ),
-    "ordinal-above-maximum": (
-        lambda run: _finding_request(
-            run,
-            runner.MAX_FINDING_ORDINAL + 1,
-            run.payloads.findings[0][SpxField.RULE],
-        ),
-        Reason.INVALID_REQUEST,
-    ),
-    "rule-not-a-rule-id": (
-        lambda run: _finding_request(
-            run, 1, str(run.payloads.findings[0][SpxField.RULE]).upper()
-        ),
-        Reason.INVALID_REQUEST,
-    ),
-    "payload-without-unit-id": (
-        lambda run: json.dumps(
-            {
-                Field.OPERATION: Operation.ADD_SCOPE,
-                Field.PATH: run.relative,
-                Field.RUN_TOKEN: run.run_token,
-                Field.PAYLOAD: {
-                    key: value
-                    for key, value in run.payloads.scopes[0].items()
-                    if key != SpxField.UNIT_ID
-                },
-            }
-        ),
-        Reason.INVALID_REQUEST,
-    ),
-    "unlisted-terminal-status": (
-        lambda run: json.dumps(
-            {
-                Field.OPERATION: Operation.FINISH,
-                Field.PATH: run.relative,
-                Field.RUN_TOKEN: run.run_token,
-                Field.TERMINAL_STATUS: Terminal.APPROVED.upper(),
-            }
-        ),
-        Reason.INVALID_REQUEST,
-    ),
-    "absolute-path": (
-        lambda run: _read_request(str(run.workspace.root / run.relative)),
-        Reason.PATH_REJECTED,
-    ),
-    "parent-traversing-path": (
-        lambda run: _read_request(
-            str(PurePosixPath(run.relative).parent / ".." / run.relative)
-        ),
-        Reason.PATH_REJECTED,
-    ),
-    "unnormalized-path": (
-        lambda run: _read_request(f"./{run.relative}"),
-        Reason.PATH_REJECTED,
-    ),
-    "candidate-linked-outside-the-repository": (
-        lambda run: _read_request(run.workspace.place_link_outside(CHANGE_TEMPLATE)),
-        Reason.PATH_REJECTED,
-    ),
-    "windows-1252-candidate": (
-        lambda run: _read_request(
-            run.workspace.place_windows_1252(CAPTURED_CHANGE_RECORD)
-        ),
-        Reason.PATH_REJECTED,
-    ),
-    "absent-candidate": (
-        lambda run: _read_request(run.workspace.path_for(CHANGE_TEMPLATE)),
-        Reason.CANDIDATE_MISSING,
-    ),
-}
+def test_a_generated_request_text_that_is_not_one_json_object_blocks_without_a_file() -> (
+    None
+):
+    def assert_blocked_without_a_file(call: EntryPointCall) -> None:
+        assert call.spawned_commands == ()
+        assert call.runner_writes == ()
+        assert len(call.stdout_lines) == 1
+        assert json.loads(call.stdout_lines[0])[Result.STATUS] == Status.BLOCKED
+
+    exercise_non_object_request_texts(assert_blocked_without_a_file)
+
+
+def test_a_request_that_is_not_utf8_text_blocks_on_stdout_without_a_file() -> None:
+    with audit_workspace() as workspace:
+        relative = workspace.place(CAPTURED_CHANGE_RECORD)
+        before = workspace.snapshot()
+
+        blocked = workspace.invoke_utf16(
+            {Field.OPERATION: Operation.READ_CANDIDATE, Field.PATH: relative}
+        )
+        changes = workspace.changes_since(before)
+
+        assert len(blocked.stdout_lines) == 1
+        assert blocked.result[Result.STATUS] == Status.BLOCKED
+        assert blocked.runner_writes == ()
+        assert _started_executables([blocked]) <= PERMITTED_EXECUTABLES
+        assert changes.in_repository_outside_store == ()
+        assert changes.in_runner_temporary_directory == ()
+        assert changes.in_runner_home_directory == ()
+
+
+@pytest.mark.parametrize("condition", tuple(CandidateCondition))
+def test_a_candidate_the_runner_cannot_take_blocks_on_stdout_without_a_file(
+    condition: CandidateCondition,
+) -> None:
+    with audit_workspace() as workspace:
+        relative = workspace.place_in_condition(condition, CAPTURED_CHANGE_RECORD)
+        before = workspace.snapshot()
+
+        blocked = workspace.invoke(
+            {Field.OPERATION: Operation.READ_CANDIDATE, Field.PATH: relative}
+        )
+        changes = workspace.changes_since(before)
+
+        assert len(blocked.stdout_lines) == 1
+        assert blocked.result[Result.STATUS] == Status.BLOCKED
+        assert blocked.runner_writes == ()
+        assert _started_executables([blocked]) <= PERMITTED_EXECUTABLES
+        assert changes.in_repository_outside_store == ()
+        assert changes.in_runner_temporary_directory == ()
+        assert changes.in_runner_home_directory == ()
 
 
 @pytest.mark.parametrize(
-    ("build_request", "reason"),
-    list(_DECLARED_REFUSALS.values()),
-    ids=list(_DECLARED_REFUSALS),
+    "operation",
+    tuple(
+        operation
+        for operation in Operation
+        if Field.RUN_TOKEN in runner.REQUIRED_FIELDS[operation]
+    ),
 )
-def test_an_invalid_request_part_way_through_a_run_blocks_on_stdout_without_a_file(
-    build_request: Callable[[_OpenRun], str], reason: object
+def test_a_refused_request_naming_a_started_run_blocks_with_its_run_token_and_no_file(
+    operation: object,
 ) -> None:
     with audit_workspace() as workspace:
         relative = workspace.place(CAPTURED_CHANGE_RECORD)
         read = workspace.invoke(
             {Field.OPERATION: Operation.READ_CANDIDATE, Field.PATH: relative}
         )
-        version = workspace.invoke({Field.OPERATION: Operation.TOOL_VERSION})
         started = workspace.invoke(
             {
                 Field.OPERATION: Operation.START,
@@ -499,35 +414,27 @@ def test_an_invalid_request_part_way_through_a_run_blocks_on_stdout_without_a_fi
                 Field.CANDIDATE_SHA256: read.result[Result.SHA256],
             }
         )
-        run = _OpenRun(
-            workspace=workspace,
-            relative=relative,
-            run_token=str(started.result[Result.RUN_TOKEN]),
-            payloads=audit_payloads(
-                subject=relative,
-                content=str(read.result[Result.CONTENT]),
-                tool_version=str(version.result[Result.TOOL_VERSION]),
-            ),
-        )
-        request_text = build_request(run)
+        run_token = started.result[Result.RUN_TOKEN]
         before = workspace.snapshot()
 
-        blocked = workspace.invoke_text(request_text)
+        # Every request field, so the request carries fields its operation
+        # does not take, with the operation, the candidate, and the run named.
+        blocked = workspace.invoke(
+            {
+                **dict.fromkeys(Field),
+                Field.OPERATION: operation,
+                Field.PATH: relative,
+                Field.RUN_TOKEN: run_token,
+            }
+        )
         changes = workspace.changes_since(before)
 
-        assert blocked.exit_code != ExitCode.OK
         assert len(blocked.stdout_lines) == 1
-        assert blocked.stderr == ""
         assert blocked.result[Result.STATUS] == Status.BLOCKED
-        assert blocked.result[Result.REASON] == reason
-        assert blocked.result[Result.RUN_TOKEN] in {
-            runner.NOT_STARTED,
-            run.run_token,
-        }
+        assert blocked.result[Result.OPERATION] == operation
+        assert blocked.result[Result.RUN_TOKEN] == run_token
         assert blocked.runner_writes == ()
-        assert runner.SPX_EXECUTABLE not in _started_executables([blocked])
         assert _started_executables([blocked]) <= PERMITTED_EXECUTABLES
-        assert changes.in_spx_store == ()
         assert changes.in_repository_outside_store == ()
         assert changes.in_runner_temporary_directory == ()
         assert changes.in_runner_home_directory == ()
