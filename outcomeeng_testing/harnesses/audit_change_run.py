@@ -1,12 +1,17 @@
 """Workspace, invocation, and observation harness for the audit-change runner.
 
-Backs the ``[test]`` evidence of ``spx/31-outcomeeng.enabler/32-changes.enabler``.
-Each workspace is a fresh Git repository in a temporary directory beside a
-separate, initially empty directory the runner receives as its temporary
-directory. The harness places whole-payload Change records into the
-repository, invokes the shipped runner's entry point as a subprocess with one
-JSON request on stdin, and exposes what the invocation printed and which files
-changed. It decides nothing: every predicate belongs to the linked test.
+Backs the ``[test]`` evidence that an audit-change run writes no file.
+Each workspace is a fresh Git repository in a temporary directory beside three
+initially empty directories: one the runner receives as its temporary
+directory, one it receives as its home directory, and one outside both that
+holds link targets. The harness places whole-payload Change records into the
+repository and starts the shipped runner as a subprocess, with one request on
+stdin, under the process observer in ``audit_change_run_observer``. Every
+invocation therefore exposes what the runner printed, every file the runner
+process wrote wherever the path lies, and every process it started. Directory
+snapshots add what changed in the repository, the SPX store, and the runner's
+temporary and home directories, which covers the processes the runner starts.
+The harness decides nothing: every predicate belongs to the linked test.
 
 The runner treats scope and finding payloads as opaque objects keyed by their
 ``unitId``, and the SPX CLI accepts any audit payload that satisfies its audit
@@ -30,7 +35,7 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from tempfile import TemporaryDirectory
+from tempfile import TemporaryDirectory, mkstemp
 from types import ModuleType
 from typing import Final, TypeVar
 
@@ -41,6 +46,7 @@ from outcomeeng.validation.implementation_audit_contract import (
     implementation_audit_provenance,
     implementation_audit_scope_payload,
 )
+from outcomeeng_testing.harnesses import audit_change_run_observer as observer
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 PLUGINS_DIR: Final = REPO_ROOT / "src" / "plugins"
@@ -48,6 +54,7 @@ SPEC_TREE_DIR: Final = PLUGINS_DIR / "spec-tree"
 RUNNER_SCRIPT: Final = (
     SPEC_TREE_DIR / "skills" / "audit-change" / "scripts" / "audit_change_run.py"
 )
+OBSERVER_SCRIPT: Final = Path(observer.__file__).resolve()
 SPEC_TREE_MANIFEST: Final = SPEC_TREE_DIR / ".claude-plugin" / "plugin.json"
 CHANGE_RECORD_RULES: Final = (
     SPEC_TREE_DIR / "skills" / "change-standards" / "references" / "change-record.md"
@@ -57,14 +64,14 @@ CHANGE_RECORD_RULES: Final = (
 CHANGE_TEMPLATE: Final = (
     SPEC_TREE_DIR / "skills" / "author-change" / "templates" / "change.md"
 )
-#: An abridged capture of Change outcomeeng/changes#162, an Executable record.
-CAPTURED_CHANGE_RECORD: Final = (
-    REPO_ROOT
-    / "outcomeeng_testing"
-    / "fixtures"
-    / "audit_change_run"
-    / "change-record.md.txt"
+_FIXTURES_DIR: Final = (
+    REPO_ROOT / "outcomeeng_testing" / "fixtures" / "audit_change_run"
 )
+#: An abridged capture of Change outcomeeng/changes#162, an Executable record.
+CAPTURED_CHANGE_RECORD: Final = _FIXTURES_DIR / "change-record.md.txt"
+#: The same capture as an editor applying typographic apostrophes saves it in
+#: Windows-1252, which is not UTF-8 text.
+WINDOWS_1252_CHANGE_RECORD: Final = _FIXTURES_DIR / "windows-1252-change-record.md.txt"
 
 #: Directory the SPX CLI keeps its run journals and verification contexts in.
 SPX_STORE_DIRNAME: Final = ".spx"
@@ -72,10 +79,12 @@ _GIT_DIRNAME: Final = ".git"
 _CANDIDATE_DIRNAME: Final = "changes"
 _FIXTURE_SUFFIX: Final = ".txt"
 _TEMPORARY_DIRECTORY_VARIABLES: Final = ("TMPDIR", "TMP", "TEMP")
+_HOME_VARIABLE: Final = "HOME"
+_REPORT_SUFFIX: Final = ".json"
 _RULE_ID: Final = re.compile(r'<rule id="([a-z0-9-]+)"')
-_CANDIDATE_EDIT: Final = "\n"
 
 _T = TypeVar("_T")
+_R = TypeVar("_R")
 
 
 def load_runner() -> ModuleType:
@@ -94,13 +103,55 @@ def load_runner() -> ModuleType:
 
 @dataclass(frozen=True)
 class RunnerCall:
-    """What one runner invocation produced."""
+    """What one runner invocation produced, and what its process did."""
 
-    request: Mapping[str, object]
+    request_text: str
     exit_code: int
     stdout_lines: tuple[str, ...]
     result: Mapping[str, object]
     stderr: str
+    #: Every filesystem mutation the runner process performed, as
+    #: ``(event, path)``, wherever the path lies.
+    runner_writes: tuple[tuple[str, ...], ...]
+    #: The argument vector of every process the runner process started.
+    spawned_commands: tuple[tuple[str, ...], ...]
+
+    @property
+    def request(self) -> Mapping[str, object]:
+        """The request object sent on stdin."""
+        value = json.loads(self.request_text)
+        if not isinstance(value, dict):
+            raise TypeError("the request sent on stdin is not a JSON object")
+        return value
+
+    @property
+    def json_object_arguments(self) -> tuple[object, ...]:
+        """Every argument of a started process that decodes as a JSON object."""
+        decoded: list[object] = []
+        for command in self.spawned_commands:
+            for argument in command:
+                try:
+                    value = json.loads(argument)
+                except json.JSONDecodeError:
+                    continue
+                if isinstance(value, dict):
+                    decoded.append(value)
+        return tuple(decoded)
+
+
+def json_strings(value: object) -> tuple[str, ...]:
+    """Return every string a decoded JSON value holds, keys and values alike."""
+    if isinstance(value, str):
+        return (value,)
+    if isinstance(value, Mapping):
+        return tuple(
+            text
+            for key, item in value.items()
+            for text in (*json_strings(key), *json_strings(item))
+        )
+    if isinstance(value, list | tuple):
+        return tuple(text for item in value for text in json_strings(item))
+    return ()
 
 
 @dataclass(frozen=True)
@@ -108,11 +159,25 @@ class FileChanges:
     """Paths created, changed, or removed between two snapshots."""
 
     in_repository_outside_store: tuple[str, ...]
+    in_spx_store: tuple[str, ...]
     in_runner_temporary_directory: tuple[str, ...]
+    in_runner_home_directory: tuple[str, ...]
 
 
-def _snapshot(root: Path, *, excluded: frozenset[str]) -> dict[str, str]:
+@dataclass(frozen=True)
+class Snapshot:
+    """Content digests of every file in each observed directory."""
+
+    repository_outside_store: Mapping[str, str]
+    spx_store: Mapping[str, str]
+    runner_temporary_directory: Mapping[str, str]
+    runner_home_directory: Mapping[str, str]
+
+
+def _digests(root: Path, *, excluded: frozenset[str] = frozenset()) -> dict[str, str]:
     digests: dict[str, str] = {}
+    if not root.exists():
+        return digests
     for path in sorted(root.rglob("*")):
         relative = path.relative_to(root)
         if relative.parts and relative.parts[0] in excluded:
@@ -134,98 +199,130 @@ def _changed(before: Mapping[str, str], after: Mapping[str, str]) -> tuple[str, 
 
 @dataclass
 class AuditWorkspace:
-    """A Git repository holding Change candidates, and the runner's temporary directory."""
+    """A Git repository holding Change candidates, and the runner's own directories."""
 
     root: Path
     runner_temporary_directory: Path
+    runner_home_directory: Path
+    outside_directory: Path
+    observation_directory: Path
+
+    def path_for(self, source: Path) -> str:
+        """Return the relative path ``place`` gives ``source``, without placing it."""
+        name = source.name.removesuffix(_FIXTURE_SUFFIX)
+        return (Path(_CANDIDATE_DIRNAME) / name).as_posix()
 
     def place(self, source: Path) -> str:
         """Copy a whole-payload record into the repository; return its relative path."""
-        name = source.name.removesuffix(_FIXTURE_SUFFIX)
-        target = self.root / _CANDIDATE_DIRNAME / name
+        relative = self.path_for(source)
+        target = self.root / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(source, target)
-        return target.relative_to(self.root).as_posix()
+        return relative
+
+    def place_link_outside(self, source: Path) -> str:
+        """Copy a record outside the repository and link a candidate path to it."""
+        relative = self.path_for(source)
+        outside = self.outside_directory / Path(relative).name
+        shutil.copyfile(source, outside)
+        link = self.root / relative
+        link.parent.mkdir(parents=True, exist_ok=True)
+        link.symlink_to(outside)
+        return relative
 
     def edit(self, relative: str) -> None:
         """Change a placed candidate's content, as another session editing it would."""
         with (self.root / relative).open("a", encoding="utf-8") as handle:
-            handle.write(_CANDIDATE_EDIT)
+            handle.write(observer.CANDIDATE_EDIT)
 
     def content(self, relative: str) -> str:
         """Return a placed candidate's current content exactly as stored."""
         return (self.root / relative).read_bytes().decode("utf-8")
 
-    def snapshot(self) -> tuple[dict[str, str], dict[str, str]]:
-        """Record every file outside the Git and SPX stores, and the runner's temporary files."""
-        return (
-            _snapshot(self.root, excluded=frozenset({_GIT_DIRNAME, SPX_STORE_DIRNAME})),
-            _snapshot(self.runner_temporary_directory, excluded=frozenset()),
+    def snapshot(self) -> Snapshot:
+        """Record every file in each directory the runner could write to."""
+        return Snapshot(
+            repository_outside_store=_digests(
+                self.root, excluded=frozenset({_GIT_DIRNAME, SPX_STORE_DIRNAME})
+            ),
+            spx_store=_digests(self.root / SPX_STORE_DIRNAME),
+            runner_temporary_directory=_digests(self.runner_temporary_directory),
+            runner_home_directory=_digests(self.runner_home_directory),
         )
 
-    def changes_since(
-        self, snapshot: tuple[dict[str, str], dict[str, str]]
-    ) -> FileChanges:
-        """Return the files that differ from ``snapshot``."""
-        repository, temporary = self.snapshot()
+    def changes_since(self, before: Snapshot) -> FileChanges:
+        """Return the files that differ from ``before``."""
+        after = self.snapshot()
         return FileChanges(
-            in_repository_outside_store=_changed(snapshot[0], repository),
-            in_runner_temporary_directory=_changed(snapshot[1], temporary),
+            in_repository_outside_store=_changed(
+                before.repository_outside_store, after.repository_outside_store
+            ),
+            in_spx_store=_changed(before.spx_store, after.spx_store),
+            in_runner_temporary_directory=_changed(
+                before.runner_temporary_directory, after.runner_temporary_directory
+            ),
+            in_runner_home_directory=_changed(
+                before.runner_home_directory, after.runner_home_directory
+            ),
         )
 
     def invoke(self, request: Mapping[str, object]) -> RunnerCall:
         """Run the runner's entry point with ``request`` on stdin."""
+        return self.invoke_text(json.dumps(request))
+
+    def invoke_text(self, request_text: str) -> RunnerCall:
+        """Run the runner's entry point with ``request_text`` on stdin, unparsed."""
+        return self._observe(request_text, ())
+
+    def invoke_racing_start(self, request: Mapping[str, object]) -> RunnerCall:
+        """Run one request while another session edits the candidate.
+
+        ``/test`` Stage 5 exception 3, time and concurrency: the observer edits
+        the candidate after the runner reads it and before SPX retains it, an
+        interval no real session can be scheduled into. Every command still
+        runs through the runner's own subprocess adapter.
+        """
+        runner = load_runner()
+        candidate = str(request[runner.RequestField.PATH])
+        return self._observe(json.dumps(request), (observer.RACE_OPTION, candidate))
+
+    def _environment(self) -> dict[str, str]:
         environment = dict(os.environ)
         for variable in _TEMPORARY_DIRECTORY_VARIABLES:
             environment[variable] = str(self.runner_temporary_directory)
+        environment[_HOME_VARIABLE] = str(self.runner_home_directory)
+        return environment
+
+    def _observe(self, request_text: str, options: Sequence[str]) -> RunnerCall:
+        handle, report = mkstemp(dir=self.observation_directory, suffix=_REPORT_SUFFIX)
+        os.close(handle)
         completed = subprocess.run(  # noqa: S603
-            [sys.executable, str(RUNNER_SCRIPT)],
+            [
+                sys.executable,
+                str(OBSERVER_SCRIPT),
+                str(RUNNER_SCRIPT),
+                report,
+                *options,
+            ],
             cwd=self.root,
-            env=environment,
-            input=json.dumps(request),
+            env=self._environment(),
+            input=request_text,
             capture_output=True,
             text=True,
             check=False,
         )
+        observation = json.loads(Path(report).read_text(encoding="utf-8"))
         lines = tuple(completed.stdout.splitlines())
-        result = json.loads(lines[-1]) if lines else {}
         return RunnerCall(
-            request=request,
+            request_text=request_text,
             exit_code=completed.returncode,
             stdout_lines=lines,
-            result=result,
+            result=json.loads(lines[-1]) if lines else {},
             stderr=completed.stderr,
-        )
-
-    def invoke_racing_start(self, request: Mapping[str, object]) -> RunnerCall:
-        """Run one request in process while another session edits the candidate.
-
-        ``/test`` Stage 5 exception 3, time and concurrency: the edit lands after
-        the runner reads the candidate and before SPX retains it, an interval no
-        real session can be scheduled into. The collaborator delegates every
-        command to the real subprocess runner and only times the edit.
-        """
-        runner = load_runner()
-        relative = str(request[runner.RequestField.PATH])
-        edited = False
-
-        def racing(argv: Sequence[str], /, *, cwd: Path, stdin: str | None) -> object:
-            nonlocal edited
-            if argv[0] == runner.SPX_EXECUTABLE and not edited:
-                self.edit(relative)
-                edited = True
-            return runner.run_subprocess(argv, cwd=cwd, stdin=stdin)
-
-        exit_code, result = runner.execute(
-            json.dumps(request), cwd=self.root, runner=racing
-        )
-        line = json.dumps(result, sort_keys=True)
-        return RunnerCall(
-            request=request,
-            exit_code=int(exit_code),
-            stdout_lines=(line,),
-            result=json.loads(line),
-            stderr="",
+            runner_writes=tuple(tuple(write) for write in observation[observer.WRITES]),
+            spawned_commands=tuple(
+                tuple(command) for command in observation[observer.SPAWNS]
+            ),
         )
 
     def render(self, render_command: str) -> dict[str, object]:
@@ -245,23 +342,32 @@ class AuditWorkspace:
 
 @contextmanager
 def audit_workspace() -> Iterator[AuditWorkspace]:
-    """Yield a fresh repository and an empty runner temporary directory."""
+    """Yield a fresh repository and the runner's empty temporary and home directories."""
     with TemporaryDirectory() as temporary:
         base = Path(temporary)
-        root = base / "repository"
-        runner_temporary_directory = base / "runner-temporary"
-        root.mkdir()
-        runner_temporary_directory.mkdir()
+        workspace = AuditWorkspace(
+            root=base / "repository",
+            runner_temporary_directory=base / "runner-temporary",
+            runner_home_directory=base / "runner-home",
+            outside_directory=base / "outside",
+            observation_directory=base / "observations",
+        )
+        for directory in (
+            workspace.root,
+            workspace.runner_temporary_directory,
+            workspace.runner_home_directory,
+            workspace.outside_directory,
+            workspace.observation_directory,
+        ):
+            directory.mkdir()
         subprocess.run(  # noqa: S603
-            ["git", "init", "--quiet", str(root)],  # noqa: S607
+            ["git", "init", "--quiet", str(workspace.root)],  # noqa: S607
             check=True,
         )
-        yield AuditWorkspace(
-            root=root, runner_temporary_directory=runner_temporary_directory
-        )
+        yield workspace
 
 
-def run_in_parallel(work: Callable[[_T], object], items: Sequence[_T]) -> list[object]:
+def run_in_parallel(work: Callable[[_T], _R], items: Sequence[_T]) -> list[_R]:
     """Run ``work`` for every item at once and return the results in item order."""
     with ThreadPoolExecutor(max_workers=len(items)) as pool:
         return list(pool.map(work, items))
