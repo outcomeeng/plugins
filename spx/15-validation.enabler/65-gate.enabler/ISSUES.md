@@ -48,3 +48,26 @@ rather than bundled into a bug fix.
 **Revisit condition**: resolve before the next behavioral change to
 `outcomeeng_testing/harnesses/gate_signal.py`, so the seam is repaired while that
 harness is already in context.
+
+## The entry point's validation dispatch is reached by no linked test
+
+`main()` in `outcomeeng/validation/__main__.py` dispatches four recipes. Linked
+gate-node tests drive its `check`, `check-full`, and `test` branches through
+`outcomeeng_testing/harnesses/gate.py`, but no linked test drives
+`main([RECIPE_VALIDATION])`, so the branch that binds the `validation`
+primitive recipe to the entry point runs under no executed test.
+
+**Evidence**: `outcomeeng_testing/harnesses/gate.py` is the only importer of
+`outcomeeng.validation.__main__` among the harnesses and spec-tree tests, and it
+calls the entry point with `RECIPE_CHECK`, `RECIPE_CHECK_FULL`, and `RECIPE_TEST`
+only; the gate-node tests that exercise `VALIDATION_RECIPE` reach it through the
+harness's recipe-run observation, which calls `run_recipe` without passing
+through the entry point.
+
+**Impact**: a regression that routes `python3 -m outcomeeng.validation validation`
+— the command behind `just validation` — to the wrong recipe, or to none, passes
+every linked test, so the gate's conformance primitive can silently stop running
+from its own command while its step list stays verified.
+
+**Settlement condition**: a linked gate-node test drives `main([RECIPE_VALIDATION])`
+with an injected spawner and shows the validation recipe's steps run.
