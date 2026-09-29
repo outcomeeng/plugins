@@ -11,6 +11,15 @@ invocation therefore exposes what the runner printed, every file the runner
 process wrote wherever the path lies, and every process it started. Directory
 snapshots add what changed in the repository, the SPX store, and the runner's
 temporary and home directories, which covers the processes the runner starts.
+
+Generated requests enter the runner's entry point in this process instead,
+under one observer ``Recorder`` installed here for that purpose, from one
+empty working directory that stays in place for the whole property run. No
+per-case repository, file, or process is involved: the generated domain is the
+request, and the subprocess invocations above exercise the real stdin, stdout,
+and process boundary. The harness owns each property's seed, example count,
+and replay command.
+
 The harness decides nothing: every predicate belongs to the linked test.
 
 The runner treats scope and finding payloads as opaque objects keyed by their
@@ -21,8 +30,10 @@ constructors rather than restating a schema.
 
 from __future__ import annotations
 
+import functools
 import hashlib
 import importlib.util
+import io
 import json
 import os
 import re
@@ -30,14 +41,18 @@ import shlex
 import shutil
 import subprocess
 import sys
+import threading
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import contextmanager
+from contextlib import chdir, contextmanager
 from dataclasses import dataclass
+from enum import StrEnum
 from pathlib import Path
 from tempfile import TemporaryDirectory, mkstemp
 from types import ModuleType
 from typing import Final, TypeVar
+
+from hypothesis import given, seed, settings
 
 from outcomeeng.validation.audit_artifacts import implementation_languages
 from outcomeeng.validation.implementation_audit_contract import (
@@ -46,7 +61,12 @@ from outcomeeng.validation.implementation_audit_contract import (
     implementation_audit_provenance,
     implementation_audit_scope_payload,
 )
+from outcomeeng_testing.generators.audit_change_run import (
+    malformed_request_objects,
+    non_object_request_texts,
+)
 from outcomeeng_testing.harnesses import audit_change_run_observer as observer
+from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 PLUGINS_DIR: Final = REPO_ROOT / "src" / "plugins"
@@ -77,6 +97,22 @@ _WINDOWS_1252_CODEC: Final = "cp1252"
 _WINDOWS_1252_PREFIX: Final = "windows-1252-"
 _TYPEWRITER_APOSTROPHE: Final = "'"
 _TYPOGRAPHIC_APOSTROPHE: Final = "\N{RIGHT SINGLE QUOTATION MARK}"
+
+# Windows PowerShell's Out-File saves text as UTF-16 with a byte-order mark,
+# whose first byte no UTF-8 sequence starts with.
+_UTF16_CODEC: Final = "utf-16"
+#: Text appended to a candidate, as another session editing it would.
+CANDIDATE_EDIT: Final = "\n"
+# A mode that grants no permission, so the process cannot open the file.
+_NO_PERMISSIONS: Final = 0
+
+#: Property run configuration for generated requests.
+MALFORMED_REQUEST_PROPERTY_SEED: Final = 20260929
+MALFORMED_REQUEST_PROPERTY_EXAMPLES: Final = settings().max_examples
+MALFORMED_REQUEST_PROPERTY_REPLAY: Final = (
+    "just test spx/31-outcomeeng.enabler/32-changes.enabler/tests/"
+    "test_audit_change_run.compliance.l1.py"
+)
 
 #: Directory the SPX CLI keeps its run journals and verification contexts in.
 SPX_STORE_DIRNAME: Final = ".spx"
@@ -179,6 +215,15 @@ class Snapshot:
     runner_home_directory: Mapping[str, str]
 
 
+def _fingerprint(path: Path) -> str:
+    """Digest a file's content, or its mode, size, and modification time when unreadable."""
+    try:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+    except PermissionError:
+        status = path.stat()
+        return f"{status.st_mode:o}:{status.st_size}:{status.st_mtime_ns}"
+
+
 def _digests(root: Path, *, excluded: frozenset[str] = frozenset()) -> dict[str, str]:
     digests: dict[str, str] = {}
     if not root.exists():
@@ -188,7 +233,7 @@ def _digests(root: Path, *, excluded: frozenset[str] = frozenset()) -> dict[str,
         if relative.parts and relative.parts[0] in excluded:
             continue
         if path.is_file():
-            digests[relative.as_posix()] = hashlib.sha256(path.read_bytes()).hexdigest()
+            digests[relative.as_posix()] = _fingerprint(path)
     return digests
 
 
@@ -200,6 +245,16 @@ def _changed(before: Mapping[str, str], after: Mapping[str, str]) -> tuple[str, 
             if before.get(path) != after.get(path)
         )
     )
+
+
+class CandidateCondition(StrEnum):
+    """A candidate path the runner contract names as refused or missing."""
+
+    ABSENT = "absent"
+    DIRECTORY = "directory"
+    UNREADABLE = "unreadable"
+    LINKED_OUTSIDE = "linked-outside"
+    WINDOWS_1252 = "windows-1252"
 
 
 @dataclass
@@ -260,10 +315,39 @@ class AuditWorkspace:
         link.symlink_to(outside)
         return relative
 
+    def place_unreadable(self, source: Path) -> str:
+        """Copy a record into the repository with no permission to read it."""
+        relative = self.place(source)
+        target = self.root / relative
+        target.chmod(_NO_PERMISSIONS)
+        if os.access(target, os.R_OK):
+            raise RuntimeError(
+                f"this user can read {target} with no permissions; "
+                "an unreadable candidate cannot be placed"
+            )
+        return relative
+
+    def place_directory(self, source: Path) -> str:
+        """Create a directory where ``place`` would put ``source``."""
+        relative = self.path_for(source)
+        (self.root / relative).mkdir(parents=True)
+        return relative
+
+    def place_in_condition(self, condition: CandidateCondition, source: Path) -> str:
+        """Put ``source`` at a candidate path in ``condition``; return the path."""
+        placements: Mapping[CandidateCondition, Callable[[Path], str]] = {
+            CandidateCondition.ABSENT: self.path_for,
+            CandidateCondition.DIRECTORY: self.place_directory,
+            CandidateCondition.UNREADABLE: self.place_unreadable,
+            CandidateCondition.LINKED_OUTSIDE: self.place_link_outside,
+            CandidateCondition.WINDOWS_1252: self.place_windows_1252,
+        }
+        return placements[condition](source)
+
     def edit(self, relative: str) -> None:
         """Change a placed candidate's content, as another session editing it would."""
         with (self.root / relative).open("a", encoding="utf-8") as handle:
-            handle.write(observer.CANDIDATE_EDIT)
+            handle.write(CANDIDATE_EDIT)
 
     def content(self, relative: str) -> str:
         """Return a placed candidate's current content exactly as stored."""
@@ -302,19 +386,14 @@ class AuditWorkspace:
 
     def invoke_text(self, request_text: str) -> RunnerCall:
         """Run the runner's entry point with ``request_text`` on stdin, unparsed."""
-        return self._observe(request_text, ())
+        return self._observe(
+            request_text, request_text.encode(load_runner().TEXT_ENCODING)
+        )
 
-    def invoke_racing_start(self, request: Mapping[str, object]) -> RunnerCall:
-        """Run one request while another session edits the candidate.
-
-        ``/test`` Stage 5 exception 3, time and concurrency: the observer edits
-        the candidate after the runner reads it and before SPX retains it, an
-        interval no real session can be scheduled into. Every command still
-        runs through the runner's own subprocess adapter.
-        """
-        runner = load_runner()
-        candidate = str(request[runner.RequestField.PATH])
-        return self._observe(json.dumps(request), (observer.RACE_OPTION, candidate))
+    def invoke_utf16(self, request: Mapping[str, object]) -> RunnerCall:
+        """Run the runner with ``request`` saved as Windows PowerShell's Out-File saves it."""
+        request_text = json.dumps(request)
+        return self._observe(request_text, request_text.encode(_UTF16_CODEC))
 
     def _environment(self) -> dict[str, str]:
         environment = dict(os.environ)
@@ -323,32 +402,26 @@ class AuditWorkspace:
         environment[_HOME_VARIABLE] = str(self.runner_home_directory)
         return environment
 
-    def _observe(self, request_text: str, options: Sequence[str]) -> RunnerCall:
+    def _observe(self, request_text: str, request_bytes: bytes) -> RunnerCall:
         handle, report = mkstemp(dir=self.observation_directory, suffix=_REPORT_SUFFIX)
         os.close(handle)
         completed = subprocess.run(  # noqa: S603
-            [
-                sys.executable,
-                str(OBSERVER_SCRIPT),
-                str(RUNNER_SCRIPT),
-                report,
-                *options,
-            ],
+            [sys.executable, str(OBSERVER_SCRIPT), str(RUNNER_SCRIPT), report],
             cwd=self.root,
             env=self._environment(),
-            input=request_text,
+            input=request_bytes,
             capture_output=True,
-            text=True,
             check=False,
         )
         observation = json.loads(Path(report).read_text(encoding="utf-8"))
-        lines = tuple(completed.stdout.splitlines())
+        encoding = load_runner().TEXT_ENCODING
+        lines = tuple(completed.stdout.decode(encoding).splitlines())
         return RunnerCall(
             request_text=request_text,
             exit_code=completed.returncode,
             stdout_lines=lines,
             result=json.loads(lines[-1]) if lines else {},
-            stderr=completed.stderr,
+            stderr=completed.stderr.decode(encoding, "backslashreplace"),
             runner_writes=tuple(tuple(write) for write in observation[observer.WRITES]),
             spawned_commands=tuple(
                 tuple(command) for command in observation[observer.SPAWNS]
@@ -461,3 +534,99 @@ def audit_payloads(*, subject: str, content: str, tool_version: str) -> AuditPay
         for index, rule in enumerate(change_record_rule_ids())
     )
     return AuditPayloads(scopes=scopes, findings=findings)
+
+
+@dataclass(frozen=True)
+class EntryPointCall:
+    """What one call of the runner's entry point in this process produced."""
+
+    exit_code: int
+    stdout: str
+    #: Every filesystem mutation the call performed, as ``(event, path)``.
+    runner_writes: tuple[tuple[str, ...], ...]
+    #: The argument vector of every process the call started.
+    spawned_commands: tuple[tuple[str, ...], ...]
+
+    @property
+    def stdout_lines(self) -> tuple[str, ...]:
+        """The lines the call printed on stdout."""
+        return tuple(self.stdout.splitlines())
+
+
+@functools.cache
+def _entry_point_recorder() -> observer.Recorder:
+    """Install one audit hook in this process for entry-point observation."""
+    recorder = observer.Recorder()
+    sys.addaudithook(recorder)
+    return recorder
+
+
+def _call_entry_point(runner: ModuleType, request_text: str) -> EntryPointCall:
+    recorder = _entry_point_recorder()
+    sink = io.StringIO()
+    recorder.start(thread=threading.get_ident())
+    try:
+        exit_code = int(runner.main(stdin=io.StringIO(request_text), stdout=sink))
+    finally:
+        writes, spawns = recorder.stop()
+    return EntryPointCall(
+        exit_code=exit_code,
+        stdout=sink.getvalue(),
+        runner_writes=tuple(tuple(write) for write in writes),
+        spawned_commands=tuple(tuple(command) for command in spawns),
+    )
+
+
+@contextmanager
+def _entry_point_directory() -> Iterator[None]:
+    """Hold an empty working directory, outside every repository, for a property run."""
+    with TemporaryDirectory() as temporary, chdir(temporary):
+        yield
+
+
+def exercise_malformed_request_objects(
+    assert_case: Callable[[Mapping[str, object], EntryPointCall], None],
+) -> None:
+    """Send every generated refused request object to the entry point.
+
+    ``assert_case`` receives the request and what the entry point did with
+    its JSON text.
+    """
+    runner = load_runner()
+
+    @seed(MALFORMED_REQUEST_PROPERTY_SEED)
+    @settings(max_examples=MALFORMED_REQUEST_PROPERTY_EXAMPLES, print_blob=True)
+    @given(request=malformed_request_objects(runner))
+    def run_cases(request: dict[str, object]) -> None:
+        assert_case(request, _call_entry_point(runner, json.dumps(request)))
+
+    with _entry_point_directory():
+        run_replayable_property(
+            run_cases,
+            seed_value=MALFORMED_REQUEST_PROPERTY_SEED,
+            replay_path=MALFORMED_REQUEST_PROPERTY_REPLAY,
+        )
+
+
+def exercise_non_object_request_texts(
+    assert_case: Callable[[EntryPointCall], None],
+) -> None:
+    """Send every generated request text that is not one JSON object to the entry point.
+
+    ``assert_case`` receives what the entry point did with the text; a failing
+    case reports the generated text itself.
+    """
+    runner = load_runner()
+
+    @seed(MALFORMED_REQUEST_PROPERTY_SEED)
+    @settings(max_examples=MALFORMED_REQUEST_PROPERTY_EXAMPLES, print_blob=True)
+    @given(request_text=non_object_request_texts(runner))
+    def run_cases(request_text: str) -> None:
+        assert_case(_call_entry_point(runner, request_text))
+
+    with _entry_point_directory():
+        run_replayable_property(
+            run_cases,
+            seed_value=MALFORMED_REQUEST_PROPERTY_SEED,
+            replay_path=MALFORMED_REQUEST_PROPERTY_REPLAY,
+        )
