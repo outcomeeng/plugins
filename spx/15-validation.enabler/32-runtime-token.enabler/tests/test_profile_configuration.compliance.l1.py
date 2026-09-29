@@ -2,13 +2,24 @@
 
 from pathlib import Path
 
-from outcomeeng.distribution.contracts import Target
+from outcomeeng.distribution.contracts import (
+    PROFILE_CONFIG_GLOBAL,
+    PROFILE_DESCRIPTION_GLOBAL,
+    Target,
+    format_template_call,
+)
 from outcomeeng.distribution.profiles import (
+    NATIVE_CONFIGURATION_FIELDS,
     PROFILE_FIELD,
     native_configuration_values,
     resolve_profile,
 )
-from outcomeeng.models import MODEL_IDENTIFIERS, AgentProfile
+from outcomeeng.models import (
+    MODEL_IDENTIFIERS,
+    AgentProfile,
+    ClaudeEffort,
+    CodexReasoningEffort,
+)
 from outcomeeng.validation._steps import (
     EVALS_ROOT,
     RUNTIME_TOKEN_STEP,
@@ -58,19 +69,17 @@ def test_profile_literals_report_profile_remediation() -> None:
     assert PROFILE_CONFIGURATION_REMEDIATION in observed.output
 
 
-def test_profile_requests_and_ordinary_prose_pass() -> None:
-    configuration = native_configuration_values(resolve_profile(Target.CODEX))
-    model_field = next(
-        field for field, value in configuration.items() if value in MODEL_IDENTIFIERS
-    )
-    assert (
-        find_profile_literals(
-            f"Select a {model_field} with high effort.\n"
-            f"{{{{! profile_config('{AgentProfile.STANDARD}') !}}}}\n"
-            f"{PROFILE_FIELD}: {AgentProfile.STANDARD}"
-        )
-        == []
-    )
+def test_every_native_configuration_value_passes_as_ordinary_prose() -> None:
+    for field in sorted(NATIVE_CONFIGURATION_FIELDS):
+        for value in (*ClaudeEffort, *CodexReasoningEffort):
+            assert find_profile_literals(f"Select a {field} with {value} effort.") == []
+
+
+def test_generated_configuration_requests_and_profile_selections_pass() -> None:
+    for profile in AgentProfile:
+        for template_global in (PROFILE_CONFIG_GLOBAL, PROFILE_DESCRIPTION_GLOBAL):
+            request = format_template_call(template_global, profile)
+            assert find_profile_literals(f"{request}\n{PROFILE_FIELD}: {profile}") == []
 
 
 def test_eval_definitions_and_prompt_templates_report_each_model_literal(

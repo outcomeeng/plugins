@@ -6,7 +6,12 @@ from io import StringIO
 from pathlib import Path
 import json
 
-from outcomeeng.distribution.contracts import BUILD_TARGET_VARIABLE, Target
+from outcomeeng.distribution.contracts import (
+    PROFILE_DESCRIPTION_GLOBAL,
+    Target,
+    format_target_conditional,
+    format_template_call,
+)
 from outcomeeng.distribution.profiles import NATIVE_CONFIGURATION_FIELDS
 from outcomeeng.models import CLAUDE_MODEL_FAMILIES, MODEL_IDENTIFIERS, AgentProfile
 from outcomeeng.validation._steps import EVALS_ROOT
@@ -41,13 +46,15 @@ def write_configuration_overrides(root: Path) -> tuple[Path, ...]:
             for field in sorted(NATIVE_CONFIGURATION_FIELDS):
                 path = root / directory / target.value / field / "SKILL.md"
                 path.parent.mkdir(parents=True, exist_ok=True)
+                request = format_template_call(
+                    PROFILE_DESCRIPTION_GLOBAL, AgentProfile.STANDARD
+                )
                 path.write_text(
                     "---\n"
-                    + f"{field}: \"{{{{! profile_description('{AgentProfile.STANDARD}') !}}}}\"\n"
+                    + f"{field}: {json.dumps(request)}\n"
                     + "---\n"
-                    + f"{{!% if {BUILD_TARGET_VARIABLE} == '{target.value}' %!}}\n"
-                    + f'{field} = "value"\n'
-                    + "{!% endif %!}\n",
+                    + format_target_conditional(target, f'{field} = "value"')
+                    + "\n",
                     encoding="utf-8",
                 )
                 paths.append(path)
@@ -57,11 +64,15 @@ def write_configuration_overrides(root: Path) -> tuple[Path, ...]:
 def prepare_profile_build(
     root: Path, field: str, value: str, *, skill: bool = False
 ) -> tuple[Path, Path]:
-    """Materialize one invalid authoring input beside existing generated state."""
-    encoded_value = json.dumps(value).replace("{", "\\u007b")
+    """Materialize one authored frontmatter field beside existing generated state.
+
+    ``value`` is written as a quoted scalar exactly as given, so a build
+    template request inside it renders during the build like any authored
+    template value.
+    """
     content = (
         "---\nname: reviewer\ndescription: Review.\n"
-        + f"{field}: {encoded_value}\n---\nReview.\n"
+        + f"{field}: {json.dumps(value)}\n---\nReview.\n"
     )
     builder = SrcTreeBuilder(root)
     builder.add_plugin(

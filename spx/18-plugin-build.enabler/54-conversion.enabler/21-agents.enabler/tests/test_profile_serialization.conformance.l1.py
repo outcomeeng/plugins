@@ -7,7 +7,12 @@ from dataclasses import asdict
 import yaml
 from outcomeeng.distribution.build import make_jinja_environment
 
-from outcomeeng.distribution.contracts import Target
+from outcomeeng.distribution.contracts import (
+    BUILD_TARGET_VARIABLE,
+    PROFILE_CONFIG_GLOBAL,
+    Target,
+    format_template_call,
+)
 from outcomeeng.distribution.profiles import (
     AGENT_PROFILES,
     ProfileSyntax,
@@ -66,8 +71,10 @@ def test_template_configuration_tracks_every_injected_native_profile() -> None:
                     target: {**AGENT_PROFILES[target], profile: replacement},
                 }
                 environment = make_jinja_environment(profiles=profiles)
-                template = environment.from_string("{{! profile_config(profile) !}}")
-                rendered = template.render(target=target.value, profile=profile)
+                template = environment.from_string(
+                    format_template_call(PROFILE_CONFIG_GLOBAL, profile)
+                )
+                rendered = template.render({BUILD_TARGET_VARIABLE: target.value})
                 parsed = (
                     tomllib.loads(rendered)
                     if target is Target.CODEX

@@ -3,11 +3,17 @@
 from outcomeeng.distribution.profiles import NATIVE_CONFIGURATION_FIELDS
 from outcomeeng.models import CLAUDE_MODEL_FAMILIES, MODEL_IDENTIFIERS
 from outcomeeng.validation.profile_configuration import find_profile_literals
+from outcomeeng_testing.generators.model_identifiers import unowned_model_identifiers
 
 
 def test_every_owned_model_identifier_is_rejected() -> None:
     for model in MODEL_IDENTIFIERS:
         assert find_profile_literals(model) == [(1, model)]
+
+
+def test_every_unowned_model_identifier_is_rejected() -> None:
+    for identifier in unowned_model_identifiers():
+        assert find_profile_literals(identifier) == [(1, identifier)]
 
 
 def test_every_bare_model_family_name_is_rejected() -> None:
