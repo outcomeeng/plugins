@@ -24,7 +24,6 @@ import pytest
 from outcomeeng_testing.harnesses.audit_change_run import (
     CAPTURED_CHANGE_RECORD,
     CHANGE_TEMPLATE,
-    WINDOWS_1252_CHANGE_RECORD,
     AuditPayloads,
     AuditWorkspace,
     RunnerCall,
@@ -467,7 +466,9 @@ _DECLARED_REFUSALS: dict[str, tuple[Callable[[_OpenRun], str], object]] = {
         Reason.PATH_REJECTED,
     ),
     "windows-1252-candidate": (
-        lambda run: _read_request(run.workspace.place(WINDOWS_1252_CHANGE_RECORD)),
+        lambda run: _read_request(
+            run.workspace.place_windows_1252(CAPTURED_CHANGE_RECORD)
+        ),
         Reason.PATH_REJECTED,
     ),
     "absent-candidate": (
