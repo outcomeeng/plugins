@@ -81,6 +81,10 @@ definitions a plugin ships and audits without adding behavior the skills lack.
 
 ## Verification
 
+- ALWAYS: a skill invoked by a configured subagent runs under that subagent's
+  selected profile configuration, and otherwise under the invoking session's
+  configuration
+
 ### Testing
 
 - ALWAYS: generate the complete authorized plugin list from the owning catalog;
@@ -151,9 +155,7 @@ definitions a plugin ships and audits without adding behavior the skills lack.
   between harnesses; a profile uses only the controls its harness supports ([audit])
 - NEVER: let task difficulty infer a profile selection; Standard is the default
   and Strong or Fast requires an explicit governing selection ([audit])
-- ALWAYS: keep skill behavior usable within the supported products with the
-  invoking agent session's configuration, including when a configured subagent
-  invokes the skill; skill frontmatter declares no model or reasoning override ([audit])
+- ALWAYS: skill frontmatter declares no model or reasoning override ([audit])
 - ALWAYS: establish release acceptance separately for each supported harness,
   retaining native loading and one minimal isolated execution for each of its
   Standard, Strong, and Fast profiles; a combined acceptance claim requires
