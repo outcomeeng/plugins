@@ -263,17 +263,3 @@ finding no edit satisfies; and `The skill auditor returns opposite verdicts on u
 in `spx/43-instructions.enabler/21-skills.enabler/ISSUES.md` records one Verifier definition
 contradicting itself on unchanged input. This entry is the remaining shape: two Verifier types whose
 verdicts diverge because one executed the subject and the other did not.
-
-## The spec-tree root name is spelled outside its owner
-
-`outcomeeng/spec_tree_structure.py` owns the spec-tree root directory name as `SPEC_TREE_ROOT_DIRECTORY`. Four validation modules spell the same name again as a module constant of their own: `EVALS_ROOT` in `outcomeeng/validation/_steps.py`, `SPEC_TREE_ROOT` in `outcomeeng/validation/eval_links.py` and in `outcomeeng/validation/infrastructure_index.py`, and `SPX_REFERENCE_ROOT` in `outcomeeng/validation/reference_portability.py`. The same restatement appears in distribution code, `regenerate_instruction_blocks` in `outcomeeng/distribution/instruction_block.py`, and in test infrastructure under `outcomeeng_testing/`, where a constant or a harness path addresses a tree's root by the literal. The `/understand` `<single_location>` rule gives each fact one home.
-
-A search over `outcomeeng/`, `outcomeeng_testing/`, and `outcomeeng_evals/` for a quoted `"spx"` used as a path or path segment, followed by a reading of each match, finds the population: every match that addresses the spec-tree root. A match that names the `spx` CLI stays outside it, whether in an argument vector such as `SPX_MARKDOWN_ARGV` or in an executable path such as the stub binary in `outcomeeng_testing/harnesses/reviewing_changes.py`. This entry names that search rather than a list, because a list goes stale with the next module that addresses the root.
-
-**Impact**: each restatement agrees with the owner only by coincidence. A change to the root name edits the owner and leaves every restating module on the old name. A validation module that restates the root then judges a directory the tree no longer uses. When its tests build their fixture tree through a harness that restates the root too, those tests still pass, so no check reports the split.
-
-**Settlement condition**: every module that addresses the spec-tree root imports `SPEC_TREE_ROOT_DIRECTORY` or composes its path from it. The search above then finds no spec-tree-root use outside `outcomeeng/spec_tree_structure.py`. Each changed module's owning node carries the edit through its own context load, tests, and evidence audit.
-
-**Why separate**: the restating modules belong to several nodes: three children of `spx/15-validation.enabler`, `spx/13-infrastructure.enabler/25-eval-harness.enabler`, `spx/21-spec-tree.enabler/43-instruction-block.enabler`, and the nodes whose tests import each harness. No single node owns the class. The instruction-block module is also under repair in Change #126, and a sweep there belongs after that Change merges.
-
-**Evidence**: the Fixer of Change #126's round 6 reported the four validation modules while it checked every literal in the instruction-block node against its owning source. The product-root sweep above then found the distribution and test-infrastructure instances on `origin/main` at `08017dbfefb9e64bdc4eece8dbc6d936b88dd8a4`.
