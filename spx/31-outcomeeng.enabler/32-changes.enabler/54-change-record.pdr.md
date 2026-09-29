@@ -26,17 +26,18 @@ Front-matter values are never stripped, restated, or maintained as authoritative
 
 ## Definitions of Ready
 
-Each Definition of Ready is independently loadable and cumulative: a level includes every requirement of the preceding level.
+Each Definition of Ready is an independently loadable criterion set, and the sets are cumulative: a level's Definition of Ready includes every criterion of the preceding level's. No criterion is an audit verdict.
 
 ### Proposed
 
-A Proposed Change is ready when:
+The Proposed Definition of Ready is:
 
 - all six front-matter fields and all four body sections satisfy the record contract;
 - `title`, `product`, `maturity`, and `lifecycle` identify one intended Output, one owning Product, `Proposed` Maturity, and a valid Lifecycle;
-- `refined_from` is `[]` for a root or the complete immutable predecessor set for a successor, and `blocked_by` names every known blocker;
-- `# Output` and `# Value` preserve the proposal in the proposer's terms and state why the operator conditionally prioritizes it for Build refinement; and
-- the operator has reviewed the proposal.
+- `refined_from` is `[]` for a root or the complete immutable predecessor set for a successor, and `blocked_by` names every known blocker; and
+- `# Output` and `# Value` preserve the proposal in the proposer's terms and state why the operator conditionally prioritizes it for Build refinement.
+
+A Proposed Change is ready when the record's audit against the Proposed Definition of Ready approves it; readiness at Proposed requires no operator review of the proposal.
 
 ### Framed
 
@@ -91,7 +92,7 @@ The record remains authoritative without any store-specific field, label, relati
 
 ## Rationale
 
-One self-contained record preserves Change meaning across local drafting and coordination stores, while cumulative, independently loadable Definitions of Ready let authoring and audit judge exactly the Maturity a record declares. Excluding records without the closed front-matter key set keeps the contract closed and avoids treating inference as product truth.
+One self-contained record preserves Change meaning across local drafting and coordination stores, while cumulative, independently loadable Definitions of Ready let authoring and audit judge exactly the Maturity a record declares. Proposed readiness is the approving audit rather than an operator review, and the audit verdict stays outside every criterion set it judges, so each Definition of Ready is decidable and a higher level inherits the preceding level's criteria, never a verdict about another level. Excluding records without the closed front-matter key set keeps the contract closed and avoids treating inference as product truth.
 
 ## Product properties
 

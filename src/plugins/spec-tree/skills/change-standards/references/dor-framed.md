@@ -1,6 +1,6 @@
 <definition_of_ready maturity="Framed" cumulative="true">
 
-Judge every criterion; this table includes the complete Proposed requirements.
+Judge every criterion; this table includes the complete Proposed requirements and is the complete criterion set for Framed Maturity, so apply no criterion outside it.
 
 | ID                     | Criterion                                                                                                                                                                                      |
 | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

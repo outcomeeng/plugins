@@ -43,8 +43,6 @@ blocked_by: []
 
 [From Sliced onward: Accountable person: <name or stable identity>.]
 
-<!-- At Proposed, after operator review: Proposal review: reviewed by the operator on YYYY-MM-DD. -->
-
 <!-- From Framed onward, after the operator approves the complete Frame: Intent attestation: attested by the operator on YYYY-MM-DD. -->
 
 [At Proposed: retain consequential unresolved questions here. Remove guidance and unused subsections; retain the four top-level sections.]

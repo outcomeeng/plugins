@@ -1,6 +1,6 @@
 <definition_of_ready maturity="Executable" cumulative="true">
 
-Judge every criterion; this table includes the complete Proposed, Framed, and Sliced requirements.
+Judge every criterion; this table includes the complete Proposed, Framed, and Sliced requirements and is the complete criterion set for Executable Maturity, so apply no criterion outside it.
 
 | ID                          | Criterion                                                                                                                                                                                                                                                                      |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
