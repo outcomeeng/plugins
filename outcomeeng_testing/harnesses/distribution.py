@@ -68,24 +68,12 @@ from outcomeeng_testing.harnesses.property_evidence import run_replayable_proper
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 CANONICAL_SOURCE_ROOT = REPOSITORY_ROOT / SOURCE_ROOT_NAME
-type FileSnapshot = tuple[tuple[str, bytes], ...]
 
 DISTRIBUTION_PROPERTY_EXAMPLES: Final = 50
 DISTRIBUTION_PROPERTY_SEED: Final = 20260714
 DISTRIBUTION_PROPERTY_REPLAY_PATH: Final = (
     "just test spx/32-distribution.enabler/tests/test_distribute_skills.property.l1.py"
 )
-
-
-def snapshot_files(root: Path) -> FileSnapshot:
-    """Return a stable relative-path and byte-content snapshot below ``root``."""
-    return tuple(
-        sorted(
-            (str(path.relative_to(root)), path.read_bytes())
-            for path in root.rglob("*")
-            if path.is_file()
-        )
-    )
 
 
 def skill_collection_returns_complete_metadata() -> bool:

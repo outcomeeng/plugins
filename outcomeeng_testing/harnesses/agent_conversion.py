@@ -4,15 +4,18 @@ from __future__ import annotations
 
 import tomllib
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Final, cast
 
 import yaml
 
 from outcomeeng.distribution.agents import (
+    AGENT_SKILL_CONFIG_FIELD,
+    AGENT_SKILLS_FIELD,
     AGENT_SOURCE_DIRECTORY_NAME,
     AGENT_TARGETS_FIELD,
+    DEVELOPER_INSTRUCTIONS_FIELD,
     TomlArrayTable,
     TomlMultilineString,
     CodexAgent,
@@ -26,28 +29,18 @@ from outcomeeng.distribution.agents import (
 from outcomeeng.distribution.build import build
 from outcomeeng.distribution.contracts import (
     DIST_CODEX_PLUGINS_DIR,
+    DIST_DIR_NAME,
     FRONTMATTER_DELIMITER,
+    MARKDOWN_FILE_SUFFIX,
     Target,
     PLUGINS_DIR_NAME,
     SOURCE_ROOT_NAME,
 )
-from outcomeeng_testing.harnesses.src_tree import write_agent_source, write_agent_tree
+from outcomeeng.validation.audit_artifacts import SPEC_TREE_PLUGIN_NAME
+from outcomeeng_testing.harnesses.src_tree import write_agent_source
 from outcomeeng_testing.harnesses.distribution import REPOSITORY_ROOT
 
 PLUGIN_NAME: Final = "sample"
-CHANGES_REVIEWER_NAME: Final = "changes-reviewer"
-GUARDED_WRITER_NAME: Final = "guarded-writer"
-READ_ONLY_REVIEWER_NAME: Final = "read-only-reviewer"
-REVIEWER_BODY: Final = "Review."
-WRITER_BODY: Final = "Write."
-REVIEWER_DESCRIPTION: Final = "Review."
-WRITER_DESCRIPTION: Final = "Write."
-REVIEWER_SOURCE_PATH: Final = (
-    Path(PLUGIN_NAME) / AGENT_SOURCE_DIRECTORY_NAME / "reviewer.md"
-)
-WRITER_SOURCE_PATH: Final = (
-    Path(PLUGIN_NAME) / AGENT_SOURCE_DIRECTORY_NAME / "writer.md"
-)
 CODEX_AGENTS_DIRNAME: Final = "codex-agents"
 AGENT_CONVERSION_FIXTURES_DIR: Final = (
     Path(__file__).resolve().parents[1] / "fixtures" / "agent_conversion"
@@ -55,13 +48,15 @@ AGENT_CONVERSION_FIXTURES_DIR: Final = (
 LIFECYCLE_COLLISION_SOURCE: Final = (
     AGENT_CONVERSION_FIXTURES_DIR / "lifecycle-collision" / SOURCE_ROOT_NAME
 )
+REPOSITORY_SOURCE_ROOT: Final = REPOSITORY_ROOT / SOURCE_ROOT_NAME
 SPEC_TREE_AGENT_SOURCE_DIR: Final = (
-    Path(__file__).resolve().parents[2]
-    / SOURCE_ROOT_NAME
+    REPOSITORY_SOURCE_ROOT
     / PLUGINS_DIR_NAME
-    / "spec-tree"
+    / SPEC_TREE_PLUGIN_NAME
     / AGENT_SOURCE_DIRECTORY_NAME
 )
+FRONTMATTER_FENCE: Final = f"{FRONTMATTER_DELIMITER}\n"
+FRONTMATTER_CLOSER: Final = f"\n{FRONTMATTER_DELIMITER}\n"
 SOURCE_AGENT_FIXTURE: Final = "source-agent.md"
 CODEX_RENDERED_AGENT_FIXTURE: Final = "codex-rendered-agent.md"
 CODEX_BLOCK_MCP_AGENT_FIXTURE: Final = "codex-block-mcp-agent.md"
@@ -71,29 +66,15 @@ DUPLICATE_REVIEWER_BANG_FIXTURE: Final = "duplicate-reviewer-bang.md"
 EMPTY_TOOLS_AGENT_FIXTURE: Final = "empty-tools-agent.md"
 FOLDED_DESCRIPTION_AGENT_FIXTURE: Final = "folded-description-agent.md"
 GUARDED_WRITER_AGENT_FIXTURE: Final = "guarded-writer-agent.md"
-READ_ONLY_REVIEWER_AGENT_FIXTURE: Final = "read-only-reviewer-agent.md"
-EXPECTED_PERMISSION_MODE_CORRESPONDENCE: Final = (
-    ("default", None),
-    ("acceptEdits", "workspace-write"),
-    ("auto", None),
-    ("dontAsk", None),
-    ("bypassPermissions", None),
-    ("plan", "read-only"),
+# The inert whole-agent payload that direct conversion calls vary one field of.
+BASELINE_AGENT_FIXTURE: Final = DUPLICATE_REVIEWER_FIXTURE
+FILENAME_COLLISION_FIXTURES: Final = (
+    DUPLICATE_REVIEWER_FIXTURE,
+    DUPLICATE_REVIEWER_BANG_FIXTURE,
 )
-# The tool names below are the authoring platform's own tool vocabulary; each
-# pairing to a capability class is the conversion decision under test, so the
-# pairs are the hand-authored oracle exactly like the correspondences above.
-EXPECTED_TOOL_CLASSIFICATION: Final = (
-    ("Bash", "script-capable"),
-    ("Edit", "write-capable"),
-    ("Glob", "read-only"),
-    ("Grep", "read-only"),
-    ("NotebookEdit", "write-capable"),
-    ("Read", "read-only"),
-    ("Skill", "script-capable"),
-    ("WebFetch", "web-capable"),
-    ("WebSearch", "web-capable"),
-    ("Write", "write-capable"),
+YAML_MCP_SERVER_FIXTURES: Final = (
+    CODEX_BLOCK_MCP_AGENT_FIXTURE,
+    CODEX_FLOW_MCP_AGENT_FIXTURE,
 )
 
 
@@ -101,6 +82,7 @@ EXPECTED_TOOL_CLASSIFICATION: Final = (
 class AgentDocumentOracle:
     """Independent YAML-frontmatter and Markdown-body observation."""
 
+    path: Path
     frontmatter: Mapping[str, object]
     body: str
 
@@ -109,6 +91,7 @@ class AgentDocumentOracle:
 class RepositoryAgentBuild:
     """Repository agent sources beside one generated distribution tree."""
 
+    source_root: Path
     sources: tuple[Path, ...]
     dist_root: Path
     admitted_targets: Mapping[Path, frozenset[Target]]
@@ -122,11 +105,11 @@ class RepositoryAgentBuild:
 
 def build_repository_agents(root: Path) -> RepositoryAgentBuild:
     """Build every repository agent into one disposable distribution tree."""
-    source_root = REPOSITORY_ROOT / SOURCE_ROOT_NAME
-    sources = iter_agent_files(source_root / PLUGINS_DIR_NAME)
-    dist_root = root / "dist"
-    build(source_root, dist_root)
+    sources = iter_agent_files(REPOSITORY_SOURCE_ROOT / PLUGINS_DIR_NAME)
+    dist_root = root / DIST_DIR_NAME
+    build(REPOSITORY_SOURCE_ROOT, dist_root)
     return RepositoryAgentBuild(
+        source_root=REPOSITORY_SOURCE_ROOT,
         sources=sources,
         dist_root=dist_root,
         admitted_targets={source: authored_agent_targets(source) for source in sources},
@@ -160,11 +143,11 @@ def authored_agent_targets(source: Path) -> frozenset[Target]:
 def agent_document_oracle(path: Path) -> AgentDocumentOracle:
     """Read an agent document through PyYAML instead of the production parser."""
     text = path.read_text(encoding="utf-8")
-    if not text.startswith(f"{FRONTMATTER_DELIMITER}\n"):
+    if not text.startswith(FRONTMATTER_FENCE):
         raise ValueError(f"{path}: expected YAML frontmatter opener")
-    frontmatter_text, separator, body = text.removeprefix(
-        f"{FRONTMATTER_DELIMITER}\n"
-    ).partition(f"\n{FRONTMATTER_DELIMITER}\n")
+    frontmatter_text, separator, body = text.removeprefix(FRONTMATTER_FENCE).partition(
+        FRONTMATTER_CLOSER
+    )
     if not separator:
         raise ValueError(f"{path}: expected YAML frontmatter closer")
     loaded = yaml.safe_load(frontmatter_text)
@@ -173,6 +156,7 @@ def agent_document_oracle(path: Path) -> AgentDocumentOracle:
     ):
         raise ValueError(f"{path}: expected string-keyed YAML mapping")
     return AgentDocumentOracle(
+        path=path,
         frontmatter=cast("Mapping[str, object]", loaded),
         body=body.strip(),
     )
@@ -216,27 +200,24 @@ def oracle_mapping(document: AgentDocumentOracle, key: str) -> Mapping[str, obje
 
 def source_agent(
     *,
-    source_path: Path = REVIEWER_SOURCE_PATH,
-    name: str = "reviewer",
-    description: str = REVIEWER_DESCRIPTION,
-    body: str = REVIEWER_BODY,
     profile: str | None = None,
     permission_mode: str | None = None,
-    skills: tuple[str, ...] = (),
-    tools: tuple[str, ...] = (),
-    tools_declared: bool = False,
+    tools: tuple[str, ...] | None = None,
 ) -> SourceAgent:
-    """Build a parsed source agent with harness-owned defaults."""
-    return SourceAgent(
-        source_path=source_path,
-        name=name,
-        description=description,
-        body=body,
+    """Parse the baseline whole-agent fixture with one caller-selected variation.
+
+    The fixture is relocated beneath a plugin's agent directory, the namespace
+    conversion requires; ``tools`` declares an explicit allowlist when given.
+    """
+    fixture = AGENT_CONVERSION_FIXTURES_DIR / BASELINE_AGENT_FIXTURE
+    baseline = parse_agent_markdown(fixture)
+    return replace(
+        baseline,
+        source_path=Path(PLUGIN_NAME) / AGENT_SOURCE_DIRECTORY_NAME / fixture.name,
         profile=profile,
         permission_mode=permission_mode,
-        skills=skills,
-        tools=tools,
-        tools_declared=tools_declared,
+        tools=baseline.tools if tools is None else tools,
+        tools_declared=baseline.tools_declared or tools is not None,
     )
 
 
@@ -244,7 +225,7 @@ def spec_tree_wrapper_agents() -> tuple[SourceAgent, ...]:
     """Return every authored Spec Tree wrapper agent."""
     return tuple(
         parse_agent_markdown(path)
-        for path in sorted(SPEC_TREE_AGENT_SOURCE_DIR.glob("*.md"))
+        for path in sorted(SPEC_TREE_AGENT_SOURCE_DIR.glob(f"*{MARKDOWN_FILE_SUFFIX}"))
     )
 
 
@@ -252,9 +233,7 @@ def repository_wrapper_agents() -> tuple[SourceAgent, ...]:
     """Return every authored marketplace wrapper agent."""
     return tuple(
         parse_agent_markdown(path)
-        for path in iter_agent_files(
-            REPOSITORY_ROOT / SOURCE_ROOT_NAME / PLUGINS_DIR_NAME
-        )
+        for path in iter_agent_files(REPOSITORY_SOURCE_ROOT / PLUGINS_DIR_NAME)
     )
 
 
@@ -263,49 +242,62 @@ def agent_conversion_fixture(name: str) -> str:
     return (AGENT_CONVERSION_FIXTURES_DIR / name).read_text(encoding="utf-8")
 
 
+def write_fixture_agent(root: Path, fixture: str) -> Path:
+    """Materialize one whole-agent fixture as a plugin agent source file."""
+    return write_agent_source(
+        root, PLUGIN_NAME, Path(fixture).stem, agent_conversion_fixture(fixture)
+    )
+
+
+def write_filename_collision_sources(root: Path) -> Path:
+    """Materialize the agents whose names converge on one converted filename."""
+    for fixture in FILENAME_COLLISION_FIXTURES:
+        write_fixture_agent(root, fixture)
+    return root / SOURCE_ROOT_NAME / PLUGINS_DIR_NAME
+
+
+def _converted_fixture_toml(
+    root: Path, fixture: str
+) -> tuple[AgentDocumentOracle, dict[str, object]]:
+    source_path = write_fixture_agent(root, fixture)
+    rendered = render_agent_toml(convert_agent(parse_agent_markdown(source_path)))
+    return agent_document_oracle(source_path), tomllib.loads(rendered)
+
+
 def converted_source_agent_toml(
     root: Path,
 ) -> tuple[AgentDocumentOracle, dict[str, object]]:
     """Render the baseline source-agent fixture through the converter."""
-    source_path = write_agent_source(
-        root,
-        PLUGIN_NAME,
-        CHANGES_REVIEWER_NAME,
-        agent_conversion_fixture(SOURCE_AGENT_FIXTURE),
-    )
-    source = parse_agent_markdown(source_path)
-    rendered = render_agent_toml(convert_agent(source))
-    return agent_document_oracle(source_path), tomllib.loads(rendered)
+    return _converted_fixture_toml(root, SOURCE_AGENT_FIXTURE)
 
 
 def converted_folded_description_toml(
     root: Path,
 ) -> tuple[AgentDocumentOracle, dict[str, object]]:
     """Render the folded-description fixture through the converter."""
-    source = write_agent_source(
-        root,
-        PLUGIN_NAME,
-        CHANGES_REVIEWER_NAME,
-        agent_conversion_fixture(FOLDED_DESCRIPTION_AGENT_FIXTURE),
-    )
-    rendered = render_agent_toml(convert_agent(parse_agent_markdown(source)))
-    return agent_document_oracle(source), tomllib.loads(rendered)
+    return _converted_fixture_toml(root, FOLDED_DESCRIPTION_AGENT_FIXTURE)
+
+
+def converted_empty_tools_toml(root: Path) -> dict[str, object]:
+    """Render the explicit-empty-tools fixture through the converter."""
+    _document, parsed = _converted_fixture_toml(root, EMPTY_TOOLS_AGENT_FIXTURE)
+    return parsed
 
 
 def converted_default_codex_source_root_toml(
     root: Path,
 ) -> tuple[AgentDocumentOracle, dict[str, object]]:
     """Convert a rendered Codex-target agent fixture from its own tree."""
-    source_root = write_dist_codex_agent_tree(
-        root,
-        PLUGIN_NAME,
-        {CHANGES_REVIEWER_NAME: agent_conversion_fixture(CODEX_RENDERED_AGENT_FIXTURE)},
-    )
+    source_root = root / DIST_CODEX_PLUGINS_DIR
     source_path = (
         source_root
         / PLUGIN_NAME
         / AGENT_SOURCE_DIRECTORY_NAME
-        / f"{CHANGES_REVIEWER_NAME}.md"
+        / Path(CODEX_RENDERED_AGENT_FIXTURE).with_suffix(MARKDOWN_FILE_SUFFIX).name
+    )
+    source_path.parent.mkdir(parents=True, exist_ok=True)
+    source_path.write_text(
+        agent_conversion_fixture(CODEX_RENDERED_AGENT_FIXTURE), encoding="utf-8"
     )
     (converted,) = convert_agents(source_root)
     return agent_document_oracle(source_path), tomllib.loads(
@@ -315,76 +307,23 @@ def converted_default_codex_source_root_toml(
 
 def converted_codex_agent_with_yaml_mcp_toml(
     root: Path,
-    source: str,
+    fixture: str,
 ) -> tuple[AgentDocumentOracle, dict[str, object]]:
     """Convert a Codex target fixture with YAML MCP mapping syntax."""
-    source_root = write_agent_tree(
-        root,
-        PLUGIN_NAME,
-        {CHANGES_REVIEWER_NAME: source},
-    )
-    source_agent_path = (
-        source_root
-        / PLUGIN_NAME
-        / AGENT_SOURCE_DIRECTORY_NAME
-        / f"{CHANGES_REVIEWER_NAME}.md"
-    )
-    (converted,) = convert_agent_tree(source_root)
-    return agent_document_oracle(source_agent_path), tomllib.loads(
+    source_path = write_fixture_agent(root, fixture)
+    (converted,) = convert_agents(root / SOURCE_ROOT_NAME / PLUGINS_DIR_NAME)
+    return agent_document_oracle(source_path), tomllib.loads(
         render_agent_toml(converted)
     )
-
-
-def converted_empty_tools_toml(root: Path) -> dict[str, object]:
-    """Render the explicit-empty-tools fixture through the converter."""
-    source = write_agent_source(
-        root,
-        PLUGIN_NAME,
-        CHANGES_REVIEWER_NAME,
-        agent_conversion_fixture(EMPTY_TOOLS_AGENT_FIXTURE),
-    )
-    rendered = render_agent_toml(convert_agent(parse_agent_markdown(source)))
-    return tomllib.loads(rendered)
-
-
-def convert_agent_tree(source_root: Path) -> tuple[CodexAgent, ...]:
-    """Convert a harness-created agent tree."""
-    return convert_agents(source_root)
-
-
-def write_dist_codex_agent_tree(
-    root: Path,
-    plugin_name: str,
-    agents: Mapping[str, str],
-) -> Path:
-    """Materialize a generated dist/codex plugin agent tree."""
-    source_root = root / DIST_CODEX_PLUGINS_DIR
-    for agent_name, content in agents.items():
-        agent_path = (
-            source_root / plugin_name / AGENT_SOURCE_DIRECTORY_NAME / f"{agent_name}.md"
-        )
-        agent_path.parent.mkdir(parents=True, exist_ok=True)
-        agent_path.write_text(content, encoding="utf-8")
-    return source_root
 
 
 def installed_guarded_writer_toml(
     root: Path,
 ) -> tuple[AgentDocumentOracle, dict[str, object]]:
     """Install the guarded-writer fixture and return source plus parsed TOML."""
-    source_root = write_agent_tree(
-        root,
-        PLUGIN_NAME,
-        {GUARDED_WRITER_NAME: agent_conversion_fixture(GUARDED_WRITER_AGENT_FIXTURE)},
-    )
-    source_path = (
-        source_root
-        / PLUGIN_NAME
-        / AGENT_SOURCE_DIRECTORY_NAME
-        / f"{GUARDED_WRITER_NAME}.md"
-    )
+    source_path = write_fixture_agent(root, GUARDED_WRITER_AGENT_FIXTURE)
     (installed_path,) = _write_converted_agents(
-        source_root, root / CODEX_AGENTS_DIRNAME
+        root / SOURCE_ROOT_NAME / PLUGINS_DIR_NAME, root / CODEX_AGENTS_DIRNAME
     )
     return agent_document_oracle(source_path), tomllib.loads(
         installed_path.read_text(encoding="utf-8")
@@ -436,32 +375,34 @@ def parsed_toml_skill_config(
     values: Mapping[str, object],
 ) -> list[Mapping[str, object]]:
     """Return ``skills.config`` entries from emitted TOML."""
-    skills = toml_table(values, "skills")
-    config = skills["config"]
+    skills = toml_table(values, AGENT_SKILLS_FIELD)
+    config = skills[AGENT_SKILL_CONFIG_FIELD]
     if not isinstance(config, list):
-        raise TypeError("skills.config: expected array")
+        raise TypeError(f"{AGENT_SKILL_CONFIG_FIELD}: expected array")
     parsed: list[Mapping[str, object]] = []
     for item in config:
         if not isinstance(item, dict):
-            raise TypeError("skills.config: expected table entries")
+            raise TypeError(f"{AGENT_SKILL_CONFIG_FIELD}: expected table entries")
         parsed.append(cast("Mapping[str, object]", item))
     return parsed
 
 
 def converted_skill_config(agent: CodexAgent) -> tuple[Mapping[str, object], ...]:
     """Return the converter's structured ``skills.config`` rows."""
-    skills = agent.values["skills"]
+    skills = agent.values[AGENT_SKILLS_FIELD]
     if not isinstance(skills, Mapping):
-        raise TypeError("skills: expected table")
-    config = skills["config"]
+        raise TypeError(f"{AGENT_SKILLS_FIELD}: expected table")
+    config = skills[AGENT_SKILL_CONFIG_FIELD]
     if not isinstance(config, TomlArrayTable):
-        raise TypeError("skills.config: expected TOML array table")
+        raise TypeError(f"{AGENT_SKILL_CONFIG_FIELD}: expected TOML array table")
     return config.rows
 
 
 def converted_instruction_value(agent: CodexAgent) -> str:
     """Return converted developer instructions."""
-    value = agent.values["developer_instructions"]
+    value = agent.values[DEVELOPER_INSTRUCTIONS_FIELD]
     if not isinstance(value, TomlMultilineString):
-        raise TypeError("developer_instructions: expected TOML multiline string")
+        raise TypeError(
+            f"{DEVELOPER_INSTRUCTIONS_FIELD}: expected TOML multiline string"
+        )
     return value.value

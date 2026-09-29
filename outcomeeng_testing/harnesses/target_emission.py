@@ -59,8 +59,8 @@ from outcomeeng_testing.generators.source_and_templating import (
 from outcomeeng_testing.harnesses.distribution import (
     CANONICAL_SOURCE_ROOT,
     REPOSITORY_ROOT,
-    snapshot_files,
 )
+from outcomeeng_testing.harnesses.snapshots import snapshot_files
 from outcomeeng_testing.harnesses.src_tree import SrcTreeBuilder
 
 type PathSnapshot = tuple[tuple[Path, bytes], ...]

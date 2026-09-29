@@ -28,11 +28,21 @@ from outcomeeng.distribution.profiles import (
 
 AGENT_NAME_FIELD: Final = "name"
 AGENT_DESCRIPTION_FIELD: Final = "description"
+AGENT_SKILLS_FIELD: Final = "skills"
+AGENT_NICKNAME_CANDIDATES_FIELD: Final = "nickname_candidates"
+AGENT_MCP_SERVERS_FIELD: Final = "mcp_servers"
+SOURCE_PERMISSION_MODE_FIELD: Final = "permissionMode"
+SOURCE_DISALLOWED_TOOLS_FIELD: Final = "disallowedTools"
 AGENT_SKILL_ENABLED_FIELD: Final = "enabled"
 AGENT_TOOLS_FIELD: Final = "tools"
 # Lists the generated targets an agent source is emitted for; absent means every target.
 AGENT_TARGETS_FIELD: Final = "targets"
 AGENT_SKILL_INCLUDE_INSTRUCTIONS_FIELD: Final = "include_instructions"
+AGENT_SKILL_CONFIG_FIELD: Final = "config"
+WEB_SEARCH_FIELD: Final = "web_search"
+SHELL_ENVIRONMENT_POLICY_FIELD: Final = "shell_environment_policy"
+SHELL_ENVIRONMENT_SET_FIELD: Final = "set"
+DEVELOPER_INSTRUCTIONS_FIELD: Final = "developer_instructions"
 APPROVAL_POLICY_FIELD: Final = "approval_policy"
 SANDBOX_MODE_FIELD: Final = "sandbox_mode"
 SUPPORTED_FRONTMATTER_FIELDS: Final = frozenset(
@@ -42,12 +52,12 @@ SUPPORTED_FRONTMATTER_FIELDS: Final = frozenset(
         PROFILE_FIELD,
         APPROVAL_POLICY_FIELD,
         SANDBOX_MODE_FIELD,
-        "nickname_candidates",
-        "mcp_servers",
-        "permissionMode",
-        "skills",
+        AGENT_NICKNAME_CANDIDATES_FIELD,
+        AGENT_MCP_SERVERS_FIELD,
+        SOURCE_PERMISSION_MODE_FIELD,
+        AGENT_SKILLS_FIELD,
         AGENT_TOOLS_FIELD,
-        "disallowedTools",
+        SOURCE_DISALLOWED_TOOLS_FIELD,
         AGENT_TARGETS_FIELD,
     }
 )
@@ -214,13 +224,13 @@ def parse_agent_text(text: str, *, source_path: Path, name: str) -> SourceAgent:
         profile=profile if isinstance(profile, str) else None,
         sandbox_mode=_optional_string(frontmatter, SANDBOX_MODE_FIELD),
         approval_policy=_optional_string(frontmatter, APPROVAL_POLICY_FIELD),
-        nickname_candidates=_string_tuple(frontmatter, "nickname_candidates"),
-        mcp_servers=_optional_mapping(frontmatter, "mcp_servers"),
-        permission_mode=_optional_string(frontmatter, "permissionMode"),
-        skills=_string_tuple(frontmatter, "skills"),
+        nickname_candidates=_string_tuple(frontmatter, AGENT_NICKNAME_CANDIDATES_FIELD),
+        mcp_servers=_optional_mapping(frontmatter, AGENT_MCP_SERVERS_FIELD),
+        permission_mode=_optional_string(frontmatter, SOURCE_PERMISSION_MODE_FIELD),
+        skills=_string_tuple(frontmatter, AGENT_SKILLS_FIELD),
         tools=_string_tuple(frontmatter, AGENT_TOOLS_FIELD),
         tools_declared=AGENT_TOOLS_FIELD in frontmatter,
-        disallowed_tools=_string_tuple(frontmatter, "disallowedTools"),
+        disallowed_tools=_string_tuple(frontmatter, SOURCE_DISALLOWED_TOOLS_FIELD),
         targets=_string_tuple(frontmatter, AGENT_TARGETS_FIELD),
         targets_declared=AGENT_TARGETS_FIELD in frontmatter,
         unsupported_fields=unsupported_fields,
@@ -269,27 +279,27 @@ def convert_agent(
         values[APPROVAL_POLICY_FIELD] = agent.approval_policy
     web_search = map_web_search(agent.tools, tools_declared=agent.tools_declared)
     if web_search is not None:
-        values["web_search"] = web_search
+        values[WEB_SEARCH_FIELD] = web_search
     if agent.nickname_candidates:
-        values["nickname_candidates"] = agent.nickname_candidates
+        values[AGENT_NICKNAME_CANDIDATES_FIELD] = agent.nickname_candidates
     if agent.mcp_servers:
-        values["mcp_servers"] = agent.mcp_servers
+        values[AGENT_MCP_SERVERS_FIELD] = agent.mcp_servers
     if agent.skills:
-        values["skills"] = {
+        values[AGENT_SKILLS_FIELD] = {
             AGENT_SKILL_INCLUDE_INSTRUCTIONS_FIELD: True,
-            "config": TomlArrayTable(
+            AGENT_SKILL_CONFIG_FIELD: TomlArrayTable(
                 tuple(
                     {AGENT_NAME_FIELD: skill, AGENT_SKILL_ENABLED_FIELD: True}
                     for skill in agent.skills
                 )
             ),
         }
-    values["shell_environment_policy"] = {
-        "set": {
+    values[SHELL_ENVIRONMENT_POLICY_FIELD] = {
+        SHELL_ENVIRONMENT_SET_FIELD: {
             CODEX_AGENT_ENV_VAR: agent_environment_marker(agent),
         },
     }
-    values["developer_instructions"] = TomlMultilineString(
+    values[DEVELOPER_INSTRUCTIONS_FIELD] = TomlMultilineString(
         render_developer_instructions(agent)
     )
     return CodexAgent(filename=f"{generated_agent_type(agent)}.toml", values=values)
@@ -928,9 +938,21 @@ def _format_toml_multiline(value: str) -> str:
 
 
 __all__ = [
+    "AGENT_DESCRIPTION_FIELD",
+    "AGENT_MCP_SERVERS_FIELD",
     "AGENT_NAME_FIELD",
+    "AGENT_NICKNAME_CANDIDATES_FIELD",
+    "AGENT_SKILLS_FIELD",
+    "AGENT_SKILL_CONFIG_FIELD",
     "AGENT_SKILL_ENABLED_FIELD",
     "AGENT_SKILL_INCLUDE_INSTRUCTIONS_FIELD",
+    "CODEX_PERMISSION_MODE_GUIDANCE_TEMPLATE",
+    "DEVELOPER_INSTRUCTIONS_FIELD",
+    "SHELL_ENVIRONMENT_POLICY_FIELD",
+    "SHELL_ENVIRONMENT_SET_FIELD",
+    "SOURCE_DISALLOWED_TOOLS_FIELD",
+    "SOURCE_PERMISSION_MODE_FIELD",
+    "WEB_SEARCH_FIELD",
     "APPROVAL_POLICY_FIELD",
     "AGENT_SOURCE_DIRECTORY_NAME",
     "ALL_TOOLS_SENTINEL",

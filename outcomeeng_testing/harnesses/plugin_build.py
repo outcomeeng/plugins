@@ -44,8 +44,8 @@ from outcomeeng.distribution.build import TEMPLATES_DIR_NAME
 from outcomeeng_testing.harnesses.distribution import (
     CANONICAL_SOURCE_ROOT,
     REPOSITORY_ROOT,
-    snapshot_files,
 )
+from outcomeeng_testing.harnesses.snapshots import snapshot_files
 from outcomeeng_testing.harnesses.src_tree import SrcTreeBuilder, src_tree
 
 PLUGIN_BUILD_PROPERTY_EXAMPLES: Final = 8

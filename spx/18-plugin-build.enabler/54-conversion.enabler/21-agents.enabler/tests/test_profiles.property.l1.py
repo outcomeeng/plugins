@@ -8,8 +8,11 @@ from outcomeeng_testing.harnesses.profiles import exercise_unknown_profiles
 
 
 def test_unknown_profiles_are_rejected() -> None:
+    targets = tuple(Target)
+
     def assert_rejected(profile: str) -> None:
-        for target in Target:
+        assert targets
+        for target in targets:
             with pytest.raises(ProfileConfigurationError):
                 resolve_profile(target, profile)
 

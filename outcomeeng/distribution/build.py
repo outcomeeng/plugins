@@ -1684,8 +1684,13 @@ def template_relative_path(source_file: Path, *, src_root: Path, plugin: str) ->
     within_templates = source_file.relative_to(src_root / TEMPLATES_DIR_NAME)
     template_name = within_templates.parts[0]
     remainder = Path(*within_templates.parts[1:])
-    skill_dir = f"{plugin}-{template_name}"
+    skill_dir = template_skill_dir_name(plugin, template_name)
     return Path(plugin) / SKILLS_SUBDIR_NAME / skill_dir / remainder
+
+
+def template_skill_dir_name(plugin: str, template_name: str) -> str:
+    """Return the skill directory one per-plugin template renders into."""
+    return f"{plugin}-{template_name}"
 
 
 def project_emissions(src_root: Path) -> EmissionProjection:
@@ -1823,17 +1828,28 @@ def _agent_aware_destination(
     capability = agent_capability(target)
     if capability.manifest_declares_agents:
         return relative_path, action
-    plugin = parts[0]
-    stem = Path(parts[-1]).stem
+    destination = converted_agent_relative_path(
+        parts[0], Path(parts[-1]).stem, capability=capability
+    )
+    return destination, EmissionAction.CONVERT_AGENT
+
+
+def converted_agent_relative_path(
+    plugin: str, stem: str, *, capability: AgentCapability
+) -> Path:
+    """Return a converted agent's path inside ``plugin``'s generated tree.
+
+    A target whose manifest cannot declare agents carries each converted agent
+    inside the plugin's lifecycle skill, named in ``capability``'s namespace.
+    """
     filename = f"{agent_slug(plugin, stem, capability=capability)}{capability.suffix}"
-    destination = (
+    return (
         Path(plugin)
         / SKILLS_SUBDIR_NAME
-        / f"{plugin}-{LIFECYCLE_TEMPLATE_NAME}"
+        / template_skill_dir_name(plugin, LIFECYCLE_TEMPLATE_NAME)
         / AGENTS_SUBDIR_NAME
         / filename
     )
-    return destination, EmissionAction.CONVERT_AGENT
 
 
 def _projected_template_emissions(

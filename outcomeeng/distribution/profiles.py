@@ -63,6 +63,10 @@ class ClaudeConfiguration:
 
 
 type NativeConfiguration = CodexConfiguration | ClaudeConfiguration
+
+NATIVE_PROFILE_SYNTAX: Final = MappingProxyType(
+    {Target.CODEX: ProfileSyntax.TOML, Target.CLAUDE: ProfileSyntax.YAML}
+)
 type ProfileRegistry = Mapping[Target, Mapping[AgentProfile, NativeConfiguration]]
 
 NATIVE_CONFIGURATION_TYPES: Final = MappingProxyType(
@@ -151,9 +155,7 @@ def render_profile_configuration(
         resolve_profile(target, profile, profiles=profiles)
     )
     if syntax is None:
-        selected_syntax = (
-            ProfileSyntax.TOML if target is Target.CODEX else ProfileSyntax.YAML
-        )
+        selected_syntax = NATIVE_PROFILE_SYNTAX[target]
     else:
         selected_syntax = ProfileSyntax(syntax)
     if selected_syntax is ProfileSyntax.JSON:

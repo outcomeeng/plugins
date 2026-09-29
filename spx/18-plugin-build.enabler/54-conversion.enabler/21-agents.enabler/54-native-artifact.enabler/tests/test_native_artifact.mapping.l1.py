@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
+from dataclasses import asdict
+
 from outcomeeng.distribution.agents import (
     AGENT_NAME_FIELD,
     AGENT_SKILL_ENABLED_FIELD,
     AGENT_SKILL_INCLUDE_INSTRUCTIONS_FIELD,
+    AGENT_SKILLS_FIELD,
     SKILL_ENABLEMENT_LIMITATION,
     convert_agent,
 )
-from dataclasses import asdict
 from outcomeeng.distribution.contracts import Target
 from outcomeeng.distribution.profiles import AGENT_PROFILES
 from outcomeeng.models import AgentProfile
@@ -22,11 +24,15 @@ from outcomeeng_testing.harnesses.agent_conversion import (
 
 
 def test_complete_native_profile_reaches_converted_agent() -> None:
-    for profile in (*AgentProfile, None):
+    profiles = tuple(AgentProfile)
+
+    assert profiles
+    for profile in (*profiles, None):
         converted = convert_agent(source_agent(profile=profile))
         expected = asdict(
             AGENT_PROFILES[Target.CODEX][profile or AgentProfile.STANDARD]
         )
+        assert expected
         assert {key: converted.values[key] for key in expected} == expected
 
 
@@ -42,7 +48,7 @@ def test_skills_are_preserved_as_codex_config_and_guidance() -> None:
             {AGENT_NAME_FIELD: skill, AGENT_SKILL_ENABLED_FIELD: True}
             for skill in source.skills
         )
-        skills = converted.values["skills"]
+        skills = converted.values[AGENT_SKILLS_FIELD]
         assert isinstance(skills, dict)
         assert skills[AGENT_SKILL_INCLUDE_INSTRUCTIONS_FIELD] is True
         assert all(skill in instructions for skill in source.skills)

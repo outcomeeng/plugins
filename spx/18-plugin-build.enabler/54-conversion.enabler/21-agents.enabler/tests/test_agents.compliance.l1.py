@@ -14,41 +14,38 @@ from outcomeeng.distribution.agents import (
     AGENT_NAME_FIELD,
     CODEX_AGENT_ENV_SEPARATOR,
     CODEX_AGENT_ENV_VAR,
+    SHELL_ENVIRONMENT_POLICY_FIELD,
+    SHELL_ENVIRONMENT_SET_FIELD,
     AgentConversionError,
     agent_environment_marker,
     convert_agents,
-    iter_agent_files,
-    parse_agent_markdown,
 )
 from outcomeeng.distribution.build import (
     FLAT_AGENT_PLUGIN_SEPARATOR,
-    LIFECYCLE_TEMPLATE_NAME,
     SourceFormatError,
     agent_capability,
-    agent_slug,
     build,
+    converted_agent_relative_path,
+    source_plugin_name,
 )
 from outcomeeng.distribution.contracts import (
     AGENTS_SUBDIR_NAME,
-    CODEX_PLUGIN_SUBDIR_NAME,
+    CODEX_PLUGIN_MANIFEST,
     DIST_DIR_NAME,
-    PLUGINS_DIR_NAME,
+    RECURSIVE_GLOB,
     SKILLS_SUBDIR_NAME,
     SOURCE_ROOT_NAME,
     Target,
 )
 from outcomeeng_testing.harnesses.agent_conversion import (
-    DUPLICATE_REVIEWER_FIXTURE,
-    DUPLICATE_REVIEWER_BANG_FIXTURE,
     LIFECYCLE_COLLISION_SOURCE,
-    PLUGIN_NAME,
-    agent_conversion_fixture,
     build_repository_agents,
+    repository_wrapper_agents,
     toml_string,
     toml_table,
+    write_filename_collision_sources,
 )
-from outcomeeng_testing.harnesses.distribution import REPOSITORY_ROOT, snapshot_files
-from outcomeeng_testing.harnesses.src_tree import write_agent_source
+from outcomeeng_testing.harnesses.snapshots import snapshot_files
 
 
 def test_environment_marker_is_namespaced_by_source_plugin(tmp_path: Path) -> None:
@@ -57,58 +54,43 @@ def test_environment_marker_is_namespaced_by_source_plugin(tmp_path: Path) -> No
 
     assert repository_agents.sources_for(Target.CODEX)
     for source_path in repository_agents.sources_for(Target.CODEX):
-        plugin = source_path.parents[1].name
-        generated_type = agent_slug(
-            plugin,
-            source_path.stem,
-            capability=capability,
-        )
+        plugin = source_plugin_name(source_path, src_root=repository_agents.source_root)
         artifact = (
             repository_agents.dist_root
             / Target.CODEX.value
-            / plugin
-            / SKILLS_SUBDIR_NAME
-            / f"{plugin}-{LIFECYCLE_TEMPLATE_NAME}"
-            / AGENTS_SUBDIR_NAME
-            / f"{generated_type}{capability.suffix}"
+            / converted_agent_relative_path(
+                plugin, source_path.stem, capability=capability
+            )
         )
         parsed = tomllib.loads(artifact.read_text(encoding="utf-8"))
         marker = toml_string(
-            toml_table(toml_table(parsed, "shell_environment_policy"), "set"),
+            toml_table(
+                toml_table(parsed, SHELL_ENVIRONMENT_POLICY_FIELD),
+                SHELL_ENVIRONMENT_SET_FIELD,
+            ),
             CODEX_AGENT_ENV_VAR,
         )
-        expected_type = source_path.stem
 
-        assert marker == (f"{plugin}{CODEX_AGENT_ENV_SEPARATOR}{expected_type}")
+        assert marker == f"{plugin}{CODEX_AGENT_ENV_SEPARATOR}{source_path.stem}"
 
 
 def test_environment_marker_without_source_plugin_is_rejected() -> None:
-    source_path = iter_agent_files(
-        REPOSITORY_ROOT / SOURCE_ROOT_NAME / PLUGINS_DIR_NAME
-    )[0]
-    source = replace(
-        parse_agent_markdown(source_path),
-        source_path=Path(source_path.name),
-    )
+    wrappers = repository_wrapper_agents()
 
-    with pytest.raises(AgentConversionError):
-        agent_environment_marker(source)
+    assert wrappers
+    for wrapper in wrappers:
+        source = replace(wrapper, source_path=Path(wrapper.source_path.name))
+
+        with pytest.raises(AgentConversionError):
+            agent_environment_marker(source)
 
 
 def test_two_sources_converting_to_one_filename_fail(tmp_path: Path) -> None:
     # The build-level path-collision check below guards the generated tree.
     # This guards conversion itself, which the harnesses call directly, so a
     # colliding pair cannot silently reduce to one written definition.
-    for fixture in (DUPLICATE_REVIEWER_FIXTURE, DUPLICATE_REVIEWER_BANG_FIXTURE):
-        write_agent_source(
-            tmp_path,
-            PLUGIN_NAME,
-            Path(fixture).stem,
-            agent_conversion_fixture(fixture),
-        )
-
     with pytest.raises(AgentConversionError):
-        convert_agents(tmp_path / SOURCE_ROOT_NAME / PLUGINS_DIR_NAME)
+        convert_agents(write_filename_collision_sources(tmp_path))
 
 
 def test_two_sources_claiming_one_output_fail_before_the_build_writes(
@@ -124,27 +106,34 @@ def test_two_sources_claiming_one_output_fail_before_the_build_writes(
 
 def test_flat_namespace_agents_carry_the_plugin_slug_prefix(tmp_path: Path) -> None:
     repository_agents = build_repository_agents(tmp_path)
-    for target in Target:
+    flat_targets = tuple(
+        target for target in Target if not agent_capability(target).namespaced
+    )
+
+    assert flat_targets
+    assert repository_agents.sources
+    for target in flat_targets:
         capability = agent_capability(target)
-        if capability.namespaced:
-            continue
         tree = repository_agents.dist_root / target.value
         artifacts = sorted(
-            path
-            for path in tree.glob(
+            tree.glob(
                 f"*/{SKILLS_SUBDIR_NAME}/*/{AGENTS_SUBDIR_NAME}/*{capability.suffix}"
             )
         )
         assert artifacts, f"{target.value} carries no converted agent artifacts"
         target_sources = repository_agents.sources_for(target)
-        for plugin_dir in sorted(
-            {source_path.parents[1] for source_path in target_sources}
-        ):
-            plugin = plugin_dir.name
+        plugins = {
+            source_plugin_name(source_path, src_root=repository_agents.source_root)
+            for source_path in target_sources
+        }
+        for plugin in sorted(plugins):
             expected_stems = {
                 FLAT_AGENT_PLUGIN_SEPARATOR.join((plugin, source_path.stem))
                 for source_path in target_sources
-                if source_path.parents[1] == plugin_dir
+                if source_plugin_name(
+                    source_path, src_root=repository_agents.source_root
+                )
+                == plugin
             }
             actual = {
                 path.stem
@@ -164,29 +153,41 @@ def test_converted_agents_ship_inside_a_manifest_declared_surface(
     tmp_path: Path,
 ) -> None:
     repository_agents = build_repository_agents(tmp_path)
-    for target in Target:
+    converting_targets = tuple(
+        target
+        for target in Target
+        if not agent_capability(target).manifest_declares_agents
+    )
+
+    assert converting_targets
+    for target in converting_targets:
         capability = agent_capability(target)
-        if capability.manifest_declares_agents:
-            continue
         tree = repository_agents.dist_root / target.value
         assert not sorted(tree.glob(f"*/{AGENTS_SUBDIR_NAME}/*")), (
             f"{target.value} carries agents outside a manifest-declared surface"
         )
-        for path in tree.glob(
-            f"*/{SKILLS_SUBDIR_NAME}/*/{AGENTS_SUBDIR_NAME}/*{capability.suffix}"
-        ):
-            assert path.relative_to(tree).parts[1] == SKILLS_SUBDIR_NAME, (
-                f"{path} is not inside the plugin's declared skill surface"
-            )
-        for manifest_path in tree.glob(f"*/{CODEX_PLUGIN_SUBDIR_NAME}/plugin.json"):
+        manifests = sorted(tree.glob(str(Path("*") / CODEX_PLUGIN_MANIFEST)))
+        assert manifests, f"{target.value} carries no plugin manifest"
+        declared_skill_roots: set[Path] = set()
+        for manifest_path in manifests:
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             declared_skills = manifest[SKILLS_SUBDIR_NAME]
             assert isinstance(declared_skills, str)
-            plugin_root = manifest_path.parent.parent
-            assert (plugin_root / declared_skills).resolve() == (
-                plugin_root / SKILLS_SUBDIR_NAME
-            ).resolve()
-            assert "agents" not in manifest, (
+            plugin_root = tree / manifest_path.relative_to(tree).parts[0]
+            declared_root = (plugin_root / declared_skills).resolve()
+            assert declared_root == (plugin_root / SKILLS_SUBDIR_NAME).resolve()
+            assert AGENTS_SUBDIR_NAME not in manifest, (
                 f"{manifest_path} declares an agents field this target's manifest "
                 "schema does not carry"
             )
+            declared_skill_roots.add(declared_root)
+        converted = sorted(
+            tree.glob(
+                str(Path(RECURSIVE_GLOB) / AGENTS_SUBDIR_NAME / f"*{capability.suffix}")
+            )
+        )
+        assert converted, f"{target.value} carries no converted agent artifacts"
+        for path in converted:
+            assert any(
+                path.resolve().is_relative_to(root) for root in declared_skill_roots
+            ), f"{path} is not inside a plugin's manifest-declared skill surface"
