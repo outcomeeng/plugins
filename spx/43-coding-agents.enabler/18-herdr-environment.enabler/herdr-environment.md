@@ -26,7 +26,7 @@ This capability is an agent adapter: the configured way the agent harness launch
 
 ### Compliance
 
-- ALWAYS: open-worktree, create-worktree, start, relaunch, stop, and key require explicit mutation authorization in the operation request before any herdr command runs ([test](tests/test_herdr_environment.compliance.l1.py))
+- ALWAYS: open-worktree, create-worktree, start, relaunch, stop, key, and a prompt whose text, stripped of surrounding whitespace, is a session-ending command of the hosted agents — `/exit` or `/quit` — require explicit mutation authorization in the operation request before any herdr command runs, because that prompt ends the agent session exactly as stop does; every other prompt runs without it ([test](tests/test_herdr_environment.compliance.l1.py))
 - NEVER: a wait-bearing request — wait, prompt with wait, start, or relaunch — is accepted without an explicit timeout, and the default runner never runs a command without a bound ([test](tests/test_herdr_environment.compliance.l1.py))
 - NEVER: create-worktree records a worktree-occupancy claim; the agent session `start` launches in the created worktree claims it ([test](tests/test_herdr_environment.compliance.l1.py))
 - NEVER: another shipped coding-agents script constructs a raw herdr argument vector or invokes herdr command help ([test](tests/test_herdr_environment.compliance.l1.py))
