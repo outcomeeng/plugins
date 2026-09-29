@@ -18,6 +18,7 @@ CAN move a prioritized Output from proposal to executable work without placing m
 - `author-change` runs one workflow per Maturity level; each workflow loads only that level's Definition of Ready and advances Maturity only when the Definition of Ready holds and the level's authority is present.
 - `audit-change` reads the complete record front matter first, judges one record against the Definition of Ready for its declared Maturity, and emits a structured Agentic verdict under `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`, whose result carries the run token, the rendered projection's run-level fields, every finding payload verbatim, and the one command that reproduces the complete rendered projection from the sealed run.
 - ALWAYS: `audit-change` reaches every file and the SPX store only through its bundled Python runner, and never invokes `rm`, `mktemp`, a shell redirect to a file, or one of its scripts directly.
+- NEVER: `audit-change` or its `change-auditor` wrapper writes a file; every payload passes over stdin and stdout, and the SPX run journal holds the run.
 - Persistence maps every front-matter field to the configured coordination store's native features and reads every field back unchanged; a store limit never shapes the record, and the persistence skill instruction selects the client for the configured store.
 - A record whose front matter does not carry the contract's closed key set is outside the contract; it receives no migration, alias, inferred front matter, body-line lineage interpretation, or audit verdict, and the auditor reports it as outside the contract.
 - `claim-change` claims only an `Available` record: it adds the holder, records the Claim, and moves Lifecycle `Available` to `Claimed`, writing neither Maturity nor any body section; any other Lifecycle, an existing holder, or a field mismatch is reported without mutation.
@@ -27,4 +28,4 @@ CAN move a prioritized Output from proposal to executable work without placing m
 
 ### Compliance
 
-- NEVER: `audit-change` or its `change-auditor` wrapper writes a file; every payload passes over stdin and stdout, and the SPX run journal holds the run ([test](tests/test_audit_change_run.compliance.l1.py))
+- NEVER: the bundled Python runner of `audit-change` writes a file; each invocation reads one JSON request on stdin and writes one JSON result on stdout, and the SPX run journal is the only state that persists between requests ([test](tests/test_audit_change_run.compliance.l1.py))
