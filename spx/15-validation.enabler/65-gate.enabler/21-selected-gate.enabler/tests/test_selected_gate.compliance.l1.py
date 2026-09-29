@@ -52,7 +52,11 @@ from outcomeeng_testing.generators.gate import (
     unrelated_full_gate_paths,
 )
 from outcomeeng_testing.harnesses.gate import (
+    CredentialAvailability,
+    across_credential_availability,
+    check_full_observation,
     collect_selected_gate_paths,
+    entry_point_check_observation,
     failing_discovery_runner,
     production_check_observation,
     repository_without_origin,
@@ -184,6 +188,19 @@ def test_a_repo_without_origin_reports_the_unset_head() -> None:
     assert str(helper_failure.value) in run.output
 
 
+def test_the_check_entry_point_reports_the_unset_head_as_the_selected_gate_does() -> (
+    None
+):
+    with repository_without_origin() as repo:
+        entry = entry_point_check_observation(repo)
+        direct = production_check_observation(repo)
+
+    assert entry.exit_code == GIT_DISCOVERY_FAILURE_EXIT_CODE
+    assert entry.spawn_calls == ()
+    assert GIT_DISCOVERY_ERROR_PREFIX in entry.output
+    assert entry.output == direct.output
+
+
 def test_collection_propagates_git_failure_as_a_typed_error() -> None:
     runner = failing_discovery_runner(
         stdout=GIT_DISCOVERY_FAILURE_STDOUT, stderr=GIT_DISCOVERY_FAILURE_STDERR
@@ -210,11 +227,16 @@ def test_infrastructure_path_without_an_index_is_rejected_by_name() -> None:
 
 
 def test_definition_guidance_changes_require_the_live_check() -> None:
-    plan = build_selected_gate_plan((INSTRUCTION_BLOCK_SOURCE_PATH,))
+    plans = across_credential_availability(
+        lambda: build_selected_gate_plan((INSTRUCTION_BLOCK_SOURCE_PATH,))
+    )
 
-    assert plan.live_discovery
-    assert any(LIVE_DISCOVERY_TEST in step.argv for step in plan.steps)
-    assert plan.live_discovery_reason == LIVE_DISCOVERY_INCLUDED_REASON
+    assert set(plans) == set(CredentialAvailability)
+    assert plans[CredentialAvailability.PRESENT] == plans[CredentialAvailability.ABSENT]
+    for plan in plans.values():
+        assert plan.live_discovery
+        assert any(LIVE_DISCOVERY_TEST in step.argv for step in plan.steps)
+        assert plan.live_discovery_reason == LIVE_DISCOVERY_INCLUDED_REASON
 
 
 @pytest.mark.parametrize(
@@ -222,71 +244,119 @@ def test_definition_guidance_changes_require_the_live_check() -> None:
 )
 def test_each_declared_discovery_surface_requires_the_live_check(pattern: str) -> None:
     with synthetic_repository() as repo:
-        plan = build_selected_gate_plan(
-            (path_from_pattern(pattern),),
-            test_infrastructure=index_test_infrastructure(repo.root),
+        index = index_test_infrastructure(repo.root)
+        plans = across_credential_availability(
+            lambda: build_selected_gate_plan(
+                (path_from_pattern(pattern),), test_infrastructure=index
+            )
         )
 
-    assert plan.live_discovery
-    assert plan.live_discovery_reason == LIVE_DISCOVERY_INCLUDED_REASON
-    assert any(
-        step.argv[: len(PYTEST_ARGV)] == PYTEST_ARGV
-        and (plan.full_gate or LIVE_DISCOVERY_TEST in step.argv)
-        and step.argv[-len(LIVE_DISCOVERY_EXCLUSION) :] != LIVE_DISCOVERY_EXCLUSION
-        for step in plan.steps
-    )
+    assert set(plans) == set(CredentialAvailability)
+    assert plans[CredentialAvailability.PRESENT] == plans[CredentialAvailability.ABSENT]
+    for plan in plans.values():
+        assert plan.live_discovery
+        assert plan.live_discovery_reason == LIVE_DISCOVERY_INCLUDED_REASON
+        assert any(
+            step.argv[: len(PYTEST_ARGV)] == PYTEST_ARGV
+            and (plan.full_gate or LIVE_DISCOVERY_TEST in step.argv)
+            and step.argv[-len(LIVE_DISCOVERY_EXCLUSION) :] != LIVE_DISCOVERY_EXCLUSION
+            for step in plan.steps
+        )
 
 
 def test_discovery_inclusion_is_printed_before_execution() -> None:
-    run = run_check_observation(branch_path=INSTRUCTION_BLOCK_SOURCE_PATH)
+    runs = across_credential_availability(
+        lambda: run_check_observation(branch_path=INSTRUCTION_BLOCK_SOURCE_PATH)
+    )
 
-    assert run.exit_code == 0
-    assert run.spawn_calls
-    assert LIVE_DISCOVERY_INCLUDED_REASON in run.output_before_first_spawn
+    assert set(runs) == set(CredentialAvailability)
+    assert (
+        runs[CredentialAvailability.PRESENT].output_before_first_spawn
+        == runs[CredentialAvailability.ABSENT].output_before_first_spawn
+    )
+    for run in runs.values():
+        assert run.exit_code == 0
+        assert run.spawn_calls
+        assert LIVE_DISCOVERY_INCLUDED_REASON in run.output_before_first_spawn
 
 
 def test_unrelated_automatic_full_gate_excludes_only_the_live_check() -> None:
     with synthetic_repository() as repo:
         layout = reach_layout(InfrastructureReach.SHARED, repo)
-        plan = build_selected_gate_plan(
-            (layout.changed_path,),
-            test_infrastructure=index_test_infrastructure(repo.root),
+        index = index_test_infrastructure(repo.root)
+        plans = across_credential_availability(
+            lambda: build_selected_gate_plan(
+                (layout.changed_path,), test_infrastructure=index
+            )
         )
 
-    assert plan.full_gate
-    assert not plan.live_discovery
-    assert tuple(
-        step.argv[: -len(LIVE_DISCOVERY_EXCLUSION)]
-        if step.argv[: len(PYTEST_ARGV)] == PYTEST_ARGV
-        else step.argv
-        for step in plan.steps
-    ) == tuple(step.argv for recipe in CHECK_RECIPES for step in recipe.steps)
-    assert all(
-        step.argv[-len(LIVE_DISCOVERY_EXCLUSION) :] == LIVE_DISCOVERY_EXCLUSION
-        for step in plan.steps
-        if step.argv[: len(PYTEST_ARGV)] == PYTEST_ARGV
-    )
+    assert set(plans) == set(CredentialAvailability)
+    assert plans[CredentialAvailability.PRESENT] == plans[CredentialAvailability.ABSENT]
+    for plan in plans.values():
+        assert plan.full_gate
+        assert not plan.live_discovery
+        assert tuple(
+            step.argv[: -len(LIVE_DISCOVERY_EXCLUSION)]
+            if step.argv[: len(PYTEST_ARGV)] == PYTEST_ARGV
+            else step.argv
+            for step in plan.steps
+        ) == tuple(step.argv for recipe in CHECK_RECIPES for step in recipe.steps)
+        assert all(
+            step.argv[-len(LIVE_DISCOVERY_EXCLUSION) :] == LIVE_DISCOVERY_EXCLUSION
+            for step in plan.steps
+            if step.argv[: len(PYTEST_ARGV)] == PYTEST_ARGV
+        )
 
 
 @pytest.mark.parametrize("path", unrelated_full_gate_paths())
 def test_unrelated_full_gate_execution_honors_its_exclusion(path: str) -> None:
-    run = run_check_observation(branch_path=path)
-
-    assert run.exit_code == 0
-    assert any(
-        call[: len(PYTEST_ARGV)] == PYTEST_ARGV
-        and call[-len(LIVE_DISCOVERY_EXCLUSION) :] == LIVE_DISCOVERY_EXCLUSION
-        for call in run.spawn_calls
+    runs = across_credential_availability(
+        lambda: run_check_observation(branch_path=path)
     )
-    assert LIVE_DISCOVERY_EXCLUDED_REASON in run.output_before_first_spawn
+
+    assert set(runs) == set(CredentialAvailability)
+    assert (
+        runs[CredentialAvailability.PRESENT].output_before_first_spawn
+        == runs[CredentialAvailability.ABSENT].output_before_first_spawn
+    )
+    for run in runs.values():
+        assert run.exit_code == 0
+        assert any(
+            call[: len(PYTEST_ARGV)] == PYTEST_ARGV
+            and call[-len(LIVE_DISCOVERY_EXCLUSION) :] == LIVE_DISCOVERY_EXCLUSION
+            for call in run.spawn_calls
+        )
+        assert LIVE_DISCOVERY_EXCLUDED_REASON in run.output_before_first_spawn
 
 
 @pytest.mark.parametrize("path", discovery_full_gate_paths())
 def test_relevant_full_gate_keeps_live_discovery_enabled(path: str) -> None:
-    plan = build_selected_gate_plan((path,))
+    plans = across_credential_availability(lambda: build_selected_gate_plan((path,)))
 
-    assert plan.full_gate
-    assert plan.live_discovery
-    assert plan.steps == tuple(
-        step for recipe in CHECK_RECIPES for step in recipe.steps
+    assert set(plans) == set(CredentialAvailability)
+    assert plans[CredentialAvailability.PRESENT] == plans[CredentialAvailability.ABSENT]
+    for plan in plans.values():
+        assert plan.full_gate
+        assert plan.live_discovery
+        assert plan.steps == tuple(
+            step for recipe in CHECK_RECIPES for step in recipe.steps
+        )
+
+
+def test_explicit_full_verification_runs_live_discovery() -> None:
+    runs = across_credential_availability(check_full_observation)
+    full_steps = tuple(
+        step.argv
+        for recipe in CHECK_RECIPES
+        for step in (*recipe.preflight_steps, *recipe.steps)
     )
+
+    assert set(runs) == set(CredentialAvailability)
+    for run in runs.values():
+        assert run.exit_code == 0
+        assert run.spawn_calls == full_steps
+        assert any(call[: len(PYTEST_ARGV)] == PYTEST_ARGV for call in run.spawn_calls)
+        assert all(
+            call[-len(LIVE_DISCOVERY_EXCLUSION) :] != LIVE_DISCOVERY_EXCLUSION
+            for call in run.spawn_calls
+        )

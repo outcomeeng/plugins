@@ -22,16 +22,19 @@ import signal
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass, field
+from enum import StrEnum
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import TextIO, cast
+from typing import TextIO, TypeVar, cast
 
 from hypothesis import given, seed, settings
 
 from outcomeeng import validation as validation_pkg
+from outcomeeng.distribution.installation import CODEX_HOME_ENV
 from outcomeeng.validation import (
     POST_KILL_REAP_ATTEMPTS,
     PREFLIGHT_STEPS,
+    RECIPE_CHECK,
     SIGNAL_GRACE_SECONDS,
     SIGNAL_POLL_INTERVAL_SECONDS,
     SUMMARY_KEY_RECIPES,
@@ -49,7 +52,12 @@ from outcomeeng.validation import (
     run_recipe,
     terminate_process_group,
 )
+from outcomeeng.validation.__main__ import main as validation_main
 from outcomeeng.validation._git import GitCommandResult
+from outcomeeng.validation.ci_gate import (
+    CODEX_API_KEY_ENVIRONMENT,
+    DISCOVERY_AUTH_MODE_ENVIRONMENT,
+)
 from outcomeeng.validation.infrastructure_index import (
     InfrastructureIndex,
     index_test_infrastructure,
@@ -57,6 +65,7 @@ from outcomeeng.validation.infrastructure_index import (
 from outcomeeng.validation.selected_gate import (
     DEFAULT_BASE_REF,
     GIT_DISCOVERY_FAILURE_EXIT_CODE,
+    RECIPE_CHECK_FULL,
     GIT_DIFF_STAGED_ARGV,
     GIT_DIFF_UNSTAGED_ARGV,
     GIT_LS_UNTRACKED_ARGV,
@@ -72,6 +81,12 @@ from outcomeeng_testing.generators.gate import (
     step_lists,
 )
 from outcomeeng_testing.harnesses.changeset_scope import build_repo_without_origin
+from outcomeeng_testing.harnesses.discovery_auth import (
+    CREDENTIAL_ENVIRONMENTS,
+    SAVED_LOGIN_API_KEY_FIELD,
+    AuthenticationMode,
+)
+from outcomeeng_testing.harnesses.discovery_auth_cases import API_FIXTURE_PATH
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
 
 SELECTED_GATE_PROPERTY_SEED = 20260705
@@ -739,6 +754,113 @@ def _reported_summary(output: str) -> dict[str, object] | None:
     if not reported:
         return None
     return read_summary(Path(reported[-1]))
+
+
+def check_full_observation() -> RunObservation:
+    """Run the entry point's explicit full-verification recipe with scripted children."""
+
+    sink = io.StringIO()
+    spawner = RecordingSpawner(
+        exit_codes=[os.EX_OK] * _CHILD_OUTPUT_BUDGET, observed_sink=sink
+    )
+    exit_code = validation_main([RECIPE_CHECK_FULL], spawner=spawner, sink=sink)
+    return _run_observation(
+        exit_code=exit_code,
+        sink=sink,
+        spawner=spawner,
+        runner_calls=(),
+    )
+
+
+def entry_point_check_observation(repo: Path) -> RunObservation:
+    """Run the entry point's selected-check recipe with ``repo`` as working directory.
+
+    The entry point resolves its repository from the working directory, so the
+    harness enters ``repo`` for the run and restores the prior directory.
+    """
+
+    sink = io.StringIO()
+    spawner = RecordingSpawner(exit_codes=[os.EX_OK], observed_sink=sink)
+    previous = Path.cwd()
+    os.chdir(repo)
+    try:
+        exit_code = validation_main([RECIPE_CHECK], spawner=spawner, sink=sink)
+    finally:
+        os.chdir(previous)
+    return _run_observation(
+        exit_code=exit_code,
+        sink=sink,
+        spawner=spawner,
+        runner_calls=(),
+    )
+
+
+class CredentialAvailability(StrEnum):
+    """Whether live-discovery credentials are present in the process environment."""
+
+    PRESENT = "present"
+    ABSENT = "absent"
+
+
+# Every environment name through which live discovery finds a credential: the
+# mode selector, each credential variable, and the home holding a saved login.
+_DISCOVERY_CREDENTIAL_NAMES = (
+    DISCOVERY_AUTH_MODE_ENVIRONMENT,
+    CODEX_HOME_ENV,
+    *sorted(CREDENTIAL_ENVIRONMENTS),
+)
+
+
+def _present_credential_environment() -> dict[str, str]:
+    """The API-mode selection with the inert fixture's key as its credential."""
+
+    document = json.loads(API_FIXTURE_PATH.read_text(encoding="utf-8"))
+    return {
+        DISCOVERY_AUTH_MODE_ENVIRONMENT: AuthenticationMode.API.value,
+        CODEX_API_KEY_ENVIRONMENT: document[SAVED_LOGIN_API_KEY_FIELD],
+    }
+
+
+@contextmanager
+def discovery_credentials(availability: CredentialAvailability) -> Iterator[None]:
+    """Hold the process environment at one credential availability for the block.
+
+    Present selects API-mode discovery with a key; absent removes every mode
+    selector and credential variable and points the saved-login home at an
+    empty directory. The prior environment is restored on every exit path.
+    """
+
+    saved = {name: os.environ.get(name) for name in _DISCOVERY_CREDENTIAL_NAMES}
+    with TemporaryDirectory() as empty_home:
+        for name in _DISCOVERY_CREDENTIAL_NAMES:
+            os.environ.pop(name, None)
+        if availability is CredentialAvailability.PRESENT:
+            os.environ.update(_present_credential_environment())
+        else:
+            os.environ[CODEX_HOME_ENV] = empty_home
+        try:
+            yield
+        finally:
+            for name, value in saved.items():
+                if value is None:
+                    os.environ.pop(name, None)
+                else:
+                    os.environ[name] = value
+
+
+_Observed = TypeVar("_Observed")
+
+
+def across_credential_availability(
+    observe: Callable[[], _Observed],
+) -> dict[CredentialAvailability, _Observed]:
+    """Return ``observe()`` taken once under each credential availability."""
+
+    observed: dict[CredentialAvailability, _Observed] = {}
+    for availability in CredentialAvailability:
+        with discovery_credentials(availability):
+            observed[availability] = observe()
+    return observed
 
 
 @contextmanager

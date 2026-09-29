@@ -1,5 +1,6 @@
 """Authored-source and eval fixtures for native configuration rejection."""
 
+import subprocess
 from collections.abc import Iterable
 from contextlib import redirect_stdout
 from dataclasses import dataclass
@@ -36,6 +37,7 @@ from outcomeeng.spec_tree_structure import (
     NodeKind,
     format_node_directory_name,
 )
+from outcomeeng.validation._model import Step
 from outcomeeng.validation._steps import EVALS_ROOT
 from outcomeeng.validation.link_integrity import EVALS_DIRNAME
 from outcomeeng.validation.profile_configuration import CONFIGURATION_ONLY_OPTION
@@ -52,6 +54,7 @@ from outcomeeng_testing.generators.profile_configuration import (
     native_field_assignments,
     token_document,
 )
+from outcomeeng_testing.generators.runtime_tokens import lint_enforced_runtime_names
 from outcomeeng_testing.harnesses.agent_conversion import (
     AGENT_CONVERSION_FIXTURES_DIR,
     DUPLICATE_REVIEWER_FIXTURE,
@@ -66,6 +69,18 @@ _PROFILE_BUILD_FIXTURE = AGENT_CONVERSION_FIXTURES_DIR / DUPLICATE_REVIEWER_FIXT
 _EVAL_NODE_SLUG = "profile-guard"
 _EVAL_RULE_DIRECTORY = "model-literal"
 _TOML_COMMENT_PREFIX = "# "
+
+# Disposable layout the harness owns for a whole guarded repository: a
+# suffixless file under the source root outside every authored directory, and
+# two files the guard's scan set excludes — one beside the source root, one
+# under the spec tree that no eval definition declares.
+_UNRENDERED_SOURCE_FILE = Path("unrendered") / "raw-runtime-tokens"
+_UNDECLARED_SPEC_FILE = f"{_EVAL_NODE_SLUG}{MARKDOWN_FILE_SUFFIX}"
+
+# The guard step's command runs from the repository whose environment provides
+# it, bounded so a hung interpreter fails the run rather than stalling it.
+_REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+_GUARD_STEP_TIMEOUT_SECONDS = 120
 
 _AUTHORED_SOURCE_DIRECTORIES = tuple(
     Path(SOURCE_ROOT_NAME) / directory
@@ -99,6 +114,27 @@ class EvalConfigurationOverrides:
     prompt: Path
     template: Path
     placed: tuple[PlacedLiteral, ...]
+
+
+@dataclass(frozen=True)
+class GuardedRepository:
+    """A disposable repository and every file and finding its guard must reach.
+
+    ``source_files`` lists every file written under ``source_root`` and
+    ``eval_configuration_files`` every eval definition and declared prompt
+    template written under ``spec_root``; the files written outside both sets
+    are absent from each. ``placed_configuration`` records every model literal
+    and native assignment across both sets, and ``placed_runtime_tokens`` every
+    raw runtime token written under the source root.
+    """
+
+    root: Path
+    source_root: Path
+    spec_root: Path
+    source_files: tuple[Path, ...]
+    eval_configuration_files: tuple[Path, ...]
+    placed_configuration: tuple[PlacedLiteral, ...]
+    placed_runtime_tokens: tuple[PlacedLiteral, ...]
 
 
 @dataclass(frozen=True)
@@ -296,3 +332,48 @@ def run_configuration_guard(paths: tuple[Path, ...]) -> ConfigurationGuardRun:
     with redirect_stdout(output):
         exit_code = main([CONFIGURATION_ONLY_OPTION, *(str(path) for path in paths)])
     return ConfigurationGuardRun(exit_code=exit_code, output=output.getvalue())
+
+
+def write_guarded_repository(root: Path) -> GuardedRepository:
+    """Write a repository whose source and spec trees carry every guarded finding.
+
+    The source root holds the native overrides in every authored directory and
+    a suffixless file of raw runtime tokens outside them; the spec tree holds an
+    eval definition with its prompt and template. A file beside the source root
+    and an undeclared spec-tree file carry the same raw tokens outside the scan
+    set.
+    """
+    overrides = write_configuration_overrides(root)
+    evals = write_eval_configuration_overrides(root)
+    source_root = root / SOURCE_ROOT_NAME
+    token_entries = tuple(
+        (case.name, (case.name,)) for case in lint_enforced_runtime_names()
+    )
+    raw_tokens = _write_lines(source_root / _UNRENDERED_SOURCE_FILE, token_entries)
+    _write_lines(root / _UNRENDERED_SOURCE_FILE.name, token_entries)
+    _write_lines(evals.spec_root / _UNDECLARED_SPEC_FILE, _prompt_entries())
+    return GuardedRepository(
+        root=root,
+        source_root=source_root,
+        spec_root=evals.spec_root,
+        source_files=(*overrides.paths, source_root / _UNRENDERED_SOURCE_FILE),
+        eval_configuration_files=(evals.definition, evals.prompt, evals.template),
+        placed_configuration=(*overrides.placed, *evals.placed),
+        placed_runtime_tokens=raw_tokens,
+    )
+
+
+def run_guard_step(step: Step) -> ConfigurationGuardRun:
+    """Execute ``step``'s complete command from the repository root."""
+    completed = subprocess.run(
+        step.argv,
+        cwd=_REPOSITORY_ROOT,
+        stdin=subprocess.DEVNULL,
+        capture_output=True,
+        text=True,
+        timeout=_GUARD_STEP_TIMEOUT_SECONDS,
+        check=False,
+    )
+    return ConfigurationGuardRun(
+        exit_code=completed.returncode, output=completed.stdout
+    )

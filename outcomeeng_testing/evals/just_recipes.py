@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Final
 
 from outcomeeng.models import EVAL_PROFILE_MODELS, AgentProfile
+from outcomeeng.validation.link_integrity import EVALS_DIRNAME
 from outcomeeng_evals.case import (
     CASE_ID_FIELD,
     CASE_INPUT_FIELD,
@@ -40,7 +41,11 @@ from outcomeeng_evals.definition import (
     TITLE_FIELD,
     TRIALS_FIELD,
 )
-from outcomeeng_evals.producer_prompt import PROMPT_SOURCE_TABLE, SECTION_FIELD
+from outcomeeng_evals.producer_prompt import (
+    MATERIALIZED_PROMPT_FILENAME,
+    PROMPT_SOURCE_TABLE,
+    SECTION_FIELD,
+)
 from outcomeeng_evals.recipes import (
     EVAL_CASE_RECIPE,
     EVAL_NODE_RECIPE,
@@ -52,6 +57,7 @@ from outcomeeng_evals.recipes import (
     RUNNING_LINE_PREFIX,
 )
 from outcomeeng_evals.runner import ENVELOPE_RESULT_KEY
+from outcomeeng_testing.evals.factories import EVAL_CASES_FILENAME
 from outcomeeng_testing.harnesses.eval_runner import captured_process_fixture
 from outcomeeng_testing.harnesses.eval_workspaces import temporary_workspace
 
@@ -251,7 +257,7 @@ def write_eval_suite(
     case_id: str,
     profile: AgentProfile | None = None,
 ) -> Path:
-    eval_dir = node_dir / "evals" / suite_name
+    eval_dir = node_dir / EVALS_DIRNAME / suite_name
     eval_dir.mkdir(parents=True)
     eval_toml = eval_dir / EVAL_TOML_FILENAME
     profile_lines = [f'{PROFILE_FIELD} = "{profile}"'] if profile is not None else []
@@ -259,8 +265,8 @@ def write_eval_suite(
         "\n".join(
             [
                 f'{TITLE_FIELD} = "{suite_name}-smoke"',
-                f'{CASES_FIELD} = "cases.jsonl"',
-                f'{PROMPT_FIELD} = "prompt.md"',
+                f'{CASES_FIELD} = "{EVAL_CASES_FILENAME}"',
+                f'{PROMPT_FIELD} = "{MATERIALIZED_PROMPT_FILENAME}"',
                 f'{PLUGIN_DIR_FIELD} = "{plugin_dir.as_posix()}"',
                 *profile_lines,
                 f"{THRESHOLD_FIELD} = 1.0",
@@ -270,11 +276,11 @@ def write_eval_suite(
         ),
         encoding="utf-8",
     )
-    (eval_dir / "prompt.md").write_text(
+    (eval_dir / MATERIALIZED_PROMPT_FILENAME).write_text(
         f"Case {CASE_ID_PLACEHOLDER}\n\n{INPUT_JSON_PLACEHOLDER}\n",
         encoding="utf-8",
     )
-    (eval_dir / "cases.jsonl").write_text(
+    (eval_dir / EVAL_CASES_FILENAME).write_text(
         json.dumps(
             {
                 CASE_ID_FIELD: case_id,
@@ -300,7 +306,7 @@ def copy_producer_prompt_fixture(tmp_path: Path) -> tuple[Path, Path, str]:
     """
 
     eval_root = tmp_path / "node"
-    eval_dir = eval_root / "evals" / _PRODUCER_SECTION_FIXTURE.name
+    eval_dir = eval_root / EVALS_DIRNAME / _PRODUCER_SECTION_FIXTURE.name
     shutil.copytree(_PRODUCER_SECTION_FIXTURE, eval_dir)
     definition = tomllib.loads(
         (eval_dir / EVAL_TOML_FILENAME).read_text(encoding="utf-8")

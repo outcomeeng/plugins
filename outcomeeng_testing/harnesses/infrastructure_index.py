@@ -18,6 +18,11 @@ from typing import Final
 from hypothesis import given, seed, settings
 
 from outcomeeng import validation as validation_pkg
+from outcomeeng.spec_tree_structure import (
+    MIN_NODE_INDEX,
+    NodeKind,
+    format_node_directory_name,
+)
 from outcomeeng.validation.infrastructure_index import (
     CONFTEST_FILENAME,
     EXECUTED_TEST_PREFIX,
@@ -36,8 +41,14 @@ from outcomeeng_testing.harnesses.property_evidence import run_replayable_proper
 HARNESSES_SUBPACKAGE: Final = "harnesses"
 GENERATORS_SUBPACKAGE: Final = "generators"
 FIXTURES_DIRECTORY: Final = "fixtures"
-FIRST_NODE: Final = f"{SPEC_TREE_ROOT}/21-first.enabler"
-SECOND_NODE: Final = f"{SPEC_TREE_ROOT}/32-second.enabler"
+FIRST_NODE: Final = (
+    f"{SPEC_TREE_ROOT}/"
+    f"{format_node_directory_name(MIN_NODE_INDEX, 'first', NodeKind.ENABLER)}"
+)
+SECOND_NODE: Final = (
+    f"{SPEC_TREE_ROOT}/"
+    f"{format_node_directory_name(MIN_NODE_INDEX, 'second', NodeKind.ENABLER)}"
+)
 SIDE_EFFECT_MARKER_NAME: Final = "imported.marker"
 
 

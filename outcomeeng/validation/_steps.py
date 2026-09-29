@@ -189,19 +189,39 @@ def eval_configuration_file_args(root: Path = Path(EVALS_ROOT)) -> tuple[str, ..
     return tuple(str(path) for path in eval_configuration_files(root))
 
 
-RUNTIME_TOKEN_STEP: Final = Step(
-    label="runtime-token",
-    argv=(
-        "uv",
-        "run",
-        "python",
-        "-m",
-        "outcomeeng.validation.runtime_tokens",
-        *runtime_token_files(),
-        CONFIGURATION_ONLY_OPTION,
-        *eval_configuration_file_args(),
-    ),
+RUNTIME_TOKEN_STEP_LABEL: Final = "runtime-token"
+RUNTIME_TOKEN_COMMAND_ARGV: Final = (
+    "uv",
+    "run",
+    "python",
+    "-m",
+    "outcomeeng.validation.runtime_tokens",
 )
+
+
+def runtime_token_step(
+    source_root: Path = Path(SOURCE_ROOT_NAME),
+    evals_root: Path = Path(EVALS_ROOT),
+) -> Step:
+    """Return the guard step over one repository's source and eval roots.
+
+    The guard command receives every file under ``source_root`` for the full
+    runtime-token and configuration scan, then, after the configuration-only
+    marker, every eval definition and declared prompt template under
+    ``evals_root`` for the configuration scan alone.
+    """
+    return Step(
+        label=RUNTIME_TOKEN_STEP_LABEL,
+        argv=(
+            *RUNTIME_TOKEN_COMMAND_ARGV,
+            *runtime_token_files(source_root),
+            CONFIGURATION_ONLY_OPTION,
+            *eval_configuration_file_args(evals_root),
+        ),
+    )
+
+
+RUNTIME_TOKEN_STEP: Final = runtime_token_step()
 
 
 def scratch_path_files() -> tuple[str, ...]:

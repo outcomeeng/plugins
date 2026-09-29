@@ -10,7 +10,11 @@ from tempfile import TemporaryDirectory
 
 from outcomeeng.distribution.build import RUNTIME_TOKEN_REGISTRY, RuntimeTokenKind
 from outcomeeng.distribution.contracts import SKILL_FILENAME, SOURCE_ROOT_NAME
-from outcomeeng.validation._steps import runtime_token_files
+from outcomeeng.validation._steps import (
+    RUNTIME_TOKEN_COMMAND_ARGV,
+    RUNTIME_TOKEN_STEP,
+)
+from outcomeeng.validation.profile_configuration import CONFIGURATION_ONLY_OPTION
 from outcomeeng.validation.runtime_tokens import (
     RUNTIME_TOKEN_IGNORE,
     Violation,
@@ -69,7 +73,7 @@ def observe_source(
 
 @dataclass(frozen=True)
 class AuthoredTreeEnforcement:
-    """The gate's selected files beside an independently derived inventory.
+    """The gate step's full-scan files beside an independently derived inventory.
 
     Returns both sets and the per-file ignore observations rather than their
     agreement, so the linked test owns every comparison the assertion claims.
@@ -84,7 +88,11 @@ class AuthoredTreeEnforcement:
 
 
 def authored_tree_enforcement() -> AuthoredTreeEnforcement:
-    """Return the authored-tree enforcement observations, undecided."""
+    """Return the authored-tree enforcement observations, undecided.
+
+    The gate files are the arguments the gate's runtime-token step passes
+    before its configuration-only marker, read from the step itself.
+    """
     repo_root = Path.cwd().resolve()
     source_root = repo_root / SOURCE_ROOT_NAME
     roots = (source_root,)
@@ -95,7 +103,11 @@ def authored_tree_enforcement() -> AuthoredTreeEnforcement:
         for path in root.rglob("*")
         if path.is_file()
     }
-    gate_files = {Path(raw_path).resolve() for raw_path in runtime_token_files()}
+    argv = RUNTIME_TOKEN_STEP.argv
+    full_scan_arguments = argv[
+        len(RUNTIME_TOKEN_COMMAND_ARGV) : argv.index(CONFIGURATION_ONLY_OPTION)
+    ]
+    gate_files = {Path(raw_path).resolve() for raw_path in full_scan_arguments}
     return AuthoredTreeEnforcement(
         enforced_roots=roots,
         expected_files=frozenset(expected_files),

@@ -130,7 +130,7 @@ _TARGET_BRANCH_PATTERN: Final = re.compile(
 _JINJA_NEUTRAL_BLOCK_STARTS: Final = {
     ending: kind for kind, ending in JINJA_NEUTRAL_BLOCK_ENDINGS.items()
 }
-_RUNTIME_TOKEN_REMEDIATION: Final = (
+RUNTIME_TOKEN_REMEDIATION: Final = (
     "must be a registry token or appear only in its matching per-runtime conditional"
 )
 PROFILE_CONFIGURATION_REMEDIATION: Final = (
@@ -504,7 +504,7 @@ def scan_file(
             path=path,
             line=lineno,
             token=token,
-            remediation=_RUNTIME_TOKEN_REMEDIATION,
+            remediation=RUNTIME_TOKEN_REMEDIATION,
         )
         for lineno, token in find_raw_tokens(text, registry=registry)
     ]

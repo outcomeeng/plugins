@@ -30,6 +30,8 @@ from outcomeeng.distribution.build import (
 )
 from outcomeeng.distribution.contracts import (
     AGENTS_SUBDIR_NAME,
+    CODEX_MANIFEST_AGENTS_FIELD,
+    CODEX_MANIFEST_SKILLS_FIELD,
     CODEX_PLUGIN_MANIFEST,
     DIST_DIR_NAME,
     RECURSIVE_GLOB,
@@ -171,12 +173,12 @@ def test_converted_agents_ship_inside_a_manifest_declared_surface(
         declared_skill_roots: set[Path] = set()
         for manifest_path in manifests:
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-            declared_skills = manifest[SKILLS_SUBDIR_NAME]
+            declared_skills = manifest[CODEX_MANIFEST_SKILLS_FIELD]
             assert isinstance(declared_skills, str)
             plugin_root = tree / manifest_path.relative_to(tree).parts[0]
             declared_root = (plugin_root / declared_skills).resolve()
             assert declared_root == (plugin_root / SKILLS_SUBDIR_NAME).resolve()
-            assert AGENTS_SUBDIR_NAME not in manifest, (
+            assert CODEX_MANIFEST_AGENTS_FIELD not in manifest, (
                 f"{manifest_path} declares an agents field this target's manifest "
                 "schema does not carry"
             )

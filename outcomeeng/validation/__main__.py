@@ -8,8 +8,9 @@ Usage::
     python3 -m outcomeeng.validation test -- -k gate
 
 Constructs the production `ProcessSpawner` adapter, binds the output sink
-to stdout, and runs the selected recipe. Returns the orchestrator's exit
-code; signal delivery propagates as `128 + signum` per the runner.
+to stdout, and runs the selected recipe; a caller may inject both. Returns
+the orchestrator's exit code; signal delivery propagates as `128 + signum`
+per the runner.
 """
 
 from __future__ import annotations
@@ -17,8 +18,14 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
+from typing import TextIO
 
-from outcomeeng.validation import ProductionSpawner, run_check, run_recipe
+from outcomeeng.validation import (
+    ProcessSpawner,
+    ProductionSpawner,
+    run_check,
+    run_recipe,
+)
 from outcomeeng.validation.selected_gate import RECIPE_CHECK_FULL, run_selected_check
 from outcomeeng.validation._steps import (
     CHECK_RECIPES,
@@ -48,20 +55,28 @@ def _recipe_args(args: list[str]) -> tuple[str, ...]:
     return tuple(args)
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(
+    argv: list[str] | None = None,
+    *,
+    spawner: ProcessSpawner | None = None,
+    sink: TextIO | None = None,
+) -> int:
     parsed = _parser().parse_args(argv)
-    spawner = ProductionSpawner()
+    process_spawner = spawner if spawner is not None else ProductionSpawner()
+    output = sink if sink is not None else sys.stdout
     if parsed.recipe == RECIPE_VALIDATION:
-        return run_recipe(spawner=spawner, sink=sys.stdout, recipe=VALIDATION_RECIPE)
+        return run_recipe(
+            spawner=process_spawner, sink=output, recipe=VALIDATION_RECIPE
+        )
     if parsed.recipe == RECIPE_TEST:
         return run_recipe(
-            spawner=spawner,
-            sink=sys.stdout,
+            spawner=process_spawner,
+            sink=output,
             recipe=test_recipe(_recipe_args(parsed.recipe_args)),
         )
     if parsed.recipe == RECIPE_CHECK_FULL:
-        return run_check(spawner=spawner, sink=sys.stdout, recipes=CHECK_RECIPES)
-    return run_selected_check(spawner=spawner, sink=sys.stdout, repo=Path.cwd())
+        return run_check(spawner=process_spawner, sink=output, recipes=CHECK_RECIPES)
+    return run_selected_check(spawner=process_spawner, sink=output, repo=Path.cwd())
 
 
 if __name__ == "__main__":

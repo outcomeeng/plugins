@@ -32,6 +32,11 @@ OUTPUT_STYLES_SUBDIR_NAME: Final = "output-styles"
 CLAUDE_PLUGIN_SUBDIR_NAME: Final = ".claude-plugin"
 CODEX_PLUGIN_SUBDIR_NAME: Final = ".codex-plugin"
 CODEX_PLUGIN_MANIFEST: Final = Path(CODEX_PLUGIN_SUBDIR_NAME) / "plugin.json"
+# The Codex plugin manifest field that declares a plugin's skill surface, and
+# the agents field that manifest schema does not carry — converted agents reach
+# Codex only through the declared skill surface.
+CODEX_MANIFEST_SKILLS_FIELD: Final = "skills"
+CODEX_MANIFEST_AGENTS_FIELD: Final = "agents"
 DIST_CODEX_PLUGINS_DIR: Final = Path(DIST_DIR_NAME) / "codex"
 REFERENCES_SUBDIR_NAME: Final = "references"
 SKILL_FILENAME: Final = "SKILL.md"
