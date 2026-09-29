@@ -65,6 +65,25 @@ def build_variable_token(variable: str) -> str:
     return f"{BUILD_VARIABLE_DELIMITER_START} {variable} {BUILD_VARIABLE_DELIMITER_END}"
 
 
+PROFILE_CONFIG_GLOBAL: Final = "profile_config"
+"""Template global rendering one profile's complete native configuration."""
+PROFILE_DESCRIPTION_GLOBAL: Final = "profile_description"
+"""Template global describing one profile's complete native configuration."""
+
+
+def format_template_call(global_name: str, *arguments: str) -> str:
+    """Return the authored variable token calling one build template global.
+
+    Each argument renders as a quoted string literal, so a string-valued enum
+    member renders its value.
+    """
+    rendered = ", ".join(repr(str(argument)) for argument in arguments)
+    return (
+        f"{BUILD_VARIABLE_DELIMITER_START} {global_name}({rendered}) "
+        f"{BUILD_VARIABLE_DELIMITER_END}"
+    )
+
+
 def format_runtime_token(kind: str, capability: str, runtime: str | None = None) -> str:
     """Return the authored template token for one runtime registry capability.
 
@@ -72,11 +91,9 @@ def format_runtime_token(kind: str, capability: str, runtime: str | None = None)
     build target's name, while a runtime-explicit second argument renders the
     named runtime's name regardless of target.
     """
-    arguments = f"{capability!r}" if runtime is None else f"{capability!r}, {runtime!r}"
-    return (
-        f"{BUILD_VARIABLE_DELIMITER_START} {kind}({arguments}) "
-        f"{BUILD_VARIABLE_DELIMITER_END}"
-    )
+    if runtime is None:
+        return format_template_call(kind, capability)
+    return format_template_call(kind, capability, runtime)
 
 
 class Target(StrEnum):

@@ -61,6 +61,8 @@ from outcomeeng.distribution.contracts import (
     PLUGIN_NAME_VARIABLE,
     PLUGINS_DIR_NAME,
     PLUGIN_SUBDIRS,
+    PROFILE_CONFIG_GLOBAL,
+    PROFILE_DESCRIPTION_GLOBAL,
     REQUIRE_SKILL_GUIDANCE_TEMPLATE,
     RUNTIME_TOKEN_ASK_USER_CAPABILITY,
     RUNTIME_TOKEN_ASK_USER_NAMES,
@@ -1258,8 +1260,8 @@ def make_jinja_environment(
             _Target(context[BUILD_TARGET_VARIABLE]), profile, profiles=profiles
         )
 
-    environment.globals["profile_config"] = profile_config
-    environment.globals["profile_description"] = profile_description
+    environment.globals[PROFILE_CONFIG_GLOBAL] = profile_config
+    environment.globals[PROFILE_DESCRIPTION_GLOBAL] = profile_description
 
     def authorized_plugins(runtime: str) -> tuple[str, ...]:
         """Read the owning catalog only when a template requests authorization."""
