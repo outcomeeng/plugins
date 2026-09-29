@@ -137,6 +137,10 @@ PROFILE_CONFIGURATION_REMEDIATION: Final = (
     "must select a complete central profile; configuration literals remain forbidden "
     "inside per-runtime conditionals"
 )
+# One report line per violation: its file, line, token, and remediation.
+VIOLATION_REPORT_TEMPLATE: Final = (
+    "{path}:{line}: raw runtime token {token!r} {remediation}"
+)
 
 # Files under src/plugins/ exempt from enforcement. Repo-relative POSIX paths.
 # An entry exempts that one file without opting the rest of the tree out, and is
@@ -571,9 +575,12 @@ def main(
     ) + scan_configuration_paths(args[boundary + 1 :])
     for violation in violations:
         print(
-            f"{violation.path}:{violation.line}: "
-            f"raw runtime token {violation.token!r} "
-            f"{violation.remediation}",
+            VIOLATION_REPORT_TEMPLATE.format(
+                path=violation.path,
+                line=violation.line,
+                token=violation.token,
+                remediation=violation.remediation,
+            )
         )
     return 1 if violations else 0
 

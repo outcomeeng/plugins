@@ -11,7 +11,10 @@ from outcomeeng_testing.harnesses.runtime_tokens import (
 
 
 def test_non_ignored_raw_tokens_fail_validation() -> None:
-    for case in lint_enforced_runtime_names():
+    cases = lint_enforced_runtime_names()
+
+    assert cases
+    for case in cases:
         observed = observe_source(raw_token_source(case))
 
         assert observed.violations
