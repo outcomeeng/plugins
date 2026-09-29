@@ -1,6 +1,5 @@
 {
   "prompt": "Audit the supplied implementation and return the structured verdict.",
-  "explicit_model": "claude-sonnet-4-5",
   "envelope": {
     "type": "result",
     "is_error": false,

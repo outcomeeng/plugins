@@ -21,6 +21,7 @@ from outcomeeng_evals.cli.commands.run import (
     TIMEOUT_SECONDS_OPTION,
     run_command,
 )
+from outcomeeng_evals.definition import EVAL_TOML_FILENAME
 from outcomeeng_evals.runner import ModelRunner
 from outcomeeng_evals.settings import DEFAULT_MAX_BUDGET_USD, DEFAULT_TIMEOUT_SECONDS
 from outcomeeng_testing.evals.fakes import StubModelRunner
@@ -39,7 +40,17 @@ class ConfiguredRunArtifacts:
     timeout_seconds: int
 
 
-def assert_run_command_exit_follows_definition_threshold() -> None:
+@dataclass(frozen=True)
+class ThresholdRunExitCodes:
+    """Exit codes of the real run command over the threshold fixture suites."""
+
+    configured_threshold_passing: int
+    configured_threshold_failing: int
+    default_threshold_at_configured_boundary: int
+    default_threshold_all_passing: int
+
+
+def run_threshold_exit_codes() -> ThresholdRunExitCodes:
     """Drive the real command against passing and below-threshold fixture runs."""
 
     responses = _load_responses()
@@ -50,27 +61,24 @@ def assert_run_command_exit_follows_definition_threshold() -> None:
         plugin_dir = workspace / "plugin"
         plugin_dir.mkdir()
 
-        passing = _invoke(
-            eval_dir / "eval.toml", plugin_dir, iter(responses["passing"])
+        return ThresholdRunExitCodes(
+            configured_threshold_passing=_invoke(
+                eval_dir / EVAL_TOML_FILENAME, plugin_dir, iter(responses["passing"])
+            ),
+            configured_threshold_failing=_invoke(
+                eval_dir / EVAL_TOML_FILENAME, plugin_dir, iter(responses["failing"])
+            ),
+            default_threshold_at_configured_boundary=_invoke(
+                eval_dir / "eval_default.toml",
+                plugin_dir,
+                iter(responses["passing"]),
+            ),
+            default_threshold_all_passing=_invoke(
+                eval_dir / "eval_default.toml",
+                plugin_dir,
+                iter(responses["all_passing"]),
+            ),
         )
-        failing = _invoke(
-            eval_dir / "eval.toml", plugin_dir, iter(responses["failing"])
-        )
-        default_rejects_configured_boundary = _invoke(
-            eval_dir / "eval_default.toml",
-            plugin_dir,
-            iter(responses["passing"]),
-        )
-        default_passing = _invoke(
-            eval_dir / "eval_default.toml",
-            plugin_dir,
-            iter(responses["all_passing"]),
-        )
-
-    assert passing == EXIT_SUCCESS
-    assert failing != EXIT_SUCCESS
-    assert default_rejects_configured_boundary != EXIT_SUCCESS
-    assert default_passing == EXIT_SUCCESS
 
 
 @contextmanager
@@ -85,10 +93,11 @@ def configured_threshold_run() -> Iterator[Path]:
         plugin_dir = workspace / "plugin"
         plugin_dir.mkdir()
 
-        exit_code = _invoke(
-            eval_dir / "eval.toml", plugin_dir, iter(responses["passing"])
+        _require_completed_run(
+            _invoke(
+                eval_dir / EVAL_TOML_FILENAME, plugin_dir, iter(responses["passing"])
+            )
         )
-        assert exit_code == EXIT_SUCCESS
         yield eval_dir
 
 
@@ -105,17 +114,26 @@ def configured_ceiling_run() -> Iterator[ConfiguredRunArtifacts]:
         plugin_dir.mkdir()
 
         exit_code = _invoke(
-            eval_dir / "eval.toml",
+            eval_dir / EVAL_TOML_FILENAME,
             plugin_dir,
             iter(responses["passing"]),
             max_budget_usd=NON_DEFAULT_MAX_BUDGET_USD,
             timeout_seconds=NON_DEFAULT_TIMEOUT_SECONDS,
         )
-        assert exit_code == EXIT_SUCCESS
+        _require_completed_run(exit_code)
         yield ConfiguredRunArtifacts(
             eval_dir=eval_dir,
             max_budget_usd=NON_DEFAULT_MAX_BUDGET_USD,
             timeout_seconds=NON_DEFAULT_TIMEOUT_SECONDS,
+        )
+
+
+def _require_completed_run(exit_code: int) -> None:
+    """Stop setup when the run whose artifacts a caller inspects did not complete."""
+
+    if exit_code != EXIT_SUCCESS:
+        raise RuntimeError(
+            f"eval run setup exited {exit_code}; no run artifacts to inspect"
         )
 
 

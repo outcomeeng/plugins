@@ -1,4 +1,9 @@
-"""Marketplace-owned fixtures for repository-local eval Just recipe tests."""
+"""Marketplace-owned infrastructure for repository-local eval Just recipe tests.
+
+Each runner builds a temporary eval suite, runs one real Just recipe against a
+fake ``claude`` binary, and returns the completed process with the observations
+the linked tests judge; the tests own every predicate.
+"""
 
 from __future__ import annotations
 
@@ -6,255 +11,230 @@ import json
 import os
 import stat
 import subprocess
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Final
 
-from outcomeeng.models import AgentProfile
-from outcomeeng_evals.cli.commands.run import PROFILE_OPTION
+from outcomeeng.models import EVAL_PROFILE_MODELS, AgentProfile
+from outcomeeng_evals.case import (
+    CASE_ID_FIELD,
+    CASE_INPUT_FIELD,
+    EXPECTED_VERDICT_FIELD,
+    MUST_CONTAIN_FIELD,
+    MUST_NOT_CONTAIN_FIELD,
+)
 from outcomeeng_evals.definition import (
+    CASES_FIELD,
     DEFAULT_PROFILE,
+    EVAL_TOML_FILENAME,
+    PLUGIN_DIR_FIELD,
     PROFILE_FIELD,
-    profile_model_selection,
+    PROMPT_FIELD,
+    THRESHOLD_FIELD,
+    TITLE_FIELD,
+    TRIALS_FIELD,
 )
-from outcomeeng_evals.settings import (
-    DEFAULT_MAX_BUDGET_USD_TEXT,
-    DEFAULT_TIMEOUT_SECONDS_TEXT,
+from outcomeeng_evals.producer_prompt import (
+    KIND_FIELD,
+    PRODUCER_FIELD,
+    PRODUCER_PATH_PLACEHOLDER,
+    PRODUCER_SECTION_KIND,
+    PRODUCER_SECTION_NAME_PLACEHOLDER,
+    PRODUCER_SECTION_PLACEHOLDER,
+    PROMPT_SOURCE_TABLE,
+    SECTION_FIELD,
+    TEMPLATE_FIELD,
 )
-from outcomeeng_testing.harnesses.eval_workspaces import (
-    with_temp_workspace,
-    with_temp_workspace_under,
+from outcomeeng_evals.runner import (
+    ENVELOPE_DURATION_MS_KEY,
+    ENVELOPE_NUM_TURNS_KEY,
+    ENVELOPE_RESULT_KEY,
+    ENVELOPE_STOP_REASON_KEY,
+    ENVELOPE_TOTAL_COST_USD_KEY,
+    ENVELOPE_USAGE_KEY,
+    USAGE_CACHE_CREATION_INPUT_TOKENS_KEY,
+    USAGE_CACHE_READ_INPUT_TOKENS_KEY,
+    USAGE_INPUT_TOKENS_KEY,
+    USAGE_OUTPUT_TOKENS_KEY,
 )
+from outcomeeng_testing.harnesses.eval_workspaces import temporary_workspace
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-EVAL_PROFILE_ENV = "EVAL_PROFILE"
-DEFINITION_PROFILE = next(
+REPO_ROOT: Final = Path(__file__).resolve().parents[2]
+EVAL_RECIPE: Final = "eval"
+EVAL_CASE_RECIPE: Final = "eval-case"
+EVAL_NODE_RECIPE: Final = "eval-node"
+MATERIALIZE_PROMPTS_RECIPE: Final = "eval-materialize-prompts"
+MATERIALIZE_PROMPTS_CHECK_RECIPE: Final = "eval-materialize-prompts-check"
+RUNNING_LINE_PREFIX: Final = "Running:"
+EVAL_PROFILE_ENV: Final = "EVAL_PROFILE"
+PLUGIN_DIR_ENV: Final = "PLUGIN_DIR"
+RECIPE_CASE_ID: Final = "case-pass"
+NODE_SUITE_NAMES: Final = ("alpha", "beta")
+PRODUCER_SECTION_NAME: Final = "pr_wait_and_reentry_policy"
+_PRODUCER_PATH: Final = "src/plugins/spec-tree/skills/manage-pr/SKILL.md"
+_RECIPE_TIMEOUT_SECONDS: Final = 90
+_PASSING_VERDICT: Final = {"overall": "PASS"}
+_FAILING_VERDICT: Final = {"overall": "FAIL"}
+
+DEFINITION_PROFILE: Final = next(
     profile for profile in AgentProfile if profile is not DEFAULT_PROFILE
 )
-OVERRIDE_PROFILE = next(
+OVERRIDE_PROFILE: Final = next(
     profile
     for profile in AgentProfile
     if profile not in (DEFAULT_PROFILE, DEFINITION_PROFILE)
 )
+# A model identity is not a profile: the recipes must refuse it as a profile.
+UNSUPPORTED_PROFILE: Final = str(EVAL_PROFILE_MODELS[DEFAULT_PROFILE].model)
 
 
-@with_temp_workspace
-def assert_eval_recipe_runs_suite_with_toml_plugin_dir(tmp_path: Path) -> None:
-    eval_toml, plugin_dir, fake_claude = write_eval_fixture(tmp_path)
+@dataclass(frozen=True)
+class EvalRecipeRun:
+    """A completed ``eval`` or ``eval-case`` recipe run and its arrangement."""
 
-    completed = run_just_eval(
-        tmp_path,
-        fake_claude,
-        "eval",
-        str(eval_toml),
-    )
-
-    assert completed.returncode == 0, completed.stdout + completed.stderr
-    assert "uv run outcomeeng-evals run" in completed.stdout
-    assert f"--plugin-dir {plugin_dir}" in completed.stdout
-    assert "--workers 1" in completed.stdout
-    assert f"--max-budget-usd {DEFAULT_MAX_BUDGET_USD_TEXT}" in completed.stdout
-    assert_running_line_shows_profile_selection(completed, DEFAULT_PROFILE)
-    assert f"--timeout-seconds {DEFAULT_TIMEOUT_SECONDS_TEXT}" in completed.stdout
-    assert "--case-id" not in completed.stdout
-    assert "suite pass_rate=100.00%" in completed.stdout
-    assert_printed_command_precedes_suite_result(completed)
+    completed: subprocess.CompletedProcess[str]
+    eval_toml: Path
+    plugin_dir: Path
+    override_plugin_dir: Path | None
+    case_id: str | None
+    running_lines: tuple[str, ...]
 
 
-@with_temp_workspace
-def assert_eval_case_recipe_runs_selected_case_with_toml_plugin_dir(
-    tmp_path: Path,
-) -> None:
-    eval_toml, plugin_dir, fake_claude = write_eval_fixture(tmp_path)
+@dataclass(frozen=True)
+class EvalNodeRecipeRun:
+    """A completed ``eval-node`` recipe run over a node with several suites."""
 
-    completed = run_just_eval(
-        tmp_path,
-        fake_claude,
-        "eval-case",
-        str(eval_toml),
-        "case-pass",
-    )
-
-    assert completed.returncode == 0, completed.stdout + completed.stderr
-    assert "uv run outcomeeng-evals run" in completed.stdout
-    assert f"--plugin-dir {plugin_dir}" in completed.stdout
-    assert "--workers 1" in completed.stdout
-    assert f"--max-budget-usd {DEFAULT_MAX_BUDGET_USD_TEXT}" in completed.stdout
-    assert_running_line_shows_profile_selection(completed, DEFAULT_PROFILE)
-    assert f"--timeout-seconds {DEFAULT_TIMEOUT_SECONDS_TEXT}" in completed.stdout
-    assert "--case-id case-pass" in completed.stdout
-    assert "suite pass_rate=100.00%" in completed.stdout
-    assert_printed_command_precedes_suite_result(completed)
+    completed: subprocess.CompletedProcess[str]
+    eval_tomls: tuple[Path, ...]
 
 
-@with_temp_workspace
-def assert_eval_recipe_uses_plugin_dir_env_override(tmp_path: Path) -> None:
-    eval_toml, plugin_dir, fake_claude = write_eval_fixture(tmp_path)
-    override_plugin_dir = tmp_path / "override-plugin"
-    override_plugin_dir.mkdir()
+@dataclass(frozen=True)
+class MaterializePromptsRecipeRun:
+    """A completed prompt-materialization recipe run and the prompt it governs."""
 
-    completed = run_just_eval(
-        tmp_path,
-        fake_claude,
-        "eval",
-        str(eval_toml),
-        env_overrides={"PLUGIN_DIR": str(override_plugin_dir)},
-    )
-
-    assert completed.returncode == 0, completed.stdout + completed.stderr
-    assert f"--plugin-dir {override_plugin_dir}" in completed.stdout
-    assert f"--plugin-dir {plugin_dir}" not in completed.stdout
-    assert "suite pass_rate=100.00%" in completed.stdout
-    assert_printed_command_precedes_suite_result(completed)
+    completed: subprocess.CompletedProcess[str]
+    prompt_path: Path
+    prompt_text: str
 
 
-@with_temp_workspace
-def assert_eval_recipe_uses_toml_profile(tmp_path: Path) -> None:
-    eval_toml, _plugin_dir, fake_claude = write_eval_fixture(
-        tmp_path, profile=DEFINITION_PROFILE
-    )
+def run_eval_recipe(
+    *,
+    select_case: bool = False,
+    definition_profile: AgentProfile | None = None,
+    profile_override: str | None = None,
+    override_plugin_dir: bool = False,
+) -> EvalRecipeRun:
+    """Run ``eval`` (or ``eval-case`` for one case) over a one-case suite.
 
-    completed = run_just_eval(
-        tmp_path,
-        fake_claude,
-        "eval",
-        str(eval_toml),
-    )
+    ``definition_profile`` is written into the suite's ``eval.toml``;
+    ``profile_override`` and ``override_plugin_dir`` set the recipe's profile
+    and plugin-directory environment overrides.
+    """
 
-    assert completed.returncode == 0, completed.stdout + completed.stderr
-    assert_running_line_shows_profile_selection(completed, DEFINITION_PROFILE)
-    assert "suite pass_rate=100.00%" in completed.stdout
-    assert_printed_command_precedes_suite_result(completed)
-
-
-@with_temp_workspace
-def assert_eval_recipe_uses_profile_env_override(tmp_path: Path) -> None:
-    eval_toml, _plugin_dir, fake_claude = write_eval_fixture(
-        tmp_path, profile=DEFINITION_PROFILE
-    )
-
-    completed = run_just_eval(
-        tmp_path,
-        fake_claude,
-        "eval",
-        str(eval_toml),
-        env_overrides={EVAL_PROFILE_ENV: OVERRIDE_PROFILE},
-    )
-
-    assert completed.returncode == 0, completed.stdout + completed.stderr
-    assert_running_line_shows_profile_selection(completed, OVERRIDE_PROFILE)
-    assert f"{PROFILE_OPTION} {DEFINITION_PROFILE}" not in completed.stdout
-    assert "suite pass_rate=100.00%" in completed.stdout
-    assert_printed_command_precedes_suite_result(completed)
-
-
-@with_temp_workspace
-def assert_eval_case_recipe_uses_profile_env_override(tmp_path: Path) -> None:
-    eval_toml, _plugin_dir, fake_claude = write_eval_fixture(
-        tmp_path, profile=DEFINITION_PROFILE
-    )
-
-    completed = run_just_eval(
-        tmp_path,
-        fake_claude,
-        "eval-case",
-        str(eval_toml),
-        "case-pass",
-        env_overrides={EVAL_PROFILE_ENV: OVERRIDE_PROFILE},
-    )
-
-    assert completed.returncode == 0, completed.stdout + completed.stderr
-    assert_running_line_shows_profile_selection(completed, OVERRIDE_PROFILE)
-    assert f"{PROFILE_OPTION} {DEFINITION_PROFILE}" not in completed.stdout
-    assert "--case-id case-pass" in completed.stdout
-    assert "suite pass_rate=100.00%" in completed.stdout
-    assert_printed_command_precedes_suite_result(completed)
+    with temporary_workspace() as workspace:
+        plugin_dir = workspace / "plugin"
+        plugin_dir.mkdir()
+        eval_toml = write_eval_suite(
+            workspace / "node",
+            plugin_dir,
+            suite_name="recipe",
+            case_id=RECIPE_CASE_ID,
+            profile=definition_profile,
+        )
+        env_overrides: dict[str, str] = {}
+        override_dir: Path | None = None
+        if override_plugin_dir:
+            override_dir = workspace / "override-plugin"
+            override_dir.mkdir()
+            env_overrides[PLUGIN_DIR_ENV] = str(override_dir)
+        if profile_override is not None:
+            env_overrides[EVAL_PROFILE_ENV] = profile_override
+        recipe_args = (
+            (EVAL_CASE_RECIPE, str(eval_toml), RECIPE_CASE_ID)
+            if select_case
+            else (EVAL_RECIPE, str(eval_toml))
+        )
+        completed = _run_just(
+            workspace,
+            write_fake_claude(workspace),
+            *recipe_args,
+            env_overrides=env_overrides,
+        )
+        return EvalRecipeRun(
+            completed=completed,
+            eval_toml=eval_toml,
+            plugin_dir=plugin_dir,
+            override_plugin_dir=override_dir,
+            case_id=RECIPE_CASE_ID if select_case else None,
+            running_lines=tuple(
+                line
+                for line in completed.stdout.splitlines()
+                if line.startswith(RUNNING_LINE_PREFIX)
+            ),
+        )
 
 
-@with_temp_workspace
-def assert_eval_node_recipe_runs_all_node_evals_serially(tmp_path: Path) -> None:
-    plugin_dir = tmp_path / "plugin"
-    plugin_dir.mkdir()
-    node_dir = tmp_path / "node"
-    alpha_eval_toml = write_eval_suite(
-        node_dir,
-        plugin_dir,
-        suite_name="alpha",
-        case_id="case-alpha",
-    )
-    beta_eval_toml = write_eval_suite(
-        node_dir,
-        plugin_dir,
-        suite_name="beta",
-        case_id="case-beta",
-    )
-    fake_claude = write_fake_claude(tmp_path)
-    eval_tomls = (alpha_eval_toml, beta_eval_toml)
+def run_eval_node_recipe() -> EvalNodeRecipeRun:
+    """Run ``eval-node`` over a node carrying one suite per ``NODE_SUITE_NAMES``."""
 
-    completed = run_just_eval(
-        tmp_path,
-        fake_claude,
-        "eval-node",
-        str(node_dir),
-    )
-
-    assert completed.returncode == 0, completed.stdout + completed.stderr
-    assert "uv run outcomeeng-evals run" in completed.stdout
-    assert completed.stdout.count("suite pass_rate=100.00%") == len(eval_tomls)
-    assert completed.stdout.index(str(alpha_eval_toml)) < completed.stdout.index(
-        str(beta_eval_toml)
-    )
-    assert_printed_command_precedes_suite_result(completed)
+    with temporary_workspace() as workspace:
+        plugin_dir = workspace / "plugin"
+        plugin_dir.mkdir()
+        node_dir = workspace / "node"
+        eval_tomls = tuple(
+            write_eval_suite(
+                node_dir,
+                plugin_dir,
+                suite_name=suite_name,
+                case_id=f"case-{suite_name}",
+            )
+            for suite_name in NODE_SUITE_NAMES
+        )
+        completed = _run_just(
+            workspace,
+            write_fake_claude(workspace),
+            EVAL_NODE_RECIPE,
+            str(node_dir),
+        )
+        return EvalNodeRecipeRun(completed=completed, eval_tomls=eval_tomls)
 
 
-@with_temp_workspace_under(REPO_ROOT)
-def assert_eval_materialize_prompts_recipe_writes_producer_prompt(
-    tmp_path: Path,
-) -> None:
-    eval_root, prompt_path = write_producer_prompt_fixture(tmp_path)
+def run_materialize_prompts_recipe(*, check: bool) -> MaterializePromptsRecipeRun:
+    """Run prompt materialization, then with ``check`` the drift check, in-repo."""
 
-    completed = run_just_eval(
-        tmp_path,
-        write_fake_claude(tmp_path),
-        "eval-materialize-prompts",
-        str(eval_root),
-    )
-
-    assert completed.returncode == 0, completed.stdout + completed.stderr
-    assert f"materialized: {prompt_path.resolve()}" in completed.stdout
-    assert "pr_wait_and_reentry_policy" in prompt_path.read_text(encoding="utf-8")
-
-
-@with_temp_workspace_under(REPO_ROOT)
-def assert_eval_materialize_prompts_check_recipe_accepts_current_prompt(
-    tmp_path: Path,
-) -> None:
-    eval_root, prompt_path = write_producer_prompt_fixture(tmp_path)
-    run_just_eval(
-        tmp_path,
-        write_fake_claude(tmp_path),
-        "eval-materialize-prompts",
-        str(eval_root),
-    )
-
-    completed = run_just_eval(
-        tmp_path,
-        write_fake_claude(tmp_path),
-        "eval-materialize-prompts-check",
-        str(eval_root),
-    )
-
-    assert completed.returncode == 0, completed.stdout + completed.stderr
-    assert f"checked: {prompt_path.resolve()}" in completed.stdout
+    with temporary_workspace(REPO_ROOT) as workspace:
+        eval_root, prompt_path = write_producer_prompt_fixture(workspace)
+        fake_claude = write_fake_claude(workspace)
+        completed = _run_just(
+            workspace, fake_claude, MATERIALIZE_PROMPTS_RECIPE, str(eval_root)
+        )
+        if check:
+            completed = _run_just(
+                workspace,
+                fake_claude,
+                MATERIALIZE_PROMPTS_CHECK_RECIPE,
+                str(eval_root),
+            )
+        return MaterializePromptsRecipeRun(
+            completed=completed,
+            prompt_path=prompt_path.resolve(),
+            prompt_text=(
+                prompt_path.read_text(encoding="utf-8") if prompt_path.exists() else ""
+            ),
+        )
 
 
-def run_just_eval(
-    tmp_path: Path,
+def _run_just(
+    workspace: Path,
     fake_claude: Path,
     *args: str,
     env_overrides: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
     env = os.environ.copy()
     env["CLAUDE_BIN"] = str(fake_claude)
-    env["XDG_CACHE_HOME"] = str(tmp_path / "xdg-cache")
+    env["XDG_CACHE_HOME"] = str(workspace / "xdg-cache")
+    env.pop(EVAL_PROFILE_ENV, None)
+    env.pop(PLUGIN_DIR_ENV, None)
     if env_overrides is not None:
         env.update(env_overrides)
     return subprocess.run(
@@ -264,46 +244,8 @@ def run_just_eval(
         capture_output=True,
         text=True,
         check=False,
-        timeout=90,
+        timeout=_RECIPE_TIMEOUT_SECONDS,
     )
-
-
-def assert_running_line_shows_profile_selection(
-    completed: subprocess.CompletedProcess[str], profile: AgentProfile
-) -> None:
-    """Assert the printed command names the profile with its resolved model and effort."""
-
-    selection = profile_model_selection(profile)
-    (running_line,) = (
-        line for line in completed.stdout.splitlines() if line.startswith("Running:")
-    )
-    assert f"{PROFILE_OPTION} {profile}" in running_line
-    assert f"model {selection.model}" in running_line
-    assert f"effort {selection.effort}" in running_line
-
-
-def assert_printed_command_precedes_suite_result(
-    completed: subprocess.CompletedProcess[str],
-) -> None:
-    assert completed.stdout.index("Running:") < completed.stdout.index(
-        "suite pass_rate=100.00%"
-    )
-
-
-def write_eval_fixture(
-    tmp_path: Path, *, profile: AgentProfile | None = None
-) -> tuple[Path, Path, Path]:
-    plugin_dir = tmp_path / "plugin"
-    plugin_dir.mkdir()
-    eval_toml = write_eval_suite(
-        tmp_path / "node",
-        plugin_dir,
-        suite_name="recipe",
-        case_id="case-pass",
-        profile=profile,
-    )
-    fake_claude = write_fake_claude(tmp_path)
-    return eval_toml, plugin_dir, fake_claude
 
 
 def write_eval_suite(
@@ -316,18 +258,18 @@ def write_eval_suite(
 ) -> Path:
     eval_dir = node_dir / "evals" / suite_name
     eval_dir.mkdir(parents=True)
-    eval_toml = eval_dir / "eval.toml"
+    eval_toml = eval_dir / EVAL_TOML_FILENAME
     profile_lines = [f'{PROFILE_FIELD} = "{profile}"'] if profile is not None else []
     eval_toml.write_text(
         "\n".join(
             [
-                f'title = "{suite_name}-smoke"',
-                'cases = "cases.jsonl"',
-                'prompt = "prompt.md"',
-                f'plugin_dir = "{plugin_dir.as_posix()}"',
+                f'{TITLE_FIELD} = "{suite_name}-smoke"',
+                f'{CASES_FIELD} = "cases.jsonl"',
+                f'{PROMPT_FIELD} = "prompt.md"',
+                f'{PLUGIN_DIR_FIELD} = "{plugin_dir.as_posix()}"',
                 *profile_lines,
-                "threshold = 1.0",
-                "trials = 1",
+                f"{THRESHOLD_FIELD} = 1.0",
+                f"{TRIALS_FIELD} = 1",
                 "",
             ]
         ),
@@ -340,11 +282,11 @@ def write_eval_suite(
     (eval_dir / "cases.jsonl").write_text(
         json.dumps(
             {
-                "id": case_id,
-                "input": {"subject": suite_name},
-                "expected_verdict": {
-                    "must_contain": [{"overall": "PASS"}],
-                    "must_not_contain": [{"overall": "FAIL"}],
+                CASE_ID_FIELD: case_id,
+                CASE_INPUT_FIELD: {"subject": suite_name},
+                EXPECTED_VERDICT_FIELD: {
+                    MUST_CONTAIN_FIELD: [_PASSING_VERDICT],
+                    MUST_NOT_CONTAIN_FIELD: [_FAILING_VERDICT],
                 },
             }
         )
@@ -359,22 +301,25 @@ def write_producer_prompt_fixture(tmp_path: Path) -> tuple[Path, Path]:
     eval_dir = eval_root / "evals" / "producer"
     eval_dir.mkdir(parents=True)
     prompt_path = eval_dir / "prompt.md"
-    (eval_dir / "prompt.template.md").write_text(
-        "Producer: {producer_path}\nSection: {producer_section_name}\n{producer_section}\n",
+    template_name = "prompt.template.md"
+    (eval_dir / template_name).write_text(
+        f"Producer: {PRODUCER_PATH_PLACEHOLDER}\n"
+        f"Section: {PRODUCER_SECTION_NAME_PLACEHOLDER}\n"
+        f"{PRODUCER_SECTION_PLACEHOLDER}\n",
         encoding="utf-8",
     )
-    (eval_dir / "eval.toml").write_text(
+    (eval_dir / EVAL_TOML_FILENAME).write_text(
         "\n".join(
             [
-                'title = "producer"',
-                'cases = "cases.jsonl"',
-                'prompt = "prompt.md"',
+                f'{TITLE_FIELD} = "producer"',
+                f'{CASES_FIELD} = "cases.jsonl"',
+                f'{PROMPT_FIELD} = "prompt.md"',
                 "",
-                "[prompt_source]",
-                'kind = "producer-section"',
-                'producer = "src/plugins/spec-tree/skills/manage-pr/SKILL.md"',
-                'section = "pr_wait_and_reentry_policy"',
-                'template = "prompt.template.md"',
+                f"[{PROMPT_SOURCE_TABLE}]",
+                f'{KIND_FIELD} = "{PRODUCER_SECTION_KIND}"',
+                f'{PRODUCER_FIELD} = "{_PRODUCER_PATH}"',
+                f'{SECTION_FIELD} = "{PRODUCER_SECTION_NAME}"',
+                f'{TEMPLATE_FIELD} = "{template_name}"',
                 "",
             ]
         ),
@@ -385,27 +330,28 @@ def write_producer_prompt_fixture(tmp_path: Path) -> tuple[Path, Path]:
 
 
 def write_fake_claude(tmp_path: Path) -> Path:
+    """Write a ``claude`` stand-in that answers every prompt with a passing verdict."""
+
+    envelope = {
+        ENVELOPE_RESULT_KEY: json.dumps({"schema_version": 1, **_PASSING_VERDICT}),
+        ENVELOPE_DURATION_MS_KEY: 1,
+        ENVELOPE_TOTAL_COST_USD_KEY: 0,
+        ENVELOPE_USAGE_KEY: {
+            USAGE_INPUT_TOKENS_KEY: 1,
+            USAGE_OUTPUT_TOKENS_KEY: 1,
+            USAGE_CACHE_READ_INPUT_TOKENS_KEY: 0,
+            USAGE_CACHE_CREATION_INPUT_TOKENS_KEY: 0,
+        },
+        ENVELOPE_NUM_TURNS_KEY: 1,
+        ENVELOPE_STOP_REASON_KEY: "end_turn",
+    }
     fake_claude = tmp_path / "fake-claude"
     fake_claude.write_text(
-        """#!/usr/bin/env python3
-import json
-import sys
-
-sys.stdin.read()
-print(json.dumps({
-    "result": json.dumps({"schema_version": 1, "overall": "PASS"}),
-    "duration_ms": 1,
-    "total_cost_usd": 0,
-    "usage": {
-        "input_tokens": 1,
-        "output_tokens": 1,
-        "cache_read_input_tokens": 0,
-        "cache_creation_input_tokens": 0,
-    },
-    "num_turns": 1,
-    "stop_reason": "end_turn",
-}))
-""",
+        "#!/usr/bin/env python3\n"
+        "import sys\n"
+        "\n"
+        "sys.stdin.read()\n"
+        f"print({json.dumps(json.dumps(envelope))})\n",
         encoding="utf-8",
     )
     fake_claude.chmod(fake_claude.stat().st_mode | stat.S_IXUSR)

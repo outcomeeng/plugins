@@ -7,55 +7,51 @@ eval directory tree with one call.
 
 from __future__ import annotations
 
-import glob
 import json
-import math
 import os
-from string import printable
 from dataclasses import dataclass
 from pathlib import Path
-from tempfile import TemporaryDirectory
 from typing import Any, cast
+
+from click.testing import CliRunner, Result
 
 from outcomeeng_evals.case import Case
 from outcomeeng_evals.ci_execution import (
-    CiRunSettings,
+    CASE_ID_FLAG,
     DEFAULT_CI_MAX_BUDGET_USD,
     DEFAULT_CI_TIMEOUT_SECONDS,
     DEFAULT_CI_WORKERS,
-    EXIT_FAILURE,
-    EXIT_SUCCESS,
+    PLUGIN_DIR_FLAG,
     UV_RUN_EVALS_ARGV_PREFIX,
-    execute_ci_plan,
 )
-from outcomeeng_evals.ci_plan import (
-    ROOT_INSTRUCTION_PATHS,
-    CiMode,
-    EvalPlanItem,
-    build_ci_plan,
-    read_changed_paths_file,
+from outcomeeng_evals.ci_plan import CiMode, EvalPlanItem
+from outcomeeng_evals.cli import main
+from outcomeeng_evals.cli.commands.ci import ci_command
+from outcomeeng_evals.cli.commands.run import (
+    MAX_BUDGET_USD_OPTION,
+    TIMEOUT_SECONDS_OPTION,
 )
 from outcomeeng.models import AgentProfile
 from outcomeeng_evals.definition import (
+    CASES_FIELD,
+    CI_POLICY_FIELD,
     CiPolicy,
     DEFAULT_PROFILE,
-    MODEL_FIELD,
+    EVAL_TOML_FILENAME,
+    OWNED_PATHS_FIELD,
+    PLUGIN_DIR_FIELD,
     PROFILE_FIELD,
-    DEFAULT_SUITE_THRESHOLD,
-    DEFAULT_TRIALS_PER_CASE,
-    MAX_TRIALS_PER_CASE,
-    OWNED_PATH_ALPHABET,
-    OWNED_PATH_RECURSIVE_SUFFIX,
-    EvalDefinition,
-    load_definition,
-    profile_model_selection,
+    PROMPT_FIELD,
+    SMOKE_CASES_FIELD,
+    THRESHOLD_FIELD,
+    TITLE_FIELD,
+    TRIALS_FIELD,
 )
 from outcomeeng_evals.grader import GradeResult
 from outcomeeng_evals.history import HistoryRow
 from outcomeeng_evals.runner import ModelProcessResult, RunMetadata
 from outcomeeng_evals.suite import CaseOutcome, SuiteResult, TrialResult
 from outcomeeng_testing.evals.fakes import (
-    RecordingCommandRunner,
     RecordingModelProcessLauncher,
     RecordingUvExecutable,
     make_recording_uv_executable,
@@ -71,15 +67,15 @@ _DEFAULT_VERDICT: dict[str, Any] = {
 }
 _DEFAULT_RESPONSE = json.dumps(_DEFAULT_VERDICT)
 _DEFAULT_THRESHOLD = 0.85
-_DEFAULT_EVAL_TITLE = "test-eval"
-_DEFAULT_CASES_FILENAME = "cases.jsonl"
-_DEFAULT_PROMPT_FILENAME = "prompt.md"
-_DEFAULT_EVAL_FILENAME = "eval.toml"
+EVAL_DEFINITION_TITLE = "test-eval"
+EVAL_CASES_FILENAME = "cases.jsonl"
+EVAL_PROMPT_FILENAME = "prompt.md"
 _DEFAULT_EVAL_RULE = "rule"
-_DEFAULT_PLUGIN_DIR = Path("dist/claude/spec-tree")
+DEFAULT_CI_PLUGIN_DIR = Path("dist/claude/spec-tree")
 DEFAULT_DEFINITION_THRESHOLD = 0.95
 DEFAULT_DEFINITION_TRIALS = 3
 DEFAULT_PLAN_CASE_IDS = ("alpha", "beta")
+DEFAULT_PLAN_RULES = ("first", "second")
 DEFAULT_CI_OWNED_PATH = "src/plugins/spec-tree/skills/manage-pr/**"
 DEFAULT_CI_CHANGED_PATH = "src/plugins/spec-tree/skills/manage-pr/SKILL.md"
 DEFAULT_CI_CHANGED_PATH_STATUS = "M"
@@ -101,6 +97,15 @@ class DefaultCiCommandHarness:
     eval_root: Path
     changed_paths_file: Path
     fake_uv: RecordingUvExecutable
+    expected_command: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class DefaultCiCommandRun:
+    """Observations from one ``ci`` subcommand run over the default CI suite."""
+
+    result: Result
+    commands: tuple[tuple[str, ...], ...]
     expected_command: tuple[str, ...]
 
 
@@ -419,11 +424,11 @@ def make_suite_result(
 def make_eval_plan_item(
     *,
     rule: str = _DEFAULT_EVAL_RULE,
-    plugin_dir: Path = _DEFAULT_PLUGIN_DIR,
+    plugin_dir: Path = DEFAULT_CI_PLUGIN_DIR,
     case_ids: tuple[str, ...] = (),
 ) -> EvalPlanItem:
     return EvalPlanItem(
-        eval_toml=Path("spx/node/evals") / rule / _DEFAULT_EVAL_FILENAME,
+        eval_toml=Path("spx/node/evals") / rule / EVAL_TOML_FILENAME,
         plugin_dir=plugin_dir,
         case_ids=case_ids,
     )
@@ -433,17 +438,17 @@ def expected_default_ci_command(eval_toml: Path) -> tuple[str, ...]:
     return (
         *UV_RUN_EVALS_ARGV_PREFIX[1:],
         str(eval_toml),
-        "--plugin-dir",
-        str(_DEFAULT_PLUGIN_DIR),
+        PLUGIN_DIR_FLAG,
+        str(DEFAULT_CI_PLUGIN_DIR),
         "--workers",
         DEFAULT_CI_WORKERS,
-        "--max-budget-usd",
+        MAX_BUDGET_USD_OPTION,
         DEFAULT_CI_MAX_BUDGET_USD,
-        "--timeout-seconds",
+        TIMEOUT_SECONDS_OPTION,
         DEFAULT_CI_TIMEOUT_SECONDS,
-        "--case-id",
+        CASE_ID_FLAG,
         *DEFAULT_PLAN_CASE_IDS[:1],
-        "--case-id",
+        CASE_ID_FLAG,
         *DEFAULT_PLAN_CASE_IDS[1:],
     )
 
@@ -495,30 +500,10 @@ def make_changed_paths_file_error_cases() -> tuple[ChangedPathsFileErrorCase, ..
     )
 
 
-def assert_changed_paths_file_reads_git_name_status_rows() -> None:
-    with TemporaryDirectory() as tmp:
-        for index, case in enumerate(make_changed_paths_file_cases()):
-            changed_paths_file = Path(tmp) / f"changed-paths-{index}.txt"
-            changed_paths_file.write_text(case.content, encoding="utf-8")
-
-            assert read_changed_paths_file(changed_paths_file) == case.expected_paths
-        for index, error_case in enumerate(make_changed_paths_file_error_cases()):
-            changed_paths_file = Path(tmp) / f"changed-paths-error-{index}.txt"
-            changed_paths_file.write_text(error_case.content, encoding="utf-8")
-
-            try:
-                read_changed_paths_file(changed_paths_file)
-            except ValueError:
-                continue
-            raise AssertionError(
-                f"changed paths file accepted ambiguous input: {error_case.content!r}"
-            )
-
-
 def make_ci_metadata_definition_case(tmp_path: Path) -> CiMetadataDefinitionCase:
     eval_toml = make_eval_dir(
         tmp_path / "eval",
-        plugin_dir=str(_DEFAULT_PLUGIN_DIR),
+        plugin_dir=str(DEFAULT_CI_PLUGIN_DIR),
         profile=DEFAULT_CI_EXPLICIT_PROFILE,
         owned_paths=(DEFAULT_CI_OWNED_PATH,),
         smoke_case_ids=DEFAULT_PLAN_CASE_IDS[:1],
@@ -526,7 +511,7 @@ def make_ci_metadata_definition_case(tmp_path: Path) -> CiMetadataDefinitionCase
     )
     return CiMetadataDefinitionCase(
         eval_toml=eval_toml,
-        plugin_dir=_DEFAULT_PLUGIN_DIR,
+        plugin_dir=DEFAULT_CI_PLUGIN_DIR,
         profile=DEFAULT_CI_EXPLICIT_PROFILE,
         owned_paths=(DEFAULT_CI_OWNED_PATH,),
         smoke_case_ids=DEFAULT_PLAN_CASE_IDS[:1],
@@ -534,395 +519,63 @@ def make_ci_metadata_definition_case(tmp_path: Path) -> CiMetadataDefinitionCase
     )
 
 
-def _required_eval_lines() -> tuple[str, ...]:
-    return (
-        f'title = "{_DEFAULT_EVAL_TITLE}"',
-        f'cases = "{_DEFAULT_CASES_FILENAME}"',
-        f'prompt = "{_DEFAULT_PROMPT_FILENAME}"',
-    )
+EvalDefinitionValue = str | int | float | tuple[str, ...]
 
 
-def _write_eval_definition(
+def _toml_value(value: EvalDefinitionValue) -> str:
+    """Render one TOML value: strings as basic strings, arrays of strings, numbers."""
+
+    if isinstance(value, str):
+        return json.dumps(value)
+    if isinstance(value, tuple):
+        return "[" + ", ".join(json.dumps(item) for item in value) + "]"
+    return str(value)
+
+
+def write_eval_definition(
     tmp_path: Path,
     *,
-    lines: tuple[str, ...] = (),
+    fields: dict[str, EvalDefinitionValue] | None = None,
+    omit: tuple[str, ...] = (),
     with_cases: bool = True,
     with_prompt: bool = True,
 ) -> Path:
+    """Write an eval definition under ``tmp_path`` and return its ``eval.toml``.
+
+    The required title, case-file, and prompt-file keys are written unless
+    named in ``omit``; each entry of ``fields`` adds one top-level key. The
+    case and prompt files exist unless ``with_cases`` or ``with_prompt`` is
+    false.
+    """
+
+    required = {
+        TITLE_FIELD: EVAL_DEFINITION_TITLE,
+        CASES_FIELD: EVAL_CASES_FILENAME,
+        PROMPT_FIELD: EVAL_PROMPT_FILENAME,
+    }
+    entries = {
+        **{key: value for key, value in required.items() if key not in omit},
+        **(fields or {}),
+    }
     directory = tmp_path / "eval"
     directory.mkdir(parents=True)
-    toml_path = directory / _DEFAULT_EVAL_FILENAME
+    toml_path = directory / EVAL_TOML_FILENAME
     toml_path.write_text(
-        "\n".join((*_required_eval_lines(), *lines)) + "\n",
+        "".join(f"{key} = {_toml_value(value)}\n" for key, value in entries.items()),
         encoding="utf-8",
     )
     if with_cases:
-        (directory / _DEFAULT_CASES_FILENAME).write_text("", encoding="utf-8")
+        (directory / EVAL_CASES_FILENAME).write_text("", encoding="utf-8")
     if with_prompt:
-        (directory / _DEFAULT_PROMPT_FILENAME).write_text("", encoding="utf-8")
+        (directory / EVAL_PROMPT_FILENAME).write_text("", encoding="utf-8")
     return toml_path
-
-
-def _assert_definition_raises(
-    *,
-    lines: tuple[str, ...],
-    match: str,
-    with_cases: bool = True,
-    with_prompt: bool = True,
-) -> None:
-    with TemporaryDirectory() as tmp:
-        toml_path = _write_eval_definition(
-            Path(tmp),
-            lines=lines,
-            with_cases=with_cases,
-            with_prompt=with_prompt,
-        )
-        try:
-            load_definition(toml_path)
-        except (FileNotFoundError, KeyError, ValueError) as exc:
-            if match not in str(exc):
-                raise AssertionError(
-                    f"expected error containing {match!r}, got {exc!r}"
-                ) from exc
-            return
-        raise AssertionError(f"expected load_definition to reject {toml_path}")
-
-
-def assert_definition_loads_required_fields() -> None:
-    with TemporaryDirectory() as tmp:
-        toml_path = _write_eval_definition(Path(tmp))
-
-        definition = load_definition(toml_path)
-
-        assert isinstance(definition, EvalDefinition)
-        assert definition.title == _DEFAULT_EVAL_TITLE
-
-
-def assert_definition_resolves_cases_path_relative_to_toml_directory() -> None:
-    with TemporaryDirectory() as tmp:
-        toml_path = _write_eval_definition(Path(tmp))
-
-        definition = load_definition(toml_path)
-
-        assert (
-            definition.cases_path
-            == (toml_path.parent / _DEFAULT_CASES_FILENAME).resolve()
-        )
-
-
-def assert_definition_resolves_prompt_path_relative_to_toml_directory() -> None:
-    with TemporaryDirectory() as tmp:
-        toml_path = _write_eval_definition(Path(tmp))
-
-        definition = load_definition(toml_path)
-
-        assert (
-            definition.prompt_template_path
-            == (toml_path.parent / _DEFAULT_PROMPT_FILENAME).resolve()
-        )
-
-
-def assert_definition_applies_default_threshold_when_omitted() -> None:
-    with TemporaryDirectory() as tmp:
-        definition = load_definition(_write_eval_definition(Path(tmp)))
-
-        assert definition.threshold == DEFAULT_SUITE_THRESHOLD
-
-
-def assert_definition_applies_default_trials_when_omitted() -> None:
-    with TemporaryDirectory() as tmp:
-        definition = load_definition(_write_eval_definition(Path(tmp)))
-
-        assert definition.trials == DEFAULT_TRIALS_PER_CASE
-
-
-def assert_definition_applies_default_profile_when_omitted() -> None:
-    with TemporaryDirectory() as tmp:
-        definition = load_definition(_write_eval_definition(Path(tmp)))
-
-        assert definition.profile is DEFAULT_PROFILE
-
-
-def assert_definition_uses_explicit_threshold_when_set() -> None:
-    with TemporaryDirectory() as tmp:
-        toml_path = _write_eval_definition(
-            Path(tmp),
-            lines=(f"threshold = {DEFAULT_DEFINITION_THRESHOLD}",),
-        )
-
-        definition = load_definition(toml_path)
-
-        assert math.isclose(definition.threshold, DEFAULT_DEFINITION_THRESHOLD)
-
-
-def assert_definition_uses_explicit_trials_when_set() -> None:
-    with TemporaryDirectory() as tmp:
-        toml_path = _write_eval_definition(
-            Path(tmp),
-            lines=(f"trials = {DEFAULT_DEFINITION_TRIALS}",),
-        )
-
-        definition = load_definition(toml_path)
-
-        assert definition.trials == DEFAULT_DEFINITION_TRIALS
-
-
-def assert_definition_loads_optional_ci_metadata() -> None:
-    with TemporaryDirectory() as tmp:
-        case = make_ci_metadata_definition_case(Path(tmp))
-
-        definition = load_definition(case.eval_toml)
-
-        assert definition.plugin_dir == case.plugin_dir
-        assert definition.profile is case.profile
-        assert definition.owned_paths == case.owned_paths
-        assert definition.smoke_case_ids == case.smoke_case_ids
-        assert definition.ci_policy is case.ci_policy
-
-
-def assert_definition_uses_explicit_profile_when_set() -> None:
-    for profile in AgentProfile:
-        with TemporaryDirectory() as tmp:
-            toml_path = _write_eval_definition(
-                Path(tmp),
-                lines=(f'{PROFILE_FIELD} = "{profile}"',),
-            )
-
-            definition = load_definition(toml_path)
-
-            assert definition.profile is profile
-
-
-def assert_definition_rejects_model() -> None:
-    """Assert a definition naming a model is rejected, even the default's model."""
-
-    default_model = profile_model_selection(DEFAULT_PROFILE).model
-    _assert_definition_raises(
-        lines=(f'{MODEL_FIELD} = "{default_model}"',),
-        match=MODEL_FIELD,
-    )
-
-
-def assert_definition_rejects_model_name_as_profile() -> None:
-    """Assert a model name is not a profile."""
-
-    for profile in AgentProfile:
-        model = profile_model_selection(profile).model
-        _assert_definition_raises(
-            lines=(f'{PROFILE_FIELD} = "{model}"',),
-            match=PROFILE_FIELD,
-        )
-
-
-def assert_definition_rejects_non_string_profile() -> None:
-    _assert_definition_raises(lines=(f"{PROFILE_FIELD} = 1",), match=PROFILE_FIELD)
-
-
-def assert_definition_accepts_owned_path_shapes_ci_matches_identically() -> None:
-    """Assert an exact path and a trailing recursive glob both load.
-
-    Both shapes are built from the source-owned alphabet and recursive suffix,
-    so narrowing either contract reaches this evidence rather than passing
-    beside it.
-    """
-
-    exact = "AGENTS.md"
-    recursive = f"src/plugins/spec-tree/skills/merge{OWNED_PATH_RECURSIVE_SUFFIX}"
-    assert OWNED_PATH_ALPHABET.fullmatch(exact)
-    assert OWNED_PATH_ALPHABET.fullmatch(
-        recursive.removesuffix(OWNED_PATH_RECURSIVE_SUFFIX)
-    )
-
-    accepted = (exact, recursive)
-    with TemporaryDirectory() as tmp:
-        entries = ", ".join(f'"{path}"' for path in accepted)
-        toml_path = _write_eval_definition(
-            Path(tmp),
-            lines=(f"owned_paths = [{entries}]",),
-        )
-
-        definition = load_definition(toml_path)
-
-        assert definition.owned_paths == accepted
-
-
-def assert_owned_path_alphabet_excludes_every_glob_magic_character() -> None:
-    """Assert the alphabet excludes every character the stdlib calls glob magic.
-
-    The property evidence proves the loader honors whatever the alphabet says.
-    It cannot prove the alphabet says the right thing -- a widened alphabet also
-    widens the domain that evidence searches. `glob.has_magic` is an oracle
-    outside this module's control, so it pins the contract the alphabet must
-    keep: a path carrying a glob character is matched differently by `fnmatch`
-    and by the CI provider's engine, and must never reach either.
-    """
-
-    magic = tuple(character for character in printable if glob.has_magic(character))
-    assert magic
-
-    for character in magic:
-        assert OWNED_PATH_ALPHABET.fullmatch(character) is None
-        _assert_definition_raises(
-            lines=(f'owned_paths = ["src{character}nested"]',),
-            match="owned_paths",
-        )
-
-
-def assert_definition_accepts_trials_at_cap() -> None:
-    with TemporaryDirectory() as tmp:
-        toml_path = _write_eval_definition(
-            Path(tmp),
-            lines=(f"trials = {MAX_TRIALS_PER_CASE}",),
-        )
-
-        definition = load_definition(toml_path)
-
-        assert definition.trials == MAX_TRIALS_PER_CASE
-
-
-def assert_definition_rejects_trials_above_cap() -> None:
-    _assert_definition_raises(
-        lines=(f"trials = {MAX_TRIALS_PER_CASE + 1}",),
-        match="trials",
-    )
-
-
-def assert_definition_rejects_trials_below_one() -> None:
-    _assert_definition_raises(lines=("trials = 0",), match="trials")
-
-
-def assert_definition_rejects_missing_title() -> None:
-    with TemporaryDirectory() as tmp:
-        directory = Path(tmp) / "eval"
-        directory.mkdir(parents=True)
-        toml_path = directory / _DEFAULT_EVAL_FILENAME
-        toml_path.write_text(
-            (
-                f'cases = "{_DEFAULT_CASES_FILENAME}"\n'
-                f'prompt = "{_DEFAULT_PROMPT_FILENAME}"\n'
-            ),
-            encoding="utf-8",
-        )
-        (directory / _DEFAULT_CASES_FILENAME).write_text("", encoding="utf-8")
-        (directory / _DEFAULT_PROMPT_FILENAME).write_text("", encoding="utf-8")
-
-        try:
-            load_definition(toml_path)
-        except (KeyError, ValueError) as exc:
-            if "title" not in str(exc):
-                raise AssertionError(f"expected title error, got {exc!r}") from exc
-            return
-        raise AssertionError(f"expected load_definition to reject {toml_path}")
-
-
-def assert_definition_rejects_missing_cases() -> None:
-    with TemporaryDirectory() as tmp:
-        directory = Path(tmp) / "eval"
-        directory.mkdir(parents=True)
-        toml_path = directory / _DEFAULT_EVAL_FILENAME
-        toml_path.write_text(
-            (
-                f'title = "{_DEFAULT_EVAL_TITLE}"\n'
-                f'prompt = "{_DEFAULT_PROMPT_FILENAME}"\n'
-            ),
-            encoding="utf-8",
-        )
-        (directory / _DEFAULT_PROMPT_FILENAME).write_text("", encoding="utf-8")
-
-        try:
-            load_definition(toml_path)
-        except (KeyError, ValueError) as exc:
-            if "cases" not in str(exc):
-                raise AssertionError(f"expected cases error, got {exc!r}") from exc
-            return
-        raise AssertionError(f"expected load_definition to reject {toml_path}")
-
-
-def assert_definition_rejects_missing_prompt() -> None:
-    with TemporaryDirectory() as tmp:
-        directory = Path(tmp) / "eval"
-        directory.mkdir(parents=True)
-        toml_path = directory / _DEFAULT_EVAL_FILENAME
-        toml_path.write_text(
-            (f'title = "{_DEFAULT_EVAL_TITLE}"\ncases = "{_DEFAULT_CASES_FILENAME}"\n'),
-            encoding="utf-8",
-        )
-        (directory / _DEFAULT_CASES_FILENAME).write_text("", encoding="utf-8")
-
-        try:
-            load_definition(toml_path)
-        except (KeyError, ValueError) as exc:
-            if "prompt" not in str(exc):
-                raise AssertionError(f"expected prompt error, got {exc!r}") from exc
-            return
-        raise AssertionError(f"expected load_definition to reject {toml_path}")
-
-
-def assert_definition_rejects_nonexistent_cases_file() -> None:
-    _assert_definition_raises(lines=(), match="cases", with_cases=False)
-
-
-def assert_definition_rejects_nonexistent_prompt_file() -> None:
-    _assert_definition_raises(lines=(), match="prompt", with_prompt=False)
-
-
-def assert_root_instruction_changes_select_full_suites() -> None:
-    with TemporaryDirectory() as tmp:
-        eval_toml = make_eval_dir(
-            Path(tmp) / "evals" / "rule",
-            plugin_dir="dist/claude/spec-tree",
-            owned_paths=(DEFAULT_CI_OWNED_PATH,),
-            smoke_case_ids=DEFAULT_PLAN_CASE_IDS,
-        )
-
-        for root_instruction_path in ROOT_INSTRUCTION_PATHS:
-            plan = build_ci_plan(
-                eval_toml.parent.parent,
-                mode=CiMode.PR,
-                changed_paths=(root_instruction_path,),
-            )
-
-            assert plan == [
-                EvalPlanItem(
-                    eval_toml=eval_toml,
-                    plugin_dir=_DEFAULT_PLUGIN_DIR,
-                    case_ids=(),
-                )
-            ]
-
-
-def assert_empty_plan_exits_successfully_without_commands() -> None:
-    runner = RecordingCommandRunner()
-
-    result = execute_ci_plan(
-        (),
-        settings=CiRunSettings(),
-        runner=runner,
-    )
-
-    assert result.exit_code == EXIT_SUCCESS
-    assert result.attempted == 0
-    assert runner.calls == []
-
-
-def assert_failing_suite_fails_aggregate_after_attempting_every_suite() -> None:
-    first = make_eval_plan_item(rule="first")
-    second = make_eval_plan_item(rule="second")
-    runner = RecordingCommandRunner(exit_codes=(EXIT_FAILURE, EXIT_SUCCESS))
-
-    result = execute_ci_plan((first, second), settings=CiRunSettings(), runner=runner)
-
-    assert result.exit_code == EXIT_FAILURE
-    assert result.attempted == 2
-    assert result.failed == (first,)
-    assert len(runner.calls) == 2
 
 
 def make_default_ci_command_harness(tmp_path: Path) -> DefaultCiCommandHarness:
     eval_root = tmp_path / "evals"
     eval_toml = make_eval_dir(
         eval_root / "rule",
-        plugin_dir="dist/claude/spec-tree",
+        plugin_dir=str(DEFAULT_CI_PLUGIN_DIR),
         owned_paths=(DEFAULT_CI_OWNED_PATH,),
         smoke_case_ids=DEFAULT_PLAN_CASE_IDS,
     )
@@ -936,40 +589,27 @@ def make_default_ci_command_harness(tmp_path: Path) -> DefaultCiCommandHarness:
     )
 
 
-def assert_main_group_exposes_ci_subcommand() -> None:
-    from click.testing import CliRunner
+def run_default_ci_subcommand(tmp_path: Path) -> DefaultCiCommandRun:
+    """Run ``ci`` in PR mode over the default suite and record its suite commands."""
 
-    from outcomeeng_evals.cli import main
-
-    result = CliRunner().invoke(main, ["--help"])
-
-    assert result.exit_code == os.EX_OK
-    assert "ci" in result.output
-
-
-def assert_ci_subcommand_builds_plan_and_executes_with_default_ceilings() -> None:
-    from click.testing import CliRunner
-
-    from outcomeeng_evals.cli import main
-
-    with TemporaryDirectory() as tmp:
-        harness = make_default_ci_command_harness(Path(tmp))
-
-        result = CliRunner().invoke(
-            main,
-            [
-                "ci",
-                str(harness.eval_root),
-                "--mode",
-                "pr",
-                "--changed-paths-file",
-                str(harness.changed_paths_file),
-            ],
-            env=harness.fake_uv.env,
-        )
-
-        assert result.exit_code == os.EX_OK
-        assert harness.fake_uv.commands() == (harness.expected_command,)
+    harness = make_default_ci_command_harness(tmp_path)
+    result = CliRunner().invoke(
+        main,
+        [
+            str(ci_command.name),
+            str(harness.eval_root),
+            "--mode",
+            CiMode.PR.value,
+            "--changed-paths-file",
+            str(harness.changed_paths_file),
+        ],
+        env=harness.fake_uv.env,
+    )
+    return DefaultCiCommandRun(
+        result=result,
+        commands=harness.fake_uv.commands(),
+        expected_command=harness.expected_command,
+    )
 
 
 def make_bimodal_cache_suite_result() -> SuiteResult:
@@ -1011,10 +651,10 @@ def make_bimodal_cache_suite_result() -> SuiteResult:
 def make_eval_dir(
     directory: Path,
     *,
-    title: str = _DEFAULT_EVAL_TITLE,
-    cases_filename: str = _DEFAULT_CASES_FILENAME,
-    prompt_filename: str = _DEFAULT_PROMPT_FILENAME,
-    eval_filename: str = _DEFAULT_EVAL_FILENAME,
+    title: str = EVAL_DEFINITION_TITLE,
+    cases_filename: str = EVAL_CASES_FILENAME,
+    prompt_filename: str = EVAL_PROMPT_FILENAME,
+    eval_filename: str = EVAL_TOML_FILENAME,
     threshold: float | None = None,
     trials: int | None = None,
     cases_content: str = "",
@@ -1034,26 +674,26 @@ def make_eval_dir(
     """
     directory.mkdir(parents=True, exist_ok=True)
     lines = [
-        f'title = "{title}"',
-        f'cases = "{cases_filename}"',
-        f'prompt = "{prompt_filename}"',
+        f'{TITLE_FIELD} = "{title}"',
+        f'{CASES_FIELD} = "{cases_filename}"',
+        f'{PROMPT_FIELD} = "{prompt_filename}"',
     ]
     if threshold is not None:
-        lines.append(f"threshold = {threshold}")
+        lines.append(f"{THRESHOLD_FIELD} = {threshold}")
     if trials is not None:
-        lines.append(f"trials = {trials}")
+        lines.append(f"{TRIALS_FIELD} = {trials}")
     if plugin_dir is not None:
-        lines.append(f'plugin_dir = "{plugin_dir}"')
+        lines.append(f'{PLUGIN_DIR_FIELD} = "{plugin_dir}"')
     if profile is not None:
         lines.append(f'{PROFILE_FIELD} = "{profile}"')
     if owned_paths:
         rendered_owned_paths = ", ".join(f'"{path}"' for path in owned_paths)
-        lines.append(f"owned_paths = [{rendered_owned_paths}]")
+        lines.append(f"{OWNED_PATHS_FIELD} = [{rendered_owned_paths}]")
     if smoke_case_ids:
         rendered_smoke_cases = ", ".join(f'"{case_id}"' for case_id in smoke_case_ids)
-        lines.append(f"smoke_cases = [{rendered_smoke_cases}]")
+        lines.append(f"{SMOKE_CASES_FIELD} = [{rendered_smoke_cases}]")
     if ci_policy is not None:
-        lines.append(f'ci_policy = "{ci_policy}"')
+        lines.append(f'{CI_POLICY_FIELD} = "{ci_policy}"')
     toml_path = directory / eval_filename
     toml_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     if with_cases:

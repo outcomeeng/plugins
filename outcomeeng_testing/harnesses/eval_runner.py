@@ -1,157 +1,86 @@
-"""Evidence harness for the eval model-runner boundary."""
+"""Evidence harness for the eval model-runner boundary.
+
+The harness builds runners around the captured model-process fixture and
+returns what they record; the linked tests own every predicate.
+"""
 
 from __future__ import annotations
 
-import json
 import os
+from dataclasses import dataclass
 from pathlib import Path
 
-import pytest
-
 from outcomeeng.models import AgentProfile
-from outcomeeng_evals.definition import DEFAULT_PROFILE, profile_model_selection
 from outcomeeng_evals.runner import (
-    BARE_FLAG,
-    CLAUDECODE_ENV,
-    EFFORT_FLAG,
-    JSON_OUTPUT_FORMAT,
-    MAX_BUDGET_FLAG,
-    MODEL_FLAG,
-    NO_SESSION_PERSISTENCE_FLAG,
-    OUTPUT_FORMAT_FLAG,
-    PLUGIN_DIR_FLAG,
-    PRINT_FLAG,
-    SETTINGS_FLAG,
     ClaudeCliRunner,
     ModelProcessInvocation,
     RunResult,
-    _metadata_from_envelope,
-    _subprocess_env,
 )
-from outcomeeng_evals.settings import ADVISOR_MODEL_SETTING, DISABLED_ADVISOR_MODEL
 from outcomeeng_testing.evals.factories import (
     ModelProcessFixture,
     load_model_process_fixture,
     make_recording_model_process_launcher,
 )
-from outcomeeng_testing.evals.fakes import (
-    RecordingModelProcessLauncher,
-    StubModelRunner,
-)
+from outcomeeng_testing.evals.fakes import RecordingModelProcessLauncher
 
 _FIXTURE_PATH = (
     Path(__file__).parents[1] / "fixtures/evals/claude_process_contract.json"
 )
 
 
-def assert_subprocess_environment_strips_claudecode_marker() -> None:
-    environment = _subprocess_env({CLAUDECODE_ENV: "present", "PATH": os.defpath})
+@dataclass(frozen=True)
+class CapturedProcessReplay:
+    """Observations from one default Claude runner replaying the captured envelope."""
 
-    assert CLAUDECODE_ENV not in environment
-    assert environment["PATH"] == os.defpath
-
-
-def assert_metadata_matches_captured_envelope() -> None:
-    fixture = _fixture()
-
-    metadata = _metadata_from_envelope(fixture.envelope)
-
-    assert metadata == fixture.expected_metadata
+    fixture: ModelProcessFixture
+    runner: ClaudeCliRunner
+    result: RunResult
+    invocations: tuple[ModelProcessInvocation, ...]
 
 
-def assert_metadata_preserves_absence() -> None:
-    metadata = _metadata_from_envelope({})
+def captured_process_fixture() -> ModelProcessFixture:
+    """Return the captured model-process contract fixture."""
 
-    assert metadata.duration_ms is None
-    assert metadata.total_cost_usd is None
-    assert metadata.input_tokens is None
-    assert metadata.output_tokens is None
-    assert metadata.cache_read_input_tokens is None
-    assert metadata.cache_creation_input_tokens is None
-    assert metadata.num_turns is None
-    assert metadata.stop_reason is None
+    return load_model_process_fixture(_FIXTURE_PATH)
 
 
-def assert_stub_runner_replays_fixture_result() -> None:
-    fixture = _fixture()
-    result = StubModelRunner(
-        response=fixture.expected_text,
-        metadata=fixture.expected_metadata,
-    ).run(fixture.prompt)
+def recording_runner(
+    fixture: ModelProcessFixture,
+    *,
+    environment: dict[str, str] | None = None,
+    bare: bool | None = None,
+    returncode: int = os.EX_OK,
+) -> tuple[ClaudeCliRunner, RecordingModelProcessLauncher]:
+    """Return a default Claude runner whose process boundary records and replays."""
 
-    assert isinstance(result, RunResult)
-    assert result.text == fixture.expected_text
-    assert result.metadata == fixture.expected_metadata
-
-
-def assert_claude_runner_replays_captured_process_contract() -> None:
-    fixture = _fixture()
-    runner, recorder = _recording_runner(fixture)
-
-    result = runner.run(fixture.prompt)
-
-    assert result.text == fixture.expected_text
-    assert result.metadata == fixture.expected_metadata
-    invocation = recorder.invocations[0]
-    assert invocation.prompt == fixture.prompt
-    default_selection = profile_model_selection(DEFAULT_PROFILE)
-    assert invocation.argv[invocation.argv.index(MODEL_FLAG) + 1] == (
-        default_selection.model
-    )
-    assert invocation.argv[invocation.argv.index(EFFORT_FLAG) + 1] == (
-        default_selection.effort
-    )
-    assert invocation.argv[0] == runner.binary
-    assert PRINT_FLAG in invocation.argv
-    assert NO_SESSION_PERSISTENCE_FLAG in invocation.argv
-    assert invocation.argv[invocation.argv.index(OUTPUT_FORMAT_FLAG) + 1] == (
-        JSON_OUTPUT_FORMAT
-    )
-    assert invocation.argv[invocation.argv.index(PLUGIN_DIR_FLAG) + 1] == str(
-        runner.plugin_dir
-    )
-    assert runner.max_budget_usd is not None
-    assert invocation.argv[invocation.argv.index(MAX_BUDGET_FLAG) + 1] == (
-        f"{runner.max_budget_usd:.4f}"
-    )
-    settings = json.loads(invocation.argv[invocation.argv.index(SETTINGS_FLAG) + 1])
-    assert settings == {ADVISOR_MODEL_SETTING: DISABLED_ADVISOR_MODEL}
-    assert CLAUDECODE_ENV not in invocation.environment
-
-
-def assert_claude_runner_raises_diagnostic_on_nonzero_exit() -> None:
-    fixture = _fixture()
-    recorder = make_recording_model_process_launcher(fixture, returncode=os.EX_USAGE)
+    recorder = make_recording_model_process_launcher(fixture, returncode=returncode)
     runner = ClaudeCliRunner(
         plugin_dir=Path.cwd(),
+        environment={} if environment is None else environment,
+        bare=bare,
         process_launcher=recorder,
-        environment={},
     )
-
-    with pytest.raises(RuntimeError, match=f"claude exited {os.EX_USAGE}"):
-        runner.run(fixture.prompt)
+    return runner, recorder
 
 
-def assert_claude_runner_auth_mapping_matches_fixture() -> None:
-    fixture = _fixture()
+def replay_captured_process_contract() -> CapturedProcessReplay:
+    """Run a default Claude runner against the captured envelope and record it."""
 
-    for auth_case in fixture.auth_cases:
-        runner, recorder = _recording_runner(
-            fixture,
-            environment=auth_case.environment,
-            bare=auth_case.bare_override,
-        )
-
-        runner.run(fixture.prompt)
-
-        has_bare = BARE_FLAG in recorder.invocations[0].argv
-        assert has_bare is auth_case.expected_bare, auth_case.name
+    fixture = captured_process_fixture()
+    runner, recorder = recording_runner(fixture)
+    result = runner.run(fixture.prompt)
+    return CapturedProcessReplay(
+        fixture=fixture,
+        runner=runner,
+        result=result,
+        invocations=tuple(recorder.invocations),
+    )
 
 
 def record_profile_invocation(profile: AgentProfile) -> ModelProcessInvocation:
     """Run a Claude runner for ``profile`` and return its one recorded invocation."""
 
-    fixture = _fixture()
+    fixture = captured_process_fixture()
     recorder = make_recording_model_process_launcher(fixture)
     runner = ClaudeCliRunner(
         plugin_dir=Path.cwd(),
@@ -162,23 +91,3 @@ def record_profile_invocation(profile: AgentProfile) -> ModelProcessInvocation:
     runner.run(fixture.prompt)
     (invocation,) = recorder.invocations
     return invocation
-
-
-def _fixture() -> ModelProcessFixture:
-    return load_model_process_fixture(_FIXTURE_PATH)
-
-
-def _recording_runner(
-    fixture: ModelProcessFixture,
-    *,
-    environment: dict[str, str] | None = None,
-    bare: bool | None = None,
-) -> tuple[ClaudeCliRunner, RecordingModelProcessLauncher]:
-    recorder = make_recording_model_process_launcher(fixture)
-    runner = ClaudeCliRunner(
-        plugin_dir=Path.cwd(),
-        environment={} if environment is None else environment,
-        bare=bare,
-        process_launcher=recorder,
-    )
-    return runner, recorder
