@@ -353,6 +353,7 @@ class ChangesetScopeModule(Protocol):
     """Typed subset of the canonical changeset-scope helper."""
 
     BaseRefNotConfiguredError: type[RuntimeError]
+    ORIGIN_HEAD_REF: str
 
     def detect_base_ref(self, repo: Path) -> str: ...
 
@@ -675,7 +676,7 @@ def run_selected_check(
 def resolve_default_base_ref(repo: Path) -> str:
     """Return the canonical remote-tracking base ref for this repository."""
 
-    changeset_scope = _load_changeset_scope()
+    changeset_scope = load_changeset_scope()
     try:
         bare_base = changeset_scope.detect_base_ref(repo)
     except changeset_scope.BaseRefNotConfiguredError as exc:
@@ -683,7 +684,9 @@ def resolve_default_base_ref(repo: Path) -> str:
     return changeset_scope.remote_tracking_ref(bare_base)
 
 
-def _load_changeset_scope() -> ChangesetScopeModule:
+def load_changeset_scope() -> ChangesetScopeModule:
+    """Return the canonical changeset-scope helper the selected gate resolves through."""
+
     cached = sys.modules.get("changeset_scope")
     if cached is not None:
         return cast("ChangesetScopeModule", cached)

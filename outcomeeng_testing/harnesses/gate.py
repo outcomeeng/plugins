@@ -18,7 +18,8 @@ import io
 import json
 import math
 import os
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -37,6 +38,7 @@ from outcomeeng.validation import (
     RUFF_CHECK_ARGV,
     SIGNAL_GRACE_SECONDS,
     SIGNAL_POLL_INTERVAL_SECONDS,
+    SUMMARY_PATH_LABEL,
     TEST_STEPS,
     VALIDATION_RECIPE,
     VALIDATION_STEPS,
@@ -58,7 +60,6 @@ from outcomeeng.validation.selected_gate import (
     GIT_DIFF_STAGED_ARGV,
     GIT_DIFF_UNSTAGED_ARGV,
     GIT_LS_UNTRACKED_ARGV,
-    SELECTED_CHECK_PLAN_HEADER,
     collect_changed_paths,
     run_selected_check as production_run_selected_check,
 )
@@ -92,13 +93,6 @@ PYTEST_TARGET_ARG = (
 )
 SELECTED_GATE_RENAMED_TARGET_ARG = "docs/renamed-selected-gate.py"
 SELECTED_GATE_WHITESPACE_PATH = " docs/selected gate edge spaces.py "
-
-
-def selected_check_plan_block(*, labels: Sequence[str], reason: str) -> str:
-    """Expected selected-check plan block for tests that inspect CLI output."""
-
-    lines = [SELECTED_CHECK_PLAN_HEADER, *(f"  {label}: {reason}" for label in labels)]
-    return "\n".join(lines) + "\n"
 
 
 def three_no_op_steps() -> tuple[Step, ...]:
@@ -651,12 +645,19 @@ def resolved_base_observation() -> ResolvedBaseObservation:
 
 @dataclass(frozen=True)
 class RunObservation:
-    """One selected-check run's exit code, live output, and spawned argvs."""
+    """One selected-check run's exit code, live output, and spawned argvs.
+
+    ``output_before_first_spawn`` is the live output written before the first
+    child started, or the whole output when no child started; ``summary`` is the
+    structured summary the run reported writing, when it reported one.
+    """
 
     exit_code: int
     output: str
     spawn_calls: tuple[tuple[str, ...], ...]
     runner_calls: tuple[tuple[str, ...], ...]
+    output_before_first_spawn: str
+    summary: dict[str, object] | None
 
 
 _CHILD_OUTPUT_BUDGET = (
@@ -687,11 +688,12 @@ def run_check_observation(
         staged_path=staged_path,
         staged_status=staged_status,
     )
+    sink = io.StringIO()
     spawner = RecordingSpawner(
         exit_codes=[os.EX_OK] * _CHILD_OUTPUT_BUDGET,
         outputs=[child_output] * _CHILD_OUTPUT_BUDGET if child_output else (),
+        observed_sink=sink,
     )
-    sink = io.StringIO()
     with TemporaryDirectory() as tmp:
         repo = Path(tmp)
         if create_repo_file is not None:
@@ -703,12 +705,45 @@ def run_check_observation(
             repo=repo,
             runner=runner,
         )
-    return RunObservation(
+    return _run_observation(
         exit_code=exit_code,
-        output=sink.getvalue(),
-        spawn_calls=tuple(spawner.spawn_calls),
+        sink=sink,
+        spawner=spawner,
         runner_calls=tuple(runner.calls),
     )
+
+
+def _run_observation(
+    *,
+    exit_code: int,
+    sink: io.StringIO,
+    spawner: RecordingSpawner,
+    runner_calls: tuple[tuple[str, ...], ...],
+) -> RunObservation:
+    output = sink.getvalue()
+    return RunObservation(
+        exit_code=exit_code,
+        output=output,
+        spawn_calls=tuple(spawner.spawn_calls),
+        runner_calls=runner_calls,
+        output_before_first_spawn=(
+            spawner.sink_at_spawn[0] if spawner.sink_at_spawn else output
+        ),
+        summary=_reported_summary(output),
+    )
+
+
+def _reported_summary(output: str) -> dict[str, object] | None:
+    """Read the structured summary whose path the run printed, if it printed one."""
+
+    reported = [
+        line.removeprefix(SUMMARY_PATH_LABEL).strip()
+        for line in output.splitlines()
+        if line.startswith(SUMMARY_PATH_LABEL)
+    ]
+    if not reported:
+        return None
+    return read_summary(Path(reported[-1]))
 
 
 def unrelated_validation_source_path() -> str:
@@ -720,23 +755,30 @@ def unrelated_validation_source_path() -> str:
     )
 
 
-def missing_origin_observation() -> RunObservation:
-    """Run the production selected check in a repository with no origin."""
+@contextmanager
+def repository_without_origin() -> Iterator[Path]:
+    """Yield a real git repository that has no origin remote."""
 
-    spawner = RecordingSpawner(exit_codes=[os.EX_OK])
-    sink = io.StringIO()
     with TemporaryDirectory() as tmp:
         repo = Path(tmp)
         build_repo_without_origin(repo)
-        exit_code = production_run_selected_check(
-            spawner=spawner,
-            sink=sink,
-            repo=repo,
-        )
-    return RunObservation(
+        yield repo
+
+
+def production_check_observation(repo: Path) -> RunObservation:
+    """Run the production selected check, with its real base-ref resolution, in ``repo``."""
+
+    sink = io.StringIO()
+    spawner = RecordingSpawner(exit_codes=[os.EX_OK], observed_sink=sink)
+    exit_code = production_run_selected_check(
+        spawner=spawner,
+        sink=sink,
+        repo=repo,
+    )
+    return _run_observation(
         exit_code=exit_code,
-        output=sink.getvalue(),
-        spawn_calls=tuple(spawner.spawn_calls),
+        sink=sink,
+        spawner=spawner,
         runner_calls=(),
     )
 
@@ -804,19 +846,24 @@ class RecordingSpawner:
     """A ProcessSpawner that returns scripted handles in order of spawn calls.
 
     The exit_codes sequence drives the i-th spawn() call's handle. spawn_calls
-    records the argv tuples passed to spawn(), in order.
+    records the argv tuples passed to spawn(), in order. When observed_sink is
+    the run's live sink, sink_at_spawn records its content at each spawn() call.
     """
 
     exit_codes: Sequence[int]
     outputs: Sequence[str] = ()
+    observed_sink: io.StringIO | None = None
     spawn_calls: list[tuple[str, ...]] = field(default_factory=list)
     output_paths: list[Path] = field(default_factory=list)
     written_outputs: list[str] = field(default_factory=list)
+    sink_at_spawn: list[str] = field(default_factory=list)
     handles: list[RecordingHandle] = field(default_factory=list)
     _next_pid: int = 10_000
 
     def spawn(self, argv: Sequence[str], output_path: Path) -> ProcessHandle:
         index = len(self.spawn_calls)
+        if self.observed_sink is not None:
+            self.sink_at_spawn.append(self.observed_sink.getvalue())
         self.spawn_calls.append(tuple(argv))
         self.output_paths.append(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)

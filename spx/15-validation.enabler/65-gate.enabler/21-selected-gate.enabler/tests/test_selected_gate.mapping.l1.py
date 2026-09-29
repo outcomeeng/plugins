@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from pathlib import Path
+from collections.abc import Sequence
+from fnmatch import fnmatchcase
 
 import pytest
 
@@ -23,13 +24,12 @@ from outcomeeng.validation import (
     TEST_STEPS,
     VALIDATION_STEPS,
 )
-from outcomeeng.validation._steps import EVALS_ROOT, RUNTIME_TOKEN_STEP
+from outcomeeng.validation._steps import RUNTIME_TOKEN_STEP
 from outcomeeng.validation.infrastructure_index import (
     InfrastructureReach,
     SPEC_TREE_ROOT,
     index_test_infrastructure,
 )
-from outcomeeng.validation.profile_configuration import eval_configuration_files
 from outcomeeng.validation.selected_gate import (
     ChangedPath,
     EVAL_CONFIGURATION_REASON,
@@ -57,18 +57,16 @@ from outcomeeng.validation.selected_gate import (
 from outcomeeng.validation import selected_gate as selection_source
 from outcomeeng_testing.generators.gate import (
     SELECTED_GATE_EVAL_DEFINITION_PATH,
-    SELECTED_GATE_EVAL_WORKFLOW_PATH,
     SELECTED_GATE_INSTRUCTION_BLOCK_SOURCE_PATH,
+    SELECTED_GATE_LANE_PATH_EXAMPLES,
     SELECTED_GATE_MARKDOWN_PATH,
-    SELECTED_GATE_PLUGIN_SCRIPT_PATH,
     SELECTED_GATE_PYTHON_SOURCE_PATH,
     SELECTED_GATE_PYTHON_TEST_PATH,
     SELECTED_GATE_README_PATH,
-    SELECTED_GATE_SHARED_SOURCE_PATH,
     SELECTED_GATE_SKILL_PATH,
     SELECTED_GATE_SPX_CONFIG_PATH,
-    SELECTED_GATE_TEMPLATE_SCRIPT_PATH,
     SELECTED_GATE_WORKFLOW_PATH,
+    guarded_eval_configuration_paths,
     path_from_pattern,
 )
 from outcomeeng_testing.harnesses import gate as gate_harness
@@ -99,32 +97,103 @@ def _reasons(plan: SelectedGatePlan) -> tuple[str, ...]:
     return tuple(item.reason for item in plan.selected_steps)
 
 
-@pytest.mark.parametrize(
-    ("patterns", "required_argvs"),
+def _selection(plan: SelectedGatePlan) -> tuple[tuple[tuple[str, ...], str], ...]:
+    return tuple((item.step.argv, item.reason) for item in plan.selected_steps)
+
+
+# The lane law: each source-declared path category selects the validation steps
+# that check that category's files, and names the category as the reason. The
+# categories, steps, and reasons are source-owned; this table declares only
+# which steps check which category, the correspondence the spec assertion makes.
+_PATTERN_LANES: tuple[tuple[tuple[str, ...], tuple[tuple[str, ...], ...], str], ...] = (
     (
-        (
-            selection_source.PYTHON_FORMAT_LINT_PATTERNS,
-            (RUFF_FORMAT_ARGV, RUFF_CHECK_ARGV),
+        selection_source.MARKDOWN_PATTERNS,
+        (FMT_CHECK_ARGV, SPX_MARKDOWN_ARGV),
+        MARKDOWN_REASON,
+    ),
+    (
+        selection_source.WORKFLOW_PATTERNS,
+        (ACTIONLINT_ARGV, SHELLCHECK_ARGV),
+        WORKFLOW_REASON,
+    ),
+    (
+        selection_source.PYTHON_FORMAT_LINT_PATTERNS,
+        (RUFF_FORMAT_ARGV, RUFF_CHECK_ARGV),
+        PYTHON_REASON,
+    ),
+    (
+        selection_source.PYTHON_TYPECHECK_PATTERNS,
+        (MYPY_ARGV, PYRIGHT_ARGV),
+        PYTHON_REASON,
+    ),
+    (
+        selection_source.SKILL_PATTERNS,
+        tuple(
+            step.argv for step in VALIDATION_STEPS if step.label in SKILL_STEP_LABELS
         ),
-        (selection_source.PYTHON_TYPECHECK_PATTERNS, (MYPY_ARGV, PYRIGHT_ARGV)),
-        (selection_source.MARKDOWN_PATTERNS, (FMT_CHECK_ARGV, SPX_MARKDOWN_ARGV)),
-        (selection_source.WORKFLOW_PATTERNS, (ACTIONLINT_ARGV, SHELLCHECK_ARGV)),
-        (selection_source.INSTRUCTION_BLOCK_PATTERNS, (INSTRUCTION_BLOCK_ARGV,)),
-        (selection_source.EVAL_TRIGGER_PATTERNS, (EVAL_TRIGGERS_ARGV,)),
-        (selection_source.EVAL_PROMPT_PATTERNS, (EVAL_PROMPTS_ARGV,)),
-        (selection_source.EVIDENCE_LINK_PATTERNS, (EVAL_LINKS_ARGV,)),
-        (
-            selection_source.SKILL_PATTERNS,
-            tuple(
-                step.argv
-                for step in VALIDATION_STEPS
-                if step.label in SKILL_STEP_LABELS
-            ),
-        ),
+        SKILL_REASON,
+    ),
+    (
+        selection_source.INSTRUCTION_BLOCK_PATTERNS,
+        (INSTRUCTION_BLOCK_ARGV,),
+        INSTRUCTION_BLOCK_REASON,
+    ),
+    (selection_source.EVAL_TRIGGER_PATTERNS, (EVAL_TRIGGERS_ARGV,), EVAL_REASON),
+    (selection_source.EVAL_PROMPT_PATTERNS, (EVAL_PROMPTS_ARGV,), EVAL_REASON),
+    (
+        selection_source.EVIDENCE_LINK_PATTERNS,
+        (EVAL_LINKS_ARGV,),
+        EVIDENCE_LINK_REASON,
     ),
 )
+
+
+def _matches(paths: Sequence[str], patterns: Sequence[str]) -> bool:
+    return any(fnmatchcase(path, pattern) for path in paths for pattern in patterns)
+
+
+def _lane_law_selection(
+    paths: Sequence[str],
+) -> tuple[tuple[tuple[str, ...], str], ...]:
+    """The steps and reasons the lane law derives for lane-only changed paths.
+
+    Every lane a path matches contributes its steps; a file the configuration
+    guard reads contributes the runtime-token step after every pattern lane; a
+    step contributed by several lanes names each lane's reason in that order.
+    The selection keeps validation-step order and ends with the live-discovery
+    test when a path matches a declared discovery surface.
+    """
+    contributions = [
+        (argvs, reason)
+        for patterns, argvs, reason in _PATTERN_LANES
+        if _matches(paths, patterns)
+    ]
+    if set(guarded_eval_configuration_paths()).intersection(paths):
+        contributions.append(((RUNTIME_TOKEN_STEP.argv,), EVAL_CONFIGURATION_REASON))
+    reasons: dict[tuple[str, ...], list[str]] = {}
+    for argvs, reason in contributions:
+        for argv in argvs:
+            reasons.setdefault(argv, []).append(reason)
+    selection = [
+        (step.argv, REASON_SEPARATOR.join(reasons[step.argv]))
+        for step in VALIDATION_STEPS
+        if step.argv in reasons
+    ]
+    if _matches(paths, selection_source.LIVE_DISCOVERY_PATTERNS):
+        selection.append(
+            ((*PYTEST_ARGV, LIVE_DISCOVERY_TEST), LIVE_DISCOVERY_INCLUDED_REASON)
+        )
+    return tuple(selection)
+
+
+@pytest.mark.parametrize(
+    ("patterns", "required_argvs", "reason"),
+    _PATTERN_LANES,
+)
 def test_every_declared_path_category_selects_its_validation_lane(
-    patterns: tuple[str, ...], required_argvs: tuple[tuple[str, ...], ...]
+    patterns: tuple[str, ...],
+    required_argvs: tuple[tuple[str, ...], ...],
+    reason: str,
 ) -> None:
     for pattern in patterns:
         with synthetic_repository() as repo:
@@ -140,6 +209,9 @@ def test_every_declared_path_category_selects_its_validation_lane(
         )
         assert selected_argvs[: len(validation_argvs)] == validation_argvs
         assert all(reason.strip() for reason in _reasons(plan))
+        if not plan.full_gate:
+            reason_by_argv = dict(_selection(plan))
+            assert all(reason in reason_by_argv[argv] for argv in required_argvs)
 
 
 @pytest.mark.parametrize("pattern", selection_source.PYTHON_ASSERTION_TEST_PATTERNS)
@@ -171,65 +243,38 @@ def test_every_evidence_link_path_category_selects_link_validation(
     assert EVAL_LINKS_ARGV not in _argvs(outside)
 
 
-def test_a_python_source_path_selects_lint_and_type_steps() -> None:
-    plan = build_selected_gate_plan((SELECTED_GATE_PYTHON_SOURCE_PATH,))
+@pytest.mark.parametrize("path", SELECTED_GATE_LANE_PATH_EXAMPLES)
+def test_a_lane_path_selects_exactly_its_lane_steps_in_validation_order(
+    path: str,
+) -> None:
+    plan = build_selected_gate_plan((path,))
 
     assert plan.full_gate is False
-    assert _argvs(plan) == (RUFF_FORMAT_ARGV, RUFF_CHECK_ARGV, MYPY_ARGV, PYRIGHT_ARGV)
-    assert set(_reasons(plan)) == {PYTHON_REASON}
+    assert _selection(plan) == _lane_law_selection((path,))
 
 
-def test_a_workflow_path_selects_the_workflow_linters() -> None:
-    plan = build_selected_gate_plan((SELECTED_GATE_WORKFLOW_PATH,))
-
-    assert plan.full_gate is False
-    assert _argvs(plan) == (ACTIONLINT_ARGV, SHELLCHECK_ARGV)
-    assert set(_reasons(plan)) == {WORKFLOW_REASON}
-
-
-def test_the_eval_workflow_selects_the_trigger_currency_check() -> None:
-    # The eval workflow carries the generated trigger blocks, so editing it
-    # selects the trigger currency check alongside the workflow linters. It
-    # carries no producer, so the prompt check stays unselected.
-    plan = build_selected_gate_plan((SELECTED_GATE_EVAL_WORKFLOW_PATH,))
+def test_combined_lane_paths_merge_lanes_in_validation_step_order() -> None:
+    plan = build_selected_gate_plan(SELECTED_GATE_LANE_PATH_EXAMPLES)
 
     assert plan.full_gate is False
-    assert _argvs(plan) == (ACTIONLINT_ARGV, SHELLCHECK_ARGV, EVAL_TRIGGERS_ARGV)
-    assert _reasons(plan) == (WORKFLOW_REASON, WORKFLOW_REASON, EVAL_REASON)
+    assert _selection(plan) == _lane_law_selection(SELECTED_GATE_LANE_PATH_EXAMPLES)
 
 
 def test_an_eval_definition_selects_both_currency_checks_and_the_configuration_guard() -> (
     None
 ):
     # An eval definition generates both the CI trigger list and, for a
-    # producer-coupled suite, the materialized prompt — so it selects both
-    # currency checks, alongside the markdown lane its `spx/**` path matches.
-    # The runtime-token step's configuration guard reads the definition for a
-    # literal model identifier, so the definition selects that step as well.
+    # producer-coupled suite, the materialized prompt, and the runtime-token
+    # step's configuration guard reads it for a literal model identifier.
     plan = build_selected_gate_plan((SELECTED_GATE_EVAL_DEFINITION_PATH,))
 
     assert plan.full_gate is False
-    assert _argvs(plan) == (
-        FMT_CHECK_ARGV,
-        RUNTIME_TOKEN_STEP.argv,
-        EVAL_TRIGGERS_ARGV,
-        EVAL_PROMPTS_ARGV,
-        SPX_MARKDOWN_ARGV,
-        EVAL_LINKS_ARGV,
-    )
-    assert _reasons(plan) == (
-        MARKDOWN_REASON,
-        EVAL_CONFIGURATION_REASON,
-        EVAL_REASON,
-        EVAL_REASON,
-        MARKDOWN_REASON,
-        EVIDENCE_LINK_REASON,
+    assert {RUNTIME_TOKEN_STEP.argv, EVAL_TRIGGERS_ARGV, EVAL_PROMPTS_ARGV} <= set(
+        _argvs(plan)
     )
 
 
-@pytest.mark.parametrize(
-    "path", tuple(str(path) for path in eval_configuration_files(Path(EVALS_ROOT)))
-)
+@pytest.mark.parametrize("path", guarded_eval_configuration_paths())
 def test_every_file_the_configuration_guard_reads_selects_the_runtime_token_step(
     path: str,
 ) -> None:
@@ -243,9 +288,7 @@ def test_every_file_the_configuration_guard_reads_selects_the_runtime_token_step
     assert reason_by_argv[RUNTIME_TOKEN_STEP.argv] == EVAL_CONFIGURATION_REASON
 
 
-@pytest.mark.parametrize(
-    "path", tuple(str(path) for path in eval_configuration_files(Path(EVALS_ROOT)))
-)
+@pytest.mark.parametrize("path", guarded_eval_configuration_paths())
 def test_a_guarded_eval_file_beside_a_skill_path_names_both_runtime_token_reasons(
     path: str,
 ) -> None:
@@ -266,42 +309,6 @@ def test_spec_tree_paths_the_configuration_guard_does_not_read_leave_it_unselect
     plan = build_selected_gate_plan((path,))
 
     assert RUNTIME_TOKEN_STEP.argv not in _argvs(plan)
-
-
-def test_combined_paths_merge_lanes_in_validation_step_order() -> None:
-    plan = build_selected_gate_plan(
-        (
-            SELECTED_GATE_PYTHON_SOURCE_PATH,
-            SELECTED_GATE_MARKDOWN_PATH,
-            SELECTED_GATE_WORKFLOW_PATH,
-        )
-    )
-
-    assert plan.full_gate is False
-    assert _argvs(plan) == (
-        FMT_CHECK_ARGV,
-        ACTIONLINT_ARGV,
-        SHELLCHECK_ARGV,
-        RUFF_FORMAT_ARGV,
-        RUFF_CHECK_ARGV,
-        MYPY_ARGV,
-        PYRIGHT_ARGV,
-        SPX_MARKDOWN_ARGV,
-        EVAL_LINKS_ARGV,
-        (*PYTEST_ARGV, LIVE_DISCOVERY_TEST),
-    )
-    assert _reasons(plan) == (
-        MARKDOWN_REASON,
-        WORKFLOW_REASON,
-        WORKFLOW_REASON,
-        PYTHON_REASON,
-        PYTHON_REASON,
-        PYTHON_REASON,
-        PYTHON_REASON,
-        MARKDOWN_REASON,
-        EVIDENCE_LINK_REASON,
-        LIVE_DISCOVERY_INCLUDED_REASON,
-    )
 
 
 def test_deleted_assertion_tests_never_select_pytest() -> None:
@@ -345,17 +352,6 @@ def test_full_gate_paths_select_the_complete_recipe_set(path: str) -> None:
 
 
 @pytest.mark.parametrize(
-    "path", (SELECTED_GATE_README_PATH, SELECTED_GATE_SPX_CONFIG_PATH)
-)
-def test_markdown_only_paths_select_the_markdown_lane(path: str) -> None:
-    plan = build_selected_gate_plan((path,))
-
-    assert plan.full_gate is False
-    assert _argvs(plan) == (FMT_CHECK_ARGV, SPX_MARKDOWN_ARGV)
-    assert set(_reasons(plan)) == {MARKDOWN_REASON}
-
-
-@pytest.mark.parametrize(
     "path",
     (
         SELECTED_GATE_MARKDOWN_PATH,
@@ -387,69 +383,6 @@ def test_paths_outside_the_spec_tree_never_select_the_evidence_link_step(
     plan = build_selected_gate_plan((path,))
 
     assert EVAL_LINKS_ARGV not in _argvs(plan)
-
-
-def test_a_skill_path_selects_skill_steps_with_the_prompt_check() -> None:
-    # An authored plugin file may be a producer for a producer-coupled eval
-    # prompt, so the prompt currency check joins the skill and markdown steps.
-    plan = build_selected_gate_plan((SELECTED_GATE_SKILL_PATH,))
-
-    expected = tuple(
-        step
-        for step in VALIDATION_STEPS
-        if step.label in SKILL_STEP_LABELS
-        or step.argv in {FMT_CHECK_ARGV, SPX_MARKDOWN_ARGV, EVAL_PROMPTS_ARGV}
-    )
-    assert plan.steps == expected
-    assert _reasons(plan) == tuple(
-        MARKDOWN_REASON
-        if step.argv in {FMT_CHECK_ARGV, SPX_MARKDOWN_ARGV}
-        else EVAL_REASON
-        if step.argv == EVAL_PROMPTS_ARGV
-        else SKILL_REASON
-        for step in expected
-    )
-
-
-def test_a_plugin_script_selects_skill_and_python_lint_steps() -> None:
-    plan = build_selected_gate_plan((SELECTED_GATE_PLUGIN_SCRIPT_PATH,))
-
-    expected = tuple(
-        step
-        for step in VALIDATION_STEPS
-        if step.label in SKILL_STEP_LABELS
-        or step.argv in {RUFF_FORMAT_ARGV, RUFF_CHECK_ARGV, EVAL_PROMPTS_ARGV}
-    )
-    assert plan.steps == expected
-    assert _reasons(plan) == tuple(
-        PYTHON_REASON
-        if step.argv in {RUFF_FORMAT_ARGV, RUFF_CHECK_ARGV}
-        else EVAL_REASON
-        if step.argv == EVAL_PROMPTS_ARGV
-        else SKILL_REASON
-        for step in expected
-    )
-
-
-def test_a_shared_fragment_selects_skill_and_markdown_steps() -> None:
-    # A shared fragment is inlined by the build; an eval names its producer by
-    # an authored `src/plugins/` path, so no shared-fragment edit stales a
-    # materialized prompt and the prompt check stays unselected here.
-    plan = build_selected_gate_plan((SELECTED_GATE_SHARED_SOURCE_PATH,))
-
-    expected = tuple(
-        step
-        for step in VALIDATION_STEPS
-        if step.label in SKILL_STEP_LABELS
-        or step.argv in {FMT_CHECK_ARGV, SPX_MARKDOWN_ARGV}
-    )
-    assert plan.steps == expected
-    assert _reasons(plan) == tuple(
-        MARKDOWN_REASON
-        if step.argv in {FMT_CHECK_ARGV, SPX_MARKDOWN_ARGV}
-        else SKILL_REASON
-        for step in expected
-    )
 
 
 def test_the_instruction_block_source_selects_the_currency_check() -> None:
@@ -654,29 +587,3 @@ def test_the_gate_harness_shared_with_the_parent_node_selects_the_full_surface()
     assert observation.index.reach(observation.path).kind is InfrastructureReach.SHARED
     assert plan.full_gate is True
     assert set(_reasons(plan)) == {SHARED_TEST_INFRASTRUCTURE_REASON}
-
-
-def test_template_script_maps_to_skill_and_lint_steps() -> None:
-    # The template tree is an authored source root the generated-source
-    # declaration and the raw-token enforcement roots both name, so a change to
-    # a shipped template script has to reach the build, drift, and lint steps
-    # that carry it into every plugin's generated tree. An eval names its
-    # producer by an authored `src/plugins/` path, so a template edit stales no
-    # materialized prompt and the prompt check stays unselected.
-    plan = build_selected_gate_plan((SELECTED_GATE_TEMPLATE_SCRIPT_PATH,))
-
-    expected = tuple(
-        step
-        for step in VALIDATION_STEPS
-        if step.label in SKILL_STEP_LABELS
-        or step.argv in {RUFF_FORMAT_ARGV, RUFF_CHECK_ARGV}
-    )
-    assert plan.full_gate is False
-    assert plan.steps[:-1] == expected
-    assert plan.steps[-1].argv == (*PYTEST_ARGV, LIVE_DISCOVERY_TEST)
-    assert _reasons(plan)[:-1] == tuple(
-        PYTHON_REASON
-        if step.argv in {RUFF_FORMAT_ARGV, RUFF_CHECK_ARGV}
-        else SKILL_REASON
-        for step in expected
-    )

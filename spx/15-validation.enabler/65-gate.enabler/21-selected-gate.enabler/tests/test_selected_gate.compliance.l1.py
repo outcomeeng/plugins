@@ -6,10 +6,13 @@ import pytest
 
 from outcomeeng.validation import (
     CHECK_RECIPES,
+    PREFLIGHT_STEPS,
     PYTEST_ARGV,
     RECIPE_CHECK,
     RECIPE_TEST,
     RECIPE_VALIDATION,
+    SUMMARY_KEY_ARGV,
+    SUMMARY_KEY_RECIPE,
 )
 from outcomeeng.validation.infrastructure_index import (
     InfrastructureReach,
@@ -29,9 +32,10 @@ from outcomeeng.validation.selected_gate import (
     LIVE_DISCOVERY_INCLUDED_REASON,
     LIVE_DISCOVERY_PATTERNS,
     LIVE_DISCOVERY_TEST,
-    PYTHON_REASON,
+    SELECTED_CHECK_PLAN_HEADER,
     TEST_REASON,
     build_selected_gate_plan,
+    load_changeset_scope,
 )
 from outcomeeng_testing.generators.gate import (
     SELECTED_GATE_FULL_GATE_PATH,
@@ -46,10 +50,12 @@ from outcomeeng_testing.harnesses.gate import (
     collect_selected_gate_paths,
     expected_full_check_spawn_calls,
     failing_discovery_runner,
-    missing_origin_observation,
+    production_check_observation,
+    repository_without_origin,
     run_check_observation,
-    selected_check_plan_block,
     selected_gate_branch_discovery_argv,
+    summary_recipes,
+    summary_steps,
     unrelated_validation_source_path,
 )
 from outcomeeng_testing.harnesses.infrastructure_index import (
@@ -67,16 +73,36 @@ def test_an_empty_changeset_selects_no_steps() -> None:
 
 def test_the_plan_prints_before_the_recipes_run() -> None:
     run = run_check_observation(branch_path=SELECTED_GATE_PYTHON_SOURCE_PATH)
+    plan = build_selected_gate_plan((SELECTED_GATE_PYTHON_SOURCE_PATH,))
+    announced = run.output_before_first_spawn.splitlines()
+    # One shared cursor over the announced lines: each selected step must name
+    # its label and reason on a line after the previous step's line.
+    cursor = iter(enumerate(announced))
+    announcing_lines = [
+        next(
+            (
+                index
+                for index, line in cursor
+                if item.step.label in line and item.reason in line
+            ),
+            None,
+        )
+        for item in plan.selected_steps
+    ]
 
-    expected_plan = build_selected_gate_plan((SELECTED_GATE_PYTHON_SOURCE_PATH,))
-    selected_block = selected_check_plan_block(
-        labels=tuple(item.step.label for item in expected_plan.selected_steps),
-        reason=PYTHON_REASON,
-    )
     assert run.exit_code == 0
-    assert run.output.startswith(selected_block)
-    assert run.output.index(selected_block) < run.output.index(f"Recipe {RECIPE_CHECK}")
-    assert "Summary: " in run.output
+    assert plan.selected_steps
+    assert announced[0] == SELECTED_CHECK_PLAN_HEADER
+    assert None not in announcing_lines, announcing_lines
+    assert run.spawn_calls == (
+        *(step.argv for step in PREFLIGHT_STEPS),
+        *(step.argv for step in plan.steps),
+    )
+    assert run.summary is not None
+    assert run.summary[SUMMARY_KEY_RECIPE] == RECIPE_CHECK
+    assert [step[SUMMARY_KEY_ARGV] for step in summary_steps(run.summary)] == [
+        list(argv) for argv in run.spawn_calls
+    ]
 
 
 def test_child_output_never_streams_to_the_live_sink() -> None:
@@ -95,9 +121,12 @@ def test_a_full_gate_path_runs_the_complete_wrapper() -> None:
 
     assert run.exit_code == 0
     assert run.spawn_calls == expected_full_check_spawn_calls()
-    assert FULL_GATE_REASON in run.output
-    assert f"Recipe {RECIPE_VALIDATION}" in run.output
-    assert f"Recipe {RECIPE_TEST}" in run.output
+    assert FULL_GATE_REASON in run.output_before_first_spawn
+    assert run.summary is not None
+    assert [recipe[SUMMARY_KEY_RECIPE] for recipe in summary_recipes(run.summary)] == [
+        RECIPE_VALIDATION,
+        RECIPE_TEST,
+    ]
 
 
 def test_a_deleted_test_path_selects_no_pytest_run() -> None:
@@ -129,12 +158,17 @@ def test_git_discovery_failure_stops_before_any_spawn() -> None:
 
 
 def test_a_repo_without_origin_reports_the_unset_head() -> None:
-    run = missing_origin_observation()
+    changeset_scope = load_changeset_scope()
+    with repository_without_origin() as repo:
+        run = production_check_observation(repo)
+        with pytest.raises(changeset_scope.BaseRefNotConfiguredError) as helper_failure:
+            changeset_scope.detect_base_ref(repo)
 
     assert run.exit_code == GIT_DISCOVERY_FAILURE_EXIT_CODE
     assert run.spawn_calls == ()
     assert GIT_DISCOVERY_ERROR_PREFIX in run.output
-    assert "refs/remotes/origin/HEAD unset" in run.output
+    assert changeset_scope.ORIGIN_HEAD_REF in run.output
+    assert str(helper_failure.value) in run.output
 
 
 def test_collection_propagates_git_failure_as_a_typed_error() -> None:
@@ -190,9 +224,8 @@ def test_discovery_inclusion_is_printed_before_execution() -> None:
     run = run_check_observation(branch_path=INSTRUCTION_BLOCK_SOURCE_PATH)
 
     assert run.exit_code == 0
-    assert run.output.index(LIVE_DISCOVERY_INCLUDED_REASON) < run.output.index(
-        f"Recipe {RECIPE_CHECK}"
-    )
+    assert run.spawn_calls
+    assert LIVE_DISCOVERY_INCLUDED_REASON in run.output_before_first_spawn
 
 
 def test_unrelated_automatic_full_gate_excludes_only_the_live_check() -> None:
@@ -227,9 +260,7 @@ def test_unrelated_full_gate_execution_honors_its_exclusion() -> None:
         and call[-len(LIVE_DISCOVERY_EXCLUSION) :] == LIVE_DISCOVERY_EXCLUSION
         for call in run.spawn_calls
     )
-    assert run.output.index(LIVE_DISCOVERY_EXCLUDED_REASON) < run.output.index(
-        f"Recipe {RECIPE_VALIDATION}"
-    )
+    assert LIVE_DISCOVERY_EXCLUDED_REASON in run.output_before_first_spawn
 
 
 def test_relevant_full_gate_keeps_live_discovery_enabled() -> None:
