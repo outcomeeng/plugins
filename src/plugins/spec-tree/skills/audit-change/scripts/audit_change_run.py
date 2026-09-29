@@ -12,11 +12,24 @@ values; a ``blocked`` result carries the reason, a detail line, the run token or
 ``not-started``, and for a failed command its exact command line, payload
 source, payload key, exit code, and stderr.
 
-Tested with: every operation of a complete rejected audit over a captured
-Change record, two such audits started at once from one worktree, a candidate
-edited before ``start`` and after it, an edit landing between the runner's read
-and SPX's retention, and a scope payload SPX rejects — each writing no file
-outside the SPX store.
+Tested with, each run observed for every file the runner process writes
+anywhere and every process it starts:
+
+- every operation of a complete rejected audit over a captured Change record;
+- two such audits started at once from one worktree;
+- a candidate edited before ``start``, and after it before ``reconcile``;
+- an edit landing between the runner's read and SPX's retention;
+- a scope payload SPX rejects, which blocks with SPX's exit code and stderr;
+- invalid requests part-way through a run, each blocking with its declared
+  reason: a truncated JSON request, a JSON array, an unknown operation, a
+  missing field, an extra field, an absolute, parent-traversing, or
+  unnormalized candidate path, a candidate linked outside the repository, an
+  absent candidate, a Windows-1252 candidate, a finding ordinal above the
+  maximum, a finding rule that is not a lowercase rule ID, a scope payload
+  with no ``unitId``, and an undeclared terminal status.
+
+None of these writes a file outside the SPX store, and none starts a process
+other than ``git`` and ``spx``.
 """
 
 from __future__ import annotations
@@ -168,7 +181,8 @@ EVIDENCE_FIELDS: Final = frozenset(
 )
 
 SPX_EXECUTABLE: Final = "spx"
-_GIT_TOPLEVEL: Final = ("git", "rev-parse", "--show-toplevel")
+GIT_EXECUTABLE: Final = "git"
+_GIT_TOPLEVEL: Final = (GIT_EXECUTABLE, "rev-parse", "--show-toplevel")
 _SPX_VERSION: Final = (SPX_EXECUTABLE, "--version")
 _RUN_COMMAND: Final = (SPX_EXECUTABLE, "verification", "run")
 
@@ -797,11 +811,16 @@ def execute(
     }
 
 
-def main(*, stdin: TextIO | None = None, stdout: TextIO | None = None) -> int:
+def main(
+    *,
+    stdin: TextIO | None = None,
+    stdout: TextIO | None = None,
+    runner: CommandRunner = run_subprocess,
+) -> int:
     """Read one request on stdin, write one result on stdout."""
     source = sys.stdin if stdin is None else stdin
     sink = sys.stdout if stdout is None else stdout
-    code, result = execute(source.read(), cwd=pathlib.Path.cwd(), runner=run_subprocess)
+    code, result = execute(source.read(), cwd=pathlib.Path.cwd(), runner=runner)
     json.dump(result, sink, sort_keys=True)
     sink.write("\n")
     return int(code)

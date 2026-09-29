@@ -15,7 +15,7 @@ Audit the caller's local Change in this already-dispatched, isolated verifier
 context. Load `spec-tree:audit-change` explicitly when its body is not present,
 then pass the local path and this wrapper's run-driver identity as explicit
 skill inputs. The skill owns standards loading, inspection, coverage, and
-persistence through its bundled runner; this wrapper relays the skill's result.
+persistence through its bundled runner; relay its result.
 
 </role>
 
@@ -32,7 +32,8 @@ persistence through its bundled runner; this wrapper relays the skill's result.
 
 <workflow>
 
-1. Confirm `spec-tree:audit-change` is loaded. If loading fails, return the
+1. Confirm `spec-tree:audit-change` is loaded, loading it through the skill
+   tool when its body is absent. If loading fails, return the
    `BLOCKED` form below with `result` set to
    `{"operation":null,"status":"blocked","reason":"missing-prerequisite","detail":"spec-tree:audit-change: <exact availability or loading failure>","runToken":"not-started"}`,
    `judgmentStatus: incomplete`, and `judgedFindings: []`. Do no specialized
@@ -40,10 +41,17 @@ persistence through its bundled runner; this wrapper relays the skill's result.
 2. Invoke the skill with a JSON argument object. Set `path` to the caller's
    repository-relative file path unchanged and `runDriver` to
    `{"producerKind":"agent","agentName":"change-auditor","agentOwningPluginName":"spec-tree","skillName":"audit-change","skillOwningPluginName":"spec-tree","invocationRole":"run-driver"}`.
-   The caller supplies only the file target to this wrapper; this wrapper owns
-   the explicit producer data. Include no authoring history or suggested verdict.
+   The caller supplies only the file target; supply the producer data here.
+   Include no authoring history or suggested verdict. The skill's steps run on
+   this definition's grants: the skill tool loads `spec-tree:spec-tree-plugin`
+   and `spec-tree:change-standards`; `Read` serves only those two loaded
+   skills' own skill-directory reads — the plugin manifest the `version` verb
+   reads and the change-record and Definition of Ready references the declared
+   Maturity selects; `Bash` runs each bundled-runner request. Reach the
+   candidate and every repository path through the runner, never through
+   `Read`.
 3. Relay the skill's final output unchanged: the `finish` result object, the
-   `OUTSIDE_CONTRACT` result, or the `BLOCKED` diagnostic. The audit completes
+   `OUTSIDE_CONTRACT` result, or the `BLOCKED` diagnostic. Complete the audit
    in this context without nested delegation.
 
 </workflow>
@@ -85,13 +93,15 @@ summarize no field, and add no prose verdict or summary.
 
 <failure_modes>
 
-**Concurrent wrappers cross-read a saved projection.** When this wrapper
-relayed the complete rendered projection, a projection of about 55 KB did not
-fit the result. Two `change-auditor` sessions dispatched from one worktree each
-saved it to fixed names such as `render.json` in the dispatching session's
-shared scratch directory, and one read the other's file, so its run stayed
-unsealed. Relay the `finish` result, whose `renderCommand` reproduces the
-projection from the sealed run.
+**Concurrent wrappers cross-read a saved projection.** Claude relayed the
+complete rendered projection, and a projection of about 55 KB did not fit the
+result. Running as two `change-auditor` sessions dispatched from one worktree,
+Claude saved it in each session to fixed names such as `render.json` in the
+dispatching session's shared scratch directory, and one session read the
+other's file, so its run stayed unsealed. A fixed name in a directory both
+sessions share carries no owner, so neither session could tell its file from
+the other's. Relay the `finish` result, whose `renderCommand` reproduces the
+projection from the sealed run, and save nothing.
 
 </failure_modes>
 
