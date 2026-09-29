@@ -25,6 +25,10 @@ from outcomeeng.distribution.contracts import (
     TEXT_FILE_SUFFIXES,
 )
 from outcomeeng.validation._model import Recipe, Step
+from outcomeeng.validation.profile_configuration import (
+    CONFIGURATION_ONLY_OPTION,
+    eval_configuration_files,
+)
 
 _REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 PYTHON_SOURCE_PATHS: Final = ("outcomeeng", "outcomeeng_testing", "outcomeeng_evals")
@@ -178,6 +182,27 @@ def runtime_token_files(root: Path = Path("src")) -> tuple[str, ...]:
     return tuple(str(path) for path in sorted(root.rglob("*")) if path.is_file())
 
 
+def eval_configuration_file_args(root: Path = Path(EVALS_ROOT)) -> tuple[str, ...]:
+    # An eval definition or prompt template naming a model bypasses the profile
+    # the eval selects, so the configuration guard reads each of them too.
+    return tuple(str(path) for path in eval_configuration_files(root))
+
+
+RUNTIME_TOKEN_STEP: Final = Step(
+    label="runtime-token",
+    argv=(
+        "uv",
+        "run",
+        "python",
+        "-m",
+        "outcomeeng.validation.runtime_tokens",
+        *runtime_token_files(),
+        CONFIGURATION_ONLY_OPTION,
+        *eval_configuration_file_args(),
+    ),
+)
+
+
 def scratch_path_files() -> tuple[str, ...]:
     # A fixed temporary path in authored content ships to the consumer, where it
     # collides across concurrent runs and writes outside the session boundary.
@@ -237,17 +262,7 @@ VALIDATION_STEPS: Final = (
             *_reference_files(),
         ),
     ),
-    Step(
-        label="runtime-token",
-        argv=(
-            "uv",
-            "run",
-            "python",
-            "-m",
-            "outcomeeng.validation.runtime_tokens",
-            *runtime_token_files(),
-        ),
-    ),
+    RUNTIME_TOKEN_STEP,
     Step(
         label="scratch-paths",
         argv=(

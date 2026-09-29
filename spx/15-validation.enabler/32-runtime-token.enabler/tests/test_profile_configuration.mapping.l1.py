@@ -1,13 +1,18 @@
 """Complete native configuration domains remain forbidden as authored literals."""
 
 from outcomeeng.distribution.profiles import NATIVE_CONFIGURATION_FIELDS
-from outcomeeng.models import MODEL_IDENTIFIERS
+from outcomeeng.models import CLAUDE_MODEL_FAMILIES, MODEL_IDENTIFIERS
 from outcomeeng.validation.profile_configuration import find_profile_literals
 
 
 def test_every_owned_model_identifier_is_rejected() -> None:
     for model in MODEL_IDENTIFIERS:
         assert find_profile_literals(model) == [(1, model)]
+
+
+def test_every_bare_model_family_name_is_rejected() -> None:
+    for family in CLAUDE_MODEL_FAMILIES:
+        assert find_profile_literals(family) == [(1, family)]
 
 
 def test_every_native_field_assignment_is_rejected() -> None:

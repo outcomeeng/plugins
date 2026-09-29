@@ -23,13 +23,19 @@ instruction filenames as their subject and so cannot consume a build token; ever
 file is converted and enforced, and the hatch supports each explicit tracked conversion
 exemption. A newly added plugin or shared fragment is enforced without being opted in.
 
+Every file also passes through the profile configuration guard, which no
+ignore-list entry or conditional exempts. Files named after
+``--configuration-only`` — the eval definitions and prompt templates under the
+spec tree — receive that guard alone, since the runtime-token contract governs
+authored source the build renders and not the spec tree.
+
 Usage::
 
-    uv run python -m outcomeeng.validation.runtime_tokens [FILE ...]
+    uv run python -m outcomeeng.validation.runtime_tokens [FILE ...] [--configuration-only FILE ...]
 
 Exit codes:
-    0 - No enforced file among the arguments contains a raw runtime token
-    1 - One or more enforced files contain a raw runtime token
+    0 - No file among the arguments carries a violation
+    1 - One or more files carry a raw runtime token or a profile configuration literal
 """
 
 from __future__ import annotations
@@ -54,7 +60,10 @@ from outcomeeng.distribution.contracts import (
     BUILD_TARGET_VARIABLE,
     Target,
 )
-from outcomeeng.validation.profile_configuration import find_profile_literals
+from outcomeeng.validation.profile_configuration import (
+    CONFIGURATION_ONLY_OPTION,
+    find_profile_literals,
+)
 
 _REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 
@@ -459,6 +468,18 @@ def is_ignored(
     return relative in ignore
 
 
+def _profile_configuration_violations(path: Path, text: str) -> list[Violation]:
+    return [
+        Violation(
+            path=path,
+            line=lineno,
+            token=token,
+            remediation=PROFILE_CONFIGURATION_REMEDIATION,
+        )
+        for lineno, token in find_profile_literals(text)
+    ]
+
+
 def scan_file(
     path: Path,
     *,
@@ -471,15 +492,7 @@ def scan_file(
         text = path.read_text(encoding="utf-8")
     except UnicodeDecodeError:
         return []
-    violations = [
-        Violation(
-            path=path,
-            line=lineno,
-            token=token,
-            remediation=PROFILE_CONFIGURATION_REMEDIATION,
-        )
-        for lineno, token in find_profile_literals(text)
-    ]
+    violations = _profile_configuration_violations(path, text)
     if is_ignored(path, ignore=ignore, repo_root=repo_root):
         return violations
     return violations + [
@@ -522,6 +535,21 @@ def scan_paths(
     return violations
 
 
+def scan_configuration_paths(paths: Iterable[str | Path]) -> list[Violation]:
+    """Scan each existing file in ``paths`` with the profile configuration guard alone."""
+    violations: list[Violation] = []
+    for raw in paths:
+        path = Path(raw)
+        if not path.is_file():
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
+        violations.extend(_profile_configuration_violations(path, text))
+    return violations
+
+
 def main(
     argv: list[str] | None = None,
     *,
@@ -530,12 +558,17 @@ def main(
     registry: dict[str, RuntimeTokenKind] = RUNTIME_TOKEN_REGISTRY,
 ) -> int:
     args = argv if argv is not None else sys.argv[1:]
+    boundary = (
+        args.index(CONFIGURATION_ONLY_OPTION)
+        if CONFIGURATION_ONLY_OPTION in args
+        else len(args)
+    )
     violations = scan_paths(
-        args,
+        args[:boundary],
         ignore=ignore,
         repo_root=repo_root,
         registry=registry,
-    )
+    ) + scan_configuration_paths(args[boundary + 1 :])
     for violation in violations:
         print(
             f"{violation.path}:{violation.line}: "

@@ -25,6 +25,14 @@ class ClaudeModel(StrEnum):
     SONNET_5_5 = "claude-sonnet-5-5"
 
 
+class ClaudeModelFamily(StrEnum):
+    """Claude model families; each bare family name is a model alias Claude accepts."""
+
+    OPUS = "opus"
+    SONNET = "sonnet"
+    HAIKU = "haiku"
+
+
 class ClaudeEffort(StrEnum):
     """Claude effort levels the profiles select from."""
 
@@ -113,10 +121,14 @@ _MODEL_SEGMENT_SEPARATOR: Final = "-"
 MODEL_IDENTIFIERS: Final = frozenset(
     str(model) for models in (CodexModel, ClaudeModel) for model in models
 )
+# A bare family name selects a model as surely as a pinned identifier, so every
+# family is a model literal, whether or not a profile selects one of its models.
 CLAUDE_MODEL_FAMILIES: Final = frozenset(
+    str(family) for family in ClaudeModelFamily
+) | {
     model.removeprefix(_CLAUDE_MODEL_PREFIX).split(_MODEL_SEGMENT_SEPARATOR, 1)[0]
     for model in ClaudeModel
-)
+}
 MODEL_IDENTIFIER_PATTERN: Final = re.compile(
     r"(?<![\w-])(?:"
     + "|".join(
