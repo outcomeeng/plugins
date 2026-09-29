@@ -18,7 +18,8 @@ eval eval_toml:
     set -euo pipefail
     plugin_dir="${PLUGIN_DIR:-$(uv run python -c 'import sys, tomllib; from pathlib import Path; data = tomllib.loads(Path(sys.argv[1]).read_text(encoding="utf-8")); print(data.get("plugin_dir", "dist/claude/spec-tree"))' "{{eval_toml}}")}"
     profile="${EVAL_PROFILE:-$(uv run python -c 'import sys; from pathlib import Path; from outcomeeng_evals.definition import load_definition; print(load_definition(Path(sys.argv[1])).profile)' "{{eval_toml}}")}"
-    read -r model effort <<< "$(uv run python -c 'import sys; from outcomeeng_evals.definition import parse_profile, profile_model_selection; selection = profile_model_selection(parse_profile(sys.argv[1], "EVAL_PROFILE")); print(selection.model, selection.effort)' "$profile")"
+    selection="$(uv run python -c 'import sys; from outcomeeng_evals.definition import parse_profile, profile_model_selection; selection = profile_model_selection(parse_profile(sys.argv[1], "EVAL_PROFILE")); print(selection.model, selection.effort)' "$profile")"
+    read -r model effort <<< "$selection"
     workers="${WORKERS:-$(uv run python -c 'from outcomeeng_evals.ci_execution import DEFAULT_CI_WORKERS; print(DEFAULT_CI_WORKERS)')}"
     max_budget_usd="${MAX_BUDGET_USD:-$(uv run python -c 'from outcomeeng_evals.ci_execution import DEFAULT_CI_MAX_BUDGET_USD; print(DEFAULT_CI_MAX_BUDGET_USD)')}"
     timeout_seconds="${TIMEOUT_SECONDS:-$(uv run python -c 'from outcomeeng_evals.ci_execution import DEFAULT_CI_TIMEOUT_SECONDS; print(DEFAULT_CI_TIMEOUT_SECONDS)')}"
@@ -34,7 +35,8 @@ eval-case eval_toml case_id:
     set -euo pipefail
     plugin_dir="${PLUGIN_DIR:-$(uv run python -c 'import sys, tomllib; from pathlib import Path; data = tomllib.loads(Path(sys.argv[1]).read_text(encoding="utf-8")); print(data.get("plugin_dir", "dist/claude/spec-tree"))' "{{eval_toml}}")}"
     profile="${EVAL_PROFILE:-$(uv run python -c 'import sys; from pathlib import Path; from outcomeeng_evals.definition import load_definition; print(load_definition(Path(sys.argv[1])).profile)' "{{eval_toml}}")}"
-    read -r model effort <<< "$(uv run python -c 'import sys; from outcomeeng_evals.definition import parse_profile, profile_model_selection; selection = profile_model_selection(parse_profile(sys.argv[1], "EVAL_PROFILE")); print(selection.model, selection.effort)' "$profile")"
+    selection="$(uv run python -c 'import sys; from outcomeeng_evals.definition import parse_profile, profile_model_selection; selection = profile_model_selection(parse_profile(sys.argv[1], "EVAL_PROFILE")); print(selection.model, selection.effort)' "$profile")"
+    read -r model effort <<< "$selection"
     workers="${WORKERS:-$(uv run python -c 'from outcomeeng_evals.ci_execution import DEFAULT_CI_WORKERS; print(DEFAULT_CI_WORKERS)')}"
     max_budget_usd="${MAX_BUDGET_USD:-$(uv run python -c 'from outcomeeng_evals.ci_execution import DEFAULT_CI_MAX_BUDGET_USD; print(DEFAULT_CI_MAX_BUDGET_USD)')}"
     timeout_seconds="${TIMEOUT_SECONDS:-$(uv run python -c 'from outcomeeng_evals.ci_execution import DEFAULT_CI_TIMEOUT_SECONDS; print(DEFAULT_CI_TIMEOUT_SECONDS)')}"

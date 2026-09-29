@@ -136,6 +136,7 @@ def test_eval_recipe_refuses_unsupported_profile_override() -> None:
     )
 
     assert run.completed.returncode != 0
+    assert run.running_lines == ()
     assert SUITE_RESULT_PREFIX not in run.completed.stdout
 
 
@@ -147,6 +148,7 @@ def test_eval_case_recipe_refuses_unsupported_profile_override() -> None:
     )
 
     assert run.completed.returncode != 0
+    assert run.running_lines == ()
     assert SUITE_RESULT_PREFIX not in run.completed.stdout
 
 
