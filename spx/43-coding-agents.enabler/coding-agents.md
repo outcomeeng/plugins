@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f6b-7240-b810-183280b87dad
+malleability: spec
+---
+
 # Coding Agents
 
 PROVIDES shared environment, identity, authority, communication, coordination, and supervision contracts for coding agents

@@ -1,3 +1,8 @@
+---
+id: 01a0ebba-5f6c-761e-9e77-8ef00196d14c
+malleability: spec
+---
+
 # Inter-Worktree Coordination
 
 PROVIDES coordination decisions and message plans for coding agents operating in separate worktrees
