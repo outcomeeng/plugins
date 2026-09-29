@@ -1,3 +1,8 @@
+---
+id: 01a0ec41-ba29-7266-a2a7-429b88c12939
+malleability: spec
+---
+
 # Eval Harness
 
 PROVIDES a generic Python evaluation runner — the `outcomeeng_evals` package — that replays curated case sets through Claude Code skills and grades structured verdicts against expected fields
