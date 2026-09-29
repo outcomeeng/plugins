@@ -79,3 +79,42 @@ CommonMark does not treat a line opening with three or more backticks as a fence
 `outcomeeng_evals/ci_triggers.py` compiles its `# BEGIN eval-trigger-paths` block-matching regex without a `^` anchor or `re.MULTILINE`, so it can match the marker text mid-line, unlike the `^...$`-anchored router and shared-region matchers in the instruction-block module. `spx/local/generated-sources.toml` declares line-start matching for this marker family and notes the deviation; the declared rule governs attribution, per `spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md`.
 
 **Resolution shape**: anchor the block pattern to the start of a line and cover the anchoring in the node's ci-trigger tests, then drop the deviation note from `spx/local/generated-sources.toml`.
+
+## Linked tests delegate their predicates to harnesses, and evidence spells literals no source exports
+
+The test evidence of `spx/13-infrastructure.enabler/25-eval-harness.enabler` departs from `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md` in four classes. In predicate ownership, a linked test's body is a call to a harness function named `assert_*`, and that function holds the behavioral predicates, the assertion calls, and for property evidence the invariant — where the decision gives every predicate and assertion call to the executed test and bars a harness from calling an assertion API or returning a verdict. In source ownership, the evidence spells protocol values — CLI options, prompt placeholders, payload keys, output tokens, recipe names — whose owning source exports no constant for the evidence to import. One finding falls in test-owned data and one in oracle independence. Test paths below are relative to `spx/13-infrastructure.enabler/25-eval-harness.enabler/`; implementation paths are relative to the repository root.
+
+**Evidence**: the `spec-tree:test-evidence-auditor` verdict on `spx/13-infrastructure.enabler/25-eval-harness.enabler`, whose finding identifiers the entries below carry, with every line reference read against the files. The source-ownership entries have no finding identifier.
+
+Predicate ownership:
+
+- `f-002` — `tests/test_definition.property.l1.py` calls only `assert_owned_path_outside_the_alphabet_is_rejected()` (`outcomeeng_testing/harnesses/evals.py:131`), which applies Hypothesis `given` at lines 140–141 and delegates the rejection check to `_assert_owned_path_rejected` (line 158). The property's invariant lives in the harness rather than lexically in the linked test, as the Property section of `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/21-evidence-types.pdr.md` requires. Settled when the invariant and its assertion sit in the linked test and the harness owns only seed selection, run count, replay, and diagnostics.
+- `f-005` — `tests/test_ci_triggers.mapping.l1.py` calls only `assert_ci_policy_controls_trigger_contribution` and `assert_universal_paths_always_contribute` (`outcomeeng_testing/harnesses/ci_triggers.py:111` and `:125`), which own the mapping predicates. Settled when the linked test states each mapping's expectation and assertion over observations the harness exposes.
+- `f-006` — `tests/test_ci_triggers.property.l1.py` calls only `assert_minimization_preserves_coverage` and `assert_minimization_is_a_subset_of_its_input` (`outcomeeng_testing/harnesses/ci_triggers.py:256` and `:269`); `_minimization_property` (line 285) applies `given` at lines 293–294 and carries both invariants. Settled on the same condition as `f-002`.
+- `f-007` — the five tests in `tests/test_ci_triggers.compliance.l1.py` call only `assert_*` functions of `outcomeeng_testing/harnesses/ci_triggers.py` (lines 135, 188, 201, 221, and 241), which own the exit-code and path-list predicates. Settled when each linked test asserts the exit code and path list itself.
+- `f-008` — the 11 tests in `tests/test_eval_harness.compliance.l1.py` call only `assert_*` functions of `outcomeeng_testing/harnesses/eval_harness.py` (lines 41–266), which hold 32 `assert` and `pytest.raises` sites. Settled when those sites sit in the linked tests and the harness exposes fixture paths, handles, and observations only.
+- `f-010` — the seven tests in `tests/test_report.compliance.l1.py` call only `assert_*` functions of `outcomeeng_testing/harnesses/eval_report.py` (lines 64–240), which hold 43 `assert` sites. Settled on the same condition as `f-008`.
+- `f-011` — the single test in `tests/test_history.compliance.l1.py` calls `assert_history_compliance()` (`outcomeeng_testing/harnesses/eval_history.py:200`), which runs twelve private `_assert_*` checks (lines 61–238), so one test result stands for twelve compliance checks. Settled when each check is a linked test that owns its predicate.
+
+Test-owned data:
+
+- `f-016` — `outcomeeng_testing/harnesses/producer_section_prompt.py` declares author-chosen payloads and expected outputs at lines 31–47: `SECTION_NAME` (line 36), `SELECTED_RULE`, `UNRELATED_RULE`, `NESTED_STEP_BODY`, `STALE_PROMPT`, and `PRODUCER_RELATIVE_PATH`, which names the real shipped skill `dist/claude/spec-tree/skills/audit-adr/SKILL.md`. `tests/test_producer_prompt.conformance.l1.py` asserts on them. The test-infrastructure decision admits no bare string as a fixture and assigns expected outputs and edge-case sets to source contracts or generators. Settled when those values come from a generator or from a whole-payload fixture read by path, and no evidence depends on the content of a shipped skill.
+
+Oracle independence (warning):
+
+- `f-019` — `owned_path_violating_characters` (`outcomeeng_testing/generators/evals.py:64`) filters its candidates through `OWNED_PATH_ALPHABET.fullmatch` (line 75), the loader's own acceptance pattern, which rejected case 42 of `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/21-evidence-types.pdr.md` names. A widened alphabet narrows the searched domain in step, so the property cannot expose the widening. Settled when the generator's violating domain derives from a source independent of the loader's pattern.
+
+Source ownership — the evidence or its test infrastructure spells each value below because its owning file exports no constant:
+
+- `outcomeeng_evals/cli/commands/run.py`: the options `--workers` and `--case-id`, and the prompt placeholders `{case_id}` and `{input_json}`.
+- `outcomeeng_evals/cli/commands/plan.py` and `outcomeeng_evals/cli/commands/ci.py`: the options `--mode` and `--changed-paths-file`.
+- `outcomeeng_evals/report.py` `serialize_result`: the result-payload keys `model`, `max_budget_usd`, and `timeout_seconds`.
+- `outcomeeng_evals/suite.py` `format_report`: the output token `suite pass_rate=`.
+- `outcomeeng_evals/cli/commands/materialize_prompts.py`: the output words `materialized` and `checked`.
+- `justfile`, the sole owner: `EVAL_PROFILE`, `PLUGIN_DIR`, the recipe names, the `Running:` prefix, and the `model <m>` and `effort <e>` tokens of the running line.
+
+A Python owner's value is settled when the owning module exports it under a semantic name and every test and test-infrastructure module imports it from there. A `justfile` value is settled when a source the evidence can import owns it, or when a decision establishes the recipe file as an owner whose values the evidence reads rather than restates.
+
+**Impact**: the node declares `malleability: spec`, under which Passing requires Validate, reachability tests, and a result for every tagged assertion, and no evidence audit, so these findings gate no merge. Harness-held predicates fail the predicate-inversion check the test-infrastructure decision names — inverting one changes the harness, not the linked test — so a linked test does not show what it proves. `f-016` and `f-019` leave two assertions whose case source or oracle is not independent of the author or the code under test. A change to any source-owned value above leaves a restated copy that the evidence compares against in place of the owner's value. An `implementation` malleability makes the evidence audit a merge gate, and each finding above then blocks.
+
+**Settlement condition**: every finding above meets its own settlement condition, and a test-evidence audit of `spx/13-infrastructure.enabler/25-eval-harness.enabler` raises none of these four classes.
