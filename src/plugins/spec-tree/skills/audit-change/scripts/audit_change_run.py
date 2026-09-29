@@ -7,10 +7,13 @@ state that persists between requests, and every request names the candidate
 path and run token it acts on, so audits of different candidates started from
 one worktree share nothing but the journal store SPX keys by run.
 
-Every result carries ``status``. An ``ok`` result carries the operation's
-values; a ``blocked`` result carries the reason, a detail line, the run token or
-``not-started``, and for a failed command its exact command line, payload
-source, payload key, exit code, and stderr.
+Every invocation writes exactly one result, and every result carries
+``status``. An ``ok`` result carries the operation's values; a ``blocked``
+result carries the reason, a detail line, the run token the request names (for
+``start``, the token of the run SPX created) or ``not-started`` when neither
+exists, and for a failed command its exact command line, payload source,
+payload key, exit code, and stderr. A filesystem or decoding error ends the
+request as a declared blocked reason, never as a traceback.
 
 Tested with, each run observed for every file the runner process writes
 anywhere and every process it starts:
@@ -21,12 +24,14 @@ anywhere and every process it starts:
 - an edit landing between the runner's read and SPX's retention;
 - a scope payload SPX rejects, which blocks with SPX's exit code and stderr;
 - invalid requests part-way through a run, each blocking with its declared
-  reason: a truncated JSON request, a JSON array, an unknown operation, a
-  missing field, an extra field, an absolute, parent-traversing, or
-  unnormalized candidate path, a candidate linked outside the repository, an
-  absent candidate, a Windows-1252 candidate, a finding ordinal above the
-  maximum, a finding rule that is not a lowercase rule ID, a scope payload
-  with no ``unitId``, and an undeclared terminal status.
+  reason and the run token the request names: a truncated JSON request, a JSON
+  array, an unknown operation, a missing field, an extra field, an absolute,
+  parent-traversing, or unnormalized candidate path, a candidate linked
+  outside the repository, an absent candidate, a Windows-1252 candidate, an
+  existing candidate the process cannot read, a candidate or reference path
+  carrying a NUL character, a finding ordinal above the maximum, a finding rule
+  that is not a lowercase rule ID, a scope payload with no ``unitId``, and an
+  undeclared terminal status.
 
 None of these writes a file outside the SPX store, and none starts a process
 other than ``git`` and ``spx``.
@@ -115,6 +120,7 @@ class BlockReason(StrEnum):
     INVALID_REQUEST = "invalid-request"
     PATH_REJECTED = "path-rejected"
     CANDIDATE_MISSING = "candidate-missing"
+    CANDIDATE_UNREADABLE = "candidate-unreadable"
     CANDIDATE_CHANGED = "candidate-changed"
     RETAINED_INPUT_MISMATCH = "retained-input-mismatch"
     COMMAND_FAILED = "command-failed"
@@ -168,6 +174,7 @@ class SpxField(StrEnum):
 
 NOT_STARTED: Final = "not-started"
 NOT_APPLICABLE: Final = "none"
+NUL: Final = "\x00"
 PAYLOAD_FROM_STDIN: Final = "stdin"
 IDEMPOTENCY_KEY_SEPARATOR: Final = ":"
 RULE_ID_PATTERN: Final = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
@@ -186,7 +193,8 @@ _GIT_TOPLEVEL: Final = (GIT_EXECUTABLE, "rev-parse", "--show-toplevel")
 _SPX_VERSION: Final = (SPX_EXECUTABLE, "--version")
 _RUN_COMMAND: Final = (SPX_EXECUTABLE, "verification", "run")
 
-_REQUIRED_FIELDS: Final[Mapping[Operation, frozenset[RequestField]]] = {
+#: The fields each operation's request carries besides ``operation``.
+REQUIRED_FIELDS: Final[Mapping[Operation, frozenset[RequestField]]] = {
     Operation.READ_CANDIDATE: frozenset({RequestField.PATH}),
     Operation.RESOLVE_REFERENCE: frozenset({RequestField.PATH}),
     Operation.TOOL_VERSION: frozenset(),
@@ -236,20 +244,26 @@ def run_subprocess(
         input=stdin,
         capture_output=True,
         text=True,
+        encoding="utf-8",
         check=False,
     )
     return CommandResult(completed.returncode, completed.stdout, completed.stderr)
 
 
 class Blocked(Exception):
-    """A request stops with a reason and the evidence that explains it."""
+    """A request stops with a reason and the evidence that explains it.
+
+    ``run_token`` is set only where the run is not the one the request names:
+    ``start`` sets it once SPX has created the run. Every other block carries
+    the request's own run token, which ``execute`` supplies.
+    """
 
     def __init__(
         self,
         reason: BlockReason,
         detail: str,
         *,
-        run_token: str = NOT_STARTED,
+        run_token: str | None = None,
         evidence: Mapping[str, object] | None = None,
     ) -> None:
         super().__init__(detail)
@@ -274,7 +288,7 @@ def _command(
     argv: Sequence[str],
     *,
     cwd: pathlib.Path,
-    run_token: str = NOT_STARTED,
+    run_token: str | None = None,
     stdin: str | None = None,
     payload_key: str = NOT_APPLICABLE,
 ) -> str:
@@ -288,12 +302,12 @@ def _command(
     }
     try:
         result = context.runner(argv, cwd=cwd, stdin=stdin)
-    except OSError as exc:
+    except (OSError, ValueError) as exc:
         evidence[ResultField.EXIT_CODE] = NOT_APPLICABLE
         evidence[ResultField.STDERR] = str(exc)
         raise Blocked(
             BlockReason.COMMAND_FAILED,
-            f"{argv[0]} could not be executed",
+            f"{argv[0]} could not be executed or printed output that is not UTF-8",
             run_token=run_token,
             evidence=evidence,
         ) from exc
@@ -309,7 +323,9 @@ def _command(
     return result.stdout
 
 
-def _json_lines(stdout: str, *, run_token: str) -> list[dict[str, object]]:
+def _json_lines(
+    stdout: str, *, run_token: str | None = None
+) -> list[dict[str, object]]:
     """Parse every non-empty stdout line as one JSON object."""
     objects: list[dict[str, object]] = []
     for line in stdout.splitlines():
@@ -348,6 +364,10 @@ def _repository_root(context: _Context) -> pathlib.Path:
 
 def _normalized_path(value: str) -> str:
     """Accept only a normalized repository-relative POSIX path."""
+    if NUL in value:
+        raise Blocked(
+            BlockReason.PATH_REJECTED, f"path contains a NUL character: {value!r}"
+        )
     pure = pathlib.PurePosixPath(value)
     if pure.is_absolute():
         raise Blocked(BlockReason.PATH_REJECTED, f"path is absolute: {value}")
@@ -358,40 +378,47 @@ def _normalized_path(value: str) -> str:
     return value
 
 
-def _within(root: pathlib.Path, path: pathlib.Path) -> bool:
-    return path.resolve().is_relative_to(root.resolve())
+def _within(root: pathlib.Path, path: pathlib.Path, named: str) -> bool:
+    """Report whether ``path`` resolves inside ``root``, blocking when it cannot resolve."""
+    try:
+        return path.resolve().is_relative_to(root.resolve())
+    except (OSError, ValueError) as exc:
+        raise Blocked(
+            BlockReason.PATH_REJECTED, f"path cannot be resolved: {named!r}: {exc}"
+        ) from exc
 
 
-def _live_content(
-    root: pathlib.Path, relative: str, *, run_token: str = NOT_STARTED
-) -> str:
+def _live_content(root: pathlib.Path, relative: str) -> str:
     """Read the candidate exactly as stored, refusing a path that escapes the root."""
     candidate = root / relative
-    if not _within(root, candidate):
+    if not _within(root, candidate, relative):
         raise Blocked(
             BlockReason.PATH_REJECTED,
             f"path resolves outside the repository: {relative}",
-            run_token=run_token,
         )
     if not candidate.exists():
-        raise Blocked(
-            BlockReason.CANDIDATE_MISSING,
-            f"candidate is absent: {relative}",
-            run_token=run_token,
-        )
+        raise Blocked(BlockReason.CANDIDATE_MISSING, f"candidate is absent: {relative}")
     if not candidate.is_file():
         raise Blocked(
             BlockReason.PATH_REJECTED,
             f"candidate is not a regular file: {relative}",
-            run_token=run_token,
         )
     try:
-        return candidate.read_bytes().decode("utf-8")
+        stored = candidate.read_bytes()
+    except FileNotFoundError as exc:
+        raise Blocked(
+            BlockReason.CANDIDATE_MISSING, f"candidate is absent: {relative}"
+        ) from exc
+    except OSError as exc:
+        raise Blocked(
+            BlockReason.CANDIDATE_UNREADABLE,
+            f"candidate cannot be read: {relative}: {exc.strerror or exc}",
+        ) from exc
+    try:
+        return stored.decode("utf-8")
     except UnicodeDecodeError as exc:
         raise Blocked(
-            BlockReason.PATH_REJECTED,
-            f"candidate is not UTF-8 text: {relative}",
-            run_token=run_token,
+            BlockReason.PATH_REJECTED, f"candidate is not UTF-8 text: {relative}"
         ) from exc
 
 
@@ -461,7 +488,7 @@ def _resolve_reference(
     root = _repository_root(context)
     if pathlib.PurePosixPath(named).is_absolute():
         resolution = Resolution.ABSOLUTE
-    elif not _within(root, root / named):
+    elif not _within(root, root / named, named):
         resolution = Resolution.OUTSIDE_REPOSITORY
     elif not (root / named).exists():
         resolution = Resolution.MISSING
@@ -506,7 +533,7 @@ def _start(context: _Context, request: Mapping[str, object]) -> dict[str, object
         "--input",
         relative,
     ]
-    lines = _json_lines(_command(context, argv, cwd=root), run_token=NOT_STARTED)
+    lines = _json_lines(_command(context, argv, cwd=root))
     run_token = next(
         (
             token
@@ -558,11 +585,10 @@ def _append(
         context,
         argv,
         cwd=_repository_root(context),
-        run_token=run_token,
         stdin=payload,
         payload_key=idempotency_key,
     )
-    accepted = _json_lines(stdout, run_token=run_token)[-1]
+    accepted = _json_lines(stdout)[-1]
     return {
         ResultField.RUN_TOKEN: run_token,
         ResultField.IDEMPOTENCY_KEY: idempotency_key,
@@ -578,7 +604,6 @@ def _unit_id(request: Mapping[str, object]) -> str:
         raise Blocked(
             BlockReason.INVALID_REQUEST,
             f"payload must be an object with a non-empty {SpxField.UNIT_ID}",
-            run_token=_optional_token(request),
         )
     return unit_id
 
@@ -604,20 +629,18 @@ def _add_finding(context: _Context, request: Mapping[str, object]) -> dict[str, 
         raise Blocked(
             BlockReason.INVALID_REQUEST,
             f"{RequestField.ORDINAL} must be an integer from 1 to {MAX_FINDING_ORDINAL}",
-            run_token=_optional_token(request),
         )
     if not isinstance(rule, str) or not RULE_ID_PATTERN.fullmatch(rule):
         raise Blocked(
             BlockReason.INVALID_REQUEST,
             f"payload {SpxField.RULE} must match {RULE_ID_PATTERN.pattern}",
-            run_token=_optional_token(request),
         )
     key = finding_key(_unit_id(request), ordinal, rule)
     return _append(context, request, noun="finding", idempotency_key=key)
 
 
 def _finding_entries(
-    projection: Mapping[str, object], *, run_token: str
+    projection: Mapping[str, object],
 ) -> list[tuple[int, dict[str, object]]]:
     """Return every rendered finding as ``(seq, payload)`` once, in journal order."""
     groups = projection.get(SpxField.FINDINGS)
@@ -625,7 +648,6 @@ def _finding_entries(
         raise Blocked(
             BlockReason.UNREADABLE_OUTPUT,
             "rendered projection carries no findings object",
-            run_token=run_token,
         )
     entries: dict[int, dict[str, object]] = {}
     for group in groups.values():
@@ -636,7 +658,6 @@ def _finding_entries(
                 raise Blocked(
                     BlockReason.UNREADABLE_OUTPUT,
                     "rendered finding lacks an integer seq and a payload object",
-                    run_token=run_token,
                 )
             entries.setdefault(seq, payload)
     return sorted(entries.items())
@@ -647,12 +668,11 @@ def _reconcile(context: _Context, request: Mapping[str, object]) -> dict[str, ob
     run_token = _string(request, RequestField.RUN_TOKEN)
     root = _repository_root(context)
     retained = _retained_content(context, root, relative, run_token)
-    live = _live_content(root, relative, run_token=run_token)
+    live = _live_content(root, relative)
     if live != retained:
         raise Blocked(
             BlockReason.CANDIDATE_CHANGED,
             "candidate differs from the retained input",
-            run_token=run_token,
             evidence={
                 ResultField.RETAINED_SHA256: _sha256(retained),
                 ResultField.LIVE_SHA256: _sha256(live),
@@ -681,7 +701,7 @@ def _reconcile(context: _Context, request: Mapping[str, object]) -> dict[str, ob
             SpxField.RULE: payload.get(SpxField.RULE),
             SpxField.SEVERITY: payload.get(SpxField.SEVERITY),
         }
-        for seq, payload in _finding_entries(projection, run_token=run_token)
+        for seq, payload in _finding_entries(projection)
     ]
     return {
         ResultField.RUN_TOKEN: run_token,
@@ -699,7 +719,6 @@ def _finish(context: _Context, request: Mapping[str, object]) -> dict[str, objec
         raise Blocked(
             BlockReason.INVALID_REQUEST,
             f"terminal status must be one of {', '.join(TerminalStatus)}: {terminal}",
-            run_token=run_token,
         )
     root = _repository_root(context)
     finish_argv = [
@@ -707,7 +726,7 @@ def _finish(context: _Context, request: Mapping[str, object]) -> dict[str, objec
         "--terminal-status",
         terminal,
     ]
-    _command(context, finish_argv, cwd=root, run_token=run_token)
+    _command(context, finish_argv, cwd=root)
     projection = _run_json(context, root, ("render",), relative, run_token)
     return {
         ResultField.RUN_TOKEN: run_token,
@@ -717,8 +736,7 @@ def _finish(context: _Context, request: Mapping[str, object]) -> dict[str, objec
             if field not in EVIDENCE_FIELDS
         },
         ResultField.FINDINGS: [
-            payload
-            for _seq, payload in _finding_entries(projection, run_token=run_token)
+            payload for _seq, payload in _finding_entries(projection)
         ],
         ResultField.RENDER_COMMAND: shlex.join(render_argv(relative, run_token)),
     }
@@ -736,7 +754,8 @@ _HANDLERS: Final = {
 }
 
 
-def _optional_token(request: Mapping[str, object]) -> str:
+def _request_token(request: Mapping[str, object]) -> str:
+    """Return the run token a request names, or ``not-started`` when it names none."""
     token = request.get(RequestField.RUN_TOKEN)
     return token if isinstance(token, str) and token else NOT_STARTED
 
@@ -745,65 +764,82 @@ def _string(request: Mapping[str, object], field: RequestField) -> str:
     value = request.get(field)
     if not isinstance(value, str) or not value:
         raise Blocked(
-            BlockReason.INVALID_REQUEST,
-            f"{field} must be a non-empty string",
-            run_token=_optional_token(request),
+            BlockReason.INVALID_REQUEST, f"{field} must be a non-empty string"
         )
     return value
 
 
-def _parse_request(text: str) -> tuple[Operation, dict[str, object]]:
+def _parse_request(text: str) -> dict[str, object]:
     try:
         request = json.loads(text)
     except json.JSONDecodeError as exc:
         raise Blocked(
             BlockReason.INVALID_REQUEST, f"request is not JSON: {exc.msg}"
         ) from exc
+    except RecursionError as exc:
+        raise Blocked(
+            BlockReason.INVALID_REQUEST, "request nests too deeply to parse"
+        ) from exc
     if not isinstance(request, dict):
         raise Blocked(BlockReason.INVALID_REQUEST, "request must be a JSON object")
+    return request
+
+
+def _operation(request: Mapping[str, object]) -> Operation:
     name = request.get(RequestField.OPERATION)
     if name not in {operation.value for operation in Operation}:
         raise Blocked(
             BlockReason.INVALID_REQUEST,
             f"{RequestField.OPERATION} must be one of {', '.join(Operation)}",
-            run_token=_optional_token(request),
         )
     operation = Operation(name)
-    allowed = _REQUIRED_FIELDS[operation] | {RequestField.OPERATION}
+    allowed = REQUIRED_FIELDS[operation] | {RequestField.OPERATION}
     missing = sorted(field.value for field in allowed if field not in request)
     unexpected = sorted(str(field) for field in request if field not in allowed)
     if missing or unexpected:
         raise Blocked(
             BlockReason.INVALID_REQUEST,
             f"{operation} request fields: missing {missing}, unexpected {unexpected}",
-            run_token=_optional_token(request),
         )
-    return operation, request
+    return operation
+
+
+def _blocked_result(
+    operation: str | None, blocked: Blocked, request_token: str
+) -> tuple[ExitCode, dict[str, object]]:
+    code = (
+        ExitCode.INVALID_REQUEST
+        if blocked.reason is BlockReason.INVALID_REQUEST
+        else ExitCode.BLOCKED
+    )
+    return code, {
+        ResultField.OPERATION: operation,
+        ResultField.STATUS: ResultStatus.BLOCKED,
+        ResultField.REASON: blocked.reason,
+        ResultField.DETAIL: blocked.detail,
+        ResultField.RUN_TOKEN: blocked.run_token or request_token,
+        **blocked.evidence,
+    }
 
 
 def execute(
     request_text: str, *, cwd: pathlib.Path, runner: CommandRunner
 ) -> tuple[ExitCode, dict[str, object]]:
-    """Perform one request and return its exit code and result object."""
+    """Perform one request and return its exit code and result object.
+
+    A blocked result carries the run token the request names, or for ``start``
+    the token of the run SPX created, and ``not-started`` when neither exists.
+    """
     operation: str | None = None
+    request_token = NOT_STARTED
     try:
-        parsed_operation, request = _parse_request(request_text)
+        request = _parse_request(request_text)
+        request_token = _request_token(request)
+        parsed_operation = _operation(request)
         operation = parsed_operation.value
         values = _HANDLERS[parsed_operation](_Context(runner=runner, cwd=cwd), request)
     except Blocked as blocked:
-        code = (
-            ExitCode.INVALID_REQUEST
-            if blocked.reason is BlockReason.INVALID_REQUEST
-            else ExitCode.BLOCKED
-        )
-        return code, {
-            ResultField.OPERATION: operation,
-            ResultField.STATUS: ResultStatus.BLOCKED,
-            ResultField.REASON: blocked.reason,
-            ResultField.DETAIL: blocked.detail,
-            ResultField.RUN_TOKEN: blocked.run_token,
-            **blocked.evidence,
-        }
+        return _blocked_result(operation, blocked, request_token)
     return ExitCode.OK, {
         ResultField.OPERATION: operation,
         ResultField.STATUS: ResultStatus.OK,
@@ -820,7 +856,16 @@ def main(
     """Read one request on stdin, write one result on stdout."""
     source = sys.stdin if stdin is None else stdin
     sink = sys.stdout if stdout is None else stdout
-    code, result = execute(source.read(), cwd=pathlib.Path.cwd(), runner=runner)
+    try:
+        request_text = source.read()
+    except UnicodeDecodeError:
+        code, result = _blocked_result(
+            None,
+            Blocked(BlockReason.INVALID_REQUEST, "request is not UTF-8 text"),
+            NOT_STARTED,
+        )
+    else:
+        code, result = execute(request_text, cwd=pathlib.Path(), runner=runner)
     json.dump(result, sink, sort_keys=True)
     sink.write("\n")
     return int(code)
