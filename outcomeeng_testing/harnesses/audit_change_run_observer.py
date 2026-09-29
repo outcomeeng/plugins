@@ -87,13 +87,14 @@ class _Recorder:
         if not self.recording:
             return
         if event == _OPEN_EVENT:
+            path = args[0]
             # An integer names a descriptor that is already open, such as the
             # pipe carrying a started process's stdin; it creates no file.
-            if isinstance(args[0], int):
+            if isinstance(path, int):
                 return
             flags = args[2] if len(args) > 2 else None
             if isinstance(flags, int) and flags & _WRITE_FLAGS:
-                self.writes.append([event, str(args[0])])
+                self.writes.append([event, str(path)])
         elif event in _MUTATION_EVENTS:
             self.writes.append([event, *(str(arg) for arg in args[:1])])
         elif event == _POPEN_EVENT:
