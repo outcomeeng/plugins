@@ -60,6 +60,7 @@ import json
 import pathlib
 import re
 import shlex
+import string
 import subprocess
 import sys
 from collections.abc import Callable, Mapping, Sequence
@@ -194,7 +195,12 @@ NUL: Final = "\x00"
 TEXT_ENCODING: Final = "utf-8"
 PAYLOAD_FROM_STDIN: Final = "stdin"
 IDEMPOTENCY_KEY_SEPARATOR: Final = ":"
-RULE_ID_PATTERN: Final = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
+RULE_ID_ALPHABET: Final = string.ascii_lowercase + string.digits
+RULE_ID_SEPARATOR: Final = "-"
+_RULE_ID_RUN: Final = f"[{re.escape(RULE_ID_ALPHABET)}]+"
+RULE_ID_PATTERN: Final = re.compile(
+    f"{_RULE_ID_RUN}(?:{re.escape(RULE_ID_SEPARATOR)}{_RULE_ID_RUN})*"
+)
 MIN_FINDING_ORDINAL: Final = 1
 MAX_FINDING_ORDINAL: Final = 999
 VERIFICATION_TYPE: Final = "audit"
