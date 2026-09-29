@@ -31,8 +31,6 @@ from typing import Final
 
 from hypothesis import strategies as st
 
-_ID_ALPHABET = string.ascii_lowercase + string.digits
-_ID_SEPARATOR = "-"
 _PATH_SEPARATOR = "/"
 _SEGMENT_ALPHABET = string.ascii_letters + string.digits + "-_"
 # A path segment the contract refuses in a candidate path: the current
@@ -109,11 +107,13 @@ def _unfit_candidate_paths() -> st.SearchStrategy[str]:
     return st.one_of(with_unfit_segment(), rooted)
 
 
-def _non_rule_ids() -> st.SearchStrategy[object]:
-    """Values that are not a lowercase hyphenated ID."""
-    id_text = st.text(alphabet=_ID_ALPHABET + _ID_SEPARATOR)
+def _non_rule_ids(runner: ModuleType) -> st.SearchStrategy[object]:
+    """Values that are not a lowercase hyphenated ID in the runner's alphabet."""
+    alphabet = runner.RULE_ID_ALPHABET
+    separator = runner.RULE_ID_SEPARATOR
+    id_text = st.text(alphabet=alphabet + separator)
     foreign = st.characters().filter(
-        lambda character: character not in _ID_ALPHABET + _ID_SEPARATOR
+        lambda character: character not in alphabet + separator
     )
     with_foreign = st.builds(
         lambda head, character, tail: f"{head}{character}{tail}",
@@ -121,11 +121,11 @@ def _non_rule_ids() -> st.SearchStrategy[object]:
         foreign,
         id_text,
     )
-    part = st.text(alphabet=_ID_ALPHABET, min_size=1)
+    part = st.text(alphabet=alphabet, min_size=1)
     misplaced_separator = st.one_of(
-        part.map(lambda text: _ID_SEPARATOR + text),
-        part.map(lambda text: text + _ID_SEPARATOR),
-        st.builds(lambda head, tail: f"{head}{_ID_SEPARATOR * 2}{tail}", part, part),
+        part.map(lambda text: separator + text),
+        part.map(lambda text: text + separator),
+        st.builds(lambda head, tail: f"{head}{separator * 2}{tail}", part, part),
     )
     return st.one_of(_not_non_empty_strings(), with_foreign, misplaced_separator)
 
@@ -156,7 +156,7 @@ def _malformed_payloads(
             lambda members, unit, value: {**members, unit_id: unit, rule: value},
             other_members,
             st.text(min_size=1),
-            _non_rule_ids(),
+            _non_rule_ids(runner),
         )
         payloads = st.one_of(payloads, with_bad_rule)
     return payloads
