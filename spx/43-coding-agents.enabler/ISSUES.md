@@ -24,6 +24,9 @@ Extending the pattern where it stands was attempted and withdrawn: adding an alt
 
 **Evidence, third reading.** `spec-tree:implementation-auditor` run `2026-09-21_22-51-31-594-7659622868e9` on head `18903ace30be971b041eba9e74606e97bf0182ae`: `source-ownership` at `blocking` on the compliance test and `single-responsibility` at `debt` on the adapter, both naming the pattern extension as enlarging the declaration; and run `2026-09-21_22-18-07-162-b29e7184d5a1` on head `d6d1b5458af190ac9d1f05775c869c08ab206c95`, `adr-compliance-guard-asymmetry` at `debt`, which named the gap.
 
+**Evidence, fourth reading.** `spec-tree:test-evidence-auditor` finding `f-001` on head `7ad28895500e40c4c106c1c510a175a6b52ddda9`, rule `source-ownership`: the herdr compliance test imports `raw_herdr_command_violations`, `herdr_help_violations`, `RAW_HERDR_COMMAND_PATTERNS`, and `HERDR_HELP_PATTERNS` from `src/plugins/coding-agents/skills/operate-herdr/scripts/herdr_environment.py`, and no production path consumes them.
+**Evidence, fourth reading.** `instructions:skill-auditor` finding `f-012` against `src/plugins/coding-agents/skills/operate-herdr` on head `7ad28895500e40c4c106c1c510a175a6b52ddda9`, rule `conciseness_shipped_script`: the shipped script carries `participant_for`, `IDENTITY_AMBIGUOUS`, and the scanner helpers the run path never calls.
+
 ## The evidence-repair same-class scan stops at the test file
 
 The apply flow's evidence repair scans for the rejected class inside the linked tests — a restated literal, a copied table — and stops there. The mirror shape is invisible to that scan: a value the tests import from production that no production path consumes. `agent_message.py` carried `FORBIDDEN_TARGET_FIELDS`, `FORBIDDEN_EXECUTABLE_FIELDS`, and `CLEAN_STATUS` as constants only the node's tests and harness read, so a test that iterated them was coupled to an inert declaration, and emptying the constant left the test green.
