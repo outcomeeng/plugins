@@ -17,7 +17,6 @@ CAN move a prioritized Output from proposal to executable work without placing m
 - `change-standards` selects the 4.0 Change chapter — `versions/4.0/methodology/change/changes.md` inside the declared `methodology.source` — for a `methodology.version` declaration of `4.0` or `4.0.N` with `N` a non-negative integer, states that comparison, and rejects every other declaration.
 - `author-change` runs one workflow per Maturity level; each workflow loads only that level's Definition of Ready and advances Maturity only when the Definition of Ready holds and the level's authority is present.
 - `audit-change` reads the complete record front matter first, judges one record against the Definition of Ready for its declared Maturity, and emits a structured Agentic verdict under `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`, whose result carries the run token, the rendered projection's run-level fields, every finding payload verbatim, and the one command that reproduces the complete rendered projection from the sealed run.
-- NEVER: `audit-change` or its `change-auditor` wrapper writes a file; every payload passes over stdin and stdout, and the SPX run journal holds the run.
 - ALWAYS: `audit-change` reaches every file and the SPX store only through its bundled Python runner, and never invokes `rm`, `mktemp`, a shell redirect to a file, or one of its scripts directly.
 - Persistence maps every front-matter field to the configured coordination store's native features and reads every field back unchanged; a store limit never shapes the record, and the persistence skill instruction selects the client for the configured store.
 - A record whose front matter does not carry the contract's closed key set is outside the contract; it receives no migration, alias, inferred front matter, body-line lineage interpretation, or audit verdict, and the auditor reports it as outside the contract.
@@ -25,3 +24,7 @@ CAN move a prioritized Output from proposal to executable work without placing m
 - `release-change` writes the Handoff into the Change — branch or changeset, completed and next Activities, blockers, and hazards, never a secret — removes the holder, moves Lifecycle `Claimed` to `Available`, and leaves Maturity unchanged, so any agent may claim the Change next.
 - `close-change` takes the terminal Lifecycle as its one argument, refuses any value outside `Applied`, `Refined`, and `Abandoned`, refuses `Refined` while no successor exists in the store or a known successor is absent from it, and moves `Claimed` to the named value after writing the terminal record.
 - The plugin ships no `/pickup`, `/handoff`, or `/issue` skill and no session-queue entry path; a follow-up is a Proposed Change created through `author-change`.
+
+### Compliance
+
+- NEVER: `audit-change` or its `change-auditor` wrapper writes a file; every payload passes over stdin and stdout, and the SPX run journal holds the run ([test](tests/test_audit_change_run.compliance.l1.py))
