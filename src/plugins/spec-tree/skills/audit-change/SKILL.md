@@ -11,7 +11,7 @@ allowed-tools: Read, Grep, Glob, {{! tool('use_skill') !}}, Bash(git rev-parse:*
 
 <objective>
 
-A verdict on one contract-form Change against `change-standards` and the Definition of Ready for its declared Maturity — `approved`, or `rejected` with each finding naming the violated rule, the artifact location, and the evidence.
+A result on one local Change record: a verdict against `change-standards` and the Definition of Ready for its declared Maturity, either `approved` or `rejected` with each finding naming the violated rule, the artifact location, and the evidence; the complete `BLOCKED` diagnostic; or the `OUTSIDE_CONTRACT` result for a front-matter key-set mismatch.
 
 </objective>
 
