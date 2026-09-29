@@ -33,7 +33,7 @@ from outcomeeng_testing.harnesses.audit_change_run import (
     audit_payloads,
     audit_workspace,
     exercise_malformed_request_objects,
-    exercise_non_object_request_texts,
+    exercise_unparseable_request_texts,
     json_strings,
     load_runner,
     run_in_parallel,
@@ -52,33 +52,21 @@ PERMITTED_EXECUTABLES = frozenset({runner.SPX_EXECUTABLE, runner.GIT_EXECUTABLE}
 
 
 def _complete_audit(workspace: AuditWorkspace, relative: str) -> list[RunnerCall]:
-    """Drive every runner operation of one rejected audit over ``relative``."""
-    calls = [
-        workspace.invoke(
-            {Field.OPERATION: Operation.READ_CANDIDATE, Field.PATH: relative}
-        )
-    ]
-    calls.append(
-        workspace.invoke(
-            {Field.OPERATION: Operation.RESOLVE_REFERENCE, Field.PATH: relative}
-        )
+    """Drive every runner operation of one rejected audit over ``relative``.
+
+    The first two calls read the candidate and start the run.
+    """
+    opened = workspace.start_run(relative)
+    run_token = opened.run_token
+    resolved = workspace.invoke(
+        {Field.OPERATION: Operation.RESOLVE_REFERENCE, Field.PATH: relative}
     )
-    calls.append(workspace.invoke({Field.OPERATION: Operation.TOOL_VERSION}))
-    candidate_sha256 = calls[0].result[Result.SHA256]
-    calls.append(
-        workspace.invoke(
-            {
-                Field.OPERATION: Operation.START,
-                Field.PATH: relative,
-                Field.CANDIDATE_SHA256: candidate_sha256,
-            }
-        )
-    )
-    run_token = calls[-1].result[Result.RUN_TOKEN]
+    versioned = workspace.invoke({Field.OPERATION: Operation.TOOL_VERSION})
+    calls = [opened.read, opened.started, resolved, versioned]
     payloads = audit_payloads(
         subject=relative,
-        content=str(calls[0].result[Result.CONTENT]),
-        tool_version=str(calls[2].result[Result.TOOL_VERSION]),
+        content=str(opened.read.result[Result.CONTENT]),
+        tool_version=str(versioned.result[Result.TOOL_VERSION]),
     )
     for scope in payloads.scopes:
         calls.append(
@@ -91,7 +79,9 @@ def _complete_audit(workspace: AuditWorkspace, relative: str) -> list[RunnerCall
                 }
             )
         )
-    for ordinal, finding in enumerate(payloads.findings, start=1):
+    for ordinal, finding in enumerate(
+        payloads.findings, start=runner.MIN_FINDING_ORDINAL
+    ):
         calls.append(
             workspace.invoke(
                 {
@@ -200,10 +190,10 @@ def test_two_audits_started_at_once_from_one_worktree_each_read_only_their_own_c
             assert calls[0].result[Result.CONTENT] == workspace.content(relative)
             run_fields = calls[-1].result[Result.RUN]
             assert isinstance(run_fields, dict)
-            assert run_fields[SpxField.RUN_TOKEN] == calls[3].result[Result.RUN_TOKEN]
+            assert run_fields[SpxField.RUN_TOKEN] == calls[1].result[Result.RUN_TOKEN]
         assert (
-            audits[0][3].result[Result.RUN_TOKEN]
-            != audits[1][3].result[Result.RUN_TOKEN]
+            audits[0][1].result[Result.RUN_TOKEN]
+            != audits[1][1].result[Result.RUN_TOKEN]
         )
         assert changes.in_repository_outside_store == ()
         assert changes.in_runner_temporary_directory == ()
@@ -246,16 +236,7 @@ def test_a_candidate_edited_during_the_run_blocks_reconciliation_without_a_file(
 ):
     with audit_workspace() as workspace:
         relative = workspace.place(CAPTURED_CHANGE_RECORD)
-        read = workspace.invoke(
-            {Field.OPERATION: Operation.READ_CANDIDATE, Field.PATH: relative}
-        )
-        started = workspace.invoke(
-            {
-                Field.OPERATION: Operation.START,
-                Field.PATH: relative,
-                Field.CANDIDATE_SHA256: read.result[Result.SHA256],
-            }
-        )
+        opened = workspace.start_run(relative)
         workspace.edit(relative)
         before = workspace.snapshot()
 
@@ -263,14 +244,14 @@ def test_a_candidate_edited_during_the_run_blocks_reconciliation_without_a_file(
             {
                 Field.OPERATION: Operation.RECONCILE,
                 Field.PATH: relative,
-                Field.RUN_TOKEN: started.result[Result.RUN_TOKEN],
+                Field.RUN_TOKEN: opened.run_token,
             }
         )
         changes = workspace.changes_since(before)
 
         assert reconciled.exit_code == ExitCode.BLOCKED
         assert reconciled.result[Result.REASON] == Reason.CANDIDATE_CHANGED
-        assert reconciled.result[Result.RUN_TOKEN] == started.result[Result.RUN_TOKEN]
+        assert reconciled.result[Result.RUN_TOKEN] == opened.run_token
         assert reconciled.runner_writes == ()
         assert _started_executables([reconciled]) <= PERMITTED_EXECUTABLES
         assert changes.in_repository_outside_store == ()
@@ -281,16 +262,7 @@ def test_a_candidate_edited_during_the_run_blocks_reconciliation_without_a_file(
 def test_a_payload_spx_rejects_blocks_with_its_command_diagnostic_and_no_file() -> None:
     with audit_workspace() as workspace:
         relative = workspace.place(CAPTURED_CHANGE_RECORD)
-        read = workspace.invoke(
-            {Field.OPERATION: Operation.READ_CANDIDATE, Field.PATH: relative}
-        )
-        started = workspace.invoke(
-            {
-                Field.OPERATION: Operation.START,
-                Field.PATH: relative,
-                Field.CANDIDATE_SHA256: read.result[Result.SHA256],
-            }
-        )
+        opened = workspace.start_run(relative)
         before = workspace.snapshot()
         payload = {SpxField.UNIT_ID: relative}
 
@@ -298,7 +270,7 @@ def test_a_payload_spx_rejects_blocks_with_its_command_diagnostic_and_no_file() 
             {
                 Field.OPERATION: Operation.ADD_SCOPE,
                 Field.PATH: relative,
-                Field.RUN_TOKEN: started.result[Result.RUN_TOKEN],
+                Field.RUN_TOKEN: opened.run_token,
                 Field.PAYLOAD: payload,
             }
         )
@@ -306,7 +278,7 @@ def test_a_payload_spx_rejects_blocks_with_its_command_diagnostic_and_no_file() 
 
         assert rejected.exit_code == ExitCode.BLOCKED
         assert rejected.result[Result.REASON] == Reason.COMMAND_FAILED
-        assert rejected.result[Result.RUN_TOKEN] == started.result[Result.RUN_TOKEN]
+        assert rejected.result[Result.RUN_TOKEN] == opened.run_token
         assert rejected.result[Result.PAYLOAD_KEY] == relative
         assert rejected.result[Result.EXIT_CODE] != 0
         assert rejected.result[Result.STDERR]
@@ -338,7 +310,7 @@ def test_a_generated_refused_request_object_blocks_on_stdout_without_a_file() ->
     exercise_malformed_request_objects(assert_blocked_without_a_file)
 
 
-def test_a_generated_request_text_that_is_not_one_json_object_blocks_without_a_file() -> (
+def test_a_generated_request_text_the_runner_cannot_parse_as_one_json_object_blocks_without_a_file() -> (
     None
 ):
     def assert_blocked_without_a_file(call: EntryPointCall) -> None:
@@ -347,7 +319,7 @@ def test_a_generated_request_text_that_is_not_one_json_object_blocks_without_a_f
         assert len(call.stdout_lines) == 1
         assert json.loads(call.stdout_lines[0])[Result.STATUS] == Status.BLOCKED
 
-    exercise_non_object_request_texts(assert_blocked_without_a_file)
+    exercise_unparseable_request_texts(assert_blocked_without_a_file)
 
 
 def test_a_request_that_is_not_utf8_text_blocks_on_stdout_without_a_file() -> None:
@@ -404,17 +376,7 @@ def test_a_refused_request_naming_a_started_run_blocks_with_its_run_token_and_no
 ) -> None:
     with audit_workspace() as workspace:
         relative = workspace.place(CAPTURED_CHANGE_RECORD)
-        read = workspace.invoke(
-            {Field.OPERATION: Operation.READ_CANDIDATE, Field.PATH: relative}
-        )
-        started = workspace.invoke(
-            {
-                Field.OPERATION: Operation.START,
-                Field.PATH: relative,
-                Field.CANDIDATE_SHA256: read.result[Result.SHA256],
-            }
-        )
-        run_token = started.result[Result.RUN_TOKEN]
+        run_token = workspace.start_run(relative).run_token
         before = workspace.snapshot()
 
         # Every request field, so the request carries fields its operation
