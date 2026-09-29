@@ -439,18 +439,26 @@ def test_worktree_requests_map_to_a_workspace_grouped_with_the_named_one() -> No
         assert entries[0].linked is True
         grouped.add(operation)
 
-        without_workspace = {
-            **request,
-            module.ARGUMENTS_FIELD: {
-                field_name: value
-                for field_name, value in arguments.items()
-                if field_name != module.WORKSPACE_FIELD
-            },
-        }
-        refusing = RecordingRunner([])
-        refused = module.execute(without_workspace, refusing)
-        assert refused[module.STATUS_FIELD] == module.ExecutionStatus.INVALID_SCHEMA
-        assert refusing.calls == []
+        # A request without a workspace is invalid whatever its authorization:
+        # with authorization present, and with authorization absent as well.
+        for removed in (
+            {module.WORKSPACE_FIELD},
+            {module.WORKSPACE_FIELD, module.MUTATION_AUTHORIZED_FIELD},
+        ):
+            without_workspace = {
+                **request,
+                module.ARGUMENTS_FIELD: {
+                    field_name: value
+                    for field_name, value in arguments.items()
+                    if field_name not in removed
+                },
+            }
+            refusing = RecordingRunner([])
+            refused = module.execute(without_workspace, refusing)
+            assert (
+                refused[module.STATUS_FIELD] == module.ExecutionStatus.INVALID_SCHEMA
+            ), sorted(removed)
+            assert refusing.calls == [], sorted(removed)
 
     assert grouped == set(module.WORKTREE_OPERATIONS)
 

@@ -597,6 +597,34 @@ def _validated_request(request: object) -> tuple[Operation, dict[str, object]]:
             ExecutionStatus.INVALID_SCHEMA,
             f"{operation.value} contains unsupported arguments: {', '.join(unexpected_arguments)}.",
         )
+    # Every required-field and request-shape check runs before the authorization
+    # checks, so a malformed request is an invalid request whatever its
+    # authorization. The authorization checks judge the authorization field, so
+    # the shape check takes it as supplied for an operation that always needs it.
+    if (
+        operation in WAIT_BEARING_OPERATIONS
+        and arguments.get(WAIT_FIELD, operation is not Operation.PROMPT) is True
+        and TIMEOUT_FIELD not in arguments
+    ):
+        raise HerdrEnvironmentError(
+            ExecutionStatus.INVALID_SCHEMA,
+            f"{operation.value} waits on the agent and requires an explicit {TIMEOUT_FIELD}.",
+        )
+    supplied_fields = frozenset(arguments)
+    if operation in MUTATING_OPERATIONS:
+        supplied_fields |= {MUTATION_AUTHORIZED_FIELD}
+    if not any(shape.accepts(supplied_fields) for shape in contract.request_shapes):
+        raise HerdrEnvironmentError(
+            ExecutionStatus.INVALID_SCHEMA,
+            f"{operation.value} arguments do not match a source-owned request shape; "
+            f"accepted shapes: {_describe_shapes(contract)}.",
+        )
+    selectors = [field for field in SELECTOR_FIELDS if field in arguments]
+    if operation not in SELECTORLESS_OPERATIONS and len(selectors) != 1:
+        raise HerdrEnvironmentError(
+            ExecutionStatus.INVALID_SCHEMA,
+            f"{operation.value} requires exactly one selector: {', '.join(SELECTOR_FIELDS)}.",
+        )
     if (
         operation in MUTATING_OPERATIONS
         and arguments.get(MUTATION_AUTHORIZED_FIELD) is not True
@@ -619,29 +647,6 @@ def _validated_request(request: object) -> tuple[Operation, dict[str, object]]:
             f"{operation.value} carrying {text.strip()!r} ends the agent session "
             f"as {Operation.STOP.value} does and requires "
             f"{MUTATION_AUTHORIZED_FIELD}: true before command construction.",
-        )
-    if (
-        operation in WAIT_BEARING_OPERATIONS
-        and arguments.get(WAIT_FIELD, operation is not Operation.PROMPT) is True
-        and TIMEOUT_FIELD not in arguments
-    ):
-        raise HerdrEnvironmentError(
-            ExecutionStatus.INVALID_SCHEMA,
-            f"{operation.value} waits on the agent and requires an explicit {TIMEOUT_FIELD}.",
-        )
-    if not any(
-        shape.accepts(frozenset(arguments)) for shape in contract.request_shapes
-    ):
-        raise HerdrEnvironmentError(
-            ExecutionStatus.INVALID_SCHEMA,
-            f"{operation.value} arguments do not match a source-owned request shape; "
-            f"accepted shapes: {_describe_shapes(contract)}.",
-        )
-    selectors = [field for field in SELECTOR_FIELDS if field in arguments]
-    if operation not in SELECTORLESS_OPERATIONS and len(selectors) != 1:
-        raise HerdrEnvironmentError(
-            ExecutionStatus.INVALID_SCHEMA,
-            f"{operation.value} requires exactly one selector: {', '.join(SELECTOR_FIELDS)}.",
         )
     location = f"request.{ARGUMENTS_FIELD}"
     for field_name in TEXT_ARGUMENT_FIELDS:
