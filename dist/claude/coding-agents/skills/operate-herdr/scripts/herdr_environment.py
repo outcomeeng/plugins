@@ -597,10 +597,12 @@ def _validated_request(request: object) -> tuple[Operation, dict[str, object]]:
             ExecutionStatus.INVALID_SCHEMA,
             f"{operation.value} contains unsupported arguments: {', '.join(unexpected_arguments)}.",
         )
-    # Every required-field and request-shape check runs before the authorization
-    # checks, so a malformed request is an invalid request whatever its
-    # authorization. The authorization checks judge the authorization field, so
-    # the shape check takes it as supplied for an operation that always needs it.
+    # Every required-field, request-shape, and value check runs before the
+    # authorization checks, so a malformed request is an invalid request whatever
+    # its authorization, and authorization is judged only on a well-formed one.
+    # The shape check takes the authorization field as supplied for an operation
+    # that always needs it, and the value checks require that field, where
+    # present, to be a JSON boolean.
     if (
         operation in WAIT_BEARING_OPERATIONS
         and arguments.get(WAIT_FIELD, operation is not Operation.PROMPT) is True
@@ -624,29 +626,6 @@ def _validated_request(request: object) -> tuple[Operation, dict[str, object]]:
         raise HerdrEnvironmentError(
             ExecutionStatus.INVALID_SCHEMA,
             f"{operation.value} requires exactly one selector: {', '.join(SELECTOR_FIELDS)}.",
-        )
-    if (
-        operation in MUTATING_OPERATIONS
-        and arguments.get(MUTATION_AUTHORIZED_FIELD) is not True
-    ):
-        raise HerdrEnvironmentError(
-            ExecutionStatus.MUTATION_UNAUTHORIZED,
-            f"{operation.value} requires {MUTATION_AUTHORIZED_FIELD}: true before command construction.",
-        )
-    # A prompt whose text, stripped of surrounding whitespace, is a session-ending
-    # command ends the agent session as stop does, so it is gated as stop is.
-    text = arguments.get(TEXT_FIELD)
-    if (
-        operation is Operation.PROMPT
-        and isinstance(text, str)
-        and text.strip() in AGENT_SESSION_ENDING_TEXTS
-        and arguments.get(MUTATION_AUTHORIZED_FIELD) is not True
-    ):
-        raise HerdrEnvironmentError(
-            ExecutionStatus.MUTATION_UNAUTHORIZED,
-            f"{operation.value} carrying {text.strip()!r} ends the agent session "
-            f"as {Operation.STOP.value} does and requires "
-            f"{MUTATION_AUTHORIZED_FIELD}: true before command construction.",
         )
     location = f"request.{ARGUMENTS_FIELD}"
     for field_name in TEXT_ARGUMENT_FIELDS:
@@ -682,6 +661,29 @@ def _validated_request(request: object) -> tuple[Operation, dict[str, object]]:
                 ExecutionStatus.INVALID_SCHEMA,
                 f"Unsupported read source at {location}.{SOURCE_FIELD}.",
             ) from error
+    if (
+        operation in MUTATING_OPERATIONS
+        and arguments.get(MUTATION_AUTHORIZED_FIELD) is not True
+    ):
+        raise HerdrEnvironmentError(
+            ExecutionStatus.MUTATION_UNAUTHORIZED,
+            f"{operation.value} requires {MUTATION_AUTHORIZED_FIELD}: true before command construction.",
+        )
+    # A prompt whose text, stripped of surrounding whitespace, is a session-ending
+    # command ends the agent session as stop does, so it is gated as stop is.
+    text = arguments.get(TEXT_FIELD)
+    if (
+        operation is Operation.PROMPT
+        and isinstance(text, str)
+        and text.strip() in AGENT_SESSION_ENDING_TEXTS
+        and arguments.get(MUTATION_AUTHORIZED_FIELD) is not True
+    ):
+        raise HerdrEnvironmentError(
+            ExecutionStatus.MUTATION_UNAUTHORIZED,
+            f"{operation.value} carrying {text.strip()!r} ends the agent session "
+            f"as {Operation.STOP.value} does and requires "
+            f"{MUTATION_AUTHORIZED_FIELD}: true before command construction.",
+        )
     return operation, arguments
 
 

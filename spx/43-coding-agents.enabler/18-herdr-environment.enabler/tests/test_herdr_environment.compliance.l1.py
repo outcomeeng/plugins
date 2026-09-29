@@ -1,3 +1,4 @@
+import json
 import string
 from typing import cast
 
@@ -48,6 +49,66 @@ def test_mutating_operations_fail_before_execution_without_authorization() -> No
                 )
 
     assert gated == set(module.MUTATING_OPERATIONS)
+
+
+def test_a_malformed_gated_request_is_invalid_whatever_its_authorization() -> None:
+    module = load_herdr_environment()
+    gated_requests: list[dict[str, object]] = []
+    for request in operation_requests(module):
+        operation = module.Operation(request[module.OPERATION_FIELD])
+        arguments = cast(dict[str, object], request[module.ARGUMENTS_FIELD])
+        if operation in module.MUTATING_OPERATIONS:
+            gated_requests.append(request)
+        elif operation is module.Operation.PROMPT:
+            gated_requests.extend(
+                {
+                    **request,
+                    module.ARGUMENTS_FIELD: {**arguments, module.TEXT_FIELD: text},
+                }
+                for text in module.AGENT_SESSION_ENDING_TEXTS
+            )
+    malformed_seen = set()
+
+    for request in gated_requests:
+        operation = module.Operation(request[module.OPERATION_FIELD])
+        arguments = dict(cast(dict[str, object], request[module.ARGUMENTS_FIELD]))
+        arguments.pop(module.MUTATION_AUTHORIZED_FIELD, None)
+        # The session-ending text is what gates the prompt, so a prompt keeps it
+        # and carries its malformation in another text argument.
+        malformable = sorted(
+            field_name
+            for field_name in module.TEXT_ARGUMENT_FIELDS & set(arguments)
+            if not (
+                operation is module.Operation.PROMPT and field_name == module.TEXT_FIELD
+            )
+        )
+        assert malformable, operation.value
+        malformed_seen.add(operation)
+
+        unauthorized_forms: list[dict[str, object]] = []
+        for field_name in malformable:
+            malformed = {
+                **arguments,
+                field_name: f"{module.LONG_OPTION_PREFIX}{arguments[field_name]}",
+            }
+            unauthorized_forms.append(malformed)
+            unauthorized_forms.append(
+                {**malformed, module.MUTATION_AUTHORIZED_FIELD: False}
+            )
+        # Authorization spelled as JSON text rather than the JSON boolean.
+        unauthorized_forms.append(
+            {**arguments, module.MUTATION_AUTHORIZED_FIELD: json.dumps(True)}
+        )
+
+        for form in unauthorized_forms:
+            runner = RecordingRunner([])
+            result = module.execute({**request, module.ARGUMENTS_FIELD: form}, runner)
+            assert (
+                result[module.STATUS_FIELD] == module.ExecutionStatus.INVALID_SCHEMA
+            ), (operation.value, form)
+            assert runner.calls == [], (operation.value, form)
+
+    assert malformed_seen == {*module.MUTATING_OPERATIONS, module.Operation.PROMPT}
 
 
 def test_a_prompt_carrying_the_stop_exit_runs_no_command_without_authorization() -> (
