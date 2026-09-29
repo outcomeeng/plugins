@@ -11,6 +11,10 @@ with a non-empty ``unitId``; a finding ``rule`` is a lowercase hyphenated ID;
 ``ordinal`` is an integer within the declared bounds; ``terminalStatus`` is a
 listed terminal status.
 
+A request text is also outside the contract when the runner cannot parse it
+as one JSON object: a truncated object, a JSON value of another type, or an
+object carrying an integer literal longer than the interpreter converts.
+
 Every strategy builds a request outside that contract by construction, taking
 every operation, field, bound, and character from the runner's own registries
 and constants. None of them consults the runner's acceptance check, so the
@@ -21,6 +25,7 @@ from __future__ import annotations
 
 import json
 import string
+import sys
 from types import ModuleType
 from typing import Final
 
@@ -36,6 +41,13 @@ _UNFIT_SEGMENTS = (".", "..", "")
 _SURROGATE_CATEGORY: Final = "Cs"
 _MAX_MEMBERS = 3
 _MAX_LEAVES = 8
+# How far past the interpreter's integer conversion limit a generated literal runs.
+_MAX_EXCESS_DIGITS = 64
+_NONZERO_DIGITS = string.digits[1:]
+_INTEGER_SIGNS = ("", "-")
+_MEMBER_SEPARATOR = ": "
+_ITEM_SEPARATOR = ", "
+_OBJECT_TEMPLATE = "{{{}}}"
 
 
 def json_values() -> st.SearchStrategy[object]:
@@ -279,7 +291,54 @@ def _truncated_request_texts(draw: st.DrawFn, runner: ModuleType) -> str:
     return text[: draw(st.integers(min_value=0, max_value=len(text) - 1))]
 
 
-def non_object_request_texts(runner: ModuleType) -> st.SearchStrategy[str]:
-    """Generate request texts that are not one JSON object."""
+@st.composite
+def _oversized_integer_request_texts(draw: st.DrawFn, runner: ModuleType) -> str:
+    """A request object text with one member an integer literal too long to convert.
+
+    The interpreter refuses to convert an integer literal with more digits
+    than its conversion limit, so the text parses as no JSON value there
+    although its syntax is one JSON object.
+    """
+    field_names = [field.value for field in runner.RequestField]
+    oversized = draw(st.sampled_from(field_names))
+    others = draw(
+        st.dictionaries(
+            st.sampled_from([name for name in field_names if name != oversized]),
+            json_values(),
+            max_size=_MAX_MEMBERS,
+        )
+    )
+    digit_count = _integer_digit_limit() + draw(
+        st.integers(min_value=1, max_value=_MAX_EXCESS_DIGITS)
+    )
+    leading = draw(st.sampled_from(_NONZERO_DIGITS))
+    filler = draw(st.sampled_from(string.digits))
+    sign = draw(st.sampled_from(_INTEGER_SIGNS))
+    literal = f"{sign}{leading}{filler * (digit_count - 1)}"
+    member = f"{json.dumps(oversized)}{_MEMBER_SEPARATOR}{literal}"
+    return _OBJECT_TEMPLATE.format(
+        _ITEM_SEPARATOR.join(
+            [
+                *(
+                    f"{json.dumps(name)}{_MEMBER_SEPARATOR}{json.dumps(value)}"
+                    for name, value in others.items()
+                ),
+                member,
+            ]
+        )
+    )
+
+
+def _integer_digit_limit() -> int:
+    """The interpreter's integer conversion digit limit, or its default when disabled."""
+    return sys.get_int_max_str_digits() or sys.int_info.default_max_str_digits
+
+
+def unparseable_request_texts(runner: ModuleType) -> st.SearchStrategy[str]:
+    """Generate request texts the runner cannot parse as one JSON object."""
     other_values = json_values().filter(lambda value: not isinstance(value, dict))
-    return st.one_of(other_values.map(json.dumps), _truncated_request_texts(runner))
+    return st.one_of(
+        other_values.map(json.dumps),
+        _truncated_request_texts(runner),
+        _oversized_integer_request_texts(runner),
+    )

@@ -63,7 +63,7 @@ from outcomeeng.validation.implementation_audit_contract import (
 )
 from outcomeeng_testing.generators.audit_change_run import (
     malformed_request_objects,
-    non_object_request_texts,
+    unparseable_request_texts,
 )
 from outcomeeng_testing.harnesses import audit_change_run_observer as observer
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
@@ -173,11 +173,24 @@ class RunnerCall:
             for argument in command:
                 try:
                     value = json.loads(argument)
-                except json.JSONDecodeError:
+                except ValueError:
                     continue
                 if isinstance(value, dict):
                     decoded.append(value)
         return tuple(decoded)
+
+
+@dataclass(frozen=True)
+class StartedRun:
+    """The ``read-candidate`` and ``start`` calls that opened one audit run."""
+
+    read: RunnerCall
+    started: RunnerCall
+
+    @property
+    def run_token(self) -> object:
+        """The run token the ``start`` result carries."""
+        return self.started.result.get(load_runner().ResultField.RUN_TOKEN)
 
 
 def json_strings(value: object) -> tuple[str, ...]:
@@ -346,12 +359,34 @@ class AuditWorkspace:
 
     def edit(self, relative: str) -> None:
         """Change a placed candidate's content, as another session editing it would."""
-        with (self.root / relative).open("a", encoding="utf-8") as handle:
+        encoding = load_runner().TEXT_ENCODING
+        with (self.root / relative).open("a", encoding=encoding) as handle:
             handle.write(CANDIDATE_EDIT)
 
     def content(self, relative: str) -> str:
         """Return a placed candidate's current content exactly as stored."""
-        return (self.root / relative).read_bytes().decode("utf-8")
+        return (self.root / relative).read_bytes().decode(load_runner().TEXT_ENCODING)
+
+    def start_run(self, relative: str) -> StartedRun:
+        """Read a placed candidate and start a run over the content that read returned.
+
+        Both calls are returned as observed; a read that returns no digest
+        starts nothing the runner accepts, and the start call shows that.
+        """
+        runner = load_runner()
+        field = runner.RequestField
+        operation = runner.Operation
+        read = self.invoke(
+            {field.OPERATION: operation.READ_CANDIDATE, field.PATH: relative}
+        )
+        started = self.invoke(
+            {
+                field.OPERATION: operation.START,
+                field.PATH: relative,
+                field.CANDIDATE_SHA256: read.result.get(runner.ResultField.SHA256),
+            }
+        )
+        return StartedRun(read=read, started=started)
 
     def snapshot(self) -> Snapshot:
         """Record every file in each directory the runner could write to."""
@@ -608,10 +643,10 @@ def exercise_malformed_request_objects(
         )
 
 
-def exercise_non_object_request_texts(
+def exercise_unparseable_request_texts(
     assert_case: Callable[[EntryPointCall], None],
 ) -> None:
-    """Send every generated request text that is not one JSON object to the entry point.
+    """Send every generated request text the runner cannot parse as one JSON object.
 
     ``assert_case`` receives what the entry point did with the text; a failing
     case reports the generated text itself.
@@ -620,7 +655,7 @@ def exercise_non_object_request_texts(
 
     @seed(MALFORMED_REQUEST_PROPERTY_SEED)
     @settings(max_examples=MALFORMED_REQUEST_PROPERTY_EXAMPLES, print_blob=True)
-    @given(request_text=non_object_request_texts(runner))
+    @given(request_text=unparseable_request_texts(runner))
     def run_cases(request_text: str) -> None:
         assert_case(_call_entry_point(runner, request_text))
 
