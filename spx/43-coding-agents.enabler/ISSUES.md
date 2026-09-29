@@ -26,6 +26,7 @@ Extending the pattern where it stands was attempted and withdrawn: adding an alt
 
 **Evidence, fourth reading.** `spec-tree:test-evidence-auditor` finding `f-001` on head `7ad28895500e40c4c106c1c510a175a6b52ddda9`, rule `source-ownership`: the herdr compliance test imports `raw_herdr_command_violations`, `herdr_help_violations`, `RAW_HERDR_COMMAND_PATTERNS`, and `HERDR_HELP_PATTERNS` from `src/plugins/coding-agents/skills/operate-herdr/scripts/herdr_environment.py`, and no production path consumes them.
 **Evidence, fourth reading.** `instructions:skill-auditor` finding `f-012` against `src/plugins/coding-agents/skills/operate-herdr` on head `7ad28895500e40c4c106c1c510a175a6b52ddda9`, rule `conciseness_shipped_script`: the shipped script carries `participant_for`, `IDENTITY_AMBIGUOUS`, and the scanner helpers the run path never calls.
+**Evidence, fifth reading.** `spec-tree:test-evidence-auditor` finding `f-003` on head `0caf8237bd062fa3d42b2e2a1e3441b8534ae1b8`, rule `source-ownership`: `participant_for` and `ExecutionStatus.IDENTITY_AMBIGUOUS` in `src/plugins/coding-agents/skills/operate-herdr/scripts/herdr_environment.py` are reached only by tests.
 
 ## The evidence-repair same-class scan stops at the test file
 
