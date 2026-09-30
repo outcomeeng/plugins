@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-import re
 import subprocess
 from collections import Counter
 from dataclasses import dataclass
 from functools import cache
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Final
 
 from outcomeeng.distribution.agents import (
     AGENT_DESCRIPTION_FIELD,
@@ -24,6 +22,7 @@ from outcomeeng.distribution.build import (
     IGNORED_SOURCE_DIRECTORY_NAMES,
     IGNORED_SOURCE_FILE_SUFFIXES,
     SHARED_FRAGMENT_FILENAME,
+    SourceFormatError,
     SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE,
     TEMPLATES_DIR_NAME,
     IncludeDirective,
@@ -663,6 +662,62 @@ def target_scoped_agent_observations() -> tuple[TargetScopedAgentObservation, ..
                 TargetScopedAgentObservation(declared=declared, outputs=outputs)
             )
     return tuple(observations)
+
+
+@dataclass(frozen=True)
+class RefusedTargetsObservation:
+    """What one build did with an agent source listing ``listed`` as its targets."""
+
+    listed: tuple[str, ...]
+    source: Path
+    error: SourceFormatError | None
+    dist_written: bool
+
+
+def refused_target_list_observations(
+    listed_values: tuple[tuple[str, ...], ...],
+) -> tuple[RefusedTargetsObservation, ...]:
+    """Build one tree per listed-targets value and return what each build did.
+
+    Each tree holds a single agent source whose `targets` field lists exactly the
+    given values. The caller owns every predicate over the refusal and the output.
+    """
+    case = min(source_scenarios(), key=lambda scenario: scenario.skill_ref)
+    observations = []
+    for listed in listed_values:
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory) / min(IGNORED_SOURCE_DIRECTORY_NAMES)
+            builder = SrcTreeBuilder(root)
+            stem = "refused-targets"
+            builder.add_plugin(
+                case.plugin,
+                agents={stem: _agent_source_listing(stem, listed)},
+            )
+            dist_root = root / DIST_DIR_NAME
+            error: SourceFormatError | None = None
+            try:
+                build(builder.src_root, dist_root)
+            except SourceFormatError as raised:
+                error = raised
+            source = builder.src_root / PLUGINS_DIR_NAME / case.plugin
+            observations.append(
+                RefusedTargetsObservation(
+                    listed=listed,
+                    source=source
+                    / AGENTS_SUBDIR_NAME
+                    / f"{stem}{MARKDOWN_FILE_SUFFIX}",
+                    error=error,
+                    dist_written=dist_root.exists() and any(dist_root.rglob("*")),
+                )
+            )
+    return tuple(observations)
+
+
+def _agent_source_listing(stem: str, listed: tuple[str, ...]) -> str:
+    return (
+        f"{FRONTMATTER_DELIMITER}\n{AGENT_NAME_FIELD}: {stem}\n{AGENT_DESCRIPTION_FIELD}: Target-scoped agent.\n"
+        f"{AGENT_TARGETS_FIELD}: [{', '.join(listed)}]\n{FRONTMATTER_DELIMITER}\n\nRelay the supplied target.\n"
+    )
 
 
 def _target_scoped_agent_source(stem: str, declared: tuple[Target, ...]) -> str:

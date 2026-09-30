@@ -45,6 +45,7 @@ from outcomeeng_testing.generators.source_and_templating import source_scenarios
 from outcomeeng_testing.generators.target_emission import execution_time_commands
 from outcomeeng_testing.harnesses.target_emission import (
     projected_versus_emitted,
+    refused_target_list_observations,
     projected_sources,
     tracked_plugin_names,
     tracked_plugin_sources,
@@ -393,6 +394,20 @@ def test_no_agent_artifact_carries_another_targets_skill_dir_token() -> None:
         )
         for path, text in agent_artifact_texts(target).items():
             assert foreign_token not in text, (target, path)
+
+
+def test_agent_source_listing_no_registered_target_fails_the_build() -> None:
+    unregistered = "".join(target.value for target in Target)
+    assert unregistered not in {target.value for target in Target}
+    observations = refused_target_list_observations(((), (unregistered,)))
+    assert [observation.listed for observation in observations] == [
+        (),
+        (unregistered,),
+    ]
+    for observation in observations:
+        assert observation.error is not None, observation
+        assert str(observation.source) in str(observation.error), observation
+        assert not observation.dist_written, observation
 
 
 def test_target_scoped_agent_sources_emit_only_into_listed_targets() -> None:
