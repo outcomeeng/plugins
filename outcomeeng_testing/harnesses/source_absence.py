@@ -1,8 +1,8 @@
 """Source trees arranged around a skill or template directory with no manifest.
 
 Each arrangement is a well-formed source tree carrying one authored skill,
-plus one extra directory that holds no `SKILL.md`: either nothing, only an
-ignored cache file, or one authored file. The returned record names the
+plus one extra directory that holds no `SKILL.md`: either nothing, one file
+a single ignore rule excludes, or one authored file. The returned record names the
 extra directory and the authored skill's own manifest, whose emission shows
 that validation accepted the tree. The linked tests own every predicate.
 """
@@ -10,6 +10,7 @@ that validation accepted the tree. The linked tests own every predicate.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import StrEnum
 from pathlib import Path
 
 from outcomeeng.distribution.build import (
@@ -52,12 +53,23 @@ class ExtraTemplateDirectory:
     authored_manifest: Path
 
 
+class IgnoreRule(StrEnum):
+    """Which rule of the authored-source predicate ignores the arranged file.
+
+    Each rule alone ignores the file, so a validator that dropped either rule
+    would see an authored file where the emission walk sees none.
+    """
+
+    DIRECTORY = "directory"
+    SUFFIX = "suffix"
+
+
 def arrange_cache_only_skill_directory(
-    root: Path, case: SourceScenario
+    root: Path, case: SourceScenario, rule: IgnoreRule
 ) -> ExtraSkillDirectory:
-    """Add a skill directory holding only one ignored cache file, no `SKILL.md`."""
+    """Add a skill directory holding one file only `rule` ignores, no `SKILL.md`."""
     arranged = _extra_skill_directory(root, case)
-    _write_ignored_cache_file(arranged.skill_root, case)
+    _write_ignored_file(arranged.skill_root, case, rule)
     return arranged
 
 
@@ -78,11 +90,11 @@ def arrange_manifestless_skill_directory(
 
 
 def arrange_cache_only_template_directory(
-    root: Path, case: SourceScenario
+    root: Path, case: SourceScenario, rule: IgnoreRule
 ) -> ExtraTemplateDirectory:
-    """Add a template directory holding only one ignored cache file."""
+    """Add a template directory holding one file only `rule` ignores."""
     arranged = _extra_template_directory(root, case)
-    _write_ignored_cache_file(arranged.template_root, case)
+    _write_ignored_file(arranged.template_root, case, rule)
     return arranged
 
 
@@ -137,10 +149,15 @@ def _skill_body(case: SourceScenario) -> str:
     )
 
 
-def _write_ignored_cache_file(directory: Path, case: SourceScenario) -> None:
-    cache_dir = directory / next(iter(sorted(IGNORED_SOURCE_DIRECTORY_NAMES)))
-    cache_dir.mkdir()
-    (cache_dir / f"{case.skill}{IGNORED_SOURCE_FILE_SUFFIXES[0]}").write_bytes(b"")
+def _write_ignored_file(
+    directory: Path, case: SourceScenario, rule: IgnoreRule
+) -> None:
+    if rule is IgnoreRule.DIRECTORY:
+        cache_dir = directory / next(iter(sorted(IGNORED_SOURCE_DIRECTORY_NAMES)))
+        cache_dir.mkdir()
+        _write_authored_file(cache_dir, case)
+        return
+    (directory / f"{case.skill}{IGNORED_SOURCE_FILE_SUFFIXES[0]}").write_bytes(b"")
 
 
 def _write_authored_file(directory: Path, case: SourceScenario) -> None:
@@ -152,6 +169,7 @@ def _write_authored_file(directory: Path, case: SourceScenario) -> None:
 __all__ = [
     "ExtraSkillDirectory",
     "ExtraTemplateDirectory",
+    "IgnoreRule",
     "arrange_cache_only_skill_directory",
     "arrange_cache_only_template_directory",
     "arrange_empty_skill_directory",

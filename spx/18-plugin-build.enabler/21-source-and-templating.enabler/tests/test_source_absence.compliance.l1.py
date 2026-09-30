@@ -14,6 +14,7 @@ from outcomeeng_testing.generators.source_and_templating import (
     source_scenarios,
 )
 from outcomeeng_testing.harnesses.source_absence import (
+    IgnoreRule,
     arrange_cache_only_skill_directory,
     arrange_cache_only_template_directory,
     arrange_empty_skill_directory,
@@ -22,11 +23,12 @@ from outcomeeng_testing.harnesses.source_absence import (
 )
 
 
+@pytest.mark.parametrize("rule", IgnoreRule)
 @pytest.mark.parametrize("case", source_scenarios(), ids=lambda c: c.skill)
 def test_cache_only_skill_directory_is_absent(
-    tmp_path: Path, case: SourceScenario
+    tmp_path: Path, case: SourceScenario, rule: IgnoreRule
 ) -> None:
-    arranged = arrange_cache_only_skill_directory(tmp_path, case)
+    arranged = arrange_cache_only_skill_directory(tmp_path, case, rule)
 
     projection = project_emissions(arranged.src_root)
 
@@ -62,11 +64,12 @@ def test_manifestless_skill_directory_with_authored_source_is_rejected(
     assert str(arranged.skill_root.relative_to(arranged.src_root)) in str(raised.value)
 
 
+@pytest.mark.parametrize("rule", IgnoreRule)
 @pytest.mark.parametrize("case", source_scenarios(), ids=lambda c: c.skill)
 def test_cache_only_template_directory_is_absent(
-    tmp_path: Path, case: SourceScenario
+    tmp_path: Path, case: SourceScenario, rule: IgnoreRule
 ) -> None:
-    arranged = arrange_cache_only_template_directory(tmp_path, case)
+    arranged = arrange_cache_only_template_directory(tmp_path, case, rule)
 
     projection = project_emissions(arranged.src_root)
 
