@@ -19,6 +19,7 @@ from enum import StrEnum
 from pathlib import Path
 import os
 import subprocess
+import sys
 
 from outcomeeng.hygiene.clean import (
     CLEAN_BASE_ARGV,
@@ -43,6 +44,7 @@ class EnvironmentPlacement(StrEnum):
     SYMLINKED = "symlinked"
     SYMLINK_TARGET = "symlink-target"
     OUTSIDE = "outside"
+    RUNNING_INTERPRETER = "running-interpreter"
 
 
 @dataclass(frozen=True)
@@ -95,9 +97,11 @@ def create_clean_repo(
 
     `environment` selects where the active Python environment sits: directly
     inside the repository, inside it as a symlink to an external directory
-    (addressed by the link or by its target), or wholly outside it. The
+    (addressed by the link or by its target), wholly outside it, or inside it
+    as a link to the environment of the interpreter running this process. The
     returned `active_python_prefix` is the prefix that placement hands the
-    cleanup command.
+    cleanup command; for the running interpreter it is that interpreter's own
+    prefix, which the command resolves without being handed it.
     """
     repo_root = tmp_path / "repo"
     ignored_cache = repo_root / IGNORED_CACHE_DIR
@@ -164,6 +168,10 @@ def _place_environment(
     if environment is EnvironmentPlacement.INSIDE:
         in_repo_prefix.mkdir()
         return in_repo_prefix
+    if environment is EnvironmentPlacement.RUNNING_INTERPRETER:
+        running_prefix = Path(sys.prefix)
+        in_repo_prefix.symlink_to(running_prefix, target_is_directory=True)
+        return running_prefix
     if environment is EnvironmentPlacement.OUTSIDE:
         external_prefix.mkdir()
         return external_prefix
