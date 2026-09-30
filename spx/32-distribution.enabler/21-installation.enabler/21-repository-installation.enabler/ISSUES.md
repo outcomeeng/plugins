@@ -546,6 +546,26 @@ outcomeeng/distribution/installation.py:1295-1296 leaves the test passing." The
 test predates the discovery-login security fix; recorded here under the
 convergence-stall rule by the Director's ruling.
 
+## The fresh-home scenario never checks which source the plan registers
+
+The spec's scenario states that the plan "registers that source for that agent".
+`test_fresh_home_plan_adds_the_declared_marketplace` in
+`tests/test_repository_installation.scenario.l1.py` asserts only that the Claude
+source operations equal a single marketplace add, so a plan that adds any other
+source still passes.
+
+**Settlement condition**: the test asserts that the add carries the source the
+checkout declares, and a plan adding another source fails it.
+
+**Evidence**: test-evidence audit finding `f-012` (REJECT) against
+`0be471a0f4ee4a5316e1a42eec3801aba02bef18`:
+"test_fresh_home_plan_adds_the_declared_marketplace asserts only that the Claude
+source operations equal [MARKETPLACE_ADD]. It never checks that the add registers
+the source the checkout declares (DECLARED_CLAUDE_SOURCE). A plan that adds any
+other source still passes, so the \"registers that source\" clause is unverified
+by this scenario's evidence." The test predates the discovery-login security
+fix; recorded here under the convergence-stall rule by the Director's ruling.
+
 ## Codex 0.155.1 poisons a fresh home during the marketplace listing, then refuses it
 
 `codex plugin marketplace list --json` against a `CODEX_HOME` that is a freshly
