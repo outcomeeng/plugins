@@ -2,15 +2,20 @@
 
 from __future__ import annotations
 
+import re
 from collections import Counter
 from dataclasses import dataclass
 from functools import cache
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from typing import Final
 
-from outcomeeng.distribution.agents import AGENT_TARGETS_FIELD
+from outcomeeng.distribution.agents import (
+    AGENT_DESCRIPTION_FIELD,
+    AGENT_NAME_FIELD,
+    AGENT_TARGETS_FIELD,
+)
 from outcomeeng.distribution.build import (
-    AGENT_CAPABILITY_REGISTRY,
     EmissionProjection,
     CLAUDE_SKILL_DIR_TOKEN,
     DISABLE_MODEL_INVOCATION_FIELD,
@@ -56,6 +61,16 @@ from outcomeeng_testing.harnesses.distribution import (
 from outcomeeng_testing.harnesses.src_tree import SrcTreeBuilder
 
 type PathSnapshot = tuple[tuple[Path, bytes], ...]
+
+# Claude Code's execution-time injection syntax: a command between these markers
+# runs when the skill loads and its output replaces the span.
+EXECUTION_TIME_INJECTION_START: Final = "!`"
+EXECUTION_TIME_INJECTION_END: Final = "`"
+EXECUTION_TIME_INJECTION_PATTERN: Final = re.compile(
+    rf"(?<!`){re.escape(EXECUTION_TIME_INJECTION_START)}"
+    rf"(?P<command>[^`\r\n]*)"
+    rf"{re.escape(EXECUTION_TIME_INJECTION_END)}"
+)
 
 # Actions whose output is the rendered source text, so a caller may compare the
 # two directly. A converted agent is a derived artifact whose output is not its
@@ -169,16 +184,31 @@ def structure_deviations() -> dict[Target, tuple[Path, ...]]:
 
 
 def agent_artifact_paths(target: Target) -> tuple[Path, ...]:
-    """Return every agent artifact one generated target tree carries.
+    """Return every file in an agents directory of one generated target tree.
 
     Reads the committed tree rather than the projection, so the observation reflects
-    what a consumer installs rather than what the build intended.
+    what a consumer installs rather than what the build intended. Both agent
+    locations are read for every target — the plugin's own agents directory and a
+    skill's — so an artifact left at a location the target does not read is
+    observed alongside the native ones.
     """
     tree = REPOSITORY_ROOT / DIST_DIR_NAME / target.value
-    capability = AGENT_CAPABILITY_REGISTRY[target.value]
-    if capability.manifest_declares_agents:
-        return tuple(sorted(tree.glob(f"*/{AGENTS_SUBDIR_NAME}/*")))
-    return tuple(sorted(tree.glob(f"*/{SKILLS_SUBDIR_NAME}/*/{AGENTS_SUBDIR_NAME}/*")))
+    return tuple(
+        sorted(
+            (
+                *tree.glob(f"*/{AGENTS_SUBDIR_NAME}/*"),
+                *tree.glob(f"*/{SKILLS_SUBDIR_NAME}/*/{AGENTS_SUBDIR_NAME}/*"),
+            )
+        )
+    )
+
+
+def execution_time_injection_commands(text: str) -> tuple[str, ...]:
+    """Return the commands Claude Code's execution-time injection syntax embeds."""
+    return tuple(
+        match.group("command")
+        for match in EXECUTION_TIME_INJECTION_PATTERN.finditer(text)
+    )
 
 
 def agent_artifact_texts(target: Target) -> dict[Path, str]:
@@ -614,6 +644,6 @@ def target_scoped_agent_observations() -> tuple[TargetScopedAgentObservation, ..
 def _target_scoped_agent_source(stem: str, declared: tuple[Target, ...]) -> str:
     listed = "".join(f"  - {target.value}\n" for target in declared)
     return (
-        f"---\nname: {stem}\ndescription: Target-scoped agent.\n"
+        f"---\n{AGENT_NAME_FIELD}: {stem}\n{AGENT_DESCRIPTION_FIELD}: Target-scoped agent.\n"
         f"{AGENT_TARGETS_FIELD}:\n{listed}---\n\nRelay the supplied target.\n"
     )

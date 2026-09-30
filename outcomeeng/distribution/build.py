@@ -61,7 +61,6 @@ from outcomeeng.distribution.contracts import (
     PLUGIN_NAME_VARIABLE,
     PLUGINS_DIR_NAME,
     PLUGIN_SUBDIRS,
-    REFERENCES_SUBDIR_NAME,
     REQUIRE_SKILL_GUIDANCE_TEMPLATE,
     RUNTIME_TOKEN_ASK_USER_CAPABILITY,
     RUNTIME_TOKEN_ASK_USER_NAMES,
@@ -157,13 +156,6 @@ CLAUDE_ONLY_FRONTMATTER_FIELDS: Final = (DISABLE_MODEL_INVOCATION_FIELD,)
 CLAUDE_SKILL_DIR_TOKEN: Final = "${CLAUDE_SKILL_DIR}"
 CODEX_SKILL_DIR_TOKEN: Final = "${SKILL_DIR}"
 SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE: Final = "{!# no-codex-skill-dir-rewrite #!}"
-EXECUTION_TIME_INJECTION_START: Final = "!`"
-EXECUTION_TIME_INJECTION_END: Final = "`"
-EXECUTION_TIME_INJECTION_PATTERN: Final = re.compile(
-    rf"(?<!`){re.escape(EXECUTION_TIME_INJECTION_START)}"
-    rf"(?P<command>[^`\r\n]*)"
-    rf"{re.escape(EXECUTION_TIME_INJECTION_END)}"
-)
 SKILL_DIR_REFERENCE_SUFFIX_PATTERN: Final = r"/[^\s`\"']+"
 SKILL_DIR_REWRITE_PLACEHOLDER: Final = "__OUTCOMEENG_CLAUDE_SKILL_DIR_LITERAL__"
 # Protects the escape directive (which shares Jinja's {!# #!} comment syntax) across
@@ -953,26 +945,6 @@ def rewrite_paths_for_target(text: str, *, target: _Target) -> str:
 
     translated = protected.replace(CLAUDE_SKILL_DIR_TOKEN, CODEX_SKILL_DIR_TOKEN)
     return translated.replace(SKILL_DIR_REWRITE_PLACEHOLDER, CLAUDE_SKILL_DIR_TOKEN)
-
-
-def execution_time_injection_commands(text: str) -> tuple[str, ...]:
-    """Return the commands embedded in execution-time dynamic context."""
-    return tuple(
-        match.group("command")
-        for match in EXECUTION_TIME_INJECTION_PATTERN.finditer(text)
-    )
-
-
-def contains_execution_time_skill_content_injection(text: str) -> bool:
-    """Return whether dynamic context can inline a skill definition."""
-    return any(
-        SKILL_FILENAME in command
-        or (
-            "../" in command
-            and ("*" in command or f"/{REFERENCES_SUBDIR_NAME}/" in command)
-        )
-        for command in execution_time_injection_commands(text)
-    )
 
 
 def skill_dir_path_references(text: str, token: str) -> tuple[str, ...]:

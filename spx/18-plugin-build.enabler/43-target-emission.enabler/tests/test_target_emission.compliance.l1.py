@@ -5,6 +5,7 @@ from __future__ import annotations
 import tomllib
 from collections import Counter
 
+from outcomeeng_testing.harnesses.agent_conversion import authored_agent_targets
 from outcomeeng_testing.harnesses.distribution import CANONICAL_SOURCE_ROOT
 from outcomeeng.distribution.agents import AGENT_TARGETS_FIELD
 from outcomeeng.distribution.build import (
@@ -13,24 +14,23 @@ from outcomeeng.distribution.build import (
     CODEX_SKILL_DIR_TOKEN,
     CLAUDE_ONLY_FRONTMATTER_FIELDS,
     DISABLE_MODEL_INVOCATION_FIELD,
-    EXECUTION_TIME_INJECTION_START,
-    EXECUTION_TIME_INJECTION_END,
     FLAT_AGENT_PLUGIN_SEPARATOR,
+    LIFECYCLE_TEMPLATE_NAME,
     SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE,
     EmissionAction,
     agent_capability,
     agent_slug,
-    agent_source_admits_target,
     plugin_names,
     template_source_files,
     skill_dir_path_references,
     frontmatter_field_names,
     rewrite_paths_for_target,
     strip_frontmatter_fields,
-    contains_execution_time_skill_content_injection,
 )
 from outcomeeng.distribution.contracts import (
+    AGENTS_SUBDIR_NAME,
     MARKDOWN_FILE_SUFFIX,
+    SKILL_FILENAME,
     SKILLS_SUBDIR_NAME,
     Target,
 )
@@ -41,6 +41,9 @@ from outcomeeng.validation.skill_frontmatter import (
 from outcomeeng_testing.generators.source_and_templating import source_scenarios
 from outcomeeng_testing.generators.target_emission import execution_time_commands
 from outcomeeng_testing.harnesses.target_emission import (
+    EXECUTION_TIME_INJECTION_END,
+    EXECUTION_TIME_INJECTION_START,
+    execution_time_injection_commands,
     projected_versus_emitted,
     projected_sources,
     text_emissions,
@@ -64,11 +67,7 @@ def test_every_source_file_emits_to_both_target_trees() -> None:
     plugin_count = len(plugin_names(CANONICAL_SOURCE_ROOT))
     for target, per_source in counts.items():
         admitted = [
-            source
-            for source in sources
-            if agent_source_admits_target(
-                source, target, src_root=CANONICAL_SOURCE_ROOT
-            )
+            source for source in sources if target in authored_agent_targets(source)
         ]
         missing = [source for source in admitted if per_source[source] < 1]
         assert not missing, f"{target.value} emits nothing for {missing}"
@@ -135,9 +134,12 @@ def test_target_trees_mirror_source_structure() -> None:
             )
             continue
         for path in deviations:
-            assert path.parts[1] == SKILLS_SUBDIR_NAME, (
-                f"{target.value} deviation outside the lifecycle skill: {path}"
-            )
+            plugin = path.parts[0]
+            assert path.parts[1:-1] == (
+                SKILLS_SUBDIR_NAME,
+                f"{plugin}-{LIFECYCLE_TEMPLATE_NAME}",
+                AGENTS_SUBDIR_NAME,
+            ), f"{target.value} deviation outside the lifecycle skill's agents: {path}"
             assert path.suffix == capabilities[target].suffix, (
                 f"{target.value} deviation is not a native agent artifact: {path}"
             )
@@ -302,20 +304,29 @@ def test_frontmatter_strip_is_idempotent() -> None:
 
 
 def test_outputs_do_not_contain_execution_time_skill_content_injection() -> None:
+    # A command reads sister-skill content when it leaves its own skill directory
+    # or names a skill definition file.
+    def reads_sister_skill(command: str) -> bool:
+        return "../" in command or SKILL_FILENAME in command
+
     commands = execution_time_commands()
     assert commands
     for command in commands:
-        assert contains_execution_time_skill_content_injection(
+        injected = execution_time_injection_commands(
             f"{EXECUTION_TIME_INJECTION_START}{command}{EXECUTION_TIME_INJECTION_END}"
-        ), command
-        assert not contains_execution_time_skill_content_injection(command), command
+        )
+        assert injected == (command,), command
+        assert reads_sister_skill(command), command
+        assert execution_time_injection_commands(command) == (), command
     outputs = emitted_texts()
     assert outputs
     for row in outputs:
-        assert not contains_execution_time_skill_content_injection(row.text), (
-            row.target,
-            row.path,
-        )
+        offending = [
+            command
+            for command in execution_time_injection_commands(row.text)
+            if reads_sister_skill(command)
+        ]
+        assert not offending, (row.target, row.path, offending)
 
 
 def test_agent_capabilities_resolve_from_the_source_owned_registry() -> None:
