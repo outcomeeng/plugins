@@ -2,7 +2,7 @@
 name: orchestrate-change
 description: >-
   ALWAYS invoke this skill when starting the Executor session for a Change, or checking, restarting, or answering a running Executor. NEVER start an Executor session by hand without this skill.
-argument-hint: "<#N | owner/repo#N | issue-url> <absolute-worktree-root> <principal-mail-name> | check <#N> <principal-mail-name>"
+argument-hint: "<#N | owner/repo#N | issue-url> <absolute-worktree-root> <principal-mail-name> | check <#N | owner/repo#N | issue-url> <principal-mail-name>"
 allowed-tools: Read, {{! tool('use_skill') !}}, Bash(spx worktree status:*), Bash(gh issue view:*)
 ---
 
@@ -45,11 +45,11 @@ Every mode's last token is the principal: the agent-mail name of the position th
 
 **Check** — `$ARGUMENTS` is `check`, a Change the Orchestrator started, and the principal. One invocation is one bounded pass.
 
-1. Read the Change with `gh issue view <N> --repo <store> --json state,comments,projectItems`; its Status is the `status` name of the project item for the store's project, and its newest `Handoff:` or terminal comment comes from `comments`. `Applied`, `Refined`, or `Abandoned` goes to step 5; `Available` with a Handoff newer than the Claim goes to step 4.
-2. Use skill `coding-agents:operate-herdr` for one `read` of the Executor's pane and one `wait` with a `timeout` of `60000`. A `wait` that ends with the server state `working` shows progress and returns result `checked`.
+1. Read the Change with `gh issue view <reference> --repo <store> --json number,state,comments,projectItems`; its Status is the `status` name of the project item for the store's project, and its newest `Handoff:` or terminal comment comes from `comments`. `Applied`, `Refined`, or `Abandoned` goes to step 5; `Available` with a Handoff newer than the Claim goes to step 4.
+2. Use skill `coding-agents:operate-herdr` for an `inventory`, and select the one pane whose agent `name` is `change-<N>`; none or several returns `stopped` with the inventory result. Then use it for one `read` of that pane and one `wait` with a `timeout` of `60000`. A `wait` that ends with the server state `working` shows progress and returns result `checked`.
 3. A `prompt-stalled`, `wait-timeout`, or `agent-blocked` result is answered by one `prompt` whose text is the Change's issue reference. A read showing the harness's remaining-context indicator at or below 10% is answered by one `prompt` with text `/compact`. A pane whose session has ended receives one `relaunch` with the same `name`, `kind`, `timeout`, and `agentArguments` as its start, then one `prompt` with the Change's issue reference; the relaunched Executor continues from the Change and its newest Handoff. Return result `checked` with the operation taken.
 4. Read the stop condition and every question the newest Handoff's blockers carry. A blocker this position removes by acting — a pane, a launch, a schedule — is answered by taking that action; when every blocker is of that kind, stop the pane with one `operate-herdr` `stop` carrying `"mutationAuthorized": true` and run **Start** again with the same worktree root and principal, returning its result. Otherwise use skill `coding-agents:message-agents` to send every other question, verbatim with the Change reference, to the principal, and return result `checked` with the message ids; the Change stays released until the principal's answer reaches the Change record.
-5. When the Change is terminal and `spx worktree status` shows the worktree with no running Executor work, use skill `coding-agents:operate-herdr` for one `stop` of the pane with `"mutationAuthorized": true`, and return result `collected`.
+5. When the Change is terminal, run `spx worktree status`. When it shows the worktree with no running Executor work, use skill `coding-agents:operate-herdr` for one `stop` of the pane with `"mutationAuthorized": true`, and return result `collected`. When it still shows running work, return result `checked` with that status verbatim; a later Check collects the pane.
 
 </workflow>
 
