@@ -2,18 +2,19 @@
 name: orchestrate-change
 description: >-
   ALWAYS invoke this skill when starting the Executor session for a Change, or checking, restarting, or answering a running Executor. NEVER start an Executor session by hand without this skill.
-argument-hint: "<#N | owner/repo#N | issue-url> <absolute-worktree-root> | check <#N>"
+argument-hint: "<#N | owner/repo#N | issue-url> <absolute-worktree-root> <principal-mail-name> | check <#N> <principal-mail-name>"
 allowed-tools: Read, {{! tool('use_skill') !}}, Bash(spx worktree status:*), Bash(gh issue view:*)
 ---
 
 <objective>
-One Change held by the worktree of one Executor session this Orchestrator started with the spec-tree definition `change-executor` selected, checked until that session closes or releases the Change, with every question it raised answered or passed up the chain of positions.
+One Change held by the worktree of one Executor session this Orchestrator started with the spec-tree definition `change-executor` selected, checked until that session closes or releases the Change, with every question it raised answered by this position's action or passed to its principal.
 </objective>
 
 <essential_principles>
 
 - The Orchestrator is a position, never a Role of the Change: it produces no artifact of the Change and never acts as a Verifier.
 - `change-executor` is the one definition this skill starts a session with; the session's own `/execute-change` launches every other session of the Change.
+- Across the Changes this position orchestrates, blockers and questions are settled in the order of each Change's `Priority` project field.
 - The harness setting alone withholds the structured-question tool from the Executor session, on its start and on every relaunch; no skill detects whether its session is an Executor.
 - Every pane operation runs through `coding-agents:operate-herdr`. Every message record is sent after this instruction: Use skill `coding-agents:message-agents`.
 
@@ -31,21 +32,23 @@ Codex provides no native argument that starts a session with a configured subage
 
 `$ARGUMENTS` selects one mode. Empty arguments, or arguments matching neither mode, return result `stopped` with reason `arguments-required` and the expected shapes from `argument-hint`. Resolve a `#N` reference against the Change store `spx/local/coordination.md` declares; an absent overlay, or an `owner/repo` other than that store, returns `stopped` with the observed value.
 
-**Start** — `$ARGUMENTS` names a Change and the absolute root of the worktree its Executor works in.
+Every mode's last token is the principal: the agent-mail name of the position this Orchestrator reports to. Message records go to that name, and `coding-agents:message-agents` resolves this session's own registered sender.
+
+**Start** — `$ARGUMENTS` names a Change, the absolute root of the worktree its Executor works in, and the principal.
 
 1. Read the Change with `gh issue view <reference> --repo <store> --json number,url,state,assignees,comments`. Require the issue `OPEN`. Run `spx worktree status` and require the named root present in the pool with no running session; a root another live session holds returns `stopped` with that session's identity.
 2. Use skill `spec-tree:claim-change` with the Change reference and the worktree root, so the winning Claim names the Executor's worktree. A claim that reports `owned_elsewhere` or any unclaimable state returns `stopped` with that report.
 3. Use skill `coding-agents:operate-herdr` for an `inventory`, and require exactly one pane whose `cwd` equals the worktree root and that hosts no agent session. None or several returns `stopped` with the inventory result.
 4. Use skill `coding-agents:operate-herdr` for one `start` in that pane, with `name` `change-<N>`, `kind` `claude`, a `timeout` of `120000`, `"mutationAuthorized": true` under the operator's standing authorization for the panes this position starts, and `agentArguments` `["--agent", "{{! subagent_name('spec-tree', 'change-executor', 'claude') !}}", "--disallowedTools", "{{! tool('ask_user', 'claude') !}}"]`.
-5. When the harness's classifier refuses that `start`, submit the same `operate-herdr` request once more. A second refusal returns `stopped` with the refused request and the reason verbatim; then use skill `coding-agents:message-agents` to send that fact to the agent session holding the operator's conversation, resolved through that skill's recipient discovery.
+5. When the harness's classifier refuses that `start`, submit the same `operate-herdr` request once more. A second refusal returns `stopped` with the refused request and the reason verbatim; before returning, use skill `coding-agents:message-agents` to send that fact to the principal, and include its message id in the result.
 6. Use skill `coding-agents:operate-herdr` for one `prompt` whose `text` is the Change's issue reference, with `wait` until `working` and a `timeout` of `120000`. Return result `started` with the pane, the agent name, and the Claim.
 
-**Check** — `$ARGUMENTS` is `check` and a Change the Orchestrator started. One invocation is one bounded pass.
+**Check** — `$ARGUMENTS` is `check`, a Change the Orchestrator started, and the principal. One invocation is one bounded pass.
 
-1. Read the Change's Status and newest `Handoff:` or terminal comment with `gh issue view <N> --repo <store> --json state,comments`. `Applied`, `Refined`, or `Abandoned` goes to step 5; `Available` with a Handoff newer than the Claim goes to step 4.
-2. Use skill `coding-agents:operate-herdr` for one `read` of the Executor's pane and one `wait` with a `timeout` of `60000`. A session that shows progress returns result `checked`.
+1. Read the Change with `gh issue view <N> --repo <store> --json state,comments,projectItems`; its Status is the `status` name of the project item for the store's project, and its newest `Handoff:` or terminal comment comes from `comments`. `Applied`, `Refined`, or `Abandoned` goes to step 5; `Available` with a Handoff newer than the Claim goes to step 4.
+2. Use skill `coding-agents:operate-herdr` for one `read` of the Executor's pane and one `wait` with a `timeout` of `60000`. A `wait` that ends with the server state `working` shows progress and returns result `checked`.
 3. A `prompt-stalled`, `wait-timeout`, or `agent-blocked` result is answered by one `prompt` whose text is the Change's issue reference. A read showing the harness's remaining-context indicator at or below 10% is answered by one `prompt` with text `/compact`. A pane whose session has ended receives one `relaunch` with the same `name`, `kind`, `timeout`, and `agentArguments` as its start, then one `prompt` with the Change's issue reference; the relaunched Executor continues from the Change and its newest Handoff. Return result `checked` with the operation taken.
-4. Read every question the newest Handoff carries. When every one is a question the Orchestrator's scope settles — a launch, a pane, a schedule — use skill `coding-agents:message-agents` to answer each by the Change's Priority, stop the pane with one `operate-herdr` `stop` carrying `"mutationAuthorized": true`, and run **Start** again with the same worktree root, returning its result. Otherwise use skill `coding-agents:message-agents` to pass every question this scope does not settle, verbatim with the Change reference, up the chain of positions, and return result `checked`; the Change stays released until an answer arrives.
+4. Read the stop condition and every question the newest Handoff's blockers carry. A blocker this position removes by acting — a pane, a launch, a schedule — is answered by taking that action; when every blocker is of that kind, stop the pane with one `operate-herdr` `stop` carrying `"mutationAuthorized": true` and run **Start** again with the same worktree root and principal, returning its result. Otherwise use skill `coding-agents:message-agents` to send every other question, verbatim with the Change reference, to the principal, and return result `checked` with the message ids; the Change stays released until the principal's answer reaches the Change record.
 5. When the Change is terminal and `spx worktree status` shows the worktree with no running Executor work, use skill `coding-agents:operate-herdr` for one `stop` of the pane with `"mutationAuthorized": true`, and return result `collected`.
 
 </workflow>

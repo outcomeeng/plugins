@@ -18,7 +18,7 @@ About to choose an assertion's verification type (`[test]` / `[eval]` / `[probe]
 
 <quick_start>
 
-**PREREQUISITE**: Check for `<SPEC_TREE_FOUNDATION>` marker. If absent, invoke `/understand` first.
+**PREREQUISITE**: Check for `<SPEC_TREE_FOUNDATION>` marker. If absent, use skill `spec-tree:understand` first.
 
 Use the canonical templates and examples provided by `/understand`:
 
@@ -64,7 +64,7 @@ ADR vs PDR is decided by content only. A decision's reach — the nodes it const
 
 **Step 2: Load context for placement**
 
-Check for `<SPEC_TREE_CONTEXT>` marker. If absent or targeting a different path, invoke `/contextualize` for the parent directory where the artifact will be placed.
+Check for `<SPEC_TREE_CONTEXT>` marker. If absent or targeting a different path, use skill `spec-tree:contextualize` for the parent directory where the artifact will be placed.
 
 This loads:
 
@@ -72,7 +72,7 @@ This loads:
 - Ancestor ADRs/PDRs (to respect constraints)
 - Parent spec (to understand scope)
 
-**Bootstrap mode**: If `spx/` doesn't exist or has no product spec, invoke `/bootstrap` first. It interviews the user and scaffolds the initial tree. Return here after bootstrapping to author individual artifacts.
+**Bootstrap mode**: If `spx/` doesn't exist or has no product spec, use skill `spec-tree:bootstrap` first. It interviews the user and scaffolds the initial tree. Return here after bootstrapping to author individual artifacts.
 
 </step>
 
@@ -89,14 +89,14 @@ This loads:
 - Use the distribution formula for new items: `i_k = 10 + floor(k * 89 / (N + 1))`
 - Use midpoint insertion between existing indices
 - Refer to ADRs/PDRs by full path from `spx/`; never write a bare decision filename such as `15-build.adr.md`
-- Place a decision record only when loaded context identifies exactly one owning directory. If multiple directories could own the concept, a node name may be stale, or the path depends on concept ownership, node renaming, node splitting, parent/child boundaries, or context-loading reach, record the placement question in the Change that carries this work, then invoke `/decompose <node-address>` before proposing any ADR/PDR path. Pass only the target address; owning-directory selection belongs to decomposition.
+- Place a decision record only when loaded context identifies exactly one owning directory. If multiple directories could own the concept, a node name may be stale, or the path depends on concept ownership, node renaming, node splitting, parent/child boundaries, or context-loading reach, record the placement question in the Change that carries this work, then use skill `spec-tree:decompose` with `<node-address>` before proposing any ADR/PDR path. Pass only the target address; owning-directory selection belongs to decomposition.
 
 **For output and variant nodes:** Place as a child of a parent that admits the node's kind, where the concern belongs.
 
 - Create one node at a time only when the parent, kind, and index are already clear from loaded context
-- If sibling ordering, shared providers, vertical slices, or index placement need analysis, invoke `/decompose <parent-node-address>`
+- If sibling ordering, shared providers, vertical slices, or index placement need analysis, use skill `spec-tree:decompose` with `<parent-node-address>`
 - Derive the slug from the concern name (lowercase, hyphenated)
-- **When adding or restructuring 2+ sibling nodes in one pass, stop authoring child nodes and hand off structure to `/decompose`.** Record the user's decomposition intent, constraints, examples, known issues, and unresolved questions in the Change that carries this work, then invoke `/decompose <node-address>`. Pass only the node address; proposed children, proposed indices, and dependency order belong to the decomposition workflow.
+- **When adding or restructuring 2+ sibling nodes in one pass, stop authoring child nodes and hand off structure to `/decompose`.** Record the user's decomposition intent, constraints, examples, known issues, and unresolved questions in the Change that carries this work, then use skill `spec-tree:decompose` with `<node-address>`. Pass only the node address; proposed children, proposed indices, and dependency order belong to the decomposition workflow.
 
 Present the proposed placement to the user before creating files.
 
@@ -244,7 +244,7 @@ Write the file. If `AGENTS.md` doesn't exist, note that product guide creation r
 
 **Step 8: Align downstream declarations**
 
-When this authoring change creates or edits a product spec, ADR, PDR, or ancestor spec assertion, invoke `/align` over the changeset before summarizing. The same changeset must carry the first affected lower specs that receive the new truth. If downstream evidence or implementation remains after the lower specs are aligned, record the next step in the Change that carries this work.
+When this authoring change creates or edits a product spec, ADR, PDR, or ancestor spec assertion, use skill `spec-tree:align` over the changeset before summarizing. The same changeset must carry the first affected lower specs that receive the new truth. If downstream evidence or implementation remains after the lower specs are aligned, record the next step in the Change that carries this work.
 
 If `/align` reports that a higher-level declaration has no aligned lower spec, fix the alignment before delivery. Do not leave new higher-level truth floating above the tree.
 
@@ -298,7 +298,7 @@ How to avoid: Fix the kind through the ordered decision procedure in `/understan
 
 Claude created a new node at index 32 without checking existing siblings. Another node already occupied index 32. The directory was created but overwrote the existing node's path.
 
-How to avoid: Always invoke `/contextualize` for the parent directory before creating any node. The sibling enumeration in the context manifest reveals all occupied indices.
+How to avoid: Always use skill `spec-tree:contextualize` for the parent directory before creating any node. The sibling enumeration in the context manifest reveals all occupied indices.
 
 **Failure 5: Rewrite pattern for temporal language**
 
@@ -339,13 +339,13 @@ Scope: this failure fires only on minting a new record for a guarantee that woul
 
 Claude received a broad request, drafted several child nodes with indices, and then treated `/decompose` as confirmation. The child list encoded unexamined dependencies and left no room for the decomposition workflow to build its own model from the durable node spec and coordination notes.
 
-How to avoid: when a request needs multiple sibling nodes, capture the user's intent and constraints in the Change that carries the work, then invoke `/decompose <node-address>`. The decomposition workflow owns child boundaries, kinds, dependency edges, and index assignment.
+How to avoid: when a request needs multiple sibling nodes, capture the user's intent and constraints in the Change that carries the work, then use skill `spec-tree:decompose` with `<node-address>`. The decomposition workflow owns child boundaries, kinds, dependency edges, and index assignment.
 
 **Failure 10: Chose a decision path while ownership was unsettled**
 
 Claude received a request to capture vocabulary in exactly one PDR and to find which PDR. The concept crossed plausible owners and raised node identity questions, but Claude used the ADR/PDR placement rule to propose a root-level path before invoking `/decompose`.
 
-How to avoid: treat "which ADR/PDR?" as structural when the owning node, node name, split, parent/child boundary, or context-loading reach is unresolved. Record the placement question as intent, invoke `/decompose <node-address>` with only the target address, and let decomposition return the owning directory before authoring writes the decision.
+How to avoid: treat "which ADR/PDR?" as structural when the owning node, node name, split, parent/child boundary, or context-loading reach is unresolved. Record the placement question as intent, use skill `spec-tree:decompose` with `<node-address>` with only the target address, and let decomposition return the owning directory before authoring writes the decision.
 
 </failure_modes>
 

@@ -23,9 +23,10 @@ Use skill `spec-tree:wait-for-load` for every resource-intensive command any ste
 3. Read the skill inventory this session carries. Every installed `code-{lang}` skill names one available language `{lang}`; record the `architect-{lang}` and `simplify-{lang}` skills installed beside it. Never invoke a skill to find out whether it exists.
 4. Select the target language: the one available language in which the node's linked evidence and the implementation it reaches are written. When no available language matches, return `blocked` with reason `language-unavailable`. When more than one matches, return `blocked` with reason `language-ambiguous`, naming each candidate.
 5. When no ADR in the loaded context governs the language architecture the node's implementation uses, run `architect-{lang}` for the node, then use skill `spec-tree:author` to persist the decision it returns before any code depends on it.
-6. Run `code-{lang}` for the node, and run every deterministic check it selects to passing. A check that does not reach passing returns `failed` with the check and its output.
-7. Use skill `spec-tree:commit-changes` to checkpoint the changes steps 5 and 6 made, recording the verification state.
-8. When `simplify-{lang}` is installed, run it on that checkpoint and apply its result contract. When it is absent, skip this step.
+6. Run `code-{lang}` for the node, and run every deterministic check it selects to passing, through the language skill's own command grants or the harness's per-call approval.
+7. Use skill `spec-tree:commit-changes` to checkpoint the changes steps 5 and 6 made, recording the verification state. A check from step 6 that did not reach passing ends here with status `failed`, naming the check, its output, and this checkpoint.
+8. When `simplify-{lang}` is installed, run it on that checkpoint. Its `failed` result makes this skill's status `failed` and its `blocked` result makes it `blocked` with the simplify reason; any other result continues. When it is absent, skip to the result.
+9. When step 8 left changes, use skill `spec-tree:commit-changes` to checkpoint them. The final checkpoint is the one this result reports.
 
 </workflow>
 
@@ -39,7 +40,7 @@ Use skill `spec-tree:wait-for-load` for every resource-intensive command any ste
 
 <output_format>
 
-Return the status — `completed`, `blocked`, or `failed` — with the node path, the selected language, the skills run in order with each skill's result unchanged, the changed paths, the checkpoint's full commit id, and each deterministic command with its exit code. A `blocked` result carries its reason and, for `language-ambiguous`, the candidate languages; a `failed` result names the composed skill or check that failed and its output.
+Return the status — `completed`, `blocked`, or `failed` — with the node path, the selected language, the skills run in order with each skill's result unchanged, every changed path since the node's starting head, the final checkpoint's full commit id, and each deterministic command with its exit code. A `blocked` result carries its reason and, for `language-ambiguous`, the candidate languages; a `failed` result names the composed skill or check that failed and its output.
 
 </output_format>
 
