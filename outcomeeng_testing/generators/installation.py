@@ -1,7 +1,10 @@
 """Generated finite plugin selections for installation evidence."""
 
 import json
+import re
 from collections.abc import Mapping, Sequence
+from dataclasses import fields
+from itertools import product
 from enum import StrEnum
 from pathlib import Path
 from typing import cast
@@ -34,7 +37,11 @@ from outcomeeng.distribution.installation import (
     InstallationMode,
     Operation,
     SPEC_TREE_PLUGIN,
+    GIT_HOST_PREFIX,
+    GIT_SCHEME_SEPARATOR,
+    GIT_URL_SCHEMES,
     SourceAction,
+    UNPUBLISHED_PLUGIN_FRAGMENT,
     marketplace_plugin_identifier,
 )
 
@@ -758,10 +765,59 @@ def generated_concurrent_record_entry(
     return entry
 
 
+def generated_boolean_states[State](state: type[State]) -> tuple[State, ...]:
+    """Every value of a state whose dimensions are independent booleans.
+
+    The state's own fields name its dimensions, so the domain is each
+    combination of those fields, and a dimension added to the state widens
+    the domain without an edit here.
+    """
+    return tuple(
+        state(*values)
+        for values in product((False, True), repeat=len(fields(cast("type", state))))
+    )
+
+
+def generated_git_source_urls(marketplace: str) -> tuple[str, ...]:
+    """One marketplace source URL for every git form the source grammar names.
+
+    Each URL scheme the grammar recognises, and the `git@` host form, reaches
+    the same repository, so the forms differ only in how they spell a git
+    source.
+    """
+    path = f"git.example/{marketplace}"
+    return (
+        *(f"{scheme}{GIT_SCHEME_SEPARATOR}{path}" for scheme in GIT_URL_SCHEMES),
+        f"{GIT_HOST_PREFIX}{path.replace('/', ':', 1)}",
+    )
+
+
+def generated_non_pending_failure_wordings(
+    pending_wordings: Sequence[str],
+) -> tuple[str, ...]:
+    """Failure wordings that name no unpublished plugin, derived from real ones.
+
+    Each observed unpublished-plugin wording yields the same message with the
+    pending phrase struck, and with the phrase's words reordered, so the
+    wording stays a real CLI message in every other respect; an empty stderr
+    is the degenerate member. None carries the phrase the pending
+    classification reads.
+    """
+    phrase = re.compile(re.escape(UNPUBLISHED_PLUGIN_FRAGMENT), re.IGNORECASE)
+    reordered = " ".join(reversed(UNPUBLISHED_PLUGIN_FRAGMENT.split()))
+    wordings: list[str] = [""]
+    for wording in pending_wordings:
+        wordings.append(phrase.sub("", wording))
+        wordings.append(phrase.sub(reordered, wording))
+    return tuple(wordings)
+
+
 __all__ = [
     "catalog_plugin_names_from_bytes",
     "catalog_plugin_names_from_document",
     "generated_agent_subsets",
+    "generated_boolean_states",
+    "generated_git_source_urls",
     "generated_catalog_subset",
     "generated_claude_install_records",
     "generated_claude_listing_entries",
@@ -778,6 +834,7 @@ __all__ = [
     "generated_concurrent_record_entry",
     "generated_failure_classification_cases",
     "generated_invalid_catalog_subsets",
+    "generated_non_pending_failure_wordings",
     "generated_persistent_catalog_selections",
     "generated_valid_catalog_subsets",
 ]

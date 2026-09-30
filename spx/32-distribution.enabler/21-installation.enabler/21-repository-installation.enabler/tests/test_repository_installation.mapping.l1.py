@@ -8,6 +8,7 @@ import pytest
 from outcomeeng.distribution.installation import (
     Agent,
     CLAUDE_CATALOG_PATH,
+    CLAUDE_GIT_SOURCE_TYPE,
     CLAUDE_PLUGIN_ID_FIELD,
     CLAUDE_PLUGIN_PROJECT_PATH_FIELD,
     CLAUDE_PLUGIN_SCOPE_FIELD,
@@ -26,6 +27,7 @@ from outcomeeng.distribution.installation import (
     SourceAction,
     UNCATALOGED_RECORD_WARNING,
     claude_registered_marketplace,
+    claude_source_type,
     installed_plugin_names,
     marketplace_plugin_name,
 )
@@ -37,6 +39,7 @@ from outcomeeng_testing.generators.installation import (
     generated_claude_listing_entries,
     generated_codex_listing_entries,
     generated_failure_classification_cases,
+    generated_git_source_urls,
 )
 from outcomeeng_testing.harnesses.installation import (
     MARKETPLACE,
@@ -362,3 +365,8 @@ def test_each_registry_entry_shape_maps_to_the_source_the_run_refreshes_from() -
             assert expected_source not in source_operations[0].argv, shape
             assert plan.claude_clone == observation.clone
     assert {shape for _, shape, _, _ in observation.rows} == set(RegistryShape)
+
+
+def test_every_git_source_form_maps_to_the_git_source_type() -> None:
+    for url in generated_git_source_urls(MARKETPLACE):
+        assert claude_source_type(url) == CLAUDE_GIT_SOURCE_TYPE, url
