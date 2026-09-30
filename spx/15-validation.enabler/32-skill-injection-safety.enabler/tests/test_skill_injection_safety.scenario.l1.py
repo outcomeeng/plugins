@@ -15,8 +15,6 @@ import pytest
 
 from outcomeeng.validation.skill_injection_safety import (
     INJECTION_FENCE_TOKEN,
-    INLINE_INJECTION_END,
-    INLINE_INJECTION_START,
     PARENT_DIRECTORY_SEGMENT,
     SKILL_FILENAME,
     ViolationKind,
@@ -24,13 +22,10 @@ from outcomeeng.validation.skill_injection_safety import (
     scan_file,
     scan_paths,
 )
-
-
-def _write_skill(directory: Path, *, body: str, name: str = SKILL_FILENAME) -> Path:
-    directory.mkdir(parents=True, exist_ok=True)
-    path = directory / name
-    path.write_text(body, encoding="utf-8")
-    return path
+from outcomeeng_testing.harnesses.skill_injection_safety import (
+    inline_injection,
+    write_skill,
+)
 
 
 def test_token_present_reports_file_and_line_and_exits_nonzero(
@@ -39,7 +34,7 @@ def test_token_present_reports_file_and_line_and_exits_nonzero(
 ) -> None:
     # Token placed on a known line; the expected line derives from construction.
     lines = ["# Heading", "", f"prose with {INJECTION_FENCE_TOKEN} inline", ""]
-    skill = _write_skill(tmp_path, body="\n".join(lines))
+    skill = write_skill(tmp_path, body="\n".join(lines))
 
     violations = scan_file(skill)
     assert [(v.path, v.line) for v in violations] == [(skill, 3)]
@@ -52,7 +47,7 @@ def test_token_present_reports_file_and_line_and_exits_nonzero(
 
 
 def test_clean_skill_reports_no_error_and_exits_zero(tmp_path: Path) -> None:
-    skill = _write_skill(tmp_path, body="# Heading\n\nplain prose, no fence\n")
+    skill = write_skill(tmp_path, body="# Heading\n\nplain prose, no fence\n")
     assert scan_file(skill) == []
     assert main([str(skill)]) == 0
 
@@ -61,9 +56,9 @@ def test_one_offender_among_many_is_named(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    clean_a = _write_skill(tmp_path / "a", body="# A\n\nclean\n")
-    offender = _write_skill(tmp_path / "b", body=f"# B\n\n{INJECTION_FENCE_TOKEN}\n")
-    clean_c = _write_skill(tmp_path / "c", body="# C\n\nclean\n")
+    clean_a = write_skill(tmp_path / "a", body="# A\n\nclean\n")
+    offender = write_skill(tmp_path / "b", body=f"# B\n\n{INJECTION_FENCE_TOKEN}\n")
+    clean_c = write_skill(tmp_path / "c", body="# C\n\nclean\n")
 
     violations = scan_paths([clean_a, offender, clean_c])
     assert [v.path for v in violations] == [offender]
@@ -75,13 +70,9 @@ def test_one_offender_among_many_is_named(
 
 def test_non_skill_basename_is_skipped(tmp_path: Path) -> None:
     # Contains the token but is not named SKILL.md.
-    other = _write_skill(tmp_path, body=f"{INJECTION_FENCE_TOKEN}\n", name="README.md")
+    other = write_skill(tmp_path, body=f"{INJECTION_FENCE_TOKEN}\n", name="README.md")
     assert scan_paths([other]) == []
     assert main([str(other)]) == 0
-
-
-def _inline(command: str) -> str:
-    return f"{INLINE_INJECTION_START}{command}{INLINE_INJECTION_END}"
 
 
 @pytest.mark.parametrize(
@@ -97,8 +88,8 @@ def test_sister_skill_injection_reports_file_and_line_and_exits_nonzero(
     capsys: pytest.CaptureFixture[str],
     command: str,
 ) -> None:
-    lines = ["# Heading", "", f"Context: {_inline(command)}", ""]
-    skill = _write_skill(tmp_path, body="\n".join(lines))
+    lines = ["# Heading", "", f"Context: {inline_injection(command)}", ""]
+    skill = write_skill(tmp_path, body="\n".join(lines))
 
     violations = scan_file(skill)
     assert [(v.path, v.line, v.kind) for v in violations] == [
@@ -111,7 +102,7 @@ def test_sister_skill_injection_reports_file_and_line_and_exits_nonzero(
 
 
 def test_own_skill_injection_is_accepted(tmp_path: Path) -> None:
-    body = f"# Heading\n\nBranch: {_inline('git branch --show-current')}\n"
-    skill = _write_skill(tmp_path, body=body)
+    body = f"# Heading\n\nBranch: {inline_injection('git branch --show-current')}\n"
+    skill = write_skill(tmp_path, body=body)
     assert scan_file(skill) == []
     assert main([str(skill)]) == 0
