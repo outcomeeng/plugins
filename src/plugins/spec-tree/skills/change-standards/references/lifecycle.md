@@ -62,8 +62,8 @@ Handoff:
 - Branch or PR: <pushed work branch, or the PR URL, or `none`>
 - Completed Activities: <checked items, by their text>
 - Next Activity: <the first unchecked Activity, or `refinement: <Maturity> → <next level>` below Executable>
-- Blockers: <blocking Change URLs still active, or `none`>
-- Hazards: <what the next holder cannot derive quickly — an unsealed run, a held checkout, a flaky check — each with the read-only command that re-confirms it>
+- Blockers: <blocking Change URLs still active, and each question the stopped work leaves for the operator, verbatim; or `none`>
+- Hazards: <why the work stopped, and what the next holder cannot derive quickly — an unsealed run, a held checkout, a flaky check — each with the read-only command that re-confirms it>
 ```
 
 Optional context lines after the five: the current agent session id and the assigned worktree root. The Handoff records what was true when it was posted; refinement of the Output belongs in the body, before the release.

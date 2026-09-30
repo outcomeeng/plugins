@@ -363,4 +363,6 @@ One content may name a prohibited path: the rule prohibiting it. A standard list
 
 **A permission prompt is a result, not an obstacle.** When a tool layer declines a path, that decline is the boundary working. Never document a way around it — a shell redirect standing in for a refused tool write, a broader permission substituted for a narrow one, a path rewritten to dodge a check. Name a path inside the boundary instead. A skill that teaches evasion converts one operator's approval into every future session's bypass.
 
+**An automated classifier's refusal admits one retrace-bound retry.** When a classifier refuses a request the operator's authorization already covers, a skill may direct one retry, and only after Claude steps back and retraces what led to the refusal: the request as sent, the reason the classifier gave, and each earlier step that shaped the request. The retry carries only the correction the retrace found; it never rewords the request to hide what the classifier objected to, and a second refusal is the result. An operator's permission prompt and a guard's block admit no retry.
+
 </path_boundary>

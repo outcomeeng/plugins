@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import subprocess
 from collections import Counter
 from dataclasses import dataclass
 from functools import cache
@@ -35,8 +36,10 @@ from outcomeeng.distribution.contracts import (
     AGENTS_SUBDIR_NAME,
     BUILD_TARGET_VARIABLE,
     DIST_DIR_NAME,
+    FRONTMATTER_DELIMITER,
     MARKDOWN_FILE_SUFFIX,
     PLUGINS_DIR_NAME,
+    SOURCE_ROOT_NAME,
     PLUGIN_SUBDIRS,
     REFERENCES_SUBDIR_NAME,
     SKILLS_SUBDIR_NAME,
@@ -121,6 +124,23 @@ def source_emission_counts() -> dict[Target, Counter[Path]]:
         )
         for target in Target
     }
+
+
+def tracked_plugin_sources() -> tuple[Path, ...]:
+    """Return every authored plugin file Git tracks, independently of the build.
+
+    The listing comes from the repository index, so a file the build's own source
+    walk skips still appears here.
+    """
+    listing = subprocess.run(
+        ["git", "ls-files", "-z", "--", f"{SOURCE_ROOT_NAME}/{PLUGINS_DIR_NAME}"],
+        cwd=REPOSITORY_ROOT,
+        capture_output=True,
+        check=True,
+    ).stdout.decode("utf-8")
+    return tuple(
+        sorted(REPOSITORY_ROOT / entry for entry in listing.split("\0") if entry)
+    )
 
 
 def projected_sources() -> tuple[Path, ...]:
@@ -582,7 +602,10 @@ def _frontmatter_source(case: SourceScenario) -> str:
         f"{field}: {case.outer_topic}"
         for field in (ALLOWED_TOOLS_FIELD, ARGUMENT_HINT_FIELD)
     )
-    return f"---\n{claude_fields}\n{portable_fields}\n---\n{case.fragment_body}"
+    return (
+        f"{FRONTMATTER_DELIMITER}\n{claude_fields}\n{portable_fields}\n"
+        f"{FRONTMATTER_DELIMITER}\n{case.fragment_body}"
+    )
 
 
 @dataclass(frozen=True)
@@ -644,6 +667,6 @@ def target_scoped_agent_observations() -> tuple[TargetScopedAgentObservation, ..
 def _target_scoped_agent_source(stem: str, declared: tuple[Target, ...]) -> str:
     listed = "".join(f"  - {target.value}\n" for target in declared)
     return (
-        f"---\n{AGENT_NAME_FIELD}: {stem}\n{AGENT_DESCRIPTION_FIELD}: Target-scoped agent.\n"
-        f"{AGENT_TARGETS_FIELD}:\n{listed}---\n\nRelay the supplied target.\n"
+        f"{FRONTMATTER_DELIMITER}\n{AGENT_NAME_FIELD}: {stem}\n{AGENT_DESCRIPTION_FIELD}: Target-scoped agent.\n"
+        f"{AGENT_TARGETS_FIELD}:\n{listed}{FRONTMATTER_DELIMITER}\n\nRelay the supplied target.\n"
     )

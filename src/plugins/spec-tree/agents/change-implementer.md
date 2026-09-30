@@ -5,6 +5,7 @@ description: >-
 profile: standard
 targets:
   - claude
+disallowedTools: Agent, {{! tool('ask_user') !}}
 skills:
   - spec-tree:implement-change
 ---

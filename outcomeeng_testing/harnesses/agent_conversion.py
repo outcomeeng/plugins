@@ -26,6 +26,7 @@ from outcomeeng.distribution.agents import (
 from outcomeeng.distribution.build import build
 from outcomeeng.distribution.contracts import (
     DIST_CODEX_PLUGINS_DIR,
+    FRONTMATTER_DELIMITER,
     Target,
     PLUGINS_DIR_NAME,
     SOURCE_ROOT_NAME,
@@ -142,9 +143,9 @@ def authored_agent_targets(source: Path) -> frozenset[Target]:
     if source.parent.name != AGENT_SOURCE_DIRECTORY_NAME:
         return frozenset(Target)
     lines = source.read_text(encoding="utf-8").split("\n")
-    if lines[0] != "---" or "---" not in lines[1:]:
+    if lines[0] != FRONTMATTER_DELIMITER or FRONTMATTER_DELIMITER not in lines[1:]:
         raise ValueError(f"{source}: expected YAML frontmatter delimiters")
-    frontmatter = lines[1 : lines.index("---", 1)]
+    frontmatter = lines[1 : lines.index(FRONTMATTER_DELIMITER, 1)]
     key = f"{AGENT_TARGETS_FIELD}:"
     if key not in frontmatter:
         return frozenset(Target)
@@ -159,9 +160,11 @@ def authored_agent_targets(source: Path) -> frozenset[Target]:
 def agent_document_oracle(path: Path) -> AgentDocumentOracle:
     """Read an agent document through PyYAML instead of the production parser."""
     text = path.read_text(encoding="utf-8")
-    if not text.startswith("---\n"):
+    if not text.startswith(f"{FRONTMATTER_DELIMITER}\n"):
         raise ValueError(f"{path}: expected YAML frontmatter opener")
-    frontmatter_text, separator, body = text.removeprefix("---\n").partition("\n---\n")
+    frontmatter_text, separator, body = text.removeprefix(
+        f"{FRONTMATTER_DELIMITER}\n"
+    ).partition(f"\n{FRONTMATTER_DELIMITER}\n")
     if not separator:
         raise ValueError(f"{path}: expected YAML frontmatter closer")
     loaded = yaml.safe_load(frontmatter_text)

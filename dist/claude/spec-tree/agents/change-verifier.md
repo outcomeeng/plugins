@@ -4,6 +4,7 @@ effort: "medium"
 name: change-verifier
 description: >-
   Round session `/execute-change` launches by exact name when an Activity needs assertions routed to their verification type and evidence produced or repaired through `/verify`.
+disallowedTools: Agent, AskUserQuestion
 skills:
   - spec-tree:verify
 ---

@@ -6,6 +6,20 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.10.0
+
+### Breaking
+
+- **`/orchestrate-officers` is removed**, with its workflows and its ledger derivation script. `/orchestrate-change` takes its place.
+
+### Added
+
+- **`/orchestrate-change` carries the Orchestrator position's duties for one Change.** Start claims the Change for an Executor and starts that session with spec-tree's `change-executor` definition selected, withholding the structured-question tool on the start and every relaunch. Check reads the Change's `Lifecycle` issue field and its newest Handoff, acts on pane blockers, and sends each question to the principal once. On Codex, Start returns `unavailable`.
+
+### Changed
+
+- **No skill, manifest or catalog text names an officer.** `/operate-herdr` and the plugin descriptions name the methodology's positions and roles.
+
 ## Unreleased
 
 ### Breaking

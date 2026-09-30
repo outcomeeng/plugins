@@ -46,6 +46,7 @@ from outcomeeng_testing.harnesses.target_emission import (
     execution_time_injection_commands,
     projected_versus_emitted,
     projected_sources,
+    tracked_plugin_sources,
     text_emissions,
     emitted_texts,
     repeated_include_observations,
@@ -63,6 +64,8 @@ def test_every_source_file_emits_to_both_target_trees() -> None:
     counts = source_emission_counts()
     sources = projected_sources()
     assert sources
+    unprojected = set(tracked_plugin_sources()) - set(sources)
+    assert not unprojected, f"authored sources the build never emits: {unprojected}"
     template_sources = set(template_source_files(CANONICAL_SOURCE_ROOT))
     plugin_count = len(plugin_names(CANONICAL_SOURCE_ROOT))
     for target, per_source in counts.items():

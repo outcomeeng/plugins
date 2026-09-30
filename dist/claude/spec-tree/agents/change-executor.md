@@ -4,6 +4,7 @@ effort: "medium"
 name: change-executor
 description: >-
   ALWAYS select at session start when an agent session executes one claimed Executable Change as its Executor through `/execute-change`.
+disallowedTools: "AskUserQuestion"
 skills:
   - spec-tree:execute-change
 ---

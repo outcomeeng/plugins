@@ -10,6 +10,27 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.100.0
+
+### Breaking
+
+- **Each Change field has one home in the GitHub store.** The issue title holds `title`; the organization issue fields `Product`, `Maturity` and `Lifecycle` hold those three fields; the organization text issue field `Predecessors` holds `refined_from`, as canonical identities such as `owner/repo#N` separated by a comma and one space; native issue dependencies hold `blocked_by`; and the issue body starts at `# Output`, with no front matter and no lineage line. `/claim-change`, `/release-change` and `/close-change` write the `Lifecycle` issue field, `/author-change` publishes to these homes and reads each back, and `/execute-change` reads them. No skill reads or writes a project field, so a store that still holds Lifecycle only in a project's `Status` field reads as missing its `Lifecycle` value.
+
+### Added
+
+- **`/execute-change` executes one Change as its Executor.** It confirms that the winning Claim names its own worktree, and for each round it launches one configured session per producing skill the round needs: `change-author` fronts `/author`, `change-verifier` fronts `/verify`, `change-tester` fronts `/test`, and `change-implementer` fronts `/implement-change`. The `change-executor` definition fronts `/execute-change`. The five definitions ship for Claude Code only; on Codex, `/execute-change` returns `unavailable`.
+- **`/implement-change` runs the target language's `architect-{lang}`, `code-{lang}` and `simplify-{lang}` skills** in one session, after finding the installed language skills.
+
+### Changed
+
+- **A Change is held by the worktree its winning Claim names.** `/claim-change` takes an optional worktree root to claim for, and `/release-change` and `/close-change` accept the session whose assigned worktree root equals the winning Claim's.
+- **`/author`, `/verify` and `/test` run load-gated commands in the foreground** and report only after every such command has exited.
+- **`/apply` runs the detected language's `simplify-{lang}` skill in its own conversation**, in place of a language-specific simplifier agent.
+
+### Requires
+
+- The Change store's owning organization defines the issue fields `Product`, `Maturity` and `Lifecycle`, and the text issue field `Predecessors`. `spx/local/coordination.md` names the store and Product, and no project.
+
 ## 0.98.4
 
 ### Requires
