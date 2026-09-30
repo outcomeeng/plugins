@@ -15,12 +15,12 @@ from outcomeeng.hygiene.clean import (
     CLEAN_BASE_ARGV,
     GIT_IGNORE_FILE,
     GIT_METADATA_DIR,
-    PATHSPEC_SEPARATOR,
     SPX_STORE_DIR,
     build_clean_argv,
     build_clean_pathspecs,
 )
 from outcomeeng_testing.harnesses.clean import (
+    GIT_END_OF_OPTIONS,
     EnvironmentPlacement,
     IGNORED_CACHE_DIR,
     IGNORED_PYTHON_ENV_DIR,
@@ -38,7 +38,9 @@ def test_pathspec_separator_is_present_before_generated_pathspecs(
         active_python_prefix=repo.active_python_prefix,
     )
 
-    assert argv[:4] == (*CLEAN_BASE_ARGV, PATHSPEC_SEPARATOR)
+    base_length = len(CLEAN_BASE_ARGV)
+    assert argv[:base_length] == CLEAN_BASE_ARGV
+    assert argv[base_length] == GIT_END_OF_OPTIONS
 
 
 def test_no_cleanup_candidates_return_empty_argv(

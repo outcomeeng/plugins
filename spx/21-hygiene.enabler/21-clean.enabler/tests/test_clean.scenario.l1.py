@@ -10,16 +10,16 @@ no runner.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from outcomeeng.hygiene.clean import (
     CLEAN_BASE_ARGV,
-    PATHSPEC_SEPARATOR,
-    SUCCESS_EXIT_CODE,
     build_clean_argv,
     clean,
 )
 from outcomeeng_testing.harnesses.clean import (
+    GIT_END_OF_OPTIONS,
     IGNORED_CACHE_DIR,
     IGNORED_PYTHON_ENV_DIR,
     RecordingRunner,
@@ -38,10 +38,12 @@ def test_clean_omits_active_environment_from_pathspecs(tmp_path: Path) -> None:
         active_python_prefix=repo.active_python_prefix,
     )
 
-    assert exit_code == SUCCESS_EXIT_CODE
+    assert exit_code == os.EX_OK
     assert len(runner.calls) == 1
     assert runner.calls[0].cwd == repo.root
-    assert runner.calls[0].argv[:4] == (*CLEAN_BASE_ARGV, PATHSPEC_SEPARATOR)
+    base_length = len(CLEAN_BASE_ARGV)
+    assert runner.calls[0].argv[:base_length] == CLEAN_BASE_ARGV
+    assert runner.calls[0].argv[base_length] == GIT_END_OF_OPTIONS
     assert IGNORED_CACHE_DIR in runner.calls[0].argv
     assert IGNORED_PYTHON_ENV_DIR not in runner.calls[0].argv
 
@@ -84,5 +86,5 @@ def test_clean_noops_when_every_top_level_path_is_protected(tmp_path: Path) -> N
         active_python_prefix=repo.active_python_prefix,
     )
 
-    assert exit_code == SUCCESS_EXIT_CODE
+    assert exit_code == os.EX_OK
     assert runner.calls == []

@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import os
 from hypothesis import given
 
-from outcomeeng.hygiene.clean import SUCCESS_EXIT_CODE, clean
+from outcomeeng.hygiene.clean import clean
 from outcomeeng.hygiene.xml_spacing import fix_file
 from outcomeeng_testing.generators.hygiene import (
     CleanWorkspaceCase,
@@ -50,6 +51,6 @@ def test_clean_is_idempotent(case: CleanWorkspaceCase) -> None:
             active_python_prefix=workspace.active_python_prefix,
         )
 
-        assert first_exit_code == SUCCESS_EXIT_CODE
-        assert second_exit_code == SUCCESS_EXIT_CODE
+        assert first_exit_code == os.EX_OK
+        assert second_exit_code == os.EX_OK
         assert workspace.snapshot() == first_result

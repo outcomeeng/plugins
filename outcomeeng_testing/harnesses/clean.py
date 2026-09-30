@@ -19,13 +19,18 @@ from enum import StrEnum
 from pathlib import Path
 import subprocess
 
-from outcomeeng.hygiene.clean import GIT_IGNORE_FILE, SPX_STORE_DIR, Runner
+from outcomeeng.hygiene.clean import (
+    CLEAN_BASE_ARGV,
+    GIT_IGNORE_FILE,
+    SPX_STORE_DIR,
+    Runner,
+)
 
 IGNORED_CACHE_DIR = ".cache"
 IGNORED_PYTHON_ENV_DIR = ".venv"
 EXTERNAL_PYTHON_ENV_DIR = "external-venv"
-DRY_RUN_FLAG_INDEX = 2
-DRY_RUN_FLAGS = "-ndX"
+GIT_DRY_RUN_OPTION = "--dry-run"
+GIT_END_OF_OPTIONS = "--"
 REMOVAL_LINE_PREFIX = "Would remove "
 
 
@@ -115,15 +120,14 @@ def observe_dry_run_removals(
 ) -> frozenset[str]:
     """Return the top-level paths Git reports it would remove for `argv`.
 
-    Runs the cleanup argv in dry-run form against the arranged repository and
-    reports each listed path with its trailing separator stripped, so the
-    linked test owns the comparison against the paths it expects.
+    Inserts Git's dry-run option directly after the base command the module
+    composed, so the dry run exercises the exact flags the module emits, then
+    runs it against the arranged repository and reports each listed path with
+    its trailing separator stripped. The linked test owns the comparison
+    against the paths it expects.
     """
-    dry_run_argv = (
-        *argv[:DRY_RUN_FLAG_INDEX],
-        DRY_RUN_FLAGS,
-        *argv[DRY_RUN_FLAG_INDEX + 1 :],
-    )
+    base_length = len(CLEAN_BASE_ARGV)
+    dry_run_argv = (*argv[:base_length], GIT_DRY_RUN_OPTION, *argv[base_length:])
     result = subprocess.run(
         dry_run_argv,
         cwd=repo.root,
@@ -162,6 +166,8 @@ __all__ = [
     "CleanRepo",
     "EXTERNAL_PYTHON_ENV_DIR",
     "EnvironmentPlacement",
+    "GIT_DRY_RUN_OPTION",
+    "GIT_END_OF_OPTIONS",
     "IGNORED_CACHE_DIR",
     "IGNORED_PYTHON_ENV_DIR",
     "RecordingRunner",
