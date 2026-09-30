@@ -206,16 +206,16 @@ def select_authentication(environment: Mapping[str, str]) -> AuthenticationSelec
             raise DiscoveryAuthenticationError(
                 f"Subscription discovery requires an explicit dedicated {CODEX_HOME_ENV} and a defined {HOME_ENV}."
             )
-        selected = Path(home).resolve()
+        codex_home = Path(home).resolve()
         personal = Path(parent).resolve()
-        if selected in (
+        if codex_home in (
             personal,
             (Path(parent) / PERSONAL_CODEX_HOME_DIRNAME).resolve(),
         ):
             raise DiscoveryAuthenticationError(
-                f"Subscription discovery refuses {CODEX_HOME_ENV} {selected}: it resolves to {HOME_ENV} or {HOME_ENV}/{PERSONAL_CODEX_HOME_DIRNAME}; set a dedicated {CODEX_HOME_ENV}."
+                f"Subscription discovery refuses {CODEX_HOME_ENV} {codex_home}: it resolves to {HOME_ENV} or {HOME_ENV}/{PERSONAL_CODEX_HOME_DIRNAME}; set a dedicated {CODEX_HOME_ENV}."
             )
-        return AuthenticationSelection(mode, saved_login=selected / AUTH_FILENAME)
+        return AuthenticationSelection(mode, saved_login=codex_home / AUTH_FILENAME)
     variable = (
         CODEX_API_KEY_ENVIRONMENT
         if mode is AuthenticationMode.API
