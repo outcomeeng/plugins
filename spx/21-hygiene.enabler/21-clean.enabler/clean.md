@@ -10,18 +10,20 @@ This paragraph declares the base command and the protected set; the module compl
 
 Evidence for an assertion of this node states the outcome the governed code decides. A predicate that holds whether or not that code runs is not evidence, in either layer: not a test whose expectation the arrangement alone satisfies, and not an assertion whose link no mutation of the governed code can falsify.
 
-The values this node declares are these, and each carries the evidence named beside it. A value absent from this list is not declared by the node.
+Every value this node spells out is listed here with its owner and the evidence it takes. A value absent from this list is not spelled by the node.
 
-| Declared value                  | Evidence                                                              |
-| ------------------------------- | --------------------------------------------------------------------- |
-| The base command                | audit, against the module's own base argv                             |
-| Its flag combination            | audit, against the same argv                                          |
-| The protected name `.git`       | audit, against the module's metadata-directory name                   |
-| The protected name `.gitignore` | audit, against the module's ignore-file name                          |
-| The protected name `.spx`       | audit, against the module's session-store name                        |
-| The active Python environment   | test — a path resolved at runtime, not a literal this node spells out |
+| Value                           | Owner                              | Evidence                                            |
+| ------------------------------- | ---------------------------------- | --------------------------------------------------- |
+| The base command                | this node                          | audit, against the module's own base argv           |
+| Its flag combination            | this node                          | audit, against the same argv                        |
+| The protected name `.git`       | this node                          | audit, against the module's metadata-directory name |
+| The protected name `.gitignore` | this node                          | audit, against the module's ignore-file name        |
+| The protected name `.spx`       | this node                          | audit, against the module's session-store name      |
+| The pathspec separator `--`     | Git's end-of-options convention    | test, against that convention's name                |
+| The success exit code `0`       | the process exit-status convention | test, against the standard library's name for it    |
+| The active Python environment   | the running interpreter            | test — a path resolved at runtime, not a literal    |
 
-A test may import any of these values to arrange or read a case; what it may not do is stand as the evidence that the module's value equals the one declared here, because both sides of that comparison come from the same source. The behavior around each value — which paths the builder omits, which it keeps, what it returns when nothing is left — is test evidence and states no literal.
+A value this node owns admits no test of its agreement with the module, because every oracle for it would be a second declaration of the same choice; audit judges that agreement. A value an outside convention owns does admit one, because its oracle is the convention's own name rather than a copy of the module's. A test may import any of these values to arrange or read a case. The behavior around each value — which paths the builder omits, which it keeps, what it returns when nothing is left — is test evidence and restates no value the node owns.
 
 The module invokes the command in the repository root whose top-level entries produced the pathspecs. That root reaches the command boundary with the argv, so the declaration holds for every caller rather than only for one whose working directory already matches.
 
@@ -30,15 +32,15 @@ The module invokes the command in the repository root whose top-level entries pr
 ### Scenarios
 
 - Given `clean` runs from an active Python environment inside the repository, when the runner records its call, then the recorded argv passes top-level pathspecs that omit that environment and the recorded call runs in the repository root those pathspecs were computed for ([test](tests/test_clean.scenario.l1.py))
-- Given the generated argv is translated to a `git clean -ndX` dry run in a repository with an ignored `.spx/` directory, an ignored active environment, and another ignored cache, then Git lists only the other cache ([test](tests/test_clean.scenario.l1.py))
+- Given the generated argv run as a Git dry run in a repository with an ignored session store, an ignored active environment, and another ignored cache, then Git lists only the other cache ([test](tests/test_clean.scenario.l1.py))
 - Given the runner returns a non-zero exit code, when `clean` runs, then the exit code is propagated to the caller ([test](tests/test_clean.scenario.l1.py))
-- Given every top-level path is protected, when `clean` runs, then the runner is not invoked and the exit code is 0 ([test](tests/test_clean.scenario.l1.py))
+- Given every top-level path is protected, when `clean` runs, then the runner is not invoked and the call reports success ([test](tests/test_clean.scenario.l1.py))
 
 ### Compliance
 
 - ALWAYS: begin the generated argv with the declared base command when cleanup candidates exist ([test](tests/test_clean.compliance.l1.py))
-- ALWAYS: every value the table above lists as audit evidence — the base command, its flag combination, and the three protected names — equals the value the module declares ([audit])
-- ALWAYS: separate the base command from generated pathspecs with `--` ([test](tests/test_clean.compliance.l1.py))
+- ALWAYS: every value the table above assigns to this node — the base command, its flag combination, and the three protected names — equals the value the module declares ([audit])
+- ALWAYS: separate the base command from generated pathspecs with the pathspec separator ([test](tests/test_clean.compliance.l1.py))
 - NEVER: include the active in-repository Python environment in the generated pathspecs ([test](tests/test_clean.compliance.l1.py))
 - NEVER: include the session store in the generated pathspecs while another ignored cache remains one — the store is operational state a live session reads ([test](tests/test_clean.compliance.l1.py))
 - NEVER: include the repository's own metadata in the generated pathspecs — neither its directory nor its ignore file is ever a cleanup candidate ([test](tests/test_clean.compliance.l1.py))
