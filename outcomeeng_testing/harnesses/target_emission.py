@@ -2,14 +2,19 @@
 
 from __future__ import annotations
 
+import subprocess
 from collections import Counter
 from dataclasses import dataclass
 from functools import cache
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from outcomeeng.distribution.agents import (
+    AGENT_DESCRIPTION_FIELD,
+    AGENT_NAME_FIELD,
+    AGENT_TARGETS_FIELD,
+)
 from outcomeeng.distribution.build import (
-    AGENT_CAPABILITY_REGISTRY,
     EmissionProjection,
     CLAUDE_SKILL_DIR_TOKEN,
     DISABLE_MODEL_INVOCATION_FIELD,
@@ -17,7 +22,9 @@ from outcomeeng.distribution.build import (
     IGNORED_SOURCE_DIRECTORY_NAMES,
     IGNORED_SOURCE_FILE_SUFFIXES,
     SHARED_FRAGMENT_FILENAME,
+    SourceFormatError,
     SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE,
+    TEMPLATES_DIR_NAME,
     IncludeDirective,
     build,
     format_directive,
@@ -29,8 +36,10 @@ from outcomeeng.distribution.contracts import (
     AGENTS_SUBDIR_NAME,
     BUILD_TARGET_VARIABLE,
     DIST_DIR_NAME,
+    FRONTMATTER_DELIMITER,
     MARKDOWN_FILE_SUFFIX,
     PLUGINS_DIR_NAME,
+    SOURCE_ROOT_NAME,
     PLUGIN_SUBDIRS,
     REFERENCES_SUBDIR_NAME,
     SKILLS_SUBDIR_NAME,
@@ -107,6 +116,41 @@ def source_emission_counts() -> dict[Target, Counter[Path]]:
     }
 
 
+def _tracked_files(source_subdir: str) -> tuple[Path, ...]:
+    """Return every file Git tracks under ``src/<source_subdir>``.
+
+    The listing comes from the repository index, so a file the build's own source
+    walk skips still appears here.
+    """
+    listing = subprocess.run(
+        ["git", "ls-files", "-z", "--", f"{SOURCE_ROOT_NAME}/{source_subdir}"],
+        cwd=REPOSITORY_ROOT,
+        capture_output=True,
+        check=True,
+    ).stdout.decode("utf-8")
+    return tuple(
+        sorted(REPOSITORY_ROOT / entry for entry in listing.split("\0") if entry)
+    )
+
+
+def tracked_plugin_sources() -> tuple[Path, ...]:
+    """Return every authored plugin file Git tracks, independently of the build."""
+    return _tracked_files(PLUGINS_DIR_NAME)
+
+
+def tracked_template_sources() -> tuple[Path, ...]:
+    """Return every per-plugin template file Git tracks, independently of the build."""
+    return _tracked_files(TEMPLATES_DIR_NAME)
+
+
+def tracked_plugin_names() -> frozenset[str]:
+    """Return the plugin directory names that carry a tracked file."""
+    plugins_root = REPOSITORY_ROOT / SOURCE_ROOT_NAME / PLUGINS_DIR_NAME
+    return frozenset(
+        path.relative_to(plugins_root).parts[0] for path in tracked_plugin_sources()
+    )
+
+
 def projected_sources() -> tuple[Path, ...]:
     """Return every source the canonical projection emits from, including templates."""
     snapshot = _canonical_emission_snapshot()
@@ -168,16 +212,23 @@ def structure_deviations() -> dict[Target, tuple[Path, ...]]:
 
 
 def agent_artifact_paths(target: Target) -> tuple[Path, ...]:
-    """Return every agent artifact one generated target tree carries.
+    """Return every file in an agents directory of one generated target tree.
 
     Reads the committed tree rather than the projection, so the observation reflects
-    what a consumer installs rather than what the build intended.
+    what a consumer installs rather than what the build intended. Both agent
+    locations are read for every target — the plugin's own agents directory and a
+    skill's — so an artifact left at a location the target does not read is
+    observed alongside the native ones.
     """
     tree = REPOSITORY_ROOT / DIST_DIR_NAME / target.value
-    capability = AGENT_CAPABILITY_REGISTRY[target.value]
-    if capability.manifest_declares_agents:
-        return tuple(sorted(tree.glob(f"*/{AGENTS_SUBDIR_NAME}/*")))
-    return tuple(sorted(tree.glob(f"*/{SKILLS_SUBDIR_NAME}/*/{AGENTS_SUBDIR_NAME}/*")))
+    return tuple(
+        sorted(
+            (
+                *tree.glob(f"*/{AGENTS_SUBDIR_NAME}/*"),
+                *tree.glob(f"*/{SKILLS_SUBDIR_NAME}/*/{AGENTS_SUBDIR_NAME}/*"),
+            )
+        )
+    )
 
 
 def agent_artifact_texts(target: Target) -> dict[Path, str]:
@@ -551,4 +602,127 @@ def _frontmatter_source(case: SourceScenario) -> str:
         f"{field}: {case.outer_topic}"
         for field in (ALLOWED_TOOLS_FIELD, ARGUMENT_HINT_FIELD)
     )
-    return f"---\n{claude_fields}\n{portable_fields}\n---\n{case.fragment_body}"
+    return (
+        f"{FRONTMATTER_DELIMITER}\n{claude_fields}\n{portable_fields}\n"
+        f"{FRONTMATTER_DELIMITER}\n{case.fragment_body}"
+    )
+
+
+@dataclass(frozen=True)
+class TargetScopedAgentObservation:
+    """One agent source's declared targets beside every output the build wrote for it."""
+
+    declared: tuple[Target, ...]
+    outputs: tuple[tuple[Target, Path, str], ...]
+
+
+def target_scoped_agent_observations() -> tuple[TargetScopedAgentObservation, ...]:
+    """Build one agent source per non-empty target list and return its outputs, undecided.
+
+    The target lists range over every non-empty subset of the registered targets.
+    Each output is read from the tree the build wrote; the caller owns every
+    predicate over which targets received the source and what each output carries.
+    """
+    target_lists = tuple(
+        tuple(target for index, target in enumerate(Target) if mask & (1 << index))
+        for mask in range(1, 1 << len(Target))
+    )
+    case = min(source_scenarios(), key=lambda scenario: scenario.skill_ref)
+    stems = {
+        declared: "-".join(("scoped", *(target.value for target in declared)))
+        for declared in target_lists
+    }
+    with TemporaryDirectory() as temporary_directory:
+        root = Path(temporary_directory) / min(IGNORED_SOURCE_DIRECTORY_NAMES)
+        builder = SrcTreeBuilder(root)
+        builder.add_plugin(
+            case.plugin,
+            agents={
+                stem: _target_scoped_agent_source(stem, declared)
+                for declared, stem in stems.items()
+            },
+        )
+        projection = project_emissions(builder.src_root)
+        dist_root = root / DIST_DIR_NAME
+        build(builder.src_root, dist_root)
+        observations = []
+        for declared, stem in stems.items():
+            outputs = tuple(
+                (
+                    emission.target,
+                    emission.relative_path,
+                    (
+                        dist_root / emission.target.value / emission.relative_path
+                    ).read_text(encoding="utf-8"),
+                )
+                for emission in projection.emissions
+                if emission.source.stem == stem
+            )
+            observations.append(
+                TargetScopedAgentObservation(declared=declared, outputs=outputs)
+            )
+    return tuple(observations)
+
+
+@dataclass(frozen=True)
+class RefusedTargetsObservation:
+    """What one build did with an agent source listing ``listed`` as its targets."""
+
+    listed: tuple[str, ...]
+    source: Path
+    error: SourceFormatError | None
+    dist_written: bool
+
+
+def refused_target_list_observations(
+    listed_values: tuple[tuple[str, ...], ...],
+) -> tuple[RefusedTargetsObservation, ...]:
+    """Build one tree per listed-targets value and return what each build did.
+
+    Each tree holds a single agent source whose `targets` field lists exactly the
+    given values. The caller owns every predicate over the refusal and the output.
+    """
+    case = min(source_scenarios(), key=lambda scenario: scenario.skill_ref)
+    observations = []
+    for listed in listed_values:
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory) / min(IGNORED_SOURCE_DIRECTORY_NAMES)
+            builder = SrcTreeBuilder(root)
+            stem = "refused-targets"
+            builder.add_plugin(
+                case.plugin,
+                agents={stem: _agent_source_listing(stem, listed)},
+            )
+            dist_root = root / DIST_DIR_NAME
+            error: SourceFormatError | None = None
+            try:
+                build(builder.src_root, dist_root)
+            except SourceFormatError as raised:
+                error = raised
+            source = builder.src_root / PLUGINS_DIR_NAME / case.plugin
+            observations.append(
+                RefusedTargetsObservation(
+                    listed=listed,
+                    source=source
+                    / AGENTS_SUBDIR_NAME
+                    / f"{stem}{MARKDOWN_FILE_SUFFIX}",
+                    error=error,
+                    dist_written=dist_root.exists() and any(dist_root.rglob("*")),
+                )
+            )
+    return tuple(observations)
+
+
+def _agent_source_listing(stem: str, listed: tuple[str, ...]) -> str:
+    return (
+        f"{FRONTMATTER_DELIMITER}\n{AGENT_NAME_FIELD}: {stem}\n{AGENT_DESCRIPTION_FIELD}: Target-scoped agent.\n"
+        f"{AGENT_TARGETS_FIELD}: [{', '.join(listed)}]\n{FRONTMATTER_DELIMITER}\n\nRelay the supplied target.\n"
+    )
+
+
+def _target_scoped_agent_source(stem: str, declared: tuple[Target, ...]) -> str:
+    listed = "".join(f"  - {target.value}\n" for target in declared)
+    return (
+        f"{FRONTMATTER_DELIMITER}\n{AGENT_NAME_FIELD}: {stem}\n{AGENT_DESCRIPTION_FIELD}: Target-scoped agent.\n"
+        f"{AGENT_TARGETS_FIELD}:\n{listed}{FRONTMATTER_DELIMITER}\n\nRelay the supplied target.\n"
+    )

@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "definition": "spec-tree:change-implementer",
+  "subjectCommit": "d090bb966859c3b4770a78a4ba2de5410d4fc53f",
+  "emittedDefinition": {
+    "path": "dist/claude/spec-tree/agents/change-implementer.md",
+    "sha256": "88b4196e5d458b0361f5398cbfca65c615f04bf76a286700ff14420952d283de",
+    "frontMatter": [
+      "model: \"opus\"",
+      "effort: \"medium\"",
+      "name: change-implementer",
+      "description: >-",
+      "  Round session `/execute-change` launches by exact name when an Activity needs a language implementation of one node produced or repaired through `/implement-change`.",
+      "disallowedTools: Agent, AskUserQuestion",
+      "skills:",
+      "  - spec-tree:implement-change"
+    ]
+  },
+  "parentSession": {
+    "sessionId": "adaf20a3-35a2-4ecf-b547-f6aa0a3a3dc9",
+    "model": "claude-opus-5-5",
+    "claudeCodeVersion": "2.1.285",
+    "plugins": [
+      {
+        "name": "spec-tree",
+        "path": "/Users/shz/Code/outcomeeng/plugins/worktrees/maintainer/dist/claude/spec-tree",
+        "version": "0.99.0"
+      }
+    ],
+    "definitionAvailable": true
+  },
+  "launch": {
+    "toolUseId": "toolu_0149aBkTxooqWkecQN1NJiXW",
+    "tool": "Agent",
+    "input": {
+      "subagent_type": "spec-tree:change-implementer",
+      "prompt": "not-a-target",
+      "description": "Launch change-implementer",
+      "run_in_background": false
+    }
+  },
+  "childStart": {
+    "parentToolUseId": "toolu_0149aBkTxooqWkecQN1NJiXW",
+    "subagentType": "spec-tree:change-implementer",
+    "taskMessage": "not-a-target",
+    "timestamp": "2026-09-30T13:08:02.511Z"
+  },
+  "childResult": {
+    "status": "completed",
+    "agentType": "spec-tree:change-implementer",
+    "resolvedModel": "claude-opus-5-5",
+    "totalDurationMs": 4175,
+    "totalTokens": 15688,
+    "totalToolUseCount": 0,
+    "text": "**Status:** `blocked`\n\n**Reason:** `target-required`\n\nThe task message was `not-a-target`, which is not a canonical full `spx/...` node path. Step 1 of `spec-tree:implement-change` says to change nothing and return `blocked` when that happens.\n\n- **Node path:** none. The task message had no `spx/...` path.\n- **Selected language:** none. The workflow stopped before step 4.\n- **Skills run:** only `spec-tree:implement-change`, which stopped at step 1. No composed skills ran.\n- **Changed paths since starting head:** none. No starting head was recorded because the workflow stopped before step 2.\n- **Final checkpoint commit id:** none.\n- **Deterministic commands:** none were run.\n\n**Blocked action:** the whole implementation workflow for this round (context loading, language selection, architect, code, commit, and simplify). To proceed, the Executor needs to send a task message that starts with a canonical full `spx/...` node path."
+  },
+  "parentResult": {
+    "subtype": "success",
+    "isError": false,
+    "numTurns": 2
+  }
+}

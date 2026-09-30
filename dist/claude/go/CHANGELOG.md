@@ -1,10 +1,16 @@
 # Changelog — go plugin
 
-Go engineering: coding, testing, architecture, the matching concern audits, and the `go-simplifier` agent.
+Go engineering: coding, testing, architecture, simplification, and the matching concern audits.
 
 What changed in **this plugin**, for a consumer repository. An entry appears when a change alters what a consumer can rely on, must do, or must know.
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
+
+## 0.3.0
+
+### Breaking
+
+- **The `go-simplifier` agent is removed.** Go simplification ships as the `/simplify-go` skill, which spec-tree's `/apply` runs in its own conversation and `/implement-change` runs in its session. No plugin ships a language-specific subagent definition.
 
 ## 0.1.0
 

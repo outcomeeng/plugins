@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill before writing or repairing deterministic tests for
   a spec assertion, selecting a decision Testing rule's assertion type, or when
   learning the testing approach.
-argument-hint: <full-spx-node-or-decision-path> [selected-assertions-json-array]
+argument-hint: <full-spx-node-or-decision-path> [selected-assertions-json-array] [repair-block]
 allowed-tools: Read, Glob, Grep, Write, Edit, {{! tool('use_skill') !}}, {{! tool('ask_user') !}}
 ---
 
@@ -35,6 +35,7 @@ Spec-tree assertion tests and decision Testing rules that are canonically assert
 - Name tests by subject, assertion type, execution level, and optional runner.
 - Derive the assertion type from the assertion's quantifier and evidence shape, never from the section containing the rule.
 - Verification routing selects the verification type. This test specialist owns assertion-type selection, execution-level selection, and controlled-implementation exceptions after test evidence is selected.
+- Use skill `spec-tree:wait-for-load` for every resource-intensive command: run the waiter and that command as one line in the foreground, and report a result only after every such line has exited.
 - For property evidence, generate product-owned variable behavior. Keep filesystem, Git, and full CLI work outside each generated case when it only supplies boundary wiring, and exercise that real boundary through a separately typed finite assertion.
 
 </non_negotiable_rules>
@@ -317,7 +318,7 @@ Examples:
 
 **Step 1: Load tree context**
 
-Abort when `$ARGUMENTS` is empty: "A canonical spec node or ADR/PDR target is required." Otherwise parse it as one canonical target followed by an optional JSON array of exact assertion texts already selected for test. Preserve each array string verbatim; it identifies the untagged spec assertion this workflow may type. Reject malformed JSON or non-string array members before reading the target. A decision target uses decision-rule mode and accepts no assertion-text array.
+Abort when `$ARGUMENTS` is empty: "A canonical spec node or ADR/PDR target is required." Otherwise parse it as one canonical target followed by an optional JSON array of exact assertion texts already selected for test. Preserve each array string verbatim; it identifies the untagged spec assertion this workflow may type. Reject malformed JSON or non-string array members before reading the target. A decision target uses decision-rule mode and accepts no assertion-text array. Text after the target and the optional array is a repair block: the verbatim result of each rejected verdict and the exact command line and output of each failed deterministic command of an earlier round on this target. Carry it into this workflow as repair input: repair every finding and failure it names within this workflow's scope, and report each one's disposition in the result.
 
 Check for `<SPEC_TREE_FOUNDATION>` and `<SPEC_TREE_CONTEXT>` markers. When either is absent: {!% require_skill 'spec-tree:understand' %!} {!% require_skill 'spec-tree:contextualize' %!}
 

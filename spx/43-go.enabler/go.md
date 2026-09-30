@@ -1,14 +1,16 @@
+---
+malleability: spec
+---
+
 # Go
 
 PROVIDES the complete Go development workflow — architecture, testing, implementation, review, and concurrency and unsafe-boundary auditing
 SO THAT Go projects using spec-tree
 CAN produce implementations governed by ADRs, verified by evidence-based tests, and audited for quality and soundness
 
-The Go plugin composes foundational methodology with language-specific standards and workflows. Its `go-simplifier` definition invokes `/simplify-go` and relays its result. The `audit-go-{code|tests|architecture}` skills carry no language-specific auditor agent and are composed by the generic artifact-type auditors, per `spx/21-spec-tree.enabler/17-audit.adr.md`. Go concurrency soundness and `unsafe`/cgo boundary soundness are part of the Go code audit (`audit-go-code`). The Go test conventions the skills teach are decided in `spx/43-go.enabler/15-go-testing.adr.md`.
+The Go plugin composes foundational methodology with language-specific standards and workflows. The `audit-go-{code|tests|architecture}` skills carry no language-specific auditor agent and are composed by the generic artifact-type auditors, per `spx/21-spec-tree.enabler/17-audit.adr.md`. Go concurrency soundness and `unsafe`/cgo boundary soundness are part of the Go code audit (`audit-go-code`). The Go test conventions the skills teach are decided in `spx/43-go.enabler/15-go-testing.adr.md`.
 
 ## Assertions
-
-- ALWAYS: `/simplify-go` owns the simplification contract for changed Go implementation: independently discover scope and governing evidence, preserve behavior and concurrency ownership, invoke `/code-go` for edits, and report changed paths and verification results. Its instructions preserve tests and evidence, block changes lacking behavioral coverage, and limit recovery to its own edits ([audit])
 
 ### Compliance
 
@@ -22,3 +24,4 @@ The Go plugin composes foundational methodology with language-specific standards
 - NEVER: the Go plugin's skills teach or recommend an in-package `testutil` or `testhelpers` package, an `export_test.go` that hands a harness or fixture to a test, a `tests/` subdirectory, or any location other than `internal/testinfra/` for shared harnesses, generators, or fixtures; a `testdata/` directory holds only the inert whole-payload inputs `spx/43-go.enabler/15-go-testing.adr.md` places there ([audit])
 - NEVER: reference specs or decisions from code — no `ADR-21` or `PDR-13` in code comments or doc comments ([audit])
 - ALWAYS: goroutine lifecycle, data-race safety under `go test -race`, `context.Context` propagation and cancellation, error wrapping with `%w`, and `unsafe` and cgo boundaries pass the Go code audit's soundness checks (`audit-go-code`, composed by the implementation auditor) ([audit])
+- ALWAYS: `/simplify-go` owns the simplification contract for changed Go implementation: independently discover scope and governing evidence, preserve behavior and concurrency ownership, invoke `/code-go` for edits, and report changed paths and verification results. Its instructions preserve tests and evidence, block changes lacking behavioral coverage, and limit recovery to its own edits ([audit])

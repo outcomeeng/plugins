@@ -21,3 +21,4 @@ CAN persist declarations without duplicating template, placement, voice, referen
 - ALWAYS: `/author` returns the changed artifact paths and validation result to its calling workflow so that the caller can perform downstream alignment and delivery ([audit])
 - NEVER: `/author` interviews the operator, chooses product scope, resolves structure, assigns evidence types, writes tests or implementation, or initiates delivery ([audit])
 - NEVER: `/author` accepts proposed sibling sets or dependency order as authority when `/decompose` has not settled the structure ([audit])
+- ALWAYS: a load-gated command `/author` runs executes in the foreground, and `/author` reports its result only after every such command has exited ([audit])

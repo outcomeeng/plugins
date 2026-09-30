@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "definition": "spec-tree:change-executor",
+  "subjectCommit": "d090bb966859c3b4770a78a4ba2de5410d4fc53f",
+  "emittedDefinition": {
+    "path": "dist/claude/spec-tree/agents/change-executor.md",
+    "sha256": "61248418f59db980038729993e35cd5b68aeb19a92c05b89a4b7d9d46071555a",
+    "frontMatter": [
+      "model: \"opus\"",
+      "effort: \"medium\"",
+      "name: change-executor",
+      "description: >-",
+      "  ALWAYS select at session start when an agent session executes one claimed Executable Change as its Executor through `/execute-change`.",
+      "disallowedTools: \"AskUserQuestion\"",
+      "skills:",
+      "  - spec-tree:execute-change"
+    ]
+  },
+  "parentSession": {
+    "sessionId": "eef0f6f2-ddd9-423f-a506-6fc80fb6638e",
+    "model": "claude-opus-5-5",
+    "claudeCodeVersion": "2.1.285",
+    "plugins": [
+      {
+        "name": "spec-tree",
+        "path": "/Users/shz/Code/outcomeeng/plugins/worktrees/maintainer/dist/claude/spec-tree",
+        "version": "0.99.0"
+      }
+    ],
+    "definitionAvailable": true
+  },
+  "launch": {
+    "toolUseId": "toolu_01BFMkr3FsAcMAqFji87h96a",
+    "tool": "Agent",
+    "input": {
+      "subagent_type": "spec-tree:change-executor",
+      "prompt": "not-a-target",
+      "description": "Run change-executor",
+      "run_in_background": false
+    }
+  },
+  "childStart": {
+    "parentToolUseId": "toolu_01BFMkr3FsAcMAqFji87h96a",
+    "subagentType": "spec-tree:change-executor",
+    "taskMessage": "not-a-target",
+    "timestamp": "2026-09-30T13:07:00.346Z"
+  },
+  "childResult": {
+    "status": "completed",
+    "agentType": "spec-tree:change-executor",
+    "resolvedModel": "claude-opus-5-5",
+    "totalDurationMs": 5497,
+    "totalTokens": 18576,
+    "totalToolUseCount": 0,
+    "text": "**Result:** `not-held`\n\n**Change URL:** none. I couldn't resolve a Change from the target.\n\n**Reason:** Step 1 (Resolve the Change) stopped because `not-a-target` isn't an issue reference. It needs to be in one of these forms: `#N`, `owner/repo#N`, or an issue URL. Since the target wasn't empty, I didn't fall back to a `<CLAIMED_CHANGE>` marker. The missing piece is a valid issue reference for the claimed Executable Change.\n\n**Final head SHA:** none. I didn't read the store, check the worktree or claim, or run any commands.\n\n**Rounds:** none. No Author, Fixer, or Verifier sessions were launched, so there are no verdict run tokens.\n\n**Merge commit:** none.\n\n**Handoff comment URL:** none. The Change wasn't held, so nothing was released and nothing was written."
+  },
+  "parentResult": {
+    "subtype": "success",
+    "isError": false,
+    "numTurns": 2
+  }
+}

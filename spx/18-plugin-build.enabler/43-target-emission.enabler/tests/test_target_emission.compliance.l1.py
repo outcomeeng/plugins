@@ -2,40 +2,54 @@
 
 from __future__ import annotations
 
+import tomllib
 from collections import Counter
 
-from outcomeeng_testing.harnesses.distribution import CANONICAL_SOURCE_ROOT
+from outcomeeng_testing.harnesses.agent_conversion import authored_agent_targets
+from outcomeeng.distribution.agents import AGENT_TARGETS_FIELD
 from outcomeeng.distribution.build import (
     AGENT_CAPABILITY_REGISTRY,
     CLAUDE_SKILL_DIR_TOKEN,
     CODEX_SKILL_DIR_TOKEN,
     CLAUDE_ONLY_FRONTMATTER_FIELDS,
     DISABLE_MODEL_INVOCATION_FIELD,
-    EXECUTION_TIME_INJECTION_START,
-    EXECUTION_TIME_INJECTION_END,
     FLAT_AGENT_PLUGIN_SEPARATOR,
+    LIFECYCLE_TEMPLATE_NAME,
     SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE,
     EmissionAction,
     agent_capability,
     agent_slug,
-    plugin_names,
-    template_source_files,
     skill_dir_path_references,
     frontmatter_field_names,
     rewrite_paths_for_target,
     strip_frontmatter_fields,
-    contains_execution_time_skill_content_injection,
 )
-from outcomeeng.distribution.contracts import SKILLS_SUBDIR_NAME, Target
+from outcomeeng.distribution.contracts import (
+    AGENTS_SUBDIR_NAME,
+    MARKDOWN_FILE_SUFFIX,
+    SKILLS_SUBDIR_NAME,
+    Target,
+)
 from outcomeeng.validation.skill_frontmatter import (
     ALLOWED_TOOLS_FIELD,
     ARGUMENT_HINT_FIELD,
+)
+from outcomeeng.validation.skill_injection_safety import (
+    INJECTION_FENCE_TOKEN,
+    INLINE_INJECTION_END,
+    INLINE_INJECTION_START,
+    inline_injection_commands,
+    reads_sister_skill_content,
 )
 from outcomeeng_testing.generators.source_and_templating import source_scenarios
 from outcomeeng_testing.generators.target_emission import execution_time_commands
 from outcomeeng_testing.harnesses.target_emission import (
     projected_versus_emitted,
+    refused_target_list_observations,
     projected_sources,
+    tracked_plugin_names,
+    tracked_plugin_sources,
+    tracked_template_sources,
     text_emissions,
     emitted_texts,
     repeated_include_observations,
@@ -45,6 +59,7 @@ from outcomeeng_testing.harnesses.target_emission import (
     agent_artifact_texts,
     structure_deviations,
     synthetic_inventory,
+    target_scoped_agent_observations,
 )
 
 
@@ -52,16 +67,29 @@ def test_every_source_file_emits_to_both_target_trees() -> None:
     counts = source_emission_counts()
     sources = projected_sources()
     assert sources
-    template_sources = set(template_source_files(CANONICAL_SOURCE_ROOT))
-    plugin_count = len(plugin_names(CANONICAL_SOURCE_ROOT))
+    unprojected = set(tracked_plugin_sources()) - set(sources)
+    assert not unprojected, f"authored sources the build never emits: {unprojected}"
+    template_sources = set(tracked_template_sources())
+    assert template_sources
+    plugin_count = len(tracked_plugin_names())
     for target, per_source in counts.items():
-        missing = [source for source in sources if per_source[source] < 1]
+        admitted = [
+            source for source in sources if target in authored_agent_targets(source)
+        ]
+        missing = [source for source in admitted if per_source[source] < 1]
         assert not missing, f"{target.value} emits nothing for {missing}"
         # An ordinary source emits exactly once per target; only a per-plugin
-        # template fans out, and then exactly once per plugin. Requiring only
+        # template fans out, and then exactly once per plugin; an agent source
+        # whose `targets` omit this target emits nothing here. Requiring only
         # "at least one" would let a duplicate emission pass unnoticed.
         for source in sources:
-            expected = plugin_count if source in template_sources else 1
+            expected = (
+                0
+                if source not in admitted
+                else plugin_count
+                if source in template_sources
+                else 1
+            )
             assert per_source[source] == expected, (
                 f"{target.value} emits {per_source[source]} outputs for {source}, "
                 f"expected {expected}"
@@ -113,9 +141,12 @@ def test_target_trees_mirror_source_structure() -> None:
             )
             continue
         for path in deviations:
-            assert path.parts[1] == SKILLS_SUBDIR_NAME, (
-                f"{target.value} deviation outside the lifecycle skill: {path}"
-            )
+            plugin = path.parts[0]
+            assert path.parts[1:-1] == (
+                SKILLS_SUBDIR_NAME,
+                f"{plugin}-{LIFECYCLE_TEMPLATE_NAME}",
+                AGENTS_SUBDIR_NAME,
+            ), f"{target.value} deviation outside the lifecycle skill's agents: {path}"
             assert path.suffix == capabilities[target].suffix, (
                 f"{target.value} deviation is not a native agent artifact: {path}"
             )
@@ -283,17 +314,24 @@ def test_outputs_do_not_contain_execution_time_skill_content_injection() -> None
     commands = execution_time_commands()
     assert commands
     for command in commands:
-        assert contains_execution_time_skill_content_injection(
-            f"{EXECUTION_TIME_INJECTION_START}{command}{EXECUTION_TIME_INJECTION_END}"
-        ), command
-        assert not contains_execution_time_skill_content_injection(command), command
+        injected = inline_injection_commands(
+            f"{INLINE_INJECTION_START}{command}{INLINE_INJECTION_END}"
+        )
+        assert injected == (command,), command
+        assert reads_sister_skill_content(command), command
+        assert inline_injection_commands(command) == (), command
     outputs = emitted_texts()
     assert outputs
     for row in outputs:
-        assert not contains_execution_time_skill_content_injection(row.text), (
-            row.target,
-            row.path,
-        )
+        offending = [
+            command
+            for command in inline_injection_commands(row.text)
+            if reads_sister_skill_content(command)
+        ]
+        assert not offending, (row.target, row.path, offending)
+        # The fenced form runs its whole block as a command at load time, so a
+        # built output carries no fence of that kind at all.
+        assert INJECTION_FENCE_TOKEN not in row.text, (row.target, row.path)
 
 
 def test_agent_capabilities_resolve_from_the_source_owned_registry() -> None:
@@ -356,3 +394,31 @@ def test_no_agent_artifact_carries_another_targets_skill_dir_token() -> None:
         )
         for path, text in agent_artifact_texts(target).items():
             assert foreign_token not in text, (target, path)
+
+
+def test_agent_source_listing_no_registered_target_fails_the_build() -> None:
+    unregistered = "".join(target.value for target in Target)
+    assert unregistered not in {target.value for target in Target}
+    observations = refused_target_list_observations(((), (unregistered,)))
+    assert [observation.listed for observation in observations] == [
+        (),
+        (unregistered,),
+    ]
+    for observation in observations:
+        assert observation.error is not None, observation
+        assert str(observation.source) in str(observation.error), observation
+        assert not observation.dist_written, observation
+
+
+def test_target_scoped_agent_sources_emit_only_into_listed_targets() -> None:
+    observations = target_scoped_agent_observations()
+    assert observations
+    for observation in observations:
+        emitted = {target for target, _path, _text in observation.outputs}
+        assert emitted == set(observation.declared), observation
+        for target, path, text in observation.outputs:
+            if path.suffix == MARKDOWN_FILE_SUFFIX:
+                fields = frontmatter_field_names(text)
+            else:
+                fields = tuple(tomllib.loads(text))
+            assert AGENT_TARGETS_FIELD not in fields, (target, path)

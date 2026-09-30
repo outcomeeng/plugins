@@ -28,3 +28,4 @@ CAN route every assertion to test, evaluate, probe, or audit before a specialist
 
 - ALWAYS: every workflow that delegates verification-type selection invokes `/verify` rather than a type-specific specialist ([audit])
 - NEVER: duplicate test assertion typing, language expression, eval producer specialization, or audit judgment inside `/verify` ([audit])
+- ALWAYS: a load-gated command `/verify` runs executes in the foreground, and `/verify` reports its result only after every such command has exited ([audit])

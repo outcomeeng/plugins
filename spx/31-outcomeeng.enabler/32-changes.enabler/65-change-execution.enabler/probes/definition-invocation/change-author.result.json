@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "definition": "spec-tree:change-author",
+  "subjectCommit": "d090bb966859c3b4770a78a4ba2de5410d4fc53f",
+  "emittedDefinition": {
+    "path": "dist/claude/spec-tree/agents/change-author.md",
+    "sha256": "206c2823864f9bd8fc03fc6a6247c846ed61547ab2f885b32b242f1afa0110a7",
+    "frontMatter": [
+      "model: \"opus\"",
+      "effort: \"medium\"",
+      "name: change-author",
+      "description: >-",
+      "  Round session `/execute-change` launches by exact name when an Activity needs spec-tree artifacts: decisions, specs, nodes, and notes produced or repaired through `/author`.",
+      "disallowedTools: Agent, AskUserQuestion",
+      "skills:",
+      "  - spec-tree:author"
+    ]
+  },
+  "parentSession": {
+    "sessionId": "7310e3d0-eb87-4d90-9457-d3bac43f8c31",
+    "model": "claude-opus-5-5",
+    "claudeCodeVersion": "2.1.285",
+    "plugins": [
+      {
+        "name": "spec-tree",
+        "path": "/Users/shz/Code/outcomeeng/plugins/worktrees/maintainer/dist/claude/spec-tree",
+        "version": "0.99.0"
+      }
+    ],
+    "definitionAvailable": true
+  },
+  "launch": {
+    "toolUseId": "toolu_01Kp81Ut8uHQKDuyniD6c395",
+    "tool": "Agent",
+    "input": {
+      "subagent_type": "spec-tree:change-author",
+      "prompt": "not-a-target",
+      "description": "Launch change-author subagent",
+      "run_in_background": false
+    }
+  },
+  "childStart": {
+    "parentToolUseId": "toolu_01Kp81Ut8uHQKDuyniD6c395",
+    "subagentType": "spec-tree:change-author",
+    "taskMessage": "not-a-target",
+    "timestamp": "2026-09-30T13:07:13.208Z"
+  },
+  "childResult": {
+    "status": "completed",
+    "agentType": "spec-tree:change-author",
+    "resolvedModel": "claude-opus-5-5",
+    "totalDurationMs": 9226,
+    "totalTokens": 24389,
+    "totalToolUseCount": 1,
+    "text": "```text\nstatus: blocked\nskill: spec-tree:author\nblocked_action: Step 1 (intake). I can't work out which artifact to create, so placement, drafting and file creation can't start.\nquestion: Which Spec Tree artifact should be authored, and where? That means the artifact type (product spec, ADR, PDR, one of the output kinds substrate, capability, domain, interface or surface, variant, outcome record, or probe protocol), what it covers, and its intended node address or parent path under spx/.\nevidence:\n  - The whole task message was the literal string \"not-a-target\". It names no artifact, concern, node address or parent path.\n  - The working directory /private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-maintainer/10af98d9-4575-4275-a88a-ac5cab196782/scratchpad/definition-invocation-2/cwd has only a `.spx` directory. It has no `spx/` tree and no product spec, so the context gives nothing to infer a target from.\n  - When there is no `spx/` tree, the skill sends the work through spec-tree:bootstrap. Bootstrap interviews the operator, so that path also needs the operator's input.\nmutations: none. No files were created or changed.\n```"
+  },
+  "parentResult": {
+    "subtype": "success",
+    "isError": false,
+    "numTurns": 2
+  }
+}

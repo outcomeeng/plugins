@@ -3,7 +3,7 @@ name: audit-prose
 description: >-
   Prose audit methodology — judges the human-facing text in scope against the anti-pattern catalog, the supplied kind's style and structure layers, and every triggered rule pack.
 argument-hint: "<interface|documentation|copy> <text or paths>"
-allowed-tools: Read, Glob, Grep, Bash
+allowed-tools: Read, Glob, Grep, Bash(spx journal open:*), Bash(spx journal append:*), Bash(spx journal seal:*), Bash(spx journal read:*), Bash(printf:*)
 ---
 
 Use skill `prose:prose-standards`.

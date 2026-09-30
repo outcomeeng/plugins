@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "definition": "spec-tree:change-tester",
+  "subjectCommit": "d090bb966859c3b4770a78a4ba2de5410d4fc53f",
+  "emittedDefinition": {
+    "path": "dist/claude/spec-tree/agents/change-tester.md",
+    "sha256": "1f6a50ef2f1f7c161a9d7931851259b69a5bd0549f31241083a5ad75d6b9aa18",
+    "frontMatter": [
+      "model: \"opus\"",
+      "effort: \"medium\"",
+      "name: change-tester",
+      "description: >-",
+      "  Round session `/execute-change` launches by exact name when an Activity needs routed `[test]` evidence produced or repaired through `/test`.",
+      "disallowedTools: Agent, AskUserQuestion",
+      "skills:",
+      "  - spec-tree:test"
+    ]
+  },
+  "parentSession": {
+    "sessionId": "4b9d6371-a0fc-472c-823e-c6f8526f36be",
+    "model": "claude-opus-5-5",
+    "claudeCodeVersion": "2.1.285",
+    "plugins": [
+      {
+        "name": "spec-tree",
+        "path": "/Users/shz/Code/outcomeeng/plugins/worktrees/maintainer/dist/claude/spec-tree",
+        "version": "0.99.0"
+      }
+    ],
+    "definitionAvailable": true
+  },
+  "launch": {
+    "toolUseId": "toolu_01Pbcq2w8qqSLUPzmTwuuze4",
+    "tool": "Agent",
+    "input": {
+      "subagent_type": "spec-tree:change-tester",
+      "prompt": "not-a-target",
+      "description": "Launch change-tester subagent",
+      "run_in_background": false
+    }
+  },
+  "childStart": {
+    "parentToolUseId": "toolu_01Pbcq2w8qqSLUPzmTwuuze4",
+    "subagentType": "spec-tree:change-tester",
+    "taskMessage": "not-a-target",
+    "timestamp": "2026-09-30T13:07:43.473Z"
+  },
+  "childResult": {
+    "status": "completed",
+    "agentType": "spec-tree:change-tester",
+    "resolvedModel": "claude-opus-5-5",
+    "totalDurationMs": 10864,
+    "totalTokens": 25781,
+    "totalToolUseCount": 1,
+    "text": "I stopped at Step 1 and made no changes, because the task gave no valid target to work on.\n\nThe skill needs one canonical spec node, ADR or PDR as its target, with an optional JSON array of exact assertion texts after it. The only thing supplied was `not-a-target`, which is not a canonical spec-tree target. The `spec-tree:test` skill received an empty argument, and its rule for that case is to stop with: \"A canonical spec node or ADR/PDR target is required.\"\n\nThere is also no spec tree to search. The working directory `/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-maintainer/10af98d9-4575-4275-a88a-ac5cab196782/scratchpad/definition-invocation-2/cwd` contains only a `.spx/` directory and has no `spx/` tree.\n\nAs a result:\n- I extracted and typed no assertions.\n- I routed no evidence and created no test files.\n- I changed no spec links and no entries in `spx/EXCLUDE`.\n- There was no repair block to act on.\n\nTo proceed, re-run with a canonical spec node path or ADR/PDR path that resolves under an `spx/` tree."
+  },
+  "parentResult": {
+    "subtype": "success",
+    "isError": false,
+    "numTurns": 2
+  }
+}

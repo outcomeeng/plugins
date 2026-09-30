@@ -44,7 +44,8 @@ hooks:
     - matcher: "Skill"
       hooks:
         - type: command
-          command: "${CLAUDE_PLUGIN_ROOT}/skills/my-skill/scripts/hook.sh"
+          command: "if [ \"${MY_PLUGIN_HOOK:-1}\" = \"0\" ]; then exit 0; fi; python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/hook.py\" || echo '{}'"
+          timeout: 10
 ```
 
 {!% else %!}

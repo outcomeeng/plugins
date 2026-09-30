@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.27.0
+
+### Breaking
+
+- **The `typescript-simplifier` agent is removed.** TypeScript simplification ships as the `/simplify-typescript` skill, which spec-tree's `/apply` runs in its own conversation and `/implement-change` runs in its session. No plugin ships a language-specific subagent definition.
+
 ## 0.25.0
 
 ### Removed

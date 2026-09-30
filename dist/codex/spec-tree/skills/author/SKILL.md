@@ -1,7 +1,8 @@
 ---
 name: author
 description: ALWAYS invoke this skill when adding, defining, or creating specs, decisions, or nodes. NEVER author spec tree artifacts without this skill.
-allowed-tools: Read, Glob, Grep, Write, Edit, request_user_input, Bash(spx validation markdown:*), Bash(spx spec status:*)
+argument-hint: "[full-spx-target-path] [change-issue-url] [repair-block]"
+allowed-tools: Read, Glob, Grep, Write, Edit, request_user_input, Bash(spx validation markdown:*), Bash(spx spec status:*), Bash(gh issue view:*)
 ---
 
 <objective>
@@ -16,9 +17,20 @@ About to choose an assertion's verification type (`[test]` / `[eval]` / `[probe]
 
 </stop_triggers>
 
+<input>
+
+`$ARGUMENTS`, when present, is a decision-ready artifact packet: one canonical full `spx/...` target path, optionally followed by the Change's issue URL, and then a repair block.
+
+- **Change reference.** Accept the Change only as its full issue URL, which names its store; a `#N` or `owner/repo#N` reference stops before any read with result `blocked`, naming the reference and the URL form required. Read the Change with `gh issue view <issue-url> --json body`, and take the operation, the artifact type, the settled content, and the placement for the target from its `# Output` and `# Frame`.
+- **Settled placement.** A target path that the Change's Frame names settles placement; Step 3 then writes without presenting the placement for confirmation.
+- **Repair block.** Text after the target and the Change reference is the verbatim result of each rejected verdict and the exact command line and output of each failed deterministic command of an earlier round on this target. Repair every finding and failure it names within this workflow's scope, and report each one's disposition in the result.
+- **Open question.** A question the packet and the loaded truth leave open — kind, placement, content, or an operator-owned gap — is asked through `request_user_input` when that tool is available; otherwise the workflow stops before writing with result `blocked`, naming the question verbatim and the write it blocks.
+
+</input>
+
 <quick_start>
 
-**PREREQUISITE**: Check for `<SPEC_TREE_FOUNDATION>` marker. If absent, invoke `/understand` first.
+**PREREQUISITE**: Check for `<SPEC_TREE_FOUNDATION>` marker. If absent, use skill `spec-tree:understand` first.
 
 Use the canonical templates and examples provided by `/understand`:
 
@@ -64,7 +76,7 @@ ADR vs PDR is decided by content only. A decision's reach — the nodes it const
 
 **Step 2: Load context for placement**
 
-Check for `<SPEC_TREE_CONTEXT>` marker. If absent or targeting a different path, invoke `/contextualize` for the parent directory where the artifact will be placed.
+Check for `<SPEC_TREE_CONTEXT>` marker. If absent or targeting a different path, use skill `spec-tree:contextualize` for the parent directory where the artifact will be placed.
 
 This loads:
 
@@ -72,7 +84,7 @@ This loads:
 - Ancestor ADRs/PDRs (to respect constraints)
 - Parent spec (to understand scope)
 
-**Bootstrap mode**: If `spx/` doesn't exist or has no product spec, invoke `/bootstrap` first. It interviews the user and scaffolds the initial tree. Return here after bootstrapping to author individual artifacts.
+**Bootstrap mode**: If `spx/` doesn't exist or has no product spec, use skill `spec-tree:bootstrap` first. It interviews the user and scaffolds the initial tree. Return here after bootstrapping to author individual artifacts.
 
 </step>
 
@@ -89,16 +101,16 @@ This loads:
 - Use the distribution formula for new items: `i_k = 10 + floor(k * 89 / (N + 1))`
 - Use midpoint insertion between existing indices
 - Refer to ADRs/PDRs by full path from `spx/`; never write a bare decision filename such as `15-build.adr.md`
-- Place a decision record only when loaded context identifies exactly one owning directory. If multiple directories could own the concept, a node name may be stale, or the path depends on concept ownership, node renaming, node splitting, parent/child boundaries, or context-loading reach, record the placement question in the Change that carries this work, then invoke `/decompose <node-address>` before proposing any ADR/PDR path. Pass only the target address; owning-directory selection belongs to decomposition.
+- Place a decision record only when loaded context identifies exactly one owning directory. If multiple directories could own the concept, a node name may be stale, or the path depends on concept ownership, node renaming, node splitting, parent/child boundaries, or context-loading reach, record the placement question in the Change that carries this work, then use skill `spec-tree:decompose` with `<node-address>` before proposing any ADR/PDR path. Pass only the target address; owning-directory selection belongs to decomposition.
 
 **For output and variant nodes:** Place as a child of a parent that admits the node's kind, where the concern belongs.
 
 - Create one node at a time only when the parent, kind, and index are already clear from loaded context
-- If sibling ordering, shared providers, vertical slices, or index placement need analysis, invoke `/decompose <parent-node-address>`
+- If sibling ordering, shared providers, vertical slices, or index placement need analysis, use skill `spec-tree:decompose` with `<parent-node-address>`
 - Derive the slug from the concern name (lowercase, hyphenated)
-- **When adding or restructuring 2+ sibling nodes in one pass, stop authoring child nodes and hand off structure to `/decompose`.** Record the user's decomposition intent, constraints, examples, known issues, and unresolved questions in the Change that carries this work, then invoke `/decompose <node-address>`. Pass only the node address; proposed children, proposed indices, and dependency order belong to the decomposition workflow.
+- **When adding or restructuring 2+ sibling nodes in one pass, stop authoring child nodes and hand off structure to `/decompose`.** Record the user's decomposition intent, constraints, examples, known issues, and unresolved questions in the Change that carries this work, then use skill `spec-tree:decompose` with `<node-address>`. Pass only the node address; proposed children, proposed indices, and dependency order belong to the decomposition workflow.
 
-Present the proposed placement to the user before creating files.
+Present the proposed placement to the user before creating files, unless the packet settles it under `<input>`.
 
 </step>
 
@@ -151,7 +163,7 @@ Before drafting, gather what's needed for the artifact type:
 - Which uncertainty between operator and agent does the probe expose?
 - What environment and preconditions does the protocol need, and which steps does any Author repeat?
 
-Use `request_user_input` for operator-owned gaps. Do not ask about information already provided in the conversation.
+Resolve operator-owned gaps as `<input>` states for an open question. Do not ask about information the conversation or the packet already provides.
 
 </step>
 
@@ -220,7 +232,7 @@ spx/{parent-path}/{NN}-{slug}.{kind}/
 2. Write the spec file
 3. Leave `tests/` absent; the selected test specialist materializes it with the first test file.
 4. If the implementation doesn't exist yet: the node merges as Declared or Specified and the projector derives its state; on a toolchain that has not adopted the status claim, apply the passing-scope list per `/understand` `references/status-claims.md`.
-5. For spec-only authoring, validate the untagged declaration with `spx validation markdown` and `spx spec status --format json`; reserve `spx validation all` for changes that touch implementation code, authored tests, validation configuration, or the validation pipeline. `/apply` later invokes `/verify`, whose selected specialist owns any evidence path it adds.
+5. For spec-only authoring, validate the untagged declaration with `spx validation markdown` and `spx spec status --format json`; reserve `spx validation all` for changes that touch implementation code, authored tests, validation configuration, or the validation pipeline. `/apply` later invokes `/verify`, whose selected specialist owns any evidence path it adds. Use skill `spec-tree:wait-for-load` for every resource-intensive command: run the waiter and that command as one line in the foreground, and report a result only after every such line has exited.
 
 **For decision records:**
 
@@ -244,7 +256,7 @@ Write the file. If `AGENTS.md` doesn't exist, note that product guide creation r
 
 **Step 8: Align downstream declarations**
 
-When this authoring change creates or edits a product spec, ADR, PDR, or ancestor spec assertion, invoke `/align` over the changeset before summarizing. The same changeset must carry the first affected lower specs that receive the new truth. If downstream evidence or implementation remains after the lower specs are aligned, record the next step in the Change that carries this work.
+When this authoring change creates or edits a product spec, ADR, PDR, or ancestor spec assertion, use skill `spec-tree:align` over the changeset before summarizing. The same changeset must carry the first affected lower specs that receive the new truth. If downstream evidence or implementation remains after the lower specs are aligned, record the next step in the Change that carries this work.
 
 If `/align` reports that a higher-level declaration has no aligned lower spec, fix the alignment before delivery. Do not leave new higher-level truth floating above the tree.
 
@@ -254,11 +266,10 @@ If `/align` reports that a higher-level declaration has no aligned lower spec, f
 
 **Step 9: Summarize and recommend next steps**
 
-Report what was created:
+Return one result:
 
-- Artifact type and path
-- Index and placement rationale
-- Open decisions (if any were identified during drafting)
+- `written` — each changed artifact's type and full path, the index and placement rationale, the validation result, open decisions identified during drafting, and, for a packet with a repair block, each finding and failed command it named with its disposition: repaired, with the changed path, or not repaired, with the reason.
+- `blocked` — the question or reference that stopped the workflow, verbatim, and the write it blocks; nothing is written.
 
 Recommend next steps based on artifact type:
 
@@ -267,7 +278,7 @@ Recommend next steps based on artifact type:
 | Product spec                     | Author top-level nodes with `/author`             |
 | ADR/PDR                          | Verify compliance in affected nodes with `/align` |
 | Output node with many assertions | Decompose with `/decompose`                       |
-| Output node                      | Establish evidence with `/verify`                 |
+| Output node                      | Establish evidence with `/apply`                  |
 | Outcome record                   | Open the experiment through a Change              |
 
 </step>
@@ -280,29 +291,7 @@ Recommend next steps based on artifact type:
 
 Claude drafted a spec from the user's description: "Users currently can't export data, so we need to add CSV export." The spec read: "The system currently lacks export functionality. CSV export addresses this gap." Both sentences are temporal — they narrate a problem being solved rather than stating product truth. The atemporal version: "The system exports query results as CSV files."
 
-How to avoid: After drafting, apply the read-aloud test from live `/understand` `<atemporal_voice>` to every sentence. If it would sound wrong after the feature ships, rewrite it.
-
-**Failure 2: Assertions placed in ADRs**
-
-Claude wrote an ADR that included: "Given a user uploads a file larger than 10MB, the system rejects it with a 413 error." This is a scenario assertion — it belongs in a spec, not in an ADR. The authoring draft states the untagged rule directly under `## Verification`: "ALWAYS: uploaded files exceeding 10MB are rejected at the gateway"; `/apply` invokes `/verify` to select its verification subsection and tag.
-
-How to avoid: ADRs govern with MUST/NEVER rules under `## Verification`, verified by audit, eval, or test per subsection. Given/When/Then text is a spec assertion, not a decision record.
-
-**Failure 3: Wrong template used for node type**
-
-Claude created an enabler node using the outcome template. The spec had a three-part hypothesis (output → outcome → impact) but the node existed only to provide shared infrastructure for two siblings. The hypothesis was forced — "We believe that providing a database schema will cause developers to write queries faster" — because the node wasn't delivering user-facing value.
-
-How to avoid: Fix the kind through the ordered decision procedure in `/understand` `references/kind-decision.md` before selecting a template; a condition only real use settles belongs in the node's outcome record, never in its opening.
-
-**Failure 4: Index collision with existing sibling**
-
-Claude created a new node at index 32 without checking existing siblings. Another node already occupied index 32. The directory was created but overwrote the existing node's path.
-
-How to avoid: Always invoke `/contextualize` for the parent directory before creating any node. The sibling enumeration in the context manifest reveals all occupied indices.
-
-**Failure 5: Rewrite pattern for temporal language**
-
-Common temporal patterns from user input and their atemporal rewrites:
+How to avoid: After drafting, apply the read-aloud test from live `/understand` `<atemporal_voice>` to every sentence. If it would sound wrong after the feature ships, rewrite it. Common temporal patterns and their atemporal rewrites:
 
 - TEMPORAL: "We need to support OAuth because users can't log in with SSO."
 - ATEMPORAL: "Authentication uses OAuth 2.0. Users authenticate via SSO providers."
@@ -313,7 +302,25 @@ Common temporal patterns from user input and their atemporal rewrites:
 - TEMPORAL: "After investigating performance issues, we decided to add caching."
 - ATEMPORAL: "Response caching reduces latency for repeated queries. Cache invalidation follows the policy in `spx/55-example.domain/15-cache-policy.adr.md`."
 
-**Failure 6: Junk-drawer container names**
+**Failure 2: Assertions placed in ADRs**
+
+Claude wrote an ADR that included: "Given a user uploads a file larger than 10MB, the system rejects it with a 413 error." This is a scenario assertion — it belongs in a spec, not in an ADR. The authoring draft states the untagged rule directly under `## Verification`: "ALWAYS: uploaded files exceeding 10MB are rejected at the gateway"; `/apply` invokes `/verify` to select its verification subsection and tag.
+
+How to avoid: ADRs govern with MUST/NEVER rules under `## Verification`, verified by audit, eval, or test per subsection. Given/When/Then text is a spec assertion, not a decision record.
+
+**Failure 3: Wrong template used for node type**
+
+Claude gave a substrate node an outcome record. The node existed only to supply shared infrastructure for two siblings, so its outcome condition was forced — "We believe that providing a database schema will cause developers to write queries faster" — because the node moved no outcome of its own.
+
+How to avoid: Fix the kind through the ordered decision procedure in `/understand` `references/kind-decision.md` before selecting a template; a condition only real use settles belongs in the node's outcome record, never in its opening.
+
+**Failure 4: Index collision with existing sibling**
+
+Claude created a new node at index 32 without checking existing siblings. Another node already occupied index 32. The directory was created but overwrote the existing node's path.
+
+How to avoid: Always use skill `spec-tree:contextualize` for the parent directory before creating any node. The sibling enumeration in the context manifest reveals all occupied indices.
+
+**Failure 5: Junk-drawer container names**
 
 Claude created a parent node named "advanced operations" that grouped prune, archive, and "future retention features." Six months later the same directory held archive, prune, dry-run, batch deletion, and a new hypothesis for session compaction — unrelated concerns glued together by a name that accepted anything.
 
@@ -321,13 +328,13 @@ A container name must describe what the container contains. If the name would ac
 
 How to avoid: read the proposed container name aloud and ask "what would I refuse to put in here?" If the answer is "nothing obvious," the name is junk-drawer. Rename it after the specific concern that justified creating the container (`session-retention`, not `advanced-operations`). When two concerns are independent, they get two containers — not a vague parent.
 
-**Failure 7: Authoring preselected `### Audit` instead of leaving verification routing to `/verify`**
+**Failure 6: Authoring preselected `### Audit` instead of leaving verification routing to `/verify`**
 
 Claude placed PDR rules like "`install` performs an atomic write (write to temp + rename) so settings.json is never observed in a partial state ([audit])" and "Running `install` twice for the same rule is a no-op the second time ([audit])" under `### Audit`. Both rules describe behaviors a finite test can falsify, but authoring preselected audit before the verification router examined their real subjects.
 
 How to avoid: write each new rule directly under `## Verification` without a subsection or tag. `/apply` invokes `/verify`, which classifies the real subject; `/test` selects the assertion type only after test is selected. Authoring never performs that classification itself.
 
-**Failure 8: Over-multiplying decision records in small trees**
+**Failure 7: Over-multiplying decision records in small trees**
 
 Claude authored four separate ADRs (binary packaging, Rust edition, shared-crate-vs-vendoring, panic-and-logging) plus two separate PDRs (rule-binding, install-tooling) for a pre-commit Rust product with five nodes. The user pushed back: "way overcomplicated … 2. All ADRs can be just one: spx/55-example.domain/15-build.adr.md." The four ADRs collapsed into one `spx/55-example.domain/15-build.adr.md`, the two PDRs were absorbed into the product spec's compliance section, and the tree went from 6 decision records to 1. Index spacing was also wrong — nodes sat at 43, 65, 82, 98, 99 for a product with no commits yet.
 
@@ -335,17 +342,17 @@ How to avoid: before authoring a second decision record at the same directory le
 
 Scope: this failure fires only on minting a new record for a guarantee that would otherwise have no home. It does not fire on a universal rule already inside an existing record sharing its subject and rationale — relocating that rule strips it of reasoning the product spec has no section to hold — so confirm a record was actually minted before citing this failure against an existing one.
 
-**Failure 9: Authoring pre-decided decomposition structure**
+**Failure 8: Authoring pre-decided decomposition structure**
 
 Claude received a broad request, drafted several child nodes with indices, and then treated `/decompose` as confirmation. The child list encoded unexamined dependencies and left no room for the decomposition workflow to build its own model from the durable node spec and coordination notes.
 
-How to avoid: when a request needs multiple sibling nodes, capture the user's intent and constraints in the Change that carries the work, then invoke `/decompose <node-address>`. The decomposition workflow owns child boundaries, kinds, dependency edges, and index assignment.
+How to avoid: when a request needs multiple sibling nodes, capture the user's intent and constraints in the Change that carries the work, then use skill `spec-tree:decompose` with `<node-address>`. The decomposition workflow owns child boundaries, kinds, dependency edges, and index assignment.
 
-**Failure 10: Chose a decision path while ownership was unsettled**
+**Failure 9: Chose a decision path while ownership was unsettled**
 
 Claude received a request to capture vocabulary in exactly one PDR and to find which PDR. The concept crossed plausible owners and raised node identity questions, but Claude used the ADR/PDR placement rule to propose a root-level path before invoking `/decompose`.
 
-How to avoid: treat "which ADR/PDR?" as structural when the owning node, node name, split, parent/child boundary, or context-loading reach is unresolved. Record the placement question as intent, invoke `/decompose <node-address>` with only the target address, and let decomposition return the owning directory before authoring writes the decision.
+How to avoid: treat "which ADR/PDR?" as structural when the owning node, node name, split, parent/child boundary, or context-loading reach is unresolved. Record the placement question as intent, use skill `spec-tree:decompose` with `<node-address>` with only the target address, and let decomposition return the owning directory before authoring writes the decision.
 
 </failure_modes>
 

@@ -51,7 +51,7 @@ Every other code stays verbatim under `command-failed`. `server-not-running` als
 
 <workflow>
 
-1. Interpret `$ARGUMENTS` as one operation with its arguments, or as a complete JSON request. When it is empty, run nothing and report to the invoking workflow that one operation from `<operation_surface>` is required; the adapter has no default operation.
+1. Interpret `$ARGUMENTS` as one operation with its arguments, or as a complete JSON request. When it is empty, run nothing and return the result that one operation from `<operation_surface>` is required; the adapter has no default operation.
 2. Build this source-owned request shape and set only the arguments the operation accepts:
 
 ```json
@@ -59,7 +59,7 @@ Every other code stays verbatim under `command-failed`. `server-not-running` als
   "schemaVersion": 1,
   "operation": "prompt",
   "arguments": {
-    "agent": "officer1",
+    "agent": "change-42",
     "text": "[PeachFrog] mail 100",
     "wait": true,
     "timeout": 120000
@@ -67,7 +67,7 @@ Every other code stays verbatim under `command-failed`. `server-not-running` als
 }
 ```
 
-3. For `key`, `start`, `relaunch`, `stop`, or `open-worktree`, require the explicit standing or same-turn authorization the invoking workflow holds for that exact pane, then add `"mutationAuthorized": true` inside `arguments`. When it is absent, do not run the adapter.
+3. For `key`, `start`, `relaunch`, `stop`, or `open-worktree`, run the request only when it names its exact target — one selector for `key`, the `pane` for `start`, `relaunch` and `stop`, the worktree `path` for `open-worktree` — and carries `"mutationAuthorized": true` inside `arguments`, which states the operator's authorization for that target. Set the flag only when the request arrived with it or the operator authorized that exact target; never add it while interpreting a plain-text request. A request without it is not run.
 4. Submit the request over stdin in one of the forms in `<invocation_forms>`.
 5. Accept only `status: "succeeded"`. Preserve the complete versioned result, `commandExitCode`, and the public `response`. For every operation but `read`, `response` is herdr's own JSON envelope: an inventory's `result` lists `agents`, and a `start`, `relaunch`, `wait`, or `prompt` result carries the one `agent` it acted on, each with `name`, `agent`, `agent_status`, `pane_id`, `tab_id`, `workspace_id`, `cwd`, and `interactive_ready`. For `read`, herdr writes terminal text, and `response` carries it verbatim under `output`.
 6. On any other `status`, act on a named lifecycle status from `<lifecycle_statuses>`, and stop with the exact `status` and `detail` on `command-failed`, `invalid-schema`, `mutation-unauthorized`, or `operation-unavailable`.
@@ -98,7 +98,7 @@ printf '%s\n' '{"schemaVersion":1,"operation":"inventory","arguments":{}}' | pyt
 - ALWAYS preserve herdr identities and states verbatim: agent names, pane, tab, and workspace ids, and the server's own `agent_status`.
 - ALWAYS carry an explicit `timeout` on every wait; the adapter rejects an unbounded wait before any command runs.
 - NEVER invoke raw herdr commands, herdr command help, or `herdr --skill`, the skill text herdr prints for agents; the adapter owns the grammar, and that text would put a second, unversioned grammar into the conversation.
-- NEVER mutate a pane — key, start, relaunch, stop, or worktree open — without authorization for that exact pane in the request.
+- NEVER mutate — key, start, relaunch, stop, or worktree open — without authorization for that exact target in the request.
 - NEVER produce or expect a pane-borne handback block; the environment surface carries prompts and keystrokes only, and message records travel through the agent-mail capability.
 
 </constraints>

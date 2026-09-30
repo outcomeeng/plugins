@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "definition": "spec-tree:change-verifier",
+  "subjectCommit": "d090bb966859c3b4770a78a4ba2de5410d4fc53f",
+  "emittedDefinition": {
+    "path": "dist/claude/spec-tree/agents/change-verifier.md",
+    "sha256": "7a213d60097c82e620d4ba44701b6e96773201b016e690e92d6824137fb2f68e",
+    "frontMatter": [
+      "model: \"opus\"",
+      "effort: \"medium\"",
+      "name: change-verifier",
+      "description: >-",
+      "  Round session `/execute-change` launches by exact name when an Activity needs assertions routed to their verification type and evidence produced or repaired through `/verify`.",
+      "disallowedTools: Agent, AskUserQuestion",
+      "skills:",
+      "  - spec-tree:verify"
+    ]
+  },
+  "parentSession": {
+    "sessionId": "09722db5-6063-4f9f-96c2-e59f2172684a",
+    "model": "claude-opus-5-5",
+    "claudeCodeVersion": "2.1.285",
+    "plugins": [
+      {
+        "name": "spec-tree",
+        "path": "/Users/shz/Code/outcomeeng/plugins/worktrees/maintainer/dist/claude/spec-tree",
+        "version": "0.99.0"
+      }
+    ],
+    "definitionAvailable": true
+  },
+  "launch": {
+    "toolUseId": "toolu_013W1M7gJiSjzWKdnxLn969R",
+    "tool": "Agent",
+    "input": {
+      "subagent_type": "spec-tree:change-verifier",
+      "prompt": "not-a-target",
+      "description": "Launch change-verifier",
+      "run_in_background": false
+    }
+  },
+  "childStart": {
+    "parentToolUseId": "toolu_013W1M7gJiSjzWKdnxLn969R",
+    "subagentType": "spec-tree:change-verifier",
+    "taskMessage": "not-a-target",
+    "timestamp": "2026-09-30T13:07:30.378Z"
+  },
+  "childResult": {
+    "status": "completed",
+    "agentType": "spec-tree:change-verifier",
+    "resolvedModel": "claude-opus-5-5",
+    "totalDurationMs": 5941,
+    "totalTokens": 19108,
+    "totalToolUseCount": 0,
+    "text": "I stopped before checking any markers or reading any files. `spec-tree:verify` received an empty target, and the text I was given, `not-a-target`, is not a valid spec-tree target either. Nothing was classified, routed or changed.\n\nThe skill's result, unchanged:\n\n```text\nA canonical spec-tree target is required. Supply `spx/`, one full `spx/...` node path, or one full `spx/.../*.adr.md` or `spx/.../*.pdr.md` decision path.\n```\n\nTo proceed, send the task again with one of those target forms. If this is a Fixer round, put the repair block after the target."
+  },
+  "parentResult": {
+    "subtype": "success",
+    "isError": false,
+    "numTurns": 2
+  }
+}

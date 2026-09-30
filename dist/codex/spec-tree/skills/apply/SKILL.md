@@ -8,7 +8,7 @@ allowed-tools: Read, Edit, collaboration.spawn_agent, collaboration.wait_agent, 
 ---
 
 <objective>
-A spec-tree work item implemented and ready for the delivery boundary the user requested.
+A spec-tree work item implemented, verified, and delivered to the boundary the user requested — the default branch on origin unless the request names a narrower one.
 
 </objective>
 
@@ -17,14 +17,14 @@ A spec-tree work item implemented and ready for the delivery boundary the user r
 The raw invocation string `$ARGUMENTS` controls what runs before the per-node flow below. Parse it exactly once before Step 0:
 
 - `$ARGUMENTS` containing a canonical full `spx/...` node path → the work queue is that single node.
-- Empty `$ARGUMENTS` → determine the work from the conversation. If nothing is clear, complete Step 1 first — invoke `/understand` when the live `SPEC_TREE_FOUNDATION` marker is absent — then read `spx/EXCLUDE`, whose entries are relative to `spx/`, and prefix each non-comment, non-blank entry with `spx/` before adding it to the work queue. Never access `spx/EXCLUDE` before the foundation is live, and never pass a bare entry to `/contextualize`. If no work is found, report "Nothing to apply" and stop.
+- Empty `$ARGUMENTS` → determine the work from the conversation. If nothing is clear, complete Step 1 first — use skill `spec-tree:understand` when the live `SPEC_TREE_FOUNDATION` marker is absent — then read `spx/EXCLUDE`, whose entries are relative to `spx/`, and prefix each non-comment, non-blank entry with `spx/` before adding it to the work queue. Never access `spx/EXCLUDE` before the foundation is live, and never pass a bare entry to `/contextualize`. If no work is found, report "Nothing to apply" and stop.
 
-When the work is described as a plan or proposal rather than a specific node or queue, invoke `/slice` first: it selects the next executable observable slice and produces the node set that becomes this flow's work queue. Skip the preflight when the queue is already a specific node or an `spx/EXCLUDE` list.
+When the work is described as a plan or proposal rather than a specific node or queue, use skill `spec-tree:slice` first: it selects the next executable observable slice and produces the node set that becomes this flow's work queue. Skip the preflight when the queue is already a specific node or an `spx/EXCLUDE` list.
 
-When the queue holds more than one node, order by numeric index prefix (lower first) — lower-indexed nodes constrain higher-indexed ones. For each node in order:
+Complete Step 1 before the queue loop in every mode, so the foundation is live before the loop reads or edits `spx/EXCLUDE`. When the queue holds more than one node, order by numeric index prefix (lower first) — lower-indexed nodes constrain higher-indexed ones. For each node in order:
 
 1. Strip the canonical node path's leading `spx/` to derive its `spx/EXCLUDE` entry. If that relative entry is listed, remove its exact line first — the `spx` CLI then includes its tests in `spx test passing`.
-2. Run Steps 1–9 on the node.
+2. Run Steps 2–9 on the node, and Step 1 again first when a compaction has made the foundation marker absent.
 3. Confirm the final gate subject is committed and the worktree is clean.
 4. Proceed to the next node without stopping or asking, subject to the gate-retry limits in `<review_gates>`.
 
@@ -60,7 +60,7 @@ When the scope is cross-node, every audit gate — Steps 4, 6, and 8 — runs at
 
 <launch_contract>
 
-Each simplification, audit, or review step below requests exactly one native launch with its mapped subagent name and target-only prompt. Use the native tool schema and result-collection capabilities. A failed launch or unusable final result stops that invocation: analyze and report the exact failure without another launch, a substitute subagent or model, an alternative launch mechanism, or an audit in this conversation.
+Each audit or review step below requests exactly one native launch with its mapped subagent name and target-only prompt. Use the native tool schema and result-collection capabilities. A failed launch or unusable final result stops that invocation: analyze and report the exact failure without another launch, a substitute subagent or model, an alternative launch mechanism, or an audit in this conversation.
 
 Persist accepted requirements in decisions and specs before dispatch. Start each Verifier without authoring history, following the root guide's isolation mechanics. Never append an author-written context packet, reasoning, summary, or suggested verdict. The invoked skill independently discovers its evidence from the target and configured instructions.
 
@@ -82,20 +82,20 @@ A rejection whose defect class a prior repair already claimed to close invalidat
 
 <verification_checkpoint>
 
-Invoke `/merging-standards` and read its `merge-policy.md` reference before the first dispatch of the flow; `<verification_dispatch_readiness>` and `<verification_result_projection>` are its sections, and invoking the compact loader alone does not load them.
+Use skill `spec-tree:merging-standards` and read its `merge-policy.md` reference before the first dispatch of the flow; `<verification_dispatch_readiness>` and `<verification_result_projection>` are its sections, and invoking the compact loader alone does not load them.
 
 Before dispatching any persisted audit or review gate, bind its subject to an exact local commit:
 
-1. Invoke `/sync-base` before every deterministic verification command and before every dispatch, and record the result it returns — `already_current` or `rebased` — for the exact head, read from the command and never from memory. Only origin knows the base moved; a result established on a head behind the fetched base tip is a verdict on a tree that cannot merge, and every verifier's resolver refuses that head as a `stale-base` block. A `rebased` result reopens the deterministic results and Verifier verdicts its preservation proof does not cover.
+1. Use skill `spec-tree:sync-base` before every deterministic verification command and before every dispatch, and record the result it returns — `already_current` or `rebased` — for the exact head, read from the command and never from memory. Only origin knows the base moved; a result established on a head behind the fetched base tip is a verdict on a tree that cannot merge, and every verifier's resolver refuses that head as a `stale-base` block. A `rebased` result reopens the deterministic results and Verifier verdicts its preservation proof does not cover.
 2. Changes may remain uncommitted until another agent session or human is expected or asked to read them. Before dispatching an audit or review, run the touched-scope deterministic verification required by the repository overlay when preparing a gate. Do not run an aggregate gate whose generated-output drift check requires committed generator sources and generated output before creating the checkpoint.
-3. When the relevant tracked or untracked files differ from `HEAD`, invoke `/commit-changes` before dispatch to commit the exact current version regardless of whether the latest verification state is `passing`, `failing`, or `not-run`; preserve that state in the checkpoint result. After any further change, commit the new version before another audit or review.
+3. When the relevant tracked or untracked files differ from `HEAD`, use skill `spec-tree:commit-changes` before dispatch to commit the exact current version regardless of whether the latest verification state is `passing`, `failing`, or `not-run`; preserve that state in the checkpoint result. After any further change, commit the new version before another audit or review.
 4. Confirm the worktree is clean and record the checkpoint's full `HEAD` commit ID.
 5. Dispatch the gate only when the required deterministic verification is `passing`, against the committed `<base>..<head>` scope. A `failing` or `not-run` checkpoint remains valid local history for recovery and collaboration while withholding gate dispatch. Do not supply a live file list for a gating run. The repository's declared full deterministic gate, when required, runs once against the clean checkpoint head as a later lifecycle step rather than before every checkpoint.
 6. Emit the complete `VERIFICATION_DISPATCH_READY` record `/merging-standards` `<verification_dispatch_readiness>` defines, bound to that exact clean head, and dispatch only once it is complete. `VERIFICATION_DISPATCH_BLOCKED` withholds the dispatch until the named field, subject, result, writer, or defect class is resolved.
 
 An audit or review over modified or untracked files is advisory. It may provide early feedback, but it never satisfies a Step 4, Step 6, Step 8, evidence-auditor, Step 9, or merge-readiness predicate. Commit the exact version before dispatching any persisted gate or asking another agent session or human to read a reusable verification subject.
 
-A Verifier that returns a `stale-base` block returned no verdict: run `/sync-base`, re-establish the deterministic results on the rebased head, checkpoint, and dispatch again. After a rejected audit or valid review finding, repair the defect class, rerun deterministic verification, and create a new checkpoint commit before redispatch. Append the rejection to the record's `priorRejections` — Verifier, exact head, finding identifiers, defect classes, failed repair invariant, root cause, widened repair rule, and same-class scan — and redispatch only once the new head's record proves every rejection resolved. Preserve the earlier checkpoint identity while its run remains prior context; do not amend the audited commit in place.
+A Verifier that returns a `stale-base` block returned no verdict: use skill `spec-tree:sync-base`, re-establish the deterministic results on the rebased head, checkpoint, and dispatch again. After a rejected audit or valid review finding, repair the defect class, rerun deterministic verification, and create a new checkpoint commit before redispatch. Append the rejection to the record's `priorRejections` — Verifier, exact head, finding identifiers, defect classes, failed repair invariant, root cause, widened repair rule, and same-class scan — and redispatch only once the new head's record proves every rejection resolved. Preserve the earlier checkpoint identity while its run remains prior context; do not amend the audited commit in place.
 
 </verification_checkpoint>
 
@@ -135,7 +135,7 @@ Step 0 and Steps 1–2 are language-independent. Steps 3–8 use the detected la
 | 5    | Establish evidence       | Use skill `spec-tree:verify`.                                               | same                                 | same                             | same                         |
 | 6    | Evidence audit           | `spec-tree_test-evidence-auditor`, `spec-tree_eval-evidence-auditor` agents | same                                 | same                             | same                         |
 | 7    | Implement                | Use skill `typescript:code-typescript`.                                     | Use skill `python:code-python`.      | Use skill `rust:code-rust`.      | Use skill `go:code-go`.      |
-| 7a   | Simplify implementation  | `typescript_typescript-simplifier`                                          | no declared simplifier               | `rust_rust-simplifier`           | `go_go-simplifier`           |
+| 7a   | Simplify implementation  | Use skill `typescript:simplify-typescript`.                                 | no simplification skill              | Use skill `rust:simplify-rust`.  | Use skill `go:simplify-go`.  |
 | 8    | Implementation audit     | `spec-tree_implementation-auditor` agent                                    | same                                 | same                             | same                         |
 | 8a   | Evidence-auditor gates   | `spec-tree_test-evidence-auditor`, `spec-tree_eval-evidence-auditor` agents | same                                 | same                             | same                         |
 | 9    | Whole-changeset review † | `spec-tree_changes-reviewer` agent                                          | same                                 | same                             | same                         |
@@ -153,27 +153,27 @@ Invoke the exact skill or agent surface shown. Never substitute, skip, or reorde
 
 <step number="0" name="Select the slice" frequency="only for a plan or proposal">
 
-Invoke `/slice` when the work is described as a plan or proposal rather than a specific node or queue, per `<invocation_modes>`; its node set becomes the work queue. Skip this step for a specific node or an `spx/EXCLUDE` list.
+Use skill `spec-tree:slice` when the work is described as a plan or proposal rather than a specific node or queue, per `<invocation_modes>`; its node set becomes the work queue. Skip this step for a specific node or an `spx/EXCLUDE` list.
 
 </step>
 
-<step number="1" name="Load methodology" frequency="once per session">
+<step number="1" name="Load methodology" frequency="once per session and after every compaction">
 
-Invoke `/understand`.
+Use skill `spec-tree:understand`.
 
-This loads the spec-tree methodology — node types, assertion formats, durable map rules. Skip if `SPEC_TREE_FOUNDATION` marker is already present in this session.
+This loads the spec-tree methodology — node types, assertion formats, durable map rules. Skip only while a live `<SPEC_TREE_FOUNDATION>` marker is present: after a compaction the marker counts as absent until this step emits it again.
 
 **Do not proceed until complete.**
 
 </step>
 
-<step number="2" name="Load work item context" frequency="every node">
+<step number="2" name="Load work item context" frequency="every node and after every compaction">
 
-Invoke `/contextualize` with the canonical full `spx/...` node path from the work queue.
+Use skill `spec-tree:contextualize` with the canonical full `spx/...` node path from the work queue.
 
 Load the full context hierarchy for the specific node — parent chain, sibling nodes, applicable decisions, assertions.
 
-**Repeat for every new node.** Do not reuse context from a previous node.
+**Repeat for every new node, and for the current node after every compaction**, which empties the set of contextualized nodes. Do not reuse context from a previous node.
 
 **Do not proceed until complete.**
 
@@ -185,7 +185,7 @@ Invoke the architecting skill for the detected language.
 
 Produce the ADR(s) for the work item. The architecture must be complete before audit.
 
-Before the architecture audit, invoke `/verify` separately for every new or changed ADR/PDR path. This moves each decision rule into its canonical verification subsection and supplies that subsection's tag before the auditor judges the decision. Keep target-node assertion routing in Step 5; this pre-audit decision routing creates no executable evidence link inside the decision record.
+Before the architecture audit, use skill `spec-tree:verify` separately for every new or changed ADR/PDR path. This moves each decision rule into its canonical verification subsection and supplies that subsection's tag before the auditor judges the decision. Keep target-node assertion routing in Step 5; this pre-audit decision routing creates no executable evidence link inside the decision record.
 
 </step>
 
@@ -203,7 +203,7 @@ Before invoking the audit, apply `<stabilized_diff_rule>` and `<verification_che
 
 <step number="5" name="Establish evidence">
 
-Invoke `/verify` for the target node. It selects each assertion's verification type and routes selected test work through `/test` to the detected language specialist. It routes eval work through `/eval` when that capability is installed and records pathless audit requirements without producing their verdict.
+Use skill `spec-tree:verify` for the target node. It selects each assertion's verification type and routes selected test work through `/test` to the detected language specialist. It routes eval work through `/eval` when that capability is installed and records pathless audit requirements without producing their verdict.
 
 Establish every selected path-bearing evidence definition before implementation. When `/verify` selects test, the linked tests exist before implementation. When it selects evaluate, the eval definition, cases, prompt, and producer contract exist before implementation. A pathless audit selection records the isolated-verifier requirement and creates no preimplementation artifact.
 
@@ -235,17 +235,17 @@ Write implementation code, then run every applicable deterministic check selecte
 
 <step number="7a" name="Simplify implementation">
 
-For Go, Rust, or TypeScript, dispatch the configured simplifier selected in `<skill_map>` after Step 7. Python has no declared simplifier and skips this step. Never infer another subagent from a language name.
+For Go, Rust, or TypeScript, run the language's simplification skill selected in `<skill_map>` in this conversation after Step 7. A language that ships no simplification skill skips this step.
 
-Before dispatch, invoke `/commit-changes` when needed and require a clean worktree. Record the full committed head. Pass only `HEAD`, or the explicit three-dot range used for the selected base. The invoked language skill independently selects the changed implementation and its governing evidence. Run one simplifier at a time, with no concurrent writer to its implementation scope.
+Before running it, use skill `spec-tree:commit-changes` when needed and require a clean worktree. Record the full committed head. Supply only `HEAD`, or the explicit three-dot range used for the selected base, as its target. The language skill independently selects the changed implementation and its governing evidence.
 
-Require the skill's JSON result with `status`, `reason`, `target`, `base`, `head`, `scope`, `changed_paths`, `changes`, `evidence`, `verification`, `blockers`, and `recovery`. Check the returned target and full head against the dispatched subject, inspect every retained edit and command result, and apply the result contract:
+Require the skill's JSON result with `status`, `reason`, `target`, `base`, `head`, `scope`, `changed_paths`, `changes`, `evidence`, `verification`, `blockers`, and `recovery`. Check the returned target and full head against the committed subject, inspect every retained edit and command result, and apply the result contract:
 
 - `simplified`: inspect the retained patch for scope and behavior preservation. Complete any still-required deterministic checks, then checkpoint every resulting edit before Step 8. Preserve the successful command results against that exact content; do not repeat commands whose subject is unchanged.
 - `unchanged`: require no retained edit and a reason explaining the empty scope or absence of a safe improvement, then continue.
-- `blocked` or `failed`: preserve the complete prerequisite or verification diagnostic and recovery outcome; stop this node before Step 8. Repair the named prerequisite or implementation through its owning workflow. A new simplifier invocation requires a repaired, verified, committed subject and follows the same one-call contract.
+- `blocked` or `failed`: preserve the complete prerequisite or verification diagnostic and recovery outcome; stop this node before Step 8. Repair the named prerequisite or implementation through its owning workflow. A new simplification run requires a repaired, verified, committed subject.
 
-An absent or malformed result follows `<launch_contract>`. A simplification result supplies no independent audit approval. Step 8 and every applicable evidence and review gate remain required. If later repair changes implementation, repeat Step 7a on the repaired committed subject before its final audits.
+An absent or malformed result stops this node before Step 8 with the exact failure. A simplification result supplies no independent audit approval. Step 8 and every applicable evidence and review gate remain required. If later repair changes implementation, repeat Step 7a on the repaired committed subject before its final audits.
 
 </step>
 
@@ -283,7 +283,7 @@ Before invoking the review, confirm every applicable Step 8a evidence-auditor ve
 
 Dispatch `spec-tree_changes-reviewer` over the full committed changeset, passing only the raw scope token: `HEAD` for the current branch or an explicit committed range for a selected base. Never add a prose prompt, severity filter, or emphasis instruction. Collect the final message through the native result-collection capabilities and require it to be the raw review run token. A tool failure, terminal result without a final message, or non-token final message blocks Step 9 and follows `<launch_contract>`.
 
-Invoke `/project-run-journal`, then inspect the returned token through its `render_review_run.py` helper exactly as that skill directs. Treat the helper output as the inspection projection of the sealed journal prefix; the sealed prefix remains the only review result. Read the rendered terminal status, full head/base identity, scope coverage, blocking/debt counts, and findings before deciding whether Step 9 converged. Carry the review forward as the bounded projection `<result_carryover>` defines.
+Use skill `spec-tree:project-run-journal`, then inspect the returned token through its `render_review_run.py` helper exactly as that skill directs. Treat the helper output as the inspection projection of the sealed journal prefix; the sealed prefix remains the only review result. Read the rendered terminal status, full head/base identity, scope coverage, blocking/debt counts, and findings before deciding whether Step 9 converged. Carry the review forward as the bounded projection `<result_carryover>` defines.
 
 The per-node gates in Steps 4, 6, and 8 inspect through distinct audit lenses; they do not see every cross-node effect — a stale reference a rename left in a sibling, dead code a move orphaned, or a spec a consolidation made false. The whole-diff review catches those effects.
 
@@ -297,7 +297,7 @@ Skip this step only when the user explicitly scoped the work to a proposal, anal
 
 Local readiness is not delivered value. A Step 8 projection with `terminalStatus: approved`, a converged Step 9 review, passing tests, a clean working tree, and a local commit ahead of base are progress. Delivered value is the change merged to the default branch on origin.
 
-Invoke `/merge`. It selects the transport and drives the change to the default branch under its own authority gates — this flow neither re-implements the merge protocol nor re-decides those gates. The `/merge` lifecycle owns commit, push, integration review, and merge.
+Use skill `spec-tree:merge`. It selects the transport and drives the change to the default branch under its own authority gates — this flow neither re-implements the merge protocol nor re-decides those gates. The `/merge` lifecycle owns commit, push, integration review, and merge.
 
 The flow is complete only when the change reaches the default branch on origin, or an explicit merge lifecycle gate blocks with no independent local action remaining. A clean working tree, a local commit, or a branch ahead of base is never the endpoint for default-branch work.
 
@@ -330,7 +330,7 @@ Steps 4, 6, 8, and applicable Step 8a are blocking audit gates. Steps 4, 6, and 
 
 For completed verdicts of `REJECTED`, `UNKNOWN`, or a complete `BLOCKED` diagnostic at Steps 4 and 6; projection `terminalStatus: rejected` or a complete blocked diagnostic at Step 8; or valid findings at Step 9: fix the defect class, verify and checkpoint the changed subject, then audit that subject. Use Step 8's complete blocked diagnostic to identify the failed command, payload, installation, or skill-load boundary. Launch failures, unusable results, and blocked inspection of a valid review token follow `<launch_contract>` and Step 9; they never enter this relaunch loop.
 
-**3 consecutive completed rejected, unknown, or blocked verdicts on the same gate (Steps 4, 6, 8, 8a), or 3 consecutive completed Step 9 reviews that surface unresolved valid findings -> STOP.** Surface the stuck gate to the user via `request_user_input`: report the gate, its most recent verdict and outstanding findings, the same-class sweep already performed, and what did not resolve. A convergence loop that keeps reopening valid findings is a signal Claude's approach is unstable; refactor the approach before asking the same gate again. A failed launch or unusable result stops on its first occurrence under `<launch_contract>`.
+**3 consecutive completed rejected, unknown, or blocked verdicts on the same audit gate (Steps 4, 6, 8, 8a) -> STOP.** Surface the stuck gate to the user via `request_user_input`: report the gate, its most recent verdict and outstanding findings, the same-class sweep already performed, and what did not resolve. A convergence loop that keeps reopening valid findings is a signal Claude's approach is unstable; refactor the approach before asking the same gate again. Repeated valid Step 9 review findings never become this stop or an operator call: the loaded merging standard governs them, and `<stabilized_diff_rule>` widens the same-class repair and amends the invariant before the next review. A failed launch or unusable result stops on its first occurrence under `<launch_contract>`.
 
 </review_gates>
 

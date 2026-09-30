@@ -12,6 +12,7 @@ import yaml
 
 from outcomeeng.distribution.agents import (
     AGENT_SOURCE_DIRECTORY_NAME,
+    AGENT_TARGETS_FIELD,
     TomlArrayTable,
     TomlMultilineString,
     CodexAgent,
@@ -25,6 +26,8 @@ from outcomeeng.distribution.agents import (
 from outcomeeng.distribution.build import build
 from outcomeeng.distribution.contracts import (
     DIST_CODEX_PLUGINS_DIR,
+    FRONTMATTER_DELIMITER,
+    Target,
     PLUGINS_DIR_NAME,
     SOURCE_ROOT_NAME,
 )
@@ -108,6 +111,13 @@ class RepositoryAgentBuild:
 
     sources: tuple[Path, ...]
     dist_root: Path
+    admitted_targets: Mapping[Path, frozenset[Target]]
+
+    def sources_for(self, target: Target) -> tuple[Path, ...]:
+        """Return the sources the build emits into ``target``'s tree."""
+        return tuple(
+            source for source in self.sources if target in self.admitted_targets[source]
+        )
 
 
 def build_repository_agents(root: Path) -> RepositoryAgentBuild:
@@ -116,15 +126,45 @@ def build_repository_agents(root: Path) -> RepositoryAgentBuild:
     sources = iter_agent_files(source_root / PLUGINS_DIR_NAME)
     dist_root = root / "dist"
     build(source_root, dist_root)
-    return RepositoryAgentBuild(sources=sources, dist_root=dist_root)
+    return RepositoryAgentBuild(
+        sources=sources,
+        dist_root=dist_root,
+        admitted_targets={source: authored_agent_targets(source) for source in sources},
+    )
+
+
+def authored_agent_targets(source: Path) -> frozenset[Target]:
+    """Read the targets an authored source lists, independently of the build's parser.
+
+    Only the block list under the targets key is read, so build tokens elsewhere
+    in the front matter need no rendering. A source outside an agents directory,
+    or an agent source without the key, lists every target.
+    """
+    if source.parent.name != AGENT_SOURCE_DIRECTORY_NAME:
+        return frozenset(Target)
+    lines = source.read_text(encoding="utf-8").split("\n")
+    if lines[0] != FRONTMATTER_DELIMITER or FRONTMATTER_DELIMITER not in lines[1:]:
+        raise ValueError(f"{source}: expected YAML frontmatter delimiters")
+    frontmatter = lines[1 : lines.index(FRONTMATTER_DELIMITER, 1)]
+    key = f"{AGENT_TARGETS_FIELD}:"
+    if key not in frontmatter:
+        return frozenset(Target)
+    items: list[str] = []
+    for line in frontmatter[frontmatter.index(key) + 1 :]:
+        if not line.startswith("  - "):
+            break
+        items.append(line.removeprefix("  - ").strip())
+    return frozenset(Target(item) for item in items)
 
 
 def agent_document_oracle(path: Path) -> AgentDocumentOracle:
     """Read an agent document through PyYAML instead of the production parser."""
     text = path.read_text(encoding="utf-8")
-    if not text.startswith("---\n"):
+    if not text.startswith(f"{FRONTMATTER_DELIMITER}\n"):
         raise ValueError(f"{path}: expected YAML frontmatter opener")
-    frontmatter_text, separator, body = text.removeprefix("---\n").partition("\n---\n")
+    frontmatter_text, separator, body = text.removeprefix(
+        f"{FRONTMATTER_DELIMITER}\n"
+    ).partition(f"\n{FRONTMATTER_DELIMITER}\n")
     if not separator:
         raise ValueError(f"{path}: expected YAML frontmatter closer")
     loaded = yaml.safe_load(frontmatter_text)

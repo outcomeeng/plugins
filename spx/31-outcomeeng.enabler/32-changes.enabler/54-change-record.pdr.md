@@ -22,7 +22,7 @@ No other front-matter key is valid. The body contains exactly these top-level se
 3. `# Frame` — the affected or intended Nodes, Assertion operations, governing Decisions, target malleability, required node states, evidence obligations, dependencies, repository boundary, and accountable person known at the declared Maturity.
 4. `# Activities` — the mutable, ordered execution plan, containing only steps another holder needs to coordinate.
 
-Front-matter values are never stripped, restated, or maintained as authoritative body lines. Provider conversations, transcripts, cost estimates, resource accounting, and routine local commands are not record content.
+Front-matter values are never restated or maintained as body lines; each place that holds a Change keeps each field in its one home, as Persistence states. Provider conversations, transcripts, cost estimates, resource accounting, and routine local commands are not record content.
 
 ## Definitions of Ready
 
@@ -66,15 +66,15 @@ An Executable Change is ready when:
 - `# Frame` states the required state and evidence obligations for every affected node; and
 - `# Activities` is ordered and sufficient for an agent to proceed without reopening product or architecture judgment.
 
-Framed requires the operator's attestation. Sliced requires a named accountable person. An agent may advance Sliced to Executable only inside the authority of the attested Frame.
+Framed requires the operator's attestation. Sliced requires a named accountable person. The Refiner may advance Sliced to Executable only inside the authority of the attested Frame.
 
 ## Lifecycle
 
-Lifecycle records who holds the Change or how it ended: `Available` means no holder; `Claimed` means one holder; `Applied`, `Refined`, and `Abandoned` are terminal. One skill moves each transition and moves nothing else: `claim-change` moves `Available` to `Claimed`, `release-change` moves `Claimed` to `Available`, and `close-change` moves `Claimed` to the terminal value its one argument names. None of the three writes Maturity, and none writes a body section other than the Handoff or the terminal record; Maturity moves only through `author-change`. Author, Fixer, and Verifier roles hold no claim.
+Lifecycle records who holds the Change or how it ended: `Available` means no holder; `Claimed` means one holder; `Applied`, `Refined`, and `Abandoned` are terminal. One skill moves each transition and moves nothing else: `claim-change` moves `Available` to `Claimed`, `release-change` moves `Claimed` to `Available`, and `close-change` moves `Claimed` to the terminal value its one argument names. None of the three writes Maturity or a body section; each posts only its own comment — the Claim, the Handoff, or the terminal record; Maturity moves only through `author-change`. Author, Fixer, and Verifier roles hold no claim.
 
-A claim requires an open record whose Product is the configured Product, whose Maturity is one declared value, whose Lifecycle is `Available`, and whose holder is empty; any other state is reported without mutation. The claim adds the holder, records the Claim — the claiming agent session and its assigned worktree root — and writes `Claimed`. When two sessions claim at once, the earliest Claim after the latest Handoff wins, and the losing session withdraws its own holder record and reports the winner.
+A claim requires an open record whose Product is the configured Product, whose Maturity is one declared value, whose Lifecycle is `Available`, and whose holder is empty; any other state is reported without mutation. The claim adds the holder, records the Claim — the claiming agent session and the worktree root the Change is claimed for, which is the session's own assigned root or a root it names — and writes `Claimed`. When two sessions claim at once, the earliest Claim after the latest Handoff wins, and the losing session withdraws its own holder record and reports the winner. The Change's holder is the session whose assigned worktree root equals the root the winning Claim names; a release or a close runs only for that session.
 
-A release requires the Handoff: branch or changeset, completed and next Activities, blockers, and the hazards the next holder cannot derive quickly — never a secret and never content that belongs in the body. What the holder learned about the Output is refined into the body through `author-change` before the release. The release writes the Handoff, removes the holder, and writes `Available`; Maturity stays as it is, and any agent may claim the Change next.
+A release requires the Handoff: branch or changeset, completed and next Activities, blockers, and the hazards the next holder cannot derive quickly — never a secret and never content that belongs in the body. What the holder learned about the Output is refined into the body through `author-change` before the release. The release writes the Handoff, removes the holder, and writes `Available`; Maturity stays as it is, and any agent session may claim the Change next.
 
 A close requires its terminal precondition from current state, not from the holder's account. `Applied` requires the changeset integrated into the authoritative branch, the Assertions and evidence governing the Change's Nodes satisfied, and the Output delivered; a merged pull request alone is not `Applied`. `Refined` requires at least one successor in the store, and every known successor naming this Change in `refined_from`; a Change whose Output continues nowhere is not refined. `Abandoned` requires the operator's explicit direction and records the operator's stated reason. The close writes the terminal record, removes the holder, writes the terminal Lifecycle, and closes the record with the matching reason. A terminal Change receives no Handoff and never returns to `Available`.
 
@@ -82,9 +82,20 @@ Every transition is an ordered write with a complete readback: each write lands 
 
 ## Persistence
 
-Persistence maps every front-matter field to the configured coordination store's native features, writes the complete record without stripping its front matter, and reads every field back unchanged before reporting success. A coordination-store limit never shapes the record.
+Each of the six fields has exactly one home in each place that holds the Change, and no place writes a field twice. A local draft carries all six as its front matter above the four sections; authoring imports a published Change into a draft and publishes the draft back. A coordination store holds each field in the one native feature the plugin assigns it, and its body holds the four sections with no front matter and no lineage line. Persistence writes each field to its home and the four sections to the body, reads each back unchanged, and reports success only then. A coordination-store limit never shapes the record.
 
-The record remains authoritative without any store-specific field, label, relationship, or rendering. Store-native metadata is a projection of the record rather than a second source of Change semantics. The persistence skill instruction selects the client for the configured store; the record embeds no store commands or provider identifiers.
+In the GitHub store the homes are:
+
+| Field          | Home                                                                                                                                                                  |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `title`        | The issue title                                                                                                                                                       |
+| `product`      | The organization issue field `Product`                                                                                                                                |
+| `maturity`     | The organization issue field `Maturity`                                                                                                                               |
+| `lifecycle`    | The organization issue field `Lifecycle`                                                                                                                              |
+| `refined_from` | The organization text issue field `Predecessors`: the canonical identities, such as `outcomeeng/changes#17`, separated by a comma and one space, and empty for a root |
+| `blocked_by`   | GitHub's native issue dependencies                                                                                                                                    |
+
+No project field holds a Change field. The Lifecycle comments — the Claim, the Handoff, and the terminal record — are the store's record of holding and continuation, not of the Change's content. The persistence skill instruction selects the client for the configured store; the record embeds no store commands or provider identifiers.
 
 ## Compatibility
 
@@ -92,11 +103,11 @@ The record remains authoritative without any store-specific field, label, relati
 
 ## Rationale
 
-One self-contained record preserves Change meaning across local drafting and coordination stores, while cumulative, independently loadable Definitions of Ready let authoring and audit judge exactly the Maturity a record declares. Proposed readiness is the approving audit rather than an operator review, and the audit verdict stays outside every criterion set it judges, so each Definition of Ready is decidable and a higher level inherits the preceding level's criteria, never a verdict about another level. Excluding records without the closed front-matter key set keeps the contract closed and avoids treating inference as product truth.
+One self-contained record preserves Change meaning across local drafting and coordination stores, and one home per field in each place leaves no second copy to drift from the first, while cumulative, independently loadable Definitions of Ready let authoring and audit judge exactly the Maturity a record declares. Proposed readiness is the approving audit rather than an operator review, and the audit verdict stays outside every criterion set it judges, so each Definition of Ready is decidable and a higher level inherits the preceding level's criteria, never a verdict about another level. Excluding records without the closed front-matter key set keeps the contract closed and avoids treating inference as product truth. The holder is keyed on the worktree the Claim names, because one account runs several sessions and a session that claims for another — one that starts the Executor's session in a worktree of its own — is not the session that later releases or closes; the worktree separates the holder from every other session of the account while letting the session started in it hold what was claimed for it.
 
 ## Product properties
 
-1. A Change carries its complete coordination meaning in the record and remains portable across coordination stores.
+1. A Change's record carries its Output, Value, Frame, and Activities and remains portable across coordination stores; who holds the Change and where its work continues are carried by its Lifecycle comments — the Claim, the Handoff, and the terminal record — under the Lifecycle rules.
 2. Maturity advances only when the declared level's cumulative Definition of Ready holds and its human or Frame-derived authority is present.
 3. Lifecycle moves through one skill per transition — claim, release with a Handoff, close to a named terminal value — each an ordered write with a complete readback that never touches Maturity; persistence preserves field equality, while audit accepts only records whose front matter carries the contract's closed key set.
 
@@ -105,12 +116,13 @@ One self-contained record preserves Change meaning across local drafting and coo
 - ALWAYS: a Change record contains exactly the six required front-matter keys and the four fixed top-level body sections in their declared order.
 - ALWAYS: Proposed, Framed, Sliced, and Executable each have one independently loadable, cumulative Definition of Ready.
 - ALWAYS: Maturity advances only when the target level's Definition of Ready holds and the level's authority is present: operator attestation for Framed, a named accountable person for Sliced, and the attested Frame for Executable.
-- ALWAYS: persistence maps every front-matter field to the configured coordination store's native features, writes the complete self-contained record, and reads each persisted field back unchanged before reporting success; a coordination-store limit never shapes the record.
-- NEVER: store-native metadata replaces, strips, or restates authoritative Change content.
+- ALWAYS: persistence writes each field to its one home in the configured coordination store and the four sections to the store body, and reads each back unchanged before reporting success; a coordination-store limit never shapes the record.
+- NEVER: a place holds a Change field in two homes, a store body carries front matter or a lineage line, or a project field holds a Change field.
 - NEVER: `audit-change` judges or migrates a record whose front matter does not carry the contract's closed key set; the auditor reports it as outside the contract.
-- ALWAYS: `claim-change` claims only an open record whose Product, Maturity, `Available` Lifecycle, and empty holder verify from current state; it adds the holder, records the Claim, writes `Claimed`, and reads the complete state back before execution begins, and a losing concurrent claim withdraws its own holder record and reports the winner.
+- ALWAYS: `claim-change` claims only an open record whose Product, Maturity, `Available` Lifecycle, and empty holder verify from current state; it adds the holder, records the Claim naming the claiming session and the worktree root the Change is claimed for, writes `Claimed`, and reads the complete state back before execution begins, and a losing concurrent claim withdraws its own holder record and reports the winner.
+- ALWAYS: `release-change` and `close-change` run only for the session whose assigned worktree root equals the root the winning Claim names, and report any other caller without mutation.
 - ALWAYS: `release-change` writes a Handoff carrying branch or changeset, completed and next Activities, blockers, and hazards, then removes the holder, writes `Available`, and reads the complete state back, leaving Maturity unchanged.
-- ALWAYS: `close-change` verifies the named terminal precondition from current state, writes the terminal record, removes the holder, writes the terminal Lifecycle, closes the record with the matching reason, and reads the complete terminal state back; it refuses an argument outside `Applied`, `Refined`, and `Abandoned`, and refuses `Refined` while no successor exists in the store or a known successor is absent from it.
-- NEVER: a Lifecycle skill writes Maturity or a body section other than the Handoff or the terminal record.
+- ALWAYS: `close-change` verifies the named terminal precondition from current state, writes the terminal record, removes the holder, writes the terminal Lifecycle, closes the record with the matching reason, and reads the complete terminal state back; it refuses an argument outside `Applied`, `Refined`, and `Abandoned`, and refuses `Refined` while no successor exists in the store, a known successor is absent from it, or a successor does not name this Change in `refined_from`.
+- NEVER: a Lifecycle skill writes Maturity or a body section, or posts a comment other than its Claim, Handoff, or terminal record.
 - NEVER: a Lifecycle transition performs a later mutation after a required write fails or a readback differs from the intended state; its diagnostic names every completed write, the failed operation, and the observed state.
 - NEVER: a Handoff, Claim, or terminal record carries a secret value or credential payload.

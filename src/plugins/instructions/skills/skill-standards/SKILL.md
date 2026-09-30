@@ -88,7 +88,7 @@ Pick the gate by role:
 - A user-only side-effecting command (`/deploy`) uses `disable-model-invocation: true`. NEVER set it on a skill other skills or subagents must load: it blocks the Skill-tool call (surfacing `Skill <name> cannot be used with Skill tool due to disable-model-invocation`) AND blocks subagent preloading.
 - A skill any automation loop re-enters — a scheduled wakeup, heartbeat, or `/loop` target — MUST be user-invocable (leave the default; never `user-invocable: false`). Automation fires as a user-style prompt, so `user-invocable: false` rejects it and no Claude-private heartbeat exists to bypass that. When a loop body is otherwise reference-like, expose a user-invocable entry the loop targets rather than gating the body. Such a loop body keeps a **passive** description — it is invoked by exact name (the timer or a parent skill), not by description-match, so a directive description would only cause false auto-activations. A user-invocable skill with a passive description is the correct shape here, not a defect.
 
-Audit skills (`audit-*`) must add `allowed-tools: Read, Grep, Glob, Bash` per the read-only rule for audit skills, plus `{{! tool('use_skill') !}}` when the audit composes another skill — audit runs never modify files.
+Audit skills (`audit-*`) must add `allowed-tools: Read, Grep, Glob` and only the specific read-only Bash verb patterns their workflow runs, never bare `Bash`, per the read-only rule for audit skills, plus `{{! tool('use_skill') !}}` when the audit composes another skill — audit runs never modify files.
 
 **Directory match is mandatory.** `skills/author/` → `name: author`. A mismatch breaks skill lookup.
 
@@ -520,5 +520,7 @@ A consumer's harness declares which directories a session may touch: the working
 One content may name a prohibited path: the rule prohibiting it. A standard listing the spellings an author may not write, or an audit row naming what to flag, states the rule rather than breaking it. Judge the surrounding intent — a path a skill presents as prohibited is not a violation, and a path a skill presents as a step to follow is one regardless of how it is fenced.
 
 **A permission prompt is a result, not an obstacle.** When a tool layer declines a path, that decline is the boundary working. Never document a way around it — a shell redirect standing in for a refused tool write, a broader permission substituted for a narrow one, a path rewritten to dodge a check. Name a path inside the boundary instead. A skill that teaches evasion converts one operator's approval into every future session's bypass.
+
+**An automated classifier's refusal admits one retrace-bound retry.** A decline names its source: the operator refusing a permission prompt, a guard — a hook or a dangerous-command guard — naming its rule, or the harness's permission classifier stating that it refused. Only a classifier refusal of a request the operator's instruction already authorized admits a retry, only where the skill directs one, and only after Claude retraces the request as sent, the classifier's reason, and each step that shaped the request. The retry carries only the correction the retrace found, never a rewording that hides the objection; a second refusal, and every other decline, is the result.
 
 </path_boundary>

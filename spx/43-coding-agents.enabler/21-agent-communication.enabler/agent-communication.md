@@ -6,7 +6,7 @@ malleability: spec
 # Agent Communication
 
 PROVIDES a source-owned message record, message vocabulary, and deterministic delivery requests for supported coding-agent environments
-SO THAT inter-worktree coordination, officer orchestration, and other coding-agent workflows
+SO THAT coding-agent workflows that coordinate agent sessions across worktrees
 CAN exchange facts, orders, questions, answers, and authority messages through complete participant identities without embedding environment transport mechanics in prompt prose
 
 ## Message record

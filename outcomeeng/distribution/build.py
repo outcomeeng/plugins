@@ -33,6 +33,7 @@ from jinja2 import (
 from jinja2.runtime import Context
 
 from outcomeeng.distribution.agents import (
+    AGENT_TARGETS_FIELD,
     AGENT_TOOLS_FIELD,
     convert_agent_markdown,
     parse_agent_text,
@@ -60,7 +61,6 @@ from outcomeeng.distribution.contracts import (
     PLUGIN_NAME_VARIABLE,
     PLUGINS_DIR_NAME,
     PLUGIN_SUBDIRS,
-    REFERENCES_SUBDIR_NAME,
     REQUIRE_SKILL_GUIDANCE_TEMPLATE,
     RUNTIME_TOKEN_ASK_USER_CAPABILITY,
     RUNTIME_TOKEN_ASK_USER_NAMES,
@@ -156,13 +156,6 @@ CLAUDE_ONLY_FRONTMATTER_FIELDS: Final = (DISABLE_MODEL_INVOCATION_FIELD,)
 CLAUDE_SKILL_DIR_TOKEN: Final = "${CLAUDE_SKILL_DIR}"
 CODEX_SKILL_DIR_TOKEN: Final = "${SKILL_DIR}"
 SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE: Final = "{!# no-codex-skill-dir-rewrite #!}"
-EXECUTION_TIME_INJECTION_START: Final = "!`"
-EXECUTION_TIME_INJECTION_END: Final = "`"
-EXECUTION_TIME_INJECTION_PATTERN: Final = re.compile(
-    rf"(?<!`){re.escape(EXECUTION_TIME_INJECTION_START)}"
-    rf"(?P<command>[^`\r\n]*)"
-    rf"{re.escape(EXECUTION_TIME_INJECTION_END)}"
-)
 SKILL_DIR_REFERENCE_SUFFIX_PATTERN: Final = r"/[^\s`\"']+"
 SKILL_DIR_REWRITE_PLACEHOLDER: Final = "__OUTCOMEENG_CLAUDE_SKILL_DIR_LITERAL__"
 # Protects the escape directive (which shares Jinja's {!# #!} comment syntax) across
@@ -954,26 +947,6 @@ def rewrite_paths_for_target(text: str, *, target: _Target) -> str:
     return translated.replace(SKILL_DIR_REWRITE_PLACEHOLDER, CLAUDE_SKILL_DIR_TOKEN)
 
 
-def execution_time_injection_commands(text: str) -> tuple[str, ...]:
-    """Return the commands embedded in execution-time dynamic context."""
-    return tuple(
-        match.group("command")
-        for match in EXECUTION_TIME_INJECTION_PATTERN.finditer(text)
-    )
-
-
-def contains_execution_time_skill_content_injection(text: str) -> bool:
-    """Return whether dynamic context can inline a skill definition."""
-    return any(
-        SKILL_FILENAME in command
-        or (
-            "../" in command
-            and ("*" in command or f"/{REFERENCES_SUBDIR_NAME}/" in command)
-        )
-        for command in execution_time_injection_commands(text)
-    )
-
-
 def skill_dir_path_references(text: str, token: str) -> tuple[str, ...]:
     """Return complete path references rooted at ``token`` in source order."""
     pattern = re.compile(rf"{re.escape(token)}{SKILL_DIR_REFERENCE_SUFFIX_PATTERN}")
@@ -1446,7 +1419,9 @@ def render_native_agent_markdown(
     configuration = render_profile_configuration(
         target, agent.profile, syntax=ProfileSyntax.YAML
     )
-    remaining = strip_frontmatter_fields(text, fields=(PROFILE_FIELD,))
+    remaining = strip_frontmatter_fields(
+        text, fields=(PROFILE_FIELD, AGENT_TARGETS_FIELD)
+    )
     if remaining.startswith("---\n"):
         return "---\n" + configuration + "\n" + remaining.removeprefix("---\n")
     return "---\n" + configuration + "\n---\n" + remaining
@@ -1718,6 +1693,8 @@ def project_emissions(src_root: Path) -> EmissionProjection:
             else EmissionAction.COPY
         )
         for target in _Target:
+            if not agent_source_admits_target(source_file, target, src_root=src_root):
+                continue
             target_path, target_action = _agent_aware_destination(
                 relative_path, action=action, target=target
             )
@@ -1751,6 +1728,42 @@ def project_emissions(src_root: Path) -> EmissionProjection:
         )
         raise SourceFormatError(f"multiple sources emit the same output: {details}")
     return projection
+
+
+def agent_source_admits_target(
+    source_file: Path, target: _Target, *, src_root: Path
+) -> bool:
+    """Return whether ``source_file`` is emitted into ``target``'s generated tree.
+
+    Only an agent source can narrow its targets, through the `targets` field of
+    its front matter as rendered for ``target``; every other source, and an agent
+    source without the field, is emitted into every target. An empty list or a
+    value naming no registered target fails the build before any output is written.
+    """
+    if (
+        source_file.parent.name != AGENTS_SUBDIR_NAME
+        or source_file.suffix != MARKDOWN_FILE_SUFFIX
+    ):
+        return True
+    rendered = render_text(
+        source_file.read_text(encoding="utf-8"),
+        shared_root=src_root / SHARED_DIR_NAME,
+        variables=_render_variables(
+            target,
+            plugin_name=plugin_relative_path(source_file, src_root=src_root).parts[0],
+        ),
+    )
+    agent = parse_agent_text(rendered, source_path=source_file, name=source_file.stem)
+    if not agent.targets_declared:
+        return True
+    registered = {registered.value for registered in _Target}
+    unknown = sorted(set(agent.targets) - registered)
+    if unknown or not agent.targets:
+        raise SourceFormatError(
+            f"{source_file}: `{AGENT_TARGETS_FIELD}` must list one or more of "
+            f"{sorted(registered)}; found {list(agent.targets)}"
+        )
+    return target.value in agent.targets
 
 
 FLAT_AGENT_PLUGIN_SEPARATOR: Final = "_"

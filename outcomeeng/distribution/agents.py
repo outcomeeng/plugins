@@ -27,15 +27,18 @@ from outcomeeng.distribution.profiles import (
 )
 
 AGENT_NAME_FIELD: Final = "name"
+AGENT_DESCRIPTION_FIELD: Final = "description"
 AGENT_SKILL_ENABLED_FIELD: Final = "enabled"
 AGENT_TOOLS_FIELD: Final = "tools"
+# Lists the generated targets an agent source is emitted for; absent means every target.
+AGENT_TARGETS_FIELD: Final = "targets"
 AGENT_SKILL_INCLUDE_INSTRUCTIONS_FIELD: Final = "include_instructions"
 APPROVAL_POLICY_FIELD: Final = "approval_policy"
 SANDBOX_MODE_FIELD: Final = "sandbox_mode"
 SUPPORTED_FRONTMATTER_FIELDS: Final = frozenset(
     {
         AGENT_NAME_FIELD,
-        "description",
+        AGENT_DESCRIPTION_FIELD,
         PROFILE_FIELD,
         APPROVAL_POLICY_FIELD,
         SANDBOX_MODE_FIELD,
@@ -45,6 +48,7 @@ SUPPORTED_FRONTMATTER_FIELDS: Final = frozenset(
         "skills",
         AGENT_TOOLS_FIELD,
         "disallowedTools",
+        AGENT_TARGETS_FIELD,
     }
 )
 # Authored agent sources. The build converts each agent as it renders it, so a
@@ -129,6 +133,8 @@ class SourceAgent:
     tools: tuple[str, ...] = ()
     tools_declared: bool = False
     disallowed_tools: tuple[str, ...] = ()
+    targets: tuple[str, ...] = ()
+    targets_declared: bool = False
     unsupported_fields: tuple[str, ...] = ()
 
 
@@ -194,7 +200,7 @@ def parse_agent_text(text: str, *, source_path: Path, name: str) -> SourceAgent:
             raise ProfileConfigurationError(
                 f"unknown agent profile: {profile!r}"
             ) from exc
-    description = _optional_string(frontmatter, "description") or (
+    description = _optional_string(frontmatter, AGENT_DESCRIPTION_FIELD) or (
         f"Converted source agent from {source_path.name}."
     )
     unsupported_fields = tuple(
@@ -215,6 +221,8 @@ def parse_agent_text(text: str, *, source_path: Path, name: str) -> SourceAgent:
         tools=_string_tuple(frontmatter, AGENT_TOOLS_FIELD),
         tools_declared=AGENT_TOOLS_FIELD in frontmatter,
         disallowed_tools=_string_tuple(frontmatter, "disallowedTools"),
+        targets=_string_tuple(frontmatter, AGENT_TARGETS_FIELD),
+        targets_declared=AGENT_TARGETS_FIELD in frontmatter,
         unsupported_fields=unsupported_fields,
     )
 
@@ -241,7 +249,7 @@ def convert_agent(
     """Convert one rendered plugin agent into a Codex custom-agent representation."""
     values: dict[str, object] = {
         AGENT_NAME_FIELD: agent.name,
-        "description": agent.description,
+        AGENT_DESCRIPTION_FIELD: agent.description,
     }
     values.update(
         native_configuration_values(

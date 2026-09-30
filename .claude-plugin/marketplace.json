@@ -21,7 +21,7 @@
     {
       "name": "typescript",
       "source": "./dist/claude/typescript",
-      "description": "TypeScript engineering: /test-typescript, /code-typescript, /audit-typescript-code, /audit-typescript-tests, /audit-typescript-architecture, /architect-typescript, typescript-simplifier agent"
+      "description": "TypeScript engineering: /test-typescript, /code-typescript, /audit-typescript-code, /audit-typescript-tests, /audit-typescript-architecture, /architect-typescript, /simplify-typescript"
     },
     {
       "name": "python",
@@ -41,7 +41,7 @@
     {
       "name": "coding-agents",
       "source": "./dist/claude/coding-agents",
-      "description": "Coding-agent environments, coordination, and officer supervision: /operate-prowl, /operate-herdr, /operate-agent-mail, /message-agents, /coordinate-agents, /recover-prowl-agents, /orchestrate-officers"
+      "description": "Coding-agent environments, coordination, and change orchestration: /operate-prowl, /operate-herdr, /operate-agent-mail, /message-agents, /coordinate-agents, /recover-prowl-agents, /orchestrate-change"
     },
     {
       "name": "work",
@@ -56,12 +56,12 @@
     {
       "name": "rust",
       "source": "./dist/claude/rust",
-      "description": "Rust engineering: /test-rust, /code-rust, /audit-rust-code, /audit-rust-tests, /audit-rust-architecture, /architect-rust, rust-simplifier agent"
+      "description": "Rust engineering: /test-rust, /code-rust, /audit-rust-code, /audit-rust-tests, /audit-rust-architecture, /architect-rust, /simplify-rust"
     },
     {
       "name": "go",
       "source": "./dist/claude/go",
-      "description": "Go engineering: /test-go, /code-go, /audit-go-code, /audit-go-tests, /audit-go-architecture, /architect-go, go-simplifier agent"
+      "description": "Go engineering: /test-go, /code-go, /audit-go-code, /audit-go-tests, /audit-go-architecture, /architect-go, /simplify-go"
     },
     {
       "name": "contribute",

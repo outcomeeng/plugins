@@ -1,14 +1,16 @@
+---
+malleability: spec
+---
+
 # Rust
 
 PROVIDES the complete Rust development workflow — architecture, testing, implementation, review, and unsafe-code auditing
 SO THAT Rust projects using spec-tree
 CAN produce implementations governed by ADRs, verified by evidence-based tests, and audited for quality and soundness
 
-The Rust plugin composes foundational methodology with language-specific standards and workflows. Its `rust-simplifier` definition invokes `/simplify-rust` and relays its result. The `audit-rust-{code|tests|architecture}` skills carry no language-specific auditor agent and are composed by the generic artifact-type auditors, per `spx/21-spec-tree.enabler/17-audit.adr.md`. Rust `unsafe`/FFI soundness is part of the Rust code audit (`audit-rust-code`).
+The Rust plugin composes foundational methodology with language-specific standards and workflows. The `audit-rust-{code|tests|architecture}` skills carry no language-specific auditor agent and are composed by the generic artifact-type auditors, per `spx/21-spec-tree.enabler/17-audit.adr.md`. Rust `unsafe`/FFI soundness is part of the Rust code audit (`audit-rust-code`).
 
 ## Assertions
-
-- ALWAYS: `/simplify-rust` owns the simplification contract for changed Rust implementation: independently discover scope and governing evidence, preserve behavior and ownership semantics, invoke `/code-rust` for edits, and report changed paths and verification results. Its instructions preserve tests and evidence, block changes lacking behavioral coverage, and limit recovery to its own edits ([audit])
 
 ### Compliance
 
@@ -21,3 +23,4 @@ The Rust plugin composes foundational methodology with language-specific standar
 - NEVER: the Rust plugin's skills teach or recommend `tests/support/`, `tests/_support/`, `tests/fixtures/`, `crate::test_support`, `super::tests`, or any inside-`tests/` or in-crate location for shared harnesses, generators, or fixtures ([audit])
 - NEVER: reference specs or decisions from code — no `ADR-21` or `PDR-13` in code comments or docstrings ([audit])
 - ALWAYS: `unsafe` blocks and FFI boundaries pass the Rust code audit's soundness checks (`audit-rust-code`, composed by the implementation auditor) — covering aliasing, lifetimes, validity invariants, and panic safety ([audit])
+- ALWAYS: `/simplify-rust` owns the simplification contract for changed Rust implementation: independently discover scope and governing evidence, preserve behavior and ownership semantics, invoke `/code-rust` for edits, and report changed paths and verification results. Its instructions preserve tests and evidence, block changes lacking behavioral coverage, and limit recovery to its own edits ([audit])

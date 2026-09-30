@@ -5,7 +5,8 @@ supplied by a plugin in their complete authorized plugin list. An active skill
 must explicitly request each launch and specify the exact configured subagent and
 its target-only prompt. The same invocation policy applies to Claude and Codex;
 each published guide and skill addresses only its own agent, with differences
-limited to a known agent-specific requirement.
+limited to an agent-specific requirement that retained native evidence or a
+decision records.
 
 ## Rationale
 
@@ -13,7 +14,10 @@ Standing authorization permits a skill's required launch without repeated
 confirmation, while explicit skill instructions prevent opportunistic delegation.
 A plugin list changes less often than its subagent definitions; unconditional namespaces identify
 the owner separately from the authored subagent name, and skill-owned task instructions
-load only when needed without duplicating the native tool schema.
+load only when needed without duplicating the native tool schema. Language
+behavior ships as skills because one language-neutral definition composing
+them serves every language, where a definition per language multiplies the
+definitions a plugin ships and audits without adding behavior the skills lack.
 
 ## Product properties
 
@@ -43,11 +47,11 @@ load only when needed without duplicating the native tool schema.
    requested subagent. A launch failure is analyzed and reported without retry
    or substitution; audit verdict handling, output contracts, and repair
    workflows are unaffected by this launch policy.
-   The apply lifecycle explicitly launches the corresponding Go, Rust, or
-   TypeScript simplifier after implementation and before final verification.
-   The language skill owns behavior-preserving simplification and its result;
-   the subagent definition invokes that skill and relays the result. This stage
-   has the same contract for both supported agent harnesses.
+   Every subagent definition is language-neutral. A language plugin ships its
+   language behavior as skills, and a language-neutral definition's session
+   composes the skills of the language its target needs. A language-specific
+   subagent definition exists only where a decision records the exception and
+   its reason.
 3. Every subagent selects one of three centrally owned profiles: Standard,
    Strong, or Fast. Standard is the default; Strong and Fast require an explicit
    selection by the governing skill or product decision. Each profile contains
@@ -88,10 +92,11 @@ load only when needed without duplicating the native tool schema.
 
 ### Audit
 
-- ALWAYS: the apply skill owns automatic Go, Rust, and TypeScript simplifier
-  dispatch after implementation, while language simplification skills own
-  scope discovery, behavior preservation, verification, and result reporting;
-  their subagent definitions contain only invocation and result relay ([audit])
+- ALWAYS: every subagent definition is language-neutral; a language plugin
+  ships its language behavior as skills, which a language-neutral definition's
+  session composes for the language its target needs ([audit])
+- NEVER: a plugin ships a language-specific subagent definition unless a
+  decision records that exception and its reason ([audit])
 - ALWAYS: preserve the following standing-request sentence verbatim within
   explicit root-guide authorization for subagents supplied by the listed plugins ([audit])
 
@@ -123,8 +128,8 @@ load only when needed without duplicating the native tool schema.
   separate maintained schema or a compatibility layer ([audit])
 - ALWAYS: render the exact configured names for each agent from the owning
   distribution mappings and address that agent alone in its generated guide and
-  skills. Differences between the two agents' invocation guidance require a
-  known agent-specific reason ([audit])
+  skills. Differences between the two agents' invocation guidance require an
+  agent-specific reason that retained native evidence or a decision records ([audit])
 - ALWAYS: invocation guidance requires exactly one native launch call for a
   skill-requested invocation and analysis and reporting of a failed launch or
   unusable result without retry, another subagent, a model override, an alternative
@@ -148,5 +153,5 @@ load only when needed without duplicating the native tool schema.
   Auditor judges the actual configuration and result, with no retry or
   substitution after a failed or unusable launch ([audit])
 - NEVER: substitute a model silently when the configured model is unavailable,
-  collapse standard and strong profiles, or interpret a request for a current
-  strong model as authority to replace the selected Sol profile with Astra ([audit])
+  collapse the Standard and Strong profiles into one configuration, or change a
+  profile's configured model without amending this decision ([audit])

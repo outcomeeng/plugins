@@ -110,4 +110,4 @@ against emitted output alone.
 
 **Evidence**: `spec-tree:changes-reviewer` runs
 `2026-09-18_03-20-58-166-8b80f274938c`, `2026-09-18_04-29-55-695-83f3737b9f22`,
-and `2026-09-18_13-02-51-809-99cdf563caa5` (debt, evidence) during Change #76.
+and `2026-09-18_13-02-51-809-99cdf563caa5` (debt, evidence) during Change #76; `spec-tree:test-evidence-auditor` finding f-004, severity `REJECT`, on `spx/18-plugin-build.enabler/43-target-emission.enabler` at head `133caf1aba9244c9f6f0706eecb2c0ccf3587b6f`, which names the same render-stage mutation surviving the portable-fields test, raised again as finding f-003 at head `7ca471d52f9b82779c3cf5ea454eea545b0c2e20` and as debt `portable-fields-exception-unfalsifiable` by `spec-tree:implementation-auditor` run `2026-09-30_13-32-44-300-3a68e92d2980`.

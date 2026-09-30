@@ -6,6 +6,17 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.19.1
+
+### Changed
+
+- **`/skill-standards` admits one retrace-bound retry after an automated classifier's refusal.** A skill may direct one retry of a request the operator's instruction already authorized, only after Claude retraces the request, the classifier's reason, and the steps that shaped it, and only with the correction the retrace found. A permission prompt or a guard block still admits no retry.
+- **Audit skills grant only the read-only Bash verb patterns their workflow runs**, never bare `Bash`, so the frontmatter rule matches the narrowest-grant rule in the command-capabilities reference.
+
+### Fixed
+
+- **The variable-scope hook example is a guarded command** with a kill switch, a floor, and a timeout, as the hook reference requires.
+
 ## 0.17.3
 
 ### Changed

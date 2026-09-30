@@ -35,7 +35,7 @@ The body contains exactly these top-level sections in this order:
 3. `# Frame`
 4. `# Activities`
 
-Missing, reordered, duplicated, or unknown top-level sections are defects. Subsections may refine the four sections. Front-matter fields are never stripped, restated, or maintained as authoritative body lines.
+Missing, reordered, duplicated, or unknown top-level sections are defects. Subsections may refine the four sections. Front-matter values are never restated or maintained as body lines.
 
 </rule>
 
@@ -97,9 +97,9 @@ Routine command logs, run tokens, verdicts, findings, verification history, cost
 
 <rule id="store-independence">
 
-The complete record remains authoritative without any store-specific field, label, relationship, or rendering. Store-native metadata is a projection. Persistence writes the complete record without stripping front matter, maps every front-matter field through the configured store, and reads every persisted value back equal before reporting success.
+Each of the six fields has exactly one home in each place that holds the Change, and no place writes a field twice. The local draft carries all six as its front matter above the four sections. A coordination store holds each field in the one native feature the persisting skill assigns it for that store, and its body holds the four sections with no front matter and no lineage line. Persistence writes each field to its home and the four sections to the body, reads each back unchanged, and reports success only then; importing a published Change into a draft reads each field from its home. A coordination-store limit never shapes the record.
 
-Store commands, provider identifiers, project item identifiers, revision selectors, concurrency observations, and holder observations are workflow state outside the record.
+Store commands, provider identifiers, issue and field identifiers, revision selectors, concurrency observations, and holder observations are workflow state outside the record.
 
 </rule>
 
