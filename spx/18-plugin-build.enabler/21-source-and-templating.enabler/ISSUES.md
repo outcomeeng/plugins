@@ -82,21 +82,22 @@ passing test-evidence audit of this node.
 `a65659114b99767b90b4d920550fff5dc0824794` during Change #76; the one finding that changeset caused (`f-018`, a
 restated spec literal in the `require_skill` test) was fixed in the changeset.
 
-## Five further evidence defects beside the boolean-harness seam
+## Six further evidence defects beside the boolean-harness seam
 
-A later test-evidence audit of this node found five defects the entry above does not name. Each sits in evidence that the seam rewrite also touches:
+Later test-evidence audits of this node found six defects the entry above does not name. Each sits in evidence that the seam rewrite also touches:
 
 - `test_per_plugin_template_renders_once_into_every_plugin` checks only the projected emission paths and never renders a template body, so the slug-substitution half of the template assertion can break while the test passes.
 - `test_per_plugin_template_body_names_no_single_plugin` applies a test-owned pattern to authored template prose. No build behavior enforces the rule, so the test checks authored content, not the build.
 - `test_neutral_guidance_oracle_rejects_runtime_specific_wording` and `test_require_skill_locality_oracle_rejects_inlined_content` exercise harness-owned verdict helpers against harness-built strings rather than the build's `require_skill` expansion.
 - The harness hand-writes the directive name `include` and the variable name `target`. `BUILD_TARGET_VARIABLE` exists in `outcomeeng/distribution/contracts.py`; `parse_directives` in `outcomeeng/distribution/build.py` exports no directive-name contract, so the source must expose one first.
 - `test_module_is_implemented` asserts the `IMPLEMENTED` flag, which no mutation of the governed behavior can falsify.
+- `test_property_failures_report_seed_and_replay_path` in `test_parse_directives.property.l1.py` asserts a verdict from `property_failure_notes_include_seed_and_replay`, which checks the property harness's own failure notes against an always-failing callback. It exercises test infrastructure, backs no assertion of this node, and sits in a file typed as property evidence for the parser.
 
-**Resolution shape**: carry these into the seam rewrite. Render a template body per plugin and compare each plugin's substitution; decide whether the no-single-plugin rule is enforced by the build or re-routed to `[audit]`; drive the two oracle tests through `expand_require_skill`; export a directive-name contract and import it with `BUILD_TARGET_VARIABLE`; delete the implementation-flag tests.
+**Resolution shape**: carry these into the seam rewrite. Render a template body per plugin and compare each plugin's substitution; decide whether the no-single-plugin rule is enforced by the build or re-routed to `[audit]`; drive the two oracle tests through `expand_require_skill`; export a directive-name contract and import it with `BUILD_TARGET_VARIABLE`; delete the implementation-flag tests; move the failure-notes evidence to the node that owns the property harness.
 
 **Why separate**: every item edits a test file or harness function the seam rewrite also rewrites, and Change #85 owns that rewrite.
 
-**Evidence**: `spec-tree:test-evidence-auditor` verdict `REJECTED` on head `2d144f83ba964be666ca403c6adeef32be04107e`, findings `f-021`, `f-022`, `f-024`, `f-028`, and `f-029`. The same verdict's other findings repeat the classes the entries above record. `spec-tree:implementation-auditor` run `2026-09-30_14-24-07-109-aa8eb9a74672` raised the seam, the delimiter self-comparison, and the conforming-only scan as debt on the same head.
+**Evidence**: `spec-tree:test-evidence-auditor` verdict `REJECTED` on head `2d144f83ba964be666ca403c6adeef32be04107e`, findings `f-021`, `f-022`, `f-024`, `f-028`, and `f-029`, and on head `a2953a83012096ec30d9d99663a342c69024b029`, finding `f-025`. Each verdict's other findings repeat the classes the entries above record. `spec-tree:implementation-auditor` run `2026-09-30_14-24-07-109-aa8eb9a74672` raised the seam, the delimiter self-comparison, and the conforming-only scan as debt on the same head.
 
 ## The authored-source predicate admits stray workspace artifacts
 
