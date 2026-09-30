@@ -2,7 +2,9 @@
 
 import hashlib
 import json
+import re
 import subprocess
+from string import Formatter
 from typing import cast
 from pathlib import Path
 
@@ -49,6 +51,7 @@ from outcomeeng_testing.harnesses.discovery_auth import (
 )
 from outcomeeng_testing.harnesses.discovery_auth_cases import (
     NativeFault,
+    PersonalHomeFault,
     SavedLoginFault,
     SESSION_COMMAND,
     authentication_case,
@@ -57,10 +60,18 @@ from outcomeeng_testing.harnesses.discovery_auth_cases import (
     invalid_saved_login,
     lock_contention_case,
     missing_credential_environment,
+    personal_codex_home_environment,
+    personal_home_faults,
 )
-from outcomeeng_testing.generators.installation import ClosingDisposition
+from outcomeeng_testing.generators.installation import (
+    ClosingDisposition,
+    generated_boolean_states,
+    generated_non_pending_failure_wordings,
+)
 from outcomeeng_testing.harnesses.installation import (
+    MARKETPLACE,
     RegistryState,
+    committed_catalog_plugin_names,
     observe_unreadable_source,
     CONCURRENT_EDIT_CONTENT,
     EXTERNAL_DEFINITION_CONTENT,
@@ -551,6 +562,18 @@ def test_ci_requires_an_explicit_authentication_mode() -> None:
         select_authentication(ci_without_authentication_mode())
 
 
+@pytest.mark.parametrize("fault", personal_home_faults(), ids=str)
+def test_subscription_refuses_a_codex_home_that_is_not_dedicated(
+    fault: PersonalHomeFault,
+) -> None:
+    with personal_codex_home_environment(fault) as case:
+        with pytest.raises(DiscoveryAuthenticationError):
+            observe_codex_subagent_discovery(
+                environment=case.environment, runner=case.runner
+            )
+        assert case.runner.calls == []
+
+
 def test_workspace_login_uses_its_native_stdin_mechanism() -> None:
     with authentication_case(AuthenticationMode.WORKSPACE_TOKEN) as case:
         with case.auth.authenticated_home(
@@ -720,11 +743,16 @@ def test_a_recorded_plugin_is_refreshed_by_the_native_update_never_a_reinstall()
         for command in claude_commands
         if command.operation is Operation.PLUGIN_UPDATE
     ]
-    failure = observe_designated_failure(
-        isolated=False,
-        operation=Operation.PLUGIN_UPDATE,
-        stderr="update failed for a reason the marketplace did not name",
-    )
+    failures = [
+        observe_designated_failure(
+            isolated=False,
+            operation=Operation.PLUGIN_UPDATE,
+            stderr=wording,
+        )
+        for wording in generated_non_pending_failure_wordings(
+            sorted(committed_catalog_plugin_names()), MARKETPLACE
+        )
+    ]
 
     assert execution.report.plan.claude_plugins
     assert not any(
@@ -760,13 +788,14 @@ def test_a_recorded_plugin_is_refreshed_by_the_native_update_never_a_reinstall()
     assert registering_operations.index(Operation.MARKETPLACE_ADD) < (
         registering_operations.index(Operation.PLUGIN_UPDATE)
     )
-    assert failure.report is None
-    assert failure.failure is not None
-    assert failure.failure.command.operation is Operation.PLUGIN_UPDATE
-    assert not any(
-        command.operation is Operation.PLUGIN_LIST and command.agent is Agent.CLAUDE
-        for command in failure.calls
-    )
+    for failure in failures:
+        assert failure.report is None
+        assert failure.failure is not None
+        assert failure.failure.command.operation is Operation.PLUGIN_UPDATE
+        assert not any(
+            command.operation is Operation.PLUGIN_LIST and command.agent is Agent.CLAUDE
+            for command in failure.calls
+        )
 
 
 def test_a_local_scope_record_for_the_checkout_suppresses_the_bootstrap_install() -> (
@@ -846,8 +875,16 @@ def test_a_failed_head_read_reports_every_carried_record_instead_of_stopping() -
 
     assert Operation.PLUGIN_LIST in after_head
     assert observation.document[ReportField.TARGET] is None
+    head_record_warning = re.compile(
+        "".join(
+            re.escape(literal) + ("" if field is None else ".+")
+            for literal, field, _, _ in Formatter().parse(
+                UNREADABLE_HEAD_RECORD_WARNING
+            )
+        )
+    )
     assert sorted(
-        warning for warning in warnings if warning.startswith("Claude Code records")
+        warning for warning in warnings if head_record_warning.fullmatch(warning)
     ) == sorted(
         UNREADABLE_HEAD_RECORD_WARNING.format(
             plugin=observation.plugin,
@@ -1064,15 +1101,7 @@ def test_a_record_written_between_the_writers_read_and_its_replace_survives(
 
 
 def test_no_agent_announces_a_first_install_its_plan_does_not_carry() -> None:
-    observation = observe_unreadable_source(
-        (
-            RegistryState(claude=True, codex=True),
-            RegistryState(claude=True, codex=True, recorded=True),
-            RegistryState(claude=True, codex=False),
-            RegistryState(claude=False, codex=True),
-            RegistryState(claude=False, codex=True, recorded=True),
-        )
-    )
+    observation = observe_unreadable_source(generated_boolean_states(RegistryState))
 
     for case in observation.cases:
         messages = [warning.message for warning in case.warnings]
@@ -1093,3 +1122,26 @@ def test_no_agent_announces_a_first_install_its_plan_does_not_carry() -> None:
             ]
             if announced:
                 assert installs, (case.state, agent)
+            reached = {
+                command.plugin
+                for command in case.attempted
+                if command.agent is agent
+                and command.operation
+                in {Operation.PLUGIN_INSTALL, Operation.PLUGIN_UPDATE}
+            } - {
+                entry[ReportField.PLUGIN]
+                for entry in cast(
+                    "list[dict[str, str]]",
+                    case.document[ReportField.PENDING_PUBLICATION],
+                )
+                if entry[ReportField.AGENT] == agent.value
+            }
+            named = cast(
+                "list[str]",
+                case.document[
+                    ReportField.CLAUDE_PLUGINS
+                    if agent is Agent.CLAUDE
+                    else ReportField.CODEX_PLUGINS
+                ],
+            )
+            assert set(named) == reached, (case.state, agent)

@@ -2,6 +2,8 @@
 
 import json
 from collections.abc import Mapping, Sequence
+from dataclasses import fields
+from itertools import product
 from enum import StrEnum
 from pathlib import Path
 from typing import cast
@@ -758,10 +760,69 @@ def generated_concurrent_record_entry(
     return entry
 
 
+def generated_boolean_states[State](state: type[State]) -> tuple[State, ...]:
+    """Every value of a state whose dimensions are independent booleans.
+
+    The state's own fields name its dimensions, so the domain is each
+    combination of those fields, and a dimension added to the state widens
+    the domain without an edit here.
+    """
+    return tuple(
+        state(*values)
+        for values in product((False, True), repeat=len(fields(cast("type", state))))
+    )
+
+
+# The network URL forms git-clone(1) documents under GIT URLS — the ssh, git,
+# http and https schemes, leaving out the ftp forms it marks deprecated — and
+# the scp-like form as git hosting services spell it with the `git@` user.
+_GIT_URL_FORMS = (
+    "ssh://git.example/{path}",
+    "git://git.example/{path}",
+    "http://git.example/{path}",
+    "https://git.example/{path}",
+    "git@git.example:{path}",
+)
+
+
+def generated_git_source_urls(marketplace: str) -> tuple[str, ...]:
+    """One marketplace source URL for every git URL form git documents.
+
+    The forms come from git's own URL syntax rather than from the classifier
+    under test, and none carries a `.git` suffix, so each form reaches the git
+    source type through its scheme or host alone.
+    """
+    return tuple(form.format(path=marketplace) for form in _GIT_URL_FORMS)
+
+
+# Transcribed verbatim from the stderr of Claude Code 2.1.285 running
+# `claude plugin update spec-tree@outcomeeng --scope project` in agent state
+# that holds no install record of the plugin: a real native update failure
+# that names no unpublished plugin, independent of the pending classifier.
+_CAPTURED_UNRECORDED_UPDATE_STDERR = (
+    '\u2718 Failed to update plugin "{plugin}@{marketplace}": '
+    'Plugin "{plugin}" not found'
+)
+
+
+def generated_non_pending_failure_wordings(
+    plugins: Sequence[str], marketplace: str
+) -> tuple[str, ...]:
+    """The observed non-pending update failure, once for every plugin named."""
+    return tuple(
+        _CAPTURED_UNRECORDED_UPDATE_STDERR.format(
+            plugin=plugin, marketplace=marketplace
+        )
+        for plugin in plugins
+    )
+
+
 __all__ = [
     "catalog_plugin_names_from_bytes",
     "catalog_plugin_names_from_document",
     "generated_agent_subsets",
+    "generated_boolean_states",
+    "generated_git_source_urls",
     "generated_catalog_subset",
     "generated_claude_install_records",
     "generated_claude_listing_entries",
@@ -778,6 +839,7 @@ __all__ = [
     "generated_concurrent_record_entry",
     "generated_failure_classification_cases",
     "generated_invalid_catalog_subsets",
+    "generated_non_pending_failure_wordings",
     "generated_persistent_catalog_selections",
     "generated_valid_catalog_subsets",
 ]

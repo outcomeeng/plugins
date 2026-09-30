@@ -35,6 +35,8 @@ CODEX_LOGOUT_SUBCOMMAND = "logout"
 API_LOGIN_FLAG = "--with-api-key"
 WORKSPACE_LOGIN_FLAG = "--with-access-token"
 AUTH_FILENAME = "auth.json"
+PERSONAL_CODEX_HOME_DIRNAME = ".codex"
+"""The personal Codex home under HOME that subscription discovery never reads."""
 CI_ENVIRONMENT = "CI"
 """The environment variable hosted runners set, which requires an explicit mode."""
 SAVED_LOGIN_MODE_FIELD = "auth_mode"
@@ -199,16 +201,26 @@ def select_authentication(environment: Mapping[str, str]) -> AuthenticationSelec
         ) from None
     if mode is AuthenticationMode.SUBSCRIPTION:
         home = environment.get(CODEX_HOME_ENV)
-        if not home:
-            parent = environment.get(HOME_ENV)
-            if not parent:
-                raise DiscoveryAuthenticationError(
-                    "Subscription discovery requires CODEX_HOME or HOME."
-                )
-            home = str(Path(parent) / ".codex")
-        return AuthenticationSelection(
-            mode, saved_login=Path(home).absolute() / AUTH_FILENAME
-        )
+        parent = environment.get(HOME_ENV)
+        if not home or not parent:
+            raise DiscoveryAuthenticationError(
+                f"Subscription discovery requires an explicit dedicated {CODEX_HOME_ENV} and a defined {HOME_ENV}."
+            )
+        codex_home = Path(home).resolve()
+        saved_login = codex_home / AUTH_FILENAME
+        personal_homes = (Path(parent), Path(parent) / PERSONAL_CODEX_HOME_DIRNAME)
+        if any(_same_file(codex_home, personal) for personal in personal_homes):
+            raise DiscoveryAuthenticationError(
+                f"Subscription discovery refuses {CODEX_HOME_ENV} {codex_home}: it is {HOME_ENV} or {HOME_ENV}/{PERSONAL_CODEX_HOME_DIRNAME}; set a dedicated {CODEX_HOME_ENV}."
+            )
+        if any(
+            _same_file(saved_login, personal / AUTH_FILENAME)
+            for personal in personal_homes
+        ):
+            raise DiscoveryAuthenticationError(
+                f"Subscription discovery refuses {saved_login}: it is the saved login in {HOME_ENV} or {HOME_ENV}/{PERSONAL_CODEX_HOME_DIRNAME}; give the dedicated {CODEX_HOME_ENV} its own saved login."
+            )
+        return AuthenticationSelection(mode, saved_login=saved_login)
     variable = (
         CODEX_API_KEY_ENVIRONMENT
         if mode is AuthenticationMode.API
@@ -220,6 +232,19 @@ def select_authentication(environment: Mapping[str, str]) -> AuthenticationSelec
             f"{mode.value} discovery requires credential {variable}."
         )
     return AuthenticationSelection(mode, credential=credential)
+
+
+def _same_file(candidate: Path, personal: Path) -> bool:
+    """Whether two paths name one file, by filesystem identity where both exist.
+
+    Identity rather than spelling catches a case variant on a case-insensitive
+    filesystem, a symbolic link, and a hard link alike; a path that does not
+    exist falls back to its resolved spelling.
+    """
+    try:
+        return os.path.samefile(candidate, personal)
+    except FileNotFoundError:
+        return candidate.resolve() == personal.resolve()
 
 
 def credential_free_environment(environment: Mapping[str, str]) -> dict[str, str]:
