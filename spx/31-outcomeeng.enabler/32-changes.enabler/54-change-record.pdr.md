@@ -22,7 +22,7 @@ No other front-matter key is valid. The body contains exactly these top-level se
 3. `# Frame` — the affected or intended Nodes, Assertion operations, governing Decisions, target malleability, required node states, evidence obligations, dependencies, repository boundary, and accountable person known at the declared Maturity.
 4. `# Activities` — the mutable, ordered execution plan, containing only steps another holder needs to coordinate.
 
-Front-matter values are never stripped, restated, or maintained as authoritative body lines. Provider conversations, transcripts, cost estimates, resource accounting, and routine local commands are not record content.
+Front-matter values are never restated or maintained as body lines; each place that holds a Change keeps each field in its one home, as Persistence states. Provider conversations, transcripts, cost estimates, resource accounting, and routine local commands are not record content.
 
 ## Definitions of Ready
 
@@ -82,9 +82,20 @@ Every transition is an ordered write with a complete readback: each write lands 
 
 ## Persistence
 
-Persistence maps every front-matter field to the configured coordination store's native features, writes the complete record without stripping its front matter, and reads every field back unchanged before reporting success. A coordination-store limit never shapes the record.
+Each of the six fields has exactly one home in each place that holds the Change, and no place writes a field twice. A local draft carries all six as its front matter above the four sections; authoring imports a published Change into a draft and publishes the draft back. A coordination store holds each field in the one native feature the plugin assigns it, and its body holds the four sections with no front matter and no lineage line. Persistence writes each field to its home and the four sections to the body, reads each back unchanged, and reports success only then. A coordination-store limit never shapes the record.
 
-The record remains authoritative without any store-specific field, label, relationship, or rendering. Store-native metadata is a projection of the record rather than a second source of Change semantics; the Lifecycle comments are the store's record of holding and continuation, not of the Change's content. The persistence skill instruction selects the client for the configured store; the record embeds no store commands or provider identifiers.
+In the GitHub store the homes are:
+
+| Field          | Home                                                                                                                                                                  |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `title`        | The issue title                                                                                                                                                       |
+| `product`      | The organization issue field `Product`                                                                                                                                |
+| `maturity`     | The organization issue field `Maturity`                                                                                                                               |
+| `lifecycle`    | The organization issue field `Lifecycle`                                                                                                                              |
+| `refined_from` | The organization text issue field `Predecessors`: the canonical identities, such as `outcomeeng/changes#17`, separated by a comma and one space, and empty for a root |
+| `blocked_by`   | GitHub's native issue dependencies                                                                                                                                    |
+
+No project field holds a Change field. The Lifecycle comments — the Claim, the Handoff, and the terminal record — are the store's record of holding and continuation, not of the Change's content. The persistence skill instruction selects the client for the configured store; the record embeds no store commands or provider identifiers.
 
 ## Compatibility
 
@@ -92,7 +103,7 @@ The record remains authoritative without any store-specific field, label, relati
 
 ## Rationale
 
-One self-contained record preserves Change meaning across local drafting and coordination stores, while cumulative, independently loadable Definitions of Ready let authoring and audit judge exactly the Maturity a record declares. Proposed readiness is the approving audit rather than an operator review, and the audit verdict stays outside every criterion set it judges, so each Definition of Ready is decidable and a higher level inherits the preceding level's criteria, never a verdict about another level. Excluding records without the closed front-matter key set keeps the contract closed and avoids treating inference as product truth. The holder is keyed on the worktree the Claim names, because one account runs several sessions and a session that claims for another — one that starts the Executor's session in a worktree of its own — is not the session that later releases or closes; the worktree separates the holder from every other session of the account while letting the session started in it hold what was claimed for it.
+One self-contained record preserves Change meaning across local drafting and coordination stores, and one home per field in each place leaves no second copy to drift from the first, while cumulative, independently loadable Definitions of Ready let authoring and audit judge exactly the Maturity a record declares. Proposed readiness is the approving audit rather than an operator review, and the audit verdict stays outside every criterion set it judges, so each Definition of Ready is decidable and a higher level inherits the preceding level's criteria, never a verdict about another level. Excluding records without the closed front-matter key set keeps the contract closed and avoids treating inference as product truth. The holder is keyed on the worktree the Claim names, because one account runs several sessions and a session that claims for another — one that starts the Executor's session in a worktree of its own — is not the session that later releases or closes; the worktree separates the holder from every other session of the account while letting the session started in it hold what was claimed for it.
 
 ## Product properties
 
@@ -105,8 +116,8 @@ One self-contained record preserves Change meaning across local drafting and coo
 - ALWAYS: a Change record contains exactly the six required front-matter keys and the four fixed top-level body sections in their declared order.
 - ALWAYS: Proposed, Framed, Sliced, and Executable each have one independently loadable, cumulative Definition of Ready.
 - ALWAYS: Maturity advances only when the target level's Definition of Ready holds and the level's authority is present: operator attestation for Framed, a named accountable person for Sliced, and the attested Frame for Executable.
-- ALWAYS: persistence maps every front-matter field to the configured coordination store's native features, writes the complete self-contained record, and reads each persisted field back unchanged before reporting success; a coordination-store limit never shapes the record.
-- NEVER: store-native metadata replaces or strips authoritative Change content, or holds a value that differs from the front-matter field it projects.
+- ALWAYS: persistence writes each field to its one home in the configured coordination store and the four sections to the store body, and reads each back unchanged before reporting success; a coordination-store limit never shapes the record.
+- NEVER: a place holds a Change field in two homes, a store body carries front matter or a lineage line, or a project field holds a Change field.
 - NEVER: `audit-change` judges or migrates a record whose front matter does not carry the contract's closed key set; the auditor reports it as outside the contract.
 - ALWAYS: `claim-change` claims only an open record whose Product, Maturity, `Available` Lifecycle, and empty holder verify from current state; it adds the holder, records the Claim naming the claiming session and the worktree root the Change is claimed for, writes `Claimed`, and reads the complete state back before execution begins, and a losing concurrent claim withdraws its own holder record and reports the winner.
 - ALWAYS: `release-change` and `close-change` run only for the session whose assigned worktree root equals the root the winning Claim names, and report any other caller without mutation.

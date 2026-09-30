@@ -7,10 +7,11 @@ CAN install plugin content from committed generated trees that match each coding
 ## Assertions
 
 - ALWAYS: every item of a list-valued skill or agent tool field that names a capability unavailable on the target is removed as a complete item; remaining item order and spelling are preserved with no empty item or dangling separator, and a field whose every item is unavailable is removed from that target's output.
+- ALWAYS: an agent source whose front matter lists `targets` is emitted into exactly those targets' generated trees, and no generated output carries the `targets` field.
 
 ### Compliance
 
-- ALWAYS: every `src/plugins/<plugin>/.../` source file produces at least one corresponding output in `dist/claude/<plugin>/` and at least one in `dist/codex/<plugin>/` — a source that emits into no target tree is a coverage gap, while a fan-out source emits once per plugin it renders for ([test](tests/test_target_emission.compliance.l1.py))
+- ALWAYS: every `src/plugins/<plugin>/.../` source file produces at least one corresponding output in `dist/claude/<plugin>/` and at least one in `dist/codex/<plugin>/`, except that an agent source whose `targets` field omits a target emits nothing into that target's tree — a source that emits into no target tree is a coverage gap, while a fan-out source emits once per plugin it renders for ([test](tests/test_target_emission.compliance.l1.py))
 - ALWAYS: `dist/<target>/<plugin>/` mirrors the `src/plugins/<plugin>/` subtree structure except where the target's agent-capability registry directs an artifact elsewhere — structure follows source unless a target reads that artifact class from a different location ([test](tests/test_target_emission.compliance.l1.py))
 - ALWAYS: a target's native agent format, agent filename shape, and flat-versus-namespaced agent namespace resolve from a source-owned per-target agent-capability registry — adding a target adds a registry entry rather than editing emission logic ([test](tests/test_target_emission.compliance.l1.py))
 - NEVER: a generated target tree carries an agent artifact in a format that target cannot read — each target receives its own native agent artifact and no foreign one ([test](tests/test_target_emission.compliance.l1.py))

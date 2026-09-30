@@ -13,6 +13,8 @@ The spec-tree plugin ships one subagent definition per skill an Executor session
 
 ## Assertions
 
+- ALWAYS: the five definitions ship for Claude Code only, and `/execute-change` on Codex returns an explicit unavailable result
+
 ### Compliance
 
 - ALWAYS: `/execute-change` confirms that the winning Claim names its worktree root and loads the latest Handoff before it starts, and executes only an Executable lineage leaf with Refined predecessors and no unresolved blocker ([audit])
