@@ -13,7 +13,8 @@ invoking real `git clean -fdX` against the test machine.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from enum import StrEnum
 from pathlib import Path
@@ -34,6 +35,7 @@ EXTERNAL_PYTHON_ENV_DIR = "external-venv"
 GIT_DRY_RUN_OPTION = "--dry-run"
 GIT_END_OF_OPTIONS = "--"
 REMOVAL_LINE_PREFIX = "Would remove "
+NESTED_WORKING_DIR = "nested"
 RECORDING_RUNNER_FAILURE_EXIT_CODE = os.EX_OK + 1
 
 
@@ -129,6 +131,24 @@ def create_clean_repo(
     )
 
 
+@contextmanager
+def working_directory_below_root(repo: CleanRepo) -> Iterator[Path]:
+    """Run the enclosed block from a directory nested below the repository root.
+
+    The directory sits inside the ignored cache, so the repository's top-level
+    entries stay as arranged. The previous working directory is restored on
+    every exit path.
+    """
+    nested = repo.ignored_cache / NESTED_WORKING_DIR
+    nested.mkdir()
+    previous = Path.cwd()
+    os.chdir(nested)
+    try:
+        yield nested
+    finally:
+        os.chdir(previous)
+
+
 def observe_dry_run_removals(
     *,
     repo: CleanRepo,
@@ -194,6 +214,7 @@ __all__ = [
     "RunnerCall",
     "create_clean_repo",
     "observe_dry_run_removals",
+    "working_directory_below_root",
 ]
 
 

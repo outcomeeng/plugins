@@ -1,9 +1,10 @@
 """Level-1 scenario evidence for workspace cleanup.
 
-Covers the scenario assertions in `clean.md`: run from inside a repository
-holding the running interpreter's environment, with neither handed to it,
-`clean` records an argv that omits that environment and runs in the root it
-resolved, a Git dry run over the generated pathspecs would remove the
+Covers the scenario assertions in `clean.md`: run from a directory nested in
+a repository holding the running interpreter's environment, with neither the
+root nor the environment handed to it, `clean` records an argv that omits
+that environment and runs in the repository root it found, a Git dry run
+over the generated pathspecs would remove the
 other ignored cache and nothing else, the runner's exit code is propagated to
 the caller, and a repository whose every top-level path is protected invokes
 no runner.
@@ -13,8 +14,6 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-
-import pytest
 
 from outcomeeng.hygiene.clean import (
     CLEAN_BASE_ARGV,
@@ -29,21 +28,19 @@ from outcomeeng_testing.harnesses.clean import (
     RecordingRunner,
     create_clean_repo,
     observe_dry_run_removals,
+    working_directory_below_root,
 )
 
 
-def test_clean_omits_active_environment_from_pathspecs(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_clean_omits_active_environment_from_pathspecs(tmp_path: Path) -> None:
     repo = create_clean_repo(
         tmp_path,
         environment=EnvironmentPlacement.RUNNING_INTERPRETER,
     )
-    monkeypatch.chdir(repo.root)
     runner = RecordingRunner()
 
-    exit_code = clean(runner=runner)
+    with working_directory_below_root(repo):
+        exit_code = clean(runner=runner)
 
     assert exit_code == os.EX_OK
     assert len(runner.calls) == 1
