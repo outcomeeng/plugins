@@ -8,7 +8,7 @@ allowed-tools: Read, Edit, Skill, Agent, AskUserQuestion, Bash(git status:*), Ba
 ---
 
 <objective>
-A spec-tree work item implemented and ready for the delivery boundary the user requested.
+A spec-tree work item implemented, verified, and delivered to the boundary the user requested — the default branch on origin unless the request names a narrower one.
 
 </objective>
 
