@@ -22,7 +22,7 @@ Validated spec assertions and decision verification rules routed to test, evalua
 - Derive evidence shape from the target artifact and selected verification type regardless of specialist availability: spec test, eval, and probe assertions are path-bearing; spec audit assertions carry a rule slug and no path, or the pathless form while the toolchain admits only that; decision rules carry requirements whose implementing specs own executable evidence links. A capability gap never changes the selected route's evidence shape.
 - Check the runtime skill catalog before invoking a selected path-bearing specialist — `/test`, `/eval`, or `/probe`. An absent specialist produces `capability-required`, never `routed`, and the result still names the selected specialist and evidence shape; `null` values belong only to the blocked shape.
 - Keep routing acyclic: `/verify` invokes specialists; specialists never invoke `/verify`.
-- Run every command `/wait-for-load` gates in the foreground, and report a result only after every such command has exited.
+- Use skill `spec-tree:wait-for-load` for every resource-intensive command: run the waiter and that command as one line in the foreground, and report a result only after every such line has exited.
 - Keep judgment isolated: selecting audit records the audit requirement and leaves the verdict to the applicable auditor context; selecting probe records the protocol link and leaves the attested run to the Author.
 
 </essential_principles>

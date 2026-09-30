@@ -35,7 +35,7 @@ Use skill `spec-tree:test-evidence-standards`. If that skill is unavailable, rep
 - Name tests by subject, assertion type, execution level, and optional runner.
 - Derive the assertion type from the assertion's quantifier and evidence shape, never from the section containing the rule.
 - Verification routing selects the verification type. This test specialist owns assertion-type selection, execution-level selection, and controlled-implementation exceptions after test evidence is selected.
-- Run every command `/wait-for-load` gates in the foreground, and report a result only after every such command has exited.
+- Use skill `spec-tree:wait-for-load` for every resource-intensive command: run the waiter and that command as one line in the foreground, and report a result only after every such line has exited.
 - For property evidence, generate product-owned variable behavior. Keep filesystem, Git, and full CLI work outside each generated case when it only supplies boundary wiring, and exercise that real boundary through a separately typed finite assertion.
 
 </non_negotiable_rules>
