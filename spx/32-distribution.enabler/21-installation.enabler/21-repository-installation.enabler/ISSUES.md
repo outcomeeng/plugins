@@ -16,7 +16,7 @@ The mapping assertion's identifier and disposable-state-root derivation is unfal
 
 **Resolution shape**: publish the listing-artifact field names from `outcomeeng/distribution/native_thread_evidence.py` beside `NativeChildLookupPayload`, import every key the test and the recording reader index from that module, add predicates over the recorded child environment that reject an ambient override or a second credential, and assert that every row's identifier and state root derive from its registry entry and differ from every other row's.
 
-**Evidence**: test-evidence audit findings `f-001` and `f-002` against `06b86db6b31704c58203929603bb2f2ceea237cb`, `f-001` through `f-004` against `3e1ba91c9ec059d96dcd2007a2fe371681599df2`, `f-001` through `f-003` against `548f8cc7b598a30969b0e68c243acb17d387f1ef`, `f-001` through `f-003` against `d84b4d2cb433059d995e6271d33551e30deb306d`, `f-001` through `f-005` with `f-008` against `f689b9b25cdd37f5e57545d313f30d29ad9cbd35`, `f-001` through `f-007` against `be286e7e32cdfbb0cc782f6175ed0f274e428e8d`, `f-001` through `f-005` against `b9ee9c2ca56d3341f03ea81abb1ec2f4cd8df57b`, `f-005` through `f-009` against `ef8b057ab649bc3da5c642cc4a18fc6745023718`, `f-003` through `f-008` against `841e864a9759eae04c8988c2931aa44b1ca21c74`, `f-001` through `f-006` against `f011edcdd33c0fdec41d8ccfbcdfe1393fc6b35a`, `f-001` through `f-006` with `f-008` against `c3b42a5514452b1b71e01c77467e7e45abfad048`, and `f-001` through `f-006` against each of `9ab0fc92c2f5c673edbfb2c73eea42502cef68e5` and `c2f6d8e1c3bc87f24d775fcbc62451b9c2ff6322`, the last nine rounds naming the execution-level mismatch and the last five naming the environment literals; the unfalsified row identifier and state root reached a finding of its own in the last round; the cited test and harness files lie outside every changeset's diff. The round against `05a7165277750d69c88bc8abbece2c4f6a96bb7c` raised the same six as `f-001` through `f-006`: `f-001` the literal `parentThreadId` where `ChildIdentityField.PARENT` owns the key; `f-002` the literals `childIds`, `pages` and `result`, for which production publishes no field constant; `f-003` the hand-written keys in `RecordingThreadReader` and the environment names in `_read_empty_native_state`; `f-004` the two `l1` cases that start the installed Codex CLI, whose floor is `l2`; `f-005` the unfalsified override and credential clauses; `f-006` the unfalsified row identifier and state root.
+**Evidence**: test-evidence audit findings `f-001` and `f-002` against `06b86db6b31704c58203929603bb2f2ceea237cb`, `f-001` through `f-004` against `3e1ba91c9ec059d96dcd2007a2fe371681599df2`, `f-001` through `f-003` against `548f8cc7b598a30969b0e68c243acb17d387f1ef`, `f-001` through `f-003` against `d84b4d2cb433059d995e6271d33551e30deb306d`, `f-001` through `f-005` with `f-008` against `f689b9b25cdd37f5e57545d313f30d29ad9cbd35`, `f-001` through `f-007` against `be286e7e32cdfbb0cc782f6175ed0f274e428e8d`, `f-001` through `f-005` against `b9ee9c2ca56d3341f03ea81abb1ec2f4cd8df57b`, `f-005` through `f-009` against `ef8b057ab649bc3da5c642cc4a18fc6745023718`, `f-003` through `f-008` against `841e864a9759eae04c8988c2931aa44b1ca21c74`, `f-001` through `f-006` against `f011edcdd33c0fdec41d8ccfbcdfe1393fc6b35a`, `f-001` through `f-006` with `f-008` against `c3b42a5514452b1b71e01c77467e7e45abfad048`, and `f-001` through `f-006` against each of `9ab0fc92c2f5c673edbfb2c73eea42502cef68e5` and `c2f6d8e1c3bc87f24d775fcbc62451b9c2ff6322`, the last nine rounds naming the execution-level mismatch and the last five naming the environment literals; the unfalsified row identifier and state root reached a finding of its own in the last round; the cited test and harness files lie outside every changeset's diff. The round against `05a7165277750d69c88bc8abbece2c4f6a96bb7c` raised the same six as `f-001` through `f-006`: `f-001` the literal `parentThreadId` where `ChildIdentityField.PARENT` owns the key; `f-002` the literals `childIds`, `pages` and `result`, for which production publishes no field constant; `f-003` the hand-written keys in `RecordingThreadReader` and the environment names in `_read_empty_native_state`; `f-004` the two `l1` cases that start the installed Codex CLI, whose floor is `l2`; `f-005` the unfalsified override and credential clauses; `f-006` the unfalsified row identifier and state root. The round against `cc5f3e86be4dbcc2c727c46f5c96593bab02b680` raised the same six again as `f-001` through `f-006`.
 
 ## The profile isolation filter strips an ambient marker no module declares
 
@@ -43,7 +43,7 @@ filter imports it rather than spelling it.
 
 **Evidence**: test-evidence audit finding `f-010` (INFO) against `c2f6d8e1c3bc87f24d775fcbc62451b9c2ff6322`. The cited
 harness lies outside that changeset's diff, and the remedy publishes a constant
-from a production module the changeset's Frame does not name. The round against `05a7165277750d69c88bc8abbece2c4f6a96bb7c` raised it again as `f-018` (INFO): "The isolation filter strips the inline literal \"CLAUDECODE\", which no module under outcomeeng/ declares."
+from a production module the changeset's Frame does not name. The round against `05a7165277750d69c88bc8abbece2c4f6a96bb7c` raised it again as `f-018` (INFO): "The isolation filter strips the inline literal \"CLAUDECODE\", which no module under outcomeeng/ declares." The round against `cc5f3e86be4dbcc2c727c46f5c96593bab02b680` raised it again as `f-016` (INFO).
 
 ## Pending plugins' prior owned definitions have no reconciliation evidence
 
@@ -51,7 +51,7 @@ The reconciliation assertion states that a pending plugin's prior owned definiti
 
 **Resolution shape**: add a harness scenario that installs, then re-runs with one plugin unpublished, and assert that the pending plugin's recorded definitions are neither pruned nor rewritten; if the scenario shows the plan copying definitions for a pending plugin, defer agent-home plan composition until the pending set is known. That is a new reconciliation capability with its own harness and a likely production change, independent of the machine-wide Claude Code refresh.
 
-**Evidence**: test-evidence audit finding `f-005` against `3e1ba91c9ec059d96dcd2007a2fe371681599df2`, `f-004` against `548f8cc7b598a30969b0e68c243acb17d387f1ef`, `f-006` against `f689b9b25cdd37f5e57545d313f30d29ad9cbd35`, `f-008` against `be286e7e32cdfbb0cc782f6175ed0f274e428e8d`, `f-006` against `b9ee9c2ca56d3341f03ea81abb1ec2f4cd8df57b`, `f-004` against `ef8b057ab649bc3da5c642cc4a18fc6745023718`, and `f-009` against `841e864a9759eae04c8988c2931aa44b1ca21c74`; the round against `f011edcdd33c0fdec41d8ccfbcdfe1393fc6b35a` did not raise it, and `f-007` against each of `c3b42a5514452b1b71e01c77467e7e45abfad048`, `9ab0fc92c2f5c673edbfb2c73eea42502cef68e5`, and `c2f6d8e1c3bc87f24d775fcbc62451b9c2ff6322` raises both its clauses. The recording runner's `unpublished` set now makes a pending plugin cheap to drive through the reconciliation observer, which lowers the cost of the harness scenario the resolution shape names. The round against `05a7165277750d69c88bc8abbece2c4f6a96bb7c` raised both clauses again as `f-007`: "Two paths are never driven: the pending-publication reconciliation path, where a pending plugin's prior owned definitions must be preserved, and the pruning path for plugins that leave the catalog-bounded home selection."
+**Evidence**: test-evidence audit finding `f-005` against `3e1ba91c9ec059d96dcd2007a2fe371681599df2`, `f-004` against `548f8cc7b598a30969b0e68c243acb17d387f1ef`, `f-006` against `f689b9b25cdd37f5e57545d313f30d29ad9cbd35`, `f-008` against `be286e7e32cdfbb0cc782f6175ed0f274e428e8d`, `f-006` against `b9ee9c2ca56d3341f03ea81abb1ec2f4cd8df57b`, `f-004` against `ef8b057ab649bc3da5c642cc4a18fc6745023718`, and `f-009` against `841e864a9759eae04c8988c2931aa44b1ca21c74`; the round against `f011edcdd33c0fdec41d8ccfbcdfe1393fc6b35a` did not raise it, and `f-007` against each of `c3b42a5514452b1b71e01c77467e7e45abfad048`, `9ab0fc92c2f5c673edbfb2c73eea42502cef68e5`, and `c2f6d8e1c3bc87f24d775fcbc62451b9c2ff6322` raises both its clauses. The recording runner's `unpublished` set now makes a pending plugin cheap to drive through the reconciliation observer, which lowers the cost of the harness scenario the resolution shape names. The round against `05a7165277750d69c88bc8abbece2c4f6a96bb7c` raised both clauses again as `f-007`: "Two paths are never driven: the pending-publication reconciliation path, where a pending plugin's prior owned definitions must be preserved, and the pruning path for plugins that leave the catalog-bounded home selection." The round against `cc5f3e86be4dbcc2c727c46f5c96593bab02b680` raised both clauses again as `f-007`.
 
 ## A dead-parameter sweep matched a spelling rather than the class
 
@@ -81,7 +81,7 @@ The compliance assertion that a persistent run reads the install-record listing 
 
 **Resolution shape**: route the no-lock clause to audit evidence in the governing decision, where the absence of a lock is a structural judgment, or add a record-store observation the harness owns — a runner that reports every open on the record file — so the clause reaches a predicate.
 
-**Evidence**: test-evidence audit finding `f-010` (WARNING) against `841e864a9759eae04c8988c2931aa44b1ca21c74`, `f-007` (WARNING) against `f011edcdd33c0fdec41d8ccfbcdfe1393fc6b35a`, `f-008` (WARNING) with the implementation audit's matching debt finding against `a47f88e39d2a5fe9318eb24e6140623ca774dcfa`, which names the same absent oracle from the recorded-command seam, `f-009` (WARNING) against `c3b42a5514452b1b71e01c77467e7e45abfad048`, and `f-008` (WARNING) against each of `9ab0fc92c2f5c673edbfb2c73eea42502cef68e5` and `c2f6d8e1c3bc87f24d775fcbc62451b9c2ff6322`. The round against `05a7165277750d69c88bc8abbece2c4f6a96bb7c` raised it as `f-013` (WARNING): "The read-count and retry clauses are falsified through the recorded commands. A lock is not a command, so adding an advisory lock around the listing read leaves both counts at one and the test passing. The no-lock clause has no deterministic oracle."
+**Evidence**: test-evidence audit finding `f-010` (WARNING) against `841e864a9759eae04c8988c2931aa44b1ca21c74`, `f-007` (WARNING) against `f011edcdd33c0fdec41d8ccfbcdfe1393fc6b35a`, `f-008` (WARNING) with the implementation audit's matching debt finding against `a47f88e39d2a5fe9318eb24e6140623ca774dcfa`, which names the same absent oracle from the recorded-command seam, `f-009` (WARNING) against `c3b42a5514452b1b71e01c77467e7e45abfad048`, and `f-008` (WARNING) against each of `9ab0fc92c2f5c673edbfb2c73eea42502cef68e5` and `c2f6d8e1c3bc87f24d775fcbc62451b9c2ff6322`. The round against `05a7165277750d69c88bc8abbece2c4f6a96bb7c` raised it as `f-013` (WARNING): "The read-count and retry clauses are falsified through the recorded commands. A lock is not a command, so adding an advisory lock around the listing read leaves both counts at one and the test passing. The no-lock clause has no deterministic oracle." The round against `cc5f3e86be4dbcc2c727c46f5c96593bab02b680` raised it again as `f-013` (WARNING).
 
 ## Claude Code renderings ship the Codex-only placement script and paraphrase its output
 
@@ -96,6 +96,8 @@ The `<plugin>-plugin` skill's Claude Code rendering carries `scripts/place_agent
 The lifecycle tests in `tests/test_repository_installation.compliance.l1.py` take their agent-definition bytes, filenames, and slugs from `PluginLifecycleHarness` in `outcomeeng_testing/harnesses/installation.py`, and the foreign, external, concurrent-edit, malformed-digest, and malformed-settings payloads from constants the same module declares; every token the tests assert against is imported from the shipped placement script. Two verifier readings of that arrangement stand side by side. The isolated test-evidence audit on `f689b9b25cdd37f5e57545d313f30d29ad9cbd35`, finding `f-009`, names the payloads incidental harness-handle values, because the script treats definition bytes opaquely by digest and every asserted token is source-owned. Changeset review `2026-09-16_02-49-48-063-4c9876671778` holds that relocating hand-authored bytes into the harness settles no case provenance and asks for a generator under `outcomeeng_testing/generators/`; the audits on `ef8b057ab649bc3da5c642cc4a18fc6745023718` (`f-012`, INFO), `841e864a9759eae04c8988c2931aa44b1ca21c74` (`f-011`, INFO), `f011edcdd33c0fdec41d8ccfbcdfe1393fc6b35a` (`f-008`, INFO), and `9ab0fc92c2f5c673edbfb2c73eea42502cef68e5` and `c2f6d8e1c3bc87f24d775fcbc62451b9c2ff6322` (`f-009`, INFO) record the same split. The round against `05a7165277750d69c88bc8abbece2c4f6a96bb7c` records it again as `f-017` (INFO), citing the definition bytes, slugs, and foreign, external, concurrent-edit and malformed payloads the harness declares.
 
 **Settlement condition.** A generator-sourced origin for the definition bytes and ownership documents, recorded in the assertion-design record, or an operator ruling that the audit's reading governs, recorded here.
+
+The round against `cc5f3e86be4dbcc2c727c46f5c96593bab02b680` records it again as `f-017` (INFO).
 
 ## The marketplace-refresh clone bound leaves no margin over the source's real clone cost
 
@@ -376,26 +378,28 @@ while the 2026-09-22T12:40:10Z conversation comment carried three unaddressed
 DEBT findings. Both were found by reading the surfaces against what they
 claimed, not by any gate.
 
-## The lifecycle evidence hand-writes the placement script's command-line flags
+## The lifecycle evidence hand-writes the placement script's flags and exit statuses
 
 `tests/test_repository_installation.compliance.l1.py` passes `--home`, `--checkout`
 and `--check` to the shipped placement script as hand-written literals, and
 `PluginLifecycleHarness.run` in `outcomeeng_testing/harnesses/installation.py`
 spells the same three. `src/templates/plugin/scripts/place_agents.py` declares
 them only inline in its `argparse` block and publishes no constant, so the
-evidence copies a command-line vocabulary it cannot import.
+evidence copies a command-line vocabulary it cannot import. The lifecycle tests also assert
+the script's exit statuses as the literals `1` and `2`, which the script returns
+bare, so the status vocabulary is copied the same way.
 
 **Impact**: a flag renamed in the script leaves the evidence invoking a command
 line the script rejects, and the failure reads as a placement defect rather
 than a renamed flag.
 
-**Resolution shape**: publish the three flags as module constants of the
-placement script, build its `argparse` block from them, and import them in the
-test and the harness. The script ships in every plugin's rendered skill, so the
+**Resolution shape**: publish the three flags and the two exit statuses as
+module constants of the placement script, build its `argparse` block and its
+returns from them, and import them in the test and the harness. The script ships in every plugin's rendered skill, so the
 change takes a plugin version bump and the skill auditor's gate.
 
-**Settlement condition**: the placement script publishes its flags, and no test
-or harness under this node spells one.
+**Settlement condition**: the placement script publishes its flags and exit
+statuses, and no test or harness under this node spells one.
 
 **Evidence**: test-evidence audit finding `f-010` (REJECT) against `05a7165277750d69c88bc8abbece2c4f6a96bb7c`:
 "The placement script's command tokens \"--home\", \"--checkout\" and \"--check\"
@@ -406,6 +410,9 @@ and publishes no constant, so the lifecycle evidence copies a CLI vocabulary it
 cannot import." The finding sits in a file the discovery-login security fix
 touches; the fix changes a shipped script and bumps a plugin, which that fix
 does not carry.
+
+The round against `cc5f3e86be4dbcc2c727c46f5c96593bab02b680` raised it again as `f-008` (REJECT), adding the exit
+statuses the tests assert as literals.
 
 ## A failed persistent run restores the committed selection, which the decisions forbid
 
@@ -439,26 +446,7 @@ decision change, not a test repair.
 production re-applies the declared plugin selection after a failed run
 (_restore_plugin_selection, outcomeeng/distribution/installation.py:1485). No
 linked [test] assertion declares that behavior, and the untagged spec assertion
-plus the ADR say failed runs retain changed state without restoring a snapshot."
-
-## The verification-recipe scenario hand-writes the recipe token and the node path
-
-`test_verification_recipe_uses_pytest_discovery_for_the_node` in
-`tests/test_repository_installation.scenario.l1.py` builds the expected
-invocation from the hand-written recipe token `test` and the literal node path
-`spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/tests`.
-The path is derivable from the test file's own location relative to the
-repository root, and the recipe token has no importable owner.
-
-**Impact**: moving the node or renaming the recipe leaves the expectation
-naming the old spelling, and the scenario fails on its own transcription rather
-than on the recipe.
-
-**Settlement condition**: the expected path derives from the test's location,
-and the recipe token comes from an owner the test imports.
-
-**Evidence**: test-evidence audit finding `f-014` (WARNING) against `05a7165277750d69c88bc8abbece2c4f6a96bb7c`; the
-scenario file lies outside the diff of the discovery-login security fix.
+plus the ADR say failed runs retain changed state without restoring a snapshot." The round against `cc5f3e86be4dbcc2c727c46f5c96593bab02b680` raised it again as `f-018` (INFO).
 
 ## The discovery harness rebuilds the isolated Codex home instead of reading the plan
 
@@ -475,7 +463,7 @@ populated.
 executed, and production names the directory once.
 
 **Evidence**: test-evidence audit finding `f-015` (WARNING) against `05a7165277750d69c88bc8abbece2c4f6a96bb7c`; the
-harness lies outside the diff of the discovery-login security fix.
+harness lies outside the diff of the discovery-login security fix. The round against `cc5f3e86be4dbcc2c727c46f5c96593bab02b680` raised it again as `f-012` (WARNING).
 
 ## Codex 0.155.1 poisons a fresh home during the marketplace listing, then refuses it
 
