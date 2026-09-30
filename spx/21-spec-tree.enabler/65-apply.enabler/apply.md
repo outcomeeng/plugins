@@ -13,12 +13,11 @@ The assertions below govern the lifecycle as a whole — how the work queue is f
 
 ## Assertions
 
-- ALWAYS: the apply instructions select the detected language's configured Go,
-  Rust, or TypeScript simplifier after implementation and before the final
-  implementation and evidence audits. The launch receives only the committed
-  scope selector. The main conversation integrates the result, verifies every
-  resulting change, and checkpoints it before Verifier dispatch; a language
-  without a declared simplifier skips this stage ([audit])
+- ALWAYS: after implementation and before the final implementation and evidence
+  audits, the apply instructions run the detected language's `simplify-{lang}`
+  skill in the main conversation, which verifies and checkpoints every
+  resulting change before Verifier dispatch; a language that ships no
+  simplification skill skips this stage ([audit])
 
 - ALWAYS: each audit or review step explicitly selects its exact configured subagent and
   supplies only the target path or scope. The skill owns these invocation
@@ -34,7 +33,7 @@ The assertions below govern the lifecycle as a whole — how the work queue is f
 ### Compliance
 
 - ALWAYS: with a canonical full `spx/...` node-path argument the work queue is that single node, and with no argument it is derived from the conversation, falling back to the paths stored relative to `spx/` in `spx/EXCLUDE` after converting each one to its canonical full `spx/...` address ([audit])
-- ALWAYS: the main conversation runs per-node authoring and implementation, delegates the declared behavior-preserving simplification stage, and dispatches the auditors and reviewers its gates require ([audit])
+- ALWAYS: the main conversation runs per-node authoring, implementation and behavior-preserving simplification, and dispatches the auditors and reviewers its gates require ([audit])
 - ALWAYS: a multi-node work queue runs in ascending numeric-index order, removing each node from `spx/EXCLUDE` before its flow and preserving each stabilized gate subject in a local checkpoint commit whose recorded verification state is `passing`, `failing`, or `not-run`; agentic gate dispatch still requires deterministic passing, and a node whose flow cannot converge stops the queue with the remaining nodes left in `spx/EXCLUDE` ([audit])
 - ALWAYS: every persisted audit or review gate binds to an exact committed head after deterministic verification passes; a rejected finding is repaired in a new local checkpoint before the gate reruns, while an audit over modified or untracked files is advisory and never satisfies a gate ([audit])
 - ALWAYS: when the repository requires the full deterministic gate, run `just check-full` only after every applicable evidence audit, implementation audit, and whole-changeset review has converged, and run no agentic verification after it; any change after the full gate invalidates it and requires the agentic gates to converge again before a new full-gate run ([audit])

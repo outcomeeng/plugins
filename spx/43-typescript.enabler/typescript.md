@@ -1,10 +1,14 @@
+---
+malleability: spec
+---
+
 # TypeScript
 
 PROVIDES the complete TypeScript development workflow — architecture, testing, implementation, and review
 SO THAT TypeScript projects using spec-tree
 CAN produce implementations governed by ADRs, verified by evidence-based tests, and audited for quality
 
-The TypeScript plugin composes foundational methodology with language-specific standards and workflows. Its `typescript-simplifier` definition invokes `/simplify-typescript` and relays its result. The `audit-typescript-{code|tests|architecture}` skills carry no language-specific auditor agent and are composed by the generic artifact-type auditors, per `spx/21-spec-tree.enabler/17-audit.adr.md`.
+The TypeScript plugin composes foundational methodology with language-specific standards and workflows. The `audit-typescript-{code|tests|architecture}` skills carry no language-specific auditor agent and are composed by the generic artifact-type auditors, per `spx/21-spec-tree.enabler/17-audit.adr.md`.
 
 ## Assertions
 

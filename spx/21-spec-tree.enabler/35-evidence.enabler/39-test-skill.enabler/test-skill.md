@@ -11,6 +11,8 @@ CAN construct and judge `[test]` evidence from one methodology without duplicati
 
 ## Assertions
 
+- ALWAYS: a load-gated command `/test` runs executes in the foreground, and `/test` reports its result only after every such command has exited ([audit])
+
 ### Compliance
 
 - ALWAYS: generic test guidance separates generated property evidence over product-owned variation from finite real-boundary evidence, keeps filesystem, Git, and full CLI work outside each generated case when it only supplies wiring, and preserves `l1` classification for cheap local boundary checks ([audit])
