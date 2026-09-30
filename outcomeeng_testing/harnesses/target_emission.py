@@ -46,6 +46,7 @@ from outcomeeng.distribution.contracts import (
     TEXT_FILE_SUFFIXES,
     Target,
 )
+from outcomeeng.validation.skill_injection_safety import INLINE_INJECTION_PATTERN
 from outcomeeng.validation.skill_frontmatter import (
     ALLOWED_TOOLS_FIELD,
     ARGUMENT_HINT_FIELD,
@@ -64,16 +65,6 @@ from outcomeeng_testing.harnesses.distribution import (
 from outcomeeng_testing.harnesses.src_tree import SrcTreeBuilder
 
 type PathSnapshot = tuple[tuple[Path, bytes], ...]
-
-# Claude Code's execution-time injection syntax: a command between these markers
-# runs when the skill loads and its output replaces the span.
-EXECUTION_TIME_INJECTION_START: Final = "!`"
-EXECUTION_TIME_INJECTION_END: Final = "`"
-EXECUTION_TIME_INJECTION_PATTERN: Final = re.compile(
-    rf"(?<!`){re.escape(EXECUTION_TIME_INJECTION_START)}"
-    rf"(?P<command>[^`\r\n]*)"
-    rf"{re.escape(EXECUTION_TIME_INJECTION_END)}"
-)
 
 # Actions whose output is the rendered source text, so a caller may compare the
 # two directly. A converted agent is a derived artifact whose output is not its
@@ -226,8 +217,7 @@ def agent_artifact_paths(target: Target) -> tuple[Path, ...]:
 def execution_time_injection_commands(text: str) -> tuple[str, ...]:
     """Return the commands Claude Code's execution-time injection syntax embeds."""
     return tuple(
-        match.group("command")
-        for match in EXECUTION_TIME_INJECTION_PATTERN.finditer(text)
+        match.group("command") for match in INLINE_INJECTION_PATTERN.finditer(text)
     )
 
 

@@ -21,11 +21,12 @@ The five definitions `change-executor`, `change-author`, `change-verifier`, `cha
 ## Attested run
 
 - Date: 2026-09-30
-- Subject commit: `7d065fc42398c5982359307dbe8c791e38ec6ff7`
+- Subject commit: `d090bb966859c3b4770a78a4ba2de5410d4fc53f`
 - Observations:
+  - Each emitted definition carries its native `disallowedTools`: `Agent` and `AskUserQuestion` for the four round definitions, `AskUserQuestion` for `change-executor`.
   - Each parent session listed its definition, loaded spec-tree from `dist/claude/spec-tree`, and made exactly one `Agent` launch with `subagent_type` `spec-tree:<name>` and prompt `not-a-target`.
   - Each child's first event carries the launch's `parent_tool_use_id` and the `subagent_type` of its definition, and each launch's tool result reports `status` `completed`, the `agentType` of its definition, and `resolvedModel` `claude-opus-5-5`, which the Standard profile's `model: opus` selects.
-  - `change-executor` returned `not-held` from `spec-tree:execute-change` step 1. `change-author` returned `blocked` with its question, evidence, and blocked action. `change-verifier` returned `blocked` from the load-context step of `spec-tree:verify`, with its routing row. `change-tester` returned `blocked` from Step 1 of `spec-tree:test`. `change-implementer` returned `blocked` with reason `target-required` from step 1 of `spec-tree:implement-change`.
+  - `change-executor` returned `not-held` from `spec-tree:execute-change` step 1. `change-author` returned `blocked` with its question and blocked action. `change-verifier` relayed the missing-target stop of `spec-tree:verify`. `change-tester` stopped at Step 1 of `spec-tree:test` with its missing-target result. `change-implementer` returned `blocked` with reason `target-required` from step 1 of `spec-tree:implement-change`.
   - No child wrote a file or ran a store command.
 - Artifacts:
   - [change-executor.result.json](change-executor.result.json)

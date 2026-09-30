@@ -16,6 +16,7 @@ Exit codes:
 
 from __future__ import annotations
 
+import re
 import sys
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -26,6 +27,15 @@ from typing import Final
 # The token is the three-backtick fence immediately followed by "!".  Built from
 # parts so this module's own source never holds the literal contiguous sequence.
 INJECTION_FENCE_TOKEN: Final[str] = "`" * 3 + "!"
+# The inline form of the same injection: the command between these markers runs
+# when the skill loads, and its output replaces the span.
+INLINE_INJECTION_START: Final[str] = "!`"
+INLINE_INJECTION_END: Final[str] = "`"
+INLINE_INJECTION_PATTERN: Final = re.compile(
+    rf"(?<!`){re.escape(INLINE_INJECTION_START)}"
+    rf"(?P<command>[^`\r\n]*)"
+    rf"{re.escape(INLINE_INJECTION_END)}"
+)
 
 SKILL_FILENAME: Final[str] = "SKILL.md"
 

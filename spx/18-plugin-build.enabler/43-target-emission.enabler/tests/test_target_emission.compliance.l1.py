@@ -38,11 +38,13 @@ from outcomeeng.validation.skill_frontmatter import (
     ALLOWED_TOOLS_FIELD,
     ARGUMENT_HINT_FIELD,
 )
+from outcomeeng.validation.skill_injection_safety import (
+    INLINE_INJECTION_END,
+    INLINE_INJECTION_START,
+)
 from outcomeeng_testing.generators.source_and_templating import source_scenarios
 from outcomeeng_testing.generators.target_emission import execution_time_commands
 from outcomeeng_testing.harnesses.target_emission import (
-    EXECUTION_TIME_INJECTION_END,
-    EXECUTION_TIME_INJECTION_START,
     execution_time_injection_commands,
     projected_versus_emitted,
     projected_sources,
@@ -316,7 +318,7 @@ def test_outputs_do_not_contain_execution_time_skill_content_injection() -> None
     assert commands
     for command in commands:
         injected = execution_time_injection_commands(
-            f"{EXECUTION_TIME_INJECTION_START}{command}{EXECUTION_TIME_INJECTION_END}"
+            f"{INLINE_INJECTION_START}{command}{INLINE_INJECTION_END}"
         )
         assert injected == (command,), command
         assert reads_sister_skill(command), command
