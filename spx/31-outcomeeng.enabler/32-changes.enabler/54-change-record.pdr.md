@@ -84,7 +84,7 @@ Every transition is an ordered write with a complete readback: each write lands 
 
 Persistence maps every front-matter field to the configured coordination store's native features, writes the complete record without stripping its front matter, and reads every field back unchanged before reporting success. A coordination-store limit never shapes the record.
 
-The record remains authoritative without any store-specific field, label, relationship, or rendering. Store-native metadata is a projection of the record rather than a second source of Change semantics. The persistence skill instruction selects the client for the configured store; the record embeds no store commands or provider identifiers.
+The record remains authoritative without any store-specific field, label, relationship, or rendering. Store-native metadata is a projection of the record rather than a second source of Change semantics; the Lifecycle comments are the store's record of holding and continuation, not of the Change's content. The persistence skill instruction selects the client for the configured store; the record embeds no store commands or provider identifiers.
 
 ## Compatibility
 
@@ -96,7 +96,7 @@ One self-contained record preserves Change meaning across local drafting and coo
 
 ## Product properties
 
-1. A Change carries its complete coordination meaning in the record and remains portable across coordination stores.
+1. A Change's record carries its Output, Value, Frame, and Activities and remains portable across coordination stores; who holds the Change and where its work continues are carried by its Lifecycle comments — the Claim, the Handoff, and the terminal record — under the Lifecycle rules.
 2. Maturity advances only when the declared level's cumulative Definition of Ready holds and its human or Frame-derived authority is present.
 3. Lifecycle moves through one skill per transition — claim, release with a Handoff, close to a named terminal value — each an ordered write with a complete readback that never touches Maturity; persistence preserves field equality, while audit accepts only records whose front matter carries the contract's closed key set.
 
