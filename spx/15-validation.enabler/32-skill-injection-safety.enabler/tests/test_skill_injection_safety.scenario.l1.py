@@ -2,8 +2,9 @@
 
 Spec: spx/15-validation.enabler/32-skill-injection-safety.enabler/skill-injection-safety.md
 
-The discriminating value (the loader-executable fence token) is imported from the
-source-owned module constant; the test never hardcodes the literal.
+The discriminating values (the loader-executable fence token, the inline injection
+markers, and the path pieces that make a command read sister-skill content) are
+imported from the source-owned module; the test never hardcodes the literals.
 """
 
 from __future__ import annotations
@@ -14,6 +15,11 @@ import pytest
 
 from outcomeeng.validation.skill_injection_safety import (
     INJECTION_FENCE_TOKEN,
+    INLINE_INJECTION_END,
+    INLINE_INJECTION_START,
+    PARENT_DIRECTORY_SEGMENT,
+    SKILL_FILENAME,
+    ViolationKind,
     main,
     scan_file,
     scan_paths,
@@ -66,3 +72,40 @@ def test_non_skill_basename_is_skipped(tmp_path: Path) -> None:
     other = _write_skill(tmp_path, body=f"{INJECTION_FENCE_TOKEN}\n", name="README.md")
     assert scan_paths([other]) == []
     assert main([str(other)]) == 0
+
+
+def _inline(command: str) -> str:
+    return f"{INLINE_INJECTION_START}{command}{INLINE_INJECTION_END}"
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        f"cat {PARENT_DIRECTORY_SEGMENT}sibling/{SKILL_FILENAME}",
+        f"cat {PARENT_DIRECTORY_SEGMENT}sibling/references/topic.md",
+        f"cat {SKILL_FILENAME}",
+    ],
+)
+def test_sister_skill_injection_reports_file_and_line_and_exits_nonzero(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    command: str,
+) -> None:
+    lines = ["# Heading", "", f"Context: {_inline(command)}", ""]
+    skill = _write_skill(tmp_path, body="\n".join(lines))
+
+    violations = scan_file(skill)
+    assert [(v.path, v.line, v.kind) for v in violations] == [
+        (skill, 3, ViolationKind.SISTER_SKILL_INJECTION)
+    ]
+
+    assert main([str(skill)]) != 0
+    out = capsys.readouterr().out
+    assert f"{skill}:3" in out
+
+
+def test_own_skill_injection_is_accepted(tmp_path: Path) -> None:
+    body = f"# Heading\n\nBranch: {_inline('git branch --show-current')}\n"
+    skill = _write_skill(tmp_path, body=body)
+    assert scan_file(skill) == []
+    assert main([str(skill)]) == 0
