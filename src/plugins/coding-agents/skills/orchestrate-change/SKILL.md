@@ -7,7 +7,7 @@ allowed-tools: Read, {{! tool('use_skill') !}}, Bash(spx worktree status:*), Bas
 ---
 
 <objective>
-One Change held by the worktree of one Executor session this Orchestrator started with the spec-tree definition `change-executor` selected, checked until that session closes or releases the Change, with every pane blocker it reported acted on and every question it raised passed to its principal.
+One Change held by the worktree of one Executor session this Orchestrator started with the spec-tree definition `change-executor` selected, checked until that session closes or releases the Change, with every Executor-session stop acted on and every other release, with its questions, passed to its principal.
 </objective>
 
 <essential_principles>
@@ -15,6 +15,7 @@ One Change held by the worktree of one Executor session this Orchestrator starte
 - The Orchestrator is a position, never a Role of the Change: it produces no artifact of the Change and never acts as a Verifier.
 - `change-executor` is the one definition this skill starts a session with; the session's own `/execute-change` launches every other session of the Change.
 - Across the Changes this position orchestrates, blockers and questions are settled in the order of each Change's `Priority` issue field.
+- This position runs **Check** for each Executor it started at the regular interval its principal sets, until **Check** returns `collected`; each run is one bounded pass, and no pass waits for the next.
 - The harness setting alone withholds the structured-question tool from the Executor session, on its start and on every relaunch; no skill detects whether its session is an Executor.
 - Every pane operation runs through `coding-agents:operate-herdr`. Every message record is sent after this instruction: Use skill `coding-agents:message-agents`.
 
@@ -54,9 +55,9 @@ The invocation is the mutation authorization, and it covers exactly the targets 
    - A read showing the harness's remaining-context indicator at or below 10% receives one `prompt` with text `/compact`.
    - A pane whose session has ended — an `identity-unavailable` result, or a read at the shell prompt — receives one `relaunch` with the same `name`, `kind`, `pane`, `timeout`, `agentArguments`, and `"mutationAuthorized": true` as its start, then one `prompt` with the Change's issue reference; the relaunched Executor continues from the Change and its newest Handoff.
    - Any other result — `prompt-stalled`, `wait-timeout`, `agent-blocked`, or a wait that ends `idle`, `done`, or `unknown` — receives one `prompt` whose text is the Change's issue reference.
-4. Read the stop condition and every question the newest Handoff's blockers carry, and handle them by kind:
-   - **Only pane blockers.** When every blocker names the Executor's own session — ended, stalled, or out of context — and `spx worktree status` shows no running work in the worktree, stop the pane with one `operate-herdr` `stop` carrying `"mutationAuthorized": true`, run **Start** again with the worktree root step 1 read, this position's own mail name, and the same principal, and return its result. When `spx worktree status` shows running work, return result `checked` with that status verbatim. This position starts no session except the Executor **Start** starts.
-   - **Any question.** Every other blocker is a question for the principal. Use skill `coding-agents:operate-agent-mail` for one `inbox` of the principal with `includeBodies` false and `limit` 200, and look for a record whose `correlation` is `change-<N>-handoff-<Handoff comment id>` and whose `sender` is this position's own mail name. When such a record exists, the questions were already sent: send nothing and return result `checked` with reason `awaiting-principal` and those message ids. Otherwise use skill `coding-agents:message-agents` for one request: `kind` `question`, that `correlation`, `subject` `Change <N>: questions from the Executor`, `ackRequired` true, and every question verbatim with the Change reference as `body`. Return result `checked` with the message id. The Change stays released until the principal, with its answer in the Change record, orders **Start** for it.
+4. Read the newest Handoff's `Blockers` and `Hazards` lines. A `Blockers` entry that is a Change URL is a dependency, every other `Blockers` entry is a question, and `Hazards` states why the work stopped. Handle the release by what those lines record:
+   - **Executor session.** When `Blockers` is `none`, `Hazards` states that the Executor session itself ended, stalled, or ran out of context, and `spx worktree status` shows no running work in the worktree, stop the pane with one `operate-herdr` `stop` carrying `"mutationAuthorized": true`, run **Start** again with the worktree root step 1 read, this position's own mail name, and the same principal, and return its result. When `spx worktree status` shows running work, return result `checked` with that status verbatim. This position starts no session except the Executor **Start** starts.
+   - **Every other release.** A question, a dependency, or any other stop `Hazards` states — a repeated defect class, a failed launch or unusable result, a blocked gate — goes to the principal once per Handoff; this position restarts no Executor for it. Use skill `coding-agents:operate-agent-mail` for one `inbox` of the principal with `includeBodies` false and `limit` 200, and look for a record whose `correlation` is `change-<N>-handoff-<Handoff comment id>` and whose `sender` is this position's own mail name. When such a record exists, the release was already reported: send nothing and return result `checked` with reason `awaiting-principal` and those message ids. Otherwise use skill `coding-agents:message-agents` for one request: `kind` `question` when `Blockers` carries a question and `fact` otherwise, that `correlation`, `subject` `Change <N>: Executor released`, `ackRequired` true, and as `body` every question verbatim, the `Blockers` and `Hazards` lines verbatim, and the Change reference. Return result `checked` with the message id. The Change stays released until the principal, with any answer in the Change record, orders **Start** for it.
 5. When the Change is terminal, run `spx worktree status`. When it shows the worktree with no running Executor work, use skill `coding-agents:operate-herdr` for one `stop` of the pane with `"mutationAuthorized": true`, and return result `collected`. When it still shows running work, return result `checked` with that status verbatim; a later Check collects the pane.
 
 </workflow>
@@ -72,7 +73,7 @@ The invocation is the mutation authorization, and it covers exactly the targets 
 
 <output_format>
 
-Return the result — `started`, `checked`, `collected`, `unavailable`, or `stopped` — with the Change URL, the worktree root, the pane and agent name, each herdr result's `status` verbatim, the blockers acted on and the questions passed up, with their message ids, and, for `stopped`, the exact report that stopped the workflow.
+Return the result — `started`, `checked`, `collected`, `unavailable`, or `stopped` — with the Change URL, the worktree root, the pane and agent name, each herdr result's `status` verbatim, the Executor-session stop acted on or the release reported to the principal, with its message id, and, for `stopped`, the exact report that stopped the workflow.
 
 </output_format>
 
@@ -80,7 +81,7 @@ Return the result — `started`, `checked`, `collected`, `unavailable`, or `stop
 
 - The winning Claim names the Executor's worktree root, and the one session this skill started there runs the `change-executor` definition with the structured-question tool withheld on start and on every relaunch.
 - Every stall, compaction, and relaunch was one bounded operation, and a relaunched Executor received only the Change's issue reference.
-- Every pane blocker the Executor reported was acted on, and every question it raised was passed up the chain verbatim, once per Handoff.
+- Every Executor-session stop the Handoff's `Hazards` recorded was acted on, and every other release was reported to the principal once per Handoff, with each question verbatim.
 - The pane was stopped only after the Change was terminal or released and the worktree carried no running work.
 
 </success_criteria>

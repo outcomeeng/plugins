@@ -14,7 +14,7 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 ### Added
 
-- **`/orchestrate-change` carries the Orchestrator position's duties for one Change.** Start claims the Change for an Executor and starts that session with spec-tree's `change-executor` definition selected, withholding the structured-question tool on the start and every relaunch. Check reads the Change's `Lifecycle` issue field and its newest Handoff, acts on pane blockers, and sends each question to the principal once. On Codex, Start returns `unavailable`.
+- **`/orchestrate-change` carries the Orchestrator position's duties for one Change.** Start claims the Change for an Executor and starts that session with spec-tree's `change-executor` definition selected, withholding the structured-question tool on the start and every relaunch. Check reads the Change's `Lifecycle` issue field and its newest Handoff, restarts the Executor when its `Hazards` line records that session's own stop, and reports every other release, with each question verbatim, to the principal once. On Codex, Start returns `unavailable`.
 
 ### Changed
 

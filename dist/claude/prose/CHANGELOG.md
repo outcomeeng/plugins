@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.12.4
+
+### Changed
+
+- **`/audit-prose` grants only the run-journal commands its workflow runs.** Its shell grant is `spx journal open`, `append`, `seal`, and `read`, plus `printf` for piping each event; any other shell command asks for approval.
+
 ## 0.11.0
 
 ### Added
