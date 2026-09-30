@@ -20,6 +20,9 @@ The module's contract:
   accepts it as a keyword argument and hands it the repository root the
   pathspecs were computed for, so the command runs in that tree rather than
   in whatever directory the calling process happens to sit in.
+- `find_repository_root()` supplies that root when the caller names none:
+  the nearest directory at or above the working directory holding Git
+  metadata.
 - `main()` wires a real `subprocess.run` adapter.
 """
 
@@ -52,7 +55,7 @@ def clean(
     active_python_prefix: Path | None = None,
 ) -> int:
     """Run the workspace cleanup. Returns the process exit code."""
-    root = repo_root if repo_root is not None else Path.cwd()
+    root = repo_root if repo_root is not None else find_repository_root(Path.cwd())
     argv = build_clean_argv(
         repo_root=root,
         active_python_prefix=active_python_prefix
@@ -62,6 +65,19 @@ def clean(
     if not argv:
         return os.EX_OK
     return runner(argv, cwd=root)
+
+
+def find_repository_root(start: Path) -> Path:
+    """Return the nearest directory at or above `start` holding Git metadata.
+
+    A linked worktree carries its metadata as a file, so any entry of that name
+    marks a root. When no directory holds one, `start` is returned and Git
+    reports the missing repository through the command's own exit code.
+    """
+    for directory in (start, *start.parents):
+        if (directory / GIT_METADATA_DIR).exists():
+            return directory
+    return start
 
 
 def build_clean_argv(
@@ -131,6 +147,7 @@ __all__ = [
     "build_clean_pathspecs",
     "build_clean_argv",
     "clean",
+    "find_repository_root",
     "main",
 ]
 
