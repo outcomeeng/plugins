@@ -6,7 +6,6 @@ import tomllib
 from collections import Counter
 
 from outcomeeng_testing.harnesses.agent_conversion import authored_agent_targets
-from outcomeeng_testing.harnesses.distribution import CANONICAL_SOURCE_ROOT
 from outcomeeng.distribution.agents import AGENT_TARGETS_FIELD
 from outcomeeng.distribution.build import (
     AGENT_CAPABILITY_REGISTRY,
@@ -20,8 +19,6 @@ from outcomeeng.distribution.build import (
     EmissionAction,
     agent_capability,
     agent_slug,
-    plugin_names,
-    template_source_files,
     skill_dir_path_references,
     frontmatter_field_names,
     rewrite_paths_for_target,
@@ -30,7 +27,6 @@ from outcomeeng.distribution.build import (
 from outcomeeng.distribution.contracts import (
     AGENTS_SUBDIR_NAME,
     MARKDOWN_FILE_SUFFIX,
-    SKILL_FILENAME,
     SKILLS_SUBDIR_NAME,
     Target,
 )
@@ -41,14 +37,17 @@ from outcomeeng.validation.skill_frontmatter import (
 from outcomeeng.validation.skill_injection_safety import (
     INLINE_INJECTION_END,
     INLINE_INJECTION_START,
+    inline_injection_commands,
+    reads_sister_skill_content,
 )
 from outcomeeng_testing.generators.source_and_templating import source_scenarios
 from outcomeeng_testing.generators.target_emission import execution_time_commands
 from outcomeeng_testing.harnesses.target_emission import (
-    execution_time_injection_commands,
     projected_versus_emitted,
     projected_sources,
+    tracked_plugin_names,
     tracked_plugin_sources,
+    tracked_template_sources,
     text_emissions,
     emitted_texts,
     repeated_include_observations,
@@ -68,8 +67,9 @@ def test_every_source_file_emits_to_both_target_trees() -> None:
     assert sources
     unprojected = set(tracked_plugin_sources()) - set(sources)
     assert not unprojected, f"authored sources the build never emits: {unprojected}"
-    template_sources = set(template_source_files(CANONICAL_SOURCE_ROOT))
-    plugin_count = len(plugin_names(CANONICAL_SOURCE_ROOT))
+    template_sources = set(tracked_template_sources())
+    assert template_sources
+    plugin_count = len(tracked_plugin_names())
     for target, per_source in counts.items():
         admitted = [
             source for source in sources if target in authored_agent_targets(source)
@@ -309,27 +309,22 @@ def test_frontmatter_strip_is_idempotent() -> None:
 
 
 def test_outputs_do_not_contain_execution_time_skill_content_injection() -> None:
-    # A command reads sister-skill content when it leaves its own skill directory
-    # or names a skill definition file.
-    def reads_sister_skill(command: str) -> bool:
-        return "../" in command or SKILL_FILENAME in command
-
     commands = execution_time_commands()
     assert commands
     for command in commands:
-        injected = execution_time_injection_commands(
+        injected = inline_injection_commands(
             f"{INLINE_INJECTION_START}{command}{INLINE_INJECTION_END}"
         )
         assert injected == (command,), command
-        assert reads_sister_skill(command), command
-        assert execution_time_injection_commands(command) == (), command
+        assert reads_sister_skill_content(command), command
+        assert inline_injection_commands(command) == (), command
     outputs = emitted_texts()
     assert outputs
     for row in outputs:
         offending = [
             command
-            for command in execution_time_injection_commands(row.text)
-            if reads_sister_skill(command)
+            for command in inline_injection_commands(row.text)
+            if reads_sister_skill_content(command)
         ]
         assert not offending, (row.target, row.path, offending)
 

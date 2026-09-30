@@ -25,6 +25,7 @@ from outcomeeng.distribution.build import (
     IGNORED_SOURCE_FILE_SUFFIXES,
     SHARED_FRAGMENT_FILENAME,
     SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE,
+    TEMPLATES_DIR_NAME,
     IncludeDirective,
     build,
     format_directive,
@@ -46,7 +47,6 @@ from outcomeeng.distribution.contracts import (
     TEXT_FILE_SUFFIXES,
     Target,
 )
-from outcomeeng.validation.skill_injection_safety import INLINE_INJECTION_PATTERN
 from outcomeeng.validation.skill_frontmatter import (
     ALLOWED_TOOLS_FIELD,
     ARGUMENT_HINT_FIELD,
@@ -117,20 +117,38 @@ def source_emission_counts() -> dict[Target, Counter[Path]]:
     }
 
 
-def tracked_plugin_sources() -> tuple[Path, ...]:
-    """Return every authored plugin file Git tracks, independently of the build.
+def _tracked_files(source_subdir: str) -> tuple[Path, ...]:
+    """Return every file Git tracks under ``src/<source_subdir>``.
 
     The listing comes from the repository index, so a file the build's own source
     walk skips still appears here.
     """
     listing = subprocess.run(
-        ["git", "ls-files", "-z", "--", f"{SOURCE_ROOT_NAME}/{PLUGINS_DIR_NAME}"],
+        ["git", "ls-files", "-z", "--", f"{SOURCE_ROOT_NAME}/{source_subdir}"],
         cwd=REPOSITORY_ROOT,
         capture_output=True,
         check=True,
     ).stdout.decode("utf-8")
     return tuple(
         sorted(REPOSITORY_ROOT / entry for entry in listing.split("\0") if entry)
+    )
+
+
+def tracked_plugin_sources() -> tuple[Path, ...]:
+    """Return every authored plugin file Git tracks, independently of the build."""
+    return _tracked_files(PLUGINS_DIR_NAME)
+
+
+def tracked_template_sources() -> tuple[Path, ...]:
+    """Return every per-plugin template file Git tracks, independently of the build."""
+    return _tracked_files(TEMPLATES_DIR_NAME)
+
+
+def tracked_plugin_names() -> frozenset[str]:
+    """Return the plugin directory names that carry a tracked file."""
+    plugins_root = REPOSITORY_ROOT / SOURCE_ROOT_NAME / PLUGINS_DIR_NAME
+    return frozenset(
+        path.relative_to(plugins_root).parts[0] for path in tracked_plugin_sources()
     )
 
 
@@ -211,13 +229,6 @@ def agent_artifact_paths(target: Target) -> tuple[Path, ...]:
                 *tree.glob(f"*/{SKILLS_SUBDIR_NAME}/*/{AGENTS_SUBDIR_NAME}/*"),
             )
         )
-    )
-
-
-def execution_time_injection_commands(text: str) -> tuple[str, ...]:
-    """Return the commands Claude Code's execution-time injection syntax embeds."""
-    return tuple(
-        match.group("command") for match in INLINE_INJECTION_PATTERN.finditer(text)
     )
 
 
