@@ -99,6 +99,15 @@ The lifecycle tests in `tests/test_repository_installation.compliance.l1.py` tak
 
 The round against `cc5f3e86be4dbcc2c727c46f5c96593bab02b680` records it again as `f-017` (INFO).
 
+The round against `01fa8e8acc904fb102bffa8dc66f5c4a14374748` raised the class at the test sites as `f-009` (REJECT)
+against `tests/test_repository_installation.compliance.l1.py:108`: "The lifecycle
+tests choose incidental plugin and agent slugs as call-site literals:
+plugin_name=\"fixture\", and ship(\"auditor\"/\"current\"/\"retired\"/\"exact\"/\"changed\")
+at 108-110, 143-146, 226-229, 296-299 and elsewhere. No assertion states these
+values, and they survive both negation and transplant, so they belong to a
+harness or generator rather than the test file." The same settlement closes
+it: a generator supplies the slugs, or an operator ruling decides the reading.
+
 ## The marketplace-refresh clone bound leaves no margin over the source's real clone cost
 
 `test_real_agent_clis_map_full_and_generated_subsets` can fail at the `marketplace-refresh` operation. `codex plugin marketplace upgrade outcomeeng --json` then exits 1 with:
@@ -464,6 +473,31 @@ executed, and production names the directory once.
 
 **Evidence**: test-evidence audit finding `f-015` (WARNING) against `05a7165277750d69c88bc8abbece2c4f6a96bb7c`; the
 harness lies outside the diff of the discovery-login security fix. The round against `cc5f3e86be4dbcc2c727c46f5c96593bab02b680` raised it again as `f-012` (WARNING).
+
+## The record-mapping test picks its publication rows in the test file
+
+`test_every_claude_install_record_maps_to_one_update_one_rewrite_or_one_warning`
+in `tests/test_repository_installation.mapping.l1.py` parametrizes over two rows
+the test file chooses — no plugin pending, and the first committed catalog plugin
+pending — and picks its case plugin with `sorted(...)[0]`. The mapping assertion
+states no publication dimension, and no source-owned domain or generator selects
+the rows.
+
+**Impact**: the publication cases are the test author's choice, so the mapping
+claims no coverage of pending publication beyond the two rows picked.
+
+**Settlement condition**: a generator supplies the publication rows over a
+declared domain, or the mapping assertion states the publication dimension and
+its domain supplies the rows.
+
+**Evidence**: test-evidence audit finding `f-010` (REJECT) against `01fa8e8acc904fb102bffa8dc66f5c4a14374748`: "The test
+file chooses parametrize rows [frozenset(), frozenset({sorted(committed_catalog_plugin_names())[0]})]
+with ids all-published/one-pending (172-176). Line 143 picks a case plugin with
+sorted(...)[0]. These rows introduce a publication dimension the mapping
+assertion does not state, and neither a source-owned domain nor a generator
+selects them." The rows predate the discovery-login security fix, which touches
+this file only to add the git-source mapping; they are recorded here under the
+convergence-stall rule by the Director's ruling.
 
 ## Codex 0.155.1 poisons a fresh home during the marketplace listing, then refuses it
 
