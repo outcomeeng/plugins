@@ -33,17 +33,19 @@ A Fixer is a fresh session of the definition the round's Author used. The task m
 
 Each Verifier is the configured auditor or reviewer for the evidence obligation the Change's Frame states, launched with a target-only task message. A `change-verifier` session produces verification routing and evidence through `/verify` and is an Author or Fixer, never a Verifier; its result is no verdict:
 
-| Subject the obligation names        | Verifier                           |
-| ----------------------------------- | ---------------------------------- |
-| A PDR                               | `spec-tree:pdr-auditor`            |
-| An ADR                              | `spec-tree:adr-auditor`            |
-| A node spec                         | `spec-tree:spec-auditor`           |
-| A node's test evidence              | `spec-tree:test-evidence-auditor`  |
-| A node's eval evidence              | `spec-tree:eval-evidence-auditor`  |
-| Implementation in a changeset scope | `spec-tree:implementation-auditor` |
-| A skill surface                     | `instructions:skill-auditor`       |
-| A subagent definition               | `instructions:subagent-auditor`    |
-| A Change record                     | `spec-tree:change-auditor`         |
+| Subject the obligation names        | Verifier                                |
+| ----------------------------------- | --------------------------------------- |
+| A PDR                               | `spec-tree:pdr-auditor`                 |
+| An ADR                              | `spec-tree:adr-auditor`                 |
+| A node spec                         | `spec-tree:spec-auditor`                |
+| A node's test evidence              | `spec-tree:test-evidence-auditor`       |
+| A node's eval evidence              | `spec-tree:eval-evidence-auditor`       |
+| Implementation in a changeset scope | `spec-tree:implementation-auditor`      |
+| A skill surface                     | `instructions:skill-auditor`            |
+| A subagent definition               | `instructions:subagent-auditor`         |
+| A Change record                     | `spec-tree:change-auditor`              |
+| The changeset, under `/merge`       | `spec-tree:changes-reviewer`            |
+| Changeset coherence, under `/merge` | `spec-tree:changeset-coherence-auditor` |
 
 </definitions>
 
@@ -57,7 +59,7 @@ Start every Verifier without this conversation's history, reasoning, summaries, 
 
 <workflow>
 
-1. **Resolve the Change.** Read `$ARGUMENTS` as an issue reference — `#N`, `owner/repo#N`, or an issue URL — or, when empty, the newest `<CLAIMED_CHANGE>` marker in the conversation; neither present stops with result `not-held` naming the missing reference. Read the issue, its `url`, its comments, and its fields under `canonical-state`.
+1. **Resolve the Change.** Resolve the store and Product under `store-binding`. Read `$ARGUMENTS` as an issue reference — `#N`, `owner/repo#N`, or an issue URL — or, when empty, the newest `<CLAIMED_CHANGE>` marker in the conversation; neither present stops with result `not-held` naming the missing reference, and an `owner/repo` that differs from the overlay store stops with result `not-held` naming it. Read the issue, its `url`, its comments, and its fields under `canonical-state`.
 2. **Confirm the claim.** Resolve this session's assigned worktree root with `git rev-parse --show-toplevel`. Require the issue `OPEN`, Lifecycle `Claimed`, Maturity `Executable`, and the claim root of the winning Claim under `claim-record` equal to that root. Run `spx worktree status` from the root and require this session's running claim for it. Any other state stops with result `not-held` and the observed values, with nothing written.
 3. **Confirm execution may start.** Read this Change's predecessors from its `Predecessors` field, its blockers, and each Change's successors under `canonical-state`. Require every predecessor to have Lifecycle `Refined`, and every blocker to have its current lineage leaves at `Applied`, following each blocker's successors to its leaves. Require that this Change has no successor. An unmet condition goes to step 8 with the condition as the blocker.
 4. **Bring the work into this worktree.** Read the newest `Handoff:` comment. When its `Branch or PR` line names a branch or a pull request, resolve the branch — a pull request's with `gh pr view <url> --json headRefName` — then `git fetch origin <branch>` and `git switch <branch>`. When no Handoff exists or the line is `none`, resolve the default branch from `git rev-parse --abbrev-ref origin/HEAD` with its leading `origin/` removed, and create the working branch the Change's Activities name with `git switch -c <branch> origin/<default>`; Activities that name no branch go to step 8 with that gap as the blocker. Use skill `spec-tree:sync-base` afterwards. Continue from the Handoff's next Activity, or from the first unchecked Activity when no Handoff exists.
@@ -67,7 +69,7 @@ Start every Verifier without this conversation's history, reasoning, summaries, 
    3. Use skill `spec-tree:sync-base`, then run the product's `verify` command — the one the product's root agent guide names among its Spec Tree phase commands — over the Activity's nodes and the changeset on the resulting head; a guide that names no `verify` command goes to step 8 with that gap as the blocker. A failing command starts a Fixer round under step 5.5 with that command as its reference. When every command passes, launch each Verifier the Frame's evidence obligations name for the Activity's subject, one launch each, against that same head.
    4. The Activity is complete when every Verifier it names approves the head step 5.3 verified.
    5. When a verdict rejects or a deterministic command fails, launch one Fixer session under `<definitions>`, its repair block carrying every rejected verdict and failed command of the round; when it returns, commit what it left as step 5.2 does and continue at step 5.3 for the new committed head. A rejection whose defect class a prior round of the same subject already raised — a finding carrying the same rule identifier, or the same category where the verdict names no rule, against the same file — or a deterministic command that fails again after a Fixer round for it, goes to step 8 with the repeated class or command and both results.
-6. **Integrate.** When every Activity before integration is complete, use skill `spec-tree:author-change` to check those Activities in the record, then use skill `spec-tree:merge` for the changeset. A gate that `/merge` reports blocked goes to step 8 with its exact report. When `/merge` reports the changeset merged, use skill `spec-tree:author-change` to check the integration Activity and every closing Activity, so every Activity in the record is checked before step 7.
+6. **Integrate.** When every Activity before integration is complete, use skill `spec-tree:author-change` to check those Activities in the record, then use skill `spec-tree:merge` for the changeset. `/merge` launches its own reviewers and auditors, each one a Verifier `<definitions>` names. A valid finding a `/merge` review or audit raises is never repaired in this session: it starts a Fixer round under step 5.5 of the definition whose round produced the file the finding names, with the finding as its repair block, and `/merge` then continues on the new committed head. A gate that `/merge` reports blocked goes to step 8 with its exact report. When `/merge` reports the changeset merged, use skill `spec-tree:author-change` to check the integration Activity and every closing Activity, so every Activity in the record is checked before step 7.
 7. **Close.** Use skill `spec-tree:close-change` with `Applied` and the Change reference. A close it refuses goes to step 8 with its exact report; a completed close returns result `closed`.
 8. **Release.** When execution stops with continuation remaining — a blocker, a failed launch or unusable result, a repeated defect class, a blocked gate, or a question that reopens product or architecture judgment — use skill `spec-tree:release-change` with the Change reference. Its Handoff names the stop condition under `Hazards` and carries the question verbatim under `Blockers` when one exists; verdict run tokens stay in this skill's result, never in the Change. Return result `released`.
 
