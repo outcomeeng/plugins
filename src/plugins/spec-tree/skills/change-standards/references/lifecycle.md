@@ -44,7 +44,7 @@ Every field a `gh` command receives from a Change body, conversation state, or i
 
 <rule id="claim-record">
 
-A Claim is one comment, `Claim: <agent session id> <assigned worktree root>`, posted after the assignee is added. Session exclusivity comes from the Claim, never from the assignee alone, because one account may run several sessions: the earliest `Claim:` posted after the newest `Handoff:` — or since issue creation when none exists — wins.
+A Claim is one comment, `Claim: <agent session id> <claim root>`, posted after the assignee is added; the claim root is the worktree root the Change is claimed for — the claiming session's own assigned root, or a root it names. The Change's holder is the session whose assigned worktree root equals the claim root of the winning Claim. Holder exclusivity comes from the Claim, never from the assignee alone, because one account may run several sessions: the earliest `Claim:` posted after the newest `Handoff:` — or since issue creation when none exists — wins.
 
 </rule>
 
