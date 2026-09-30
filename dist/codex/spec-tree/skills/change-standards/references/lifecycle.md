@@ -20,6 +20,8 @@ Read the issue with `gh issue view <N> --repo <store> --json number,title,state,
 
 Write a single-select field with `gh api graphql -f query='mutation($i:ID!,$f:ID!,$v:ID!){setIssueFieldValue(input:{issueId:$i,issueFields:[{fieldId:$f,singleSelectOptionId:$v}]}){clientMutationId}}' -f i=<issue-id> -f f=<field-id> -f v=<option-id>`; the text field takes `textValue:$v` with `$v:String!` in place of the option. The issue id is the `id` the field read returns. Resolve the field and option ids with `gh api graphql -f query='query($l:String!){organization(login:$l){issueFields(first:50){nodes{... on IssueFieldSingleSelect{id name options{id name}} ... on IssueFieldText{id name}}}}}' -f l=<owner>`; hardcode none of them.
 
+A Change's successors are the store records whose `Predecessors` value names its canonical identity `<store>#<N>`. Read every store issue's value with `gh api graphql --paginate -f query='query($o:String!,$r:String!,$endCursor:String){repository(owner:$o,name:$r){issues(first:100,after:$endCursor){pageInfo{hasNextPage endCursor} nodes{number url issueFieldValues(first:50){nodes{... on IssueFieldTextValue{value field{... on IssueFieldText{name}}}}}}}}}' -f o=<owner> -f r=<repo>`, split each value at every comma followed by one space, and keep the records with an entry equal to `<store>#<N>`. A Change's blockers are its native dependencies, read with `gh api repos/<store>/issues/<N>/dependencies/blocked_by`.
+
 </rule>
 
 <rule id="ordered-write">
@@ -30,13 +32,13 @@ A transition records each successful write in its declared order. When a require
 
 <rule id="complete-readback">
 
-A transition completes only after re-reading the issue and its fields and finding every value equal to the intended state: Product equals the overlay Product, Maturity is unchanged, Lifecycle equals the target value, the assignee list equals the intended holder set, and the newest `Claim:`, `Handoff:`, or terminal comment is the exact comment the transition posted. Report the readback values verbatim.
+A transition completes only after re-reading the issue and its fields and finding every value equal to the intended state: Product equals the overlay Product, Maturity is unchanged, Lifecycle equals the target value, the assignee list equals the intended holder set, and the transition's own record is the one its rule selects: for a claim, the winning Claim under `claim-record` is the exact comment the transition posted; for a release or a close, the newest `Handoff:` or terminal comment is. Report the readback values verbatim.
 
 </rule>
 
 <rule id="write-inspection">
 
-Before any `gh issue comment` or `gh issue edit --body-file` write, inspect the exact text about to be written for secret values and credential payloads: tokens, keys, passwords, connection strings, cookies, or any pasted credential-shaped content. When any appears, write nothing, report only the kind of content found, never the value, and ask through the structured-question tool whether the operator supplies a redacted text or abandons the write; on redaction, inspect the supplied text and continue; on abandon, the write does not happen and the result says so.
+Before any write that sends text to the store — a comment, an issue title or body, or a text field value — inspect the exact text about to be written for secret values and credential payloads: tokens, keys, passwords, connection strings, cookies, or any pasted credential-shaped content. When any appears, write nothing, report only the kind of content found, never the value, and ask through the structured-question tool whether the operator supplies a redacted text or abandons the write; on redaction, inspect the supplied text and continue; on abandon, the write does not happen and the result says so.
 
 </rule>
 
