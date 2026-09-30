@@ -60,7 +60,7 @@ When the scope is cross-node, every audit gate — Steps 4, 6, and 8 — runs at
 
 <launch_contract>
 
-Each simplification, audit, or review step below requests exactly one native launch with its mapped subagent name and target-only prompt. Use the native tool schema and result-collection capabilities. A failed launch or unusable final result stops that invocation: analyze and report the exact failure without another launch, a substitute subagent or model, an alternative launch mechanism, or an audit in this conversation.
+Each audit or review step below requests exactly one native launch with its mapped subagent name and target-only prompt. Use the native tool schema and result-collection capabilities. A failed launch or unusable final result stops that invocation: analyze and report the exact failure without another launch, a substitute subagent or model, an alternative launch mechanism, or an audit in this conversation.
 
 Persist accepted requirements in decisions and specs before dispatch. Start each Verifier without authoring history, following the root guide's isolation mechanics. Never append an author-written context packet, reasoning, summary, or suggested verdict. The invoked skill independently discovers its evidence from the target and configured instructions.
 
@@ -135,7 +135,7 @@ Step 0 and Steps 1–2 are language-independent. Steps 3–8 use the detected la
 | 5    | Establish evidence       | Use skill `spec-tree:verify`.                                               | same                                 | same                             | same                         |
 | 6    | Evidence audit           | `spec-tree:test-evidence-auditor`, `spec-tree:eval-evidence-auditor` agents | same                                 | same                             | same                         |
 | 7    | Implement                | Use skill `typescript:code-typescript`.                                     | Use skill `python:code-python`.      | Use skill `rust:code-rust`.      | Use skill `go:code-go`.      |
-| 7a   | Simplify implementation  | `typescript:typescript-simplifier`                                          | no declared simplifier               | `rust:rust-simplifier`           | `go:go-simplifier`           |
+| 7a   | Simplify implementation  | Use skill `typescript:simplify-typescript`.                                 | no simplification skill              | Use skill `rust:simplify-rust`.  | Use skill `go:simplify-go`.  |
 | 8    | Implementation audit     | `spec-tree:implementation-auditor` agent                                    | same                                 | same                             | same                         |
 | 8a   | Evidence-auditor gates   | `spec-tree:test-evidence-auditor`, `spec-tree:eval-evidence-auditor` agents | same                                 | same                             | same                         |
 | 9    | Whole-changeset review † | `spec-tree:changes-reviewer` agent                                          | same                                 | same                             | same                         |
@@ -235,17 +235,17 @@ Write implementation code, then run every applicable deterministic check selecte
 
 <step number="7a" name="Simplify implementation">
 
-For Go, Rust, or TypeScript, dispatch the configured simplifier selected in `<skill_map>` after Step 7. Python has no declared simplifier and skips this step. Never infer another subagent from a language name.
+For Go, Rust, or TypeScript, run the language's simplification skill selected in `<skill_map>` in this conversation after Step 7. A language that ships no simplification skill skips this step.
 
-Before dispatch, invoke `/commit-changes` when needed and require a clean worktree. Record the full committed head. Pass only `HEAD`, or the explicit three-dot range used for the selected base. The invoked language skill independently selects the changed implementation and its governing evidence. Run one simplifier at a time, with no concurrent writer to its implementation scope.
+Before running it, invoke `/commit-changes` when needed and require a clean worktree. Record the full committed head. Supply only `HEAD`, or the explicit three-dot range used for the selected base, as its target. The language skill independently selects the changed implementation and its governing evidence.
 
-Require the skill's JSON result with `status`, `reason`, `target`, `base`, `head`, `scope`, `changed_paths`, `changes`, `evidence`, `verification`, `blockers`, and `recovery`. Check the returned target and full head against the dispatched subject, inspect every retained edit and command result, and apply the result contract:
+Require the skill's JSON result with `status`, `reason`, `target`, `base`, `head`, `scope`, `changed_paths`, `changes`, `evidence`, `verification`, `blockers`, and `recovery`. Check the returned target and full head against the committed subject, inspect every retained edit and command result, and apply the result contract:
 
 - `simplified`: inspect the retained patch for scope and behavior preservation. Complete any still-required deterministic checks, then checkpoint every resulting edit before Step 8. Preserve the successful command results against that exact content; do not repeat commands whose subject is unchanged.
 - `unchanged`: require no retained edit and a reason explaining the empty scope or absence of a safe improvement, then continue.
-- `blocked` or `failed`: preserve the complete prerequisite or verification diagnostic and recovery outcome; stop this node before Step 8. Repair the named prerequisite or implementation through its owning workflow. A new simplifier invocation requires a repaired, verified, committed subject and follows the same one-call contract.
+- `blocked` or `failed`: preserve the complete prerequisite or verification diagnostic and recovery outcome; stop this node before Step 8. Repair the named prerequisite or implementation through its owning workflow. A new simplification run requires a repaired, verified, committed subject.
 
-An absent or malformed result follows `<launch_contract>`. A simplification result supplies no independent audit approval. Step 8 and every applicable evidence and review gate remain required. If later repair changes implementation, repeat Step 7a on the repaired committed subject before its final audits.
+An absent or malformed result stops this node before Step 8 with the exact failure. A simplification result supplies no independent audit approval. Step 8 and every applicable evidence and review gate remain required. If later repair changes implementation, repeat Step 7a on the repaired committed subject before its final audits.
 
 </step>
 
