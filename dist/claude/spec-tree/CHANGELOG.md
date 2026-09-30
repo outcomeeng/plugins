@@ -25,6 +25,8 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 - **A Change is held by the worktree its winning Claim names.** `/claim-change` takes an optional worktree root to claim for, and `/release-change` and `/close-change` accept the session whose assigned worktree root equals the winning Claim's.
 - **`/author`, `/verify` and `/test` run load-gated commands in the foreground** and report only after every such command has exited.
+- **`/author` accepts a decision-ready packet**: a full `spx/...` target path, optionally a Change reference whose Output and Frame supply the settled content and placement, and a repair block from an earlier round. A placement the Change's Frame names is written without a confirmation question, and a question left open stops with result `blocked` when the structured-question tool is unavailable.
+- **`/close-change` refuses `Refined`** when a successor it is told about does not name the Change in its `Predecessors` field.
 - **`/apply` runs the detected language's `simplify-{lang}` skill in its own conversation**, in place of a language-specific simplifier agent.
 
 ### Requires

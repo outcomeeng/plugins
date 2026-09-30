@@ -1,7 +1,8 @@
 ---
 name: author
 description: ALWAYS invoke this skill when adding, defining, or creating specs, decisions, or nodes. NEVER author spec tree artifacts without this skill.
-allowed-tools: Read, Glob, Grep, Write, Edit, {{! tool('use_skill') !}}, {{! tool('ask_user') !}}, Bash(spx validation markdown:*), Bash(spx spec status:*)
+argument-hint: "[full-spx-target-path] [#N | owner/repo#N | issue-url] [repair-block]"
+allowed-tools: Read, Glob, Grep, Write, Edit, {{! tool('use_skill') !}}, {{! tool('ask_user') !}}, Bash(spx validation markdown:*), Bash(spx spec status:*), Bash(gh issue view:*)
 ---
 
 <objective>
@@ -15,6 +16,17 @@ A Spec Tree artifact — a product spec, decision record (ADR/PDR), output-kind 
 About to choose an assertion's verification type (`[test]` / `[eval]` / `[probe]` / `[audit]`) or its assertion type (scenario / mapping / conformance / property / compliance); about to write or edit a test file; about to implement a work item -> STOP. That work belongs to `/apply`, which invokes `/verify` before the selected specialist. Write the assertion or decision-rule text without a tag or type subsection; never select which type it resolves to, and never write the test or implementation behind it. Tagging new text with a chosen type, authoring a test, or writing implementation code from inside this skill is the exact boundary breach this trigger exists to stop.
 
 </stop_triggers>
+
+<input>
+
+`$ARGUMENTS`, when present, is a decision-ready artifact packet: one canonical full `spx/...` target path, optionally followed by a Change reference — `#N`, `owner/repo#N`, or an issue URL — and then a repair block.
+
+- **Change reference.** Read the Change with `gh issue view <reference> --json body`, and take the operation, the artifact type, the settled content, and the placement for the target from its `# Output` and `# Frame`.
+- **Settled placement.** A target path that the Change's Frame names settles placement; Step 3 then writes without presenting the placement for confirmation.
+- **Repair block.** Text after the target and the Change reference is the verbatim result of each rejected verdict and the exact command line and output of each failed deterministic command of an earlier round on this target. Repair every finding and failure it names within this workflow's scope, and report each one's disposition in the result.
+- **Open question.** A question the packet and the loaded truth leave open — kind, placement, content, or an operator-owned gap — is asked through `{{! tool('ask_user') !}}` when that tool is available; otherwise the workflow stops before writing with result `blocked`, naming the question verbatim and the write it blocks.
+
+</input>
 
 <quick_start>
 
@@ -98,7 +110,7 @@ This loads:
 - Derive the slug from the concern name (lowercase, hyphenated)
 - **When adding or restructuring 2+ sibling nodes in one pass, stop authoring child nodes and hand off structure to `/decompose`.** Record the user's decomposition intent, constraints, examples, known issues, and unresolved questions in the Change that carries this work, then use skill `spec-tree:decompose` with `<node-address>`. Pass only the node address; proposed children, proposed indices, and dependency order belong to the decomposition workflow.
 
-Present the proposed placement to the user before creating files.
+Present the proposed placement to the user before creating files, unless the packet settles it under `<input>`.
 
 </step>
 
@@ -151,7 +163,7 @@ Before drafting, gather what's needed for the artifact type:
 - Which uncertainty between operator and agent does the probe expose?
 - What environment and preconditions does the protocol need, and which steps does any Author repeat?
 
-Use `{{! tool('ask_user') !}}` for operator-owned gaps. Do not ask about information already provided in the conversation.
+Resolve operator-owned gaps as `<input>` states for an open question. Do not ask about information the conversation or the packet already provides.
 
 </step>
 
