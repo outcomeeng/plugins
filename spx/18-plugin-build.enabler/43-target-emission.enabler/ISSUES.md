@@ -10,4 +10,4 @@ The assertion that a target's native agent format, filename shape, and namespace
 
 **Why separate**: the repair restructures the emission boundary in `outcomeeng/distribution/build.py` for every target, beyond the `targets` field this node's last change added. The same boundary carries the optional-capability evidence gap `spx/18-plugin-build.enabler/ISSUES.md` records.
 
-**Evidence**: `spec-tree:test-evidence-auditor` findings f-001 and f-002, severity `REJECT`, on `spx/18-plugin-build.enabler/43-target-emission.enabler` at head `133caf1aba9244c9f6f0706eecb2c0ccf3587b6f`, raised again as f-001 and f-002 at head `bcf9b3d56a4c6ac629167b31d9daf4c5ac855f09`.
+**Evidence**: `spec-tree:test-evidence-auditor` findings f-001 and f-002, severity `REJECT`, on `spx/18-plugin-build.enabler/43-target-emission.enabler` at head `133caf1aba9244c9f6f0706eecb2c0ccf3587b6f`, raised again as f-001 and f-002 at heads `bcf9b3d56a4c6ac629167b31d9daf4c5ac855f09` and `7ca471d52f9b82779c3cf5ea454eea545b0c2e20`; `spec-tree:implementation-auditor` run `2026-09-30_13-32-44-300-3a68e92d2980` raises the same gap as debt `registry-resolution-unfalsifiable`.
