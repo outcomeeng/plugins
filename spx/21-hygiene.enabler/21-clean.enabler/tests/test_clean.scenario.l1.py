@@ -65,7 +65,7 @@ def test_git_dry_run_preserves_session_store_and_active_environment(
 
 def test_clean_propagates_runner_exit_code(tmp_path: Path) -> None:
     repo = create_clean_repo(tmp_path)
-    runner = RecordingRunner(exit_code=3)
+    runner = RecordingRunner.failing()
 
     exit_code = clean(
         runner=runner,
@@ -73,7 +73,8 @@ def test_clean_propagates_runner_exit_code(tmp_path: Path) -> None:
         active_python_prefix=repo.active_python_prefix,
     )
 
-    assert exit_code == 3
+    assert exit_code != os.EX_OK
+    assert exit_code == runner.exit_code
 
 
 def test_clean_noops_when_every_top_level_path_is_protected(tmp_path: Path) -> None:

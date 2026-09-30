@@ -37,7 +37,6 @@ PATHSPEC_SEPARATOR = "--"
 GIT_METADATA_DIR = ".git"
 GIT_IGNORE_FILE = ".gitignore"
 SPX_STORE_DIR = ".spx"
-SUCCESS_EXIT_CODE = 0
 
 
 class Runner(Protocol):
@@ -61,7 +60,7 @@ def clean(
         else Path(sys.prefix),
     )
     if not argv:
-        return SUCCESS_EXIT_CODE
+        return os.EX_OK
     return runner(argv, cwd=root)
 
 
@@ -129,7 +128,6 @@ __all__ = [
     "SPX_STORE_DIR",
     "PATHSPEC_SEPARATOR",
     "Runner",
-    "SUCCESS_EXIT_CODE",
     "build_clean_pathspecs",
     "build_clean_argv",
     "clean",

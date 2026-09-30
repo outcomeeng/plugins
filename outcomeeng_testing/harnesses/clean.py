@@ -17,6 +17,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from enum import StrEnum
 from pathlib import Path
+import os
 import subprocess
 
 from outcomeeng.hygiene.clean import (
@@ -32,6 +33,7 @@ EXTERNAL_PYTHON_ENV_DIR = "external-venv"
 GIT_DRY_RUN_OPTION = "--dry-run"
 GIT_END_OF_OPTIONS = "--"
 REMOVAL_LINE_PREFIX = "Would remove "
+RECORDING_RUNNER_FAILURE_EXIT_CODE = os.EX_OK + 1
 
 
 class EnvironmentPlacement(StrEnum):
@@ -53,10 +55,20 @@ class RunnerCall:
 
 @dataclass
 class RecordingRunner:
-    """Runner that returns a scripted exit code and records every call."""
+    """Runner that returns a scripted exit code and records every call.
 
-    exit_code: int = 0
+    The default scripts success; `failing()` scripts the one non-success code
+    this double returns, so a case that needs a failed run receives its code
+    from the double rather than choosing one.
+    """
+
+    exit_code: int = os.EX_OK
     calls: list[RunnerCall] = field(default_factory=list)
+
+    @classmethod
+    def failing(cls) -> RecordingRunner:
+        """Return a double scripted to report a failed run."""
+        return cls(exit_code=RECORDING_RUNNER_FAILURE_EXIT_CODE)
 
     def __call__(self, argv: Sequence[str], *, cwd: Path) -> int:
         self.calls.append(RunnerCall(argv=tuple(argv), cwd=cwd))
