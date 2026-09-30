@@ -3,7 +3,7 @@ name: verify
 description: >-
   ALWAYS invoke this skill when selecting or establishing evidence for spec
   assertions, decision verification rules, or a spec-tree scope.
-argument-hint: <full-spx-node-or-decision-path|spx/>
+argument-hint: <full-spx-node-or-decision-path|spx/> [repair-block]
 allowed-tools: Read, Glob, Grep, Edit, Skill
 ---
 
@@ -33,9 +33,9 @@ Validated spec assertions and decision verification rules routed to test, evalua
 
 When `$ARGUMENTS` is empty, abort before checking markers: "A canonical spec-tree target is required. Supply `spx/`, one full `spx/...` node path, or one full `spx/.../*.adr.md` or `spx/.../*.pdr.md` decision path."
 
-Require a live `<SPEC_TREE_FOUNDATION>` marker. Use skill `spec-tree:understand` when it is absent. For a node or product-root target, require a `<SPEC_TREE_CONTEXT>` marker matching `$ARGUMENTS`. For a decision target, require the marker for its containing node, or `spx/` for a product-level decision. Use skill `spec-tree:contextualize` for that canonical context target when its marker is absent.
+Require a live `<SPEC_TREE_FOUNDATION>` marker. Use skill `spec-tree:understand` when it is absent. For a node or product-root target, require a `<SPEC_TREE_CONTEXT>` marker matching the target. For a decision target, require the marker for its containing node, or `spx/` for a product-level decision. Use skill `spec-tree:contextualize` for that canonical context target when its marker is absent.
 
-Accept only `spx/`, one canonical full `spx/...` node path, or one canonical full decision path ending in `.adr.md` or `.pdr.md`. Read spec assertions from a spec target and `## Verification` rules from a decision target. For a product-root or aggregate target, walk the declared scope deterministically rather than selecting files by keyword, then partition the selected subjects by their owning canonical node or decision path. Each specialist invocation receives one supported node or decision target, never the aggregate target.
+Accept only `spx/`, one canonical full `spx/...` node path, or one canonical full decision path ending in `.adr.md` or `.pdr.md`. Read spec assertions from a spec target and `## Verification` rules from a decision target. For a product-root or aggregate target, walk the declared scope deterministically rather than selecting files by keyword, then partition the selected subjects by their owning canonical node or decision path. Each specialist invocation receives one supported node or decision target, never the aggregate target. Text after the target is a repair block: the verbatim result of each rejected verdict and the exact command line and output of each failed deterministic command of an earlier round on this target. Carry it into this workflow as repair input: repair every finding and failure it names within this workflow's scope, and report each one's disposition in the result.
 
 </step>
 
@@ -62,7 +62,7 @@ Classify the real subject's execution, not the determinism of a downstream grade
 
 Prefer the strongest reachable evidence in that order after applying this boundary. A prose-content existence check is never deterministic behavior evidence; reading authored text and asserting its wording proves only that the text was authored.
 
-Ignore an existing current tag or decision subsection as classification authority. Input validation has already stopped every unsupported tag shape. Classify the remaining subject from its real verdict. For a decision rule, move it to the subsection matching the selected verification type before its specialist supplies the subsection's tag shape.
+Ignore an existing current tag or decision subsection as classification authority. Input validation has already stopped every unsupported tag shape. Classify the remaining subject from its real verdict. A spec assertion whose current tag already names the selected verification type keeps that tag, is not passed to a specialist again, and reports `routed` with its existing evidence path or rule slug. A spec assertion whose current tag names another verification type has that tag removed before routing, so it reaches the selected specialist as an untagged assertion, and its row names the removed tag. For a decision rule, move it to the subsection matching the selected verification type before its specialist supplies the subsection's tag shape.
 
 </step>
 
@@ -71,7 +71,7 @@ Ignore an existing current tag or decision subsection as classification authorit
 Route each classified assertion exactly once:
 
 - **test** — use skill `spec-tree:test`; it owns test assertion typing, execution level, source-contract checks, generic test ceremony, and language delegation. For each spec node, pass that canonical node target plus a JSON array containing the exact text of every untagged assertion selected for test in that node so `/test` can distinguish routed work from unrelated untagged assertions. Pass each decision target separately in decision-rule mode with no assertion array so `/test` selects the rule's assertion-type tag without creating a test file or evidence link inside the ADR/PDR. An aggregate scope fans out through these per-owner invocations.
-- **evaluate** — for each spec node carrying selected eval assertions, use skill `spec-tree:eval` with that canonical node target plus a JSON array containing the exact text of every untagged assertion selected for evaluate in that node. This filtered set prevents `/eval` from consuming unrelated untagged assertions. `/eval` owns product command binding and producer-specialized eval authoring. For a decision rule, preserve the implementing-spec eval requirement under `### Eval` without writing an evidence path in the decision, and use skill `spec-tree:eval` with that decision target only when it supports decision-rule mode. When the required capability is unavailable, preserve the target artifact's evaluate evidence shape and report `EVAL_CAPABILITY_REQUIRED` with the subject and required producer kind. Never pass an aggregate target to `/eval` or implement eval behavior inside `/verify`.
+- **evaluate** — for each spec node carrying selected eval assertions, use skill `spec-tree:eval` with that canonical node target plus a JSON array containing the exact text of every untagged assertion selected for evaluate in that node. This filtered set prevents `/eval` from consuming unrelated untagged assertions. `/eval` owns product command binding and producer-specialized eval authoring. For a decision rule, preserve the implementing-spec eval requirement under `### Eval` without writing an evidence path in the decision, and use skill `spec-tree:eval` with that decision target only when it supports decision-rule mode. When the required capability is unavailable, preserve the target artifact's evaluate evidence shape and report `capability-required` with the subject and required producer kind. Never pass an aggregate target to `/eval` or implement eval behavior inside `/verify`.
 - **probe** — use skill `spec-tree:probe` with the canonical node target and the exact text of every assertion selected for probe in that node when the runtime skill catalog carries it; it owns the protocol at `probes/{probe-slug}/probe.md`, and the assertion records that link with routing status `routed`. When `/probe` is not installed, preserve the probe evidence shape and report `capability-required` with the subject and the protocol path. Never author a protocol or attest a run inside `/verify`.
 - **audit** — record the `[audit:{rule-slug}]` tag with a rule slug unique within its spec — or the pathless `[audit]` tag where the toolchain admits only that form — and the applicable isolated-verifier requirement with routing status `routed`. The pending isolated-verifier verdict does not make evidence routing blocked. Never produce the audit verdict in this workflow.
 
@@ -95,7 +95,7 @@ Example:
 
 ```text
 | Subject | Verification type | Specialist | Evidence path or requirement | Status |
-| Node A deterministic rule | test | /test | tests/test_rule.compliance.l1.py | routed |
+| Node A deterministic rule | test | /test | tests/<the language's compliance test file> | routed |
 | Node B producer rule | evaluate | /eval | structured eval capability required | capability-required |
 | Node C unsupported input | — | — | — | blocked |
 ```

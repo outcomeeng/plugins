@@ -157,23 +157,23 @@ Use skill `spec-tree:slice` when the work is described as a plan or proposal rat
 
 </step>
 
-<step number="1" name="Load methodology" frequency="once per session">
+<step number="1" name="Load methodology" frequency="once per session and after every compaction">
 
 Use skill `spec-tree:understand`.
 
-This loads the spec-tree methodology — node types, assertion formats, durable map rules. Skip if `SPEC_TREE_FOUNDATION` marker is already present in this session.
+This loads the spec-tree methodology — node types, assertion formats, durable map rules. Skip only while a live `<SPEC_TREE_FOUNDATION>` marker is present: after a compaction the marker counts as absent until this step emits it again.
 
 **Do not proceed until complete.**
 
 </step>
 
-<step number="2" name="Load work item context" frequency="every node">
+<step number="2" name="Load work item context" frequency="every node and after every compaction">
 
 Use skill `spec-tree:contextualize` with the canonical full `spx/...` node path from the work queue.
 
 Load the full context hierarchy for the specific node — parent chain, sibling nodes, applicable decisions, assertions.
 
-**Repeat for every new node.** Do not reuse context from a previous node.
+**Repeat for every new node, and for the current node after every compaction**, which empties the set of contextualized nodes. Do not reuse context from a previous node.
 
 **Do not proceed until complete.**
 
