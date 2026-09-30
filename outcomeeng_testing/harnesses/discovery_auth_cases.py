@@ -73,6 +73,26 @@ class PersonalHomeFault(StrEnum):
     HOME = "home"
     PERSONAL_CODEX_HOME = "personal-codex-home"
     LINKED_PERSONAL_CODEX_HOME = "linked-personal-codex-home"
+    CASE_VARIANT_PERSONAL_CODEX_HOME = "case-variant-personal-codex-home"
+    SYMLINKED_PERSONAL_SAVED_LOGIN = "symlinked-personal-saved-login"
+    HARD_LINKED_PERSONAL_SAVED_LOGIN = "hard-linked-personal-saved-login"
+
+
+def personal_home_faults() -> tuple[PersonalHomeFault, ...]:
+    """Every non-dedicated home this host's temporary filesystem can present.
+
+    A case variant names the personal home only where the filesystem folds
+    case, so it joins the domain only there.
+    """
+    with TemporaryDirectory() as directory:
+        probe = Path(directory) / PERSONAL_CODEX_HOME_DIRNAME
+        probe.mkdir()
+        folds_case = (Path(directory) / PERSONAL_CODEX_HOME_DIRNAME.upper()).exists()
+    return tuple(
+        fault
+        for fault in PersonalHomeFault
+        if folds_case or fault is not PersonalHomeFault.CASE_VARIANT_PERSONAL_CODEX_HOME
+    )
 
 
 @dataclass(frozen=True)
@@ -251,6 +271,22 @@ def personal_codex_home_environment(
             alias = root / "alias"
             alias.symlink_to(personal, target_is_directory=True)
             environment[CODEX_HOME_ENV] = str(alias)
+        elif fault is PersonalHomeFault.CASE_VARIANT_PERSONAL_CODEX_HOME:
+            environment[CODEX_HOME_ENV] = str(
+                root / PERSONAL_CODEX_HOME_DIRNAME.upper()
+            )
+        elif fault in (
+            PersonalHomeFault.SYMLINKED_PERSONAL_SAVED_LOGIN,
+            PersonalHomeFault.HARD_LINKED_PERSONAL_SAVED_LOGIN,
+        ):
+            dedicated = root / "dedicated"
+            dedicated.mkdir()
+            link = dedicated / AUTH_FILENAME
+            if fault is PersonalHomeFault.SYMLINKED_PERSONAL_SAVED_LOGIN:
+                link.symlink_to(personal / AUTH_FILENAME)
+            else:
+                link.hardlink_to(personal / AUTH_FILENAME)
+            environment[CODEX_HOME_ENV] = str(dedicated)
         yield PersonalHomeCase(environment, NativeCredentialRunner(refreshed))
 
 

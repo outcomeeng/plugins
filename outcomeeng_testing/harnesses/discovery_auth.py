@@ -207,15 +207,20 @@ def select_authentication(environment: Mapping[str, str]) -> AuthenticationSelec
                 f"Subscription discovery requires an explicit dedicated {CODEX_HOME_ENV} and a defined {HOME_ENV}."
             )
         codex_home = Path(home).resolve()
-        personal = Path(parent).resolve()
-        if codex_home in (
-            personal,
-            (Path(parent) / PERSONAL_CODEX_HOME_DIRNAME).resolve(),
+        saved_login = codex_home / AUTH_FILENAME
+        personal_homes = (Path(parent), Path(parent) / PERSONAL_CODEX_HOME_DIRNAME)
+        if any(_same_file(codex_home, personal) for personal in personal_homes):
+            raise DiscoveryAuthenticationError(
+                f"Subscription discovery refuses {CODEX_HOME_ENV} {codex_home}: it is {HOME_ENV} or {HOME_ENV}/{PERSONAL_CODEX_HOME_DIRNAME}; set a dedicated {CODEX_HOME_ENV}."
+            )
+        if any(
+            _same_file(saved_login, personal / AUTH_FILENAME)
+            for personal in personal_homes
         ):
             raise DiscoveryAuthenticationError(
-                f"Subscription discovery refuses {CODEX_HOME_ENV} {codex_home}: it resolves to {HOME_ENV} or {HOME_ENV}/{PERSONAL_CODEX_HOME_DIRNAME}; set a dedicated {CODEX_HOME_ENV}."
+                f"Subscription discovery refuses {saved_login}: it is the saved login in {HOME_ENV} or {HOME_ENV}/{PERSONAL_CODEX_HOME_DIRNAME}; give the dedicated {CODEX_HOME_ENV} its own saved login."
             )
-        return AuthenticationSelection(mode, saved_login=codex_home / AUTH_FILENAME)
+        return AuthenticationSelection(mode, saved_login=saved_login)
     variable = (
         CODEX_API_KEY_ENVIRONMENT
         if mode is AuthenticationMode.API
@@ -227,6 +232,19 @@ def select_authentication(environment: Mapping[str, str]) -> AuthenticationSelec
             f"{mode.value} discovery requires credential {variable}."
         )
     return AuthenticationSelection(mode, credential=credential)
+
+
+def _same_file(candidate: Path, personal: Path) -> bool:
+    """Whether two paths name one file, by filesystem identity where both exist.
+
+    Identity rather than spelling catches a case variant on a case-insensitive
+    filesystem, a symbolic link, and a hard link alike; a path that does not
+    exist falls back to its resolved spelling.
+    """
+    try:
+        return os.path.samefile(candidate, personal)
+    except FileNotFoundError:
+        return candidate.resolve() == personal.resolve()
 
 
 def credential_free_environment(environment: Mapping[str, str]) -> dict[str, str]:

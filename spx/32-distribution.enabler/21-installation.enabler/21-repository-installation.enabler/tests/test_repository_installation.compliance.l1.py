@@ -61,6 +61,7 @@ from outcomeeng_testing.harnesses.discovery_auth_cases import (
     lock_contention_case,
     missing_credential_environment,
     personal_codex_home_environment,
+    personal_home_faults,
 )
 from outcomeeng_testing.generators.installation import (
     ClosingDisposition,
@@ -561,7 +562,7 @@ def test_ci_requires_an_explicit_authentication_mode() -> None:
         select_authentication(ci_without_authentication_mode())
 
 
-@pytest.mark.parametrize("fault", list(PersonalHomeFault), ids=str)
+@pytest.mark.parametrize("fault", personal_home_faults(), ids=str)
 def test_subscription_refuses_a_codex_home_that_is_not_dedicated(
     fault: PersonalHomeFault,
 ) -> None:
