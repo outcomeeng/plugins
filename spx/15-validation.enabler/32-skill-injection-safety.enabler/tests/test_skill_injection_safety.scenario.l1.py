@@ -26,7 +26,7 @@ from outcomeeng.validation.skill_injection_safety import (
 )
 
 
-def _write_skill(directory: Path, *, body: str, name: str = "SKILL.md") -> Path:
+def _write_skill(directory: Path, *, body: str, name: str = SKILL_FILENAME) -> Path:
     directory.mkdir(parents=True, exist_ok=True)
     path = directory / name
     path.write_text(body, encoding="utf-8")
@@ -57,14 +57,20 @@ def test_clean_skill_reports_no_error_and_exits_zero(tmp_path: Path) -> None:
     assert main([str(skill)]) == 0
 
 
-def test_one_offender_among_many_is_named(tmp_path: Path) -> None:
+def test_one_offender_among_many_is_named(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     clean_a = _write_skill(tmp_path / "a", body="# A\n\nclean\n")
     offender = _write_skill(tmp_path / "b", body=f"# B\n\n{INJECTION_FENCE_TOKEN}\n")
     clean_c = _write_skill(tmp_path / "c", body="# C\n\nclean\n")
 
     violations = scan_paths([clean_a, offender, clean_c])
     assert [v.path for v in violations] == [offender]
+
     assert main([str(clean_a), str(offender), str(clean_c)]) != 0
+    reported = capsys.readouterr().out.splitlines()
+    assert [line.split(":", 1)[0] for line in reported] == [str(offender)]
 
 
 def test_non_skill_basename_is_skipped(tmp_path: Path) -> None:
