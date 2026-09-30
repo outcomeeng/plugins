@@ -13,7 +13,10 @@ Standing authorization permits a skill's required launch without repeated
 confirmation, while explicit skill instructions prevent opportunistic delegation.
 A plugin list changes less often than its subagent definitions; unconditional namespaces identify
 the owner separately from the authored subagent name, and skill-owned task instructions
-load only when needed without duplicating the native tool schema.
+load only when needed without duplicating the native tool schema. Language
+behavior ships as skills because one language-neutral definition composing
+them serves every language, where a definition per language multiplies the
+definitions a plugin ships and audits without adding behavior the skills lack.
 
 ## Product properties
 
@@ -43,11 +46,11 @@ load only when needed without duplicating the native tool schema.
    requested subagent. A launch failure is analyzed and reported without retry
    or substitution; audit verdict handling, output contracts, and repair
    workflows are unaffected by this launch policy.
-   The apply lifecycle explicitly launches the corresponding Go, Rust, or
-   TypeScript simplifier after implementation and before final verification.
-   The language skill owns behavior-preserving simplification and its result;
-   the subagent definition invokes that skill and relays the result. This stage
-   has the same contract for both supported agent harnesses.
+   Every subagent definition is language-neutral. A language plugin ships its
+   language behavior as skills, and a language-neutral definition's session
+   composes the skills of the language its target needs. A language-specific
+   subagent definition exists only where a decision records the exception and
+   its reason.
 3. Every subagent selects one of three centrally owned profiles: Standard,
    Strong, or Fast. Standard is the default; Strong and Fast require an explicit
    selection by the governing skill or product decision. Each profile contains
@@ -88,10 +91,11 @@ load only when needed without duplicating the native tool schema.
 
 ### Audit
 
-- ALWAYS: the apply skill owns automatic Go, Rust, and TypeScript simplifier
-  dispatch after implementation, while language simplification skills own
-  scope discovery, behavior preservation, verification, and result reporting;
-  their subagent definitions contain only invocation and result relay ([audit])
+- ALWAYS: every subagent definition is language-neutral; a language plugin
+  ships its language behavior as skills, which a language-neutral definition's
+  session composes for the language its target needs ([audit])
+- NEVER: a plugin ships a language-specific subagent definition unless a
+  decision records that exception and its reason ([audit])
 - ALWAYS: preserve the following standing-request sentence verbatim within
   explicit root-guide authorization for subagents supplied by the listed plugins ([audit])
 
