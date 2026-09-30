@@ -10,7 +10,7 @@ This paragraph declares the base command and the protected set; the module compl
 
 Evidence for an assertion of this node states the outcome the governed code decides. A predicate that holds whether or not that code runs is not evidence, in either layer: not a test whose expectation the arrangement alone satisfies, and not an assertion whose link no mutation of the governed code can falsify.
 
-Every value this node spells out is listed here with its owner and the evidence it takes. A value absent from this list is not spelled by the node.
+Every value the cleanup command uses that this node spells out is listed here with its owner and the evidence it takes; a value the command uses and this list omits is not spelled by the node. The names of surfaces the node refers to — the recipe, the module, the harness guides — are not values the command uses and fall outside the list.
 
 | Value                           | Owner                              | Evidence                                            |
 | ------------------------------- | ---------------------------------- | --------------------------------------------------- |
