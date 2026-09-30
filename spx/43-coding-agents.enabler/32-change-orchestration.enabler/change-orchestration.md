@@ -13,7 +13,7 @@ The Orchestrator is a position, never one of the five Roles: it holds no Role fo
 
 ## Assertions
 
-- ALWAYS: `/orchestrate-change` claims one Change for its Executor and starts one Executor session for it in a herdr pane through `spx/43-coding-agents.enabler/18-herdr-environment.enabler`; on Claude Code the session starts with the spec-tree definition `change-executor` selected, and on Codex the skill returns an explicit unavailable result ([audit])
+- ALWAYS: `/orchestrate-change` claims one Change for its Executor, naming the Executor's worktree root, and starts one Executor session for it in a herdr pane through `spx/43-coding-agents.enabler/18-herdr-environment.enabler`; on Claude Code the session starts with the spec-tree definition `change-executor` selected, and on Codex the skill returns an explicit unavailable result ([audit])
 - ALWAYS: the Executor session's start and every resume withhold the harness's structured-question tool through the harness setting alone; no skill detects whether its session is an Executor ([audit])
 - ALWAYS: `/orchestrate-change` names `change-executor` as the one configured definition it starts, and starts no session through any other definition ([audit])
 - ALWAYS: a start the harness's classifier refuses is retried once as one command per step with no shell variables, and a second refusal passes to the position holder with the operator's conversation ([audit])
