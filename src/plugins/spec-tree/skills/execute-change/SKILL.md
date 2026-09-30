@@ -55,6 +55,14 @@ Start every Verifier without this conversation's history, reasoning, summaries, 
 
 </launch_contract>
 
+{!% if target == 'codex' %!}
+<codex_surface>
+
+The plugin ships the round definitions this skill launches for Claude Code only. On this surface the skill runs none of its steps: it returns result `unavailable` with the Change reference and this reason, and writes nothing.
+
+</codex_surface>
+{!% endif %!}
+
 <workflow>
 
 1. **Resolve the Change.** Read `$ARGUMENTS` as an issue reference — `#N`, `owner/repo#N`, or an issue URL — or, when empty, the newest `<CLAIMED_CHANGE>` marker in the conversation; neither present stops with result `not-held` naming the missing reference. Read the issue, its comments, and its single project item under `canonical-state`.
@@ -84,7 +92,7 @@ Start every Verifier without this conversation's history, reasoning, summaries, 
 
 <output_format>
 
-Return the result — `closed`, `released`, or `not-held` — the Change URL, the final full head SHA, each round's definition, target, and verdict run tokens, the merge commit when integration happened, and the Handoff comment URL when the Change was released.
+Return the result — `closed`, `released`, `not-held`, or `unavailable` — the Change URL, the final full head SHA, each round's definition, target, and verdict run tokens, the merge commit when integration happened, and the Handoff comment URL when the Change was released.
 
 </output_format>
 

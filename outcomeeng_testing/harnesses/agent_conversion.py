@@ -22,9 +22,10 @@ from outcomeeng.distribution.agents import (
     render_agent_toml,
     iter_agent_files,
 )
-from outcomeeng.distribution.build import build
+from outcomeeng.distribution.build import agent_source_admits_target, build
 from outcomeeng.distribution.contracts import (
     DIST_CODEX_PLUGINS_DIR,
+    Target,
     PLUGINS_DIR_NAME,
     SOURCE_ROOT_NAME,
 )
@@ -108,6 +109,13 @@ class RepositoryAgentBuild:
 
     sources: tuple[Path, ...]
     dist_root: Path
+    admitted_targets: Mapping[Path, frozenset[Target]]
+
+    def sources_for(self, target: Target) -> tuple[Path, ...]:
+        """Return the sources the build emits into ``target``'s tree."""
+        return tuple(
+            source for source in self.sources if target in self.admitted_targets[source]
+        )
 
 
 def build_repository_agents(root: Path) -> RepositoryAgentBuild:
@@ -116,7 +124,18 @@ def build_repository_agents(root: Path) -> RepositoryAgentBuild:
     sources = iter_agent_files(source_root / PLUGINS_DIR_NAME)
     dist_root = root / "dist"
     build(source_root, dist_root)
-    return RepositoryAgentBuild(sources=sources, dist_root=dist_root)
+    return RepositoryAgentBuild(
+        sources=sources,
+        dist_root=dist_root,
+        admitted_targets={
+            source: frozenset(
+                target
+                for target in Target
+                if agent_source_admits_target(source, target, src_root=source_root)
+            )
+            for source in sources
+        },
+    )
 
 
 def agent_document_oracle(path: Path) -> AgentDocumentOracle:

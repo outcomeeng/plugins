@@ -3,6 +3,8 @@ name: change-tester
 description: >-
   Round session `/execute-change` launches by exact name when an Activity needs routed `[test]` evidence produced or repaired through `/test`.
 profile: standard
+targets:
+  - claude
 skills:
   - spec-tree:test
 ---

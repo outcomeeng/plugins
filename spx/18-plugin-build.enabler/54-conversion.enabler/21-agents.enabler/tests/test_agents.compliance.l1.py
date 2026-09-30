@@ -55,8 +55,8 @@ def test_environment_marker_is_namespaced_by_source_plugin(tmp_path: Path) -> No
     repository_agents = build_repository_agents(tmp_path)
     capability = agent_capability(Target.CODEX)
 
-    assert repository_agents.sources
-    for source_path in repository_agents.sources:
+    assert repository_agents.sources_for(Target.CODEX)
+    for source_path in repository_agents.sources_for(Target.CODEX):
         plugin = source_path.parents[1].name
         generated_type = agent_slug(
             plugin,
@@ -136,13 +136,14 @@ def test_flat_namespace_agents_carry_the_plugin_slug_prefix(tmp_path: Path) -> N
             )
         )
         assert artifacts, f"{target.value} carries no converted agent artifacts"
+        target_sources = repository_agents.sources_for(target)
         for plugin_dir in sorted(
-            {source_path.parents[1] for source_path in repository_agents.sources}
+            {source_path.parents[1] for source_path in target_sources}
         ):
             plugin = plugin_dir.name
             expected_stems = {
                 FLAT_AGENT_PLUGIN_SEPARATOR.join((plugin, source_path.stem))
-                for source_path in repository_agents.sources
+                for source_path in target_sources
                 if source_path.parents[1] == plugin_dir
             }
             actual = {

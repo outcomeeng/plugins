@@ -29,6 +29,8 @@ from outcomeeng.distribution.profiles import (
 AGENT_NAME_FIELD: Final = "name"
 AGENT_SKILL_ENABLED_FIELD: Final = "enabled"
 AGENT_TOOLS_FIELD: Final = "tools"
+# Lists the generated targets an agent source is emitted for; absent means every target.
+AGENT_TARGETS_FIELD: Final = "targets"
 AGENT_SKILL_INCLUDE_INSTRUCTIONS_FIELD: Final = "include_instructions"
 APPROVAL_POLICY_FIELD: Final = "approval_policy"
 SANDBOX_MODE_FIELD: Final = "sandbox_mode"
@@ -45,6 +47,7 @@ SUPPORTED_FRONTMATTER_FIELDS: Final = frozenset(
         "skills",
         AGENT_TOOLS_FIELD,
         "disallowedTools",
+        AGENT_TARGETS_FIELD,
     }
 )
 # Authored agent sources. The build converts each agent as it renders it, so a
@@ -129,6 +132,8 @@ class SourceAgent:
     tools: tuple[str, ...] = ()
     tools_declared: bool = False
     disallowed_tools: tuple[str, ...] = ()
+    targets: tuple[str, ...] = ()
+    targets_declared: bool = False
     unsupported_fields: tuple[str, ...] = ()
 
 
@@ -215,6 +220,8 @@ def parse_agent_text(text: str, *, source_path: Path, name: str) -> SourceAgent:
         tools=_string_tuple(frontmatter, AGENT_TOOLS_FIELD),
         tools_declared=AGENT_TOOLS_FIELD in frontmatter,
         disallowed_tools=_string_tuple(frontmatter, "disallowedTools"),
+        targets=_string_tuple(frontmatter, AGENT_TARGETS_FIELD),
+        targets_declared=AGENT_TARGETS_FIELD in frontmatter,
         unsupported_fields=unsupported_fields,
     )
 

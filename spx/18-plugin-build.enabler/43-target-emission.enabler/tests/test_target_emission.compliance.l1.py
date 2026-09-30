@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import tomllib
 from collections import Counter
 
 from outcomeeng_testing.harnesses.distribution import CANONICAL_SOURCE_ROOT
+from outcomeeng.distribution.agents import AGENT_TARGETS_FIELD
 from outcomeeng.distribution.build import (
     AGENT_CAPABILITY_REGISTRY,
     CLAUDE_SKILL_DIR_TOKEN,
@@ -18,6 +20,7 @@ from outcomeeng.distribution.build import (
     EmissionAction,
     agent_capability,
     agent_slug,
+    agent_source_admits_target,
     plugin_names,
     template_source_files,
     skill_dir_path_references,
@@ -26,7 +29,11 @@ from outcomeeng.distribution.build import (
     strip_frontmatter_fields,
     contains_execution_time_skill_content_injection,
 )
-from outcomeeng.distribution.contracts import SKILLS_SUBDIR_NAME, Target
+from outcomeeng.distribution.contracts import (
+    MARKDOWN_FILE_SUFFIX,
+    SKILLS_SUBDIR_NAME,
+    Target,
+)
 from outcomeeng.validation.skill_frontmatter import (
     ALLOWED_TOOLS_FIELD,
     ARGUMENT_HINT_FIELD,
@@ -45,6 +52,7 @@ from outcomeeng_testing.harnesses.target_emission import (
     agent_artifact_texts,
     structure_deviations,
     synthetic_inventory,
+    target_scoped_agent_observations,
 )
 
 
@@ -55,13 +63,27 @@ def test_every_source_file_emits_to_both_target_trees() -> None:
     template_sources = set(template_source_files(CANONICAL_SOURCE_ROOT))
     plugin_count = len(plugin_names(CANONICAL_SOURCE_ROOT))
     for target, per_source in counts.items():
-        missing = [source for source in sources if per_source[source] < 1]
+        admitted = [
+            source
+            for source in sources
+            if agent_source_admits_target(
+                source, target, src_root=CANONICAL_SOURCE_ROOT
+            )
+        ]
+        missing = [source for source in admitted if per_source[source] < 1]
         assert not missing, f"{target.value} emits nothing for {missing}"
         # An ordinary source emits exactly once per target; only a per-plugin
-        # template fans out, and then exactly once per plugin. Requiring only
+        # template fans out, and then exactly once per plugin; an agent source
+        # whose `targets` omit this target emits nothing here. Requiring only
         # "at least one" would let a duplicate emission pass unnoticed.
         for source in sources:
-            expected = plugin_count if source in template_sources else 1
+            expected = (
+                0
+                if source not in admitted
+                else plugin_count
+                if source in template_sources
+                else 1
+            )
             assert per_source[source] == expected, (
                 f"{target.value} emits {per_source[source]} outputs for {source}, "
                 f"expected {expected}"
@@ -356,3 +378,17 @@ def test_no_agent_artifact_carries_another_targets_skill_dir_token() -> None:
         )
         for path, text in agent_artifact_texts(target).items():
             assert foreign_token not in text, (target, path)
+
+
+def test_target_scoped_agent_sources_emit_only_into_listed_targets() -> None:
+    observations = target_scoped_agent_observations()
+    assert observations
+    for observation in observations:
+        emitted = {target for target, _path, _text in observation.outputs}
+        assert emitted == set(observation.declared), observation
+        for target, path, text in observation.outputs:
+            if path.suffix == MARKDOWN_FILE_SUFFIX:
+                fields = frontmatter_field_names(text)
+            else:
+                fields = tuple(tomllib.loads(text))
+            assert AGENT_TARGETS_FIELD not in fields, (target, path)

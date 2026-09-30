@@ -32,7 +32,7 @@ def test_agent_definition_and_dispatch_names_preserve_plugin_and_authored_role(
     for target in Target:
         capability = agent_capability(target)
         target_tree = repository_agents.dist_root / target.value
-        for source in repository_agents.sources:
+        for source in repository_agents.sources_for(target):
             plugin = source.parents[1].name
             stem = source.stem
             slug = agent_slug(plugin, stem, capability=capability)

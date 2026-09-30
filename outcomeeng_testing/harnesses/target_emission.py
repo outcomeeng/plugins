@@ -8,6 +8,7 @@ from functools import cache
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from outcomeeng.distribution.agents import AGENT_TARGETS_FIELD
 from outcomeeng.distribution.build import (
     AGENT_CAPABILITY_REGISTRY,
     EmissionProjection,
@@ -552,3 +553,67 @@ def _frontmatter_source(case: SourceScenario) -> str:
         for field in (ALLOWED_TOOLS_FIELD, ARGUMENT_HINT_FIELD)
     )
     return f"---\n{claude_fields}\n{portable_fields}\n---\n{case.fragment_body}"
+
+
+@dataclass(frozen=True)
+class TargetScopedAgentObservation:
+    """One agent source's declared targets beside every output the build wrote for it."""
+
+    declared: tuple[Target, ...]
+    outputs: tuple[tuple[Target, Path, str], ...]
+
+
+def target_scoped_agent_observations() -> tuple[TargetScopedAgentObservation, ...]:
+    """Build one agent source per non-empty target list and return its outputs, undecided.
+
+    The target lists range over every non-empty subset of the registered targets.
+    Each output is read from the tree the build wrote; the caller owns every
+    predicate over which targets received the source and what each output carries.
+    """
+    target_lists = tuple(
+        tuple(target for index, target in enumerate(Target) if mask & (1 << index))
+        for mask in range(1, 1 << len(Target))
+    )
+    case = min(source_scenarios(), key=lambda scenario: scenario.skill_ref)
+    stems = {
+        declared: "-".join(("scoped", *(target.value for target in declared)))
+        for declared in target_lists
+    }
+    with TemporaryDirectory() as temporary_directory:
+        root = Path(temporary_directory) / min(IGNORED_SOURCE_DIRECTORY_NAMES)
+        builder = SrcTreeBuilder(root)
+        builder.add_plugin(
+            case.plugin,
+            agents={
+                stem: _target_scoped_agent_source(stem, declared)
+                for declared, stem in stems.items()
+            },
+        )
+        projection = project_emissions(builder.src_root)
+        dist_root = root / DIST_DIR_NAME
+        build(builder.src_root, dist_root)
+        observations = []
+        for declared, stem in stems.items():
+            outputs = tuple(
+                (
+                    emission.target,
+                    emission.relative_path,
+                    (
+                        dist_root / emission.target.value / emission.relative_path
+                    ).read_text(encoding="utf-8"),
+                )
+                for emission in projection.emissions
+                if emission.source.stem == stem
+            )
+            observations.append(
+                TargetScopedAgentObservation(declared=declared, outputs=outputs)
+            )
+    return tuple(observations)
+
+
+def _target_scoped_agent_source(stem: str, declared: tuple[Target, ...]) -> str:
+    listed = "".join(f"  - {target.value}\n" for target in declared)
+    return (
+        f"---\nname: {stem}\ndescription: Target-scoped agent.\n"
+        f"{AGENT_TARGETS_FIELD}:\n{listed}---\n\nRelay the supplied target.\n"
+    )

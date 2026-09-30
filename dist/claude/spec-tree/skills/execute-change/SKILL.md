@@ -84,7 +84,7 @@ Start every Verifier without this conversation's history, reasoning, summaries, 
 
 <output_format>
 
-Return the result — `closed`, `released`, or `not-held` — the Change URL, the final full head SHA, each round's definition, target, and verdict run tokens, the merge commit when integration happened, and the Handoff comment URL when the Change was released.
+Return the result — `closed`, `released`, `not-held`, or `unavailable` — the Change URL, the final full head SHA, each round's definition, target, and verdict run tokens, the merge commit when integration happened, and the Handoff comment URL when the Change was released.
 
 </output_format>
 
