@@ -21,10 +21,10 @@ The raw invocation string `$ARGUMENTS` controls what runs before the per-node fl
 
 When the work is described as a plan or proposal rather than a specific node or queue, use skill `spec-tree:slice` first: it selects the next executable observable slice and produces the node set that becomes this flow's work queue. Skip the preflight when the queue is already a specific node or an `spx/EXCLUDE` list.
 
-When the queue holds more than one node, order by numeric index prefix (lower first) — lower-indexed nodes constrain higher-indexed ones. For each node in order:
+Complete Step 1 before the queue loop in every mode, so the foundation is live before the loop reads or edits `spx/EXCLUDE`. When the queue holds more than one node, order by numeric index prefix (lower first) — lower-indexed nodes constrain higher-indexed ones. For each node in order:
 
 1. Strip the canonical node path's leading `spx/` to derive its `spx/EXCLUDE` entry. If that relative entry is listed, remove its exact line first — the `spx` CLI then includes its tests in `spx test passing`.
-2. Run Steps 1–9 on the node.
+2. Run Steps 2–9 on the node, and Step 1 again first when a compaction has made the foundation marker absent.
 3. Confirm the final gate subject is committed and the worktree is clean.
 4. Proceed to the next node without stopping or asking, subject to the gate-retry limits in `<review_gates>`.
 

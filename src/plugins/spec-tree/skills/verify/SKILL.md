@@ -43,7 +43,7 @@ Accept only `spx/`, one canonical full `spx/...` node path, or one canonical ful
 
 Inspect only the existing tag shape before reading the subject or its verdict. For spec assertions, an absent tag or one current verification tag proceeds to classification. For decision rules, an absent tag proceeds to classification regardless of its current subsection; a present tag proceeds only when the enclosing subsection and tag match the decision grammar: `### Testing` carries exactly one of `[scenario]`, `[mapping]`, `[conformance]`, `[property]`, or `[compliance]`; `### Eval` carries `[eval]`; `### Audit` carries `[audit]`.
 
-Any other tag shape triggers an immediate terminal return for that assertion. Return before reading the `subject` field or applying any rule from `classify-subject`, `route-specialist`, or `record-result`. Do not inspect or classify the subject, repeat the tag text, select a specialist, or derive an evidence shape. The assertion has no selected verification type. Report `blocked` with the generic reason `unsupported-tag-shape`; in structured output, set `verification_type`, `specialist`, and `evidence_shape` to `null`.
+Any other tag shape triggers an immediate terminal return for that assertion. Return before reading the `subject` field or applying any rule from `classify-subject`, `route-specialist`, or `record-result`. Do not inspect or classify the subject, repeat the tag text, select a specialist, or derive an evidence shape. The assertion has no selected verification type. Report `blocked` with the generic reason `unsupported-tag-shape`, in the blocked row shape `record-result` defines.
 
 </step>
 
@@ -75,6 +75,8 @@ Route each classified assertion exactly once:
 - **probe** — use skill `spec-tree:probe` with the canonical node target and the exact text of every assertion selected for probe in that node when the runtime skill catalog carries it; it owns the protocol at `probes/{probe-slug}/probe.md`, and the assertion records that link with routing status `routed`. When `/probe` is not installed, preserve the probe evidence shape and report `capability-required` with the subject and the protocol path. Never author a protocol or attest a run inside `/verify`.
 - **audit** — record the `[audit:{rule-slug}]` tag with a rule slug unique within its spec — or the pathless `[audit]` tag where the toolchain admits only that form — and the applicable isolated-verifier requirement with routing status `routed`. The pending isolated-verifier verdict does not make evidence routing blocked. Never produce the audit verdict in this workflow.
 
+When the invocation carried a repair block, pass each specialist, after its target and assertion array, the repair items that concern that target's evidence verbatim, including items on an assertion whose current tag this workflow keeps; such an assertion's specialist is invoked for its repair items even though the assertion is not routed again.
+
 Validate the specialist result before updating the subject. A path-bearing spec assertion requires the specialist's canonical co-located evidence path. A decision rule requires the canonical subsection and tag, while its implementing specs own evidence paths. Spec audit assertions carry no path.
 
 </step>
@@ -83,21 +85,28 @@ Validate the specialist result before updating the subject. A path-bearing spec 
 
 Update each successfully routed spec assertion with exactly one current tag. Update each decision rule with the selected verification subsection and that subsection's canonical tag shape. Leave blocked unsupported input unchanged and return the blocked result.
 
-Report one row per subject:
+Report one row per subject in this shape, with `null` written as `null`:
 
 ```text
-| Subject | Verification type | Specialist | Evidence path or requirement | Status |
+| Subject | Verification type | Specialist | Evidence shape | Evidence path or requirement | Removed tag | Status |
 ```
 
-Use `routed`, `capability-required`, or `blocked` as status. A `capability-required` row keeps the selected route intact: the specialist is the absent path-bearing specialist (`/test`, `/eval`, or `/probe`) and the evidence shape is `path-bearing`; `isolated-verifier` and `pathless` belong to audit alone. Never report an assertion verified merely because classification completed; path-bearing evidence must exist and pass its deterministic command, and audit requires its isolated verifier.
+- `Status` is `routed`, `capability-required`, or `blocked`.
+- `Evidence shape` is `path-bearing` for spec test, eval, and probe assertions, `pathless` for spec audit assertions, and `requirement` for decision rules. A `capability-required` row keeps the selected route intact: the specialist is the absent path-bearing specialist (`/test`, `/eval`, or `/probe`) and the evidence shape is `path-bearing`.
+- `Removed tag` names the tag `classify-subject` removed from a reclassified assertion, and is `null` otherwise.
+- A `blocked` row from `validate-input` carries `null` as its verification type, specialist, evidence shape, and evidence path, and its reason `unsupported-tag-shape` in the status cell as `blocked: unsupported-tag-shape`.
+
+Never report an assertion verified merely because classification completed; path-bearing evidence must exist and pass its deterministic command, and audit requires its isolated verifier.
+
+When the invocation carried a repair block, add one line per repair item after the table: the item as the block names it, and its disposition — `forwarded to /<specialist>` with that specialist's reported outcome, `repaired` for a classification or tag defect this workflow fixed, or `not-owned` with the reason when no step of this workflow or its specialists owns the fix.
 
 Example:
 
 ```text
-| Subject | Verification type | Specialist | Evidence path or requirement | Status |
-| Node A deterministic rule | test | /test | tests/<the language's compliance test file> | routed |
-| Node B producer rule | evaluate | /eval | structured eval capability required | capability-required |
-| Node C unsupported input | — | — | — | blocked |
+| Subject | Verification type | Specialist | Evidence shape | Evidence path or requirement | Removed tag | Status |
+| Node A deterministic rule | test | /test | path-bearing | tests/<the language's compliance test file> | null | routed |
+| Node B producer rule | evaluate | /eval | path-bearing | eval capability required for the structured producer | [audit:producer-voice] | capability-required |
+| Node C unsupported input | null | null | null | null | null | blocked: unsupported-tag-shape |
 ```
 
 For the terminal unsupported-input guard, record no verification type, specialist, or evidence shape. Classification output must never accompany that blocked result.
