@@ -214,16 +214,26 @@ def ci_without_authentication_mode() -> dict[str, str]:
     return {CI_ENVIRONMENT: "true"}
 
 
+@dataclass
+class PersonalHomeCase:
+    """A subscription environment naming a non-dedicated home, and a recording runner."""
+
+    environment: dict[str, str]
+    runner: NativeCredentialRunner
+
+
 @contextmanager
 def personal_codex_home_environment(
     fault: PersonalHomeFault,
-) -> Iterator[dict[str, str]]:
+) -> Iterator[PersonalHomeCase]:
     """Yield a subscription environment whose saved login sits in a non-dedicated home.
 
     A valid ChatGPT saved login exists in both HOME and HOME/.codex, so the
-    CODEX_HOME rule is the only reason selection can refuse.
+    CODEX_HOME rule is the only reason selection can refuse. The runner
+    records every native command a caller issues under that environment.
     """
     initial = (FIXTURE_ROOT / "chatgpt.json").read_text(encoding="utf-8")
+    refreshed = (FIXTURE_ROOT / "refreshed.json").read_text(encoding="utf-8")
     with TemporaryDirectory() as directory:
         root = Path(directory).resolve()
         personal = root / PERSONAL_CODEX_HOME_DIRNAME
@@ -241,7 +251,7 @@ def personal_codex_home_environment(
             alias = root / "alias"
             alias.symlink_to(personal, target_is_directory=True)
             environment[CODEX_HOME_ENV] = str(alias)
-        yield environment
+        yield PersonalHomeCase(environment, NativeCredentialRunner(refreshed))
 
 
 @dataclass

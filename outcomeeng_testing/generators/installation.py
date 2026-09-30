@@ -1,7 +1,6 @@
 """Generated finite plugin selections for installation evidence."""
 
 import json
-import re
 from collections.abc import Mapping, Sequence
 from dataclasses import fields
 from itertools import product
@@ -41,7 +40,6 @@ from outcomeeng.distribution.installation import (
     GIT_SCHEME_SEPARATOR,
     GIT_URL_SCHEMES,
     SourceAction,
-    UNPUBLISHED_PLUGIN_FRAGMENT,
     marketplace_plugin_identifier,
 )
 
@@ -792,24 +790,26 @@ def generated_git_source_urls(marketplace: str) -> tuple[str, ...]:
     )
 
 
-def generated_non_pending_failure_wordings(
-    pending_wordings: Sequence[str],
-) -> tuple[str, ...]:
-    """Failure wordings that name no unpublished plugin, derived from real ones.
+# Transcribed verbatim from the stderr of Claude Code 2.1.285 running
+# `claude plugin update spec-tree@outcomeeng --scope project` in agent state
+# that holds no install record of the plugin: a real native update failure
+# that names no unpublished plugin, independent of the pending classifier.
+_CAPTURED_UNRECORDED_UPDATE_STDERR = (
+    '\u2718 Failed to update plugin "{plugin}@{marketplace}": '
+    'Plugin "{plugin}" not found'
+)
 
-    Each observed unpublished-plugin wording yields the same message with the
-    pending phrase struck, and with the phrase's words reordered, so the
-    wording stays a real CLI message in every other respect; an empty stderr
-    is the degenerate member. None carries the phrase the pending
-    classification reads.
-    """
-    phrase = re.compile(re.escape(UNPUBLISHED_PLUGIN_FRAGMENT), re.IGNORECASE)
-    reordered = " ".join(reversed(UNPUBLISHED_PLUGIN_FRAGMENT.split()))
-    wordings: list[str] = [""]
-    for wording in pending_wordings:
-        wordings.append(phrase.sub("", wording))
-        wordings.append(phrase.sub(reordered, wording))
-    return tuple(wordings)
+
+def generated_non_pending_failure_wordings(
+    plugins: Sequence[str], marketplace: str
+) -> tuple[str, ...]:
+    """The observed non-pending update failure, once for every plugin named."""
+    return tuple(
+        _CAPTURED_UNRECORDED_UPDATE_STDERR.format(
+            plugin=plugin, marketplace=marketplace
+        )
+        for plugin in plugins
+    )
 
 
 __all__ = [

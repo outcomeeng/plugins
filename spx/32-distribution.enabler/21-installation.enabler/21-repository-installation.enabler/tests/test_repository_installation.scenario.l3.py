@@ -12,6 +12,7 @@ from outcomeeng.distribution.installation import (
     FIRST_INSTALL_WARNING,
     ReportField,
     SPEC_TREE_PLUGIN,
+    STDERR_WARNING_PREFIX,
 )
 from outcomeeng_testing.harnesses.installation import (
     MARKETPLACE,
@@ -46,7 +47,7 @@ def test_real_agent_clis_bootstrap_empty_persistent_state() -> None:
         for agent in Agent
     ]
     assert observation.stderr.splitlines() == [
-        f"warning: {_first_install_warning(agent)}" for agent in Agent
+        f"{STDERR_WARNING_PREFIX}{_first_install_warning(agent)}" for agent in Agent
     ]
     assert observation.claude_listing_exit_code == 0, observation.claude_listing_stderr
     assert observation.codex_listing_exit_code == 0, observation.codex_listing_stderr

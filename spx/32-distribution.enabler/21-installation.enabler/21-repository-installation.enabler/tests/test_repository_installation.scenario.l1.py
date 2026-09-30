@@ -22,6 +22,7 @@ from outcomeeng.distribution.installation import (
     VERSIONLESS_LISTING_ENTRY_WARNING,
     ReportField,
     SPEC_TREE_PLUGIN,
+    STDERR_WARNING_PREFIX,
     UNREADABLE_SETTINGS_WARNING,
     UNREADABLE_HEAD_RECORD_WARNING,
     UNRESOLVED_TARGET_RECORD_WARNING,
@@ -36,7 +37,9 @@ from outcomeeng_testing.generators.installation import (
     ClosingDisposition,
     MOVED_DISPOSITIONS,
     RecordDisposition,
+    generated_boolean_states,
 )
+from outcomeeng.validation._steps import RECIPE_TEST
 from outcomeeng_testing.harnesses.installation import (
     observe_unlocated_registry_plan,
     MARKETPLACE,
@@ -57,6 +60,7 @@ from outcomeeng_testing.harnesses.installation import (
     observe_record_refresh_plan,
     observe_unpublished_plugin,
     observe_verification_recipe,
+    repository_root,
 )
 
 
@@ -88,9 +92,8 @@ def test_verification_recipe_uses_pytest_discovery_for_the_node() -> None:
 
     assert observation.exit_code == 0, observation.stderr
     assert observation.invoked == (
-        "test",
-        "spx/32-distribution.enabler/21-installation.enabler/"
-        "21-repository-installation.enabler/tests",
+        RECIPE_TEST,
+        Path(__file__).parent.relative_to(repository_root()).as_posix(),
     )
 
 
@@ -123,7 +126,7 @@ def test_first_persistent_run_installs_only_spec_tree_and_warns() -> None:
         for agent in Agent
     ]
     assert observation.stderr.splitlines() == [
-        f"warning: {_first_install_warning(agent)}" for agent in Agent
+        f"{STDERR_WARNING_PREFIX}{_first_install_warning(agent)}" for agent in Agent
     ]
 
 
@@ -584,25 +587,10 @@ def test_a_plugin_with_no_resolved_target_is_reported_in_the_invocation_checkout
 
 
 def test_unreadable_invocation_settings_stop_bootstrap_and_nothing_else() -> None:
-    both_registered = RegistryState(claude=True, codex=True)
-    both_registered_with_record = RegistryState(claude=True, codex=True, recorded=True)
-    codex_unregistered = RegistryState(claude=True, codex=False)
-    claude_unregistered = RegistryState(claude=False, codex=True)
-    claude_unregistered_with_record = RegistryState(
-        claude=False, codex=True, recorded=True
-    )
-    observation = observe_unreadable_source(
-        (
-            both_registered,
-            both_registered_with_record,
-            codex_unregistered,
-            claude_unregistered,
-            claude_unregistered_with_record,
-        )
-    )
+    observation = observe_unreadable_source(generated_boolean_states(RegistryState))
 
     by_state = {case.state: case for case in observation.cases}
-    marketplace = by_state[both_registered].plan.roots.marketplace
+    marketplace = observation.cases[0].plan.roots.marketplace
     settings_suffix = UNREADABLE_SETTINGS_WARNING.format(diagnostic="")
     withheld_suffix = WITHHELD_REGISTRATION_WARNING.format(
         diagnostic="", marketplace=marketplace
@@ -654,8 +642,9 @@ def test_unreadable_invocation_settings_stop_bootstrap_and_nothing_else() -> Non
         else:
             assert codex_named == [], state
 
-    for state in (both_registered, both_registered_with_record, codex_unregistered):
-        case = by_state[state]
+    for state, case in by_state.items():
+        if not state.claude:
+            continue
         # A record the invocation checkout already holds is refreshed by its
         # own native update even though the settings that would have carried a
         # bootstrap cannot be read.
@@ -690,12 +679,15 @@ def test_unreadable_invocation_settings_stop_bootstrap_and_nothing_else() -> Non
                 == case.target_version
             ), (state, project_path)
 
-    assert _agent_operations(by_state[codex_unregistered], Agent.CODEX) == (
-        Operation.MARKETPLACE_INSPECT,
-        Operation.PLUGIN_INSPECT,
-    )
-    for state in (claude_unregistered, claude_unregistered_with_record):
-        case = by_state[state]
+    for state, case in by_state.items():
+        if not state.codex:
+            assert _agent_operations(case, Agent.CODEX) == (
+                Operation.MARKETPLACE_INSPECT,
+                Operation.PLUGIN_INSPECT,
+            ), state
+    for state, case in by_state.items():
+        if state.claude:
+            continue
         # The closing listing names no marketplace, so the withheld Claude
         # registration leaves it in place while withholding every command
         # that names the marketplace — the native update of the invocation

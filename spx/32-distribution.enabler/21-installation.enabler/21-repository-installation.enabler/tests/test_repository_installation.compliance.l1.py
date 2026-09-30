@@ -68,8 +68,9 @@ from outcomeeng_testing.generators.installation import (
     generated_non_pending_failure_wordings,
 )
 from outcomeeng_testing.harnesses.installation import (
+    MARKETPLACE,
     RegistryState,
-    captured_unpublished_plugin_stderr,
+    committed_catalog_plugin_names,
     observe_unreadable_source,
     CONCURRENT_EDIT_CONTENT,
     EXTERNAL_DEFINITION_CONTENT,
@@ -564,9 +565,12 @@ def test_ci_requires_an_explicit_authentication_mode() -> None:
 def test_subscription_refuses_a_codex_home_that_is_not_dedicated(
     fault: PersonalHomeFault,
 ) -> None:
-    with personal_codex_home_environment(fault) as environment:
+    with personal_codex_home_environment(fault) as case:
         with pytest.raises(DiscoveryAuthenticationError):
-            select_authentication(environment)
+            observe_codex_subagent_discovery(
+                environment=case.environment, runner=case.runner
+            )
+        assert case.runner.calls == []
 
 
 def test_workspace_login_uses_its_native_stdin_mechanism() -> None:
@@ -745,10 +749,7 @@ def test_a_recorded_plugin_is_refreshed_by_the_native_update_never_a_reinstall()
             stderr=wording,
         )
         for wording in generated_non_pending_failure_wordings(
-            [
-                captured_unpublished_plugin_stderr(agent, SPEC_TREE_PLUGIN)
-                for agent in Agent
-            ]
+            sorted(committed_catalog_plugin_names()), MARKETPLACE
         )
     ]
 
