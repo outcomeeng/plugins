@@ -8,25 +8,29 @@ This reference operationalizes the Lifecycle and Handoff rules of the Change cha
 
 <rule id="store-binding">
 
-Read `spx/local/coordination.md` for the Change store (`owner/repo`), the project owner and number, and the Product value. Read no other overlay for the store; a transition that moves the checkout reads `spx/local/merging.md` for the safety checks the repository declares around a detach. Every store command names only that store; a `gh` grant admits any repository the account reaches, so this discipline is the containment. An absent overlay is a blocked operation naming the missing file; no Lifecycle transition runs without a declared store.
+Read `spx/local/coordination.md` for the Change store (`owner/repo`) and the Product value. The store is a GitHub repository whose owner is an organization that defines the issue fields `canonical-state` names; a store of another kind is a blocked operation naming the declared store. Read no other overlay for the store; a transition that moves the checkout reads `spx/local/merging.md` for the safety checks the repository declares around a detach. Every store command names only that store; a `gh` grant admits any repository the account reaches, so this discipline is the containment. An absent overlay is a blocked operation naming the missing file; no Lifecycle transition runs without a declared store.
 
 </rule>
 
 <rule id="canonical-state">
 
-Product, Maturity, and Status (the store's projection of Lifecycle) are canonical project fields; the issue body carries the record; comments carry Claim, Handoff, and terminal records; the assignee list represents the holder. Read state with `gh project item-list <number> --owner <owner> --format json`, select the item whose `content.url` equals the issue URL exactly, and require exactly one match; its `product`, `maturity`, and `status` keys are the canonical values. Read the issue with `gh issue view <N> --repo <store> --json number,title,state,stateReason,assignees,comments,url`. Never derive a field from issue prose. Resolve the project node id with `gh project view <number> --owner <owner> --format json --jq .id` and the field and option ids with `gh project field-list <number> --owner <owner> --format json`; hardcode none of them.
+The issue holds each Change field in its one home: the issue title holds `title`; the organization issue fields `Product`, `Maturity`, and `Lifecycle` hold `product`, `maturity`, and `lifecycle`; the organization text issue field `Predecessors` holds `refined_from` as canonical identities such as `owner/repo#N`, separated by a comma and one space and empty for a root; native issue dependencies hold `blocked_by`; and the issue body holds the four sections with no front matter and no lineage line. Comments carry Claim, Handoff, and terminal records, and the assignee list represents the holder. No project field holds a Change field.
+
+Read the issue with `gh issue view <N> --repo <store> --json number,title,state,stateReason,assignees,comments,url`. Read its fields with `gh api graphql -f query='query($o:String!,$r:String!,$n:Int!){repository(owner:$o,name:$r){issue(number:$n){id issueFieldValues(first:50){nodes{... on IssueFieldSingleSelectValue{name field{... on IssueFieldSingleSelect{name}}} ... on IssueFieldTextValue{value field{... on IssueFieldText{name}}}}}}}}' -f o=<owner> -f r=<repo> -F n=<N>`, selecting each value by its field `name`. `Product`, `Maturity`, and `Lifecycle` each carry exactly one value; an absent value is a missing required field. `Lifecycle` is valid only as `Available`, `Claimed`, `Applied`, `Refined`, or `Abandoned`; any other value is reported as unrecognized, with nothing written. Never derive a field from issue prose.
+
+Write a single-select field with `gh api graphql -f query='mutation($i:ID!,$f:ID!,$v:ID!){setIssueFieldValue(input:{issueId:$i,issueFields:[{fieldId:$f,singleSelectOptionId:$v}]}){clientMutationId}}' -f i=<issue-id> -f f=<field-id> -f v=<option-id>`; the text field takes `textValue:$v` with `$v:String!` in place of the option. The issue id is the `id` the field read returns. Resolve the field and option ids with `gh api graphql -f query='query($l:String!){organization(login:$l){issueFields(first:50){nodes{... on IssueFieldSingleSelect{id name options{id name}} ... on IssueFieldText{id name}}}}}' -f l=<owner>`; hardcode none of them.
 
 </rule>
 
 <rule id="ordered-write">
 
-A transition records each successful write in its declared order. When a required command fails, a required field is absent, or a readback differs from the intended state, stop before every later mutation and report: the successful writes in order, the failed command or mismatched value, and the observed Product, Maturity, Status, assignees, issue state and reason, and newest `Claim:`, `Handoff:`, or terminal comment. Never repair a partial transition by guessing which later mutation would make it look complete.
+A transition records each successful write in its declared order. When a required command fails, a required field is absent, or a readback differs from the intended state, stop before every later mutation and report: the successful writes in order, the failed command or mismatched value, and the observed Product, Maturity, Lifecycle, assignees, issue state and reason, and newest `Claim:`, `Handoff:`, or terminal comment. Never repair a partial transition by guessing which later mutation would make it look complete.
 
 </rule>
 
 <rule id="complete-readback">
 
-A transition completes only after re-reading the issue and its single project item and finding every value equal to the intended state: Product equals the overlay Product, Maturity is unchanged, Status equals the target value, the assignee list equals the intended holder set, and the newest `Claim:`, `Handoff:`, or terminal comment is the exact comment the transition posted. Report the readback values verbatim.
+A transition completes only after re-reading the issue and its fields and finding every value equal to the intended state: Product equals the overlay Product, Maturity is unchanged, Lifecycle equals the target value, the assignee list equals the intended holder set, and the newest `Claim:`, `Handoff:`, or terminal comment is the exact comment the transition posted. Report the readback values verbatim.
 
 </rule>
 

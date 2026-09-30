@@ -27,7 +27,7 @@ Read `${CLAUDE_SKILL_DIR}/references/change-record.md` completely. Then read exa
 | `Executable` | `${CLAUDE_SKILL_DIR}/references/dor-executable.md` |
 | `Lifecycle`  | `${CLAUDE_SKILL_DIR}/references/lifecycle.md`      |
 
-NEVER load another Maturity's Definition of Ready in the same invocation. Each Definition of Ready is cumulative and complete for its level. `lifecycle.md` carries the store-binding, ordered-write, complete-readback, write-inspection, inert-stdin, and Claim, Handoff, and terminal-record rules. The shared references own the rules and no procedure.
+NEVER load another Maturity's Definition of Ready in the same invocation. Each Definition of Ready is cumulative and complete for its level. `lifecycle.md` carries the store-binding, canonical-state, ordered-write, complete-readback, write-inspection, inert-stdin, and Claim, Handoff, and terminal-record rules, with the store commands those rules name. `change-record.md` and the Definitions of Ready carry rules and no procedure.
 
 </loading_contract>
 

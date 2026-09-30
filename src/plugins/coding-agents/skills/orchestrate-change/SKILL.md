@@ -3,7 +3,7 @@ name: orchestrate-change
 description: >-
   ALWAYS invoke this skill when starting the Executor session for a Change, or checking, restarting, or answering a running Executor. NEVER start an Executor session by hand without this skill.
 argument-hint: "<#N | owner/repo#N | issue-url> <absolute-worktree-root> <principal-mail-name> | check <#N | owner/repo#N | issue-url> <pane-id> <principal-mail-name>"
-allowed-tools: Read, {{! tool('use_skill') !}}, Bash(spx worktree status:*), Bash(gh issue view:*)
+allowed-tools: Read, {{! tool('use_skill') !}}, Bash(spx worktree status:*), Bash(gh issue view:*), Bash(gh api graphql:*)
 ---
 
 <objective>
@@ -14,7 +14,7 @@ One Change held by the worktree of one Executor session this Orchestrator starte
 
 - The Orchestrator is a position, never a Role of the Change: it produces no artifact of the Change and never acts as a Verifier.
 - `change-executor` is the one definition this skill starts a session with; the session's own `/execute-change` launches every other session of the Change.
-- Across the Changes this position orchestrates, blockers and questions are settled in the order of each Change's `Priority` project field.
+- Across the Changes this position orchestrates, blockers and questions are settled in the order of each Change's `Priority` issue field.
 - The harness setting alone withholds the structured-question tool from the Executor session, on its start and on every relaunch; no skill detects whether its session is an Executor.
 - Every pane operation runs through `coding-agents:operate-herdr`. Every message record is sent after this instruction: Use skill `coding-agents:message-agents`.
 
@@ -46,7 +46,7 @@ Every mode's last token is the principal: the agent-mail name of the position th
 
 **Check** — `$ARGUMENTS` is `check`, a Change the Orchestrator started, the pane its Start reported, and the principal. One invocation is one bounded pass.
 
-1. Read the Change with `gh issue view <reference> --repo <store> --json number,state,comments,projectItems`; its Status is the `status` name of the project item for the store's project, the worktree root is the root field of the winning `Claim: <session id> <root>` comment — for a Claimed Change the earliest Claim posted after the newest `Handoff:`, and for a released Change the earliest Claim posted before that Handoff and after the Handoff preceding it, which is the Claim the release ended — and its newest `Handoff:` or terminal comment comes from `comments`. `Applied`, `Refined`, or `Abandoned` goes to step 5; `Available` with a Handoff newer than the Claim goes to step 4.
+1. Read the Change with `gh issue view <reference> --repo <store> --json number,state,comments`, and its issue fields with `gh api graphql -f query='query($o:String!,$r:String!,$n:Int!){repository(owner:$o,name:$r){issue(number:$n){issueFieldValues(first:50){nodes{... on IssueFieldSingleSelectValue{name field{... on IssueFieldSingleSelect{name}}}}}}}}' -f o=<owner> -f r=<repo> -F n=<N>`; its Lifecycle is the `name` of the value whose field is `Lifecycle`, the worktree root is the root field of the winning `Claim: <session id> <root>` comment — for a Claimed Change the earliest Claim posted after the newest `Handoff:`, and for a released Change the earliest Claim posted before that Handoff and after the Handoff preceding it, which is the Claim the release ended — and its newest `Handoff:` or terminal comment comes from `comments`. `Applied`, `Refined`, or `Abandoned` goes to step 5; `Available` with a Handoff newer than the Claim goes to step 4.
 2. Use skill `coding-agents:operate-herdr` for one `read` of the pane and one `wait` on it with a `timeout` of `60000`. A `wait` that ends with the server state `working` shows progress and returns result `checked`.
 3. Every other result is answered by exactly one of these operations, and returns result `checked` with the operation taken:
    - A read showing the harness's remaining-context indicator at or below 10% receives one `prompt` with text `/compact`.

@@ -6,7 +6,7 @@ description: >-
   Change to Available. NEVER leave a Change Claimed by a conversation that has
   ended, and NEVER close a Change with this skill.
 argument-hint: "[#N | owner/repo#N | issue-url]"
-allowed-tools: Read, Bash(git status:*), Bash(git branch --show-current), Bash(git rev-parse:*), Bash(git push -u origin HEAD:*), Bash(git switch --detach), Bash(git switch -c work/change-:*), Bash(git merge-base --is-ancestor:*), Bash(spx worktree status:*), Bash(spx diagnose:*), Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh issue comment:*), Bash(gh pr view:*), Bash(gh project view:*), Bash(gh project field-list:*), Bash(gh project item-list:*), Bash(gh project item-edit:*), Bash(gh api user --jq .login), Bash(gh api repos/*/issues/*/dependencies/blocked_by), Bash(printf:*), Bash(printenv CODEX_THREAD_ID), request_user_input
+allowed-tools: Read, Bash(git status:*), Bash(git branch --show-current), Bash(git rev-parse:*), Bash(git push -u origin HEAD:*), Bash(git switch --detach), Bash(git switch -c work/change-:*), Bash(git merge-base --is-ancestor:*), Bash(spx worktree status:*), Bash(spx diagnose:*), Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh issue comment:*), Bash(gh pr view:*), Bash(gh api graphql:*), Bash(gh api user --jq .login), Bash(gh api repos/*/issues/*/dependencies/blocked_by), Bash(printf:*), Bash(printenv CODEX_THREAD_ID), request_user_input
 ---
 
 <objective>
@@ -21,7 +21,7 @@ Use skill `spec-tree:change-standards`. Invoke it with `Lifecycle`; it loads the
 
 <workflow>
 
-1. **Resolve the held Change.** Read `$ARGUMENTS` as an issue reference — `#N`, `owner/repo#N`, or an issue URL — or, when empty, the newest `<CLAIMED_CHANGE>` marker in the conversation; an `owner/repo` that differs from the overlay store under `store-binding` is a blocked operation. When neither an argument nor a marker exists, stop and report the missing issue reference; a release that runs after a compaction supplies the reference, because the marker does not survive it. Read the issue and its single project item under `canonical-state`. Resolve `<current-login>` with `gh api user --jq .login`, this session's assigned worktree root with `git rev-parse --show-toplevel`, and the agent session id from `printenv CODEX_THREAD_ID`. Require the issue `OPEN`, Status `Claimed`, `<current-login>` in the assignee list, and the worktree root the winning Claim names under `claim-record` to equal this session's assigned root. Any other state — a terminal Status, another holder, a winning Claim naming a different worktree — is reported verbatim and stops without mutation.
+1. **Resolve the held Change.** Read `$ARGUMENTS` as an issue reference — `#N`, `owner/repo#N`, or an issue URL — or, when empty, the newest `<CLAIMED_CHANGE>` marker in the conversation; an `owner/repo` that differs from the overlay store under `store-binding` is a blocked operation. When neither an argument nor a marker exists, stop and report the missing issue reference; a release that runs after a compaction supplies the reference, because the marker does not survive it. Read the issue and its fields under `canonical-state`. Resolve `<current-login>` with `gh api user --jq .login`, this session's assigned worktree root with `git rev-parse --show-toplevel`, and the agent session id from `printenv CODEX_THREAD_ID`. Require the issue `OPEN`, Lifecycle `Claimed`, `<current-login>` in the assignee list, and the worktree root the winning Claim names under `claim-record` to equal this session's assigned root. Any other state — a terminal Lifecycle, another holder, a winning Claim naming a different worktree — is reported verbatim and stops without mutation.
 2. **Refine the body first.** What this conversation learned about the Output — Nodes, Assertions, Decisions, completed and discovered Activities, a Maturity that current facts made false — belongs in the record, not in the Handoff. Use skill `spec-tree:author-change` for that revision before continuing; this skill writes no body section and no Maturity.
 3. **Make the work recoverable.**
    1. Run `git status --short --branch`, resolve the default branch from `git rev-parse --abbrev-ref origin/HEAD` with its leading `origin/` removed, and classify the checkout before any commit. A checkout attached to the default branch stops before any commit and any store write with result `default-branch-checkout`, because default-branch work reaches origin only through `/merge`. A checkout attached to another branch has that branch as its work branch. A detached checkout that carries uncommitted session-owned changes, or for which `git merge-base --is-ancestor HEAD origin/<default>` exits nonzero, gets the work branch `work/change-<N>` through `git switch -c work/change-<N>`. A clean detached checkout for which that command exits zero carries no local work: it needs no commit, push, or switch, and its Handoff names `none` as `Branch or PR`; continue at step 4.
@@ -34,8 +34,8 @@ Use skill `spec-tree:change-standards`. Invoke it with `Lifecycle`; it loads the
 5. **Release in order**, recording each successful write under `ordered-write`:
    1. Post the Handoff with `gh issue comment <N> --repo <store> --body-file -`, the text on stdin under `inert-stdin`.
    2. Remove the holder with `gh issue edit <N> --repo <store> --remove-assignee @me`.
-   3. Write Status `Available` with `gh project item-edit --project-id <project-id> --id <item-id> --field-id <status-field-id> --single-select-option-id <available-option-id>`, ids resolved under `canonical-state`. Write it even when the field already reads `Available`.
-6. **Read back** under `complete-readback`: Product equals the overlay Product, Maturity is unchanged, Status is `Available`, the assignee list is empty, and the newest `Handoff:` is the exact comment just posted.
+   3. Write Lifecycle `Available` through the single-select write under `canonical-state`, with the issue id, the `Lifecycle` field id, and the `Available` option id it resolves. Write it even when the field already reads `Available`.
+6. **Read back** under `complete-readback`: Product equals the overlay Product, Maturity is unchanged, Lifecycle is `Available`, the assignee list is empty, and the newest `Handoff:` is the exact comment just posted.
 
 </workflow>
 
@@ -47,7 +47,7 @@ Return the issue URL, the readback values verbatim, the pushed branch or PR, and
 
 <failure_modes>
 
-**Status remained implicit after a release.** Claude posted the Handoff and removed the assignee, then treated the open issue as Available while its project Status still read `Claimed`. Every release writes Status `Available` and reads Product, Maturity, Status, assignees, and the newest Handoff back before it completes.
+**Lifecycle remained implicit after a release.** Claude posted the Handoff and removed the assignee, then treated the open issue as Available while its `Lifecycle` field still read `Claimed`. Every release writes Lifecycle `Available` and reads Product, Maturity, Lifecycle, assignees, and the newest Handoff back before it completes.
 
 **A Handoff carried the body.** Claude wrote insight, status narrative, and a restated plan into the Handoff comment while the record's Activities stayed stale. The Handoff carries the five continuation lines; what was learned about the Output is refined into the body through `author-change` first.
 
@@ -60,7 +60,7 @@ Return the issue URL, the readback values verbatim, the pushed branch or PR, and
 - This session's worktree held the Change from current store state before the first write, and any other state produced a report with no mutation.
 - Every session-owned change is committed; a checkout carrying local work has its work branch on origin at the local tip, the overlay-declared preflight and post-cleanup checks passed around the detach, and no longer has the branch checked out; a clean checkout without local work names `none` as `Branch or PR`.
 - The Handoff carries exactly the five continuation lines, refinement landed in the body before it, and it passed `write-inspection` before posting.
-- The released state reads back complete: Status `Available`, an empty assignee list, the exact new Handoff as the newest `Handoff:`, and Product and Maturity unchanged.
+- The released state reads back complete: Lifecycle `Available`, an empty assignee list, the exact new Handoff as the newest `Handoff:`, and Product and Maturity unchanged.
 - Every failed transition stopped before later mutation and reported the ordered successful writes, the failed operation, and the complete observed state.
 
 </success_criteria>

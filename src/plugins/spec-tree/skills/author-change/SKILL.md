@@ -5,7 +5,7 @@ description: >-
   Engineering Change record. NEVER use it to author a spec or review a code
   changeset.
 argument-hint: "<local Change path and intent | existing Change reference and revision>"
-allowed-tools: Read, Write, Edit, Grep, Glob, {{! tool('use_skill') !}},{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}},{!% endif %!} Bash(gh issue view:*), Bash(gh issue list:*), Bash(gh issue create:*), Bash(gh issue edit:*), Bash(gh project field-list:*), Bash(gh project item-list:*), Bash(gh project item-add:*), Bash(gh project item-edit:*), Bash(spx change draft create:*), Bash(spx change draft list:*), Bash(spx verification run input:*), Bash(spx verification run status:*), Bash(spx verification run render:*), Bash(printf:*)
+allowed-tools: Read, Write, Edit, Grep, Glob, {{! tool('use_skill') !}},{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}},{!% endif %!} Bash(gh issue view:*), Bash(gh issue list:*), Bash(gh issue create:*), Bash(gh issue edit:*), Bash(gh api graphql:*), Bash(gh api repos/*/issues/*:*), Bash(spx change draft create:*), Bash(spx change draft list:*), Bash(spx verification run input:*), Bash(spx verification run status:*), Bash(spx verification run render:*), Bash(printf:*)
 ---
 
 <objective>
@@ -16,7 +16,7 @@ A complete store-independent Change record authored locally, independently appro
 
 - Operate on one Change. Resolve new-versus-existing identity and the requested target Maturity before routing.
 - Use skill `spec-tree:change-standards`. Invoke it with exactly the target Maturity. It loads the common contract and only that Maturity's cumulative Definition of Ready.
-- Load `spx/local/coordination.md` when present for the Change store, Product, project, and field mapping. Store coordinates and revision selectors remain outside the record.
+- Load `spx/local/coordination.md` when present for the Change store and Product. Store coordinates and revision selectors remain outside the record.
 - Preserve an explicitly selected local working file inside the Product repository. Otherwise use `<local_draft>` to obtain an SPX-managed file. Every refinement and repair changes that one file.
 - Keep provider conversations, transcripts, prompt copies, and received conversation input out of the Change record. Preserve established intent in Output, Value, Frame, and Activities.
 - Ask only about a consequential operator-owned choice that supplied intent and repository truth leave unresolved. Ask one focused question at a time and state how its answer changes the record.
@@ -67,7 +67,7 @@ Read exactly one maturity workflow and `${CLAUDE_SKILL_DIR}/templates/change.md`
 
 <revision_safety>
 
-For an existing Change, read its complete current body, store-native projection, holder, predecessor and blocker records needed for the revision, and latest Handoff when resuming execution. Import the complete record into the selected draft once. Preserve `refined_from` byte-for-byte unless creating a new successor; revisions never change it. Retain the inspected remote representation outside the record for the publication concurrency check.
+For an existing Change, read its complete current body, each field from its store home, holder, predecessor and blocker records needed for the revision, and latest Handoff when resuming execution. Import it into the selected draft once, composing the front matter from each field's home above the body. Preserve `refined_from` byte-for-byte unless creating a new successor; revisions never change it. Retain the inspected remote representation outside the record for the publication concurrency check.
 
 A claim held by another holder blocks takeover. Terminal Lifecycle blocks ordinary resumption. Splitting and coalescing are separate lineage operations. A Claimed holder writes a Handoff and releases the Change before lowering Maturity. Reconcile an existing local candidate with the store representation before overwriting either.
 
@@ -81,7 +81,7 @@ A claim held by another holder blocks takeover. Terminal Lifecycle blocks ordina
 4. Require `terminalStatus: approved`, zero findings, complete common-rule and declared-DoR coverage, and retained input equal to the unchanged candidate. An outside-contract result, failed launch, unusable result, rejected verdict, or blocked diagnostic withholds publication.
 5. For a completed rejection, sweep the complete candidate for the cited defect class, batch repairs, read affected sections together, and dispatch a new audit only after the repaired candidate stabilizes. Ask the operator when repair reopens judgment. Stop after three consecutive completed non-approvals at this gate and report the outstanding class.
 
-Audit results remain in SPX and the conversation. NEVER write audit bookkeeping into the Change body, comments, or project fields.
+Audit results remain in SPX and the conversation. NEVER write audit bookkeeping into the Change body, comments, or fields.
 
 </audit_gate>
 
@@ -89,28 +89,32 @@ Audit results remain in SPX and the conversation. NEVER write audit bookkeeping 
 
 Publication requires unchanged local content approved by `<audit_gate>`, content authority for the target Maturity, and revision authority for an existing store record. Re-read the remote representation immediately before mutation and reconcile any intervening edit locally; re-audit a changed candidate.
 
-For the GitHub store declared by `spx/local/coordination.md`, use `gh` only. Resolve repository, project, field IDs, option IDs, issue identity, and project item ID from live reads; hardcode none of them. Map every front-matter field:
+Use skill `spec-tree:change-standards`. Invoke it with `Lifecycle` for the store rules: `store-binding` resolves the store and blocks an absent overlay or a store of another kind, `canonical-state` names each field's home and the commands that read and write it, and `inert-stdin` and `write-inspection` govern every text sent to the store. Use `gh` only, and resolve the issue, field, option, and blocker ids from live reads; hardcode none of them. Each front-matter field has one home, and nothing else in the store holds it:
 
-| Record field   | Store-native projection                                                 |
-| -------------- | ----------------------------------------------------------------------- |
-| `title`        | Issue title and the unchanged YAML field in the issue body              |
-| `product`      | Project `Product` field and the unchanged YAML field in the issue body  |
-| `maturity`     | Project `Maturity` field and the unchanged YAML field in the issue body |
-| `lifecycle`    | Project `Status` field and the unchanged YAML field in the issue body   |
-| `refined_from` | The unchanged YAML list in the native issue body                        |
-| `blocked_by`   | The unchanged YAML list in the native issue body                        |
+| Record field   | Home in the store                                                                                                     |
+| -------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `title`        | The issue title                                                                                                       |
+| `product`      | The issue field `Product`                                                                                             |
+| `maturity`     | The issue field `Maturity`                                                                                            |
+| `lifecycle`    | The issue field `Lifecycle`                                                                                           |
+| `refined_from` | The text issue field `Predecessors`: the identities in order, separated by a comma and one space; no value for a root |
+| `blocked_by`   | The issue's native dependencies                                                                                       |
 
-Create or update exactly one issue. Send the complete local file, including both YAML delimiters and every front-matter field, through `gh issue create --body-file -` or `gh issue edit --body-file -`. Set the issue title from `title`. Add or locate its project item, then set Product, Maturity, and Status through `gh project item-edit`. NEVER strip front matter, synthesize `# Relationships`, add body-line lineage, or publish a draft iteration.
+The issue body is the approved local file from its `# Output` line to its end. Write in this order, recording each successful write:
 
-After all writes, read the issue through `gh issue view --json title,body,projectItems,number,url` and the project item through `gh project item-list --format json`. Require:
+1. Create the issue with `gh issue create --repo <store> --title '<title>' --body-file -`, or update it with `gh issue edit <N> --repo <store> --title '<title>' --body-file -`, the body on stdin.
+2. Write `Product`, `Maturity`, and `Lifecycle` through the single-select write under `canonical-state`. For a new successor, write `Predecessors` through the text write. A revision never writes `Predecessors`; it requires the stored value to equal `refined_from` already.
+3. Read the native blockers with `gh api repos/<store>/issues/<N>/dependencies/blocked_by`. Add each missing blocker with `gh api repos/<store>/issues/<N>/dependencies/blocked_by --method POST -F issue_id=<id>`, and remove each extra one with `gh api repos/<store>/issues/<N>/dependencies/blocked_by/<id> --method DELETE`, where `<id>` is the blocker's numeric id from `gh api repos/<owner>/<repo>/issues/<M> --jq .id`.
 
-- issue title equals `title`;
-- issue body equals the complete approved local file;
-- project Product equals `product`;
-- project Maturity equals `maturity`;
-- project Status equals `lifecycle`;
-- parsed issue-body `refined_from` equals the local list in order;
-- parsed issue-body `blocked_by` equals the local list in order.
+NEVER write front matter, a lineage line, or a `# Relationships` section into the body, write a field into a project, or publish a draft iteration.
+
+After all writes, read the issue with `gh issue view <N> --repo <store> --json title,body,number,url`, its fields under `canonical-state`, and its blockers. Require:
+
+- the issue title equals `title`;
+- the issue body equals the approved local file from its `# Output` line;
+- `Product`, `Maturity`, and `Lifecycle` equal `product`, `maturity`, and `lifecycle`;
+- `Predecessors`, split at every comma followed by one space, equals `refined_from` in order, and carries no value for a root;
+- the native blockers, as canonical identities, equal the set `blocked_by` names.
 
 Any mismatch or partial write is a failed persistence result. Preserve the local file and canonical issue reference, report successful writes and the exact failed or unequal field, and resume from observed state without creating a duplicate or publishing unaudited content. Authentication failures stop without printing credentials.
 
@@ -118,7 +122,7 @@ Any mismatch or partial write is a failed persistence result. Preserve the local
 
 <result>
 
-Return the canonical Change reference, exact persisted Maturity and Lifecycle, whether the operation created or revised the Change, the equality result for every front-matter field, and the next Activity or unresolved operator question. Use skill `spec-tree:release-change`. Invoke it only when this session holds the Change (Status `Claimed`, with the winning Claim naming this session's assigned worktree root) and work stops or transfers with continuation remaining; a Change this session does not hold needs no release. Preserve any unaudited local candidate locally and leave the published Change unchanged.
+Return the canonical Change reference, exact persisted Maturity and Lifecycle, whether the operation created or revised the Change, the equality result for every front-matter field, and the next Activity or unresolved operator question. Use skill `spec-tree:release-change`. Invoke it only when this session holds the Change (Lifecycle `Claimed`, with the winning Claim naming this session's assigned worktree root) and work stops or transfers with continuation remaining; a Change this session does not hold needs no release. Preserve any unaudited local candidate locally and leave the published Change unchanged.
 
 </result>
 
@@ -142,7 +146,7 @@ Return the canonical Change reference, exact persisted Maturity and Lifecycle, w
 
 **Conversation text entered the Change.** Claude copied received instructions into an Input section to preserve context. The record then depended on provider conversation and violated the methodology boundary. Preserve the proposal in Output and Value, and keep conversation text in provider context and store history.
 
-**Publication stripped authoritative fields.** Claude projected title and project fields, removed front matter from the issue body, and left lineage as a body line. The stored Change ceased to be portable. Publish the complete local record and treat native fields as equality-checked projections.
+**A field lived in two homes.** Claude published the front matter in the issue body and also set the issue fields, and left lineage as a body line. A Lifecycle skill later wrote only the field, so the two copies disagreed and readers took whichever they found first. Each field has one home in the store; the body starts at `# Output`.
 
 </failure_modes>
 
@@ -152,7 +156,7 @@ Return the canonical Change reference, exact persisted Maturity and Lifecycle, w
 - The candidate satisfies the one cumulative Definition of Ready loaded for its declared Maturity and carries the required authority.
 - Triage asks only questions whose answers change Output, Frame, Maturity, risk, or ownership.
 - The complete unchanged record receives an independent approved audit before publication.
-- Every front-matter field and the complete issue body read back equal after `gh` persistence.
+- Every front-matter field reads back equal from its one store home, and the issue body equals the approved file from its `# Output` line.
 - The record contains no store-specific key, received conversation input, audit bookkeeping, or authoritative body restatement of front matter.
 - Continuation depends only on the Change, repository references, and applicable Handoff.
 

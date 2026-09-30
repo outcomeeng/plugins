@@ -17,7 +17,7 @@ A result on one local Change record: a verdict against `change-standards` and th
 
 <constraints>
 
-- NEVER mutate the candidate or product content: repository files, claims, Changes, comments, and project fields remain unchanged. Persisting the audit's own journal state through `spx verification run` is the only permitted state mutation.
+- NEVER mutate the candidate or product content: repository files, claims, Changes, comments, and issue fields remain unchanged. Persisting the audit's own journal state through `spx verification run` is the only permitted state mutation.
 - NEVER run deterministic verification, publish a Change, or delegate this audit to another session.
 - ALWAYS judge contract-form content only against `spec-tree:change-standards` loaded with the candidate's declared Maturity, as step 3 of `<execution_sequence>` loads it. The standards load the common contract and exactly one cumulative Definition of Ready; this skill owns the audit procedure.
 - NEVER require a Git commit, changeset, remote issue, or remote revision as the audit subject. The local file's complete retained content is the subject.

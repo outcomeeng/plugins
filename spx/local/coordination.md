@@ -5,6 +5,5 @@ Loaded by `/claim-change`, `/release-change`, `/close-change`, and `/author-chan
 ## Change store
 
 - Repository: `outcomeeng/changes` (one issue per Change; issues only)
-- Project: owner `outcomeeng`, number `1` (`https://github.com/orgs/outcomeeng/projects/1`)
 - Product: `plugins` — the `Product` field value for every Change this repository picks up or hands off
-- Fields: `Product` (methodology | spx | plugins), `Maturity` (Proposed | Framed | Sliced | Executable), `Status` projects Lifecycle (Available | Claimed | Applied | Refined | Abandoned)
+- Fields: the `outcomeeng` organization issue fields `Product` (methodology | spx | plugins), `Maturity` (Proposed | Framed | Sliced | Executable), `Lifecycle` (Available | Claimed | Applied | Refined | Abandoned), and the text issue field `Predecessors`; no project field holds a Change field
