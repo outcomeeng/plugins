@@ -31,7 +31,7 @@ The module invokes the command in the repository root whose top-level entries pr
 
 ### Scenarios
 
-- Given `clean` runs from an active Python environment inside the repository, when the runner records its call, then the recorded argv passes top-level pathspecs that omit that environment and the recorded call runs in the repository root those pathspecs were computed for ([test](tests/test_clean.scenario.l1.py))
+- Given `clean` runs from inside a repository that holds the running interpreter's environment, and its caller hands it neither the root nor the environment, when the runner records its call, then the recorded argv passes top-level pathspecs that omit that environment and the recorded call runs in the repository root those pathspecs were computed for ([test](tests/test_clean.scenario.l1.py))
 - Given the generated argv run as a Git dry run in a repository with an ignored session store, an ignored active environment, and another ignored cache, then Git lists only the other cache ([test](tests/test_clean.scenario.l1.py))
 - Given the runner returns a non-zero exit code, when `clean` runs, then the exit code is propagated to the caller ([test](tests/test_clean.scenario.l1.py))
 - Given every top-level path is protected, when `clean` runs, then the runner is not invoked and the call reports success ([test](tests/test_clean.scenario.l1.py))
