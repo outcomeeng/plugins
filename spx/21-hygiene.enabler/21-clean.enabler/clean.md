@@ -25,13 +25,13 @@ Every value the cleanup command uses that this node spells out is listed here wi
 
 A value this node owns admits no test of its agreement with the module, because every oracle for it would be a second declaration of the same choice; audit judges that agreement. A value an outside convention owns does admit one, because its oracle is the convention's own name rather than a copy of the module's. A test may import any of these values to arrange or read a case. The behavior around each value — which paths the builder omits, which it keeps, what it returns when nothing is left — is test evidence and restates no value the node owns.
 
-The module invokes the command in the repository root whose top-level entries produced the pathspecs. That root reaches the command boundary with the argv, so the declaration holds for every caller rather than only for one whose working directory already matches.
+The module invokes the command in the repository root whose top-level entries produced the pathspecs. A caller that names no root gets the nearest directory at or above its working directory that holds the repository's metadata. That root reaches the command boundary with the argv, so the declaration holds for every caller rather than only for one whose working directory already matches.
 
 ## Assertions
 
 ### Scenarios
 
-- Given `clean` runs from inside a repository that holds the running interpreter's environment, and its caller hands it neither the root nor the environment, when the runner records its call, then the recorded argv passes top-level pathspecs that omit that environment and the recorded call runs in the repository root those pathspecs were computed for ([test](tests/test_clean.scenario.l1.py))
+- Given `clean` runs from a directory nested inside a repository that holds the running interpreter's environment, and its caller hands it neither the root nor the environment, when the runner records its call, then the recorded argv passes top-level pathspecs that omit that environment and the recorded call runs in the repository root those pathspecs were computed for ([test](tests/test_clean.scenario.l1.py))
 - Given the generated argv run as a Git dry run in a repository with an ignored session store, an ignored active environment, and another ignored cache, then Git lists only the other cache ([test](tests/test_clean.scenario.l1.py))
 - Given the runner returns a non-zero exit code, when `clean` runs, then the exit code is propagated to the caller ([test](tests/test_clean.scenario.l1.py))
 - Given every top-level path is protected, when `clean` runs, then the runner is not invoked and the call reports success ([test](tests/test_clean.scenario.l1.py))
