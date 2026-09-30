@@ -59,7 +59,7 @@ Every other code stays verbatim under `command-failed`. `server-not-running` als
   "schemaVersion": 1,
   "operation": "prompt",
   "arguments": {
-    "agent": "officer1",
+    "agent": "change-42",
     "text": "[PeachFrog] mail 100",
     "wait": true,
     "timeout": 120000
