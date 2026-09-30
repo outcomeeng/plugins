@@ -37,6 +37,7 @@ from outcomeeng_testing.harnesses.discovery_auth import (
     SAVED_LOGIN_API_KEY_FIELD,
     SAVED_LOGIN_TOKENS_FIELD,
     AUTH_FILENAME,
+    PERSONAL_CODEX_HOME_DIRNAME,
     WORKSPACE_TOKEN_ENV,
     AuthenticationMode,
     DiscoveryAuthentication,
@@ -63,6 +64,15 @@ class SavedLoginFault(StrEnum):
     MISSING = "missing"
     MALFORMED = "malformed"
     NON_SUBSCRIPTION = "non-subscription"
+
+
+class PersonalHomeFault(StrEnum):
+    """A subscription CODEX_HOME that is not a dedicated home."""
+
+    UNSET = "unset"
+    HOME = "home"
+    PERSONAL_CODEX_HOME = "personal-codex-home"
+    LINKED_PERSONAL_CODEX_HOME = "linked-personal-codex-home"
 
 
 @dataclass(frozen=True)
@@ -202,6 +212,36 @@ def missing_credential_environment(mode: AuthenticationMode) -> dict[str, str]:
 
 def ci_without_authentication_mode() -> dict[str, str]:
     return {CI_ENVIRONMENT: "true"}
+
+
+@contextmanager
+def personal_codex_home_environment(
+    fault: PersonalHomeFault,
+) -> Iterator[dict[str, str]]:
+    """Yield a subscription environment whose saved login sits in a non-dedicated home.
+
+    A valid ChatGPT saved login exists in both HOME and HOME/.codex, so the
+    CODEX_HOME rule is the only reason selection can refuse.
+    """
+    initial = (FIXTURE_ROOT / "chatgpt.json").read_text(encoding="utf-8")
+    with TemporaryDirectory() as directory:
+        root = Path(directory).resolve()
+        personal = root / PERSONAL_CODEX_HOME_DIRNAME
+        personal.mkdir()
+        for home in (root, personal):
+            saved = home / AUTH_FILENAME
+            saved.write_text(initial, encoding="utf-8")
+            saved.chmod(0o600)
+        environment = {HOME_ENV: str(root)}
+        if fault is PersonalHomeFault.HOME:
+            environment[CODEX_HOME_ENV] = str(root)
+        elif fault is PersonalHomeFault.PERSONAL_CODEX_HOME:
+            environment[CODEX_HOME_ENV] = str(personal)
+        elif fault is PersonalHomeFault.LINKED_PERSONAL_CODEX_HOME:
+            alias = root / "alias"
+            alias.symlink_to(personal, target_is_directory=True)
+            environment[CODEX_HOME_ENV] = str(alias)
+        yield environment
 
 
 @dataclass

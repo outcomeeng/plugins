@@ -49,6 +49,7 @@ from outcomeeng_testing.harnesses.discovery_auth import (
 )
 from outcomeeng_testing.harnesses.discovery_auth_cases import (
     NativeFault,
+    PersonalHomeFault,
     SavedLoginFault,
     SESSION_COMMAND,
     authentication_case,
@@ -57,6 +58,7 @@ from outcomeeng_testing.harnesses.discovery_auth_cases import (
     invalid_saved_login,
     lock_contention_case,
     missing_credential_environment,
+    personal_codex_home_environment,
 )
 from outcomeeng_testing.generators.installation import ClosingDisposition
 from outcomeeng_testing.harnesses.installation import (
@@ -549,6 +551,15 @@ def test_local_default_reuses_subscription_despite_other_available_credentials()
 def test_ci_requires_an_explicit_authentication_mode() -> None:
     with pytest.raises(DiscoveryAuthenticationError):
         select_authentication(ci_without_authentication_mode())
+
+
+@pytest.mark.parametrize("fault", list(PersonalHomeFault), ids=str)
+def test_subscription_refuses_a_codex_home_that_is_not_dedicated(
+    fault: PersonalHomeFault,
+) -> None:
+    with personal_codex_home_environment(fault) as environment:
+        with pytest.raises(DiscoveryAuthenticationError):
+            select_authentication(environment)
 
 
 def test_workspace_login_uses_its_native_stdin_mechanism() -> None:

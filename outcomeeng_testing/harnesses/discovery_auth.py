@@ -35,6 +35,8 @@ CODEX_LOGOUT_SUBCOMMAND = "logout"
 API_LOGIN_FLAG = "--with-api-key"
 WORKSPACE_LOGIN_FLAG = "--with-access-token"
 AUTH_FILENAME = "auth.json"
+PERSONAL_CODEX_HOME_DIRNAME = ".codex"
+"""The personal Codex home under HOME that subscription discovery never reads."""
 CI_ENVIRONMENT = "CI"
 """The environment variable hosted runners set, which requires an explicit mode."""
 SAVED_LOGIN_MODE_FIELD = "auth_mode"
@@ -199,16 +201,21 @@ def select_authentication(environment: Mapping[str, str]) -> AuthenticationSelec
         ) from None
     if mode is AuthenticationMode.SUBSCRIPTION:
         home = environment.get(CODEX_HOME_ENV)
-        if not home:
-            parent = environment.get(HOME_ENV)
-            if not parent:
-                raise DiscoveryAuthenticationError(
-                    "Subscription discovery requires CODEX_HOME or HOME."
-                )
-            home = str(Path(parent) / ".codex")
-        return AuthenticationSelection(
-            mode, saved_login=Path(home).absolute() / AUTH_FILENAME
-        )
+        parent = environment.get(HOME_ENV)
+        if not home or not parent:
+            raise DiscoveryAuthenticationError(
+                f"Subscription discovery requires an explicit dedicated {CODEX_HOME_ENV} and a defined {HOME_ENV}."
+            )
+        selected = Path(home).resolve()
+        personal = Path(parent).resolve()
+        if selected in (
+            personal,
+            (Path(parent) / PERSONAL_CODEX_HOME_DIRNAME).resolve(),
+        ):
+            raise DiscoveryAuthenticationError(
+                f"Subscription discovery refuses {CODEX_HOME_ENV} {selected}: it resolves to {HOME_ENV} or {HOME_ENV}/{PERSONAL_CODEX_HOME_DIRNAME}; set a dedicated {CODEX_HOME_ENV}."
+            )
+        return AuthenticationSelection(mode, saved_login=selected / AUTH_FILENAME)
     variable = (
         CODEX_API_KEY_ENVIRONMENT
         if mode is AuthenticationMode.API
