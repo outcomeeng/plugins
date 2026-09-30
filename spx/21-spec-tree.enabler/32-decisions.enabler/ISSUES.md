@@ -21,11 +21,3 @@ These patterns span the **entire** audit-skill family — every `audit-*` SKILL.
 ## Verdict-row keys in `audit-{lang}-architecture` skills lack conformance evidence (FOLLOW-UP)
 
 The `audit-{lang}-architecture` skills declare their verdict-row keys (`section-structure`, `testability-in-verification`, `atemporal-voice`, …) as prose in the JSON output schema, with no conformance test or eval pinning the key names — a rename or revert (such as a `testability-in-compliance` → `testability-in-verification` rename) would go undetected. This is the same class as the `[eval]`-migration candidates tracked in `spx/43-typescript.enabler/25-typescript-standards.enabler/ISSUES.md`; fold verdict-row-key assertions into that language-auditor eval work rather than testing one renamed key in isolation.
-
-## Assertion-type terminology not yet propagated to every language surface (deferred)
-
-The terminology pass aligns decision-record, template, audit, and test-methodology wording to the foundation term **assertion type** (the five values `scenario`/`mapping`/`conformance`/`property`/`compliance`), keeps **verification type** for test/evaluate/audit, and keeps **verdict mode** for the deterministic/agentic axis. The decision-audit skills, specs, eval prompts, and verdict identifier `assertion-type-mismatch` conform. One surface still carries older wording and remains a follow-up:
-
-- **Language test-standard skills** — `python-test-standards`, `typescript-test-standards`, `rust-test-standards`, `test-rust`, `test-typescript`, the `typescript-simplifier` agent, and `architect-python/references/testability-patterns.md` (the "Evidence mode" table header) still say `evidence mode` for the `<evidence>` filename segment. Each rename is a plugin-distribution change carrying that plugin's own version bump, so it travels as its own PR rather than widening the spec-tree-only first PR.
-
-The PDR audit verdict-contract identifiers `tag-validity`, `invalid-tag`, and `assertion-type-mismatch` are aligned with the shipped eval suites.
