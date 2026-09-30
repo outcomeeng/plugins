@@ -335,6 +335,13 @@ linked evidence carries no invocation-checkout record — the same class that
 produced the withheld-registration case now covered in
 `tests/test_repository_installation.scenario.l1.py`.
 
+The round against `114c56d96942138058a10caae796bd59d83e20ec` raised it as
+`f-013` (WARNING): "generated_listing_defect_records, consumed by
+observe_defective_record_listing, carries no record of the invocation checkout.
+Continuation past a defect is therefore observed only for the rewrite and
+bootstrap dispositions, never for the native update of a record the invocation
+checkout holds."
+
 ## Two review surfaces report success for something that did not happen
 
 The changeset review has two surfaces that read as success while the thing they
@@ -497,6 +504,46 @@ sorted(...)[0]. These rows introduce a publication dimension the mapping
 assertion does not state, and neither a source-owned domain nor a generator
 selects them." The rows predate the discovery-login security fix, which touches
 this file only to add the git-source mapping; they are recorded here under the
+convergence-stall rule by the Director's ruling.
+
+## The scenario tests pick their case plugin in the test file
+
+The isolated-absence and pending-publication scenarios in
+`tests/test_repository_installation.scenario.l1.py` choose their case plugin
+with `sorted(committed_catalog_plugin_names())[0]`. The assertions name no
+particular plugin, so the choice is a call-site value no assertion states. This
+is the class the record-mapping entry above records for the mapping test.
+
+**Settlement condition**: a generator supplies the case plugin, and no scenario
+under this node picks one at the call site.
+
+**Evidence**: test-evidence audit finding `f-010` (REJECT) against
+`114c56d96942138058a10caae796bd59d83e20ec`: "The scenario tests pick their case
+plugin in the test file with sorted(committed_catalog_plugin_names())[0] at lines
+172, 195, 208 and 233. The assertion names no particular plugin, so the choice
+is a call-site value the assertion does not state and should come from a
+generator." The lines predate the discovery-login security fix; recorded here
+under the convergence-stall rule by the Director's ruling.
+
+## The unlocated-registry scenario never checks that the source is named
+
+The spec's scenario states that planning stops "with that entry's source named".
+`test_a_registry_entry_naming_no_install_location_stops_planning` in
+`tests/test_repository_installation.scenario.l1.py` asserts only that the error
+carries `UNLOCATED_REGISTRY_DIAGNOSTIC`, so a diagnostic that dropped the source
+would leave it passing.
+
+**Settlement condition**: the test asserts that the planning error names the
+registered entry's source, and removing the source from the diagnostic fails it.
+
+**Evidence**: test-evidence audit finding `f-011` (REJECT) against
+`114c56d96942138058a10caae796bd59d83e20ec`:
+"test_a_registry_entry_naming_no_install_location_stops_planning asserts only
+that the error contains UNLOCATED_REGISTRY_DIAGNOSTIC (\"the marketplace registry
+entry names no clone\"). It never checks that the entry's source is named.
+Removing `from {claude_registered.source}` from the diagnostic in
+outcomeeng/distribution/installation.py:1295-1296 leaves the test passing." The
+test predates the discovery-login security fix; recorded here under the
 convergence-stall rule by the Director's ruling.
 
 ## Codex 0.155.1 poisons a fresh home during the marketplace listing, then refuses it
