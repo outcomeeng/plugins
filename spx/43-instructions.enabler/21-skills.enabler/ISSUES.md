@@ -117,11 +117,14 @@ Source: `instructions:skill-auditor` finding rule `stale_cross_reference`, sever
 [Change #92](https://github.com/outcomeeng/changes/issues/92) carries the
 standards-skill pass that owns it.
 
-## The Claude render of `skill-standards` sits 930 code points under the eager-payload ceiling
+## The Claude render of `skill-standards` sits 223 code points under the eager-payload ceiling
 
-`dist/claude/instructions/skills/skill-standards/SKILL.md` measures 39070 code
+`dist/claude/instructions/skills/skill-standards/SKILL.md` measures 39777 code
 points against the 40,000-code-point ceiling `skill-standards`
-`<eager_foundation_exception>` declares for itself.
+`<eager_foundation_exception>` declares for itself. Change #200 adds 766 code points to the
+render, which measures 39011 on `main` at `e29503eb59973c2b85cb9cdb229e816a186f090c`:
+the audit-skill Bash-grant rule, the refusal sources, and the retry rule for a
+classifier-refused Executor start.
 
 **Impact.** The next small edit to a Claude-only section tips the reference past
 the ceiling and turns a routine change into a must-fix on this reference.
@@ -132,7 +135,9 @@ carried by `references/command-capabilities.md` `<dynamic_context>`, are one
 candidate — so a routine edit has room.
 
 Source: `instructions:skill-auditor` finding rule `eager_payload_headroom`, severity
-`WARNING`, on head `524b9c46c7960a106d84ef856b4020a0ce904b16` during Change #76;
+`WARNING`, on head `524b9c46c7960a106d84ef856b4020a0ce904b16` during Change #76,
+remeasured by the skill auditor on head `913a65e5b370ffa846bfe7a47be4a551e6a9c547`
+during Change #200;
 [Change #92](https://github.com/outcomeeng/changes/issues/92) carries the
 standards-skill pass that owns it.
 
@@ -288,3 +293,34 @@ self-contradiction is not. "A skill-directory token inside an `allowed-tools` pa
 match" in `spx/ISSUES.md` is opened by `f-007`, the first half of the reversal above; its settlement
 condition rests on an executed invocation rather than an auditor verdict, and the `f-003` reversal
 neither answers nor closes it.
+
+## The Codex render of `command-capabilities.md` contradicts itself and ships build instructions
+
+`src/plugins/instructions/skills/skill-standards/references/command-capabilities.md`
+carries no per-target content, so its Codex render at
+`dist/codex/instructions/skills/skill-standards/references/command-capabilities.md`
+lines 69-76 tells a Codex author to write the Claude Code skill-directory token in
+authored source, shows `${SKILL_DIR}` in the example directly below, and then says
+never to write Codex's token in source. A reader who follows the example breaks the
+rule beside it. The same render tells consumer repositories to "update build
+rendering" and to "fix the renderer for Codex" (lines 5, 11, and 30), which only this
+repository can do. Both contradict the bundle's own rule in
+`references/runtime-variables.md` that generated runtime guidance describes only its
+own runtime token, and `SKILL.md` routes every Codex author to this reference.
+
+**Impact.** A Codex consumer authoring bundled-file references from this standard
+receives a token rule that contradicts its own example and instructions to change a
+build it does not have.
+
+**Settlement condition.** The reference carries per-target content, as
+`runtime-variables.md` and `platform-constraints.md` already do, so each render
+describes only its own harness's token and syntax, and build and renderer guidance
+stays in source-only comments; one skill audit of `skill-standards` then raises no
+finding on this reference.
+
+**Why separate.** The fix restructures a whole reference file per target. Change #200
+changed no line of that file; the audit read it only because `SKILL.md` routes to it.
+
+Source: `instructions:skill-auditor` finding `f-015`, rule
+`rendered_output_contradiction_and_portability`, severity `REJECT`, on head
+`913a65e5b370ffa846bfe7a47be4a551e6a9c547` during Change #200.
