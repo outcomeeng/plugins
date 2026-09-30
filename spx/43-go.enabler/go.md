@@ -12,8 +12,6 @@ The Go plugin composes foundational methodology with language-specific standards
 
 ## Assertions
 
-- ALWAYS: `/simplify-go` owns the simplification contract for changed Go implementation: independently discover scope and governing evidence, preserve behavior and concurrency ownership, invoke `/code-go` for edits, and report changed paths and verification results. Its instructions preserve tests and evidence, block changes lacking behavioral coverage, and limit recovery to its own edits ([audit])
-
 ### Compliance
 
 - ALWAYS: the `audit-go-{code|tests|architecture}` skills carry no Go-specific auditor agent, name no caller, and stay invocable on their own; an artifact-type auditor composes them for the Go concerns in scope, and the author-context isolation an audit verdict requires binds the author context per `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` ([audit])
@@ -26,3 +24,4 @@ The Go plugin composes foundational methodology with language-specific standards
 - NEVER: the Go plugin's skills teach or recommend an in-package `testutil` or `testhelpers` package, an `export_test.go` that hands a harness or fixture to a test, a `tests/` subdirectory, or any location other than `internal/testinfra/` for shared harnesses, generators, or fixtures; a `testdata/` directory holds only the inert whole-payload inputs `spx/43-go.enabler/15-go-testing.adr.md` places there ([audit])
 - NEVER: reference specs or decisions from code — no `ADR-21` or `PDR-13` in code comments or doc comments ([audit])
 - ALWAYS: goroutine lifecycle, data-race safety under `go test -race`, `context.Context` propagation and cancellation, error wrapping with `%w`, and `unsafe` and cgo boundaries pass the Go code audit's soundness checks (`audit-go-code`, composed by the implementation auditor) ([audit])
+- ALWAYS: `/simplify-go` owns the simplification contract for changed Go implementation: independently discover scope and governing evidence, preserve behavior and concurrency ownership, invoke `/code-go` for edits, and report changed paths and verification results. Its instructions preserve tests and evidence, block changes lacking behavioral coverage, and limit recovery to its own edits ([audit])

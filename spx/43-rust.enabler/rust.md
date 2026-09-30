@@ -12,8 +12,6 @@ The Rust plugin composes foundational methodology with language-specific standar
 
 ## Assertions
 
-- ALWAYS: `/simplify-rust` owns the simplification contract for changed Rust implementation: independently discover scope and governing evidence, preserve behavior and ownership semantics, invoke `/code-rust` for edits, and report changed paths and verification results. Its instructions preserve tests and evidence, block changes lacking behavioral coverage, and limit recovery to its own edits ([audit])
-
 ### Compliance
 
 - ALWAYS: the `audit-rust-{code|tests|architecture}` skills carry no Rust-specific auditor agent, name no caller, and stay invocable on their own; an artifact-type auditor composes them for the Rust concerns in scope, and the author-context isolation an audit verdict requires binds the author context per `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` ([audit])
@@ -25,3 +23,4 @@ The Rust plugin composes foundational methodology with language-specific standar
 - NEVER: the Rust plugin's skills teach or recommend `tests/support/`, `tests/_support/`, `tests/fixtures/`, `crate::test_support`, `super::tests`, or any inside-`tests/` or in-crate location for shared harnesses, generators, or fixtures ([audit])
 - NEVER: reference specs or decisions from code — no `ADR-21` or `PDR-13` in code comments or docstrings ([audit])
 - ALWAYS: `unsafe` blocks and FFI boundaries pass the Rust code audit's soundness checks (`audit-rust-code`, composed by the implementation auditor) — covering aliasing, lifetimes, validity invariants, and panic safety ([audit])
+- ALWAYS: `/simplify-rust` owns the simplification contract for changed Rust implementation: independently discover scope and governing evidence, preserve behavior and ownership semantics, invoke `/code-rust` for edits, and report changed paths and verification results. Its instructions preserve tests and evidence, block changes lacking behavioral coverage, and limit recovery to its own edits ([audit])

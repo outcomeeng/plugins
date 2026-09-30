@@ -5,7 +5,8 @@ supplied by a plugin in their complete authorized plugin list. An active skill
 must explicitly request each launch and specify the exact configured subagent and
 its target-only prompt. The same invocation policy applies to Claude and Codex;
 each published guide and skill addresses only its own agent, with differences
-limited to a known agent-specific requirement.
+limited to an agent-specific requirement that retained native evidence or a
+decision records.
 
 ## Rationale
 
@@ -127,8 +128,8 @@ definitions a plugin ships and audits without adding behavior the skills lack.
   separate maintained schema or a compatibility layer ([audit])
 - ALWAYS: render the exact configured names for each agent from the owning
   distribution mappings and address that agent alone in its generated guide and
-  skills. Differences between the two agents' invocation guidance require a
-  known agent-specific reason ([audit])
+  skills. Differences between the two agents' invocation guidance require an
+  agent-specific reason that retained native evidence or a decision records ([audit])
 - ALWAYS: invocation guidance requires exactly one native launch call for a
   skill-requested invocation and analysis and reporting of a failed launch or
   unusable result without retry, another subagent, a model override, an alternative
@@ -152,5 +153,5 @@ definitions a plugin ships and audits without adding behavior the skills lack.
   Auditor judges the actual configuration and result, with no retry or
   substitution after a failed or unusable launch ([audit])
 - NEVER: substitute a model silently when the configured model is unavailable,
-  collapse standard and strong profiles, or interpret a request for a current
-  strong model as authority to replace the selected Sol profile with Astra ([audit])
+  collapse the Standard and Strong profiles into one configuration, or change a
+  profile's configured model without amending this decision ([audit])

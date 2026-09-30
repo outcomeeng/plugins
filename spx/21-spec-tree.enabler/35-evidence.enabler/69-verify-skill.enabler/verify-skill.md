@@ -11,8 +11,6 @@ CAN route every assertion to test, evaluate, probe, or audit before a specialist
 
 ## Assertions
 
-- ALWAYS: a load-gated command `/verify` runs executes in the foreground, and `/verify` reports its result only after every such command has exited ([audit])
-
 ### Scenarios
 
 - Given an assertion whose real subject produces deterministic behavior, structured producer output, a claim only an executed observation of the running node settles, or no deterministic verdict, when `/verify` classifies it, then the assertion routes respectively to `/test`, `/eval`, a probe protocol link, or an audit requirement ([eval](evals/routing/eval.toml))
@@ -30,3 +28,4 @@ CAN route every assertion to test, evaluate, probe, or audit before a specialist
 
 - ALWAYS: every workflow that delegates verification-type selection invokes `/verify` rather than a type-specific specialist ([audit])
 - NEVER: duplicate test assertion typing, language expression, eval producer specialization, or audit judgment inside `/verify` ([audit])
+- ALWAYS: a load-gated command `/verify` runs executes in the foreground, and `/verify` reports its result only after every such command has exited ([audit])

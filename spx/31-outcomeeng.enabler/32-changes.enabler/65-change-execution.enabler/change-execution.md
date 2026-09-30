@@ -13,6 +13,8 @@ The spec-tree plugin ships one subagent definition per skill an Executor session
 
 ## Assertions
 
+### Compliance
+
 - ALWAYS: `/execute-change` confirms that the winning Claim names its worktree root and loads the latest Handoff before it starts, and executes only an Executable lineage leaf with Refined predecessors and no unresolved blocker ([audit])
 - ALWAYS: for every round, `/execute-change` launches one subagent session of the definition that fronts the producing skill the Activity needs — `change-author` for `/author`, `change-verifier` for `/verify`, `change-tester` for `/test`, `change-implementer` for `/implement-change` — and launches each Fixer as a fresh session of the same definition, handed the earlier round's artifacts and verdicts ([audit])
 - ALWAYS: `/implement-change` finds the installed `architect-{lang}`, `code-{lang}` and `simplify-{lang}` skills and runs the target language's skills in its one session — `architect-{lang}` for a language decision, `code-{lang}` for implementation, then `simplify-{lang}` where the language ships one — and launches no subagent ([audit])
