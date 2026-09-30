@@ -35,6 +35,7 @@ from outcomeeng.validation.skill_frontmatter import (
     ARGUMENT_HINT_FIELD,
 )
 from outcomeeng.validation.skill_injection_safety import (
+    INJECTION_FENCE_TOKEN,
     INLINE_INJECTION_END,
     INLINE_INJECTION_START,
     inline_injection_commands,
@@ -327,6 +328,9 @@ def test_outputs_do_not_contain_execution_time_skill_content_injection() -> None
             if reads_sister_skill_content(command)
         ]
         assert not offending, (row.target, row.path, offending)
+        # The fenced form runs its whole block as a command at load time, so a
+        # built output carries no fence of that kind at all.
+        assert INJECTION_FENCE_TOKEN not in row.text, (row.target, row.path)
 
 
 def test_agent_capabilities_resolve_from_the_source_owned_registry() -> None:
