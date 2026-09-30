@@ -517,3 +517,18 @@ Claude Code state is every project- or local-scope install record on the machine
 This section is the interim consumer of the declaration; the `spx` verification scope projection supersedes it when that capability ships.
 
 <!-- /SPEC-TREE:shared generated-sources -->
+
+<!-- SPEC-TREE:shared formatter-pin -->
+
+## Formatter pin
+
+The repository requires one exact dprint version, pinned in three places: `FORMATTER_VERSION` in `outcomeeng/distribution/build.py`, and `DPRINT_VERSION` in `.github/workflows/check.yml` and `.github/workflows/refresh-instruction-blocks.yml`. CI installs the workflow pin, and the build refuses any other installed version, so a host dprint other than the pin fails the pre-commit build of every commit.
+
+When the host dprint updates:
+
+1. Move all three pins to the new version in one commit.
+2. Run `just build-skills` and `dprint check`, and include any `dist/` or formatting difference in that commit.
+3. Push the commit to origin's default branch.
+4. In every other checkout, pull and rebase onto it, and install the same dprint version before the next commit.
+
+<!-- /SPEC-TREE:shared formatter-pin -->
