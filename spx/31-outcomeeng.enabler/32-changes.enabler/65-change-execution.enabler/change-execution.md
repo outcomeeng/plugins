@@ -21,4 +21,5 @@ The spec-tree plugin ships one subagent definition per skill an Executor session
 - ALWAYS: `/execute-change` launches its Verifiers from the configured auditor and reviewer definitions, each named exactly and each with a target-only prompt ([audit])
 - NEVER: the Executor produces an artifact of a round; it sequences Activities, integrates the changeset through `/merge`, and closes the Change through `/close-change` or releases it with a Handoff through `/release-change` ([audit])
 - ALWAYS: `change-executor`, `change-author`, `change-verifier`, `change-tester` and `change-implementer` each front exactly one skill, hold no logic, and inherit the invoking session's execution policy ([audit])
+- ALWAYS: each of the five definitions, as the Claude Code build emits it, loads natively, starts as the child session of one launch by its exact name, and returns a result its fronted skill or its own workflow declares ([probe](probes/definition-invocation/probe.md))
 - ALWAYS: a load-gated command `/implement-change` runs executes in the foreground, and the skill reports its result only after every such command has exited ([audit])

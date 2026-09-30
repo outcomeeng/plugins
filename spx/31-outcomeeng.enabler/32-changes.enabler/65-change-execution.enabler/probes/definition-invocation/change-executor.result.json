@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "definition": "spec-tree:change-executor",
+  "subjectCommit": "7d065fc42398c5982359307dbe8c791e38ec6ff7",
+  "emittedDefinition": {
+    "path": "dist/claude/spec-tree/agents/change-executor.md",
+    "sha256": "a7c14a3615d36961730c50d97291cfb743057989f3fbc5db5f7544549cea5d38",
+    "frontMatter": [
+      "model: \"opus\"",
+      "effort: \"medium\"",
+      "name: change-executor",
+      "description: >-",
+      "  ALWAYS select at session start when an agent session executes one claimed Executable Change as its Executor through `/execute-change`.",
+      "skills:",
+      "  - spec-tree:execute-change"
+    ]
+  },
+  "parentSession": {
+    "sessionId": "f88cdfa8-fcdf-423c-86cf-ffbcb7d6cae8",
+    "model": "claude-opus-5-5",
+    "claudeCodeVersion": "2.1.285",
+    "plugins": [
+      {
+        "name": "spec-tree",
+        "path": "/Users/shz/Code/outcomeeng/plugins/worktrees/maintainer/dist/claude/spec-tree",
+        "version": "0.99.0"
+      }
+    ],
+    "definitionAvailable": true
+  },
+  "launch": {
+    "toolUseId": "toolu_01La5VHQdUDkyCbVZFk3eymG",
+    "tool": "Agent",
+    "input": {
+      "subagent_type": "spec-tree:change-executor",
+      "prompt": "not-a-target",
+      "description": "Launch change executor",
+      "run_in_background": false
+    }
+  },
+  "childStart": {
+    "parentToolUseId": "toolu_01La5VHQdUDkyCbVZFk3eymG",
+    "subagentType": "spec-tree:change-executor",
+    "taskMessage": "not-a-target",
+    "timestamp": "2026-09-30T11:51:04.734Z"
+  },
+  "childResult": {
+    "status": "completed",
+    "agentType": "spec-tree:change-executor",
+    "resolvedModel": "claude-opus-5-5",
+    "totalDurationMs": 5962,
+    "totalTokens": 18432,
+    "totalToolUseCount": 0,
+    "text": "**Result: `not-held`**\n\nExecution never started because there is no Change to resolve. Step 1 of `spec-tree:execute-change` needs an issue reference in the form `#N`, `owner/repo#N` or an issue URL, or a `<CLAIMED_CHANGE>` marker in the conversation. The target I was given is `not-a-target`, which fits none of those forms, and there is no `<CLAIMED_CHANGE>` marker in the conversation.\n\n- **Missing reference:** an issue reference for the claimed Executable Change.\n- **Change URL:** none, because no Change was resolved.\n- **Final head SHA:** none, because no worktree or branch was touched.\n- **Rounds:** none were launched, so there are no definitions, targets or verdict run tokens.\n- **Merge commit:** none.\n- **Handoff comment URL:** none. Nothing was claimed, so nothing was released.\n\nNothing was written to the Change store, the repository or the filesystem."
+  },
+  "parentResult": {
+    "subtype": "success",
+    "isError": false,
+    "numTurns": 2
+  }
+}
