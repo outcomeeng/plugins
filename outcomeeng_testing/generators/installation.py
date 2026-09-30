@@ -36,9 +36,6 @@ from outcomeeng.distribution.installation import (
     InstallationMode,
     Operation,
     SPEC_TREE_PLUGIN,
-    GIT_HOST_PREFIX,
-    GIT_SCHEME_SEPARATOR,
-    GIT_URL_SCHEMES,
     SourceAction,
     marketplace_plugin_identifier,
 )
@@ -776,18 +773,26 @@ def generated_boolean_states[State](state: type[State]) -> tuple[State, ...]:
     )
 
 
-def generated_git_source_urls(marketplace: str) -> tuple[str, ...]:
-    """One marketplace source URL for every git form the source grammar names.
+# The network URL forms git-clone(1) documents under GIT URLS — the ssh, git,
+# http and https schemes, leaving out the ftp forms it marks deprecated — and
+# the scp-like form as git hosting services spell it with the `git@` user.
+_GIT_URL_FORMS = (
+    "ssh://git.example/{path}",
+    "git://git.example/{path}",
+    "http://git.example/{path}",
+    "https://git.example/{path}",
+    "git@git.example:{path}",
+)
 
-    Each URL scheme the grammar recognises, and the `git@` host form, reaches
-    the same repository, so the forms differ only in how they spell a git
-    source.
+
+def generated_git_source_urls(marketplace: str) -> tuple[str, ...]:
+    """One marketplace source URL for every git URL form git documents.
+
+    The forms come from git's own URL syntax rather than from the classifier
+    under test, and none carries a `.git` suffix, so each form reaches the git
+    source type through its scheme or host alone.
     """
-    path = f"git.example/{marketplace}"
-    return (
-        *(f"{scheme}{GIT_SCHEME_SEPARATOR}{path}" for scheme in GIT_URL_SCHEMES),
-        f"{GIT_HOST_PREFIX}{path.replace('/', ':', 1)}",
-    )
+    return tuple(form.format(path=marketplace) for form in _GIT_URL_FORMS)
 
 
 # Transcribed verbatim from the stderr of Claude Code 2.1.285 running
