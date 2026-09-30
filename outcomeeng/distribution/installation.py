@@ -146,6 +146,9 @@ CODEX_PLUGIN_ID_FIELD = "pluginId"
 CODEX_PLUGIN_ENABLED_FIELD = "enabled"
 CODEX_PLUGIN_MARKETPLACE_FIELD = "marketplaceName"
 SPEC_TREE_PLUGIN = "spec-tree"
+STDERR_WARNING_PREFIX = "warning: "
+"""The prefix every warning line the run prints to stderr carries."""
+
 FIRST_INSTALL_WARNING = (
     "No {marketplace} plugins are installed for {agent}; installing only "
     "{plugin}. You probably want to install more plugins."
@@ -2800,7 +2803,7 @@ def main(
         print(json.dumps({"error": str(error)}, sort_keys=True), file=sys.stderr)
         return 1
     for warning in (*report.plan.warnings, *report.rewrite_warnings):
-        print(f"warning: {warning.message}", file=sys.stderr)
+        print(f"{STDERR_WARNING_PREFIX}{warning.message}", file=sys.stderr)
     off_target = report.record_drift.off_target if report.record_drift else ()
     if arguments.json_output:
         print(json.dumps(report_document(report), sort_keys=True))
@@ -3743,6 +3746,7 @@ def _version_after(
 
 
 __all__ = [
+    "STDERR_WARNING_PREFIX",
     "AGENT_ADAPTERS",
     "CATALOG_MARKETPLACE_NAME_FIELD",
     "CATALOG_PLUGIN_SOURCE_FIELD",
