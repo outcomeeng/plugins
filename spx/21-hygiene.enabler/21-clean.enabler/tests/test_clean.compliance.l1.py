@@ -152,7 +152,12 @@ def test_git_dry_run_passes_a_file_at_a_holder_position_whole(
 
     removals = observe_dry_run_removals(repo=repo, argv=argv)
 
-    assert removals == {IGNORED_CACHE_DIR, *repo.pattern_named_entries}
+    assert repo.files_at_holder_positions
+    assert removals == {
+        IGNORED_CACHE_DIR,
+        *repo.pattern_named_entries,
+        *repo.files_at_holder_positions,
+    }
 
 
 def test_outside_repo_active_environment_does_not_remove_pathspecs(

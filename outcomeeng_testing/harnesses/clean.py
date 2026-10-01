@@ -94,6 +94,7 @@ class CleanRepo:
     session_store: Path
     caches_beside_local_work: frozenset[str] = frozenset()
     pattern_named_entries: frozenset[str] = frozenset()
+    files_at_holder_positions: frozenset[str] = frozenset()
 
 
 def create_clean_repo(
@@ -122,7 +123,8 @@ def create_clean_repo(
     matching that path, reported by `pattern_named_entries`.
 
     `local_work_holders_as_files` instead makes the first entry of each nested
-    local-work path a plain file, so that path and its neighbours do not exist.
+    local-work path an ignored plain file, reported by `files_at_holder_positions`,
+    so that path and its neighbours do not exist.
     """
     repo_root = tmp_path / "repo"
     ignored_cache = repo_root / IGNORED_CACHE_DIR
@@ -139,11 +141,15 @@ def create_clean_repo(
     ]
     caches_beside_local_work: set[str] = set()
     pattern_named_entries: set[str] = set()
+    files_at_holder_positions: set[str] = set()
     if include_local_work:
         for local_path in LOCAL_WORK_PATHS:
             holder = Path(local_path).parent
             if holder.parts and local_work_holders_as_files:
-                (repo_root / holder.parts[0]).write_text(local_path, encoding="utf-8")
+                holder_file = holder.parts[0]
+                (repo_root / holder_file).write_text(local_path, encoding="utf-8")
+                ignore_lines.append(f"/{holder_file}")
+                files_at_holder_positions.add(holder_file)
                 continue
             local_dir = repo_root / local_path
             local_dir.mkdir(parents=True)
@@ -177,6 +183,7 @@ def create_clean_repo(
         session_store=session_store,
         caches_beside_local_work=frozenset(caches_beside_local_work),
         pattern_named_entries=frozenset(pattern_named_entries),
+        files_at_holder_positions=frozenset(files_at_holder_positions),
     )
 
 
