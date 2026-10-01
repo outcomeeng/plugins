@@ -1,15 +1,17 @@
 # Selected Gate
 
-PROVIDES changed-path selection for the local `check` wrapper
-SO THAT coding agents and contributor workstations
-CAN run the deterministic gate steps that prove the current slice without spending local time on unrelated full-gate work
+PROVIDES changed-path selection of deterministic gate steps for the local `check` wrapper, and of the real-agent Codex tests for local, explicit full, and CI verification
+SO THAT coding agents, contributor workstations, and CI
+CAN run the deterministic gate steps that prove the current slice without spending local time on unrelated full-gate work, and run the real-agent Codex tests on every changeset that can alter what they observe
 
 ## Assertions
+
+- Direct test execution that names a real-agent Codex test runs that test, whatever the changeset changes; agent-definition selection governs only the selected and full gate wrappers
 
 ### Mappings
 
 - Changed repository paths map to a deterministic ordered subset of source-owned validation steps, with each selected step carrying a human-readable reason for inclusion ([test](tests/test_selected_gate.mapping.l1.py))
-- Changed Python test assertion files map to a pytest step targeted at those files, while the full-gate wrapper preserves the complete validation-plus-test recipe set for CI and explicit full-gate runs ([test](tests/test_selected_gate.mapping.l1.py))
+- Changed Python test assertion files map to a pytest step targeted at those files, while the full-gate wrapper preserves the complete validation-plus-test recipe set for CI and explicit full-gate runs, running the real-agent Codex tests within it only for a changeset that changes agent definitions ([test](tests/test_selected_gate.mapping.l1.py))
 - Changed paths under the test-infrastructure package map by the reach the static import index reports, per `spx/15-validation.enabler/65-gate.enabler/21-selected-gate.enabler/21-test-infrastructure-reach.adr.md`: a module reached by executed tests under exactly one node selects a pytest step targeted at exactly those tests; a module reached by tests under more than one node or by `conftest.py`, and any non-Python artifact, selects the full surface; a module no test reaches selects no test step ([test](tests/test_selected_gate.mapping.l1.py))
 - A changed path under `spx/` maps to the evidence-link integrity step alongside the markdown lane, and a changed path outside `spx/` does not select it — a spec edit that leaves a `[test]` or `[eval]` link dangling fails the selected gate ([test](tests/test_selected_gate.mapping.l1.py))
 - Every import statement form an executed test or test-infrastructure module can carry — `import a.b`, `from a.b import c` naming a submodule, `from a.b import c` naming an attribute, `from . import c`, and `from .c import d` — maps to the test-infrastructure module names the static import index records for it: the imported module and every package on its dotted path, plus the submodule when the imported name resolves to one ([test](tests/test_infrastructure_index.mapping.l1.py))
@@ -25,9 +27,9 @@ CAN run the deterministic gate steps that prove the current slice without spendi
 
 ### Compliance
 
-- ALWAYS: local selection includes live discovery for installation, subagent-definition generation and placement, discovery, and their governing contracts and verification infrastructure; explicit full verification and CI include it, as governed by `spx/15-validation.enabler/65-gate.enabler/21-selected-gate.enabler/15-live-discovery.pdr.md`. ([test](tests/test_selected_gate.compliance.l1.py))
-- NEVER: an unrelated local change acquires a live-discovery requirement through automatic full-suite escalation; the complete selected deterministic scope remains intact. ([test](tests/test_selected_gate.compliance.l1.py))
-- ALWAYS: the plan explains live-discovery inclusion or exclusion before execution, independently of credential availability. ([test](tests/test_selected_gate.compliance.l1.py))
+- ALWAYS: local changed-path selection, explicit full verification, and CI full verification select the real-agent Codex tests — the fresh-session subagent discovery test and the real-agent bootstrap test — when the changeset changes an agent definition: an authored agent source under `src/plugins/*/agents/`, a generated rendering of one under `dist/`, or the code that converts, emits, or places agent definitions, namely the agent conversion and emission code under `outcomeeng/distribution/` and the shipped placement scripts, as governed by `spx/15-validation.enabler/65-gate.enabler/21-selected-gate.enabler/15-live-discovery.pdr.md` ([test](tests/test_selected_gate.compliance.l1.py))
+- NEVER: a changeset that changes no agent definition selects a real-agent Codex test in local changed-path, explicit full, or CI verification — including when its selected deterministic scope widens automatically to the full deterministic suite — and excluding those tests removes no other step or test from that scope ([test](tests/test_selected_gate.compliance.l1.py))
+- ALWAYS: the plan displays the reason for including or excluding the real-agent Codex tests before running selected steps, independently of credential availability ([test](tests/test_selected_gate.compliance.l1.py))
 - ALWAYS: the selected gate prints the selected steps and reasons before running them through the existing signal-safe recipe orchestrator, preserving bounded output and structured summaries ([test](tests/test_selected_gate.compliance.l1.py))
 - ALWAYS: when the canonical changeset-scope helper cannot resolve the remote default branch, the selected gate returns its structured git-discovery failure instead of propagating the helper exception ([test](tests/test_selected_gate.compliance.l1.py))
 - NEVER: building the static import index imports, executes, or reloads a test-infrastructure or test module — a module whose import has an observable side effect leaves no trace after the index is built ([test](tests/test_infrastructure_index.compliance.l1.py))
