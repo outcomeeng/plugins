@@ -1,11 +1,11 @@
-"""Level-1 compliance evidence for `spx/21-hygiene.enabler/21-clean.enabler/`.
+"""Level-1 compliance evidence for workspace cleanup.
 
-Covers the compliance assertions in `clean.md`:
-- ALWAYS: invoke `git clean -fdX` as the base command.
-- ALWAYS: separate `git clean -fdX` from generated pathspecs with `--`.
-- NEVER: include the active in-repository Python environment in the generated
-  pathspecs.
-- NEVER: fall back to bare `git clean -fdX` when no cleanup candidates exist.
+Covers the compliance assertions in `clean.md` whose verdict a command can
+produce: the argv the builder composes, the paths it omits, the empty argv
+it returns when nothing is left to clean, and a real Git dry run that lists
+no declared local-work path, even when a holder position is a file. The declared base command, protected set, and
+local-work paths are values the module complies with rather than behavior,
+so their evidence is audit and no case here pins them.
 """
 
 from __future__ import annotations
@@ -16,34 +16,33 @@ from outcomeeng.hygiene.clean import (
     CLEAN_BASE_ARGV,
     GIT_IGNORE_FILE,
     GIT_METADATA_DIR,
-    PATHSPEC_SEPARATOR,
+    SPX_STORE_DIR,
     build_clean_argv,
+    build_clean_pathspecs,
 )
 from outcomeeng_testing.harnesses.clean import (
+    GIT_END_OF_OPTIONS,
+    EnvironmentPlacement,
     IGNORED_CACHE_DIR,
     IGNORED_PYTHON_ENV_DIR,
     create_clean_repo,
+    observe_dry_run_removals,
 )
-
-
-def test_argv_is_force_directories_gitignored_only() -> None:
-    assert CLEAN_BASE_ARGV == ("git", "clean", "-fdX")
 
 
 def test_pathspec_separator_is_present_before_generated_pathspecs(
     tmp_path: Path,
 ) -> None:
-    repo_root = tmp_path / "repo"
-    active_python_prefix = repo_root / IGNORED_PYTHON_ENV_DIR
-    active_python_prefix.mkdir(parents=True)
-    (repo_root / IGNORED_CACHE_DIR).mkdir()
+    repo = create_clean_repo(tmp_path)
 
     argv = build_clean_argv(
-        repo_root=repo_root,
-        active_python_prefix=active_python_prefix,
+        repo_root=repo.root,
+        active_python_prefix=repo.active_python_prefix,
     )
 
-    assert argv[:4] == (*CLEAN_BASE_ARGV, PATHSPEC_SEPARATOR)
+    base_length = len(CLEAN_BASE_ARGV)
+    assert argv[:base_length] == CLEAN_BASE_ARGV
+    assert argv[base_length] == GIT_END_OF_OPTIONS
 
 
 def test_no_cleanup_candidates_return_empty_argv(
@@ -62,14 +61,11 @@ def test_no_cleanup_candidates_return_empty_argv(
 def test_inside_repo_active_environment_is_omitted_from_pathspecs(
     tmp_path: Path,
 ) -> None:
-    repo_root = tmp_path / "repo"
-    active_python_prefix = repo_root / IGNORED_PYTHON_ENV_DIR
-    active_python_prefix.mkdir(parents=True)
-    (repo_root / IGNORED_CACHE_DIR).mkdir()
+    repo = create_clean_repo(tmp_path)
 
     argv = build_clean_argv(
-        repo_root=repo_root,
-        active_python_prefix=active_python_prefix,
+        repo_root=repo.root,
+        active_python_prefix=repo.active_python_prefix,
     )
 
     assert IGNORED_CACHE_DIR in argv
@@ -78,22 +74,26 @@ def test_inside_repo_active_environment_is_omitted_from_pathspecs(
     assert GIT_IGNORE_FILE not in argv
 
 
+def test_session_store_is_omitted_while_cache_remains(tmp_path: Path) -> None:
+    repo = create_clean_repo(tmp_path)
+
+    pathspecs = build_clean_pathspecs(
+        repo_root=repo.root,
+        active_python_prefix=repo.active_python_prefix,
+    )
+
+    assert SPX_STORE_DIR not in pathspecs
+    assert IGNORED_CACHE_DIR in pathspecs
+
+
 def test_inside_repo_symlinked_active_environment_is_omitted_from_pathspecs(
     tmp_path: Path,
 ) -> None:
-    repo_root = tmp_path / "repo"
-    external_python_prefix = tmp_path / "external-venv"
-    repo_root.mkdir()
-    external_python_prefix.mkdir()
-    (repo_root / IGNORED_CACHE_DIR).mkdir()
-    (repo_root / IGNORED_PYTHON_ENV_DIR).symlink_to(
-        external_python_prefix,
-        target_is_directory=True,
-    )
+    repo = create_clean_repo(tmp_path, environment=EnvironmentPlacement.SYMLINKED)
 
     argv = build_clean_argv(
-        repo_root=repo_root,
-        active_python_prefix=repo_root / IGNORED_PYTHON_ENV_DIR,
+        repo_root=repo.root,
+        active_python_prefix=repo.active_python_prefix,
     )
 
     assert IGNORED_CACHE_DIR in argv
@@ -103,37 +103,71 @@ def test_inside_repo_symlinked_active_environment_is_omitted_from_pathspecs(
 def test_inside_repo_symlink_target_active_environment_is_omitted_from_pathspecs(
     tmp_path: Path,
 ) -> None:
-    repo_root = tmp_path / "repo"
-    external_python_prefix = tmp_path / "external-venv"
-    repo_root.mkdir()
-    external_python_prefix.mkdir()
-    (repo_root / IGNORED_CACHE_DIR).mkdir()
-    (repo_root / IGNORED_PYTHON_ENV_DIR).symlink_to(
-        external_python_prefix,
-        target_is_directory=True,
+    repo = create_clean_repo(
+        tmp_path,
+        environment=EnvironmentPlacement.SYMLINK_TARGET,
     )
 
     argv = build_clean_argv(
-        repo_root=repo_root,
-        active_python_prefix=external_python_prefix,
+        repo_root=repo.root,
+        active_python_prefix=repo.active_python_prefix,
     )
 
     assert IGNORED_CACHE_DIR in argv
     assert IGNORED_PYTHON_ENV_DIR not in argv
 
 
+def test_git_dry_run_lists_no_local_work_path(tmp_path: Path) -> None:
+    repo = create_clean_repo(tmp_path, include_local_work=True)
+
+    argv = build_clean_argv(
+        repo_root=repo.root,
+        active_python_prefix=repo.active_python_prefix,
+    )
+
+    removals = observe_dry_run_removals(repo=repo, argv=argv)
+
+    assert repo.caches_beside_local_work
+    assert repo.pattern_named_entries
+    assert removals == {
+        IGNORED_CACHE_DIR,
+        *repo.caches_beside_local_work,
+        *repo.pattern_named_entries,
+    }
+
+
+def test_git_dry_run_passes_a_file_at_a_holder_position_whole(
+    tmp_path: Path,
+) -> None:
+    repo = create_clean_repo(
+        tmp_path,
+        include_local_work=True,
+        local_work_holders_as_files=True,
+    )
+
+    argv = build_clean_argv(
+        repo_root=repo.root,
+        active_python_prefix=repo.active_python_prefix,
+    )
+
+    removals = observe_dry_run_removals(repo=repo, argv=argv)
+
+    assert repo.files_at_holder_positions
+    assert removals == {
+        IGNORED_CACHE_DIR,
+        *repo.pattern_named_entries,
+        *repo.files_at_holder_positions,
+    }
+
+
 def test_outside_repo_active_environment_does_not_remove_pathspecs(
     tmp_path: Path,
 ) -> None:
-    repo_root = tmp_path / "repo"
-    active_python_prefix = tmp_path / "outside-venv"
-    repo_root.mkdir()
-    active_python_prefix.mkdir()
-    (repo_root / IGNORED_CACHE_DIR).mkdir()
+    repo = create_clean_repo(tmp_path, environment=EnvironmentPlacement.OUTSIDE)
 
     argv = build_clean_argv(
-        repo_root=repo_root,
-        active_python_prefix=active_python_prefix,
+        repo_root=repo.root,
+        active_python_prefix=repo.active_python_prefix,
     )
 
     assert IGNORED_CACHE_DIR in argv

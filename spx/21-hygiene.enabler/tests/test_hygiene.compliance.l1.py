@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import os
 from hypothesis import given
 
-from outcomeeng.hygiene.clean import SUCCESS_EXIT_CODE, clean
+from outcomeeng.hygiene.clean import clean
 from outcomeeng.hygiene.xml_spacing import fix_file
 from outcomeeng_testing.generators.hygiene import (
     CleanWorkspaceCase,
@@ -29,12 +30,12 @@ def test_clean_removes_only_ignored_paths(case: CleanWorkspaceCase) -> None:
         untracked_before = workspace.untracked_bytes()
 
         exit_code = clean(
-            runner=SubprocessRunner(workspace.root),
+            runner=SubprocessRunner(),
             repo_root=workspace.root,
             active_python_prefix=workspace.active_python_prefix,
         )
 
-        assert exit_code == SUCCESS_EXIT_CODE
+        assert exit_code == os.EX_OK
         assert workspace.tracked_bytes() == tracked_before
         assert workspace.untracked_bytes() == untracked_before
         assert all(not path.exists() for path in workspace.ignored_paths)

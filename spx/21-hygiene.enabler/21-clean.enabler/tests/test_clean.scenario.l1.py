@@ -1,72 +1,79 @@
-"""Level-1 scenario evidence for `spx/21-hygiene.enabler/21-clean.enabler/`.
+"""Level-1 scenario evidence for workspace cleanup.
 
-Covers the scenario assertions in `clean.md`: the recorded argv omits an
-active in-repository Python environment from generated pathspecs, Git dry-run
-output preserves that environment while listing another ignored cache, and
-the runner's exit code is propagated to the caller.
+Covers the scenario assertions in `clean.md`: run from a directory nested in
+a repository holding the running interpreter's environment, with neither the
+root nor the environment handed to it, `clean` records an argv that omits
+that environment and runs in the repository root it found, a Git dry run
+over the generated pathspecs would remove the
+other ignored cache and nothing else, the runner's exit code is propagated to
+the caller, and a repository whose every top-level path is protected invokes
+no runner. Root resolution from a directory with no repository metadata up to
+the search ceiling returns that directory, and a ceiling below a repository
+stops the search before it.
 """
 
 from __future__ import annotations
 
-import subprocess
+import os
 from pathlib import Path
 
 from outcomeeng.hygiene.clean import (
     CLEAN_BASE_ARGV,
-    PATHSPEC_SEPARATOR,
-    SUCCESS_EXIT_CODE,
     build_clean_argv,
     clean,
+    find_repository_root,
 )
 from outcomeeng_testing.harnesses.clean import (
+    GIT_END_OF_OPTIONS,
     IGNORED_CACHE_DIR,
     IGNORED_PYTHON_ENV_DIR,
+    EnvironmentPlacement,
     RecordingRunner,
     create_clean_repo,
+    create_directory_without_repository,
+    observe_dry_run_removals,
+    working_directory_below_root,
 )
 
 
 def test_clean_omits_active_environment_from_pathspecs(tmp_path: Path) -> None:
-    repo = create_clean_repo(tmp_path)
+    repo = create_clean_repo(
+        tmp_path,
+        environment=EnvironmentPlacement.RUNNING_INTERPRETER,
+    )
     runner = RecordingRunner()
 
-    exit_code = clean(
-        runner=runner,
-        repo_root=repo.root,
-        active_python_prefix=repo.active_python_prefix,
-    )
+    with working_directory_below_root(repo):
+        exit_code = clean(runner=runner)
 
-    assert exit_code == 0
+    assert exit_code == os.EX_OK
     assert len(runner.calls) == 1
-    assert runner.calls[0][:4] == (*CLEAN_BASE_ARGV, PATHSPEC_SEPARATOR)
-    assert IGNORED_CACHE_DIR in runner.calls[0]
-    assert IGNORED_PYTHON_ENV_DIR not in runner.calls[0]
+    assert runner.calls[0].cwd == repo.root
+    base_length = len(CLEAN_BASE_ARGV)
+    assert runner.calls[0].argv[:base_length] == CLEAN_BASE_ARGV
+    assert runner.calls[0].argv[base_length] == GIT_END_OF_OPTIONS
+    assert IGNORED_CACHE_DIR in runner.calls[0].argv
+    assert IGNORED_PYTHON_ENV_DIR not in runner.calls[0].argv
 
 
-def test_git_dry_run_preserves_active_environment(tmp_path: Path) -> None:
+def test_git_dry_run_preserves_session_store_and_active_environment(
+    tmp_path: Path,
+) -> None:
     repo = create_clean_repo(tmp_path)
 
     argv = build_clean_argv(
         repo_root=repo.root,
         active_python_prefix=repo.active_python_prefix,
     )
-    dry_run_argv = ("git", "clean", "-ndX", *argv[len(CLEAN_BASE_ARGV) :])
 
-    result = subprocess.run(
-        dry_run_argv,
-        cwd=repo.root,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
+    removals = observe_dry_run_removals(repo=repo, argv=argv)
 
-    assert f"Would remove {IGNORED_CACHE_DIR}/" in result.stdout
-    assert f"Would remove {IGNORED_PYTHON_ENV_DIR}/" not in result.stdout
+    assert removals == {IGNORED_CACHE_DIR}
 
 
 def test_clean_propagates_runner_exit_code(tmp_path: Path) -> None:
     repo = create_clean_repo(tmp_path)
-    runner = RecordingRunner(exit_code=3)
+    runner = RecordingRunner.failing()
 
     exit_code = clean(
         runner=runner,
@@ -74,7 +81,8 @@ def test_clean_propagates_runner_exit_code(tmp_path: Path) -> None:
         active_python_prefix=repo.active_python_prefix,
     )
 
-    assert exit_code == 3
+    assert exit_code != os.EX_OK
+    assert exit_code == runner.exit_code
 
 
 def test_clean_noops_when_every_top_level_path_is_protected(tmp_path: Path) -> None:
@@ -87,5 +95,24 @@ def test_clean_noops_when_every_top_level_path_is_protected(tmp_path: Path) -> N
         active_python_prefix=repo.active_python_prefix,
     )
 
-    assert exit_code == SUCCESS_EXIT_CODE
+    assert exit_code == os.EX_OK
     assert runner.calls == []
+
+
+def test_root_resolution_falls_back_to_start_without_metadata(
+    tmp_path: Path,
+) -> None:
+    start = create_directory_without_repository(tmp_path)
+
+    root = find_repository_root(start, ceiling=tmp_path)
+
+    assert root == start
+
+
+def test_root_resolution_stops_at_the_search_ceiling(tmp_path: Path) -> None:
+    repo = create_clean_repo(tmp_path)
+    ceiling = repo.ignored_cache
+
+    root = find_repository_root(ceiling, ceiling=ceiling)
+
+    assert root == ceiling

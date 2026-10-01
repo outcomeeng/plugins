@@ -81,3 +81,43 @@ passing test-evidence audit of this node.
 **Evidence**: `spec-tree:test-evidence-auditor` verdict `REJECTED` on head
 `a65659114b99767b90b4d920550fff5dc0824794` during Change #76; the one finding that changeset caused (`f-018`, a
 restated spec literal in the `require_skill` test) was fixed in the changeset.
+
+## Seven further evidence defects beside the boolean-harness seam
+
+Later test-evidence audits of this node found seven defects the entry above does not name. Each sits in evidence that the seam rewrite also touches:
+
+- `test_per_plugin_template_renders_once_into_every_plugin` checks only the projected emission paths and never renders a template body, so the slug-substitution half of the template assertion can break while the test passes.
+- `test_per_plugin_template_body_names_no_single_plugin` applies a test-owned pattern to authored template prose. No build behavior enforces the rule, so the test checks authored content, not the build.
+- `test_neutral_guidance_oracle_rejects_runtime_specific_wording` and `test_require_skill_locality_oracle_rejects_inlined_content` exercise harness-owned verdict helpers against harness-built strings rather than the build's `require_skill` expansion.
+- The harness hand-writes the directive name `include` and the variable name `target`. `BUILD_TARGET_VARIABLE` exists in `outcomeeng/distribution/contracts.py`; `parse_directives` in `outcomeeng/distribution/build.py` exports no directive-name contract, so the source must expose one first.
+- `test_module_is_implemented` asserts the `IMPLEMENTED` flag, which no mutation of the governed behavior can falsify.
+- `_nested_require_expands` computes the expected nested `require_skill` body with `expand_require_skill`, the same function `render_text` calls to produce the output, so a mutation of `expand_require_skill` changes the expectation and the output together and the test passes.
+- `test_property_failures_report_seed_and_replay_path` in `test_parse_directives.property.l1.py` asserts a verdict from `property_failure_notes_include_seed_and_replay`, which checks the property harness's own failure notes against an always-failing callback. It exercises test infrastructure, backs no assertion of this node, and sits in a file typed as property evidence for the parser.
+
+**Resolution shape**: carry these into the seam rewrite. Render a template body per plugin and compare each plugin's substitution; decide whether the no-single-plugin rule is enforced by the build or re-routed to `[audit]`; drive the two oracle tests through `expand_require_skill`; state the nested `require_skill` expectation from the guidance template and the skill reference rather than from `expand_require_skill`; export a directive-name contract and import it with `BUILD_TARGET_VARIABLE`; delete the implementation-flag tests; move the failure-notes evidence to the node that owns the property harness.
+
+**Why separate**: every item edits a test file or harness function the seam rewrite also rewrites, and Change #85 owns that rewrite.
+
+**Evidence**: `spec-tree:test-evidence-auditor` verdict `REJECTED` on head `2d144f83ba964be666ca403c6adeef32be04107e`, findings `f-021`, `f-022`, `f-024`, `f-028`, and `f-029`, on head `a2953a83012096ec30d9d99663a342c69024b029`, finding `f-025`, and on head `8d36af1a747353ae9c717236e1005cc63068e6bb`, finding `f-005`. Each verdict's other findings repeat the classes the entries above record. `spec-tree:implementation-auditor` run `2026-09-30_14-24-07-109-aa8eb9a74672` raised the seam, the delimiter self-comparison, and the conforming-only scan as debt on the same head.
+
+## The authored-source predicate admits stray workspace artifacts
+
+`_is_authored_source_file` in `outcomeeng/distribution/build.py` rejects a file only for an ignored directory name or an ignored file suffix, so a stray workspace artifact with neither — a macOS metadata file, a Spotlight index marker — counts as authored source. Two consequences follow. A skill directory a rebase leaves holding only such a file fails validation for a missing manifest, which is the situation the absence rule removes for cache-only directories. The same file is also projected as a copy emission into both generated trees, where the source-to-output parity step then reports it.
+
+The root harness guides name that artifact class together with the Python cache in one cleanup rule, so the build-side declaration is narrower than the class the guides describe.
+
+**Resolution shape**: give the predicate a third input beside its ignored directory names and file suffixes — a set of ignored file names — and restate the absence assertion in terms of the whole class. No file of the class exists under `src/` today, so the generated trees do not change when it lands.
+
+**Why separate**: Change #119's Frame settles the absence rule on the predicate the emission walk already applies, keyed on the declared ignored directory names and file suffixes. Adding a class of ignored artifact widens that predicate beyond the attested Frame, so it is a Change of its own rather than work for the changeset that surfaced it.
+
+**Evidence**: `spec-tree:changes-reviewer` run `2026-09-21_16-03-29-169-c48d77290660`, debt finding on `source-and-templating.md`, raised against head `39f60328b985a254743073f95c6d134cc56e0adc`.
+
+## The custom-delimiter assertion's evidence compares the source to itself
+
+`source-and-templating.md` declares the Jinja2 environment's custom delimiters as literals and links `tests/test_source_and_templating.compliance.l1.py` for them. The linked evidence compares the environment's configured delimiters against the same constants `outcomeeng/distribution/build.py` declares, so mutating those constants leaves the test passing. A value the spec tree declares and a source complies with is audit evidence, because every oracle for that agreement is a second declaration.
+
+**Resolution shape**: split the declared delimiter literals onto an `[audit]` assertion and leave the behavior the delimiters govern — a body carrying standard Jinja syntax passing through unchanged, a custom block rendering per target — on its test links. The clean node's spec carries the same split as its worked example.
+
+**Why separate**: the repair deletes `jinja_environment_uses_custom_delimiters`, one of the boolean-returning harness predicates the entry "Linked tests delegate their predicates to boolean-returning harnesses" records, whose settlement condition assigns this node's evidence-seam rewrite to Change #85. Removing that predicate ahead of the rewrite splits one seam repair across two changesets.
+
+**Evidence**: found by the same-class scan over both governed nodes' specs during Change #119 round 3, prompted by the implementation audit's blocking finding on the clean node's parallel assertion in run `2026-09-21_16-03-52-930-bb909cac6a0a`.

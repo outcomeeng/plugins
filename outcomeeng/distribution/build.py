@@ -1662,7 +1662,14 @@ def template_source_files(src_root: Path) -> tuple[Path, ...]:
     templates_root = src_root / TEMPLATES_DIR_NAME
     if not templates_root.is_dir():
         return ()
-    return tuple(sorted(path for path in templates_root.rglob("*") if path.is_file()))
+    return tuple(
+        sorted(
+            path
+            for path in templates_root.rglob("*")
+            if path.is_file()
+            and _is_authored_source_file(path.relative_to(templates_root))
+        )
+    )
 
 
 def template_relative_path(source_file: Path, *, src_root: Path, plugin: str) -> Path:
@@ -2002,6 +2009,8 @@ def _validate_templates(src_root: Path) -> None:
         for template_root in sorted(
             path for path in templates_root.iterdir() if path.is_dir()
         ):
+            if not _holds_authored_source(template_root, templates_root):
+                continue
             if not (template_root / SKILL_FILENAME).is_file():
                 raise SourceFormatError(
                     f"template directory missing {SKILL_FILENAME}: "
@@ -2020,11 +2029,27 @@ def _validate_plugin_tree(plugin_root: Path, src_root: Path) -> None:
         for skill_root in sorted(
             path for path in skills_root.iterdir() if path.is_dir()
         ):
+            if not _holds_authored_source(skill_root, plugin_root.parent):
+                continue
             if not (skill_root / SKILL_FILENAME).is_file():
                 raise SourceFormatError(
                     f"skill directory missing {SKILL_FILENAME}: "
                     f"{skill_root.relative_to(src_root)}"
                 )
+
+
+def _holds_authored_source(directory: Path, walk_root: Path) -> bool:
+    """Whether any file under ``directory`` survives the emission walk's filter.
+
+    A directory a rebase leaves holding only ignored caches, or nothing at all,
+    is absent rather than a directory missing its manifest. ``walk_root`` is the
+    root the filter's relative paths are taken against.
+    """
+    return any(
+        _is_authored_source_file(path.relative_to(walk_root))
+        for path in directory.rglob("*")
+        if path.is_file()
+    )
 
 
 if __name__ == "__main__":
