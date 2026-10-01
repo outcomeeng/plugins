@@ -7,7 +7,9 @@ that environment and runs in the repository root it found, a Git dry run
 over the generated pathspecs would remove the
 other ignored cache and nothing else, the runner's exit code is propagated to
 the caller, and a repository whose every top-level path is protected invokes
-no runner.
+no runner. Root resolution from a directory with no repository metadata up to
+the search ceiling returns that directory, and a ceiling below a repository
+stops the search before it.
 """
 
 from __future__ import annotations
@@ -19,6 +21,7 @@ from outcomeeng.hygiene.clean import (
     CLEAN_BASE_ARGV,
     build_clean_argv,
     clean,
+    find_repository_root,
 )
 from outcomeeng_testing.harnesses.clean import (
     GIT_END_OF_OPTIONS,
@@ -27,6 +30,7 @@ from outcomeeng_testing.harnesses.clean import (
     EnvironmentPlacement,
     RecordingRunner,
     create_clean_repo,
+    create_directory_without_repository,
     observe_dry_run_removals,
     working_directory_below_root,
 )
@@ -93,3 +97,22 @@ def test_clean_noops_when_every_top_level_path_is_protected(tmp_path: Path) -> N
 
     assert exit_code == os.EX_OK
     assert runner.calls == []
+
+
+def test_root_resolution_falls_back_to_start_without_metadata(
+    tmp_path: Path,
+) -> None:
+    start = create_directory_without_repository(tmp_path)
+
+    root = find_repository_root(start, ceiling=tmp_path)
+
+    assert root == start
+
+
+def test_root_resolution_stops_at_the_search_ceiling(tmp_path: Path) -> None:
+    repo = create_clean_repo(tmp_path)
+    ceiling = repo.ignored_cache
+
+    root = find_repository_root(ceiling, ceiling=ceiling)
+
+    assert root == ceiling

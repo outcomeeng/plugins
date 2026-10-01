@@ -37,6 +37,7 @@ GIT_DRY_RUN_OPTION = "--dry-run"
 GIT_END_OF_OPTIONS = "--"
 REMOVAL_LINE_PREFIX = "Would remove "
 NESTED_WORKING_DIR = "nested"
+WORKSPACE_DIR = "workspace"
 LOCAL_WORK_FILE = "kept"
 GIT_PATTERN_WILDCARD = "*"
 GITIGNORE_ESCAPE = "\\"
@@ -100,6 +101,7 @@ def create_clean_repo(
     *,
     include_cache: bool = True,
     include_local_work: bool = False,
+    local_work_holders_as_files: bool = False,
     environment: EnvironmentPlacement = EnvironmentPlacement.INSIDE,
 ) -> CleanRepo:
     """Create a repository with ignored environment, session store, and cache.
@@ -118,6 +120,9 @@ def create_clean_repo(
     whose repository-relative path `caches_beside_local_work` reports. Beside
     each top-level one it places an ignored file whose name is a Git pattern
     matching that path, reported by `pattern_named_entries`.
+
+    `local_work_holders_as_files` instead makes the first entry of each nested
+    local-work path a plain file, so that path and its neighbours do not exist.
     """
     repo_root = tmp_path / "repo"
     ignored_cache = repo_root / IGNORED_CACHE_DIR
@@ -136,11 +141,14 @@ def create_clean_repo(
     pattern_named_entries: set[str] = set()
     if include_local_work:
         for local_path in LOCAL_WORK_PATHS:
+            holder = Path(local_path).parent
+            if holder.parts and local_work_holders_as_files:
+                (repo_root / holder.parts[0]).write_text(local_path, encoding="utf-8")
+                continue
             local_dir = repo_root / local_path
             local_dir.mkdir(parents=True)
             (local_dir / LOCAL_WORK_FILE).write_text(local_path, encoding="utf-8")
             ignore_lines.append(f"/{local_path}/")
-            holder = Path(local_path).parent
             if holder.parts:
                 (repo_root / holder / IGNORED_CACHE_DIR).mkdir(exist_ok=True)
                 caches_beside_local_work.add((holder / IGNORED_CACHE_DIR).as_posix())
@@ -170,6 +178,17 @@ def create_clean_repo(
         caches_beside_local_work=frozenset(caches_beside_local_work),
         pattern_named_entries=frozenset(pattern_named_entries),
     )
+
+
+def create_directory_without_repository(tmp_path: Path) -> Path:
+    """Create a directory with no repository metadata in it or up to `tmp_path`.
+
+    `tmp_path` is the search ceiling a linked test hands root resolution, so
+    the host's own directories above it never take part.
+    """
+    directory = tmp_path / WORKSPACE_DIR / NESTED_WORKING_DIR
+    directory.mkdir(parents=True)
+    return directory
 
 
 @contextmanager
@@ -254,6 +273,7 @@ __all__ = [
     "RecordingRunner",
     "RunnerCall",
     "create_clean_repo",
+    "create_directory_without_repository",
     "observe_dry_run_removals",
     "working_directory_below_root",
 ]
