@@ -170,7 +170,8 @@ bump-dry base_ref="origin/main" segment="":
 bump-check base_ref="origin/main":
     uv run python -m outcomeeng.distribution.bump --check {{base_ref}}
 
-# Remove gitignored files and directories, sparing .git, .gitignore, .spx, and the active Python environment
+# Remove gitignored files and directories, sparing .git, .gitignore, .spx, the active Python environment,
+# and local agent and user state (.claude, .codex, .agents, .mcp.json, .env, methodology/memories)
 clean:
     uv run python -m outcomeeng.hygiene.clean
 
