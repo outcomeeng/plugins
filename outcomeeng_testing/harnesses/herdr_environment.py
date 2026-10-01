@@ -118,17 +118,23 @@ UNKNOWN_OPERATION_REPLAY_PATH = INVENTORY_REPLAY_PATH
 BOUND_PROBE_CHILD_SLEEP_SECONDS = 30
 # The disposable repository a created worktree lives in: its primary checkout
 # and the linked worktree, each a directory under one temporary root. Git runs
-# there with no global or system configuration, so signing, hooks, and identity
-# settings of the machine never reach it.
+# there with no global or system configuration and with every inherited `GIT_*`
+# variable dropped, its author and committer identity fixed through the
+# environment variables Git reads ahead of any configured identity, and signing
+# disabled, so signing, hooks, repository redirection, and identity settings of
+# the machine never reach it.
 DISPOSABLE_PRIMARY_DIRECTORY = "repo"
 DISPOSABLE_WORKTREE_DIRECTORY = "worktree"
-DISPOSABLE_GIT_IDENTITY = (
-    "-c",
-    "user.name=herdr-evidence",
-    "-c",
-    "user.email=herdr-evidence@invalid",
-)
-DISPOSABLE_GIT_ENV = {"GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}
+DISPOSABLE_GIT_INHERITED_PREFIX = "GIT_"
+DISPOSABLE_GIT_CONFIG = ("-c", "commit.gpgsign=false")
+DISPOSABLE_GIT_ENV = {
+    "GIT_CONFIG_GLOBAL": os.devnull,
+    "GIT_CONFIG_NOSYSTEM": "1",
+    "GIT_AUTHOR_NAME": "herdr-evidence",
+    "GIT_AUTHOR_EMAIL": "herdr-evidence@invalid",
+    "GIT_COMMITTER_NAME": "herdr-evidence",
+    "GIT_COMMITTER_EMAIL": "herdr-evidence@invalid",
+}
 DISPOSABLE_COMMAND_TIMEOUT_SECONDS = 30
 
 
@@ -939,12 +945,19 @@ def run_bound_through_execute(
 
 def _disposable_git(*arguments: str, cwd: Path) -> None:
     subprocess.run(  # noqa: S603, S607 — git is a standard dev tool on PATH.
-        ["git", *DISPOSABLE_GIT_IDENTITY, *arguments],
+        ["git", *DISPOSABLE_GIT_CONFIG, *arguments],
         check=True,
         capture_output=True,
         text=True,
         cwd=str(cwd),
-        env={**os.environ, **DISPOSABLE_GIT_ENV},
+        env={
+            **{
+                name: value
+                for name, value in os.environ.items()
+                if not name.startswith(DISPOSABLE_GIT_INHERITED_PREFIX)
+            },
+            **DISPOSABLE_GIT_ENV,
+        },
         timeout=DISPOSABLE_COMMAND_TIMEOUT_SECONDS,
     )
 
