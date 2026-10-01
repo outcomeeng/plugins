@@ -1,22 +1,25 @@
 """On-demand removal of gitignored cache directories and artifacts.
 
-Replaces the Justfile `clean` recipe's `find -delete` chain with `git clean
--fdX`. The semantics:
+Replaces the Justfile `clean` recipe's `find -delete` chain with `git
+--literal-pathspecs clean -fdX`. The semantics:
 
+- `--literal-pathspecs`  read every pathspec as one path, never as a pattern
 - `-f`  force (required by git when not configured otherwise)
 - `-d`  recurse into untracked directories
 - `-X`  remove only files ignored by git (preserving untracked-but-not-ignored
   files)
-- pathspecs limit the cleanup to top-level entries outside the session store,
-  the local-work paths, and the active Python environment; an entry holding a
-  nested local-work path is replaced by its other children
+- pathspecs limit the cleanup to top-level entries outside the protected set:
+  the repository metadata and ignore file, the session store, the local-work
+  paths, and the active Python environment; an entry holding a nested
+  local-work path is replaced by its other children, level by level
 
 The module's contract:
 
-- `CLEAN_BASE_ARGV` names the `git clean` argv that gives gitignored-only
+- `CLEAN_BASE_ARGV` names the `git` argv that gives literal, gitignored-only
   cleanup semantics.
-- `build_clean_argv()` appends generated top-level pathspecs that omit the
-  session store and, when needed, the active environment.
+- `build_clean_argv()` appends the pathspecs `build_clean_pathspecs()`
+  generates, which omit every protected path and every directory holding a
+  nested one.
 - `Runner` Protocol describes the injected subprocess boundary; `clean()`
   accepts it as a keyword argument and hands it the repository root the
   pathspecs were computed for, so the command runs in that tree rather than
@@ -36,7 +39,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Protocol
 
-CLEAN_BASE_ARGV: tuple[str, ...] = ("git", "clean", "-fdX")
+CLEAN_BASE_ARGV: tuple[str, ...] = ("git", "--literal-pathspecs", "clean", "-fdX")
 PATHSPEC_SEPARATOR = "--"
 GIT_METADATA_DIR = ".git"
 GIT_IGNORE_FILE = ".gitignore"
@@ -94,7 +97,12 @@ def build_clean_argv(
     repo_root: Path,
     active_python_prefix: Path,
 ) -> tuple[str, ...]:
-    """Build the cleanup argv that spares the store and the active environment."""
+    """Build the cleanup argv that spares every protected path.
+
+    The protected set is the repository metadata and ignore file, the session
+    store, the local-work paths, and the active environment. Returns an empty
+    argv when no pathspec remains, so the bare base command never runs.
+    """
     pathspecs = build_clean_pathspecs(
         repo_root=repo_root,
         active_python_prefix=active_python_prefix,
