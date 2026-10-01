@@ -6,6 +6,24 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.11.0
+
+### Breaking
+
+- **`/operate-herdr`'s `open-worktree` requires `workspace`.** The worktree opens as its own herdr workspace, grouped with the one the request names as a linked-worktree workspace, and the result returns that workspace and its root pane. A request without `workspace` returns `invalid-schema` before any herdr command runs.
+- **`/operate-herdr`'s `stop` keeps the pane.** It submits the agent's own `/exit`, so the session ends and the pane stays open at its shell for a `relaunch`. A `prompt` whose text is `/exit` or `/quit` needs mutation authorization, as `stop` does.
+- **`/orchestrate-change` Start takes the herdr workspace** as the argument after the worktree root.
+
+### Added
+
+- **`/operate-herdr` creates worktrees.** `create-worktree` takes `workspace` and an absolute `path`, with an optional `branch` and `base`. One authorized operation creates the Git worktree, opens it grouped with the named workspace, and returns the checkout's path, its workspace and its root pane. It records no worktree-occupancy claim; the session `start` launches there claims it.
+- **`/orchestrate-change` creates or opens the Executor's worktree.** Start runs `create-worktree` when the root is absent from the pool and `open-worktree` otherwise, each naming the invocation's herdr workspace, and starts the Executor in the root pane herdr returns.
+
+### Changed
+
+- **`/orchestrate-change` restarts an Executor in its kept pane.** When a Handoff records the Executor session's own stop, Check stops the session, claims the Change again for its worktree, and relaunches into the same pane. Collecting a terminal Change stops the session and leaves its pane at its shell.
+- **`/operate-herdr`'s inventory reports every hosted agent.** An agent whose evidence lacks a projected field appears as an incomplete item naming the missing fields, and every other agent stays complete. `start`, `relaunch` and `wait` return `agent-evidence-incomplete` when readiness needs a missing field; `read` and `prompt` succeed carrying the incomplete item.
+
 ## 0.10.0
 
 ### Breaking
