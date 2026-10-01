@@ -3,11 +3,11 @@
 Implements the `Runner` Protocol declared in `outcomeeng.hygiene.clean`.
 The double is a spy (recording calls) and a stub (returning a scripted
 exit code), used by `l1` tests to verify clean's argv contract without
-invoking real `git clean -fdX` against the test machine.
+invoking the real cleanup command against the test machine.
 
 - Stage 5 #2 (Interaction protocols): clean's correctness is the argv it
   passes to `git`.
-- Stage 5 #4 (Safety): real `git clean -fdX` mutates the test machine's
+- Stage 5 #4 (Safety): the real cleanup command mutates the test machine's
   working tree.
 """
 
@@ -38,6 +38,8 @@ GIT_END_OF_OPTIONS = "--"
 REMOVAL_LINE_PREFIX = "Would remove "
 NESTED_WORKING_DIR = "nested"
 LOCAL_WORK_FILE = "kept"
+GIT_PATTERN_WILDCARD = "*"
+GITIGNORE_ESCAPE = "\\"
 RECORDING_RUNNER_FAILURE_EXIT_CODE = os.EX_OK + 1
 
 
@@ -90,6 +92,7 @@ class CleanRepo:
     ignored_cache: Path
     session_store: Path
     caches_beside_local_work: frozenset[str] = frozenset()
+    pattern_named_entries: frozenset[str] = frozenset()
 
 
 def create_clean_repo(
@@ -112,7 +115,9 @@ def create_clean_repo(
     `include_local_work` adds every local-work path the module declares as an
     ignored directory holding one file, so a case covers each declared path
     without restating it. Beside each nested one it places an ignored cache,
-    whose repository-relative path `caches_beside_local_work` reports.
+    whose repository-relative path `caches_beside_local_work` reports. Beside
+    each top-level one it places an ignored file whose name is a Git pattern
+    matching that path, reported by `pattern_named_entries`.
     """
     repo_root = tmp_path / "repo"
     ignored_cache = repo_root / IGNORED_CACHE_DIR
@@ -128,6 +133,7 @@ def create_clean_repo(
         f"{SPX_STORE_DIR}/",
     ]
     caches_beside_local_work: set[str] = set()
+    pattern_named_entries: set[str] = set()
     if include_local_work:
         for local_path in LOCAL_WORK_PATHS:
             local_dir = repo_root / local_path
@@ -138,6 +144,14 @@ def create_clean_repo(
             if holder.parts:
                 (repo_root / holder / IGNORED_CACHE_DIR).mkdir(exist_ok=True)
                 caches_beside_local_work.add((holder / IGNORED_CACHE_DIR).as_posix())
+            else:
+                pattern_name = f"{local_path[:-1]}{GIT_PATTERN_WILDCARD}"
+                (repo_root / pattern_name).write_text(local_path, encoding="utf-8")
+                escaped = pattern_name.replace(
+                    GIT_PATTERN_WILDCARD, f"{GITIGNORE_ESCAPE}{GIT_PATTERN_WILDCARD}"
+                )
+                ignore_lines.append(f"/{escaped}")
+                pattern_named_entries.add(pattern_name)
     (repo_root / GIT_IGNORE_FILE).write_text(
         "".join(f"{line}\n" for line in ignore_lines),
         encoding="utf-8",
@@ -154,6 +168,7 @@ def create_clean_repo(
         ignored_cache=ignored_cache,
         session_store=session_store,
         caches_beside_local_work=frozenset(caches_beside_local_work),
+        pattern_named_entries=frozenset(pattern_named_entries),
     )
 
 

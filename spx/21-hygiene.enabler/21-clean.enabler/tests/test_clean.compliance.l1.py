@@ -128,7 +128,12 @@ def test_git_dry_run_lists_no_local_work_path(tmp_path: Path) -> None:
     removals = observe_dry_run_removals(repo=repo, argv=argv)
 
     assert repo.caches_beside_local_work
-    assert removals == {IGNORED_CACHE_DIR, *repo.caches_beside_local_work}
+    assert repo.pattern_named_entries
+    assert removals == {
+        IGNORED_CACHE_DIR,
+        *repo.caches_beside_local_work,
+        *repo.pattern_named_entries,
+    }
 
 
 def test_outside_repo_active_environment_does_not_remove_pathspecs(
