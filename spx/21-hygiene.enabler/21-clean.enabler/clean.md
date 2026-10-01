@@ -4,7 +4,7 @@ PROVIDES on-demand removal of gitignored cache directories and artifacts from th
 SO THAT contributors invoking `just clean`
 CAN reclaim disk space and reset cache state without remembering ad-hoc `find -delete` invocations
 
-The `outcomeeng.hygiene.clean` module invokes `git clean -fdX` from the repository root when at least one top-level cleanup candidate remains after protected paths are removed. The protected set is `.git`, `.gitignore`, `.spx`, and the active Python environment. The flag combination is the base contract: `-f` (force, required by git), `-d` (recurse into untracked directories), `-X` (remove only gitignored paths). The module passes top-level pathspecs that omit the session store and, when the Python process running the cleanup lives inside the repository, that active environment. When every top-level path is protected, the module exits successfully without invoking Git.
+The `outcomeeng.hygiene.clean` module invokes `git clean -fdX` from the repository root when at least one top-level cleanup candidate remains after protected paths are removed. The protected set is `.git`, `.gitignore`, `.spx`, the active Python environment, and the local-work paths `.claude`, `.codex`, `.agents`, `.mcp.json`, `.env`, and `methodology/memories`: gitignored state a person or an agent keeps on purpose, which no build or tool recreates. The flag combination is the base contract: `-f` (force, required by git), `-d` (recurse into untracked directories), `-X` (remove only gitignored paths). The module passes top-level pathspecs that omit the session store, every top-level local-work path, and, when the Python process running the cleanup lives inside the repository, that active environment. A top-level entry that holds a nested local-work path is not itself a pathspec: its other children stand in its place, level by level, so no pathspec names the protected path or a directory that holds it. When every top-level path is protected, the module exits successfully without invoking Git.
 
 This paragraph declares the base command and the protected set; the module complies with that declaration. Their agreement is audit evidence, because every oracle for it is a second declaration of the same value. Test evidence therefore covers the behavior around those values — the argv the builder composes, the paths it omits, the exit codes it returns — and never the values themselves. Removing a test that pinned one of these values re-routes its assertion's verification type in the same change, so the two layers cannot drift apart.
 
@@ -19,6 +19,7 @@ Every value the cleanup command uses that this node spells out is listed here wi
 | The protected name `.git`       | this node                          | audit, against the module's metadata-directory name |
 | The protected name `.gitignore` | this node                          | audit, against the module's ignore-file name        |
 | The protected name `.spx`       | this node                          | audit, against the module's session-store name      |
+| The six local-work paths        | this node                          | audit, against the module's local-work list         |
 | The pathspec separator `--`     | Git's end-of-options convention    | test, against that convention's name                |
 | The success exit code `0`       | the process exit-status convention | test, against the standard library's name for it    |
 | The active Python environment   | the running interpreter            | test — a path resolved at runtime, not a literal    |
@@ -39,10 +40,11 @@ The module invokes the command in the repository root whose top-level entries pr
 ### Compliance
 
 - ALWAYS: begin the generated argv with the declared base command when cleanup candidates exist ([test](tests/test_clean.compliance.l1.py))
-- ALWAYS: every value the table above assigns to this node — the base command, its flag combination, and the three protected names — equals the value the module declares ([audit])
+- ALWAYS: every value the table above assigns to this node — the base command, its flag combination, the three protected names, and the six local-work paths — equals the value the module declares ([audit])
 - ALWAYS: separate the base command from generated pathspecs with the pathspec separator ([test](tests/test_clean.compliance.l1.py))
 - NEVER: include the active in-repository Python environment in the generated pathspecs ([test](tests/test_clean.compliance.l1.py))
 - NEVER: include the session store in the generated pathspecs while another ignored cache remains one — the store is operational state a live session reads ([test](tests/test_clean.compliance.l1.py))
 - NEVER: include the repository's own metadata in the generated pathspecs — neither its directory nor its ignore file is ever a cleanup candidate ([test](tests/test_clean.compliance.l1.py))
 - NEVER: fall back to the bare base command when no cleanup candidates exist ([test](tests/test_clean.compliance.l1.py))
+- ALWAYS: a Git dry run of the generated argv lists no declared local-work path, at the top level or nested, and still lists an ignored cache that sits beside a nested one ([test](tests/test_clean.compliance.l1.py))
 - ALWAYS: the root harness guides `CLAUDE.md` and `AGENTS.md` name `just clean` as the agent's own action when a gitignored artifact blocks a gate, with no operator question and no path-limited substitute ([audit])
