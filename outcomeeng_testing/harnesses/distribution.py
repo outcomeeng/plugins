@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import tempfile
 import tomllib
-from collections import Counter
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Final, cast
 
@@ -76,87 +77,140 @@ DISTRIBUTION_PROPERTY_REPLAY_PATH: Final = (
 )
 
 
-def skill_collection_returns_complete_metadata() -> bool:
-    """Exercise collection through generated plugin and skill identities."""
+@dataclass(frozen=True)
+class CollectedSkill:
+    """One collected skill projected onto its source-owned metadata fields."""
+
+    source: Path
+    name: str
+    description: str
+    dir_name: str
+
+
+@dataclass(frozen=True)
+class SkillCollectionObservation:
+    """Skills created for one scenario and the collection result over them."""
+
+    scenario: DistributionScenario
+    sources: Mapping[str, Path]
+    collected: tuple[CollectedSkill, ...]
+
+
+@dataclass(frozen=True)
+class DescriptionCleaningObservation:
+    """The directive-framed action and the description cleaning returned."""
+
+    action: str
+    cleaned: str
+
+
+@dataclass(frozen=True)
+class TargetCleanupObservation:
+    """Entries left after cleanup and the metadata content before and after."""
+
+    remaining_entries: tuple[str, ...]
+    written_metadata_content: str
+    preserved_metadata_content: str
+
+
+@dataclass(frozen=True)
+class SkillCopyObservation:
+    """Names supplied to a skill copy and every entry it produced, links included."""
+
+    regular_reference: str
+    valid_link_reference: str
+    broken_link_reference: str
+    copied_paths: frozenset[Path]
+
+
+@dataclass(frozen=True)
+class WorkflowContractObservation:
+    """Production contract results for the committed workflow and its variants."""
+
+    committed_result: bool
+    violating_results: tuple[bool, ...]
+
+
+@dataclass(frozen=True)
+class SkillCollectionUnionCase:
+    """One generated plugin-to-skill mapping and the skill names collected."""
+
+    plugin_skills: Mapping[str, tuple[str, ...]]
+    collected_dir_names: tuple[str, ...]
+
+
+def observe_skill_collection() -> SkillCollectionObservation:
+    """Collect two generated skills of one plugin from a temporary tree."""
     scenario = distribution_scenarios()[0]
     with tempfile.TemporaryDirectory() as temporary_directory:
         root = Path(temporary_directory)
-        first_source = _create_skill(root, scenario, scenario.skill)
-        second_source = _create_skill(root, scenario, scenario.alternate_skill)
+        sources = {
+            skill_name: _create_skill(root, scenario, skill_name)
+            for skill_name in (scenario.skill, scenario.alternate_skill)
+        }
         result = collect_skills([scenario.plugin], monorepo_root=root)
-        expected = {
-            (
-                source,
-                skill_name,
-                scenario.action,
-                skill_name,
-            )
-            for source, skill_name in (
-                (first_source, scenario.skill),
-                (second_source, scenario.alternate_skill),
-            )
-        }
-        actual = {
-            (
-                cast("Path", skill[COLLECTED_SKILL_SOURCE_FIELD]),
-                cast("str", skill[SKILL_NAME_FIELD]),
-                cast("str", skill[SKILL_DESCRIPTION_FIELD]),
-                cast("str", skill[COLLECTED_SKILL_DIR_NAME_FIELD]),
-            )
-            for skill in result
-        }
-        return actual == expected
+        return SkillCollectionObservation(
+            scenario=scenario,
+            sources=sources,
+            collected=_collected_skills(result),
+        )
 
 
-def plugin_without_skills_is_skipped() -> bool:
-    """Return whether a plugin without a skills directory contributes nothing."""
+def observe_plugin_without_skills() -> tuple[CollectedSkill, ...]:
+    """Collect from a plugin directory that has no skills directory."""
     scenario = distribution_scenarios()[0]
     with tempfile.TemporaryDirectory() as temporary_directory:
         root = Path(temporary_directory)
         (root / CLAUDE_DIST_RELATIVE / scenario.plugin).mkdir(parents=True)
-        return collect_skills([scenario.plugin], monorepo_root=root) == []
+        return _collected_skills(collect_skills([scenario.plugin], monorepo_root=root))
 
 
-def skill_without_manifest_is_skipped() -> bool:
-    """Return whether a skill directory without its manifest is skipped."""
+def observe_skill_without_manifest() -> tuple[CollectedSkill, ...]:
+    """Collect from a skill directory that has no skill manifest."""
     scenario = distribution_scenarios()[0]
     with tempfile.TemporaryDirectory() as temporary_directory:
         root = Path(temporary_directory)
         _skill_root(root, scenario.plugin, scenario.skill).mkdir(parents=True)
-        return collect_skills([scenario.plugin], monorepo_root=root) == []
+        return _collected_skills(collect_skills([scenario.plugin], monorepo_root=root))
 
 
-def directive_description_is_cleaned() -> bool:
-    """Return whether source-owned directive framing is removed."""
+def observe_directive_description_cleaning() -> DescriptionCleaningObservation:
+    """Clean a description framed by the source-owned directive markers."""
     action = distribution_scenarios()[0].action
     description = (
         f"{DIRECTIVE_DESCRIPTION_PREFIX}{action}"
         f"{DIRECTIVE_DESCRIPTION_BOUNDARY} {action}{SENTENCE_TERMINATOR}"
     )
-    return clean_description(description) == action
+    return DescriptionCleaningObservation(
+        action=action,
+        cleaned=clean_description(description),
+    )
 
 
-def target_cleanup_preserves_only_git_metadata() -> bool:
-    """Exercise recursive cleanup while retaining repository metadata."""
+def observe_target_cleanup() -> TargetCleanupObservation:
+    """Clear a target holding metadata, an ordinary file, and a directory."""
     scenario = distribution_scenarios()[0]
     with tempfile.TemporaryDirectory() as temporary_directory:
         root = Path(temporary_directory)
         metadata_file = root / GIT_METADATA_DIR_NAME / scenario.skill
         metadata_file.parent.mkdir()
         metadata_file.write_text(scenario.content)
-        ordinary_file = root / scenario.alternate_skill
-        ordinary_file.write_text(scenario.content)
+        (root / scenario.alternate_skill).write_text(scenario.content)
         ordinary_directory = root / scenario.plugin
         ordinary_directory.mkdir()
         (ordinary_directory / scenario.skill).write_text(scenario.content)
         clear_repo_contents(root)
-        return tuple(root.iterdir()) == (metadata_file.parent,) and (
-            metadata_file.read_text() == scenario.content
+        return TargetCleanupObservation(
+            remaining_entries=tuple(sorted(entry.name for entry in root.iterdir())),
+            written_metadata_content=scenario.content,
+            preserved_metadata_content=(
+                metadata_file.read_text() if metadata_file.is_file() else ""
+            ),
         )
 
 
-def skill_copy_skips_broken_symlinks() -> bool:
-    """Exercise copy behavior with regular, valid-link, and broken-link inputs."""
+def observe_skill_copy_with_links() -> SkillCopyObservation:
+    """Copy a skill whose references hold a file, a valid link, and a broken link."""
     scenario = distribution_scenarios()[0]
     with tempfile.TemporaryDirectory() as temporary_directory:
         root = Path(temporary_directory)
@@ -179,26 +233,40 @@ def skill_copy_skips_broken_symlinks() -> bool:
             destination,
         )
         copied = destination / scenario.skill
-        return (
-            (copied / SKILL_FILENAME).is_file()
-            and (copied / REFERENCES_SUBDIR_NAME / regular.name).is_file()
-            and (copied / REFERENCES_SUBDIR_NAME / valid_link.name).exists()
-            and not (copied / REFERENCES_SUBDIR_NAME / broken_link.name).exists()
+        return SkillCopyObservation(
+            regular_reference=regular.name,
+            valid_link_reference=valid_link.name,
+            broken_link_reference=broken_link.name,
+            copied_paths=frozenset(
+                path.relative_to(copied) for path in copied.rglob("*")
+            ),
         )
 
 
-def skill_collection_union_holds() -> bool:
-    """Run the generated multi-plugin union property."""
+def exercise_skill_collection_union(
+    assert_case: Callable[[SkillCollectionUnionCase], None],
+) -> None:
+    """Supply generated multi-plugin collections to the evidence file's predicate."""
+
+    @seed(DISTRIBUTION_PROPERTY_SEED)
+    @settings(
+        max_examples=DISTRIBUTION_PROPERTY_EXAMPLES,
+        deadline=None,
+        print_blob=True,
+    )
+    @given(plugin_skills=plugin_skill_mapping_strategy())
+    def run_cases(plugin_skills: dict[str, tuple[str, ...]]) -> None:
+        assert_case(_observe_skill_collection_union(plugin_skills))
+
     run_replayable_property(
-        _generated_skill_collection_union_holds,
+        run_cases,
         seed_value=DISTRIBUTION_PROPERTY_SEED,
         replay_path=DISTRIBUTION_PROPERTY_REPLAY_PATH,
     )
-    return True
 
 
-def distribution_workflow_uses_runtime_and_source_paths() -> bool:
-    """Exercise workflow path rules against conforming and violating variants."""
+def observe_distribution_workflow_paths() -> WorkflowContractObservation:
+    """Apply the path contract to the committed workflow and violating variants."""
     paths = _push_paths(_workflow())
     retired_source_path = f"{RETIRED_DISTRIBUTION_SOURCE_PREFIX}{RECURSIVE_GLOB}"
     violating_variants = (
@@ -207,44 +275,40 @@ def distribution_workflow_uses_runtime_and_source_paths() -> bool:
         paths | {retired_source_path},
         paths | {CODEX_DISTRIBUTION_PATH},
     )
-    return distribution_workflow_paths_match_contract(paths) and all(
-        not distribution_workflow_paths_match_contract(variant)
-        for variant in violating_variants
+    return WorkflowContractObservation(
+        committed_result=distribution_workflow_paths_match_contract(paths),
+        violating_results=tuple(
+            distribution_workflow_paths_match_contract(variant)
+            for variant in violating_variants
+        ),
     )
 
 
-def distribution_workflow_uses_project_python() -> bool:
-    """Exercise Python-version alignment against a source-derived mismatch."""
+def observe_distribution_workflow_python() -> WorkflowContractObservation:
+    """Apply the Python-version contract to the workflow and a derived mismatch."""
     requires_python = _requires_python_specifier()
     workflow_version = _distribution_python_version(_workflow())
     violating_version = f"{MINIMUM_VERSION_PREFIX}{workflow_version}"
-    return distribution_python_version_matches_project(
-        workflow_version,
-        requires_python,
-    ) and not distribution_python_version_matches_project(
-        violating_version,
-        requires_python,
+    return WorkflowContractObservation(
+        committed_result=distribution_python_version_matches_project(
+            workflow_version,
+            requires_python,
+        ),
+        violating_results=(
+            distribution_python_version_matches_project(
+                violating_version,
+                requires_python,
+            ),
+        ),
     )
 
 
-@seed(DISTRIBUTION_PROPERTY_SEED)
-@settings(
-    max_examples=DISTRIBUTION_PROPERTY_EXAMPLES,
-    deadline=None,
-    print_blob=True,
-)
-@given(plugin_skills=plugin_skill_mapping_strategy())
-def _generated_skill_collection_union_holds(
+def _observe_skill_collection_union(
     plugin_skills: dict[str, tuple[str, ...]],
-) -> None:
+) -> SkillCollectionUnionCase:
     scenario = distribution_scenarios()[0]
     with tempfile.TemporaryDirectory() as temporary_directory:
         root = Path(temporary_directory)
-        expected = Counter(
-            skill_name
-            for skill_names in plugin_skills.values()
-            for skill_name in skill_names
-        )
         for plugin_name, skill_names in plugin_skills.items():
             for skill_name in skill_names:
                 _create_skill(
@@ -254,10 +318,24 @@ def _generated_skill_collection_union_holds(
                     plugin_name=plugin_name,
                 )
         result = collect_skills(list(plugin_skills), monorepo_root=root)
-        actual = Counter(
-            cast("str", skill[COLLECTED_SKILL_DIR_NAME_FIELD]) for skill in result
+        return SkillCollectionUnionCase(
+            plugin_skills=plugin_skills,
+            collected_dir_names=tuple(
+                cast("str", skill[COLLECTED_SKILL_DIR_NAME_FIELD]) for skill in result
+            ),
         )
-        assert actual == expected
+
+
+def _collected_skills(result: list[dict[str, object]]) -> tuple[CollectedSkill, ...]:
+    return tuple(
+        CollectedSkill(
+            source=cast("Path", skill[COLLECTED_SKILL_SOURCE_FIELD]),
+            name=cast("str", skill[SKILL_NAME_FIELD]),
+            description=cast("str", skill[SKILL_DESCRIPTION_FIELD]),
+            dir_name=cast("str", skill[COLLECTED_SKILL_DIR_NAME_FIELD]),
+        )
+        for skill in result
+    )
 
 
 def _create_skill(

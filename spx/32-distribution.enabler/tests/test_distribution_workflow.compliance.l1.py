@@ -1,12 +1,20 @@
 from outcomeeng_testing.harnesses.distribution import (
-    distribution_workflow_uses_project_python,
-    distribution_workflow_uses_runtime_and_source_paths,
+    observe_distribution_workflow_paths,
+    observe_distribution_workflow_python,
 )
 
 
 def test_distribution_workflow_uses_runtime_and_source_paths() -> None:
-    assert distribution_workflow_uses_runtime_and_source_paths()
+    observed = observe_distribution_workflow_paths()
+
+    assert observed.committed_result
+    assert observed.violating_results
+    assert not any(observed.violating_results)
 
 
 def test_distribution_workflow_uses_project_python() -> None:
-    assert distribution_workflow_uses_project_python()
+    observed = observe_distribution_workflow_python()
+
+    assert observed.committed_result
+    assert observed.violating_results
+    assert not any(observed.violating_results)
