@@ -79,16 +79,20 @@ def clean(
     return runner(argv, cwd=root)
 
 
-def find_repository_root(start: Path) -> Path:
+def find_repository_root(start: Path, *, ceiling: Path | None = None) -> Path:
     """Return the nearest directory at or above `start` holding Git metadata.
 
     A linked worktree carries its metadata as a file, so any entry of that name
-    marks a root. When no directory holds one, `start` is returned and Git
-    reports the missing repository through the command's own exit code.
+    marks a root. The search climbs no higher than `ceiling`, the filesystem
+    root when none is named. When no directory up to it holds metadata, `start`
+    is returned and Git reports the missing repository through the command's
+    own exit code.
     """
     for directory in (start, *start.parents):
         if (directory / GIT_METADATA_DIR).exists():
             return directory
+        if directory == ceiling:
+            break
     return start
 
 
@@ -175,7 +179,7 @@ def _pathspecs_below(
         entry_relative = relative / entry.name
         if entry_relative in excluded:
             continue
-        if entry_relative in holders and entry.is_dir() and not entry.is_symlink():
+        if entry_relative in holders and entry.is_dir():
             pathspecs.extend(
                 _pathspecs_below(
                     entry, entry_relative, excluded=excluded, holders=holders
