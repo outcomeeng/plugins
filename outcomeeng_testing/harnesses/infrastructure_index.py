@@ -35,7 +35,7 @@ from outcomeeng.validation.infrastructure_index import (
     InfrastructureReach,
     index_test_infrastructure,
 )
-from outcomeeng_testing.generators.infrastructure_index import import_chains
+from outcomeeng_testing.generators.infrastructure_index import import_chain_sources
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
 
 HARNESSES_SUBPACKAGE: Final = "harnesses"
@@ -239,41 +239,17 @@ INDEX_PROPERTY_REPLAY_PATH: Final = (
 INDEX_PROPERTY_EXAMPLES: Final = 40
 
 
-@dataclass(frozen=True)
-class ChainLayout:
-    """An import chain of modules, first to last, and the test importing the first."""
-
-    modules: tuple[str, ...]
-    test: str
-    index: InfrastructureIndex
-
-
-def chain_layout(repo: SyntheticRepository, chain: tuple[str, ...]) -> ChainLayout:
-    """Write modules where each imports the next and a test importing the first."""
-
-    modules = tuple(f"{repo.package}.{HARNESSES_SUBPACKAGE}.{name}" for name in chain)
-    for position, name in enumerate(chain):
-        following = chain[position + 1 :]
-        source = (
-            f"from {repo.package}.{HARNESSES_SUBPACKAGE} import {following[0]}\n"
-            if following
-            else ""
-        )
-        repo.write_module(modules[position], source)
-    test = repo.write_test(
-        FIRST_NODE,
-        "chain",
-        f"from {repo.package}.{HARNESSES_SUBPACKAGE} import {chain[0]}\n",
-    )
-    return ChainLayout(modules=modules, test=test, index=repo.index())
-
-
 def index_property(test_func: Callable[..., None]) -> Callable[[], None]:
-    """Bind the chain domain and run configuration to a property test."""
+    """Bind the chain-source domain and run configuration to a property test.
+
+    Each generated case is source text the test indexes in memory; the
+    filesystem walk that reads such text from a repository is exercised by the
+    node's finite scenario and mapping evidence, outside the generated loop.
+    """
 
     configured = seed(INDEX_PROPERTY_SEED)(
         settings(max_examples=INDEX_PROPERTY_EXAMPLES, deadline=None, print_blob=True)(
-            given(chain=import_chains())(test_func)
+            given(sources=import_chain_sources())(test_func)
         )
     )
 

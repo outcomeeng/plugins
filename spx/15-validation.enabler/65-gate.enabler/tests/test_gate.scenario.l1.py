@@ -58,6 +58,7 @@ from outcomeeng_testing.generators.gate import (
 )
 from outcomeeng_testing.harnesses.gate import (
     check_run_observation,
+    entry_point_validation_observation,
     pipeline_run_observation,
     recipe_run_observation,
     signal_interrupt_observation,
@@ -87,6 +88,20 @@ def test_the_validation_recipe_runs_preflight_first_and_reports_conformance() ->
         assert SUMMARY_KEY_LOG_PATH not in step
         assert step[SUMMARY_KEY_STATUS] == RUN_PASS_STATUS
         assert isinstance(step[SUMMARY_KEY_EXIT_CODE], int)
+
+
+def test_the_validation_command_runs_the_validation_recipe() -> None:
+    run = entry_point_validation_observation()
+
+    assert run.exit_code == PASS_EXIT_CODE
+    assert run.spawn_calls == tuple(
+        step.argv
+        for step in (*VALIDATION_RECIPE.preflight_steps, *VALIDATION_RECIPE.steps)
+    )
+    assert run.summary is not None
+    assert run.summary[SUMMARY_KEY_RECIPE] == RECIPE_VALIDATION
+    assert run.summary[SUMMARY_KEY_VERIFICATION_TYPE] == VERIFICATION_TYPE_VALIDATION
+    assert run.summary[SUMMARY_KEY_PURPOSE] == PURPOSE_CONFORMANCE
 
 
 def test_the_test_recipe_runs_pytest_after_preflight() -> None:

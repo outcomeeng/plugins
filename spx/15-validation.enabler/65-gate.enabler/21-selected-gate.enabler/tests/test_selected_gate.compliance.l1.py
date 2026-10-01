@@ -40,7 +40,6 @@ from outcomeeng.validation.selected_gate import (
     load_changeset_scope,
 )
 from outcomeeng_testing.generators.gate import (
-    DELETED_GIT_STATUS,
     GIT_DISCOVERY_FAILURE_STDERR,
     GIT_DISCOVERY_FAILURE_STDOUT,
     assertion_test_paths,
@@ -52,12 +51,16 @@ from outcomeeng_testing.generators.gate import (
     unrelated_full_gate_paths,
 )
 from outcomeeng_testing.harnesses.gate import (
+    ChangeKind,
     CredentialAvailability,
+    PathChange,
+    RepositoryChanges,
     across_credential_availability,
     check_full_observation,
     collect_selected_gate_paths,
     entry_point_check_observation,
     entry_point_test_observation,
+    failing_discovery_check_observation,
     failing_discovery_runner,
     production_check_observation,
     repository_without_origin,
@@ -80,7 +83,7 @@ def test_an_empty_changeset_selects_no_steps() -> None:
 
 @pytest.mark.parametrize("path", lane_paths())
 def test_the_plan_prints_before_the_recipes_run(path: str) -> None:
-    run = run_check_observation(branch_path=path)
+    run = run_check_observation(RepositoryChanges(branch=(PathChange(path),)))
     with synthetic_repository() as repo:
         plan = build_selected_gate_plan(
             (path,), test_infrastructure=index_test_infrastructure(repo.root)
@@ -123,7 +126,9 @@ def test_the_plan_prints_before_the_recipes_run(path: str) -> None:
 def test_child_output_never_streams_to_the_live_sink(path: str) -> None:
     child_output = high_volume_child_output()
 
-    run = run_check_observation(branch_path=path, child_output=child_output)
+    run = run_check_observation(
+        RepositoryChanges(branch=(PathChange(path),)), child_output=child_output
+    )
 
     assert run.exit_code == 0
     assert child_output not in run.output
@@ -132,7 +137,7 @@ def test_child_output_never_streams_to_the_live_sink(path: str) -> None:
 
 @pytest.mark.parametrize("path", discovery_full_gate_paths())
 def test_a_full_gate_path_runs_the_complete_wrapper(path: str) -> None:
-    run = run_check_observation(branch_path=path)
+    run = run_check_observation(RepositoryChanges(branch=(PathChange(path),)))
 
     assert run.exit_code == 0
     assert run.spawn_calls == tuple(
@@ -151,7 +156,9 @@ def test_a_full_gate_path_runs_the_complete_wrapper(path: str) -> None:
 def test_a_deleted_test_path_selects_no_pytest_run() -> None:
     (test_path,) = assertion_test_paths(1)
 
-    run = run_check_observation(branch_path=test_path, branch_status=DELETED_GIT_STATUS)
+    run = run_check_observation(
+        RepositoryChanges(branch=(PathChange(test_path, ChangeKind.DELETE),))
+    )
 
     assert run.exit_code == 0
     assert all(PYTEST_ARGV != call[: len(PYTEST_ARGV)] for call in run.spawn_calls)
@@ -159,10 +166,8 @@ def test_a_deleted_test_path_selects_no_pytest_run() -> None:
 
 
 def test_git_discovery_failure_stops_before_any_spawn() -> None:
-    run = run_check_observation(
-        branch_path=GIT_DISCOVERY_FAILURE_STDOUT,
-        branch_returncode=GIT_DISCOVERY_FAILURE_EXIT_CODE,
-        branch_stderr=GIT_DISCOVERY_FAILURE_STDERR,
+    run = failing_discovery_check_observation(
+        stdout=GIT_DISCOVERY_FAILURE_STDOUT, stderr=GIT_DISCOVERY_FAILURE_STDERR
     )
 
     assert run.exit_code == GIT_DISCOVERY_FAILURE_EXIT_CODE
@@ -267,7 +272,9 @@ def test_each_declared_discovery_surface_requires_the_live_check(pattern: str) -
 
 def test_discovery_inclusion_is_printed_before_execution() -> None:
     runs = across_credential_availability(
-        lambda: run_check_observation(branch_path=INSTRUCTION_BLOCK_SOURCE_PATH)
+        lambda: run_check_observation(
+            RepositoryChanges(branch=(PathChange(INSTRUCTION_BLOCK_SOURCE_PATH),))
+        )
     )
 
     assert set(runs) == set(CredentialAvailability)
@@ -312,7 +319,7 @@ def test_unrelated_automatic_full_gate_excludes_only_the_live_check() -> None:
 @pytest.mark.parametrize("path", unrelated_full_gate_paths())
 def test_unrelated_full_gate_execution_honors_its_exclusion(path: str) -> None:
     runs = across_credential_availability(
-        lambda: run_check_observation(branch_path=path)
+        lambda: run_check_observation(RepositoryChanges(branch=(PathChange(path),)))
     )
 
     assert set(runs) == set(CredentialAvailability)

@@ -2,19 +2,20 @@
 
 from __future__ import annotations
 
-from outcomeeng_testing.harnesses.infrastructure_index import (
-    chain_layout,
-    index_property,
-    synthetic_repository,
-)
+from outcomeeng.validation.infrastructure_index import build_infrastructure_index
+from outcomeeng_testing.generators.infrastructure_index import ChainSources
+from outcomeeng_testing.harnesses.infrastructure_index import index_property
 
 
 @index_property
 def test_every_module_in_an_import_chain_reaches_the_test(
-    chain: tuple[str, ...],
+    sources: ChainSources,
 ) -> None:
-    with synthetic_repository() as repo:
-        layout = chain_layout(repo, chain)
+    index = build_infrastructure_index(
+        package=sources.package,
+        module_sources=sources.module_sources,
+        test_sources=sources.test_sources,
+    )
 
-    for module in layout.modules:
-        assert layout.index.reaching_tests(module) == (layout.test,)
+    for module in sources.chain:
+        assert index.reaching_tests(module) == (sources.test,)

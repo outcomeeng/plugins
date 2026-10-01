@@ -33,7 +33,6 @@ from outcomeeng.validation.selected_gate import (
     SHARED_TEST_INFRASTRUCTURE_REASON,
     SKILL_LANE,
     SKILL_REASON,
-    ChangedPath,
     SelectedGatePlan,
     SelectionLane,
     TEST_REASON,
@@ -42,13 +41,8 @@ from outcomeeng.validation.selected_gate import (
     EVIDENCE_LINK_REASON,
     branch_diff_argv,
     build_selected_gate_plan,
-    deleted_paths_after_status_resolution,
 )
 from outcomeeng_testing.generators.gate import (
-    COPIED_GIT_STATUS,
-    DELETED_GIT_STATUS,
-    MODIFIED_GIT_STATUS,
-    RENAMED_GIT_STATUS,
     alternate_base_ref,
     assertion_test_paths,
     distinct_changed_paths,
@@ -67,6 +61,10 @@ from outcomeeng_testing.generators.gate import (
 )
 from outcomeeng_testing.harnesses import gate as gate_harness
 from outcomeeng_testing.harnesses.gate import (
+    ChangeKind,
+    PathChange,
+    RepositoryChanges,
+    collected_entries_observation,
     collected_paths_observation,
     resolved_base_observation,
     run_check_observation,
@@ -267,13 +265,19 @@ def test_deleted_assertion_tests_never_select_pytest() -> None:
     plan = build_selected_gate_plan((test_path,), deleted_paths=(test_path,))
     assert all(item.reason != TEST_REASON for item in plan.selected_steps)
 
-    deleted_paths = deleted_paths_after_status_resolution(
-        (
-            ChangedPath(path=test_path, status=MODIFIED_GIT_STATUS),
-            ChangedPath(path=test_path, status=DELETED_GIT_STATUS),
+    # Modified on the branch, then deleted from the working tree: git reports
+    # both statuses for one path, and the absent file resolves it as deleted.
+    observation = collected_entries_observation(
+        RepositoryChanges(
+            branch=(PathChange(test_path, ChangeKind.MODIFY),),
+            unstaged=(PathChange(test_path, ChangeKind.DELETE),),
         )
     )
-    plan = build_selected_gate_plan((test_path,), deleted_paths=deleted_paths)
+    assert len({entry.status for entry in observation.entries}) > 1
+    assert observation.deleted_paths == (test_path,)
+    plan = build_selected_gate_plan(
+        (test_path,), deleted_paths=observation.deleted_paths
+    )
     assert all(item.reason != TEST_REASON for item in plan.selected_steps)
 
     plan = build_selected_gate_plan(
@@ -308,23 +312,41 @@ def test_changed_paths_collect_from_all_four_git_surfaces() -> None:
     branch_path, staged_path, unstaged_path, untracked_path = distinct_changed_paths(4)
 
     observation = collected_paths_observation(
-        branch_path=branch_path,
-        staged_path=staged_path,
-        unstaged_path=unstaged_path,
-        untracked_path=untracked_path,
+        RepositoryChanges(
+            branch=(PathChange(branch_path),),
+            staged=(PathChange(staged_path),),
+            unstaged=(PathChange(unstaged_path, ChangeKind.MODIFY),),
+            untracked=(untracked_path,),
+        )
     )
 
-    assert observation.collected == tuple(sorted(observation.inputs))
-    assert observation.runner_repos == (observation.repo,) * observation.command_count
+    assert observation.collected == tuple(sorted(observation.named))
+    assert observation.runner_calls
+    assert set(observation.runner_repos) == {observation.repo}
 
 
 @pytest.mark.parametrize("path", whitespace_paths())
-def test_whitespace_paths_survive_collection(path: str) -> None:
+def test_whitespace_paths_survive_collection_from_every_surface(path: str) -> None:
+    surfaces = (
+        RepositoryChanges(branch=(PathChange(path),)),
+        RepositoryChanges(staged=(PathChange(path),)),
+        RepositoryChanges(unstaged=(PathChange(path, ChangeKind.MODIFY),)),
+        RepositoryChanges(untracked=(path,)),
+    )
+
+    for changes in surfaces:
+        assert collected_paths_observation(changes).collected == (path,), changes
+
+
+def test_a_path_changed_on_every_tracked_surface_collects_once() -> None:
+    (path,) = distinct_changed_paths(1)
+
     observation = collected_paths_observation(
-        branch_path=path,
-        staged_path=path,
-        unstaged_path=path,
-        untracked_path=path,
+        RepositoryChanges(
+            branch=(PathChange(path, ChangeKind.MODIFY),),
+            staged=(PathChange(path, ChangeKind.MODIFY),),
+            unstaged=(PathChange(path, ChangeKind.MODIFY),),
+        )
     )
 
     assert observation.collected == (path,)
@@ -334,7 +356,8 @@ def test_an_injected_base_ref_resolver_drives_branch_discovery() -> None:
     (branch_path,) = distinct_changed_paths(1)
 
     observation = resolved_base_observation(
-        base_ref=alternate_base_ref(), branch_path=branch_path
+        base_ref=alternate_base_ref(),
+        changes=RepositoryChanges(branch=(PathChange(branch_path),)),
     )
 
     assert observation.collected == (branch_path,)
@@ -347,9 +370,9 @@ def test_a_rename_collects_both_sides() -> None:
     renamed_path = renamed_away_path(test_path)
 
     observation = collected_paths_observation(
-        branch_old_path=test_path,
-        branch_path=renamed_path,
-        branch_status=RENAMED_GIT_STATUS,
+        RepositoryChanges(
+            branch=(PathChange(renamed_path, ChangeKind.RENAME, source=test_path),)
+        )
     )
 
     assert observation.collected == tuple(sorted((test_path, renamed_path)))
@@ -359,9 +382,13 @@ def test_a_renamed_test_source_never_reaches_pytest() -> None:
     (test_path,) = assertion_test_paths(1)
 
     run = run_check_observation(
-        branch_old_path=test_path,
-        branch_path=renamed_away_path(test_path),
-        branch_status=RENAMED_GIT_STATUS,
+        RepositoryChanges(
+            branch=(
+                PathChange(
+                    renamed_away_path(test_path), ChangeKind.RENAME, source=test_path
+                ),
+            )
+        )
     )
 
     assert run.exit_code == 0
@@ -369,15 +396,14 @@ def test_a_renamed_test_source_never_reaches_pytest() -> None:
     assert PYTHON_REASON in run.output
 
 
-def test_a_deleted_then_modified_test_still_runs_when_present() -> None:
+def test_a_deleted_then_restored_test_still_runs_when_present() -> None:
     (test_path,) = assertion_test_paths(1)
 
     run = run_check_observation(
-        branch_path=test_path,
-        branch_status=DELETED_GIT_STATUS,
-        staged_path=test_path,
-        staged_status=MODIFIED_GIT_STATUS,
-        create_repo_file=test_path,
+        RepositoryChanges(
+            branch=(PathChange(test_path, ChangeKind.DELETE),),
+            staged=(PathChange(test_path),),
+        )
     )
 
     assert run.exit_code == 0
@@ -389,9 +415,9 @@ def test_a_copy_collects_both_sides() -> None:
     copied_path = renamed_away_path(test_path)
 
     observation = collected_paths_observation(
-        branch_old_path=test_path,
-        branch_path=copied_path,
-        branch_status=COPIED_GIT_STATUS,
+        RepositoryChanges(
+            branch=(PathChange(copied_path, ChangeKind.COPY, source=test_path),)
+        )
     )
 
     assert observation.collected == tuple(sorted((test_path, copied_path)))
@@ -401,9 +427,13 @@ def test_a_copied_test_selects_pytest_for_the_surviving_source() -> None:
     (test_path,) = assertion_test_paths(1)
 
     run = run_check_observation(
-        branch_old_path=test_path,
-        branch_path=renamed_away_path(test_path),
-        branch_status=COPIED_GIT_STATUS,
+        RepositoryChanges(
+            branch=(
+                PathChange(
+                    renamed_away_path(test_path), ChangeKind.COPY, source=test_path
+                ),
+            )
+        )
     )
 
     assert run.exit_code == 0

@@ -1,4 +1,4 @@
-"""Recording doubles for the gate orchestrator.
+"""Recording doubles and real git repositories for the gate orchestrator.
 
 These harnesses implement the `ProcessSpawner` and `ProcessHandle` Protocols
 declared in `outcomeeng.validation`. They are spies (recording calls) and
@@ -8,6 +8,10 @@ orchestration behavior without launching real subprocesses.
 Exception case: Stage 5, Interaction protocols — the orchestrator's
 correctness depends on the sequence and shape of spawn/wait/signal calls.
 Recording doubles let `l1` tests assert on those interactions.
+
+Selected-gate path discovery runs against real git: the harness arranges a
+temporary repository whose base ref, commits, index, and working tree carry
+the requested changes, and production discovery reads git's own output.
 """
 
 from __future__ import annotations
@@ -19,7 +23,8 @@ import json
 import math
 import os
 import signal
-from collections.abc import Callable, Iterator, Mapping, Sequence
+import subprocess
+from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from enum import StrEnum
@@ -36,6 +41,7 @@ from outcomeeng.validation import (
     PREFLIGHT_STEPS,
     RECIPE_CHECK,
     RECIPE_TEST,
+    RECIPE_VALIDATION,
     SIGNAL_GRACE_SECONDS,
     SIGNAL_POLL_INTERVAL_SECONDS,
     SUMMARY_KEY_RECIPES,
@@ -55,7 +61,7 @@ from outcomeeng.validation import (
 )
 from outcomeeng.validation.__main__ import RECIPE_ARGS_SEPARATOR
 from outcomeeng.validation.__main__ import main as validation_main
-from outcomeeng.validation._git import GitCommandResult
+from outcomeeng.validation._git import GitCommandResult, GitRunner, run_git_command
 from outcomeeng.validation.ci_gate import (
     CODEX_API_KEY_ENVIRONMENT,
     DISCOVERY_AUTH_MODE_ENVIRONMENT,
@@ -68,15 +74,13 @@ from outcomeeng.validation.selected_gate import (
     DEFAULT_BASE_REF,
     GIT_DISCOVERY_FAILURE_EXIT_CODE,
     RECIPE_CHECK_FULL,
-    GIT_DIFF_STAGED_ARGV,
-    GIT_DIFF_UNSTAGED_ARGV,
-    GIT_LS_UNTRACKED_ARGV,
-    branch_diff_argv,
+    ChangedPath,
+    collect_changed_path_entries,
     collect_changed_paths,
+    deleted_paths_after_status_resolution,
     run_selected_check as production_run_selected_check,
 )
 from outcomeeng_testing.generators.gate import (
-    MODIFIED_GIT_STATUS,
     REPOSITORY_ROOT,
     infrastructure_module_paths,
     selected_gate_changed_paths,
@@ -146,67 +150,208 @@ def summary_recipes(summary: dict[str, object]) -> list[dict[str, object]]:
     return _json_records(summary.get(SUMMARY_KEY_RECIPES), SUMMARY_KEY_RECIPES)
 
 
-def selected_gate_runner_for_paths(
-    *,
-    base_ref: str = DEFAULT_BASE_REF,
-    branch_path: str = "",
-    branch_old_path: str = "",
-    staged_path: str = "",
-    staged_old_path: str = "",
-    unstaged_path: str = "",
-    unstaged_old_path: str = "",
-    untracked_path: str = "",
-    branch_status: str = MODIFIED_GIT_STATUS,
-    staged_status: str = MODIFIED_GIT_STATUS,
-    unstaged_status: str = MODIFIED_GIT_STATUS,
-    branch_returncode: int = 0,
-    branch_stderr: str = "",
-) -> RecordingGitRunner:
-    """Build a git runner for selected-gate path discovery tests."""
+class ChangeKind(StrEnum):
+    """The git operation the harness performs on one path of one surface.
 
-    return RecordingGitRunner(
-        outputs={
-            branch_diff_argv(base_ref): (
-                GitCommandResult(
-                    returncode=branch_returncode,
-                    stdout=_selected_gate_name_status_output(
-                        status=branch_status,
-                        path=branch_path,
-                        old_path=branch_old_path,
+    These name arrangement actions, never git's status vocabulary: real git
+    reports the status each action produces.
+    """
+
+    ADD = "add"
+    MODIFY = "modify"
+    DELETE = "delete"
+    RENAME = "rename"
+    COPY = "copy"
+
+
+class UnsupportedSurfaceChange(ValueError):
+    """A change kind the named git surface cannot carry."""
+
+    def __init__(self, surface: str, kind: ChangeKind) -> None:
+        self.surface = surface
+        self.kind = kind
+        super().__init__(f"the {surface} surface cannot carry a {kind} change")
+
+
+@dataclass(frozen=True)
+class PathChange:
+    """One path a git surface changes; ``source`` names a rename or copy origin."""
+
+    path: str
+    kind: ChangeKind = ChangeKind.ADD
+    source: str = ""
+
+
+@dataclass(frozen=True)
+class RepositoryChanges:
+    """The changes a real repository carries on each discovery surface.
+
+    ``branch`` changes are committed after the base ref, ``staged`` changes are
+    in the index, ``unstaged`` changes are only in the working tree, and
+    ``untracked`` paths are new files git does not track.
+    """
+
+    branch: tuple[PathChange, ...] = ()
+    staged: tuple[PathChange, ...] = ()
+    unstaged: tuple[PathChange, ...] = ()
+    untracked: tuple[str, ...] = ()
+
+    def paths(self) -> tuple[str, ...]:
+        """Every path the changes name, sources included, in surface order."""
+
+        return tuple(
+            dict.fromkeys(
+                (
+                    *(
+                        path
+                        for change in (*self.branch, *self.staged, *self.unstaged)
+                        for path in (change.source, change.path)
+                        if path
                     ),
-                    stderr=branch_stderr,
+                    *self.untracked,
                 )
-            ),
-            GIT_DIFF_STAGED_ARGV: GitCommandResult(
-                returncode=0,
-                stdout=_selected_gate_name_status_output(
-                    status=staged_status,
-                    path=staged_path,
-                    old_path=staged_old_path,
-                ),
-            ),
-            GIT_DIFF_UNSTAGED_ARGV: GitCommandResult(
-                returncode=0,
-                stdout=_selected_gate_name_status_output(
-                    status=unstaged_status,
-                    path=unstaged_path,
-                    old_path=unstaged_old_path,
-                ),
-            ),
-            GIT_LS_UNTRACKED_ARGV: GitCommandResult(
-                returncode=0,
-                stdout=f"{untracked_path}\n" if untracked_path else "",
-            ),
-        }
+            )
+        )
+
+
+# Repository-local configuration for the arranged repository. Rename and copy
+# detection is pinned so git reports both whatever the caller's own config
+# says, and no caller-wide exclude file hides an arranged untracked path.
+_REPOSITORY_CONFIG = (
+    ("diff.renames", "copies"),
+    ("core.excludesFile", os.devnull),
+    ("commit.gpgsign", "false"),
+    ("user.name", "selected-gate harness"),
+    ("user.email", "selected-gate-harness@example.invalid"),
+)
+_HARNESS_GIT_ENVIRONMENT = {
+    "GIT_CONFIG_GLOBAL": os.devnull,
+    "GIT_CONFIG_SYSTEM": os.devnull,
+}
+_HARNESS_GIT_TIMEOUT_SECONDS = 30
+_REMOTE_TRACKING_REF_PREFIX = "refs/remotes/"
+_BASE_PHASE = "base"
+_BRANCH_PHASE = "branch"
+_STAGED_PHASE = "staged"
+_UNSTAGED_PHASE = "unstaged"
+_UNTRACKED_PHASE = "untracked"
+
+
+def _git(repo: Path, *args: str) -> None:
+    subprocess.run(
+        ("git", *args),
+        cwd=repo,
+        env={**os.environ, **_HARNESS_GIT_ENVIRONMENT},
+        stdin=subprocess.DEVNULL,
+        capture_output=True,
+        check=True,
+        timeout=_HARNESS_GIT_TIMEOUT_SECONDS,
     )
+
+
+def _write(repo: Path, path: str, phase: str) -> None:
+    # One comment line naming the phase and path: valid in every format a
+    # changed path can carry, and distinct per path so git pairs a rename or
+    # copy only with the origin the arrangement names.
+    target = repo / path
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(f"# {phase} {path}\n", encoding="utf-8")
+
+
+def _base_paths(changes: RepositoryChanges) -> tuple[str, ...]:
+    existing = (ChangeKind.MODIFY, ChangeKind.DELETE)
+    return tuple(
+        dict.fromkeys(
+            path
+            for change in (*changes.branch, *changes.staged, *changes.unstaged)
+            for path in (
+                (change.path,) if change.kind in existing else (change.source,)
+            )
+            if path
+        )
+    )
+
+
+def _apply(repo: Path, change: PathChange, phase: str) -> tuple[str, ...]:
+    """Apply one change to the working tree; return the paths it touched."""
+
+    if change.kind in (ChangeKind.ADD, ChangeKind.MODIFY):
+        _write(repo, change.path, phase)
+        return (change.path,)
+    if change.kind is ChangeKind.DELETE:
+        (repo / change.path).unlink()
+        return (change.path,)
+    destination = repo / change.path
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    origin = repo / change.source
+    if change.kind is ChangeKind.RENAME:
+        origin.rename(destination)
+        return (change.source, change.path)
+    # Git reports a copy only from an origin the same change modifies.
+    destination.write_bytes(origin.read_bytes())
+    _write(repo, change.source, phase)
+    return (change.source, change.path)
+
+
+def _stage(repo: Path, paths: Sequence[str]) -> None:
+    if paths:
+        _git(repo, "add", "--all", "--", *paths)
+
+
+@contextmanager
+def changed_repository(
+    changes: RepositoryChanges, *, base_ref: str = DEFAULT_BASE_REF
+) -> Iterator[Path]:
+    """Yield a real git repository carrying ``changes`` against ``base_ref``.
+
+    The base commit holds every path a change modifies, deletes, renames, or
+    copies, and ``base_ref`` names it as a remote-tracking ref. The repository
+    and every file in it are removed on exit.
+    """
+
+    for change in changes.unstaged:
+        if change.kind not in (ChangeKind.MODIFY, ChangeKind.DELETE):
+            raise UnsupportedSurfaceChange(_UNSTAGED_PHASE, change.kind)
+    with TemporaryDirectory() as tmp:
+        repo = Path(tmp).resolve()
+        _git(repo, "init", "--quiet")
+        for key, value in _REPOSITORY_CONFIG:
+            _git(repo, "config", key, value)
+        for path in _base_paths(changes):
+            _write(repo, path, _BASE_PHASE)
+        _git(repo, "add", "--all")
+        _git(repo, "commit", "--quiet", "--allow-empty", "--message", _BASE_PHASE)
+        _git(repo, "update-ref", f"{_REMOTE_TRACKING_REF_PREFIX}{base_ref}", "HEAD")
+        _stage(
+            repo,
+            [
+                p
+                for change in changes.branch
+                for p in _apply(repo, change, _BRANCH_PHASE)
+            ],
+        )
+        _git(repo, "commit", "--quiet", "--allow-empty", "--message", _BRANCH_PHASE)
+        _stage(
+            repo,
+            [
+                p
+                for change in changes.staged
+                for p in _apply(repo, change, _STAGED_PHASE)
+            ],
+        )
+        for change in changes.unstaged:
+            _apply(repo, change, _UNSTAGED_PHASE)
+        for path in changes.untracked:
+            _write(repo, path, _UNTRACKED_PHASE)
+        yield repo
 
 
 def collect_selected_gate_paths(
     repo: Path,
     *,
-    runner: RecordingGitRunner,
+    runner: GitRunner = run_git_command,
 ) -> tuple[str, ...]:
-    """Collect synthetic paths against the harness-owned base ref."""
+    """Collect changed paths against the default base ref."""
     return collect_changed_paths(repo, base_ref=DEFAULT_BASE_REF, runner=runner)
 
 
@@ -215,9 +360,9 @@ def run_selected_check(
     spawner: ProcessSpawner,
     sink: TextIO,
     repo: Path,
-    runner: RecordingGitRunner,
+    runner: GitRunner = run_git_command,
 ) -> int:
-    """Run the selected gate against the harness-owned base ref."""
+    """Run the selected gate against the default base ref."""
     return production_run_selected_check(
         spawner=spawner,
         sink=sink,
@@ -225,19 +370,6 @@ def run_selected_check(
         base_ref=DEFAULT_BASE_REF,
         runner=runner,
     )
-
-
-def _selected_gate_name_status_output(
-    *,
-    status: str,
-    path: str,
-    old_path: str = "",
-) -> str:
-    if not path:
-        return ""
-    if old_path:
-        return f"{status}\t{old_path}\t{path}\n"
-    return f"{status}\t{path}\n"
 
 
 def gate_step_property(
@@ -558,65 +690,51 @@ def while_loops_in_gate_modules() -> tuple[tuple[str, ast.While], ...]:
 
 @dataclass(frozen=True)
 class CollectionObservation:
-    """Collected changed paths beside the recorded git interactions."""
+    """Paths collected from a real repository beside the git commands that ran."""
 
-    inputs: tuple[str, ...]
+    named: tuple[str, ...]
     collected: tuple[str, ...]
     runner_calls: tuple[tuple[str, ...], ...]
     runner_repos: tuple[Path, ...]
     repo: Path
-    command_count: int
 
 
-def collected_paths_observation(
-    *,
-    branch_path: str = "",
-    branch_old_path: str = "",
-    branch_status: str = MODIFIED_GIT_STATUS,
-    staged_path: str = "",
-    unstaged_path: str = "",
-    untracked_path: str = "",
-) -> CollectionObservation:
-    """Collect the given synthetic paths and report every recorded interaction."""
+def collected_paths_observation(changes: RepositoryChanges) -> CollectionObservation:
+    """Collect the changed paths of a real repository carrying ``changes``."""
 
-    runner = selected_gate_runner_for_paths(
-        branch_path=branch_path,
-        branch_old_path=branch_old_path,
-        branch_status=branch_status,
-        staged_path=staged_path,
-        unstaged_path=unstaged_path,
-        untracked_path=untracked_path,
-    )
-    with TemporaryDirectory() as tmp:
-        repo = Path(tmp)
+    runner = RecordingGitRunner()
+    with changed_repository(changes) as repo:
         collected = collect_selected_gate_paths(repo, runner=runner)
-    inputs = tuple(
-        path
-        for path in (
-            branch_old_path,
-            branch_path,
-            staged_path,
-            unstaged_path,
-            untracked_path,
-        )
-        if path
-    )
     return CollectionObservation(
-        inputs=inputs,
+        named=changes.paths(),
         collected=collected,
         runner_calls=tuple(runner.calls),
         runner_repos=tuple(runner.repos),
         repo=repo,
-        command_count=len(runner.outputs),
     )
+
+
+@dataclass(frozen=True)
+class EntryObservation:
+    """Changed-path entries collected from a real repository, and its deletions."""
+
+    entries: tuple[ChangedPath, ...]
+    deleted_paths: tuple[str, ...]
+
+
+def collected_entries_observation(changes: RepositoryChanges) -> EntryObservation:
+    """Collect status entries and resolve deletions in a repository carrying ``changes``."""
+
+    with changed_repository(changes) as repo:
+        entries = collect_changed_path_entries(repo, base_ref=DEFAULT_BASE_REF)
+        deleted = deleted_paths_after_status_resolution(entries, repo=repo)
+    return EntryObservation(entries=entries, deleted_paths=deleted)
 
 
 @dataclass(frozen=True)
 class ResolvedBaseObservation:
     """Collection through an injected base-ref resolver."""
 
-    branch_path: str
-    base_ref: str
     collected: tuple[str, ...]
     resolver_repos: tuple[Path, ...]
     repo: Path
@@ -624,9 +742,9 @@ class ResolvedBaseObservation:
 
 
 def resolved_base_observation(
-    *, base_ref: str, branch_path: str
+    *, base_ref: str, changes: RepositoryChanges
 ) -> ResolvedBaseObservation:
-    """Collect ``branch_path`` through a resolver that answers ``base_ref``."""
+    """Collect from a repository based at ``base_ref`` through a resolver answering it."""
 
     resolver_repos: list[Path] = []
 
@@ -634,20 +752,14 @@ def resolved_base_observation(
         resolver_repos.append(candidate_repo)
         return base_ref
 
-    runner = selected_gate_runner_for_paths(
-        base_ref=base_ref,
-        branch_path=branch_path,
-    )
-    with TemporaryDirectory() as tmp:
-        repo = Path(tmp)
+    runner = RecordingGitRunner()
+    with changed_repository(changes, base_ref=base_ref) as repo:
         collected = collect_changed_paths(
             repo,
             base_ref_resolver=resolve_base_ref,
             runner=runner,
         )
     return ResolvedBaseObservation(
-        branch_path=branch_path,
-        base_ref=base_ref,
         collected=collected,
         resolver_repos=tuple(resolver_repos),
         repo=repo,
@@ -677,40 +789,44 @@ _CHILD_OUTPUT_BUDGET = (
 )
 
 
-def run_check_observation(
-    *,
-    branch_path: str = "",
-    branch_old_path: str = "",
-    branch_status: str = MODIFIED_GIT_STATUS,
-    branch_returncode: int = 0,
-    branch_stderr: str = "",
-    staged_path: str = "",
-    staged_status: str = MODIFIED_GIT_STATUS,
-    child_output: str = "",
-    create_repo_file: str | None = None,
-) -> RunObservation:
-    """Run the selected check against scripted git state and record the run."""
-
-    runner = selected_gate_runner_for_paths(
-        branch_path=branch_path,
-        branch_old_path=branch_old_path,
-        branch_status=branch_status,
-        branch_returncode=branch_returncode,
-        branch_stderr=branch_stderr,
-        staged_path=staged_path,
-        staged_status=staged_status,
-    )
-    sink = io.StringIO()
-    spawner = RecordingSpawner(
+def _scripted_spawner(sink: io.StringIO, child_output: str = "") -> RecordingSpawner:
+    return RecordingSpawner(
         exit_codes=[os.EX_OK] * _CHILD_OUTPUT_BUDGET,
         outputs=[child_output] * _CHILD_OUTPUT_BUDGET if child_output else (),
         observed_sink=sink,
     )
-    with TemporaryDirectory() as tmp:
-        repo = Path(tmp)
-        if create_repo_file is not None:
-            (repo / create_repo_file).parent.mkdir(parents=True, exist_ok=True)
-            (repo / create_repo_file).touch()
+
+
+def run_check_observation(
+    changes: RepositoryChanges, *, child_output: str = ""
+) -> RunObservation:
+    """Run the selected check in a real repository carrying ``changes``."""
+
+    runner = RecordingGitRunner()
+    sink = io.StringIO()
+    spawner = _scripted_spawner(sink, child_output)
+    with changed_repository(changes) as repo:
+        exit_code = run_selected_check(
+            spawner=spawner,
+            sink=sink,
+            repo=repo,
+            runner=runner,
+        )
+    return _run_observation(
+        exit_code=exit_code,
+        sink=sink,
+        spawner=spawner,
+        runner_calls=tuple(runner.calls),
+    )
+
+
+def failing_discovery_check_observation(*, stdout: str, stderr: str) -> RunObservation:
+    """Run the selected check while git discovery fails with ``stdout`` and ``stderr``."""
+
+    runner = FailingGitRunner(stdout=stdout, stderr=stderr)
+    sink = io.StringIO()
+    spawner = _scripted_spawner(sink)
+    with changed_repository(RepositoryChanges()) as repo:
         exit_code = run_selected_check(
             spawner=spawner,
             sink=sink,
@@ -766,6 +882,22 @@ def check_full_observation() -> RunObservation:
         exit_codes=[os.EX_OK] * _CHILD_OUTPUT_BUDGET, observed_sink=sink
     )
     exit_code = validation_main([RECIPE_CHECK_FULL], spawner=spawner, sink=sink)
+    return _run_observation(
+        exit_code=exit_code,
+        sink=sink,
+        spawner=spawner,
+        runner_calls=(),
+    )
+
+
+def entry_point_validation_observation() -> RunObservation:
+    """Run the entry point's validation recipe command with scripted children."""
+
+    sink = io.StringIO()
+    spawner = RecordingSpawner(
+        exit_codes=[os.EX_OK] * _CHILD_OUTPUT_BUDGET, observed_sink=sink
+    )
+    exit_code = validation_main([RECIPE_VALIDATION], spawner=spawner, sink=sink)
     return _run_observation(
         exit_code=exit_code,
         sink=sink,
@@ -915,14 +1047,10 @@ def production_check_observation(repo: Path) -> RunObservation:
     )
 
 
-def failing_discovery_runner(*, stdout: str, stderr: str) -> RecordingGitRunner:
-    """A git runner whose branch discovery fails with ``stdout`` and ``stderr``."""
+def failing_discovery_runner(*, stdout: str, stderr: str) -> FailingGitRunner:
+    """A git runner whose every discovery command fails with ``stdout`` and ``stderr``."""
 
-    return selected_gate_runner_for_paths(
-        branch_path=stdout,
-        branch_returncode=GIT_DISCOVERY_FAILURE_EXIT_CODE,
-        branch_stderr=stderr,
-    )
+    return FailingGitRunner(stdout=stdout, stderr=stderr)
 
 
 def captured_property_failure_notes(
@@ -1006,17 +1134,41 @@ class RecordingSpawner:
 
 @dataclass
 class RecordingGitRunner:
-    """A git runner double keyed by command argv."""
+    """A spy over the production git runner that records each command and repository.
 
-    outputs: Mapping[tuple[str, ...], GitCommandResult]
+    Exception case: Stage 5, Observability — the commands discovery issues and
+    the repository each runs in are hidden behind the real runner; the spy
+    records them and returns the real git result unchanged.
+    """
+
+    delegate: GitRunner = run_git_command
     calls: list[tuple[str, ...]] = field(default_factory=list)
     repos: list[Path] = field(default_factory=list)
 
     def __call__(self, command: Sequence[str], repo: Path) -> GitCommandResult:
-        key = tuple(command)
-        self.calls.append(key)
+        self.calls.append(tuple(command))
         self.repos.append(repo)
-        return self.outputs[key]
+        return self.delegate(command, repo)
+
+
+@dataclass
+class FailingGitRunner:
+    """A git runner whose every command fails with scripted diagnostics.
+
+    Exception case: Stage 5, Failure simulation — a discovery failure carrying
+    both stdout and stderr is not reliably reproducible from real git.
+    """
+
+    stdout: str
+    stderr: str
+    returncode: int = GIT_DISCOVERY_FAILURE_EXIT_CODE
+    calls: list[tuple[str, ...]] = field(default_factory=list)
+
+    def __call__(self, command: Sequence[str], repo: Path) -> GitCommandResult:
+        self.calls.append(tuple(command))
+        return GitCommandResult(
+            returncode=self.returncode, stdout=self.stdout, stderr=self.stderr
+        )
 
 
 @dataclass
@@ -1116,6 +1268,7 @@ class BoundedAdvancingClock:
 
 __all__ = [
     "HangingHandle",
+    "FailingGitRunner",
     "RecordingGitRunner",
     "RecordingHandle",
     "RecordingSpawner",
@@ -1130,3 +1283,5 @@ _2: type[ProcessHandle] = RecordingHandle
 _3: type[ProcessHandle] = HangingHandle
 _4: type[ProcessSpawner] = SignalRaisingSpawner
 _5: type[ProcessSpawner] = SpawnFailingSpawner
+_6: type[GitRunner] = RecordingGitRunner
+_7: type[GitRunner] = FailingGitRunner

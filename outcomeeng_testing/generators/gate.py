@@ -32,12 +32,9 @@ from outcomeeng.validation.infrastructure_index import (
 from outcomeeng.validation.profile_configuration import eval_configuration_files
 from outcomeeng.validation.selected_gate import (
     DEFAULT_BASE_REF,
-    DELETED_GIT_STATUS_PREFIX,
     FULL_GATE_PATTERNS,
     LIVE_DISCOVERY_PATTERNS,
     PYTHON_ASSERTION_TEST_PATTERNS,
-    RENAMED_GIT_STATUS_PREFIX,
-    COPIED_GIT_STATUS_PREFIX,
     SELECTION_LANES,
     TEST_INFRASTRUCTURE_PATTERNS,
     SelectionLane,
@@ -53,14 +50,6 @@ NESTED_SEGMENT: Final = "nested"
 WHITESPACE_FILL: Final = " generated segment "
 FILL_ALPHABET: Final = string.ascii_lowercase + string.digits
 MAX_FILL_LENGTH: Final = 8
-
-# Git's name-status vocabulary: `M` marks a modification, and a rename or copy
-# carries its similarity score after the source-owned status prefix.
-MODIFIED_GIT_STATUS: Final = "M"
-FULL_SIMILARITY_SCORE: Final = "100"
-RENAMED_GIT_STATUS: Final = f"{RENAMED_GIT_STATUS_PREFIX}{FULL_SIMILARITY_SCORE}"
-COPIED_GIT_STATUS: Final = f"{COPIED_GIT_STATUS_PREFIX}{FULL_SIMILARITY_SCORE}"
-DELETED_GIT_STATUS: Final = DELETED_GIT_STATUS_PREFIX
 
 # Scripted child behavior for recording spawners. The text and the non-zero
 # code are incidental: the orchestrator treats any output as opaque and any
