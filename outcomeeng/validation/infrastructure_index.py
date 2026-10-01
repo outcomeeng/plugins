@@ -10,7 +10,7 @@ repository root.
 from __future__ import annotations
 
 import ast
-from collections.abc import Collection, Iterator, Mapping
+from collections.abc import Collection, Iterable, Iterator, Mapping
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
@@ -181,44 +181,41 @@ def import_dependencies(
     return frozenset(dependencies)
 
 
-def index_test_infrastructure(
-    repo: Path,
+def build_infrastructure_index(
     *,
-    package: str = TEST_INFRASTRUCTURE_PACKAGE,
-    spec_root: str = SPEC_TREE_ROOT,
+    package: str,
+    module_sources: Mapping[str, str],
+    test_sources: Mapping[str, str],
+    conftest_sources: Iterable[str] = (),
 ) -> InfrastructureIndex:
-    """Build the index from the repository's source text without importing it."""
+    """Build the index from source text already read, without touching a file.
 
-    package_root = repo / package
-    modules = frozenset(
-        _module_name(path.relative_to(repo).as_posix(), package=package)
-        for path in _python_files(package_root)
-    )
-    module_dependencies: dict[str, frozenset[str]] = {}
-    for path in _python_files(package_root):
-        module = _module_name(path.relative_to(repo).as_posix(), package=package)
-        module_dependencies[module] = import_dependencies(
-            path.read_text(encoding="utf-8"),
+    ``module_sources`` maps each test-infrastructure module name to its source,
+    ``test_sources`` maps each executed test's repository-relative path to its
+    source, and ``conftest_sources`` holds each ``conftest.py`` source.
+    """
+
+    modules = frozenset(module_sources)
+    module_dependencies = {
+        module: import_dependencies(
+            source,
             importing_package=importing_package_for_module(module, modules=modules),
             package=package,
             modules=modules,
         )
-    test_dependencies: dict[str, frozenset[str]] = {}
-    conftest_dependencies: set[str] = set()
-    for path in _executed_test_files(repo / spec_root):
-        test_dependencies[path.relative_to(repo).as_posix()] = import_dependencies(
-            path.read_text(encoding="utf-8"),
-            importing_package=None,
-            package=package,
-            modules=modules,
+        for module, source in module_sources.items()
+    }
+    test_dependencies = {
+        path: import_dependencies(
+            source, importing_package=None, package=package, modules=modules
         )
-    for path in _conftest_files(repo, spec_root=spec_root):
+        for path, source in test_sources.items()
+    }
+    conftest_dependencies: set[str] = set()
+    for source in conftest_sources:
         conftest_dependencies.update(
             import_dependencies(
-                path.read_text(encoding="utf-8"),
-                importing_package=None,
-                package=package,
-                modules=modules,
+                source, importing_package=None, package=package, modules=modules
             )
         )
     return InfrastructureIndex(
@@ -227,6 +224,33 @@ def index_test_infrastructure(
         module_dependencies=module_dependencies,
         test_dependencies=test_dependencies,
         conftest_dependencies=frozenset(conftest_dependencies),
+    )
+
+
+def index_test_infrastructure(
+    repo: Path,
+    *,
+    package: str = TEST_INFRASTRUCTURE_PACKAGE,
+    spec_root: str = SPEC_TREE_ROOT,
+) -> InfrastructureIndex:
+    """Build the index from the repository's source text without importing it."""
+
+    return build_infrastructure_index(
+        package=package,
+        module_sources={
+            _module_name(path.relative_to(repo).as_posix(), package=package): (
+                path.read_text(encoding="utf-8")
+            )
+            for path in _python_files(repo / package)
+        },
+        test_sources={
+            path.relative_to(repo).as_posix(): path.read_text(encoding="utf-8")
+            for path in _executed_test_files(repo / spec_root)
+        },
+        conftest_sources=tuple(
+            path.read_text(encoding="utf-8")
+            for path in _conftest_files(repo, spec_root=spec_root)
+        ),
     )
 
 
