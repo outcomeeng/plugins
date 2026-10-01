@@ -49,5 +49,5 @@ The module invokes the command in the repository root whose top-level entries pr
 - NEVER: include the repository's own metadata in the generated pathspecs — neither its directory nor its ignore file is ever a cleanup candidate ([test](tests/test_clean.compliance.l1.py))
 - NEVER: fall back to the bare base command when no cleanup candidates exist ([test](tests/test_clean.compliance.l1.py))
 - ALWAYS: a Git dry run of the generated argv lists no declared local-work path, at the top level or nested, even beside an ignored entry whose name is a pattern matching one, and still lists an ignored cache that sits beside a nested one ([test](tests/test_clean.compliance.l1.py))
-- ALWAYS: an entry at a holding position that is not a directory is itself a pathspec, and a Git dry run of the generated argv completes over it ([test](tests/test_clean.compliance.l1.py))
+- ALWAYS: an entry at a holding position that is not a directory is itself a pathspec, so a Git dry run of the generated argv lists it when it is ignored ([test](tests/test_clean.compliance.l1.py))
 - ALWAYS: the root harness guides `CLAUDE.md` and `AGENTS.md` name `just clean` as the agent's own action when a gitignored artifact blocks a gate, with no operator question and no path-limited substitute ([audit])
