@@ -25,6 +25,7 @@ import sys
 from outcomeeng.hygiene.clean import (
     CLEAN_BASE_ARGV,
     GIT_IGNORE_FILE,
+    LOCAL_WORK_PATHS,
     SPX_STORE_DIR,
     Runner,
 )
@@ -36,6 +37,7 @@ GIT_DRY_RUN_OPTION = "--dry-run"
 GIT_END_OF_OPTIONS = "--"
 REMOVAL_LINE_PREFIX = "Would remove "
 NESTED_WORKING_DIR = "nested"
+LOCAL_WORK_FILE = "kept"
 RECORDING_RUNNER_FAILURE_EXIT_CODE = os.EX_OK + 1
 
 
@@ -87,12 +89,14 @@ class CleanRepo:
     active_python_prefix: Path
     ignored_cache: Path
     session_store: Path
+    caches_beside_local_work: frozenset[str] = frozenset()
 
 
 def create_clean_repo(
     tmp_path: Path,
     *,
     include_cache: bool = True,
+    include_local_work: bool = False,
     environment: EnvironmentPlacement = EnvironmentPlacement.INSIDE,
 ) -> CleanRepo:
     """Create a repository with ignored environment, session store, and cache.
@@ -104,6 +108,11 @@ def create_clean_repo(
     returned `active_python_prefix` is the prefix that placement hands the
     cleanup command; for the running interpreter it is that interpreter's own
     prefix, which the command resolves without being handed it.
+
+    `include_local_work` adds every local-work path the module declares as an
+    ignored directory holding one file, so a case covers each declared path
+    without restating it. Beside each nested one it places an ignored cache,
+    whose repository-relative path `caches_beside_local_work` reports.
     """
     repo_root = tmp_path / "repo"
     ignored_cache = repo_root / IGNORED_CACHE_DIR
@@ -113,8 +122,24 @@ def create_clean_repo(
     if include_cache:
         ignored_cache.mkdir()
     active_python_prefix = _place_environment(tmp_path, repo_root, environment)
+    ignore_lines = [
+        f"{IGNORED_PYTHON_ENV_DIR}/",
+        f"{IGNORED_CACHE_DIR}/",
+        f"{SPX_STORE_DIR}/",
+    ]
+    caches_beside_local_work: set[str] = set()
+    if include_local_work:
+        for local_path in LOCAL_WORK_PATHS:
+            local_dir = repo_root / local_path
+            local_dir.mkdir(parents=True)
+            (local_dir / LOCAL_WORK_FILE).write_text(local_path, encoding="utf-8")
+            ignore_lines.append(f"/{local_path}/")
+            holder = Path(local_path).parent
+            if holder.parts:
+                (repo_root / holder / IGNORED_CACHE_DIR).mkdir(exist_ok=True)
+                caches_beside_local_work.add((holder / IGNORED_CACHE_DIR).as_posix())
     (repo_root / GIT_IGNORE_FILE).write_text(
-        f"{IGNORED_PYTHON_ENV_DIR}/\n{IGNORED_CACHE_DIR}/\n{SPX_STORE_DIR}/\n",
+        "".join(f"{line}\n" for line in ignore_lines),
         encoding="utf-8",
     )
     subprocess.run(
@@ -128,6 +153,7 @@ def create_clean_repo(
         active_python_prefix=active_python_prefix,
         ignored_cache=ignored_cache,
         session_store=session_store,
+        caches_beside_local_work=frozenset(caches_beside_local_work),
     )
 
 
@@ -154,7 +180,7 @@ def observe_dry_run_removals(
     repo: CleanRepo,
     argv: Sequence[str],
 ) -> frozenset[str]:
-    """Return the top-level paths Git reports it would remove for `argv`.
+    """Return the repository-relative paths Git reports it would remove for `argv`.
 
     Inserts Git's dry-run option directly after the base command the module
     composed, so the dry run exercises the exact flags the module emits, then

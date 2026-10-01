@@ -1,10 +1,11 @@
 """Level-1 compliance evidence for workspace cleanup.
 
 Covers the compliance assertions in `clean.md` whose verdict a command can
-produce: the argv the builder composes, the paths it omits, and the empty argv
-it returns when nothing is left to clean. The declared base command and
-protected set are values the module complies with rather than behavior, so
-their evidence is audit and no case here pins them.
+produce: the argv the builder composes, the paths it omits, the empty argv
+it returns when nothing is left to clean, and a real Git dry run that lists
+no declared local-work path. The declared base command, protected set, and
+local-work paths are values the module complies with rather than behavior,
+so their evidence is audit and no case here pins them.
 """
 
 from __future__ import annotations
@@ -25,6 +26,7 @@ from outcomeeng_testing.harnesses.clean import (
     IGNORED_CACHE_DIR,
     IGNORED_PYTHON_ENV_DIR,
     create_clean_repo,
+    observe_dry_run_removals,
 )
 
 
@@ -113,6 +115,20 @@ def test_inside_repo_symlink_target_active_environment_is_omitted_from_pathspecs
 
     assert IGNORED_CACHE_DIR in argv
     assert IGNORED_PYTHON_ENV_DIR not in argv
+
+
+def test_git_dry_run_lists_no_local_work_path(tmp_path: Path) -> None:
+    repo = create_clean_repo(tmp_path, include_local_work=True)
+
+    argv = build_clean_argv(
+        repo_root=repo.root,
+        active_python_prefix=repo.active_python_prefix,
+    )
+
+    removals = observe_dry_run_removals(repo=repo, argv=argv)
+
+    assert repo.caches_beside_local_work
+    assert removals == {IGNORED_CACHE_DIR, *repo.caches_beside_local_work}
 
 
 def test_outside_repo_active_environment_does_not_remove_pathspecs(
