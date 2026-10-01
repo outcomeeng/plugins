@@ -7,8 +7,9 @@ Replaces the Justfile `clean` recipe's `find -delete` chain with `git clean
 - `-d`  recurse into untracked directories
 - `-X`  remove only files ignored by git (preserving untracked-but-not-ignored
   files)
-- pathspecs limit the cleanup to top-level entries outside the session store
-  and the active Python environment
+- pathspecs limit the cleanup to top-level entries outside the session store,
+  the local-work paths, and the active Python environment; an entry holding a
+  nested local-work path is replaced by its other children
 
 The module's contract:
 
@@ -40,6 +41,14 @@ PATHSPEC_SEPARATOR = "--"
 GIT_METADATA_DIR = ".git"
 GIT_IGNORE_FILE = ".gitignore"
 SPX_STORE_DIR = ".spx"
+LOCAL_WORK_PATHS: tuple[str, ...] = (
+    ".claude",
+    ".codex",
+    ".agents",
+    ".mcp.json",
+    ".env",
+    "methodology/memories",
+)
 
 
 class Runner(Protocol):
@@ -100,11 +109,24 @@ def build_clean_pathspecs(
     repo_root: Path,
     active_python_prefix: Path,
 ) -> tuple[str, ...]:
-    """Return top-level pathspecs safe for git clean."""
+    """Return pathspecs safe for git clean.
+
+    Every top-level entry outside the protected set is a pathspec, except one
+    that contains a nested local-work path: its other children stand in its
+    place, level by level, so no pathspec names the protected path or a
+    directory that holds it.
+    """
     repo_root_absolute = Path(os.path.abspath(repo_root))
     active_python_prefix_absolute = Path(os.path.abspath(active_python_prefix))
     active_python_prefix_real = Path(os.path.realpath(active_python_prefix))
-    preserved_names = {GIT_IGNORE_FILE, GIT_METADATA_DIR, SPX_STORE_DIR}
+    local_work = [Path(path) for path in LOCAL_WORK_PATHS]
+    nested_local_work = frozenset(path for path in local_work if len(path.parts) > 1)
+    preserved_names = {
+        GIT_IGNORE_FILE,
+        GIT_METADATA_DIR,
+        SPX_STORE_DIR,
+        *(path.name for path in local_work if len(path.parts) == 1),
+    }
 
     try:
         relative_active_prefix = active_python_prefix_absolute.relative_to(
@@ -120,11 +142,40 @@ def build_clean_pathspecs(
         if Path(os.path.realpath(entry)) == active_python_prefix_real:
             preserved_names.add(entry.name)
 
-    return tuple(
-        entry.name
-        for entry in sorted(repo_root.iterdir(), key=lambda path: path.name)
-        if entry.name not in preserved_names
+    return _pathspecs_below(
+        repo_root,
+        Path(),
+        excluded=frozenset(Path(name) for name in preserved_names) | nested_local_work,
+        holders=frozenset(
+            parent
+            for path in nested_local_work
+            for parent in path.parents
+            if parent.parts
+        ),
     )
+
+
+def _pathspecs_below(
+    directory: Path,
+    relative: Path,
+    *,
+    excluded: frozenset[Path],
+    holders: frozenset[Path],
+) -> tuple[str, ...]:
+    pathspecs: list[str] = []
+    for entry in sorted(directory.iterdir(), key=lambda path: path.name):
+        entry_relative = relative / entry.name
+        if entry_relative in excluded:
+            continue
+        if entry_relative in holders and entry.is_dir() and not entry.is_symlink():
+            pathspecs.extend(
+                _pathspecs_below(
+                    entry, entry_relative, excluded=excluded, holders=holders
+                )
+            )
+            continue
+        pathspecs.append(entry_relative.as_posix())
+    return tuple(pathspecs)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -141,6 +192,7 @@ __all__ = [
     "CLEAN_BASE_ARGV",
     "GIT_IGNORE_FILE",
     "GIT_METADATA_DIR",
+    "LOCAL_WORK_PATHS",
     "SPX_STORE_DIR",
     "PATHSPEC_SEPARATOR",
     "Runner",
