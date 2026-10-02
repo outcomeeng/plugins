@@ -232,7 +232,6 @@ def index_test_infrastructure(
     repo: Path,
     *,
     package: str = TEST_INFRASTRUCTURE_PACKAGE,
-    spec_root: str = SPEC_TREE_ROOT,
 ) -> InfrastructureIndex:
     """Build the index from the repository's source text without importing it."""
 
@@ -246,11 +245,10 @@ def index_test_infrastructure(
         },
         test_sources={
             path.relative_to(repo).as_posix(): path.read_text(encoding="utf-8")
-            for path in _executed_test_files(repo / spec_root)
+            for path in _executed_test_files(repo / SPEC_TREE_ROOT)
         },
         conftest_sources=tuple(
-            path.read_text(encoding="utf-8")
-            for path in _conftest_files(repo, spec_root=spec_root)
+            path.read_text(encoding="utf-8") for path in _conftest_files(repo)
         ),
     )
 
@@ -300,10 +298,10 @@ def _executed_test_files(root: Path) -> Iterator[Path]:
             yield path
 
 
-def _conftest_files(repo: Path, *, spec_root: str) -> Iterator[Path]:
+def _conftest_files(repo: Path) -> Iterator[Path]:
     root_conftest = repo / CONFTEST_FILENAME
     if root_conftest.is_file():
         yield root_conftest
-    spec_dir = repo / spec_root
+    spec_dir = repo / SPEC_TREE_ROOT
     if spec_dir.is_dir():
         yield from sorted(spec_dir.rglob(CONFTEST_FILENAME))

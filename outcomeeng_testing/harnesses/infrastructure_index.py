@@ -245,11 +245,10 @@ class ChainSources:
     test_sources: Mapping[str, str]
 
 
-def chain_sources(
-    chain: tuple[str, ...], package: str = TEST_INFRASTRUCTURE_PACKAGE
-) -> ChainSources:
+def chain_sources(chain: tuple[str, ...]) -> ChainSources:
     """Compose modules where each imports the next and a test importing the first."""
 
+    package = TEST_INFRASTRUCTURE_PACKAGE
     harnesses = f"{package}.{HARNESSES_SUBPACKAGE}"
     modules = tuple(f"{harnesses}.{name}" for name in chain)
     module_sources = {package: "", harnesses: ""}

@@ -678,7 +678,6 @@ def run_selected_check(
     sink: TextIO,
     repo: Path,
     base_ref: str | None = None,
-    base_ref_resolver: BaseRefResolver | None = None,
     runner: GitRunner = run_git_command,
 ) -> int:
     """Run the selected local check through the recipe orchestrator."""
@@ -687,7 +686,6 @@ def run_selected_check(
         changed_path_entries = collect_changed_path_entries(
             repo,
             base_ref=base_ref,
-            base_ref_resolver=base_ref_resolver,
             runner=runner,
         )
     except GitDiscoveryError as exc:
@@ -734,13 +732,13 @@ def run_full_check(
     sink: TextIO,
     repo: Path,
     base_ref: str | None = None,
-    base_ref_resolver: BaseRefResolver | None = None,
     runner: GitRunner = run_git_command,
 ) -> int:
     """Run the explicit full gate, selecting real-agent Codex tests by changeset."""
 
-    resolver = base_ref_resolver or resolve_full_gate_base_ref
-    resolved_base_ref = base_ref if base_ref is not None else resolver(repo)
+    resolved_base_ref = (
+        base_ref if base_ref is not None else resolve_full_gate_base_ref(repo)
+    )
     try:
         changed_paths = collect_changed_paths(
             repo,

@@ -204,17 +204,10 @@ def pytest_collection_observation(
     )
 
 
-def run_full_check_observation(
-    *,
-    branch_path: str = "",
-    branch_status: str = "M",
-) -> RunObservation:
+def run_full_check_observation(*, branch_path: str = "") -> RunObservation:
     """Run the explicit full gate against scripted git state and record the run."""
 
-    runner = selected_gate_runner_for_paths(
-        branch_path=branch_path,
-        branch_status=branch_status,
-    )
+    runner = selected_gate_runner_for_paths(branch_path=branch_path)
     spawner = RecordingSpawner(exit_codes=[os.EX_OK] * _SPAWN_BUDGET)
     sink = io.StringIO()
     with TemporaryDirectory() as tmp:
