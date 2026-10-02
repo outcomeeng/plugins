@@ -11,7 +11,6 @@ from tempfile import TemporaryDirectory
 from uuid import uuid4
 
 from outcomeeng.distribution.native_profile_execution import (
-    NATIVE_PROFILE_AMBIENT_ENVIRONMENT_VARIABLES,
     NativeProfileExecutionObservation,
 )
 from outcomeeng_testing.harnesses.discovery_auth import CREDENTIAL_ENVIRONMENTS
@@ -24,6 +23,7 @@ from outcomeeng_testing.harnesses.discovery_auth_cases import (
 from outcomeeng.distribution.installation import CODEX_HOME_ENV
 from outcomeeng_testing.harnesses.native_profile_execution import (
     CLAUDE_CREDENTIAL_VARIABLES,
+    NATIVE_PROFILE_AMBIENT_ENVIRONMENT_VARIABLES,
     run_native_profile_execution,
 )
 from outcomeeng_testing.harnesses.installation import repository_root

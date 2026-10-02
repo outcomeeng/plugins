@@ -3,13 +3,11 @@
 from collections.abc import Mapping
 from dataclasses import replace
 
-from outcomeeng.distribution.native_profile_execution import (
-    NATIVE_PROFILE_AMBIENT_ENVIRONMENT_VARIABLES,
-)
 from outcomeeng_testing.harnesses.discovery_auth import CREDENTIAL_ENVIRONMENTS
 from outcomeeng_testing.harnesses.discovery_auth_cases import NativeFault
 from outcomeeng_testing.harnesses.native_profile_execution import (
     CLAUDE_CREDENTIAL_VARIABLES,
+    NATIVE_PROFILE_AMBIENT_ENVIRONMENT_VARIABLES,
 )
 from outcomeeng_testing.harnesses.native_profile_failures import native_profile_failure
 

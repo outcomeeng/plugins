@@ -39,7 +39,6 @@ from outcomeeng.distribution.installation import (
     AGENT_OWNERSHIP_DIGEST_FIELD,
     AGENT_OWNERSHIP_ENTRIES_FIELD,
     AGENT_OWNERSHIP_FILENAME,
-    CODEX_CONFIG_PLUGINS_TABLE,
     AGENT_OWNERSHIP_PLUGIN_FIELD,
     AGENT_OWNERSHIP_SCHEMA_FIELD,
     AGENT_OWNERSHIP_SCHEMA_VERSION,
@@ -201,6 +200,12 @@ DECLARED_CODEX_SOURCE = declared_codex_source(
 """The same declared source in the form Codex adds it."""
 EMPTY_CODEX_MARKETPLACE_LISTING = json.dumps({CODEX_MARKETPLACES_FIELD: []})
 """A Codex registry listing carrying no marketplace, as a home with none reports."""
+CODEX_CONFIG_PLUGINS_TABLE = "plugins"
+"""The Codex configuration table under which a home declares plugins, read by the Codex CLI and never by production.
+
+A provisioned home's configuration declares no plugin: it carries no entry in
+this table, so the home reads as empty state for selection and bootstrap.
+"""
 CODEX_CONFIG_PLUGIN_ENABLED_KEY = "enabled"
 """The activation key inside that table, read by the Codex CLI and never by production."""
 PLUGIN_DISABLING_CODEX_CONFIG = f"[{CODEX_CONFIG_PLUGINS_TABLE}]\n{CODEX_CONFIG_PLUGIN_ENABLED_KEY} = false\n".encode()

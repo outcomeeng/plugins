@@ -50,12 +50,6 @@ ISOLATED_CODEX_HOME_DIRECTORY = "codex"
 """The directory beneath isolated state that becomes `CODEX_HOME`."""
 ISOLATED_CODEX_SQLITE_DIRECTORY = "codex-sqlite"
 """The directory beneath isolated state that becomes `CODEX_SQLITE_HOME`."""
-CODEX_CONFIG_PLUGINS_TABLE = "plugins"
-"""The Codex configuration table under which a home or product declares plugins.
-
-A provisioned home's configuration declares no plugin: it carries no entry in
-this table, so the home reads as empty state for selection and bootstrap.
-"""
 CODEX_HOME_EMPTY_CONFIG = ""
 """The plugin-free configuration a provisioned disposable `CODEX_HOME` holds."""
 AGENT_OWNERSHIP_FILENAME = ".outcomeeng-marketplace-ownership.json"
@@ -3911,7 +3905,6 @@ __all__ = [
     "CODEX_AGENTS_PATH",
     "CODEX_CATALOG_PATH",
     "CODEX_CONFIG_PATH",
-    "CODEX_CONFIG_PLUGINS_TABLE",
     "ISOLATED_CLAUDE_CONFIG_DIRECTORY",
     "ISOLATED_CODEX_HOME_DIRECTORY",
     "ISOLATED_CODEX_SQLITE_DIRECTORY",

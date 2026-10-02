@@ -22,7 +22,6 @@ from outcomeeng.distribution.installation import (
     execute_installation,
 )
 from outcomeeng.distribution.native_profile_execution import (
-    NATIVE_PROFILE_AMBIENT_ENVIRONMENT_VARIABLES,
     NativeExecutionRunners,
     NativeProfileExecutionObservation,
     NativeProfileRow,
@@ -51,6 +50,26 @@ from outcomeeng_testing.harnesses.installation import mirror_installation_inputs
 CLAUDE_CREDENTIAL_VARIABLES = frozenset(
     {"ANTHROPIC_API_KEY", "CLAUDE_CODE_OAUTH_TOKEN"}
 )
+NATIVE_PROFILE_OVERRIDE_ENVIRONMENT_VARIABLES = frozenset(
+    {
+        "CLAUDE_CODE_EFFORT_LEVEL",
+        "CLAUDE_CODE_SUBAGENT_MODEL",
+    }
+)
+"""Ambient model and effort overrides a profile probe must not inherit."""
+NATIVE_PROFILE_SESSION_MARKER_ENVIRONMENT_VARIABLE = "CLAUDECODE"
+"""The marker a running Claude Code session exports to the processes it starts.
+
+A probe launched from inside a session would otherwise inherit it and run as a
+nested session rather than as the isolated parent the profile row describes.
+"""
+NATIVE_PROFILE_AMBIENT_ENVIRONMENT_VARIABLES = frozenset(
+    {
+        *NATIVE_PROFILE_OVERRIDE_ENVIRONMENT_VARIABLES,
+        NATIVE_PROFILE_SESSION_MARKER_ENVIRONMENT_VARIABLE,
+    }
+)
+"""Every ambient variable the isolation filter strips before a profile row runs."""
 
 
 def run_profile_process(

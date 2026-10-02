@@ -27,7 +27,6 @@ from outcomeeng.distribution.installation import (
     marketplace_plugin_identifier,
     marketplace_plugin_name,
     CODEX_CONFIG_PATH,
-    CODEX_CONFIG_PLUGINS_TABLE,
     CODEX_EXEC_SUBCOMMAND,
     FIRST_INSTALL_WARNING,
     SPEC_TREE_PLUGIN,
@@ -76,6 +75,7 @@ from outcomeeng_testing.generators.installation import (
     generated_non_pending_failure_wordings,
 )
 from outcomeeng_testing.harnesses.installation import (
+    CODEX_CONFIG_PLUGINS_TABLE,
     MARKETPLACE,
     REAL_AGENT_CODEX_HOME_PROVISIONERS,
     captured_codex_home_refusal,

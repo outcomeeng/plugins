@@ -29,26 +29,6 @@ from outcomeeng.distribution.profiles import (
 )
 
 NATIVE_PROFILE_ARTIFACTS_DIRECTORY: Final = Path("native-profile-execution")
-NATIVE_PROFILE_OVERRIDE_ENVIRONMENT_VARIABLES: Final = frozenset(
-    {
-        "CLAUDE_CODE_EFFORT_LEVEL",
-        "CLAUDE_CODE_SUBAGENT_MODEL",
-    }
-)
-"""Ambient model and effort overrides a profile probe must not inherit."""
-NATIVE_PROFILE_SESSION_MARKER_ENVIRONMENT_VARIABLE: Final = "CLAUDECODE"
-"""The marker a running Claude Code session exports to the processes it starts.
-
-A probe launched from inside a session would otherwise inherit it and run as a
-nested session rather than as the isolated parent the profile row describes.
-"""
-NATIVE_PROFILE_AMBIENT_ENVIRONMENT_VARIABLES: Final = frozenset(
-    {
-        *NATIVE_PROFILE_OVERRIDE_ENVIRONMENT_VARIABLES,
-        NATIVE_PROFILE_SESSION_MARKER_ENVIRONMENT_VARIABLE,
-    }
-)
-"""Every ambient variable the isolation filter strips before a profile row runs."""
 
 
 @dataclass(frozen=True)
