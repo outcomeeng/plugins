@@ -138,3 +138,13 @@ instruction-block node leaves pinned router prose's verification form unstated.
 verification form for pinned router prose, the drift-gate claim states its rule
 atemporally, and the removal-mutation test is settled under the same condition as
 the five prose-coupling assertions.
+
+## `/update-instruction-block` workflow warnings left after its approving skill audit
+
+The typed skill audit that approved `src/plugins/spec-tree/skills/update-instruction-block` on head `164eb9e842474b3a0ae1904bf3b61568b30ccd73` raised three warnings on the workflow text:
+
+- Step 2's never-rerun rule omits the `--reconcile --from` exception that GATE 3 states later, so a reader in order may refuse the tie-break rerun.
+- The `dirty` report says the operator must commit or set aside the edit and then re-run, without saying whether the run ends there, while the recency-tie branch commits through `spec-tree:commit-changes`.
+- The success criteria require the no-verb render to reproduce each written router block, but Step 5 never runs that render; `--check` alone passes a hand-edit inside the router.
+
+**Settlement condition**: the never-rerun rule names the `--from` exception where it is stated, the `dirty` report states that the run ends with nothing written, Step 5 runs the no-verb render comparison, and a typed skill audit approves the surface without these warnings.
