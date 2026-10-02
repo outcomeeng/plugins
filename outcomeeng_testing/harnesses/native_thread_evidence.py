@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -14,14 +13,7 @@ from uuid import uuid4
 from hypothesis import given, seed, settings
 
 from outcomeeng.distribution.installation import (
-    CODEX_HOME_CONFIG_PATH,
-    CODEX_HOME_ENV,
-    CODEX_SQLITE_HOME_ENV,
-    HOME_ENV,
-    ISOLATED_CODEX_HOME_DIRECTORY,
-    ISOLATED_CODEX_SQLITE_DIRECTORY,
     CommandResult,
-    provision_codex_home,
 )
 from outcomeeng.distribution.native_thread_evidence import (
     THREAD_READ_COMMAND,
@@ -34,8 +26,6 @@ from outcomeeng.distribution.native_thread_evidence import (
     NativeTurnField,
     NativeTurnStatus,
     collect_native_child_evidence,
-    read_native_thread,
-    read_native_child,
 )
 from outcomeeng_testing.generators.native_thread_evidence import (
     NativeEvidenceCase,
@@ -203,48 +193,3 @@ def exercise_native_evidence(
         run_replayable_property(
             run_cases, seed_value=_EVIDENCE_SEED, replay_path=_EVIDENCE_REPLAY
         )
-
-
-def _empty_native_state(root: Path) -> dict[str, str]:
-    """Provision empty disposable Codex state beneath `root` and its child environment."""
-    codex_home = root / ISOLATED_CODEX_HOME_DIRECTORY
-    codex_sqlite_home = root / ISOLATED_CODEX_SQLITE_DIRECTORY
-    provision_codex_home(codex_home)
-    codex_sqlite_home.mkdir()
-    return {
-        "PATH": os.environ["PATH"],
-        HOME_ENV: str(root),
-        CODEX_HOME_ENV: str(codex_home),
-        CODEX_SQLITE_HOME_ENV: str(codex_sqlite_home),
-    }
-
-
-def _read_empty_native_state(*, children: bool) -> CommandResult:
-    """Exercise the real app-server read in empty state without a model turn."""
-    with TemporaryDirectory(prefix="native-thread-read-") as temporary:
-        root = Path(temporary)
-        environment = _empty_native_state(root)
-        reader = read_native_child if children else read_native_thread
-        return reader(str(uuid4()), root, environment)
-
-
-def observe_empty_native_state_codex_home_config() -> bytes | None:
-    """The `config.toml` the empty native-read state holds before its first Codex command.
-
-    Provisions the same state the absent-thread reads run against and reads it
-    without starting any Codex process; `None` when the home holds no config.
-    """
-    with TemporaryDirectory(prefix="native-thread-read-") as temporary:
-        environment = _empty_native_state(Path(temporary))
-        config = Path(environment[CODEX_HOME_ENV]) / CODEX_HOME_CONFIG_PATH
-        return config.read_bytes() if config.is_file() else None
-
-
-def read_absent_native_thread() -> CommandResult:
-    """Read an unknown thread through the real app-server without a model turn."""
-    return _read_empty_native_state(children=False)
-
-
-def read_absent_native_child() -> CommandResult:
-    """Exercise real parent-filtered active and archived child listing."""
-    return _read_empty_native_state(children=True)

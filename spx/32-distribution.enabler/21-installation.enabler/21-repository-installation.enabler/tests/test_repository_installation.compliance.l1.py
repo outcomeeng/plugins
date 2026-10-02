@@ -72,10 +72,10 @@ from outcomeeng_testing.generators.installation import (
     generated_boolean_states,
     generated_definition_edit,
     generated_non_hex_digest,
-    generated_non_pending_failure_wordings,
 )
 from outcomeeng_testing.harnesses.installation import (
     CODEX_CONFIG_PLUGINS_TABLE,
+    captured_non_pending_failure_wordings,
     MARKETPLACE,
     REAL_AGENT_CODEX_HOME_PROVISIONERS,
     captured_codex_home_refusal,
@@ -806,7 +806,7 @@ def test_a_recorded_plugin_is_refreshed_by_the_native_update_never_a_reinstall()
             operation=Operation.PLUGIN_UPDATE,
             stderr=wording,
         )
-        for wording in generated_non_pending_failure_wordings(
+        for wording in captured_non_pending_failure_wordings(
             sorted(committed_catalog_plugin_names()), MARKETPLACE
         )
     ]

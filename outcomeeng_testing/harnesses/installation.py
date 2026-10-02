@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import re
 import shutil
 import stat
 import subprocess
@@ -24,12 +25,15 @@ from typing import cast
 from outcomeeng.distribution.agents import (
     AGENT_NAME_FIELD,
     AGENT_SKILL_ENABLED_FIELD,
+    AGENT_SKILLS_CONFIG_FIELD,
+    AGENT_SKILLS_FIELD,
 )
-from outcomeeng.distribution.build import render_text
+from outcomeeng.distribution.build import agent_capability, agent_slug, render_text
 from outcomeeng.distribution.contracts import (
     BUILD_TARGET_VARIABLE,
     CLAUDE_DIST_RELATIVE,
     DIST_CODEX_PLUGINS_DIR,
+    NATIVE_AGENT_PLUGIN_SEPARATOR,
     PLUGIN_NAME_VARIABLE,
     Target,
 )
@@ -42,9 +46,6 @@ from outcomeeng.distribution.installation import (
     AGENT_OWNERSHIP_PLUGIN_FIELD,
     AGENT_OWNERSHIP_SCHEMA_FIELD,
     AGENT_OWNERSHIP_SCHEMA_VERSION,
-    AGENT_SKILL_NAME_FIELD,
-    AGENT_SKILLS_CONFIG_FIELD,
-    AGENT_SKILLS_FIELD,
     Agent,
     AgentHomeCollision,
     AgentHomeCollisionError,
@@ -171,9 +172,6 @@ from outcomeeng_testing.generators.installation import (
     generated_unparseable_json,
 )
 from outcomeeng.validation.ci_gate import JUST_BINARY
-from outcomeeng_testing.harnesses.native_thread_evidence import (
-    observe_empty_native_state_codex_home_config,
-)
 from outcomeeng_testing.harnesses.discovery_auth import (
     DiscoveryAuthentication,
     DiscoveryAuthenticationError,
@@ -211,7 +209,8 @@ CODEX_CONFIG_PLUGIN_ENABLED_KEY = "enabled"
 PLUGIN_DISABLING_CODEX_CONFIG = f"[{CODEX_CONFIG_PLUGINS_TABLE}]\n{CODEX_CONFIG_PLUGIN_ENABLED_KEY} = false\n".encode()
 
 SUBAGENT_DISCOVERY_NAMES_FIELD = "subagent_names"
-RENAMED_CHECKOUT_AGENT_NAME = "local_helper.toml"
+RENAMED_CHECKOUT_AGENT_NAME = f"local_helper{agent_capability(Target.CODEX).suffix}"
+"""A checkout definition filename carrying no plugin namespace prefix."""
 RENAMED_CHECKOUT_SKILL_NAME = "renamed-skill"
 SUBAGENT_DISCOVERY_OUTPUT_SCHEMA: dict[str, object] = {
     "type": "object",
@@ -449,11 +448,11 @@ class PluginLifecycleHarness:
 
     def definition_name(self, slug: str) -> str:
         """The shipped filename this plugin gives the agent named `slug`."""
-        return f"{self.plugin_name}_{slug}.toml"
+        return shipped_codex_definition_name(self.plugin_name, slug)
 
     def definition_content(self, slug: str) -> bytes:
         """The shipped definition bytes for the agent named `slug`."""
-        return f'name = "{self.plugin_name}-{slug}"\n'.encode()
+        return f'{AGENT_NAME_FIELD} = "{self.plugin_name}-{slug}"\n'.encode()
 
     def ship(self, slug: str) -> Path:
         """Write the shipped definition for `slug` and return its path."""
@@ -1469,6 +1468,29 @@ CODEX_HOME_REFUSAL_FIXTURE = (
 Captured from a disposable home holding only a linked `auth.json`, during the
 write-through login. Recapture when the host's codex-cli changes that refusal.
 """
+
+
+@dataclass(frozen=True)
+class CapturedCliWording:
+    """A real CLI diagnostic read by path, with the identifiers its captured run named.
+
+    A variant changes only the plugin and marketplace names, the values the
+    evidence's domain ranges over; every other byte is the capture's own.
+    """
+
+    path: Path
+    plugin: str
+    marketplace: str
+
+    def naming(self, plugin: str, marketplace: str) -> str:
+        """The captured wording as the CLI prints it for `plugin` in `marketplace`."""
+        replacements = {self.plugin: plugin, self.marketplace: marketplace}
+        pattern = "|".join(re.escape(captured) for captured in replacements)
+        return re.sub(
+            pattern,
+            lambda match: replacements[match.group()],
+            self.path.read_text(encoding="utf-8"),
+        )
 
 
 def captured_codex_home_refusal() -> str:
@@ -2700,12 +2722,29 @@ def observe_agent_home_collision() -> AgentHomeCollisionObservation:
     )
 
 
+def shipped_codex_definition_name(plugin: str, slug: str) -> str:
+    """The filename the build gives `plugin`'s Codex definition of the agent `slug`.
+
+    The flat namespace prefix and the file suffix come from the build's own
+    per-target agent capability, so the harness carries no copy of either.
+    """
+    capability = agent_capability(Target.CODEX)
+    return f"{agent_slug(plugin, slug, capability=capability)}{capability.suffix}"
+
+
 def skill_enabling_definition(plugin: str) -> bytes:
-    """A definition carrying no plugin filename prefix that enables one plugin skill."""
+    """A definition carrying no plugin filename prefix that enables one plugin skill.
+
+    The skill entry names the skill inside the plugin's native namespace, the
+    form an authored agent's skill list carries into its converted definition.
+    """
+    qualified_skill = (
+        f"{plugin}{NATIVE_AGENT_PLUGIN_SEPARATOR}{RENAMED_CHECKOUT_SKILL_NAME}"
+    )
     return (
-        'name = "local-helper"\n'
+        f'{AGENT_NAME_FIELD} = "{generated_agent_slug()}"\n'
         f"[[{AGENT_SKILLS_FIELD}.{AGENT_SKILLS_CONFIG_FIELD}]]\n"
-        f'{AGENT_SKILL_NAME_FIELD} = "{plugin}:{RENAMED_CHECKOUT_SKILL_NAME}"\n'
+        f'{AGENT_NAME_FIELD} = "{qualified_skill}"\n'
         f"{AGENT_SKILL_ENABLED_FIELD} = true\n"
     ).encode("utf-8")
 
@@ -2728,7 +2767,10 @@ def observe_scope_split() -> ScopeSplitObservation:
         (checkout_agents / changed.destination.name).write_bytes(
             changed.content + b"# locally changed\n"
         )
-        (checkout_agents / f"{changed.plugin}_symlink.toml").symlink_to(changed.source)
+        (
+            checkout_agents
+            / shipped_codex_definition_name(changed.plugin, generated_agent_slug())
+        ).symlink_to(changed.source)
         (checkout_agents / RENAMED_CHECKOUT_AGENT_NAME).write_bytes(
             skill_enabling_definition(changed.plugin)
         )
@@ -4260,25 +4302,51 @@ def _shipped_agent_snapshot(checkout: Path) -> tuple[tuple[str, bytes], ...]:
     return tuple(sorted(shipped.items()))
 
 
-# Transcribed verbatim from each real agent CLI's install failure against a
-# registered marketplace source that had not published the named plugin; independent of
-# the production fragment constant so a drifted constant fails the linked tests.
-_CAPTURED_UNPUBLISHED_PLUGIN_STDERR: Mapping[Agent, str] = {
-    Agent.CLAUDE: (
-        'Failed to install plugin "{plugin}@{marketplace}": '
-        'Plugin "{plugin}" not found in marketplace "{marketplace}".'
+_UNPUBLISHED_PLUGIN_STDERR_FIXTURES: Mapping[Agent, CapturedCliWording] = {
+    Agent.CLAUDE: CapturedCliWording(
+        INSTALLATION_FIXTURES / "claude-code-plugin-install-unpublished.stderr.txt",
+        plugin="contribute",
+        marketplace="outcomeeng",
     ),
-    Agent.CODEX: (
-        "Error: plugin `{plugin}` was not found in marketplace `{marketplace}`"
+    Agent.CODEX: CapturedCliWording(
+        INSTALLATION_FIXTURES / "codex-cli-plugin-add-unpublished.stderr.txt",
+        plugin="contribute",
+        marketplace="outcomeeng",
     ),
 }
+"""Each agent CLI's install failure against a registered source that had not published the plugin.
+
+Captured while adding the `contribute` plugin against a canonical marketplace
+that did not yet publish it; the CLI versions of that run were not recorded.
+The captures stay independent of the production fragment constant, so a
+drifted constant fails the linked tests. Recapture when either CLI rewords the
+failure.
+"""
+
+_UNRECORDED_UPDATE_STDERR_FIXTURE = CapturedCliWording(
+    INSTALLATION_FIXTURES / "claude-code-2.1.285-plugin-update-unrecorded.stderr.txt",
+    plugin="spec-tree",
+    marketplace="outcomeeng",
+)
+"""Claude Code 2.1.285 updating `spec-tree` in agent state holding no install record of it.
+
+A real native update failure that names no unpublished plugin, independent of
+the pending classifier. Recapture when the host's Claude Code rewords it.
+"""
 
 
 def captured_unpublished_plugin_stderr(agent: Agent, plugin: str) -> str:
     """One agent CLI's observed unpublished-plugin install failure wording."""
-    return _CAPTURED_UNPUBLISHED_PLUGIN_STDERR[agent].format(
-        plugin=plugin,
-        marketplace=MARKETPLACE,
+    return _UNPUBLISHED_PLUGIN_STDERR_FIXTURES[agent].naming(plugin, MARKETPLACE)
+
+
+def captured_non_pending_failure_wordings(
+    plugins: Sequence[str], marketplace: str
+) -> tuple[str, ...]:
+    """The observed non-pending update failure, once for every plugin named."""
+    return tuple(
+        _UNRECORDED_UPDATE_STDERR_FIXTURE.naming(plugin, marketplace)
+        for plugin in plugins
     )
 
 
@@ -4400,6 +4468,7 @@ __all__ = [
     "observe_repository_plan",
     "observe_scope_split",
     "racing_digest_reader",
+    "shipped_codex_definition_name",
     "skill_enabling_definition",
     "RENAMED_CHECKOUT_AGENT_NAME",
     "RENAMED_CHECKOUT_SKILL_NAME",
@@ -4410,7 +4479,10 @@ __all__ = [
     "CodexHomeContractObservation",
     "CodexHomeContractRunner",
     "REAL_AGENT_CODEX_HOME_PROVISIONERS",
+    "CapturedCliWording",
     "captured_codex_home_refusal",
+    "captured_non_pending_failure_wordings",
+    "captured_unpublished_plugin_stderr",
     "codex_home_config",
     "observe_isolated_codex_home_contract",
     "observe_real_agent_state_codex_home_config",
@@ -4659,7 +4731,6 @@ def observe_real_agent_state_codex_home_config() -> bytes | None:
 
 REAL_AGENT_CODEX_HOME_PROVISIONERS: Mapping[str, Callable[[], bytes | None]] = {
     "real-agent-state": observe_real_agent_state_codex_home_config,
-    "empty-native-state": observe_empty_native_state_codex_home_config,
 }
 """Every real-agent observation's Codex home provisioning, observed before its first command."""
 

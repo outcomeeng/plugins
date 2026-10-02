@@ -10,6 +10,10 @@ from outcomeeng_testing.harnesses.native_profile_execution import (
     NATIVE_PROFILE_AMBIENT_ENVIRONMENT_VARIABLES,
 )
 from outcomeeng_testing.harnesses.native_profile_failures import native_profile_failure
+from outcomeeng_testing.harnesses.native_profile_launch import native_profile_launch
+
+from outcomeeng.distribution.contracts import Target
+from outcomeeng.distribution.native_profile_execution import native_profile_rows
 
 from outcomeeng.distribution.native_thread_evidence import (
     ChildIdentityField,
@@ -60,6 +64,67 @@ def test_no_native_process_inherits_an_ambient_override_or_an_unselected_credent
         assert len(observation.calls) == len(observation.rows)
         for call in observation.calls:
             assert not stripped & call.environment.keys(), call.argv
+
+
+def test_every_row_launches_its_child_once_passing_only_the_selected_credential() -> (
+    None
+):
+    strippable = (
+        NATIVE_PROFILE_AMBIENT_ENVIRONMENT_VARIABLES
+        | CLAUDE_CREDENTIAL_VARIABLES
+        | CREDENTIAL_ENVIRONMENTS
+    )
+    for selected in sorted(CLAUDE_CREDENTIAL_VARIABLES):
+        with native_profile_launch({selected}) as observation:
+            assert strippable - CLAUDE_CREDENTIAL_VARIABLES | {selected} <= (
+                observation.environment.keys()
+            )
+            assert len(observation.rows) == len(native_profile_rows())
+            for item in observation.rows:
+                row = item.observation.row
+                launches = [
+                    call
+                    for call in item.calls
+                    if set(row.launch_commands[0]) <= set(call.argv)
+                ]
+                assert len(launches) == 1, (row.identifier, launches)
+                launch = launches[0]
+                assert item.observation.launch_exit_code == 0, row.identifier
+                assert row.definition_path.is_file()
+                assert row.loading_path.is_file()
+                assert row.result_path.is_file()
+                assert not row.state_root.exists()
+                if row.target is Target.CLAUDE:
+                    assert launch.environment.keys() & strippable == {selected}
+                    assert (
+                        launch.environment[selected]
+                        == observation.environment[selected]
+                    )
+                else:
+                    assert not launch.environment.keys() & strippable, row.identifier
+                for call in item.calls:
+                    if call is not launch:
+                        assert not call.environment.keys() & strippable, call.argv
+
+
+def test_an_ambiguous_claude_credential_fails_its_row_without_a_launch() -> None:
+    with native_profile_launch(CLAUDE_CREDENTIAL_VARIABLES) as observation:
+        assert CLAUDE_CREDENTIAL_VARIABLES <= observation.environment.keys()
+        assert {item.observation.row.target for item in observation.rows} == set(Target)
+        for item in observation.rows:
+            row = item.observation.row
+            launches = [
+                call
+                for call in item.calls
+                if set(row.launch_commands[0]) <= set(call.argv)
+            ]
+            if row.target is Target.CLAUDE:
+                assert item.observation.terminal_condition is not None
+                assert item.observation.launch_exit_code is None
+                assert not launches, row.identifier
+                assert row.result_path.is_file()
+            else:
+                assert len(launches) == 1, row.identifier
 
 
 def test_native_child_read_retains_correlated_configuration_and_completion() -> None:

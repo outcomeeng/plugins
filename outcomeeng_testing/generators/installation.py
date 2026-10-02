@@ -1,6 +1,8 @@
 """Generated finite plugin selections for installation evidence."""
 
 import json
+import os
+import random
 import secrets
 import string
 from collections.abc import Mapping, Sequence
@@ -832,33 +834,20 @@ def generated_git_source_urls(marketplace: str) -> tuple[str, ...]:
     return tuple(form.format(path=marketplace) for form in _GIT_URL_FORMS)
 
 
-# Transcribed verbatim from the stderr of Claude Code 2.1.285 running
-# `claude plugin update spec-tree@outcomeeng --scope project` in agent state
-# that holds no install record of the plugin: a real native update failure
-# that names no unpublished plugin, independent of the pending classifier.
-_CAPTURED_UNRECORDED_UPDATE_STDERR = (
-    '\u2718 Failed to update plugin "{plugin}@{marketplace}": '
-    'Plugin "{plugin}" not found'
-)
-
-
-def generated_non_pending_failure_wordings(
-    plugins: Sequence[str], marketplace: str
-) -> tuple[str, ...]:
-    """The observed non-pending update failure, once for every plugin named."""
-    return tuple(
-        _CAPTURED_UNRECORDED_UPDATE_STDERR.format(
-            plugin=plugin, marketplace=marketplace
-        )
-        for plugin in plugins
-    )
-
-
-_IDENTIFIER_ENTROPY_BYTES = 6
+_IDENTIFIER_ENTROPY_BITS = 48
+_SEED_BITS = 32
 _SHA256_HEX_LENGTH = 64
 _NON_HEX_LETTERS = "".join(
     letter for letter in string.ascii_lowercase if letter not in string.hexdigits
 )
+GENERATED_VALUE_SEED_ENVIRONMENT = "OUTCOMEENG_INSTALLATION_GENERATOR_SEED"
+"""Replays one run's incidental draws when set to the seed its identifiers carry."""
+_REPLAYED_SEED = os.environ.get(GENERATED_VALUE_SEED_ENVIRONMENT)
+GENERATED_VALUE_SEED = (
+    int(_REPLAYED_SEED, 16) if _REPLAYED_SEED else secrets.randbits(_SEED_BITS)
+)
+"""The seed of this process's incidental draws, carried in every generated identifier."""
+_DRAWS = random.Random(GENERATED_VALUE_SEED)
 
 
 def generated_identifier(kind: str) -> str:
@@ -867,8 +856,12 @@ def generated_identifier(kind: str) -> str:
     Plugin names, agent slugs, and definition filenames in lifecycle cases are
     incidental: no assertion states one, so each case draws a new one and a
     predicate that happened to depend on a particular spelling fails at once.
+    Every identifier carries the hexadecimal seed of the draws that made it, so
+    a failure reporting one is replayed by rerunning the same pytest target with
+    `OUTCOMEENG_INSTALLATION_GENERATOR_SEED` set to that seed.
     """
-    return f"{kind}-{secrets.token_hex(_IDENTIFIER_ENTROPY_BYTES)}"
+    draw = _DRAWS.getrandbits(_IDENTIFIER_ENTROPY_BITS)
+    return f"{kind}-{GENERATED_VALUE_SEED:08x}-{draw:012x}"
 
 
 def generated_plugin_name() -> str:
@@ -902,8 +895,11 @@ def generated_agent_file() -> tuple[str, bytes]:
 
 
 def generated_non_hex_digest() -> str:
-    """A SHA-256-length digest drawn from letters outside the hexadecimal alphabet."""
-    return "".join(secrets.choice(_NON_HEX_LETTERS) for _ in range(_SHA256_HEX_LENGTH))
+    """A SHA-256-length digest drawn from letters outside the hexadecimal alphabet.
+
+    The letters come from the same seeded draws as every generated identifier.
+    """
+    return "".join(_DRAWS.choice(_NON_HEX_LETTERS) for _ in range(_SHA256_HEX_LENGTH))
 
 
 def generated_unparseable_json() -> str:
@@ -912,6 +908,8 @@ def generated_unparseable_json() -> str:
 
 
 __all__ = [
+    "GENERATED_VALUE_SEED",
+    "GENERATED_VALUE_SEED_ENVIRONMENT",
     "generated_agent_definition",
     "generated_agent_file",
     "generated_agent_slug",
@@ -941,7 +939,6 @@ __all__ = [
     "generated_concurrent_record_entry",
     "generated_failure_classification_cases",
     "generated_invalid_catalog_subsets",
-    "generated_non_pending_failure_wordings",
     "generated_persistent_catalog_selections",
     "generated_publication_states",
     "generated_valid_catalog_subsets",
