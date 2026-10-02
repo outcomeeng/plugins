@@ -30,7 +30,7 @@ The compliance assertion that a persistent run reads the install-record listing 
 
 **Resolution shape**: route the no-lock clause to audit evidence in the governing decision, where the absence of a lock is a structural judgment, or add a record-store observation the harness owns — a runner that reports every open on the record file — so the clause reaches a predicate.
 
-**Evidence**: test-evidence audit finding `f-010` (WARNING) against `841e864a9759eae04c8988c2931aa44b1ca21c74`, `f-007` (WARNING) against `f011edcdd33c0fdec41d8ccfbcdfe1393fc6b35a`, `f-008` (WARNING) with the implementation audit's matching debt finding against `a47f88e39d2a5fe9318eb24e6140623ca774dcfa`, which names the same absent oracle from the recorded-command seam, `f-009` (WARNING) against `c3b42a5514452b1b71e01c77467e7e45abfad048`, and `f-008` (WARNING) against each of `9ab0fc92c2f5c673edbfb2c73eea42502cef68e5` and `c2f6d8e1c3bc87f24d775fcbc62451b9c2ff6322`. The round against `05a7165277750d69c88bc8abbece2c4f6a96bb7c` raised it as `f-013` (WARNING): "The read-count and retry clauses are falsified through the recorded commands. A lock is not a command, so adding an advisory lock around the listing read leaves both counts at one and the test passing. The no-lock clause has no deterministic oracle." The round against `cc5f3e86be4dbcc2c727c46f5c96593bab02b680` raised it again as `f-013` (WARNING). The round against `43e80d923e177a48707f433e9cf12b86ee6c4b9b` raised it again as `f-015` (WARNING). The round against `d357782498093adc369be5c335e65748b20c79d1` raised it again as `f-005` (WARNING).
+**Evidence**: test-evidence audit finding `f-010` (WARNING) against `841e864a9759eae04c8988c2931aa44b1ca21c74`, `f-007` (WARNING) against `f011edcdd33c0fdec41d8ccfbcdfe1393fc6b35a`, `f-008` (WARNING) with the implementation audit's matching debt finding against `a47f88e39d2a5fe9318eb24e6140623ca774dcfa`, which names the same absent oracle from the recorded-command seam, `f-009` (WARNING) against `c3b42a5514452b1b71e01c77467e7e45abfad048`, and `f-008` (WARNING) against each of `9ab0fc92c2f5c673edbfb2c73eea42502cef68e5` and `c2f6d8e1c3bc87f24d775fcbc62451b9c2ff6322`. The round against `05a7165277750d69c88bc8abbece2c4f6a96bb7c` raised it as `f-013` (WARNING): "The read-count and retry clauses are falsified through the recorded commands. A lock is not a command, so adding an advisory lock around the listing read leaves both counts at one and the test passing. The no-lock clause has no deterministic oracle." The round against `cc5f3e86be4dbcc2c727c46f5c96593bab02b680` raised it again as `f-013` (WARNING). The round against `43e80d923e177a48707f433e9cf12b86ee6c4b9b` raised it again as `f-015` (WARNING). The round against `d357782498093adc369be5c335e65748b20c79d1` raised it again as `f-005` (WARNING). The round against `2a3987d45705b13bcb7351fec768ff8aa6fa280c` raised it again as `f-002` (WARNING).
 
 ## Claude Code renderings ship the Codex-only placement script and paraphrase its output
 
@@ -81,6 +81,8 @@ If the enable message or the update message words the absence differently, the c
 **Resolution shape**: build a disposable marketplace fixture that omits a plugin the built tree ships, register it as the source in the isolated homes the installation harness already provisions, and run the real `claude` and `codex` CLIs against it to record the install wording for both CLIs and the enable and update wording for Claude Code. That is a new real-CLI evidence lane with its own fixture, not a change to an existing test, which is why it is not folded into the changeset that surfaced it.
 
 **Evidence**: raised by changeset review `2026-08-09_10-14-46-352-325b0ceb84d5` against the changeset that introduced the carve-out.
+
+The two install captures also name no CLI version: their filenames carry none, and the harness docstring declaring them states that the versions of the capturing run were not recorded, so the evidence cannot tell a current capture from a stale oracle. The recapture lane above records each capture under a filename naming its tool and version, as `claude-code-2.1.285-plugin-update-unrecorded.stderr.txt` and `codex-cli-0.160.0-home-without-config.stderr.txt` do, and retires the unversioned pair. Raised as implementation-audit debt findings 82 and 83 in run `2026-10-02_12-15-14-254-77c7191ef444` over `d3b2825406e6c1e42680dd28d75eaf6809be3ead...2a3987d45705b13bcb7351fec768ff8aa6fa280c`; a recapture attempt in that repair round was refused by the session's permission boundary before either CLI ran.
 
 ## The L3 installation evidence stalls on a Full Disk Access prompt
 
@@ -319,7 +321,7 @@ decision change, not a test repair.
 production re-applies the declared plugin selection after a failed run
 (_restore_plugin_selection, outcomeeng/distribution/installation.py:1485). No
 linked [test] assertion declares that behavior, and the untagged spec assertion
-plus the ADR say failed runs retain changed state without restoring a snapshot." The round against `cc5f3e86be4dbcc2c727c46f5c96593bab02b680` raised it again as `f-018` (INFO). The round against `43e80d923e177a48707f433e9cf12b86ee6c4b9b` raised it again as `f-019` (INFO). The round against `d357782498093adc369be5c335e65748b20c79d1` raised it again as `f-006` (INFO).
+plus the ADR say failed runs retain changed state without restoring a snapshot." The round against `cc5f3e86be4dbcc2c727c46f5c96593bab02b680` raised it again as `f-018` (INFO). The round against `43e80d923e177a48707f433e9cf12b86ee6c4b9b` raised it again as `f-019` (INFO). The round against `d357782498093adc369be5c335e65748b20c79d1` raised it again as `f-006` (INFO). The round against `2a3987d45705b13bcb7351fec768ff8aa6fa280c` raised it again as `f-004` (INFO).
 
 ## The real-agent Codex home domain is a hand-maintained mapping
 
@@ -328,7 +330,7 @@ holds a plugin-free `config.toml` names three domains: the isolated
 installation's home, the write-through preflight's temporary homes, and every
 other home a real-agent observation points `CODEX_HOME` at. The third domain is
 evidenced through `REAL_AGENT_CODEX_HOME_PROVISIONERS` in
-`outcomeeng_testing/harnesses/installation.py`, a two-entry mapping the harness
+`outcomeeng_testing/harnesses/installation.py`, a one-entry mapping the harness
 maintains by hand. A real-agent observation that provisions its home another
 way falls outside the evidence without failing any test.
 
@@ -356,7 +358,7 @@ the evidence without an edit to a list.
 "The 'every other home a real-agent observation points CODEX_HOME at' domain is
 the hand-maintained two-entry REAL_AGENT_CODEX_HOME_PROVISIONERS mapping. It is
 not derived from the observations." The round against `d357782498093adc369be5c335e65748b20c79d1` raised it again as `f-004`
-(WARNING).
+(WARNING). The round against `2a3987d45705b13bcb7351fec768ff8aa6fa280c` raised it again as `f-003` (WARNING).
 
 ## The shipped placement script restates the agent naming relation
 
@@ -384,3 +386,48 @@ its own.
 **Evidence**: same-class sweep after test-evidence audit finding `f-003`
 (REJECT) against `d357782498093adc369be5c335e65748b20c79d1`, which found the installation harness
 restating the same relation.
+
+## The native-profile override set has no oracle independent of the filter that strips it
+
+The compliance assertion that a native-profile row removes ambient model and
+effort overrides is evidenced by
+`tests/test_native_profile_execution.compliance.l1.py`, whose two isolation
+tests take the expected stripped set from
+`NATIVE_PROFILE_AMBIENT_ENVIRONMENT_VARIABLES` in
+`outcomeeng_testing/harnesses/native_profile_execution.py`. The isolation
+filter `_isolated_environment` strips exactly that set, and `ambient_environment`
+in `outcomeeng_testing/harnesses/native_profile_launch.py` plants exactly that
+set, so removing a name from `NATIVE_PROFILE_OVERRIDE_ENVIRONMENT_VARIABLES`
+leaves both tests passing while a row inherits that override.
+
+No source independent of the filter declares which variables are model and
+effort overrides. The spec states the class, not its members, and
+`spx/12-shipped-scripting.adr.md` routes the agreement between a declared value
+and the source complying with it to audit, so declaring the members in the spec
+alone moves the agreement to audit rather than giving the test an oracle. The
+installed Claude Code CLI's own vocabulary is the candidate separately owned
+registry, but no stable surface exposes it: `claude --help` names no
+environment variable, and the names carried in the 2.1.287 binary are
+recoverable only by string extraction, which also yields fragments that are no
+variable.
+
+The same extraction indicates the set is incomplete, not only unwitnessed. The
+2.1.287 binary carries model-selection variables the filter does not strip,
+among them `ANTHROPIC_MODEL`, `ANTHROPIC_DEFAULT_OPUS_MODEL`,
+`ANTHROPIC_DEFAULT_SONNET_MODEL`, `ANTHROPIC_DEFAULT_HAIKU_MODEL`,
+`ANTHROPIC_SMALL_FAST_MODEL`, `CLAUDE_CODE_SUBAGENT_MODEL_FORCE`, and
+`CLAUDE_EFFORT`. An alias remap such as `ANTHROPIC_DEFAULT_OPUS_MODEL` changes
+the model a profile's `model: opus` resolves to, so an operator shell carrying
+one would let a Standard or Strong row run on a model its profile does not
+name.
+
+**Settlement condition**: the governing decision names the source of the
+override set — a declared contract whose agreement with the filter is audit
+evidence, or a captured, versioned CLI artifact the test reads by path — and
+the linked test fails when a member of that set is removed from the filter.
+
+**Evidence**: implementation-audit blocking finding 81, rule
+`oracle-independence`, in run `2026-10-02_12-15-14-254-77c7191ef444` over
+`d3b2825406e6c1e42680dd28d75eaf6809be3ead...2a3987d45705b13bcb7351fec768ff8aa6fa280c`;
+the variable names come from `strings` over the installed Claude Code 2.1.287
+binary, filtered for model, effort, and thinking tokens.
