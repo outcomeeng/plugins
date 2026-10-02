@@ -2,57 +2,6 @@
 
 Known defects in the repository-installation evidence. Each entry names the artifact, the observed failure, and the smallest unit of work that resolves it.
 
-## Native-profile evidence restates protocol vocabulary the owning modules hold
-
-`tests/test_native_profile_execution.compliance.l1.py` indexes the child-thread document with the literal `parentThreadId` while `outcomeeng/distribution/native_thread_evidence.py` owns that key as `ChildIdentityField.PARENT`, and asserts the retained child-listing artifact through the literals `childIds`, `pages`, and `result`, for which that module publishes no field constants. Both are source-ownership defects: a rename in the owning module leaves the evidence asserting a contract production no longer emits.
-
-`outcomeeng_testing/harnesses/native_thread_evidence.py` repeats the class in `RecordingThreadReader`: its failure-shaping methods hand-write `childIds`, `thread`, `turns`, `status`, and `items` while the same harness builds the payloads through `NativeChildLookupPayload`, `NativeChildThread`, and `NativeTurn` elsewhere. Its `_read_empty_native_state` builds the child environment from the literals `HOME`, `CODEX_HOME`, and `CODEX_SQLITE_HOME` while `outcomeeng/distribution/installation.py` publishes those names and the `STATE_ENV_NAMES` tuple.
-
-Two clauses of the same assertion are also unfalsified: removing the ambient model and effort override filter from `_isolated_environment` in `outcomeeng_testing/harnesses/native_profile_execution.py`, or passing the unfiltered environment instead of `credential_free_environment`, breaks no linked test, because the tests inspect the recorded native calls only for their count and never read `NativeCall.environment`.
-
-Two tests in the same compliance file, `test_real_native_read_reports_absent_thread_without_launching_a_turn` and `test_real_native_child_listing_retains_empty_pages_without_launching`, spawn the installed Codex CLI through the app-server read and listing commands while the file declares the `l1` cell; an installed agent CLI is an acquired executable whose level floor is `l2`, so those cases belong in an `l2` file.
-
-The mapping assertion's identifier and disposable-state-root derivation is unfalsified in the same way: collapsing `identifier` in `native_profile_rows` to a constant makes every row share one `state_root` and one artifact directory, while `test_native_profile_rows_cover_the_central_configuration_matrix` still keys on target and profile and `test_native_profile_artifacts_are_separate_from_disposable_state` checks only parent-directory relations, so no predicate observes that the identifier and state root derive from the registry entry or are distinct per row.
-
-**Resolution shape**: publish the listing-artifact field names from `outcomeeng/distribution/native_thread_evidence.py` beside `NativeChildLookupPayload`, import every key the test and the recording reader index from that module, add predicates over the recorded child environment that reject an ambient override or a second credential, and assert that every row's identifier and state root derive from its registry entry and differ from every other row's.
-
-**Evidence**: test-evidence audit findings `f-001` and `f-002` against `06b86db6b31704c58203929603bb2f2ceea237cb`, `f-001` through `f-004` against `3e1ba91c9ec059d96dcd2007a2fe371681599df2`, `f-001` through `f-003` against `548f8cc7b598a30969b0e68c243acb17d387f1ef`, `f-001` through `f-003` against `d84b4d2cb433059d995e6271d33551e30deb306d`, `f-001` through `f-005` with `f-008` against `f689b9b25cdd37f5e57545d313f30d29ad9cbd35`, `f-001` through `f-007` against `be286e7e32cdfbb0cc782f6175ed0f274e428e8d`, `f-001` through `f-005` against `b9ee9c2ca56d3341f03ea81abb1ec2f4cd8df57b`, `f-005` through `f-009` against `ef8b057ab649bc3da5c642cc4a18fc6745023718`, `f-003` through `f-008` against `841e864a9759eae04c8988c2931aa44b1ca21c74`, `f-001` through `f-006` against `f011edcdd33c0fdec41d8ccfbcdfe1393fc6b35a`, `f-001` through `f-006` with `f-008` against `c3b42a5514452b1b71e01c77467e7e45abfad048`, and `f-001` through `f-006` against each of `9ab0fc92c2f5c673edbfb2c73eea42502cef68e5` and `c2f6d8e1c3bc87f24d775fcbc62451b9c2ff6322`, the last nine rounds naming the execution-level mismatch and the last five naming the environment literals; the unfalsified row identifier and state root reached a finding of its own in the last round; the cited test and harness files lie outside every changeset's diff. The round against `05a7165277750d69c88bc8abbece2c4f6a96bb7c` raised the same six as `f-001` through `f-006`: `f-001` the literal `parentThreadId` where `ChildIdentityField.PARENT` owns the key; `f-002` the literals `childIds`, `pages` and `result`, for which production publishes no field constant; `f-003` the hand-written keys in `RecordingThreadReader` and the environment names in `_read_empty_native_state`; `f-004` the two `l1` cases that start the installed Codex CLI, whose floor is `l2`; `f-005` the unfalsified override and credential clauses; `f-006` the unfalsified row identifier and state root. The round against `cc5f3e86be4dbcc2c727c46f5c96593bab02b680` raised the same six again as `f-001` through `f-006`.
-
-## The profile isolation filter strips an ambient marker no module declares
-
-`_isolated_environment` in `outcomeeng_testing/harnesses/native_profile_execution.py`
-removes the ambient overrides a profile probe must not inherit. Two of the three
-names it strips come from imported constant sets their owning module publishes;
-the third is the inline literal `CLAUDECODE`, which no module under `outcomeeng/`
-declares. The harness therefore holds one name of the isolation policy that has
-no source contract, so a change to that marker in production reaches no importer
-and the filter keeps stripping a name the product no longer uses, or stops
-stripping one it does.
-
-This is not the class the native-profile entry above records. That entry covers
-evidence restating vocabulary the owning modules hold, whose remedy is to import
-from the owner; here there is no owner to import from and the remedy is to
-publish the name first.
-
-**Resolution shape**: publish the ambient marker from the module that owns the
-isolation policy, beside the constant sets the filter already imports, and have
-`_isolated_environment` import it.
-
-**Settlement condition**: the marker is published from an owning module and the
-filter imports it rather than spelling it.
-
-**Evidence**: test-evidence audit finding `f-010` (INFO) against `c2f6d8e1c3bc87f24d775fcbc62451b9c2ff6322`. The cited
-harness lies outside that changeset's diff, and the remedy publishes a constant
-from a production module the changeset's Frame does not name. The round against `05a7165277750d69c88bc8abbece2c4f6a96bb7c` raised it again as `f-018` (INFO): "The isolation filter strips the inline literal \"CLAUDECODE\", which no module under outcomeeng/ declares." The round against `cc5f3e86be4dbcc2c727c46f5c96593bab02b680` raised it again as `f-016` (INFO).
-
-## Pending plugins' prior owned definitions have no reconciliation evidence
-
-The reconciliation assertion states that a pending plugin's prior owned definitions are preserved, and both `spx/12-marketplace-state.adr.md` and `21-installation-architecture.adr.md` require it, but no harness case combines a pending-publication plugin with agent-home reconciliation: `observe_agent_home_reconciliation` builds both preflights from a changed catalog with every plugin published. The clause therefore reaches no predicate, and the same observer retires one agent source rather than dropping a plugin from the home selection, so the clause that prunes owned definitions of plugins outside the catalog-bounded selection is likewise never driven. The plan builder also composes the agent-home plan before any command runs, so a plugin that turns out pending during execution still has its checkout definitions in the desired set; whether the applied plan copies definitions for unavailable skill content, against the decision, is undetermined until the scenario exists.
-
-**Resolution shape**: add a harness scenario that installs, then re-runs with one plugin unpublished, and assert that the pending plugin's recorded definitions are neither pruned nor rewritten; if the scenario shows the plan copying definitions for a pending plugin, defer agent-home plan composition until the pending set is known. That is a new reconciliation capability with its own harness and a likely production change, independent of the machine-wide Claude Code refresh.
-
-**Evidence**: test-evidence audit finding `f-005` against `3e1ba91c9ec059d96dcd2007a2fe371681599df2`, `f-004` against `548f8cc7b598a30969b0e68c243acb17d387f1ef`, `f-006` against `f689b9b25cdd37f5e57545d313f30d29ad9cbd35`, `f-008` against `be286e7e32cdfbb0cc782f6175ed0f274e428e8d`, `f-006` against `b9ee9c2ca56d3341f03ea81abb1ec2f4cd8df57b`, `f-004` against `ef8b057ab649bc3da5c642cc4a18fc6745023718`, and `f-009` against `841e864a9759eae04c8988c2931aa44b1ca21c74`; the round against `f011edcdd33c0fdec41d8ccfbcdfe1393fc6b35a` did not raise it, and `f-007` against each of `c3b42a5514452b1b71e01c77467e7e45abfad048`, `9ab0fc92c2f5c673edbfb2c73eea42502cef68e5`, and `c2f6d8e1c3bc87f24d775fcbc62451b9c2ff6322` raises both its clauses. The recording runner's `unpublished` set now makes a pending plugin cheap to drive through the reconciliation observer, which lowers the cost of the harness scenario the resolution shape names. The round against `05a7165277750d69c88bc8abbece2c4f6a96bb7c` raised both clauses again as `f-007`: "Two paths are never driven: the pending-publication reconciliation path, where a pending plugin's prior owned definitions must be preserved, and the pruning path for plugins that leave the catalog-bounded home selection." The round against `cc5f3e86be4dbcc2c727c46f5c96593bab02b680` raised both clauses again as `f-007`.
-
 ## A dead-parameter sweep matched a spelling rather than the class
 
 A repair round swept for parameters a function body discards with an explicit
@@ -81,7 +30,7 @@ The compliance assertion that a persistent run reads the install-record listing 
 
 **Resolution shape**: route the no-lock clause to audit evidence in the governing decision, where the absence of a lock is a structural judgment, or add a record-store observation the harness owns — a runner that reports every open on the record file — so the clause reaches a predicate.
 
-**Evidence**: test-evidence audit finding `f-010` (WARNING) against `841e864a9759eae04c8988c2931aa44b1ca21c74`, `f-007` (WARNING) against `f011edcdd33c0fdec41d8ccfbcdfe1393fc6b35a`, `f-008` (WARNING) with the implementation audit's matching debt finding against `a47f88e39d2a5fe9318eb24e6140623ca774dcfa`, which names the same absent oracle from the recorded-command seam, `f-009` (WARNING) against `c3b42a5514452b1b71e01c77467e7e45abfad048`, and `f-008` (WARNING) against each of `9ab0fc92c2f5c673edbfb2c73eea42502cef68e5` and `c2f6d8e1c3bc87f24d775fcbc62451b9c2ff6322`. The round against `05a7165277750d69c88bc8abbece2c4f6a96bb7c` raised it as `f-013` (WARNING): "The read-count and retry clauses are falsified through the recorded commands. A lock is not a command, so adding an advisory lock around the listing read leaves both counts at one and the test passing. The no-lock clause has no deterministic oracle." The round against `cc5f3e86be4dbcc2c727c46f5c96593bab02b680` raised it again as `f-013` (WARNING).
+**Evidence**: test-evidence audit finding `f-010` (WARNING) against `841e864a9759eae04c8988c2931aa44b1ca21c74`, `f-007` (WARNING) against `f011edcdd33c0fdec41d8ccfbcdfe1393fc6b35a`, `f-008` (WARNING) with the implementation audit's matching debt finding against `a47f88e39d2a5fe9318eb24e6140623ca774dcfa`, which names the same absent oracle from the recorded-command seam, `f-009` (WARNING) against `c3b42a5514452b1b71e01c77467e7e45abfad048`, and `f-008` (WARNING) against each of `9ab0fc92c2f5c673edbfb2c73eea42502cef68e5` and `c2f6d8e1c3bc87f24d775fcbc62451b9c2ff6322`. The round against `05a7165277750d69c88bc8abbece2c4f6a96bb7c` raised it as `f-013` (WARNING): "The read-count and retry clauses are falsified through the recorded commands. A lock is not a command, so adding an advisory lock around the listing read leaves both counts at one and the test passing. The no-lock clause has no deterministic oracle." The round against `cc5f3e86be4dbcc2c727c46f5c96593bab02b680` raised it again as `f-013` (WARNING). The round against `43e80d923e177a48707f433e9cf12b86ee6c4b9b` raised it again as `f-015` (WARNING).
 
 ## Claude Code renderings ship the Codex-only placement script and paraphrase its output
 
@@ -90,23 +39,6 @@ The `<plugin>-plugin` skill's Claude Code rendering carries `scripts/place_agent
 **Resolution shape**: exclude `scripts/` from the Claude Code rendering in the shared template, or state in `<agent_delivery>` why an inert copy must ship; quote the printed sentence verbatim in `<examples>`; render the three result cells per target. Either change touches every plugin's rendered skill, so it lands as one template change gated by the skill auditor.
 
 **Evidence**: skill audit warnings `f-007` and `f-008` against `06b86db6b31704c58203929603bb2f2ceea237cb`, and `f-006` and `f-007` against `3e1ba91c9ec059d96dcd2007a2fe371681599df2`.
-
-## Lifecycle evidence cases are hand-authored in the harness
-
-The lifecycle tests in `tests/test_repository_installation.compliance.l1.py` take their agent-definition bytes, filenames, and slugs from `PluginLifecycleHarness` in `outcomeeng_testing/harnesses/installation.py`, and the foreign, external, concurrent-edit, malformed-digest, and malformed-settings payloads from constants the same module declares; every token the tests assert against is imported from the shipped placement script. Two verifier readings of that arrangement stand side by side. The isolated test-evidence audit on `f689b9b25cdd37f5e57545d313f30d29ad9cbd35`, finding `f-009`, names the payloads incidental harness-handle values, because the script treats definition bytes opaquely by digest and every asserted token is source-owned. Changeset review `2026-09-16_02-49-48-063-4c9876671778` holds that relocating hand-authored bytes into the harness settles no case provenance and asks for a generator under `outcomeeng_testing/generators/`; the audits on `ef8b057ab649bc3da5c642cc4a18fc6745023718` (`f-012`, INFO), `841e864a9759eae04c8988c2931aa44b1ca21c74` (`f-011`, INFO), `f011edcdd33c0fdec41d8ccfbcdfe1393fc6b35a` (`f-008`, INFO), and `9ab0fc92c2f5c673edbfb2c73eea42502cef68e5` and `c2f6d8e1c3bc87f24d775fcbc62451b9c2ff6322` (`f-009`, INFO) record the same split. The round against `05a7165277750d69c88bc8abbece2c4f6a96bb7c` records it again as `f-017` (INFO), citing the definition bytes, slugs, and foreign, external, concurrent-edit and malformed payloads the harness declares.
-
-**Settlement condition.** A generator-sourced origin for the definition bytes and ownership documents, recorded in the assertion-design record, or an operator ruling that the audit's reading governs, recorded here.
-
-The round against `cc5f3e86be4dbcc2c727c46f5c96593bab02b680` records it again as `f-017` (INFO).
-
-The round against `01fa8e8acc904fb102bffa8dc66f5c4a14374748` raised the class at the test sites as `f-009` (REJECT)
-against `tests/test_repository_installation.compliance.l1.py:108`: "The lifecycle
-tests choose incidental plugin and agent slugs as call-site literals:
-plugin_name=\"fixture\", and ship(\"auditor\"/\"current\"/\"retired\"/\"exact\"/\"changed\")
-at 108-110, 143-146, 226-229, 296-299 and elsewhere. No assertion states these
-values, and they survive both negation and transplant, so they belong to a
-harness or generator rather than the test file." The same settlement closes
-it: a generator supplies the slugs, or an operator ruling decides the reading.
 
 ## The marketplace-refresh clone bound leaves no margin over the source's real clone cost
 
@@ -303,45 +235,6 @@ unresolvable plugin belonged to the invocation checkout exited zero — and is
 repaired in this changeset against the architecture decision's exit-code and
 coverage assertions.
 
-## The listing-defect evidence never pairs a defect with an invocation-checkout record
-
-`observe_defective_record_listing` in `outcomeeng_testing/harnesses/installation.py`
-builds its listing from `generated_listing_defect_records`, which emits a
-pathless entry, a versionless entry, and one well-formed record in another
-checkout. The invocation checkout records nothing there, so the run's
-continuation past either defect is observed for the rewrite disposition and for
-the bootstrap install and enable, never for the native update of a record the
-invocation checkout holds. `21-installation-architecture.adr.md` states that
-neither defect settles anything about the rest of the machine's records, and the
-native update is one of the dispositions that rest carries, so a regression that
-abandoned that branch on a defect would leave every linked test passing.
-
-**Resolution shape**: give `generated_listing_defect_records` an
-invocation-checkout record beside the two defects and the other checkout's
-record, and retain the present listing as a second case, so the defect state is
-paired with the native-update disposition as well as the bootstrap one.
-
-**Why separate**: the present case's assertion that the bootstrap install and
-enable still run past each defect is itself the evidence for the bootstrap
-disposition, and an invocation-checkout record suppresses bootstrap, so the
-pairing adds an observation rather than widening this one — a second observer
-and a generator parameter, not an assertion.
-
-**Settlement condition**: a defect case whose listing carries a record of the
-invocation checkout, asserting that its native update still runs.
-
-**Evidence**: found by this changeset's sweep for states the spec declares whose
-linked evidence carries no invocation-checkout record — the same class that
-produced the withheld-registration case now covered in
-`tests/test_repository_installation.scenario.l1.py`.
-
-The round against `114c56d96942138058a10caae796bd59d83e20ec` raised it as
-`f-013` (WARNING): "generated_listing_defect_records, consumed by
-observe_defective_record_listing, carries no record of the invocation checkout.
-Continuation past a defect is therefore observed only for the rewrite and
-bootstrap dispositions, never for the native update of a record the invocation
-checkout holds."
-
 ## Two review surfaces report success for something that did not happen
 
 The changeset review has two surfaces that read as success while the thing they
@@ -394,42 +287,6 @@ while the 2026-09-22T12:40:10Z conversation comment carried three unaddressed
 DEBT findings. Both were found by reading the surfaces against what they
 claimed, not by any gate.
 
-## The lifecycle evidence hand-writes the placement script's flags and exit statuses
-
-`tests/test_repository_installation.compliance.l1.py` passes `--home`, `--checkout`
-and `--check` to the shipped placement script as hand-written literals, and
-`PluginLifecycleHarness.run` in `outcomeeng_testing/harnesses/installation.py`
-spells the same three. `src/templates/plugin/scripts/place_agents.py` declares
-them only inline in its `argparse` block and publishes no constant, so the
-evidence copies a command-line vocabulary it cannot import. The lifecycle tests also assert
-the script's exit statuses as the literals `1` and `2`, which the script returns
-bare, so the status vocabulary is copied the same way.
-
-**Impact**: a flag renamed in the script leaves the evidence invoking a command
-line the script rejects, and the failure reads as a placement defect rather
-than a renamed flag.
-
-**Resolution shape**: publish the three flags and the two exit statuses as
-module constants of the placement script, build its `argparse` block and its
-returns from them, and import them in the test and the harness. The script ships in every plugin's rendered skill, so the
-change takes a plugin version bump and the skill auditor's gate.
-
-**Settlement condition**: the placement script publishes its flags and exit
-statuses, and no test or harness under this node spells one.
-
-**Evidence**: test-evidence audit finding `f-010` (REJECT) against `05a7165277750d69c88bc8abbece2c4f6a96bb7c`:
-"The placement script's command tokens \"--home\", \"--checkout\" and \"--check\"
-are hand-written in the test (:376, :408) and in PluginLifecycleHarness.run
-(outcomeeng_testing/harnesses/installation.py:502-508). The shipped script
-declares them only inline in argparse (src/templates/plugin/scripts/place_agents.py:220-222)
-and publishes no constant, so the lifecycle evidence copies a CLI vocabulary it
-cannot import." The finding sits in a file the discovery-login security fix
-touches; the fix changes a shipped script and bumps a plugin, which that fix
-does not carry.
-
-The round against `cc5f3e86be4dbcc2c727c46f5c96593bab02b680` raised it again as `f-008` (REJECT), adding the exit
-statuses the tests assert as literals.
-
 ## A failed persistent run restores the committed selection, which the decisions forbid
 
 `execute_persistent_installation` in `outcomeeng/distribution/installation.py`
@@ -462,106 +319,37 @@ decision change, not a test repair.
 production re-applies the declared plugin selection after a failed run
 (_restore_plugin_selection, outcomeeng/distribution/installation.py:1485). No
 linked [test] assertion declares that behavior, and the untagged spec assertion
-plus the ADR say failed runs retain changed state without restoring a snapshot." The round against `cc5f3e86be4dbcc2c727c46f5c96593bab02b680` raised it again as `f-018` (INFO).
+plus the ADR say failed runs retain changed state without restoring a snapshot." The round against `cc5f3e86be4dbcc2c727c46f5c96593bab02b680` raised it again as `f-018` (INFO). The round against `43e80d923e177a48707f433e9cf12b86ee6c4b9b` raised it again as `f-019` (INFO).
 
-## The discovery harness rebuilds the isolated Codex home instead of reading the plan
+## The real-agent Codex home domain is a hand-maintained mapping
 
-`outcomeeng_testing/harnesses/installation.py` rebuilds the isolated Codex home
-as `state / "codex"` in the subagent-discovery observation rather than reading
-`plan.roots.codex_home`, and `outcomeeng/distribution/installation.py` spells
-the same directory inline and publishes no constant for it.
+The compliance assertion that every disposable Codex home the harness provisions
+holds a plugin-free `config.toml` names three domains: the isolated
+installation's home, the write-through preflight's temporary homes, and every
+other home a real-agent observation points `CODEX_HOME` at. The third domain is
+evidenced through `REAL_AGENT_CODEX_HOME_PROVISIONERS` in
+`outcomeeng_testing/harnesses/installation.py`, a two-entry mapping the harness
+maintains by hand. A real-agent observation that provisions its home another
+way falls outside the evidence without failing any test.
 
-**Impact**: a change to where isolated installation places the Codex home
-leaves the discovery probe pointed at a directory the installation never
-populated.
+**Impact**: the "every other home" clause covers the observations someone
+remembered to list, not the observations that exist.
 
-**Settlement condition**: the harness reads the Codex home from the plan it
-executed, and production names the directory once.
+**Resolution shape**: route every real-agent observation's disposable Codex
+home through one harness provisioner that records each home it creates, and
+derive the evidence domain from those records rather than from a list.
 
-**Evidence**: test-evidence audit finding `f-015` (WARNING) against `05a7165277750d69c88bc8abbece2c4f6a96bb7c`; the
-harness lies outside the diff of the discovery-login security fix. The round against `cc5f3e86be4dbcc2c727c46f5c96593bab02b680` raised it again as `f-012` (WARNING).
+**Progress**: the subagent-discovery observation and the isolated-installation
+observation now read the Codex home from the plan they execute, which
+production provisions, instead of rebuilding it as `state / "codex"`; the
+native-profile row reads it from its plan as well. The listed mapping remains
+the domain for the two harness-owned states.
 
-## The record-mapping test picks its publication rows in the test file
+**Settlement condition**: the evidence's real-agent home domain is derived from
+the provisioning records, and a new observation that provisions a home reaches
+the evidence without an edit to a list.
 
-`test_every_claude_install_record_maps_to_one_update_one_rewrite_or_one_warning`
-in `tests/test_repository_installation.mapping.l1.py` parametrizes over two rows
-the test file chooses — no plugin pending, and the first committed catalog plugin
-pending — and picks its case plugin with `sorted(...)[0]`. The mapping assertion
-states no publication dimension, and no source-owned domain or generator selects
-the rows.
-
-**Impact**: the publication cases are the test author's choice, so the mapping
-claims no coverage of pending publication beyond the two rows picked.
-
-**Settlement condition**: a generator supplies the publication rows over a
-declared domain, or the mapping assertion states the publication dimension and
-its domain supplies the rows.
-
-**Evidence**: test-evidence audit finding `f-010` (REJECT) against `01fa8e8acc904fb102bffa8dc66f5c4a14374748`: "The test
-file chooses parametrize rows [frozenset(), frozenset({sorted(committed_catalog_plugin_names())[0]})]
-with ids all-published/one-pending (172-176). Line 143 picks a case plugin with
-sorted(...)[0]. These rows introduce a publication dimension the mapping
-assertion does not state, and neither a source-owned domain nor a generator
-selects them." The rows predate the discovery-login security fix, which touches
-this file only to add the git-source mapping; they are recorded here under the
-convergence-stall rule by the Director's ruling.
-
-## The scenario tests pick their case plugin in the test file
-
-The isolated-absence and pending-publication scenarios in
-`tests/test_repository_installation.scenario.l1.py` choose their case plugin
-with `sorted(committed_catalog_plugin_names())[0]`. The assertions name no
-particular plugin, so the choice is a call-site value no assertion states. This
-is the class the record-mapping entry above records for the mapping test.
-
-**Settlement condition**: a generator supplies the case plugin, and no scenario
-under this node picks one at the call site.
-
-**Evidence**: test-evidence audit finding `f-010` (REJECT) against
-`114c56d96942138058a10caae796bd59d83e20ec`: "The scenario tests pick their case
-plugin in the test file with sorted(committed_catalog_plugin_names())[0] at lines
-172, 195, 208 and 233. The assertion names no particular plugin, so the choice
-is a call-site value the assertion does not state and should come from a
-generator." The lines predate the discovery-login security fix; recorded here
-under the convergence-stall rule by the Director's ruling.
-
-## The unlocated-registry scenario never checks that the source is named
-
-The spec's scenario states that planning stops "with that entry's source named".
-`test_a_registry_entry_naming_no_install_location_stops_planning` in
-`tests/test_repository_installation.scenario.l1.py` asserts only that the error
-carries `UNLOCATED_REGISTRY_DIAGNOSTIC`, so a diagnostic that dropped the source
-would leave it passing.
-
-**Settlement condition**: the test asserts that the planning error names the
-registered entry's source, and removing the source from the diagnostic fails it.
-
-**Evidence**: test-evidence audit finding `f-011` (REJECT) against
-`114c56d96942138058a10caae796bd59d83e20ec`:
-"test_a_registry_entry_naming_no_install_location_stops_planning asserts only
-that the error contains UNLOCATED_REGISTRY_DIAGNOSTIC (\"the marketplace registry
-entry names no clone\"). It never checks that the entry's source is named.
-Removing `from {claude_registered.source}` from the diagnostic in
-outcomeeng/distribution/installation.py:1295-1296 leaves the test passing." The
-test predates the discovery-login security fix; recorded here under the
-convergence-stall rule by the Director's ruling.
-
-## The fresh-home scenario never checks which source the plan registers
-
-The spec's scenario states that the plan "registers that source for that agent".
-`test_fresh_home_plan_adds_the_declared_marketplace` in
-`tests/test_repository_installation.scenario.l1.py` asserts only that the Claude
-source operations equal a single marketplace add, so a plan that adds any other
-source still passes.
-
-**Settlement condition**: the test asserts that the add carries the source the
-checkout declares, and a plan adding another source fails it.
-
-**Evidence**: test-evidence audit finding `f-012` (REJECT) against
-`0be471a0f4ee4a5316e1a42eec3801aba02bef18`:
-"test_fresh_home_plan_adds_the_declared_marketplace asserts only that the Claude
-source operations equal [MARKETPLACE_ADD]. It never checks that the add registers
-the source the checkout declares (DECLARED_CLAUDE_SOURCE). A plan that adds any
-other source still passes, so the \"registers that source\" clause is unverified
-by this scenario's evidence." The test predates the discovery-login security
-fix; recorded here under the convergence-stall rule by the Director's ruling.
+**Evidence**: test-evidence audit finding `f-018` (WARNING) against `43e80d923e177a48707f433e9cf12b86ee6c4b9b`:
+"The 'every other home a real-agent observation points CODEX_HOME at' domain is
+the hand-maintained two-entry REAL_AGENT_CODEX_HOME_PROVISIONERS mapping. It is
+not derived from the observations."

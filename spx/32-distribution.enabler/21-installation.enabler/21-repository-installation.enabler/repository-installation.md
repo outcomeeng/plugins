@@ -68,7 +68,7 @@ CAN refresh exactly the selected plugins in every Claude Code checkout on the ma
   ambient model and effort overrides, passes only the selected harness
   credential, and invokes its native-child command exactly once; a failed row
   records its terminal condition without a retry, credential fallback, profile
-  substitution, or alternate launch. ([test](tests/test_native_profile_execution.compliance.l1.py))
+  substitution, or alternate launch. ([test](tests/test_native_profile_execution.compliance.l1.py), [test](tests/test_native_profile_execution.compliance.l2.py))
 - ALWAYS: release acceptance is established independently for each supported
   harness and retains configuration, native loading, and one minimal isolated
   execution result for all three of that harness's profiles declared in
