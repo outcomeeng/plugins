@@ -1,4 +1,4 @@
-<!-- SPEC-TREE v0.39.0 langs:python -->
+<!-- SPEC-TREE v0.40.0 langs:python -->
 
 <operator_question_interrupt>
 **OPERATOR QUESTION - IMMEDIATE PRIVILEGE REVOCATION:** When the operator asks a question, immediately relinquish all privileges to modify the current product or any external file, service, or resource. Answer the question immediately.
@@ -143,6 +143,10 @@ DENY   git stash pop
 DENY   git stash pop stash@{0}
 DENY   git stash clear
 ```
+
+## No File Removal
+
+**NEVER** run `rm`, `rm -f`, `rmdir`, `unlink`, or any other command that deletes a file, including a scratch file, a file under `$TMPDIR`, and the session scratchpad. Write each command without a cleanup step. Git cleanup that a governing skill flow runs, such as the `/merge` flow's branch cleanup, stays outside this rule.
 
 ## Autonomy Boundary
 

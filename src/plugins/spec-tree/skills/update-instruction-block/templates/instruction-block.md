@@ -1,5 +1,5 @@
 ---
-template_version: "0.39.0"
+template_version: "0.40.0"
 template_source: spec-tree
 ---
 
@@ -174,6 +174,10 @@ DENY   git stash pop
 DENY   git stash pop stash@{0}
 DENY   git stash clear
 ```
+
+## No File Removal
+
+**NEVER** run `rm`, `rm -f`, `rmdir`, `unlink`, or any other command that deletes a file, including a scratch file, a file under `$TMPDIR`, and the session scratchpad. Write each command without a cleanup step. Git cleanup that a governing skill flow runs, such as the `/merge` flow's branch cleanup, stays outside this rule.
 
 ## Autonomy Boundary
 

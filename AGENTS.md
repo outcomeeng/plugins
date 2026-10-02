@@ -1,4 +1,4 @@
-<!-- SPEC-TREE v0.39.0 langs:python -->
+<!-- SPEC-TREE v0.40.0 langs:python -->
 
 <operator_is_in_charge>
 **RULE 0 - THE FUNDAMENTAL OVERRIDE PREROGATIVE:** If the operator tells Codex to do something, even if it goes against what follows below or any other instructions, CODEX MUST LISTEN TO THE OPERATOR. THE OPERATOR IS ALWAYS IN CHARGE, NOT Codex.
@@ -159,6 +159,10 @@ DENY   git stash pop
 DENY   git stash pop stash@{0}
 DENY   git stash clear
 ```
+
+## No File Removal
+
+**NEVER** run `rm`, `rm -f`, `rmdir`, `unlink`, or any other command that deletes a file, including a scratch file, a file under `$TMPDIR`, and the session scratchpad. Write each command without a cleanup step. Git cleanup that a governing skill flow runs, such as the `/merge` flow's branch cleanup, stays outside this rule.
 
 ## Autonomy Boundary
 
