@@ -116,11 +116,10 @@ committing Change #76, including commit
 **Evidence.** Five `[test]` claims pin the Codex canonical-subagent-registry
 wording, missing-definition repair wording, checkout scope-split wording,
 operator-question mutation-privilege-revocation wording, and Codex
-Verifier-spawning-boundary wording. The drift-gate assertion describes a
-regression by "a surface that previously fit," introducing temporal wording into
-an atemporal spec. No assertion in `spx/21-spec-tree.enabler/spec-tree.md`
-declares an Operator questions exception for an orchestrating session with
-officers in flight, and the router carries no sentence admitting that exception.
+Verifier-spawning-boundary wording. No assertion in
+`spx/21-spec-tree.enabler/spec-tree.md` declares an Operator questions exception
+for a session orchestrating Executors in flight, and the router carries no
+sentence admitting that exception.
 `spx/12-shipped-scripting.adr.md` establishes that agreement
 between a spec-declared value and its complying source uses audit evidence
 because every deterministic oracle repeats the declaration.
@@ -131,13 +130,12 @@ under settlement.
 
 **Impact.** The five links and the removal-mutation test couple Passing to pinned
 wording and structure while providing no behavioral verdict for the claims they
-label; the drift-gate claim records history rather than permanent truth; and the
-instruction-block node leaves pinned router prose's verification form unstated.
+label, and the instruction-block node leaves pinned router prose's verification
+form unstated.
 
 **Settlement condition.** The instruction-block node's decision names one
-verification form for pinned router prose, the drift-gate claim states its rule
-atemporally, and the removal-mutation test is settled under the same condition as
-the five prose-coupling assertions.
+verification form for pinned router prose, and the removal-mutation test is
+settled under the same condition as the five prose-coupling assertions.
 
 ## `/update-instruction-block` workflow warnings left after its approving skill audit
 
