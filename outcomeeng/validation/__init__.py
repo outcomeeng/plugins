@@ -97,8 +97,10 @@ from outcomeeng.validation.selected_gate import (
     RECIPE_CHECK_FULL,
     SelectedGatePlan,
     SelectedGateStep,
+    build_full_gate_plan,
     build_selected_gate_plan,
     collect_changed_paths,
+    run_full_check,
     run_selected_check,
 )
 
@@ -176,10 +178,12 @@ __all__ = [
     "SelectedGatePlan",
     "SelectedGateStep",
     "assert_json_schema",
+    "build_full_gate_plan",
     "build_selected_gate_plan",
     "collect_changed_paths",
     "run",
     "run_check",
+    "run_full_check",
     "run_recipe",
     "run_selected_check",
 ]

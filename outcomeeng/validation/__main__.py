@@ -18,10 +18,13 @@ import argparse
 import sys
 from pathlib import Path
 
-from outcomeeng.validation import ProductionSpawner, run_check, run_recipe
-from outcomeeng.validation.selected_gate import RECIPE_CHECK_FULL, run_selected_check
+from outcomeeng.validation import ProductionSpawner, run_recipe
+from outcomeeng.validation.selected_gate import (
+    RECIPE_CHECK_FULL,
+    run_full_check,
+    run_selected_check,
+)
 from outcomeeng.validation._steps import (
-    CHECK_RECIPES,
     RECIPE_CHECK,
     RECIPE_TEST,
     RECIPE_VALIDATION,
@@ -60,7 +63,7 @@ def main(argv: list[str] | None = None) -> int:
             recipe=test_recipe(_recipe_args(parsed.recipe_args)),
         )
     if parsed.recipe == RECIPE_CHECK_FULL:
-        return run_check(spawner=spawner, sink=sys.stdout, recipes=CHECK_RECIPES)
+        return run_full_check(spawner=spawner, sink=sys.stdout, repo=Path.cwd())
     return run_selected_check(spawner=spawner, sink=sys.stdout, repo=Path.cwd())
 
 
