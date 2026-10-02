@@ -5,14 +5,17 @@ from __future__ import annotations
 import pytest
 
 from outcomeeng.distribution.contracts import INSTRUCTION_BLOCK_ARGV
+from outcomeeng.distribution import agents as agent_conversion
 from outcomeeng.validation import (
     ACTIONLINT_ARGV,
+    CHECK_RECIPES,
     EVAL_LINKS_ARGV,
     EVAL_PROMPTS_ARGV,
     EVAL_TRIGGERS_ARGV,
     FMT_CHECK_ARGV,
     MYPY_ARGV,
     PYRIGHT_ARGV,
+    PREFLIGHT_STEPS,
     PYTEST_ARGV,
     RUFF_CHECK_ARGV,
     RUFF_FORMAT_ARGV,
@@ -32,9 +35,9 @@ from outcomeeng.validation.selected_gate import (
     EVIDENCE_LINK_REASON,
     FULL_GATE_REASON,
     INSTRUCTION_BLOCK_REASON,
-    LIVE_DISCOVERY_EXCLUSION,
-    LIVE_DISCOVERY_INCLUDED_REASON,
-    LIVE_DISCOVERY_TEST,
+    REAL_AGENT_CODEX_EXCLUSION,
+    REAL_AGENT_CODEX_INCLUDED_REASON,
+    REAL_AGENT_CODEX_TESTS,
     MARKDOWN_REASON,
     PYTHON_REASON,
     REACHED_TESTS_REASON,
@@ -45,6 +48,7 @@ from outcomeeng.validation.selected_gate import (
     TEST_REASON,
     UNTRACEABLE_TEST_INFRASTRUCTURE_REASON,
     WORKFLOW_REASON,
+    build_full_gate_plan,
     build_selected_gate_plan,
     deleted_paths_after_status_resolution,
 )
@@ -82,6 +86,10 @@ from outcomeeng_testing.harnesses.infrastructure_index import (
     reach_layout,
     repository_reach,
     synthetic_repository,
+)
+from outcomeeng_testing.harnesses.real_agent_selection import (
+    repository_relative_path,
+    run_full_check_observation,
 )
 
 
@@ -235,7 +243,6 @@ def test_combined_paths_merge_lanes_in_validation_step_order() -> None:
         PYRIGHT_ARGV,
         SPX_MARKDOWN_ARGV,
         EVAL_LINKS_ARGV,
-        (*PYTEST_ARGV, LIVE_DISCOVERY_TEST),
     )
     assert _reasons(plan) == (
         MARKDOWN_REASON,
@@ -247,7 +254,6 @@ def test_combined_paths_merge_lanes_in_validation_step_order() -> None:
         PYTHON_REASON,
         MARKDOWN_REASON,
         EVIDENCE_LINK_REASON,
-        LIVE_DISCOVERY_INCLUDED_REASON,
     )
 
 
@@ -283,8 +289,8 @@ def test_full_gate_paths_select_the_complete_recipe_set(path: str) -> None:
 
     assert plan.full_gate is True
     assert tuple(
-        step.argv[: -len(LIVE_DISCOVERY_EXCLUSION)]
-        if step.argv[-len(LIVE_DISCOVERY_EXCLUSION) :] == LIVE_DISCOVERY_EXCLUSION
+        step.argv[: -len(REAL_AGENT_CODEX_EXCLUSION)]
+        if step.argv[-len(REAL_AGENT_CODEX_EXCLUSION) :] == REAL_AGENT_CODEX_EXCLUSION
         else step.argv
         for step in plan.steps
     ) == tuple(step.argv for step in (*VALIDATION_STEPS, *TEST_STEPS))
@@ -536,14 +542,14 @@ def test_test_infrastructure_reach_maps_to_gate_steps(
         assert plan.full_gate is True
         assert tuple(step.argv for step in plan.steps) == (
             *(step.argv for step in VALIDATION_STEPS),
-            *((*step.argv, *LIVE_DISCOVERY_EXCLUSION) for step in TEST_STEPS),
+            *((*step.argv, *REAL_AGENT_CODEX_EXCLUSION) for step in TEST_STEPS),
         )
         assert set(_reasons(plan)) == {SHARED_TEST_INFRASTRUCTURE_REASON}
     elif kind is InfrastructureReach.UNTRACEABLE:
         assert plan.full_gate is True
         assert tuple(step.argv for step in plan.steps) == (
             *(step.argv for step in VALIDATION_STEPS),
-            *((*step.argv, *LIVE_DISCOVERY_EXCLUSION) for step in TEST_STEPS),
+            *((*step.argv, *REAL_AGENT_CODEX_EXCLUSION) for step in TEST_STEPS),
         )
         assert set(_reasons(plan)) == {UNTRACEABLE_TEST_INFRASTRUCTURE_REASON}
     else:
@@ -620,10 +626,89 @@ def test_template_script_maps_to_skill_and_lint_steps() -> None:
     )
     assert plan.full_gate is False
     assert plan.steps[:-1] == expected
-    assert plan.steps[-1].argv == (*PYTEST_ARGV, LIVE_DISCOVERY_TEST)
+    assert plan.steps[-1].argv[: len(PYTEST_ARGV)] == PYTEST_ARGV
+    assert set(plan.steps[-1].argv[len(PYTEST_ARGV) :]) == set(REAL_AGENT_CODEX_TESTS)
+    assert plan.selected_steps[-1].reason == REAL_AGENT_CODEX_INCLUDED_REASON
     assert _reasons(plan)[:-1] == tuple(
         PYTHON_REASON
         if step.argv in {RUFF_FORMAT_ARGV, RUFF_CHECK_ARGV}
         else SKILL_REASON
         for step in expected
+    )
+
+
+# Every changed-path category the selector owns other than agent definitions.
+NON_AGENT_DEFINITION_CATEGORIES = (
+    selection_source.FULL_GATE_PATTERNS,
+    selection_source.PYTHON_FORMAT_LINT_PATTERNS,
+    selection_source.PYTHON_TYPECHECK_PATTERNS,
+    selection_source.PYTHON_ASSERTION_TEST_PATTERNS,
+    selection_source.MARKDOWN_PATTERNS,
+    selection_source.WORKFLOW_PATTERNS,
+    selection_source.SKILL_PATTERNS,
+    selection_source.INSTRUCTION_BLOCK_PATTERNS,
+    selection_source.EVAL_TRIGGER_PATTERNS,
+    selection_source.EVAL_PROMPT_PATTERNS,
+    selection_source.EVIDENCE_LINK_PATTERNS,
+    selection_source.TEST_INFRASTRUCTURE_PATTERNS,
+)
+
+
+@pytest.mark.parametrize(
+    ("patterns", "agent_definition"),
+    (
+        (selection_source.AGENT_DEFINITION_PATTERNS, True),
+        *((patterns, False) for patterns in NON_AGENT_DEFINITION_CATEGORIES),
+    ),
+)
+def test_the_full_gate_wrapper_runs_real_agent_codex_tests_only_for_agent_definitions(
+    patterns: tuple[str, ...], agent_definition: bool
+) -> None:
+    for pattern in patterns:
+        plan = build_full_gate_plan((path_from_pattern(pattern),))
+
+        assert plan.full_gate is True
+        assert plan.real_agent_codex is agent_definition
+        assert tuple(step.argv for step in plan.steps) == tuple(
+            step.argv
+            if agent_definition or step.argv[: len(PYTEST_ARGV)] != PYTEST_ARGV
+            else (*step.argv, *REAL_AGENT_CODEX_EXCLUSION)
+            for recipe in CHECK_RECIPES
+            for step in recipe.steps
+        )
+
+
+def test_an_empty_changeset_runs_the_full_gate_without_real_agent_codex_tests() -> None:
+    plan = build_full_gate_plan(())
+
+    assert plan.full_gate is True
+    assert plan.real_agent_codex is False
+    assert tuple(step.argv for step in plan.steps) == tuple(
+        (*step.argv, *REAL_AGENT_CODEX_EXCLUSION)
+        if step.argv[: len(PYTEST_ARGV)] == PYTEST_ARGV
+        else step.argv
+        for recipe in CHECK_RECIPES
+        for step in recipe.steps
+    )
+
+
+@pytest.mark.parametrize("agent_definition", (True, False))
+def test_explicit_full_execution_spawns_the_planned_recipe_set(
+    agent_definition: bool,
+) -> None:
+    path = (
+        repository_relative_path(agent_conversion.__file__)
+        if agent_definition
+        else SELECTED_GATE_PYTHON_SOURCE_PATH
+    )
+
+    run = run_full_check_observation(branch_path=path)
+
+    assert run.exit_code == 0
+    assert run.spawn_calls == tuple(
+        step.argv
+        if agent_definition or step.argv[: len(PYTEST_ARGV)] != PYTEST_ARGV
+        else (*step.argv, *REAL_AGENT_CODEX_EXCLUSION)
+        for recipe in CHECK_RECIPES
+        for step in (*PREFLIGHT_STEPS, *recipe.steps)
     )
