@@ -53,21 +53,36 @@ When the operator calls the Author, the same session must also act as the Fixer 
 
 **Verifier.** The role held by the agent session that produces an agentic verdict: an Auditor for audit, a Reviewer for review.
 
+**Position.** Standing authority the operator grants an agent session over a scope, lasting across Changes, where a role lasts one task. The operator grants each position as a durable record naming the product, the position, and the worktree root where the position runs. One session holds one position, in one worktree root; a session no grant names holds no position and works in roles only. A position name is capitalized and takes the form `{Product} {Position}`, such as `Plugins Maintainer` or `Methodology Director`; the operator stands outside that form. Position names stay distinct from role names, so a position never implies that its holder does one thing only.
+
+The set of positions is open. The operator holds product judgment and attests each Frame. The **Director** coordinates across products and confirms Slices under the operator's delegation. A **Maintainer** refines its product's Changes and, on the Director's order, launches Executors only for a product without an Orchestrator. The **Orchestrator** launches the Executor for each Change the Maintainer hands it at Executable, on the Director's order, and runs Executors to delivery. A grant may name any further position, which holds the authority its grant names.
+
+A position holder takes roles and never loosens their rules. It may act as an Author, or as the Fixer of a round another session authored, and never acts as a Verifier. The generated router of every repository states the positions content, so every consumer repository carries it.
+
 ## Rationale
 
 The terms agent harness, agent, agent adapter, and agent session stay separate so configuration, connection mechanics, and interaction identity do not collapse into one term. Subagent definitions and spawned subagents also stay distinct: discovering an installed configuration proves its availability for invocation, while execution requires a spawned agent session. The prohibited-terminology table makes each ambiguous term's replacement explicit.
 
 The five roles name what a session does for a Change independently of which harness, agent, or adapter runs it. Separate sessions reduce attachment to earlier choices when an agent calls both production and repair; operator-requested repair preserves the operator's control over repeated rounds in the same session.
 
-The Refiner is the operator's conversation because refinement is an interview. Field names in the SPX CLI's verification payloads — `producer`, `expectedProducer`, `recordedByRunDriver`, the run driver — are schema vocabulary for run provenance, and pattern words such as orchestrator or applier describe a shape of dispatch; neither is a role name.
+Positions name who holds standing authority across Changes, so the operator addresses a session by what it does in which product rather than by an identity a mail store or harness assigns. Keeping position names apart from role names lets one holder take several roles in turn without either vocabulary absorbing the other, and barring a position holder from the Verifier role keeps every agentic verdict free of the authority that directs the work it judges.
+
+The Refiner is the operator's conversation because refinement is an interview. Field names in the SPX CLI's verification payloads — `producer`, `expectedProducer`, `recordedByRunDriver`, the run driver — are schema vocabulary for run provenance, and lowercase pattern words such as orchestrator or applier describe a shape of dispatch; neither is a role name, and the capitalized Orchestrator names a position.
 
 ## Product properties
 
 1. Agent-facing decisions, specs, skills, and instructions use agent harness, agent, agent adapter, agent session, subagent, and subagent definition for their defined meanings; product domains identify which concept they govern and preserve those distinctions in configuration, invocation, observation, and resume behavior.
-2. Agent-facing decisions, specs, skills, and instructions name who refines, executes, produces, repairs, or verifies a Change with the capitalized Role names Refiner, Executor, Author, Fixer, and Verifier, with Auditor and Reviewer as the two Verifier kinds; the Refiner is held by the operator's conversation.
-3. Author and Fixer session selection follows who calls them: an agent calling both uses separate sessions; an operator calling the Author can require that same session to perform any number of repair rounds.
+2. Agent-facing decisions, specs, skills, and instructions name who refines, executes, produces, repairs, or verifies a Change with the capitalized Role names Refiner, Executor, Author, Fixer, and Verifier, with Auditor and Reviewer as the two Verifier kinds; the Refiner is held by the operator's conversation. They name standing authority across Changes with a capitalized position name of the form `{Product} {Position}`, distinct from every role name, held by one session in one worktree root under the operator's grant.
+3. Author and Fixer session selection follows who calls them: an agent calling both uses separate sessions; an operator calling the Author can require that same session to perform any number of repair rounds. A position holder takes roles under their unchanged rules, acting as an Author or as the Fixer of a round another session authored, and never as a Verifier.
 
 ## Verification
+
+- ALWAYS: decisions, specs, skills, and instructions that describe standing authority over a scope across Changes name it as a position the operator grants, with a capitalized name of the form `{Product} {Position}`
+- NEVER: a position name stands in for a role name, or a role name for a position name
+- ALWAYS: one agent session holds at most one position, in the one worktree root its grant names, and a session no grant names holds no position and works in roles only
+- ALWAYS: a position holder takes roles under their unchanged rules, acting as an Author or as the Fixer of a round another session authored
+- NEVER: a position holder acts as a Verifier
+- ALWAYS: the generated router of every repository states the operator's authority, the Director, Maintainer, and Orchestrator positions with the authority each holds, and that a grant may name any further position, which holds the authority its grant names
 
 ### Audit
 
