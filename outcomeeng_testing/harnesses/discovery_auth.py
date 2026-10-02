@@ -66,6 +66,8 @@ SAVED_LOGIN_TOKEN_FIELDS: tuple[str, ...] = (
     SAVED_LOGIN_ACCOUNT_FIELD,
 )
 """Every token-set field a usable ChatGPT saved login carries."""
+WRITE_THROUGH_UNSUPPORTED_DIAGNOSTIC = "The CLI credential writer cannot preserve the saved-login link; subscription discovery is unsupported by this CLI."
+"""The preflight's diagnostic for a CLI whose credential writer replaces a linked saved login."""
 FILE_STORE_ARGS = ("-c", 'cli_auth_credentials_store="file"')
 DISCOVERY_TIMEOUT_SECONDS = 600
 LOCK_RETRY_SECONDS = 0.05
@@ -383,9 +385,7 @@ class DiscoveryAuthentication:
                 or not isinstance(document, dict)
                 or document.get(SAVED_LOGIN_API_KEY_FIELD) != fabricated
             ):
-                raise DiscoveryAuthenticationError(
-                    "The CLI credential writer cannot preserve the saved-login link; subscription discovery is unsupported by this CLI."
-                )
+                raise DiscoveryAuthenticationError(WRITE_THROUGH_UNSUPPORTED_DIAGNOSTIC)
 
     @contextmanager
     def authenticated_home(

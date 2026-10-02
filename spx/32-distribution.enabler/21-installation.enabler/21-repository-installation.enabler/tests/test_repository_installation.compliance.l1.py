@@ -4,6 +4,7 @@ import hashlib
 import json
 import re
 import subprocess
+import tomllib
 from string import Formatter
 from typing import cast
 from pathlib import Path
@@ -42,6 +43,7 @@ from outcomeeng_testing.harnesses.discovery_auth import (
     AUTH_FILENAME,
     CREDENTIAL_ENVIRONMENTS,
     REDACTED_CREDENTIAL,
+    WRITE_THROUGH_UNSUPPORTED_DIAGNOSTIC,
     SAVED_LOGIN_ACCOUNT_FIELD,
     SAVED_LOGIN_TOKENS_FIELD,
     AuthenticationMode,
@@ -69,7 +71,11 @@ from outcomeeng_testing.generators.installation import (
     generated_non_pending_failure_wordings,
 )
 from outcomeeng_testing.harnesses.installation import (
+    CODEX_CONFIG_PLUGINS_TABLE,
     MARKETPLACE,
+    REAL_AGENT_CODEX_HOME_PROVISIONERS,
+    captured_codex_home_refusal,
+    observe_isolated_codex_home_contract,
     RegistryState,
     committed_catalog_plugin_names,
     observe_unreadable_source,
@@ -1145,3 +1151,76 @@ def test_no_agent_announces_a_first_install_its_plan_does_not_carry() -> None:
                 ],
             )
             assert set(named) == reached, (case.state, agent)
+
+
+def test_isolated_installation_runs_every_codex_command_against_a_home_holding_a_plugin_free_config() -> (
+    None
+):
+    observed = observe_isolated_codex_home_contract()
+    assert observed.failure is None, observed.failure and observed.failure.result.stderr
+    assert observed.codex_calls
+    for call in observed.codex_calls:
+        assert call.home_config is not None, call.operation
+        assert not tomllib.loads(call.home_config.decode("utf-8")).get(
+            CODEX_CONFIG_PLUGINS_TABLE
+        )
+
+
+def test_the_write_through_preflight_logs_in_only_against_homes_holding_a_plugin_free_config() -> (
+    None
+):
+    with authentication_case(fault=NativeFault.HOME_CONTRACT) as case:
+        with case.auth.authenticated_home(
+            case.home, cwd=case.home, env=case.environment
+        ):
+            assert (case.home / AUTH_FILENAME).resolve() == case.saved
+        logins = [
+            call for call in case.runner.calls if CODEX_LOGIN_SUBCOMMAND in call.argv
+        ]
+        assert logins
+        for call in logins:
+            assert call.home != case.home
+            assert call.home_config is not None
+            assert not tomllib.loads(call.home_config.decode("utf-8")).get(
+                CODEX_CONFIG_PLUGINS_TABLE
+            )
+
+
+@pytest.mark.parametrize("provisioner", REAL_AGENT_CODEX_HOME_PROVISIONERS)
+def test_every_real_agent_codex_home_holds_a_plugin_free_config_before_any_codex_command(
+    provisioner: str,
+) -> None:
+    home_config = REAL_AGENT_CODEX_HOME_PROVISIONERS[provisioner]()
+    assert home_config is not None
+    assert not tomllib.loads(home_config.decode("utf-8")).get(
+        CODEX_CONFIG_PLUGINS_TABLE
+    )
+
+
+def test_a_refused_preflight_login_reports_the_refusal_the_cli_printed() -> None:
+    with authentication_case(fault=NativeFault.REFUSED_HOME) as case:
+        with pytest.raises(DiscoveryAuthenticationError) as raised:
+            with case.auth.authenticated_home(
+                case.home, cwd=case.home, env=case.environment
+            ):
+                pytest.fail("a refused preflight login reached saved-login use")
+        logins = [
+            call for call in case.runner.calls if CODEX_LOGIN_SUBCOMMAND in call.argv
+        ]
+        assert logins
+        echoed = logins[0].input_text
+        assert echoed
+        message = str(raised.value)
+        assert captured_codex_home_refusal() in message
+        assert echoed not in message
+        assert REDACTED_CREDENTIAL in message
+        assert WRITE_THROUGH_UNSUPPORTED_DIAGNOSTIC not in message
+        assert not (case.home / AUTH_FILENAME).exists()
+
+
+def test_a_refused_installation_command_reports_the_refusal_the_cli_printed() -> None:
+    observed = observe_isolated_codex_home_contract(refuse_every_home=True)
+    assert observed.report is None
+    assert observed.failure is not None
+    assert observed.failure.command.agent is Agent.CODEX
+    assert observed.failure.result.stderr == captured_codex_home_refusal()

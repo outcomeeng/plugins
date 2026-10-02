@@ -80,6 +80,7 @@ from outcomeeng.distribution.installation import (
     CODEX_CONFIG_PATH,
     CODEX_HOME_ENV,
     CODEX_HOME_AGENTS_PATH,
+    CODEX_HOME_CONFIG_PATH,
     CODEX_MARKETPLACE_LIST_COMMAND,
     CODEX_PLUGIN_ENABLED_FIELD,
     CODEX_PLUGIN_ENTRIES_FIELD,
@@ -162,6 +163,9 @@ from outcomeeng_testing.generators.installation import (
     generated_persistent_catalog_selections,
 )
 from outcomeeng.validation.ci_gate import JUST_BINARY
+from outcomeeng_testing.harnesses.native_thread_evidence import (
+    observe_empty_native_state_codex_home_config,
+)
 from outcomeeng_testing.harnesses.discovery_auth import (
     DiscoveryAuthentication,
     DiscoveryAuthenticationError,
@@ -1417,6 +1421,27 @@ INSTALLATION_FIXTURES = (
     Path(__file__).resolve().parents[1] / "fixtures" / "installation"
 )
 """Whole-payload artifacts captured from real agent state, read by path and never imported."""
+
+
+CODEX_HOME_REFUSAL_FIXTURE = (
+    INSTALLATION_FIXTURES / "codex-cli-0.160.0-home-without-config.stderr.txt"
+)
+"""The stderr codex-cli 0.160.0 printed refusing an existing `CODEX_HOME` with no `config.toml`.
+
+Captured from a disposable home holding only a linked `auth.json`, during the
+write-through login. Recapture when the host's codex-cli changes that refusal.
+"""
+
+
+def captured_codex_home_refusal() -> str:
+    """The real refusal the installed Codex CLI printed for a home with no config."""
+    return CODEX_HOME_REFUSAL_FIXTURE.read_text(encoding="utf-8")
+
+
+def codex_home_config(home: Path) -> bytes | None:
+    """The bytes of the `config.toml` a Codex home holds, or `None` when it holds none."""
+    path = home / CODEX_HOME_CONFIG_PATH
+    return path.read_bytes() if path.is_file() else None
 
 
 def install_record_fixture_path() -> Path:
@@ -4213,6 +4238,15 @@ __all__ = [
     "RENAMED_CHECKOUT_SKILL_NAME",
     "absent_from_every_agent",
     "observe_unpublished_plugin",
+    "CODEX_HOME_REFUSAL_FIXTURE",
+    "CodexHomeCall",
+    "CodexHomeContractObservation",
+    "CodexHomeContractRunner",
+    "REAL_AGENT_CODEX_HOME_PROVISIONERS",
+    "captured_codex_home_refusal",
+    "codex_home_config",
+    "observe_isolated_codex_home_contract",
+    "observe_real_agent_state_codex_home_config",
     "observe_verification_recipe",
 ]
 
@@ -4371,6 +4405,96 @@ def _observe_installation_run(
     return UnpublishedPluginObservation(
         report=report, failure=None, calls=tuple(runner.calls)
     )
+
+
+@dataclass(frozen=True)
+class CodexHomeCall:
+    """One Codex command and the `config.toml` its `CODEX_HOME` held when it ran."""
+
+    operation: Operation
+    home: Path
+    home_config: bytes | None
+
+
+@dataclass
+class CodexHomeContractRunner:
+    """Installation runner holding every Codex command to the CLI's home contract.
+
+    Controlled under `/test` Stage 5 Failure simulation and Interaction
+    protocols: whether the installed Codex CLI refuses an existing
+    `CODEX_HOME` holding no `config.toml` depends on the host's CLI version,
+    so this runner reproduces that refusal with the captured stderr and
+    records the configuration each Codex command's home held when it ran.
+    `refuse_every_home` reproduces a CLI that refuses even a provisioned home.
+    """
+
+    refuse_every_home: bool = False
+    codex_calls: list[CodexHomeCall] = field(default_factory=list)
+
+    def __call__(self, command: InstallationCommand) -> CommandResult:
+        if command.agent is Agent.CODEX:
+            home = Path(dict(command.environment)[CODEX_HOME_ENV])
+            config = codex_home_config(home)
+            self.codex_calls.append(CodexHomeCall(command.operation, home, config))
+            if self.refuse_every_home or (home.exists() and config is None):
+                return CommandResult(
+                    argv=command.argv,
+                    exit_code=1,
+                    stdout="",
+                    stderr=captured_codex_home_refusal(),
+                )
+        stdout = _inspection_or_empty_payload(command)
+        return CommandResult(argv=command.argv, exit_code=0, stdout=stdout, stderr="")
+
+
+@dataclass(frozen=True)
+class CodexHomeContractObservation:
+    """One isolated installation run under the Codex home contract."""
+
+    report: InstallationReport | None
+    failure: InstallationFailure | None
+    codex_calls: tuple[CodexHomeCall, ...]
+
+
+def observe_isolated_codex_home_contract(
+    *, refuse_every_home: bool = False
+) -> CodexHomeContractObservation:
+    """Execute one isolated installation through `CodexHomeContractRunner`."""
+    runner = CodexHomeContractRunner(refuse_every_home=refuse_every_home)
+    with TemporaryDirectory() as temporary_directory:
+        plan = _build_run_plan(
+            Path(temporary_directory), isolated=True, source=DECLARED_CLAUDE_SOURCE
+        )
+        try:
+            report = execute_installation(plan, runner)
+        except InstallationFailure as failure:
+            return CodexHomeContractObservation(
+                report=None, failure=failure, codex_calls=tuple(runner.codex_calls)
+            )
+    return CodexHomeContractObservation(
+        report=report, failure=None, codex_calls=tuple(runner.codex_calls)
+    )
+
+
+def observe_real_agent_state_codex_home_config() -> bytes | None:
+    """The `config.toml` the real-agent agent state holds before its first Codex command.
+
+    Provisions the selected agent state the real-agent observations point
+    `CODEX_HOME` at and reads it without starting any Codex process.
+    """
+    with TemporaryDirectory() as temporary_directory:
+        environment = _persistent_environment(
+            Path(temporary_directory) / "selected-agent-state"
+        )
+        _prepare_agent_state(environment)
+        return codex_home_config(Path(environment[CODEX_HOME_ENV]))
+
+
+REAL_AGENT_CODEX_HOME_PROVISIONERS: Mapping[str, Callable[[], bytes | None]] = {
+    "real-agent-state": observe_real_agent_state_codex_home_config,
+    "empty-native-state": observe_empty_native_state_codex_home_config,
+}
+"""Every real-agent observation's Codex home provisioning, observed before its first command."""
 
 
 def absent_from_every_agent(names: frozenset[str]) -> Mapping[Agent, frozenset[str]]:

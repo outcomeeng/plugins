@@ -40,6 +40,8 @@ CLAUDE_LOCAL_SETTINGS_PATH = Path(".claude/settings.local.json")
 CODEX_CONFIG_PATH = Path(".codex/config.toml")
 CODEX_AGENTS_PATH = Path(".codex/agents")
 CODEX_HOME_AGENTS_PATH = Path("agents")
+CODEX_HOME_CONFIG_PATH = Path("config.toml")
+"""The configuration file the installed Codex CLI requires in an existing `CODEX_HOME`."""
 AGENT_OWNERSHIP_FILENAME = ".outcomeeng-marketplace-ownership.json"
 AGENT_OWNERSHIP_SCHEMA_VERSION = 1
 AGENT_OWNERSHIP_SCHEMA_FIELD = "schema_version"
@@ -3840,6 +3842,7 @@ __all__ = [
     "CODEX_GIT_SOURCE_TYPE",
     "CODEX_HOME_ENV",
     "CODEX_HOME_AGENTS_PATH",
+    "CODEX_HOME_CONFIG_PATH",
     "CODEX_LOCAL_SOURCE_TYPE",
     "CODEX_MARKETPLACES_FIELD",
     "CLAUDE_MARKETPLACE_LIST_COMMAND",

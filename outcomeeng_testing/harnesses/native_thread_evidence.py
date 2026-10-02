@@ -13,7 +13,13 @@ from uuid import uuid4
 
 from hypothesis import given, seed, settings
 
-from outcomeeng.distribution.installation import CommandResult
+from outcomeeng.distribution.installation import (
+    CODEX_HOME_CONFIG_PATH,
+    CODEX_HOME_ENV,
+    CODEX_SQLITE_HOME_ENV,
+    HOME_ENV,
+    CommandResult,
+)
 from outcomeeng.distribution.native_thread_evidence import (
     THREAD_READ_COMMAND,
     ChildIdentityField,
@@ -179,20 +185,37 @@ def exercise_native_evidence(
         )
 
 
+def _empty_native_state(root: Path) -> dict[str, str]:
+    """Provision empty disposable Codex state beneath `root` and its child environment."""
+    (root / "codex").mkdir()
+    (root / "sqlite").mkdir()
+    return {
+        "PATH": os.environ["PATH"],
+        HOME_ENV: str(root),
+        CODEX_HOME_ENV: str(root / "codex"),
+        CODEX_SQLITE_HOME_ENV: str(root / "sqlite"),
+    }
+
+
 def _read_empty_native_state(*, children: bool) -> CommandResult:
     """Exercise the real app-server read in empty state without a model turn."""
     with TemporaryDirectory(prefix="native-thread-read-") as temporary:
         root = Path(temporary)
-        (root / "codex").mkdir()
-        (root / "sqlite").mkdir()
-        environment = {
-            "PATH": os.environ["PATH"],
-            "HOME": temporary,
-            "CODEX_HOME": str(root / "codex"),
-            "CODEX_SQLITE_HOME": str(root / "sqlite"),
-        }
+        environment = _empty_native_state(root)
         reader = read_native_child if children else read_native_thread
         return reader(str(uuid4()), root, environment)
+
+
+def observe_empty_native_state_codex_home_config() -> bytes | None:
+    """The `config.toml` the empty native-read state holds before its first Codex command.
+
+    Provisions the same state the absent-thread reads run against and reads it
+    without starting any Codex process; `None` when the home holds no config.
+    """
+    with TemporaryDirectory(prefix="native-thread-read-") as temporary:
+        environment = _empty_native_state(Path(temporary))
+        config = Path(environment[CODEX_HOME_ENV]) / CODEX_HOME_CONFIG_PATH
+        return config.read_bytes() if config.is_file() else None
 
 
 def read_absent_native_thread() -> CommandResult:

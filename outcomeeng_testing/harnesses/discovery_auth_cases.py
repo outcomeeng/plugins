@@ -29,6 +29,10 @@ from outcomeeng.validation.ci_gate import (
     DISCOVERY_AUTH_MODE_ENVIRONMENT,
     JUST_BINARY,
 )
+from outcomeeng_testing.harnesses.installation import (
+    captured_codex_home_refusal,
+    codex_home_config,
+)
 from outcomeeng_testing.harnesses.discovery_auth import (
     CI_ENVIRONMENT,
     CODEX_LOGIN_SUBCOMMAND,
@@ -58,6 +62,10 @@ class NativeFault(StrEnum):
     LOGIN_FAILURE = "login-failure"
     TIMEOUT = "timeout"
     INCOMPATIBLE_WRITER = "incompatible-writer"
+    HOME_CONTRACT = "home-contract"
+    """Refuse a login against an existing home holding no `config.toml`, as the installed CLI does."""
+    REFUSED_HOME = "refused-home"
+    """Refuse every login with the captured refusal, echoing the credential it read on stdin."""
 
 
 class SavedLoginFault(StrEnum):
@@ -101,6 +109,7 @@ class NativeCall:
     home: Path
     environment: Mapping[str, str]
     input_text: str | None = field(repr=False)
+    home_config: bytes | None = None
 
 
 @dataclass
@@ -121,13 +130,28 @@ class NativeCredentialRunner:
         timeout: float,
     ) -> subprocess.CompletedProcess[str]:
         home = Path(env[CODEX_HOME_ENV])
-        self.calls.append(NativeCall(tuple(argv), home, dict(env), input_text))
+        home_config = codex_home_config(home)
+        self.calls.append(
+            NativeCall(tuple(argv), home, dict(env), input_text, home_config)
+        )
         if argv[0] == JUST_BINARY:
             return subprocess.CompletedProcess(
                 argv, NATIVE_FAILURE_EXIT_CODE, "", "installation failed"
             )
         target = home / AUTH_FILENAME
         if CODEX_LOGIN_SUBCOMMAND in argv:
+            refused = self.fault is NativeFault.REFUSED_HOME or (
+                self.fault is NativeFault.HOME_CONTRACT
+                and home.exists()
+                and home_config is None
+            )
+            if refused:
+                return subprocess.CompletedProcess(
+                    argv,
+                    NATIVE_FAILURE_EXIT_CODE,
+                    "",
+                    captured_codex_home_refusal() + (input_text or ""),
+                )
             if self.fault is NativeFault.LOGIN_FAILURE:
                 return subprocess.CompletedProcess(
                     argv, NATIVE_FAILURE_EXIT_CODE, "", input_text or ""
