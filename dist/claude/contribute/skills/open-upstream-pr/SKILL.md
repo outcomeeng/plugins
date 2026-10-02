@@ -77,7 +77,7 @@ A conflict stops the replay mid-pick and leaves the checkout in that state. Run 
 
 **Step 6 — GATE: Run the base repository's own verification.** Locate its declared checks — the commands its contributing guide names, its workflow files, and its build and test targets — and run them locally. They must report success. Those commands belong to that repository and cannot be enumerated here, so they run per `/contribution-standards` `<capability_scope>` rather than from this skill's grants; the same applies to editing the files Step 5 shapes.
 
-Capture verbose output in a directory from `mktemp -d`, inspect the exit status and failing sections, and remove the directory on every exit path. Fix failures and re-run until green. A check that cannot run locally is recorded for Step 9's body with the reason it could not run; never report it as passed and never drop it silently.
+Capture verbose output in a directory from `mktemp -d`, inspect the exit status and failing sections, and leave the directory in place. Fix failures and re-run until green. A check that cannot run locally is recorded for Step 9's body with the reason it could not run; never report it as passed and never drop it silently.
 
 **Step 7 — GATE: Review the outward text.** Draft the title and body per `<title_and_body>`, then review them per `/contribution-standards` `<invariants>` "Outward-facing text is permanent". Where the prose plugin is installed, dispatch its `prose:prose-auditor` thin agent through the runtime's agent-dispatch surface and apply its findings. Where it is not, review against `/contribution-standards` `<outward_text>` and state in the report that the review ran unassisted.
 

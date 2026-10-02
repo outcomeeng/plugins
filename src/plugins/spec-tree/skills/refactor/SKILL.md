@@ -112,13 +112,9 @@ Before applying changes, determine what will be affected:
 
 **Step 4a: Apply — Move**
 
-1. Create the node directory at the new location with an appropriate index.
-2. Move the spec file, renaming if the slug stays the same.
-3. Move the `tests/` directory and all test files.
-4. If ISSUES.md, or a prior-form PLAN.md, exists in the source directory, move it to the new location — they are node-local coordination notes.
-5. Move any child nodes recursively.
-6. Update cross-cutting assertion links in ancestor specs that pointed to the old path.
-7. Remove the old directory.
+1. Move the node directory to the new location with an appropriate index, using `git mv <old-node-directory> <new-node-directory>`. The spec, the `tests/` directory, any ISSUES.md or prior-form PLAN.md, and every child node move with it, and no old directory remains.
+2. When the slug changes, rename the spec file with `git mv` so it repeats the new slug.
+3. Update cross-cutting assertion links in ancestor specs that pointed to the old path.
 
 **Index assignment**: Preserve the node's existing index when possible. If insertion or reindexing is needed, invoke `/decompose` for the target parent before moving files.
 
@@ -162,7 +158,7 @@ Before applying changes, determine what will be affected:
 3. Merge test files from the removed node's `tests/` into the surviving node's `tests/`.
 4. Update the surviving node's opening to cover the merged scope.
 5. Update any cross-cutting assertion links in ancestor specs that pointed to the removed node.
-6. Remove the old node's directory.
+6. Remove the old node's directory with `git rm -r <old-node-directory>` once its assertions and tests live in the surviving node, so Git records the removal in the changeset.
 7. If the surviving node now exceeds ~7 assertions or mixes independent concerns, invoke `/decompose` for the surviving node.
 
 </step>

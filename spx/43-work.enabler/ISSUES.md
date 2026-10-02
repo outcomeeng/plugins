@@ -21,12 +21,10 @@ The extraction is a cross-repo port into `@outcomeeng/spx`, a separate product, 
 
 **Resolution shape**: decide first whether deck sanitation belongs in the SPX CLI at all or is retired instead. If it is kept, port the audit dimensions and the repackager, publish, advance the floor, and reduce the shipped skill to its instruction with no scripts; declare the five undeclared audit dimensions above before the port so the extraction carries a specified contract rather than undeclared behavior. Revisit when that decision is taken.
 
-## A narrow tool grant cannot express the scratch-directory removal the skill mandates
+## The skill declares no narrow tool grant
 
-`sanitize-powerpoint` creates its working directory with `mktemp -d` and requires removal on every exit path, including failure, with a success-criteria item that proves it. Declaring a narrow `allowed-tools` contract for the skill founders on that requirement: the directory's path is chosen at run time, and no Bash grant pattern binds to it. The grants that would work — `Bash(rm -rf:*)` or a `${TMPDIR}` wildcard — authorize approval-free removal of paths the run never created, which is the overbroad-grant defect the skill auditor rejects elsewhere. Naming every other command while omitting the removal states a contract the body's own mandate breaks.
+`sanitize-powerpoint` declares no `allowed-tools`, so every command reaches per-call approval. That is safe, but the skill's reader gets no tool contract. The workflow deletes no file: the router's No File Removal rule forbids an agent-run deletion, so the `mktemp -d` working directory stays in place when the run ends, and no removal grant is needed.
 
-The skill therefore declares no `allowed-tools` and every command reaches per-call approval, which is correct but leaves the tool contract undocumented for its reader.
+**Resolution shape**: declare a narrow grant for each command the workflow runs — the lock-file check, `mktemp -d`, the two bundled scripts, the backup copy, and the swap. The working directory and the deck paths are chosen at run time, so first confirm which of those commands a grant pattern can bind without also authorizing paths the run never created.
 
-**Resolution shape**: pick one of three. Give `mktemp -d` an explicit template under a fixed prefix so a grant can match the prefix, once the prefix form is confirmed portable across the BSD and GNU `mktemp` a consumer may have. Or move the working directory's lifetime into `pptx_repack.py`, so a Python context manager owns creation and removal and no shell removal exists to grant. Or add a `<shell_scope>` section stating that the removal is deliberately approval-gated, matching the doctrine `/open-pr` already carries, and declare the remaining commands.
-
-**Evidence**: raised as a `reject consistency` finding by the changeset reviewer against the path-boundary changeset, which had added an `allowed-tools` list omitting any removal capability. The list was withdrawn rather than completed with an overbroad grant.
+**Evidence**: raised as a `reject consistency` finding by the changeset reviewer against the path-boundary changeset, which had added an `allowed-tools` list omitting a removal capability the body then required. That removal no longer exists.

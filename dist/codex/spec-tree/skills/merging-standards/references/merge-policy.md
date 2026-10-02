@@ -103,7 +103,7 @@ Local deterministic verification is the Author-side validation and testing predi
 
 CI owns full-repository deterministic regression detection. The Author still owns all verification types locally: validate, test, evaluate, review, and audit run before publication, but local validate/test/evaluate are scoped while review/audit inspect the changeset and the touched node(s).
 
-Run long or verbose deterministic commands with complete stdout/stderr redirected to a log file inside a `mktemp -d` directory, then inspect the summary, exit status, and failing sections. Do not stream passing-test logs through the session transcript. Remove the directory once inspected, on a passing run and a failing one alike — carry a failure's exit status and failing sections into the report rather than leaving the directory behind for them. A passing run reports the command, exit code, and concise summary.
+Run long or verbose deterministic commands with complete stdout/stderr redirected to a log file inside a `mktemp -d` directory, then inspect the summary, exit status, and failing sections. Do not stream passing-test logs through the session transcript. Leave the directory in place, and carry a failure's exit status and failing sections into the report. A passing run reports the command, exit code, and concise summary.
 
 </local_deterministic_scope>
 

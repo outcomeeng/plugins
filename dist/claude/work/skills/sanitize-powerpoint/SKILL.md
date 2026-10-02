@@ -29,7 +29,7 @@ Run these steps in order. Steps 2 and 6 use the bundled scripts in `<scripts>`.
 
 3. **Present and scope.** Show the user the findings grouped by dimension. Mechanical fixes (layout `type`, font redirect) and judgment fixes (color mapping, layout renames) are different — surface the judgment ones explicitly. Use `AskUserQuestion` to get per-dimension or per-finding approval. Fix only what the user approves.
 
-4. **Extract.** Create the working directory with `mktemp -d` so it is unique per invocation and lands in the session's temporary directory, **outside any git repository**. Never extract into the deck's own folder, and never name a fixed temporary path — concurrent runs collide on one. Remove the directory on every exit path, including failure.
+4. **Extract.** Create the working directory with `mktemp -d` so it is unique per invocation and lands in the session's temporary directory, **outside any git repository**. Never extract into the deck's own folder, and never name a fixed temporary path — concurrent runs collide on one. Leave the directory in place when the run ends.
 
 5. **Apply approved fixes.** Edit the extracted XML part by part, following `${CLAUDE_SKILL_DIR}/references/audit-and-fix.md`. Handle one dimension at a time, and track every changed part.
 
@@ -84,11 +84,9 @@ The audit script never writes. The repack script writes only its named output fi
 </scripts>
 
 <shell_scope>
-This skill declares no `allowed-tools`, so every command reaches the harness for per-call approval. The omission is deliberate, not an oversight.
+This skill declares no `allowed-tools`, so every command reaches the harness for per-call approval.
 
-Step 4 creates the working directory with `mktemp -d` and step 6's checklist proves it was removed on exit. That removal targets a path chosen at run time, and no grant pattern binds to one. The patterns that would cover it — a bare `rm -rf` grant, or a `${TMPDIR}` wildcard — authorize approval-free removal of paths this run never created, which is the overbroad grant the skill standard forbids. Naming every other command while omitting the removal would state a contract this workflow's own mandate breaks.
-
-Do not add a partial list to close the gap. A real contract needs one of three changes first: give `mktemp` a template under a fixed prefix that a grant can match, move the working directory's lifetime into one of the bundled scripts so no shell removal exists to grant, or keep the removal approval-gated and say so beside the declared commands.
+The workflow deletes no file: the working directory step 4 creates with `mktemp -d` stays in place when the run ends. The skill has not yet declared a narrow grant for each remaining command, so per-call approval covers them all. Do not add a partial list; a partial list states a contract the workflow's commands exceed.
 </shell_scope>
 
 <failure_modes>
@@ -134,7 +132,7 @@ A sanitizing run is complete when:
 - [ ] The repaired deck passes `pptx_repack.py` verification (ZIP integrity, XML well-formedness); any member-count change matches the trim scope approved in step 3.
 - [ ] The original deck was backed up before the swap.
 - [ ] A re-run of `pptx_audit.py` on the live file confirms the approved findings are resolved and no new finding appeared.
-- [ ] The working directory came from `mktemp -d`, was removed on exit, and was the only scratch artifact; the deck's folder holds only the deck and its backup.
+- [ ] The working directory came from `mktemp -d` and was the only scratch artifact; the deck's folder holds only the deck and its backup.
 
 </success_criteria>
 
