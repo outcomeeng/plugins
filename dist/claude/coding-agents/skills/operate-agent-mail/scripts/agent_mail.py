@@ -345,9 +345,12 @@ PUBLIC_GIT_COMMON_DIR_COMMAND: Final[tuple[str, ...]] = (
     PATH_FORMAT_ABSOLUTE_OPTION,
     GIT_COMMON_DIR_OPTION,
 )
+# The range of the integer ids the store assigns to a message and to a
+# registered agent.
+STORE_ID_BOUNDS: Final[tuple[int, int]] = (1, 1_000_000_000)
 INTEGER_BOUNDS: Final[Mapping[str, tuple[int, int]]] = {
     LIMIT_FIELD: (1, 1_000),
-    MESSAGE_ID_FIELD: (1, 1_000_000_000),
+    MESSAGE_ID_FIELD: STORE_ID_BOUNDS,
 }
 BOOLEAN_ARGUMENT_FIELDS = frozenset({ALL_RECORDS_FIELD, INCLUDE_BODIES_FIELD})
 TEXT_ARGUMENT_FIELDS = frozenset({AGENT_FIELD, PROGRAM_FIELD, MODEL_FIELD, TASK_FIELD})
@@ -1195,7 +1198,12 @@ def _data_for(
     if operation is Operation.REGISTER:
         return {
             AGENT_FIELD: _text(response.get(STORE_NAME_FIELD), STORE_NAME_FIELD),
-            RECORD_ID_FIELD: response.get(STORE_ID_FIELD),
+            RECORD_ID_FIELD: _integer(
+                response.get(STORE_ID_FIELD),
+                STORE_ID_FIELD,
+                minimum=STORE_ID_BOUNDS[0],
+                maximum=STORE_ID_BOUNDS[1],
+            ),
         }
     if operation is Operation.SEND:
         record = validate_record(arguments[RECORD_FIELD], with_id=False)

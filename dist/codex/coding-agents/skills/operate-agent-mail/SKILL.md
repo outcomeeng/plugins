@@ -34,11 +34,13 @@ The operation rules:
 
 - **Registration carries no name.** A `register` request never names the agent; the store assigns the name from its own vocabulary, and the result's `agent` carries it verbatim as the identity every later operation addresses.
 - **Listing marks nothing.** `list` returns the recipient's records the recipient has not yet read or acknowledged, and changes no record's read state.
-- **All records.** `list` with `allRecords: true` returns every record the recipient holds, including the ones already read or acknowledged, so a session that takes over a mail identity reads back what its predecessor judged.
-- **Read.** `read` records that the recipient judged one message, visible to the recipient alone.
+- **All records.** `list` with `allRecords: true` returns every record the recipient holds, including the ones already read or acknowledged, so a session that takes over a mail identity reads back what its predecessor marked read.
+- **Bodies.** `list` returns each record's `body` only with `includeBodies: true`. Without it, every record reads back with `body: ""`, so an empty `body` from such a listing says nothing about the message; list again with `includeBodies: true` before acting on or relaying a record's content.
+- **Read.** `read` marks one message read, visible to the recipient alone.
 - **Acknowledge.** `acknowledge` is a read the sender can observe.
 - **Only two operations change read state.** `read` and `acknowledge` change a record's read state; no other operation does.
 - **Bounds.** `limit` is an integer from 1 to 1000, and `messageId` is the integer `id` a record carries, from 1 to 1000000000; a value outside either range is rejected with `invalid-schema` before any command runs.
+- **Store ids.** Every `id` a result carries — a record's and the registered agent's — is an integer from 1 to 1000000000; a store response whose `id` is absent or outside that range fails as `invalid-schema`.
 - **No NUL character.** A text argument or record field carrying a NUL character is rejected with `invalid-schema` before any command runs.
 
 The record rules:
@@ -136,7 +138,7 @@ Neither shape carries `schemaVersion`, `operation`, `commandExitCode`, `response
 - ALWAYS supply arguments under the field names in `<operation_surface>` and leave the mapping to the adapter: it alone turns a field into an `am` option or a store field and reads it back, and it rejects an argument outside the operation's shape as `invalid-schema` rather than dropping it.
 - NEVER invoke raw `am` commands, `am` command help, or read the store's database.
 - NEVER derive the project key outside the adapter; it reads the key from the repository, and no working directory, environment variable, or parent path stands in for it.
-- NEVER treat a read as a judgment about the message's content; it records only that the recipient judged one message.
+- NEVER treat a read as an evaluation of the message's content; it records only that the recipient marked one message read.
 - NEVER treat an acknowledgement as agreement, ownership, authorization, or acceptance of a proposal; it is a read the sender can observe.
 - NEVER derive liveness, staleness, or session state from the per-agent activity timestamp a store response carries — the store writes it once at registration and never maintains it.
 - NEVER report or relay the registration token the store returns; the adapter removes it from every result.
@@ -150,7 +152,7 @@ The evidence for the bundled adapter lives in the repository that ships this ski
 `tests/test_agent_mail.mapping.l1.py`:
 
 - every operation's request → the argument vector the store's captured usage text accepts, each option bound to its own value and both values of every optional boolean generated;
-- a `list` request → the store's non-marking listing in unjudged mode, and with `allRecords: true` → that listing's complete form;
+- a `list` request → the store's non-marking listing of unread records, and with `allRecords: true` → that listing's complete form;
 - a `register` request → a command carrying no name, and a result whose `agent` is the name the store assigned;
 - a listing row → a record for its recipient on every classification branch, with `kind` and `subject` asserted for each;
 - a `recipient` carrying `,` → `invalid-schema` before any command runs;
@@ -162,7 +164,7 @@ The evidence for the bundled adapter lives in the repository that ships this ski
 
 - a generated record, including one whose correlation the thread alphabet rejects → the store fields and back to an equal record;
 - an `order`, its `delegation-request`, and its one correlated terminal handback → delivered through this skill's own `send`, under one thread;
-- a repeated terminal handback → one result; a conflicting kind, or the same kind with different content, for one reference → rejected, with a detail naming the difference.
+- a repeated terminal handback → one result; a conflicting kind, or the same kind with different content, for one reference → rejected, with a detail naming the difference. This reduction is a function of the bundled script that neither invocation form reaches: `run` with `send` delivers every handback it is given and checks none against earlier ones.
 
 `tests/test_agent_mail.compliance.l1.py`:
 
@@ -174,6 +176,8 @@ The evidence for the bundled adapter lives in the repository that ships this ski
 - a text argument carrying NUL → `invalid-schema` before any command runs;
 - every operation where only the adapter's own programs resolve → completes;
 - another shipped script building a raw mail command in argument-vector or shell-string form → reported.
+
+The bundled script also carries the scanners the last compliance domain runs, which detect another shipped script building a raw mail command or deriving the project key from Git state. Neither invocation form reaches them; they are evidence machinery, not part of what this skill performs.
 
 `probes/installed-store/probe.md` records an attested run of registration, send, listing, read, and acknowledgement against the installed `am` 0.3.36, whose committed observations are the captured usage and response fixtures the tests read.
 
@@ -188,7 +192,7 @@ The evidence for the bundled adapter lives in the repository that ships this ski
 <success_criteria>
 
 - A successful `run` operation is established only when the bundled script exits zero and emits exactly the seven fields of the versioned success result — `schemaVersion: 1`, `operation`, `status: "succeeded"`, `commandExitCode: 0`, `projectKey`, `response`, and `data` — without exposing `am` command grammar; a successful `project-key` form is established only when it exits zero and emits `projectKey`.
-- Every record sent and read back carries the same `schema`, `kind`, `correlation`, `sender`, `recipient`, `subject`, `body`, and `ackRequired`, plus the store-assigned `id` on read.
+- Every record sent and read back through `list` with `includeBodies: true` carries the same `schema`, `kind`, `correlation`, `sender`, `recipient`, `subject`, `body`, and `ackRequired`, plus the store-assigned `id` on read.
 - No `list` changes a record's read state; only `read` and `acknowledge` do.
 - An absent store or an unresolvable repository yields its named unavailable result and no fallback.
 - No registration result carries the store's registration token.
