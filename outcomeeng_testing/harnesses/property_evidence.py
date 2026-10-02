@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+SEED_NOTE_PREFIX = "Hypothesis seed: "
+REPLAY_NOTE_PREFIX = "Replay path: "
+
 
 def run_replayable_property(
     property_run: Callable[[], None],
@@ -15,6 +18,6 @@ def run_replayable_property(
     try:
         property_run()
     except Exception as error:
-        error.add_note(f"Hypothesis seed: {seed_value}")
-        error.add_note(f"Replay path: {replay_path}")
+        error.add_note(f"{SEED_NOTE_PREFIX}{seed_value}")
+        error.add_note(f"{REPLAY_NOTE_PREFIX}{replay_path}")
         raise

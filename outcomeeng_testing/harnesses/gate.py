@@ -131,32 +131,39 @@ def single_step_recipe(name: str) -> Recipe:
     )
 
 
+class GateSummaryShapeError(RuntimeError):
+    """A run summary the harness reads is not the JSON shape it can project."""
+
+
+def _object_records(value: object, *, field_name: str) -> list[dict[str, object]]:
+    if not isinstance(value, list) or not all(
+        isinstance(record, dict) for record in value
+    ):
+        msg = f"summary field {field_name!r} is not a list of JSON objects"
+        raise GateSummaryShapeError(msg)
+    return cast("list[dict[str, object]]", value)
+
+
 def read_summary(path: Path) -> dict[str, object]:
     """Read a validation summary JSON object."""
 
     data = json.loads(path.read_text(encoding="utf-8"))
-    assert isinstance(data, dict)
+    if not isinstance(data, dict):
+        msg = f"summary at {path} is not a JSON object"
+        raise GateSummaryShapeError(msg)
     return cast("dict[str, object]", data)
 
 
 def summary_steps(summary: dict[str, object]) -> list[dict[str, object]]:
     """Return typed step summaries."""
 
-    steps = summary["steps"]
-    assert isinstance(steps, list)
-    for step in steps:
-        assert isinstance(step, dict)
-    return cast("list[dict[str, object]]", steps)
+    return _object_records(summary["steps"], field_name="steps")
 
 
 def summary_recipes(summary: dict[str, object]) -> list[dict[str, object]]:
     """Return typed recipe summaries."""
 
-    recipes = summary["recipes"]
-    assert isinstance(recipes, list)
-    for recipe in recipes:
-        assert isinstance(recipe, dict)
-    return cast("list[dict[str, object]]", recipes)
+    return _object_records(summary["recipes"], field_name="recipes")
 
 
 def selected_gate_runner_for_paths(
@@ -1040,6 +1047,10 @@ class HangingHandle:
             self._killed = True
 
 
+class UnboundedWaitError(RuntimeError):
+    """The controlled clock observed more sleeps than its declared budget."""
+
+
 @dataclass
 class BoundedAdvancingClock:
     """A clock that advances on sleep and rejects an unbounded wait."""
@@ -1055,7 +1066,8 @@ class BoundedAdvancingClock:
 
     def sleep(self, seconds: float) -> None:
         if len(self.sleep_calls) >= self.max_sleep_calls:
-            raise AssertionError("signal shutdown exceeded its bounded sleep budget")
+            msg = "signal shutdown exceeded its bounded sleep budget"
+            raise UnboundedWaitError(msg)
         self.sleep_calls.append(seconds)
         self.current += seconds
 

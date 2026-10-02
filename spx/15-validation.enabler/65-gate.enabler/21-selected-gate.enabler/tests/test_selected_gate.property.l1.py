@@ -10,6 +10,10 @@ from outcomeeng_testing.harnesses.gate import (
     selected_gate_property,
     selected_gate_reach_index,
 )
+from outcomeeng_testing.harnesses.property_evidence import (
+    REPLAY_NOTE_PREFIX,
+    SEED_NOTE_PREFIX,
+)
 
 
 @selected_gate_property
@@ -35,5 +39,5 @@ def test_property_failure_reports_seed_and_replay_path() -> None:
 
     notes = captured_property_failure_notes(always_fails)
 
-    assert f"Hypothesis seed: {SELECTED_GATE_PROPERTY_SEED}" in notes
-    assert f"Replay path: {SELECTED_GATE_PROPERTY_REPLAY_PATH}" in notes
+    assert f"{SEED_NOTE_PREFIX}{SELECTED_GATE_PROPERTY_SEED}" in notes
+    assert f"{REPLAY_NOTE_PREFIX}{SELECTED_GATE_PROPERTY_REPLAY_PATH}" in notes
