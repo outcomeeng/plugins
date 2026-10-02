@@ -41,6 +41,8 @@ A master also has a `<p:sldMasterId>` in `presentation.xml` and a relationship i
 | Broken `r:id`         | An `r:id` in `presentation.xml`'s master list or a master's layout list whose `Id` is absent from that part's `.rels` | Add the missing `<Relationship>`, or delete the dangling reference element                                                  |
 | Missing content type  | A master, layout, or slide part with no `<Override>` in `[Content_Types].xml`                                         | Add the `<Override>` with the correct content type                                                                          |
 | Duplicate layout name | Two layouts under one master sharing a `<p:cSld name>`                                                                | Rename one (dimension 5)                                                                                                    |
+| Multi-master layout   | A layout part that more than one master's `<p:sldLayoutIdLst>` lists                                                  | Keep it under the master its slides use and give the other master its own copy, or remove the extra listing                 |
+| Missing layout part   | A master's layout relationship whose target part is absent from the package                                           | Remove the master's `<p:sldLayoutId>` and relationship, or restore the part                                                 |
 | Unregistered master   | A `slideMasterN.xml` not in `presentation.xml`'s `<p:sldMasterIdLst>`                                                 | Register it (add `<p:sldMasterId>` + relationship) or remove it                                                             |
 
 Structure findings are integrity defects — a deck can fail to open or lose content. Fix all of them. They are mechanical, but re-listing vs. removing an orphan is a judgment call: re-list if a slide needs it, remove if it is dead.
@@ -109,7 +111,7 @@ Present every color finding and convert only on explicit, per-color approval.
 
 ## Dimension 5 — Layout naming
 
-Detection: collect every layout `<p:cSld name>`. Flag any `1_`-prefixed dedup artifact. Within a master where at least one layout name ends in `| <theme name>` — the owning master's theme name — flag every layout name that does not. The script proposes no names.
+Detection: collect every layout `<p:cSld name>`. Flag any `1_`, `2_`, or `3_`-prefixed dedup artifact. Within a master where at least one layout name ends in `| <theme name>` — the owning master's theme name — flag every layout name that does not. The script proposes no names.
 
 Fix — rewrite the display name:
 
