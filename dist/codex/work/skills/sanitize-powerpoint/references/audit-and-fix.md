@@ -35,13 +35,13 @@ A master also has a `<p:sldMasterId>` in `presentation.xml` and a relationship i
 
 ## Dimension 1 — Structure and integrity
 
-| Finding               | Detection                                                                      | Fix                                                                                                                         |
-| --------------------- | ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
-| Orphaned layout       | A `slideLayoutN.xml` part that no master's `<p:sldLayoutIdLst>` lists          | Either re-list it under the correct master (add `<p:sldLayoutId>` + relationship) or remove it via the five-place checklist |
-| Broken `r:id`         | An `r:id` whose `Id` is absent from the part's `.rels`                         | Add the missing `<Relationship>`, or delete the dangling reference element                                                  |
-| Missing content type  | A master/layout/slide/theme part with no `<Override>` in `[Content_Types].xml` | Add the `<Override>` with the correct content type                                                                          |
-| Duplicate layout name | Two layouts under one master sharing a `<p:cSld name>`                         | Rename one (dimension 5)                                                                                                    |
-| Unregistered master   | A `slideMasterN.xml` not in `presentation.xml`'s `<p:sldMasterIdLst>`          | Register it (add `<p:sldMasterId>` + relationship) or remove it                                                             |
+| Finding               | Detection                                                                                                             | Fix                                                                                                                         |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Orphaned layout       | A `slideLayoutN.xml` part that no master's `<p:sldLayoutIdLst>` lists                                                 | Either re-list it under the correct master (add `<p:sldLayoutId>` + relationship) or remove it via the five-place checklist |
+| Broken `r:id`         | An `r:id` in `presentation.xml`'s master list or a master's layout list whose `Id` is absent from that part's `.rels` | Add the missing `<Relationship>`, or delete the dangling reference element                                                  |
+| Missing content type  | A master, layout, or slide part with no `<Override>` in `[Content_Types].xml`                                         | Add the `<Override>` with the correct content type                                                                          |
+| Duplicate layout name | Two layouts under one master sharing a `<p:cSld name>`                                                                | Rename one (dimension 5)                                                                                                    |
+| Unregistered master   | A `slideMasterN.xml` not in `presentation.xml`'s `<p:sldMasterIdLst>`                                                 | Register it (add `<p:sldMasterId>` + relationship) or remove it                                                             |
 
 Structure findings are integrity defects — a deck can fail to open or lose content. Fix all of them. They are mechanical, but re-listing vs. removing an orphan is a judgment call: re-list if a slide needs it, remove if it is dead.
 
@@ -120,7 +120,7 @@ Fix — rewrite the display name:
 <p:cSld name="Pitch statement | Cover">
 ```
 
-The name is display-only — no slide or master references it, so a rename cannot break anything. But the *target* name is a human decision: the audit proposes names that fit the inferred pattern; the user confirms each. Never rename to a value already used by another layout in the same master (dimension 1 duplicate).
+The name is display-only — no slide or master references it, so a rename cannot break anything. But the *target* name is a human decision: Claude proposes names that fit the deck's convention; the user confirms each. Never rename to a value already used by another layout in the same master (dimension 1 duplicate).
 
 ## Dimension 6 — Trim
 

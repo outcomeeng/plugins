@@ -52,7 +52,7 @@ A completed {{process}} run that produces {{output}} with deterministic validati
 <step name="validate_input">{{Reject invalid input before mutation.}}</step>
 <step name="execute">{{Run the declared automation through its bundled path.}}</step>
 <step name="validate_output">{{Check the output through the declared deterministic contract.}}</step>
-<step name="clean_up">{{Remove invocation-owned temporary state on every exit path.}}</step>
+<step name="clean_up">{{Confirm the bundled path removed the temporary state it created, on every exit path; Claude runs no deleting command.}}</step>
 
 </workflow>
 

@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.2.7
+
+### Changed
+
+- **`open-upstream-pr` leaves its verification log directory in place.** Step 6 captures the base repository's check output in a `mktemp -d` directory and no longer removes it.
+
 ## 0.2.3
 
 ### Changed

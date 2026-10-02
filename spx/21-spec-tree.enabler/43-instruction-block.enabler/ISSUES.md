@@ -143,7 +143,7 @@ the five prose-coupling assertions.
 
 The typed skill audit that approved `src/plugins/spec-tree/skills/update-instruction-block` on head `164eb9e842474b3a0ae1904bf3b61568b30ccd73` raised three warnings on the workflow text:
 
-- Step 2's never-rerun rule omits the `--reconcile --from` exception that GATE 3 states later, so a reader in order may refuse the tie-break rerun.
+- Step 3's never-rerun rule omits the `--reconcile --from` exception that GATE 3 states later, so a reader in order may refuse the tie-break rerun.
 - The `dirty` report says the operator must commit or set aside the edit and then re-run, without saying whether the run ends there, while the recency-tie branch commits through `spec-tree:commit-changes`.
 - The success criteria require the no-verb render to reproduce each written router block, but Step 5 never runs that render; `--check` alone passes a hand-edit inside the router.
 

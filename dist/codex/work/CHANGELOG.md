@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.8.4
+
+### Changed
+
+- **`sanitize-powerpoint` keeps its working directory and states what its audit detects.** The run extracts every member of the deck into a `mktemp -d` working directory, writes the repaired deck into a second `mktemp -d` directory, and leaves both directories in place. The audit-dimensions table names exactly the checks `pptx_audit.py` runs: master and layout `r:id` resolution, content-type overrides for masters, layouts, and slides, the `| <theme name>` layout-name suffix, and no unused-theme check.
+
 ## 0.8.0
 
 ### Removed

@@ -29,11 +29,11 @@ Run these steps in order. Steps 2 and 6 use the bundled scripts in `<scripts>`.
 
 3. **Present and scope.** Show the user the findings grouped by dimension. Mechanical fixes (layout `type`, font redirect) and judgment fixes (color mapping, layout renames) are different — surface the judgment ones explicitly. Use `{{! tool('ask_user') !}}` to get per-dimension or per-finding approval. Fix only what the user approves.
 
-4. **Extract.** Create the working directory with `mktemp -d` so it is unique per invocation and lands in the session's temporary directory, **outside any git repository**. Never extract into the deck's own folder, and never name a fixed temporary path — concurrent runs collide on one. Leave the directory in place when the run ends.
+4. **Extract.** Extract every member of the deck into a working directory created with `mktemp -d`; `pptx_repack.py` reads any original part missing from it as a deliberate deletion. Create the directory so it is unique per invocation and lands in the session's temporary directory, **outside any git repository**. Never extract into the deck's own folder, and never name a fixed temporary path — concurrent runs collide on one. Leave the directory in place when the run ends.
 
 5. **Apply approved fixes.** Edit the extracted XML part by part, following `${CLAUDE_SKILL_DIR}/references/audit-and-fix.md`. Handle one dimension at a time, and track every changed part.
 
-6. **Repackage and verify.** Run `pptx_repack.py` with the original deck, the working directory, and an output path. It rebuilds the package preserving every untouched part's content and the original member order, then verifies (see `<repackaging>`). Do not hand-roll the repackage.
+6. **Repackage and verify.** Run `pptx_repack.py` with the original deck, the working directory, and an output path in a second `mktemp -d` directory — never inside the working directory, whose every file the repacker packs, and never the original deck's path. It rebuilds the package preserving every untouched part's content and the original member order, then verifies (see `<repackaging>`). Do not hand-roll the repackage.
 
 7. **Back up and swap.** Re-check the lock file (step 1) — if PowerPoint reopened the deck, stop. Copy the original to a timestamped backup (an `_archive/` sibling, or `<name>_pre-sanitize-<date>.pptx`). Copy the repaired file over the original.
 
@@ -44,16 +44,16 @@ Run these steps in order. Steps 2 and 6 use the bundled scripts in `<scripts>`.
 <audit_dimensions>
 The audit covers six dimensions. `references/audit-and-fix.md` gives the detection method and the exact XML transformation for each.
 
-| # | Dimension        | What it catches                                                                                                                                                                 |
-| - | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1 | **Structure**    | Orphaned layout parts, broken `r:id` references, missing content-type overrides, layouts duplicated within a master, unregistered masters                                       |
-| 2 | **Layout types** | A layout's `type` attribute (`blank`, `secHead`, `title`, `titleOnly`, `obj`, `cust`, …) not matching its actual content — e.g. an empty layout typed `cust` instead of `blank` |
-| 3 | **Fonts**        | Typefaces that are not the theme's major/minor font — stray `buFont` bullet fonts, theme script-fallbacks, hardcoded run fonts                                                  |
-| 4 | **Colors**       | Hardcoded `<a:srgbClr>` values where a theme `<a:schemeClr>` exists for the same color                                                                                          |
-| 5 | **Naming**       | Layout names that deviate from the deck's own dominant naming pattern; PowerPoint dedup artifacts (`1_`-prefixed names)                                                         |
-| 6 | **Trim**         | Masters and layouts used by zero slides, unused themes, sensitivity labels (`docMetadata/LabelInfo.xml`), Office add-ins (`ppt/webextensions/`)                                 |
+| # | Dimension        | What it catches                                                                                                                                                                                                                      |
+| - | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1 | **Structure**    | Orphaned layout parts, unresolved master and layout `r:id` references in `presentation.xml` and the masters, master, layout, and slide parts with no content-type override, layouts duplicated within a master, unregistered masters |
+| 2 | **Layout types** | A layout's `type` attribute (`blank`, `secHead`, `title`, `titleOnly`, `obj`, `cust`, …) not matching its actual content — e.g. an empty layout typed `cust` instead of `blank`                                                      |
+| 3 | **Fonts**        | Typefaces in slides, layouts, and masters that are not the theme's major/minor font — stray `buFont` bullet fonts and hardcoded run fonts; theme script-fallback fonts are not flagged                                               |
+| 4 | **Colors**       | Hardcoded `<a:srgbClr>` values where a theme `<a:schemeClr>` exists for the same color                                                                                                                                               |
+| 5 | **Naming**       | PowerPoint dedup artifacts (`1_`-prefixed names); within a master where at least one layout name ends in `\| <theme name>`, every layout name that does not                                                                          |
+| 6 | **Trim**         | Masters and layouts used by zero slides, sensitivity labels (`docMetadata/LabelInfo.xml`), Office add-ins (`ppt/webextensions/`)                                                                                                     |
 
-Dimension 5 is **inferred, never imposed**: the audit detects the pattern the deck already uses most (commonly `<Type> | <MasterName>`) and flags only the outliers. It never invents a convention.
+Dimension 5 is **inferred, never imposed**: the audit checks only the `<name> | <theme name>` suffix convention, and only within a master where at least one layout already uses it. It never invents a convention and proposes no names.
 </audit_dimensions>
 
 <repackaging>
@@ -132,7 +132,7 @@ A sanitizing run is complete when:
 - [ ] The repaired deck passes `pptx_repack.py` verification (ZIP integrity, XML well-formedness); any member-count change matches the trim scope approved in step 3.
 - [ ] The original deck was backed up before the swap.
 - [ ] A re-run of `pptx_audit.py` on the live file confirms the approved findings are resolved and no new finding appeared.
-- [ ] The working directory came from `mktemp -d` and was the only scratch artifact; the deck's folder holds only the deck and its backup.
+- [ ] The working directory and the output directory came from `mktemp -d` and were the only scratch artifacts; the deck's folder holds only the deck and its backup.
 
 </success_criteria>
 
