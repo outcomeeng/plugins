@@ -71,6 +71,7 @@ from outcomeeng_testing.harnesses.infrastructure_index import (
 from outcomeeng_testing.harnesses.real_agent_selection import (
     checkout_agent_definition_paths,
     codex_credential_environment,
+    direct_test_observation,
     pytest_collection_observation,
     repository_relative_path,
     run_full_check_observation,
@@ -445,3 +446,36 @@ def test_the_selection_reason_prints_before_execution_whatever_the_credentials(
     for run, reason in runs:
         assert run.exit_code == 0
         assert run.output.index(reason) < run.output.index("Recipe ")
+
+
+def test_direct_execution_runs_a_named_real_agent_codex_test_whatever_the_changeset() -> (
+    None
+):
+    # The changeset changes no agent definition, so both gate wrappers exclude
+    # the real-agent Codex tests; direct execution naming them still runs them.
+    unrelated = unrelated_validation_source_path()
+    gate_runs = (
+        run_check_observation(branch_path=unrelated),
+        run_full_check_observation(branch_path=unrelated),
+    )
+    direct = direct_test_observation(REAL_AGENT_CODEX_TESTS)
+
+    for run in gate_runs:
+        gate_pytest_calls = tuple(
+            call for call in run.spawn_calls if call[: len(PYTEST_ARGV)] == PYTEST_ARGV
+        )
+        assert gate_pytest_calls
+        assert all(
+            call[-len(REAL_AGENT_CODEX_EXCLUSION) :] == REAL_AGENT_CODEX_EXCLUSION
+            for call in gate_pytest_calls
+        )
+
+    assert direct.exit_code == 0
+    (direct_pytest_call,) = (
+        call for call in direct.spawn_calls if call[: len(PYTEST_ARGV)] == PYTEST_ARGV
+    )
+    direct_arguments = direct_pytest_call[len(PYTEST_ARGV) :]
+    assert direct_arguments == tuple(REAL_AGENT_CODEX_TESTS)
+    collection = pytest_collection_observation(direct_arguments)
+    assert collection.exit_code == 0, collection.output
+    assert collection.collected == frozenset(REAL_AGENT_CODEX_TESTS)

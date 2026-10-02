@@ -1,9 +1,11 @@
 """Observations for real-agent Codex test selection in the selected and full gates.
 
 The full-gate runs drive the production entry point through the gate harness's
-recording spawner and scripted git runner. Exception case: Stage 5,
-Interaction protocols — the claim is which argvs the gate spawns, and the
-recording spawner exposes them without launching validators.
+recording spawner and scripted git runner, and the direct-execution run drives
+the `test` recipe the direct entry point composes through the same recording
+spawner. Exception case: Stage 5, Interaction protocols — the claim is which
+argvs the gate and the direct recipe spawn, and the recording spawner exposes
+them without launching validators or the real-agent tests themselves.
 
 Pytest collection runs for real: the observation is the set of test node ids a
 pytest argument tail collects, which is what the gate's exclusion decides.
@@ -27,7 +29,12 @@ from outcomeeng.distribution.agents import AGENT_SOURCE_DIRECTORY_NAME
 from outcomeeng.distribution.build import project_emissions
 from outcomeeng.distribution.contracts import DIST_DIR_NAME
 from outcomeeng.distribution.installation import CODEX_HOME_ENV
-from outcomeeng.validation import PREFLIGHT_STEPS, TEST_STEPS, VALIDATION_STEPS
+from outcomeeng.validation import (
+    PREFLIGHT_STEPS,
+    TEST_STEPS,
+    VALIDATION_STEPS,
+    test_recipe as direct_test_recipe,
+)
 from outcomeeng.validation.ci_gate import (
     CODEX_API_KEY_ENVIRONMENT,
     DISCOVERY_AUTH_MODE_ENVIRONMENT,
@@ -41,8 +48,10 @@ from outcomeeng_testing.harnesses.discovery_auth import (
     AuthenticationMode,
 )
 from outcomeeng_testing.harnesses.gate import (
+    RecipeRunObservation,
     RecordingSpawner,
     RunObservation,
+    recipe_run_observation,
     selected_gate_runner_for_paths,
 )
 
@@ -161,6 +170,21 @@ def run_full_check_observation(
         output=sink.getvalue(),
         spawn_calls=tuple(spawner.spawn_calls),
         runner_calls=tuple(runner.calls),
+    )
+
+
+def direct_test_observation(pytest_arguments: Sequence[str]) -> RecipeRunObservation:
+    """Run the direct `test` recipe for ``pytest_arguments`` and record the run.
+
+    The direct entry point composes this recipe from the caller's pytest
+    arguments alone; every scripted child exits successfully, so the recorded
+    argvs are the complete set the direct recipe spawns.
+    """
+
+    recipe = direct_test_recipe(pytest_arguments)
+    return recipe_run_observation(
+        recipe=recipe,
+        exit_codes=[os.EX_OK] * (len(recipe.preflight_steps) + len(recipe.steps)),
     )
 
 
