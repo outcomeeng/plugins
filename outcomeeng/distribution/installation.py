@@ -42,6 +42,20 @@ CODEX_AGENTS_PATH = Path(".codex/agents")
 CODEX_HOME_AGENTS_PATH = Path("agents")
 CODEX_HOME_CONFIG_PATH = Path("config.toml")
 """The configuration file the installed Codex CLI requires in an existing `CODEX_HOME`."""
+ISOLATED_HOME_DIRECTORY = "home"
+"""The directory beneath isolated state that becomes `HOME`."""
+ISOLATED_CLAUDE_CONFIG_DIRECTORY = "claude"
+"""The directory beneath isolated state that becomes `CLAUDE_CONFIG_DIR`."""
+ISOLATED_CODEX_HOME_DIRECTORY = "codex"
+"""The directory beneath isolated state that becomes `CODEX_HOME`."""
+ISOLATED_CODEX_SQLITE_DIRECTORY = "codex-sqlite"
+"""The directory beneath isolated state that becomes `CODEX_SQLITE_HOME`."""
+CODEX_CONFIG_PLUGINS_TABLE = "plugins"
+"""The Codex configuration table under which a home or product declares plugins.
+
+A provisioned home's configuration declares no plugin: it carries no entry in
+this table, so the home reads as empty state for selection and bootstrap.
+"""
 CODEX_HOME_EMPTY_CONFIG = ""
 """The plugin-free configuration a provisioned disposable `CODEX_HOME` holds."""
 AGENT_OWNERSHIP_FILENAME = ".outcomeeng-marketplace-ownership.json"
@@ -643,6 +657,8 @@ class AgentHomePlan:
     mutations: tuple[AgentHomeMutation, ...]
     collisions: tuple[AgentHomeCollision, ...]
     ownership_after: tuple[AgentOwnership, ...]
+    ownership_before: tuple[AgentOwnership, ...] = ()
+    """The ownership record as preflight read it, before any planned change."""
 
 
 @dataclass(frozen=True)
@@ -1162,10 +1178,10 @@ def build_isolated_installation_plan(
         checkout=resolved_checkout,
         marketplace=catalog_marketplace_name(resolved_checkout / CLAUDE_CATALOG_PATH),
         state=resolved_state,
-        home=resolved_state / "home",
-        claude_config=resolved_state / "claude",
-        codex_home=resolved_state / "codex",
-        codex_sqlite_home=resolved_state / "codex-sqlite",
+        home=resolved_state / ISOLATED_HOME_DIRECTORY,
+        claude_config=resolved_state / ISOLATED_CLAUDE_CONFIG_DIRECTORY,
+        codex_home=resolved_state / ISOLATED_CODEX_HOME_DIRECTORY,
+        codex_sqlite_home=resolved_state / ISOLATED_CODEX_SQLITE_DIRECTORY,
     )
     environment = isolated_environment(roots, base_environment)
     claude_catalog = catalog_plugin_names(roots.checkout / CLAUDE_CATALOG_PATH)
@@ -2290,6 +2306,41 @@ def build_agent_home_plan(
         mutations=tuple(sorted(mutations)),
         collisions=tuple(sorted(collisions)),
         ownership_after=tuple(sorted(ownership_after.values())),
+        ownership_before=tuple(sorted(ownership.values())),
+    )
+
+
+def without_pending_plugins(
+    plan: AgentHomePlan, pending: frozenset[str]
+) -> AgentHomePlan:
+    """Narrow a reconciliation to the plugins whose skill content the run delivered.
+
+    A plugin pending publication delivered no skill content, so the run neither
+    copies definitions for it nor prunes the ones it already owns: every
+    mutation naming it is dropped, and every destination it owned before the
+    run, or would own after it, keeps the ownership claim preflight read.
+    """
+    if not pending:
+        return plan
+    before = {entry.destination: entry for entry in plan.ownership_before}
+    after = {entry.destination: entry for entry in plan.ownership_after}
+    for destination in set(before) | set(after):
+        prior = before.get(destination)
+        planned = after.get(destination)
+        if (prior is None or prior.plugin not in pending) and (
+            planned is None or planned.plugin not in pending
+        ):
+            continue
+        if prior is None:
+            after.pop(destination, None)
+        else:
+            after[destination] = prior
+    return replace(
+        plan,
+        mutations=tuple(
+            mutation for mutation in plan.mutations if mutation.plugin not in pending
+        ),
+        ownership_after=tuple(sorted(after.values())),
     )
 
 
@@ -2608,7 +2659,12 @@ def execute_installation(
     closing_results: list[CommandResult] = []
     for command in plan.closing:
         closing_results.append(_run_command(plan, command, runner, results, pending))
-    agent_home = apply_agent_home_plan(plan.agent_home)
+    agent_home = apply_agent_home_plan(
+        without_pending_plugins(
+            plan.agent_home,
+            frozenset(entry.plugin for entry in pending if entry.agent is Agent.CODEX),
+        )
+    )
     return InstallationReport(
         plan=plan,
         results=tuple(results),
@@ -3855,6 +3911,11 @@ __all__ = [
     "CODEX_AGENTS_PATH",
     "CODEX_CATALOG_PATH",
     "CODEX_CONFIG_PATH",
+    "CODEX_CONFIG_PLUGINS_TABLE",
+    "ISOLATED_CLAUDE_CONFIG_DIRECTORY",
+    "ISOLATED_CODEX_HOME_DIRECTORY",
+    "ISOLATED_CODEX_SQLITE_DIRECTORY",
+    "ISOLATED_HOME_DIRECTORY",
     "CODEX_GIT_SOURCE_TYPE",
     "CODEX_HOME_ENV",
     "CODEX_HOME_AGENTS_PATH",
@@ -3915,6 +3976,7 @@ __all__ = [
     "STATE_ENV_NAMES",
     "SPEC_TREE_PLUGIN",
     "apply_agent_home_plan",
+    "without_pending_plugins",
     "build_agent_home_plan",
     "build_isolated_installation_plan",
     "build_persistent_installation_plan",

@@ -15,6 +15,7 @@ from outcomeeng.distribution.installation import (
     CLAUDE_PLUGIN_SCOPE_FIELD,
     CLAUDE_PLUGIN_VERSION_FIELD,
     CLAUDE_PROJECT_SCOPE,
+    CLAUDE_REPOSITORY_FIELD,
     CLAUDE_SCOPE_FLAG,
     FIRST_INSTALL_WARNING,
     Operation,
@@ -42,6 +43,7 @@ from outcomeeng_testing.generators.installation import (
 from outcomeeng.validation._steps import RECIPE_TEST
 from outcomeeng_testing.harnesses.installation import (
     observe_unlocated_registry_plan,
+    DECLARED_CLAUDE_SOURCE,
     MARKETPLACE,
     RegistryState,
     UnreadableSourceCase,
@@ -169,81 +171,97 @@ def test_marketplace_inspection_failure_stops_before_any_plan_operation() -> Non
 
 
 def test_persistent_installation_reports_an_unpublished_plugin_and_completes() -> None:
-    absent = sorted(committed_catalog_plugin_names())[0]
+    for absent in committed_catalog_plugin_names():
+        observation = observe_unpublished_plugin(
+            isolated=False, unpublished=absent_from_every_agent(frozenset({absent}))
+        )
 
-    observation = observe_unpublished_plugin(
-        isolated=False, unpublished=absent_from_every_agent(frozenset({absent}))
-    )
-
-    assert observation.failure is None
-    assert observation.report is not None
-    assert {entry.plugin for entry in observation.report.pending_publication} == {
-        absent
-    }
-    installed = {
-        call.plugin
-        for call in observation.calls
-        if call.operation is Operation.PLUGIN_INSTALL
-    }
-    # Every catalog plugin, not merely more than one: "every other plugin still
-    # installs" fails the moment the run stops early, and a count threshold
-    # passes a run that stopped after the second plugin.
-    assert installed == committed_catalog_plugin_names()
+        assert observation.failure is None, absent
+        assert observation.report is not None, absent
+        assert {entry.plugin for entry in observation.report.pending_publication} == {
+            absent
+        }
+        installed = {
+            call.plugin
+            for call in observation.calls
+            if call.operation is Operation.PLUGIN_INSTALL
+        }
+        # Every catalog plugin, not merely more than one: "every other plugin
+        # still installs" fails the moment the run stops early, and a count
+        # threshold passes a run that stopped after the second plugin.
+        assert installed == committed_catalog_plugin_names(), absent
 
 
 def test_isolated_installation_treats_an_absent_plugin_as_terminal() -> None:
-    absent = sorted(committed_catalog_plugin_names())[0]
+    for absent in committed_catalog_plugin_names():
+        observation = observe_unpublished_plugin(
+            isolated=True, unpublished=absent_from_every_agent(frozenset({absent}))
+        )
 
-    observation = observe_unpublished_plugin(
-        isolated=True, unpublished=absent_from_every_agent(frozenset({absent}))
-    )
-
-    assert observation.report is None
-    assert observation.failure is not None
-    assert observation.failure.command.plugin == absent
-    assert observation.failure.command.operation is Operation.PLUGIN_INSTALL
+        assert observation.report is None, absent
+        assert observation.failure is not None, absent
+        assert observation.failure.command.plugin == absent
+        assert observation.failure.command.operation is Operation.PLUGIN_INSTALL
 
 
 def test_the_json_report_never_lists_a_pending_plugin_as_installed() -> None:
-    absent = sorted(committed_catalog_plugin_names())[0]
+    for agent in Agent:
+        for absent in committed_catalog_plugin_names():
+            observation = observe_unpublished_plugin(
+                isolated=False, unpublished={agent: frozenset({absent})}
+            )
 
-    observation = observe_unpublished_plugin(
-        isolated=False, unpublished={Agent.CLAUDE: frozenset({absent})}
-    )
+            assert observation.report is not None, (agent, absent)
+            document = report_document(observation.report)
+            pending = {
+                cast(str, entry[ReportField.PLUGIN])
+                for entry in cast(
+                    list[dict[str, str]], document[ReportField.PENDING_PUBLICATION]
+                )
+            }
+            installed = {
+                other: set(
+                    cast(
+                        list[str],
+                        document[
+                            ReportField.CLAUDE_PLUGINS
+                            if other is Agent.CLAUDE
+                            else ReportField.CODEX_PLUGINS
+                        ],
+                    )
+                )
+                for other in Agent
+            }
 
-    assert observation.report is not None
-    document = report_document(observation.report)
-    pending = {
-        cast(str, entry[ReportField.PLUGIN])
-        for entry in cast(
-            list[dict[str, str]], document[ReportField.PENDING_PUBLICATION]
-        )
-    }
-
-    # The text summary and this document answer from the same accessor. Reading
-    # the plan directly here reported a plugin as installed in one field while
-    # the next field reported it unpublished, and the two disagreed inside one
-    # document.
-    assert pending == {absent}
-    assert not pending & set(cast(list[str], document[ReportField.CLAUDE_PLUGINS]))
-    assert absent in cast(list[str], document[ReportField.CODEX_PLUGINS])
+            # The text summary and this document answer from the same
+            # accessor. Reading the plan directly here reported a plugin as
+            # installed in one field while the next field reported it
+            # unpublished, and the two disagreed inside one document.
+            assert pending == {absent}, (agent, absent)
+            assert not pending & installed[agent], (agent, absent)
+            for other in Agent:
+                if other is not agent:
+                    assert absent in installed[other], (agent, absent, other)
 
 
 def test_a_plugin_absent_from_one_agent_stays_installed_for_the_other() -> None:
-    absent = sorted(committed_catalog_plugin_names())[0]
+    for agent in Agent:
+        for absent in committed_catalog_plugin_names():
+            observation = observe_unpublished_plugin(
+                isolated=False, unpublished={agent: frozenset({absent})}
+            )
 
-    observation = observe_unpublished_plugin(
-        isolated=False, unpublished={Agent.CLAUDE: frozenset({absent})}
-    )
-
-    assert observation.failure is None
-    assert observation.report is not None
-    # The two marketplaces refresh separately, so one agent reporting a plugin
-    # unpublished says nothing about the other. A pending record carrying only
-    # the plugin name cannot express that, and drops the plugin from both
-    # agents' installed counts on either one's failure.
-    assert observation.report.pending_for(Agent.CLAUDE) == frozenset({absent})
-    assert observation.report.pending_for(Agent.CODEX) == frozenset()
+            assert observation.failure is None, (agent, absent)
+            assert observation.report is not None, (agent, absent)
+            # The two marketplaces refresh separately, so one agent reporting
+            # a plugin unpublished says nothing about the other. A pending
+            # record carrying only the plugin name cannot express that, and
+            # drops the plugin from both agents' installed counts on either
+            # one's failure.
+            for other in Agent:
+                assert observation.report.pending_for(other) == (
+                    frozenset({absent}) if other is agent else frozenset()
+                ), (agent, absent, other)
 
 
 def test_fresh_home_plan_adds_the_declared_marketplace() -> None:
@@ -257,6 +275,12 @@ def test_fresh_home_plan_adds_the_declared_marketplace() -> None:
         in {Operation.MARKETPLACE_ADD, Operation.MARKETPLACE_REFRESH}
     ]
     assert source_operations == [Operation.MARKETPLACE_ADD]
+    assert [
+        command.source
+        for command in observation.plan.commands
+        if command.agent is Agent.CLAUDE
+        and command.operation is Operation.MARKETPLACE_ADD
+    ] == [DECLARED_CLAUDE_SOURCE]
 
 
 def test_persistent_run_moves_every_record_without_a_command_in_another_checkout() -> (
@@ -433,6 +457,56 @@ def test_a_defective_refresh_scope_entry_is_reported_and_the_run_continues() -> 
             SPEC_TREE_PLUGIN,
             observation.plan.roots.marketplace,
             observation.other_checkout,
+        )
+        == observation.target_version
+    )
+    assert observation.exit_code != 0
+
+
+def test_a_defective_entry_leaves_the_invocation_checkouts_native_update_running() -> (
+    None
+):
+    observation = observe_defective_record_listing(invocation_checkout_recorded=True)
+    claude_commands = [
+        command for command in observation.attempted if command.agent is Agent.CLAUDE
+    ]
+    updates = [
+        command
+        for command in claude_commands
+        if command.operation is Operation.PLUGIN_UPDATE
+    ]
+
+    assert (
+        PATHLESS_LISTING_ENTRY_WARNING.format(
+            plugin=SPEC_TREE_PLUGIN, scope=CLAUDE_PROJECT_SCOPE
+        )
+        in observation.warnings
+    )
+    assert (
+        VERSIONLESS_LISTING_ENTRY_WARNING.format(
+            plugin=SPEC_TREE_PLUGIN,
+            scope=CLAUDE_PROJECT_SCOPE,
+            project_path=observation.defect_checkout,
+        )
+        in observation.warnings
+    )
+    assert [(command.plugin, command.scope) for command in updates] == [
+        (SPEC_TREE_PLUGIN, CLAUDE_PROJECT_SCOPE)
+    ]
+    assert updates[0].cwd == observation.plan.roots.checkout
+    assert not any(
+        command.operation in {Operation.PLUGIN_INSTALL, Operation.PLUGIN_ENABLE}
+        for command in claude_commands
+    )
+    assert [record.project_path for record in observation.plan.rewrite_records] == [
+        observation.other_checkout
+    ]
+    assert (
+        _recorded_version(
+            observation.record_file_after,
+            SPEC_TREE_PLUGIN,
+            observation.plan.roots.marketplace,
+            observation.plan.roots.checkout,
         )
         == observation.target_version
     )
@@ -785,3 +859,10 @@ def test_a_registry_entry_naming_no_install_location_stops_planning() -> None:
 
     assert observation.error is not None
     assert UNLOCATED_REGISTRY_DIAGNOSTIC in observation.error
+    assert (
+        cast(str, observation.registry_entry[CLAUDE_REPOSITORY_FIELD])
+        in observation.error
+    )
+    assert [
+        (command.agent, command.operation) for command in observation.attempted
+    ] == [(command.agent, command.operation) for command in observation.inspections]

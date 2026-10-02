@@ -27,6 +27,7 @@ from outcomeeng.distribution.installation import (
     marketplace_plugin_identifier,
     marketplace_plugin_name,
     CODEX_CONFIG_PATH,
+    CODEX_CONFIG_PLUGINS_TABLE,
     CODEX_EXEC_SUBCOMMAND,
     FIRST_INSTALL_WARNING,
     SPEC_TREE_PLUGIN,
@@ -67,11 +68,14 @@ from outcomeeng_testing.harnesses.discovery_auth_cases import (
 )
 from outcomeeng_testing.generators.installation import (
     ClosingDisposition,
+    generated_agent_definition,
+    generated_agent_file,
     generated_boolean_states,
+    generated_definition_edit,
+    generated_non_hex_digest,
     generated_non_pending_failure_wordings,
 )
 from outcomeeng_testing.harnesses.installation import (
-    CODEX_CONFIG_PLUGINS_TABLE,
     MARKETPLACE,
     REAL_AGENT_CODEX_HOME_PROVISIONERS,
     captured_codex_home_refusal,
@@ -79,12 +83,6 @@ from outcomeeng_testing.harnesses.installation import (
     RegistryState,
     committed_catalog_plugin_names,
     observe_unreadable_source,
-    CONCURRENT_EDIT_CONTENT,
-    EXTERNAL_DEFINITION_CONTENT,
-    FOREIGN_DEFINITION_CONTENT,
-    MALFORMED_OWNERSHIP_DIGEST,
-    UNOWNED_AGENT_CONTENT,
-    UNOWNED_AGENT_FILENAME,
     observe_designated_failure,
     observe_interrupted_reconciliation,
     observe_local_record_bootstrap_plan,
@@ -98,6 +96,8 @@ from outcomeeng_testing.harnesses.installation import (
     PluginLifecycleHarness,
     observe_agent_home_collision,
     observe_agent_home_reconciliation,
+    HomeSelectionChange,
+    observe_home_selection_change,
     observe_codex_config_independence,
     observe_codex_subagent_discovery,
     observe_failed_run_restore,
@@ -112,13 +112,13 @@ from outcomeeng_testing.harnesses.installation import (
 def test_plugin_lifecycle_places_owned_definitions_and_is_idempotent(
     tmp_path: Path,
 ) -> None:
-    lifecycle = PluginLifecycleHarness.create(tmp_path, plugin_name="fixture")
+    lifecycle = PluginLifecycleHarness.create(tmp_path)
     module = lifecycle.load_module()
-    shipped = lifecycle.ship("auditor")
+    shipped = lifecycle.ship_agent()
 
     before_check = lifecycle.snapshot(lifecycle.home)
     check = lifecycle.run(check=True)
-    assert check.exit_code == 1
+    assert check.exit_code == module.EXIT_CHANGES_PENDING
     assert f"{module.WRITE_PREFIX}{lifecycle.home_agents / shipped.name}" in (
         check.stdout
     )
@@ -147,18 +147,17 @@ def test_plugin_lifecycle_places_owned_definitions_and_is_idempotent(
 def test_plugin_lifecycle_prunes_only_matching_owned_definitions(
     tmp_path: Path,
 ) -> None:
-    lifecycle = PluginLifecycleHarness.create(tmp_path, plugin_name="fixture")
+    lifecycle = PluginLifecycleHarness.create(tmp_path)
     module = lifecycle.load_module()
-    current = lifecycle.ship("current")
-    retired = lifecycle.ship("retired")
-    foreign = lifecycle.write_home(
-        UNOWNED_AGENT_FILENAME, UNOWNED_AGENT_CONTENT.encode()
-    )
+    current = lifecycle.ship_agent()
+    retired = lifecycle.ship_agent()
+    foreign_name, foreign_content = generated_agent_file()
+    foreign = lifecycle.write_home(foreign_name, foreign_content)
     assert lifecycle.run().exit_code == 0
 
     retired.unlink()
     check = lifecycle.run(check=True)
-    assert check.exit_code == 1
+    assert check.exit_code == module.EXIT_CHANGES_PENDING
     assert f"{module.PRUNE_PREFIX}{lifecycle.home_agents / retired.name}" in (
         check.stdout
     )
@@ -167,20 +166,20 @@ def test_plugin_lifecycle_prunes_only_matching_owned_definitions(
     assert reconciled.exit_code == 0
     assert (lifecycle.home_agents / current.name).read_bytes() == current.read_bytes()
     assert not (lifecycle.home_agents / retired.name).exists()
-    assert foreign.read_bytes() == UNOWNED_AGENT_CONTENT.encode()
+    assert foreign.read_bytes() == foreign_content
 
 
 def test_plugin_lifecycle_rejects_an_unrecorded_destination_without_mutation(
     tmp_path: Path,
 ) -> None:
-    lifecycle = PluginLifecycleHarness.create(tmp_path, plugin_name="fixture")
+    lifecycle = PluginLifecycleHarness.create(tmp_path)
     module = lifecycle.load_module()
-    shipped = lifecycle.ship("auditor")
-    lifecycle.write_home(shipped.name, FOREIGN_DEFINITION_CONTENT)
+    shipped = lifecycle.ship_agent()
+    lifecycle.write_home(shipped.name, generated_agent_definition())
     before = lifecycle.snapshot(lifecycle.home)
 
     result = lifecycle.run()
-    assert result.exit_code == 2
+    assert result.exit_code == module.EXIT_REFUSED
     assert f"{module.COLLISION_PREFIX}{lifecycle.home_agents / shipped.name}" in (
         result.stdout
     )
@@ -190,18 +189,18 @@ def test_plugin_lifecycle_rejects_an_unrecorded_destination_without_mutation(
 def test_plugin_lifecycle_rejects_a_non_hex_ownership_digest_without_mutation(
     tmp_path: Path,
 ) -> None:
-    lifecycle = PluginLifecycleHarness.create(tmp_path, plugin_name="fixture")
+    lifecycle = PluginLifecycleHarness.create(tmp_path)
     module = lifecycle.load_module()
-    shipped = lifecycle.ship("auditor")
+    shipped = lifecycle.ship_agent()
     lifecycle.write_ownership(
         lifecycle.ownership_document(
-            lifecycle.ownership_entry(shipped.name, MALFORMED_OWNERSHIP_DIGEST)
+            lifecycle.ownership_entry(shipped.name, generated_non_hex_digest())
         )
     )
     before = lifecycle.snapshot(lifecycle.home)
 
     result = lifecycle.run()
-    assert result.exit_code == 2
+    assert result.exit_code == module.EXIT_REFUSED
     assert module.NON_HEX_DIGEST in result.stdout
     assert result.home_snapshot == before
 
@@ -209,33 +208,36 @@ def test_plugin_lifecycle_rejects_a_non_hex_ownership_digest_without_mutation(
 def test_plugin_lifecycle_rejects_a_symlink_destination_without_mutation(
     tmp_path: Path,
 ) -> None:
-    lifecycle = PluginLifecycleHarness.create(tmp_path / "case", plugin_name="fixture")
+    lifecycle = PluginLifecycleHarness.create(tmp_path)
     module = lifecycle.load_module()
-    shipped = lifecycle.ship("auditor")
-    external = tmp_path / "external.toml"
-    external.write_bytes(EXTERNAL_DEFINITION_CONTENT)
+    shipped = lifecycle.ship_agent()
+    external_name, external_content = generated_agent_file()
+    external = lifecycle.outside / external_name
+    external.write_bytes(external_content)
     lifecycle.home_agents.mkdir(parents=True, exist_ok=True)
     (lifecycle.home_agents / shipped.name).symlink_to(external)
     before = lifecycle.snapshot(lifecycle.home)
 
     result = lifecycle.run()
-    assert result.exit_code == 2
+    assert result.exit_code == module.EXIT_REFUSED
     assert f"{module.COLLISION_PREFIX}{lifecycle.home_agents / shipped.name}" in (
         result.stdout
     )
     assert result.home_snapshot == before
-    assert external.read_bytes() == EXTERNAL_DEFINITION_CONTENT
+    assert external.read_bytes() == external_content
 
 
 def test_plugin_lifecycle_reports_scope_splits_before_home_mutation(
     tmp_path: Path,
 ) -> None:
-    lifecycle = PluginLifecycleHarness.create(tmp_path, plugin_name="fixture")
+    lifecycle = PluginLifecycleHarness.create(tmp_path)
     module = lifecycle.load_module()
-    exact = lifecycle.ship("exact")
-    changed = lifecycle.ship("changed")
+    exact = lifecycle.ship_agent()
+    changed = lifecycle.ship_agent()
     lifecycle.write_checkout(exact.name, exact.read_bytes())
-    lifecycle.write_checkout(changed.name, changed.read_bytes() + b"# changed\n")
+    lifecycle.write_checkout(
+        changed.name, generated_definition_edit(changed.read_bytes())
+    )
     renamed = lifecycle.write_checkout(
         RENAMED_CHECKOUT_AGENT_NAME,
         skill_enabling_definition(lifecycle.plugin_name),
@@ -243,7 +245,7 @@ def test_plugin_lifecycle_reports_scope_splits_before_home_mutation(
     before = lifecycle.snapshot(lifecycle.home)
 
     result = lifecycle.run()
-    assert result.exit_code == 2
+    assert result.exit_code == module.EXIT_REFUSED
     assert (
         f"{module.SCOPE_SPLIT_REMOVAL_PREFIX}{lifecycle.checkout_agents / exact.name}"
         in result.stdout
@@ -286,6 +288,52 @@ def test_catalog_reconciliation_prunes_only_stale_owned_agents() -> None:
     assert observation.foreign_second == observation.foreign_initial
 
 
+def test_reconciliation_preserves_a_pending_plugins_prior_owned_definitions() -> None:
+    observation = observe_home_selection_change(HomeSelectionChange.PENDING)
+    first = dict(observation.home_first)
+    second = dict(observation.home_second)
+    desired = dict(observation.desired_second)
+    pending_names = {
+        name
+        for plugin in observation.changed
+        for name in observation.shipped_by_plugin.get(plugin, frozenset())
+    }
+
+    assert observation.second_report.pending_for(Agent.CODEX) == observation.changed
+    assert pending_names
+    for name in pending_names:
+        assert second[name] == first[name], name
+        assert second[name] != desired[name], name
+    for name in set(desired) - pending_names:
+        assert second[name] == desired[name], name
+    assert observation.foreign_second == observation.foreign_first
+
+
+def test_reconciliation_prunes_owned_definitions_of_plugins_leaving_the_home_selection() -> (
+    None
+):
+    observation = observe_home_selection_change(HomeSelectionChange.DESELECTED)
+    deselected_names = {
+        name
+        for plugin in observation.changed
+        for name in observation.shipped_by_plugin.get(plugin, frozenset())
+    }
+    second = dict(observation.home_second)
+
+    assert deselected_names
+    assert deselected_names <= set(dict(observation.home_first))
+    assert not deselected_names & set(second)
+    assert {
+        name: content
+        for name, content in observation.desired_second
+        if name not in deselected_names
+    }.items() <= second.items()
+    assert observation.foreign_second == observation.foreign_first
+    agent_home = observation.second_report.agent_home
+    assert agent_home is not None
+    assert {path.name for path in agent_home.pruned} == deselected_names
+
+
 def test_an_interrupted_run_is_adopted_cleanly_on_rerun() -> None:
     observation = observe_interrupted_reconciliation()
 
@@ -300,10 +348,10 @@ def test_an_interrupted_run_is_adopted_cleanly_on_rerun() -> None:
 def test_a_lifecycle_run_adopts_an_identical_unrecorded_destination(
     tmp_path: Path,
 ) -> None:
-    lifecycle = PluginLifecycleHarness.create(tmp_path, plugin_name="fixture")
+    lifecycle = PluginLifecycleHarness.create(tmp_path)
     module = lifecycle.load_module()
-    content = lifecycle.definition_content("auditor")
-    shipped = lifecycle.ship("auditor")
+    shipped = lifecycle.ship_agent()
+    content = shipped.read_bytes()
     lifecycle.write_home(shipped.name, content)
 
     run = lifecycle.run()
@@ -378,37 +426,39 @@ def test_failed_persistent_run_restores_the_committed_selection() -> None:
 def test_a_write_destination_changed_after_preflight_stops_before_mutation(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    lifecycle = PluginLifecycleHarness.create(tmp_path, plugin_name="fixture")
-    shipped = lifecycle.ship("auditor")
+    lifecycle = PluginLifecycleHarness.create(tmp_path)
+    shipped = lifecycle.ship_agent()
     module = lifecycle.load_module()
     destination = lifecycle.home_agents / shipped.name
 
+    concurrent_edit = generated_agent_definition()
+
     def inject() -> None:
         destination.parent.mkdir(parents=True, exist_ok=True)
-        destination.write_bytes(CONCURRENT_EDIT_CONTENT)
+        destination.write_bytes(concurrent_edit)
 
     exit_code = module.main(
-        ["--home", str(lifecycle.home), "--checkout", str(lifecycle.checkout)],
+        lifecycle.arguments(),
         current_digest=racing_digest_reader(
             destination, inject, module._current_digest
         ),
     )
 
-    assert exit_code == 2
+    assert exit_code == module.EXIT_REFUSED
     assert (
         f"{module.COLLISION_PREFIX}{destination} "
         f"({module.CAUSE_CHANGED_AFTER_PREFLIGHT})" in capsys.readouterr().out
     )
-    assert destination.read_bytes() == CONCURRENT_EDIT_CONTENT
+    assert destination.read_bytes() == concurrent_edit
     assert not lifecycle.ownership_path.exists()
 
 
 def test_a_prune_destination_changed_after_preflight_stops_before_mutation(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    lifecycle = PluginLifecycleHarness.create(tmp_path, plugin_name="fixture")
-    retired = lifecycle.definition_content("retired")
-    stale = lifecycle.write_home(lifecycle.definition_name("retired"), retired)
+    lifecycle = PluginLifecycleHarness.create(tmp_path)
+    retired_name, retired = lifecycle.unshipped_agent()
+    stale = lifecycle.write_home(retired_name, retired)
     lifecycle.write_ownership(
         lifecycle.ownership_document(
             lifecycle.ownership_entry(stale.name, hashlib.sha256(retired).hexdigest())
@@ -416,20 +466,22 @@ def test_a_prune_destination_changed_after_preflight_stops_before_mutation(
     )
     module = lifecycle.load_module()
 
+    concurrent_edit = generated_agent_definition()
+
     def inject() -> None:
-        stale.write_bytes(CONCURRENT_EDIT_CONTENT)
+        stale.write_bytes(concurrent_edit)
 
     exit_code = module.main(
-        ["--home", str(lifecycle.home), "--checkout", str(lifecycle.checkout)],
+        lifecycle.arguments(),
         current_digest=racing_digest_reader(stale, inject, module._current_digest),
     )
 
-    assert exit_code == 2
+    assert exit_code == module.EXIT_REFUSED
     assert (
         f"{module.COLLISION_PREFIX}{stale} ({module.CAUSE_CHANGED_AFTER_PREFLIGHT})"
         in capsys.readouterr().out
     )
-    assert stale.read_bytes() == CONCURRENT_EDIT_CONTENT
+    assert stale.read_bytes() == concurrent_edit
 
 
 def test_a_missing_probe_credential_fails_before_any_agent_process() -> None:
@@ -660,20 +712,20 @@ def test_disposable_cleanup_preserves_native_refresh_in_the_saved_file() -> None
 def test_a_malformed_ownership_record_still_reports_every_scope_split(
     tmp_path: Path,
 ) -> None:
-    lifecycle = PluginLifecycleHarness.create(tmp_path, plugin_name="fixture")
+    lifecycle = PluginLifecycleHarness.create(tmp_path)
     module = lifecycle.load_module()
-    exact = lifecycle.ship("exact")
+    exact = lifecycle.ship_agent()
     lifecycle.write_checkout(exact.name, exact.read_bytes())
     lifecycle.write_ownership(
         lifecycle.ownership_document(
-            lifecycle.ownership_entry(exact.name, MALFORMED_OWNERSHIP_DIGEST)
+            lifecycle.ownership_entry(exact.name, generated_non_hex_digest())
         )
     )
     before = lifecycle.snapshot(lifecycle.home)
 
     result = lifecycle.run()
 
-    assert result.exit_code == 2
+    assert result.exit_code == module.EXIT_REFUSED
     assert (
         f"{module.SCOPE_SPLIT_REMOVAL_PREFIX}{lifecycle.checkout_agents / exact.name}"
         in result.stdout
@@ -685,10 +737,10 @@ def test_a_malformed_ownership_record_still_reports_every_scope_split(
 def test_a_recorded_destination_that_is_a_directory_names_its_cause(
     tmp_path: Path,
 ) -> None:
-    lifecycle = PluginLifecycleHarness.create(tmp_path, plugin_name="fixture")
+    lifecycle = PluginLifecycleHarness.create(tmp_path)
     module = lifecycle.load_module()
-    content = lifecycle.definition_content("auditor")
-    shipped = lifecycle.ship("auditor")
+    shipped = lifecycle.ship_agent()
+    content = shipped.read_bytes()
     destination = lifecycle.home_agents / shipped.name
     destination.mkdir(parents=True)
     lifecycle.write_ownership(
@@ -700,7 +752,7 @@ def test_a_recorded_destination_that_is_a_directory_names_its_cause(
 
     result = lifecycle.run()
 
-    assert result.exit_code == 2
+    assert result.exit_code == module.EXIT_REFUSED
     assert (
         f"{module.COLLISION_PREFIX}{destination} ({module.CAUSE_NOT_REGULAR_FILE})"
         in result.stdout
@@ -711,18 +763,17 @@ def test_a_recorded_destination_that_is_a_directory_names_its_cause(
 def test_a_symlinked_agent_directory_still_reports_every_scope_split(
     tmp_path: Path,
 ) -> None:
-    lifecycle = PluginLifecycleHarness.create(tmp_path / "case", plugin_name="fixture")
+    lifecycle = PluginLifecycleHarness.create(tmp_path)
     module = lifecycle.load_module()
-    exact = lifecycle.ship("exact")
+    exact = lifecycle.ship_agent()
     lifecycle.write_checkout(exact.name, exact.read_bytes())
-    real_agents = tmp_path / "real-agents"
-    real_agents.mkdir()
+    real_agents = lifecycle.outside
     lifecycle.home.mkdir(parents=True, exist_ok=True)
     lifecycle.home_agents.symlink_to(real_agents)
 
     result = lifecycle.run()
 
-    assert result.exit_code == 2
+    assert result.exit_code == module.EXIT_REFUSED
     assert (
         f"{module.SCOPE_SPLIT_REMOVAL_PREFIX}{lifecycle.checkout_agents / exact.name}"
         in result.stdout

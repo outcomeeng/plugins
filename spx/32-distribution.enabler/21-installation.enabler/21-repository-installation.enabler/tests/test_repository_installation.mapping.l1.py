@@ -40,6 +40,7 @@ from outcomeeng_testing.generators.installation import (
     generated_codex_listing_entries,
     generated_failure_classification_cases,
     generated_git_source_urls,
+    generated_publication_states,
 )
 from outcomeeng_testing.harnesses.installation import (
     MARKETPLACE,
@@ -132,15 +133,17 @@ def test_every_planned_operation_reports_its_failure_and_stops_installation() ->
 
 
 @pytest.mark.parametrize(
-    ("mode", "source", "operation"),
-    generated_failure_classification_cases(observe_failure_operation_domains()),
+    ("mode", "source", "operation", "plugin"),
+    generated_failure_classification_cases(
+        observe_failure_operation_domains(), sorted(committed_catalog_plugin_names())
+    ),
 )
 def test_absent_plugin_wording_is_pending_only_for_persistent_plugin_operations(
     mode: InstallationMode,
     source: str | None,
     operation: Operation,
+    plugin: str,
 ) -> None:
-    plugin = sorted(committed_catalog_plugin_names())[0]
     carries_plugin = operation in PLUGIN_OPERATIONS
     pending = mode is InstallationMode.PERSISTENT and carries_plugin
 
@@ -171,8 +174,7 @@ def test_absent_plugin_wording_is_pending_only_for_persistent_plugin_operations(
 
 @pytest.mark.parametrize(
     "unpublished",
-    [frozenset(), frozenset({sorted(committed_catalog_plugin_names())[0]})],
-    ids=["all-published", "one-pending"],
+    generated_publication_states(sorted(committed_catalog_plugin_names())),
 )
 def test_every_claude_install_record_maps_to_one_update_one_rewrite_or_one_warning(
     unpublished: frozenset[str],

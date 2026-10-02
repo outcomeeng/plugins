@@ -18,6 +18,8 @@ from outcomeeng.distribution.installation import (
     CODEX_HOME_ENV,
     CODEX_SQLITE_HOME_ENV,
     HOME_ENV,
+    ISOLATED_CODEX_HOME_DIRECTORY,
+    ISOLATED_CODEX_SQLITE_DIRECTORY,
     CommandResult,
     provision_codex_home,
 )
@@ -27,6 +29,9 @@ from outcomeeng.distribution.native_thread_evidence import (
     NativeChildEvidence,
     NativeChildThread,
     NativeChildLookupPayload,
+    NativeLookupField,
+    NativeThreadField,
+    NativeTurnField,
     NativeTurnStatus,
     collect_native_child_evidence,
     read_native_thread,
@@ -81,7 +86,12 @@ class RecordingThreadReader:
             CommandResult(
                 THREAD_READ_COMMAND,
                 0,
-                json.dumps({"childIds": [thread["id"]], "thread": document}),
+                json.dumps(
+                    {
+                        NativeLookupField.CHILD_IDS: [thread["id"]],
+                        NativeLookupField.THREAD: document,
+                    }
+                ),
                 "",
             )
         )
@@ -96,7 +106,12 @@ class RecordingThreadReader:
             CommandResult(
                 THREAD_READ_COMMAND,
                 0,
-                json.dumps({"childIds": [thread["id"]], "thread": document}),
+                json.dumps(
+                    {
+                        NativeLookupField.CHILD_IDS: [thread["id"]],
+                        NativeLookupField.THREAD: document,
+                    }
+                ),
                 "",
             )
         )
@@ -112,7 +127,9 @@ class RecordingThreadReader:
         document = json.loads(
             json.dumps(NativeChildLookupPayload(childIds=[thread["id"]], thread=thread))
         )
-        document["thread"]["turns"][0]["status"] = status
+        document[NativeLookupField.THREAD][NativeThreadField.TURNS][0][
+            NativeTurnField.STATUS
+        ] = status
         return cls(CommandResult(THREAD_READ_COMMAND, 0, json.dumps(document), ""))
 
     @classmethod
@@ -120,7 +137,7 @@ class RecordingThreadReader:
         document = json.loads(
             json.dumps(NativeChildLookupPayload(childIds=[thread["id"]], thread=thread))
         )
-        document["thread"]["turns"] = []
+        document[NativeLookupField.THREAD][NativeThreadField.TURNS] = []
         return cls(CommandResult(THREAD_READ_COMMAND, 0, json.dumps(document), ""))
 
     @classmethod
@@ -130,7 +147,9 @@ class RecordingThreadReader:
         document = json.loads(
             json.dumps(NativeChildLookupPayload(childIds=[thread["id"]], thread=thread))
         )
-        document["thread"]["turns"][0]["items"] = []
+        document[NativeLookupField.THREAD][NativeThreadField.TURNS][0][
+            NativeTurnField.ITEMS
+        ] = []
         return cls(CommandResult(THREAD_READ_COMMAND, 0, json.dumps(document), ""))
 
     @classmethod
@@ -188,13 +207,15 @@ def exercise_native_evidence(
 
 def _empty_native_state(root: Path) -> dict[str, str]:
     """Provision empty disposable Codex state beneath `root` and its child environment."""
-    provision_codex_home(root / "codex")
-    (root / "sqlite").mkdir()
+    codex_home = root / ISOLATED_CODEX_HOME_DIRECTORY
+    codex_sqlite_home = root / ISOLATED_CODEX_SQLITE_DIRECTORY
+    provision_codex_home(codex_home)
+    codex_sqlite_home.mkdir()
     return {
         "PATH": os.environ["PATH"],
         HOME_ENV: str(root),
-        CODEX_HOME_ENV: str(root / "codex"),
-        CODEX_SQLITE_HOME_ENV: str(root / "sqlite"),
+        CODEX_HOME_ENV: str(codex_home),
+        CODEX_SQLITE_HOME_ENV: str(codex_sqlite_home),
     }
 
 

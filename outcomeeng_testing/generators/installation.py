@@ -1,6 +1,8 @@
 """Generated finite plugin selections for installation evidence."""
 
 import json
+import secrets
+import string
 from collections.abc import Mapping, Sequence
 from dataclasses import fields
 from itertools import product
@@ -308,17 +310,36 @@ def generated_listing_defect_records(
     other_checkout: Path,
     defect_checkout: Path,
     version: str,
+    invocation_checkout: Path | None = None,
 ) -> tuple[tuple[dict[str, str], RecordDisposition], ...]:
-    """Each refresh-scope listing defect beside one movable record.
+    """Each refresh-scope listing defect beside the records the run still moves.
 
     An entry naming no project path and an entry reporting no version are
     the two ways a refresh-scope entry carries too little for the run to
     address it. Each fails the run it appears in, so both are generated
     apart from the whole-domain cycle; the well-formed record beside them
     is what makes the run's continuation past either defect observable.
+    With `invocation_checkout` the listing also records the plugin for the
+    invocation checkout itself, so continuation is observable for the native
+    update as well as for the rewrite.
     """
     identifier = marketplace_plugin_identifier(plugin, marketplace)
-    return (
+    invocation: tuple[tuple[dict[str, str], RecordDisposition], ...] = (
+        ()
+        if invocation_checkout is None
+        else (
+            (
+                {
+                    CLAUDE_PLUGIN_ID_FIELD: identifier,
+                    CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
+                    CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(invocation_checkout),
+                    CLAUDE_PLUGIN_VERSION_FIELD: version,
+                },
+                RecordDisposition.INVOCATION_NATIVE,
+            ),
+        )
+    )
+    return invocation + (
         (
             {
                 CLAUDE_PLUGIN_ID_FIELD: identifier,
@@ -725,20 +746,36 @@ def generated_failure_classification_cases(
     operation_domains: Sequence[
         tuple[InstallationMode, str | None, Sequence[Operation]]
     ],
-) -> tuple[tuple[InstallationMode, str | None, Operation], ...]:
-    """Compose each reachable mode-operation pair with a plan source.
+    plugins: Sequence[str],
+) -> tuple[tuple[InstallationMode, str | None, Operation, str], ...]:
+    """Compose each reachable mode-operation pair with a plan source and a plugin.
 
     Several source configurations can reach the same operation.  Keep the
     first source that reaches each mode-operation pair so every finite mapping
-    case appears exactly once.
+    case appears exactly once.  The plugin the failure names rotates through
+    `plugins` across the cases, so no single catalog member stands for them
+    all and every member is named once the cases outnumber the catalog.
     """
+    if not plugins:
+        raise ValueError("failure classification needs at least one plugin")
     reached: dict[tuple[InstallationMode, Operation], str | None] = {}
     for mode, source, operations in operation_domains:
         for operation in operations:
             reached.setdefault((mode, operation), source)
     return tuple(
-        (mode, source, operation) for (mode, operation), source in reached.items()
+        (mode, source, operation, plugins[index % len(plugins)])
+        for index, ((mode, operation), source) in enumerate(reached.items())
     )
+
+
+def generated_publication_states(plugins: Sequence[str]) -> tuple[frozenset[str], ...]:
+    """Every publication state with at most one unpublished plugin.
+
+    The empty state publishes every plugin; each other state withholds one
+    catalog member, so a record of every plugin is met both moved and left
+    unmoved by an unpublished update.
+    """
+    return (frozenset(), *(frozenset({plugin}) for plugin in plugins))
 
 
 CONCURRENT_SESSION_CHECKOUT = "concurrent-session-checkout"
@@ -817,7 +854,72 @@ def generated_non_pending_failure_wordings(
     )
 
 
+_IDENTIFIER_ENTROPY_BYTES = 6
+_SHA256_HEX_LENGTH = 64
+_NON_HEX_LETTERS = "".join(
+    letter for letter in string.ascii_lowercase if letter not in string.hexdigits
+)
+
+
+def generated_identifier(kind: str) -> str:
+    """A fresh lowercase identifier of the given kind, unique per call.
+
+    Plugin names, agent slugs, and definition filenames in lifecycle cases are
+    incidental: no assertion states one, so each case draws a new one and a
+    predicate that happened to depend on a particular spelling fails at once.
+    """
+    return f"{kind}-{secrets.token_hex(_IDENTIFIER_ENTROPY_BYTES)}"
+
+
+def generated_plugin_name() -> str:
+    """A fresh plugin name for a shipped-plugin lifecycle case."""
+    return generated_identifier("plugin")
+
+
+def generated_agent_slug() -> str:
+    """A fresh agent slug for a shipped agent definition."""
+    return generated_identifier("agent")
+
+
+def generated_agent_definition() -> bytes:
+    """A definition naming a fresh agent, as any party other than the plugin writes one.
+
+    The placement script treats definition bytes opaquely by digest, so the
+    only property that matters is that the bytes differ from every shipped
+    definition and from each other.
+    """
+    return f'name = "{generated_agent_slug()}"\n'.encode()
+
+
+def generated_definition_edit(content: bytes) -> bytes:
+    """The definition `content` with a fresh trailing TOML comment, as a local edit leaves it."""
+    return content + f"# {generated_identifier('edit')}\n".encode()
+
+
+def generated_agent_file() -> tuple[str, bytes]:
+    """A fresh agent filename and definition outside every plugin's namespace."""
+    return f"{generated_agent_slug()}.toml", generated_agent_definition()
+
+
+def generated_non_hex_digest() -> str:
+    """A SHA-256-length digest drawn from letters outside the hexadecimal alphabet."""
+    return "".join(secrets.choice(_NON_HEX_LETTERS) for _ in range(_SHA256_HEX_LENGTH))
+
+
+def generated_unparseable_json() -> str:
+    """An object opened with an unquoted key, which no JSON reader parses."""
+    return "{ " + generated_identifier("key")
+
+
 __all__ = [
+    "generated_agent_definition",
+    "generated_agent_file",
+    "generated_agent_slug",
+    "generated_definition_edit",
+    "generated_identifier",
+    "generated_non_hex_digest",
+    "generated_plugin_name",
+    "generated_unparseable_json",
     "catalog_plugin_names_from_bytes",
     "catalog_plugin_names_from_document",
     "generated_agent_subsets",
@@ -841,5 +943,6 @@ __all__ = [
     "generated_invalid_catalog_subsets",
     "generated_non_pending_failure_wordings",
     "generated_persistent_catalog_selections",
+    "generated_publication_states",
     "generated_valid_catalog_subsets",
 ]

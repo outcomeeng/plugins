@@ -22,7 +22,7 @@ from outcomeeng.distribution.installation import (
     execute_installation,
 )
 from outcomeeng.distribution.native_profile_execution import (
-    NATIVE_PROFILE_OVERRIDE_ENVIRONMENT_VARIABLES,
+    NATIVE_PROFILE_AMBIENT_ENVIRONMENT_VARIABLES,
     NativeExecutionRunners,
     NativeProfileExecutionObservation,
     NativeProfileRow,
@@ -48,7 +48,9 @@ from outcomeeng_testing.harnesses.discovery_auth import (
 )
 from outcomeeng_testing.harnesses.installation import mirror_installation_inputs
 
-CLAUDE_CREDENTIAL_VARIABLES = ("ANTHROPIC_API_KEY", "CLAUDE_CODE_OAUTH_TOKEN")
+CLAUDE_CREDENTIAL_VARIABLES = frozenset(
+    {"ANTHROPIC_API_KEY", "CLAUDE_CODE_OAUTH_TOKEN"}
+)
 
 
 def run_profile_process(
@@ -184,8 +186,7 @@ def _isolated_environment(environment: Mapping[str, str]) -> dict[str, str]:
         name: value
         for name, value in credential_free_environment(environment).items()
         if name not in CLAUDE_CREDENTIAL_VARIABLES
-        and name not in NATIVE_PROFILE_OVERRIDE_ENVIRONMENT_VARIABLES
-        and name != "CLAUDECODE"
+        and name not in NATIVE_PROFILE_AMBIENT_ENVIRONMENT_VARIABLES
     }
 
 
@@ -209,7 +210,7 @@ def _execute_row(
     )
     if interval.authentication is not None:
         with interval.authentication.authenticated_home(
-            row.state_root / "codex", cwd=checkout, env=child_environment
+            plan.roots.codex_home, cwd=checkout, env=child_environment
         ):
             return run_native_profile_row(
                 row, checkout=checkout, environment=child_environment, runners=runners
