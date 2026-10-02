@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import fnmatch
-
 import pytest
 
 from outcomeeng.distribution import agents as agent_conversion
@@ -24,6 +22,7 @@ from outcomeeng.validation.selected_gate import (
     VALIDATION_LANES,
     ChangedPath,
     FULL_GATE_REASON,
+    InfrastructureIndexRequired,
     PathCategory,
     REAL_AGENT_CODEX_EXCLUSION,
     REACHED_TESTS_REASON,
@@ -39,6 +38,7 @@ from outcomeeng.validation.selected_gate import (
 from outcomeeng_testing.generators.gate import (
     SELECTED_GATE_PYTHON_SOURCE_PATH,
     SELECTED_GATE_PYTHON_TEST_PATH,
+    category_patterns,
     path_from_pattern,
 )
 from outcomeeng_testing.harnesses import gate as gate_harness
@@ -46,12 +46,12 @@ from outcomeeng_testing.harnesses.gate import (
     PYTEST_TARGET_ARG,
     SELECTED_GATE_RENAMED_TARGET_ARG,
     SELECTED_GATE_WHITESPACE_PATH,
+    category_pattern_path_matches,
     collected_paths_observation,
     resolved_base_observation,
     run_check_observation,
     selected_gate_branch_discovery_argv,
     selected_gate_changed_path_domain,
-    selected_gate_reach_index,
 )
 from outcomeeng_testing.harnesses.infrastructure_index import (
     conftest_reach_layout,
@@ -65,10 +65,6 @@ from outcomeeng_testing.harnesses.real_agent_selection import (
     run_full_check_observation,
 )
 
-FULL_SURFACE_REACH = frozenset(
-    {InfrastructureReach.SHARED, InfrastructureReach.UNTRACEABLE}
-)
-
 
 def _argvs(plan: SelectedGatePlan) -> tuple[tuple[str, ...], ...]:
     return tuple(item.step.argv for item in plan.selected_steps)
@@ -78,41 +74,26 @@ def _reasons(plan: SelectedGatePlan) -> tuple[str, ...]:
     return tuple(item.reason for item in plan.selected_steps)
 
 
-def _categories_of(path: str) -> frozenset[PathCategory]:
-    # The category patterns are shell-style globs; the standard library's glob
-    # matcher, not the selector's own classification, decides membership.
+def _pathspec_categories(path: str) -> frozenset[PathCategory]:
+    # Git's pathspec matcher, not the selector's own classification, decides
+    # which category patterns select the path.
+    matched = category_pattern_path_matches()[path]
     return frozenset(
         category
         for category, patterns in PATH_CATEGORY_PATTERNS.items()
-        if any(fnmatch.fnmatchcase(path, pattern) for pattern in patterns)
+        if matched.intersection(patterns)
     )
 
 
-def _selects_full_surface(path: str) -> bool:
-    categories = _categories_of(path)
-    return PathCategory.FULL_GATE in categories or (
-        PathCategory.TEST_INFRASTRUCTURE in categories
-        and selected_gate_reach_index().reach(path).kind in FULL_SURFACE_REACH
-    )
-
-
-def _expected_validation_steps(
-    paths: tuple[str, ...],
-) -> tuple[tuple[tuple[str, ...], str], ...]:
-    # Every lane of every category a path lies in contributes its steps, each
-    # carrying its lane's reason, in validation-step order.
-    reason_by_argv = {
-        argv: lane.reason
-        for path in paths
-        for category in _categories_of(path)
-        if category in VALIDATION_LANES
-        for lane in (VALIDATION_LANES[category],)
-        for argv in lane.argvs
-    }
-    return tuple(
-        (step.argv, reason_by_argv[step.argv])
-        for step in VALIDATION_STEPS
-        if step.argv in reason_by_argv
+def _lane_steps(
+    categories: frozenset[PathCategory],
+) -> frozenset[tuple[tuple[str, ...], str]]:
+    # Each lane of a category the path lies in contributes every step it
+    # declares, carrying that lane's reason.
+    return frozenset(
+        (argv, VALIDATION_LANES[category].reason)
+        for category in categories & VALIDATION_LANES.keys()
+        for argv in VALIDATION_LANES[category].argvs
     )
 
 
@@ -126,37 +107,59 @@ def _validation_steps(
     )
 
 
-@pytest.mark.parametrize("category", tuple(PathCategory), ids=str)
+def _source_order(argvs: tuple[tuple[str, ...], ...]) -> tuple[tuple[str, ...], ...]:
+    return tuple(step.argv for step in VALIDATION_STEPS if step.argv in argvs)
+
+
+def _lane_decided(path: str) -> bool:
+    # Full-gate paths select the complete recipe set and test-infrastructure
+    # paths select by import reach; every other path selects by its lanes.
+    return not _pathspec_categories(path) & {
+        PathCategory.FULL_GATE,
+        PathCategory.TEST_INFRASTRUCTURE,
+    }
+
+
+@pytest.mark.parametrize("pattern", category_patterns())
 def test_every_category_path_selects_the_lanes_of_every_category_it_lies_in(
-    category: PathCategory,
+    pattern: str,
 ) -> None:
-    for pattern in PATH_CATEGORY_PATTERNS[category]:
-        path = path_from_pattern(pattern)
+    path = path_from_pattern(pattern)
+    categories = _pathspec_categories(path)
 
-        plan = build_selected_gate_plan(
-            (path,), test_infrastructure=selected_gate_reach_index()
-        )
+    if PathCategory.FULL_GATE in categories:
+        assert build_selected_gate_plan((path,)).full_gate is True
+    elif PathCategory.TEST_INFRASTRUCTURE in categories:
+        with pytest.raises(InfrastructureIndexRequired):
+            build_selected_gate_plan((path,))
+    else:
+        plan = build_selected_gate_plan((path,))
+        steps = _validation_steps(plan)
+        argvs = tuple(argv for argv, _ in steps)
 
-        assert plan.full_gate is _selects_full_surface(path), path
-        if not plan.full_gate:
-            assert _validation_steps(plan) == _expected_validation_steps((path,)), path
+        assert plan.full_gate is False
+        assert len(set(steps)) == len(steps)
+        assert frozenset(steps) == _lane_steps(categories)
+        assert argvs == _source_order(argvs)
 
 
 def test_paths_of_every_lane_merge_their_lanes_in_validation_step_order() -> None:
     paths = tuple(
         path
-        for category in VALIDATION_LANES
-        for pattern in PATH_CATEGORY_PATTERNS[category]
-        for path in (path_from_pattern(pattern),)
-        if not _selects_full_surface(path)
+        for path in map(path_from_pattern, category_patterns())
+        if _lane_decided(path)
     )
 
-    plan = build_selected_gate_plan(
-        paths, test_infrastructure=selected_gate_reach_index()
-    )
+    plan = build_selected_gate_plan(paths)
+    steps = _validation_steps(plan)
+    argvs = tuple(argv for argv, _ in steps)
 
     assert plan.full_gate is False
-    assert _validation_steps(plan) == _expected_validation_steps(paths)
+    assert len(set(steps)) == len(steps)
+    assert frozenset(steps) == frozenset().union(
+        *(_lane_steps(_pathspec_categories(path)) for path in paths)
+    )
+    assert argvs == _source_order(argvs)
 
 
 @pytest.mark.parametrize(

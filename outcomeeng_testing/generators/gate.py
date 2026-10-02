@@ -89,10 +89,10 @@ def paths_in_pattern(pattern: str) -> SearchStrategy[str]:
     return st.tuples(*pieces).map("".join)
 
 
-def category_paths() -> SearchStrategy[str]:
-    """Paths in every changed-path category the selector classifies."""
+def category_patterns() -> tuple[str, ...]:
+    """Every glob pattern of every changed-path category, each once, sorted."""
 
-    patterns = tuple(
+    return tuple(
         sorted(
             {
                 pattern
@@ -101,7 +101,12 @@ def category_paths() -> SearchStrategy[str]:
             }
         )
     )
-    return st.sampled_from(patterns).flatmap(paths_in_pattern)
+
+
+def category_paths() -> SearchStrategy[str]:
+    """Paths in every changed-path category the selector classifies."""
+
+    return st.sampled_from(category_patterns()).flatmap(paths_in_pattern)
 
 
 def selected_gate_changed_paths() -> SearchStrategy[list[str]]:

@@ -8,16 +8,22 @@ orchestration behavior without launching real subprocesses.
 Exception case: Stage 5, Interaction protocols — the orchestrator's
 correctness depends on the sequence and shape of spawn/wait/signal calls.
 Recording doubles let `l1` tests assert on those interactions.
+
+The module also runs git's pathspec matcher over throwaway indexes, an
+implementation independent of the selector's own glob matching, and reports
+which category patterns select each path.
 """
 
 from __future__ import annotations
 
 import ast
+import functools
 import inspect
 import io
 import json
 import math
 import os
+import subprocess
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -70,6 +76,8 @@ from outcomeeng_testing.generators.gate import (
     SELECTED_GATE_PYTHON_TEST_PATH,
     SELECTED_GATE_SKILL_PATH,
     SELECTED_GATE_WORKFLOW_PATH,
+    category_patterns,
+    path_from_pattern,
     selected_gate_changed_paths,
 )
 from outcomeeng_testing.harnesses.changeset_scope import (
@@ -86,6 +94,7 @@ SELECTED_GATE_PROPERTY_REPLAY_PATH = (
     "test_selection_is_deterministic_for_path_order_and_duplicates"
 )
 SELECTED_GATE_PROPERTY_EXAMPLES = 40
+PATHSPEC_GIT_TIMEOUT_SECONDS = 30
 STATIC_ANALYSIS_ARGVS = (RUFF_CHECK_ARGV, MYPY_ARGV, PYRIGHT_ARGV)
 PASS_EXIT_CODE = 0
 FAIL_EXIT_CODE = 2
@@ -272,6 +281,105 @@ def selected_gate_reach_index() -> InfrastructureIndex:
 
     return build_infrastructure_index(
         package=TEST_INFRASTRUCTURE_PACKAGE, module_sources={}, test_sources={}
+    )
+
+
+class PathspecOracleError(RuntimeError):
+    """The git pathspec matcher could not be set up or queried."""
+
+
+# Pathspec semantics git reads from the environment; each one would change how
+# a pattern matches, so the oracle runs git without them.
+_PATHSPEC_ENVIRONMENT = (
+    "GIT_LITERAL_PATHSPECS",
+    "GIT_GLOB_PATHSPECS",
+    "GIT_NOGLOB_PATHSPECS",
+    "GIT_ICASE_PATHSPECS",
+    "GIT_DIR",
+    "GIT_INDEX_FILE",
+    "GIT_WORK_TREE",
+)
+_EMPTY_BLOB_MODE = "100644"
+
+
+def _pathspec_git(repo: Path, *args: str, stdin: str = "") -> str:
+    environment = {
+        name: value
+        for name, value in os.environ.items()
+        if name not in _PATHSPEC_ENVIRONMENT
+    }
+    completed = subprocess.run(
+        ("git", "-c", "core.ignorecase=false", *args),
+        cwd=repo,
+        input=stdin,
+        capture_output=True,
+        text=True,
+        env=environment,
+        timeout=PATHSPEC_GIT_TIMEOUT_SECONDS,
+        check=False,
+    )
+    if completed.returncode != 0:
+        raise PathspecOracleError(
+            f"git {' '.join(args)} exited {completed.returncode}: {completed.stderr}"
+        )
+    return completed.stdout
+
+
+def _index_compatible_groups(paths: Sequence[str]) -> tuple[tuple[str, ...], ...]:
+    # One git index cannot hold a path that is also another path's directory,
+    # so such paths go to separate indexes.
+    groups: list[list[str]] = []
+    for path in sorted(set(paths)):
+        for group in groups:
+            if not any(
+                member.startswith(f"{path}/") or path.startswith(f"{member}/")
+                for member in group
+            ):
+                group.append(path)
+                break
+        else:
+            groups.append([path])
+    return tuple(tuple(group) for group in groups)
+
+
+def git_pathspec_matches(
+    paths: Sequence[str], patterns: Sequence[str]
+) -> Mapping[str, frozenset[str]]:
+    """Map each path to the patterns git's pathspec matcher selects it under.
+
+    Git matches a pathspec as POSIX ``fnmatch`` without ``FNM_PATHNAME``, so a
+    wildcard crosses path separators. The paths are index entries of
+    throwaway repositories; no working-tree file is written.
+    """
+
+    matches: dict[str, set[str]] = {path: set() for path in paths}
+    for group in _index_compatible_groups(paths):
+        with TemporaryDirectory() as directory:
+            repo = Path(directory)
+            _pathspec_git(repo, "init", "--quiet")
+            blob = _pathspec_git(repo, "hash-object", "-w", "--stdin").strip()
+            _pathspec_git(
+                repo,
+                "update-index",
+                "--add",
+                "--index-info",
+                stdin="".join(f"{_EMPTY_BLOB_MODE} {blob}\t{path}\n" for path in group),
+            )
+            for pattern in patterns:
+                listed = _pathspec_git(repo, "ls-files", "-z", "--", pattern)
+                for path in listed.split("\0"):
+                    if path:
+                        matches[path].add(pattern)
+    return {path: frozenset(found) for path, found in matches.items()}
+
+
+@functools.cache
+def category_pattern_path_matches() -> Mapping[str, frozenset[str]]:
+    """Git pathspec matches for the path built from every category pattern."""
+
+    patterns = category_patterns()
+    return git_pathspec_matches(
+        tuple(path_from_pattern(pattern) for pattern in patterns), patterns
     )
 
 
