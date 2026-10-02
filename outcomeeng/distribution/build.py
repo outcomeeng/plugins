@@ -58,6 +58,8 @@ from outcomeeng.distribution.contracts import (
     BUILD_TARGET_VARIABLE,
     BUILD_VARIABLE_DELIMITER_END,
     BUILD_VARIABLE_DELIMITER_START,
+    FLAT_AGENT_PLUGIN_SEPARATOR,
+    NATIVE_AGENT_PLUGIN_SEPARATOR,
     PLUGIN_NAME_VARIABLE,
     PLUGINS_DIR_NAME,
     PLUGIN_SUBDIRS,
@@ -1771,10 +1773,6 @@ def agent_source_admits_target(
             f"{sorted(registered)}; found {list(agent.targets)}"
         )
     return target.value in agent.targets
-
-
-FLAT_AGENT_PLUGIN_SEPARATOR: Final = "_"
-NATIVE_AGENT_PLUGIN_SEPARATOR: Final = ":"
 
 
 def agent_slug(plugin: str, stem: str, *, capability: AgentCapability) -> str:

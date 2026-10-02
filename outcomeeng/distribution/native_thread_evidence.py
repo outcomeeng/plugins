@@ -49,6 +49,22 @@ class NativeLookupField(StrEnum):
     ERROR = "error"
 
 
+class NativeEvidenceCondition(StrEnum):
+    """Terminal conditions a native child-evidence collection records.
+
+    Each names the first unavailable or inconsistent observation; a mismatched
+    identity field is reported with the field it names instead.
+    """
+
+    READ_FAILED = "native child thread read failed"
+    READ_NOT_JSON = "native child thread read is not JSON"
+    THREAD_ABSENT = "native child thread is absent"
+    NO_SINGLE_CHILD = "native listing has no single child identity"
+    TURN_COUNT = "native child does not contain exactly one turn"
+    TURN_INCOMPLETE = "native child turn did not complete"
+    COMPLETION_ABSENT = "native child completion message is absent"
+
+
 class NativeThreadField(StrEnum):
     """Non-identity fields of a native thread record."""
 
@@ -167,20 +183,20 @@ def collect_native_child_evidence(
     result = reader(parent_id, cwd, environment)
     if result.exit_code != 0:
         return NativeChildEvidence(
-            parent_id, result, None, "native child thread read failed"
+            parent_id, result, None, NativeEvidenceCondition.READ_FAILED
         )
     try:
         document = json.loads(result.stdout)
     except json.JSONDecodeError:
         return NativeChildEvidence(
-            parent_id, result, None, "native child thread read is not JSON"
+            parent_id, result, None, NativeEvidenceCondition.READ_NOT_JSON
         )
     thread = (
         document.get(NativeLookupField.THREAD) if isinstance(document, dict) else None
     )
     if not isinstance(thread, dict):
         return NativeChildEvidence(
-            parent_id, result, None, "native child thread is absent"
+            parent_id, result, None, NativeEvidenceCondition.THREAD_ABSENT
         )
     child_ids = document.get(NativeLookupField.CHILD_IDS)
     if (
@@ -191,7 +207,7 @@ def collect_native_child_evidence(
         or child_ids[0] == parent_id
     ):
         return NativeChildEvidence(
-            parent_id, result, thread, "native listing has no single child identity"
+            parent_id, result, thread, NativeEvidenceCondition.NO_SINGLE_CHILD
         )
     receiver_id = child_ids[0]
     expected = {
@@ -232,14 +248,14 @@ def _single_parent(stream: str) -> str:
 def _completion_condition(thread: Mapping[str, object]) -> str | None:
     turns = thread.get(NativeThreadField.TURNS)
     if not isinstance(turns, list) or len(turns) != 1:
-        return "native child does not contain exactly one turn"
+        return NativeEvidenceCondition.TURN_COUNT
     turn = turns[0]
     if (
         not isinstance(turn, dict)
         or turn.get(NativeTurnField.STATUS) != NativeTurnStatus.COMPLETED
         or turn.get(NativeTurnField.ERROR) is not None
     ):
-        return "native child turn did not complete"
+        return NativeEvidenceCondition.TURN_INCOMPLETE
     items = turn.get(NativeTurnField.ITEMS)
     if isinstance(items, list) and any(
         isinstance(item, dict)
@@ -249,7 +265,7 @@ def _completion_condition(thread: Mapping[str, object]) -> str | None:
         for item in items
     ):
         return None
-    return "native child completion message is absent"
+    return NativeEvidenceCondition.COMPLETION_ABSENT
 
 
 def _read_native_record(

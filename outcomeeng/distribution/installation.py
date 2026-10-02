@@ -16,9 +16,16 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Protocol, cast
 
+from outcomeeng.distribution.agents import (
+    AGENT_NAME_FIELD,
+    AGENT_SKILLS_CONFIG_FIELD,
+    AGENT_SKILLS_FIELD,
+)
 from outcomeeng.distribution.contracts import (
     AGENTS_SUBDIR_NAME,
     DIST_DIR_NAME,
+    FLAT_AGENT_PLUGIN_SEPARATOR,
+    NATIVE_AGENT_PLUGIN_SEPARATOR,
     SKILLS_SUBDIR_NAME,
 )
 
@@ -59,9 +66,6 @@ AGENT_OWNERSHIP_ENTRIES_FIELD = "entries"
 AGENT_OWNERSHIP_DESTINATION_FIELD = "destination"
 AGENT_OWNERSHIP_PLUGIN_FIELD = "plugin"
 AGENT_OWNERSHIP_DIGEST_FIELD = "digest"
-AGENT_SKILLS_FIELD = "skills"
-AGENT_SKILLS_CONFIG_FIELD = "config"
-AGENT_SKILL_NAME_FIELD = "name"
 CATALOG_PLUGINS_FIELD = "plugins"
 CATALOG_PLUGIN_NAME_FIELD = "name"
 HOME_ENV = "HOME"
@@ -2136,7 +2140,8 @@ def _checkout_agent_mentions_plugin(
     plugins: frozenset[str],
 ) -> bool:
     if any(
-        path.stem.startswith(f"{plugin}_") or path.stem.startswith(f"{plugin}-")
+        path.stem.startswith(f"{plugin}{FLAT_AGENT_PLUGIN_SEPARATOR}")
+        or path.stem.startswith(f"{plugin}-")
         for plugin in plugins
     ):
         return True
@@ -2152,8 +2157,8 @@ def _checkout_agent_mentions_plugin(
         return False
     return any(
         isinstance(entry, dict)
-        and isinstance(name := entry.get(AGENT_SKILL_NAME_FIELD), str)
-        and name.partition(":")[0] in plugins
+        and isinstance(name := entry.get(AGENT_NAME_FIELD), str)
+        and name.partition(NATIVE_AGENT_PLUGIN_SEPARATOR)[0] in plugins
         for entry in config
     )
 
@@ -3857,9 +3862,6 @@ __all__ = [
     "render_claude_source",
     "rewrite_install_records",
     "AGENT_OWNERSHIP_FILENAME",
-    "AGENT_SKILL_NAME_FIELD",
-    "AGENT_SKILLS_CONFIG_FIELD",
-    "AGENT_SKILLS_FIELD",
     "AGENT_OWNERSHIP_SCHEMA_VERSION",
     "Agent",
     "AgentAdapter",
