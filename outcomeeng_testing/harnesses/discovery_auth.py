@@ -21,6 +21,7 @@ from outcomeeng.distribution.installation import (
     CODEX_EXECUTABLE,
     CODEX_HOME_ENV,
     HOME_ENV,
+    provision_codex_home,
 )
 from outcomeeng.validation.ci_gate import (
     CODEX_API_KEY_ENVIRONMENT,
@@ -68,6 +69,8 @@ SAVED_LOGIN_TOKEN_FIELDS: tuple[str, ...] = (
 """Every token-set field a usable ChatGPT saved login carries."""
 WRITE_THROUGH_UNSUPPORTED_DIAGNOSTIC = "The CLI credential writer cannot preserve the saved-login link; subscription discovery is unsupported by this CLI."
 """The preflight's diagnostic for a CLI whose credential writer replaces a linked saved login."""
+WRITE_THROUGH_REFUSED_DIAGNOSTIC = "The CLI refused the write-through preflight login"
+"""The preflight's diagnostic prefix for a login the CLI refused; the CLI's own stderr follows."""
 FILE_STORE_ARGS = ("-c", 'cli_auth_credentials_store="file"')
 DISCOVERY_TIMEOUT_SECONDS = 600
 LOCK_RETRY_SECONDS = 0.05
@@ -356,7 +359,7 @@ class DiscoveryAuthentication:
             root = Path(directory).resolve()
             owner = root / "owner.json"
             consumer = root / "consumer"
-            consumer.mkdir()
+            provision_codex_home(consumer)
             owner.write_text("{}", encoding="utf-8")
             owner.chmod(0o600)
             identity = owner.stat()
@@ -375,11 +378,14 @@ class DiscoveryAuthentication:
                 env={**env, CODEX_HOME_ENV: str(consumer)},
                 input_text=fabricated,
             )
+            if result.returncode != 0:
+                raise DiscoveryAuthenticationError(
+                    f"{WRITE_THROUGH_REFUSED_DIAGNOSTIC} ({result.returncode}): {result.stderr}"
+                )
             document = self.redactor.read_document(owner)
             after = owner.stat()
             if (
-                result.returncode != 0
-                or not link.is_symlink()
+                not link.is_symlink()
                 or link.resolve() != owner
                 or (identity.st_dev, identity.st_ino) != (after.st_dev, after.st_ino)
                 or not isinstance(document, dict)
@@ -395,7 +401,7 @@ class DiscoveryAuthentication:
         cwd: Path,
         env: Mapping[str, str],
     ) -> Iterator[subprocess.CompletedProcess[str]]:
-        home.mkdir(parents=True, exist_ok=True)
+        provision_codex_home(home)
         self.credential_files.add(home / AUTH_FILENAME)
         if self.selection.mode is not AuthenticationMode.SUBSCRIPTION:
             flag = (

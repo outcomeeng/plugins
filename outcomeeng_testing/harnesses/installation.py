@@ -33,6 +33,7 @@ from outcomeeng.distribution.contracts import (
     Target,
 )
 from outcomeeng.distribution.installation import (
+    provision_codex_home,
     AGENT_OWNERSHIP_DESTINATION_FIELD,
     AGENT_OWNERSHIP_DIGEST_FIELD,
     AGENT_OWNERSHIP_ENTRIES_FIELD,
@@ -3806,6 +3807,7 @@ def _persistent_environment(root: Path) -> dict[str, str]:
 def _prepare_agent_state(environment: Mapping[str, str]) -> None:
     for name in STATE_ENV_NAMES:
         Path(environment[name]).mkdir(parents=True, exist_ok=True)
+    provision_codex_home(Path(environment[CODEX_HOME_ENV]))
 
 
 def _command_scope(command: InstallationCommand) -> str:

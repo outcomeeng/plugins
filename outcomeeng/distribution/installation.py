@@ -42,6 +42,8 @@ CODEX_AGENTS_PATH = Path(".codex/agents")
 CODEX_HOME_AGENTS_PATH = Path("agents")
 CODEX_HOME_CONFIG_PATH = Path("config.toml")
 """The configuration file the installed Codex CLI requires in an existing `CODEX_HOME`."""
+CODEX_HOME_EMPTY_CONFIG = ""
+"""The plugin-free configuration a provisioned disposable `CODEX_HOME` holds."""
 AGENT_OWNERSHIP_FILENAME = ".outcomeeng-marketplace-ownership.json"
 AGENT_OWNERSHIP_SCHEMA_VERSION = 1
 AGENT_OWNERSHIP_SCHEMA_FIELD = "schema_version"
@@ -3552,6 +3554,19 @@ def _required_environment_path(
     return Path(value).expanduser()
 
 
+def provision_codex_home(home: Path) -> None:
+    """Create a disposable `CODEX_HOME` holding a plugin-free `config.toml`.
+
+    The installed Codex CLI refuses an existing home that holds no
+    `config.toml`, so a provisioned home carries one before its first Codex
+    command; a configuration already present is left unchanged.
+    """
+    home.mkdir(parents=True, exist_ok=True)
+    config = home / CODEX_HOME_CONFIG_PATH
+    if not config.exists():
+        config.write_text(CODEX_HOME_EMPTY_CONFIG, encoding="utf-8")
+
+
 def _create_isolated_roots(roots: InstallationRoots) -> None:
     if roots.state is None or roots.codex_sqlite_home is None:
         raise ValueError("isolated installation requires disposable state roots")
@@ -3559,10 +3574,10 @@ def _create_isolated_roots(roots: InstallationRoots) -> None:
         roots.state,
         roots.home,
         roots.claude_config,
-        roots.codex_home,
         roots.codex_sqlite_home,
     ):
         root.mkdir(parents=True, exist_ok=True)
+    provision_codex_home(roots.codex_home)
 
 
 def _agent_adapter(agent: Agent) -> AgentAdapter:
@@ -3748,6 +3763,7 @@ def _version_after(
 
 
 __all__ = [
+    "provision_codex_home",
     "STDERR_WARNING_PREFIX",
     "AGENT_ADAPTERS",
     "CATALOG_MARKETPLACE_NAME_FIELD",
@@ -3843,6 +3859,7 @@ __all__ = [
     "CODEX_HOME_ENV",
     "CODEX_HOME_AGENTS_PATH",
     "CODEX_HOME_CONFIG_PATH",
+    "CODEX_HOME_EMPTY_CONFIG",
     "CODEX_LOCAL_SOURCE_TYPE",
     "CODEX_MARKETPLACES_FIELD",
     "CLAUDE_MARKETPLACE_LIST_COMMAND",

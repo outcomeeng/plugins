@@ -19,6 +19,7 @@ from outcomeeng.distribution.installation import (
     CODEX_SQLITE_HOME_ENV,
     HOME_ENV,
     CommandResult,
+    provision_codex_home,
 )
 from outcomeeng.distribution.native_thread_evidence import (
     THREAD_READ_COMMAND,
@@ -187,7 +188,7 @@ def exercise_native_evidence(
 
 def _empty_native_state(root: Path) -> dict[str, str]:
     """Provision empty disposable Codex state beneath `root` and its child environment."""
-    (root / "codex").mkdir()
+    provision_codex_home(root / "codex")
     (root / "sqlite").mkdir()
     return {
         "PATH": os.environ["PATH"],
