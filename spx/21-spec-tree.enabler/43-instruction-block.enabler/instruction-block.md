@@ -11,6 +11,8 @@ CAN retain the Spec Tree routing instructions and reach the product's own phase 
 
 ## Assertions
 
+- ALWAYS: generation emits and validates, in the router block of every repository it renders and of both agent harnesses, a positions section stating the operator's authority; the Director, Maintainer, and Orchestrator position titles with the authority each holds over its scope; that a grant may name any further position, which holds the authority its grant names; the position name form `{Product} {Position}`, with the operator outside it; that position titles and position names stay distinct from role names; that one agent session holds at most one position, in the one worktree root its grant names, while a session no grant names holds no position and works in roles only; and that a position holder may take any role except the Verifier and keeps every rule of each role it takes, per `spx/15-agent-terminology.pdr.md`
+
 ### Scenarios
 
 - Given a template with language blocks and per-harness blocks, when the managed surface is generated for an enabled-language set, then both `CLAUDE.md` and `AGENTS.md` are written, each with its router block first, preserving content outside every managed fence, and containing inside the router block exactly the enabled languages' blocks and only its own harness's blocks ([test](tests/test_instruction_block.scenario.l1.py))
@@ -61,7 +63,7 @@ CAN retain the Spec Tree routing instructions and reach the product's own phase 
 ### Properties
 
 - The generated root guide contains the complete authorized plugin list derived
-  from the owning catalog. Adding a role within an authorized plugin leaves the
+  from the owning catalog. Adding a subagent within an authorized plugin leaves the
   guide unchanged, while adding an authorized plugin updates the list ([test](tests/test_plugin_authorization.property.l1.py)).
 - For every explicit language token outside the language set declared by the canonical instruction-block template, the CLI rejects the `--languages` override and names every allowed language ([test](tests/test_language_override.property.l1.py))
 - Every generated router block's `template_version` equals the installed template version ([test](tests/test_instruction_block.property.l1.py))
@@ -77,11 +79,14 @@ CAN retain the Spec Tree routing instructions and reach the product's own phase 
 - ALWAYS: both generated root guides preserve the standing-request sentence in
   `spx/15-subagent-execution.pdr.md` verbatim within explicit authorization for
   every subagent supplied by their listed plugins. An active skill must explicitly
-  instruct each launch; availability, task wording, and role-description matching
-  supply no launch instruction ([audit]).
-- NEVER: a root guide contains a role inventory, per-role invocation table, task
-  prompt, or per-role result-contract copy ([audit]).
-- ALWAYS: root guides delegate role selection and target-only prompts to the calling
+  instruct each launch; availability, task wording, and subagent-description
+  matching supply no launch instruction. The standing authorization admits the
+  Executor and Verifier launches a position holder makes under the operator's
+  grant, each requested by the skill that governs it, per
+  `spx/15-agent-terminology.pdr.md` ([audit]).
+- NEVER: a root guide contains a subagent inventory, per-subagent invocation table,
+  task prompt, or per-subagent result-contract copy ([audit]).
+- ALWAYS: root guides delegate subagent selection and target-only prompts to the calling
   skills while permitting minimal agent-specific mechanical guidance, including
   a call example for a demonstrated invocation problem. Each generated guide
   addresses only its own agent. Both guides require every audit and review to
