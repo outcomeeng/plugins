@@ -73,17 +73,32 @@ def _first_install_warning(agent: Agent) -> str:
     )
 
 
+def _reported_warnings(case: UnreadableSourceCase) -> list[dict[str, str]]:
+    """The warnings one run's own report carries, each with its agent and message."""
+    return cast("list[dict[str, str]]", case.document[ReportField.WARNINGS])
+
+
+def _reported_record_paths(case: UnreadableSourceCase) -> list[str]:
+    """The project paths of the records one run's own report names as moved, in report order."""
+    return [
+        record[ReportField.PROJECT_PATH]
+        for record in cast(
+            "list[dict[str, str]]", case.document[ReportField.CLAUDE_RECORDS]
+        )
+    ]
+
+
 def _announced_first_installs(
     case: UnreadableSourceCase, marketplace: str
-) -> frozenset[Agent]:
-    """The agents whose first install one run announced."""
+) -> frozenset[str]:
+    """The agents whose first install one run's own report announced."""
     return frozenset(
-        warning.agent
-        for warning in case.warnings
-        if warning.message
+        warning[ReportField.AGENT]
+        for warning in _reported_warnings(case)
+        if warning[ReportField.MESSAGE]
         == FIRST_INSTALL_WARNING.format(
             marketplace=marketplace,
-            agent=warning.agent.value,
+            agent=warning[ReportField.AGENT],
             plugin=SPEC_TREE_PLUGIN,
         )
     )
@@ -664,29 +679,28 @@ def test_unreadable_invocation_settings_stop_bootstrap_and_nothing_else() -> Non
     observation = observe_unreadable_source(generated_boolean_states(RegistryState))
 
     by_state = {case.state: case for case in observation.cases}
-    marketplace = observation.cases[0].plan.roots.marketplace
+    marketplace = MARKETPLACE
     settings_suffix = UNREADABLE_SETTINGS_WARNING.format(diagnostic="")
     withheld_suffix = WITHHELD_REGISTRATION_WARNING.format(
         diagnostic="", marketplace=marketplace
     )
     for state, case in by_state.items():
         settings_warnings = [
-            warning
-            for warning in case.warnings
-            if warning.message.endswith(settings_suffix)
+            warning[ReportField.MESSAGE]
+            for warning in _reported_warnings(case)
+            if warning[ReportField.MESSAGE].endswith(settings_suffix)
         ]
         assert len(settings_warnings) == 1, state
-        assert str(observation.settings_path) in settings_warnings[0].message, state
-        assert settings_warnings[0].blocking is not state.recorded, state
+        assert str(observation.settings_path) in settings_warnings[0], state
         claude_operations = _agent_operations(case, Agent.CLAUDE)
         assert Operation.PLUGIN_INSTALL not in claude_operations, state
         assert Operation.PLUGIN_ENABLE not in claude_operations, state
         assert {
-            warning.agent
-            for warning in case.warnings
-            if warning.message.endswith(withheld_suffix)
+            warning[ReportField.AGENT]
+            for warning in _reported_warnings(case)
+            if warning[ReportField.MESSAGE].endswith(withheld_suffix)
         } == {
-            agent
+            agent.value
             for agent, registered in (
                 (Agent.CLAUDE, state.claude),
                 (Agent.CODEX, state.codex),
@@ -710,7 +724,7 @@ def test_unreadable_invocation_settings_stop_bootstrap_and_nothing_else() -> Non
         assert case.document[ReportField.CLAUDE_PLUGINS] == (
             [SPEC_TREE_PLUGIN] if state.claude and state.recorded else []
         ), state
-        codex_named = case.document[ReportField.CODEX_PLUGINS]
+        codex_named = cast("list[str]", case.document[ReportField.CODEX_PLUGINS])
         if state.codex:
             assert SPEC_TREE_PLUGIN in codex_named, state
         else:
@@ -731,11 +745,9 @@ def test_unreadable_invocation_settings_stop_bootstrap_and_nothing_else() -> Non
             Operation.MARKETPLACE_HEAD,
             Operation.PLUGIN_LIST,
         ), state
-        assert [record.project_path for record in case.plan.claude_records] == (
-            [observation.invocation_checkout] if state.recorded else []
-        ), state
-        assert [record.project_path for record in case.plan.rewrite_records] == [
-            observation.other_checkout
+        assert _reported_record_paths(case) == [
+            *([str(observation.invocation_checkout)] if state.recorded else []),
+            str(observation.other_checkout),
         ], state
         moved = (
             (observation.invocation_checkout, observation.other_checkout)
@@ -771,8 +783,7 @@ def test_unreadable_invocation_settings_stop_bootstrap_and_nothing_else() -> Non
             Operation.PLUGIN_INSPECT,
             Operation.PLUGIN_LIST,
         ), state
-        assert case.plan.claude_records == (), state
-        assert case.plan.rewrite_records == (), state
+        assert _reported_record_paths(case) == [], state
         moved = (
             (observation.invocation_checkout, observation.other_checkout)
             if state.recorded

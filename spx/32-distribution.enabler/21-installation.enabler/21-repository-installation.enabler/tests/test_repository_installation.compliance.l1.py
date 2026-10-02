@@ -74,7 +74,6 @@ from outcomeeng_testing.generators.installation import (
     generated_non_hex_digest,
 )
 from outcomeeng_testing.harnesses.installation import (
-    CODEX_CONFIG_PLUGINS_TABLE,
     captured_non_pending_failure_wordings,
     MARKETPLACE,
     REAL_AGENT_CODEX_HOME_PROVISIONERS,
@@ -379,16 +378,20 @@ def test_foreign_agent_collision_stops_before_any_mutation() -> None:
 def test_scope_split_reports_exact_and_changed_copies_before_mutation() -> None:
     observation = observe_scope_split()
 
-    assert {entry.classification for entry in observation.entries} == {
-        ScopeSplitClassification.DIRECTED_REMOVAL,
-        ScopeSplitClassification.SHADOWING_COLLISION,
-    }
-    assert len(observation.entries) == 4
-    assert {
-        entry.classification
-        for entry in observation.entries
-        if entry.path.name == RENAMED_CHECKOUT_AGENT_NAME
-    } == {ScopeSplitClassification.SHADOWING_COLLISION}
+    reported = [
+        (entry.path.name, entry.classification) for entry in observation.entries
+    ]
+    assert sorted(reported) == sorted(
+        [
+            (observation.exact_copy, ScopeSplitClassification.DIRECTED_REMOVAL),
+            (observation.changed_copy, ScopeSplitClassification.SHADOWING_COLLISION),
+            (observation.linked_copy, ScopeSplitClassification.SHADOWING_COLLISION),
+            (
+                observation.unrecognized_copy,
+                ScopeSplitClassification.SHADOWING_COLLISION,
+            ),
+        ]
+    )
     assert observation.attempted == ()
     assert observation.home_after == observation.home_before
 
@@ -1161,19 +1164,19 @@ def test_no_agent_announces_a_first_install_its_plan_does_not_carry() -> None:
     observation = observe_unreadable_source(generated_boolean_states(RegistryState))
 
     for case in observation.cases:
-        messages = [warning.message for warning in case.warnings]
+        reported = cast("list[dict[str, str]]", case.document[ReportField.WARNINGS])
         for agent in (Agent.CLAUDE, Agent.CODEX):
-            announced = (
-                FIRST_INSTALL_WARNING.format(
-                    marketplace=case.plan.roots.marketplace,
+            announced = {
+                ReportField.AGENT: agent.value,
+                ReportField.MESSAGE: FIRST_INSTALL_WARNING.format(
+                    marketplace=MARKETPLACE,
                     agent=agent.value,
                     plugin=SPEC_TREE_PLUGIN,
-                )
-                in messages
-            )
+                ),
+            } in reported
             installs = [
                 command
-                for command in case.plan.commands
+                for command in case.attempted
                 if command.agent is agent
                 and command.operation is Operation.PLUGIN_INSTALL
             ]
@@ -1212,9 +1215,7 @@ def test_isolated_installation_runs_every_codex_command_against_a_home_holding_a
     assert observed.codex_calls
     for call in observed.codex_calls:
         assert call.home_config is not None, call.operation
-        assert not tomllib.loads(call.home_config.decode("utf-8")).get(
-            CODEX_CONFIG_PLUGINS_TABLE
-        )
+        assert tomllib.loads(call.home_config.decode("utf-8")) == {}
 
 
 def test_the_write_through_preflight_logs_in_only_against_homes_holding_a_plugin_free_config() -> (
@@ -1232,9 +1233,7 @@ def test_the_write_through_preflight_logs_in_only_against_homes_holding_a_plugin
         for call in logins:
             assert call.home != case.home
             assert call.home_config is not None
-            assert not tomllib.loads(call.home_config.decode("utf-8")).get(
-                CODEX_CONFIG_PLUGINS_TABLE
-            )
+            assert tomllib.loads(call.home_config.decode("utf-8")) == {}
 
 
 @pytest.mark.parametrize("provisioner", REAL_AGENT_CODEX_HOME_PROVISIONERS)
@@ -1243,9 +1242,7 @@ def test_every_real_agent_codex_home_holds_a_plugin_free_config_before_any_codex
 ) -> None:
     home_config = REAL_AGENT_CODEX_HOME_PROVISIONERS[provisioner]()
     assert home_config is not None
-    assert not tomllib.loads(home_config.decode("utf-8")).get(
-        CODEX_CONFIG_PLUGINS_TABLE
-    )
+    assert tomllib.loads(home_config.decode("utf-8")) == {}
 
 
 def test_a_refused_preflight_login_reports_the_refusal_the_cli_printed() -> None:

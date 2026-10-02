@@ -198,16 +198,6 @@ DECLARED_CODEX_SOURCE = declared_codex_source(
 """The same declared source in the form Codex adds it."""
 EMPTY_CODEX_MARKETPLACE_LISTING = json.dumps({CODEX_MARKETPLACES_FIELD: []})
 """A Codex registry listing carrying no marketplace, as a home with none reports."""
-CODEX_CONFIG_PLUGINS_TABLE = "plugins"
-"""The Codex configuration table under which a home declares plugins, read by the Codex CLI and never by production.
-
-A provisioned home's configuration declares no plugin: it carries no entry in
-this table, so the home reads as empty state for selection and bootstrap.
-"""
-CODEX_CONFIG_PLUGIN_ENABLED_KEY = "enabled"
-"""The activation key inside that table, read by the Codex CLI and never by production."""
-PLUGIN_DISABLING_CODEX_CONFIG = f"[{CODEX_CONFIG_PLUGINS_TABLE}]\n{CODEX_CONFIG_PLUGIN_ENABLED_KEY} = false\n".encode()
-
 SUBAGENT_DISCOVERY_NAMES_FIELD = "subagent_names"
 RENAMED_CHECKOUT_AGENT_NAME = f"local_helper{agent_capability(Target.CODEX).suffix}"
 """A checkout definition filename carrying no plugin namespace prefix."""
@@ -348,6 +338,14 @@ class ScopeSplitObservation:
     """Checkout split classifications and selected-home mutation boundary."""
 
     entries: tuple[ScopeSplitEntry, ...]
+    exact_copy: str
+    """The checkout definition holding a shipped definition's bytes unchanged."""
+    changed_copy: str
+    """The checkout definition holding a shipped definition's bytes with a local edit appended."""
+    linked_copy: str
+    """The checkout definition that is a symbolic link to a shipped definition."""
+    unrecognized_copy: str
+    """The checkout definition carrying no plugin namespace whose skill entry names a plugin."""
     attempted: tuple[InstallationCommand, ...]
     home_before: tuple[tuple[str, bytes], ...]
     home_after: tuple[tuple[str, bytes], ...]
@@ -633,7 +631,6 @@ class RealInstallationObservation:
     persistent_codex_plugins: PluginListing
     persistent_claude_selected: frozenset[str]
     persistent_codex_selected: frozenset[str]
-    persistent_planned_operations: int
     persistent_selection: frozenset[str]
     persistent_settings_before: bytes
     persistent_settings_after: bytes
@@ -1748,12 +1745,10 @@ class UnreadableSourceCase:
     """One persistent run under unreadable invocation settings at one registry state."""
 
     state: RegistryState
-    plan: InstallationPlan
-    warnings: tuple[InstallationWarning, ...]
     attempted: tuple[InstallationCommand, ...]
     """Every command the run issued, closing listing included."""
     document: dict[str, object]
-    """The JSON report the public CLI printed for this run."""
+    """The JSON report the public CLI printed for this run: its own warnings, records, and installed sets."""
     record_file_after: dict[str, object]
     target_version: str
     exit_code: int
@@ -1849,25 +1844,6 @@ def _unreadable_source_case(
     record_file.write_text(
         json.dumps(_record_file_from_cases(records, cache_root), indent=2)
     )
-    plan = build_persistent_installation_plan(
-        preflight,
-        claude_marketplace_payload=(
-            claude_marketplace_listing_payload(
-                DECLARED_CLAUDE_SOURCE, marketplace, clone
-            )
-            if state.claude
-            else json.dumps([])
-        ),
-        claude_plugins_payload=json.dumps([entry for entry, _ in records]),
-        codex_marketplace_payload=(
-            codex_marketplace_listing_payload(DECLARED_CODEX_SOURCE, marketplace)
-            if state.codex
-            else EMPTY_CODEX_MARKETPLACE_LISTING
-        ),
-        codex_plugins_payload=_plugin_listing_payload(
-            Agent.CODEX, mirror, frozenset({SPEC_TREE_PLUGIN})
-        ),
-    )
     runner = RecordingRunner(
         record_file=record_file,
         clone=clone,
@@ -1884,8 +1860,6 @@ def _unreadable_source_case(
         )
     return UnreadableSourceCase(
         state=state,
-        plan=plan,
-        warnings=plan.warnings,
         attempted=tuple(runner.calls),
         document=cast("dict[str, object]", json.loads(stdout.getvalue())),
         record_file_after=cast(
@@ -2767,10 +2741,10 @@ def observe_scope_split() -> ScopeSplitObservation:
         (checkout_agents / changed.destination.name).write_bytes(
             changed.content + b"# locally changed\n"
         )
-        (
-            checkout_agents
-            / shipped_codex_definition_name(changed.plugin, generated_agent_slug())
-        ).symlink_to(changed.source)
+        linked_copy = shipped_codex_definition_name(
+            changed.plugin, generated_agent_slug()
+        )
+        (checkout_agents / linked_copy).symlink_to(changed.source)
         (checkout_agents / RENAMED_CHECKOUT_AGENT_NAME).write_bytes(
             skill_enabling_definition(changed.plugin)
         )
@@ -2784,6 +2758,10 @@ def observe_scope_split() -> ScopeSplitObservation:
         home_after = _agent_snapshot(Path(environment[CODEX_HOME_ENV]))
     return ScopeSplitObservation(
         entries=entries,
+        exact_copy=exact.destination.name,
+        changed_copy=changed.destination.name,
+        linked_copy=linked_copy,
+        unrecognized_copy=RENAMED_CHECKOUT_AGENT_NAME,
         attempted=tuple(runner.calls),
         home_before=home_before,
         home_after=home_after,
@@ -3156,9 +3134,10 @@ def observe_codex_config_independence() -> ConfigObservation:
         persistent_before = execute_persistent_installation(
             mirror, environment, RecordingRunner()
         ).plan
+        committed_config = (checkout / CODEX_CONFIG_PATH).read_bytes()
         config = mirror / CODEX_CONFIG_PATH
         config.parent.mkdir(parents=True, exist_ok=True)
-        config.write_bytes(PLUGIN_DISABLING_CODEX_CONFIG)
+        config.write_bytes(committed_config)
         after = build_isolated_installation_plan(mirror, state, os.environ)
         persistent_after = execute_persistent_installation(
             mirror, environment, RecordingRunner()
@@ -3169,7 +3148,7 @@ def observe_codex_config_independence() -> ConfigObservation:
         after=after,
         persistent_before=persistent_before,
         persistent_after=persistent_after,
-        config_written=PLUGIN_DISABLING_CODEX_CONFIG,
+        config_written=committed_config,
         config_observed=config_observed,
     )
 
@@ -3532,10 +3511,6 @@ def observe_real_installation() -> RealInstallationObservation:
         _copy_committed_project_settings(checkout, persistent_settings)
         persistent_selection = _declared_selection(persistent_settings)
         persistent_settings_before = persistent_settings.read_bytes()
-        persistent_preflight = build_persistent_preflight(
-            persistent_mirror,
-            selected_environment,
-        )
         persistent_codex_marketplaces = _run_codex_marketplace_listing(
             persistent_mirror,
             selected_environment,
@@ -3543,21 +3518,6 @@ def observe_real_installation() -> RealInstallationObservation:
         persistent_claude_marketplaces = _run_claude_marketplace_listing(
             persistent_mirror,
             selected_environment,
-        )
-        persistent_plan = build_persistent_installation_plan(
-            persistent_preflight,
-            claude_marketplace_payload=persistent_claude_marketplaces.stdout,
-            claude_plugins_payload=_plugin_listing_payload(
-                Agent.CLAUDE,
-                persistent_mirror,
-                persistent_subsets[Agent.CLAUDE],
-            ),
-            codex_marketplace_payload=persistent_codex_marketplaces.stdout,
-            codex_plugins_payload=_plugin_listing_payload(
-                Agent.CODEX,
-                persistent_mirror,
-                persistent_subsets[Agent.CODEX],
-            ),
         )
         persistent = _run_persistent_recipe(
             checkout,
@@ -3666,11 +3626,6 @@ def observe_real_installation() -> RealInstallationObservation:
         ),
         persistent_claude_selected=persistent_subsets[Agent.CLAUDE],
         persistent_codex_selected=persistent_subsets[Agent.CODEX],
-        persistent_planned_operations=(
-            len(persistent_preflight.inspections)
-            + len(persistent_plan.commands)
-            + len(persistent_plan.closing)
-        ),
         persistent_selection=persistent_selection,
         persistent_settings_before=persistent_settings_before,
         persistent_settings_after=persistent_settings_after,
