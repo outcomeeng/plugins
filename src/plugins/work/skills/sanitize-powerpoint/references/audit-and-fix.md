@@ -23,10 +23,10 @@ Every fix edits an extracted XML part. Hold to three rules:
 
 ## Removing a part — the five-place checklist
 
-A slide layout (or master, or any referenced part) is wired into the package in up to five places. Removing the `.xml` file alone leaves a broken package. Remove **all** of:
+A slide layout (or master, or any referenced part) is wired into the package in up to five places. Taking out the `.xml` file alone leaves a broken package. Take out **all** of:
 
-1. The part file itself — `ppt/slideLayouts/slideLayoutN.xml`.
-2. Its relationships file — `ppt/slideLayouts/_rels/slideLayoutN.xml.rels`.
+1. The part file itself — move `ppt/slideLayouts/slideLayoutN.xml` out of the working directory into a separate `mktemp -d` directory; never delete it. `pptx_repack.py` reads the absent part as a deliberate removal.
+2. Its relationships file — move `ppt/slideLayouts/_rels/slideLayoutN.xml.rels` into that same directory.
 3. The `<Override>` for it in `[Content_Types].xml`.
 4. The `*Id` entry in its parent's `*IdLst` — e.g. `<p:sldLayoutId>` in the owning master.
 5. The `<Relationship>` in the parent's `.rels` that the `*Id` resolved through.

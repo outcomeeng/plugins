@@ -86,7 +86,7 @@ The audit script never writes. The repack script writes only its named output fi
 <shell_scope>
 This skill declares no `allowed-tools`, so every command reaches the harness for per-call approval.
 
-The workflow deletes no file: the working directory step 4 creates with `mktemp -d` stays in place when the run ends. The skill has not yet declared a narrow grant for each remaining command, so per-call approval covers them all. Do not add a partial list; a partial list states a contract the workflow's commands exceed.
+The workflow deletes no file: a trimmed part moves out of the working directory into a separate `mktemp -d` directory, and every scratch directory stays in place when the run ends. The skill has not yet declared a narrow grant for each remaining command, so per-call approval covers them all. Do not add a partial list; a partial list states a contract the workflow's commands exceed.
 </shell_scope>
 
 <failure_modes>

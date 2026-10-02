@@ -129,7 +129,7 @@ Before applying changes, determine what will be affected:
 1. Remove the assertions from the source node's spec.
 2. Add the assertions to the target node's spec under the correct assertion type heading.
 3. If test files exist for the moved assertions:
-   - Move the test files from source `tests/` to target `tests/`.
+   - Move each test file from source `tests/` to target `tests/` with `git mv <old> <new>`.
    - Update the test links in the assertions.
 4. If the source node now has zero assertions, consolidate it into the node that owns its remaining concern (Step 4d), or, when no concern remains, remove its directory with `git rm -r <node-directory>`.
 5. Verify both specs still have coherent concerns.
@@ -142,7 +142,7 @@ Before applying changes, determine what will be affected:
 
 1. Compose the parent containing the affected siblings. Use skill `spec-tree:decompose`.
 2. Apply the resulting structure: create the provider directory and spec from the decomposition result.
-3. Move assertions and test files for the shared concern into the provider.
+3. Move assertions for the shared concern into the provider, and move their test files with `git mv <old> <new>`.
 4. Remove the shared content from each dependent node's spec.
 5. Update evidence links that moved with the assertions.
 
@@ -157,7 +157,7 @@ Before applying changes, determine what will be affected:
    - Group by assertion type
    - Deduplicate identical assertions
    - Resolve conflicting assertions (ask user if unclear)
-3. Merge test files from the removed node's `tests/` into the surviving node's `tests/`.
+3. Move each test file from the removed node's `tests/` into the surviving node's `tests/` with `git mv <old> <new>`, before Step 6 removes the emptied node.
 4. Update the surviving node's opening to cover the merged scope.
 5. Update any cross-cutting assertion links in ancestor specs that pointed to the removed node.
 6. Remove the old node's directory with `git rm -r <old-node-directory>` once its assertions and tests live in the surviving node, so Git records the removal in the changeset.
