@@ -52,6 +52,29 @@ def agent_item_variant(
     }
 
 
+def incomplete_agent_variants(
+    module: ModuleType, template: dict[str, object]
+) -> list[tuple[frozenset[str], dict[str, object]]]:
+    """Every hosted agent session a captured item yields by dropping a non-empty
+    subset of the projected fields, paired with the fields dropped.
+
+    The domain is complete and finite: every non-empty subset of the adapter's
+    projected fields, the pane among them. Every field the subset leaves keeps
+    the value herdr emitted.
+    """
+    fields = tuple(module.PARTICIPANT_FIELDS)
+    variants: list[tuple[frozenset[str], dict[str, object]]] = []
+    for size in range(1, len(fields) + 1):
+        for dropped in combinations(fields, size):
+            variant = {
+                field_name: value
+                for field_name, value in template.items()
+                if field_name not in dropped
+            }
+            variants.append((frozenset(dropped), variant))
+    return variants
+
+
 def inventories(
     module: ModuleType, template: dict[str, object]
 ) -> st.SearchStrategy[list[dict[str, object]]]:

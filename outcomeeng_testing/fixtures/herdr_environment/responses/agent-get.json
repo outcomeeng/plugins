@@ -1,0 +1,23 @@
+{
+  "id": "cli:agent:get",
+  "result": {
+    "agent": {
+      "agent": "claude",
+      "agent_status": "idle",
+      "cwd": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/herdr-capture-164/wt-create",
+      "focused": false,
+      "foreground_cwd": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/herdr-capture-164/wt-create",
+      "interactive_ready": true,
+      "name": "capture-relaunch",
+      "pane_id": "w2J:p1",
+      "revision": 7,
+      "state_change_seq": 207,
+      "tab_id": "w2J:t1",
+      "terminal_id": "term_65c7ec7a446da1d",
+      "terminal_title": "✳ Claude Code",
+      "terminal_title_stripped": "Claude Code",
+      "workspace_id": "w2J"
+    },
+    "type": "agent_info"
+  }
+}

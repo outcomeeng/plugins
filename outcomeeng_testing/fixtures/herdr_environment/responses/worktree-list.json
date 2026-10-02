@@ -1,0 +1,45 @@
+{
+  "id": "cli:worktree:list",
+  "result": {
+    "source": {
+      "repo_key": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/herdr-capture-164-grouped/repo/.git",
+      "repo_name": "repo",
+      "repo_root": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/herdr-capture-164-grouped/repo",
+      "source_checkout_path": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/herdr-capture-164-grouped/repo",
+      "source_workspace_id": "w2Y"
+    },
+    "type": "worktree_list",
+    "worktrees": [
+      {
+        "branch": "main",
+        "is_bare": false,
+        "is_detached": false,
+        "is_linked_worktree": false,
+        "is_prunable": false,
+        "label": "repo",
+        "open_workspace_id": "w2Y",
+        "path": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/herdr-capture-164-grouped/repo"
+      },
+      {
+        "branch": "capture-create",
+        "is_bare": false,
+        "is_detached": false,
+        "is_linked_worktree": true,
+        "is_prunable": false,
+        "label": "repo",
+        "open_workspace_id": "w2Z",
+        "path": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/herdr-capture-164-grouped/wt-create"
+      },
+      {
+        "branch": "capture-open",
+        "is_bare": false,
+        "is_detached": false,
+        "is_linked_worktree": true,
+        "is_prunable": false,
+        "label": "repo",
+        "open_workspace_id": "w20",
+        "path": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/herdr-capture-164-grouped/wt-open"
+      }
+    ]
+  }
+}

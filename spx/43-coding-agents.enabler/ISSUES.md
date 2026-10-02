@@ -24,6 +24,10 @@ Extending the pattern where it stands was attempted and withdrawn: adding an alt
 
 **Evidence, third reading.** `spec-tree:implementation-auditor` run `2026-09-21_22-51-31-594-7659622868e9` on head `18903ace30be971b041eba9e74606e97bf0182ae`: `source-ownership` at `blocking` on the compliance test and `single-responsibility` at `debt` on the adapter, both naming the pattern extension as enlarging the declaration; and run `2026-09-21_22-18-07-162-b29e7184d5a1` on head `d6d1b5458af190ac9d1f05775c869c08ab206c95`, `adr-compliance-guard-asymmetry` at `debt`, which named the gap.
 
+**Evidence, fourth reading.** `spec-tree:test-evidence-auditor` finding `f-001` on head `7ad28895500e40c4c106c1c510a175a6b52ddda9`, rule `source-ownership`: the herdr compliance test imports `raw_herdr_command_violations`, `herdr_help_violations`, `RAW_HERDR_COMMAND_PATTERNS`, and `HERDR_HELP_PATTERNS` from `src/plugins/coding-agents/skills/operate-herdr/scripts/herdr_environment.py`, and no production path consumes them.
+**Evidence, fourth reading.** `instructions:skill-auditor` finding `f-012` against `src/plugins/coding-agents/skills/operate-herdr` on head `7ad28895500e40c4c106c1c510a175a6b52ddda9`, rule `conciseness_shipped_script`: the shipped script carries `participant_for`, `IDENTITY_AMBIGUOUS`, and the scanner helpers the run path never calls.
+**Evidence, fifth reading.** `spec-tree:test-evidence-auditor` finding `f-003` on head `0caf8237bd062fa3d42b2e2a1e3441b8534ae1b8`, rule `source-ownership`: `participant_for` and `ExecutionStatus.IDENTITY_AMBIGUOUS` in `src/plugins/coding-agents/skills/operate-herdr/scripts/herdr_environment.py` are reached only by tests.
+
 ## The evidence-repair same-class scan stops at the test file
 
 The apply flow's evidence repair scans for the rejected class inside the linked tests — a restated literal, a copied table — and stops there. The mirror shape is invisible to that scan: a value the tests import from production that no production path consumes. `agent_message.py` carried `FORBIDDEN_TARGET_FIELDS`, `FORBIDDEN_EXECUTABLE_FIELDS`, and `CLEAN_STATUS` as constants only the node's tests and harness read, so a test that iterated them was coupled to an inert declaration, and emptying the constant left the test green.
@@ -37,24 +41,14 @@ The apply flow's evidence repair scans for the rejected class inside the linked 
 
 **Settlement condition.** The apply flow's same-class sweep, or the test-evidence standard it applies, states that a source-owned value a test imports has a production consumer, and a compliance test's violating cases come from the linked test or a real production contract, never from a constant only tests read.
 
-## Two adapter skills report an empty request to a named caller
+## An adapter skill description hedges its NEVER clause
 
-`/skill-standards` requires a skill instruction to read the same whether a workflow or a person invokes it, so an instruction that names its caller breaks caller independence. Two sibling capability skills direct the empty-argument report to "the invoking workflow": `src/plugins/coding-agents/skills/operate-herdr/SKILL.md` at lines 54 and 70, where line 70 additionally routes mutation authorization through "the invoking workflow holds". The same wording in `src/plugins/coding-agents/skills/operate-agent-mail/SKILL.md` is repaired in the changeset that found it.
+`/agent-prompt-standards` `<constraint_language>` reads a NEVER as unconditional. `src/plugins/coding-agents/skills/operate-prowl/SKILL.md` line 4 ends its description's NEVER with "when this capability is available" — a condition that holds wherever the description is loaded, so it hedges the prohibition without narrowing it and spends characters from the shared listing budget on a no-op qualifier. The sibling descriptions of `operate-agent-mail` and `operate-herdr` end their NEVER at the prohibition.
 
-**Impact**: a person invoking `/operate-herdr` by name reads an instruction addressed to a workflow that does not exist, and the mutation-authorization sentence names a holder the direct invocation has no counterpart for.
+**Impact**: a workflow reading the description can take the prohibition as conditional on some availability check it is expected to make, when no such check exists.
 
-**Settlement condition**: both lines state the report and the authorization requirement without naming a caller, and the herdr node's skill surface passes the typed skill auditor.
+**Settlement condition**: the description ends its NEVER clause at the prohibition, and the skill surface of `spx/43-coding-agents.enabler/18-prowl-environment.enabler` passes the typed skill auditor.
 
-**Evidence**: `instructions:skill-auditor` finding `f-010` against the agent-mail skill on head `d6d1b5458af190ac9d1f05775c869c08ab206c95`, then a same-class sweep across `src/plugins/coding-agents/skills/*/SKILL.md` that found the two herdr instances and no others.
+**Why separate**: the instance belongs to `spx/43-coding-agents.enabler/18-prowl-environment.enabler`, whose skill surface carries its own audit gate and plugin bump.
 
-## Two adapter skill descriptions hedge their NEVER clause
-
-`/agent-prompt-standards` `<constraint_language>` reads a NEVER as unconditional. Three coding-agents capability skills end their description's NEVER with "when this capability is available" — a condition that holds wherever the description is loaded, so it hedges the prohibition without narrowing it and spends characters from the shared listing budget on a no-op qualifier. `src/plugins/coding-agents/skills/operate-herdr/SKILL.md` line 4 and `src/plugins/coding-agents/skills/operate-prowl/SKILL.md` line 4 still carry it; the same clause in `src/plugins/coding-agents/skills/operate-agent-mail/SKILL.md` is repaired in the changeset that found it.
-
-**Impact**: a workflow reading either description can take the prohibition as conditional on some availability check it is expected to make, when no such check exists.
-
-**Settlement condition**: both descriptions end their NEVER clause at the prohibition, and each owning node's skill surface passes the typed skill auditor.
-
-**Why separate**: each instance belongs to a different node — `spx/43-coding-agents.enabler/18-herdr-environment.enabler` and `spx/43-coding-agents.enabler/18-prowl-environment.enabler` — whose surfaces this changeset does not touch, and each carries its own audit gate and plugin bump.
-
-**Evidence**: `instructions:skill-auditor` finding `f-007`, rule `hedged_never_clause`, against the agent-mail skill surface committed at `5f61aa80ce127256f1829e96535f33a1a0295227`, then a sweep over `src/plugins/*/skills/*/SKILL.md` that found the two siblings and no others.
+**Evidence**: `instructions:skill-auditor` finding `f-007`, rule `hedged_never_clause`, against the agent-mail skill surface committed at `5f61aa80ce127256f1829e96535f33a1a0295227`, then a sweep over `src/plugins/*/skills/*/SKILL.md` that found the same clause in the herdr and Prowl sibling descriptions and no others.
