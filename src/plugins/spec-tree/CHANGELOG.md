@@ -10,6 +10,15 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.100.1
+
+### Changed
+
+- **The router forbids deleting files.** The managed router instruction block carries a No File Removal section: an agent never runs `rm`, `rm -f`, `rmdir`, `unlink`, or any other command that deletes a file, including scratch files, files under `$TMPDIR`, and the session scratchpad, and writes each command without a cleanup step. Git cleanup that a governing skill flow runs, such as the `/merge` flow's branch cleanup, a tracked file that a governing skill flow removes through Git, such as `/refactor`'s `git rm -r` of a consolidated node, and a file removal that a skill's bundled script performs, such as `/update-instruction-block` retiring obsolete instruction files, and a removal that a command the repository's own instructions declare performs, such as its clean target, stay outside the rule. Run `/update-instruction-block` to bring a router block to template version 0.40.0.
+- **Verification logs stay in place.** `/open-pr`, `/manage-pr`, and the merging-standards local deterministic scope capture verbose output in a `mktemp -d` directory and leave that directory in place after inspection.
+- **`/refactor` moves and removes nodes through Git.** A Move relocates the node directory with `git mv`, and a Consolidate removes the absorbed node with `git rm -r`. A Re-scope that empties a node consolidates or removes it. The skill composes `spec-tree:understand`, `spec-tree:contextualize`, and `spec-tree:decompose` by exact name.
+- **`/update-instruction-block` stops on unresolved cases.** A "Pause and inspect" answer ends the run with nothing further written, and the stop report names each root file the reconcile already rewrote. Ties whose regions need different winners pause the run. A kept or mutual delegation counts as resolved, and the closing check reports it as `stale`, which the run reports as its result. A root file that exists without a router block reads as `stale`, and `absent` means the root file is missing.
+
 ## 0.100.0
 
 ### Breaking

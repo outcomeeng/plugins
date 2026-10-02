@@ -29,11 +29,11 @@ Run these steps in order. Steps 2 and 6 use the bundled scripts in `<scripts>`.
 
 3. **Present and scope.** Show the user the findings grouped by dimension. Mechanical fixes (layout `type`, font redirect) and judgment fixes (color mapping, layout renames) are different — surface the judgment ones explicitly. Use `{{! tool('ask_user') !}}` to get per-dimension or per-finding approval. Fix only what the user approves.
 
-4. **Extract.** Create the working directory with `mktemp -d` so it is unique per invocation and lands in the session's temporary directory, **outside any git repository**. Never extract into the deck's own folder, and never name a fixed temporary path — concurrent runs collide on one. Remove the directory on every exit path, including failure.
+4. **Extract.** Extract every member of the deck into a working directory created with `mktemp -d`; `pptx_repack.py` reads any original part missing from it as a deliberate deletion. Create the directory so it is unique per invocation and lands in the session's temporary directory, **outside any git repository**. Never extract into the deck's own folder, and never name a fixed temporary path — concurrent runs collide on one. Leave the directory in place when the run ends.
 
 5. **Apply approved fixes.** Edit the extracted XML part by part, following `${CLAUDE_SKILL_DIR}/references/audit-and-fix.md`. Handle one dimension at a time, and track every changed part.
 
-6. **Repackage and verify.** Run `pptx_repack.py` with the original deck, the working directory, and an output path. It rebuilds the package preserving every untouched part's content and the original member order, then verifies (see `<repackaging>`). Do not hand-roll the repackage.
+6. **Repackage and verify.** Run `pptx_repack.py` with the original deck, the working directory, and an output path in a second `mktemp -d` directory — never inside the working directory, whose every file the repacker packs, and never the original deck's path. It rebuilds the package preserving every untouched part's content and the original member order, then verifies (see `<repackaging>`). Do not hand-roll the repackage.
 
 7. **Back up and swap.** Re-check the lock file (step 1) — if PowerPoint reopened the deck, stop. Copy the original to a timestamped backup (an `_archive/` sibling, or `<name>_pre-sanitize-<date>.pptx`). Copy the repaired file over the original.
 
@@ -44,16 +44,16 @@ Run these steps in order. Steps 2 and 6 use the bundled scripts in `<scripts>`.
 <audit_dimensions>
 The audit covers six dimensions. `references/audit-and-fix.md` gives the detection method and the exact XML transformation for each.
 
-| # | Dimension        | What it catches                                                                                                                                                                 |
-| - | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1 | **Structure**    | Orphaned layout parts, broken `r:id` references, missing content-type overrides, layouts duplicated within a master, unregistered masters                                       |
-| 2 | **Layout types** | A layout's `type` attribute (`blank`, `secHead`, `title`, `titleOnly`, `obj`, `cust`, …) not matching its actual content — e.g. an empty layout typed `cust` instead of `blank` |
-| 3 | **Fonts**        | Typefaces that are not the theme's major/minor font — stray `buFont` bullet fonts, theme script-fallbacks, hardcoded run fonts                                                  |
-| 4 | **Colors**       | Hardcoded `<a:srgbClr>` values where a theme `<a:schemeClr>` exists for the same color                                                                                          |
-| 5 | **Naming**       | Layout names that deviate from the deck's own dominant naming pattern; PowerPoint dedup artifacts (`1_`-prefixed names)                                                         |
-| 6 | **Trim**         | Masters and layouts used by zero slides, unused themes, sensitivity labels (`docMetadata/LabelInfo.xml`), Office add-ins (`ppt/webextensions/`)                                 |
+| # | Dimension        | What it catches                                                                                                                                                                                                                                                                                                              |
+| - | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1 | **Structure**    | Orphaned layout parts, unresolved master and layout `r:id` references in `presentation.xml` and the masters, master, layout, and slide parts with no content-type override, layouts duplicated within a master, layouts listed by more than one master, layout parts a master targets that are missing, unregistered masters |
+| 2 | **Layout types** | A layout's `type` attribute (`blank`, `secHead`, `title`, `titleOnly`, `obj`, `cust`, …) not matching its actual content — e.g. an empty layout typed `cust` instead of `blank`                                                                                                                                              |
+| 3 | **Fonts**        | Typefaces in slides, layouts, and masters that are not the theme's major/minor font — stray `buFont` bullet fonts and hardcoded run fonts; theme script-fallback fonts are not flagged                                                                                                                                       |
+| 4 | **Colors**       | Hardcoded `<a:srgbClr>` values where a theme `<a:schemeClr>` exists for the same color                                                                                                                                                                                                                                       |
+| 5 | **Naming**       | PowerPoint dedup artifacts (`1_`, `2_`, and `3_`-prefixed names); within a master where at least one layout name ends in `\| <theme name>`, every layout name that does not                                                                                                                                                  |
+| 6 | **Trim**         | Masters and layouts used by zero slides, sensitivity labels (`docMetadata/LabelInfo.xml`), Office add-ins (`ppt/webextensions/`)                                                                                                                                                                                             |
 
-Dimension 5 is **inferred, never imposed**: the audit detects the pattern the deck already uses most (commonly `<Type> | <MasterName>`) and flags only the outliers. It never invents a convention.
+Dimension 5 is **inferred, never imposed**: the audit checks only the `<name> | <theme name>` suffix convention, and only within a master where at least one layout already uses it. It never invents a convention and proposes no names.
 </audit_dimensions>
 
 <repackaging>
@@ -84,11 +84,9 @@ The audit script never writes. The repack script writes only its named output fi
 </scripts>
 
 <shell_scope>
-This skill declares no `allowed-tools`, so every command reaches the harness for per-call approval. The omission is deliberate, not an oversight.
+This skill declares no `allowed-tools`, so every command reaches the harness for per-call approval.
 
-Step 4 creates the working directory with `mktemp -d` and step 6's checklist proves it was removed on exit. That removal targets a path chosen at run time, and no grant pattern binds to one. The patterns that would cover it — a bare `rm -rf` grant, or a `${TMPDIR}` wildcard — authorize approval-free removal of paths this run never created, which is the overbroad grant the skill standard forbids. Naming every other command while omitting the removal would state a contract this workflow's own mandate breaks.
-
-Do not add a partial list to close the gap. A real contract needs one of three changes first: give `mktemp` a template under a fixed prefix that a grant can match, move the working directory's lifetime into one of the bundled scripts so no shell removal exists to grant, or keep the removal approval-gated and say so beside the declared commands.
+The workflow deletes no file: a trimmed part moves out of the working directory into a separate `mktemp -d` directory, and every scratch directory stays in place when the run ends. The skill has not yet declared a narrow grant for each remaining command, so per-call approval covers them all. Do not add a partial list; a partial list states a contract the workflow's commands exceed.
 </shell_scope>
 
 <failure_modes>
@@ -134,7 +132,7 @@ A sanitizing run is complete when:
 - [ ] The repaired deck passes `pptx_repack.py` verification (ZIP integrity, XML well-formedness); any member-count change matches the trim scope approved in step 3.
 - [ ] The original deck was backed up before the swap.
 - [ ] A re-run of `pptx_audit.py` on the live file confirms the approved findings are resolved and no new finding appeared.
-- [ ] The working directory came from `mktemp -d`, was removed on exit, and was the only scratch artifact; the deck's folder holds only the deck and its backup.
+- [ ] The working directory and the output directory came from `mktemp -d` and were the only scratch artifacts; the deck's folder holds only the deck and its backup.
 
 </success_criteria>
 

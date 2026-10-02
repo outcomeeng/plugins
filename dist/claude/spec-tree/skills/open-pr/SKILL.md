@@ -54,7 +54,7 @@ Access class comes from `viewerPermission` alone. A remote URL, the authenticate
 
 **Step 3 — GATE: Evaluate `VERIFICATION_READINESS`.** Per /merging-standards `<authority_gates>`, the PR opens ready only when `VERIFICATION_READINESS` holds — all predicates below.
 
-*(a) Deterministic verification.* Run the project's local deterministic verification per /merging-standards `<local_deterministic_scope>` — validation and testing for the touched scope, escalating only when the overlay or risk evidence requires a wider local run. Capture verbose stdout/stderr in a log file inside a `mktemp -d` directory, inspect only the exit status, summary, and failing sections, and remove the directory once inspected, on success and on failure alike. It must report success; fix failures and re-run until green.
+*(a) Deterministic verification.* Run the project's local deterministic verification per /merging-standards `<local_deterministic_scope>` — validation and testing for the touched scope, escalating only when the overlay or risk evidence requires a wider local run. Capture verbose stdout/stderr in a log file inside a `mktemp -d` directory, inspect only the exit status, summary, and failing sections, and leave the directory in place. It must report success; fix failures and re-run until green.
 
 Invoke `/commit-changes` after deterministic verification passes and before any evidence Auditor or Reviewer agent session is dispatched. Confirm the worktree is clean and record the full checkpoint `HEAD`. After any further change, commit the new version before another evidence Auditor or Reviewer agent session reads it.
 

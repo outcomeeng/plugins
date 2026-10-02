@@ -90,6 +90,6 @@ Defaults are authority. Never raise a cost, retry, worker, timeout, or external-
 - Every expected failure maps to one terminal action.
 - Dependency and version claims cite current authoritative sources when they can change.
 - Resource ceilings are explicit and are never raised implicitly.
-- Temporary state is invocation-unique and removed on every exit path.
+- Temporary state is invocation-unique; code that creates it removes it on every exit path, and no step instructs Claude to delete it with a shell command.
 
 </validation>

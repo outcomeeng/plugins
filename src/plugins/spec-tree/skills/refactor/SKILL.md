@@ -1,7 +1,7 @@
 ---
 name: refactor
 description: ALWAYS invoke this skill when moving nodes, re-scoping content, or extracting shared providers. NEVER restructure the spec tree without this skill.
-allowed-tools: Read, Glob, Grep, Write, Edit, Bash(git status:*), Bash(git mv:*), {{! tool('use_skill') !}}
+allowed-tools: Read, Glob, Grep, Write, Edit, Bash(git status:*), Bash(git mv:*), Bash(git rm -r:*), {{! tool('use_skill') !}}
 ---
 
 <objective>
@@ -10,17 +10,19 @@ A restructured Spec Tree — nodes moved between parents, content re-scoped, sha
 
 </objective>
 
-<quick_start>
+<context>
 
-**PREREQUISITE**: Check for `<SPEC_TREE_FOUNDATION>` marker. If absent, invoke `/understand` first.
+**PREREQUISITE**: Check for a live `<SPEC_TREE_FOUNDATION>` marker. When it is absent, load the foundation first. Use skill `spec-tree:understand`.
 
-References and workflows:
+</context>
+
+<reference_guides>
 
 - Live `/understand` `<artifact_placement>` — content taxonomy and placement rules
 - Live `/understand` `<identity_and_kinds>` — the seven kinds, their order, and containment
-- `/decompose` — structural composition, shared provider extraction, consolidation boundaries, ordering evidence, and index assignment
+- `spec-tree:decompose` — structural composition, shared provider extraction, consolidation boundaries, ordering evidence, and index assignment
 
-</quick_start>
+</reference_guides>
 
 <operations>
 
@@ -58,7 +60,7 @@ If the request is ambiguous, ask.
 
 **Step 2: Load context**
 
-Invoke `/contextualize` for each node involved in the operation. This loads:
+Load the context of each node involved in the operation, one invocation per node. Use skill `spec-tree:contextualize`. Each invocation loads:
 
 - The affected nodes' specs and assertions
 - Parent and ancestor specs
@@ -77,7 +79,7 @@ Before applying changes, determine what will be affected:
 
 - Does the target parent exist?
 - Will the node's existing index conflict with children at the target?
-- Does the move require choosing a new sibling index? If yes, invoke `/decompose` for the target parent before applying.
+- Does the move require choosing a new sibling index? If yes, compose the target parent before applying. Use skill `spec-tree:decompose`.
 - Do any ADRs/PDRs at the source location govern this node? Will it leave their scope?
 - Do any ancestor specs have cross-cutting assertions that reference this node?
 - Are there test links in other specs that point into this node's `tests/` directory?
@@ -86,14 +88,14 @@ Before applying changes, determine what will be affected:
 
 - Which assertions move from which node to which?
 - Do the assertions' test links need updating (different `tests/` directory)?
-- After redistribution, does any node end up with zero assertions? (If so, it MUST be removed or consolidated.)
+- After redistribution, does any node end up with zero assertions? (If so, Step 4b consolidates or removes it.)
 - Do the remaining assertions in each node still form a coherent concern?
 
 **For Extract provider:**
 
 - What exactly is shared? (Infrastructure, utility, foundation)
 - Which siblings need it? (Must be 2+)
-- Has `/decompose` defined the shared provider, ordering evidence, and index placement?
+- Has `spec-tree:decompose` defined the shared provider, ordering evidence, and index placement?
 - Which assertions describe what the provider provides?
 - Do dependent specs need updating to remove the shared content?
 
@@ -103,7 +105,7 @@ Before applying changes, determine what will be affected:
 - Which node's opening survives?
 - How do the combined assertions fit together?
 - Which node's directory survives based on durable scope identity and evidence links?
-- Does consolidation alter sibling ordering or child composition? If yes, invoke `/decompose` before applying.
+- Does consolidation alter sibling ordering or child composition? If yes, compose the parent before applying. Use skill `spec-tree:decompose`.
 - What happens to the removed node's test files?
 
 </step>
@@ -112,15 +114,11 @@ Before applying changes, determine what will be affected:
 
 **Step 4a: Apply — Move**
 
-1. Create the node directory at the new location with an appropriate index.
-2. Move the spec file, renaming if the slug stays the same.
-3. Move the `tests/` directory and all test files.
-4. If ISSUES.md, or a prior-form PLAN.md, exists in the source directory, move it to the new location — they are node-local coordination notes.
-5. Move any child nodes recursively.
-6. Update cross-cutting assertion links in ancestor specs that pointed to the old path.
-7. Remove the old directory.
+1. Move the node directory to the new location with an appropriate index, using `git mv <old-node-directory> <new-node-directory>`. The spec, the `tests/` directory, any ISSUES.md or prior-form PLAN.md, and every child node move with it, and no old directory remains.
+2. When the slug changes, rename the spec file with `git mv` so it repeats the new slug.
+3. Update cross-cutting assertion links in ancestor specs that pointed to the old path.
 
-**Index assignment**: Preserve the node's existing index when possible. If insertion or reindexing is needed, invoke `/decompose` for the target parent before moving files.
+**Index assignment**: Preserve the node's existing index when possible. If insertion or reindexing is needed, compose the target parent before moving files. Use skill `spec-tree:decompose`.
 
 </step>
 
@@ -131,9 +129,9 @@ Before applying changes, determine what will be affected:
 1. Remove the assertions from the source node's spec.
 2. Add the assertions to the target node's spec under the correct assertion type heading.
 3. If test files exist for the moved assertions:
-   - Move the test files from source `tests/` to target `tests/`.
+   - Move each test file from source `tests/` to target `tests/` with `git mv <old> <new>`.
    - Update the test links in the assertions.
-4. If the source node now has zero assertions, flag it for consolidation or removal.
+4. If the source node now has zero assertions, consolidate it into the node that owns its remaining concern (Step 4d), or, when no concern remains, remove its directory with `git rm -r <node-directory>`.
 5. Verify both specs still have coherent concerns.
 
 </step>
@@ -142,9 +140,9 @@ Before applying changes, determine what will be affected:
 
 **Step 4c: Apply — Extract provider**
 
-1. Invoke `/decompose` on the parent containing the affected siblings, with the shared concern recorded in the governing Change if needed.
+1. Compose the parent containing the affected siblings. Use skill `spec-tree:decompose`.
 2. Apply the resulting structure: create the provider directory and spec from the decomposition result.
-3. Move assertions and test files for the shared concern into the provider.
+3. Move assertions for the shared concern into the provider, and move their test files with `git mv <old> <new>`.
 4. Remove the shared content from each dependent node's spec.
 5. Update evidence links that moved with the assertions.
 
@@ -159,11 +157,11 @@ Before applying changes, determine what will be affected:
    - Group by assertion type
    - Deduplicate identical assertions
    - Resolve conflicting assertions (ask user if unclear)
-3. Merge test files from the removed node's `tests/` into the surviving node's `tests/`.
+3. Move each test file from the removed node's `tests/` into the surviving node's `tests/` with `git mv <old> <new>`, before Step 6 removes the emptied node.
 4. Update the surviving node's opening to cover the merged scope.
 5. Update any cross-cutting assertion links in ancestor specs that pointed to the removed node.
-6. Remove the old node's directory.
-7. If the surviving node now exceeds ~7 assertions or mixes independent concerns, invoke `/decompose` for the surviving node.
+6. Remove the old node's directory with `git rm -r <old-node-directory>` once its assertions and tests live in the surviving node, so Git records the removal in the changeset.
+7. If the surviving node now exceeds ~7 assertions or mixes independent concerns, decompose the surviving node. Use skill `spec-tree:decompose`.
 
 </step>
 
@@ -177,12 +175,12 @@ After applying any operation:
 - [ ] No orphaned test files — every test file in affected `tests/` directories is linked from an assertion
 - [ ] Coordination-note files (ISSUES.md, and a prior-form PLAN.md) moved with their node — they are node-local, not shared (do not need evidence links)
 - [ ] No empty nodes — every node has at least one assertion
-- [ ] Any new or changed index assignment came from `/decompose`
+- [ ] Any new or changed index assignment came from `spec-tree:decompose`
 - [ ] ADR/PDR scope correct — nodes are governed by the decisions in their ancestry
 - [ ] Cross-cutting assertions in ancestors still reference valid paths
 - [ ] Every node, ADR, and PDR reference uses a full path from `spx/`
 - [ ] Atemporal voice maintained — no temporal language introduced
-- [ ] No content misplacement (per `/understand` `references/artifact-placement.md` `<common_misplacements>`)
+- [ ] No content misplacement (per the live `/understand` `<artifact_placement>` and the placements it rules out)
 
 </step>
 
@@ -284,14 +282,13 @@ How to avoid: Before re-pointing, classify each citing assertion. Universal — 
 
 <success_criteria>
 
-Refactoring is complete when:
+Refactoring is complete when the restructured tree shows:
 
-- [ ] Operation identified and context loaded
-- [ ] Impact analyzed before applying
-- [ ] Structural composition decisions delegated to `/decompose` when needed
-- [ ] Changes applied (move/re-scope/extract/consolidate)
-- [ ] Validation checklist passes (no broken links, no orphans, no empty nodes)
-- [ ] Summary report with all files created/modified/moved/removed
-- [ ] Follow-up issues noted if any
+- [ ] Every evidence link in an affected spec resolves to an existing file, and every test file in an affected `tests/` directory is linked from an assertion
+- [ ] Every affected node carries at least one assertion, and no empty node directory remains
+- [ ] Every moved or surviving node is governed by the decisions in its new ancestry
+- [ ] Every new or changed index came from `spec-tree:decompose`
+- [ ] Every moved tracked file kept its history through `git mv`
+- [ ] The report names every file created, modified, moved, and removed, and every follow-up issue
 
 </success_criteria>

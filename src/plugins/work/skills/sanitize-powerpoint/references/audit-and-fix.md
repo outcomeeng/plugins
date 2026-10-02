@@ -23,10 +23,10 @@ Every fix edits an extracted XML part. Hold to three rules:
 
 ## Removing a part — the five-place checklist
 
-A slide layout (or master, or any referenced part) is wired into the package in up to five places. Removing the `.xml` file alone leaves a broken package. Remove **all** of:
+A slide layout (or master, or any referenced part) is wired into the package in up to five places. Taking out the `.xml` file alone leaves a broken package. Take out **all** of:
 
-1. The part file itself — `ppt/slideLayouts/slideLayoutN.xml`.
-2. Its relationships file — `ppt/slideLayouts/_rels/slideLayoutN.xml.rels`.
+1. The part file itself — move `ppt/slideLayouts/slideLayoutN.xml` out of the working directory into a separate `mktemp -d` directory; never delete it. `pptx_repack.py` reads the absent part as a deliberate removal.
+2. Its relationships file — move `ppt/slideLayouts/_rels/slideLayoutN.xml.rels` into that same directory.
 3. The `<Override>` for it in `[Content_Types].xml`.
 4. The `*Id` entry in its parent's `*IdLst` — e.g. `<p:sldLayoutId>` in the owning master.
 5. The `<Relationship>` in the parent's `.rels` that the `*Id` resolved through.
@@ -35,13 +35,15 @@ A master also has a `<p:sldMasterId>` in `presentation.xml` and a relationship i
 
 ## Dimension 1 — Structure and integrity
 
-| Finding               | Detection                                                                      | Fix                                                                                                                         |
-| --------------------- | ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
-| Orphaned layout       | A `slideLayoutN.xml` part that no master's `<p:sldLayoutIdLst>` lists          | Either re-list it under the correct master (add `<p:sldLayoutId>` + relationship) or remove it via the five-place checklist |
-| Broken `r:id`         | An `r:id` whose `Id` is absent from the part's `.rels`                         | Add the missing `<Relationship>`, or delete the dangling reference element                                                  |
-| Missing content type  | A master/layout/slide/theme part with no `<Override>` in `[Content_Types].xml` | Add the `<Override>` with the correct content type                                                                          |
-| Duplicate layout name | Two layouts under one master sharing a `<p:cSld name>`                         | Rename one (dimension 5)                                                                                                    |
-| Unregistered master   | A `slideMasterN.xml` not in `presentation.xml`'s `<p:sldMasterIdLst>`          | Register it (add `<p:sldMasterId>` + relationship) or remove it                                                             |
+| Finding               | Detection                                                                                                             | Fix                                                                                                                         |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Orphaned layout       | A `slideLayoutN.xml` part that no master's `<p:sldLayoutIdLst>` lists                                                 | Either re-list it under the correct master (add `<p:sldLayoutId>` + relationship) or remove it via the five-place checklist |
+| Broken `r:id`         | An `r:id` in `presentation.xml`'s master list or a master's layout list whose `Id` is absent from that part's `.rels` | Add the missing `<Relationship>`, or delete the dangling reference element                                                  |
+| Missing content type  | A master, layout, or slide part with no `<Override>` in `[Content_Types].xml`                                         | Add the `<Override>` with the correct content type                                                                          |
+| Duplicate layout name | Two layouts under one master sharing a `<p:cSld name>`                                                                | Rename one (dimension 5)                                                                                                    |
+| Multi-master layout   | A layout part that more than one master's `<p:sldLayoutIdLst>` lists                                                  | Keep it under the master its slides use and give the other master its own copy, or remove the extra listing                 |
+| Missing layout part   | A master's layout relationship whose target part is absent from the package                                           | Remove the master's `<p:sldLayoutId>` and relationship, or restore the part                                                 |
+| Unregistered master   | A `slideMasterN.xml` not in `presentation.xml`'s `<p:sldMasterIdLst>`                                                 | Register it (add `<p:sldMasterId>` + relationship) or remove it                                                             |
 
 Structure findings are integrity defects — a deck can fail to open or lose content. Fix all of them. They are mechanical, but re-listing vs. removing an orphan is a judgment call: re-list if a slide needs it, remove if it is dead.
 
@@ -109,7 +111,7 @@ Present every color finding and convert only on explicit, per-color approval.
 
 ## Dimension 5 — Layout naming
 
-Detection: collect every layout `<p:cSld name>`. Infer the deck's dominant pattern — most often `<Type> | <MasterName>`, where `<MasterName>` is the owning master's theme name. Flag layouts that deviate, and any `1_`-prefixed dedup artifact.
+Detection: collect every layout `<p:cSld name>`. Flag any `1_`, `2_`, or `3_`-prefixed dedup artifact. Within a master where at least one layout name ends in `| <theme name>` — the owning master's theme name — flag every layout name that does not. The script proposes no names.
 
 Fix — rewrite the display name:
 
@@ -120,14 +122,13 @@ Fix — rewrite the display name:
 <p:cSld name="Pitch statement | Cover">
 ```
 
-The name is display-only — no slide or master references it, so a rename cannot break anything. But the *target* name is a human decision: the audit proposes names that fit the inferred pattern; the user confirms each. Never rename to a value already used by another layout in the same master (dimension 1 duplicate).
+The name is display-only — no slide or master references it, so a rename cannot break anything. But the *target* name is a human decision: Claude proposes names that fit the deck's convention; the user confirms each. Never rename to a value already used by another layout in the same master (dimension 1 duplicate).
 
 ## Dimension 6 — Trim
 
 Detection:
 
 - Masters / layouts used by zero slides — walk the cascade, mark every layout a slide reaches and every master those layouts belong to; the unmarked remainder is unused.
-- Themes referenced by no master, notes master, or handout master.
 - `docMetadata/LabelInfo.xml` — a sensitivity label.
 - `ppt/webextensions/` — Office add-in task panes.
 

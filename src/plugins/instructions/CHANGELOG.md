@@ -6,6 +6,13 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.19.2
+
+### Changed
+
+- **Scratch an agent creates stays in place.** `/skill-standards` `<path_boundary>` requires code that creates a scratch directory — a bundled script, a hook, a test fixture — to remove it on every exit path, and forbids a skill from instructing Claude to delete scratch it created through a shell command. The `create-skill` validation list and automation template follow the same split.
+- **`create-skill`'s reusability and test-pattern references open with a table of contents**, so a partial read sees every section.
+
 ## 0.19.1
 
 ### Changed
