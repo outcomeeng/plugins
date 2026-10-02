@@ -53,11 +53,13 @@ When the operator calls the Author, the same session must also act as the Fixer 
 
 **Verifier.** The role held by the agent session that produces an agentic verdict: an Auditor for audit, a Reviewer for review.
 
-**Position.** Standing authority the operator grants an agent session over a scope, lasting across Changes, where a role lasts one task. The operator grants each position as a durable record naming the product, the position, and the worktree root where the position runs. One session holds one position, in one worktree root; a session no grant names holds no position and works in roles only. A position name is capitalized and takes the form `{Product} {Position}`, such as `Plugins Maintainer` or `Methodology Director`; the operator stands outside that form. Position names stay distinct from role names, so a position never implies that its holder does one thing only.
+**Position.** Standing authority the operator grants an agent session over a scope, lasting across Changes, where a role is held within one Change. The operator grants each position as a durable record naming the product, the position, and the worktree root where the position runs. One session holds one position, in one worktree root; a session no grant names holds no position and works in roles only.
 
-The set of positions is open. The operator holds product judgment and attests each Frame. The **Director** coordinates across products and confirms Slices under the operator's delegation. A **Maintainer** refines its product's Changes and, on the Director's order, launches Executors only for a product without an Orchestrator. The **Orchestrator** launches the Executor for each Change the Maintainer hands it at Executable, on the Director's order, and runs Executors to delivery. A grant may name any further position, which holds the authority its grant names.
+A position title is a capitalized word naming a kind of position in every product, such as Director, Maintainer, or Orchestrator. A position name identifies one granted position and takes the form `{Product} {Position}`, the product followed by the position title, such as `Plugins Maintainer` or `Methodology Director`; the operator stands outside that form. Text that states what a position carries in every product uses the bare title; text that identifies or addresses one granted position, its holder, or its grant uses the position name. Position titles and position names stay distinct from role names, so a position never implies that its holder does one thing only.
 
-A position holder takes roles and never loosens their rules. It may act as an Author, or as the Fixer of a round another session authored, and never acts as a Verifier. The generated router of every repository states the positions content, so every consumer repository carries it.
+The set of positions is open. The operator holds product judgment and attests each Frame. The **Director** coordinates across products and confirms Slices under the operator's delegation; the operator remains the accountable person for every Slice the Director confirms. A **Maintainer** refines its product's Changes and, on the Director's order, launches Executors only for a product without an Orchestrator. The **Orchestrator** launches the Executor for each Change the Maintainer hands it at Executable, on the Director's order, and runs Executors to delivery. A grant may name any further position, which holds the authority its grant names.
+
+A position holder may take any role except the Verifier, such as the Author, or the Fixer of a round another session authored. Each role it takes keeps every rule that role carries; the position neither widens nor relaxes any of them, and it never acts as a Verifier. The generated router of every repository states the positions content, so every consumer repository carries it.
 
 ## Rationale
 
@@ -72,17 +74,18 @@ The Refiner is the operator's conversation because refinement is an interview. F
 ## Product properties
 
 1. Agent-facing decisions, specs, skills, and instructions use agent harness, agent, agent adapter, agent session, subagent, and subagent definition for their defined meanings; product domains identify which concept they govern and preserve those distinctions in configuration, invocation, observation, and resume behavior.
-2. Agent-facing decisions, specs, skills, and instructions name who refines, executes, produces, repairs, or verifies a Change with the capitalized Role names Refiner, Executor, Author, Fixer, and Verifier, with Auditor and Reviewer as the two Verifier kinds; the Refiner is held by the operator's conversation. They name standing authority across Changes with a capitalized position name of the form `{Product} {Position}`, distinct from every role name, held by one session in one worktree root under the operator's grant.
-3. Author and Fixer session selection follows who calls them: an agent calling both uses separate sessions; an operator calling the Author can require that same session to perform any number of repair rounds. A position holder takes roles under their unchanged rules, acting as an Author or as the Fixer of a round another session authored, and never as a Verifier.
+2. Agent-facing decisions, specs, skills, and instructions name who refines, executes, produces, repairs, or verifies a Change with the capitalized Role names Refiner, Executor, Author, Fixer, and Verifier, with Auditor and Reviewer as the two Verifier kinds; the Refiner is held by the operator's conversation. They name standing authority across Changes as a position the operator grants: a capitalized position title, such as Director, Maintainer, or Orchestrator, for what a position carries in every product, and a position name of the form `{Product} {Position}` for one granted position, both distinct from every role name, each granted position held by one session in one worktree root.
+3. Author and Fixer session selection follows who calls them: an agent calling both uses separate sessions; an operator calling the Author can require that same session to perform any number of repair rounds. A position holder may take any role except the Verifier, and every rule of a role it takes holds unchanged.
 
 ## Verification
 
-- ALWAYS: decisions, specs, skills, and instructions that describe standing authority over a scope across Changes name it as a position the operator grants, with a capitalized name of the form `{Product} {Position}`
-- NEVER: a position name stands in for a role name, or a role name for a position name
+- ALWAYS: decisions, specs, skills, and instructions that describe standing authority over a scope across Changes name it as a position the operator grants
+- ALWAYS: text that identifies or addresses one granted position, its holder, or its grant names it by its position name of the form `{Product} {Position}`, such as `Plugins Maintainer`, and text that states what a position carries in every product names it by its bare capitalized position title, such as Director, Maintainer, or Orchestrator
+- NEVER: a position title or position name stands in for a role name, or a role name for a position title or position name
 - ALWAYS: one agent session holds at most one position, in the one worktree root its grant names, and a session no grant names holds no position and works in roles only
-- ALWAYS: a position holder takes roles under their unchanged rules, acting as an Author or as the Fixer of a round another session authored
+- NEVER: a position widens or relaxes any rule of a role its holder takes, including the separate-session rule for an Author and a Fixer an agent calls
 - NEVER: a position holder acts as a Verifier
-- ALWAYS: the generated router of every repository states the operator's authority, the Director, Maintainer, and Orchestrator positions with the authority each holds, and that a grant may name any further position, which holds the authority its grant names
+- ALWAYS: the generated router of every repository states the operator's authority, the Director, Maintainer, and Orchestrator position titles with the authority each holds, and that a grant may name any further position, which holds the authority its grant names
 
 ### Audit
 
