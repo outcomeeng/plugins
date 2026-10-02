@@ -160,7 +160,7 @@ If `MERGE_READINESS` does not hold, directly read /merging-standards `action-tok
 
 <script_testing>
 
-`scripts/resolve_review_thread.py` has mapping evidence in this plugin's source test suite. The covered behavior is the review-thread resolution workflow this skill invokes.
+`scripts/resolve_review_thread.py` has linked scenario, property, and compliance evidence in this plugin's source test suite. The covered behavior is the review-thread resolution workflow this skill invokes.
 
 Tested inputs and expected outputs:
 
@@ -168,7 +168,7 @@ Tested inputs and expected outputs:
 - Review-comment discovery: `--host ghe.example.com --repo outcomeeng/plugins --pr 405 --review-comment-id 12345` discovers the owning review-thread node before resolving it.
 - Thread pagination: a first review-thread page whose `pageInfo.hasNextPage` is true and `endCursor` is present leads to a follow-up `threadsAfter=<cursor>` query, then resolves the discovered thread.
 - Comment pagination: a thread comments page whose `pageInfo.hasNextPage` is true and `endCursor` is present leads to a follow-up `commentsAfter=<cursor>` query before resolving the owning thread.
-- Malformed resolver CLI inputs: generated thread IDs, repositories, PR numbers, comment IDs, hosts, and mixed direct/discovery modes outside the helper's source-owned validators return exit code `2`, print a validation message, and make no GitHub mutation call.
+- Malformed resolver CLI inputs: empty and incomplete discovery selector sets, generated thread IDs, repositories, PR numbers, comment IDs, hosts, and mixed direct/discovery modes outside the helper's source-owned validators return exit code `2`, print a validation message, and make no GitHub mutation call.
 - Missing review comment: complete review-thread pagination without a matching comment returns exit code `2` with `review comment was not found after complete review-thread pagination`.
 - Malformed GitHub payloads: null repository, null pull request, null paginated thread node, missing comment pagination metadata, and missing pagination cursor responses return exit code `2` with the exact failing response shape named.
 - Cleanup: the helper creates no temporary files and owns no persistent state; tests assert only subprocess calls, stdout/stderr payload handling, and exit codes.
