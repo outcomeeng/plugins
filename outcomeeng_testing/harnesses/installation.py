@@ -583,9 +583,14 @@ class PluginListing:
 
 @dataclass(frozen=True)
 class RealFirstInstallObservation:
-    """Real agent-CLI observations from one empty persistent installation."""
+    """Real agent-CLI observations from one empty persistent installation.
 
-    initial_state: tuple[tuple[str, bytes], ...]
+    `initial_state` lists every file the selected agent state holds before the
+    run, each keyed by the environment variable naming its state root and its
+    path relative to that root.
+    """
+
+    initial_state: tuple[tuple[str, str, bytes], ...]
     initial_project_settings: bytes | None
     exit_code: int
     stdout: str
@@ -3046,7 +3051,7 @@ def observe_real_first_install() -> RealFirstInstallObservation:
         )
         environment = _persistent_environment(selected_root)
         _prepare_agent_state(environment)
-        initial_state = _tree_snapshot(selected_root)
+        initial_state = _state_snapshot(environment)
         project_settings = mirror / CLAUDE_PROJECT_SETTINGS_PATH
         initial_project_settings = (
             project_settings.read_bytes() if project_settings.exists() else None
@@ -4145,6 +4150,17 @@ def _seed_persistent_state(root: Path) -> None:
         path = root / relative_path
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(str(relative_path), encoding="utf-8")
+
+
+def _state_snapshot(
+    environment: Mapping[str, str],
+) -> tuple[tuple[str, str, bytes], ...]:
+    """Every file beneath each state root, keyed by the root's environment name."""
+    return tuple(
+        (name, relative, content)
+        for name in STATE_ENV_NAMES
+        for relative, content in _tree_snapshot(Path(environment[name]))
+    )
 
 
 def _tree_snapshot(root: Path) -> tuple[tuple[str, bytes], ...]:
