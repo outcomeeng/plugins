@@ -160,7 +160,7 @@ The rules' natural owner is `spx/31-outcomeeng.enabler/31-verification.enabler/1
 
 ## Harnesses raise `AssertionError` for lifecycle failures
 
-Harness modules under `outcomeeng_testing/harnesses/` and a generator under `outcomeeng_testing/generators/` raise `AssertionError` when a resource fails to start, a process fails to announce itself, a build implementation is unavailable, or a generated value has the wrong shape — `gate_signal.py`, `plugin_build.py`, `build_orchestration.py`, `runtime_parameterization.py`, `hooks.py`, `coding_agents.py`, `gate.py`, `bump.py`, `evals/factories.py`, and `generators/prowl_environment.py` among them. The predicate-seam rule in `/test-evidence-standards` reserves assertion failures for the linked test; infrastructure raises only setup, dependency, lifecycle, or execution errors. Raising `AssertionError` from infrastructure reports a failure away from every `assert` site and can read as a verdict the harness owns.
+Harness modules under `outcomeeng_testing/harnesses/` and a generator under `outcomeeng_testing/generators/` raise `AssertionError` when a resource fails to start, a process fails to announce itself, a build implementation is unavailable, or a generated value has the wrong shape — `gate_signal.py`, `plugin_build.py`, `build_orchestration.py`, `runtime_parameterization.py`, `hooks.py`, `coding_agents.py`, `bump.py`, `evals/factories.py`, and `generators/prowl_environment.py` among them. The predicate-seam rule in `/test-evidence-standards` reserves assertion failures for the linked test; infrastructure raises only setup, dependency, lifecycle, or execution errors. Raising `AssertionError` from infrastructure reports a failure away from every `assert` site and can read as a verdict the harness owns.
 
 **Evidence.** The isolated test-evidence audit of `spx/13-infrastructure.enabler/13-host-readiness.enabler` on head `e3bf060ce4dd29ff34984b5d66f8302d9ca22e95` rejected the same shape in that node's harness (finding `f-001`), fixed there by raising a `RuntimeError` subclass from a harness-owned horizon. A grep over the harness home found the instances above outside that node.
 
@@ -263,3 +263,11 @@ finding no edit satisfies; and `The skill auditor returns opposite verdicts on u
 in `spx/43-instructions.enabler/21-skills.enabler/ISSUES.md` records one Verifier definition
 contradicting itself on unchanged input. This entry is the remaining shape: two Verifier types whose
 verdicts diverge because one executed the subject and the other did not.
+
+## Property failure-note templates are restated outside their owner
+
+`outcomeeng_testing/harnesses/property_evidence.py` owns the failure-note prefixes `SEED_NOTE_PREFIX` and `REPLAY_NOTE_PREFIX` that `run_replayable_property` attaches to a failing property. Four harnesses build the same notes from inline f-strings instead of calling `run_replayable_property` or importing the prefixes — `evals.py`, `ci_triggers.py`, `bump.py`, and `source_and_templating.py` — and `spx/32-distribution.enabler/21-bump.enabler/tests/test_bump.property.l1.py` restates both templates as test-file literals, the source-ownership shape the test-evidence audit of `spx/15-validation.enabler/65-gate.enabler/21-selected-gate.enabler` rejected (finding `f-002`, head `2a3987d45705b13bcb7351fec768ff8aa6fa280c`) and that node's repair resolved.
+
+**Resolution shape.** Route each inline producer through `run_replayable_property` or the exported prefixes, and have the bump property test import the prefixes; take each owning node through its test-evidence audit.
+
+**Why separate.** Each instance sits in a harness or test governed by another node that the selected-gate repair does not touch.
