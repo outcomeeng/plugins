@@ -6,8 +6,6 @@ CAN run the deterministic gate steps that prove the current slice without spendi
 
 ## Assertions
 
-- Direct test execution that names a real-agent Codex test runs that test, whatever the changeset changes; agent-definition selection governs only the selected and full gate wrappers
-
 ### Mappings
 
 - Changed repository paths map to a deterministic ordered subset of source-owned validation steps, with each selected step carrying a human-readable reason for inclusion ([test](tests/test_selected_gate.mapping.l1.py))
@@ -33,4 +31,5 @@ CAN run the deterministic gate steps that prove the current slice without spendi
 - ALWAYS: the selected gate prints the selected steps and reasons before running them through the existing signal-safe recipe orchestrator, preserving bounded output and structured summaries ([test](tests/test_selected_gate.compliance.l1.py))
 - ALWAYS: when the canonical changeset-scope helper cannot resolve the remote default branch, the selected gate returns its structured git-discovery failure instead of propagating the helper exception ([test](tests/test_selected_gate.compliance.l1.py))
 - NEVER: building the static import index imports, executes, or reloads a test-infrastructure or test module — a module whose import has an observable side effect leaves no trace after the index is built ([test](tests/test_infrastructure_index.compliance.l1.py))
+- ALWAYS: direct test execution that names a real-agent Codex test runs that test, whatever the changeset changes; agent-definition selection governs only the selected and full gate wrappers ([test](tests/test_selected_gate.compliance.l1.py))
 - NEVER: the planner classifies a changed test-infrastructure path without the reach index — a plan built with none supplied raises the source-owned error naming the paths it cannot classify ([test](tests/test_selected_gate.compliance.l1.py))
