@@ -41,7 +41,7 @@ The canonical runtime template is the rendered, delimiter-free file bundled at `
 2. **Detect status.** Run:
 
    ```bash
-   python3 "${CLAUDE_SKILL_DIR}/scripts/instruction_block.py" --template "${CLAUDE_SKILL_DIR}/templates/instruction-block.md" --repo-root <repo-root> <languages-option> --check
+   python3 "${CLAUDE_SKILL_DIR}/scripts/instruction_block.py" --template "${CLAUDE_SKILL_DIR}/templates/instruction-block.md" --repo-root "<repo-root>" <languages-option> --check
    ```
 
    The output is one of `current`, `stale`, or `absent` — the worst status across the two root instruction files, and `stale` also when a `shared` region diverges between the two files, is present in only one, or is malformed (an open fence with no matching close, or one name opened twice), and while a reported delegation candidate is unresolved. Beside the verdict, stderr carries one `budget: <file> <size>/<ceiling> <fit|breach>` line per root instruction file that exists, measuring it against the 32768-byte combined Codex project-doc ceiling; a `breach` line names the exact overage, and the surface shrinks to fit — a breach is never resolved by raising a consumer's harness budget. Relay any `breach` line in the closing report. The enabled-language set is detected from `<repo-root>/spx/**/tests/` extensions unless the optional `--languages` flag supplies the comma-separated override carried by `<languages-option>`. **GATE 1:** any invocation that exits non-zero prints an actionable `error: …` line to stderr (missing or non-directory `--repo-root`, a symlink whose target escapes the repository, a template with no `template_version`) — report that exact line and stop rather than continuing.
@@ -49,7 +49,7 @@ The canonical runtime template is the rendered, delimiter-free file bundled at `
 3. **Reconcile diverged `shared` regions first.** **GATE 2:** when Step 2 reported `current`, both instruction files are up to date — report and stop without writing. Otherwise run the reconcile exactly once before regenerating: it operates on committed git state, and its own deterministic replacements may dirty a root file before it reports another ambiguity. Never invoke it a second time after it writes `reconciled: ...` output or after applying an operator-selected edit. Run:
 
    ```bash
-   python3 "${CLAUDE_SKILL_DIR}/scripts/instruction_block.py" --template "${CLAUDE_SKILL_DIR}/templates/instruction-block.md" --repo-root <repo-root> <languages-option> --reconcile
+   python3 "${CLAUDE_SKILL_DIR}/scripts/instruction_block.py" --template "${CLAUDE_SKILL_DIR}/templates/instruction-block.md" --repo-root "<repo-root>" <languages-option> --reconcile
    ```
 
    It takes the git-more-recently-committed side for each diverged region and prints `reconciled: {name}` for each it resolved by recency. It exits non-zero and prints every ambiguity it will not guess. Handle every reported ambiguity in one edit batch, never guessing.
@@ -62,8 +62,8 @@ The canonical runtime template is the rendered, delimiter-free file bundled at `
    - **`ambiguous (recency tie): {name}`**
      - *Detected* — recency cannot pick a side: the two files' regions carry an identical commit timestamp, or git cannot resolve a commit timestamp for the region's line range in either file.
      - *Recommend* — the side the surrounding independent content already agrees with.
-     - *Apply* — rerun the reconcile with the winning side named, so the generator writes the region in the exact byte shape it emits everywhere else rather than reproducing that shape by hand: `python3 "${CLAUDE_SKILL_DIR}/scripts/instruction_block.py" --template "${CLAUDE_SKILL_DIR}/templates/instruction-block.md" --repo-root <repo-root> <languages-option> --reconcile --from <claude|codex>`.
-     - *Preconditions* — the rerun reads committed state and refuses a dirty root file, so when the first pass already resolved another diverged region by recency it left the root files dirty; commit those writes through `/commit-changes` first — never a raw `git commit`, which this skill grants no tool for — or the rerun reports `dirty: {file}` and applies nothing. And `--from` selects the named side for *every* diverged region in the pass, not only the tied one, so run it only when the operator's choice is correct for all of them; otherwise commit the recency-resolved regions first and rerun `--from` against the tie alone.
+     - *Apply* — rerun the reconcile with the winning side named, so the generator writes the region in the exact byte shape it emits everywhere else rather than reproducing that shape by hand: `python3 "${CLAUDE_SKILL_DIR}/scripts/instruction_block.py" --template "${CLAUDE_SKILL_DIR}/templates/instruction-block.md" --repo-root "<repo-root>" <languages-option> --reconcile --from <claude|codex>`.
+     - *Preconditions* — the rerun reads committed state and refuses a dirty root file, so when the first pass already resolved another diverged region by recency it left the root files dirty. Use skill `spec-tree:commit-changes`. Commit those writes through it first — never a raw `git commit`, which this skill grants no tool for — or the rerun reports `dirty: {file}` and applies nothing. And `--from` selects the named side for *every* diverged region in the pass, not only the tied one, so run it only when the operator's choice is correct for all of them; otherwise commit the recency-resolved regions first and rerun `--from` against the tie alone.
    - **`ambiguous (one-sided): {name}`**
      - *Detected* — a `shared` region is present in one file but not the other.
      - *Recommend* — preserve the existing region by adding the same complete fenced body to the file that lacks it.
@@ -75,7 +75,7 @@ The canonical runtime template is the rendered, delimiter-free file bundled at `
    - **`ambiguous (delegating): {file}`**
      - *Detected* — the named file's body is small enough to be nothing but a pointer at the other root instruction file. Only reading it decides whether it is.
      - *Recommend* — read that body in full. If it does nothing but send the reader to the other file, adopt the other side's body. If it states anything of its own, however briefly, keep both bodies: adoption discards this one entirely.
-     - *Apply an adopt choice* — rerun the write with the surviving side named: `python3 "${CLAUDE_SKILL_DIR}/scripts/instruction_block.py" --template "${CLAUDE_SKILL_DIR}/templates/instruction-block.md" --repo-root <repo-root> <languages-option> --write --adopt <claude|codex>`.
+     - *Apply an adopt choice* — rerun the write with the surviving side named: `python3 "${CLAUDE_SKILL_DIR}/scripts/instruction_block.py" --template "${CLAUDE_SKILL_DIR}/templates/instruction-block.md" --repo-root "<repo-root>" <languages-option> --write --adopt <claude|codex>`.
      - *Apply a keep choice* — leave the bodies alone. The report recurs on every run until one body stops naming the other or grows past the bound; that recurrence is the safe resting state, not a failure.
      - *Refused when the named side is itself a pointer* — the expected shape when both files were reported, each naming the other. The rerun exits with `error: --adopt <harness> names a body that only points at the other root instruction file; no side carries content to adopt, so write the intended instructions into one file first`. Neither reading held content worth adopting, so no `--adopt` value succeeds while that holds — naming the opposite harness hits the same refusal, because the opposite body points back.
      - *Refused when the discarded side is not a pointer* — `error: --adopt <harness> would discard the body of <file>, which carries content of its own rather than a pointer at another root instruction file; adoption replaces a whole body, so no answer authorizes it`. `--adopt` applies only to the topology this report names; run outside one it would destroy a body no report ever offered up.
@@ -86,7 +86,7 @@ The canonical runtime template is the rendered, delimiter-free file bundled at `
 4. **Regenerate both files.** With the committed `shared` regions reconciled, regenerate the router block for the `stale` or `absent` status:
 
    ```bash
-   python3 "${CLAUDE_SKILL_DIR}/scripts/instruction_block.py" --template "${CLAUDE_SKILL_DIR}/templates/instruction-block.md" --repo-root <repo-root> <languages-option> --write
+   python3 "${CLAUDE_SKILL_DIR}/scripts/instruction_block.py" --template "${CLAUDE_SKILL_DIR}/templates/instruction-block.md" --repo-root "<repo-root>" <languages-option> --write
    ```
 
    The router block re-renders first in each file, each root file preserves its product-owned content and every `shared` region body, the router is scoped to the detected languages and its own harness, on first encounter the bootstrap pass wraps at most one `shared` region, symlinked root instruction files are replaced by regular file copies, and obsolete `spx/` instruction files are removed. When only one of the two root instruction files exists, the missing file is first seeded with a copy of the existing file's content before its router block is inserted. The write also prints the same per-file `budget:` stderr lines as Step 2, measured over the freshly written files.
@@ -127,7 +127,7 @@ Afterward both files stand exactly as they were. Adoption replaces a whole body,
 ambiguous (recency tie): commands
 ```
 
-After the operator selects `claude`, commit whatever the first pass already resolved so the root files are clean, then carry the choice into the reconcile with `python3 "${CLAUDE_SKILL_DIR}/scripts/instruction_block.py" --template "${CLAUDE_SKILL_DIR}/templates/instruction-block.md" --repo-root <repo-root> <languages-option> --reconcile --from claude`, which prints `reconciled: commands` and writes the `CLAUDE.md` body whole into `AGENTS.md`. Run `--write` and the closing `--check`; no line from the prior `AGENTS.md` region is blended into the result.
+After the operator selects `claude`, commit whatever the first pass already resolved so the root files are clean, then carry the choice into the reconcile with `python3 "${CLAUDE_SKILL_DIR}/scripts/instruction_block.py" --template "${CLAUDE_SKILL_DIR}/templates/instruction-block.md" --repo-root "<repo-root>" <languages-option> --reconcile --from claude`, which prints `reconciled: commands` and writes the `CLAUDE.md` body whole into `AGENTS.md`. Run `--write` and the closing `--check`; no line from the prior `AGENTS.md` region is blended into the result.
 
 Whole-side replacement is what that last sentence rules out. Given these two `commands` bodies:
 

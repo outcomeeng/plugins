@@ -14,7 +14,7 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 ### Changed
 
-- **The router forbids deleting files.** The managed instruction block in `CLAUDE.md` and `AGENTS.md` carries a No File Removal section: an agent never runs `rm`, `rm -f`, `rmdir`, `unlink`, or any other command that deletes a file, including scratch files, files under `$TMPDIR`, and the session scratchpad, and writes each command without a cleanup step. Git cleanup that a governing skill flow runs, such as the `/merge` flow's branch cleanup, stays outside the rule. Run `/update-instruction-block` to bring a router block to template version 0.40.0.
+- **The router forbids deleting files.** The managed instruction block in `CLAUDE.md` and `AGENTS.md` carries a No File Removal section: an agent never runs `rm`, `rm -f`, `rmdir`, `unlink`, or any other command that deletes a file, including scratch files, files under `$TMPDIR`, and the session scratchpad, and writes each command without a cleanup step. Git cleanup that a governing skill flow runs, such as the `/merge` flow's branch cleanup, and a file removal that a skill's bundled script performs, such as `/update-instruction-block` retiring obsolete instruction files, stay outside the rule. Run `/update-instruction-block` to bring a router block to template version 0.40.0.
 
 ## 0.100.0
 
