@@ -30,7 +30,7 @@ The compliance assertion that a persistent run reads the install-record listing 
 
 **Resolution shape**: route the no-lock clause to audit evidence in the governing decision, where the absence of a lock is a structural judgment, or add a record-store observation the harness owns — a runner that reports every open on the record file — so the clause reaches a predicate.
 
-**Evidence**: test-evidence audit finding `f-010` (WARNING) against `841e864a9759eae04c8988c2931aa44b1ca21c74`, `f-007` (WARNING) against `f011edcdd33c0fdec41d8ccfbcdfe1393fc6b35a`, `f-008` (WARNING) with the implementation audit's matching debt finding against `a47f88e39d2a5fe9318eb24e6140623ca774dcfa`, which names the same absent oracle from the recorded-command seam, `f-009` (WARNING) against `c3b42a5514452b1b71e01c77467e7e45abfad048`, and `f-008` (WARNING) against each of `9ab0fc92c2f5c673edbfb2c73eea42502cef68e5` and `c2f6d8e1c3bc87f24d775fcbc62451b9c2ff6322`. The round against `05a7165277750d69c88bc8abbece2c4f6a96bb7c` raised it as `f-013` (WARNING): "The read-count and retry clauses are falsified through the recorded commands. A lock is not a command, so adding an advisory lock around the listing read leaves both counts at one and the test passing. The no-lock clause has no deterministic oracle." The round against `cc5f3e86be4dbcc2c727c46f5c96593bab02b680` raised it again as `f-013` (WARNING). The round against `43e80d923e177a48707f433e9cf12b86ee6c4b9b` raised it again as `f-015` (WARNING).
+**Evidence**: test-evidence audit finding `f-010` (WARNING) against `841e864a9759eae04c8988c2931aa44b1ca21c74`, `f-007` (WARNING) against `f011edcdd33c0fdec41d8ccfbcdfe1393fc6b35a`, `f-008` (WARNING) with the implementation audit's matching debt finding against `a47f88e39d2a5fe9318eb24e6140623ca774dcfa`, which names the same absent oracle from the recorded-command seam, `f-009` (WARNING) against `c3b42a5514452b1b71e01c77467e7e45abfad048`, and `f-008` (WARNING) against each of `9ab0fc92c2f5c673edbfb2c73eea42502cef68e5` and `c2f6d8e1c3bc87f24d775fcbc62451b9c2ff6322`. The round against `05a7165277750d69c88bc8abbece2c4f6a96bb7c` raised it as `f-013` (WARNING): "The read-count and retry clauses are falsified through the recorded commands. A lock is not a command, so adding an advisory lock around the listing read leaves both counts at one and the test passing. The no-lock clause has no deterministic oracle." The round against `cc5f3e86be4dbcc2c727c46f5c96593bab02b680` raised it again as `f-013` (WARNING). The round against `43e80d923e177a48707f433e9cf12b86ee6c4b9b` raised it again as `f-015` (WARNING). The round against `d357782498093adc369be5c335e65748b20c79d1` raised it again as `f-005` (WARNING).
 
 ## Claude Code renderings ship the Codex-only placement script and paraphrase its output
 
@@ -67,7 +67,7 @@ The margin narrows as the source grows. The suite passed repeatedly earlier the 
 
 ## The unpublished-plugin enable and update wordings are unobserved
 
-`_is_pending_publication` in `outcomeeng/distribution/installation.py` classifies a failed plugin install, enable, or update as pending publication when `UNPUBLISHED_PLUGIN_FRAGMENT` — the literal `not found in marketplace` — appears in the lower-cased stderr. The simulated stimuli in `outcomeeng_testing/harnesses/installation.py` carry the independently transcribed real **install** wording for both CLIs, observed while adding the `contribute` plugin against a canonical marketplace that did not yet publish it:
+`_is_pending_publication` in `outcomeeng/distribution/installation.py` classifies a failed plugin install, enable, or update as pending publication when `UNPUBLISHED_PLUGIN_FRAGMENT` — the literal `not found in marketplace` — appears in the lower-cased stderr. The inert fixtures `outcomeeng_testing/fixtures/installation/claude-code-plugin-install-unpublished.stderr.txt` and `outcomeeng_testing/fixtures/installation/codex-cli-plugin-add-unpublished.stderr.txt`, read by path in `outcomeeng_testing/harnesses/installation.py`, carry the independently captured real **install** wording for both CLIs, observed while adding the `contribute` plugin against a canonical marketplace that did not yet publish it:
 
 ```text
 Claude Code: Failed to install plugin "contribute@outcomeeng": Plugin "contribute" not found in marketplace "outcomeeng".
@@ -319,7 +319,7 @@ decision change, not a test repair.
 production re-applies the declared plugin selection after a failed run
 (_restore_plugin_selection, outcomeeng/distribution/installation.py:1485). No
 linked [test] assertion declares that behavior, and the untagged spec assertion
-plus the ADR say failed runs retain changed state without restoring a snapshot." The round against `cc5f3e86be4dbcc2c727c46f5c96593bab02b680` raised it again as `f-018` (INFO). The round against `43e80d923e177a48707f433e9cf12b86ee6c4b9b` raised it again as `f-019` (INFO).
+plus the ADR say failed runs retain changed state without restoring a snapshot." The round against `cc5f3e86be4dbcc2c727c46f5c96593bab02b680` raised it again as `f-018` (INFO). The round against `43e80d923e177a48707f433e9cf12b86ee6c4b9b` raised it again as `f-019` (INFO). The round against `d357782498093adc369be5c335e65748b20c79d1` raised it again as `f-006` (INFO).
 
 ## The real-agent Codex home domain is a hand-maintained mapping
 
@@ -342,8 +342,11 @@ derive the evidence domain from those records rather than from a list.
 **Progress**: the subagent-discovery observation and the isolated-installation
 observation now read the Codex home from the plan they execute, which
 production provisions, instead of rebuilding it as `state / "codex"`; the
-native-profile row reads it from its plan as well. The listed mapping remains
-the domain for the two harness-owned states.
+native-profile row reads it from its plan as well. The `l2` native-profile
+evidence now drives the producer's own row, whose home the isolated plan
+provisions, so the harness-owned empty native-read state and its mapping entry
+are gone. The listed mapping remains the domain for the one harness-owned
+state left, the selected real-agent state.
 
 **Settlement condition**: the evidence's real-agent home domain is derived from
 the provisioning records, and a new observation that provisions a home reaches
@@ -352,4 +355,32 @@ the evidence without an edit to a list.
 **Evidence**: test-evidence audit finding `f-018` (WARNING) against `43e80d923e177a48707f433e9cf12b86ee6c4b9b`:
 "The 'every other home a real-agent observation points CODEX_HOME at' domain is
 the hand-maintained two-entry REAL_AGENT_CODEX_HOME_PROVISIONERS mapping. It is
-not derived from the observations."
+not derived from the observations." The round against `d357782498093adc369be5c335e65748b20c79d1` raised it again as `f-004`
+(WARNING).
+
+## The shipped placement script restates the agent naming relation
+
+`src/templates/plugin/scripts/place_agents.py` classifies a checkout definition
+as plugin-owned by the literal flat prefix `<plugin>_` and by the literal `:`
+before a skill entry's name. The build owns both through
+`FLAT_AGENT_PLUGIN_SEPARATOR` and `NATIVE_AGENT_PLUGIN_SEPARATOR` in
+`outcomeeng/distribution/contracts.py`, which the installer's own scope-split
+classification and the installation harness consume. The shipped script is a
+standalone, standard-library-only file in a consumer's plugin tree, so it cannot
+import that owner, and a separator change would reach the installer and leave
+the script classifying against the old one.
+
+**Resolution shape**: render both separators into the script from the build's
+owner through the template renderer, the way `PLUGIN` is rendered, so every
+plugin's shipped copy carries the owner's values; the change rewrites every
+plugin's rendered skill surface and passes the skill-auditor gate.
+
+**Why separate**: it changes every plugin's shipped script and the template
+render contract, which the evidence repair that surfaced it does not touch.
+
+**Settlement condition**: the rendered script carries no separator literal of
+its own.
+
+**Evidence**: same-class sweep after test-evidence audit finding `f-003`
+(REJECT) against `d357782498093adc369be5c335e65748b20c79d1`, which found the installation harness
+restating the same relation.
