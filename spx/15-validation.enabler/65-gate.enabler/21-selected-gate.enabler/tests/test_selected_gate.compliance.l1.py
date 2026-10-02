@@ -11,8 +11,11 @@ from outcomeeng.validation import (
     PREFLIGHT_STEPS,
     PYTEST_ARGV,
     RECIPE_CHECK,
+    RECIPE_HEADER_PREFIX,
     RECIPE_TEST,
     RECIPE_VALIDATION,
+    SUMMARY_PATH_LABEL,
+    recipe_header,
 )
 from outcomeeng.distribution import agents as agent_conversion
 from outcomeeng.validation import selected_gate as selection_source
@@ -29,17 +32,22 @@ from outcomeeng.validation.selected_gate import (
     GIT_DISCOVERY_STDOUT_LABEL,
     GitDiscoveryError,
     InfrastructureIndexRequired,
+    CHANGESET_BASE_LABEL,
+    FIRST_PARENT_BASE_REF,
     INSTRUCTION_BLOCK_SOURCE_PATH,
+    PATH_CATEGORY_PATTERNS,
     PYPROJECT_PATH,
-    PYTHON_REASON,
     REAL_AGENT_CODEX_EXCLUDED_REASON,
     REAL_AGENT_CODEX_EXCLUSION,
     REAL_AGENT_CODEX_INCLUDED_REASON,
+    REAL_AGENT_CODEX_TEST_MODULE,
     REAL_AGENT_CODEX_TESTS,
+    PathCategory,
     SelectedGatePlan,
     TEST_REASON,
     build_full_gate_plan,
     build_selected_gate_plan,
+    render_plan,
 )
 from outcomeeng_testing.generators.gate import (
     SELECTED_GATE_FULL_GATE_PATH,
@@ -59,7 +67,6 @@ from outcomeeng_testing.harnesses.gate import (
     failing_discovery_runner,
     missing_origin_observation,
     run_check_observation,
-    selected_check_plan_block,
     selected_gate_branch_discovery_argv,
     unrelated_validation_source_path,
 )
@@ -69,28 +76,13 @@ from outcomeeng_testing.harnesses.infrastructure_index import (
     synthetic_repository,
 )
 from outcomeeng_testing.harnesses.real_agent_selection import (
-    checkout_agent_definition_paths,
+    checkout_agent_definition_inventory,
     codex_credential_environment,
     direct_test_observation,
+    first_parent_full_check_observation,
     pytest_collection_observation,
     repository_relative_path,
     run_full_check_observation,
-)
-
-# Every changed-path category the selector owns other than agent definitions.
-NON_AGENT_DEFINITION_CATEGORIES = (
-    selection_source.FULL_GATE_PATTERNS,
-    selection_source.PYTHON_FORMAT_LINT_PATTERNS,
-    selection_source.PYTHON_TYPECHECK_PATTERNS,
-    selection_source.PYTHON_ASSERTION_TEST_PATTERNS,
-    selection_source.MARKDOWN_PATTERNS,
-    selection_source.WORKFLOW_PATTERNS,
-    selection_source.SKILL_PATTERNS,
-    selection_source.INSTRUCTION_BLOCK_PATTERNS,
-    selection_source.EVAL_TRIGGER_PATTERNS,
-    selection_source.EVAL_PROMPT_PATTERNS,
-    selection_source.EVIDENCE_LINK_PATTERNS,
-    selection_source.TEST_INFRASTRUCTURE_PATTERNS,
 )
 
 
@@ -111,11 +103,11 @@ def _argvs_without_exclusion(plan: SelectedGatePlan) -> tuple[tuple[str, ...], .
     )
 
 
-def _real_agent_codex_test_modules() -> tuple[str, ...]:
+def _pytest_calls(
+    spawn_calls: tuple[tuple[str, ...], ...],
+) -> tuple[tuple[str, ...], ...]:
     return tuple(
-        sorted(
-            {node_id.split("::", maxsplit=1)[0] for node_id in REAL_AGENT_CODEX_TESTS}
-        )
+        call for call in spawn_calls if call[: len(PYTEST_ARGV)] == PYTEST_ARGV
     )
 
 
@@ -129,15 +121,13 @@ def test_an_empty_changeset_selects_no_steps() -> None:
 def test_the_plan_prints_before_the_recipes_run() -> None:
     run = run_check_observation(branch_path=SELECTED_GATE_PYTHON_SOURCE_PATH)
 
-    expected_plan = build_selected_gate_plan((SELECTED_GATE_PYTHON_SOURCE_PATH,))
-    selected_block = selected_check_plan_block(
-        labels=tuple(item.step.label for item in expected_plan.selected_steps),
-        reason=PYTHON_REASON,
+    plan_text = render_plan(
+        build_selected_gate_plan((SELECTED_GATE_PYTHON_SOURCE_PATH,))
     )
     assert run.exit_code == 0
-    assert run.output.startswith(selected_block)
-    assert run.output.index(selected_block) < run.output.index(f"Recipe {RECIPE_CHECK}")
-    assert "Summary: " in run.output
+    assert run.output.startswith(plan_text)
+    assert len(plan_text) <= run.output.index(recipe_header(RECIPE_CHECK))
+    assert SUMMARY_PATH_LABEL in run.output
 
 
 def test_child_output_never_streams_to_the_live_sink() -> None:
@@ -163,8 +153,8 @@ def test_a_full_gate_path_runs_the_complete_wrapper() -> None:
         for step in (*PREFLIGHT_STEPS, *recipe.steps)
     )
     assert FULL_GATE_REASON in run.output
-    assert f"Recipe {RECIPE_VALIDATION}" in run.output
-    assert f"Recipe {RECIPE_TEST}" in run.output
+    assert recipe_header(RECIPE_VALIDATION) in run.output
+    assert recipe_header(RECIPE_TEST) in run.output
 
 
 def test_a_deleted_test_path_selects_no_pytest_run() -> None:
@@ -196,12 +186,12 @@ def test_git_discovery_failure_stops_before_any_spawn() -> None:
 
 
 def test_a_repo_without_origin_reports_the_unset_head() -> None:
-    run = missing_origin_observation()
+    observation = missing_origin_observation()
 
-    assert run.exit_code == GIT_DISCOVERY_FAILURE_EXIT_CODE
-    assert run.spawn_calls == ()
-    assert GIT_DISCOVERY_ERROR_PREFIX in run.output
-    assert "refs/remotes/origin/HEAD unset" in run.output
+    assert observation.run.exit_code == GIT_DISCOVERY_FAILURE_EXIT_CODE
+    assert observation.run.spawn_calls == ()
+    assert GIT_DISCOVERY_ERROR_PREFIX in observation.run.output
+    assert observation.helper_failure in observation.run.output
 
 
 def test_collection_propagates_git_failure_as_a_typed_error() -> None:
@@ -227,52 +217,32 @@ def test_infrastructure_path_without_an_index_is_rejected_by_name() -> None:
     assert layout.changed_path in str(caught.value)
 
 
-@pytest.mark.parametrize("pattern", selection_source.AGENT_DEFINITION_PATTERNS)
-def test_every_agent_definition_category_selects_the_real_agent_codex_tests(
-    pattern: str,
+@pytest.mark.parametrize(
+    "kind", tuple(checkout_agent_definition_inventory().by_kind()), ids=str
+)
+def test_every_kind_of_checkout_agent_definition_selects_the_real_agent_codex_tests(
+    kind: str,
 ) -> None:
-    path = path_from_pattern(pattern)
-    with synthetic_repository() as repo:
-        local = build_selected_gate_plan(
-            (path,), test_infrastructure=index_test_infrastructure(repo.root)
-        )
-    full = build_full_gate_plan((path,))
+    paths = checkout_agent_definition_inventory().by_kind()[kind]
 
-    for plan in (local, full):
-        assert plan.real_agent_codex, path
-        assert plan.real_agent_codex_reason == REAL_AGENT_CODEX_INCLUDED_REASON
-        pytest_arguments = _pytest_arguments(plan)
-        assert pytest_arguments, path
-        assert all(
-            arguments[-len(REAL_AGENT_CODEX_EXCLUSION) :] != REAL_AGENT_CODEX_EXCLUSION
-            for arguments in pytest_arguments
-        )
-        if not plan.full_gate:
-            assert set(REAL_AGENT_CODEX_TESTS) <= {
-                argument for arguments in pytest_arguments for argument in arguments
-            }
-
-
-def test_every_checkout_agent_definition_selects_the_real_agent_codex_tests() -> None:
-    paths = checkout_agent_definition_paths()
-
-    assert repository_relative_path(agent_conversion.__file__) in paths
+    assert paths
     for path in paths:
         local = build_selected_gate_plan((path,))
         full = build_full_gate_plan((path,))
-        assert local.real_agent_codex, path
-        assert full.real_agent_codex, path
-        local_arguments = _pytest_arguments(local)
-        if local.full_gate:
+        for plan in (local, full):
+            assert plan.real_agent_codex, path
+            assert plan.real_agent_codex_reason == REAL_AGENT_CODEX_INCLUDED_REASON
+            pytest_arguments = _pytest_arguments(plan)
+            assert pytest_arguments, path
             assert all(
                 arguments[-len(REAL_AGENT_CODEX_EXCLUSION) :]
                 != REAL_AGENT_CODEX_EXCLUSION
-                for arguments in local_arguments
+                for arguments in pytest_arguments
             )
-        else:
-            assert set(REAL_AGENT_CODEX_TESTS) <= {
-                argument for arguments in local_arguments for argument in arguments
-            }
+            if not plan.full_gate:
+                assert set(REAL_AGENT_CODEX_TESTS) <= {
+                    argument for arguments in pytest_arguments for argument in arguments
+                }
 
 
 def test_the_real_agent_codex_tests_resolve_to_collected_tests() -> None:
@@ -293,14 +263,22 @@ def test_an_agent_definition_full_gate_runs_the_unmodified_recipe_set() -> None:
         )
 
 
-@pytest.mark.parametrize("patterns", NON_AGENT_DEFINITION_CATEGORIES)
+@pytest.mark.parametrize(
+    "category",
+    tuple(
+        category
+        for category in PathCategory
+        if category is not PathCategory.AGENT_DEFINITION
+    ),
+    ids=str,
+)
 def test_no_other_changed_path_category_selects_a_real_agent_codex_test(
-    patterns: tuple[str, ...],
+    category: PathCategory,
 ) -> None:
     full_recipe_argvs = tuple(
         step.argv for recipe in CHECK_RECIPES for step in recipe.steps
     )
-    for pattern in patterns:
+    for pattern in PATH_CATEGORY_PATTERNS[category]:
         path = path_from_pattern(pattern)
         with synthetic_repository() as repo:
             local = build_selected_gate_plan(
@@ -327,12 +305,12 @@ def test_no_other_changed_path_category_selects_a_real_agent_codex_test(
 def test_a_changeset_on_real_agent_evidence_without_agent_definitions_selects_none() -> (
     None
 ):
-    # The changeset that provisions the real-agent tests' Codex homes changes
-    # their harnesses, their module, this node's selection code and spec, and
-    # the gate configuration, and no agent definition.
+    # A changeset confined to the real-agent tests' own evidence changes their
+    # harnesses, their module, this node's selection code and spec, and the
+    # gate configuration, and no agent definition.
     reach = repository_reach(installation_harness.__file__)
     changeset = (
-        *_real_agent_codex_test_modules(),
+        REAL_AGENT_CODEX_TEST_MODULE,
         reach.path,
         repository_relative_path(discovery_auth_harness.__file__),
         repository_relative_path(selection_source.__file__),
@@ -358,7 +336,7 @@ def test_a_changeset_on_real_agent_evidence_without_agent_definitions_selects_no
 
 
 def test_a_changed_real_agent_test_module_runs_every_other_test_in_it() -> None:
-    modules = _real_agent_codex_test_modules()
+    modules = (REAL_AGENT_CODEX_TEST_MODULE,)
     plan = build_selected_gate_plan(modules)
 
     assert not plan.full_gate
@@ -411,7 +389,7 @@ def test_unrelated_full_gate_execution_honors_its_exclusion(
         for call in pytest_calls
     )
     assert run.output.index(REAL_AGENT_CODEX_EXCLUDED_REASON) < run.output.index(
-        f"Recipe {RECIPE_VALIDATION}"
+        recipe_header(RECIPE_VALIDATION)
     )
 
 
@@ -445,7 +423,7 @@ def test_the_selection_reason_prints_before_execution_whatever_the_credentials(
 
     for run, reason in runs:
         assert run.exit_code == 0
-        assert run.output.index(reason) < run.output.index("Recipe ")
+        assert run.output.index(reason) < run.output.index(RECIPE_HEADER_PREFIX)
 
 
 def test_direct_execution_runs_a_named_real_agent_codex_test_whatever_the_changeset() -> (
@@ -479,3 +457,51 @@ def test_direct_execution_runs_a_named_real_agent_codex_test_whatever_the_change
     collection = pytest_collection_observation(direct_arguments)
     assert collection.exit_code == 0, collection.output
     assert collection.collected == frozenset(REAL_AGENT_CODEX_TESTS)
+
+
+def test_ci_full_verification_without_a_default_branch_selects_by_the_first_parent() -> (
+    None
+):
+    # CI's merge-commit checkout carries no remote default branch, so the full
+    # gate discovers the changeset against the first parent.
+    agent_definition = repository_relative_path(agent_conversion.__file__)
+
+    run = first_parent_full_check_observation(branch_path=agent_definition)
+
+    assert run.exit_code == 0
+    assert run.runner_calls[0] == selected_gate_branch_discovery_argv(
+        base_ref=FIRST_PARENT_BASE_REF
+    )
+    pytest_calls = _pytest_calls(run.spawn_calls)
+    assert pytest_calls
+    assert all(
+        call[-len(REAL_AGENT_CODEX_EXCLUSION) :] != REAL_AGENT_CODEX_EXCLUSION
+        for call in pytest_calls
+    )
+    plan_end = run.output.index(RECIPE_HEADER_PREFIX)
+    assert run.output.index(REAL_AGENT_CODEX_INCLUDED_REASON) < plan_end
+    assert (
+        run.output.index(f"{CHANGESET_BASE_LABEL}: {FIRST_PARENT_BASE_REF}") < plan_end
+    )
+
+
+def test_ci_full_verification_without_a_default_branch_excludes_unrelated_changes() -> (
+    None
+):
+    run = first_parent_full_check_observation(
+        branch_path=unrelated_validation_source_path()
+    )
+
+    assert run.exit_code == 0
+    assert run.runner_calls[0] == selected_gate_branch_discovery_argv(
+        base_ref=FIRST_PARENT_BASE_REF
+    )
+    pytest_calls = _pytest_calls(run.spawn_calls)
+    assert pytest_calls
+    assert all(
+        call[-len(REAL_AGENT_CODEX_EXCLUSION) :] == REAL_AGENT_CODEX_EXCLUSION
+        for call in pytest_calls
+    )
+    assert run.output.index(REAL_AGENT_CODEX_EXCLUDED_REASON) < run.output.index(
+        RECIPE_HEADER_PREFIX
+    )

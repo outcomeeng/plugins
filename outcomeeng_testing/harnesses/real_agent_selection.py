@@ -17,9 +17,9 @@ import io
 import os
 import subprocess
 import sys
-from collections.abc import Iterator, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Final
@@ -28,7 +28,11 @@ from outcomeeng.distribution import agents as agent_conversion
 from outcomeeng.distribution.agents import AGENT_SOURCE_DIRECTORY_NAME
 from outcomeeng.distribution.build import project_emissions
 from outcomeeng.distribution.contracts import DIST_DIR_NAME
-from outcomeeng.distribution.installation import CODEX_HOME_ENV
+from outcomeeng.distribution.installation import (
+    CODEX_HOME_ENV,
+    apply_agent_home_plan,
+    generated_codex_agent_definitions,
+)
 from outcomeeng.validation import (
     PREFLIGHT_STEPS,
     TEST_STEPS,
@@ -41,12 +45,15 @@ from outcomeeng.validation.ci_gate import (
 )
 from outcomeeng.validation.selected_gate import (
     DEFAULT_BASE_REF,
+    FIRST_PARENT_BASE_REF,
+    PYTEST_NODE_ID_SEPARATOR,
     run_full_check as production_run_full_check,
 )
 from outcomeeng_testing.harnesses.discovery_auth import (
     WORKSPACE_TOKEN_ENV,
     AuthenticationMode,
 )
+from outcomeeng_testing.harnesses.changeset_scope import build_repo_without_origin
 from outcomeeng_testing.harnesses.gate import (
     RecipeRunObservation,
     RecordingSpawner,
@@ -54,6 +61,7 @@ from outcomeeng_testing.harnesses.gate import (
     recipe_run_observation,
     selected_gate_runner_for_paths,
 )
+from outcomeeng_testing.harnesses.installation import PluginLifecycleHarness
 
 REPOSITORY_ROOT: Final = Path(__file__).resolve().parents[2]
 SOURCE_ROOT: Final = REPOSITORY_ROOT / "src"
@@ -67,7 +75,6 @@ PYTEST_COLLECTION_ARGV: Final = (
     "-p",
     "no:cacheprovider",
 )
-PYTEST_NODE_ID_SEPARATOR: Final = "::"
 PLACEHOLDER_CREDENTIAL: Final = "placeholder-credential-for-selection"
 CODEX_CREDENTIAL_VARIABLES: Final = (
     CODEX_API_KEY_ENVIRONMENT,
@@ -86,26 +93,79 @@ def repository_relative_path(module_file: str) -> str:
     return Path(module_file).resolve().relative_to(REPOSITORY_ROOT).as_posix()
 
 
-def checkout_agent_definition_paths() -> tuple[str, ...]:
-    """Return the checkout's agent definitions, independently of the selector.
+def _module_path(function: Callable[..., object]) -> str:
+    return repository_relative_path(sys.modules[function.__module__].__file__ or "")
 
-    The build's emission projection names every authored agent source and the
-    generated rendering it emits into each target tree; the conversion module
-    is the code that converts those sources into each target's native artifact.
+
+@dataclass(frozen=True)
+class AgentDefinitionInventory:
+    """The checkout's agent definitions by kind, derived independently of the selector.
+
+    Each kind comes from the owner that produces or places the artifact: the
+    build's emission projection names every authored agent source, the
+    rendering it emits, and every rendering of the shipped placement script;
+    the conversion module, the module defining that projection, and the module
+    defining repository installation's agent-home placement are the code that
+    converts, emits, and places definitions; and the plugin-lifecycle harness
+    that executes the shipped placement script names its authored template.
     """
 
+    authored_sources: tuple[str, ...]
+    renderings: tuple[str, ...]
+    conversion_code: tuple[str, ...]
+    emission_code: tuple[str, ...]
+    placement_code: tuple[str, ...]
+    placement_scripts: tuple[str, ...]
+
+    def by_kind(self) -> Mapping[str, tuple[str, ...]]:
+        """Return every kind's paths keyed by the kind's field name."""
+
+        return {kind.name: getattr(self, kind.name) for kind in fields(self)}
+
+
+def _shipped_placement_script(relative_path: Path) -> bool:
+    # The plugin-lifecycle harness that executes the shipped placement script
+    # names where a plugin's lifecycle skill carries it; a target-tree output
+    # at that place for its own plugin is a rendering of the script.
+    if not relative_path.parts:
+        return False
+    lifecycle = PluginLifecycleHarness(root=Path(), plugin_name=relative_path.parts[0])
+    shipped = lifecycle.script_path.relative_to(lifecycle.skill_root.parents[1])
+    return relative_path.parts[1:] == shipped.parts
+
+
+def checkout_agent_definition_inventory() -> AgentDefinitionInventory:
+    """Return the checkout's agent definitions by kind."""
+
     projection = project_emissions(SOURCE_ROOT)
-    paths: set[str] = {repository_relative_path(agent_conversion.__file__)}
+    authored: set[str] = set()
+    renderings: set[str] = set()
+    placement_scripts: set[str] = set()
     for emission in projection.emissions:
-        if emission.source.parent.name != AGENT_SOURCE_DIRECTORY_NAME:
-            continue
-        paths.add(repository_relative_path(str(emission.source)))
-        paths.add(
-            (
-                Path(DIST_DIR_NAME) / emission.target.value / emission.relative_path
-            ).as_posix()
-        )
-    return tuple(sorted(paths))
+        rendering = (
+            Path(DIST_DIR_NAME) / emission.target.value / emission.relative_path
+        ).as_posix()
+        if emission.source.parent.name == AGENT_SOURCE_DIRECTORY_NAME:
+            authored.add(repository_relative_path(str(emission.source)))
+            renderings.add(rendering)
+        elif _shipped_placement_script(emission.relative_path):
+            placement_scripts.add(repository_relative_path(str(emission.source)))
+            placement_scripts.add(rendering)
+    return AgentDefinitionInventory(
+        authored_sources=tuple(sorted(authored)),
+        renderings=tuple(sorted(renderings)),
+        conversion_code=(repository_relative_path(agent_conversion.__file__),),
+        emission_code=(_module_path(project_emissions),),
+        placement_code=tuple(
+            sorted(
+                {
+                    _module_path(generated_codex_agent_definitions),
+                    _module_path(apply_agent_home_plan),
+                }
+            )
+        ),
+        placement_scripts=tuple(sorted(placement_scripts)),
+    )
 
 
 @dataclass(frozen=True)
@@ -163,6 +223,38 @@ def run_full_check_observation(
             sink=sink,
             repo=Path(tmp),
             base_ref=DEFAULT_BASE_REF,
+            runner=runner,
+        )
+    return RunObservation(
+        exit_code=exit_code,
+        output=sink.getvalue(),
+        spawn_calls=tuple(spawner.spawn_calls),
+        runner_calls=tuple(runner.calls),
+    )
+
+
+def first_parent_full_check_observation(*, branch_path: str) -> RunObservation:
+    """Run the explicit full gate where no remote default branch is configured.
+
+    The repository is a real git checkout without ``refs/remotes/origin/HEAD``,
+    as CI's merge-commit checkout is, and the gate resolves its base itself;
+    the scripted git runner answers branch discovery only against the first
+    parent, so any other base fails the run.
+    """
+
+    runner = selected_gate_runner_for_paths(
+        base_ref=FIRST_PARENT_BASE_REF,
+        branch_path=branch_path,
+    )
+    spawner = RecordingSpawner(exit_codes=[os.EX_OK] * _SPAWN_BUDGET)
+    sink = io.StringIO()
+    with TemporaryDirectory() as tmp:
+        repo = Path(tmp)
+        build_repo_without_origin(repo)
+        exit_code = production_run_full_check(
+            spawner=spawner,
+            sink=sink,
+            repo=repo,
             runner=runner,
         )
     return RunObservation(

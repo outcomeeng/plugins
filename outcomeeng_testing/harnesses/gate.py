@@ -50,6 +50,11 @@ from outcomeeng.validation import (
     terminate_process_group,
 )
 from outcomeeng.validation._git import GitCommandResult
+from outcomeeng.validation.infrastructure_index import (
+    TEST_INFRASTRUCTURE_PACKAGE,
+    InfrastructureIndex,
+    build_infrastructure_index,
+)
 from outcomeeng.validation.selected_gate import (
     DEFAULT_BASE_REF,
     GIT_DISCOVERY_FAILURE_EXIT_CODE,
@@ -57,7 +62,6 @@ from outcomeeng.validation.selected_gate import (
     GIT_DIFF_STAGED_ARGV,
     GIT_DIFF_UNSTAGED_ARGV,
     GIT_LS_UNTRACKED_ARGV,
-    SELECTED_CHECK_PLAN_HEADER,
     collect_changed_paths,
     run_selected_check as production_run_selected_check,
 )
@@ -68,7 +72,10 @@ from outcomeeng_testing.generators.gate import (
     SELECTED_GATE_WORKFLOW_PATH,
     selected_gate_changed_paths,
 )
-from outcomeeng_testing.harnesses.changeset_scope import build_repo_without_origin
+from outcomeeng_testing.harnesses.changeset_scope import (
+    CHANGESET_SCOPE,
+    build_repo_without_origin,
+)
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
 
 SELECTED_GATE_PROPERTY_SEED = 20260705
@@ -91,13 +98,6 @@ PYTEST_TARGET_ARG = (
 )
 SELECTED_GATE_RENAMED_TARGET_ARG = "docs/renamed-selected-gate.py"
 SELECTED_GATE_WHITESPACE_PATH = " docs/selected gate edge spaces.py "
-
-
-def selected_check_plan_block(*, labels: Sequence[str], reason: str) -> str:
-    """Expected selected-check plan block for tests that inspect CLI output."""
-
-    lines = [SELECTED_CHECK_PLAN_HEADER, *(f"  {label}: {reason}" for label in labels)]
-    return "\n".join(lines) + "\n"
 
 
 def three_no_op_steps() -> tuple[Step, ...]:
@@ -260,6 +260,18 @@ def selected_gate_changed_path_domain() -> tuple[str, str, str, str]:
         SELECTED_GATE_WORKFLOW_PATH,
         SELECTED_GATE_SKILL_PATH,
         SELECTED_GATE_PYTHON_TEST_PATH,
+    )
+
+
+def selected_gate_reach_index() -> InfrastructureIndex:
+    """An index over a test-infrastructure package no executed test imports.
+
+    Generated changed paths carry no test sources, so every generated
+    test-infrastructure path is unreached or untraceable against it.
+    """
+
+    return build_infrastructure_index(
+        package=TEST_INFRASTRUCTURE_PACKAGE, module_sources={}, test_sources={}
     )
 
 
@@ -648,6 +660,14 @@ class RunObservation:
     runner_calls: tuple[tuple[str, ...], ...]
 
 
+@dataclass(frozen=True)
+class MissingOriginObservation:
+    """A selected-check run in a repository with no origin, beside the helper's own failure."""
+
+    run: RunObservation
+    helper_failure: str
+
+
 _CHILD_OUTPUT_BUDGET = (
     2 * len(PREFLIGHT_STEPS) + len(VALIDATION_STEPS) + len(TEST_STEPS)
 )
@@ -709,8 +729,13 @@ def unrelated_validation_source_path() -> str:
     )
 
 
-def missing_origin_observation() -> RunObservation:
-    """Run the production selected check in a repository with no origin."""
+def missing_origin_observation() -> MissingOriginObservation:
+    """Run the production selected check in a repository with no origin.
+
+    The canonical changeset-scope helper is also asked for the base ref in the
+    same repository, so the observation carries the failure text the helper
+    itself raises there.
+    """
 
     spawner = RecordingSpawner(exit_codes=[os.EX_OK])
     sink = io.StringIO()
@@ -722,11 +747,20 @@ def missing_origin_observation() -> RunObservation:
             sink=sink,
             repo=repo,
         )
-    return RunObservation(
-        exit_code=exit_code,
-        output=sink.getvalue(),
-        spawn_calls=tuple(spawner.spawn_calls),
-        runner_calls=(),
+        try:
+            CHANGESET_SCOPE.detect_base_ref(repo)
+        except CHANGESET_SCOPE.BaseRefNotConfiguredError as error:
+            helper_failure = str(error)
+        else:
+            raise RuntimeError("the helper resolved a base ref without an origin")
+    return MissingOriginObservation(
+        run=RunObservation(
+            exit_code=exit_code,
+            output=sink.getvalue(),
+            spawn_calls=tuple(spawner.spawn_calls),
+            runner_calls=(),
+        ),
+        helper_failure=helper_failure,
     )
 
 

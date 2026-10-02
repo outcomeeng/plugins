@@ -2,71 +2,43 @@
 
 from __future__ import annotations
 
+import fnmatch
+
 import pytest
 
-from outcomeeng.distribution.contracts import INSTRUCTION_BLOCK_ARGV
 from outcomeeng.distribution import agents as agent_conversion
 from outcomeeng.validation import (
-    ACTIONLINT_ARGV,
     CHECK_RECIPES,
     EVAL_LINKS_ARGV,
-    EVAL_PROMPTS_ARGV,
-    EVAL_TRIGGERS_ARGV,
-    FMT_CHECK_ARGV,
-    MYPY_ARGV,
-    PYRIGHT_ARGV,
     PREFLIGHT_STEPS,
     PYTEST_ARGV,
-    RUFF_CHECK_ARGV,
-    RUFF_FORMAT_ARGV,
-    SHELLCHECK_ARGV,
-    SPX_MARKDOWN_ARGV,
     TEST_STEPS,
     VALIDATION_STEPS,
 )
 from outcomeeng.validation.infrastructure_index import (
     InfrastructureReach,
     SPEC_TREE_ROOT,
-    index_test_infrastructure,
 )
 from outcomeeng.validation.selected_gate import (
+    PATH_CATEGORY_PATTERNS,
+    VALIDATION_LANES,
     ChangedPath,
-    EVAL_REASON,
-    EVIDENCE_LINK_REASON,
     FULL_GATE_REASON,
-    INSTRUCTION_BLOCK_REASON,
+    PathCategory,
     REAL_AGENT_CODEX_EXCLUSION,
-    REAL_AGENT_CODEX_INCLUDED_REASON,
-    REAL_AGENT_CODEX_TESTS,
-    MARKDOWN_REASON,
-    PYTHON_REASON,
     REACHED_TESTS_REASON,
     SHARED_TEST_INFRASTRUCTURE_REASON,
-    SKILL_REASON,
-    SKILL_STEP_LABELS,
     SelectedGatePlan,
     TEST_REASON,
     UNTRACEABLE_TEST_INFRASTRUCTURE_REASON,
-    WORKFLOW_REASON,
+    PYTHON_REASON,
     build_full_gate_plan,
     build_selected_gate_plan,
     deleted_paths_after_status_resolution,
 )
-from outcomeeng.validation import selected_gate as selection_source
 from outcomeeng_testing.generators.gate import (
-    SELECTED_GATE_EVAL_DEFINITION_PATH,
-    SELECTED_GATE_EVAL_WORKFLOW_PATH,
-    SELECTED_GATE_INSTRUCTION_BLOCK_SOURCE_PATH,
-    SELECTED_GATE_MARKDOWN_PATH,
-    SELECTED_GATE_PLUGIN_SCRIPT_PATH,
     SELECTED_GATE_PYTHON_SOURCE_PATH,
     SELECTED_GATE_PYTHON_TEST_PATH,
-    SELECTED_GATE_README_PATH,
-    SELECTED_GATE_SHARED_SOURCE_PATH,
-    SELECTED_GATE_SKILL_PATH,
-    SELECTED_GATE_SPX_CONFIG_PATH,
-    SELECTED_GATE_TEMPLATE_SCRIPT_PATH,
-    SELECTED_GATE_WORKFLOW_PATH,
     path_from_pattern,
 )
 from outcomeeng_testing.harnesses import gate as gate_harness
@@ -79,6 +51,7 @@ from outcomeeng_testing.harnesses.gate import (
     run_check_observation,
     selected_gate_branch_discovery_argv,
     selected_gate_changed_path_domain,
+    selected_gate_reach_index,
 )
 from outcomeeng_testing.harnesses.infrastructure_index import (
     conftest_reach_layout,
@@ -92,6 +65,10 @@ from outcomeeng_testing.harnesses.real_agent_selection import (
     run_full_check_observation,
 )
 
+FULL_SURFACE_REACH = frozenset(
+    {InfrastructureReach.SHARED, InfrastructureReach.UNTRACEABLE}
+)
+
 
 def _argvs(plan: SelectedGatePlan) -> tuple[tuple[str, ...], ...]:
     return tuple(item.step.argv for item in plan.selected_steps)
@@ -101,50 +78,90 @@ def _reasons(plan: SelectedGatePlan) -> tuple[str, ...]:
     return tuple(item.reason for item in plan.selected_steps)
 
 
-@pytest.mark.parametrize(
-    ("patterns", "required_argvs"),
-    (
-        (
-            selection_source.PYTHON_FORMAT_LINT_PATTERNS,
-            (RUFF_FORMAT_ARGV, RUFF_CHECK_ARGV),
-        ),
-        (selection_source.PYTHON_TYPECHECK_PATTERNS, (MYPY_ARGV, PYRIGHT_ARGV)),
-        (selection_source.MARKDOWN_PATTERNS, (FMT_CHECK_ARGV, SPX_MARKDOWN_ARGV)),
-        (selection_source.WORKFLOW_PATTERNS, (ACTIONLINT_ARGV, SHELLCHECK_ARGV)),
-        (selection_source.INSTRUCTION_BLOCK_PATTERNS, (INSTRUCTION_BLOCK_ARGV,)),
-        (selection_source.EVAL_TRIGGER_PATTERNS, (EVAL_TRIGGERS_ARGV,)),
-        (selection_source.EVAL_PROMPT_PATTERNS, (EVAL_PROMPTS_ARGV,)),
-        (selection_source.EVIDENCE_LINK_PATTERNS, (EVAL_LINKS_ARGV,)),
-        (
-            selection_source.SKILL_PATTERNS,
-            tuple(
-                step.argv
-                for step in VALIDATION_STEPS
-                if step.label in SKILL_STEP_LABELS
-            ),
-        ),
-    ),
-)
-def test_every_declared_path_category_selects_its_validation_lane(
-    patterns: tuple[str, ...], required_argvs: tuple[tuple[str, ...], ...]
+def _categories_of(path: str) -> frozenset[PathCategory]:
+    # The category patterns are shell-style globs; the standard library's glob
+    # matcher, not the selector's own classification, decides membership.
+    return frozenset(
+        category
+        for category, patterns in PATH_CATEGORY_PATTERNS.items()
+        if any(fnmatch.fnmatchcase(path, pattern) for pattern in patterns)
+    )
+
+
+def _selects_full_surface(path: str) -> bool:
+    categories = _categories_of(path)
+    return PathCategory.FULL_GATE in categories or (
+        PathCategory.TEST_INFRASTRUCTURE in categories
+        and selected_gate_reach_index().reach(path).kind in FULL_SURFACE_REACH
+    )
+
+
+def _expected_validation_steps(
+    paths: tuple[str, ...],
+) -> tuple[tuple[tuple[str, ...], str], ...]:
+    # Every lane of every category a path lies in contributes its steps, each
+    # carrying its lane's reason, in validation-step order.
+    reason_by_argv = {
+        argv: lane.reason
+        for path in paths
+        for category in _categories_of(path)
+        if category in VALIDATION_LANES
+        for lane in (VALIDATION_LANES[category],)
+        for argv in lane.argvs
+    }
+    return tuple(
+        (step.argv, reason_by_argv[step.argv])
+        for step in VALIDATION_STEPS
+        if step.argv in reason_by_argv
+    )
+
+
+def _validation_steps(
+    plan: SelectedGatePlan,
+) -> tuple[tuple[tuple[str, ...], str], ...]:
+    return tuple(
+        (item.step.argv, item.reason)
+        for item in plan.selected_steps
+        if item.step.argv[: len(PYTEST_ARGV)] != PYTEST_ARGV
+    )
+
+
+@pytest.mark.parametrize("category", tuple(PathCategory), ids=str)
+def test_every_category_path_selects_the_lanes_of_every_category_it_lies_in(
+    category: PathCategory,
 ) -> None:
-    for pattern in patterns:
-        with synthetic_repository() as repo:
-            plan = build_selected_gate_plan(
-                (path_from_pattern(pattern),),
-                test_infrastructure=index_test_infrastructure(repo.root),
-            )
+    for pattern in PATH_CATEGORY_PATTERNS[category]:
+        path = path_from_pattern(pattern)
 
-        selected_argvs = _argvs(plan)
-        assert set(required_argvs) <= set(selected_argvs)
-        validation_argvs = tuple(
-            step.argv for step in VALIDATION_STEPS if step.argv in selected_argvs
+        plan = build_selected_gate_plan(
+            (path,), test_infrastructure=selected_gate_reach_index()
         )
-        assert selected_argvs[: len(validation_argvs)] == validation_argvs
-        assert all(reason.strip() for reason in _reasons(plan))
+
+        assert plan.full_gate is _selects_full_surface(path), path
+        if not plan.full_gate:
+            assert _validation_steps(plan) == _expected_validation_steps((path,)), path
 
 
-@pytest.mark.parametrize("pattern", selection_source.PYTHON_ASSERTION_TEST_PATTERNS)
+def test_paths_of_every_lane_merge_their_lanes_in_validation_step_order() -> None:
+    paths = tuple(
+        path
+        for category in VALIDATION_LANES
+        for pattern in PATH_CATEGORY_PATTERNS[category]
+        for path in (path_from_pattern(pattern),)
+        if not _selects_full_surface(path)
+    )
+
+    plan = build_selected_gate_plan(
+        paths, test_infrastructure=selected_gate_reach_index()
+    )
+
+    assert plan.full_gate is False
+    assert _validation_steps(plan) == _expected_validation_steps(paths)
+
+
+@pytest.mark.parametrize(
+    "pattern", PATH_CATEGORY_PATTERNS[PathCategory.PYTHON_ASSERTION_TEST]
+)
 @pytest.mark.parametrize("deleted", (False, True))
 def test_every_assertion_path_category_maps_presence_to_targeted_execution(
     pattern: str, deleted: bool
@@ -161,7 +178,7 @@ def test_every_assertion_path_category_maps_presence_to_targeted_execution(
     assert (path in targets) is not deleted
 
 
-@pytest.mark.parametrize("pattern", selection_source.EVIDENCE_LINK_PATTERNS)
+@pytest.mark.parametrize("pattern", PATH_CATEGORY_PATTERNS[PathCategory.EVIDENCE_LINK])
 def test_every_evidence_link_path_category_selects_link_validation(
     pattern: str,
 ) -> None:
@@ -171,90 +188,6 @@ def test_every_evidence_link_path_category_selects_link_validation(
 
     assert EVAL_LINKS_ARGV in _argvs(inside)
     assert EVAL_LINKS_ARGV not in _argvs(outside)
-
-
-def test_a_python_source_path_selects_lint_and_type_steps() -> None:
-    plan = build_selected_gate_plan((SELECTED_GATE_PYTHON_SOURCE_PATH,))
-
-    assert plan.full_gate is False
-    assert _argvs(plan) == (RUFF_FORMAT_ARGV, RUFF_CHECK_ARGV, MYPY_ARGV, PYRIGHT_ARGV)
-    assert set(_reasons(plan)) == {PYTHON_REASON}
-
-
-def test_a_workflow_path_selects_the_workflow_linters() -> None:
-    plan = build_selected_gate_plan((SELECTED_GATE_WORKFLOW_PATH,))
-
-    assert plan.full_gate is False
-    assert _argvs(plan) == (ACTIONLINT_ARGV, SHELLCHECK_ARGV)
-    assert set(_reasons(plan)) == {WORKFLOW_REASON}
-
-
-def test_the_eval_workflow_selects_the_trigger_currency_check() -> None:
-    # The eval workflow carries the generated trigger blocks, so editing it
-    # selects the trigger currency check alongside the workflow linters. It
-    # carries no producer, so the prompt check stays unselected.
-    plan = build_selected_gate_plan((SELECTED_GATE_EVAL_WORKFLOW_PATH,))
-
-    assert plan.full_gate is False
-    assert _argvs(plan) == (ACTIONLINT_ARGV, SHELLCHECK_ARGV, EVAL_TRIGGERS_ARGV)
-    assert _reasons(plan) == (WORKFLOW_REASON, WORKFLOW_REASON, EVAL_REASON)
-
-
-def test_an_eval_definition_selects_both_currency_checks() -> None:
-    # An eval definition generates both the CI trigger list and, for a
-    # producer-coupled suite, the materialized prompt — so it selects both
-    # currency checks, alongside the markdown lane its `spx/**` path matches.
-    plan = build_selected_gate_plan((SELECTED_GATE_EVAL_DEFINITION_PATH,))
-
-    assert plan.full_gate is False
-    assert _argvs(plan) == (
-        FMT_CHECK_ARGV,
-        EVAL_TRIGGERS_ARGV,
-        EVAL_PROMPTS_ARGV,
-        SPX_MARKDOWN_ARGV,
-        EVAL_LINKS_ARGV,
-    )
-    assert _reasons(plan) == (
-        MARKDOWN_REASON,
-        EVAL_REASON,
-        EVAL_REASON,
-        MARKDOWN_REASON,
-        EVIDENCE_LINK_REASON,
-    )
-
-
-def test_combined_paths_merge_lanes_in_validation_step_order() -> None:
-    plan = build_selected_gate_plan(
-        (
-            SELECTED_GATE_PYTHON_SOURCE_PATH,
-            SELECTED_GATE_MARKDOWN_PATH,
-            SELECTED_GATE_WORKFLOW_PATH,
-        )
-    )
-
-    assert plan.full_gate is False
-    assert _argvs(plan) == (
-        FMT_CHECK_ARGV,
-        ACTIONLINT_ARGV,
-        SHELLCHECK_ARGV,
-        RUFF_FORMAT_ARGV,
-        RUFF_CHECK_ARGV,
-        MYPY_ARGV,
-        PYRIGHT_ARGV,
-        SPX_MARKDOWN_ARGV,
-        EVAL_LINKS_ARGV,
-    )
-    assert _reasons(plan) == (
-        MARKDOWN_REASON,
-        WORKFLOW_REASON,
-        WORKFLOW_REASON,
-        PYTHON_REASON,
-        PYTHON_REASON,
-        PYTHON_REASON,
-        PYTHON_REASON,
-        MARKDOWN_REASON,
-        EVIDENCE_LINK_REASON,
-    )
 
 
 def test_deleted_assertion_tests_never_select_pytest() -> None:
@@ -280,10 +213,7 @@ def test_deleted_assertion_tests_never_select_pytest() -> None:
     assert plan.selected_steps[-1].step.argv == (*PYTEST_ARGV, PYTEST_TARGET_ARG)
 
 
-@pytest.mark.parametrize(
-    "path",
-    selection_source.FULL_GATE_PATTERNS,
-)
+@pytest.mark.parametrize("path", PATH_CATEGORY_PATTERNS[PathCategory.FULL_GATE])
 def test_full_gate_paths_select_the_complete_recipe_set(path: str) -> None:
     plan = build_selected_gate_plan((path_from_pattern(path),))
 
@@ -295,128 +225,6 @@ def test_full_gate_paths_select_the_complete_recipe_set(path: str) -> None:
         for step in plan.steps
     ) == tuple(step.argv for step in (*VALIDATION_STEPS, *TEST_STEPS))
     assert set(_reasons(plan)) == {FULL_GATE_REASON}
-
-
-@pytest.mark.parametrize(
-    "path", (SELECTED_GATE_README_PATH, SELECTED_GATE_SPX_CONFIG_PATH)
-)
-def test_markdown_only_paths_select_the_markdown_lane(path: str) -> None:
-    plan = build_selected_gate_plan((path,))
-
-    assert plan.full_gate is False
-    assert _argvs(plan) == (FMT_CHECK_ARGV, SPX_MARKDOWN_ARGV)
-    assert set(_reasons(plan)) == {MARKDOWN_REASON}
-
-
-@pytest.mark.parametrize(
-    "path",
-    (
-        SELECTED_GATE_MARKDOWN_PATH,
-        SELECTED_GATE_EVAL_DEFINITION_PATH,
-        SELECTED_GATE_PYTHON_TEST_PATH,
-    ),
-)
-def test_spec_tree_paths_select_the_evidence_link_step(path: str) -> None:
-    plan = build_selected_gate_plan((path,))
-
-    assert plan.full_gate is False
-    reason_by_argv = {item.step.argv: item.reason for item in plan.selected_steps}
-    assert reason_by_argv[EVAL_LINKS_ARGV] == EVIDENCE_LINK_REASON
-
-
-@pytest.mark.parametrize(
-    "path",
-    (
-        SELECTED_GATE_README_PATH,
-        SELECTED_GATE_SPX_CONFIG_PATH,
-        SELECTED_GATE_SKILL_PATH,
-        SELECTED_GATE_WORKFLOW_PATH,
-        SELECTED_GATE_PYTHON_SOURCE_PATH,
-    ),
-)
-def test_paths_outside_the_spec_tree_never_select_the_evidence_link_step(
-    path: str,
-) -> None:
-    plan = build_selected_gate_plan((path,))
-
-    assert EVAL_LINKS_ARGV not in _argvs(plan)
-
-
-def test_a_skill_path_selects_skill_steps_with_the_prompt_check() -> None:
-    # An authored plugin file may be a producer for a producer-coupled eval
-    # prompt, so the prompt currency check joins the skill and markdown steps.
-    plan = build_selected_gate_plan((SELECTED_GATE_SKILL_PATH,))
-
-    expected = tuple(
-        step
-        for step in VALIDATION_STEPS
-        if step.label in SKILL_STEP_LABELS
-        or step.argv in {FMT_CHECK_ARGV, SPX_MARKDOWN_ARGV, EVAL_PROMPTS_ARGV}
-    )
-    assert plan.steps == expected
-    assert _reasons(plan) == tuple(
-        MARKDOWN_REASON
-        if step.argv in {FMT_CHECK_ARGV, SPX_MARKDOWN_ARGV}
-        else EVAL_REASON
-        if step.argv == EVAL_PROMPTS_ARGV
-        else SKILL_REASON
-        for step in expected
-    )
-
-
-def test_a_plugin_script_selects_skill_and_python_lint_steps() -> None:
-    plan = build_selected_gate_plan((SELECTED_GATE_PLUGIN_SCRIPT_PATH,))
-
-    expected = tuple(
-        step
-        for step in VALIDATION_STEPS
-        if step.label in SKILL_STEP_LABELS
-        or step.argv in {RUFF_FORMAT_ARGV, RUFF_CHECK_ARGV, EVAL_PROMPTS_ARGV}
-    )
-    assert plan.steps == expected
-    assert _reasons(plan) == tuple(
-        PYTHON_REASON
-        if step.argv in {RUFF_FORMAT_ARGV, RUFF_CHECK_ARGV}
-        else EVAL_REASON
-        if step.argv == EVAL_PROMPTS_ARGV
-        else SKILL_REASON
-        for step in expected
-    )
-
-
-def test_a_shared_fragment_selects_skill_and_markdown_steps() -> None:
-    # A shared fragment is inlined by the build; an eval names its producer by
-    # an authored `src/plugins/` path, so no shared-fragment edit stales a
-    # materialized prompt and the prompt check stays unselected here.
-    plan = build_selected_gate_plan((SELECTED_GATE_SHARED_SOURCE_PATH,))
-
-    expected = tuple(
-        step
-        for step in VALIDATION_STEPS
-        if step.label in SKILL_STEP_LABELS
-        or step.argv in {FMT_CHECK_ARGV, SPX_MARKDOWN_ARGV}
-    )
-    assert plan.steps == expected
-    assert _reasons(plan) == tuple(
-        MARKDOWN_REASON
-        if step.argv in {FMT_CHECK_ARGV, SPX_MARKDOWN_ARGV}
-        else SKILL_REASON
-        for step in expected
-    )
-
-
-def test_the_instruction_block_source_selects_the_currency_check() -> None:
-    plan = build_selected_gate_plan((SELECTED_GATE_INSTRUCTION_BLOCK_SOURCE_PATH,))
-
-    assert INSTRUCTION_BLOCK_ARGV in _argvs(plan)
-    assert (
-        next(
-            item.reason
-            for item in plan.selected_steps
-            if item.step.argv == INSTRUCTION_BLOCK_ARGV
-        )
-        == INSTRUCTION_BLOCK_REASON
-    )
 
 
 def test_changed_paths_collect_from_all_four_git_surfaces() -> None:
@@ -609,62 +417,12 @@ def test_the_gate_harness_shared_with_the_parent_node_selects_the_full_surface()
     assert set(_reasons(plan)) == {SHARED_TEST_INFRASTRUCTURE_REASON}
 
 
-def test_template_script_maps_to_skill_and_lint_steps() -> None:
-    # The template tree is an authored source root the generated-source
-    # declaration and the raw-token enforcement roots both name, so a change to
-    # a shipped template script has to reach the build, drift, and lint steps
-    # that carry it into every plugin's generated tree. An eval names its
-    # producer by an authored `src/plugins/` path, so a template edit stales no
-    # materialized prompt and the prompt check stays unselected.
-    plan = build_selected_gate_plan((SELECTED_GATE_TEMPLATE_SCRIPT_PATH,))
-
-    expected = tuple(
-        step
-        for step in VALIDATION_STEPS
-        if step.label in SKILL_STEP_LABELS
-        or step.argv in {RUFF_FORMAT_ARGV, RUFF_CHECK_ARGV}
-    )
-    assert plan.full_gate is False
-    assert plan.steps[:-1] == expected
-    assert plan.steps[-1].argv[: len(PYTEST_ARGV)] == PYTEST_ARGV
-    assert set(plan.steps[-1].argv[len(PYTEST_ARGV) :]) == set(REAL_AGENT_CODEX_TESTS)
-    assert plan.selected_steps[-1].reason == REAL_AGENT_CODEX_INCLUDED_REASON
-    assert _reasons(plan)[:-1] == tuple(
-        PYTHON_REASON
-        if step.argv in {RUFF_FORMAT_ARGV, RUFF_CHECK_ARGV}
-        else SKILL_REASON
-        for step in expected
-    )
-
-
-# Every changed-path category the selector owns other than agent definitions.
-NON_AGENT_DEFINITION_CATEGORIES = (
-    selection_source.FULL_GATE_PATTERNS,
-    selection_source.PYTHON_FORMAT_LINT_PATTERNS,
-    selection_source.PYTHON_TYPECHECK_PATTERNS,
-    selection_source.PYTHON_ASSERTION_TEST_PATTERNS,
-    selection_source.MARKDOWN_PATTERNS,
-    selection_source.WORKFLOW_PATTERNS,
-    selection_source.SKILL_PATTERNS,
-    selection_source.INSTRUCTION_BLOCK_PATTERNS,
-    selection_source.EVAL_TRIGGER_PATTERNS,
-    selection_source.EVAL_PROMPT_PATTERNS,
-    selection_source.EVIDENCE_LINK_PATTERNS,
-    selection_source.TEST_INFRASTRUCTURE_PATTERNS,
-)
-
-
-@pytest.mark.parametrize(
-    ("patterns", "agent_definition"),
-    (
-        (selection_source.AGENT_DEFINITION_PATTERNS, True),
-        *((patterns, False) for patterns in NON_AGENT_DEFINITION_CATEGORIES),
-    ),
-)
+@pytest.mark.parametrize("category", tuple(PathCategory), ids=str)
 def test_the_full_gate_wrapper_runs_real_agent_codex_tests_only_for_agent_definitions(
-    patterns: tuple[str, ...], agent_definition: bool
+    category: PathCategory,
 ) -> None:
-    for pattern in patterns:
+    agent_definition = category is PathCategory.AGENT_DEFINITION
+    for pattern in PATH_CATEGORY_PATTERNS[category]:
         plan = build_full_gate_plan((path_from_pattern(pattern),))
 
         assert plan.full_gate is True

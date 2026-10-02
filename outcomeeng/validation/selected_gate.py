@@ -5,9 +5,11 @@ from __future__ import annotations
 import fnmatch
 import importlib.util
 import sys
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
+from enum import StrEnum
 from pathlib import Path
+from types import MappingProxyType
 from typing import Final, Protocol, TextIO, cast
 
 from outcomeeng.validation._engine import run_check, run_recipe
@@ -103,8 +105,12 @@ REAL_AGENT_CODEX_EXCLUSION: Final = (
 )
 # The full gate runs in CI from a merge-commit checkout that carries no
 # `origin/HEAD`; its first parent is the base tip there and the previous commit
-# on a default-branch push.
+# on a default-branch push. The plan names the base it used, so a run that fell
+# back to the first parent says so before any step runs.
 FIRST_PARENT_BASE_REF: Final = "HEAD^"
+CHANGESET_BASE_LABEL: Final = "changeset base"
+FIRST_PARENT_BASE_NOTE: Final = "first parent; no remote default branch is configured"
+PLAN_LINE_INDENT: Final = "  "
 SHARED_TEST_INFRASTRUCTURE_REASON: Final = "shared test infrastructure changed"
 UNTRACEABLE_TEST_INFRASTRUCTURE_REASON: Final = (
     "test-infrastructure artifact reached by path changed"
@@ -211,15 +217,105 @@ INSTRUCTION_BLOCK_PATTERNS: Final = (
     "outcomeeng/distribution/instruction_block.py",
 )
 # Agent definitions: authored agent sources, their generated renderings, the
-# code that converts and emits them, and the shipped placement scripts.
+# code that converts and emits them, the repository installation code that
+# places and reconciles them in the selected agent home, and the shipped
+# placement scripts.
 AGENT_DEFINITION_PATTERNS: Final = (
     "src/plugins/*/agents/**",
     "dist/claude/*/agents/**",
     "dist/codex/*/skills/*/agents/**",
     "outcomeeng/distribution/agents.py",
     "outcomeeng/distribution/build.py",
+    "outcomeeng/distribution/installation.py",
     "src/templates/plugin/scripts/place_agents.py",
     "dist/*/*/skills/*-plugin/scripts/place_agents.py",
+)
+
+
+class PathCategory(StrEnum):
+    """Every changed-path category the selector classifies a path into."""
+
+    FULL_GATE = "full-gate"
+    TEST_INFRASTRUCTURE = "test-infrastructure"
+    PYTHON_FORMAT_LINT = "python-format-lint"
+    PYTHON_TYPECHECK = "python-typecheck"
+    PYTHON_ASSERTION_TEST = "python-assertion-test"
+    MARKDOWN = "markdown"
+    WORKFLOW = "workflow"
+    SKILL = "skill"
+    INSTRUCTION_BLOCK = "instruction-block"
+    EVAL_TRIGGER = "eval-trigger"
+    EVAL_PROMPT = "eval-prompt"
+    EVIDENCE_LINK = "evidence-link"
+    AGENT_DEFINITION = "agent-definition"
+
+
+# The planner classifies every changed path through this registry alone, so a
+# category exists for selection exactly when it has an entry here.
+PATH_CATEGORY_PATTERNS: Final[Mapping[PathCategory, tuple[str, ...]]] = (
+    MappingProxyType(
+        {
+            PathCategory.FULL_GATE: FULL_GATE_PATTERNS,
+            PathCategory.TEST_INFRASTRUCTURE: TEST_INFRASTRUCTURE_PATTERNS,
+            PathCategory.PYTHON_FORMAT_LINT: PYTHON_FORMAT_LINT_PATTERNS,
+            PathCategory.PYTHON_TYPECHECK: PYTHON_TYPECHECK_PATTERNS,
+            PathCategory.PYTHON_ASSERTION_TEST: PYTHON_ASSERTION_TEST_PATTERNS,
+            PathCategory.MARKDOWN: MARKDOWN_PATTERNS,
+            PathCategory.WORKFLOW: WORKFLOW_PATTERNS,
+            PathCategory.SKILL: SKILL_PATTERNS,
+            PathCategory.INSTRUCTION_BLOCK: INSTRUCTION_BLOCK_PATTERNS,
+            PathCategory.EVAL_TRIGGER: EVAL_TRIGGER_PATTERNS,
+            PathCategory.EVAL_PROMPT: EVAL_PROMPT_PATTERNS,
+            PathCategory.EVIDENCE_LINK: EVIDENCE_LINK_PATTERNS,
+            PathCategory.AGENT_DEFINITION: AGENT_DEFINITION_PATTERNS,
+        }
+    )
+)
+
+
+@dataclass(frozen=True)
+class ValidationLane:
+    """The validation steps one path category selects and the reason it gives."""
+
+    argvs: tuple[tuple[str, ...], ...]
+    reason: str
+
+
+SKILL_LANE_ARGVS: Final = tuple(
+    step.argv for step in VALIDATION_STEPS if step.label in SKILL_STEP_LABELS
+)
+# The validation steps each lane-bearing category selects. The full-gate,
+# test-infrastructure, assertion-test, and agent-definition categories select
+# no validation lane of their own: they decide the full surface or the pytest
+# step instead.
+VALIDATION_LANES: Final[Mapping[PathCategory, ValidationLane]] = MappingProxyType(
+    {
+        PathCategory.MARKDOWN: ValidationLane(
+            argvs=(FMT_CHECK_ARGV, SPX_MARKDOWN_ARGV), reason=MARKDOWN_REASON
+        ),
+        PathCategory.WORKFLOW: ValidationLane(
+            argvs=(ACTIONLINT_ARGV, SHELLCHECK_ARGV), reason=WORKFLOW_REASON
+        ),
+        PathCategory.PYTHON_FORMAT_LINT: ValidationLane(
+            argvs=(RUFF_FORMAT_ARGV, RUFF_CHECK_ARGV), reason=PYTHON_REASON
+        ),
+        PathCategory.PYTHON_TYPECHECK: ValidationLane(
+            argvs=(MYPY_ARGV, PYRIGHT_ARGV), reason=PYTHON_REASON
+        ),
+        PathCategory.SKILL: ValidationLane(argvs=SKILL_LANE_ARGVS, reason=SKILL_REASON),
+        PathCategory.INSTRUCTION_BLOCK: ValidationLane(
+            argvs=(INSTRUCTION_BLOCK_ARGV,), reason=INSTRUCTION_BLOCK_REASON
+        ),
+        PathCategory.EVAL_TRIGGER: ValidationLane(
+            argvs=(EVAL_TRIGGERS_ARGV,), reason=EVAL_REASON
+        ),
+        PathCategory.EVAL_PROMPT: ValidationLane(
+            argvs=(EVAL_PROMPTS_ARGV,), reason=EVAL_REASON
+        ),
+        PathCategory.EVIDENCE_LINK: ValidationLane(
+            argvs=(EVAL_LINKS_ARGV,), reason=EVIDENCE_LINK_REASON
+        ),
+    }
 )
 
 GIT_DIFF_BRANCH_ARGV_PREFIX: Final = (
@@ -428,8 +524,9 @@ def build_selected_gate_plan(
     if not normalized:
         return SelectedGatePlan(changed_paths=(), selected_steps=(), full_gate=False)
 
-    real_agent_codex = _matches_any(normalized, AGENT_DEFINITION_PATTERNS)
-    if _matches_any(normalized, FULL_GATE_PATTERNS):
+    categories = changed_path_categories(normalized)
+    real_agent_codex = PathCategory.AGENT_DEFINITION in categories
+    if PathCategory.FULL_GATE in categories:
         return _full_surface_plan(
             normalized, reason=FULL_GATE_REASON, real_agent_codex=real_agent_codex
         )
@@ -456,54 +553,12 @@ def build_selected_gate_plan(
                 )
             reached_tests.update(report.tests)
 
-    selected_argvs: set[tuple[str, ...]] = set()
     reasons: dict[tuple[str, ...], str] = {}
-    if _matches_any(normalized, MARKDOWN_PATTERNS):
-        markdown_argvs: tuple[tuple[str, ...], ...] = (
-            FMT_CHECK_ARGV,
-            SPX_MARKDOWN_ARGV,
-        )
-        for argv in markdown_argvs:
-            selected_argvs.add(argv)
-            reasons[argv] = MARKDOWN_REASON
-    if _matches_any(normalized, WORKFLOW_PATTERNS):
-        workflow_argvs: tuple[tuple[str, ...], ...] = (ACTIONLINT_ARGV, SHELLCHECK_ARGV)
-        for argv in workflow_argvs:
-            selected_argvs.add(argv)
-            reasons[argv] = WORKFLOW_REASON
-    if _matches_any(normalized, PYTHON_FORMAT_LINT_PATTERNS):
-        python_lint_argvs: tuple[tuple[str, ...], ...] = (
-            RUFF_FORMAT_ARGV,
-            RUFF_CHECK_ARGV,
-        )
-        for argv in python_lint_argvs:
-            selected_argvs.add(argv)
-            reasons[argv] = PYTHON_REASON
-    if _matches_any(normalized, PYTHON_TYPECHECK_PATTERNS):
-        python_typecheck_argvs: tuple[tuple[str, ...], ...] = (
-            MYPY_ARGV,
-            PYRIGHT_ARGV,
-        )
-        for argv in python_typecheck_argvs:
-            selected_argvs.add(argv)
-            reasons[argv] = PYTHON_REASON
-    if _matches_any(normalized, SKILL_PATTERNS):
-        for step in VALIDATION_STEPS:
-            if step.label in SKILL_STEP_LABELS:
-                selected_argvs.add(step.argv)
-                reasons[step.argv] = SKILL_REASON
-    if _matches_any(normalized, INSTRUCTION_BLOCK_PATTERNS):
-        selected_argvs.add(INSTRUCTION_BLOCK_ARGV)
-        reasons[INSTRUCTION_BLOCK_ARGV] = INSTRUCTION_BLOCK_REASON
-    if _matches_any(normalized, EVAL_TRIGGER_PATTERNS):
-        selected_argvs.add(EVAL_TRIGGERS_ARGV)
-        reasons[EVAL_TRIGGERS_ARGV] = EVAL_REASON
-    if _matches_any(normalized, EVAL_PROMPT_PATTERNS):
-        selected_argvs.add(EVAL_PROMPTS_ARGV)
-        reasons[EVAL_PROMPTS_ARGV] = EVAL_REASON
-    if _matches_any(normalized, EVIDENCE_LINK_PATTERNS):
-        selected_argvs.add(EVAL_LINKS_ARGV)
-        reasons[EVAL_LINKS_ARGV] = EVIDENCE_LINK_REASON
+    for category, lane in VALIDATION_LANES.items():
+        if category in categories:
+            for argv in lane.argvs:
+                reasons[argv] = lane.reason
+    selected_argvs = set(reasons)
 
     selected_steps = [
         SelectedGateStep(step=step, reason=reasons[step.argv])
@@ -563,7 +618,19 @@ def build_full_gate_plan(changed_paths: tuple[str, ...]) -> SelectedGatePlan:
     return _full_surface_plan(
         normalized,
         reason=FULL_CHECK_REASON,
-        real_agent_codex=_matches_any(normalized, AGENT_DEFINITION_PATTERNS),
+        real_agent_codex=PathCategory.AGENT_DEFINITION
+        in changed_path_categories(normalized),
+    )
+
+
+def changed_path_categories(paths: Sequence[str]) -> frozenset[PathCategory]:
+    """Return every category in which at least one of ``paths`` lies."""
+
+    candidates = tuple(paths)
+    return frozenset(
+        category
+        for category, patterns in PATH_CATEGORY_PATTERNS.items()
+        if _matches_any(candidates, patterns)
     )
 
 
@@ -672,18 +739,19 @@ def run_full_check(
 ) -> int:
     """Run the explicit full gate, selecting real-agent Codex tests by changeset."""
 
+    resolver = base_ref_resolver or resolve_full_gate_base_ref
+    resolved_base_ref = base_ref if base_ref is not None else resolver(repo)
     try:
         changed_paths = collect_changed_paths(
             repo,
-            base_ref=base_ref,
-            base_ref_resolver=base_ref_resolver or resolve_full_gate_base_ref,
+            base_ref=resolved_base_ref,
             runner=runner,
         )
     except GitDiscoveryError as exc:
         _write_git_discovery_error(sink, exc)
         return GIT_DISCOVERY_FAILURE_EXIT_CODE
     plan = build_full_gate_plan(changed_paths)
-    _write_plan(sink, plan)
+    _write_plan(sink, plan, changeset_base=resolved_base_ref)
     return run_check(spawner=spawner, sink=sink, recipes=_full_surface_recipes(plan))
 
 
@@ -722,15 +790,38 @@ def _load_changeset_scope() -> ChangesetScopeModule:
     return cast("ChangesetScopeModule", module)
 
 
-def _write_plan(sink: TextIO, plan: SelectedGatePlan) -> None:
-    sink.write(f"{SELECTED_CHECK_PLAN_HEADER}\n")
+def render_plan(plan: SelectedGatePlan, *, changeset_base: str | None = None) -> str:
+    """Return the plan text the gate prints before it runs any step.
+
+    ``changeset_base`` names the ref the changed paths were discovered
+    against; a first-parent fallback carries a note saying why.
+    """
+
+    lines = [SELECTED_CHECK_PLAN_HEADER]
+    if changeset_base is not None:
+        note = (
+            f" ({FIRST_PARENT_BASE_NOTE})"
+            if changeset_base == FIRST_PARENT_BASE_REF
+            else ""
+        )
+        lines.append(
+            f"{PLAN_LINE_INDENT}{CHANGESET_BASE_LABEL}: {changeset_base}{note}"
+        )
     if not plan.changed_paths and not plan.full_gate:
-        sink.write(f"No gate steps selected: {NO_CHANGED_PATHS_REASON}.\n")
-        sink.flush()
-        return
-    for item in plan.selected_steps:
-        sink.write(f"  {item.step.label}: {item.reason}\n")
-    sink.write(f"  {plan.real_agent_codex_reason}\n")
+        lines.append(f"No gate steps selected: {NO_CHANGED_PATHS_REASON}.")
+        return "\n".join(lines) + "\n"
+    lines.extend(
+        f"{PLAN_LINE_INDENT}{item.step.label}: {item.reason}"
+        for item in plan.selected_steps
+    )
+    lines.append(f"{PLAN_LINE_INDENT}{plan.real_agent_codex_reason}")
+    return "\n".join(lines) + "\n"
+
+
+def _write_plan(
+    sink: TextIO, plan: SelectedGatePlan, *, changeset_base: str | None = None
+) -> None:
+    sink.write(render_plan(plan, changeset_base=changeset_base))
     sink.flush()
 
 
@@ -752,11 +843,15 @@ def _matches_any(paths: tuple[str, ...], patterns: tuple[str, ...]) -> bool:
 
 
 def _is_python_assertion_test(path: str) -> bool:
-    return _matches_any((path,), PYTHON_ASSERTION_TEST_PATTERNS)
+    return _matches_any(
+        (path,), PATH_CATEGORY_PATTERNS[PathCategory.PYTHON_ASSERTION_TEST]
+    )
 
 
 def _is_test_infrastructure_path(path: str) -> bool:
-    return _matches_any((path,), TEST_INFRASTRUCTURE_PATTERNS)
+    return _matches_any(
+        (path,), PATH_CATEGORY_PATTERNS[PathCategory.TEST_INFRASTRUCTURE]
+    )
 
 
 def _changed_path_entries_from_output(

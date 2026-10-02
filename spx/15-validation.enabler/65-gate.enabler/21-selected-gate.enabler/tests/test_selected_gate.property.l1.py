@@ -8,19 +8,20 @@ from outcomeeng_testing.harnesses.gate import (
     SELECTED_GATE_PROPERTY_SEED,
     captured_property_failure_notes,
     selected_gate_property,
+    selected_gate_reach_index,
 )
 
 
 @selected_gate_property
 def _selection_is_order_and_duplication_insensitive(paths: list[str]) -> None:
-    forward = build_selected_gate_plan(tuple(paths))
-    reverse = build_selected_gate_plan(tuple(reversed(paths * 2)))
+    index = selected_gate_reach_index()
 
-    assert forward.changed_paths == reverse.changed_paths
-    assert forward.full_gate == reverse.full_gate
-    assert tuple(item.step.argv for item in forward.selected_steps) == tuple(
-        item.step.argv for item in reverse.selected_steps
+    forward = build_selected_gate_plan(tuple(paths), test_infrastructure=index)
+    reverse = build_selected_gate_plan(
+        tuple(reversed(paths * 2)), test_infrastructure=index
     )
+
+    assert forward == reverse
 
 
 def test_selection_is_deterministic_for_path_order_and_duplicates() -> None:

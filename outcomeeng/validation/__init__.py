@@ -20,6 +20,7 @@ from outcomeeng.validation._engine import (
     PHASE_PREFLIGHT,
     PHASE_RECIPE,
     POST_KILL_REAP_ATTEMPTS,
+    RECIPE_HEADER_PREFIX,
     RUN_FAIL_STATUS,
     RUN_PASS_STATUS,
     SIGNAL_GRACE_SECONDS,
@@ -44,6 +45,7 @@ from outcomeeng.validation._engine import (
     STEP_PASS_STATUS,
     run,
     run_check,
+    recipe_header,
     run_recipe,
     terminate_process_group,
 )
@@ -133,6 +135,7 @@ __all__ = [
     "RUFF_CHECK_ARGV",
     "RUFF_FORMAT_ARGV",
     "RECIPE_CHECK",
+    "RECIPE_HEADER_PREFIX",
     "RECIPE_CHECK_FULL",
     "RECIPE_AD_HOC",
     "RECIPE_TEST",
@@ -184,6 +187,7 @@ __all__ = [
     "run",
     "run_check",
     "run_full_check",
+    "recipe_header",
     "run_recipe",
     "run_selected_check",
 ]

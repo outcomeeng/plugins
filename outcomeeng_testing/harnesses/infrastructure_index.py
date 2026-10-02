@@ -1,14 +1,17 @@
-"""Synthetic repositories for static import-index evidence.
+"""Synthetic repositories and source sets for static import-index evidence.
 
 The harness writes real files into a temporary repository — a
 test-infrastructure package, executed tests under spec nodes, a conftest —
-and returns the repository-relative paths it wrote. The linked test builds
-the index and owns every predicate over it.
+and returns the repository-relative paths it wrote. For generated import
+chains it composes the same layout as in-memory source text, so the property
+exercises transitive closure over parsed import edges without filesystem
+wiring per generated case. The linked test builds the index and owns every
+predicate over it.
 """
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -65,11 +68,11 @@ class SyntheticRepository:
     def write_test(self, node: str, name: str, source: str) -> str:
         """Write an executed test under ``node``; return its repository-relative path."""
 
-        relative = Path(node) / TESTS_DIRECTORY_NAME / f"test_{name}.scenario.l1.py"
+        relative = executed_test_path(node, name)
         target = self.root / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(source, encoding="utf-8")
-        return relative.as_posix()
+        return relative
 
     def write_conftest(self, source: str) -> str:
         """Write the repository-root conftest; return its repository-relative path."""
@@ -89,6 +92,14 @@ class SyntheticRepository:
         """Build the static import index over the repository."""
 
         return index_test_infrastructure(self.root, package=self.package)
+
+
+def executed_test_path(node: str, name: str) -> str:
+    """Return the repository-relative path of executed test ``name`` under ``node``."""
+
+    return (
+        Path(node) / TESTS_DIRECTORY_NAME / f"test_{name}.scenario.l1.py"
+    ).as_posix()
 
 
 @contextmanager
@@ -224,32 +235,37 @@ INDEX_PROPERTY_EXAMPLES: Final = 40
 
 
 @dataclass(frozen=True)
-class ChainLayout:
-    """An import chain of modules, first to last, and the test importing the first."""
+class ChainSources:
+    """An import chain as in-memory source text, and the test importing its first module."""
 
+    package: str
     modules: tuple[str, ...]
     test: str
-    index: InfrastructureIndex
+    module_sources: Mapping[str, str]
+    test_sources: Mapping[str, str]
 
 
-def chain_layout(repo: SyntheticRepository, chain: tuple[str, ...]) -> ChainLayout:
-    """Write modules where each imports the next and a test importing the first."""
+def chain_sources(
+    chain: tuple[str, ...], package: str = TEST_INFRASTRUCTURE_PACKAGE
+) -> ChainSources:
+    """Compose modules where each imports the next and a test importing the first."""
 
-    modules = tuple(f"{repo.package}.{HARNESSES_SUBPACKAGE}.{name}" for name in chain)
-    for position, name in enumerate(chain):
+    harnesses = f"{package}.{HARNESSES_SUBPACKAGE}"
+    modules = tuple(f"{harnesses}.{name}" for name in chain)
+    module_sources = {package: "", harnesses: ""}
+    for position, module in enumerate(modules):
         following = chain[position + 1 :]
-        source = (
-            f"from {repo.package}.{HARNESSES_SUBPACKAGE} import {following[0]}\n"
-            if following
-            else ""
+        module_sources[module] = (
+            f"from {harnesses} import {following[0]}\n" if following else ""
         )
-        repo.write_module(modules[position], source)
-    test = repo.write_test(
-        FIRST_NODE,
-        "chain",
-        f"from {repo.package}.{HARNESSES_SUBPACKAGE} import {chain[0]}\n",
+    test = executed_test_path(FIRST_NODE, "chain")
+    return ChainSources(
+        package=package,
+        modules=modules,
+        test=test,
+        module_sources=module_sources,
+        test_sources={test: f"from {harnesses} import {chain[0]}\n"},
     )
-    return ChainLayout(modules=modules, test=test, index=repo.index())
 
 
 def index_property(test_func: Callable[..., None]) -> Callable[[], None]:
