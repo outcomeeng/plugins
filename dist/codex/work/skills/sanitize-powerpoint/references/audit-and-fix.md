@@ -109,7 +109,7 @@ Present every color finding and convert only on explicit, per-color approval.
 
 ## Dimension 5 — Layout naming
 
-Detection: collect every layout `<p:cSld name>`. Infer the deck's dominant pattern — most often `<Type> | <MasterName>`, where `<MasterName>` is the owning master's theme name. Flag layouts that deviate, and any `1_`-prefixed dedup artifact.
+Detection: collect every layout `<p:cSld name>`. Flag any `1_`-prefixed dedup artifact. Within a master where at least one layout name ends in `| <theme name>` — the owning master's theme name — flag every layout name that does not. The script proposes no names.
 
 Fix — rewrite the display name:
 
@@ -127,7 +127,6 @@ The name is display-only — no slide or master references it, so a rename canno
 Detection:
 
 - Masters / layouts used by zero slides — walk the cascade, mark every layout a slide reaches and every master those layouts belong to; the unmarked remainder is unused.
-- Themes referenced by no master, notes master, or handout master.
 - `docMetadata/LabelInfo.xml` — a sensitivity label.
 - `ppt/webextensions/` — Office add-in task panes.
 

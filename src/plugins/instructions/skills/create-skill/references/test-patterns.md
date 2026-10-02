@@ -1,3 +1,16 @@
+<contents>
+
+- `<overview>` — what skill testing covers
+- `<evaluation_driven_development>` — writing evaluations before the skill
+- `<case_contract>` — the shape of one test case
+- `<scenario_selection>` — choosing scenarios
+- `<fresh_context_testing>` — testing in a fresh context
+- `<multi_model_and_runtime_coverage>` — coverage across models and agents
+- `<feedback_loop>` — turning results into revisions
+- `<success_criteria>` — when testing is complete
+
+</contents>
+
 <overview>
 
 Develop behavior-producing skills from representative evaluations and fresh-context use. Establish the failure before adding extensive guidance, then keep only content that changes the observed result.

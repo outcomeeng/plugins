@@ -1,3 +1,16 @@
+<contents>
+
+- `<overview>` — what reusable skill design covers
+- `<knowledge_model>` — the knowledge a reusable skill encodes
+- `<varies_and_constant>` — separating what varies from what stays constant
+- `<domain_examples>` — worked domain examples
+- `<abstraction_levels>` — choosing the abstraction level
+- `<clarification_design>` — designing clarification questions
+- `<validation>` — checks for a reusable skill
+- `<anti_patterns>` — reusability failures to avoid
+
+</contents>
+
 <overview>
 
 Create reusable skills by separating stable domain knowledge from choices that vary per request. Encode stable rules and procedures; resolve variable inputs through repository truth or focused operator questions.
