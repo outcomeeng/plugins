@@ -24,6 +24,7 @@ The spec-tree plugin's only runtime hook is a `SessionStart` hook that delegates
 
 - The spec-tree plugin's `hooks.json` declares exactly one hook event — `SessionStart` — whose command delegates to `spx hook run session-start` and names no plugin-shipped script path ([test](tests/test_agent_environment.conformance.l1.py))
 
-### Audit
+### Compliance
 
 - ALWAYS: the `SessionStart` hook delegates session-identity, project-dir, and worktree-occupancy work to the `spx` CLI hook runner and embeds no `.spx/`, git, transcript, or session logic of its own; on the disabled-or-absent path it exits with a valid empty result, per `spx/21-spec-tree.enabler/15-hook-state-delegation.adr.md` ([audit])
+- ALWAYS: the `SessionStart` hook entry declares a 30-second timeout, the bound inside which `spx hook run session-start` finishes under the host load an orchestrated worktree pool produces, per `spx/15-hook-safety.pdr.md` ([audit])
