@@ -1,6 +1,6 @@
 ---
-model: "opus"
-effort: "medium"
+model: "sonnet"
+effort: "high"
 name: change-executor
 description: >-
   ALWAYS select at session start when an agent session executes one claimed Executable Change as its Executor through `/execute-change`.
