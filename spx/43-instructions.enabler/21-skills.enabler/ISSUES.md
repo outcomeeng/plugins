@@ -303,3 +303,19 @@ Source: `instructions:skill-auditor` finding `f-015`, rule
 **Impact**: dprint `markup_fmt` may rewrite the examples, and fence boundaries are ambiguous to a reader.
 
 **Settlement condition**: every pseudo-XML example uses a `text` fence with matched delimiters; one typed skill audit raises no such finding.
+
+## `skill-standards` describes the context that loads it
+
+**Evidence**: `instructions:skill-auditor` warning f-010 (rule `caller_independence`) on `src/plugins/instructions/skills/skill-standards/SKILL.md:22` at head `8e631614b562ec5edf05c0e4c80a38625ada90d7`: `<repo_local_overlay>` opens "When another skill loads this reference inside a repository", and line 18 describes its callers, while the same skill's caller-independence rule bars a skill from naming or describing its caller or invocation context.
+
+**Impact**: the canonical standard does not hold its own rule, so an auditor can cite it as a counterexample.
+
+**Settlement condition**: the overlay rule and the reference note state their behavior without naming who loads the skill; one typed skill audit raises no `caller_independence` finding against them.
+
+## `audit-skill`'s annotated examples grade in a vocabulary the run does not record
+
+**Evidence**: the built `instructions:skill-auditor` run `2026-10-03_22-58-55-808-4bb7d31783f5` on `src/plugins/instructions/skills/audit-skill` at head `8e631614b562ec5edf05c0e4c80a38625ada90d7` raised debt findings (rule `severity-vocabulary-mismatch`) against `references/operational-effectiveness-examples.md` lines 5, 31, 56, 95 and `references/xml-structure-examples.md` lines 5, 31, 53, 88, 116, 130: the examples flag violations as critical or recommendation, while `SKILL.md` records only the `blocking` and `debt` severities and states no mapping.
+
+**Impact**: an auditor reading an example grades by a label the run cannot record and maps it to a severity by its own judgment.
+
+**Settlement condition**: the examples use `blocking` and `debt`, or `SKILL.md` states the mapping; one typed skill audit of `audit-skill` raises no `severity-vocabulary-mismatch` finding.

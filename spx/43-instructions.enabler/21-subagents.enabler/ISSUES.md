@@ -260,3 +260,18 @@ execution evidence.
 both harnesses at a location the auditor reads, or an exact-definition minimal isolated
 invocation of each definition, and one `subagent-auditor` run on each definition raises no
 `f-002` class finding.
+
+## The instructions auditors' descriptions read as launch triggers
+
+**Evidence:** `instructions:subagent-auditor` warning `f-003` (rule
+`description-invites-inferred-launch`) on `src/plugins/instructions/agents/skill-auditor.md`
+lines 3-5 at head `8e631614b562ec5edf05c0e4c80a38625ada90d7`: the description is directive task-pattern wording ("ALWAYS invoke
+when auditing, reviewing, or evaluating SKILL.md files ..."), while `/subagent-standards`
+`<invocation>` bars turning a description or task pattern into a launch request.
+`src/plugins/instructions/agents/subagent-auditor.md` carries the same form.
+
+**Impact:** the wording invites a launch on user phrasing rather than on an active skill's
+explicit instruction.
+
+**Settlement condition:** both descriptions state the role and the calling-skill condition
+in passive form, and one `subagent-auditor` run on each raises no such finding.
