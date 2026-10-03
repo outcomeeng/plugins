@@ -8,9 +8,13 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 ## 0.19.4
 
+### Breaking
+
+- **`/audit-skill` and `/audit-subagent` take a JSON argument.** Each takes one JSON object carrying the target path and the run-driver identity in place of a bare path; a bare path, an absent object, or a malformed run-driver identity returns a `BLOCKED` diagnostic before any run starts. The `skill-auditor` and `subagent-auditor` agents supply that object from the target they receive.
+
 ### Changed
 
-- **The skill and subagent audits record their verdicts as sealed verification runs.** `/audit-skill` and `/audit-subagent` take a JSON argument carrying the target path and the run-driver identity, record their scope units and findings through `spx verification run`, and return the run token with the rendered projection, whose terminal status `approved` or `rejected` is the verdict; a `blocking` or a `debt` finding rejects the run, and a refused payload or finish returns a `BLOCKED` diagnostic. `/audit-skill` records one unit for the bundle and one per bundle file; `/audit-subagent` records one unit for the definition and one per governing declaration it read. The `skill-auditor` and `subagent-auditor` agents relay the token and projection unchanged, the auditor skeleton and `/create-skill`'s auditor template admit a sealed run as the verdict format, `/create-skill` accepts a skill only on a sealed `approved` run, and `/skill-standards` admits the `spx verification run` journal verbs in an audit skill's grants.
+- **The skill and subagent audits record their verdicts as sealed verification runs.** `/audit-skill` and `/audit-subagent` record their scope units and findings through `spx verification run`, and return the run token with the rendered projection, whose terminal status `approved` or `rejected` is the verdict; a `blocking` or a `debt` finding rejects the run, and a refused payload or finish returns a `BLOCKED` diagnostic. `/audit-skill` records one unit for the bundle and one per bundle file; `/audit-subagent` records one unit for the definition and one per governing declaration it read. The `skill-auditor` and `subagent-auditor` agents relay the token and projection unchanged, the auditor skeleton and `/create-skill`'s auditor template admit a sealed run as the verdict format, `/create-skill` accepts a skill only on a sealed `approved` run, and `/skill-standards` admits the `spx verification run` journal verbs in an audit skill's grants.
 
 ## 0.19.3
 
