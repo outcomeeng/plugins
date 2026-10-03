@@ -27,18 +27,18 @@ A `### Testing` rule's assertion-type tag is chosen from the rule's claim shape 
 
 ## Assertions
 
-- Given a composed language-architecture verdict with malformed fields, a different target, missing required concern rows, or an inconsistent overall result, when the ADR audit consumes it, then the ADR verdict rejects it as `language-result-invalid` without accepting partial concern coverage.
+- Given a composed language-architecture verdict with malformed fields, a different target, missing required concern rows, or an inconsistent overall result, when the ADR audit consumes it, then the ADR audit run records a `language-result-invalid` finding and accepts no partial concern coverage.
 - Given an ADR with specific untagged rules directly under `## Verification`, alone or alongside valid routed subsections, when its declaration is audited, then absent draft tags and subsections cause no finding and all other declaration-quality checks remain applicable.
-- Given an ADR with an untagged rule inside a routed verification subsection, when audited, then the verdict rejects that rule as `invalid-tag`.
+- Given an ADR with an untagged rule inside a routed verification subsection, when audited, then the run records an `invalid-tag` finding against that rule.
 - NEVER: approval of an ADR declaration establishes that its untagged rules have evidence or that the governed implementation complies.
 
 ### Scenarios
 
-- Given an ADR missing a required section, when audited by `/audit-adr`, then the verdict is REJECT with finding category "missing-section" ([eval](evals/structure/eval.toml))
-- Given an ADR with temporal language in any section, when audited by `/audit-adr`, then the verdict is REJECT with finding category "temporal-voice" ([eval](evals/voice/eval.toml))
-- Given an ADR whose `### Testing` compliance-type rule carries a bare mechanism tag instead of an assertion-type tag, when audited by `/audit-adr`, then the verdict is REJECT with finding category "invalid-tag" ([eval](evals/tag-validity/eval.toml))
-- Given an ADR whose `### Testing` rule tags a universal claim (ALWAYS/NEVER) as `scenario`, when audited by `/audit-adr`, then the verdict is REJECT with finding category "assertion-type-mismatch" ([eval](evals/tag-validity/eval.toml))
-- Given an ADR where all three properties hold, when audited by `/audit-adr`, then the verdict is APPROVED ([eval](evals/structure/eval.toml))
+- Given an ADR missing a required section, when audited by `/audit-adr`, then the sealed audit run's terminal status is `rejected` with a finding whose rule is `missing-section` ([eval](evals/structure/eval.toml))
+- Given an ADR with temporal language in any section, when audited by `/audit-adr`, then the sealed audit run's terminal status is `rejected` with a finding whose rule is `temporal-voice` ([eval](evals/voice/eval.toml))
+- Given an ADR whose `### Testing` compliance-type rule carries a bare mechanism tag instead of an assertion-type tag, when audited by `/audit-adr`, then the sealed audit run's terminal status is `rejected` with a finding whose rule is `invalid-tag` ([eval](evals/tag-validity/eval.toml))
+- Given an ADR whose `### Testing` rule tags a universal claim (ALWAYS/NEVER) as `scenario`, when audited by `/audit-adr`, then the sealed audit run's terminal status is `rejected` with a finding whose rule is `assertion-type-mismatch` ([eval](evals/tag-validity/eval.toml))
+- Given an ADR where all three properties hold, when audited by `/audit-adr`, then the sealed audit run's terminal status is `approved` ([eval](evals/structure/eval.toml))
 
 ### Compliance
 
@@ -46,4 +46,5 @@ A `### Testing` rule's assertion-type tag is chosen from the rule's claim shape 
 - ALWAYS: judge section structure, atemporal voice, and tag validity from the canonical decision template, never from a transcribed copy of it ([audit])
 - ALWAYS: compose language-specific ADR concerns by invoking `audit-{lang}-architecture` for the language detected in scope, rather than dispatching a separate language-specific auditor agent ([audit])
 - ALWAYS: verify each `### Testing` rule's assertion type fits the claim's quantifier per the `/test` router — a universal is never `scenario`; reject a type the router would not produce, without relitigating a choice the router leaves open ([audit])
+- ALWAYS: `/audit-adr` records its audit through `spx verification run` on a file scope anchored on the ADR path: one root unit with `auditKind` `adr`, one child per evidence-model property and per composed language concern, and every finding. It returns the run token and the rendered projection, or a blocked diagnostic when spx refuses a recorded payload or the finish, and the `adr-auditor` wrapper passes the raw target and its run-driver identity and relays them unchanged ([audit])
 - NEVER: classify ADR content as product-behavior-versus-architecture — an ADR's content is architecture by definition; that classification is the PDR audit's concern ([audit])
