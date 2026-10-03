@@ -40,7 +40,7 @@ A run that cannot complete returns:
 ```text
 BLOCKED
 runToken: {{exact token or not-started}}
-command: {{exact failed operation}}
+command: {{exact failed operation, or request for a failure before the run starts}}
 exitCode: {{exact exit code or none}}
 stderr: {{exact stderr or none}}
 judgedFindings: {{every finding judged before the stop}}

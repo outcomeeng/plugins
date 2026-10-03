@@ -52,7 +52,7 @@ Context placement, agent selection, and dispatch policy belong to the caller. A 
 
 Every Codex SKILL.md starts with YAML frontmatter and uses only fields accepted by Codex's current skill validator. `name` matches the skill directory, `description` states the selection contract, and tool restrictions grant only capabilities the workflow needs. Do not project Claude-only visibility, preload, heartbeat, hook, or invocation semantics onto Codex fields.
 
-Reference skills stay hidden from ordinary user selection while remaining available to composed workflows through Codex's documented skill invocation surface. Audit skills remain read-only. A field or reachability behavior without a documented Codex contract is omitted.
+Reference skills stay hidden from ordinary user selection while remaining available to composed workflows through Codex's documented skill invocation surface. Audit skills change no file beyond the `spx verification run` journal their own verbs write. A field or reachability behavior without a documented Codex contract is omitted.
 
 Read `${SKILL_DIR}/references/command-capabilities.md` before authoring arguments, dynamic context, tool restrictions, or file references for Codex.
 

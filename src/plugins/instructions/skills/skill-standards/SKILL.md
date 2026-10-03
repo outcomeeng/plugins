@@ -63,7 +63,7 @@ Every SKILL.md starts with YAML frontmatter. The canonical catalog of supported 
 | `when_to_use`              | No          | Extra trigger phrases or example requests appended to `description` in the skill listing. Shares the 1,536-char cap.                                                                                                              |
 | `argument-hint`            | No          | Free-text hint shown during `/` autocomplete (e.g. `[issue-number]`).                                                                                                                                                             |
 | `arguments`                | No          | Named positional arguments for `$name` substitution in the body. Space-separated string or YAML list; names map to argument positions in order.                                                                                   |
-| `allowed-tools`            | No          | Tools Claude may use without per-call approval while the skill is active. Space-separated string or YAML list. Restrict for audit (read-only) and reference skills.                                                               |
+| `allowed-tools`            | No          | Tools Claude may use without per-call approval while the skill is active. Space-separated string or YAML list. Restrict for audit and reference skills.                                                                           |
 | `disable-model-invocation` | No          | `true` to **block programmatic invocation entirely** — Claude cannot load the skill, including via the Skill tool, and the skill cannot be preloaded into subagents. Use for `/deploy`-style user-only commands. Default `false`. |
 | `user-invocable`           | No          | `false` to hide from the `/` autocomplete menu while keeping Claude able to invoke via the Skill tool. Description stays in context. Use for reference skills that other skills load programmatically. Default `true`.            |
 | `model`                    | Forbidden   | Skills retain the invoking session's configuration, including when a configured subagent invokes the skill.                                                                                                                       |
@@ -102,7 +102,7 @@ Audit skills (`audit-*`) must add `allowed-tools: Read, Grep, Glob` and only the
 
 Every Codex SKILL.md starts with YAML frontmatter and uses only fields accepted by Codex's current skill validator. `name` matches the skill directory, `description` states the selection contract, and tool restrictions grant only capabilities the workflow needs. Do not project Claude-only visibility, preload, heartbeat, hook, or invocation semantics onto Codex fields.
 
-Reference skills stay hidden from ordinary user selection while remaining available to composed workflows through Codex's documented skill invocation surface. Audit skills remain read-only. A field or reachability behavior without a documented Codex contract is omitted.
+Reference skills stay hidden from ordinary user selection while remaining available to composed workflows through Codex's documented skill invocation surface. Audit skills change no file beyond the `spx verification run` journal their own verbs write. A field or reachability behavior without a documented Codex contract is omitted.
 
 Read `${CLAUDE_SKILL_DIR}/references/command-capabilities.md` before authoring arguments, dynamic context, tool restrictions, or file references for Codex.
 
@@ -188,7 +188,7 @@ description: >-
 
 **Protocol and loop-body skills** that a parent skill loads, or that a timer fires by exact name (a heartbeat re-entry target), keep a passive description while staying user-invocable — they are never reached by description-match, so a directive description would only cause false auto-activations. See the gate-by-role rules in `<frontmatter>`.
 
-**Audit skills** describe the audit they perform: the subject, judgment, and distinguishing criteria. Their descriptions contain no routing, dispatch, preload, agent, or execution-context statement. Audit skills stay model-invocable, carry read-only `allowed-tools`, and never use `disable-model-invocation`.
+**Audit skills** describe the audit they perform: the subject, judgment, and distinguishing criteria. Their descriptions contain no routing, dispatch, preload, agent, or execution-context statement. Audit skills stay model-invocable, carry the `allowed-tools` `<frontmatter>` names for them, and never use `disable-model-invocation`.
 
 ```yaml
 description: >-

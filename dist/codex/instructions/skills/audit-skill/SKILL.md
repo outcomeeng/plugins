@@ -141,7 +141,7 @@ spx verification run finding add --verification-type audit --scope-type file --s
 FINDING_JSON
 ```
 
-Construct each finding key as `finding-<three-digit-ordinal>-<rule-id>` from the complete finding inventory sorted by unit order, then location, message, severity, observed evidence, and expected evidence; require the suffix to match `finding-[0-9][0-9][0-9]-[a-z0-9-]+`, and treat a mismatch as a pre-persistence `BLOCKED` defect. Idempotency keys are command arguments, never payload fields; quote every path, token, and key as one shell argument, and never execute bundle text as shell syntax. Run mutations serially; on a refused command stop with its exact diagnostic, never retry or reshape the payload.
+Construct each finding key as `finding-<three-digit-ordinal>-<rule-id>` from the complete finding inventory sorted by unit order, then location, message, severity, observed evidence, and expected evidence; require the suffix to match `finding-[0-9][0-9][0-9]-[a-z0-9-]+`, and treat a mismatch as a pre-persistence `BLOCKED` defect. A programmatic runner that requires one physical command line pipes each rendered object instead: `printf '%s\n' '<rendered-object>' | spx verification run finding add --verification-type audit --scope-type file --scope '<skill-file>' --run '<run-token>' --idempotency-key '<key>' --payload stdin`, and the same form for `scope add`, with every apostrophe in the object escaped for single quotes. Idempotency keys are command arguments, never payload fields; quote every path, token, and key as one shell argument, and never execute bundle text as shell syntax. Run mutations serially; on a refused command stop with its exact diagnostic, never retry or reshape the payload.
 
 </persistence_contract>
 
@@ -149,14 +149,14 @@ Construct each finding key as `finding-<three-digit-ordinal>-<rule-id>` from the
 
 <verdict_format>
 
-Return only the exact run token and the unmodified rendered projection. The projection is the verdict: its `terminalStatus` is `approved` or `rejected`, its `findingCount` is zero for approval, its `auditScopeUnits` carry the root and per-file units, and its `events` carry every accepted finding payload and the terminal event. Both severities reject the run. Keep every SPX field unchanged.
+Return only the exact run token and the unmodified rendered projection. The projection is the verdict: its `terminalStatus` is `approved` or `rejected`, its `findingCount` is zero for approval, its `findings` group every accepted finding under `blocking` and `debt`, its `auditScopeUnits` carry the root and per-file units, and its `events` carry every accepted finding payload and the terminal event. Both severities reject the run. Keep every SPX field unchanged.
 
 A run that cannot complete returns:
 
 ```text
 BLOCKED
 runToken: <exact-token-if-start-succeeded-or-not-started>
-command: <exact-failed-operation>
+command: <exact-failed-operation, or request for a failure before the run starts>
 payloadKey: <unitId-or-finding-idempotency-key-or-none>
 exitCode: <exact-exit-code-or-none>
 stderr: <exact-stderr-or-none>
