@@ -14,7 +14,7 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 ### Changed
 
-- **`change-executor` runs on the central Executor profile.** An Executor session starts on that profile's complete Claude Code configuration, at high effort, with no manual step.
+- **`change-executor` selects the central Executor profile.** Its emitted Claude Code definition declares that profile's complete configuration, at high effort, so no manual model or effort step precedes an Executor start.
 - **Codex agents name current-generation models.** Every Codex agent rendering carries its central profile's current-generation model in place of the retired generation.
 
 ## 0.100.2
