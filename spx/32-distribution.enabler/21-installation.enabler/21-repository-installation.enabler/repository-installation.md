@@ -71,7 +71,7 @@ CAN refresh exactly the selected plugins in every Claude Code checkout on the ma
   substitution, or alternate launch. ([test](tests/test_native_profile_execution.compliance.l1.py))
 - ALWAYS: release acceptance is established independently for each supported
   harness and retains configuration, native loading, and one minimal isolated
-  execution result for all three of that harness's profiles declared in
+  execution result for every profile of that harness declared in
   `spx/15-subagent-execution.pdr.md`. Evidence for one harness establishes no
   execution claim for another; a combined acceptance claim requires complete
   evidence for every harness it names. Each row derives
