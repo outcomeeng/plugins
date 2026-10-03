@@ -14,8 +14,8 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 ### Changed
 
-- **`change-executor` runs on Sonnet at high effort.** The definition selects the central Executor profile, so an Executor session starts on Claude Code `model: sonnet` with `effort: high` with no manual step.
-- **Codex agents name current-generation models.** Every Codex agent rendering names `gpt-6.1-sol`, `gpt-6-astra`, or `gpt-6-luna` in place of the retired gpt-5.6 generation.
+- **`change-executor` runs on the central Executor profile.** An Executor session starts on that profile's complete Claude Code configuration, at high effort, with no manual step.
+- **Codex agents name current-generation models.** Every Codex agent rendering carries its central profile's current-generation model in place of the retired generation.
 
 ## 0.100.2
 

@@ -10,7 +10,7 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 ### Changed
 
-- **Codex agents name current-generation models.** The `prose-auditor` Codex rendering names `gpt-6-astra` in place of the retired gpt-5.6 generation.
+- **Codex agents name current-generation models.** The `prose-auditor` Codex rendering carries the Strong profile's current-generation model in place of the retired generation.
 
 ## 0.12.4
 
