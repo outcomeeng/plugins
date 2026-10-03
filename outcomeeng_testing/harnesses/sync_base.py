@@ -14,6 +14,7 @@ from types import ModuleType
 from outcomeeng_testing.generators.sync_base import (
     RepositoryDomain,
     TrackedEdit,
+    invalid_utf8_payload,
     repository_domain,
 )
 
@@ -451,6 +452,60 @@ def build_rename_base_repo(root: pathlib.Path) -> RenameBaseRepo:
         old_path=data.initial_file,
         new_path=data.renamed_file,
     )
+
+
+@dataclass(frozen=True)
+class NonUtf8BranchRepo:
+    """A behind-base clone whose branch diff carries bytes that are not UTF-8.
+
+    The branch commits ``feature_file`` holding ``feature_payload``, a text line
+    with a stray non-UTF-8 byte; the base then advances an unrelated file, so the
+    rebase is clean and leaves the branch's paths and patch unchanged.
+    """
+
+    repo: pathlib.Path
+    base_ref: str
+    remote_ref: str
+    feature_branch: str
+    feature_file: str
+    feature_payload: bytes
+    base_file: str
+
+
+def build_non_utf8_branch_behind_base_repo(root: pathlib.Path) -> NonUtf8BranchRepo:
+    """Build a behind-base clone whose branch diff holds non-UTF-8 bytes."""
+    data = repository_domain()
+    payload = invalid_utf8_payload()
+    origin = _init_origin_with_base(root, data)
+    repo = _working_clone_on_feature(root, origin, data)
+    (repo / data.feature_file).write_bytes(payload)
+    _git(repo, "add", data.feature_file)
+    _git(repo, "commit", "-q", "-m", data.feature_message)
+
+    pusher = root / "pusher"
+    _commit_file(pusher, data.base_file, data.base_content, data.base_message)
+    _git(pusher, "push", "-q", "origin", data.base_branch)
+
+    return NonUtf8BranchRepo(
+        repo=repo,
+        base_ref=data.base_branch,
+        remote_ref=f"origin/{data.base_branch}",
+        feature_branch=data.feature_branch,
+        feature_file=data.feature_file,
+        feature_payload=payload,
+        base_file=data.base_file,
+    )
+
+
+def branch_diff_bytes(repo: pathlib.Path, base: str, head: str) -> bytes:
+    """Return the raw bytes of ``git diff base...head`` with no text decoding."""
+    result = subprocess.run(  # noqa: S603 — fixed argv, no shell, args from the harness
+        ["git", "diff", f"{base}...{head}"],  # noqa: S607
+        cwd=repo,
+        capture_output=True,
+        check=True,
+    )
+    return result.stdout
 
 
 def detach_head(repo: pathlib.Path) -> None:
