@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "definition": "spec-tree:change-skill-author",
+  "subjectCommit": "6cbb66684b7e53b3314237b60681e50016757ac9",
+  "emittedDefinition": {
+    "path": "dist/claude/spec-tree/agents/change-skill-author.md",
+    "sha256": "288ede72cc5dc7e09968496d5c7bda887e9810d996deebae21d17842b6603364",
+    "frontMatter": [
+      "model: \"opus\"",
+      "effort: \"medium\"",
+      "name: change-skill-author",
+      "description: >-",
+      "  Round session `/execute-change` launches by exact name when an Activity needs a skill surface (a `SKILL.md`, another file in a skill directory, or an authored shared fragment) produced or repaired through `instructions:create-skill`.",
+      "disallowedTools: \"AskUserQuestion\"",
+      "skills:",
+      "  - instructions:create-skill"
+    ]
+  },
+  "parentSession": {
+    "sessionId": "f607087b-268c-4fef-b74f-89ba245dbd83",
+    "model": "claude-opus-5-5",
+    "claudeCodeVersion": "2.1.289",
+    "plugins": [
+      {
+        "name": "spec-tree",
+        "path": "/Users/shz/Code/outcomeeng/plugins/worktrees/contributor-2/dist/claude/spec-tree",
+        "version": "0.100.3"
+      }
+    ],
+    "definitionAvailable": true
+  },
+  "launch": {
+    "toolUseId": "toolu_01HS1eWJPrX8AM7VA3XGiUUP",
+    "tool": "Agent",
+    "input": {
+      "subagent_type": "spec-tree:change-skill-author",
+      "prompt": "not-a-target",
+      "description": "Launch change-skill-author",
+      "run_in_background": false
+    }
+  },
+  "childStart": {
+    "parentToolUseId": "toolu_01HS1eWJPrX8AM7VA3XGiUUP",
+    "subagentType": "spec-tree:change-skill-author",
+    "taskMessage": "not-a-target",
+    "timestamp": "2026-10-03T20:38:16.562Z"
+  },
+  "childResult": {
+    "status": "completed",
+    "agentType": "spec-tree:change-skill-author",
+    "resolvedModel": "claude-opus-5-5",
+    "totalDurationMs": 5206,
+    "totalTokens": 18285,
+    "totalToolUseCount": 1,
+    "text": "I couldn't do this round because the required skill `instructions:create-skill` failed to load, so I'm returning it as blocked.\n\n```\nstatus: blocked\nrequired_skill: instructions:create-skill\nfailure: Skill invocation returned \"Unknown skill: instructions:create-skill\"\nblocked_action: Authoring or fixing the skill surface for task message \"not-a-target\"\n```\n\nThe skill isn't installed or exposed in this session. It doesn't appear in the available skills listing. I didn't fall back to a workflow from memory and I made no file changes.\n\nTo unblock this, someone needs to install or enable the plugin that provides `instructions:create-skill` in this session, then launch the round again. Separately, the task message \"not-a-target\" doesn't name a usable target and would need one."
+  },
+  "parentResult": {
+    "subtype": "success",
+    "isError": false,
+    "numTurns": 2,
+    "totalCostUsd": 0.223757
+  }
+}
