@@ -73,14 +73,13 @@ Source: `instructions:skill-auditor` finding rule `stale_cross_reference`, sever
 [Change #92](https://github.com/outcomeeng/changes/issues/92) carries the
 standards-skill pass that owns it.
 
-## The Claude render of `skill-standards` sits 223 code points under the eager-payload ceiling
+## The Claude render of `skill-standards` sits 62 code points under the eager-payload ceiling
 
-`dist/claude/instructions/skills/skill-standards/SKILL.md` measures 39777 code
+`dist/claude/instructions/skills/skill-standards/SKILL.md` measures 39938 code
 points against the 40,000-code-point ceiling `skill-standards`
-`<eager_foundation_exception>` declares for itself. Change #200 adds 766 code points to the
-render, which measures 39011 on `main` at `e29503eb59973c2b85cb9cdb229e816a186f090c`:
-the audit-skill Bash-grant rule, the refusal sources, and the retry rule for a
-classifier-refused Executor start.
+`<eager_foundation_exception>` declares for itself, after Change #332 admits the
+`spx verification run` journal verbs in the audit-skill grant rule and aligns the audit
+description and Codex frontmatter sentences with it.
 
 **Impact.** The next small edit to a Claude-only section tips the reference past
 the ceiling and turns a routine change into a must-fix on this reference.
@@ -280,3 +279,27 @@ changed no line of that file; the audit read it only because `SKILL.md` routes t
 Source: `instructions:skill-auditor` finding `f-015`, rule
 `rendered_output_contradiction_and_portability`, severity `REJECT`, on head
 `913a65e5b370ffa846bfe7a47be4a551e6a9c547` during Change #200.
+
+## `/create-skill` assumes a spec tree and restates its standards loads
+
+**Evidence**: `instructions:skill-auditor` warnings on `src/plugins/instructions/skills/create-skill` at head `add3e3e862f7512a55e8b9655d07f78412abe87c`: f-010 (rule `plugin_portability_undefined_reference`) — `workflows/audit-skill.md:21` tells a consumer to persist requirements in decisions and specs and to follow the root guide's isolation mechanics, surfaces a repository without a spec tree lacks; f-011 (rule `conciseness_duplicated_loading`) — `SKILL.md` composes `/skill-standards` and `/agent-prompt-standards`, and `<reference_loading>` and every workflow's `<required_reading>` restate both loads and the overlay read.
+
+**Impact**: a consumer without a spec tree or a root guide meets an instruction it cannot resolve, and every route pays for the restated loads.
+
+**Settlement condition**: the isolation requirement is stated directly or conditioned on the surfaces existing, the loads stand once, and one typed skill audit of `create-skill` raises neither finding.
+
+## `skill-standards` justifies its eager-foundation exception by material it does not inline
+
+**Evidence**: `instructions:skill-auditor` warning f-008 (rule `eager_foundation_justification_accuracy`) on `src/plugins/instructions/skills/skill-standards/SKILL.md:305` at head `add3e3e862f7512a55e8b9655d07f78412abe87c`: the self-application names "its command-capability rules" as inline, while the body routes them to `references/command-capabilities.md` as a conditional read, and the exception's opening covers foundation skills while this is a reference skill.
+
+**Impact**: the self-application cannot be checked against the exception's same-material and no-mandatory-read conditions.
+
+**Settlement condition**: the justification names only inline material and states why the exception covers a reference skill; one typed skill audit raises no such finding.
+
+## `audit-skill`'s structure examples use `xml` fences for pseudo-XML
+
+**Evidence**: `instructions:skill-auditor` warning f-009 (rule `repository-markdown-pseudo-xml-fence`) on `src/plugins/instructions/skills/audit-skill/references/xml-structure-examples.md` at head `add3e3e862f7512a55e8b9655d07f78412abe87c`: pseudo-XML examples sit in `xml` fences, some closed by mismatched four-backtick fences.
+
+**Impact**: dprint `markup_fmt` may rewrite the examples, and fence boundaries are ambiguous to a reader.
+
+**Settlement condition**: every pseudo-XML example uses a `text` fence with matched delimiters; one typed skill audit raises no such finding.

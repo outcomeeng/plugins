@@ -239,3 +239,24 @@ coherence is those trees' specs, not this standard.
 assertion that names it and declares its execution-policy inheritance with linked evidence,
 and this node's spec records that the declarations exist. Scheduled as
 <https://github.com/outcomeeng/changes/issues/128>.
+
+## The two instructions auditors carry no retained release-acceptance evidence
+
+**Evidence:** `instructions:subagent-auditor` finding `f-002`, severity `REJECT`, on
+`src/plugins/instructions/agents/skill-auditor.md` and on
+`src/plugins/instructions/agents/subagent-auditor.md` at head
+`add3e3e862f7512a55e8b9655d07f78412abe87c`: `spx/15-subagent-execution.pdr.md` declares per-harness, per-profile release
+acceptance — native loading and one minimal isolated execution for every profile — and the
+tree retains no acceptance artifact for the Claude or the Codex Standard row either
+definition selects, and no exact-definition minimal isolated invocation of either. The
+same runs raised `f-001`, the undeclared execution-policy inheritance the entry above
+records for every marketplace definition.
+
+**Impact:** nothing in the tree shows either emitted definition loading natively and
+returning its run token and projection; the Codex Standard configuration of both has no
+execution evidence.
+
+**Settlement condition:** the release retains passing Standard-profile acceptance rows for
+both harnesses at a location the auditor reads, or an exact-definition minimal isolated
+invocation of each definition, and one `subagent-auditor` run on each definition raises no
+`f-002` class finding.

@@ -81,3 +81,11 @@ consume it, and gate changed agents with `instructions:subagent-auditor`.
 The audit skills declare their target input two ways. `src/plugins/instructions/skills/audit-skill/SKILL.md` and `src/plugins/instructions/skills/audit-subagent/SKILL.md` declare an `argument-hint` and parse a JSON object carrying the target path and the run-driver identity. `src/plugins/spec-tree/skills/audit-adr/SKILL.md` and `src/plugins/spec-tree/skills/audit-pdr/SKILL.md` declare no argument and take their target from the invoking prompt, so `/` autocomplete offers no signal about the expected input. `src/plugins/instructions/skills/skill-standards/references/command-capabilities.md` requires `argument-hint` when a skill takes arguments, which does not settle whether an audit target is an argument or prompt context.
 
 Required handling: decide whether an audit skill's target is a declared argument, then apply the answer across the audit-skill family rather than one file at a time — the answer changes each skill's input contract and its `missing_argument_hint` exposure under `audit-skill`'s own anti-pattern list. Reconcile with entry 1's skeleton sweep, which rewrites the same frontmatter. Gate changed skills with `instructions:skill-auditor`.
+
+## 10. The node's first assertion carries a tag outside a routed group
+
+`spx/43-instructions.enabler/instructions.md` places its first assertion, the subagent-authoring policy rule tagged `[audit]`, directly under `## Assertions` before `### Compliance`. Only an untagged authoring declaration sits there.
+
+Source: `spec-tree:spec-auditor` finding `heading-mismatch`, severity `REJECT`, at head `add3e3e862f7512a55e8b9655d07f78412abe87c`.
+
+Required handling: move the assertion under `### Compliance`, its universal ALWAYS shape, and obtain one spec audit of the node with no `heading-mismatch` finding.
