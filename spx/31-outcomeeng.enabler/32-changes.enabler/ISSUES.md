@@ -195,3 +195,15 @@ Evidence: `instructions:skill-auditor` findings f-008 (rule `routing_contradicti
 Impact: a revision of an Executable record proceeds on a guessed entry condition, and description matching misses requests phrased as refining a Change.
 
 Revisit and settlement condition: the Executable workflow states its entry for a current Executable record, and the description uses the verbs a request for a Change uses; one typed skill audit of `author-change` then raises neither finding.
+
+## DEBT [restatement]: audit-change step 5 lists record subjects the standards own
+
+Defect class: `restatement`.
+
+Finding: step 5 of `audit-change` lists the record content it judges — the four-section order, Output, Value, per-node target malleability, the Intent attestation, the accountable person, and the Executable predicates against `<merge_composition>` — while its own constraint says `change-standards` owns contract content and the skill owns only procedure.
+
+Evidence: `instructions:skill-auditor` finding f-009 (rule `standards_content_restated_in_auditor`), severity `WARNING`, against `src/plugins/spec-tree/skills/audit-change/SKILL.md:110`, in the typed skill audit of `audit-change` on head `d7bec8eb8a49a33aee1141fdf9c255c8fa719c66`, which approved with no must-fix finding.
+
+Impact: a rule `change-standards` adds, renames, or rescopes can drift from the step's list, and the step can read as a narrower checklist than the loaded inventory.
+
+Revisit and settlement condition: step 5 judges against the loaded rule and criterion inventory without restating its subjects; one typed skill audit of `audit-change` then raises no `standards_content_restated_in_auditor` finding.
