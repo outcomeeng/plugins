@@ -74,7 +74,7 @@ This run records `change-skill-author` and `change-subagent-author`, the two def
 ## Limitations
 
 - The run exercises only the stop at an unaccepted target; a round that produces an artifact, and a Fixer's repair block, stay unexercised.
-- The emitted effort is recorded from the definition file — `effort: medium` for the four Standard-profile definitions and `effort: high` for `change-executor`; each child's tool result reports the resolved model and no effort value.
+- The emitted effort is recorded from the definition file — `effort: medium` for the six Standard-profile definitions and `effort: high` for `change-executor`; each child's tool result reports the resolved model and no effort value.
 - The run of the two instruction round definitions exercises the `blocked` result for an uninstalled fronted skill. A round that runs `instructions:create-skill` or `instructions:create-subagent` whole, including a launch of `instructions:skill-auditor` by either definition, stays unexercised because the probe installs no `instructions` plugin.
 - The Codex renderings are not invoked; the node's `ISSUES.md` records that gap.
 - A later change to an emitted definition invalidates its record here until the protocol runs again on the new commit.
