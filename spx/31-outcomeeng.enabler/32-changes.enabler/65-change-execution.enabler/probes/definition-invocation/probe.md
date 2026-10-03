@@ -57,6 +57,6 @@ The run above holds for `change-author`, `change-verifier`, `change-tester` and 
 ## Limitations
 
 - The run exercises only the stop at an unaccepted target; a round that produces an artifact, and a Fixer's repair block, stay unexercised.
-- The emitted `effort: medium` is recorded from the definition file; the child's tool result reports the resolved model and no effort value.
+- For the four Standard-profile definitions, the emitted `effort: medium` is recorded from the definition file; the child's tool result reports the resolved model and no effort value.
 - The Codex renderings are not invoked; the node's `ISSUES.md` records that gap.
 - A later change to an emitted definition invalidates its record here until the protocol runs again on the new commit.
