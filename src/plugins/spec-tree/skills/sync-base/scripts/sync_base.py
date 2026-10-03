@@ -298,6 +298,23 @@ def _git(
     )
 
 
+def _git_bytes(
+    repo: pathlib.Path, *args: str, stdin: bytes | None = None
+) -> subprocess.CompletedProcess[bytes]:
+    """Run a git command in ``repo``, capturing raw output bytes without raising.
+
+    A diff carries file content verbatim, which need not be valid UTF-8, so a
+    command whose output is a patch is read without text decoding.
+    """
+    return subprocess.run(  # noqa: S603 — fixed argv, no shell, args from callers
+        ["git", *args],  # noqa: S607
+        cwd=repo,
+        input=stdin,
+        capture_output=True,
+        check=False,
+    )
+
+
 def _rev(repo: pathlib.Path, ref: str) -> str | None:
     """Resolve ``ref`` to a full OID, or ``None`` when it does not resolve."""
     result = _git(repo, "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}")
@@ -339,17 +356,20 @@ def _patch_id(repo: pathlib.Path, base: str, head: str) -> str | None:
     """Return the stable patch identity of ``base...head``, or ``None`` on failure.
 
     An empty diff yields the empty string, which compares equal across a sync
-    that left the branch's changes identical.
+    that left the branch's changes identical. The diff passes to ``patch-id`` as
+    raw bytes, so a branch whose content is not valid UTF-8 still has an
+    identity; the identity itself is a hexadecimal object name.
     """
-    diff = _git(repo, "diff", f"{base}...{head}")
+    diff = _git_bytes(repo, "diff", f"{base}...{head}")
     if diff.returncode != 0:
         return None
     if not diff.stdout.strip():
         return ""
-    identified = _git(repo, "patch-id", "--stable", stdin=diff.stdout)
+    identified = _git_bytes(repo, "patch-id", "--stable", stdin=diff.stdout)
     if identified.returncode != 0:
         return None
-    return identified.stdout.split()[0] if identified.stdout.strip() else ""
+    fields = identified.stdout.split()
+    return fields[0].decode("ascii") if fields else ""
 
 
 def _build_preservation(
