@@ -78,11 +78,11 @@ Use a native TOML definition with `name`, `description`, and
   custom agent invokes it; `/skill-standards` owns the rule that skill
   frontmatter carries no model or reasoning override.
 
-| Profile  | Native configuration                                 |
-| -------- | ---------------------------------------------------- |
-| Standard | `model=gpt-5.6-terra`, `model_reasoning_effort=high` |
-| Strong   | `model=gpt-5.6-sol`, `model_reasoning_effort=high`   |
-| Fast     | `model=gpt-5.6-luna`, `model_reasoning_effort=high`  |
+| Profile  | Native configuration                               |
+| -------- | -------------------------------------------------- |
+| Standard | `model=gpt-6.1-sol`, `model_reasoning_effort=high` |
+| Strong   | `model=gpt-6-astra`, `model_reasoning_effort=high` |
+| Fast     | `model=gpt-6-luna`, `model_reasoning_effort=high`  |
 
 </profiles>
 

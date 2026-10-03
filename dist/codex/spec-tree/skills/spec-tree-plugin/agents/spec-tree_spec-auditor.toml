@@ -1,6 +1,6 @@
 name = "spec-tree_spec-auditor"
 description = "ALWAYS invoke when auditing a spec node's assertion quality after writing an enabler or outcome node spec or before closing it."
-model = "gpt-5.6-terra"
+model = "gpt-6.1-sol"
 model_reasoning_effort = "high"
 sandbox_mode = "read-only"
 web_search = "disabled"
