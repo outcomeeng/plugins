@@ -24,14 +24,21 @@ Each round's producing session is one subagent of the definition that fronts the
 
 | Result the Activity names                                                                        | Definition                         | Skill it fronts                |
 | ------------------------------------------------------------------------------------------------ | ---------------------------------- | ------------------------------ |
-| A decision, spec, node, note, or other artifact `/author` writes                                 | `spec-tree:change-author`          | `/author`                      |
-| Verification selection for a node's or decision's claims                                         | `spec-tree:change-verifier`        | `/verify`                      |
-| Test evidence for assertions routed to test                                                      | `spec-tree:change-tester`          | `/test`                        |
-| Implementation of a node in its language                                                         | `spec-tree:change-implementer`     | `/implement-change`            |
+| A decision, spec, node, note, or other artifact `/author` writes                                 | `spec-tree:change-author`          | `spec-tree:author`             |
+| Verification selection for a node's or decision's claims                                         | `spec-tree:change-verifier`        | `spec-tree:verify`             |
+| Test evidence for assertions routed to test                                                      | `spec-tree:change-tester`          | `spec-tree:test`               |
+| Implementation of a node in its language                                                         | `spec-tree:change-implementer`     | `spec-tree:implement-change`   |
 | A skill surface: a `SKILL.md`, another file in a skill directory, or an authored shared fragment | `spec-tree:change-skill-author`    | `instructions:create-skill`    |
 | A subagent definition                                                                            | `spec-tree:change-subagent-author` | `instructions:create-subagent` |
 
-A Fixer is a fresh session of the definition the round's Author used. The task message of an Author session is the Activity's target in the form its fronted skill accepts: the canonical `spx/...` path of the node or decision it produces, which the `spec-tree:change-author` task message follows with the Change's issue URL, because `/author` reads the Output's requirements from the Change. The `spec-tree:change-skill-author` and `spec-tree:change-subagent-author` task messages carry the repository path of the skill surface or subagent definition the Activity produces, the Change's issue URL, and the sentence `Add the plugin changelog entry that records the change.`, so the round that produces the surface produces its changelog entry. A round whose fronted skill is not installed returns a `blocked` result naming that skill. The task message of a Fixer session is its Author's task message followed by a repair block: the verbatim result of every rejected verdict of the earlier round, and the exact command line and output of every deterministic command that failed on it. The fronted skill reads that block as its repair input.
+A Fixer is a fresh session of the definition the round's Author used. The task message of each session follows its definition:
+
+- `spec-tree:change-author` Author: the canonical `spx/...` path of the node or decision it produces, followed by the Change's issue URL, because `/author` reads the Output's requirements from the Change.
+- `spec-tree:change-skill-author` and `spec-tree:change-subagent-author` Author: the repository path of the skill surface or subagent definition the Activity produces, the Change's issue URL, and the sentence `Add the plugin changelog entry that records the change.`, so the round that produces the surface produces its changelog entry.
+- Every other definition's Author: the Activity's target in the form its fronted skill accepts.
+- Fixer: its Author's task message followed by a repair block: the verbatim result of every rejected verdict of the earlier round, and the exact command line and output of every deterministic command that failed on it. The fronted skill reads that block as its repair input.
+
+A round whose fronted skill is not installed returns a `blocked` result naming that skill.
 
 Each Verifier is the configured auditor or reviewer for the evidence obligation the Change's Frame states, launched with a target-only task message. A `change-verifier` session produces verification routing and evidence through `/verify` and is an Author or Fixer, never a Verifier; its result is no verdict. The Verifier of a `spec-tree:change-skill-author` round is `instructions:skill-auditor`, and the Verifier of a `spec-tree:change-subagent-author` round is `instructions:subagent-auditor`:
 

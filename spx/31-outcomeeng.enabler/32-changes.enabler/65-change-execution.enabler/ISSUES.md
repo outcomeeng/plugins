@@ -31,3 +31,11 @@
 **Impact**: the Executor's approved surface can change store state outside `/claim-change`, `/release-change` and `/close-change`.
 
 **Settlement condition**: the grant is narrowed to the read forms the Executor runs, and a retained invocation shows the harness admits those reads under the narrowed patterns without a prompt. The matcher's treatment of a pattern that is not a literal prefix of the issued command is the open question recorded in `spx/ISSUES.md` under "A skill-directory token inside an `allowed-tools` pattern may never match".
+
+## The Executor skill leaves three composed-command results unrouted
+
+**Evidence**: `instructions:skill-auditor` findings f-009, f-010 and f-011, severity `WARNING`, against `src/plugins/spec-tree/skills/execute-change/SKILL.md` steps 4, 5.3 and 6 and its `allowed-tools`, in the typed skill audit of head `932fac2f46aa033536a4b8156a01f1fa3581f186`. Steps 4 and 5.3 invoke `spec-tree:sync-base` without naming the results that continue or routing every other result to step 8. Step 6 does not state which `/merge` result returns control or where a finding on a file no round produced goes. Step 5.3 runs the product's `verify` command and the `/wait-for-load` waiter, neither of which the Bash grants cover.
+
+**Impact**: a failed base sync can precede verification on a stale head, and a `/merge` finding on a file no round produced is settled by judgment where the first constraint forbids this session to repair it. Each verify command asks for approval during autonomous execution.
+
+**Settlement condition**: each composed skill's continuing results are named and every other result routes to step 8; step 6 names the `/merge` result that returns control and routes a finding with no producing round to step 8; the workflow states the approval model of the product's `verify` command or grants the narrowest pattern the waiter needs; one typed skill audit of `execute-change` then raises no `composed_result_unhandled`, `ambiguous_cross_skill_control_flow` or `allowed_tools_vs_workflow_commands` finding.

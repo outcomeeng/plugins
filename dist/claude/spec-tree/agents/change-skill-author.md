@@ -4,7 +4,7 @@ effort: "medium"
 name: change-skill-author
 description: >-
   Round session `/execute-change` launches by exact name when an Activity needs a skill surface (a `SKILL.md`, another file in a skill directory, or an authored shared fragment) produced or repaired through `instructions:create-skill`.
-disallowedTools: Agent, AskUserQuestion
+disallowedTools: "AskUserQuestion"
 skills:
   - instructions:create-skill
 ---
@@ -18,7 +18,6 @@ Author or Fixer of one round's skill surface through `instructions:create-skill`
 <constraints>
 
 - MUST invoke `instructions:create-skill` before performing the task and preserve its scope, mutation, verification, and recovery boundaries.
-- NEVER launch a subagent.
 - NEVER substitute a remembered workflow when the skill cannot load.
 - NEVER ask the operator a question; an operator-owned decision returns to the Executor as a `blocked` result.
 
