@@ -21,7 +21,7 @@ A sealed `spx verification run` on one skill bundle against `/skill-standards` a
 - NEVER modify the target bundle or any product file; the only state this audit changes is its own SPX verification-run journal.
 - NEVER report a score; report contextual judgment across the full skill-authoring surface.
 - MUST read the governing standards and the references their applicability rules require before evaluating.
-- NEVER generate fixes unless explicitly requested by the user.
+- NEVER generate fixes; the run records findings, and repair belongs to the author.
 - NEVER make assumptions about skill intent; record an ambiguity as a finding.
 - MUST complete every applicable standards area before finishing the run.
 - ALWAYS apply contextual judgment: what matters for a simple skill differs from a complex one.
@@ -49,7 +49,7 @@ Use skill `instructions:instructions-plugin`. Invoke it with the verb `version` 
    ```
 
    Capture the exact `runToken` and use it for every later command. Read the retained input with `spx verification run input --verification-type audit --scope-type file --scope '<skill-file>' --run '<run-token>'` and require its `content` to equal the live file; a difference returns `BLOCKED` with the run preserved.
-2. **Load the standards.** Read `/skill-standards`, then `spx/local/skills.md` at the repository root when it exists. Read `/agent-prompt-standards`, injected above. When the target bundles scripts, read `/skill-standards`' `references/script-standards.md`. When the target carries command-capability fields — `argument-hint` or `arguments`, `allowed-tools`, `!`-dynamic context, or `@` file references — read `/skill-standards`' `references/command-capabilities.md`. When the target is an `audit-*` skill, read `/skill-standards`' `references/auditor-skeleton.md`. Read `${SKILL_DIR}/references/xml-structure-examples.md` and `${SKILL_DIR}/references/operational-effectiveness-examples.md` for annotated violation examples. A required standard that cannot be read is a blocking `configuration_issue` finding, and the run rejects.
+2. **Load the standards.** Read `/skill-standards`, then `spx/local/skills.md` at the repository root when it exists. Read `/agent-prompt-standards` through the `Use skill` instruction above. When the target bundles scripts, read `/skill-standards`' `references/script-standards.md`. When the target carries command-capability fields — `argument-hint` or `arguments`, `allowed-tools`, `!`-dynamic context, or `@` file references — read `/skill-standards`' `references/command-capabilities.md`. When the target is an `audit-*` skill, read `/skill-standards`' `references/auditor-skeleton.md`. Read `${SKILL_DIR}/references/xml-structure-examples.md` and `${SKILL_DIR}/references/operational-effectiveness-examples.md` for annotated violation examples. A required standard that cannot be read is a blocking `configuration_issue` finding, and the run rejects.
 3. **Read the bundle.** Read every file in the target bundle — `SKILL.md` and every file under `references/`, `workflows/`, `templates/`, `assets/`, and `scripts/`, uncited and orphaned files included. Retrieve the omitted ranges of a truncated read before judging an absence; a missing closing tag requires reading the actual end of the file. When the target uses `/skill-standards`' eager-foundation exception, run this counter against every rendered target `SKILL.md` and judge the exception's threshold from its integer output, never from an estimate:
 
    ```bash
@@ -168,7 +168,7 @@ judgedFindings: <JSON array of every finding judged before the stop, in the find
 
 <failure_modes>
 
-**Failure 1: Approved a skill whose objective was still activity-shaped.** Claude read an `<objective>` that opened with a verb ("Audit…", "Generate…") or an actor ("The skill…") and passed it, because the activity reading felt natural. The objective states an output; an activity- or actor-shaped one is the blocking finding the `actor_or_activity_objective` rule exists to catch. Read every objective against `/agent-prompt-standards` `<objective_shape>`, not by feel.
+**Failure 1: Approved a skill whose objective was still activity-shaped.** Claude read an `<objective>` that opened with a verb ("Audit…", "Generate…") or an actor ("The skill…") and passed it, because the activity reading felt natural. The objective states an output; an activity- or actor-shaped one is a blocking finding under `/agent-prompt-standards` `<objective_shape>`. Read every objective against `/agent-prompt-standards` `<objective_shape>`, not by feel.
 
 **Failure 2: Skipped an evaluation area and missed a whole class.** Claude judged YAML and structure, formed a verdict, and stopped — leaving prompt craft or anti-patterns unexamined, so a class of violations passed unseen. The verdict is sound only when every evaluation area was judged; a skipped area yields an unsound verdict, not a shorter one. Cover every applicable rule in the loaded standards before finishing the run.
 

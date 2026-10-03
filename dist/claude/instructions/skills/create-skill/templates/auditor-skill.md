@@ -21,7 +21,7 @@ A sealed `spx verification run` on {{scope}} against {{governing standards}} —
 
 <audit_workflow>
 
-1. Parse {{the target path and the run-driver identity}} and resolve {{the complete audit scope}}; a missing or unreadable target returns `BLOCKED` with `runToken: not-started` before any run starts.
+1. Parse `$ARGUMENTS` as a JSON object carrying {{the target path and the run-driver identity}} and resolve {{the complete audit scope}}; a missing or unreadable target returns `BLOCKED` with `runToken: not-started` before any run starts.
 2. Start one run with `spx verification run start --verification-type audit --scope-type {{file-or-changeset}} --scope '{{scope}}'` and use its exact `runToken` for every later command.
 3. Load {{the governing standards and repository-local specialization}}.
 4. Judge every applicable rule and collect falsifiable findings.
