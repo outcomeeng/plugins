@@ -14,7 +14,8 @@ CAN reject eval suites that would still pass when the real producer is broken or
 ### Compliance
 
 - ALWAYS: the `audit-eval-evidence` skill is an agent-preloaded audit skill that names no caller and stays invocable on its own; the author-context isolation an audit verdict requires binds the author context per `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`, never this skill ([audit])
-- ALWAYS: the `eval-evidence-auditor` agent is a thin wrapper that carries no independent audit policy beyond invoking `spec-tree:audit-eval-evidence` ([audit])
+- ALWAYS: the `eval-evidence-auditor` agent is a thin wrapper that carries no independent audit policy beyond invoking `spec-tree:audit-eval-evidence` with the raw target and its run-driver identity, and relays the run token and the rendered projection unchanged ([audit])
+- ALWAYS: `/audit-eval-evidence` records its audit through `spx verification run` on a file scope anchored on the node's spec file: one root unit with `auditKind` `eval-evidence` and one child per gate. A passing gate is `audited`, a failing gate is `audited` with a finding, and a gate it cannot decide is `incomplete` with its cause recorded, so the run seals `rejected`. It returns the run token and the rendered projection, or a blocked diagnostic when spx refuses a recorded payload or the finish ([audit])
 - ALWAYS: audit `[eval]` evidence for producer coupling first — a suite that does not exercise or load the actual producing skill, agent, classifier, or script cannot prove that producer's behavior ([audit])
 - ALWAYS: reject prompt-only simulations for claims about skill, agent, or classifier behavior — changing the real producer to unrelated text must make the evidence fail or the eval has no evidentiary value ([audit])
 - ALWAYS: check oracle independence, assertion alignment, falsifiability, and run evidence after producer coupling passes ([audit])
