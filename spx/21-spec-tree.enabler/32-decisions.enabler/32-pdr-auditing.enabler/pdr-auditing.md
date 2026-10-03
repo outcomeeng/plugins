@@ -27,14 +27,14 @@ A PDR that fails any property is not a well-formed product decision.
 
 The `/audit-pdr` skill in the spec-tree plugin classifies every statement in the PDR:
 
-| Content type                       | Belongs in     | Finding if in PDR                        |
-| ---------------------------------- | -------------- | ---------------------------------------- |
-| Observable product behavior        | PDR            | Correct                                  |
-| Observable non-functional property | PDR (property) | Correct                                  |
-| Technology choice                  | ADR            | REJECT — architecture content            |
-| Implementation approach            | ADR or code    | REJECT — implementation content          |
-| Data structure or schema           | ADR            | REJECT — architecture content            |
-| Performance implementation         | ADR            | REJECT (but performance guarantee = PDR) |
+| Content type                       | Belongs in     | Finding rule if in PDR                                          |
+| ---------------------------------- | -------------- | --------------------------------------------------------------- |
+| Observable product behavior        | PDR            | None                                                            |
+| Observable non-functional property | PDR (property) | None                                                            |
+| Technology choice                  | ADR            | `architecture-content`                                          |
+| Implementation approach            | ADR or code    | `architecture-content`                                          |
+| Data structure or schema           | ADR            | `architecture-content`                                          |
+| Performance implementation         | ADR            | `architecture-content` (a performance guarantee is PDR content) |
 
 The distinction: "Sessions expire after 1 hour" is product behavior (PDR). "Sessions use JWT with 1-hour TTL" is architecture (ADR). "The session table has a TTL column" is implementation (code).
 
@@ -47,15 +47,15 @@ The distinction: "Sessions expire after 1 hour" is product behavior (PDR). "Sess
 
 ### Scenarios
 
-- Given a PDR containing architecture content ("use JWT tokens", "store in PostgreSQL"), when audited by `/audit-pdr`, then the verdict is REJECT with finding category "architecture-content" ([eval](evals/structure/eval.toml))
+- Given a PDR containing architecture content ("use JWT tokens", "store in PostgreSQL"), when audited by `/audit-pdr`, then the sealed audit run's terminal status is `rejected` with a finding whose rule is `architecture-content` ([eval](evals/structure/eval.toml))
 - Given a PDR for a product whose product document declares its audience operates the product through a command-line, filesystem, or version-control surface, and whose statements describe the CLI, filesystem, or version-control state that audience observes, when audited by `/audit-pdr`, then content classification passes and the statements are not rejected as architecture ([eval](evals/structure/eval.toml))
-- Given a PDR whose statements describe a tool's internal algorithm, in-memory data structure, persisted schema, or library choice that the declared audience never operates, when audited by `/audit-pdr`, then the verdict is REJECT with finding category "architecture-content" even for a tooling product ([eval](evals/structure/eval.toml))
-- Given a PDR with product properties that are not user-observable ("database uses row-level locking"), when audited, then the verdict is REJECT with finding category "non-observable-property" ([eval](evals/structure/eval.toml))
-- Given a PDR with temporal language in any section, when audited, then the verdict is REJECT with finding category "temporal-language" ([eval](evals/voice/eval.toml))
-- Given a PDR whose `### Testing` rule carries a bare mechanism tag, a tag disagreeing with its subsection, no tag, or more than one tag, when audited, then the verdict is REJECT with finding category "invalid-tag" ([eval](evals/tag-validity/eval.toml))
-- Given a PDR whose `### Testing` rule tags a universal claim (ALWAYS/NEVER) as `scenario`, when audited, then the verdict is REJECT with finding category "assertion-type-mismatch" ([eval](evals/tag-validity/eval.toml))
-- Given a PDR that contradicts the product spec or an ancestor PDR, when audited, then the verdict is REJECT with finding category "consistency-violation" ([eval](evals/structure/eval.toml))
-- Given a PDR where all five properties hold, when audited, then the verdict is APPROVED ([eval](evals/structure/eval.toml))
+- Given a PDR whose statements describe a tool's internal algorithm, in-memory data structure, persisted schema, or library choice that the declared audience never operates, when audited by `/audit-pdr`, then the sealed audit run's terminal status is `rejected` with a finding whose rule is `architecture-content` even for a tooling product ([eval](evals/structure/eval.toml))
+- Given a PDR with product properties that are not user-observable ("database uses row-level locking"), when audited, then the sealed audit run's terminal status is `rejected` with a finding whose rule is `non-observable-property` ([eval](evals/structure/eval.toml))
+- Given a PDR with temporal language in any section, when audited, then the sealed audit run's terminal status is `rejected` with a finding whose rule is `temporal-language` ([eval](evals/voice/eval.toml))
+- Given a PDR whose `### Testing` rule carries a bare mechanism tag, a tag disagreeing with its subsection, no tag, or more than one tag, when audited, then the sealed audit run's terminal status is `rejected` with a finding whose rule is `invalid-tag` ([eval](evals/tag-validity/eval.toml))
+- Given a PDR whose `### Testing` rule tags a universal claim (ALWAYS/NEVER) as `scenario`, when audited, then the sealed audit run's terminal status is `rejected` with a finding whose rule is `assertion-type-mismatch` ([eval](evals/tag-validity/eval.toml))
+- Given a PDR that contradicts the product spec or an ancestor PDR, when audited, then the sealed audit run's terminal status is `rejected` with a finding whose rule is `consistency-violation` ([eval](evals/structure/eval.toml))
+- Given a PDR where all five properties hold, when audited, then the sealed audit run's terminal status is `approved` ([eval](evals/structure/eval.toml))
 
 ### Compliance
 
@@ -66,4 +66,5 @@ The distinction: "Sessions expire after 1 hour" is product behavior (PDR). "Sess
 - ALWAYS: verify product properties are observable from the user's perspective, not from the implementation's perspective ([audit])
 - ALWAYS: verify each `### Testing` rule's assertion type fits the claim's quantifier per the `/test` router — a universal is never `scenario`; reject a type the router would not produce, without relitigating a choice the router leaves open ([audit])
 - ALWAYS: compare the PDR against the product spec and ancestor PDRs; a contradiction with either is a consistency violation ([audit])
+- ALWAYS: `/audit-pdr` records its audit through `spx verification run` on a file scope anchored on the PDR path: one root unit with `auditKind` `pdr`, one child per evidence-model property, and every finding. It returns the run token and the rendered projection, or a blocked diagnostic when spx refuses a recorded payload or the finish, and the `pdr-auditor` wrapper passes the raw target and its run-driver identity and relays them unchanged ([audit])
 - NEVER: approve temporal language in any section — Decision, Rationale, Product properties, Verification all state product truth ([audit])
