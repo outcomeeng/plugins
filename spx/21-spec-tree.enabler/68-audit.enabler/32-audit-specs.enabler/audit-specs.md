@@ -28,19 +28,19 @@ The **prose-coupling** check is the verification-type analog: when a claim's sub
 ## Assertions
 
 - Given a spec with specific untagged assertions directly under `## Assertions`, alone or alongside valid routed subsections, when its declaration is audited, then missing draft tags and claim-shape headings cause no finding and all other declaration-quality checks remain applicable.
-- Given an untagged assertion inside a claim-shape subsection whose declared malleability requires a tag, when audited, then the verdict rejects that assertion as `invalid-tag`.
+- Given an untagged assertion inside a claim-shape subsection whose declared malleability requires a tag, when audited, then the run records an `invalid-tag` finding against that assertion.
 - NEVER: approval of a spec declaration establishes evidence completeness, implementation correctness, or Passing state for an untagged assertion.
 
 ### Scenarios
 
-- Given a spec node missing or malforming its kind statement, missing its `## Assertions` section, or carrying a claim-shape heading mismatched to its assertions, when audited by `/audit-specs`, then the verdict is REJECT with a structure finding (`missing-section`, `malformed-kind-statement`, or `heading-mismatch`) ([eval](evals/structure/eval.toml))
-- Given a spec node with universal `[audit]` assertions under `### Compliance`, when audited by `/audit-specs`, then the verdict is APPROVED because the heading describes claim shape independently of verification type ([eval](evals/structure/eval.toml))
-- Given a spec node that replaces the canonical claim-shape heading with a verification-type heading such as `### Audit`, when audited by `/audit-specs`, then the verdict is REJECT with finding category "heading-mismatch" ([eval](evals/structure/eval.toml))
-- Given a spec node with temporal language in any section, when audited by `/audit-specs`, then the verdict is REJECT with finding category "temporal-voice" ([audit])
-- Given a spec node whose assertion carries a bare mechanism tag, more than one tag, or no tag inside a routed subsection whose declared malleability requires one, when audited by `/audit-specs`, then the verdict is REJECT with finding category "invalid-tag" ([audit])
-- Given a spec node whose `[test]` assertion tags a universal claim (ALWAYS/NEVER/"for all") as `scenario`, when audited by `/audit-specs`, then the verdict is REJECT with finding category "evidence-type-mismatch" ([audit])
-- Given a spec node whose `[test]` assertion makes a claim about the content of an authored prose or documentation artifact, when audited by `/audit-specs`, then the verdict is REJECT with finding category "prose-coupling" ([audit])
-- Given a spec node where structure, voice, and every assertion's tag fitness all hold, when audited by `/audit-specs`, then the verdict is APPROVED ([eval](evals/structure/eval.toml))
+- Given a spec node missing or malforming its kind statement, missing its `## Assertions` section, or carrying a claim-shape heading mismatched to its assertions, when audited by `/audit-specs`, then the sealed audit run's terminal status is `rejected` with a finding whose rule is `missing-section`, `malformed-kind-statement`, or `heading-mismatch` ([eval](evals/structure/eval.toml))
+- Given a spec node with universal `[audit]` assertions under `### Compliance`, when audited by `/audit-specs`, then the sealed audit run's terminal status is `approved` because the heading describes claim shape independently of verification type ([eval](evals/structure/eval.toml))
+- Given a spec node that replaces the canonical claim-shape heading with a verification-type heading such as `### Audit`, when audited by `/audit-specs`, then the sealed audit run's terminal status is `rejected` with a finding whose rule is `heading-mismatch` ([eval](evals/structure/eval.toml))
+- Given a spec node with temporal language in any section, when audited by `/audit-specs`, then the sealed audit run's terminal status is `rejected` with a finding whose rule is `temporal-voice` ([audit])
+- Given a spec node whose assertion carries a bare mechanism tag, more than one tag, or no tag inside a routed subsection whose declared malleability requires one, when audited by `/audit-specs`, then the sealed audit run's terminal status is `rejected` with a finding whose rule is `invalid-tag` ([audit])
+- Given a spec node whose `[test]` assertion tags a universal claim (ALWAYS/NEVER/"for all") as `scenario`, when audited by `/audit-specs`, then the sealed audit run's terminal status is `rejected` with a finding whose rule is `evidence-type-mismatch` ([audit])
+- Given a spec node whose `[test]` assertion makes a claim about the content of an authored prose or documentation artifact, when audited by `/audit-specs`, then the sealed audit run's terminal status is `rejected` with a finding whose rule is `prose-coupling` ([audit])
+- Given a spec node where structure, voice, and every assertion's tag fitness all hold, when audited by `/audit-specs`, then the sealed audit run's terminal status is `approved` ([eval](evals/structure/eval.toml))
 
 ### Compliance
 
@@ -49,4 +49,5 @@ The **prose-coupling** check is the verification-type analog: when a claim's sub
 - ALWAYS: verify each `[test]` assertion's assertion type fits the claim's quantifier per the `/test` router — a universal is never `scenario` — without relitigating a choice the router leaves open ([audit])
 - ALWAYS: flag a `[test]` tag on a claim whose subject is authored prose or documentation content — the verification belongs in `[eval]` or `[audit]`, and the check holds whether the would-be evidence reads the authored artifact directly or through test infrastructure ([audit])
 - ALWAYS: `/audit-specs` names no caller and stays invocable on its own; the Author's agent session produces a verdict by dispatching the audit to a separate Verifier's agent session rather than grading its own work in place, per `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` ([audit])
+- ALWAYS: `/audit-specs` records its audit through `spx verification run` on a file scope anchored on the node spec path: one root unit with `auditKind` `spec`, one child per declaration-quality property, and every finding. It returns the run token and the rendered projection, or a blocked diagnostic when spx refuses a recorded payload or the finish, and the `spec-auditor` wrapper passes the raw target and its run-driver identity and relays them unchanged ([audit])
 - NEVER: classify a node's content as architecture-versus-product-behavior — that classification is the decision-record audits' concern, not the node audit's ([audit])
