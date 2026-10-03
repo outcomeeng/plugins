@@ -183,3 +183,15 @@ Evidence: `instructions:skill-auditor` finding f-008 (rule `undefined-cross-skil
 Impact: a consumer that loads only one of these skills meets a term or input it cannot resolve, and the audit skill's grant list carries exceptions no rule records.
 
 Revisit and settlement condition: each term names its owning skill or is defined where used, the workflows name `spx/local/coordination.md`, the journal-write exception is written into the standards, the `printf` grant is narrowed, the template shows object placeholders, and the Executable criterion names the Executor; one typed skill audit of each skill and one PDR audit then raise none of these findings.
+
+## DEBT [entry-conditions]: author-change leaves two entry points and one trigger phrase unstated
+
+Defect class: `entry-conditions`.
+
+Finding: the Executable workflow's step 1 resolves only a Sliced Change, while the router says each workflow handles creation and revision at its level, so revising a Change already at Executable has no stated entry condition. The description's trigger "interviewing ... a Change record" does not match how a request for a Change is phrased.
+
+Evidence: `instructions:skill-auditor` findings f-008 (rule `routing_contradiction`) against `src/plugins/spec-tree/skills/author-change/workflows/executable.md:9` and f-010 (rule `description_trigger_phrasing`) against `src/plugins/spec-tree/skills/author-change/SKILL.md:4`, both severity `WARNING`, in the typed skill audit of `author-change` on head `e2b7d787e3a8cd92005c2522d12aa9d5a57ec688`, which approved with no must-fix finding.
+
+Impact: a revision of an Executable record proceeds on a guessed entry condition, and description matching misses requests phrased as refining a Change.
+
+Revisit and settlement condition: the Executable workflow states its entry for a current Executable record, and the description uses the verbs a request for a Change uses; one typed skill audit of `author-change` then raises neither finding.
