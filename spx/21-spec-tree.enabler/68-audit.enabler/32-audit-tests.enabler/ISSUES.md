@@ -26,7 +26,7 @@ Step 3a of `/audit-tests` judges a source symbol the test cites by declared-cont
 
 **Why it is recorded rather than resolved here.** Authoring the case is small; establishing it is not. A case reaches evidence only through a run against the real producer, and both suites already carry no passing full-suite run for their current ten cases under the entry above. An eleventh case committed with an unvalidated expected verdict adds an untested claim about grader behavior to a suite awaiting rebuild. Recorded by operator direction, with the same rebuild as its home.
 
-**Resolution shape.** Add the case to the rebuilt suite: a symbol with no in-repository importer whose ownership rests on a published surface — a protocol only third parties implement, a packaging entry point, or a registry lookup — with an approving expected verdict, so removing the declared-contract rule turns that case red. Run it with the rest of the suite at the default budget and commit the resulting rows.
+**Resolution shape.** Add the case to the rebuilt suite: a symbol with no in-repository importer whose ownership rests on a published surface — a protocol only third parties implement, a packaging entry point, or a registry lookup — whose expected sealed audit run has terminal status `approved`, so removing the declared-contract rule turns that case red. Run it with the rest of the suite at the default budget and commit the resulting rows.
 
 ## Eval run history is stale for both full-chain-ownership suites
 
