@@ -31,3 +31,5 @@ The skills-about-skills cluster is three peers with distinct roles:
 - NEVER: restate `/skill-standards` rules inside `/create-skill` or `/audit-skill` — a single source of truth prevents drift between standard and enforcer ([audit])
 - NEVER: add standards content to `/create-skill/references/` — that directory carries workflow guidance; standards belong in `/skill-standards` ([audit])
 - ALWAYS: when a foundation skill loads the same references on every invocation, `/skill-standards` requires one consolidated canonical eager payload and governs its total loaded size instead of applying the 500-line overview rule; conditional operational detail, templates, examples, and overlays remain separate ([audit])
+- ALWAYS: `/audit-skill` records one root unit for the target bundle and one child unit for each file in the bundle, and attaches each finding to the unit of the file it names ([audit])
+- ALWAYS: `/skill-standards`' auditor skeleton admits a sealed `spx verification run` projection as an auditor's verdict format, and `/create-skill` accepts a produced or improved skill only on a sealed run whose terminal status is `approved` ([audit])
