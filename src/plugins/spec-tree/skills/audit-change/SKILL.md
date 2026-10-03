@@ -117,7 +117,7 @@ version. Do metadata preparation before substantive judgment.
    Activities together. At Executable, judge the Frame's stated `VERIFICATION_READINESS`
    predicates, results with their producers, and decision-record audits against the
    composition the loaded Definition of Ready's `<merge_composition>` selects for the
-   Nodes' target malleability; record a finding when they disagree, or when an
+   changeset; record a finding when they disagree, or when an
    evidence obligation names a Verifier outside them. Assess every common rule and
    selected DoR criterion.
    Distinguish intended paths and explicit prototype constraints from broken
