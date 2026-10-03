@@ -22,14 +22,15 @@ The five definitions `change-executor`, `change-author`, `change-verifier`, `cha
 
 - Date: 2026-09-30
 - Subject commit: `d090bb966859c3b4770a78a4ba2de5410d4fc53f`
+  This record covers the four round definitions. The run's `change-executor` result is superseded by the run below and is not retained.
+
 - Observations:
-  - Each emitted definition carries its native `disallowedTools`: `Agent` and `AskUserQuestion` for the four round definitions, `AskUserQuestion` for `change-executor`.
+  - Each of the four round definitions carries its native `disallowedTools`: `Agent` and `AskUserQuestion`.
   - Each parent session listed its definition, loaded spec-tree from `dist/claude/spec-tree`, and made exactly one `Agent` launch with `subagent_type` `spec-tree:<name>` and prompt `not-a-target`.
   - Each child's first event carries the launch's `parent_tool_use_id` and the `subagent_type` of its definition, and each launch's tool result reports `status` `completed`, the `agentType` of its definition, and `resolvedModel` `claude-opus-5-5`, which the Standard profile's `model: opus` selects.
-  - `change-executor` returned `not-held` from `spec-tree:execute-change` step 1. `change-author` returned `blocked` with its question and blocked action. `change-verifier` relayed the missing-target stop of `spec-tree:verify`. `change-tester` stopped at Step 1 of `spec-tree:test` with its missing-target result. `change-implementer` returned `blocked` with reason `target-required` from step 1 of `spec-tree:implement-change`.
+  - `change-author` returned `blocked` with its question and blocked action. `change-verifier` relayed the missing-target stop of `spec-tree:verify`. `change-tester` stopped at Step 1 of `spec-tree:test` with its missing-target result. `change-implementer` returned `blocked` with reason `target-required` from step 1 of `spec-tree:implement-change`.
   - No child wrote a file or ran a store command.
 - Artifacts:
-  - [change-executor.result.json](change-executor.result.json)
   - [change-author.result.json](change-author.result.json)
   - [change-verifier.result.json](change-verifier.result.json)
   - [change-tester.result.json](change-tester.result.json)
@@ -37,7 +38,7 @@ The five definitions `change-executor`, `change-author`, `change-verifier`, `cha
 
 ## Attested run: change-executor on the Executor profile
 
-The run above holds for `change-author`, `change-verifier`, `change-tester` and `change-implementer`. This run replaces its `change-executor` result, because the emitted definition now selects the Executor profile.
+This run records `change-executor`, whose emitted definition selects the Executor profile.
 
 - Date: 2026-10-03
 - Subject commit: `8a5ddbe8d21caa37a7db2d7d304b613c6805b9a8`
@@ -57,6 +58,6 @@ The run above holds for `change-author`, `change-verifier`, `change-tester` and 
 ## Limitations
 
 - The run exercises only the stop at an unaccepted target; a round that produces an artifact, and a Fixer's repair block, stay unexercised.
-- For the four Standard-profile definitions, the emitted `effort: medium` is recorded from the definition file; the child's tool result reports the resolved model and no effort value.
+- The emitted effort is recorded from the definition file — `effort: medium` for the four Standard-profile definitions and `effort: high` for `change-executor`; each child's tool result reports the resolved model and no effort value.
 - The Codex renderings are not invoked; the node's `ISSUES.md` records that gap.
 - A later change to an emitted definition invalidates its record here until the protocol runs again on the new commit.
