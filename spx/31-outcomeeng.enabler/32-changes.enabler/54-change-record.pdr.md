@@ -63,8 +63,8 @@ An Executable Change is ready when:
 
 - the Sliced Definition of Ready holds;
 - every consequential Decision for the changeset is settled;
-- `# Frame` states the required state and evidence obligations for every affected node; and
-- `# Activities` is ordered and sufficient for an agent to proceed without reopening product or architecture judgment.
+- `# Frame` states, for every Node the changeset touches, its required state and the evidence obligations the merge composition selects from the Nodes' target malleability: the merge gate the least malleable target selects, the results each Node's tagged assertions need with the producer of each, and the authoring checks its decision-record changes require; it names no Verifier outside those three, and a Node whose target malleability is lower than its declared one carries both values; and
+- `# Activities` is ordered and sufficient for an agent to proceed without reopening product or architecture judgment, and each verification Activity cites the Frame's evidence obligations instead of a skill's default gates.
 
 Framed requires the operator's attestation. Sliced requires a named accountable person. The Refiner may advance Sliced to Executable only inside the authority of the attested Frame.
 
@@ -103,7 +103,7 @@ No project field holds a Change field. The Lifecycle comments — the Claim, the
 
 ## Rationale
 
-One self-contained record preserves Change meaning across local drafting and coordination stores, and one home per field in each place leaves no second copy to drift from the first, while cumulative, independently loadable Definitions of Ready let authoring and audit judge exactly the Maturity a record declares. Proposed readiness is the approving audit rather than an operator review, and the audit verdict stays outside every criterion set it judges, so each Definition of Ready is decidable and a higher level inherits the preceding level's criteria, never a verdict about another level. Excluding records without the closed front-matter key set keeps the contract closed and avoids treating inference as product truth. The holder is keyed on the worktree the Claim names, because one account runs several sessions and a session that claims for another — one that starts the Executor's session in a worktree of its own — is not the session that later releases or closes; the worktree separates the holder from every other session of the account while letting the session started in it hold what was claimed for it.
+One self-contained record preserves Change meaning across local drafting and coordination stores, and one home per field in each place leaves no second copy to drift from the first, while cumulative, independently loadable Definitions of Ready let authoring and audit judge exactly the Maturity a record declares. Proposed readiness is the approving audit rather than an operator review, and the audit verdict stays outside every criterion set it judges, so each Definition of Ready is decidable and a higher level inherits the preceding level's criteria, never a verdict about another level. Excluding records without the closed front-matter key set keeps the contract closed and avoids treating inference as product truth. The holder is keyed on the worktree the Claim names, because one account runs several sessions and a session that claims for another — one that starts the Executor's session in a worktree of its own — is not the session that later releases or closes; the worktree separates the holder from every other session of the account while letting the session started in it hold what was claimed for it. An Executable Frame derives its evidence obligations from the merge composition, because an obligation the composition does not select sends an Executor through Verifier rounds no gate requires, and an omitted one lets a Change reach `Applied` short of the state its Frame requires.
 
 ## Product properties
 
@@ -116,6 +116,7 @@ One self-contained record preserves Change meaning across local drafting and coo
 - ALWAYS: a Change record contains exactly the six required front-matter keys and the four fixed top-level body sections in their declared order.
 - ALWAYS: Proposed, Framed, Sliced, and Executable each have one independently loadable, cumulative Definition of Ready.
 - ALWAYS: Maturity advances only when the target level's Definition of Ready holds and the level's authority is present: operator attestation for Framed, a named accountable person for Sliced, and the attested Frame for Executable.
+- ALWAYS: an Executable `# Frame` states the merge gate, the results with their producers, and the authoring checks that the merge composition selects from the target malleability of the Nodes the changeset touches, and names no Verifier outside them; `audit-change` rejects an Executable record whose stated obligations disagree with that composition.
 - ALWAYS: persistence writes each field to its one home in the configured coordination store and the four sections to the store body, and reads each back unchanged before reporting success; a coordination-store limit never shapes the record.
 - NEVER: a place holds a Change field in two homes, a store body carries front matter or a lineage line, or a project field holds a Change field.
 - NEVER: `audit-change` judges or migrates a record whose front matter does not carry the contract's closed key set; the auditor reports it as outside the contract.
