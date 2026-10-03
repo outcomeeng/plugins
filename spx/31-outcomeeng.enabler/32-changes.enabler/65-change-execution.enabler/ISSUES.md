@@ -46,7 +46,7 @@
 
 **Impact**: a round produces the changelog entry only as far as its fronted skill follows an instruction its declared scope does not name, and the Executor can neither detect nor fill the gap without producing an artifact itself.
 
-**Settlement condition**: `instructions:create-skill` and `instructions:create-subagent` each declare a changelog step with its scope for a surface outside any plugin, or the entry moves to its own Activity and definition; the change-execution spec assertion, the `execute-change` task-message rule and the spec-tree changelog entry then name that owner. The fix amends two skills of the `instructions` plugin, each needing a typed skill audit and a version bump, so it is a separate concern from this changeset.
+**Settlement condition**: `instructions:create-skill` and `instructions:create-subagent` each declare a changelog step with its scope for a surface outside any plugin, or the entry moves to its own Activity and definition; the change-execution spec assertion, the `execute-change` task-message rule and the spec-tree changelog entry then name that owner.
 
 ## A subagent-definition round carries no committed-head skill audit for its calling-skill update
 
@@ -54,4 +54,4 @@
 
 **Impact**: when a Change's subagent-definition Activity also edits a calling skill, that edit reaches `/merge` with a committed-head skill audit only if the Change's Frame names a skill-surface obligation for it.
 
-**Settlement condition**: the pairing of a subagent-definition round names `instructions:skill-auditor` as well whenever the round's committed diff changes a skill surface, in the `execute-change` definitions text, its step 5.3 and the change-execution assertion, and one typed skill audit of `execute-change` then approves. The pairing is the text of an operator-attested assertion operation, and the Change's Activities route a calling-skill update to a skill-surface round, so the amendment belongs to a Change that reopens that assertion.
+**Settlement condition**: the pairing of a subagent-definition round names `instructions:skill-auditor` as well whenever the round's committed diff changes a skill surface, in the `execute-change` definitions text, its step 5.3 and the change-execution assertion, and one typed skill audit of `execute-change` then approves.
