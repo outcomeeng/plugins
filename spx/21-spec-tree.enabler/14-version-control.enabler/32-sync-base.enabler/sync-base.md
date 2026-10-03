@@ -11,8 +11,6 @@ CAN read product truth, verify, and integrate against a current base without re-
 
 ## Assertions
 
-- Given a branch whose diff against its base holds bytes that are not valid UTF-8, when the synchronization primitive runs a clean rebase that changes none of the branch's paths, then it reports `rebased` and a readiness-preservation proof with an unchanged branch patch identity, computed from the diff's raw bytes
-
 ### Scenarios
 
 These assertions exercise the bundled synchronization primitive. The `/sync-base` skill owns recovery from its intermediate results.
@@ -37,6 +35,7 @@ These assertions exercise the bundled synchronization primitive. The `/sync-base
 - Given a clean detached HEAD advanced to the base tip, when the synchronization primitive runs, then it emits a readiness-preservation proof reporting the base advance in `base_delta_paths`, no path overlap, and an unchanged branch patch identity — a parked worktree carries no branch work the advance invalidates ([test](tests/test_sync_base_preservation.scenario.l1.py))
 - Given a clean detached HEAD already at the base tip, when the synchronization primitive runs, then it emits a preservation proof reporting an empty base delta and an unchanged branch patch identity ([test](tests/test_sync_base_preservation.scenario.l1.py))
 - Given a clean rebase whose base advance renames a file, when the synchronization primitive runs, then the proof reports both the old and the new path in `base_delta_paths` — a base rename is not collapsed to the new name, so a base rename of a path the branch also changed surfaces as a path overlap rather than hiding ([test](tests/test_sync_base_preservation.scenario.l1.py))
+- Given a branch whose diff against its base holds bytes that are not valid UTF-8, when the synchronization primitive runs a clean rebase that changes none of the branch's paths, then it reports `rebased` and a readiness-preservation proof with an unchanged branch patch identity, computed from the diff's raw bytes ([test](tests/test_sync_base_preservation.scenario.l1.py))
 
 ### Compliance
 
