@@ -15,6 +15,7 @@ An entry is written by the changeset that ships the change. A later changeset ad
 ### Changed
 
 - **An Executable Change's Frame states the verification the merge composition selects.** The Executable Definition of Ready requires `# Frame` to state the `VERIFICATION_READINESS` predicates, the results with their producers, and the decision-record audits that the merge composition selects for the changeset, and `/author-change` derives that statement. `change-auditor` rejects an Executable record whose stated obligations disagree with the composition or name a Verifier outside it, so a record it approved before may now be rejected.
+- **A Sliced split or coalescence has a route.** When `/author-change` finds that framed work is not one integrable unit, it authors each successor Change with `refined_from` naming its sources and closes each source `Refined` through `/close-change`.
 - **Target malleability is defined.** It is the value a node declares once the Change is applied; an absent field means `implementation`.
 
 ## 0.100.3
