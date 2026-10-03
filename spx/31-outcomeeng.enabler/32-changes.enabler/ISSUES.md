@@ -88,17 +88,17 @@ Impact: the `<conciseness>` rule says to leave out what Claude already knows. Th
 
 Revisit and settlement condition: the passage keeps only the product-specific rules, that idempotency keys are arguments and not payload fields and that candidate text is never executed as shell syntax; one typed skill audit of `audit-change` then raises no `conciseness_general_knowledge` finding.
 
-## DEBT [ambiguity]: the Executable evidence criterion is silent on a softened node and bundles three obligations
+## DEBT [granularity]: the Executable evidence criterion bundles three obligations
 
-Defect class: `ambiguity`.
+Defect class: `granularity`.
 
-Finding: `executable-state-evidence` requires a Node to carry both its declared and its target malleability only when the target is lower than the declared value. It states nothing for a Node whose target is higher, which the `frame` rule of `change-record.md` admits by naming a Change that softens a node. The one criterion also carries three independently judgeable obligations: the selected `VERIFICATION_READINESS` predicates, the per-node results with their producers, and the decision-record audits.
+Finding: `executable-state-evidence` carries three independently judgeable obligations under one identifier: the selected `VERIFICATION_READINESS` predicates, the per-node results with their producers, and the decision-record audits.
 
-Evidence: `instructions:skill-auditor` finding f-009 (rule `ambiguous-criterion`), severity `WARNING`, against `src/plugins/spec-tree/skills/change-standards/references/dor-executable.md:14`, in the typed skill audit of `change-standards` on head `b0ace02701a73ce0cb4c34b5f1df924217779889`, which approved with no must-fix finding. The criterion states Assertion operation 1 of `spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md` as amended.
+Evidence: `instructions:skill-auditor` finding f-009 (rule `ambiguous-criterion`), severity `WARNING`, against `src/plugins/spec-tree/skills/change-standards/references/dor-executable.md:14`, in the typed skill audit of `change-standards` on head `b0ace02701a73ce0cb4c34b5f1df924217779889`, which approved with no must-fix finding.
 
-Impact: an Auditor judging an Executable record that softens a node cannot tell whether the record must carry both values, and a finding against the criterion cannot name which of its three obligations failed.
+Impact: a finding against the criterion cannot name which of its three obligations failed.
 
-Revisit and settlement condition: the decision states whether a softened node carries both values, the criterion follows it, and each of the three obligations is judgeable on its own; one typed skill audit of `change-standards` then raises no `ambiguous-criterion` finding.
+Revisit and settlement condition: each of the three obligations is judgeable under its own criterion or clause; one typed skill audit of `change-standards` then raises no finding against the bundling.
 
 ## DEBT [provenance]: audit-change records the spec-tree version for any supplied agent-owning plugin
 
