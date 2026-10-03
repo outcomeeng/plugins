@@ -51,10 +51,10 @@ Use skill `instructions:instructions-plugin`. Invoke it with the verb `version` 
 2. **Load the standards.** Read `instructions:subagent-standards` and `instructions:agent-prompt-standards`, injected above. They own the rules; creator workflow references supply no additional standard. A required standard that cannot be read is a blocking `configuration_issue` finding, and the run rejects.
 3. **Read the target and its context.** Apply `/subagent-standards` `<configuration_subject>` to classify the target and independently discover any declared source-to-output mapping, and `<configuration>` to resolve the target's governing context. Read the whole target, its governing decisions, selected profile, owning skill, and result contract. Read the exact emitted definitions when the target is a generation input, applying the appropriate harness standards to each. When the configuration delegates its behavior, read the complete invoked skill and distinguish wrapper obligations from behavior that skill already owns.
 4. **Admit invocation evidence** as `/subagent-standards` `<evidence>` requires, reading the declared acceptance artifact or the retained native-loading and invocation evidence for the target. Missing required evidence remains a finding; never launch the target during this audit.
-5. **Judge.** Apply every relevant rule from the loaded standards, using their actual text, never memory. Check the whole target for equivalent functionality before declaring an omission. Record a finding only when an exact rule, location, and observed-versus-expected evidence back it, with a blocking or debt severity; the evidence of a finding about execution policy or invocation evidence names the declaration or acceptance artifact read. An observation that a rule holds is not a finding and is not recorded.
-6. **Record.** Once judgment is complete, add the root unit, then each finding against it, under `<persistence_contract>`.
-7. **Reconcile.** Read `spx verification run status` with the same type, scope, and token. Require exactly one unit, the root, and an accepted record for every finding. Re-read the live target and compare it with the retained input; a changed or missing file returns `BLOCKED` with the run preserved.
-8. **Finish and render.** Derive `approved` only when the root unit is audited and no finding exists; derive `rejected` when any finding exists, a debt-only set included, or when coverage is incomplete. Run:
+5. **Judge.** Apply every relevant rule from the loaded standards, using their actual text, never memory. Check the whole target for equivalent functionality before declaring an omission. Record a finding only when an exact rule, location, and observed-versus-expected evidence back it, with a blocking or debt severity. An observation that a rule holds is not a finding and is not recorded. Retain the repository path of every governing declaration read in steps 3 and 4 — the spec assertion or decision that declares execution-policy inheritance or invocation acceptance.
+6. **Record.** Once judgment is complete, add the root unit, then one child unit for each governing declaration read in path order, then each finding against the unit it concerns, under `<persistence_contract>`.
+7. **Reconcile.** Read `spx verification run status` with the same type, scope, and token. Require exactly one root unit, one child unit for every governing declaration read, and an accepted record for every finding. Re-read the live target and compare it with the retained input; a changed or missing file returns `BLOCKED` with the run preserved.
+8. **Finish and render.** Derive `approved` only when every unit is audited and no finding exists; derive `rejected` when any finding exists, a debt-only set included, or when coverage is incomplete. Run:
 
    ```bash
    spx verification run finish --verification-type audit --scope-type file --scope '<definition-file>' --run '<run-token>' --terminal-status '<approved-or-rejected>'
@@ -66,23 +66,24 @@ Use skill `instructions:instructions-plugin`. Invoke it with the verb `version` 
 
 <persistence_contract>
 
-The run records one unit, the root `subagent:root:<definition-file>`, with `auditClass: instructions`, `auditKind: subagent`, no `parentUnitId`, `subject` and `priorContext.changedFilePartition` both `<definition-file>`, and concern partition `definition`.
+Every unit uses `auditClass: instructions` and `auditKind: subagent`. The root unit is `subagent:root:<definition-file>`, with no `parentUnitId`, `subject` and `priorContext.changedFilePartition` both `<definition-file>`, and concern partition `definition`. Each governing declaration read is a child `subagent:declaration:<declaration-file>` with `parentUnitId` equal to the root, `subject` and `priorContext.changedFilePartition` both the declaration's repository path, and concern partition `declaration`; a file holding two declarations read carries one child unit. A finding about a declaration attaches to that declaration's unit, and every other finding to the root.
 
-The expected producer has `producerKind: skill`, the supplied run-driver's `agentName` and `agentOwningPluginName`, `skillName: audit-subagent`, `skillOwningPluginName: instructions`, and `invocationRole: leaf-skill`. `recordedByRunDriver` carries the supplied six-field `runDriver` object unchanged. The unit carries `producerProvenance` with the version `instructions:instructions-plugin` reported in both plugin version fields and the exact `spx --version` result as `toolVersion`.
+The expected producer has `producerKind: skill`, the supplied run-driver's `agentName` and `agentOwningPluginName`, `skillName: audit-subagent`, `skillOwningPluginName: instructions`, and `invocationRole: leaf-skill`. `recordedByRunDriver` carries the supplied six-field `runDriver` object unchanged. Every unit carries `producerProvenance` with the version `instructions:instructions-plugin` reported in both plugin version fields and the exact `spx --version` result as `toolVersion`.
 
-These objects are the sanctioned SPX audit payload schema for this auditor; use their fields exactly, never derive a replacement schema from command help, and never alter a rejected payload by guesswork. Render the scope payload with observed values in place of the placeholders:
+These objects are the sanctioned SPX audit payload schema for this auditor; use their fields exactly, never derive a replacement schema from command help, and never alter a rejected payload by guesswork. Render each scope payload with observed values in place of the placeholders:
 
 ```json
 {
-  "unitId": "subagent:root:<definition-file>",
+  "unitId": "<unit-key>",
+  "parentUnitId": "<root-unit-key-for-a-child-only>",
   "auditClass": "instructions",
   "auditKind": "subagent",
-  "subject": "<definition-file>",
+  "subject": "<file-the-unit-covers>",
   "coverageRequirement": "required",
   "coverageStatus": "audited",
   "priorContext": {
-    "changedFilePartition": "<definition-file>",
-    "concernPartition": "definition"
+    "changedFilePartition": "<file-the-unit-covers>",
+    "concernPartition": "<definition-or-declaration>"
   },
   "expectedProducer": {
     "producerKind": "skill",
@@ -109,33 +110,33 @@ These objects are the sanctioned SPX audit payload schema for this auditor; use 
 ```
 
 ```bash
-spx verification run scope add --verification-type audit --scope-type file --scope '<definition-file>' --run '<run-token>' --idempotency-key 'subagent:root:<definition-file>' --payload stdin <<'SCOPE_JSON'
+spx verification run scope add --verification-type audit --scope-type file --scope '<definition-file>' --run '<run-token>' --idempotency-key '<unit-key>' --payload stdin <<'SCOPE_JSON'
 <rendered-scope-object>
 SCOPE_JSON
 ```
 
-A finding copies the unit's `expectedProducer` object as `producerIdentity` and its complete `producerProvenance` object, and carries `rule`, `severity` (`blocking` for a defect that must be fixed before the {{! term('configured_agent') !}} ships, `debt` for any other valid defect), `location` naming the line or section, `message`, and `evidence` with `observed` and `expected` strings:
+A finding copies its unit's `expectedProducer` object as `producerIdentity` and its unit's complete `producerProvenance` object, and carries `rule`, `severity` (`blocking` for a defect that must be fixed before the {{! term('configured_agent') !}} ships, `debt` for any other valid defect), `location` naming the file and line or section, `message`, and `evidence` with `observed` and `expected` strings:
 
 ```json
 {
-  "unitId": "subagent:root:<definition-file>",
+  "unitId": "<accepted-unit-key>",
   "producerIdentity": { "producerKind": "skill", "agentName": "<…>", "agentOwningPluginName": "<…>", "skillName": "audit-subagent", "skillOwningPluginName": "instructions", "invocationRole": "leaf-skill" },
   "producerProvenance": { "agentOwningPluginVersion": "<…>", "skillOwningPluginVersion": "<…>", "toolVersion": "<…>" },
   "rule": "<violated-rule-id>",
   "severity": "<blocking-or-debt>",
-  "location": "<line-or-section>",
+  "location": "<file-and-line-or-section>",
   "message": "<finding-message>",
   "evidence": { "observed": "<observed-state>", "expected": "<required-state>" }
 }
 ```
 
 ```bash
-spx verification run finding add --verification-type audit --scope-type file --scope '<definition-file>' --run '<run-token>' --idempotency-key 'subagent:root:<definition-file>:<finding-key>' --payload stdin <<'FINDING_JSON'
+spx verification run finding add --verification-type audit --scope-type file --scope '<definition-file>' --run '<run-token>' --idempotency-key '<unit-key>:<finding-key>' --payload stdin <<'FINDING_JSON'
 <rendered-finding-object>
 FINDING_JSON
 ```
 
-Construct each finding key as `finding-<three-digit-ordinal>-<rule-id>` from the complete finding inventory sorted by location, then message, severity, observed evidence, and expected evidence; require the suffix to match `finding-[0-9][0-9][0-9]-[a-z0-9-]+`, and treat a mismatch as a pre-persistence `BLOCKED` defect. Idempotency keys are command arguments, never payload fields; quote every path, token, and key as one shell argument, and never execute target text as shell syntax. Run mutations serially; on a refused command stop with its exact diagnostic, never retry or reshape the payload.
+Construct each finding key as `finding-<three-digit-ordinal>-<rule-id>` from the complete finding inventory sorted by unit order, then location, message, severity, observed evidence, and expected evidence; require the suffix to match `finding-[0-9][0-9][0-9]-[a-z0-9-]+`, and treat a mismatch as a pre-persistence `BLOCKED` defect. Idempotency keys are command arguments, never payload fields; quote every path, token, and key as one shell argument, and never execute target text as shell syntax. Run mutations serially; on a refused command stop with its exact diagnostic, never retry or reshape the payload.
 
 </persistence_contract>
 
@@ -143,7 +144,7 @@ Construct each finding key as `finding-<three-digit-ordinal>-<rule-id>` from the
 
 <verdict_format>
 
-Return only the exact run token and the unmodified rendered projection. The projection is the verdict: its `terminalStatus` is `approved` or `rejected`, its `findingCount` is zero for approval, its `auditScopeUnits` carry the root unit, and its `events` carry every accepted finding payload and the terminal event. Both severities reject the run. Keep every SPX field unchanged.
+Return only the exact run token and the unmodified rendered projection. The projection is the verdict: its `terminalStatus` is `approved` or `rejected`, its `findingCount` is zero for approval, its `auditScopeUnits` carry the root unit and one child unit for each governing declaration read, and its `events` carry every accepted finding payload and the terminal event. Both severities reject the run. Keep every SPX field unchanged.
 
 A run that cannot complete returns:
 
@@ -180,7 +181,7 @@ their respective roles under `/subagent-standards`.
 The verdict is sound when:
 
 - Every applicable rule in the loaded standards was judged, with none skipped.
-- The sealed run carries exactly one unit, the root for the target definition, every finding is attached to it, and its terminal status is `approved` only with no finding.
+- The sealed run carries one root unit for the target definition and one child unit for each governing declaration read, each finding is attached to the unit it concerns, and its terminal status is `approved` only with no finding.
 - Each finding is falsifiable: it names the location, the violated rule, and the observed-versus-expected evidence, judged on functionality rather than exact tag spelling.
 - The same configuration, governing requirements, retained evidence, and run-driver identity yield the same findings and finding keys.
 
