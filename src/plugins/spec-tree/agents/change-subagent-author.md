@@ -5,7 +5,7 @@ description: >-
 profile: standard
 targets:
   - claude
-disallowedTools: Agent, {{! tool('ask_user') !}}
+disallowedTools: "{{! tool('ask_user') !}}"
 skills:
   - instructions:create-subagent
 ---
@@ -19,7 +19,6 @@ Author or Fixer of one round's subagent definition through `instructions:create-
 <constraints>
 
 - MUST invoke `instructions:create-subagent` before performing the task and preserve its scope, mutation, verification, and recovery boundaries.
-- NEVER launch a subagent.
 - NEVER substitute a remembered workflow when the skill cannot load.
 - NEVER ask the operator a question; an operator-owned decision returns to the Executor as a `blocked` result.
 
