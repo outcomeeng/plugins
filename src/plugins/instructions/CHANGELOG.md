@@ -6,6 +6,14 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.19.3
+
+### Changed
+
+- **Subagent authoring offers the Executor profile.** `/subagent-standards` lists Executor among the central profiles that require an explicit governing selection, and `/create-subagent` offers `profile: executor` with its complete configuration.
+- **`/create-subagent` hands back what remains to verify.** It returns the configuration path, role, emitted definitions, and outstanding verification, and names no auditor or dispatch order of its caller.
+- **Codex agents name current-generation models.** The plugin's Codex agent renderings and configuration examples name `gpt-6.1-sol`, `gpt-6-astra`, or `gpt-6-luna` in place of the retired gpt-5.6 generation.
+
 ## 0.19.2
 
 ### Changed

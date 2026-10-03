@@ -10,6 +10,13 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.100.3
+
+### Changed
+
+- **`change-executor` runs on Sonnet at high effort.** The definition selects the central Executor profile, so an Executor session starts on Claude Code `model: sonnet` with `effort: high` with no manual step.
+- **Codex agents name current-generation models.** Every Codex agent rendering names `gpt-6.1-sol`, `gpt-6-astra`, or `gpt-6-luna` in place of the retired gpt-5.6 generation.
+
 ## 0.100.2
 
 ### Fixed

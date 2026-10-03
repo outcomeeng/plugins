@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.12.5
+
+### Changed
+
+- **Codex agents name current-generation models.** The `prose-auditor` Codex rendering names `gpt-6-astra` in place of the retired gpt-5.6 generation.
+
 ## 0.12.4
 
 ### Changed
