@@ -37,15 +37,11 @@ with native configuration and an independently verifiable result contract.
    the exact definition through the product's normal checkpoint workflow.
 7. Apply `/subagent-standards` `<configuration_subject>` to identify the authored input
    and exact emitted definitions, or the directly authored native definition.
-   Return the requested configuration path and configured role for the owning
-   verification workflow. It dispatches `instructions:subagent-auditor`
-   with that path alone; the audit independently discovers the generation relationship
-   and its evidence. Keep native loading and one minimal isolated execution bound to
-   the emitted definition under `/subagent-standards`.
+   Return the configuration path, the configured role, the emitted definitions, and
+   the verification still outstanding under `/subagent-standards`: its audit, and native
+   loading with one minimal isolated execution of the emitted definition.
 
-This skill's write-focused tool grant does not launch a configuration while it is
-being authored. The owning verification workflow performs the post-authoring
-audit and invocation check after this skill returns.
+This skill launches no configuration it authors.
 
 </workflow>
 
