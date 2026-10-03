@@ -25,7 +25,7 @@ Restricting the structural read-set to deterministic derivation keeps context lo
 ### Audit
 
 - ALWAYS: `/contextualize` reads the structural context in deterministic order, then reads explicit full-path methodology-governance ADR/PDR citations from loaded specs and decisions before emitting the context marker ([audit])
-- ALWAYS: the target `spx spec context --json` capability includes both deterministic tree-walk derivation and explicit full-path methodology-governance ADR/PDR citations from loaded specs and decisions in the read-set, with provenance that names the citing file ([audit])
+- ALWAYS: the `spx spec context --json` capability includes both deterministic tree-walk derivation and explicit full-path methodology-governance ADR/PDR citations from loaded specs and decisions in the read-set, with provenance that names the citing file ([audit])
 - ALWAYS: where the consuming floor admits a published SPX release that provides `spx spec context --json`, `/contextualize` derives the target read-set from that structured output, reads the ordered read-order paths in their enumerated order, reads the guides and the lifecycle overlay (`spx/local/merging.md`) outside that order, and lists the remaining local overlays without reading them — those are consumed by the skills they configure ([audit])
 - NEVER: where the consuming floor admits a published SPX release that provides `spx spec context --json`, context loading enumerates its structural read-set by agent-executed globbing with a self-reported read-count check, or by any manual fallback that reconstructs the structural read-set outside the CLI ([audit])
 - NEVER: context loading scans coordination-note prose for governing references — coordination notes do not affect the read-set ([audit])
