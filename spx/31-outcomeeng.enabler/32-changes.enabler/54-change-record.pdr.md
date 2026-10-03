@@ -1,6 +1,6 @@
 # Change Record Contract
 
-A Change is a self-contained, store-neutral coordination record for one intended Output. Its record shape, Maturity-specific Definitions of Ready, authority requirements, Lifecycle transitions, persistence behavior, and compatibility boundary are fixed by this decision; `audit-change` produces its Agentic verdict under [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md).
+A Change is a self-contained, store-neutral coordination record for one intended Output. Its record shape, Maturity-specific Definitions of Ready, authority requirements, Lifecycle transitions, persistence behavior, and compatibility boundary are fixed by this decision; `audit-change` produces its Agentic verdict under `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`.
 
 ## Record
 
@@ -63,7 +63,7 @@ An Executable Change is ready when:
 
 - the Sliced Definition of Ready holds;
 - every consequential Decision for the changeset is settled;
-- `# Frame` states, for every Node the changeset touches, its required state and its evidence obligations: the predicates `VERIFICATION_READINESS` reads that the merge composition in [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md) selects from the least malleable target, the results each Node's required state needs under its target malleability with the producer of each, and the authoring checks each decision record the changeset adds or changes requires; it names no Verifier outside those three, and a Node whose target malleability is lower than its declared one carries both values; and
+- `# Frame` states, for every Node the changeset touches, its required state and its evidence obligations: the predicates `VERIFICATION_READINESS` reads that the merge composition in `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` selects from the least malleable target, the results each Node's required state needs under its target malleability with the producer of each, and the authoring checks each decision record the changeset adds or changes requires; it names no Verifier outside those three, and a Node whose target malleability is lower than its declared one carries both values; and
 - `# Activities` is ordered and sufficient for an agent to proceed without reopening product or architecture judgment, and each verification Activity cites the Frame's evidence obligations instead of the verification a skill runs by default.
 
 Framed requires the operator's attestation. Sliced requires a named accountable person. The Refiner may advance Sliced to Executable only inside the authority of the attested Frame.
