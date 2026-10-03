@@ -88,7 +88,7 @@ Pick the gate by role:
 - A user-only side-effecting command (`/deploy`) uses `disable-model-invocation: true`. NEVER set it on a skill other skills or subagents must load: it blocks the Skill-tool call (surfacing `Skill <name> cannot be used with Skill tool due to disable-model-invocation`) AND blocks subagent preloading.
 - A skill any automation loop re-enters — a scheduled wakeup, heartbeat, or `/loop` target — MUST be user-invocable (leave the default; never `user-invocable: false`). Automation fires as a user-style prompt, so `user-invocable: false` rejects it and no Claude-private heartbeat exists to bypass that. When a loop body is otherwise reference-like, expose a user-invocable entry the loop targets rather than gating the body. Such a loop body keeps a **passive** description — it is invoked by exact name (the timer or a parent skill), not by description-match, so a directive description would only cause false auto-activations. A user-invocable skill with a passive description is the correct shape here, not a defect.
 
-Audit skills (`audit-*`) must add `allowed-tools: Read, Grep, Glob` and only the specific read-only Bash verb patterns their workflow runs, never bare `Bash`, per the read-only rule for audit skills, plus `{{! tool('use_skill') !}}` when the audit composes another skill — audit runs never modify files.
+Audit skills (`audit-*`) must add `allowed-tools: Read, Grep, Glob` and only the specific Bash verb patterns their workflow runs — read-only verbs, and the `spx verification run` verbs that write the audit's own run journal — never bare `Bash`, plus `{{! tool('use_skill') !}}` when the audit composes another skill.
 
 **Directory match is mandatory.** `skills/author/` → `name: author`. A mismatch breaks skill lookup.
 

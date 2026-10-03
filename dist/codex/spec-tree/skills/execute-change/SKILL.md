@@ -57,6 +57,8 @@ Each Verifier is the configured auditor or reviewer for the evidence obligation 
 | The changeset, under `/merge`       | `spec-tree_changes-reviewer`            |
 | Changeset coherence, under `/merge` | `spec-tree_changeset-coherence-auditor` |
 
+The verdict of a `instructions_skill-auditor` or `instructions_subagent-auditor` launch is the terminal status of the sealed run whose token the launch returns: `approved` approves, and `rejected` rejects whatever the finding count. A launch that returns a blocked diagnostic for a refused payload or finish yields no verdict and goes to step 8 with that diagnostic.
+
 </definitions>
 
 <launch_contract>
