@@ -55,3 +55,11 @@
 **Impact**: when a Change's subagent-definition Activity also edits a calling skill, that edit reaches `/merge` with a committed-head skill audit only if the Change's Frame names a skill-surface obligation for it.
 
 **Settlement condition**: the pairing of a subagent-definition round names `instructions:skill-auditor` as well whenever the round's committed diff changes a skill surface, in the `execute-change` definitions text, its step 5.3 and the change-execution assertion, and one typed skill audit of `execute-change` then approves.
+
+## A round's launch of the typed auditors from inside its session is unexercised
+
+**Evidence**: `spec-tree:changes-reviewer` run `2026-10-03_22-47-33-122-09a416477991` on head `b46badf51dc7f3258eef8c0a4bee0fcd059b9938`, finding severity `DEBT`, category evidence. `change-skill-author` and `change-subagent-author` leave the Agent tool enabled, and their fronted skills launch `instructions:skill-auditor` from inside the round session: `instructions:create-skill` through its audit step, `instructions:create-subagent` through its calling-skill step. The retained runs in `probes/definition-invocation/probe.md` exercise only the `blocked` result for an uninstalled fronted skill, and its limitations leave that launch unexercised.
+
+**Impact**: when the agent harness refuses a subagent launch from a subagent session, every skill-surface or subagent-definition round returns `BLOCKED` from its fronted skill, and no retained evidence detects it before the first such Change executes.
+
+**Settlement condition**: a retained attested run in which `change-skill-author`, with the `instructions` plugin installed, reaches the typed `instructions:skill-auditor` launch and receives its verdict, and the probe protocol covers the same run for `change-subagent-author`.
