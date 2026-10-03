@@ -11,8 +11,6 @@ CAN retain the Spec Tree routing instructions and reach the product's own phase 
 
 ## Assertions
 
-- ALWAYS: generation emits and validates, in the router block of every repository it renders and of both agent harnesses, a positions section stating the operator's authority; the Director, Maintainer, and Orchestrator position titles with the authority each holds over its scope; that a grant may name any further position, which holds the authority its grant names; the position name form `{Product} {Position}`, with the operator outside it; that position titles and position names stay distinct from role names; that one agent session holds at most one position, in the one worktree root its grant names, while a session no grant names holds no position and works in roles only; and that a position holder may take any role except the Verifier and keeps every rule of each role it takes, per `spx/15-agent-terminology.pdr.md`
-
 ### Scenarios
 
 - Given a template with language blocks and per-harness blocks, when the managed surface is generated for an enabled-language set, then both `CLAUDE.md` and `AGENTS.md` are written, each with its router block first, preserving content outside every managed fence, and containing inside the router block exactly the enabled languages' blocks and only its own harness's blocks ([test](tests/test_instruction_block.scenario.l1.py))
@@ -76,6 +74,7 @@ CAN retain the Spec Tree routing instructions and reach the product's own phase 
 
 ### Compliance
 
+- ALWAYS: generation emits and validates, in the router block of every repository it renders and of both agent harnesses, a positions section stating the operator's authority; the Director, Maintainer, and Orchestrator position titles with the authority each holds over its scope; that a grant may name any further position, which holds the authority its grant names; the position name form `{Product} {Position}`, with the operator outside it; that position titles and position names stay distinct from role names; that one agent session holds at most one position, in the one worktree root its grant names, while a session no grant names holds no position and works in roles only; and that a position holder may take any role except the Verifier and keeps every rule of each role it takes, per `spx/15-agent-terminology.pdr.md` ([test](tests/test_positions.compliance.l1.py))
 - ALWAYS: both generated root guides preserve the standing-request sentence in
   `spx/15-subagent-execution.pdr.md` verbatim within explicit authorization for
   every subagent supplied by their listed plugins. An active skill must explicitly
