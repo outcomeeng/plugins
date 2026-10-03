@@ -114,7 +114,12 @@ version. Do metadata preparation before substantive judgment.
    malleability, the in-Frame Intent attestation,
    accountable person, required node states,
    evidence obligations, Decisions, repository boundary, dependencies, and
-   Activities together. Assess every common rule and selected DoR criterion.
+   Activities together. At Executable, judge the Frame's stated `VERIFICATION_READINESS`
+   predicates, results with their producers, and decision-record audits against the
+   composition the loaded Definition of Ready's `<merge_composition>` selects for the
+   Nodes' target malleability; record a finding when they disagree, or when an
+   evidence obligation names a Verifier outside them. Assess every common rule and
+   selected DoR criterion.
    Distinguish intended paths and explicit prototype constraints from broken
    existing references through the bounded lookup in step 3. Record each defect
    with its violated rule and concrete observed-versus-expected evidence. A
