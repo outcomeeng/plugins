@@ -14,7 +14,9 @@ Merging is one phase in a broader delivery lifecycle. Separating verification, p
 
 ## Verification
 
-- ALWAYS: where the transport runs CI on the pushed head, a verification push that obtains CI's deterministic run precedes `VERIFICATION_READINESS` and presents the head to no hosted review and no integration; `VERIFICATION_READINESS` then authorizes presenting that head to hosted review and integration, and a later push whose diff differs from the verification-ready diff withdraws the presented head from hosted review before it lands
+### Eval
+
+- ALWAYS: where the transport runs CI on the pushed head, a verification push that obtains CI's deterministic run precedes `VERIFICATION_READINESS` and presents the head to no hosted review and no integration; `VERIFICATION_READINESS` then authorizes presenting that head to hosted review and integration, and a later push whose diff differs from the verification-ready diff withdraws the presented head from hosted review before it lands ([eval])
 
 ### Audit
 
