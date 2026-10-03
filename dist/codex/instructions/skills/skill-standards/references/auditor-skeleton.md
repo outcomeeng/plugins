@@ -42,7 +42,7 @@ A run-recording objective names the sealed run as the verdict. Its `<verdict_for
 An auditor's `<success_criteria>` states verdict soundness, never a re-list of the workflow steps:
 
 - Every applicable rule was judged — none skipped (coverage-complete).
-- The verdict states its overall determination — APPROVED/REJECTED, PASS/FAIL, the auditor's keep/worth-improving/must-fix grouping, or a sealed run's `approved`/`rejected` terminal status — with no rule left unevaluated.
+- The verdict states its overall determination — APPROVED/REJECTED, PASS/FAIL, or a sealed run's `approved`/`rejected` terminal status — with no rule left unevaluated.
 - Each finding that flags a problem is falsifiable: it names the artifact, the violated rule, and the evidence.
 - The same input yields the same verdict (reproducible).
 

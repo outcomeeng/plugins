@@ -34,7 +34,7 @@ For every explicit improvement request, complete the router's `<material_change_
 
 For an explicit improvement request, map every accepted finding to its governing rule, identify every same-class instance in the complete bundle, resolve the exact authored paths, and settle every operator-owned decision that changes behavior. Before changing behavior, load `${CLAUDE_SKILL_DIR}/references/test-patterns.md`. Load `${CLAUDE_SKILL_DIR}/references/reusability-patterns.md` when the repair changes variable inputs, clarification, abstraction level, or tool choice. Load `${CLAUDE_SKILL_DIR}/references/technical-patterns.md` when the repair touches files, data, external services, state mutation, or executable automation.
 
-Apply every must-fix item and every explicitly requested improvement through the authoring rules loaded by `/create-skill`. Preserve unaffected content and keep standards in `/skill-standards` rather than copying them into the target skill.
+Apply every finding, blocking or debt, and every explicitly requested improvement through the authoring rules loaded by `/create-skill`. Preserve unaffected content and keep standards in `/skill-standards` rather than copying them into the target skill.
 
 </step>
 

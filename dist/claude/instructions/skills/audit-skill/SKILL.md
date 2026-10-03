@@ -20,6 +20,7 @@ A sealed `spx verification run` on one skill bundle against `/skill-standards` a
 
 - NEVER modify the target bundle or any product file; the only state this audit changes is its own SPX verification-run journal.
 - NEVER report a score; report contextual judgment across the full skill-authoring surface.
+- NEVER invent a requirement because a tag, example, or optional mechanism is absent; judge an absent failure-mode section under the loaded prompt standard.
 - MUST read the governing standards and the references their applicability rules require before evaluating.
 - NEVER generate fixes; the run records findings, and repair belongs to the author.
 - NEVER make assumptions about skill intent; record an ambiguity as a finding.
