@@ -63,3 +63,11 @@
 **Impact**: when the agent harness refuses a subagent launch from a subagent session, every skill-surface or subagent-definition round returns `BLOCKED` from its fronted skill, and no retained evidence detects it before the first such Change executes.
 
 **Settlement condition**: a retained attested run in which `change-skill-author`, with the `instructions` plugin installed, reaches the typed `instructions:skill-auditor` launch and receives its verdict, and the probe protocol covers the same run for `change-subagent-author`.
+
+## The instruction skills declare no repair-block intake for a Fixer round
+
+**Evidence**: `spec-tree:changes-reviewer` run `2026-10-03_22-50-05-358-7abe73e44d07` on head `59622008c0a2f9b78310058eda2d61bce96f9f52`, finding severity `DEBT`, category consistency, against the Fixer rule of `src/plugins/spec-tree/skills/execute-change/SKILL.md`. A Fixer round of `change-skill-author` or `change-subagent-author` receives its Author's task message and a repair block of rejected verdicts and failed command output. The `improve` route of `instructions:create-skill` repairs from the verdict of the skill audit it dispatches itself, and `instructions:create-subagent` declares no intake for a supplied block either.
+
+**Impact**: a Fixer round started by a failed deterministic command or by a `/merge` finding repairs only what its own fresh audit raises, so a defect that audit does not reproduce returns to the repeated-defect stop of `/execute-change`.
+
+**Settlement condition**: `instructions:create-skill` and `instructions:create-subagent` each declare an intake that joins a supplied repair block of verdicts and failed command output to the findings the round repairs, and the Fixer rule of `/execute-change` then drops its exception for the two skills.
