@@ -51,6 +51,13 @@ model: "opus"
 effort: "high"
 ```
 
+Executor:
+
+```yaml
+model: "sonnet"
+effort: "high"
+```
+
 Fast:
 
 ```yaml

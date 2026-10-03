@@ -27,8 +27,8 @@ with native configuration and an independently verifiable result contract.
    invocation, and evidence. Read the relevant references from the index below.
 3. For a skill-backed role, author a thin wrapper that invokes the owning skill
    and relays its result. Keep task-specific behavior in that skill.
-4. For a marketplace source, declare `profile: standard`, `profile: strong`, or
-   `profile: fast` according to the governing selection. Let the product build
+4. For a marketplace source, declare `profile: standard`, `profile: strong`,
+   `profile: executor`, or `profile: fast` according to the governing selection. Let the product build
    emit the complete native configuration. For a product-owned native definition,
    use the selected complete configuration supplied by the loaded standards and examples.
 5. Update the calling skill through `instructions:create-skill` so its explicit

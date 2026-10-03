@@ -67,8 +67,8 @@ Use a native TOML definition with `name`, `description`, and
 
 <profiles>
 
-- ALWAYS: select exactly one central profile. Standard is the default. Strong and Fast
-  require an explicit selection by the governing skill or product decision.
+- ALWAYS: select exactly one central profile. Standard is the default. Strong, Executor,
+  and Fast require an explicit selection by the governing skill or product decision.
 - NEVER: infer a different profile from task difficulty, a role name, or an existing override.
 - ALWAYS: obtain the selected profile's complete native configuration as one unit,
   including the intentional absence of unsupported controls.
@@ -82,6 +82,7 @@ Use a native TOML definition with `name`, `description`, and
 | -------- | -------------------------------------------------- |
 | Standard | `model=gpt-6.1-sol`, `model_reasoning_effort=high` |
 | Strong   | `model=gpt-6-astra`, `model_reasoning_effort=high` |
+| Executor | `model=gpt-6.1-sol`, `model_reasoning_effort=high` |
 | Fast     | `model=gpt-6-luna`, `model_reasoning_effort=high`  |
 
 </profiles>
