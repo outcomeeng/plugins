@@ -89,11 +89,3 @@ Required handling: decide whether an audit skill's target is a declared argument
 Source: `spec-tree:spec-auditor` finding `heading-mismatch`, severity `REJECT`, at head `add3e3e862f7512a55e8b9655d07f78412abe87c`.
 
 Required handling: move the assertion under `### Compliance`, its universal ALWAYS shape, and obtain one spec audit of the node with no `heading-mismatch` finding.
-
-## 11. Two assertions state audit skills as read-only without the journal qualifier
-
-`spx/43-instructions.enabler/instructions.md` lines 17-18 state that auditor skills are read-only and never modify files, while the node's run-recording assertions and `/skill-standards` admit the `spx verification run` journal writes an audit run makes. A run that writes its own journal satisfies one statement and violates the other.
-
-Source: `spec-tree:changes-reviewer` debt finding (consistency) in review run `2026-10-03_23-05-35-961-1caf5fd87f79` at head `2357bd53b11beb95f7db3e7f8dbd0938ead12501`.
-
-Required handling: a Change qualifies both assertions to the boundary the standards state — no change to the subject or any product file, and only the audit's own verification-run journal written — and one spec audit of the node approves them.
