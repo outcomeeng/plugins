@@ -71,3 +71,11 @@
 **Impact**: a Fixer round started by a failed deterministic command or by a `/merge` finding repairs only what its own fresh audit raises, so a defect that audit does not reproduce returns to the repeated-defect stop of `/execute-change`.
 
 **Settlement condition**: `instructions:create-skill` and `instructions:create-subagent` each declare an intake that joins a supplied repair block of verdicts and failed command output to the findings the round repairs, and the Fixer rule of `/execute-change` then drops its exception for the two skills.
+
+## No route produces the invocation evidence of a subagent definition an Executor delivers
+
+**Evidence**: `spec-tree:changes-reviewer` run `2026-10-03_22-56-23-685-4cdbf8555ae6` on head `72378e875578070b6574c37595f0882802f41e3d`, finding severity `DEBT`, category evidence, against `src/plugins/spec-tree/skills/execute-change/SKILL.md` and `change-execution.md`. `/subagent-standards` requires each subagent definition without declared per-harness release acceptance to retain its exact-definition minimal isolated invocation, and `instructions:create-subagent` returns that invocation as verification still outstanding. The `<definitions>` table of `/execute-change` has no row whose result is a retained invocation run, the Executor produces no artifact, and the paired Verifier of a `change-subagent-author` round is `instructions:subagent-auditor` alone.
+
+**Impact**: a subagent-definition Activity completes only when its auditor finds the invocation evidence present, so a definition whose evidence is absent reaches the repeated-defect stop of `/execute-change` with no round that can produce it.
+
+**Settlement condition**: a `<definitions>` row or named Activity result produces and retains the invocation run for the committed emitted definition, steps 5.3 and 5.4 of `/execute-change` require it before the round completes, and the change-execution assertion on the subagent-definition round names it.
