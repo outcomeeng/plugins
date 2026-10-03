@@ -31,3 +31,11 @@
 **Impact**: a failed base sync can precede verification on a stale head, and a `/merge` finding on a file no round produced is settled by judgment where the first constraint forbids this session to repair it. Each verify command asks for approval during autonomous execution.
 
 **Settlement condition**: each composed skill's continuing results are named and every other result routes to step 8; step 6 names the `/merge` result that returns control and routes a finding with no producing round to step 8; the workflow states the approval model of the product's `verify` command or grants the narrowest pattern the waiter needs; one typed skill audit of `execute-change` then raises no `composed_result_unhandled`, `ambiguous_cross_skill_control_flow` or `allowed_tools_vs_workflow_commands` finding.
+
+## The Executor skill's grants, verify scope and reading tag carry three open warnings
+
+**Evidence**: `instructions:skill-auditor` findings f-008, f-010 and f-011, severity `WARNING`, against `src/plugins/spec-tree/skills/execute-change/SKILL.md`, in the typed skill audit of head `8b72c99fe5a258ef2d562e7e33e1151c909c0658`, which approved with no must-fix finding. The Codex render grants `spawn_agent` and `wait_agent` although its `<codex_surface>` runs no step. Step 5.3 runs the product `verify` command over the Activity's nodes and the changeset, and a skill-surface or subagent-definition round targets paths outside any spec node. `<required_reading>`, a workflow-file tag, holds the always-on composition directives of a non-router skill.
+
+**Impact**: the Codex grant exceeds the behavior it serves, the verification scope for a round whose subject is no spec node depends on judgment, and the tag does not name its content.
+
+**Settlement condition**: the Codex render grants only what its `unavailable` path needs, step 5.3 states the scope for a subject that is no spec node, and the always-on directives sit in a semantically named section; one typed skill audit of `execute-change` then raises no `narrowest_allowed_tools`, `ambiguous_instruction` on scope, or `tag_semantics` finding.
