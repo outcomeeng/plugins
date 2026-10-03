@@ -34,7 +34,8 @@ Each round's producing session is one subagent of the definition that fronts the
 A Fixer is a fresh session of the definition the round's Author used. The task message of each session follows its definition:
 
 - `spec-tree:change-author` Author: the canonical `spx/...` path of the node or decision it produces, followed by the Change's issue URL, because `/author` reads the Output's requirements from the Change.
-- `spec-tree:change-skill-author` and `spec-tree:change-subagent-author` Author: the repository path of the skill surface or subagent definition the Activity produces, the Change's issue URL, and the sentence `Add the plugin changelog entry that records the change.`, so the round that produces the surface produces its changelog entry.
+- `spec-tree:change-skill-author` Author: the `instructions:create-skill` intent the Activity names — create, improve, add workflow, add reference, add template, add script, or upgrade to router — the repository path of the skill surface the Activity produces, the Change's issue URL, and the sentence `Add the plugin changelog entry that records the change.`; the intent keeps `instructions:create-skill` from asking its intake menu, and the sentence makes the round that produces the surface produce its changelog entry.
+- `spec-tree:change-subagent-author` Author: the repository path of the subagent definition the Activity produces, the Change's issue URL, and the sentence `Add the plugin changelog entry that records the change.`, so the round that produces the definition produces its changelog entry.
 - Every other definition's Author: the Activity's target in the form its fronted skill accepts.
 - Fixer: its Author's task message followed by a repair block: the verbatim result of every rejected verdict of the earlier round, and the exact command line and output of every deterministic command that failed on it. The fronted skill reads that block as its repair input.
 

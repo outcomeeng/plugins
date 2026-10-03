@@ -39,3 +39,11 @@
 **Impact**: the Codex grant exceeds the behavior it serves, the verification scope for a round whose subject is no spec node depends on judgment, and the tag does not name its content.
 
 **Settlement condition**: the Codex render grants only what its `unavailable` path needs, step 5.3 states the scope for a subject that is no spec node, and the always-on directives sit in a semantically named section; one typed skill audit of `execute-change` then raises no `narrowest_allowed_tools`, `ambiguous_instruction` on scope, or `tag_semantics` finding.
+
+## An instruction round's changelog entry has no declared owner in the fronted skills
+
+**Evidence**: `spec-tree:changes-reviewer` run `2026-10-03_21-00-54-163-94f69948f54e` on head `a5828b89d9470a14436c069f6884a556847610bc`, finding severity `DEBT`, category consistency, against `change-execution.md`. Neither `instructions:create-skill` nor `instructions:create-subagent` declares changelog authoring. The `/execute-change` task message carries the instruction as a sentence, and the 0.101.0 entry of the spec-tree changelog states that each round produces the entry that records its surface. A surface outside any plugin has no plugin changelog.
+
+**Impact**: a round produces the changelog entry only as far as its fronted skill follows an instruction its declared scope does not name, and the Executor can neither detect nor fill the gap without producing an artifact itself.
+
+**Settlement condition**: `instructions:create-skill` and `instructions:create-subagent` each declare a changelog step with its scope for a surface outside any plugin, or the entry moves to its own Activity and definition; the change-execution spec assertion, the `execute-change` task-message rule and the spec-tree changelog entry then name that owner. The fix amends two skills of the `instructions` plugin, each needing a typed skill audit and a version bump, so it is a separate concern from this changeset.
