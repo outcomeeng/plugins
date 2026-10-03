@@ -101,7 +101,7 @@ No project field holds a Change field. The Lifecycle comments — the Claim, the
 
 ## Compatibility
 
-`audit-change` accepts only records whose front matter carries this contract's closed key set. A record whose front matter does not carry that closed key set is outside the contract: it receives no migration, alias, inferred front matter, body-line lineage interpretation, or audit verdict, and the auditor reports it as outside the contract.
+`audit-change` accepts only records whose front matter carries this contract's closed key set. A record whose front matter does not carry that closed key set is outside the contract: it receives no migration, alias, inferred front matter, body-line lineage interpretation, or audit verdict, and the Auditor reports it as outside the contract.
 
 ## Rationale
 
@@ -121,7 +121,7 @@ One self-contained record preserves Change meaning across local drafting and coo
 - ALWAYS: an Executable `# Frame` states the predicates `VERIFICATION_READINESS` reads, the results with their producers, and the decision-record audits that the merge composition selects from the target malleability of the Nodes the changeset touches, and names no Verifier outside them; `audit-change` rejects an Executable record whose stated obligations disagree with that composition.
 - ALWAYS: persistence writes each field to its one home in the configured coordination store and the four sections to the store body, and reads each back unchanged before reporting success; a coordination-store limit never shapes the record.
 - NEVER: a place holds a Change field in two homes, a store body carries front matter or a lineage line, or a project field holds a Change field.
-- NEVER: `audit-change` judges or migrates a record whose front matter does not carry the contract's closed key set; the auditor reports it as outside the contract.
+- NEVER: `audit-change` judges or migrates a record whose front matter does not carry the contract's closed key set; the Auditor reports it as outside the contract.
 - ALWAYS: `claim-change` claims only an open record whose Product, Maturity, `Available` Lifecycle, and empty holder verify from current state; it adds the holder, records the Claim naming the claiming session and the worktree root the Change is claimed for, writes `Claimed`, and reads the complete state back before execution begins, and a losing concurrent claim withdraws its own holder record and reports the winner.
 - ALWAYS: `release-change` and `close-change` run only for the session whose assigned worktree root equals the root the winning Claim names, and report any other caller without mutation.
 - ALWAYS: `release-change` writes a Handoff carrying branch or changeset, completed and next Activities, blockers, and hazards, then removes the holder, writes `Available`, and reads the complete state back, leaving Maturity unchanged.
