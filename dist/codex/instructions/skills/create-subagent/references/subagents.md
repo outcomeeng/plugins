@@ -15,7 +15,7 @@ auditing and preserves the skill's result contract.
 ```toml
 name = "spec-tree_spec-auditor"
 description = "ALWAYS invoke when the governing skill requests an audit of one spec node."
-model = "gpt-5.6-terra"
+model = "gpt-6.1-sol"
 model_reasoning_effort = "high"
 developer_instructions = """
 <workflow>
@@ -38,21 +38,28 @@ Use the profile selected by the governing requirement.
 Standard:
 
 ```toml
-model = "gpt-5.6-terra"
+model = "gpt-6.1-sol"
 model_reasoning_effort = "high"
 ```
 
 Strong:
 
 ```toml
-model = "gpt-5.6-sol"
+model = "gpt-6-astra"
+model_reasoning_effort = "high"
+```
+
+Executor:
+
+```toml
+model = "gpt-6.1-sol"
 model_reasoning_effort = "high"
 ```
 
 Fast:
 
 ```toml
-model = "gpt-5.6-luna"
+model = "gpt-6-luna"
 model_reasoning_effort = "high"
 ```
 

@@ -661,3 +661,11 @@ one, and the login exits nonzero only because the home it provisions holds no
 `config.toml`, which Codex refuses. The repair is the provisioned `config.toml`
 and a diagnostic that names the observed refusal; both belong to
 outcomeeng/changes#180.
+
+## Release acceptance for the Executor profile and the gpt-6 Codex configurations is unretained
+
+`spx/15-subagent-execution.pdr.md` requires release acceptance for every profile of each harness, and the release-acceptance assertion in `repository-installation.md` requires configuration, native loading, and one minimal isolated execution result for each. `outcomeeng.distribution.profiles.AGENT_PROFILES` carries the Executor profile, and every Codex profile names a gpt-6 model: Standard and Executor `gpt-6.1-sol`, Strong `gpt-6-astra`, Fast `gpt-6-luna`. `native_profile_rows` therefore derives `claude-executor`, `codex-standard`, `codex-strong`, `codex-executor`, and `codex-fast` rows whose configurations no retained run covers.
+
+**Impact**: no artifact shows the Claude Code `sonnet` configuration at high effort, or any gpt-6 Codex configuration, loading and executing as a native subagent. A combined acceptance claim for either harness is therefore incomplete.
+
+**Settlement condition**: `just verify-native-profile-execution` retains passing `claude-executor`, `codex-standard`, `codex-strong`, `codex-executor`, and `codex-fast` rows.

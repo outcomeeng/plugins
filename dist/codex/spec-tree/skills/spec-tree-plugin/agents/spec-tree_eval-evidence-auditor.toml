@@ -1,6 +1,6 @@
 name = "spec-tree_eval-evidence-auditor"
 description = "ALWAYS invoke when auditing eval evidence quality against spec assertions after writing evals for a spec node or before relying on eval evidence."
-model = "gpt-5.6-terra"
+model = "gpt-6.1-sol"
 model_reasoning_effort = "high"
 sandbox_mode = "read-only"
 web_search = "disabled"

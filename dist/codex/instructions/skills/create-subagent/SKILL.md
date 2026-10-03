@@ -27,8 +27,8 @@ with native configuration and an independently verifiable result contract.
    invocation, and evidence. Read the relevant references from the index below.
 3. For a skill-backed role, author a thin wrapper that invokes the owning skill
    and relays its result. Keep task-specific behavior in that skill.
-4. For a marketplace source, declare `profile: standard`, `profile: strong`, or
-   `profile: fast` according to the governing selection. Let the product build
+4. For a marketplace source, declare `profile: standard`, `profile: strong`,
+   `profile: executor`, or `profile: fast` according to the governing selection. Let the product build
    emit the complete native configuration. For a product-owned native definition,
    use the selected complete configuration supplied by the loaded standards and examples.
 5. Update the calling skill through `instructions:create-skill` so its explicit
@@ -37,15 +37,11 @@ with native configuration and an independently verifiable result contract.
    the exact definition through the product's normal checkpoint workflow.
 7. Apply `/subagent-standards` `<configuration_subject>` to identify the authored input
    and exact emitted definitions, or the directly authored native definition.
-   Return the requested configuration path and configured role for the owning
-   verification workflow. It dispatches `instructions_subagent-auditor`
-   with that path alone; the audit independently discovers the generation relationship
-   and its evidence. Keep native loading and one minimal isolated execution bound to
-   the emitted definition under `/subagent-standards`.
+   Return the configuration path, the configured role, the emitted definitions, and
+   the verification still outstanding under `/subagent-standards`: its audit, and native
+   loading with one minimal isolated execution of the emitted definition.
 
-This skill's write-focused tool grant does not launch a configuration while it is
-being authored. The owning verification workflow performs the post-authoring
-audit and invocation check after this skill returns.
+This skill launches no configuration it authors.
 
 </workflow>
 

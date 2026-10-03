@@ -76,6 +76,17 @@ Strong:
 {{! profile_config('strong') !}}
 ````
 
+Executor:
+
+{!% if target == 'codex' %!}
+
+````toml
+{!% else %!}
+```yaml
+{!% endif %!}
+{{! profile_config('executor') !}}
+````
+
 Fast:
 
 {!% if target == 'codex' %!}

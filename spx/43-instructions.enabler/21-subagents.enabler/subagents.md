@@ -40,9 +40,9 @@ The subagents-about-subagents cluster is three peers with distinct roles:
 - ALWAYS: subagent invocation guidance requires plugin authorization and an active
   skill's explicit call request, uses the native tool schema, and requires analysis
   and reporting of a failed launch or unusable result without retry or substitution ([audit]).
-- ALWAYS: configuration guidance selects one central Standard, Strong, or Fast
+- ALWAYS: configuration guidance selects one central Standard, Strong, Executor, or Fast
   profile declared in `spx/15-subagent-execution.pdr.md` and obtains the complete
-  native configuration together; Standard is the default, Strong and Fast
+  native configuration together; Standard is the default, Strong, Executor, and Fast
   require explicit governing selection, and independent model or reasoning
   overrides and product-defined profiles are forbidden ([audit]).
 - ALWAYS: `/subagent-standards` owns every rule `/audit-subagent` enforces — standards and enforcement stay in one place so drift cannot open between them ([audit])

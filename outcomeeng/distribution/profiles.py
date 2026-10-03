@@ -20,21 +20,23 @@ class AgentProfile(StrEnum):
 
     STANDARD = "standard"
     STRONG = "strong"
+    EXECUTOR = "executor"
     FAST = "fast"
 
 
 class CodexModel(StrEnum):
     """Model identities available to the central native profiles."""
 
-    TERRA = "gpt-5.6-terra"
-    SOL = "gpt-5.6-sol"
-    LUNA = "gpt-5.6-luna"
+    SOL = "gpt-6.1-sol"
+    ASTRA = "gpt-6-astra"
+    LUNA = "gpt-6-luna"
 
 
 class ClaudeModel(StrEnum):
     """Model identities available to the central native profiles."""
 
     OPUS = "opus"
+    SONNET = "sonnet"
     HAIKU = "haiku"
 
 
@@ -120,16 +122,18 @@ NATIVE_CONFIGURATION_FIELDS: Final = frozenset(
     for configuration_type in NATIVE_CONFIGURATION_TYPES.values()
     for field in fields(configuration_type)
 )
+CODEX_STANDARD_CONFIGURATION: Final = CodexConfiguration(
+    CodexModel.SOL, CodexReasoningEffort.HIGH
+)
 AGENT_PROFILES: Final[ProfileRegistry] = MappingProxyType(
     {
         Target.CODEX: MappingProxyType(
             {
-                AgentProfile.STANDARD: CodexConfiguration(
-                    CodexModel.TERRA, CodexReasoningEffort.HIGH
-                ),
+                AgentProfile.STANDARD: CODEX_STANDARD_CONFIGURATION,
                 AgentProfile.STRONG: CodexConfiguration(
-                    CodexModel.SOL, CodexReasoningEffort.HIGH
+                    CodexModel.ASTRA, CodexReasoningEffort.HIGH
                 ),
+                AgentProfile.EXECUTOR: CODEX_STANDARD_CONFIGURATION,
                 AgentProfile.FAST: CodexConfiguration(
                     CodexModel.LUNA, CodexReasoningEffort.HIGH
                 ),
@@ -142,6 +146,9 @@ AGENT_PROFILES: Final[ProfileRegistry] = MappingProxyType(
                 ),
                 AgentProfile.STRONG: ClaudeConfiguration(
                     ClaudeModel.OPUS, ClaudeEffort.HIGH
+                ),
+                AgentProfile.EXECUTOR: ClaudeConfiguration(
+                    ClaudeModel.SONNET, ClaudeEffort.HIGH
                 ),
                 AgentProfile.FAST: ClaudeConfiguration(ClaudeModel.HAIKU, None),
             }
@@ -168,7 +175,8 @@ def resolve_profile(
     for harness, configurations in profiles.items():
         if set(configurations) != set(AgentProfile):
             raise ProfileConfigurationError(
-                f"{harness}: profiles must contain exactly Standard, Strong, and Fast"
+                f"{harness}: profiles must contain exactly "
+                + ", ".join(str(profile) for profile in AgentProfile)
             )
         for name, configuration in configurations.items():
             if not isinstance(configuration, NATIVE_CONFIGURATION_TYPES[harness]):

@@ -1,6 +1,6 @@
 name = "instructions_subagent-auditor"
 description = "ALWAYS invoke when auditing, reviewing, or evaluating custom agent configuration files for best practices compliance, or when the user asks to audit a custom agent."
-model = "gpt-5.6-terra"
+model = "gpt-6.1-sol"
 model_reasoning_effort = "high"
 sandbox_mode = "read-only"
 web_search = "disabled"

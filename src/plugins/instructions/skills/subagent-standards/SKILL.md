@@ -73,8 +73,8 @@ and its system prompt in the body. Keep operational settings such as `tools`,
 
 <profiles>
 
-- ALWAYS: select exactly one central profile. Standard is the default. Strong and Fast
-  require an explicit selection by the governing skill or product decision.
+- ALWAYS: select exactly one central profile. Standard is the default. Strong, Executor,
+  and Fast require an explicit selection by the governing skill or product decision.
 - NEVER: infer a different profile from task difficulty, a role name, or an existing override.
 - ALWAYS: obtain the selected profile's complete native configuration as one unit,
   including the intentional absence of unsupported controls.
@@ -88,6 +88,7 @@ and its system prompt in the body. Keep operational settings such as `tools`,
 | -------- | --------------------------------------- |
 | Standard | {{! profile_description('standard') !}} |
 | Strong   | {{! profile_description('strong') !}}   |
+| Executor | {{! profile_description('executor') !}} |
 | Fast     | {{! profile_description('fast') !}}     |
 
 </profiles>

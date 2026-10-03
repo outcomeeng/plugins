@@ -1,6 +1,6 @@
 {
   "name": "instructions",
-  "version": "0.19.2",
+  "version": "0.19.3",
   "description": "Create and audit instruction assets: skills, subagents, and agent prompt standards",
   "author": {
     "name": "Simon Heimlicher",
