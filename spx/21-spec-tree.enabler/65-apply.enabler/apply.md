@@ -43,3 +43,4 @@ The assertions below govern the lifecycle as a whole — how the work queue is f
 - ALWAYS: invocation guidance requires exactly one native launch and analysis and
   reporting of a failed launch or unusable result without retry or substitution.
   Completed audit verdicts follow the existing gate and repair workflows ([audit]).
+- ALWAYS: the apply lifecycle reads the verdict of the `adr-auditor`, `pdr-auditor`, `spec-auditor`, `test-evidence-auditor`, `eval-evidence-auditor` and `changeset-coherence-auditor` from the terminal status of the sealed run whose token the launch returns: a `rejected` run rejects whatever its finding count, a launch whose run spx refused a payload or the finish of is blocked, and no approval comes from legacy verdict JSON, a transcript, a task-output file or prose ([audit])
