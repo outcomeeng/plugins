@@ -4,7 +4,7 @@ The protocol lives at `probes/definition-invocation/probe.md`, the target of the
 
 ## Intent
 
-The seven definitions `change-executor`, `change-author`, `change-verifier`, `change-tester`, `change-implementer`, `change-skill-author` and `change-subagent-author` are launched by exact name, with no human watching the launch. Reading a definition does not show that Claude Code loads it, preloads its skill, and returns that skill's result contract. This probe shows each exact emitted Claude Code definition doing so in one minimal isolated invocation.
+The seven definitions `change-executor`, `change-author`, `change-verifier`, `change-tester`, `change-implementer`, `change-skill-author` and `change-subagent-author` are launched by exact name, with no human watching the launch. Reading a definition does not show that Claude Code loads it, starts it as a child of one launch by its exact name, and returns a result its fronted skill or its own workflow declares. This probe shows each exact emitted Claude Code definition doing so in one minimal isolated invocation. For `change-skill-author` and `change-subagent-author` the retained run exercises the `blocked` result for an uninstalled fronted skill, because the probe installs no `instructions` plugin.
 
 ## Environment and preconditions
 
