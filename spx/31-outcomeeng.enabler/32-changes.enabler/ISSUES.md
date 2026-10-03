@@ -62,7 +62,9 @@ Evidence: `instructions:skill-auditor` finding f-009 (rule `caller_independence`
 
 Impact: `/skill-standards` caller independence requires that a skill never names or describes its caller or invocation context. The contract falls short of that rule even though its behavior meets it, so each later audit of the skill raises the finding again.
 
-Revisit and settlement condition: the request contract states the two data inputs and how the skill uses them, with no mention of direct or composed execution or of the invoker; one typed skill audit of `audit-change` then raises no `caller_independence` finding.
+The same rule reads the required `runDriver` input of `instructions:audit-skill` as dependence on the caller: `instructions:skill-auditor` finding f-012 (rule `caller_independence`), severity `REJECT`, against `src/plugins/instructions/skills/audit-skill/SKILL.md:35` at head `add3e3e862f7512a55e8b9655d07f78412abe87c`. The Change that made the two instructions auditors record through `spx verification run` settled that input as required, the shape `audit-change` uses; `audit-subagent` takes it the same way. A run-driver identity recorded as provenance, with no branching on it, is input data rather than dependence on the caller, and `/skill-standards` states no such distinction.
+
+Revisit and settlement condition: the request contract states the two data inputs and how the skill uses them, with no mention of direct or composed execution or of the invoker; `/skill-standards` states that a run-driver identity recorded as provenance, with no branching on it, is input data; one typed skill audit of each of `audit-change`, `audit-skill`, and `audit-subagent` then raises no `caller_independence` finding.
 
 ## DEBT [failure-branch]: audit-change step 3 names no result when the retained input differs
 
