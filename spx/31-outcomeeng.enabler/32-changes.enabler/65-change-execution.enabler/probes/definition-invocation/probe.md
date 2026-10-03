@@ -35,6 +35,21 @@ The five definitions `change-executor`, `change-author`, `change-verifier`, `cha
   - [change-tester.result.json](change-tester.result.json)
   - [change-implementer.result.json](change-implementer.result.json)
 
+## Attested run: change-executor on the Executor profile
+
+The run above holds for `change-author`, `change-verifier`, `change-tester` and `change-implementer`. This run replaces its `change-executor` result, because the emitted definition now selects the Executor profile.
+
+- Date: 2026-10-03
+- Subject commit: `8a5ddbe8d21caa37a7db2d7d304b613c6805b9a8`
+- Observations:
+  - The emitted definition carries `model: "sonnet"`, `effort: "high"`, and `disallowedTools: "AskUserQuestion"`.
+  - The parent session listed `spec-tree:change-executor`, loaded spec-tree from `dist/claude/spec-tree`, and made exactly one `Agent` launch with `subagent_type` `spec-tree:change-executor` and prompt `not-a-target`.
+  - The child's first event carries the launch's `parent_tool_use_id` and the `subagent_type` `spec-tree:change-executor`. The launch's tool result reports `status` `completed`, `agentType` `spec-tree:change-executor`, and `resolvedModel` `claude-sonnet-5-5`, which the Executor profile's `model: sonnet` selects.
+  - `change-executor` returned `not-held` from `spec-tree:execute-change` step 1. Its one tool call, loading `spec-tree:change-standards`, was refused by the probe's `--allowedTools Agent` grant, and the child reported that refusal without reconstructing the skill.
+  - The child wrote no file and ran no store command. The run cost USD 0.19 against the USD 2.00 ceiling.
+- Artifacts:
+  - [change-executor.result.json](change-executor.result.json)
+
 ## Verdict
 
 `passed`: each exact emitted definition loaded natively, started as a child session of one `Agent` launch, and returned a result its fronted skill or its own workflow declares.
