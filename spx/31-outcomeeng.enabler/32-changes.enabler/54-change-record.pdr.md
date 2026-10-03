@@ -44,7 +44,7 @@ A Proposed Change is ready when the record's audit against the Proposed Definiti
 A Framed Change is ready when:
 
 - the Proposed Definition of Ready holds;
-- `# Frame` identifies every affected or intended Node, each Assertion operation, every Decision needed to preserve product intent, and the target malleability of each affected node;
+- `# Frame` identifies every affected or intended Node, each Assertion operation, every Decision needed to preserve product intent, and the target malleability of each affected node, which is the value the node declares once the Change is applied, an absent field meaning `implementation`;
 - every question that can change the intended Output is settled; and
 - the operator's attestation that the Frame captures their intent is present in the record.
 
