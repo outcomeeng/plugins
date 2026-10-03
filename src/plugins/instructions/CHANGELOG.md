@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.19.4
+
+### Changed
+
+- **The skill and subagent audits record their verdicts as sealed verification runs.** `/audit-skill` and `/audit-subagent` take a JSON argument carrying the target path and the run-driver identity, record their scope units and findings through `spx verification run`, and return the run token with the rendered projection, whose terminal status `approved` or `rejected` is the verdict; a `blocking` or a `debt` finding rejects the run, and a refused payload or finish returns a `BLOCKED` diagnostic. `/audit-skill` records one unit for the bundle and one per bundle file; `/audit-subagent` records one unit for the definition and one per governing declaration it read. The `skill-auditor` and `subagent-auditor` agents relay the token and projection unchanged, the auditor skeleton and `/create-skill`'s auditor template admit a sealed run as the verdict format, `/create-skill` accepts a skill only on a sealed `approved` run, and `/skill-standards` admits the `spx verification run` journal verbs in an audit skill's grants.
+
 ## 0.19.3
 
 ### Changed
