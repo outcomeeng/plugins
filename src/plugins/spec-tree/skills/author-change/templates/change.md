@@ -21,7 +21,7 @@ blocked_by: []
 
 ## Nodes
 
-[At Framed or later: every affected or intended Node with its per-node target malleability. At Executable: add every other Node the changeset touches with its target malleability, and each Node's required state and evidence obligations.]
+[At Framed or later: every affected or intended Node with its per-node target malleability. At Executable: add every other Node the changeset touches, and state for every Node what `executable-state-evidence` requires.]
 
 ## Assertions
 
