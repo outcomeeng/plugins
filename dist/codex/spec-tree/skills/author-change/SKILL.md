@@ -69,7 +69,7 @@ Read exactly one maturity workflow and `${SKILL_DIR}/templates/change.md`. The w
 
 For an existing Change, read its complete current body, each field from its store home, holder, predecessor and blocker records needed for the revision, and latest Handoff when resuming execution. Import it into the selected draft once, composing the front matter from each field's home above the body. Preserve `refined_from` byte-for-byte unless creating a new successor; revisions never change it. Retain the inspected remote representation outside the record for the publication concurrency check.
 
-A claim held by another holder blocks takeover. Terminal Lifecycle blocks ordinary resumption. Splitting and coalescing are separate lineage operations. A Claimed holder writes a Handoff and releases the Change before lowering Maturity. Reconcile an existing local candidate with the store representation before overwriting either.
+A claim held by another holder blocks takeover. Terminal Lifecycle blocks ordinary resumption. A split or coalescence creates successor Changes as the Sliced workflow states and never rewrites an existing Change's `refined_from`. A Claimed holder writes a Handoff and releases the Change before lowering Maturity. Reconcile an existing local candidate with the store representation before overwriting either.
 
 </revision_safety>
 

@@ -10,6 +10,14 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.100.4
+
+### Changed
+
+- **An Executable Change's Frame states the verification the merge composition selects.** The Executable Definition of Ready requires `# Frame` to state the `VERIFICATION_READINESS` predicates, the results with their producers, and the decision-record audits that the merge composition selects for the changeset, and `/author-change` derives that statement. `change-auditor` rejects an Executable record whose stated obligations disagree with the composition or name a Verifier outside it, so a record it approved before may now be rejected.
+- **A Sliced split or coalescence has a route.** When `/author-change` finds that framed work is not one integrable unit, it checks every source first, claims each source Change it does not hold, authors each successor Change with `refined_from` naming its sources, and closes each source `Refined` through `/close-change`; a source held elsewhere, terminal, or carrying a Handoff branch stops the route before any claim.
+- **Target malleability is defined.** It is the value a node declares once the Change is applied; an absent field means `implementation`.
+
 ## 0.100.3
 
 ### Changed

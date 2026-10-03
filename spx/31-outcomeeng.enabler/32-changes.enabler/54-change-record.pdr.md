@@ -44,7 +44,7 @@ A Proposed Change is ready when the record's audit against the Proposed Definiti
 A Framed Change is ready when:
 
 - the Proposed Definition of Ready holds;
-- `# Frame` identifies every affected or intended Node, each Assertion operation, every Decision needed to preserve product intent, and the target malleability of each affected node;
+- `# Frame` identifies every affected or intended Node, each Assertion operation, every Decision needed to preserve product intent, and the target malleability of each affected node, which is the value the node declares once the Change is applied, an absent field meaning `implementation`;
 - every question that can change the intended Output is settled; and
 - the operator's attestation that the Frame captures their intent is present in the record.
 
@@ -63,8 +63,10 @@ An Executable Change is ready when:
 
 - the Sliced Definition of Ready holds;
 - every consequential Decision for the changeset is settled;
-- `# Frame` states the required state and evidence obligations for every affected node; and
-- `# Activities` is ordered and sufficient for an agent to proceed without reopening product or architecture judgment.
+- `# Frame` states, for every Node the changeset touches, its target malleability, its required state, and the evidence obligations the merge composition selects for the changeset: every predicate `VERIFICATION_READINESS` reads that the composition selects, from the least malleable target and from the changeset's files alike, the results each Node's tagged assertions need with the producer of each, and the decision-record audit each added or changed decision record receives; it names no Verifier outside those three, and a Node whose target malleability differs from its declared malleability carries both values; and
+- `# Activities` is ordered and sufficient for an agent to proceed without reopening product or architecture judgment, and each verification Activity cites the Frame's evidence obligations instead of a skill's default gates.
+
+The merge composition is the one the `Merge` section of the 4.0 Projection chapter states — `versions/4.0/methodology/product-tree/verification/projection.md` inside the declared `methodology.source` — which defines when a changeset touches a node, the predicates a changeset selects by its least malleable touched node and by a product spec or outcome-record change, when a result is produced again before merge, the dependency protection that fails a changeset raising a malleability or ending `Passing` in the closure of an effectively `Passing` consumer, and the decision-record audit as an authoring check that produces no node-local result.
 
 Framed requires the operator's attestation. Sliced requires a named accountable person. The Refiner may advance Sliced to Executable only inside the authority of the attested Frame.
 
@@ -99,11 +101,11 @@ No project field holds a Change field. The Lifecycle comments — the Claim, the
 
 ## Compatibility
 
-`audit-change` accepts only records whose front matter carries this contract's closed key set. A record whose front matter does not carry that closed key set is outside the contract: it receives no migration, alias, inferred front matter, body-line lineage interpretation, or audit verdict, and the auditor reports it as outside the contract.
+`audit-change` accepts only records whose front matter carries this contract's closed key set. A record whose front matter does not carry that closed key set is outside the contract: it receives no migration, alias, inferred front matter, body-line lineage interpretation, or audit verdict, and the Auditor reports it as outside the contract.
 
 ## Rationale
 
-One self-contained record preserves Change meaning across local drafting and coordination stores, and one home per field in each place leaves no second copy to drift from the first, while cumulative, independently loadable Definitions of Ready let authoring and audit judge exactly the Maturity a record declares. Proposed readiness is the approving audit rather than an operator review, and the audit verdict stays outside every criterion set it judges, so each Definition of Ready is decidable and a higher level inherits the preceding level's criteria, never a verdict about another level. Excluding records without the closed front-matter key set keeps the contract closed and avoids treating inference as product truth. The holder is keyed on the worktree the Claim names, because one account runs several sessions and a session that claims for another — one that starts the Executor's session in a worktree of its own — is not the session that later releases or closes; the worktree separates the holder from every other session of the account while letting the session started in it hold what was claimed for it.
+One self-contained record preserves Change meaning across local drafting and coordination stores, and one home per field in each place leaves no second copy to drift from the first, while cumulative, independently loadable Definitions of Ready let authoring and audit judge exactly the Maturity a record declares. Proposed readiness is the approving audit rather than an operator review, and the audit verdict stays outside every criterion set it judges, so each Definition of Ready is decidable and a higher level inherits the preceding level's criteria, never a verdict about another level. Excluding records without the closed front-matter key set keeps the contract closed and avoids treating inference as product truth. The holder is keyed on the worktree the Claim names, because one account runs several sessions and a session that claims for another — one that starts the Executor's session in a worktree of its own — is not the session that later releases or closes; the worktree separates the holder from every other session of the account while letting the session started in it hold what was claimed for it. An Executable Frame derives its evidence obligations from the merge composition, because an obligation the composition does not select sends an Executor through Verifier rounds no gate requires, and an omitted one lets a Change reach `Applied` short of the state its Frame requires.
 
 ## Product properties
 
@@ -116,9 +118,10 @@ One self-contained record preserves Change meaning across local drafting and coo
 - ALWAYS: a Change record contains exactly the six required front-matter keys and the four fixed top-level body sections in their declared order.
 - ALWAYS: Proposed, Framed, Sliced, and Executable each have one independently loadable, cumulative Definition of Ready.
 - ALWAYS: Maturity advances only when the target level's Definition of Ready holds and the level's authority is present: operator attestation for Framed, a named accountable person for Sliced, and the attested Frame for Executable.
+- ALWAYS: an Executable `# Frame` states the predicates `VERIFICATION_READINESS` reads, the results with their producers, and the decision-record audits that the merge composition selects for the changeset, and names no Verifier outside them; `audit-change` rejects an Executable record whose stated obligations disagree with that composition.
 - ALWAYS: persistence writes each field to its one home in the configured coordination store and the four sections to the store body, and reads each back unchanged before reporting success; a coordination-store limit never shapes the record.
 - NEVER: a place holds a Change field in two homes, a store body carries front matter or a lineage line, or a project field holds a Change field.
-- NEVER: `audit-change` judges or migrates a record whose front matter does not carry the contract's closed key set; the auditor reports it as outside the contract.
+- NEVER: `audit-change` judges or migrates a record whose front matter does not carry the contract's closed key set; the Auditor reports it as outside the contract.
 - ALWAYS: `claim-change` claims only an open record whose Product, Maturity, `Available` Lifecycle, and empty holder verify from current state; it adds the holder, records the Claim naming the claiming session and the worktree root the Change is claimed for, writes `Claimed`, and reads the complete state back before execution begins, and a losing concurrent claim withdraws its own holder record and reports the winner.
 - ALWAYS: `release-change` and `close-change` run only for the session whose assigned worktree root equals the root the winning Claim names, and report any other caller without mutation.
 - ALWAYS: `release-change` writes a Handoff carrying branch or changeset, completed and next Activities, blockers, and hazards, then removes the holder, writes `Available`, and reads the complete state back, leaving Maturity unchanged.
