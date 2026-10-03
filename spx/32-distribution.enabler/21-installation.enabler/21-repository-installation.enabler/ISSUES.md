@@ -59,32 +59,56 @@ than spelling them.
 recorded in the entry above, whose finding on the evidence half named these keys as the ones
 the owning module publishes no constant for.
 
-## The profile isolation filter strips an ambient marker no module declares
+## The ambient-marker entry was wrong on its premise, and the import landed
 
-`_isolated_environment` in `outcomeeng_testing/harnesses/native_profile_execution.py`
-removes the ambient overrides a profile probe must not inherit. Two of the three
-names it strips come from imported constant sets their owning module publishes;
-the third is the inline literal `CLAUDECODE`, which no module under `outcomeeng/`
-declares. The harness therefore holds one name of the isolation policy that has
-no source contract, so a change to that marker in production reaches no importer
-and the filter keeps stripping a name the product no longer uses, or stops
-stripping one it does.
+This entry recorded that `_isolated_environment` in
+`outcomeeng_testing/harnesses/native_profile_execution.py` stripped the ambient marker
+`CLAUDECODE` through an inline literal that no module declared, and proposed publishing the
+name as the remedy.
 
-This is not the class the native-profile entry above records. That entry covers
-evidence restating vocabulary the owning modules hold, whose remedy is to import
-from the owner; here there is no owner to import from and the remedy is to
-publish the name first.
+The premise was wrong. `outcomeeng_evals/runner.py` declares it as `CLAUDECODE_ENV`, and
+`outcomeeng_testing/harnesses/eval_runner.py` already imports it. The entry read "no module
+under `outcomeeng/` declares it", which is true of that one package and false of the product,
+and it drew the wrong remedy from it: nothing needed publishing, only importing.
 
-**Resolution shape**: publish the ambient marker from the module that owns the
-isolation policy, beside the constant sets the filter already imports, and have
-`_isolated_environment` import it.
+**Landed.** The filter imports `CLAUDECODE_ENV` from its owner. The entry stays as the record
+that a filing proposed a publication the product already had, so a later reader meets the
+correction rather than the claim.
 
-**Settlement condition**: the marker is published from an owning module and the
-filter imports it rather than spelling it.
+**Evidence**: `CLAUDECODE_ENV` at `outcomeeng_evals/runner.py:45`, its import in
+`outcomeeng_testing/harnesses/eval_runner.py`, and the node's test-evidence audit finding on
+the frozen head `3d1dbffd76393c71dbbaf455f5c81c81bf015064`, which named the owner this entry
+said did not exist. The rounds against `05a7165277750d69c88bc8abbece2c4f6a96bb7c` and
+`cc5f3e86be4dbcc2c727c46f5c96593bab02b680` raised the same claim again as `f-018` and `f-016`
+(INFO).
 
-**Evidence**: test-evidence audit finding `f-010` (INFO) against `c2f6d8e1c3bc87f24d775fcbc62451b9c2ff6322`. The cited
-harness lies outside that changeset's diff, and the remedy publishes a constant
-from a production module the changeset's Frame does not name. The round against `05a7165277750d69c88bc8abbece2c4f6a96bb7c` raised it again as `f-018` (INFO): "The isolation filter strips the inline literal \"CLAUDECODE\", which no module under outcomeeng/ declares." The round against `cc5f3e86be4dbcc2c727c46f5c96593bab02b680` raised it again as `f-016` (INFO).
+## The child-identity literal is checked by the type that declares it
+
+An audit round raised `case.thread["parentThreadId"]` in
+`tests/test_native_profile_execution.compliance.l1.py` as a source-ownership defect, on the
+ground that `outcomeeng/distribution/native_thread_evidence.py` owns that key as
+`ChildIdentityField.PARENT` and the same file already imports the enum.
+
+The finding is wrong on its premise. `case.thread` is the TypedDict `NativeChildThread`,
+which declares `parentThreadId` as one of its fields, so the literal is read against the type
+that owns it and the type checker enforces the agreement: renaming the field makes this site
+a `typeddict-item` error rather than a passing test over a key production no longer emits.
+That is the guarantee the source-ownership rule asks for, supplied by the checker.
+
+Substituting the enum makes it worse, not better. A TypedDict admits only a literal key, so
+`case.thread[ChildIdentityField.PARENT]` fails `mypy --strict` with exactly that error — the
+enum cannot index the payload at all. The two declarations coexist for different jobs: the
+TypedDict field types the payload, and the enum keys the identity fields the reader iterates,
+which is how lines 88 and 98 of the same test use it.
+
+**Settlement condition.** None. A later round raising this site reads this entry first. If the
+module's two declarations of the same key are themselves the defect, that is a change to the
+producer and belongs with the entry on its unpublished listing keys.
+
+**Evidence.** `NativeChildThread` at `outcomeeng/distribution/native_thread_evidence.py:61-69`
+declaring `parentThreadId`; the `typeddict-item` error `mypy --strict` reports for the enum
+form; and `ChildIdentityField` iterated at lines 88 and 98 of the test, which is the use the
+enum is for.
 
 ## The installation harness restates names its product modules own
 
