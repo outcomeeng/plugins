@@ -4,7 +4,7 @@ The protocol lives at `probes/definition-invocation/probe.md`, the target of the
 
 ## Intent
 
-The five definitions `change-executor`, `change-author`, `change-verifier`, `change-tester` and `change-implementer` are launched by exact name, with no human watching the launch. Reading a definition does not show that Claude Code loads it, preloads its skill, and returns that skill's result contract. This probe shows each exact emitted Claude Code definition doing so in one minimal isolated invocation.
+The seven definitions `change-executor`, `change-author`, `change-verifier`, `change-tester`, `change-implementer`, `change-skill-author` and `change-subagent-author` are launched by exact name, with no human watching the launch. Reading a definition does not show that Claude Code loads it, starts it as a child of one launch by its exact name, and returns a result its fronted skill or its own workflow declares. This probe shows each exact emitted Claude Code definition doing so in one minimal isolated invocation. For `change-skill-author` and `change-subagent-author` the retained run exercises the `blocked` result for an uninstalled fronted skill, because the probe installs no `instructions` plugin.
 
 ## Environment and preconditions
 
@@ -51,6 +51,22 @@ This run records `change-executor`, whose emitted definition selects the Executo
 - Artifacts:
   - [change-executor.result.json](change-executor.result.json)
 
+## Attested run: the instruction round definitions
+
+This run records `change-skill-author` and `change-subagent-author`, the two definitions that front skills of the `instructions` plugin. The protocol ran unchanged, from an empty scratch directory with `dist/claude/spec-tree` as the only spec-tree plugin and the protocol's `--max-budget-usd 2.00` ceiling.
+
+- Date: 2026-10-03
+- Subject commits: `6cbb66684b7e53b3314237b60681e50016757ac9` for `change-skill-author`, and `0942beb61734927d2f07fc7b81c66209e27f876b` for `change-subagent-author`, whose first run on `6cbb66684b7e53b3314237b60681e50016757ac9` is superseded by the run on its next definition and is not retained.
+- Observations:
+  - Each emitted definition carries `disallowedTools: "AskUserQuestion"`, `model: "opus"` and `effort: "medium"`.
+  - Each parent session listed its definition, loaded spec-tree from `dist/claude/spec-tree`, and made exactly one `Agent` launch with `subagent_type` `spec-tree:<name>` and prompt `not-a-target`.
+  - Each child's first event carries the launch's `parent_tool_use_id` and the `subagent_type` of its definition, and each launch's tool result reports `status` `completed`, the `agentType` of its definition, and `resolvedModel` `claude-opus-5-5`, which the Standard profile's `model: opus` selects.
+  - Each child invoked its fronted skill, `instructions:create-skill` and `instructions:create-subagent` respectively, with the task message. The probe installs no `instructions` plugin, so the Skill tool returned `Unknown skill`, and each child returned a `blocked` result naming the required skill and the exact failure.
+  - No child wrote a file or ran a store command. The runs cost USD 0.22 and USD 0.16 against the USD 2.00 ceiling.
+- Artifacts:
+  - [change-skill-author.result.json](change-skill-author.result.json)
+  - [change-subagent-author.result.json](change-subagent-author.result.json)
+
 ## Verdict
 
 `passed`: each exact emitted definition loaded natively, started as a child session of one `Agent` launch, and returned a result its fronted skill or its own workflow declares.
@@ -58,6 +74,7 @@ This run records `change-executor`, whose emitted definition selects the Executo
 ## Limitations
 
 - The run exercises only the stop at an unaccepted target; a round that produces an artifact, and a Fixer's repair block, stay unexercised.
-- The emitted effort is recorded from the definition file — `effort: medium` for the four Standard-profile definitions and `effort: high` for `change-executor`; each child's tool result reports the resolved model and no effort value.
+- The emitted effort is recorded from the definition file — `effort: medium` for the six Standard-profile definitions and `effort: high` for `change-executor`; each child's tool result reports the resolved model and no effort value.
+- The run of the two instruction round definitions exercises the `blocked` result for an uninstalled fronted skill. A round that runs `instructions:create-skill` or `instructions:create-subagent` whole, including a launch of `instructions:skill-auditor` by either definition, stays unexercised because the probe installs no `instructions` plugin.
 - The Codex renderings are not invoked; the node's `ISSUES.md` records that gap.
 - A later change to an emitted definition invalidates its record here until the protocol runs again on the new commit.

@@ -22,16 +22,26 @@ Use skill `spec-tree:wait-for-load` for every resource-intensive command any ste
 
 Each round's producing session is one subagent of the definition that fronts the skill the Activity's result needs:
 
-| Result the Activity names                                        | Definition                     | Skill it fronts     |
-| ---------------------------------------------------------------- | ------------------------------ | ------------------- |
-| A decision, spec, node, note, or other artifact `/author` writes | `spec-tree_change-author`      | `/author`           |
-| Verification selection for a node's or decision's claims         | `spec-tree_change-verifier`    | `/verify`           |
-| Test evidence for assertions routed to test                      | `spec-tree_change-tester`      | `/test`             |
-| Implementation of a node in its language                         | `spec-tree_change-implementer` | `/implement-change` |
+| Result the Activity names                                                                        | Definition                         | Skill it fronts                |
+| ------------------------------------------------------------------------------------------------ | ---------------------------------- | ------------------------------ |
+| A decision, spec, node, note, or other artifact `/author` writes                                 | `spec-tree_change-author`          | `spec-tree:author`             |
+| Verification selection for a node's or decision's claims                                         | `spec-tree_change-verifier`        | `spec-tree:verify`             |
+| Test evidence for assertions routed to test                                                      | `spec-tree_change-tester`          | `spec-tree:test`               |
+| Implementation of a node in its language                                                         | `spec-tree_change-implementer`     | `spec-tree:implement-change`   |
+| A skill surface: a `SKILL.md`, another file in a skill directory, or an authored shared fragment | `spec-tree_change-skill-author`    | `instructions:create-skill`    |
+| A subagent definition                                                                            | `spec-tree_change-subagent-author` | `instructions:create-subagent` |
 
-A Fixer is a fresh session of the definition the round's Author used. The task message of an Author session is the Activity's target in the form its fronted skill accepts: the canonical `spx/...` path of the node or decision it produces, which the `change-author` task message follows with the Change's issue URL, because `/author` reads the Output's requirements from the Change. The task message of a Fixer session is its Author's task message followed by a repair block: the verbatim result of every rejected verdict of the earlier round, and the exact command line and output of every deterministic command that failed on it. The fronted skill reads that block as its repair input.
+A Fixer is a fresh session of the definition the round's Author used. The task message of each session follows its definition:
 
-Each Verifier is the configured auditor or reviewer for the evidence obligation the Change's Frame states, launched with a target-only task message. A `change-verifier` session produces verification routing and evidence through `/verify` and is an Author or Fixer, never a Verifier; its result is no verdict:
+- `spec-tree_change-author` Author: the canonical `spx/...` path of the node or decision it produces, followed by the Change's issue URL, because `/author` reads the Output's requirements from the Change.
+- `spec-tree_change-skill-author` Author: the `instructions:create-skill` intent the Activity names — create, improve, add workflow, add reference, add template, add script, or upgrade to router — the repository path of the skill surface the Activity produces, the Change's issue URL, and the sentence `Add the plugin changelog entry that records the change.`; the intent keeps `instructions:create-skill` from asking its intake menu, and the sentence makes the round that produces the surface produce its changelog entry.
+- `spec-tree_change-subagent-author` Author: the repository path of the subagent definition the Activity produces, the Change's issue URL, and the sentence `Add the plugin changelog entry that records the change.`, so the round that produces the definition produces its changelog entry.
+- Every other definition's Author: the Activity's target in the form its fronted skill accepts.
+- Fixer: its Author's task message followed by a repair block: the verbatim result of every rejected verdict of the earlier round, and the exact command line and output of every deterministic command that failed on it. The fronted skill reads that block as its repair input, except `instructions:create-skill` and `instructions:create-subagent`, which declare no repair-block intake. For a `spec-tree_change-skill-author` round the Fixer's message names the `improve` intent in place of the Author's, because the Author's round already produced the target.
+
+A round whose fronted skill is not installed returns a `blocked` result naming that skill.
+
+Each Verifier is the configured auditor or reviewer for the evidence obligation the Change's Frame states, launched with a target-only task message. A `change-verifier` session produces verification routing and evidence through `/verify` and is an Author or Fixer, never a Verifier; its result is no verdict. The Verifier of a `spec-tree_change-skill-author` round is `instructions_skill-auditor`, and the Verifier of a `spec-tree_change-subagent-author` round is `instructions_subagent-auditor`:
 
 | Subject the obligation names        | Verifier                                |
 | ----------------------------------- | --------------------------------------- |
@@ -72,7 +82,7 @@ The plugin ships the round definitions this skill launches for Claude Code only.
 5. **Run each Activity in order** as one or more rounds:
    1. Select the definition from `<definitions>` by the result the Activity names; a result no row matches goes to step 8 with that result as the blocker. An Activity whose result is a Verifier's verdict goes to step 5.3 with the committed subject. An Activity whose result is integration goes to step 6, and an Activity whose result is closing goes to step 7.
    2. Launch one Author session of that definition under `<launch_contract>`. When it returns, run `git status --short`; use skill `spec-tree:commit-changes` for every uncommitted change the session left, recording the verification state. A `blocked` result goes to step 8 with its reason, and with its question verbatim when it carries one.
-   3. Use skill `spec-tree:sync-base`, then run the product's `verify` command — the one the product's root agent guide names among its Spec Tree phase commands — over the Activity's nodes and the changeset on the resulting head; a guide that names no `verify` command goes to step 8 with that gap as the blocker. A failing command starts a Fixer round under step 5.5 with that command as its reference. When every command passes, launch each Verifier the Frame's evidence obligations name for the Activity's subject, one launch each, against that same head.
+   3. Use skill `spec-tree:sync-base`, then run the product's `verify` command — the one the product's root agent guide names among its Spec Tree phase commands — over the Activity's nodes and the changeset on the resulting head; a guide that names no `verify` command goes to step 8 with that gap as the blocker. A failing command starts a Fixer round under step 5.5 with that command as its reference. When every command passes, launch each Verifier the Frame's evidence obligations name for the Activity's subject, and for a skill-surface or subagent-definition round the Verifier `<definitions>` pairs with its definition, one launch each, against that same head; a Verifier both name is launched once.
    4. The Activity is complete when every Verifier it names approves the head step 5.3 verified.
    5. When a verdict rejects or a deterministic command fails, launch one Fixer session under `<definitions>`, its repair block carrying every rejected verdict and failed command of the round; when it returns, commit what it left as step 5.2 does and continue at step 5.3 for the new committed head. A rejection whose defect class a prior round of the same subject already raised — a finding carrying the same rule identifier, or the same category where the verdict names no rule, against the same file — or a deterministic command that fails again after a Fixer round for it, goes to step 8 with the repeated class or command and both results.
 6. **Integrate.** When every Activity before integration is complete, use skill `spec-tree:author-change` to check those Activities in the record, then use skill `spec-tree:merge` for the changeset. `/merge` launches its own reviewers and auditors, each one a Verifier `<definitions>` names. A valid finding a `/merge` review or audit raises is never repaired in this session: it starts a Fixer round under step 5.5 of the definition whose round produced the file the finding names, with the finding as its repair block, and `/merge` then continues on the new committed head. A gate that `/merge` reports blocked goes to step 8 with its exact report. When `/merge` reports the changeset merged, use skill `spec-tree:author-change` to check the integration Activity and every closing Activity, so every Activity in the record is checked before step 7.
@@ -89,6 +99,14 @@ The plugin ships the round definitions this skill launches for Claude Code only.
 - NEVER settle a question the Change's Frame leaves open; step 8 carries it to the Handoff.
 
 </constraints>
+
+<failure_modes>
+
+**A `/merge` finding was repaired in the Executor session.** Claude edited the file a valid `/merge` review finding named, which the first constraint forbids, so the merge gate could not pass within the Executor's own limits. Start a Fixer round of the definition whose round produced the file, with the finding as its repair block (step 6).
+
+**A refused release was reported as released.** Claude returned `released` for a Change still `Claimed` after `/release-change` refused. Return `release-refused` with the exact report whenever the release is refused (step 8).
+
+</failure_modes>
 
 <output_format>
 

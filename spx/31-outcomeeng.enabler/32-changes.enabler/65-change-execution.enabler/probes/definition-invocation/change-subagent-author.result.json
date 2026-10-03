@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "definition": "spec-tree:change-subagent-author",
+  "subjectCommit": "0942beb61734927d2f07fc7b81c66209e27f876b",
+  "emittedDefinition": {
+    "path": "dist/claude/spec-tree/agents/change-subagent-author.md",
+    "sha256": "e97d0b2c495e9776f70b244b28150d470f718224b9da5d8412d2ecd5eeaf339d",
+    "frontMatter": [
+      "model: \"opus\"",
+      "effort: \"medium\"",
+      "name: change-subagent-author",
+      "description: >-",
+      "  Round session `/execute-change` launches by exact name when an Activity needs a subagent definition produced or repaired through `instructions:create-subagent`.",
+      "disallowedTools: \"AskUserQuestion\"",
+      "skills:",
+      "  - instructions:create-subagent"
+    ]
+  },
+  "parentSession": {
+    "sessionId": "2b72c58d-1a3a-4d33-acac-1e7493affcf5",
+    "model": "claude-sonnet-5-5",
+    "claudeCodeVersion": "2.1.289",
+    "plugins": [
+      {
+        "name": "spec-tree",
+        "path": "/Users/shz/Code/outcomeeng/plugins/worktrees/contributor-2/dist/claude/spec-tree",
+        "version": "0.100.3"
+      }
+    ],
+    "definitionAvailable": true
+  },
+  "launch": {
+    "toolUseId": "toolu_01VrkyYj5TR8wBwBicN9p4GA",
+    "tool": "Agent",
+    "input": {
+      "description": "Run subagent author",
+      "subagent_type": "spec-tree:change-subagent-author",
+      "prompt": "not-a-target",
+      "run_in_background": false
+    }
+  },
+  "childStart": {
+    "parentToolUseId": "toolu_01VrkyYj5TR8wBwBicN9p4GA",
+    "subagentType": "spec-tree:change-subagent-author",
+    "taskMessage": "not-a-target",
+    "timestamp": "2026-10-03T20:50:13.403Z"
+  },
+  "childResult": {
+    "status": "completed",
+    "agentType": "spec-tree:change-subagent-author",
+    "resolvedModel": "claude-opus-5-5",
+    "totalDurationMs": 5641,
+    "totalTokens": 18182,
+    "totalToolUseCount": 1,
+    "text": "```\nstatus: blocked\nrequired_skill: instructions:create-subagent\nfailure: Skill tool returned \"Unknown skill: instructions:create-subagent\". This session cannot invoke the skill, so it ran no workflow. It did not use a workflow from memory in its place.\ntask_message: \"not-a-target\" (passed to the skill unchanged)\nblocked_action: Writing or repairing this round's subagent definition. No files were created or changed.\n```"
+  },
+  "parentResult": {
+    "subtype": "success",
+    "isError": false,
+    "numTurns": 2,
+    "totalCostUsd": 0.16193180000000001
+  }
+}
