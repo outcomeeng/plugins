@@ -14,19 +14,19 @@ Successor: the Proposed Change filed after Change #89 merges for the agent-run-j
 
 Revisit and settlement condition: remove all three unused verification-run grants and pass one typed skill audit over the revised `author-change` surface.
 
-## DEBT [specificity]: author-change leaves four checks and one workflow unnamed
+## DEBT [specificity]: author-change and change-standards leave checks unnamed
 
 Defect class: `specificity`.
 
-Finding: the typed skill audit of `author-change` on the Change Lifecycle changeset (head `a28a5be91fc2ea04151c283059caa9cb9a11fd12`) found the audit gate not naming which granted `spx verification run` command establishes `terminalStatus`, the rendered projection, and retained-input equality; the split and coalesce lineage operations routed to a workflow no bundle names; the structured-question tool unnamed and ungranted where the body asks the operator; and two success criteria ("carries the required authority", "Continuation depends only on…") without a named check.
+Finding: the typed skill audit of `author-change` on the Change Lifecycle changeset (head `a28a5be91fc2ea04151c283059caa9cb9a11fd12`) found the audit gate not naming which granted `spx verification run` command establishes `terminalStatus`, the rendered projection, and retained-input equality; the structured-question tool unnamed and ungranted where the body asks the operator; and two success criteria ("carries the required authority", "Continuation depends only on…") without a named check.
 
 Evidence: `instructions:skill-auditor` findings f-010, f-012, f-013, f-014 on `src/plugins/spec-tree/skills/author-change/SKILL.md`. The second skill-audit pass on the three Lifecycle skills added: `release-change` step 3 carries six stop-capable operations in one paragraph (f-009), a candidate for numbered sub-steps. The relaunch of the `change-standards` audit added: `SKILL.md` calls the references "rules and no procedure" while `lifecycle.md` carries command forms (f-008), and its first success criterion is not observable at load (f-010). The typed skill audit of `change-standards` on the Proposed-readiness changeset (head `98e924f4f88200425e649c3034f6fb0336f2bcf8`) raised the same "no procedure" claim again: `SKILL.md:30` states that the shared references own the rules and no procedure while `lifecycle.md` carries command-bearing rules, and the same sentence's inventory of `lifecycle.md` omits its `canonical-state` rule (f-009, `WARNING`). The typed skill audit of `author-change` at that head again found no step naming the `spx verification run` command that establishes the audit-gate checks (f-009, `WARNING`).
 
-Impact: the gate's checks and the lineage operations rest on judgment where a named command or workflow would make them falsifiable, and a reader of the `change-standards` loading contract receives an inaccurate account of what `lifecycle.md` contains.
+Impact: the gate's checks rest on judgment where a named command or workflow would make them falsifiable, and a reader of the `change-standards` loading contract receives an inaccurate account of what `lifecycle.md` contains.
 
 Successor: the Proposed Change filed after Change #89 merges for the `author-change` grants (entry above), carrying these as further items.
 
-Revisit and settlement condition: each check named against its granted command, the lineage workflow named or the operation stopped with a named result, the structured-question tool named and granted, the `change-standards` loading contract describing its references' content accurately with every `lifecycle.md` rule in its inventory, and one typed skill audit of each skill approving with no `specificity` finding.
+Revisit and settlement condition: each check named against its granted command, the structured-question tool named and granted, the `change-standards` loading contract describing its references' content accurately with every `lifecycle.md` rule in its inventory, and one typed skill audit of each skill approving with no `specificity` finding.
 
 ## DEBT [single-location]: Change skills state one requirement in more than one place
 
@@ -94,7 +94,7 @@ Defect class: `granularity`.
 
 Finding: `executable-state-evidence` carries three independently judgeable obligations under one identifier: the selected `VERIFICATION_READINESS` predicates, the per-node results with their producers, and the decision-record audits.
 
-Evidence: `instructions:skill-auditor` finding f-009 (rule `ambiguous-criterion`), severity `WARNING`, against `src/plugins/spec-tree/skills/change-standards/references/dor-executable.md:14`, in the typed skill audit of `change-standards` on head `b0ace02701a73ce0cb4c34b5f1df924217779889`, which approved with no must-fix finding. The audit on head `303923264a553bd518a68e93f5c228fd30565196` raised the same shape as f-012 (rule `conciseness-readability`) against `src/plugins/spec-tree/skills/change-standards/references/dor-executable.md:14`.
+Evidence: `instructions:skill-auditor` finding f-009 (rule `ambiguous-criterion`), severity `WARNING`, against `src/plugins/spec-tree/skills/change-standards/references/dor-executable.md:14`, in the typed skill audit of `change-standards` on head `b0ace02701a73ce0cb4c34b5f1df924217779889`, which approved with no must-fix finding. The audits on heads `303923264a553bd518a68e93f5c228fd30565196` and `9e5aa8f2f0aa09d8e161620b8c6733165d1ef1b8` raised the same shape as f-012 and f-010 (rule `conciseness-readability`) against `src/plugins/spec-tree/skills/change-standards/references/dor-executable.md:14`.
 
 Impact: a finding against the criterion cannot name which of its three obligations failed.
 
@@ -135,3 +135,39 @@ Evidence: `instructions:skill-auditor` findings f-008 (rule `internal-consistenc
 Impact: a Proposed record that keeps its open questions in `# Frame` as its Definition of Ready requires breaks the shared `frame` rule, the standard depends on an unnamed caller for field homes its own Lifecycle reference declares, and a reader of the objective can take the Lifecycle load to exclude the record contract.
 
 Revisit and settlement condition: the `frame` rule admits the open questions the Proposed Definition of Ready requires, `store-independence` names the Lifecycle rules as the source of field homes, and the objective states that the record contract accompanies every selection; one typed skill audit of `change-standards` then raises none of the three findings.
+
+## DEBT [cumulative-completeness]: later Definitions of Ready drop Framed qualifiers and leave the malleability order unstated
+
+Defect class: `cumulative-completeness`.
+
+Finding: `sliced-frame` and `executable-frame` ask only for each "Assertion operation" and "governing or intended Decision", while `framed-assertions` requires each operation by owning Node and exact target and `framed-decisions` requires the Frame to retain each settled choice; the Sliced and Executable tables claim to include the complete Framed requirements. The Executable composition selects predicates by the least malleable target, and no reference in `change-standards` states the order of `spec`, `verification`, and `implementation`.
+
+Evidence: `instructions:skill-auditor` findings f-008 (rule `cumulative-definition-completeness`) against `src/plugins/spec-tree/skills/change-standards/references/dor-sliced.md:11` and f-009 (rule `ambiguous-ordering`) against `src/plugins/spec-tree/skills/change-standards/references/dor-executable.md:25`, both severity `WARNING`, in the typed skill audit of `change-standards` on head `9e5aa8f2f0aa09d8e161620b8c6733165d1ef1b8`, which approved with no must-fix finding.
+
+Impact: a Sliced or Executable record can pass after dropping exact assertion targets or settled choices that Framed required, and an Author or Verifier derives the least malleable target from the word "floor" alone.
+
+Revisit and settlement condition: the Sliced and Executable criteria carry the Framed qualifiers, and the shared `frame` rule or the composition states the malleability order; one typed skill audit of `change-standards` then raises neither finding.
+
+## DEBT [cohesion]: one author-change principle carries two concerns
+
+Defect class: `cohesion`.
+
+Finding: one `<essential_principles>` bullet in `author-change` combines Framed attestation handling with the `change-auditor` dispatch rule.
+
+Evidence: `instructions:skill-auditor` finding f-009 (rule `principle_cohesion`), severity `WARNING`, against `src/plugins/spec-tree/skills/author-change/SKILL.md:23`, in the typed skill audit of `author-change` on head `9e5aa8f2f0aa09d8e161620b8c6733165d1ef1b8`.
+
+Impact: the `attestation-required` stop and the audit-isolation rule cannot be located or applied on their own.
+
+Revisit and settlement condition: each concern stands in its own bullet; one typed skill audit of `author-change` then raises no `principle_cohesion` finding.
+
+## DEBT [decidability]: the Applied precondition rests on undefined terms
+
+Defect class: `decidability`.
+
+Finding: the Lifecycle section of `54-change-record.pdr.md` requires for `Applied` that "the Assertions and evidence governing the Change's Nodes" are "satisfied" and "the Output delivered", terms whose meaning comes only from the foundation's node-state and delivery-boundary definitions.
+
+Evidence: `spec-tree:pdr-auditor` finding `invalid-draft-rule`, severity `WARNING`, on `spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md` at head `9e5aa8f2f0aa09d8e161620b8c6733165d1ef1b8`, in an audit that approved.
+
+Impact: two Verifiers can differ on what "satisfied" requires for a Node the Frame does not require `Passing`.
+
+Revisit and settlement condition: the decision states the Applied precondition in terms of the state each Frame requires for its Nodes and the delivery boundary; one PDR audit then raises no finding against the rule.
