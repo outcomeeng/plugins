@@ -11,6 +11,8 @@ CAN read product truth, verify, and integrate against a current base without re-
 
 ## Assertions
 
+- Given a branch whose diff against its base holds bytes that are not valid UTF-8, when the synchronization primitive runs a clean rebase that changes none of the branch's paths, then it reports `rebased` and a readiness-preservation proof with an unchanged branch patch identity, computed from the diff's raw bytes
+
 ### Scenarios
 
 These assertions exercise the bundled synchronization primitive. The `/sync-base` skill owns recovery from its intermediate results.
