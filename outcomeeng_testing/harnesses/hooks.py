@@ -72,7 +72,7 @@ _SESSION_START_ENV_EXCLUDES = {
 
 # The hook declares its own short timeout; the harness bounds the subprocess well
 # above it so a hung command surfaces as a harness failure rather than a wedge.
-_SUBPROCESS_TIMEOUT_S = 30
+_SUBPROCESS_TIMEOUT_S = 60
 
 
 def hook_generated_evidence(
