@@ -58,10 +58,10 @@ changeset after the subagent-creator track merges.
 
 Worklist:
 
-1. Reconcile the route-specific permission and auditor Bash contradictions in
+1. Reconcile the route-specific permission contradiction in
    `spx/43-instructions.enabler/21-skills.enabler/ISSUES.md` before changing the
-   creator or auditor template. Define one least-privilege contract that the
-   standard, template, and auditor can all enforce.
+   creator. Define one least-privilege contract that the standard and the
+   auditor can both enforce.
 2. Repair the representative-exercise ordering so every exercise-driven edit
    returns through deterministic checks and the complete-bundle skill audit
    before publication.

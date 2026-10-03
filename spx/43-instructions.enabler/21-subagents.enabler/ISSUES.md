@@ -77,9 +77,9 @@ propagating a rename:
   alert-threshold tables, and per-invocation cost tracking as if the product ships
   that observability; cut or reframe as optional external guidance (~55 lines).
 
-Reconcile with `spx/43-instructions.enabler/ISSUES.md` entries 3 (verdict-row
-taxonomy), 4 (audit-skill eval coverage), 7 (runtime terminology), and 9
-(audit-skill target-argument convention) before editing the auditor surface.
+Reconcile with `spx/43-instructions.enabler/ISSUES.md` entries 4 (audit-skill eval
+coverage), 7 (runtime terminology), and 9 (audit-skill target-argument convention)
+before editing the auditor surface.
 
 ## `/create-subagent` states a description rule `/agent-prompt-standards` owns
 
@@ -115,14 +115,16 @@ reverted to the standard, leaving only the placement question above. A
 the passive form, citing those examples; that recommendation was dropped, and the
 examples it cited no longer teach the weaker form.
 
-## `/audit-subagent`'s objective states its categories in a second sentence
+## The auditor skeleton's worked example states its categories in a second sentence
 
-`src/plugins/instructions/skills/audit-subagent/SKILL.md` opens with the verdict
-sentence and then names the four finding categories in a second sentence, while
-the sibling `src/plugins/instructions/skills/audit-skill/SKILL.md` carries the
-equivalent content in one sentence joined by a semicolon.
+`src/plugins/instructions/skills/audit-subagent/SKILL.md` and
+`src/plugins/instructions/skills/audit-skill/SKILL.md` each state their sealed-run
+verdict and its finding shape in one sentence whose em-dash clause names them.
+The ADR example in `/skill-standards` `references/auditor-skeleton.md` still names
+its finding categories in a second sentence.
 
-Successive `instructions:skill-auditor` runs read this differently. One run
+Successive `instructions:skill-auditor` runs read the earlier two-sentence
+`audit-subagent` objective differently. One run
 flagged the shortened objective and required the categories be named; a later run
 accepted the categories and flagged the second sentence. The two governing
 references model the shape differently. `/skill-standards`
@@ -135,7 +137,7 @@ categories. Naming categories is settled; whether they form a second part is not
 
 Required handling: decide once whether an auditor's finding-category clause is a
 distinct output part or a subordinate clause, record it so `<objective_shape>`
-and the skeleton's worked example stop modelling opposite shapes, and bring both
+and the skeleton's worked example stop modelling opposite shapes, and bring the
 auditor objectives onto the chosen shape.
 
 Source: `instructions:skill-auditor` finding `f-009`, severity `WARNING`, on the
