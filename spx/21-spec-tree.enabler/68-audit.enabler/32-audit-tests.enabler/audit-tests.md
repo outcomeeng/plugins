@@ -32,17 +32,17 @@ A test missing any property has zero evidentiary value regardless of code qualit
 
 The `/audit-tests` skill loads the same test-evidence standards as `/test`, then classifies test coupling into distinct categories, each with a different audit response:
 
-| Category           | Definition                                                                                                                                              | Verdict                                                                                 |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| Direct             | Test imports the module under test                                                                                                                      | Proceed to falsifiability                                                               |
-| Indirect           | Test imports a harness that wraps the module                                                                                                            | Proceed — verify harness coupling                                                       |
-| Transitive         | Test imports something that depends on the module                                                                                                       | Review — may be legitimate cross-module evidence at L2                                  |
-| Laundered indirect | Test imports a test-infrastructure module that exists only to expose hardcoded values back to the test                                                  | REJECT — laundering                                                                     |
-| False              | Test imports the module but never exercises the assertion-relevant path                                                                                 | REJECT                                                                                  |
-| Partial            | Test exercises some paths but not the ones the assertion claims                                                                                         | REJECT                                                                                  |
-| None               | Test imports only its test framework                                                                                                                    | REJECT — tautology                                                                      |
-| Severed            | Test imports the module under test and replaces the imported behavior with a mock, fake, stub, monkeypatch, or equivalent replacement                   | REJECT — coupling severed                                                               |
-| Prose-coupling     | Test reads an authored prose or documentation body (skill, spec, prompt) and asserts on its content — directly or laundered through test infrastructure | REJECT — couples to authored text, not behavior; retag the assertion `[eval]`/`[audit]` |
+| Category           | Definition                                                                                                                                              | Audit response                                                                                    |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Direct             | Test imports the module under test                                                                                                                      | Proceed to falsifiability                                                                         |
+| Indirect           | Test imports a harness that wraps the module                                                                                                            | Proceed — verify harness coupling                                                                 |
+| Transitive         | Test imports something that depends on the module                                                                                                       | Review — may be legitimate cross-module evidence at L2                                            |
+| Laundered indirect | Test imports a test-infrastructure module that exists only to expose hardcoded values back to the test                                                  | Blocking finding — laundering                                                                     |
+| False              | Test imports the module but never exercises the assertion-relevant path                                                                                 | Blocking finding                                                                                  |
+| Partial            | Test exercises some paths but not the ones the assertion claims                                                                                         | Blocking finding                                                                                  |
+| None               | Test imports only its test framework                                                                                                                    | Blocking finding — tautology                                                                      |
+| Severed            | Test imports the module under test and replaces the imported behavior with a mock, fake, stub, monkeypatch, or equivalent replacement                   | Blocking finding — coupling severed                                                               |
+| Prose-coupling     | Test reads an authored prose or documentation body (skill, spec, prompt) and asserts on its content — directly or laundered through test infrastructure | Blocking finding — couples to authored text, not behavior; retag the assertion `[eval]`/`[audit]` |
 
 ## Falsifiability Model
 
@@ -60,7 +60,7 @@ The Auditor traces, by reading, whether the test drives execution into the asser
 2. Read the test and follow what it calls into that production code.
 3. Judge whether the test's execution reaches the assertion-relevant path — the lines whose behavior the assertion claims.
 
-A test that imports the module but never drives execution into the assertion-relevant path provides no coverage evidence — REJECT regardless of coupling, falsifiability, and alignment. The finding names the specific assertion-relevant path the test fails to reach, traced from the code, not a measured percentage.
+A test that imports the module but never drives execution into the assertion-relevant path provides no coverage evidence — a blocking finding regardless of coupling, falsifiability, and alignment. The finding names the specific assertion-relevant path the test fails to reach, traced from the code, not a measured percentage.
 
 ## Literal Rule
 
@@ -95,15 +95,16 @@ The legitimate pattern: production defines a typed constant (object, dict, froze
 
 When the value originates outside the codebase — an HTTP status, a POSIX errno, a protocol opcode — both production and test import directly from the platform or library origin. Production never re-exports a library constant; tests import from where production imports from.
 
-When the audit rejects bare literals, the verdict reports the positive pattern as the remediation. Language-specific structural rules (the constant-object syntax, the type derivation, the no-enums policy) live in `/typescript-standards`, `/python-standards`, and `/rust-standards`.
+When the audit rejects bare literals, the finding reports the positive pattern as the remediation. Language-specific structural rules (the constant-object syntax, the type derivation, the no-enums policy) live in `/typescript-standards`, `/python-standards`, and `/rust-standards`.
 
 ## Assertions
 
 ### Compliance
 
-- ALWAYS: given successful required language-concern composition, the language-neutral `/audit-tests` methodology inspects every artifact in a non-Python evidence chain before approval, rejects unsourced protocol vocabulary in imported test infrastructure, and identifies the transitive artifact and required ownership target in its structured verdict ([eval](evals/full-chain-ownership/eval.toml))
+- ALWAYS: given successful required language-concern composition, the language-neutral `/audit-tests` methodology inspects every artifact in a non-Python evidence chain before approval, rejects unsourced protocol vocabulary in imported test infrastructure, and records the transitive artifact and required ownership target in a finding of its sealed audit run ([eval](evals/full-chain-ownership/eval.toml))
 - ALWAYS: the Codex runtime rendering of `/audit-tests` satisfies the same non-Python full-chain ownership verdict contract as the shared authored skill ([eval](evals/full-chain-ownership-codex/eval.toml))
 - ALWAYS: `/audit-tests` names no caller and stays invocable on its own; the Author's agent session produces a verdict by dispatching the audit to a separate Verifier's agent session rather than grading its own work in place, per `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` ([audit])
+- ALWAYS: `/audit-tests` records a node target through `spx verification run` on a file scope anchored on the node's spec file: one root unit with `auditKind` `tests`, one child per assertion, one grandchild per linked test file and language concern, and a retired path as a `not-applicable` child. It records an evidence-scope target, a committed changeset, on a changeset scope. It returns the run token and the rendered projection, or a blocked diagnostic when spx refuses a recorded payload or the finish, and the `test-evidence-auditor` wrapper passes the raw target and its run-driver identity and relays them unchanged ([audit])
 - ALWAYS: `/audit-tests` invokes `/contextualize` on the target spec node before any audit phase ([audit])
 - ALWAYS: when the audit inputs carry no language partition, `/audit-tests` derives one for every test-file extension an installed language plugin's test standards declare, and rejects with `unsupported-language` and remediation target `language-partition` only an extension no installed plugin claims ([audit])
 - ALWAYS: check testability before coupling — a test cannot evidence an assertion the source code cannot expose ([audit])
