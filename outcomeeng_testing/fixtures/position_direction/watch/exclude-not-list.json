@@ -1,0 +1,4 @@
+{
+  "position": "Director",
+  "groups": [{ "label": "Executor", "backend": "herdr", "cwd_prefix": "/abs/pool", "exclude": "/abs/pool/a" }]
+}
