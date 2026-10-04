@@ -10,6 +10,18 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.102.0
+
+### Breaking
+
+- **A Change record opens with `## Intent` and its body carries content only.** `change-standards` states the Intent form: front matter keeps its six keys and `lifecycle` admits `Submitted`; the body opens with `## Intent` (What, Why, an optional Observation, and Evidence), Framed adds `## Nodes`, `## Assertion operations`, and `## Decisions`, Sliced adds `## Slice`, and Executable adds `## Activities`. The `# Output`, `# Value`, `# Frame`, and `# Activities` form is outside the contract and takes the Intent form at its next revision through `/author-change`. A body line carrying attestation, accountable-person, priority, or overrule text is a defect.
+
+### Changed
+
+- **Maturity authority is read from the store.** Maturity advances past Proposed, Framed, and Sliced only when the store shows the Product's Maintainer's move of the Change out of `Submitted` at the Maturity it leaves: the issue's `Lifecycle` field-change event from `Submitted` to `Available`, with the `Confirmation:` comment naming that Maturity, the delegate, the operator it acts for, the agent harness, and the agent session. `change-standards` names the paginated event read and the `Confirmation:` and `Rejection:` comment shapes; a rejection grants no authority.
+- **The Definitions of Ready judge the Intent form.** Proposed requires an Intent with What, Why, and Evidence and leaves open questions unanswered under `## Decisions`; Framed requires every affected Node with its target malleability, every Assertion operation, and every Decision answered; Sliced requires one vertical slice in one repository with an observable check; Executable requires each Node's required state and ordered Activities, each naming one result on one Node and its round, whose named results are the evidence obligations the merge composition selects, judged as separate criteria for predicates, results, decision-record audits, and Verifiers. No criterion requires a body authority line.
+- **A Handoff's optional lines are named.** A Handoff carries its five required lines and, optionally, `Session:` and `Worktree:` lines; a release with the `submit` result names `confirmation: <Maturity>` as its Next Activity.
+
 ## 0.101.1
 
 ### Changed

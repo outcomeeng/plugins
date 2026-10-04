@@ -1,17 +1,17 @@
 <definition_of_ready maturity="Framed" cumulative="true">
 
-Judge every criterion; this table includes the complete Proposed requirements and is the complete criterion set for Framed Maturity, so apply no criterion outside it.
+Judge every criterion; this table includes the complete Proposed requirements and is the complete criterion set for Framed Maturity, so apply no criterion outside it. Each criterion judges the record against the shared rule it names in `change-record.md`.
 
-| ID                     | Criterion                                                                                                                                                                                                                                              |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `framed-record`        | All six front-matter fields and all four ordered top-level body sections satisfy the shared record contract.                                                                                                                                           |
-| `framed-identity`      | `title`, `product`, `maturity: Framed`, and `lifecycle` identify one intended Output, one Product, and a valid Lifecycle.                                                                                                                              |
-| `framed-relationships` | Root or successor lineage is complete and immutable; `blocked_by` names every known blocker.                                                                                                                                                           |
-| `framed-output-value`  | `# Output` and `# Value` preserve the proposal and its established priority basis without received conversation input.                                                                                                                                 |
-| `framed-nodes`         | `# Frame` identifies every affected or intended Node and each node's own `spec`, `verification`, or `implementation` target malleability, the value the node declares once the Change is applied; no Change-wide target substitutes for those entries. |
-| `framed-assertions`    | `# Frame` identifies every Assertion addition, amendment, or removal by owning Node and exact target.                                                                                                                                                  |
-| `framed-decisions`     | `# Frame` identifies every governing or intended Decision needed to preserve product intent and retains each settled choice.                                                                                                                           |
-| `framed-questions`     | Every question capable of changing the intended Output is settled.                                                                                                                                                                                     |
-| `framed-authority`     | `# Frame` carries `Intent attestation: attested by the operator on <date>.` after the operator approves the complete Frame.                                                                                                                            |
+| ID                      | Criterion                                                                                                                                          |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `framed-record`         | The front matter and the body's section set and order satisfy `record-shape`, and the body opens with `## Intent`.                                 |
+| `framed-identity`       | `title`, `product`, `maturity: Framed`, and `lifecycle` identify one intended Output, one Product, and a valid Lifecycle.                          |
+| `framed-relationships`  | `refined_from` and `blocked_by` satisfy `lineage` and `blockers`, and `blocked_by` names every known blocker.                                      |
+| `framed-intent`         | `## Intent` states What, Why, and Evidence under `intent`, with Observation present only where an observation gives rise to the Change.            |
+| `framed-input-boundary` | The record satisfies `received-input-boundary`.                                                                                                    |
+| `framed-body-authority` | The body satisfies `body-authority`.                                                                                                               |
+| `framed-nodes`          | `## Nodes` names every affected or intended Node with its target malleability under `nodes`.                                                       |
+| `framed-assertions`     | `## Assertion operations` names every Assertion operation by its owning Node or decision record and its exact target under `assertion-operations`. |
+| `framed-decisions`      | `## Decisions` holds every question that can change the intended Output, and each carries its answer under `decisions`.                            |
 
 </definition_of_ready>
