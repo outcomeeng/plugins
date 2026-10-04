@@ -29,7 +29,7 @@ Read `${SKILL_DIR}/references/change-record.md` completely for every selection. 
 
 NEVER load another Maturity's Definition of Ready in the same invocation. Each Definition of Ready is cumulative and complete for its level.
 
-`change-record.md` states the record rules, and each Definition of Ready states criteria that judge a record against those rules by identifier; neither carries a store command. `lifecycle.md` carries the store-binding, canonical-state, authority-read, ordered-write, complete-readback, write-inspection, inert-stdin, claim-record, handoff-record, confirmation-record, and terminal-record rules, together with the store commands those rules name.
+`change-record.md` states the record rules, and each Definition of Ready states criteria that judge a record against those rules by identifier; neither carries a store command. `lifecycle.md` carries the store-binding, canonical-state, authority-read, ordered-write, complete-readback, write-inspection, inert-stdin, claim-record, handoff-record, confirmation-record, and terminal-record rules, together with the store commands those rules name; it alone assigns each field's home in the declared store and names the reads that establish authority, so a record rule that needs a field home or an authority read applies under the `Lifecycle` selection.
 
 </loading_contract>
 
