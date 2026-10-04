@@ -6,6 +6,8 @@ CAN run the deterministic gate steps that prove the current slice without spendi
 
 ## Assertions
 
+- For a changeset whose every changed path a Markdown lane in `spx/local/merging.md` covers, every step the selected gate selects maps to a declared Markdown lane that runs it
+
 ### Mappings
 
 - Changed repository paths map to a deterministic ordered subset of source-owned validation steps, with each selected step carrying a human-readable reason for inclusion ([test](tests/test_selected_gate.mapping.l1.py))
