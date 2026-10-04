@@ -7,7 +7,7 @@
 <process>
 
 1. Take the Frame or Slice from the Maintainer that brings it, by mail: the Change's link and the exact Frame or Slice. A Frame or Slice no Maintainer brings is not attested.
-2. Read the Change with `gh issue view` and compare the Frame or Slice with the operator's direction and intent recorded in the note and with the theme in force. Verify every claim the mail makes against the Change.
+2. Read the Change from the store the repository's coordination overlay declares (`gh issue view` for a GitHub store) and compare the Frame or Slice with the operator's direction and intent recorded in the note and with the theme in force. Verify every claim the mail makes against the Change.
 3. Decide:
    - Inside the direction and intent: answer yes.
    - Outside it, or short of what the direction names: answer with the exact change the Maintainer makes.
