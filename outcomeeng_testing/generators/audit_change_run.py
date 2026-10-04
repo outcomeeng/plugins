@@ -19,6 +19,10 @@ Every strategy builds a request outside that contract by construction, taking
 every operation, field, bound, and character from the runner's own registries
 and constants. None of them consults the runner's acceptance check, so the
 refusal a linked test observes is never the generator's own verdict.
+
+``rule_identifiers`` supplies the opposite domain: distinct finding rule
+identifiers the contract accepts, derived from the runner's alphabet and
+separator.
 """
 
 from __future__ import annotations
@@ -46,6 +50,27 @@ _INTEGER_SIGNS = ("", "-")
 _MEMBER_SEPARATOR = ": "
 _ITEM_SEPARATOR = ", "
 _OBJECT_TEMPLATE = "{{{}}}"
+# The characters each half of a derived rule identifier takes from the alphabet.
+_RULE_ID_RUN = 4
+
+
+def rule_identifiers(runner: ModuleType, count: int) -> tuple[str, ...]:
+    """Derive ``count`` distinct finding rule identifiers the runner's contract accepts.
+
+    Each identifier joins two overlapping windows of the runner's alphabet with
+    its separator, so a different start index yields a different identifier and
+    every one is a lowercase hyphenated ID in that alphabet.
+    """
+    alphabet = runner.RULE_ID_ALPHABET
+    return tuple(
+        runner.RULE_ID_SEPARATOR.join(
+            (
+                alphabet[start : start + _RULE_ID_RUN],
+                alphabet[start + 1 : start + 1 + _RULE_ID_RUN],
+            )
+        )
+        for start in range(count)
+    )
 
 
 def json_values() -> st.SearchStrategy[object]:

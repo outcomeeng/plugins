@@ -36,7 +36,6 @@ import importlib.util
 import io
 import json
 import os
-import re
 import shlex
 import shutil
 import subprocess
@@ -54,6 +53,11 @@ from typing import Final, TypeVar
 
 from hypothesis import given, seed, settings
 
+from outcomeeng.distribution.installation import (
+    HOME_ENV,
+    PLUGIN_MANIFEST_VERSION_FIELD,
+)
+from outcomeeng.hygiene.clean import GIT_METADATA_DIR, SPX_STORE_DIR
 from outcomeeng.validation.audit_artifacts import implementation_languages
 from outcomeeng.validation.implementation_audit_contract import (
     ImplementationAuditConcern,
@@ -63,6 +67,7 @@ from outcomeeng.validation.implementation_audit_contract import (
 )
 from outcomeeng_testing.generators.audit_change_run import (
     malformed_request_objects,
+    rule_identifiers,
     unparseable_request_texts,
 )
 from outcomeeng_testing.harnesses import audit_change_run_observer as observer
@@ -76,9 +81,8 @@ RUNNER_SCRIPT: Final = (
 )
 OBSERVER_SCRIPT: Final = Path(observer.__file__).resolve()
 SPEC_TREE_MANIFEST: Final = SPEC_TREE_DIR / ".claude-plugin" / "plugin.json"
-CHANGE_RECORD_RULES: Final = (
-    SPEC_TREE_DIR / "skills" / "change-standards" / "references" / "change-record.md"
-)
+#: How many finding rule identifiers one generated audit records.
+RULE_IDENTIFIER_COUNT: Final = 10
 
 #: The author-change record template, a source-owned Change record.
 CHANGE_TEMPLATE: Final = (
@@ -114,13 +118,9 @@ MALFORMED_REQUEST_PROPERTY_REPLAY: Final = (
     "test_audit_change_run.compliance.l1.py"
 )
 
-#: Directory the SPX CLI keeps its run journals and verification contexts in.
-SPX_STORE_DIRNAME: Final = ".spx"
-_GIT_DIRNAME: Final = ".git"
 _CANDIDATE_DIRNAME: Final = "changes"
 _FIXTURE_SUFFIX: Final = ".txt"
 _TEMPORARY_DIRECTORY_VARIABLES: Final = ("TMPDIR", "TMP", "TEMP")
-_HOME_VARIABLE: Final = "HOME"
 _REPORT_SUFFIX: Final = ".json"
 
 _T = TypeVar("_T")
@@ -391,9 +391,9 @@ class AuditWorkspace:
         """Record every file in each directory the runner could write to."""
         return Snapshot(
             repository_outside_store=_digests(
-                self.root, excluded=frozenset({_GIT_DIRNAME, SPX_STORE_DIRNAME})
+                self.root, excluded=frozenset({GIT_METADATA_DIR, SPX_STORE_DIR})
             ),
-            spx_store=_digests(self.root / SPX_STORE_DIRNAME),
+            spx_store=_digests(self.root / SPX_STORE_DIR),
             runner_temporary_directory=_digests(self.runner_temporary_directory),
             runner_home_directory=_digests(self.runner_home_directory),
         )
@@ -433,7 +433,7 @@ class AuditWorkspace:
         environment = dict(os.environ)
         for variable in _TEMPORARY_DIRECTORY_VARIABLES:
             environment[variable] = str(self.runner_temporary_directory)
-        environment[_HOME_VARIABLE] = str(self.runner_home_directory)
+        environment[HOME_ENV] = str(self.runner_home_directory)
         return environment
 
     def _observe(self, request_text: str, request_bytes: bytes) -> RunnerCall:
@@ -510,16 +510,10 @@ def run_in_parallel(work: Callable[[_T], _R], items: Sequence[_T]) -> list[_R]:
         return list(pool.map(work, items))
 
 
-def change_record_rule_ids() -> tuple[str, ...]:
-    """Return the common Change record rule identifiers the shipped standards declare."""
-    rule_id = re.compile(f'<rule id="({load_runner().RULE_ID_PATTERN.pattern})"')
-    return tuple(rule_id.findall(CHANGE_RECORD_RULES.read_text(encoding="utf-8")))
-
-
 def spec_tree_plugin_version() -> str:
     """Return the authored spec-tree plugin version."""
     manifest = json.loads(SPEC_TREE_MANIFEST.read_text(encoding="utf-8"))
-    return str(manifest["version"])
+    return str(manifest[PLUGIN_MANIFEST_VERSION_FIELD])
 
 
 @dataclass(frozen=True)
@@ -566,7 +560,9 @@ def audit_payloads(*, subject: str, content: str, tool_version: str) -> AuditPay
             expected=rule,
             producer_provenance=provenance,
         )
-        for index, rule in enumerate(change_record_rule_ids())
+        for index, rule in enumerate(
+            rule_identifiers(load_runner(), RULE_IDENTIFIER_COUNT)
+        )
     )
     return AuditPayloads(scopes=scopes, findings=findings)
 
