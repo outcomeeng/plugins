@@ -16,20 +16,6 @@ and improvement workflows without granting them to read-only routes.
 Source: skill-auditor finding `f-003`, rule `overbroad_allowed_tools`, severity
 `WARNING`.
 
-## Revalidate after exercise-driven edits
-
-`src/plugins/instructions/skills/create-skill/workflows/create-new-skill.md:79`
-allows the representative exercise to trigger iterative edits after deterministic
-checks and the skill audit have already completed. The final bundle can therefore
-differ from the bundle those gates evaluated.
-
-Required handling: run the representative exercise before final validation, or loop
-every exercise-driven edit back through deterministic checks and the complete-bundle
-skill audit before publication.
-
-Source: PR 458 review comment `3610850053`, classified as `DEBT` in the `evidence`
-category after merge.
-
 ## The composing-skill assertion awaits verification selection
 
 The assertion under `## Assertions` in `skills.md` that a composing skill names each
@@ -70,29 +56,6 @@ and both `<progressive_disclosure>` branches drop "below".
 
 Source: `instructions:skill-auditor` finding rule `stale_cross_reference`, severity
 `WARNING`, on head `524b9c46c7960a106d84ef856b4020a0ce904b16` during Change #76;
-[Change #92](https://github.com/outcomeeng/changes/issues/92) carries the
-standards-skill pass that owns it.
-
-## The Claude render of `skill-standards` sits 62 code points under the eager-payload ceiling
-
-`dist/claude/instructions/skills/skill-standards/SKILL.md` measures 39938 code
-points against the 40,000-code-point ceiling `skill-standards`
-`<eager_foundation_exception>` declares for itself, after Change #332 admits the
-`spx verification run` journal verbs in the audit-skill grant rule and aligns the audit
-description and Codex frontmatter sentences with it.
-
-**Impact.** The next small edit to a Claude-only section tips the reference past
-the ceiling and turns a routine change into a blocking finding on this reference.
-
-**Settlement condition.** Conditional detail leaves the eager body for its
-reference — the `<context>` bash-block constraints at lines 274-280, already
-carried by `references/command-capabilities.md` `<dynamic_context>`, are one
-candidate — so a routine edit has room.
-
-Source: `instructions:skill-auditor` finding rule `eager_payload_headroom`, severity
-`WARNING`, on head `524b9c46c7960a106d84ef856b4020a0ce904b16` during Change #76,
-remeasured by the skill auditor on head `913a65e5b370ffa846bfe7a47be4a551e6a9c547`
-during Change #200;
 [Change #92](https://github.com/outcomeeng/changes/issues/92) carries the
 standards-skill pass that owns it.
 
@@ -203,13 +166,7 @@ cross-head comparison admits: no text moved, no reference changed, and no slug w
 the two findings, because there is no between. One file set is the subject and one document is the
 judgment.
 
-The auditor's own rule vocabulary is unbounded, which is what lets opposed readings coexist. Its
-`<verdict_format>` types the `rule` field as a free-form `<strength-name>` or `<issue-name>`
-placeholder, and `src/plugins/instructions/skills/audit-skill/SKILL.md` fixes only
-`configuration_issue`, `actor_or_activity_objective`, and `auditor_skeleton_violation`. None of
-`unverified_allow_list_match`, `narrow_allowed_tools`, or `restated_dependency_contract` appears
-anywhere under `src/plugins/` or `dist/`, so each run mints the slug it judges under and nothing
-binds one run's classification of a line to the next run's.
+The auditor's rule vocabulary is bounded by the rule catalogs `/skill-standards` `references/rule-catalog.md` and `/agent-prompt-standards` `<rule_catalog>` declare, and `/audit-skill` keys each finding by its file's unit and catalog rule ID, so one run's classification of a line is comparable with the next run's.
 
 **Impact.** `src/plugins/instructions/skills/audit-skill/SKILL.md` `<success_criteria>` states "The
 same SKILL.md yields the same verdict"; these runs falsify that criterion on its own subject.
@@ -230,10 +187,7 @@ have undone correct work.
 surface return the same rule and severity for every line both judge, and no single run's verdict
 document both praises and faults the same subject under the same rule. The intra-run contradictions
 add the second clause: runs that contradict themselves the same way satisfy the cross-run clause
-while each verdict stays unusable. Reaching either needs the rule vocabulary bounded —
-`/skill-standards` owning the enumerated rule slugs `/audit-skill` may emit,
-which is what the node assertion requiring `/skill-standards` to own every rule `/audit-skill`
-enforces already declares — so a line cannot be classified under a slug minted for one run.
+while each verdict stays unusable.
 
 **Related.** Three adjacent Verifier-judgment problems are recorded elsewhere in this tree; this is
 the fourth and the first where one auditor definition contradicts itself on unchanged input, rather
@@ -280,14 +234,6 @@ changed no line of that file; the audit read it only because `SKILL.md` routes t
 Source: `instructions:skill-auditor` finding `f-015`, rule
 `rendered_output_contradiction_and_portability`, severity `REJECT`, on head
 `913a65e5b370ffa846bfe7a47be4a551e6a9c547` during Change #200.
-
-## `/create-skill` assumes a spec tree and restates its standards loads
-
-**Evidence**: `instructions:skill-auditor` warnings on `src/plugins/instructions/skills/create-skill` at head `add3e3e862f7512a55e8b9655d07f78412abe87c`: f-010 (rule `plugin_portability_undefined_reference`) — `workflows/audit-skill.md:21` tells a consumer to persist requirements in decisions and specs and to follow the root guide's isolation mechanics, surfaces a repository without a spec tree lacks; f-011 (rule `conciseness_duplicated_loading`) — `SKILL.md` composes `/skill-standards` and `/agent-prompt-standards`, and `<reference_loading>` and every workflow's `<required_reading>` restate both loads and the overlay read.
-
-**Impact**: a consumer without a spec tree or a root guide meets an instruction it cannot resolve, and every route pays for the restated loads.
-
-**Settlement condition**: the isolation requirement is stated directly or conditioned on the surfaces existing, the loads stand once, and one typed skill audit of `create-skill` raises neither finding.
 
 ## `skill-standards` justifies its eager-foundation exception by material it does not inline
 
