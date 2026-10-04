@@ -121,6 +121,12 @@ MALFORMED_REQUEST_PROPERTY_REPLAY: Final = (
 _CANDIDATE_DIRNAME: Final = "changes"
 _FIXTURE_SUFFIX: Final = ".txt"
 _TEMPORARY_DIRECTORY_VARIABLES: Final = ("TMPDIR", "TMP", "TEMP")
+# The GitHub CLI records a device identifier under its state directory on its
+# first run, in the home directory unless the host sets XDG_STATE_HOME. The
+# record is the CLI's own telemetry state, so the runner's environment turns
+# telemetry off and the home directory snapshot sees only what the audit wrote.
+_GH_TELEMETRY_VARIABLE: Final = "GH_TELEMETRY"
+_GH_TELEMETRY_OFF: Final = "false"
 _REPORT_SUFFIX: Final = ".json"
 
 _T = TypeVar("_T")
@@ -434,6 +440,7 @@ class AuditWorkspace:
         for variable in _TEMPORARY_DIRECTORY_VARIABLES:
             environment[variable] = str(self.runner_temporary_directory)
         environment[HOME_ENV] = str(self.runner_home_directory)
+        environment[_GH_TELEMETRY_VARIABLE] = _GH_TELEMETRY_OFF
         return environment
 
     def _observe(self, request_text: str, request_bytes: bytes) -> RunnerCall:
