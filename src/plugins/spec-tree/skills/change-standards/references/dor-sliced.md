@@ -5,7 +5,7 @@ Judge every criterion; this table includes the complete Proposed and Framed requ
 | ID                      | Criterion                                                                                                                                                |
 | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `sliced-record`         | The front matter and the body's section set and order satisfy `record-shape`, and the body opens with `## Intent`.                                       |
-| `sliced-identity`       | `title`, `product`, `maturity: Sliced`, and `lifecycle` identify one intended Output, one Product, and a valid Lifecycle.                                |
+| `sliced-identity`       | `title`, `product`, `maturity: Sliced`, and `lifecycle` identify one intended Output, one Product, and a valid Lifecycle under `record-shape`.           |
 | `sliced-relationships`  | `refined_from` and `blocked_by` satisfy `lineage` and `blockers`, `blocked_by` names every known blocker, and the dependency graph has no blocker cycle. |
 | `sliced-intent`         | `## Intent` states What, Why, and Evidence under `intent`, with Observation present only where an observation gives rise to the Change.                  |
 | `sliced-input-boundary` | The record satisfies `received-input-boundary`.                                                                                                          |
