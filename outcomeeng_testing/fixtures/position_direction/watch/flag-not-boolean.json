@@ -1,0 +1,4 @@
+{
+  "position": "Director",
+  "sessions": [{ "position": "Maintainer", "backend": "prowl", "cwd": "/abs/wt", "report_background": "no" }]
+}
