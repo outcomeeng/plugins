@@ -29,7 +29,7 @@ Apply `<authority>` and `<record_rules>` below for every selection. Then read ex
 
 NEVER load another Maturity's Definition of Ready in the same invocation. Each Definition of Ready is cumulative and complete for its level.
 
-`<record_rules>` states the record rules, and each Definition of Ready states criteria that judge a record against those rules by identifier; neither carries a store command. `lifecycle.md` carries the store-binding, canonical-state, authority-read, ordered-write, complete-readback, write-inspection, inert-stdin, claim-record, handoff-record, confirmation-record, and terminal-record rules, together with the store commands those rules name; it alone assigns each field's home in the declared store and names the store reads — fields, lineage, blockers, and authority. A criterion whose evidence is store state, such as the blocker graph of `*-relationships`, is judged from those reads, which a separate `Lifecycle` load supplies; a Maturity selection never infers that state from the record alone.
+`<record_rules>` states the record rules, and each Definition of Ready states criteria that judge a record against those rules by identifier, and the Executable Definition of Ready also against its own `<merge_composition>`; neither carries a store command. `lifecycle.md` carries the store-binding, canonical-state, authority-read, ordered-write, complete-readback, write-inspection, inert-stdin, claim-record, handoff-record, confirmation-record, and terminal-record rules, together with the store commands those rules name; it alone assigns each field's home in the declared store and names the store reads — fields, lineage, blockers, and authority. A criterion whose evidence is store state, such as the blocker graph of `*-relationships`, is judged from those reads, which a separate `Lifecycle` load supplies; a Maturity selection never infers that state from the record alone.
 
 </loading_contract>
 
@@ -67,7 +67,7 @@ The body opens with `## Intent`. Each Maturity adds its sections after the Inten
 | `## Slice`                | Sliced            | `slice`                |
 | `## Activities`           | Executable        | `activities`           |
 
-A Proposed record may also carry `## Decisions` holding its open questions. Every section present stands in this order, appears once, and is a level-two heading; a missing required section, a reordered or duplicated section, and an unknown level-two section are defects. Subsections may refine a section. Front-matter values are never restated or maintained as body lines.
+A known section may stand before the Maturity that first requires it — `## Decisions` holding a Proposed record's open questions, or the sections a higher Maturity added before the Change's Maturity was lowered — and the declared Maturity's Definition of Ready judges such a section only where one of its criteria names it. Every section present stands in this order, appears once, and is a level-two heading; a missing required section, a reordered or duplicated section, and an unknown level-two section are defects. Subsections may refine a section. Front-matter values are never restated or maintained as body lines.
 
 </rule>
 
@@ -180,7 +180,7 @@ A candidate outside the contract receives no judgment, migration, alias, inferre
 
 <success_criteria>
 
-- Each record rule is stated once, in `<record_rules>`; a Definition of Ready criterion cites the rule it applies by identifier and adds only the level's own condition.
+- Each record rule is stated once, in `<record_rules>`; a Definition of Ready criterion cites the record rule or, at Executable, the `<merge_composition>` it applies, and adds only the level's own condition.
 - Every loaded criterion has a stable identifier and can be judged from the complete record, the store state the `Lifecycle` reads return, and necessary repository references.
 - The authority for each Maturity advance is read from the store's field-change events and confirmation comments under `authority-read`, and no rule or criterion requires body authority text.
 - The four Maturity values, the six Lifecycle values, lineage, blockers, authority, product truth, and continuation remain distinct.
