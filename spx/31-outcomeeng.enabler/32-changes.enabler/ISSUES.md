@@ -181,3 +181,17 @@ Evidence: `instructions:skill-auditor` finding f-009 (rule `standards_content_re
 Impact: a rule `change-standards` adds, renames, or rescopes can drift from the step's list, and the step can read as a narrower checklist than the loaded inventory.
 
 Revisit and settlement condition: step 5 judges against the loaded rule and criterion inventory without restating its subjects; one typed skill audit of `audit-change` then raises no `standards_content_restated_in_auditor` finding.
+
+## DEBT [adr-pdr-compliance]: the audit-change runner is a generic shipped script beyond fifty lines
+
+Defect class: `adr-pdr-compliance`.
+
+Finding: `src/plugins/spec-tree/skills/audit-change/scripts/audit_change_run.py` is a generic shipped script far beyond fifty lines, which `spx/12-shipped-scripting.adr.md` holds as debt awaiting extraction of its logic into the SPX CLI once the script proves its value, or removal when it does not.
+
+The `change-auditor` definition `src/plugins/spec-tree/agents/change-auditor.md` has no retained release-acceptance evidence: `spx/15-subagent-execution.pdr.md` declares release acceptance per supported harness as native loading plus one minimal isolated execution for each of its Standard, Strong, and Fast profiles. Release acceptance belongs to the release, so the changeset that introduces the definition, Change outcomeeng/changes#162, runs no paid invocation.
+
+Evidence: `spec-tree:implementation-auditor` run `2026-09-29_08-34-14-821-c605096fd926` raised a `debt` finding under rule `adr-pdr-compliance` against the runner; `wc -l` over the runner derives its current length, so this entry carries no line count. `instructions:subagent-auditor` finding `f-002`, verdict `REJECT`, class `evidence/missing-invocation-evidence`, judged `src/plugins/spec-tree/agents/change-auditor.md` on head `02c847e66b2f526804db14eb568fae2a2180b858`.
+
+Impact: the runner's state, branching, and result contracts ship inside a plugin that a consumer repository cannot version independently or repair without a marketplace release. No execution claim stands for the `change-auditor` definition on any harness or profile until release acceptance retains its evidence.
+
+Revisit and settlement condition: once the runner proves its value in use, its logic moves into the SPX CLI, tested there and consumed by the plugins product as a trusted third-party component, leaving `audit-change` its instruction and no script; a runner that does not prove its value is removed rather than extracted. The definition's gap settles when release acceptance retains, for every supported harness, native loading and one minimal isolated execution of each Standard, Strong, and Fast profile, judged by an independent Auditor with no retry or substitution after a failed or unusable launch.
