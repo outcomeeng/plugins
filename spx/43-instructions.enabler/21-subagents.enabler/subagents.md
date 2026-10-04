@@ -12,7 +12,7 @@ The subagents-about-subagents cluster is three peers with distinct roles:
 
 ## Assertions
 
-- ALWAYS: `/audit-subagent` records one changeset-scoped `spx verification run` on one configuration file the changeset changes, with one definition unit and one unit for each governing declaration it read, each keyed by its audit class, audit kind, concern, and path; each finding attaches to the definition unit, or to a declaration unit only when the changeset changes that declaration's file, and its key is its unit's key and its rule ID; a target the changeset leaves unchanged returns a blocked result naming the target, and no run starts.
+- ALWAYS: `/audit-subagent` records one changeset-scoped `spx verification run` on one configuration file the changeset changes, with one definition unit and one unit for each governing declaration it read, each keyed by its audit class, audit kind, concern, and path; a finding whose every violating location lies in a changed governing declaration's file attaches to that declaration's unit, every other finding to the definition unit, and its key is its unit's key and its rule ID; a target the changeset leaves unchanged returns a blocked result naming the target, and no run starts.
 - ALWAYS: every rule ID `/audit-subagent` records names a rule in the rule catalog `/subagent-standards` or `/agent-prompt-standards` owns, and `/audit-subagent` records no finding under any other rule.
 
 ### Compliance

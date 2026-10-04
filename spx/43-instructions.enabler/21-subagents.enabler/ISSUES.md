@@ -205,6 +205,14 @@ invoking session's execution policy, and no assertion under `spx/` names
 the verification node names those wrappers only by directory — so no owning node resolves
 for them and none declares their inheritance.
 
+`instructions:subagent-auditor` runs `2026-10-04_08-05-49-516-69556ee8eb70` on
+`src/plugins/instructions/agents/skill-auditor.md` and
+`2026-10-04_08-10-45-475-6e2ba9a37ef3` on `src/plugins/instructions/agents/subagent-auditor.md`
+raised the same gap as `inheritance-declared`, and its Codex form as
+`no-prompt-only-boundary`: both auditors write their own run journal through
+`spx verification run`, so the `read-only` sandbox the other auditor wrappers declare does not
+fit them, and their Codex emission carries no `sandbox_mode`.
+
 **Independence:** the gap predates the strengthened admission rule and is not caused by it.
 Those definitions have always inherited the session's execution policy and their owning
 nodes have never named them; the rule made an existing silence legible rather than
@@ -227,7 +235,8 @@ acceptance — native loading and one minimal isolated execution for every profi
 tree retains no acceptance artifact for the Claude or the Codex Standard row either
 definition selects, and no exact-definition minimal isolated invocation of either. The
 same runs raised `f-001`, the undeclared execution-policy inheritance the entry above
-records for every marketplace definition.
+records for every marketplace definition. Runs `2026-10-04_08-05-49-516-69556ee8eb70` and
+`2026-10-04_08-10-45-475-6e2ba9a37ef3` raised it again as `invocation-evidence`.
 
 **Impact:** nothing in the tree shows either emitted definition loading natively and
 returning its run token and projection; the Codex Standard configuration of both has no
