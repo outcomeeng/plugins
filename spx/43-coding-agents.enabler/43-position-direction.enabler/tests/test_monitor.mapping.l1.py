@@ -31,6 +31,7 @@ from outcomeeng_testing.harnesses.position_direction import (
     Rig,
     check_examples,
     load_scripts,
+    scratch_dir,
     watch_with,
 )
 
@@ -322,3 +323,36 @@ def test_a_failing_source_signals_watch_broken_while_the_other_sources_are_polle
         distinct_pairs(), subjects(), subjects(), subjects(), thresholds()
     )
     check_examples(strategy, check, MAIL_EDGES)
+
+
+def test_an_unreadable_mail_channel_signals_watch_broken_and_polling_goes_on() -> None:
+    def check(case: tuple[tuple[Watched, Watched], str]) -> None:
+        (mailing, blocked_side), channel_name = case
+        with scratch_dir() as directory:
+            channel = f"{directory}/{channel_name}"
+            watch = watch_with(
+                mail={"channel": channel, "agent": mailing.position},
+                sessions=[
+                    {
+                        "position": blocked_side.position,
+                        "backend": backends[0],
+                        "cwd": blocked_side.cwd,
+                    }
+                ],
+            )
+            rig = Rig(watch)
+            rig.read_mail_through_the_adapter()
+            blocked = rig.session(
+                backends[0], blocked_side.handle, blocked_side.cwd, State.BLOCKED
+            )
+            rig.backends[backends[0]].inventory = [blocked]
+
+            events = rig.poll()
+            broken = named(events, Signal.WATCH_BROKEN)
+            assert [event.subject for event in broken] == ["mail"]
+            assert channel in broken[0].detail
+            assert [e.subject for e in named(events, Signal.BLOCKED)] == [
+                blocked_side.position
+            ]
+
+    check_examples(st.tuples(distinct_pairs(), handles()), check, MAIL_EDGES)
