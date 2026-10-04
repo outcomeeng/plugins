@@ -113,12 +113,18 @@ committing Change #76, including commit
 
 ## Pinned router prose is coupled to structural test evidence
 
-**Evidence.** Five `[test]` claims pin the Codex canonical-subagent-registry
-wording, missing-definition repair wording, checkout scope-split wording,
-operator-question mutation-privilege-revocation wording, and Codex
-Verifier-spawning-boundary wording. The drift-gate assertion describes a
-regression by "a surface that previously fit," introducing temporal wording into
-an atemporal spec. No assertion in `spx/21-spec-tree.enabler/spec-tree.md`
+**Evidence.** The spec audit of this node on head
+`280e20ce33432f4d39a41cd836a4161535be124b` rejected ten `[test]` tags whose
+claims state router prose rather than generator behavior: the Codex
+canonical-subagent-registry, missing-definition repair, and checkout scope-split
+wording; the code-comment reference rule; the `/wait-for-load` stop trigger; the
+operator-question mutation-privilege revocation; the read-the-whole-file
+instruction; the methodology-declaration instruction; the Codex
+Verifier-spawning boundary; and the absent session-result tokens. Those ten
+claims stand untagged under `## Assertions` awaiting verification selection, so
+`tests/test_agent_registry.compliance.l1.py`,
+`tests/test_methodology_declaration.compliance.l1.py`, and the matching tests in
+`tests/test_instruction_block.compliance.l1.py` back no assertion. No assertion in `spx/21-spec-tree.enabler/spec-tree.md`
 declares an Operator questions exception for an orchestrating session with
 officers in flight, and the router carries no sentence admitting that exception.
 `spx/12-shipped-scripting.adr.md` establishes that agreement
@@ -129,15 +135,14 @@ prove formatting rather than behavior. The removal-mutation test over router
 prose is part of the same gap because it uses the pinned-prose verification form
 under settlement.
 
-**Impact.** The five links and the removal-mutation test couple Passing to pinned
-wording and structure while providing no behavioral verdict for the claims they
-label; the drift-gate claim records history rather than permanent truth; and the
+**Impact.** The unlinked tests and the removal-mutation test pin wording and
+structure while providing no behavioral verdict for any claim, and the
 instruction-block node leaves pinned router prose's verification form unstated.
 
 **Settlement condition.** The instruction-block node's decision names one
-verification form for pinned router prose, the drift-gate claim states its rule
-atemporally, and the removal-mutation test is settled under the same condition as
-the five prose-coupling assertions.
+verification form for pinned router prose, verification selection routes the ten
+untagged router-prose claims under it, every test that then backs no assertion
+is removed, and the removal-mutation test is settled under the same condition.
 
 ## `/update-instruction-block` workflow warnings left after its approving skill audit
 
