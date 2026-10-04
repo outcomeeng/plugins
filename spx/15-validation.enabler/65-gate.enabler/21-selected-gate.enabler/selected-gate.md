@@ -6,9 +6,9 @@ CAN run the deterministic gate steps that prove the current slice without spendi
 
 ## Assertions
 
-- For a changeset whose every changed path a Markdown lane in `spx/local/merging.md` covers, every step the selected gate selects maps to a declared Markdown lane that runs it
-
 ### Mappings
+
+- For a changeset whose every changed path a Markdown lane in `spx/local/merging.md` covers, every step the selected gate selects maps to a declared Markdown lane that runs it ([test](tests/test_markdown_lane_coverage.mapping.l1.py))
 
 - Changed repository paths map to a deterministic ordered subset of source-owned validation steps, with each selected step carrying a human-readable reason for inclusion ([test](tests/test_selected_gate.mapping.l1.py))
 - Changed Python test assertion files map to a pytest step targeted at those files, while the full-gate wrapper preserves the complete validation-plus-test recipe set for CI and explicit full-gate runs ([test](tests/test_selected_gate.mapping.l1.py))
