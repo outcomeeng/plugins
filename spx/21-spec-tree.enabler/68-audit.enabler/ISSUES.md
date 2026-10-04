@@ -378,3 +378,11 @@ The audit side of the divergence between `spec-tree:implementation-auditor` run 
 **Impact.** Evidence without an owning assertion proves a claim no one declared, and the hidden status choice leaves the scenario's case outside its test.
 
 **Settlement condition.** Each of the two compliance tests backs a declared assertion on the node that owns unit identity, or moves there, and the lifecycle test submits the terminal status at its own call site.
+
+## The accounting record that names an artifact-type audit skill has no lifecycle evidence
+
+**Evidence.** `implementation_audit_accounting_payload` in `outcomeeng/validation/implementation_audit_contract.py` accepts a registered kind and an artifact-type audit skill, and `src/plugins/spec-tree/skills/audit-implementation/SKILL.md` prescribes the record that carries them. The lifecycle scenario of this node records only an accounting unit for a path no registered artifact matches, so no executed run seals a unit whose `expectedProducer` names an artifact-type skill.
+
+**Impact.** The unit key and the producer shape of that record rest on the skill text and the payload builder alone.
+
+**Settlement condition.** A scenario of this node records the accounting unit for a path the registry selects an artifact-type audit skill for, and asserts the sealed projection carries that kind in the unit key and that skill as its expected producer.

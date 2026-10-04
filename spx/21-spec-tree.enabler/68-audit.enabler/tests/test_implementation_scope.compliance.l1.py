@@ -464,3 +464,40 @@ def test_the_resolver_emits_the_registry_selection_for_every_resolved_path() -> 
         )
     for path in unregistered:
         assert selection[path] == [], path
+
+
+def test_an_advisory_live_path_receives_a_registry_selection() -> None:
+    resolver = load_resolve_scope_module()
+    field = load_select_artifacts_module().SelectionField
+    (detected, *_) = detected_artifacts()
+    (committed, *_) = unregistered_paths()
+    live_path = path_matching(detected)
+    audit_input = json.dumps({LIVE_PATHS_KEY: [live_path]})
+    with feature_paths_repo([committed]) as stale:
+        completed = run_implementation_scope(
+            stale.repo, CHANGESET_SCOPE.HEAD_REF, audit_input=audit_input
+        )
+
+    assert completed.returncode == 0, completed.stderr
+    document = json.loads(completed.stdout)
+    selection = {
+        entry[field.PATH]: entry[field.ARTIFACTS]
+        for entry in document[resolver.SELECTION_KEY]
+    }
+    changed = document[CHANGESET_SCOPE.ScopeField.CHANGED_PATHS]
+    assert committed in changed
+    assert list(selection) == [*changed, live_path]
+    assert selection[live_path][0][field.KIND] == detected.kind.name
+
+
+def test_a_live_path_list_that_is_not_a_list_of_strings_is_rejected() -> None:
+    audit_input = json.dumps({LIVE_PATHS_KEY: "not-a-list"})
+    (committed, *_) = unregistered_paths()
+    with feature_paths_repo([committed]) as stale:
+        completed = run_implementation_scope(
+            stale.repo, CHANGESET_SCOPE.HEAD_REF, audit_input=audit_input
+        )
+
+    assert completed.returncode == EXIT_COMMAND_FAILURE
+    assert ERROR_PREFIX in completed.stderr
+    assert completed.stdout == ""

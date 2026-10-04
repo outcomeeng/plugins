@@ -256,10 +256,10 @@ field shown is required, and `producerProvenance` is omitted:
 ```
 
 When the selection names an artifact-type audit skill for the path, its
-accounting record names it: `unitId` reads
-`implementation:unknown:coverage-gap:<plugin>:<audit>:<the exact resolved path>`
-and `expectedProducer` is the run-driver identity with that `skillName` and
-`skillOwningPluginName`; each such skill gets its own record.
+accounting record names it: `unitId` carries the selection's kind in place of
+`unknown`, and `expectedProducer` is the producer shape of a concern unit with
+that `skillName`, that `skillOwningPluginName`, and `invocationRole`
+`leaf-skill`; each selected artifact-type skill gets its own record.
 
 `languagePartition` is the only optional prior-context field. Omit it when the
 kind is unknown; never replace `priorContext` with top-level partition
@@ -365,7 +365,7 @@ The final response relays the rendered SPX projection and run token. Do not summ
 
 <coverage_model>
 
-Build the expected coverage inventory from the selection the scope resolver recorded in the run's sealed start input, before invoking any concern skill. Read the `artifact_selection` array back from that input — `spx verification run input --verification-type audit --scope-type changeset --scope <base>..<head> --run '{run-token}'`, field `content` — never from a re-run of the resolver and never from a reading of the paths. For each resolved path it holds the registered artifacts whose detection matches the path, most specific first, a kind with a match adding its detection-less artifacts; each artifact carries its `kind`, `role`, `plugin`, `audit` skill, and `contract`. Dispatch exactly the skills that selection names, validating each against the installed skill inventory this context carries before invoking any concern. The inventory never selects: it decides only whether a selected skill is invoked or recorded as a required `missing-skill` unit, and invoking a skill is dispatch to a selected artifact, never a probe for whether a kind is installed. Never load a write-capable author skill inside the audit — the skill-composition grant cannot be narrowed to names selected at run time, so this rule is the containment — and never create a partition from a file extension, filename, or artifact class the registry did not select.
+Build the expected coverage inventory from the selection the scope resolver recorded in the run's sealed start input, before invoking any concern skill. Read the `artifact_selection` array back from that input — `spx verification run input --verification-type audit --scope-type changeset --scope <base>..<head> --run '{run-token}'`, field `content` — never from a re-run of the resolver and never from a reading of the paths. For each resolved path, and each live path of an advisory audit, it holds the registered artifacts whose detection matches the path, most specific first, a kind with a match adding its detection-less artifacts; each artifact carries its `kind`, `role`, `plugin`, `audit` skill, and `contract`. Dispatch exactly the skills that selection names, validating each against the installed skill inventory this context carries before invoking any concern. The inventory never selects: it decides only whether a selected skill is invoked or recorded as a required `missing-skill` unit, and invoking a skill is dispatch to a selected artifact, never a probe for whether a kind is installed. Never load a write-capable author skill inside the audit — the skill-composition grant cannot be narrowed to names selected at run time, so this rule is the containment — and never create a partition from a file extension, filename, or artifact class the registry did not select.
 
 Dispatch only a skill whose `contract` is `concern`. A path whose registered artifact's audit skill carries the `artifact-type` contract, a path matching no registered artifact, and a matched path whose selected concern skill returns `NOT_APPLICABLE` stay with their artifact-type auditor and the whole-changeset review; never manufacture a kind, a missing skill, or an unsupported unit for such a path.
 

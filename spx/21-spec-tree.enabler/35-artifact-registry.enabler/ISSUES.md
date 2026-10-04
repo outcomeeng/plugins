@@ -13,3 +13,11 @@ The extraction shares its target with the scope resolver's recorded fold in `spx
 **Settlement condition.** SPX reads the marketplace's registry document and returns each resolved path's selection through its scope resolution, no bundled reader script or rendered data file ships, and the scope resolver reads the selection from the CLI.
 
 **Evidence.** The Change `outcomeeng/changes#337` records the reader's size debt and its fold into the scope resolution.
+
+## The specs kind detects only the 4.x spec form
+
+The specs kind selects `spx/**/*.spec.md`. A tree authored under the 3.x grammar carries `{slug}.md` specs beside decision records, `ISSUES.md` notes and other Markdown files in the same directory, so no path pattern separates them, and `spx/21-spec-tree.enabler/ISSUES.md` records this tree's migration to the 4.x grammar as open. The product root, the 3.x node specs of this repository and the `{slug}.md` specs of every consumer on the 3.x grammar select nothing, so an implementation audit accounts for their paths as unmatched.
+
+**Impact.** The `spec-tree:audit-specs` skill is never named in the accounting units of a changeset that edits a 3.x spec.
+
+**Settlement condition.** The registry detects a spec in the form every supported grammar carries, either through a detection that separates the `{slug}.md` spec of a node directory from the other Markdown it holds or through the tree migration that leaves one spec form, and a mapping case selects `audit-specs` for a spec path of each form.

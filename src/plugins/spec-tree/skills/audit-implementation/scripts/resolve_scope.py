@@ -65,7 +65,7 @@ FINAL_COVERAGE_STATUSES = frozenset(
     {"audited", "not-applicable", MISSING_SKILL_STATUS, "unsupported"}
 )
 # The run input carries the select-artifacts provider's selection for every
-# resolved path under this key.
+# resolved path, and for every live path an advisory audit adds, under this key.
 SELECTION_KEY = "artifact_selection"
 
 
@@ -302,8 +302,16 @@ def main(argv: list[str] | None = None, runner: Runner = subprocess.run) -> int:
     except (ImportError, OSError, ValueError) as exc:
         print(f"{ERROR_PREFIX}: {exc}", file=sys.stderr)
         return EXIT_COMMAND_FAILURE
+    changed = resolved[scope.ScopeField.CHANGED_PATHS]
+    live = resolved.get(LIVE_PATHS_KEY) or []
+    if not isinstance(live, list) or not all(isinstance(p, str) for p in live):
+        print(
+            f"{ERROR_PREFIX}: {LIVE_PATHS_KEY} must be a list of path strings",
+            file=sys.stderr,
+        )
+        return EXIT_COMMAND_FAILURE
     resolved[SELECTION_KEY] = selection.selection_for_paths(
-        resolved[scope.ScopeField.CHANGED_PATHS], registry
+        [*changed, *(path for path in live if path not in changed)], registry
     )
     print(json.dumps(resolved, sort_keys=True))
     return 0

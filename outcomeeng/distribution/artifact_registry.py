@@ -16,7 +16,12 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Final
 
-from outcomeeng.distribution.contracts import SCRIPTS_SUBDIR_NAME, SKILLS_SUBDIR_NAME
+from outcomeeng.distribution.contracts import (
+    MARKDOWN_FILE_SUFFIX,
+    SCRIPTS_SUBDIR_NAME,
+    SKILL_FILENAME,
+    SKILLS_SUBDIR_NAME,
+)
 from outcomeeng.validation.implementation_audit_contract import SPEC_TREE_PLUGIN_NAME
 
 INSTRUCTIONS_PLUGIN_NAME: Final = "instructions"
@@ -71,7 +76,7 @@ class AuditContract(StrEnum):
 # The glob segment standing for any number of directory segments; a path glob is
 # matched against a changed path with ``PurePosixPath.full_match``.
 GLOB_ANY_SEGMENTS: Final = "**"
-MARKDOWN_EXTENSION: Final = "md"
+MARKDOWN_EXTENSION: Final = MARKDOWN_FILE_SUFFIX.lstrip(".")
 # Every test file the methodology governs sits under a node's ``tests/``
 # directory below the spec tree root.
 SPEC_TESTS_PATH_GLOB: Final = f"spx/{GLOB_ANY_SEGMENTS}/tests/{GLOB_ANY_SEGMENTS}"
@@ -79,7 +84,6 @@ SPEC_TREE_ROOT_GLOB: Final = f"spx/{GLOB_ANY_SEGMENTS}"
 ADR_PATH_GLOB: Final = f"{SPEC_TREE_ROOT_GLOB}/*.adr.md"
 PDR_PATH_GLOB: Final = f"{SPEC_TREE_ROOT_GLOB}/*.pdr.md"
 SPEC_PATH_GLOB: Final = f"{SPEC_TREE_ROOT_GLOB}/*.spec.md"
-SKILL_FILENAME: Final = "SKILL.md"
 SUBAGENT_PATH_GLOB: Final = f"{GLOB_ANY_SEGMENTS}/agents/*.md"
 PROSE_PATH_GLOB: Final = f"docs/{GLOB_ANY_SEGMENTS}/*.md"
 CHANGE_DRAFT_PATH_GLOB: Final = f"{GLOB_ANY_SEGMENTS}/change-drafts/*.md"
