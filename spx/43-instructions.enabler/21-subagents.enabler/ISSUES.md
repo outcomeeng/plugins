@@ -77,9 +77,9 @@ propagating a rename:
   alert-threshold tables, and per-invocation cost tracking as if the product ships
   that observability; cut or reframe as optional external guidance (~55 lines).
 
-Reconcile with `spx/43-instructions.enabler/ISSUES.md` entries 3 (verdict-row
-taxonomy), 4 (audit-skill eval coverage), 7 (runtime terminology), and 9
-(audit-skill target-argument convention) before editing the auditor surface.
+Reconcile with `spx/43-instructions.enabler/ISSUES.md` entries 4 (audit-skill eval
+coverage), 7 (runtime terminology), and 9 (audit-skill target-argument convention)
+before editing the auditor surface.
 
 ## `/create-subagent` states a description rule `/agent-prompt-standards` owns
 
@@ -115,14 +115,16 @@ reverted to the standard, leaving only the placement question above. A
 the passive form, citing those examples; that recommendation was dropped, and the
 examples it cited no longer teach the weaker form.
 
-## `/audit-subagent`'s objective states its categories in a second sentence
+## The auditor skeleton's worked example states its categories in a second sentence
 
-`src/plugins/instructions/skills/audit-subagent/SKILL.md` opens with the verdict
-sentence and then names the four finding categories in a second sentence, while
-the sibling `src/plugins/instructions/skills/audit-skill/SKILL.md` carries the
-equivalent content in one sentence joined by a semicolon.
+`src/plugins/instructions/skills/audit-subagent/SKILL.md` and
+`src/plugins/instructions/skills/audit-skill/SKILL.md` each state their sealed-run
+verdict and its finding shape in one sentence whose em-dash clause names them.
+The ADR example in `/skill-standards` `references/auditor-skeleton.md` still names
+its finding categories in a second sentence.
 
-Successive `instructions:skill-auditor` runs read this differently. One run
+Successive `instructions:skill-auditor` runs read the earlier two-sentence
+`audit-subagent` objective differently. One run
 flagged the shortened objective and required the categories be named; a later run
 accepted the categories and flagged the second sentence. The two governing
 references model the shape differently. `/skill-standards`
@@ -135,7 +137,7 @@ categories. Naming categories is settled; whether they form a second part is not
 
 Required handling: decide once whether an auditor's finding-category clause is a
 distinct output part or a subordinate clause, record it so `<objective_shape>`
-and the skeleton's worked example stop modelling opposite shapes, and bring both
+and the skeleton's worked example stop modelling opposite shapes, and bring the
 auditor objectives onto the chosen shape.
 
 Source: `instructions:skill-auditor` finding `f-009`, severity `WARNING`, on the
@@ -237,3 +239,39 @@ coherence is those trees' specs, not this standard.
 assertion that names it and declares its execution-policy inheritance with linked evidence,
 and this node's spec records that the declarations exist. Scheduled as
 <https://github.com/outcomeeng/changes/issues/128>.
+
+## The two instructions auditors carry no retained release-acceptance evidence
+
+**Evidence:** `instructions:subagent-auditor` finding `f-002`, severity `REJECT`, on
+`src/plugins/instructions/agents/skill-auditor.md` and on
+`src/plugins/instructions/agents/subagent-auditor.md` at head
+`add3e3e862f7512a55e8b9655d07f78412abe87c`: `spx/15-subagent-execution.pdr.md` declares per-harness, per-profile release
+acceptance — native loading and one minimal isolated execution for every profile — and the
+tree retains no acceptance artifact for the Claude or the Codex Standard row either
+definition selects, and no exact-definition minimal isolated invocation of either. The
+same runs raised `f-001`, the undeclared execution-policy inheritance the entry above
+records for every marketplace definition.
+
+**Impact:** nothing in the tree shows either emitted definition loading natively and
+returning its run token and projection; the Codex Standard configuration of both has no
+execution evidence.
+
+**Settlement condition:** the release retains passing Standard-profile acceptance rows for
+both harnesses at a location the auditor reads, or an exact-definition minimal isolated
+invocation of each definition, and one `subagent-auditor` run on each definition raises no
+`f-002` class finding.
+
+## The instructions auditors' descriptions read as launch triggers
+
+**Evidence:** `instructions:subagent-auditor` warning `f-003` (rule
+`description-invites-inferred-launch`) on `src/plugins/instructions/agents/skill-auditor.md`
+lines 3-5 at head `8e631614b562ec5edf05c0e4c80a38625ada90d7`: the description is directive task-pattern wording ("ALWAYS invoke
+when auditing, reviewing, or evaluating SKILL.md files ..."), while `/subagent-standards`
+`<invocation>` bars turning a description or task pattern into a launch request.
+`src/plugins/instructions/agents/subagent-auditor.md` carries the same form.
+
+**Impact:** the wording invites a launch on user phrasing rather than on an active skill's
+explicit instruction.
+
+**Settlement condition:** both descriptions state the role and the calling-skill condition
+in passive form, and one `subagent-auditor` run on each raises no such finding.

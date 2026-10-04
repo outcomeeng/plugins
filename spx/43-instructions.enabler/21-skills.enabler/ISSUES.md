@@ -16,23 +16,6 @@ and improvement workflows without granting them to read-only routes.
 Source: skill-auditor finding `f-003`, rule `overbroad_allowed_tools`, severity
 `WARNING`.
 
-## Reconcile the auditor Bash capability contract
-
-`src/plugins/instructions/skills/create-skill/templates/auditor-skill.md:5` now uses
-`allowed-tools: Read, Grep, Glob, {{! tool('use_skill') !}}`. The post-merge audit requires `Bash` for
-auditor command-based verification, while an earlier audit rejected bare `Bash` as
-overbroad. `/skill-standards`'s command-capability rules also require command-specific
-`Bash(<command>:*)` grants. A generic auditor template cannot select those commands
-without knowing the generated auditor's workflow.
-
-Required handling: decide whether every auditor requires `Bash`, define how a generic
-template expresses least-privilege command grants, and align `/skill-standards`,
-`/audit-skill`, and the auditor template so the same surface cannot be rejected both
-for granting and omitting bare `Bash`.
-
-Source: skill-auditor finding `f-004`, rule `read_only_audit_capabilities`, severity
-`REJECT`, reconciled with the earlier `overbroad_allowed_tools` rejection.
-
 ## Revalidate after exercise-driven edits
 
 `src/plugins/instructions/skills/create-skill/workflows/create-new-skill.md:79`
@@ -46,33 +29,6 @@ skill audit before publication.
 
 Source: PR 458 review comment `3610850053`, classified as `DEBT` in the `evidence`
 category after merge.
-
-## `/audit-skill` declares no target argument and no no-target edge case
-
-`src/plugins/instructions/skills/audit-subagent/SKILL.md` declares
-`arguments: configured_agent_path` and stops with `REJECTED` naming the missing
-argument when that path is empty. Its sibling
-`src/plugins/instructions/skills/audit-skill/SKILL.md` declares no `arguments`,
-no `argument-hint`, and no `$ARGUMENTS`, and carries no matching edge case for a
-dispatch that names no target.
-
-The asymmetry has two effects. A direct `/audit-skill` invocation resolves its
-target from surrounding conversation rather than a declared contract, which
-`/skill-standards` `<skill_organization>` requires to stay independently
-invocable. And a malformed dispatch that supplies no path has no defined stop,
-so the audit proceeds against whatever the context suggests.
-
-Required handling: declare the argument surface `audit-skill` actually takes —
-the changed skill-surface paths plus governing nodes and verification state —
-and add the no-target edge case its sibling already states. `/skill-standards`
-`references/command-capabilities.md` carries both candidate forms: `arguments`
-with a YAML name list for stable tokens, whose worked example is
-`audit-subagent`'s own `configured_agent_path`, and `$ARGUMENTS` for whole-string
-capture where multi-word intent must survive. Either choice also owes the
-`argument-hint` the reference requires of every skill that takes arguments.
-
-Source: `instructions:skill-auditor` findings `f-007` and `f-010`, severity
-`WARNING`, on the changeset merged as PR 488.
 
 ## The composing-skill assertion awaits verification selection
 
@@ -117,17 +73,16 @@ Source: `instructions:skill-auditor` finding rule `stale_cross_reference`, sever
 [Change #92](https://github.com/outcomeeng/changes/issues/92) carries the
 standards-skill pass that owns it.
 
-## The Claude render of `skill-standards` sits 223 code points under the eager-payload ceiling
+## The Claude render of `skill-standards` sits 62 code points under the eager-payload ceiling
 
-`dist/claude/instructions/skills/skill-standards/SKILL.md` measures 39777 code
+`dist/claude/instructions/skills/skill-standards/SKILL.md` measures 39938 code
 points against the 40,000-code-point ceiling `skill-standards`
-`<eager_foundation_exception>` declares for itself. Change #200 adds 766 code points to the
-render, which measures 39011 on `main` at `e29503eb59973c2b85cb9cdb229e816a186f090c`:
-the audit-skill Bash-grant rule, the refusal sources, and the retry rule for a
-classifier-refused Executor start.
+`<eager_foundation_exception>` declares for itself, after Change #332 admits the
+`spx verification run` journal verbs in the audit-skill grant rule and aligns the audit
+description and Codex frontmatter sentences with it.
 
 **Impact.** The next small edit to a Claude-only section tips the reference past
-the ceiling and turns a routine change into a must-fix on this reference.
+the ceiling and turns a routine change into a blocking finding on this reference.
 
 **Settlement condition.** Conditional detail leaves the eager body for its
 reference — the `<context>` bash-block constraints at lines 274-280, already
@@ -324,3 +279,43 @@ changed no line of that file; the audit read it only because `SKILL.md` routes t
 Source: `instructions:skill-auditor` finding `f-015`, rule
 `rendered_output_contradiction_and_portability`, severity `REJECT`, on head
 `913a65e5b370ffa846bfe7a47be4a551e6a9c547` during Change #200.
+
+## `/create-skill` assumes a spec tree and restates its standards loads
+
+**Evidence**: `instructions:skill-auditor` warnings on `src/plugins/instructions/skills/create-skill` at head `add3e3e862f7512a55e8b9655d07f78412abe87c`: f-010 (rule `plugin_portability_undefined_reference`) — `workflows/audit-skill.md:21` tells a consumer to persist requirements in decisions and specs and to follow the root guide's isolation mechanics, surfaces a repository without a spec tree lacks; f-011 (rule `conciseness_duplicated_loading`) — `SKILL.md` composes `/skill-standards` and `/agent-prompt-standards`, and `<reference_loading>` and every workflow's `<required_reading>` restate both loads and the overlay read.
+
+**Impact**: a consumer without a spec tree or a root guide meets an instruction it cannot resolve, and every route pays for the restated loads.
+
+**Settlement condition**: the isolation requirement is stated directly or conditioned on the surfaces existing, the loads stand once, and one typed skill audit of `create-skill` raises neither finding.
+
+## `skill-standards` justifies its eager-foundation exception by material it does not inline
+
+**Evidence**: `instructions:skill-auditor` warning f-008 (rule `eager_foundation_justification_accuracy`) on `src/plugins/instructions/skills/skill-standards/SKILL.md:305` at head `add3e3e862f7512a55e8b9655d07f78412abe87c`: the self-application names "its command-capability rules" as inline, while the body routes them to `references/command-capabilities.md` as a conditional read, and the exception's opening covers foundation skills while this is a reference skill.
+
+**Impact**: the self-application cannot be checked against the exception's same-material and no-mandatory-read conditions.
+
+**Settlement condition**: the justification names only inline material and states why the exception covers a reference skill; one typed skill audit raises no such finding.
+
+## `audit-skill`'s structure examples use `xml` fences for pseudo-XML
+
+**Evidence**: `instructions:skill-auditor` warning f-009 (rule `repository-markdown-pseudo-xml-fence`) on `src/plugins/instructions/skills/audit-skill/references/xml-structure-examples.md` at head `add3e3e862f7512a55e8b9655d07f78412abe87c`: pseudo-XML examples sit in `xml` fences, some closed by mismatched four-backtick fences.
+
+**Impact**: dprint `markup_fmt` may rewrite the examples, and fence boundaries are ambiguous to a reader.
+
+**Settlement condition**: every pseudo-XML example uses a `text` fence with matched delimiters; one typed skill audit raises no such finding.
+
+## `skill-standards` describes the context that loads it
+
+**Evidence**: `instructions:skill-auditor` warning f-010 (rule `caller_independence`) on `src/plugins/instructions/skills/skill-standards/SKILL.md:22` at head `8e631614b562ec5edf05c0e4c80a38625ada90d7`: `<repo_local_overlay>` opens "When another skill loads this reference inside a repository", and line 18 describes its callers, while the same skill's caller-independence rule bars a skill from naming or describing its caller or invocation context.
+
+**Impact**: the canonical standard does not hold its own rule, so an auditor can cite it as a counterexample.
+
+**Settlement condition**: the overlay rule and the reference note state their behavior without naming who loads the skill; one typed skill audit raises no `caller_independence` finding against them.
+
+## `audit-skill`'s annotated examples grade in a vocabulary the run does not record
+
+**Evidence**: the built `instructions:skill-auditor` run `2026-10-03_22-58-55-808-4bb7d31783f5` on `src/plugins/instructions/skills/audit-skill` at head `8e631614b562ec5edf05c0e4c80a38625ada90d7` raised debt findings (rule `severity-vocabulary-mismatch`) against `references/operational-effectiveness-examples.md` lines 5, 31, 56, 95 and `references/xml-structure-examples.md` lines 5, 31, 53, 88, 116, 130: the examples flag violations as critical or recommendation, while `SKILL.md` records only the `blocking` and `debt` severities and states no mapping.
+
+**Impact**: an auditor reading an example grades by a label the run cannot record and maps it to a severity by its own judgment.
+
+**Settlement condition**: the examples use `blocking` and `debt`, or `SKILL.md` states the mapping; one typed skill audit of `audit-skill` raises no `severity-vocabulary-mismatch` finding.

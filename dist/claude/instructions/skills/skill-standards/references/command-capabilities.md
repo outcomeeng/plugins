@@ -19,7 +19,7 @@ A skill that operates on user-supplied input handles it explicitly:
 - **`argument-hint`** — free-text autocomplete hint shown after `/skill-name`. Present whenever the skill takes arguments; omit for self-contained skills.
 - **`$ARGUMENTS`** — consumes the full raw instruction string. Use it when preserving whitespace and multi-word intent matters, including forwarding instructions between lifecycle skills.
 - **`$ARGUMENTS[N]` or `$N`** — consumes a numbered positional value when the position is stable and a name would add no clarity.
-- **`arguments` with `$name`** — names positional arguments the body substitutes as `$name` (space-separated string or YAML list; names map to positions in order). Use it when a stable token has a domain name, such as `$configured_agent_path`.
+- **`arguments` with `$name`** — names positional arguments the body substitutes as `$name` (space-separated string or YAML list; names map to positions in order). Use it when a stable token has a domain name, such as `$configuration_target`.
 - **Integration** — reference each declared `$name` where the body consumes it (e.g. "Audit the skill at `$skill_path`"), never as unused decoration. An argument declared but never substituted, or substituted but never declared, is a defect.
 - **Empty arguments** — a skill that requires input states the requirement and what it does when input is absent; a skill that works with or without input states the fallback (e.g. "operate on the current selection when `$target` is empty" or "use the current changeset when `$ARGUMENTS` is empty").
 
@@ -32,7 +32,7 @@ A skill that operates on user-supplied input handles it explicitly:
 Examples:
 
 - Free-form forwarding: `/merge` reads `$ARGUMENTS` and forwards `$ARGUMENTS` verbatim to `/manage-github-pr`, preserving multi-word instructions.
-- Stable token: `arguments: configured_agent_path` with `$configured_agent_path` names one path-like positional value for an audit skill.
+- Stable token: `arguments: configuration_target` with `$configuration_target` names one positional value, a configuration path or role, for a creator skill.
 
 </arguments>
 
@@ -55,7 +55,7 @@ A skill injects state-dependent context with the `!`-backtick form inside `<cont
 - **Specificity** — restrict bash to the narrowest pattern that works: `Bash(git add:*)`, `Bash(git commit:*)`, never bare `Bash` or `Bash(git *)` when specific verbs suffice. A broad grant re-admits the destructive and exfiltrating commands the restriction exists to bar.
 - **Destructive-operation containment** — a skill that must not delete, force-push, or deploy omits the tools that would let it; the allow-list is the containment.
 - **Data-exfiltration containment** — a read-only analysis skill omits `Bash`, `WebFetch`, and `Write` so it cannot send local content outward; grant them only when the task needs them.
-- **Read-only audits** — an `audit-*` skill grants read capabilities and, on a harness that exposes a skill-composition tool, that tool when it composes another skill. Add only the specific read-only Bash commands its workflow requires; never grant `Write`/`Edit`.
+- **Audit capabilities** — an `audit-*` skill grants read capabilities and, on a harness that exposes a skill-composition tool, that tool when it composes another skill. Add only the specific Bash commands its workflow requires — read-only commands, and the `spx verification run` verbs that write the audit's own run journal; never grant `Write`/`Edit`.
 
 - ALWAYS: grant the narrowest `allowed-tools` the skill's task needs, restricting bash to specific verb patterns.
 - NEVER: grant a destructive or network tool a skill's task does not require, or leave a security-sensitive skill unrestricted.

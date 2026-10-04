@@ -79,3 +79,11 @@
 **Impact**: a subagent-definition Activity completes only when its auditor finds the invocation evidence present, so a definition whose evidence is absent reaches the repeated-defect stop of `/execute-change` with no round that can produce it.
 
 **Settlement condition**: a `<definitions>` row or named Activity result produces and retains the invocation run for the committed emitted definition, steps 5.3 and 5.4 of `/execute-change` require it before the round completes, and the change-execution assertion on the subagent-definition round names it.
+
+## `/execute-change` resolves a held Change from a marker a compaction may drop
+
+**Evidence**: `instructions:skill-auditor` finding f-010, severity `WARNING`, rule `compaction_marker_survival`, against `src/plugins/spec-tree/skills/execute-change/SKILL.md` step 1, in the typed skill audit of head `add3e3e862f7512a55e8b9655d07f78412abe87c`. Step 1 falls back to the newest `<CLAIMED_CHANGE>` marker in the conversation without the compaction caveat `/release-change` and `/close-change` state.
+
+**Impact**: an Executor resumed after a compaction finds no marker and stops with `not-held` instead of asking for the issue reference.
+
+**Settlement condition**: step 1 carries the compaction caveat the Lifecycle skills state, and one typed skill audit of `execute-change` raises no `compaction_marker_survival` finding.

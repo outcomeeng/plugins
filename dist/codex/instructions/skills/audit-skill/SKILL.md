@@ -2,10 +2,10 @@
 name: audit-skill
 description: >-
   SKILL.md audit methodology — judges skill content for standards compliance,
-  operational effectiveness, portability, voice, and structure.
-argument-hint: <skill-path>
-arguments: skill_path
-allowed-tools: Read, Grep, Glob, Bash(python3 -c 'from pathlib import Path; import sys; print(len(Path(sys.argv[1]).read_text(encoding="utf-8")))':*)
+  operational effectiveness, portability, voice, and structure, and records the
+  judgment through an SPX file-scoped verification run.
+argument-hint: "<JSON object with path and runDriver>"
+allowed-tools: Read, Grep, Glob, Bash(python3 -c 'from pathlib import Path; import sys; print(len(Path(sys.argv[1]).read_text(encoding="utf-8")))':*), Bash(git rev-parse:*), Bash(realpath:*), Bash(spx --version), Bash(spx verification run start:*), Bash(spx verification run input:*), Bash(spx verification run status:*), Bash(spx verification run scope add:*), Bash(spx verification run finding add:*), Bash(spx verification run finish:*), Bash(spx verification run render:*), Bash(printf '%s\n':*)
 ---
 
 Use skill `instructions:skill-standards`.
@@ -13,122 +13,167 @@ Use skill `instructions:skill-standards`.
 Use skill `instructions:agent-prompt-standards`.
 
 <objective>
-An `APPROVED` or `REJECTED` verdict on a SKILL.md against `/skill-standards` and `/agent-prompt-standards`, with findings grouped as keep-these-aspects, worth-improving, and must-fix; every rejected finding names the artifact location, violated rule, and evidence.
+A sealed `spx verification run` on one skill bundle against `/skill-standards` and `/agent-prompt-standards` — terminal status `approved` with no finding, or `rejected` with each blocking or debt finding naming the location, the violated rule, and the evidence — or a `BLOCKED` diagnostic naming the failed prerequisite or command.
 </objective>
 
 <constraints>
-- NEVER modify files during audit - ONLY analyze and report findings
-- NEVER report a score; report contextual judgment across the full skill-authoring surface
-- MUST read the governing standards and the references their applicability rules require before evaluating
-- ALWAYS provide file:line locations for every finding
-- NEVER generate fixes unless explicitly requested by the user
-- NEVER make assumptions about skill intent - flag ambiguities as findings
-- MUST complete every applicable standards area
-- ALWAYS apply contextual judgment - what matters for a simple skill differs from a complex one
+
+- NEVER modify the target bundle or any product file; the only state this audit changes is its own SPX verification-run journal.
+- NEVER report a score; report contextual judgment across the full skill-authoring surface.
+- NEVER invent a requirement because a tag, example, or optional mechanism is absent; judge an absent failure-mode section under the loaded prompt standard.
+- MUST read the governing standards and the references their applicability rules require before evaluating.
+- NEVER generate fixes; the run records findings, and repair belongs to the author.
+- NEVER make assumptions about skill intent; record an ambiguity as a finding.
+- MUST complete every applicable standards area before finishing the run.
+- ALWAYS apply contextual judgment: what matters for a simple skill differs from a complex one.
 
 </constraints>
 
 <audit_workflow>
-Use `$skill_path` as exactly one skill-directory or `SKILL.md` path. Preserve that supplied path in `target`; a file target selects its containing bundle. If the input is absent, ambiguous, unreadable, or does not identify a skill bundle, emit `REJECTED` with one `configuration_issue` finding in `must-fix` and empty passing observation rows. Use the supplied path as the finding location, or this skill's file when no path was supplied, with `line: null`; omit metadata that cannot be established. Never infer another target.
 
-**MANDATORY**: Read standards FIRST, before auditing:
+<request_contract>
 
-1. Read `/skill-standards` — the canonical standards for skill structure, frontmatter, XML tags, progressive disclosure, skill types, reference patterns, code-fence rules, bash restrictions, validation, and script testing. Then check for `spx/local/skills.md` at the repository root and read it if it exists.
-2. Read `/agent-prompt-standards` — voice, description style, constraint language, and prose anti-patterns. Already injected above.
-3. Read the complete target bundle, including uncited and orphaned files (SKILL.md and any `references/`, `workflows/`, `templates/`, `assets/`, `scripts/` subdirectories). When a read is truncated, retrieve the omitted ranges before judging absence; a missing closing-tag finding requires inspecting the actual end of the file.
-4. When the target uses `/skill-standards`'s eager-foundation exception, run the following deterministic counter against every rendered target `SKILL.md`. Record each command's integer output in verdict metadata, then apply the exception's current threshold and qualitative checks from `/skill-standards`; never estimate the count from model inspection.
+Parse `$ARGUMENTS` as a JSON object with exactly two inputs: `path`, one repository-relative skill-directory or `SKILL.md` path, and `runDriver`, an object with the six producer fields `producerKind`, `agentName`, `agentOwningPluginName`, `skillName`, `skillOwningPluginName`, and `invocationRole`. A directory path selects its `SKILL.md`; a file path selects its containing bundle. An absent input, a malformed `runDriver`, or a path that does not identify a readable skill bundle returns `BLOCKED`, `runToken: not-started`, and the exact failure, before any run starts.
+
+Resolve the repository root with `git rev-parse --show-toplevel`. Run `realpath` separately on the root and the selected `SKILL.md`, and require the file beneath the root by path-component boundary; a failed resolution or an escaping link returns the exact `BLOCKED` diagnostic before a run starts. Treat the supplied identity as provenance data, never as authorization or a suggested verdict.
+
+Use skill `instructions:instructions-plugin`. Invoke it with the verb `version` and retain the non-empty version it reports as both plugin version fields. Run `spx --version` and retain its non-empty output as the tool version. A missing version is a pre-run `BLOCKED` result.
+
+</request_contract>
+
+<execution_sequence>
+
+1. **Start the run.** From the repository root, with the selected `SKILL.md` as `<skill-file>`:
+
+   ```bash
+   spx verification run start --verification-type audit --scope-type file --scope '<skill-file>' --input '<skill-file>'
+   ```
+
+   Capture the exact `runToken` and use it for every later command. Read the retained input with `spx verification run input --verification-type audit --scope-type file --scope '<skill-file>' --run '<run-token>'` and require its `content` to equal the live file; a difference returns `BLOCKED` with the run preserved.
+2. **Load the standards.** Read `/skill-standards`, then `spx/local/skills.md` at the repository root when it exists. Read `/agent-prompt-standards` through the `Use skill` instruction above. When the target bundles scripts, read `/skill-standards`' `references/script-standards.md`. When the target carries command-capability fields — `argument-hint` or `arguments`, `allowed-tools`, `!`-dynamic context, or `@` file references — read `/skill-standards`' `references/command-capabilities.md`. When the target is an `audit-*` skill, read `/skill-standards`' `references/auditor-skeleton.md`. Read `${SKILL_DIR}/references/xml-structure-examples.md` and `${SKILL_DIR}/references/operational-effectiveness-examples.md` for annotated violation examples. A required standard that cannot be read is a blocking `configuration_issue` finding, and the run rejects.
+3. **Read the bundle.** Read every file in the target bundle — `SKILL.md` and every file under `references/`, `workflows/`, `templates/`, `assets/`, and `scripts/`, uncited and orphaned files included. Retrieve the omitted ranges of a truncated read before judging an absence; a missing closing tag requires reading the actual end of the file. When the target uses `/skill-standards`' eager-foundation exception, run this counter against every rendered target `SKILL.md` and judge the exception's threshold from its integer output, never from an estimate:
 
    ```bash
    python3 -c 'from pathlib import Path; import sys; print(len(Path(sys.argv[1]).read_text(encoding="utf-8")))' "<rendered-SKILL.md>"
    ```
 
-5. When the target bundles scripts, read `/skill-standards`’s `references/script-standards.md` before evaluating them. Read this audit skill's own `${SKILL_DIR}/references/xml-structure-examples.md` and `${SKILL_DIR}/references/operational-effectiveness-examples.md` for annotated violation examples; both paths resolve from this `audit-skill` bundle. When the target carries command-capability fields — `argument-hint`/`arguments`, `allowed-tools`, `!`-dynamic context, or `@` file references — also read `/skill-standards`'s `references/command-capabilities.md` for the rules that govern that surface. When the target is an `audit-*` skill, also read `/skill-standards`'s `references/auditor-skeleton.md` — the `/skill-standards` table loaded in step 1 names it; read the file itself explicitly — the canonical auditor structure the `auditor_skeleton_violation` check verifies against.
-6. Handle edge cases:
-   - If `/skill-standards` or `/agent-prompt-standards` is unreadable, add a `REJECT` finding with rule `configuration_issue` to the `must-fix` row and proceed with available content; the incomplete audit remains `REJECTED`.
-   - If YAML frontmatter is malformed, flag as critical issue.
-   - If the skill references external files that don't exist, flag as critical issue and recommend fixing broken references.
-   - If the skill references a bundled plugin file through repository-local authored or generated plugin paths, legacy plugin-root paths, or an authored Codex-only skill-directory token, flag as a portable file-reference defect.
-   - Determine the skill type from its purpose and the loaded standards; record it in `metadata.skill_type`.
-7. Evaluate the target skill against the standards loaded in steps 1-2.
+4. **Judge.** Evaluate the bundle against every applicable rule of the loaded standards, using their actual text, never memory; a creator skill's workflow references are authoring guidance, never standards. Record malformed frontmatter, a reference to a file that does not exist, and a bundled plugin file reached through a repository-local authored or generated plugin path, a legacy plugin-root path, or an authored Codex-only skill-directory token as blocking findings. Record each finding with its location, the violated rule, a blocking or debt severity, a message, and observed-versus-expected evidence. An observation that a rule holds is not a finding and is not recorded.
+5. **Record.** Once judgment is complete, add the root unit, then one child unit per bundle file in path order, then each finding against the unit of the file it names, and every finding that names no bundle file against the root, under `<persistence_contract>`.
+6. **Reconcile.** Read `spx verification run status` with the same type, scope, and token. Require exactly one root unit, one child unit for every bundle file, and an accepted unit for every finding. Re-read the live `SKILL.md` and compare it with the retained input; a changed or missing file returns `BLOCKED` with the run preserved.
+7. **Finish and render.** Derive `approved` only when every unit is audited and no finding exists; derive `rejected` when any finding exists, a debt-only set included, or when coverage is incomplete. Run:
 
-**Use ACTUAL patterns from `/skill-standards`, not memory.** Never treat a creator skill's workflow references as standards — those references carry authoring workflow content only.
-</audit_workflow>
+   ```bash
+   spx verification run finish --verification-type audit --scope-type file --scope '<skill-file>' --run '<run-token>' --terminal-status '<approved-or-rejected>'
+   ```
 
-<verdict_format>
-Emit a structured verdict. The skill's entire output is the verdict payload.
+   Then run `spx verification run render` with the same type, scope, and token, and return the token and the rendered projection unchanged. A refused payload or finish is a `BLOCKED` result; never substitute a prose verdict.
 
-The skill's `overall` is `APPROVED` iff the `must-fix` row has no `REJECT` findings; otherwise it is `REJECTED`. An audit that cannot complete records a `REJECT` finding in `must-fix` and returns `REJECTED`. Worth-improving and keep-these-aspects observations land as `WARNING` and `INFO` findings respectively and do not reject the skill.
+</execution_sequence>
+
+<persistence_contract>
+
+Every unit uses `auditClass: instructions` and `auditKind: skill`. The root unit is `skill:root:<skill-file>` with concern partition `bundle`; each child is `skill:file:<bundle-file>` with `parentUnitId` equal to the root and concern partition `file`. Every unit's `subject` is `<skill-file>`, the run's scope, and its `priorContext.changedFilePartition` is the file the unit covers: `<skill-file>` for the root, the bundle file for a child. Omit `parentUnitId` on the root.
+
+The expected producer has `producerKind: skill`, the supplied run-driver's `agentName` and `agentOwningPluginName`, `skillName: audit-skill`, `skillOwningPluginName: instructions`, and `invocationRole: leaf-skill`. `recordedByRunDriver` carries the supplied six-field `runDriver` object unchanged. Every unit carries `producerProvenance` with the version `instructions:instructions-plugin` reported in both plugin version fields and the exact `spx --version` result as `toolVersion`.
+
+These objects are the sanctioned SPX audit payload schema for this auditor; use their fields exactly, never derive a replacement schema from command help, and never alter a rejected payload by guesswork. Render each scope payload with observed values in place of the placeholders:
 
 ```json
 {
-  "schema_version": 1,
-  "skill": "audit-skill",
-  "target": "<skill-path>",
-  "overall": "APPROVED | REJECTED",
-  "rows": [
-    {
-      "name": "keep-these-aspects",
-      "status": "PASS",
-      "findings": [
-        {
-          "id": "f-001",
-          "file": "<skill-file>",
-          "line": 12,
-          "rule": "<strength-name>",
-          "severity": "INFO",
-          "message": "<what it does> — removing this would <specific consequence>"
-        }
-      ]
-    },
-    {
-      "name": "worth-improving",
-      "status": "PASS",
-      "findings": [
-        {
-          "id": "f-002",
-          "file": "<skill-file>",
-          "line": 24,
-          "rule": "<issue-name>",
-          "severity": "WARNING",
-          "message": "Current: <what exists>. Change to: <what it should be>. Benefit: <specific gain>."
-        }
-      ]
-    },
-    {
-      "name": "must-fix",
-      "status": "PASS | FAIL",
-      "findings": [
-        {
-          "id": "f-003",
-          "file": "<skill-file>",
-          "line": 36,
-          "rule": "<issue-name>",
-          "severity": "REJECT",
-          "message": "Current: <what exists>. Fix: <specific action>. Impact if unfixed: <what breaks>."
-        }
-      ]
-    }
-  ],
-  "metadata": {
-    "skill_type": "simple | complex | delegation | etc.",
-    "line_count": "<n>",
-    "eager_payload_code_points": { "<rendered-SKILL.md>": "<n>" }
+  "unitId": "<unit-key>",
+  "parentUnitId": "<root-unit-key-for-a-child-only>",
+  "auditClass": "instructions",
+  "auditKind": "skill",
+  "subject": "<skill-file>",
+  "coverageRequirement": "required",
+  "coverageStatus": "audited",
+  "priorContext": {
+    "changedFilePartition": "<file-the-unit-covers>",
+    "concernPartition": "<bundle-or-file>"
+  },
+  "expectedProducer": {
+    "producerKind": "skill",
+    "agentName": "<supplied-agent-name>",
+    "agentOwningPluginName": "<supplied-agent-owning-plugin>",
+    "skillName": "audit-skill",
+    "skillOwningPluginName": "instructions",
+    "invocationRole": "leaf-skill"
+  },
+  "recordedByRunDriver": {
+    "producerKind": "<supplied>",
+    "agentName": "<supplied>",
+    "agentOwningPluginName": "<supplied>",
+    "skillName": "<supplied>",
+    "skillOwningPluginName": "<supplied>",
+    "invocationRole": "<supplied>"
+  },
+  "producerProvenance": {
+    "agentOwningPluginVersion": "<instructions-plugin-version>",
+    "skillOwningPluginVersion": "<instructions-plugin-version>",
+    "toolVersion": "<exact-spx-version>"
   }
 }
 ```
 
-Omit `eager_payload_code_points` when the eager-foundation exception does not apply.
+```bash
+spx verification run scope add --verification-type audit --scope-type file --scope '<skill-file>' --run '<run-token>' --idempotency-key '<unit-key>' --payload stdin <<'SCOPE_JSON'
+<rendered-scope-object>
+SCOPE_JSON
+```
 
-Note: While this skill uses pure XML structure, it produces JSON output that the verdict toolchain renders as markdown for human readability.
+A finding copies its unit's `expectedProducer` object as `producerIdentity` and its unit's complete `producerProvenance` object, and carries `rule`, `severity` (`blocking` for a defect that must be fixed before the skill ships, `debt` for any other valid defect), `location` naming the file and line or section, `message`, and `evidence` with `observed` and `expected` strings:
+
+```json
+{
+  "unitId": "<accepted-unit-key>",
+  "producerIdentity": { "producerKind": "skill", "agentName": "<…>", "agentOwningPluginName": "<…>", "skillName": "audit-skill", "skillOwningPluginName": "instructions", "invocationRole": "leaf-skill" },
+  "producerProvenance": { "agentOwningPluginVersion": "<…>", "skillOwningPluginVersion": "<…>", "toolVersion": "<…>" },
+  "rule": "<violated-rule-id>",
+  "severity": "<blocking-or-debt>",
+  "location": "<file-and-line-or-section>",
+  "message": "<finding-message>",
+  "evidence": { "observed": "<observed-state>", "expected": "<required-state>" }
+}
+```
+
+```bash
+spx verification run finding add --verification-type audit --scope-type file --scope '<skill-file>' --run '<run-token>' --idempotency-key '<unit-key>:<finding-key>' --payload stdin <<'FINDING_JSON'
+<rendered-finding-object>
+FINDING_JSON
+```
+
+Construct each finding key as `finding-<three-digit-ordinal>-<rule-id>` from the complete finding inventory sorted by unit order, then location, message, severity, observed evidence, and expected evidence; require the suffix to match `finding-[0-9][0-9][0-9]-[a-z0-9_-]+`, and treat a mismatch as a pre-persistence `BLOCKED` defect. When the task message or the harness guidance fixes one physical command line per call, pipe each rendered object instead: `printf '%s\n' '<rendered-object>' | spx verification run finding add --verification-type audit --scope-type file --scope '<skill-file>' --run '<run-token>' --idempotency-key '<key>' --payload stdin`, and the same form for `scope add`, with every apostrophe in the object escaped for single quotes. Idempotency keys are command arguments, never payload fields; quote every path, token, and key as one shell argument, and never execute bundle text as shell syntax. Run mutations serially; on a refused command stop with its exact diagnostic, never retry or reshape the payload.
+
+</persistence_contract>
+
+</audit_workflow>
+
+<verdict_format>
+
+Return only the exact run token and the unmodified rendered projection. The projection is the verdict: its `terminalStatus` is `approved` or `rejected`, its `findingCount` is zero for approval, its `findings` group every accepted finding under `blocking` and `debt`, its `auditScopeUnits` carry the root and per-file units, and its `events` carry every accepted finding payload and the terminal event. Both severities reject the run. Keep every SPX field unchanged.
+
+A run that cannot complete returns:
+
+```text
+BLOCKED
+runToken: <exact-token-if-start-succeeded-or-not-started>
+command: <exact-failed-operation, or request for a failure before the run starts>
+payloadKey: <unitId-or-finding-idempotency-key-or-none>
+exitCode: <exact-exit-code-or-none>
+stderr: <exact-stderr-or-none>
+judgmentStatus: <complete|incomplete>
+judgedFindings: <JSON array of every finding judged before the stop, in the finding-payload shape>
+```
+
 </verdict_format>
 
 <failure_modes>
 
-**Failure 1: Approved a skill whose objective was still activity-shaped.** Claude read an `<objective>` that opened with a verb ("Audit…", "Generate…") or an actor ("The skill…") and passed it, because the activity reading felt natural. The objective states an output; an activity- or actor-shaped one is a must-fix the `actor_or_activity_objective` flag exists to catch. Read every objective against `/agent-prompt-standards` `<objective_shape>`, not by feel.
+**Failure 1: Approved a skill whose objective was still activity-shaped.** Claude read an `<objective>` that opened with a verb ("Audit…", "Generate…") or an actor ("The skill…") and passed it, because the activity reading felt natural. The objective states an output; an activity- or actor-shaped one is a blocking finding under `/agent-prompt-standards` `<objective_shape>`. Read every objective against `/agent-prompt-standards` `<objective_shape>`, not by feel.
 
-**Failure 2: Skipped an evaluation area and missed a whole class.** Claude judged YAML and structure, formed a verdict, and stopped — leaving prompt craft or anti-patterns unexamined, so a class of violations passed unseen. The verdict is sound only when every evaluation area was judged; a skipped area yields an unsound verdict, not a shorter one. Cover every applicable rule in the loaded standards before issuing the verdict.
+**Failure 2: Skipped an evaluation area and missed a whole class.** Claude judged YAML and structure, formed a verdict, and stopped — leaving prompt craft or anti-patterns unexamined, so a class of violations passed unseen. The verdict is sound only when every evaluation area was judged; a skipped area yields an unsound verdict, not a shorter one. Cover every applicable rule in the loaded standards before finishing the run.
 
-**Failure 3: Scored the skill instead of judging it.** Claude assigned a number ("8/10 structure") instead of grouping findings as keep / worth-improving / must-fix, turning a verdict into a rating the author cannot act on. Each finding names a location, a standard, and a consequence; a score names none of them. Emit findings, never scores.
+**Failure 3: Scored the skill instead of judging it.** Claude assigned a number ("8/10 structure") instead of recording findings, turning a verdict into a rating the author cannot act on. Each finding names a file, a location, a rule, and evidence; a score names none of them. Record findings, never scores.
 
 </failure_modes>
 
@@ -136,17 +181,8 @@ Note: While this skill uses pure XML structure, it produces JSON output that the
 The verdict is sound when:
 
 - Every applicable rule in the loaded standards was judged, with none skipped.
-- The verdict states an overall APPROVED/REJECTED with findings grouped keep-these-aspects / worth-improving / must-fix.
-- Each finding is falsifiable: it names the location (file:line), the standard at issue, and the consequence — every keep names what degrades if removed, every must-fix names the failure it prevents.
-- The same SKILL.md yields the same verdict.
+- The sealed run carries one root unit and one child unit per bundle file, and its terminal status is `approved` only with no finding and full coverage.
+- Each finding is falsifiable: it names the location, the violated rule, and the observed-versus-expected evidence.
+- The same bundle, standards, and run-driver identity yield the same findings and finding keys.
 
 </success_criteria>
-
-<validation>
-Before returning the verdict, require exactly one row for each category in `<verdict_format>`, with each row’s status consistent with its findings. Verify its completeness against the applicable standards,
-its locations against the actual files, and each finding against its cited rule and evidence.
-The `rows` array contains exactly `keep-these-aspects`, `worth-improving`, and `must-fix` in that order. `metadata` is a top-level object and never a row. Remove any extra row before returning the verdict.
-Check every rendered target's recorded code-point count when the eager-foundation
-exception applies. Remove findings that impose an optional mechanism without a governing
-requirement; an absent failure-mode section is assessed under the loaded prompt standard.
-</validation>

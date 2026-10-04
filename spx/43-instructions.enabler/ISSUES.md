@@ -16,13 +16,6 @@ Before starting, reconcile this work with:
 - `spx/21-spec-tree.enabler/16-verification.enabler/PLAN.md` for the run-journal migration.
 - Any active structural-conformance session touching the same audit-skill family.
 
-A concrete instance for the sweep: `audit-skill/SKILL.md` and `audit-subagent/SKILL.md` both carry a
-`<validation>` checklist (Completeness, Precision, Accuracy, Actionability, Fairness, Context,
-Examples) restating ground `<success_criteria>` already covers, and the auditor skeleton carries no
-such block. Both instances are the same defect, so fold each checklist item not already stated in
-`<success_criteria>` into that section and drop the rest across the family in one pass rather than
-per skill.
-
 Gate changed skills with `instructions:skill-auditor`, then `just build-skills`, `just check-skills`, and `just docs-check`.
 
 ## 2. `<quick_start>` policy enforcement on reference skills
@@ -35,14 +28,6 @@ Required handling:
 - Preserve legitimate `<quick_start>` blocks on on-demand tool skills.
 
 Gate changed skills with `instructions:skill-auditor`.
-
-## 3. Verification-run row taxonomy
-
-Verdict-emitting skills use different row taxonomies while claiming a shared audit evidence envelope. For example, `audit-skill` uses `keep-these-aspects` / `worth-improving` / `must-fix`, while `audit-subagent` uses `critical-issues` / `recommendations` / `strengths` / `quick-fixes`.
-
-Required handling: decide whether the SPX verification-run payload contract mandates a uniform row taxonomy or treats row names as free-form labels inside a fixed envelope. This decision affects rendered audit surfaces and any auditor agent that indexes on row names.
-
-Govern with `spx/15-audit-result-delivery.pdr.md` and the audit nodes before editing individual skills.
 
 ## 4. Audit-skill eval coverage
 
@@ -75,13 +60,12 @@ Required handling: decide whether objective statements may use the artifact subj
 
 ## 7. Skill auditor remediation must preserve runtime terminology
 
-`skill-auditor` rejected the phrase "the agent" under the prompt-voice rule, then prescribed "the configured agent" as an acceptable replacement. That remediation bypasses the runtime terminology layer: `configured_agent` is an authoring-time key used through `{{! term('configured_agent') !}}`, which renders as `subagent` for Claude and `custom agent` for Codex. The governing prompt standard prefers imperative, subject-free instructions but does not yet forbid the literal phrase "configured agent", and `src/plugins/instructions/skills/audit-subagent/SKILL.md:65,68` still uses that literal phrase. The auditor recommendation and those existing occurrences expose the same unresolved cross-runtime terminology rule.
+`skill-auditor` rejected the phrase "the agent" under the prompt-voice rule, then prescribed "the configured agent" as an acceptable replacement. That remediation bypasses the runtime terminology layer: `configured_agent` is an authoring-time key used through `{{! term('configured_agent') !}}`, which renders as `subagent` for Claude and `custom agent` for Codex. The governing prompt standard prefers imperative, subject-free instructions but does not yet forbid the literal phrase "configured agent". The auditor recommendation exposes that unresolved cross-runtime terminology rule.
 
 Required handling:
 
 - Declare that cross-runtime skill prose uses imperative, subject-free wording or the canonical terminology expression; the literal internal key name is forbidden.
 - Require auditor remediation for banned-subject findings to follow that rule instead of recommending an internal terminology key as prose.
-- Sweep the existing literal occurrences in `src/plugins/instructions/skills/audit-subagent/SKILL.md` onto imperative wording or `{{! term('configured_agent') !}}` as appropriate.
 - Add an auditor eval case where "the agent" is rejected and "the configured agent" is also rejected as its replacement.
 
 ## 8. Auditor agent model declaration convention
@@ -94,6 +78,14 @@ consume it, and gate changed agents with `instructions:subagent-auditor`.
 
 ## 9. Audit-skill target-argument declaration convention
 
-The audit skills declare their target input two ways. `src/plugins/instructions/skills/audit-subagent/SKILL.md` declares `argument-hint` and `arguments` and substitutes the named argument through its body. `src/plugins/instructions/skills/audit-skill/SKILL.md`, `src/plugins/spec-tree/skills/audit-adr/SKILL.md`, and `src/plugins/spec-tree/skills/audit-pdr/SKILL.md` declare no argument and take their target from the invoking prompt, so `/` autocomplete offers no signal about the expected input. `src/plugins/instructions/skills/skill-standards/references/command-capabilities.md` requires `argument-hint` when a skill takes arguments, which does not settle whether an audit target is an argument or prompt context.
+The audit skills declare their target input two ways. `src/plugins/instructions/skills/audit-skill/SKILL.md` and `src/plugins/instructions/skills/audit-subagent/SKILL.md` declare an `argument-hint` and parse a JSON object carrying the target path and the run-driver identity. `src/plugins/spec-tree/skills/audit-adr/SKILL.md` and `src/plugins/spec-tree/skills/audit-pdr/SKILL.md` declare no argument and take their target from the invoking prompt, so `/` autocomplete offers no signal about the expected input. `src/plugins/instructions/skills/skill-standards/references/command-capabilities.md` requires `argument-hint` when a skill takes arguments, which does not settle whether an audit target is an argument or prompt context.
 
 Required handling: decide whether an audit skill's target is a declared argument, then apply the answer across the audit-skill family rather than one file at a time — the answer changes each skill's input contract and its `missing_argument_hint` exposure under `audit-skill`'s own anti-pattern list. Reconcile with entry 1's skeleton sweep, which rewrites the same frontmatter. Gate changed skills with `instructions:skill-auditor`.
+
+## 10. The node's first assertion carries a tag outside a routed group
+
+`spx/43-instructions.enabler/instructions.md` places its first assertion, the subagent-authoring policy rule tagged `[audit]`, directly under `## Assertions` before `### Compliance`. Only an untagged authoring declaration sits there.
+
+Source: `spec-tree:spec-auditor` finding `heading-mismatch`, severity `REJECT`, at head `add3e3e862f7512a55e8b9655d07f78412abe87c`.
+
+Required handling: move the assertion under `### Compliance`, its universal ALWAYS shape, and obtain one spec audit of the node with no `heading-mismatch` finding.

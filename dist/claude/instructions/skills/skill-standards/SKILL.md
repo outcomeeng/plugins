@@ -11,7 +11,7 @@ The canonical standards for skill authoring — frontmatter, XML structure, nami
 </objective>
 
 <success_criteria>
-Skills conform to these standards when, at minimum: (a) SKILL.md is under 500 lines unless it qualifies for the eager-foundation exception in `<progressive_disclosure>`, (b) the body uses pure XML structure with no markdown headings, (c) `<objective>` and `<success_criteria>` tags are present, (d) the description matches the invocation path — directive when description-match activation applies, passive when invoked only by exact name or a parent capability — (e) the skill is independent of its caller, and (f) the skill passes `/audit-skill` with no must-fix items.
+Skills conform to these standards when, at minimum: (a) SKILL.md is under 500 lines unless it qualifies for the eager-foundation exception in `<progressive_disclosure>`, (b) the body uses pure XML structure with no markdown headings, (c) `<objective>` and `<success_criteria>` tags are present, (d) the description matches the invocation path — directive when description-match activation applies, passive when invoked only by exact name or a parent capability — (e) the skill is independent of its caller, and (f) an `/audit-skill` run on the skill seals `approved`.
 </success_criteria>
 
 <reference_note>
@@ -59,7 +59,7 @@ Every SKILL.md starts with YAML frontmatter. The canonical catalog of supported 
 | `when_to_use`              | No          | Extra trigger phrases or example requests appended to `description` in the skill listing. Shares the 1,536-char cap.                                                                                                              |
 | `argument-hint`            | No          | Free-text hint shown during `/` autocomplete (e.g. `[issue-number]`).                                                                                                                                                             |
 | `arguments`                | No          | Named positional arguments for `$name` substitution in the body. Space-separated string or YAML list; names map to argument positions in order.                                                                                   |
-| `allowed-tools`            | No          | Tools Claude may use without per-call approval while the skill is active. Space-separated string or YAML list. Restrict for audit (read-only) and reference skills.                                                               |
+| `allowed-tools`            | No          | Tools Claude may use without per-call approval while the skill is active. Space-separated string or YAML list. Restrict for audit and reference skills.                                                                           |
 | `disable-model-invocation` | No          | `true` to **block programmatic invocation entirely** — Claude cannot load the skill, including via the Skill tool, and the skill cannot be preloaded into subagents. Use for `/deploy`-style user-only commands. Default `false`. |
 | `user-invocable`           | No          | `false` to hide from the `/` autocomplete menu while keeping Claude able to invoke via the Skill tool. Description stays in context. Use for reference skills that other skills load programmatically. Default `true`.            |
 | `model`                    | Forbidden   | Skills retain the invoking session's configuration, including when a configured subagent invokes the skill.                                                                                                                       |
@@ -84,7 +84,7 @@ Pick the gate by role:
 - A user-only side-effecting command (`/deploy`) uses `disable-model-invocation: true`. NEVER set it on a skill other skills or subagents must load: it blocks the Skill-tool call (surfacing `Skill <name> cannot be used with Skill tool due to disable-model-invocation`) AND blocks subagent preloading.
 - A skill any automation loop re-enters — a scheduled wakeup, heartbeat, or `/loop` target — MUST be user-invocable (leave the default; never `user-invocable: false`). Automation fires as a user-style prompt, so `user-invocable: false` rejects it and no Claude-private heartbeat exists to bypass that. When a loop body is otherwise reference-like, expose a user-invocable entry the loop targets rather than gating the body. Such a loop body keeps a **passive** description — it is invoked by exact name (the timer or a parent skill), not by description-match, so a directive description would only cause false auto-activations. A user-invocable skill with a passive description is the correct shape here, not a defect.
 
-Audit skills (`audit-*`) must add `allowed-tools: Read, Grep, Glob` and only the specific read-only Bash verb patterns their workflow runs, never bare `Bash`, per the read-only rule for audit skills, plus `Skill` when the audit composes another skill — audit runs never modify files.
+Audit skills (`audit-*`) must add `allowed-tools: Read, Grep, Glob` and only the specific Bash verb patterns their workflow runs — read-only verbs, and the `spx verification run` verbs that write the audit's own run journal — never bare `Bash`, plus `Skill` when the audit composes another skill.
 
 **Directory match is mandatory.** `skills/author/` → `name: author`. A mismatch breaks skill lookup.
 
@@ -172,7 +172,7 @@ description: >-
 
 **Protocol and loop-body skills** that a parent skill loads, or that a timer fires by exact name (a heartbeat re-entry target), keep a passive description while staying user-invocable — they are never reached by description-match, so a directive description would only cause false auto-activations. See the gate-by-role rules in `<frontmatter>`.
 
-**Audit skills** describe the audit they perform: the subject, judgment, and distinguishing criteria. Their descriptions contain no routing, dispatch, preload, agent, or execution-context statement. Audit skills stay model-invocable, carry read-only `allowed-tools`, and never use `disable-model-invocation`.
+**Audit skills** describe the audit they perform: the subject, judgment, and distinguishing criteria. Their descriptions contain no routing, dispatch, preload, agent, or execution-context statement. Audit skills stay model-invocable, carry the `allowed-tools` `<frontmatter>` names for them, and never use `disable-model-invocation`.
 
 ```yaml
 description: >-
