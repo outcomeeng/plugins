@@ -23,7 +23,7 @@ When another skill loads this reference inside a repository, check for `spx/loca
 </repo_local_overlay>
 
 <rule_catalog>
-Every rule this skill and its references state carries one stable rule ID in `${SKILL_DIR}/references/rule-catalog.md`. Read it before auditing a skill or recording a finding.
+Every rule this skill and its references state about a skill bundle carries one stable rule ID in `${SKILL_DIR}/references/rule-catalog.md`. Read it before auditing a skill or recording a finding.
 </rule_catalog>
 
 <skill_organization>
@@ -58,7 +58,7 @@ Every Codex SKILL.md starts with YAML frontmatter and uses only fields accepted 
 
 Reference skills stay hidden from ordinary user selection while remaining available to composed workflows through Codex's documented skill invocation surface. Audit skills change no file beyond the `spx verification run` journal their own verbs write. A field or reachability behavior without a documented Codex contract is omitted.
 
-Read `${SKILL_DIR}/references/command-capabilities.md` before authoring arguments, dynamic context, tool restrictions, or file references for Codex.
+Read `${SKILL_DIR}/references/command-capabilities.md` before authoring arguments, dynamic context, tool restrictions, payload commands, or file references for Codex.
 
 </frontmatter>
 
