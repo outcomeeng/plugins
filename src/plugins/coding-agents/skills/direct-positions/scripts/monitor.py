@@ -10,25 +10,62 @@ Usage: python3 monitor.py WATCH.json STATE.json [--every SECONDS]
 
 from __future__ import annotations
 
+import argparse
+import fcntl
 import hashlib
 import json
 import os
 import re
 import sys
 import time
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass
 from datetime import datetime, timezone
+from enum import StrEnum
 from pathlib import Path
 
 import environment
 import position_mail
+import watch_file
+
+DEFAULT_BLOCKED_REMIND_MINUTES = 15
+
+
+class Signal(StrEnum):
+    MAIL = "MAIL"
+    BLOCKED = "BLOCKED"
+    WENT_IDLE = "WENT-IDLE"
+    WAITING_ON_BACKGROUND = "WAITING-ON-BACKGROUND"
+    STALLED = "STALLED"
+    COMPACT_NOW = "COMPACT-NOW"
+    COMPACT_AT_BOUNDARY = "COMPACT-AT-BOUNDARY"
+    COMPACT_IDLE = "COMPACT-IDLE"
+    ABSENT = "ABSENT"
+    WATCH_BROKEN = "WATCH-BROKEN"
+    WATCH_DUPLICATE = "WATCH-DUPLICATE"
+
 
 # Context tiers, most urgent first: (threshold, applies only when the turn has ended, signal).
 TIERS = (
-    (85, False, "COMPACT-NOW"),
-    (75, False, "COMPACT-AT-BOUNDARY"),
-    (50, True, "COMPACT-IDLE"),
+    (85, False, Signal.COMPACT_NOW),
+    (75, False, Signal.COMPACT_AT_BOUNDARY),
+    (50, True, Signal.COMPACT_IDLE),
 )
-ENDED = ("idle", "done")
+TIER_STEP_PERCENT = 5
+
+Inbox = Callable[[str, str], list[position_mail.Record]]
+
+
+@dataclass(frozen=True)
+class Event:
+    """One signal about one subject; `detail` carries its own leading separator."""
+
+    signal: Signal
+    subject: str
+    detail: str = ""
+
+    def line(self, position: str) -> str:
+        return f"[{position}] {self.signal} {self.subject}{self.detail}"
 
 
 def _minutes_since(stamp: str | None, now: datetime) -> float | None:
@@ -38,24 +75,33 @@ def _minutes_since(stamp: str | None, now: datetime) -> float | None:
     return (now - then).total_seconds() / 60
 
 
-def _mail(watch: dict, state: dict, emit) -> None:
+def _mail(watch: dict, state: dict, inbox: Inbox) -> list[Event]:
     mail = watch.get("mail")
     if not mail:
-        return
+        return []
     try:
-        records = position_mail.inbox(mail["channel"], mail["agent"])
+        records = inbox(mail["channel"], mail["agent"])
     except position_mail.MailError as error:
-        emit(f"WATCH-BROKEN mail: {error}")
-        return
+        return [Event(Signal.WATCH_BROKEN, "mail", f": {error}")]
+    # A fresh state file takes the inbox as its baseline and withholds existing mail.
+    baseline = "mail_last_id" not in state
     last = state.get("mail_last_id", 0)
+    events = []
     for record in sorted(records, key=lambda r: r.id):
-        if record.id > last:
-            emit(f"MAIL {record.id} from {record.sender}: {record.subject}")
+        if record.id > last and not baseline:
+            events.append(
+                Event(
+                    Signal.MAIL,
+                    str(record.id),
+                    f" from {record.sender}: {record.subject}",
+                )
+            )
     state["mail_last_id"] = max([last] + [r.id for r in records])
+    return events
 
 
 def _targets(
-    watch: dict, inventories: dict
+    watch: dict, inventories: Mapping[str, list[environment.Session]]
 ) -> dict[str, tuple[environment.Session | None, dict]]:
     """Every watched name mapped to its live session (or None) and its watch entry."""
     targets: dict[str, tuple[environment.Session | None, dict]] = {}
@@ -75,32 +121,40 @@ def _targets(
             sessions, group["cwd_prefix"], group.get("exclude", [])
         )
         if not members and group.get("expect_members"):
-            targets[f"{group['label']}"] = (None, group)
+            targets[group["label"]] = (None, group)
         for member in members:
             targets[f"{group['label']} {member.handle}"] = (member, group)
     return targets
 
 
 def _session(
-    name: str, session, entry: dict, previous: dict, now: datetime, emit
+    name: str,
+    session: environment.Session | None,
+    entry: dict,
+    previous: dict,
+    now: datetime,
+    backends: Mapping[str, environment.Backend],
+    events: list[Event],
 ) -> dict:
     if session is None:
         if previous.get("state") != "absent":
-            emit(f"ABSENT {name}: no session")
+            events.append(Event(Signal.ABSENT, name, ": no session"))
         return {"state": "absent"}
 
-    backend = environment.BACKENDS[session.backend]
     text = None
     needs_text = (
         entry.get("context_percent")
         or entry.get("stall_minutes")
-        or (session.backend != "prowl" and session.state in ENDED)
+        or (
+            session.backend != environment.Prowl.name
+            and session.state in environment.ENDED
+        )
     )
     if needs_text:
         try:
-            text = backend.read(session)
+            text = backends[session.backend].read(session)
         except environment.AdapterError as error:
-            emit(f"WATCH-BROKEN read {name}: {error}")
+            events.append(Event(Signal.WATCH_BROKEN, f"read {name}", f": {error}"))
     used = environment.context_percent(text) if text else None
     background = environment.background_work(session, text)
     shown = f"{used}%" if used is not None else "?%"
@@ -113,40 +167,62 @@ def _session(
         "context": used,
     }
 
-    if session.state == "blocked":
+    if session.state == environment.State.BLOCKED:
         # Reported on first sight, baseline included, and again every remind interval.
-        remind = entry.get("blocked_remind_minutes", 15)
+        remind = entry.get("blocked_remind_minutes", DEFAULT_BLOCKED_REMIND_MINUTES)
         since = _minutes_since(previous.get("blocked_reported_at"), now)
-        if was != "blocked" or since is None or since >= remind:
+        if was != environment.State.BLOCKED or since is None or since >= remind:
             held = _minutes_since(previous.get("blocked_since"), now)
             waited = (
-                f" for {held:.0f} min" if was == "blocked" and held is not None else ""
+                f" for {held:.0f} min"
+                if was == environment.State.BLOCKED and held is not None
+                else ""
             )
-            emit(
-                f"BLOCKED {name} {shown}{waited}: waiting at an approval or question; read the pane and dispose of it"
+            events.append(
+                Event(
+                    Signal.BLOCKED,
+                    name,
+                    f" {shown}{waited}: waiting at an approval or question; read the pane and dispose of it",
+                )
             )
             current["blocked_reported_at"] = now.isoformat()
         else:
             current["blocked_reported_at"] = previous.get("blocked_reported_at")
         current["blocked_since"] = (
-            previous.get("blocked_since") if was == "blocked" else now.isoformat()
+            previous.get("blocked_since")
+            if was == environment.State.BLOCKED
+            else now.isoformat()
         )
-    elif was == "working" and session.state in ENDED:
+    elif was == environment.State.WORKING and session.state in environment.ENDED:
         if background:
             # A position resting on its own monitor parks silently when its watch entry says so.
             parked = True
             if entry.get("report_background", True):
-                emit(
-                    f"WAITING-ON-BACKGROUND {name} {shown}: turn ended with work still running; do not prompt"
+                events.append(
+                    Event(
+                        Signal.WAITING_ON_BACKGROUND,
+                        name,
+                        f" {shown}: turn ended with work still running; do not prompt",
+                    )
                 )
         else:
-            emit(
-                f"WENT-IDLE {name} {shown}: finished a leg; needs a prompt or a disposition"
+            events.append(
+                Event(
+                    Signal.WENT_IDLE,
+                    name,
+                    f" {shown}: finished a leg; needs a prompt or a disposition",
+                )
             )
-    elif session.state in ENDED and parked and not background:
+    elif session.state in environment.ENDED and parked and not background:
         parked = False
-        emit(f"WENT-IDLE {name} {shown}: background work ended; needs a disposition")
-    elif session.state == "working":
+        events.append(
+            Event(
+                Signal.WENT_IDLE,
+                name,
+                f" {shown}: background work ended; needs a disposition",
+            )
+        )
+    elif session.state == environment.State.WORKING:
         parked = False
     current["parked"] = parked
 
@@ -160,23 +236,35 @@ def _session(
             active_at = now.isoformat()
         current["digest"], current["active_at"] = digest, active_at
         quiet = _minutes_since(active_at, now)
-        if session.state == "working" and quiet is not None and quiet >= stall:
+        if (
+            session.state == environment.State.WORKING
+            and quiet is not None
+            and quiet >= stall
+        ):
             if not previous.get("stall_reported"):
-                emit(
-                    f"STALLED {name}: pane unchanged for {quiet:.0f} min while working"
+                events.append(
+                    Event(
+                        Signal.STALLED,
+                        name,
+                        f": pane unchanged for {quiet:.0f} min while working",
+                    )
                 )
             current["stall_reported"] = True
 
     reported = dict(previous.get("tiers", {}))
     if used is not None and entry.get("context_percent"):
         tier = next(
-            (t for t in TIERS if used >= t[0] and (not t[1] or session.state in ENDED)),
+            (
+                t
+                for t in TIERS
+                if used >= t[0] and (not t[1] or session.state in environment.ENDED)
+            ),
             None,
         )
         if tier:
-            bucket = used // 5
+            bucket = used // TIER_STEP_PERCENT
             if reported.get(tier[2]) != bucket:
-                emit(f"{tier[2]} {name} {used}% state={session.state}")
+                events.append(Event(tier[2], name, f" {used}% state={session.state}"))
             reported = {tier[2]: bucket}
         else:
             reported = {}
@@ -184,87 +272,144 @@ def _session(
     return current
 
 
-def poll(watch: dict, state: dict, now: datetime) -> list[str]:
-    lines: list[str] = []
-    me = watch["position"]
+def poll(
+    watch: dict,
+    state: dict,
+    now: datetime,
+    *,
+    backends: Mapping[str, environment.Backend] | None = None,
+    inbox: Inbox | None = None,
+) -> list[Event]:
+    """One poll: the new signals, with `state` updated in place."""
+    backends = environment.BACKENDS if backends is None else backends
+    events = _mail(watch, state, position_mail.inbox if inbox is None else inbox)
 
-    def emit(text: str) -> None:
-        lines.append(f"[{me}] {text}")
-
-    _mail(watch, state, emit)
-
-    backends = {e["backend"] for e in watch.get("sessions", [])} | {
+    names = {e["backend"] for e in watch.get("sessions", [])} | {
         g["backend"] for g in watch.get("groups", [])
     }
     inventories: dict[str, list[environment.Session]] = {}
-    for name in sorted(backends):
+    for name in sorted(names):
         try:
-            inventories[name] = environment.BACKENDS[name].sessions()
+            inventories[name] = backends[name].sessions()
         except environment.AdapterError as error:
-            emit(f"WATCH-BROKEN {name} inventory: {error}")
+            events.append(Event(Signal.WATCH_BROKEN, f"{name} inventory", f": {error}"))
 
     seen = state.setdefault("sessions", {})
     targets = _targets(watch, inventories)
     for name, (session, entry) in targets.items():
-        seen[name] = _session(name, session, entry, seen.get(name, {}), now, emit)
+        seen[name] = _session(
+            name, session, entry, seen.get(name, {}), now, backends, events
+        )
     # A group member that disappeared since the last poll.
     for name in [
         n for n in seen if n not in targets and seen[n].get("state") != "absent"
     ]:
         if any(name.startswith(g["label"] + " ") for g in watch.get("groups", [])):
-            emit(f"ABSENT {name}: session ended")
+            events.append(Event(Signal.ABSENT, name, ": session ended"))
             seen[name] = {"state": "absent"}
-    return lines
+    return events
+
+
+def load_state(path: Path) -> dict:
+    if not path.exists():
+        return {}
+    try:
+        state = json.loads(path.read_text())
+    except json.JSONDecodeError as error:
+        raise watch_file.WatchFileError(f"{path} is not JSON: {error}") from error
+    if not isinstance(state, dict):
+        raise watch_file.WatchFileError(f"{path} must hold a JSON object")
+    return state
 
 
 def poll_once(watch_path: Path, state_path: Path) -> None:
-    watch = json.loads(watch_path.read_text())
-    state = json.loads(state_path.read_text()) if state_path.exists() else {}
-    first_run = not state
-    lines = poll(watch, state, datetime.now(timezone.utc))
+    watch = watch_file.load(watch_path)
+    state = load_state(state_path)
+    events = poll(watch, state, datetime.now(timezone.utc))
     state_path.write_text(json.dumps(state, indent=2))
-    for line in lines:
-        # The baseline run withholds existing mail; every session signal shows at once.
-        if first_run and "] MAIL " in line:
-            continue
-        print(line, flush=True)
+    for event in events:
+        print(event.line(watch["position"]), flush=True)
 
 
-def holder(lock: Path) -> int | None:
-    """The live process id holding the lock, or None."""
+def _positive_seconds(text: str) -> float:
     try:
-        pid = int(lock.read_text())
-        os.kill(pid, 0)
-        return pid
-    except (FileNotFoundError, ValueError, ProcessLookupError, PermissionError):
+        seconds = float(text)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError(
+            f"{text!r} is not a number of seconds"
+        ) from error
+    if not seconds > 0:
+        raise argparse.ArgumentTypeError(
+            f"{text!r} must be a positive number of seconds"
+        )
+    return seconds
+
+
+def take_lock(path: Path):
+    """The open lock file this process holds, or None when another loop holds it.
+
+    The kernel releases the lock when its holder ends, so a lock file left by
+    a dead process is taken over by the next loop.
+    """
+    handle = path.open("a+")
+    try:
+        fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        handle.close()
         return None
+    handle.seek(0)
+    handle.truncate()
+    handle.write(str(os.getpid()))
+    handle.flush()
+    return handle
+
+
+def _holder(path: Path) -> str:
+    try:
+        return path.read_text().strip() or "?"
+    except OSError:
+        return "?"
 
 
 def main(argv: list[str]) -> int:
-    watch_path, state_path = Path(argv[0]), Path(argv[1])
-    if "--every" not in argv:
-        poll_once(watch_path, state_path)
+    parser = argparse.ArgumentParser(
+        prog="monitor.py",
+        description="Emit one line per new signal about the watched positions.",
+    )
+    parser.add_argument("watch", type=Path, help="the watch file naming the positions")
+    parser.add_argument("state", type=Path, help="the state file the monitor writes")
+    parser.add_argument(
+        "--every",
+        type=_positive_seconds,
+        help="poll in a loop at this interval instead of once",
+    )
+    args = parser.parse_args(argv)
+    try:
+        watch_file.load(args.watch)
+        load_state(args.state)
+    except watch_file.WatchFileError as error:
+        print(f"monitor.py: {error}", file=sys.stderr)
+        return 2
+    if args.every is None:
+        poll_once(args.watch, args.state)
         return 0
-    interval = float(argv[argv.index("--every") + 1])
-    lock = Path(f"{state_path}.lock")
-    other = holder(lock)
-    if other is not None:
+    lock = Path(f"{args.state}.lock")
+    held = take_lock(lock)
+    if held is None:
         print(
-            f"WATCH-DUPLICATE another loop ({other}) already watches {state_path}; this copy exits",
+            f"{Signal.WATCH_DUPLICATE} another loop ({_holder(lock)}) already watches {args.state}; this copy exits",
             flush=True,
         )
         return 0
-    lock.write_text(str(os.getpid()))
-    try:
+    with held:
         while True:
             try:
-                poll_once(watch_path, state_path)
+                poll_once(args.watch, args.state)
             except Exception as error:  # a broken poll reports and the loop goes on
-                print(f"WATCH-BROKEN monitor.py poll failed: {error}", flush=True)
-            time.sleep(interval)
-    finally:
-        if holder(lock) == os.getpid():
-            lock.unlink(missing_ok=True)
+                print(
+                    f"{Signal.WATCH_BROKEN} monitor.py poll failed: {error}", flush=True
+                )
+            time.sleep(args.every)
 
 
 if __name__ == "__main__":

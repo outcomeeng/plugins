@@ -9,14 +9,21 @@ Usage: python3 roster.py WATCH.json
 
 from __future__ import annotations
 
-import json
+import argparse
 import sys
+from collections.abc import Callable, Mapping
 from datetime import datetime, timezone
 from pathlib import Path
 
 import environment
+import watch_file
 
 COLUMNS = ("Position", "Mail name", "Backend", "Worktree", "Pane", "State", "Context")
+ABSENT = "absent"
+INVENTORY_FAILED = "inventory failed"
+
+# One backend's inventory: its sessions, or the adapter's message when it failed.
+Inventory = list[environment.Session] | str
 
 
 def _row(cells: list[str]) -> str:
@@ -32,7 +39,12 @@ def _context(session: environment.Session) -> str:
     return f"{used}%" if used is not None else "?"
 
 
-def render(watch: dict, inventories: dict, now: datetime, read_context=_context) -> str:
+def render(
+    watch: dict,
+    inventories: Mapping[str, Inventory],
+    now: datetime,
+    read_context: Callable[[environment.Session], str] = _context,
+) -> str:
     lines = [
         f"# Roster of {watch['position']}, {now.strftime('%Y-%m-%d %H:%MZ')}",
         "",
@@ -48,89 +60,73 @@ def render(watch: dict, inventories: dict, now: datetime, read_context=_context)
             entry.get("cwd", ""),
         ]
         if isinstance(sessions, str):
-            lines.append(_row(cells + ["?", f"inventory failed: {sessions}", "?"]))
+            lines.append(_row(cells + ["?", f"{INVENTORY_FAILED}: {sessions}", "?"]))
             continue
         found = environment.find(
-            sessions, cwd=entry.get("cwd"), handle=entry.get("handle")
+            sessions or [], cwd=entry.get("cwd"), handle=entry.get("handle")
         )
         if found is None:
-            lines.append(_row(cells + ["-", "absent", "-"]))
+            lines.append(_row(cells + ["-", ABSENT, "-"]))
         else:
             lines.append(_row(cells + [found.handle, found.state, read_context(found)]))
     for group in watch.get("groups", []):
         sessions = inventories.get(group["backend"])
         if isinstance(sessions, str):
-            lines.append(
-                _row(
-                    [
-                        group["label"],
-                        "-",
-                        group["backend"],
-                        group["cwd_prefix"],
-                        "?",
-                        f"inventory failed: {sessions}",
-                        "?",
-                    ]
-                )
-            )
+            cells = [
+                group["label"],
+                "-",
+                group["backend"],
+                group["cwd_prefix"],
+                "?",
+                f"{INVENTORY_FAILED}: {sessions}",
+                "?",
+            ]
+            lines.append(_row(cells))
             continue
         for member in environment.under(
-            sessions, group["cwd_prefix"], group.get("exclude", [])
+            sessions or [], group["cwd_prefix"], group.get("exclude", [])
         ):
-            lines.append(
-                _row(
-                    [
-                        f"{group['label']} {member.handle}",
-                        "-",
-                        member.backend,
-                        member.cwd,
-                        member.handle,
-                        member.state,
-                        read_context(member),
-                    ]
-                )
-            )
+            cells = [
+                f"{group['label']} {member.handle}",
+                "-",
+                member.backend,
+                member.cwd,
+                member.handle,
+                member.state,
+                read_context(member),
+            ]
+            lines.append(_row(cells))
     return "\n".join(lines) + "\n"
 
 
-def inventories_for(watch: dict) -> dict:
+def inventories_for(
+    watch: dict, backends: Mapping[str, environment.Backend] | None = None
+) -> dict[str, Inventory]:
     """Each backend's sessions, or the error text when its inventory failed."""
-    backends = {e["backend"] for e in watch.get("sessions", [])} | {
+    backends = environment.BACKENDS if backends is None else backends
+    names = {e["backend"] for e in watch.get("sessions", [])} | {
         g["backend"] for g in watch.get("groups", [])
     }
-    found: dict = {}
-    for name in sorted(backends):
+    found: dict[str, Inventory] = {}
+    for name in sorted(names):
         try:
-            found[name] = environment.BACKENDS[name].sessions()
+            found[name] = backends[name].sessions()
         except environment.AdapterError as error:
             found[name] = str(error)
     return found
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) != 1:
-        print(
-            "usage: roster.py WATCH.json — WATCH.json names the watched positions",
-            file=sys.stderr,
-        )
-        return 2
-    path = Path(argv[0])
+    parser = argparse.ArgumentParser(
+        prog="roster.py",
+        description="Print one Markdown row per watched position and group member.",
+    )
+    parser.add_argument("watch", type=Path, help="the watch file naming the positions")
+    args = parser.parse_args(argv)
     try:
-        watch = json.loads(path.read_text())
-    except FileNotFoundError:
-        print(
-            f"roster.py: no watch file at {path}; create it with one entry per position",
-            file=sys.stderr,
-        )
-        return 2
-    except json.JSONDecodeError as error:
-        print(f"roster.py: {path} is not JSON: {error}", file=sys.stderr)
-        return 2
-    if "position" not in watch:
-        print(
-            f"roster.py: {path} lacks the top-level 'position' naming the watching position",
-            file=sys.stderr,
-        )
+        watch = watch_file.load(args.watch)
+    except watch_file.WatchFileError as error:
+        print(f"roster.py: {error}", file=sys.stderr)
         return 2
     sys.stdout.write(render(watch, inventories_for(watch), datetime.now(timezone.utc)))
     return 0
