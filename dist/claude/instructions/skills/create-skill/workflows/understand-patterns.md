@@ -1,6 +1,6 @@
 <required_reading>
 
-Read `/skill-standards` and `/agent-prompt-standards`. Read `spx/local/skills.md` when the target repository provides it.
+The router's `<reference_loading>` supplies every standard this route reads.
 
 </required_reading>
 
