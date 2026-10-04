@@ -1,18 +1,22 @@
-"""Filesystem access for artifact-registry node evidence."""
+"""Filesystem access and observations for artifact-registry node evidence."""
 
 from __future__ import annotations
 
+import io
 import json
+import os
 from collections.abc import Mapping
+from contextlib import redirect_stderr, redirect_stdout
+from dataclasses import dataclass
 from pathlib import Path
+from shutil import copy2, copytree, rmtree
+from tempfile import TemporaryDirectory
 from types import ModuleType
 from typing import cast
 
 from outcomeeng.distribution.artifact_registry import (
     ARTIFACT_REGISTRY_PROVIDER,
-    Artifact,
-    ArtifactKind,
-    Detection,
+    RegisteredSkill,
     RegistryField,
     artifact_registry_render_variables,
 )
@@ -22,12 +26,30 @@ from outcomeeng.distribution.contracts import (
     SOURCE_ROOT_NAME,
     Target,
 )
+from outcomeeng.distribution.orchestration import (
+    CATALOG_PATHS,
+    CLAUDE_DIST_PLUGINS_DIR,
+)
 from outcomeeng.distribution.shipped_scripts import load_shipped_module
+from outcomeeng.validation.audit_artifacts import (
+    PLUGIN_SURFACE_PATHS,
+    SKILLS_DIR_NAME,
+)
+from outcomeeng.validation.plugins import main
 from outcomeeng_testing.harnesses.dist_tree import DistTreeReader
+from outcomeeng_testing.harnesses.plugin_manifest import RecordingValidationRunner
 
 # ``parents[2]`` reaches the repository root from
 # ``outcomeeng_testing/harnesses/artifact_registry.py``.
 REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+@dataclass(frozen=True)
+class ManifestsStepObservation:
+    """The exit status and the error output of one run of the manifests step."""
+
+    exit_code: int
+    stderr: str
 
 
 def authored_registry_path() -> Path:
@@ -81,43 +103,42 @@ def kind_entries(document: Mapping[str, object]) -> Mapping[str, object]:
     return entries
 
 
-def declared_kind_document(kind: ArtifactKind) -> dict[str, object]:
-    """Read the document one kind declares, field by field through the registry fields.
+def observe_manifests_step(
+    removing: RegisteredSkill | None = None,
+) -> ManifestsStepObservation:
+    """Run the manifests step over a copy of the committed plugin surfaces.
 
-    Each registry field is read from the dataclass field it names, so the
-    expected document follows the declaration and the field contract rather
-    than the serializer that renders the data file.
+    ``removing`` names one registered skill whose directory the copy of the
+    Claude Code generated surface does not carry. The copy hard-links every
+    committed file it can, so removing a directory never touches the repository.
     """
-    return {
-        RegistryField.NAME: kind.name,
-        RegistryField.PLUGIN: kind.plugin,
-        RegistryField.ARTIFACTS: [
-            _declared_artifact_document(artifact) for artifact in kind.artifacts
-        ],
-    }
+    with TemporaryDirectory() as temporary_directory:
+        root = Path(temporary_directory)
+        for relative in (*PLUGIN_SURFACE_PATHS, *CATALOG_PATHS.values()):
+            _link_tree(REPO_ROOT / relative, root / relative)
+        if removing is not None:
+            claude_surface = root / CLAUDE_DIST_PLUGINS_DIR
+            rmtree(claude_surface / removing.plugin / SKILLS_DIR_NAME / removing.skill)
+        stderr = io.StringIO()
+        with redirect_stdout(io.StringIO()), redirect_stderr(stderr):
+            exit_code = main([str(root)], runner=RecordingValidationRunner())
+        return ManifestsStepObservation(exit_code, stderr.getvalue())
 
 
-def _declared_artifact_document(artifact: Artifact) -> dict[str, object]:
-    return {
-        RegistryField.ROLE: artifact.role,
-        RegistryField.DETECTION: (
-            None
-            if artifact.detection is None
-            else _declared_detection_document(artifact.detection)
-        ),
-        RegistryField.AUTHOR: artifact.author,
-        RegistryField.AUDIT: artifact.audit,
-        RegistryField.STANDARD: artifact.standard,
-        RegistryField.CONTRACT: artifact.contract,
-    }
+def _link_tree(source: Path, destination: Path) -> None:
+    """Copy ``source`` to ``destination``, hard-linking files where the volume allows."""
+    if source.is_dir():
+        copytree(source, destination, copy_function=_link_or_copy)
+        return
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    _link_or_copy(source, destination)
 
 
-def _declared_detection_document(detection: Detection) -> dict[str, object]:
-    return {
-        RegistryField.EXTENSIONS: list(detection.extensions),
-        RegistryField.PATH_GLOBS: list(detection.path_globs),
-        RegistryField.FILENAMES: list(detection.filenames),
-    }
+def _link_or_copy(source: str | Path, destination: str | Path) -> None:
+    try:
+        os.link(source, destination)
+    except OSError:
+        copy2(source, destination)
 
 
 def _document(raw: object, path: Path) -> Mapping[str, object]:

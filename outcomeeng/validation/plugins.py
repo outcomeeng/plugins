@@ -53,6 +53,7 @@ PLUGIN_VERSION_FIELD: Final = "version"
 CLAUDE_PLUGIN_MANIFEST_PATH: Final = ".claude-plugin/plugin.json"
 CODEX_PLUGIN_MANIFEST_PATH: Final = ".codex-plugin/plugin.json"
 CLAUDE_PLUGIN_VALIDATE_ARGV: Final = ("claude", "plugin", "validate")
+ARTIFACT_REGISTRY_ERROR_LABEL: Final = "artifact registry"
 
 
 def discover_targets(root: Path) -> list[Path]:
@@ -268,9 +269,14 @@ def _report_validation_failures(failures: list[tuple[Path, str]]) -> None:
             print(f"  {output.strip()}", file=sys.stderr)
 
 
-def _report_contract_errors(prefix: str, errors: list[str]) -> None:
+def contract_error_line(label: str, message: str) -> str:
+    """Return the line the step prints for one contract violation."""
+    return f"error: {label}: {message}"
+
+
+def _report_contract_errors(label: str, errors: list[str]) -> None:
     for message in errors:
-        print(f"error: {prefix}: {message}", file=sys.stderr)
+        print(contract_error_line(label, message), file=sys.stderr)
 
 
 def main(
@@ -302,7 +308,7 @@ def main(
     _report_contract_errors("audit artifacts", audit_artifact_errors)
 
     registry_errors = check_registered_skills(root)
-    _report_contract_errors("artifact registry", registry_errors)
+    _report_contract_errors(ARTIFACT_REGISTRY_ERROR_LABEL, registry_errors)
 
     return (
         1

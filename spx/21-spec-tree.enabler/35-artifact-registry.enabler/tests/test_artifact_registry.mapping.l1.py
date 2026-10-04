@@ -16,7 +16,6 @@ from outcomeeng_testing.generators.artifact_registry import (
     unregistered_paths,
 )
 from outcomeeng_testing.harnesses.artifact_registry import (
-    declared_kind_document,
     kind_entries,
     load_select_artifacts_module,
     rendered_registry_document,
@@ -38,7 +37,7 @@ def _selected(path: str) -> list[tuple[str, str, str | None]]:
 @pytest.mark.parametrize("kind", ARTIFACT_KINDS, ids=lambda k: k.name)
 def test_each_kind_renders_into_the_provider_data_file(kind: ArtifactKind) -> None:
     rendered = kind_entries(rendered_registry_document())[kind.name]
-    assert rendered == declared_kind_document(kind)
+    assert rendered == kind.as_json()
 
 
 @pytest.mark.parametrize("target", tuple(Target), ids=lambda t: t.value)

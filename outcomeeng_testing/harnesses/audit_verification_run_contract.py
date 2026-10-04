@@ -12,7 +12,6 @@ from shutil import rmtree
 from tempfile import TemporaryDirectory
 from typing import Final, cast
 
-from outcomeeng.distribution.artifact_registry import registered_skills
 from outcomeeng.validation.audit_artifacts import (
     AGENTS_DIR_NAME,
     IMPLEMENTATION_AUDIT_ARTIFACTS,
@@ -31,7 +30,6 @@ from outcomeeng.validation.audit_artifacts import (
     check_audit_artifact_contract,
     check_audit_runtime_surface,
     check_language_concern_surface,
-    check_registered_skill_surface,
     check_runtime_surface,
     check_wrapper_surface,
     implementation_audit_runtime_directory,
@@ -982,32 +980,3 @@ def _required_string(payload: Mapping[str, object], key: str) -> str:
 def _touch(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.touch()
-
-
-def observe_registry_skill_removal(kind: str, skill: str) -> list[str]:
-    """Return the registered-skill errors after one kind's plugin stops shipping ``skill``."""
-    with TemporaryDirectory() as temporary_directory:
-        surface = Path(temporary_directory)
-        for registered in registered_skills():
-            _touch(
-                surface
-                / registered.plugin
-                / SKILLS_DIR_NAME
-                / registered.skill
-                / SKILL_FILENAME
-            )
-        plugin = next(
-            registered.plugin
-            for registered in registered_skills()
-            if registered.kind == kind
-        )
-        rmtree(surface / plugin / SKILLS_DIR_NAME / skill)
-        return check_registered_skill_surface(surface)
-
-
-def registry_skill_surface_errors_on_live_surfaces() -> list[list[str]]:
-    """Return the registered-skill errors each committed plugin surface carries."""
-    return [
-        check_registered_skill_surface(REPO_ROOT / relative)
-        for relative in PLUGIN_SURFACE_PATHS
-    ]
