@@ -97,7 +97,8 @@ def test_clean_rebase_has_no_conflict_details_conflict_stays_active(
     assert conflict.status is module.SyncStatus.CONFLICT
     assert conflict.conflict is not None
     assert conflict.conflict.summary == module.CONFLICT_SUMMARY
-    assert "CONFLICT (content): Merge conflict in" in conflict.conflict.git_output
+    assert conflict.conflict.conflicted_paths == [handle.conflict_file]
+    assert handle.conflict_file in conflict.conflict.git_output
     # Synchronization hands the conflict over without aborting it: the index
     # still holds the unmerged stages and the working file both sides.
     assert handle.conflict_file in unmerged_index_entries(handle.repo)

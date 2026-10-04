@@ -661,10 +661,10 @@ def build_non_utf8_branch_behind_base_repo(root: pathlib.Path) -> NonUtf8BranchR
     )
 
 
-def branch_diff_bytes(repo: pathlib.Path, base: str, head: str) -> bytes:
-    """Return the raw bytes of ``git diff base...head`` with no text decoding."""
+def branch_diff_bytes(repo: pathlib.Path, base: str) -> bytes:
+    """Return the raw bytes of ``git diff base...HEAD`` with no text decoding."""
     result = subprocess.run(  # noqa: S603 — fixed argv, no shell, args from the harness
-        ["git", "diff", f"{base}...{head}"],  # noqa: S607
+        ["git", "diff", f"{base}...HEAD"],  # noqa: S607
         cwd=repo,
         capture_output=True,
         check=True,

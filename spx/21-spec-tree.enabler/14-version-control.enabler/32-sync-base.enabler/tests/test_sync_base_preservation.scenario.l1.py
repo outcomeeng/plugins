@@ -163,7 +163,7 @@ def test_non_utf8_branch_diff_keeps_patch_identity_across_clean_rebase(
 ) -> None:
     module = load_sync_base_module()
     handle = build_non_utf8_branch_behind_base_repo(repository_root(tmp_path))
-    branch_diff = branch_diff_bytes(handle.repo, handle.remote_ref, "HEAD")
+    branch_diff = branch_diff_bytes(handle.repo, handle.remote_ref)
 
     # Precondition: the branch's diff carries the payload's raw bytes, which no
     # UTF-8 decoder accepts.

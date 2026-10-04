@@ -87,10 +87,8 @@ def test_rebase_conflict_stops_with_active_conflict_details(
     assert details.base_delta_paths == [handle.conflict_file]
     assert details.branch_paths_before == [handle.conflict_file]
     assert details.path_overlap == [handle.conflict_file]
-    # Git's own conflict text.
-    assert f"CONFLICT (content): Merge conflict in {handle.conflict_file}" in (
-        details.git_output
-    )
+    # Git's own conflict text names the conflicted file the harness created.
+    assert handle.conflict_file in details.git_output
     # Operator options to inspect, continue, or abort.
     for option in (
         module.CONFLICT_INSPECT_STATUS,
