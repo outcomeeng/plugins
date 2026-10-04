@@ -837,7 +837,12 @@ def _finding_entries(
         )
     entries: dict[int, dict[str, object]] = {}
     for group in groups.values():
-        for entry in group if isinstance(group, list) else []:
+        if not isinstance(group, list):
+            raise Blocked(
+                BlockReason.UNREADABLE_OUTPUT,
+                "rendered findings group is not an array",
+            )
+        for entry in group:
             seq = entry.get(SpxField.SEQ) if isinstance(entry, dict) else None
             payload = entry.get(SpxField.PAYLOAD) if isinstance(entry, dict) else None
             if not isinstance(seq, int) or not isinstance(payload, dict):

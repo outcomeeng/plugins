@@ -200,7 +200,7 @@ Revisit and settlement condition: once the runner proves its value in use, its l
 
 Defect class: `evidence`.
 
-Finding: `reconcile` and the finding readers of `audit_change_run.py` block with `unreadable-output` when the rendered projection carries no `auditScopeUnits` array of objects or a finding without an integer `seq` and a payload object. `tests/test_audit_change_run.compliance.l1.py` drives the runner against the real SPX store, which never renders such a projection, so removing either block leaves every linked test passing. The same holds for the other blocked-result branches the real store never reaches: the runner's command wrapper on an `OSError`, a `ValueError`, or undecodable output, the line reader on unparseable or empty command output, the `retained-input-mismatch` block of `start`, the `OSError` branch of the stdin read in `main`, and the serializer's `RecursionError` fallback. The test-evidence audit of the changes node on head `c9124f951d82668d846e303686b236a52f72a309` raised this as a `WARNING` coverage finding against `src/plugins/spec-tree/skills/audit-change/scripts/audit_change_run.py`.
+Finding: `reconcile` and the finding readers of `audit_change_run.py` block with `unreadable-output` when the rendered projection carries no `auditScopeUnits` array of objects or a finding without an integer `seq` and a payload object. `tests/test_audit_change_run.compliance.l1.py` drives the runner against the real SPX store, which never renders such a projection, so removing either block leaves every linked test passing. The same holds for the other blocked-result branches the real store never reaches: the runner's command wrapper on an `OSError`, a `ValueError`, or undecodable output, the line reader on unparseable or empty command output, the findings reader on a findings group that is not an array, the `retained-input-mismatch` block of `start`, the `OSError` branch of the stdin read in `main`, and the serializer's `RecursionError` fallback. The test-evidence audit of the changes node on head `c9124f951d82668d846e303686b236a52f72a309` raised this as a `WARNING` coverage finding against `src/plugins/spec-tree/skills/audit-change/scripts/audit_change_run.py`.
 
 Impact: the runner's refusal of a malformed projection is unobserved, so a regression there reads a run with no coverage as an empty one.
 
@@ -217,3 +217,15 @@ Evidence: `instructions:skill-auditor` finding f-009 (rule `internal_consistency
 Impact: Claude meets two absolute instructions that disagree on the title write.
 
 Revisit and settlement condition: the prohibition is scoped to the `inert-stdin` rule, or the title step cites that rule's single-quote form; one typed skill audit of `author-change` then raises no `internal_consistency` finding.
+
+## DEBT [skill-contract]: audit-change's grant deviation and its inline reason table stay open
+
+Defect class: `skill-contract`.
+
+Finding: two warnings stand against `audit-change` after its approving audit. The `allowed-tools` grant omits the `Read`, `Grep`, and `Glob` baseline that `/skill-standards` requires of audit skills, because the runner is the audit's only read path and its journal appends make the grant a write grant; the skill states the deviation, and no standard or overlay records it. The reason table in `<runner_contract>` states every blocked condition inline, so each invocation loads text the workflow needs only to relay a blocked result unchanged, while the completeness of that table is itself a review requirement.
+
+Evidence: `instructions:skill-auditor` findings f-008 (rule `audit-skill-read-only-allowed-tools`) and f-009 (rule `progressive-disclosure-conditional-detail`), each severity `WARNING`, against `src/plugins/spec-tree/skills/audit-change/SKILL.md`, in the typed skill audit of `audit-change` on head `007c3871de7b82f7592325be191d26fbfa8aee8d`, which approved with no must-fix finding.
+
+Impact: each later audit of the skill raises the grant warning again, and the table's size pulls against the review rule that it name every blocked condition.
+
+Revisit and settlement condition: `/skill-standards` or `spx/local/skills.md` records the journal-writing grant as a sanctioned exception to the audit read-only rule, and the exhaustive condition text moves to a bundled reference the skill loads only for a blocked result; one typed skill audit of `audit-change` then raises neither warning.

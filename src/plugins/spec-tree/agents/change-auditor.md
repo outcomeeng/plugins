@@ -83,11 +83,14 @@ Return exactly one of these results, unchanged, and nothing else:
   ```text
   BLOCKED
   result: <runner blocked result object>
+  runnerExit: <the runner's exit status, or none when no runner call ran>
   judgmentStatus: <complete|incomplete>
   judgedFindings: <complete-JSON-array>
   ```
 
-  `result` carries `operation`, `status`, `reason`, `detail`, and `runToken`
+  `runnerExit` is the exit status of the runner invocation that produced
+  `result`, nonzero for every blocked result and `none` for the pre-run
+  loading diagnostic. `result` carries `operation`, `status`, `reason`, `detail`, and `runToken`
   (the token or `not-started`), and for a failed command its `command`,
   `payloadSource`, `payloadKey`, `exitCode`, and `stderr`. `judgedFindings`
   holds every finding judged before the stop in the complete finding-payload
