@@ -75,7 +75,7 @@ A Claim is one comment, `Claim: <agent session id> <claim root>`, posted after t
 
 <rule id="handoff-record">
 
-A Handoff is one comment carrying the five required lines below, optionally followed by the two named context lines, and nothing else — nothing that belongs in the body:
+A Handoff is one comment carrying exactly these lines in this order: the opening line `Handoff:`, one blank line, the five required lines, and optionally the two context lines. It carries nothing else, and nothing that belongs in the body:
 
 ```markdown
 Handoff:
@@ -95,7 +95,7 @@ The `Session:` and `Worktree:` lines are the only optional lines, and each appea
 
 <rule id="confirmation-record">
 
-A confirmation or rejection is one comment posted on a `Submitted` Change before its Lifecycle moves to `Available`, carrying exactly these lines:
+A confirmation or rejection is one comment posted on a `Submitted` Change before its Lifecycle moves to `Available`. A confirmation carries exactly these lines in this order — the opening line, one blank line, and four required lines — and nothing else:
 
 ```markdown
 Confirmation: <Maturity>
@@ -106,7 +106,7 @@ Confirmation: <Maturity>
 - Session: <the agent session id>
 ```
 
-A rejection replaces the first line with `Rejection: <Maturity>` and adds `- Reason: <the operator's stated reason>` after the `Session:` line. `<Maturity>` is the Change's current Maturity: `Proposed`, `Framed`, or `Sliced`. The comment names the delegate and the operator because every session acts through one account, so the field-change event's actor names the account and never the delegate.
+A rejection carries the same lines with two differences, and nothing else: its opening line is `Rejection: <Maturity>`, and a fifth required line `- Reason: <the operator's stated reason>` follows the `Session:` line. `<Maturity>` is the Change's current Maturity: `Proposed`, `Framed`, or `Sliced`. The comment names the delegate and the operator because every session acts through one account, so the field-change event's actor names the account and never the delegate.
 
 </rule>
 
