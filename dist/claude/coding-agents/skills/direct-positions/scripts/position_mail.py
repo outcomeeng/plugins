@@ -67,4 +67,3 @@ def inbox(channel: str, agent: str, limit: int = 30) -> list[Record]:
         )
         for record in result["data"].get("records", [])
     ]
-
