@@ -867,6 +867,11 @@ def _reconcile(context: _Context, request: Mapping[str, object]) -> dict[str, ob
     run_status = _run_json(context, root, ("status",), relative, run_token)
     projection = _run_json(context, root, ("render",), relative, run_token)
     units = projection.get(SpxField.AUDIT_SCOPE_UNITS)
+    if not isinstance(units, list) or not all(isinstance(unit, dict) for unit in units):
+        raise Blocked(
+            BlockReason.UNREADABLE_OUTPUT,
+            f"rendered projection lacks a {SpxField.AUDIT_SCOPE_UNITS} array of objects",
+        )
     scope_units = [
         {
             field: unit.get(field)
@@ -877,8 +882,7 @@ def _reconcile(context: _Context, request: Mapping[str, object]) -> dict[str, ob
                 SpxField.COVERAGE_STATUS,
             )
         }
-        for unit in (units if isinstance(units, list) else [])
-        if isinstance(unit, dict)
+        for unit in units
     ]
     findings = [
         {

@@ -122,7 +122,6 @@ _FIXTURE_SUFFIX: Final = ".txt"
 _TEMPORARY_DIRECTORY_VARIABLES: Final = ("TMPDIR", "TMP", "TEMP")
 _HOME_VARIABLE: Final = "HOME"
 _REPORT_SUFFIX: Final = ".json"
-_RULE_ID: Final = re.compile(r'<rule id="([a-z0-9-]+)"')
 
 _T = TypeVar("_T")
 _R = TypeVar("_R")
@@ -513,7 +512,8 @@ def run_in_parallel(work: Callable[[_T], _R], items: Sequence[_T]) -> list[_R]:
 
 def change_record_rule_ids() -> tuple[str, ...]:
     """Return the common Change record rule identifiers the shipped standards declare."""
-    return tuple(_RULE_ID.findall(CHANGE_RECORD_RULES.read_text(encoding="utf-8")))
+    rule_id = re.compile(f'<rule id="({load_runner().RULE_ID_PATTERN.pattern})"')
+    return tuple(rule_id.findall(CHANGE_RECORD_RULES.read_text(encoding="utf-8")))
 
 
 def spec_tree_plugin_version() -> str:
