@@ -41,7 +41,7 @@ Apply every catalog rule to each file the repair changed. Confirm every bundled 
 | Anti-pattern          | Rejected behavior                                                                          |
 | --------------------- | ------------------------------------------------------------------------------------------ |
 | Single-site repair    | Fixing the listed location while another instance of the same rule stays in the bundle     |
-| Self-verification     | Dispatching `skill-auditor` or invoking `/audit-skill` from this workflow                  |
+| Self-verification     | Dispatching `instructions:skill-auditor` or invoking `/audit-skill` from this workflow     |
 | Runtime-specific path | Assuming a home-directory skill location instead of using the supplied or repository path  |
 | Lexical batch rename  | Renaming unlike skill types because their names share a token, suffix, or grammatical form |
 | Restated standards    | Copying `/skill-standards` rules into this workflow                                        |
