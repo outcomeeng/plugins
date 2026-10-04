@@ -143,29 +143,6 @@ auditor objectives onto the chosen shape.
 Source: `instructions:skill-auditor` finding `f-009`, severity `WARNING`, on the
 changeset merged as PR 488, reconciled against an earlier run's opposing finding.
 
-## `/subagent-standards` is declared and not built; both auditors carry rulebooks
-
-`subagents.md` declares three peers. `/create-subagent` and `/audit-subagent` ship;
-`/subagent-standards` does not, so the node's first two assertions lead their
-implementation. Because the auditor has no canonical-rules owner to load,
-`src/plugins/instructions/skills/audit-subagent/SKILL.md` carries an
-`<evaluation_areas>` and `<anti_patterns>` rulebook that restates
-`/agent-prompt-standards`. The same defect class sits in
-`src/plugins/instructions/skills/audit-skill/SKILL.md` against `/skill-standards`;
-`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` property 7
-requires both to be swept together, so fixing one alone is an invalid single-site fix.
-
-**Resolution shape.** Author `/subagent-standards` as a reference skill owning the
-canonical subagent rules — configuration fields, tool grants, model selection, context
-isolation, invocation contract — migrated out of `/create-subagent`'s overview and
-references and out of both embedded rulebooks; strip `<evaluation_areas>` and
-`<anti_patterns>` from `/audit-subagent` and `/audit-skill` so each loads its standards
-skill and enforces without restating; regenerate both runtime trees, run the focused
-skill and documentation checks, dispatch `instructions:skill-auditor` over every changed
-skill surface, then run the changeset review. The bundle-consolidation entry above
-resolves inside this work: extracting the canonical rules is that consolidation under a
-governing principle.
-
 ## The model-reproducibility rule belongs in `/subagent-standards`
 
 `/subagent-standards` owns model selection, so the canonical rule belongs in it: a
