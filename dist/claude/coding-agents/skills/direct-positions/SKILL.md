@@ -1,7 +1,7 @@
 ---
 name: direct-positions
 description: >-
-  ALWAYS invoke this skill when acting as the Director of the positions that refine and deliver Changes: resuming the Director session, handling a monitor event or a position's mail, sending a position an instruction, running one theme across products, or preparing positions for a restart. NEVER instruct a position without this skill.
+  ALWAYS invoke this skill when acting as the Director of the positions that refine and deliver Changes: resuming the Director session, handling a monitor event or a position's mail, sending a position an instruction, attesting a Frame or confirming a Slice a Maintainer brings, running one theme across products, or preparing positions for a restart. NEVER instruct a position without this skill.
 argument-hint: "[resume | event <monitor line> | instruct | attest | theme | restart]"
 allowed-tools: Read, Skill, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/roster.py":*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/monitor.py":*), Bash(spx change draft:*), Bash(spx worktree status:*), Bash(gh issue view:*), Bash(gh pr view:*), Bash(git status:*), Bash(git log:*), Bash(git show:*), Bash(git diff:*)
 ---
