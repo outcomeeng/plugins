@@ -23,15 +23,16 @@ The skill bundles one monitor for every watched position and a roster that lists
     }
   ],
   "groups": [
-    { "label": "Executor", "backend": "herdr", "cwd_prefix": "/abs/path", "exclude": [] }
+    { "label": "Executor", "backend": "herdr", "cwd_prefix": "/abs/path", "exclude": [], "expect_members": false }
   ]
 }
 ```
 
 - `mail` names the agent-mail channel: the repository whose common Git directory keys the store, and the Director's own name. Omit it to watch sessions only.
 - A `sessions` entry matches its live session by `cwd`, or by `handle` (a Prowl pane id or a herdr agent name).
-- A `groups` entry watches every session under `cwd_prefix`, so Executors appear and disappear without editing the file.
-- `stall_minutes` and `context_percent` turn on pane reads for that entry; without them the monitor reads only the server state.
+- A `groups` entry watches every session under `cwd_prefix` except the paths in `exclude`, so Executors appear and disappear without editing the file. `expect_members: true` reports `ABSENT` for the group's label while no session lives under the prefix.
+- `stall_minutes` and `context_percent` turn on pane reads for that entry; without them the monitor reads only the server state. Thresholds are positive numbers, and `report_background` and `expect_members` are booleans.
+- Both scripts reject a missing or malformed watch file, and the monitor rejects a malformed state file or an `--every` that is not a positive, finite number of seconds. Each exits with status 2 and names the defect on standard error.
 - `report_background: false` silences `WAITING-ON-BACKGROUND` for a position that rests on its own monitor.
 
 ## Signals
@@ -54,7 +55,7 @@ A compaction tier is reported once per 5% step. Prowl's status stays `working` w
 
 ## State and lock
 
-`state.json` holds the last mail id and each session's last state, timestamps, pane digest and reported tiers. Only the monitor writes it. `state.json.lock` holds the loop's process id; a re-arm finds the live holder and exits with `WATCH-DUPLICATE`, so a re-arm never doubles signals. A stale lock whose process is gone is taken over.
+`state.json` holds the last mail id and each session's last state, timestamps, pane digest and reported tiers. Only the monitor writes it. `state.json.lock` holds the loop's process id under an exclusive file lock taken atomically; a re-arm finds the lock held and exits with `WATCH-DUPLICATE`, so a re-arm never doubles signals. A lock file left by a process that is gone is taken over.
 
 ## Arming
 
@@ -63,7 +64,3 @@ The harness caps a monitor at 30 minutes. Arm it through the harness monitor too
 ## Roster
 
 `roster.py WATCH.json` prints one Markdown row per position — mail name, backend, worktree, pane, server state, context — and one row per group member. A failed inventory shows as `inventory failed` with the adapter's message, never as `absent`. Pipe it to `spx change draft create --input stdin` to keep it in the worktree across reboots.
-
-## Tests
-
-`tests/test_scripts.py` exercises the roster rendering and the monitor's signal edges over controlled inventories: `python3 -m pytest tests/`.

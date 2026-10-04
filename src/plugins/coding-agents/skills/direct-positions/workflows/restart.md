@@ -1,9 +1,3 @@
-<required_reading>
-
-`${CLAUDE_SKILL_DIR}/references/guards.md`.
-
-</required_reading>
-
 <process>
 
 **Before a planned Prowl or host restart**
@@ -19,13 +13,13 @@
 
 **Bringing up a new position session**
 
-1. Start the session in the position's worktree with the position's start prompt. As soon as it waits at its prompt, send `/rc <Position name>` (for example `/rc SPX Maintainer`) so the operator can remote-control it.
+1. Start the session in the position's worktree with the position's start prompt. As soon as it waits at its prompt, send `/rc <Position name>` (for example `/rc SPX Maintainer`) so the operator can remote-control it. Use skill `coding-agents:operate-prowl` (the `send` operation) or `coding-agents:operate-herdr` (the `prompt` operation), by the position's backend, to send it.
 2. Add its entry to `.spx/worktree/director/watch.json` with its mail name, and regenerate the roster.
 
 **Compacting a position**
 
 1. Order the position to write its state to its durable note and reach an idle boundary.
-2. At the boundary, send `/compact`, read the pane back for the harness's confirmation, then send its resume line: re-invoke `/understand`, re-read its note, re-arm its monitor.
+2. At the boundary, send `/compact` through the same capability, read the pane back through it for the harness's confirmation, then send the position's resume line: re-invoke `/understand`, re-read its note, re-arm its monitor.
 3. A stopped position whose work is closed is compacted and left unresumed until its work reopens.
 
 </process>

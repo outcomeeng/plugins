@@ -2,8 +2,8 @@
 name: direct-positions
 description: >-
   ALWAYS invoke this skill when acting as the Director of the positions that refine and deliver Changes: resuming the Director session, handling a monitor event or a position's mail, sending a position an instruction, running one theme across products, or preparing positions for a restart. NEVER instruct a position without this skill.
-argument-hint: "[resume | event <monitor line> | instruct | theme | restart]"
-allowed-tools: Read, Skill, Bash(spx change draft:*), Bash(spx worktree status:*), Bash(gh issue view:*), Bash(gh pr view:*)
+argument-hint: "[resume | event <monitor line> | instruct | attest | theme | restart]"
+allowed-tools: Read, Skill, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/roster.py":*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/monitor.py":*), Bash(spx change draft:*), Bash(spx worktree status:*), Bash(gh issue view:*), Bash(gh pr view:*), Bash(git status:*), Bash(git log:*), Bash(git show:*), Bash(git diff:*)
 ---
 
 <objective>
@@ -12,12 +12,12 @@ Every position's Change moving to the default branch on origin, with every block
 
 <essential_principles>
 
-- The Director coordinates which Changes the positions refine and deliver, and holds the best Outcome Engineering context. It does no refinement and no delivery itself: it never writes, judges or restates a Change, node or product artifact.
+- Act as the Director: coordinate which Changes the positions refine and deliver, with the best Outcome Engineering context. Refine and deliver nothing. Never write or restate a Change, node or product artifact, and judge only the Frame or Slice attested through `${CLAUDE_SKILL_DIR}/workflows/attest.md`.
 - Maintainers hold the best per-product context. Ask the owning Maintainer every product or repository question; never answer one from memory, and never contextualize a product node in the Director session.
 - Never believe a report unchecked. Verify a claim against the store, git, the pane or the mail before relaying it or acting on it.
 - Read the pane and the mail of a position before acting on it. Read and write only to positions themselves, never to agents a position runs.
 - A blocker never sits. Read the exact blocked command and the exact options at once, decide what the authority map in `${CLAUDE_SKILL_DIR}/references/authority.md` gives the Director, and resolve it. Route to the operator only what that map gives the operator.
-- Positions run one skill each: Orchestrators run `coding-agents:orchestrate-change`, Executors run `/execute-change`. Never add procedure, admissions, checklists or restated steps on top of a skill. Read the governing skill before ordering anything it covers.
+- Positions run one skill each: Orchestrators run `coding-agents:orchestrate-change`, Executors run `/execute-change`. Never add procedure, admissions, checklists or restated steps on top of a skill. Use the governing skill before ordering anything it covers.
 - Discovery operates only on Changes; delivery operates only in a worktree; the two never cross. A finding that needs a record change stops delivery: Handoff, release, Executor stopped; discovery revises; a fresh Executor claims. An Executor is stopped after its Handoff, never reused or left idle.
 - Contextualization changes nothing in any session.
 - Never soften a rule, decision, spec or assertion for code, tooling, history or a deadline; fix the lower layer. Never maintain compatibility: no shims, no fallbacks, no "accept the old form too".
@@ -40,6 +40,7 @@ Every position's Change moving to the default branch on origin, with every block
 | `resume`, a fresh session, or the first turn after a compaction         | `${CLAUDE_SKILL_DIR}/workflows/resume.md`       |
 | `event`, a monitor line, or a mail from a position                      | `${CLAUDE_SKILL_DIR}/workflows/handle-event.md` |
 | `instruct`, any order, answer or question to a position                 | `${CLAUDE_SKILL_DIR}/workflows/instruct.md`     |
+| `attest`, a Frame to attest or a Slice to confirm a Maintainer brings   | `${CLAUDE_SKILL_DIR}/workflows/attest.md`       |
 | `theme`, the operator naming one theme for every position               | `${CLAUDE_SKILL_DIR}/workflows/run-theme.md`    |
 | `restart`, a planned Prowl or host restart, or a position to start anew | `${CLAUDE_SKILL_DIR}/workflows/restart.md`      |
 
@@ -54,6 +55,7 @@ After reading the workflow, follow it exactly.
 | `resume.md`       | Load the foundation, gather the roster, arm the monitor, read mail       |
 | `handle-event.md` | Dispose of one monitor line or one position mail                         |
 | `instruct.md`     | Choose the channel and wording for one instruction, answer or question   |
+| `attest.md`       | Answer a Maintainer that brings a Frame to attest or a Slice to confirm  |
 | `run-theme.md`    | Run one theme: one Change per position, vertical slices that merge       |
 | `restart.md`      | Prepare positions for a restart, bring a position up, compact a position |
 
@@ -61,11 +63,11 @@ After reading the workflow, follow it exactly.
 
 <reference_index>
 
-| Reference          | Content                                                                             |
-| ------------------ | ----------------------------------------------------------------------------------- |
-| `authority.md`     | Who decides what: positions, ranks, the Director's delegation, the operator's share |
-| `guards.md`        | Command guards, classifier refusals and permission prompts: what each one ends      |
-| `status-report.md` | The STATUS template positions mail every 15 minutes and the step-in triggers        |
+| Reference                | Content                                                                             |
+| ------------------------ | ----------------------------------------------------------------------------------- |
+| `authority.md`           | Who decides what: positions, ranks, the Director's delegation, the operator's share |
+| `classifier-triggers.md` | The Director actions the harness classifier refuses                                 |
+| `status-report.md`       | The STATUS template positions mail every 15 minutes and the step-in triggers        |
 
 The monitor's internals — signals, state file, lock and context tiers — are in `${CLAUDE_SKILL_DIR}/README.md`. Read it only when a monitor line is unclear or the monitor misbehaves.
 
@@ -85,12 +87,11 @@ The roster is a worktree-local draft: `python3 "${CLAUDE_SKILL_DIR}/scripts/rost
 
 <constraints>
 
-- NEVER relay authority to another session ("the operator answered first-hand …") and never order an audit overrule — the classifier refuses both as instruction poisoning. Authority is a state move by the watcher of the backlog, performed by that watcher.
-- NEVER answer a dangerous-command-guard prompt with Yes, in any pane — cancel it.
+- NEVER relay authority to another session ("the operator answered first-hand …") and never order an audit overrule — the classifier refuses both as instruction poisoning. Authority is a state move by the watcher of the backlog, performed by that watcher. `${CLAUDE_SKILL_DIR}/references/classifier-triggers.md` lists every refused Director action.
 - NEVER send text into a pane that waits at a question or an approval unless the operator says to handle it.
 - NEVER invent a subagent or a launch route. A missing configured definition is a blocker for the operator.
+- ALWAYS name the absolute path of the settings file and confirm it with the operator through the structured-question tool before writing `enabledMcpjsonServers`; one confirmation covers one write.
 - NEVER quote the operator verbatim in an artifact, a Change or a mail; state the substance.
-- NEVER write temporary files outside the session scratchpad or a `mktemp` directory.
 - NEVER remove a worktree before listing its ignored and untracked `.spx` state and preserving every draft in it.
 
 </constraints>
@@ -109,7 +110,7 @@ The roster is a worktree-local draft: `python3 "${CLAUDE_SKILL_DIR}/scripts/rost
 
 **Claude reported audit rounds on spec-malleable nodes as progress.** Three test-evidence audits ran on nodes whose malleability is `spec`, which requires none. Read each node's malleability before ordering or reporting an evidence audit.
 
-**Claude chose "continue without this MCP server" for an Executor.** A project-declared MCP server is used; approve it through the user setting `enabledMcpjsonServers`, never by guidance text in a project guide.
+**Claude chose "continue without this MCP server" for an Executor.** A project-declared MCP server is used; approve it through the user setting `enabledMcpjsonServers` after confirming the settings path, never by guidance text in a project guide.
 
 **Claude relayed an operator rule as "the operator says".** The classifier refused the whole batch as security weakening. Ask the operator to tell positions such a rule directly, or state it as the Director's own order when the authority map allows.
 
