@@ -413,6 +413,7 @@ class CurrentRepo:
     remote_ref: str
     feature_branch: str
     missing_branch: str
+    missing_remote_ref: str
 
 
 def build_current_repo(root: pathlib.Path) -> CurrentRepo:
@@ -427,6 +428,7 @@ def build_current_repo(root: pathlib.Path) -> CurrentRepo:
         remote_ref=REMOTE.tracking_ref(data.base_branch),
         feature_branch=data.feature_branch,
         missing_branch=data.missing_branch,
+        missing_remote_ref=REMOTE.tracking_ref(data.missing_branch),
     )
 
 

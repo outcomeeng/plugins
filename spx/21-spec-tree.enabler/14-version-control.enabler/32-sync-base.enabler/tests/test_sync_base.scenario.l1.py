@@ -341,7 +341,7 @@ def test_explicit_base_ref_overrides_origin_head(
 
     assert result.status is module.SyncStatus.GIT_FAILURE
     assert result.base_ref == handle.missing_branch
-    assert result.remote_ref == module.remote_tracking_ref(handle.missing_branch)
+    assert result.remote_ref == handle.missing_remote_ref
 
 
 def test_explicit_valid_base_rebases_onto_that_base_not_origin_head(
