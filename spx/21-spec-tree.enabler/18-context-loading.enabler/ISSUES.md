@@ -22,7 +22,7 @@ The count is the wrong unit. What binds is each decision's `### Audit` and `### 
 
 ## The context manifest carries no methodology declaration
 
-`context-loading.md` declares that the `/contextualize` manifest states the methodology source and version the repository follows, taken from the `methodology` block of the SPX CLI's context bundle. The bundle exists: `spx spec context show --json` on the installed `@outcomeeng/spx` 0.6.26 emits `methodology.source` `outcomeeng/methodology` and `methodology.version` `4.0` for this repository. The skill does not consume it. Consumption of the bundle is blocked on the published contract and the floor: `REQUIRED_SPX_VERSION` and the CI pin sit at 0.6.15, below the 0.6.16 release that introduced the subcommand. The `<SPEC_TREE_CONTEXT>` marker therefore names no methodology version, and a session learns it only by reading the spx configuration file by hand.
+`context-loading.md` declares that the `/contextualize` manifest states the methodology source and version the repository follows, taken from the `methodology` block of the SPX CLI's context bundle. The bundle exists: `spx spec context show --json` on the installed `@outcomeeng/spx` 0.6.26 emits `methodology.source` `outcomeeng/methodology` and `methodology.version` `4.0` for this repository. The skill does not consume it. The floor and the CI pin sit at 0.7.2, above the 0.6.16 release that introduced the subcommand, so consumption of the bundle waits only on the published contract. The `<SPEC_TREE_CONTEXT>` marker therefore names no methodology version, and a session learns it only by reading the spx configuration file by hand.
 
 Two further readings show the same gap from the CLI side. `spx diagnose` reports `methodology-context` as `unavailable` with `observedSource` and `observedVersion` absent, because no installed methodology package is configured. `spx spec context show --understand`, which serves the foundation payload from that package, fails for the same reason: `methodology.packageDir` is unset. Whether the `/understand` foundation is delivered through that payload is a separate decision the context-enumeration ADR does not yet make.
 
@@ -30,7 +30,7 @@ Two further readings show the same gap from the CLI side. `spx diagnose` reports
 
 **Resolution shape**: land the consumption slice described in "The skill enumerates the read-set locally" below (floor and pin advanced to a release whose bundle satisfies the contract, `/contextualize` reading the bundle), emit the `methodology` block in the manifest, retag the assertion's evidence against the CLI output, and delete the interim instruction-block line in the same change.
 
-**Evidence**: `spx spec context show --json spx/21-spec-tree.enabler/18-context-loading.enabler` on 0.6.26; `spx diagnose --format json` `methodology-context` record; `outcomeeng/validation/spx_version.py` line 87 and `.github/workflows/check.yml` line 31.
+**Evidence**: `spx spec context show --json spx/21-spec-tree.enabler/18-context-loading.enabler` on 0.6.26; `spx diagnose --format json` `methodology-context` record; `outcomeeng/validation/spx_version.py` and `.github/workflows/check.yml`, which both place the floor and the pin at 0.7.2.
 
 ## The context walk reads fewer sibling contracts than the foundation declares
 
@@ -62,11 +62,7 @@ The published CLI supplies the bundle as `spx spec context show --json`, whose s
 
 **Impact.** The agent counts files itself, so a skipped decision or a read higher-index sibling is possible; the structural enumeration is judged by `[audit]` where a deterministic grader could judge CLI output.
 
-**Settlement condition.** The bundle satisfies the decision's contract, `REQUIRED_SPX_VERSION` in `outcomeeng/validation/spx_version.py` and `SPX_VERSION` in `.github/workflows/check.yml` advance to a release carrying it, and one changeset then:
-
-- rewrites Steps 1 to 3 of `src/plugins/spec-tree/skills/contextualize/SKILL.md` to run `spx spec context show --json <target>`, read every path in `read`, read the guides and the lifecycle overlay `spx/local/merging.md` outside that loop, list the remaining local overlays without reading them, and enumerate exactly those paths and the cited-governance provenance in the `<SPEC_TREE_CONTEXT>` manifest;
-- retags the read-completeness, lower-index-sibling and determinism assertions in `context-loading.md` from `[audit]` to `[test]` against the CLI output, because the enumeration is then code and the determinism claim gains a deterministic grader; until the complete contract publishes, those assertions and the decision's rules stay `[audit]`, and the foundation-manifest assertions keep their own `[test]` evidence;
-- runs `just build-skills`, then `instructions:skill-auditor` on the edited skill and the spec and test-evidence auditor gates.
+**Settlement condition.** The published bundle satisfies the decision's contract and the repository's floor and pin sit at a release carrying it. `/contextualize` enumerates exactly the paths in the bundle's `read` and reports the cited-governance provenance in the `<SPEC_TREE_CONTEXT>` manifest, reads the guides and the lifecycle overlay `spx/local/merging.md` outside that loop, and lists the remaining local overlays without reading them. The read-completeness, lower-index-sibling and determinism assertions in `context-loading.md` carry `[test]` evidence against the CLI output, and the foundation-manifest assertions keep their own `[test]` evidence.
 
 **Related.** `outcomeeng/changes#346` makes the decision name the capability by the command the CLI ships, and `outcomeeng/changes#320` carries complete Product Tree context through `list` and `show`.
 

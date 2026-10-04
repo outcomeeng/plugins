@@ -66,11 +66,7 @@ pattern used identically in this file.
 
 The worktree lifecycle — creating a pool worktree on demand, archiving it, restoring it, disposing of it — is `spx worktree` behavior, and `spx` is a separate product with its own spec tree. `spx/21-spec-tree.enabler/19-worktree-occupancy.enabler` records the boundary: how `spx` manages a worktree is `spx`'s concern, and a node here specifies only the plugins' use of that capability. The published `@outcomeeng/spx` 0.7.2 exposes `spx worktree claim`, `status` and `release` only, and no decision in this repository declares the lifecycle design.
 
-What the node owes once `spx` decides and publishes the lifecycle:
-
-- The plugins' use of the published verbs, which skill invokes them and when, as assertions here; the verbs stay specified in the `spx` tree.
-- If the lifecycle populates the live set on demand, provisioning keeps only its migration role: classify, push every local ref, bare-clone, place the main checkout, carry gitignored state, hand off the husk. The `init-worktrees` skill's pool-name gathering, its `--worktree` flag and the tests that request N worktrees and assert N exist follow that change.
-- Renaming this node and the skill to match a migration-only role is a `/refactor` operation, not an edit.
+Once `spx` decides and publishes the lifecycle, the node's assertions specify the plugins' use of the published verbs, which skill invokes them and when, while the verbs stay specified in the `spx` tree. If the lifecycle populates the live set on demand, provisioning keeps only its migration role: classify, push every local ref, bare-clone, place the main checkout, carry gitignored state and hand off the husk. The node and the skill then carry names that match that role, and the skill's pool-name gathering, its `--worktree` flag and the tests that request N worktrees and assert N exist are gone.
 
 Provisioning a fresh pool needs no migration: a bare clone and one `git worktree add` for the main checkout, with no husk, no ref push and no gitignored carry. The provisioner exists for the retrofit case, and its extraction is the entry above.
 
