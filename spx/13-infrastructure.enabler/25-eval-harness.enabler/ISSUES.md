@@ -79,3 +79,27 @@ CommonMark does not treat a line opening with three or more backticks as a fence
 `outcomeeng_evals/ci_triggers.py` compiles its `# BEGIN eval-trigger-paths` block-matching regex without a `^` anchor or `re.MULTILINE`, so it can match the marker text mid-line, unlike the `^...$`-anchored router and shared-region matchers in the instruction-block module. `spx/local/generated-sources.toml` declares line-start matching for this marker family and notes the deviation; the declared rule governs attribution, per `spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md`.
 
 **Resolution shape**: anchor the block pattern to the start of a line and cover the anchoring in the node's ci-trigger tests, then drop the deviation note from `spx/local/generated-sources.toml`.
+
+## The shipped harness retires its producer-coupling assertions at the cutover
+
+The eval-harness redesign re-homes this concern: eval-verification governance moves to `spx/31-outcomeeng.enabler/31-verification.enabler/31-eval-verification.enabler/`, with harness vocabulary under its `21-eval-harness.enabler` child, and the runtime adapter contract the redesigned harness delegates to lives under `spx/31-outcomeeng.enabler/31-verification.enabler/21-agentic-verification.enabler/`. This node's specs, decisions and evidence stay authoritative for the shipped harness until the implementation cutover, after which the node retires.
+
+`spx/31-outcomeeng.enabler/31-verification.enabler/31-eval-verification.enabler/15-adapter-derived-evals.adr.md` decides eval coupling for the methodology through the adapter contract, in place of materializing producer text into a prompt. `57-producer-coupled-skill-evals.adr.md` is scoped to the `outcomeeng_evals` harness alone, so the two decisions govern disjoint subjects while the shipped harness stands. At cutover this node's producer-coupling assertions (the `prompt_source` kind conformance rules, the `materialize-prompts` CLI rule and the producer-derived materialization property) retire with the `outcomeeng_evals/producer_prompt.py` machinery and the generated `prompt.md` files they govern, replaced by the adapter-invoked case shape the new decision declares.
+
+**Settlement condition.** The cutover completes as `spx/31-outcomeeng.enabler/31-verification.enabler/31-eval-verification.enabler/ISSUES.md` records it, and this node retires.
+
+## The cache-amortization prototype stays as the measurement record
+
+`15-prompt-caching.adr.md` keeps prefix reuse as the cost lever and records the corrected mechanism: capture the amortization on the subscription `claude --print` path through a base session that loads every plugin once and is forked per case, so each case reads the shared prefix warm and writes only its case-specific suffix, keeping the rule against routing to a metered API. `prototypes/eval-cache-amortization/` holds the investigation (`investigation.md`) and the measurement (`FINDINGS.md`: 5.45 times per call, about 73 to 80 percent per suite). The fork-session cache regression persists: since Claude Code v2.1.69 (`anthropics/claude-code#34629`, closed without resolution), `claude --print --resume` and `--fork-session` stop reusing the cached conversation history, so a forked case cold-writes the prefix as the current single-turn shape does, and the harness keeps its single-turn invocation. The telemetry that makes caching observable ships: the per-run cache read and creation token aggregates in `cost_summary` and `history.jsonl`.
+
+No fork-per-case implementation happens in this node. The caching decision re-derives under the agentic-verification node, whose `ISSUES.md` records the open realization paths. The `[audit]` rule in `15-prompt-caching.adr.md` still cites `spx/31-outcomeeng.enabler/31-verification.enabler/21-agentic-verification.enabler/PLAN.md` for that re-derivation; the citation points to `spx/31-outcomeeng.enabler/31-verification.enabler/21-agentic-verification.enabler/ISSUES.md` when the decision next changes.
+
+**Settlement condition.** The relocated subtree absorbs the prototype or retires it, per the prove-then-migrate-or-remove lifecycle in `spx/12-shipped-scripting.adr.md`.
+
+## The eval harness raises AssertionError for lifecycle failures
+
+`outcomeeng_testing/evals/factories.py` and `outcomeeng_testing/harnesses/evals.py` raise `AssertionError` when a resource fails to start or a generated value has the wrong shape. The predicate-seam rule in `/test-evidence-standards` reserves assertion failures for the linked test; infrastructure raises only setup, dependency, lifecycle or execution errors, so raising `AssertionError` from infrastructure reports a failure away from every `assert` site and can read as a verdict the harness owns.
+
+**Evidence.** The isolated test-evidence audit of `spx/13-infrastructure.enabler/13-host-readiness.enabler` on head `e3bf060ce4dd29ff34984b5d66f8302d9ca22e95` rejected the same shape in that node's harness (finding `f-001`), fixed there by raising a `RuntimeError` subclass from a harness-owned horizon.
+
+**Settlement condition.** Each infrastructure `AssertionError` in these modules becomes a lifecycle or dependency error type the harness owns, with every behavioral predicate left in the linked tests, and the node passes its test-evidence audit.

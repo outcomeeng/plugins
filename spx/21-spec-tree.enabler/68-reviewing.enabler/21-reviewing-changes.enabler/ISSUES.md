@@ -10,7 +10,7 @@ The review prompt's scope reaches unchanged consumers of a changed governing dec
 
 ## Eval lane suspended while the node is `tier: prototype`
 
-The node's LLM-behavior assertions — rule-citation grounding, absence-claim discipline, severity rubric fit, wrapper protocol, findings direction, and the adversarial probes — carry `[audit]` evidence while the spec declares `tier: prototype`; the eval harness is unavailable for producer-coupled evidence. The `tier` frontmatter field is ahead of its declaration: `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/PLAN.md` defers tier until the CLI projects the frontmatter field and spec-audit recognizes it, so this node carries the key by operator direction before that schema lands (review run `2026-08-16_20-27-53-613-16cfc8848697`, one debt finding, tracked here).
+The node's LLM-behavior assertions — rule-citation grounding, absence-claim discipline, severity rubric fit, wrapper protocol, findings direction, and the adversarial probes — carry `[audit]` evidence while the spec declares `tier: prototype`; the eval harness is unavailable for producer-coupled evidence. The `tier` frontmatter field is ahead of its declaration: tier is deferred until the CLI projects the frontmatter field and spec-audit recognizes it, so this node carries the key by operator direction before that schema lands (review run `2026-08-16_20-27-53-613-16cfc8848697`, one debt finding, tracked here).
 
 **Resolution shape**: when the eval facility runs again, author one producer-coupled eval per assertion class through `prompt_source.producer` pointing at the shipped review prompt, relink the assertions as `[eval]`, and drop the tier marker. Cases for the probes: a diff asserting an exhaustive or mutually exclusive partition with a constructible hole; a restated rule with a dropped conjunct; a newly bound definite description with no owner; an unchanged cited consumer the change contradicts.
 
@@ -103,7 +103,7 @@ Governing decision settled: `spx/31-outcomeeng.enabler/31-verification.enabler/1
 
 Required handling:
 
-- Consume the declared attribution in this node's scope derivation as the reviewer's own derivation, never a caller filter, preserving the caller-independence rule this node already carries; the skip-and-record mechanics arrive with the `spx` verification scope projection tracked in `spx/31-outcomeeng.enabler/31-verification.enabler/PLAN.md`.
+- Consume the declared attribution in this node's scope derivation as the reviewer's own derivation, never a caller filter, preserving the caller-independence rule this node already carries; the skip-and-record mechanics arrive with the `spx` verification scope projection recorded in `spx/31-outcomeeng.enabler/31-verification.enabler/ISSUES.md`.
 - Keep base-sync scope on the real changed-file set — the governing decision widens no exclusion beyond agentic verification.
 
 ## 9. Four shipped review scripts await extraction into the SPX CLI
@@ -205,7 +205,7 @@ Objective: merge the review prompt single-source cleanup without carrying the lo
 
 Reconstruct the preserved review-journal and result-contract work from current `origin/main` as one review-owned merge cycle only when the patch has one observable result: the review skill records grounded findings in a sealed journal and returns one raw run token through source-owned evidence infrastructure.
 
-The extraction includes this node's spec, review prompt, journal runner and result contracts, co-located tests and evals, and the smallest review-specific harness or generator changes they require. Eval-harness capabilities that can merge independently remain in `spx/13-infrastructure.enabler/25-eval-harness.enabler/PLAN.md`; merge policy that consumes the token remains in `spx/21-spec-tree.enabler/76-merge.enabler/PLAN.md`.
+The extraction includes this node's spec, review prompt, journal runner and result contracts, co-located tests and evals, and the smallest review-specific harness or generator changes they require. Eval-harness capabilities that can merge independently and merge policy that consumes the token remain with the preserved aggregate in `spx/21-spec-tree.enabler/65-apply.enabler/ISSUES.md`.
 
 **Revisit condition:** replace this section with the extracted branch and PR identity after focused tests, evidence audits, and rollback analysis establish one review-owned cluster.
 
@@ -249,3 +249,21 @@ shows the skill reviewed that exact scope.
 **Evidence**: `instructions:subagent-auditor` findings `f-001` and `f-002`
 against `src/plugins/spec-tree/agents/changes-reviewer.md` on Change #76 head
 `843ddd709b058970d414ec755cc10121ff6bb5ff`.
+
+## The reviewer reads a conforming absent `<failure_modes>` section as a coordination-note gap
+
+`/agent-prompt-standards` `<failure_mode_writing>` prescribes omitting `<failure_modes>` from a skill that has not failed yet, so a new skill conforms by carrying no such section. `spec-tree:changes-reviewer` nonetheless raised the absence as a debt finding on the contribute-plugin consolidation, in review runs `2026-08-17_00-39-40-323-2100d0f7fbde` and `2026-08-17_00-58-42-318-56d83c759ed7`, and each answer cost a full re-review cycle with the same reasoning. The skill auditor's side of the same defect is in `spx/43-instructions.enabler/21-skills.enabler/ISSUES.md`.
+
+**Settlement condition.** The review prompt's coordination-note rule carries the matching case: a note that tracks work a standard declares complete-as-absent represents no future work, so its removal closes the item.
+
+## Two Verifier rules collide on pinning a spec-declared tuning value
+
+The changes-reviewer requires a test to pin `SIGNAL_GRACE_SECONDS` to the spec's two-second grace period with an independent literal, citing the mutation-check rule in `15-test-infrastructure.pdr.md`, and three review runs raised it as blocking. The test-evidence-auditor rejects exactly that literal as a source-ownership violation, citing `spx/12-shipped-scripting.adr.md`. The operator ruled that the ADR governs, and the reviewer finding is dropped as unbacked.
+
+**Settlement condition.** One of the two decisions is amended so a reviewer and an evidence auditor reading both reach one verdict. The full entry is in `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/ISSUES.md`.
+
+## An implementation audit and a changeset review read one shipped executable to opposite verdicts
+
+`spec-tree:changes-reviewer` run `2026-09-22_20-40-26-221-404eea4ba809` rejected line 181 of `src/plugins/coding-agents/skills/orchestrate-officers/scripts/derive_ledger.py` by executing the shipped entry point: a JSON array under a read's `cause` is unhashable, so the frozenset membership test raised `TypeError`, outside the entry point's refused-source handler, and the script printed a traceback and exited 1 against a contract of one versioned invalid-input result on stdout and exit two. The implementation audit approved the same file on the same head by reading it. The repair landed at `1ea3cf1567a963c6466366098155fcaa3a04d01a`.
+
+**Settlement condition.** A decision states whether an implementation audit executes a shipped executable, and the review's execution of the subject has a named owner. The full entry is in `spx/31-outcomeeng.enabler/31-verification.enabler/ISSUES.md`.

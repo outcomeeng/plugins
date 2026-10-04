@@ -111,3 +111,17 @@ against emitted output alone.
 **Evidence**: `spec-tree:changes-reviewer` runs
 `2026-09-18_03-20-58-166-8b80f274938c`, `2026-09-18_04-29-55-695-83f3737b9f22`,
 and `2026-09-18_13-02-51-809-99cdf563caa5` (debt, evidence) during Change #76; `spec-tree:test-evidence-auditor` finding f-004, severity `REJECT`, on `spx/18-plugin-build.enabler/43-target-emission.enabler` at head `133caf1aba9244c9f6f0706eecb2c0ccf3587b6f`, which names the same render-stage mutation surviving the portable-fields test, raised again as finding f-003 at head `7ca471d52f9b82779c3cf5ea454eea545b0c2e20` and as debt `portable-fields-exception-unfalsifiable` by `spec-tree:implementation-auditor` run `2026-09-30_13-32-44-300-3a68e92d2980`.
+
+## The plugin-build harness raises AssertionError for lifecycle failures
+
+`outcomeeng_testing/harnesses/plugin_build.py` raises `AssertionError` when a resource fails to start, a build implementation is unavailable or a generated value has the wrong shape. The predicate-seam rule in `/test-evidence-standards` reserves assertion failures for the linked test; infrastructure raises only setup, dependency, lifecycle or execution errors, so raising `AssertionError` from infrastructure reports a failure away from every `assert` site and can read as a verdict the harness owns.
+
+**Evidence.** The isolated test-evidence audit of `spx/13-infrastructure.enabler/13-host-readiness.enabler` on head `e3bf060ce4dd29ff34984b5d66f8302d9ca22e95` rejected the same shape in that node's harness (finding `f-001`), fixed there by raising a `RuntimeError` subclass from a harness-owned horizon.
+
+**Settlement condition.** Each infrastructure `AssertionError` in the harness becomes a lifecycle or dependency error type the harness owns, with every behavioral predicate left in the linked tests, and the node passes its test-evidence audit.
+
+## The build subtree uses the prohibited agent-concept term
+
+`spx/15-agent-terminology.pdr.md` defines agent harness, agent, agent adapter, agent session, subagent and subagent definition, and its prohibited-terminology table maps `runtime`, `per-runtime` and `runtime-specific` to `agent`, `per-agent` and `agent-specific` where the subject is a selectable coding agent. The router template, generated dispatch guidance, registry enforcement and installed-name discovery use the decision. `15-build-architecture.adr.md` and `21-source-and-templating.enabler/21-runtime-parameterization.enabler/runtime-parameterization.md` still say "runtime-divergent", "per-runtime registry" and "No runtime is the source language", which mean per-agent target rendering. Methodology Role names and execution-time uses of "runtime" keep their defined meanings.
+
+**Settlement condition.** One whole-tree sweep aligns the agent-concept uses to "agent" or "agent harness", separating them from generic execution-time "runtime". Node names carry the term (`spx/15-validation.enabler/32-runtime-token.enabler` and `spx/18-plugin-build.enabler/21-source-and-templating.enabler/21-runtime-parameterization.enabler`), so the sweep includes `/refactor` node renames and is a structural change, not a text pass. Each node in the sweep records its share in its own `ISSUES.md`.

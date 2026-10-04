@@ -17,3 +17,9 @@
 **Resolution shape.** Convert all three files in one dedicated changeset, choosing semantic tag names from the section content — `<dependency_injection>`, `<hexagonal_architecture>`, and so on — rather than transliterating heading text. Replace each `## Contents` block with a `<reference_index>` section in the same pass. Run the skill auditor over the `architect-python` skill afterward, since the same run that recommends this conversion also checks the result.
 
 **Revisit condition.** Resolve when `architect-python` next needs a substantive content change to any of the three references, or when a skill audit escalates the finding above recommendation severity.
+
+## The architecture standards restate the decision template
+
+A standard begins by loading the matching `/understand` template when one exists, and no skill encodes the template's shape, because a restated shape drifts the moment the template advances. The prose plugin conforms. In this node's skills, `src/plugins/python/skills/python-architecture-standards/SKILL.md` and `src/plugins/python/skills/architect-python/SKILL.md` restate the ADR section list inline.
+
+**Settlement condition.** Each restated section list becomes a pointer that loads the decision template through the live `/understand` foundation, keeping only language-specific content rules: dependency-injection patterns, testability constraints and per-language verification routing, with each plugin's changeset gating its skills with `instructions:skill-auditor`. The TypeScript and Rust pairs carry the same gap in `spx/43-typescript.enabler/25-typescript-standards.enabler/21-typescript-architecture.enabler/ISSUES.md` and `spx/43-rust.enabler/ISSUES.md`.

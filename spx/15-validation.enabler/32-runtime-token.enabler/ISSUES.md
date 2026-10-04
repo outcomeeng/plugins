@@ -43,3 +43,9 @@ Required handling:
   target matched by preceding branches.
 - Run the focused runtime-token tests and a test-evidence audit over the repaired
   generator chain before removing this issue.
+
+## The node and its spec use the prohibited agent-concept term
+
+`spx/15-agent-terminology.pdr.md` maps `runtime`, `per-runtime` and `runtime-specific` to `agent`, `per-agent` and `agent-specific` where the subject is a selectable coding agent. This node's spec says "per-runtime conditional" and "runtime-divergent name", which mean per-agent, and the node's name encodes the term. "Runtime" stays valid for execution-time behavior and for an execution environment such as Python.
+
+**Settlement condition.** The node and its spec align to the decision's wording, as part of the tree-wide sweep `spx/18-plugin-build.enabler/ISSUES.md` records. The node name encodes the term, so the sweep includes a `/refactor` node rename.

@@ -19,3 +19,25 @@ The shared-test-owned-constant-bag rule under `32-test-data-ownership.enabler/` 
 ## Eval Runner CI Gate
 
 The l3 eval test under `32-test-data-ownership.enabler/tests/` is skipped unless `OUTCOMEENG_RUN_L3_EVALS=1` is set in the environment. A CI workflow that runs l3 evals on a scheduled cadence (not per-PR) needs to be configured separately — the harness exits 0 on a passing suite, so the integration is a matter of selecting cases and gating cost.
+
+## The shipped TypeScript test examples move assertions into the harness
+
+The shared `<predicate_seam>` in `test-evidence-standards` requires every assertion API call to be lexically visible in the linked test, and its `<assertion_type_litmus>` requires a property's invariant to remain in the linked test while the generator owns the domain and the harness keeps the seed, the run count and the replay diagnostics. `25-typescript-tests.enabler/43-test-infrastructure-auditing.enabler/test-infrastructure-auditing.md` already forbids an imported harness that itself calls `expect`, an assertion API or a matcher. The shipped examples in `src/plugins/typescript/skills/typescript-test-standards` contradict both. The Rust plugin was corrected to the right shape first, and `spx/43-rust.enabler/ISSUES.md` records its worked examples as the reference.
+
+Twenty example sites fall in three classes:
+
+- Thirteen bare delegations, `await assertX(...)` as the whole test body with no `expect`: `references/exception-implementations.md` lines 15, 19, 36, 42, 62, 68, 85 and 102, `references/l1-patterns.md` line 53, `references/l2-patterns.md` lines 13 and 17, `levels/l1-local-deterministic.md` line 73 and `levels/l2-local-infrastructure.md` line 35.
+- Six property-run delegations, `assertProperty(...)` moving the whole run into the harness: `SKILL.md` lines 204 to 207 (the four-row pattern table), `references/l1-patterns.md` line 20 and `levels/l1-local-deterministic.md` line 54.
+- One naming defect, `levels/l3-remote-credentialed.md` line 34, which keeps `expect` in the test and reads `await expect(assertSignedStripeFixtureAccepted()).resolves.toMatchObject(...)`. The seam holds; the helper's name asserts something it does not do.
+
+`audit-typescript-tests` line 132 repeats the same claim, that the invariant lives in the imported property harness.
+
+**Settlement condition.** The first two classes put the assertion flow in the test and leave the harness the resource, the double and the run configuration; the third renames the helper; and `audit-typescript-tests` states the invariant in the linked test. The change is skill content only, with no spec assertion changing, and it passes the typed skill auditor.
+
+**Evidence.** `grep -rn 'assertProperty\|await assert' src/plugins/typescript/skills/typescript-test-standards` lists the sites.
+
+## Four reference files over 100 lines carry no table of contents
+
+`/skill-standards` `<progressive_disclosure>` requires a table of contents at the top of every reference file over 100 lines, so partial reads still see the full scope. Four files in this node's skills exceed the threshold without one: `src/plugins/typescript/skills/architect-typescript/references/typescript-principles.md` (144 lines), `src/plugins/typescript/skills/code-typescript/references/outcome-engineering-patterns.md` (138), `src/plugins/typescript/skills/code-typescript/references/vocabulary-registry-pattern.md` (116) and `src/plugins/typescript/skills/typescript-test-standards/references/exception-implementations.md` (109).
+
+**Settlement condition.** Each file opens with a table of contents in the form its surrounding skill uses, listing every top-level section, and `instructions:skill-auditor` approves each affected skill. The marketplace carries the same gap in other plugins, each recorded in its own node.

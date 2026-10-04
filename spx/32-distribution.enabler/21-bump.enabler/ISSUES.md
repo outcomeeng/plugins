@@ -78,3 +78,11 @@ Both rows concern one classification question. The assertion reads as a universa
 **Disposition and reason**: filed under `spx/15-merging.pdr.md` by operator instruction. The path-attribution assertion and its linked property evidence are outside the amendment in [Change #113](https://github.com/outcomeeng/changes/issues/113), which changes the ahead-of-base assertion's rationale and the opening sentence. This finding requires no repair or investigation round in that Change and does not block its merge.
 
 **Settlement condition**: on the node's next evidence change, select the quantifier and evidence type through `/verify` and its `/test` routing. If property stands, establish evidence with a generator over the declared path domain. If mapping stands, establish evidence over the complete finite source-owned class set. Align the assertion heading and linked evidence with that selection.
+
+## The bump harness raises AssertionError for lifecycle failures
+
+`outcomeeng_testing/harnesses/bump.py` raises `AssertionError` when a resource fails to start, a process fails to announce itself or a generated value has the wrong shape. The predicate-seam rule in `/test-evidence-standards` reserves assertion failures for the linked test; infrastructure raises only setup, dependency, lifecycle or execution errors, so raising `AssertionError` from infrastructure reports a failure away from every `assert` site and can read as a verdict the harness owns.
+
+**Evidence.** The isolated test-evidence audit of `spx/13-infrastructure.enabler/13-host-readiness.enabler` on head `e3bf060ce4dd29ff34984b5d66f8302d9ca22e95` rejected the same shape in that node's harness (finding `f-001`), fixed there by raising a `RuntimeError` subclass from a harness-owned horizon.
+
+**Settlement condition.** Each infrastructure `AssertionError` in the harness becomes a lifecycle or dependency error type the harness owns, with every behavioral predicate left in the linked tests, and the node passes its test-evidence audit.

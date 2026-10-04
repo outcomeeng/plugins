@@ -21,3 +21,9 @@ concern is scratch-path and repository-target enforcement, and it edited this fi
 line only. Restructuring the whole reference is a documentation-structure concern with its
 own skill-auditor gate, so it carries no dependency on the boundary work and does not
 block it.
+
+## The architecture standards restate the decision template
+
+A standard begins by loading the matching `/understand` template when one exists, and no skill encodes the template's shape, because a restated shape drifts the moment the template advances. The prose plugin conforms. In this node's skills, `src/plugins/typescript/skills/architect-typescript/SKILL.md` restates the ADR section list inline (title and decision, Rationale, Invariants, Verification, in the list that starts at line 144), and `src/plugins/typescript/skills/typescript-architecture-standards/SKILL.md` carries the same shape.
+
+**Settlement condition.** Each restated section list becomes a pointer that loads the decision template through the live `/understand` foundation, keeping only language-specific content rules: dependency-injection patterns, testability constraints and per-language verification routing. The Python and Rust pairs carry the same gap in `spx/43-python.enabler/25-python-standards.enabler/21-python-architecture.enabler/ISSUES.md` and `spx/43-rust.enabler/ISSUES.md`, and each plugin's changeset gates its skills with `instructions:skill-auditor`.

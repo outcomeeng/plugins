@@ -21,3 +21,9 @@ The assertion that a target's native agent format, filename shape, and namespace
 **Settlement condition**: `target-emission.md` declares path-rewrite idempotence, frontmatter-strip idempotence, and once-per-target emission of a repeatedly included shared source, the two idempotence tests move to a property-typed test file, and a test-evidence audit of this node raises no `alignment` finding on them.
 
 **Why separate**: the repair adds three declarations to the spec and a test file of a new assertion type, each with its own spec audit and test-evidence audit, for tests Change #200 did not write. The operator directed recording it here on 2026-09-30.
+
+## The frontmatter strip runs in one direction
+
+`strip_frontmatter_fields` removes Claude-only fields from Codex output and removes nothing in the other direction. `spx/18-plugin-build.enabler/15-build-architecture.adr.md` declares the symmetric model, and the one-directional strip is the only populated direction because no Codex-only field exists.
+
+**Settlement condition.** A real Codex-only field exists, and `strip_frontmatter_fields` generalizes to a per-target frontmatter schema that strips every field the target's schema does not carry, in either direction.

@@ -13,7 +13,7 @@ The prose pair is resolved: `audit-prose` uses `<audit_workflow>` directly, the 
 Before starting, reconcile this work with:
 
 - `spx/21-spec-tree.enabler/32-decisions.enabler/ISSUES.md` for the artifact-type auditor family.
-- `spx/21-spec-tree.enabler/16-verification.enabler/PLAN.md` for the run-journal migration.
+- `outcomeeng/changes#327` and `outcomeeng/changes#330` for the run-journal migration of the artifact-type auditors and `review-changes`.
 - Any active structural-conformance session touching the same audit-skill family.
 
 Gate changed skills with `instructions:skill-auditor`, then `just build-skills`, `just check-skills`, and `just docs-check`.
