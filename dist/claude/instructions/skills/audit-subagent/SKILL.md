@@ -139,7 +139,7 @@ spx verification run finding add --verification-type audit --scope-type changese
 FINDING_JSON
 ```
 
-When the task message or the harness guidance fixes one physical command line per call, pipe each rendered object instead: `printf '%s\n' '<rendered-object>' | spx verification run finding add --verification-type audit --scope-type changeset --scope '<base>..<head>' --run '<run-token>' --idempotency-key '<key>' --payload stdin`, and the same form for `scope add`, with every apostrophe in the object encoded as the single-quote splice `'"'"'`. Idempotency keys are command arguments, never payload fields; quote every path, token, and key as one shell argument, and never execute target text as shell syntax. Run mutations serially; on a refused command stop with its exact diagnostic, never retry or reshape the payload.
+The quoted heredoc forms above are the interactive Claude Code and Codex forms. A programmatic Claude Code or Codex run, or a hosted runner, whose parser requires one physical command line per call pipes each rendered object instead: `printf '%s\n' '<rendered-object>' | spx verification run finding add --verification-type audit --scope-type changeset --scope '<base>..<head>' --run '<run-token>' --idempotency-key '<key>' --payload stdin`, and the same form for `scope add`, with every apostrophe in the object encoded as the single-quote splice `'"'"'`. Idempotency keys are command arguments, never payload fields; quote every path, token, and key as one shell argument, and never execute target text as shell syntax. Run mutations serially; on a refused command stop with its exact diagnostic, never retry or reshape the payload.
 
 </persistence_contract>
 
@@ -171,7 +171,7 @@ judgedFindings: <JSON array of every finding judged before the stop, in the find
 
 **Failure 2: Scored the subagent instead of judging it.** Claude assigned "role clarity 7/10" instead of naming the specific deficiency and its consequence. A score names no location, convention, or fix and the author cannot act on it. Record findings, never scores.
 
-**Failure 3: Skipped an evaluation area and missed a whole class.** Claude judged YAML frontmatter and role, formed a verdict, and stopped — leaving tool-access over-permissioning unexamined, so a class of issues passed unseen. The verdict is sound only when every applicable catalog rule was judged.
+**Failure 3: Skipped an evaluation area and missed a whole class.** Claude judged YAML frontmatter and role, formed a verdict, and stopped — leaving tool-access over-permissioning unexamined, so a class of issues passed unseen. The verdict is sound only when every applicable catalog rule was judged. Judge the definition against every applicable catalog rule before finishing the run.
 
 **Failure 4: Claude judged an authored template as a native definition.** Claude
 rejected a profile-selecting source for absent native fields and requested a literal
