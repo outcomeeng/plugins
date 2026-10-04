@@ -28,3 +28,9 @@ The extraction is a cross-repo port into `@outcomeeng/spx`, a separate product, 
 **Resolution shape**: declare a narrow grant for each command the workflow runs — the lock-file check, `mktemp -d`, the part move, the two bundled scripts, the backup copy, and the swap — and give `pptx_repack.py` an explicit drop list so a trim no longer depends on moving files. The working directory and the deck paths are chosen at run time, so first confirm which of those commands a grant pattern can bind without also authorizing paths the run never created.
 
 **Evidence**: raised as a `reject consistency` finding by the changeset reviewer against the path-boundary changeset, which had added an `allowed-tools` list omitting a removal capability the body then required. That removal no longer exists.
+
+## Four reference files over 100 lines carry no table of contents
+
+`/skill-standards` `<progressive_disclosure>` requires a table of contents at the top of every reference file over 100 lines, so partial reads still see the full scope. In this node's skills, `src/plugins/work/skills/draw-excalidraw/references/element-templates.md` (202 lines) and `visual-patterns.md` (128), and `src/plugins/work/skills/sanitize-powerpoint/references/audit-and-fix.md` (137) and `opc-structure.md` (134), have none.
+
+**Settlement condition.** Each file opens with a table of contents in the form its skill uses, listing every top-level section, and `instructions:skill-auditor` approves each affected skill afterward.

@@ -45,3 +45,17 @@
 **Impact.** Inconsistent dprint output and spurious diff noise on the next edit.
 
 **Settlement condition.** The paragraph is one line, matching the file's convention. [Change #95](https://github.com/outcomeeng/changes/issues/95) carries the `/apply` pass that owns it.
+
+## The preserved aggregate branch holds claims no merge cycle has drained
+
+`origin/work/strict-finding-disposition` preserves an aggregate of 103 commits that changed 189 paths when it was recorded at `5f26a67a9aef9327e57fd5e02d130c8363578a07` against `origin/main` at `b8503c8147f9291a67d828e649baff0d9c078d9c`; it now points at `b913114806c4cabbb2009d94572050621700d483`. It is recovery material and never enters whole-changeset verification or publication as one pull request. Its behavioral claims belong to the nodes that own them: test-verification, the eval harness, reviewing-changes, audit, the TypeScript code standards and merge, and no merge cycle has drained them.
+
+**Settlement condition.** Every preserved behavioral claim is merged, explicitly superseded by current product truth, or retained in its owning node's `ISSUES.md` with a concrete revisit condition.
+
+**Evidence.** `git ls-remote origin refs/heads/work/strict-finding-disposition` prints the branch head. The changeset-coherence auditor branch the earlier plan excluded is no longer on origin.
+
+## A merging decision governs the apply flow's Verifier dispatches
+
+`apply.md` declares all four rules of `spx/15-merging.pdr.md` product property 3 for the apply flow: each per-node and whole-changeset Verifier dispatch is preceded by the readiness record, a repeated rejected defect class stops the queue for a widened repair, the flow carries only the bounded projection of each Verifier result, and every independent Author-side action finishes before a blocking check or Verifier wait. `/apply` reaches the record through `<verification_checkpoint>` and the projection through `<result_carryover>`. The decision is titled for merging and opens on the delivery lifecycle, while these four rules concern agentic dispatch, whose natural owner is `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`.
+
+**Settlement condition.** The rules relocate into the verification decision and the realizing assertions in `apply.md` re-point to them. The full entry is in `spx/31-outcomeeng.enabler/31-verification.enabler/ISSUES.md`.

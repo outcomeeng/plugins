@@ -9,8 +9,11 @@ The newest full-suite passing rows for `evals/structure`, `evals/voice`, and
 runs on commits that are not ancestors of the current head. The producer
 `src/plugins/spec-tree/skills/audit-adr/SKILL.md` changed in twenty commits since,
 the eval harness changed, and `prompt.md` was rematerialized, so no committed run
-proves the current producer, prompt, and case set. `PLAN.md` in this node defers
-the refresh behind the verification-run migration.
+proves the current producer, prompt, and case set. Each edit of the producer
+re-materializes the prompts, because the three suites embed the producer verbatim
+in their `prompt.md`. The refresh waits for the verification-run migration of
+`spx/21-spec-tree.enabler/68-audit.enabler`, which rewrites this producer's
+verdict contract, so run evidence recorded before it lands is paid for again.
 
 **Settlement condition**: one passing `just eval-node` run over the three suites
 on a head that carries the current producer, with its rows committed to each

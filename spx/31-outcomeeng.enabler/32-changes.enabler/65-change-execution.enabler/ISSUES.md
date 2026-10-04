@@ -22,7 +22,7 @@
 
 **Impact**: the Executor's approved surface can change store state outside `/claim-change`, `/release-change` and `/close-change`.
 
-**Settlement condition**: the grant is narrowed to the read forms the Executor runs, and a retained invocation shows the harness admits those reads under the narrowed patterns without a prompt. The matcher's treatment of a pattern that is not a literal prefix of the issued command is the open question recorded in `spx/ISSUES.md` under "A skill-directory token inside an `allowed-tools` pattern may never match".
+**Settlement condition**: the grant is narrowed to the read forms the Executor runs, and a retained invocation shows the harness admits those reads under the narrowed patterns without a prompt. The matcher's treatment of a pattern that is not a literal prefix of the issued command is the open question recorded in `spx/43-instructions.enabler/21-skills.enabler/ISSUES.md` under "A skill-directory token inside an `allowed-tools` pattern may never match".
 
 ## The Executor skill leaves three composed-command results unrouted
 

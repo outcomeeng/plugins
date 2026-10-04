@@ -27,3 +27,9 @@ Evidence: `spec-tree:test-evidence-auditor` finding f-004, severity `REJECT`, ra
 Impact: a failing distribution test reports a bare `False` instead of the observed value, and every node whose evidence chain imports this harness carries the finding into its own test-evidence audit.
 
 Settlement condition: each helper returns the observation its comparison consumes, the comparison moves into the linked test under `spx/32-distribution.enabler/tests/`, and a test-evidence audit of this node raises no `predicate-ownership` finding.
+
+## Plugin changelog titles use two forms
+
+Most plugin changelogs open with "# Changelog — {plugin} plugin", and a minority open with the dash-free "# {Plugin} plugin changelog", the form the prose canon's em dash rule requires. `head -1` over every `src/plugins/*/CHANGELOG.md` derives which titles stand in which form, so this entry names that relation and no count: a count falsified twice, once when a plugin was added and once when a changeset renamed a single title, and neither edit was in view of the sentence holding the figure.
+
+**Settlement condition.** One sweep renames every title still carrying the dash, and the entry closes when that derivation yields the dash-free form for every plugin. The sweep touches every plugin whose title still carries the dash, so it stands outside any one plugin's changeset.

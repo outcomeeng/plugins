@@ -64,3 +64,19 @@ result.
 `src/plugins/spec-tree/agents/changeset-coherence-auditor.md` on Change #76
 head `843ddd709b058970d414ec755cc10121ff6bb5ff`. The same audit approved the
 corrected least-privilege tool and profile configuration.
+
+## The auditor's verdict persists as direct structured JSON
+
+The direct structured JSON verdict is the auditor's output, and no SPX verification run records it, because SPX exposes no changeset-coherence audit payload or projection contract.
+
+**Settlement condition.** SPX publishes a changeset-coherence contract in an `@outcomeeng/spx` release, this repository's required SPX floor and CI pin advance to that release, and the verdict persists through one SPX verification run over the exact committed scope. The rendered projection preserves `APPROVED`, `REJECTED` and `UNKNOWN`, the semantic clusters, the findings, the publication authorization and the dependency-ordered review-unit sequence, with deterministic contract coverage and migrated producer-coupled eval expectations, under an unchanged semantic verdict model.
+
+## The compliance section holds eleven assertions
+
+The Compliance section holds eleven assertions, above the guideline of about seven for a decomposition candidate. The node stays whole: one `PROVIDES` statement covers every assertion, and the verdict states, the cluster partition, the collapse ordering, the evidence boundaries and the structured projection are one classification contract that the eval suite scores as one producer. Splitting them yields children whose assertions cannot be verified apart. A Verifier skips this decomposition signal.
+
+**Revisit condition.** The node gains an assertion outside the classification contract, or the persistence migration lands and the projection contract separates from the classification contract.
+
+## The node names no declared generated-source relationship
+
+`changeset-coherence.md` and the shipped `src/plugins/spec-tree/skills/audit-changeset-coherence/SKILL.md` require declared generated-source relationship evidence without naming `spx/local/generated-sources.toml` or citing `spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md`. The entry in `spx/31-outcomeeng.enabler/31-verification.enabler/ISSUES.md` carries the settlement condition.

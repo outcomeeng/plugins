@@ -73,3 +73,11 @@ because Change #94 treats the suite as evidence and cannot alter its oracle.
 **Settlement condition.** A separate Change decides the intended executable
 fixture shape, supplies the matching module-resolution artifact or uses a real
 relative import, and establishes the revised case through both full suites.
+
+## The test-evidence audit carries no guard against synchronizing the audited subject
+
+The test-evidence audit skill loads `/contextualize` for its target node, and `/contextualize` runs `/sync-base`, which rebases the audited branch. `spec-tree:audit-implementation` states that an audit never synchronizes, rebases or otherwise mutates the audited subject; this node's audit path carries no such guard.
+
+**Evidence.** Rollout `agent-a4cedd803fc1a5758.jsonl` of a test-evidence audit dispatched against head `f07db1bbaf225ec031d7a777f02c166daa588871` on 2026-09-16 resolved two conflicts and finished at `15d4309e69c26804cd1b04676248a529fd0235b9`, so the concurrent implementation audit found its sealed head superseded.
+
+**Settlement condition.** The audit selects the Verifier-mode context load that the entry in `spx/21-spec-tree.enabler/18-context-loading.enabler/ISSUES.md` settles, so the audited head stays the dispatched head.

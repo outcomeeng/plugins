@@ -235,17 +235,18 @@ while each verdict stays unusable. Reaching either needs the rule vocabulary bou
 which is what the node assertion requiring `/skill-standards` to own every rule `/audit-skill`
 enforces already declares — so a line cannot be classified under a slug minted for one run.
 
-**Related.** `spx/ISSUES.md` records three adjacent Verifier-judgment problems; this is the fourth
-and the first where one auditor definition contradicts itself on unchanged input, rather than two
-Verifiers disagreeing or one raising an unactionable finding. "Auditors read a conforming absent
-`<failure_modes>` section as a gap" is the same auditor raising a finding no edit satisfies; this
+**Related.** Three adjacent Verifier-judgment problems are recorded elsewhere in this tree; this is
+the fourth and the first where one auditor definition contradicts itself on unchanged input, rather
+than two Verifiers disagreeing or one raising an unactionable finding. "Auditors read a conforming
+absent `<failure_modes>` section as a gap", below in this file, is the same auditor raising a finding no edit satisfies; this
 entry is the stronger claim, because there the finding was at least stable across runs. "Two
-verifier rules collide on pinning a spec-declared tuning value", and "Two verifier rules collide on
-naming the evidence location in a shipped skill" in
+verifier rules collide on pinning a spec-declared tuning value" in
+`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/ISSUES.md`, and "Two
+verifier rules collide on naming the evidence location in a shipped skill" in
 `spx/43-coding-agents.enabler/18-agent-mail.enabler/ISSUES.md`, each record two different Verifiers
 reading two decisions to opposite verdicts — resolvable by amending one decision, which a
 self-contradiction is not. "A skill-directory token inside an `allowed-tools` pattern may never
-match" in `spx/ISSUES.md` is opened by `f-007`, the first half of the reversal above; its settlement
+match", below in this file, is opened by `f-007`, the first half of the reversal above; its settlement
 condition rests on an executed invocation rather than an auditor verdict, and the `f-003` reversal
 neither answers nor closes it.
 
@@ -319,3 +320,29 @@ Source: `instructions:skill-auditor` finding `f-015`, rule
 **Impact**: an auditor reading an example grades by a label the run cannot record and maps it to a severity by its own judgment.
 
 **Settlement condition**: the examples use `blocking` and `debt`, or `SKILL.md` states the mapping; one typed skill audit of `audit-skill` raises no `severity-vocabulary-mismatch` finding.
+
+## Two audit-skill reference files over 100 lines carry no table of contents
+
+`/skill-standards` `<progressive_disclosure>` requires a table of contents at the top of every reference file over 100 lines, so partial reads still see the full scope. `src/plugins/instructions/skills/audit-skill/references/operational-effectiveness-examples.md` (116 lines) and `src/plugins/instructions/skills/audit-skill/references/xml-structure-examples.md` (140 lines) have none. The `create-subagent` references carry theirs.
+
+**Settlement condition.** Each file opens with a `## Contents` section or an XML `<contents>` block listing every top-level section, in the form its skill uses, and `instructions:skill-auditor` approves `audit-skill` afterward.
+
+## Auditors read a conforming absent `<failure_modes>` section as a gap
+
+`/agent-prompt-standards` `<failure_mode_writing>` prescribes omitting `<failure_modes>` from a skill that has not failed yet: "Never invent failure modes... Add failure modes as they occur in real usage." A new skill therefore conforms by carrying no such section. `instructions:audit-skill` nonetheless raises the absence as a `worth-improving` warning, and its own remedy then restates the standard back: "once a real near-miss occurs", "do not fabricate one if none has occurred". `spec-tree:changes-reviewer` reads the same absence as a coordination-note gap. The warning is unactionable by construction: no edit satisfies it, and declining it leaves the next Verifier to raise it again. It fired six times over three skills and four verification rounds across the contribute-plugin consolidation, each costing a full re-audit or re-review cycle to answer with the same reasoning.
+
+**Evidence.** `instructions:skill-auditor` warnings on `src/plugins/contribute/skills/open-upstream-issue/SKILL.md` and `src/plugins/contribute/skills/sync-fork/SKILL.md`, three rounds running, with `spec-tree:changes-reviewer` debt findings on the same absence in review runs `2026-08-17_00-39-40-323-2100d0f7fbde` and `2026-08-17_00-58-42-318-56d83c759ed7`.
+
+**Settlement condition.** `instructions:audit-skill` stops raising a bare missing `<failure_modes>` as a finding for a skill whose history shows no observed failure, or raises it only where a governing node, changelog or commit history records one the skill omits. The reviewer's coordination-note rule carries the matching case: a note tracking work a standard declares complete-as-absent represents no future work, so its removal closes the item. The reviewer's side is in `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/ISSUES.md`.
+
+## A skill-directory token inside an `allowed-tools` pattern may never match
+
+`/skill-standards` `references/command-capabilities.md` `<file_references>` documents `${CLAUDE_SKILL_DIR}` for the skill body, where the loader substitutes the absolute path before Claude sees the command, and states no substitution behavior for an `allowed-tools` frontmatter pattern. Skill surfaces across three plugins nonetheless spell the token inside a permission entry, as in `Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/<name>.py":*)`, so each grant is written against a string the loader may never produce. Either the loader expands the token in the pattern as it does in the body and the grant means what it says, or the pattern is matched literally against a command whose path is already expanded and the grant matches nothing. Reading the loader's documentation, a skill body or the frontmatter settles nothing.
+
+**Impact.** A grant that never matches does not fail; it degrades. The declared containment stops being the real approval boundary, and every invocation of the script falls back to a per-call permission prompt, which strands an unattended run. Nothing in the skill surface, the build or the deterministic gate distinguishes a grant that matches from one that never will.
+
+**Evidence.** `instructions:skill-auditor` finding `f-007`, severity `WARNING`, against `src/plugins/coding-agents/skills/orchestrate-officers/SKILL.md:6`, then a sweep of the `allowed-tools` frontmatter across `src/plugins/*/skills/*/SKILL.md` that found the token in a permission entry on 17 surfaces across `coding-agents`, `spec-tree` and `contribute`. `grep -l 'allowed-tools:.*CLAUDE_SKILL_DIR' src/plugins/*/skills/*/SKILL.md` derives the current population.
+
+**Settlement condition.** A session runs one of the surfaces the sweep names to the point where it issues its `python3` command and records whether the harness admits the command under the declared grant or prompts for it; the established behavior then fixes one spelling across the whole population. An executed invocation is the only evidence that closes this.
+
+**Related.** "A non-interactive git guard sits on the command that cannot prompt", in `spx/21-spec-tree.enabler/76-merge.enabler/32-github-pr.enabler/ISSUES.md`, asks whether the Bash grant matcher tolerates an `ENV=value` prefix. One executed invocation that reports the matcher's behavior on an unexpanded token and on an environment-variable prefix answers both.

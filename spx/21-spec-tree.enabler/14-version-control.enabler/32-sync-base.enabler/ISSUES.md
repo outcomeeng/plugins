@@ -47,3 +47,11 @@ shares with its siblings extracts with the primitives tracked in
 Carry the rebase-never-reset invariant and the untracked-collision gap above
 into the ported surface rather than leaving either behind. Revisit when the
 capability publishes.
+
+## `/sync-base` has no read-only form a Verifier could select
+
+A Verifier's context load runs `/sync-base`, which fetches, rebases the audited branch onto its base and resolves conflicts, while other Verifiers dispatched against the same committed head are still running. `/sync-base` offers no form that reports a branch behind its base without moving the checkout.
+
+**Evidence.** Rollout `agent-a4cedd803fc1a5758.jsonl` of the test-evidence audit dispatched against head `f07db1bbaf225ec031d7a777f02c166daa588871` on 2026-09-16 rebased the branch to `15d4309e69c26804cd1b04676248a529fd0235b9`; implementation-audit run `2026-09-16_12-40-04-694-a2e206a2d753` then found its sealed head superseded.
+
+**Settlement condition.** `/sync-base` reports behind-base without moving the checkout when the caller selects it, or the context load reads the committed subject without calling it; the decision lives with the entry in `spx/21-spec-tree.enabler/18-context-loading.enabler/ISSUES.md`.
