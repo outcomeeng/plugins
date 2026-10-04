@@ -72,3 +72,37 @@ select `### Testing` for some rules rather than sending all three decisions to
 changeset that found it; the defect-class sweep across the touched node reaches
 these three, which sit under decisions this changeset does not otherwise govern
 and whose contexts are not loaded.
+
+## The agentic runners carry no generated-extent skip mechanics
+
+The bundled review and audit runners record no skipped generated extent in a run journal. The skip-and-record disposition `15-generated-attribution.pdr.md` declares reaches agentic runs through the root-instruction rule their agents load, which cannot emit scope-evidence journal events.
+
+**Settlement condition.** The `spx` verification scope projection ships and the review and audit runners consume its projection in place of the instruction prose.
+
+## The coherence audit names no declared generated-source relationship
+
+`spx/21-spec-tree.enabler/68-audit.enabler/32-changeset-coherence.enabler/changeset-coherence.md` and the shipped `src/plugins/spec-tree/skills/audit-changeset-coherence/SKILL.md` require declared generated-source relationship evidence without naming `spx/local/generated-sources.toml` as that source or citing the governing decision.
+
+**Settlement condition.** The node spec cites the declaration and the decision, and the skill reads its evidence from the declaration, in one changeset that carries the plugin version bump, the regeneration and the skill audit.
+
+## Generators that consume their own declared inputs carry no migration obligation
+
+`outcomeeng/catalog/plugin_catalog.py` reading `.claude-plugin/marketplace.json` and `outcomeeng_evals/ci_triggers.py` discovering `eval.toml` files are generators consuming their own declared inputs. They generate; they derive no generated-source attribution, so `15-generated-attribution.pdr.md` places no migration obligation on them. A Verifier skips this class.
+
+## A merging decision governs the apply flow's Verifier dispatches
+
+`spx/15-merging.pdr.md` is titled "Agent Authority over Merging" and opens on the `VERIFY -> PREVIEW -> MERGE -> DEPLOY -> RELEASE -> CLOSE` lifecycle, while its dispatch-readiness, repeated-class, finish-before-wait and bounded-projection rules bind the apply flow's per-node and whole-changeset gates as well. The rules' natural owner is `14-verification.pdr.md`, which already decides who dispatches an agentic verification, the Author and Verifier isolation, the defect-class sweep, the commit-before-read boundary and the deterministic-before-agentic ordering.
+
+**Settlement condition.** The readiness record, repeated-class invalidation, finish-before-wait and bounded-projection rules move into `14-verification.pdr.md`, `spx/15-merging.pdr.md` reduces to the merge-lifecycle specialization that cites them, and the realizing assertions in `spx/21-spec-tree.enabler/76-merge.enabler/merge.md`, `spx/21-spec-tree.enabler/65-apply.enabler/apply.md` and the two PR-lifecycle node specs re-point; `merging-standards` keeps the section text its merge transports read.
+
+**Revisit condition.** A third workflow outside the delivery path needs the readiness record, or `14-verification.pdr.md` is next restructured.
+
+## An implementation audit and a changeset review read one shipped executable to opposite verdicts
+
+On head `ccaef088c98007c963125af0fc621040d1f6b51b`, `spec-tree:implementation-auditor` run `2026-09-22_20-40-39-797-98d0f564dc05` approved `src/plugins/coding-agents/skills/orchestrate-officers/scripts/derive_ledger.py` with zero findings, and `spec-tree:changes-reviewer` run `2026-09-22_20-40-26-221-404eea4ba809` rejected line 181 of the same file by executing it: a JSON array under a read's `cause` raised `TypeError` outside the refused-source handler, against a contract of one invalid-input result on stdout and exit two. The repair landed at `1ea3cf1567a963c6466366098155fcaa3a04d01a`; the divergence is a difference in what each Verifier looked at.
+
+**Impact.** An implementation audit's approval of an executable carries no claim about the behavior the code's declared contract makes, so the two verdicts cannot both stand as gate evidence for one claim.
+
+**Settlement condition.** A decision states whether an implementation audit of a shipped executable executes it, so that audit's scope and verdict claim say so, or whether the verdict about executed behavior belongs only to a Verifier that executes, so the audit's approval is scoped to what reading establishes. `14-verification.pdr.md` bars an agentic run from running deterministic verification; whether a one-off execution of the subject is that is part of what is unsettled.
+
+**Related.** The two Verifier rules that collide on pinning a spec-declared tuning value, in the verification subtree's test-verification node, record two Verifiers reading two decisions to opposite verdicts, which amending one decision resolves.

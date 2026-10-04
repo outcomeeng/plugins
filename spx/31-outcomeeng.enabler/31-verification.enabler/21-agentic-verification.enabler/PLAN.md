@@ -1,7 +1,0 @@
-# Plan: agentic-verification
-
-The adapter contract is decided in `spx/31-outcomeeng.enabler/31-verification.enabler/21-agentic-verification.enabler/21-adapter-contract.adr.md`; its rules are untagged pending `/verify` routing (tracked in `spx/31-outcomeeng.enabler/31-verification.enabler/21-conformance-verification.enabler/PLAN.md`). Remaining work:
-
-- **Prompt-caching re-derivation** — the caching decision at `spx/13-infrastructure.enabler/25-eval-harness.enabler/15-prompt-caching.adr.md` re-derives with the external component's invocation design per `spx/31-outcomeeng.enabler/31-verification.enabler/18-verification-component.adr.md`. Its gate condition is stale: `anthropics/claude-code#34629` closed without resolution and the fork-session cache regression persists, so the three realization paths — the community request interceptor, partial amortization within one session, or staying single-turn — are an operator decision recorded when that invocation-design work begins. The old ADR stays authoritative for the shipped harness until cutover.
-- **Codex headless invocation spike** — establish the Codex adapter's bounded headless invocation shape before `spx/31-outcomeeng.enabler/31-verification.enabler/21-agentic-verification.enabler/21-codex-invocation.enabler` gains assertions.
-- **Runtime substrate assertions** — `21-claude-invocation.enabler` and `21-codex-invocation.enabler` remain declared placeholders until the component's adapter implementations exist to comply with them.
