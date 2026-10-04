@@ -14,8 +14,8 @@ from outcomeeng_testing.harnesses.sync_base import (
     build_detached_current_repo,
     build_non_utf8_branch_behind_base_repo,
     build_overlapping_base_repo,
+    build_prefetched_behind_base_repo,
     build_rename_base_repo,
-    fetch_base,
     load_sync_base_module,
     repository_root,
 )
@@ -81,10 +81,9 @@ def test_base_delta_accurate_when_caller_prefetched(
     tmp_path: pathlib.Path,
 ) -> None:
     module = load_sync_base_module()
-    handle = build_behind_base_repo(repository_root(tmp_path))
     # The caller already fetched the base before invoking sync-base, so the
     # remote-tracking ref already points at the advanced base.
-    fetch_base(handle.repo, handle.base_ref)
+    handle = build_prefetched_behind_base_repo(repository_root(tmp_path))
 
     result = module.sync_base(handle.repo)
     proof = result.preservation

@@ -17,8 +17,8 @@ from outcomeeng_testing.harnesses.sync_base import (
     build_conflicting_repo,
     build_detached_behind_base_repo,
     build_detached_dirty_behind_base_repo,
+    build_detached_diverged_repo,
     build_dirty_behind_base_repo,
-    detach_head,
     head_oid,
     head_parent_oids,
     load_sync_base_module,
@@ -175,12 +175,11 @@ def test_diverged_detached_head_is_never_advanced_commits_preserved(
     # Advancing it would orphan that commit, so sync-base reports git_failure and
     # leaves HEAD — and the feature commit — intact.
     module = load_sync_base_module()
-    handle = build_behind_base_repo(repository_root(tmp_path))
-    feature_oid_before = head_oid(handle.repo)
-    detach_head(handle.repo)
+    handle = build_detached_diverged_repo(repository_root(tmp_path))
 
     result = module.sync_base(handle.repo)
 
     assert result.status is module.SyncStatus.GIT_FAILURE
-    assert head_oid(handle.repo) == feature_oid_before
+    assert head_oid(handle.repo) == handle.detached_oid
+    assert handle.feature_file is not None
     assert (handle.repo / handle.feature_file).exists()

@@ -5,8 +5,7 @@ from __future__ import annotations
 import pathlib
 
 from outcomeeng_testing.harnesses.sync_base import (
-    build_behind_base_repo,
-    fetch_base,
+    build_prefetched_behind_base_repo,
     head_oid,
     load_sync_base_module,
     merge_base_oid,
@@ -19,8 +18,7 @@ def test_proof_carries_schema_version_and_full_oids_no_lane_name(
     tmp_path: pathlib.Path,
 ) -> None:
     module = load_sync_base_module()
-    handle = build_behind_base_repo(repository_root(tmp_path))
-    fetch_base(handle.repo, handle.base_ref)
+    handle = build_prefetched_behind_base_repo(repository_root(tmp_path))
     old_head = head_oid(handle.repo)
     old_base = merge_base_oid(handle.repo, handle.remote_ref)
     new_base = resolve_ref(handle.repo, handle.remote_ref)

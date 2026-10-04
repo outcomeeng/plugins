@@ -488,14 +488,18 @@ def build_untracked_only_behind_base_repo(root: pathlib.Path) -> BehindBaseRepo:
     return behind
 
 
-def fetch_base(repo: pathlib.Path, base_ref: str) -> None:
-    """Fetch the base into ``repo`` to simulate a caller that pre-fetched.
+def build_prefetched_behind_base_repo(root: pathlib.Path) -> BehindBaseRepo:
+    """Build a behind-base clone whose caller already fetched the base advance.
 
-    After this the working clone's remote-tracking ref already points at the
-    advanced base, so a preservation proof that anchored the base delta at the
-    pre-fetch remote ref would report an empty delta.
+    Same branch-behind-base state as ``build_behind_base_repo``, plus a fetch of
+    the base, so the working clone's remote-tracking ref already points at the
+    advanced base before synchronization runs. A preservation proof that
+    anchored the base delta at the pre-fetch remote ref would report an empty
+    delta here.
     """
-    _git(repo, "fetch", REMOTE.remote_name, base_ref)
+    behind = build_behind_base_repo(root)
+    _git(behind.repo, "fetch", REMOTE.remote_name, behind.base_ref)
+    return behind
 
 
 def head_oid(repo: pathlib.Path) -> str:
@@ -672,7 +676,7 @@ def branch_diff_bytes(repo: pathlib.Path, base: str) -> bytes:
     return result.stdout
 
 
-def detach_head(repo: pathlib.Path) -> None:
+def _detach_head(repo: pathlib.Path) -> None:
     """Detach HEAD so the branch cannot be resolved for a rebase."""
     sha = _git(repo, "rev-parse", "HEAD")
     _git(repo, "checkout", "-q", "--detach", sha)
@@ -689,7 +693,7 @@ def _working_clone_detached_on_base(
     the remote-tracking base once the base moves on.
     """
     repo = _working_clone(root, origin, data, REMOTE)
-    detach_head(repo)
+    _detach_head(repo)
     return repo
 
 
@@ -700,7 +704,9 @@ class DetachedRepo:
     ``detached_oid`` is the commit HEAD is parked at. ``base_file`` is the base
     advance the worktree is behind by — present only when a base advance was
     pushed (``None`` for the already-current case). ``dirty_file`` and
-    ``dirty_marker`` are populated only for the dirty case.
+    ``dirty_marker`` are populated only for the dirty case. ``feature_file`` is
+    populated only for the diverged case: the file the parked commit carries
+    and the base lacks.
     """
 
     repo: pathlib.Path
@@ -711,6 +717,7 @@ class DetachedRepo:
     base_file: str | None = None
     dirty_file: str | None = None
     dirty_marker: str | None = None
+    feature_file: str | None = None
 
 
 def build_detached_behind_base_repo(root: pathlib.Path) -> DetachedRepo:
@@ -789,6 +796,28 @@ def build_detached_dirty_behind_base_repo(
     )
 
 
+def build_detached_diverged_repo(root: pathlib.Path) -> DetachedRepo:
+    """Build a detached worktree whose parked commit has diverged from the base.
+
+    Same branch-behind-base state as ``build_behind_base_repo``, with HEAD then
+    detached at the feature commit: the parked commit carries ``feature_file``,
+    which the base lacks, while the base has advanced past the fork point and
+    the clone has not fetched it. ``detached_oid`` is that parked feature
+    commit; advancing the worktree to the base tip would orphan it.
+    """
+    behind = build_behind_base_repo(root)
+    _detach_head(behind.repo)
+    return DetachedRepo(
+        repo=behind.repo,
+        base_ref=behind.base_ref,
+        remote_ref=behind.remote_ref,
+        detached_oid=head_oid(behind.repo),
+        data=behind.data,
+        base_file=behind.base_file,
+        feature_file=behind.feature_file,
+    )
+
+
 def build_detached_untracked_only_behind_base_repo(
     root: pathlib.Path,
 ) -> DetachedRepo:
@@ -819,7 +848,7 @@ def build_detached_no_remote_repo(root: pathlib.Path) -> DetachedRepo:
     _git(root, "init", "-q", "-b", data.base_branch, str(repo), cwd=root)
     _configure(repo)
     _commit_file(repo, data.initial_file, data.initial_content, data.initial_message)
-    detach_head(repo)
+    _detach_head(repo)
     return DetachedRepo(
         repo=repo,
         base_ref=data.base_branch,
