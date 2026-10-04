@@ -40,7 +40,10 @@ from outcomeeng.distribution.orchestration import (
     CLAUDE_DIST_PLUGINS_DIR,
     SOURCE_PLUGINS_DIR,
 )
-from outcomeeng.validation.audit_artifacts import check_audit_artifact_contract
+from outcomeeng.validation.audit_artifacts import (
+    check_audit_artifact_contract,
+    check_registered_skills,
+)
 
 # Paths to both marketplace catalogs, relative to the repo root.
 CATALOGS = CATALOG_PATHS
@@ -298,8 +301,19 @@ def main(
     audit_artifact_errors = check_audit_artifact_contract(root)
     _report_contract_errors("audit artifacts", audit_artifact_errors)
 
+    registry_errors = check_registered_skills(root)
+    _report_contract_errors("artifact registry", registry_errors)
+
     return (
-        1 if (failures or sync_errors or parity_errors or audit_artifact_errors) else 0
+        1
+        if (
+            failures
+            or sync_errors
+            or parity_errors
+            or audit_artifact_errors
+            or registry_errors
+        )
+        else 0
     )
 
 

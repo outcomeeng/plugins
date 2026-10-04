@@ -19,6 +19,8 @@
     "outcomeeng/vendor/**",
     "outcomeeng_testing/fixtures/link_conversion/**",
     "pyproject.toml",
+    // The authored registry data file carries one build token and renders into JSON under dist/.
+    "src/plugins/*/skills/*/scripts/artifact-registry.json",
   ],
   "dockerfile": {},
   "json": {

@@ -1,19 +1,34 @@
-"""Process boundary for the implementation audit's shipped scope entrypoint."""
+"""Process boundary for the implementation audit's shipped scope entrypoint.
+
+The entrypoint under test is the rendered copy the build ships under
+``dist/claude/``: the resolver reads the artifact registry from a rendered
+sibling data file, which only the shipped tree carries as a JSON document.
+"""
 
 import contextlib
 import io
 import json
 import pathlib
-import runpy
 import subprocess
 import sys
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
+from types import ModuleType
 from typing import Any, Literal, cast
 
+from outcomeeng.distribution.contracts import DIST_DIR_NAME, SKILLS_SUBDIR_NAME, Target
+from outcomeeng.distribution.shipped_scripts import load_shipped_module
+from outcomeeng.validation.audit_artifacts import IMPLEMENTATION_AUDIT_SCOPE_ENTRYPOINT
 from outcomeeng.validation.implementation_audit_contract import (
+    IMPLEMENTATION_AUDIT_SKILL_NAME,
+    SPEC_TREE_PLUGIN_NAME,
     ImplementationAuditConcern,
     implementation_audit_unit_id,
+)
+from outcomeeng_testing.harnesses.changeset_scope import (
+    StaleBaseRepo,
+    commit_file,
+    stale_local_base_repo,
 )
 
 SCRIPT_PATH = (
@@ -21,16 +36,23 @@ SCRIPT_PATH = (
     .resolve()
     .parents[2]
     .joinpath(
-        "src",
-        "plugins",
-        "spec-tree",
-        "skills",
-        "audit-implementation",
-        "scripts",
-        "resolve_scope.py",
+        DIST_DIR_NAME,
+        Target.CLAUDE.value,
+        SPEC_TREE_PLUGIN_NAME,
+        SKILLS_SUBDIR_NAME,
+        IMPLEMENTATION_AUDIT_SKILL_NAME,
+        IMPLEMENTATION_AUDIT_SCOPE_ENTRYPOINT,
     )
 )
-_MODULE = runpy.run_path(str(SCRIPT_PATH))
+_RESOLVE_SCOPE_MODULE_NAME = "implementation_resolve_scope"
+
+
+def load_resolve_scope_module() -> ModuleType:
+    """Load the shipped scope resolver once as a module; every accessor reads that copy."""
+    return load_shipped_module(_RESOLVE_SCOPE_MODULE_NAME, SCRIPT_PATH)
+
+
+_MODULE = vars(load_resolve_scope_module())
 ERROR_PREFIX = cast(str, _MODULE["ERROR_PREFIX"])
 RECONCILE_PREFIX = cast(str, _MODULE["RECONCILE_PREFIX"])
 SCOPE_IDENTITY_OPTION = cast(str, _MODULE["SCOPE_IDENTITY_OPTION"])
@@ -49,9 +71,9 @@ EXIT_COMMAND_FAILURE = cast(int, _MODULE["EXIT_COMMAND_FAILURE"])
 REQUIRED_COVERAGE = cast(str, _MODULE["REQUIRED_COVERAGE"])
 FINAL_COVERAGE_STATUSES = cast(frozenset[str], _MODULE["FINAL_COVERAGE_STATUSES"])
 MISSING_SKILL_STATUS = cast(str, _MODULE["MISSING_SKILL_STATUS"])
-# The two StrEnum classes come out of the runpy namespace as plain objects;
-# a concrete class annotation cannot name members the checker never sees, so
-# the cast admits attribute access and the tests pin each member by value.
+# The module is loaded from a file path, so the checker sees its two StrEnum
+# classes as plain objects and can name none of their members; the cast admits
+# attribute access, and the tests pin each member by value.
 AUDIT_FIELD = cast(Any, _MODULE["AuditField"])
 RECONCILE_FIELD = cast(Any, _MODULE["ReconcileField"])
 reconcile = cast(
@@ -275,3 +297,17 @@ def run_implementation_scope(
         capture_output=True,
         check=False,
     )
+
+
+@contextlib.contextmanager
+def feature_paths_repo(paths: Sequence[str]) -> Iterator[StaleBaseRepo]:
+    """Yield a stale-base repository whose feature branch also changes ``paths``.
+
+    Each path is committed on the feature branch after the generated feature
+    file, so the changeset scoped against the remote base carries the generated
+    feature file and every supplied path.
+    """
+    with stale_local_base_repo() as stale:
+        for name in paths:
+            commit_file(stale.repo, name, name, name)
+        yield stale
