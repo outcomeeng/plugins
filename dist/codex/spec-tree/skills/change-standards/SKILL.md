@@ -3,8 +3,7 @@ name: change-standards
 user-invocable: false
 description: >-
   Change record standards for Intent, maturity, lifecycle, authority,
-  refinement, and continuation. Loaded by composing workflows, not invoked
-  directly.
+  refinement, and continuation. Loaded by other skills, not invoked directly.
 argument-hint: "<Proposed|Framed|Sliced|Executable|Lifecycle>"
 arguments: selection
 allowed-tools: Read
