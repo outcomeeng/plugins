@@ -6,6 +6,7 @@ from outcomeeng.validation.implementation_audit_contract import (
     AuditCoverageRequirement,
     AuditCoverageStatus,
     ImplementationAuditConcern,
+    implementation_audit_accounting_payload,
     implementation_audit_concern_skill_name,
 )
 from outcomeeng_testing.harnesses.audit_verification_run_contract import (
@@ -14,9 +15,12 @@ from outcomeeng_testing.harnesses.audit_verification_run_contract import (
 from outcomeeng_testing.harnesses.changeset_scope import (
     ORIGIN_HEAD_REF,
     CHANGESET_SCOPE,
+    CHANGESET_SCOPE_CONTRACT,
     base_advanced_after_branch_repo,
     git_commit_oid,
+    git_rename_records,
     remote_base_oid,
+    renamed_file_repo,
     stale_local_base_repo,
 )
 from outcomeeng_testing.generators.changeset_scope import distinct_subject_paths
@@ -386,6 +390,68 @@ def test_a_missing_skill_unit_names_its_absent_skill_and_is_never_unexpected() -
     assert verdict[RECONCILE_FIELD.UNEXPECTED] == []
     assert verdict[RECONCILE_FIELD.NONFINAL] == []
     assert verdict[RECONCILE_FIELD.RECONCILED] is True
+
+
+def test_a_rename_reconciles_with_a_destination_unit_and_a_source_accounting_record() -> (
+    None
+):
+    """A renamed file's two paths both stand in the sealed inventory.
+
+    The run records a concern unit for the destination and an accounting record
+    for the source the head no longer carries. Dropping the rename's source from
+    the fresh resolution reports it as drift; omitting the source's accounting
+    record leaves it unaccounted.
+    """
+    with renamed_file_repo() as renamed:
+        origin_base = CHANGESET_SCOPE_CONTRACT.ORIGIN_REF_PREFIX + renamed.base_ref
+        assert git_rename_records(renamed.repo, origin_base) == (
+            (renamed.source_file, renamed.destination_file),
+        )
+        recorded_input = {
+            CHANGESET_SCOPE.ScopeField.CHANGED_PATHS: [
+                renamed.source_file,
+                renamed.destination_file,
+            ]
+        }
+        destination_unit = audit_scope_unit(
+            renamed.destination_file,
+            language=LANGUAGE,
+            concern=CONCERN,
+            requirement=REQUIRED_COVERAGE,
+            status=FINAL,
+        )
+        source_record = implementation_audit_accounting_payload(
+            subject_path=renamed.source_file
+        )
+
+        accounted = run_implementation_scope_against_recorded_run(
+            renamed.repo,
+            CHANGESET_SCOPE.HEAD_REF,
+            reconcile_run=ABSENT_RUN_TOKEN,
+            scope_identity=SENTINEL_SCOPE_IDENTITY,
+            recorded_input=recorded_input,
+            scope_units=[destination_unit, source_record],
+        )
+        unaccounted = run_implementation_scope_against_recorded_run(
+            renamed.repo,
+            CHANGESET_SCOPE.HEAD_REF,
+            reconcile_run=ABSENT_RUN_TOKEN,
+            scope_identity=SENTINEL_SCOPE_IDENTITY,
+            recorded_input=recorded_input,
+            scope_units=[destination_unit],
+        )
+
+        assert accounted.returncode == 0
+        verdict = json.loads(accounted.stdout)
+        assert verdict[RECONCILE_FIELD.DRIFTED] == []
+        assert verdict[RECONCILE_FIELD.UNACCOUNTED] == []
+        assert verdict[RECONCILE_FIELD.UNEXPECTED] == []
+        assert verdict[RECONCILE_FIELD.NONFINAL] == []
+        assert verdict[RECONCILE_FIELD.RECONCILED] is True
+        assert unaccounted.returncode == EXIT_UNRECONCILED
+        rejected = json.loads(unaccounted.stdout)
+        assert rejected[RECONCILE_FIELD.UNACCOUNTED] == [renamed.source_file]
+        assert rejected[RECONCILE_FIELD.RECONCILED] is False
 
 
 def test_a_head_behind_the_fetched_base_is_relayed_as_the_stale_base_refusal() -> None:
