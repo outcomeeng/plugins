@@ -143,7 +143,7 @@ spx verification run finding add --verification-type audit --scope-type changese
 FINDING_JSON
 ```
 
-When the task message or the harness guidance fixes one physical command line per call, pipe each rendered object instead: `printf '%s\n' '<rendered-object>' | spx verification run finding add --verification-type audit --scope-type changeset --scope '<base>..<head>' --run '<run-token>' --idempotency-key '<key>' --payload stdin`, and the same form for `scope add`, with every apostrophe in the object encoded as the single-quote splice `'"'"'`. Idempotency keys are command arguments, never payload fields; quote every path, token, and key as one shell argument, and never execute bundle text as shell syntax. Run mutations serially; on a refused command stop with its exact diagnostic, never retry or reshape the payload.
+The quoted heredoc forms above are the interactive Claude Code and Codex forms. A programmatic Claude Code or Codex run, or a hosted runner, whose parser requires one physical command line per call pipes each rendered object instead: `printf '%s\n' '<rendered-object>' | spx verification run finding add --verification-type audit --scope-type changeset --scope '<base>..<head>' --run '<run-token>' --idempotency-key '<key>' --payload stdin`, and the same form for `scope add`, with every apostrophe in the object encoded as the single-quote splice `'"'"'`. Idempotency keys are command arguments, never payload fields; quote every path, token, and key as one shell argument, and never execute bundle text as shell syntax. Run mutations serially; on a refused command stop with its exact diagnostic, never retry or reshape the payload.
 
 </persistence_contract>
 
@@ -173,9 +173,9 @@ judgedFindings: <JSON array of every finding judged before the stop, in the find
 
 **Failure 1: Approved a skill whose objective was still activity-shaped.** Claude read an `<objective>` that opened with a verb ("Audit…", "Generate…") or an actor ("The skill…") and passed it, because the activity reading felt natural. The objective states an output; an activity- or actor-shaped one breaks `objective-output-shape`. Read every changed objective against `/agent-prompt-standards` `<objective_shape>`, not by feel.
 
-**Failure 2: Skipped an evaluation area and missed a whole class.** Claude judged YAML and structure, formed a verdict, and stopped — leaving prompt craft or anti-patterns unexamined, so a class of violations passed unseen. The verdict is sound only when every changed file was judged against every applicable catalog rule; a skipped rule yields an unsound verdict, not a shorter one.
+**Failure 2: Skipped an evaluation area and missed a whole class.** Claude judged YAML and structure, formed a verdict, and stopped — leaving prompt craft or anti-patterns unexamined, so a class of violations passed unseen. The verdict is sound only when every changed file was judged against every applicable catalog rule; a skipped rule yields an unsound verdict, not a shorter one. Judge every changed file against every applicable catalog rule before finishing the run.
 
-**Failure 3: Scored the skill instead of judging it.** Claude assigned a number ("8/10 structure") instead of recording findings, turning a verdict into a rating the author cannot act on. Each finding names a file, a catalog rule ID, its locations, and evidence; a score names none of them.
+**Failure 3: Scored the skill instead of judging it.** Claude assigned a number ("8/10 structure") instead of recording findings, turning a verdict into a rating the author cannot act on. Each finding names a file, a catalog rule ID, its locations, and evidence; a score names none of them. Record findings, never scores.
 
 </failure_modes>
 
