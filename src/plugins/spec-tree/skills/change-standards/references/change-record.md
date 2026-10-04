@@ -1,13 +1,13 @@
 <contents>
 
 - `<authority>` — the governing Change chapter and the record's boundary
-- `<record_rules>` — `record-shape`, `output-and-value`, `received-input-boundary`, `lineage`, `blockers`, `frame`, `maturity-and-authority`, `activities`, `store-independence`, `compatibility-boundary`
+- `<record_rules>` — `record-shape`, `intent`, `received-input-boundary`, `lineage`, `blockers`, `nodes`, `assertion-operations`, `decisions`, `slice`, `activities`, `body-authority`, `maturity-and-authority`, `store-independence`, `compatibility-boundary`
 
 </contents>
 
 <authority>
 
-The governing methodology is the Change chapter selected by the consumer repository's `spx.config.yaml`. An accepted `methodology.version` is exactly `4.0`, or exactly `4.0.N` with `N` one or more decimal digits representing a non-negative integer. Both accepted forms select `versions/4.0/methodology/change/changes.md` inside the declared `methodology.source`. An absent configuration, absent `methodology` block, the sentinel `installed`, another major or minor line, a non-integer patch component, an extra version component, and a prerelease suffix are invalid selections. The invalid-selection diagnostic contains the observed value — `absent` when no value exists — and the accepted forms `4.0` and `4.0.N`, where `N` is a non-negative integer. This reference operationalizes the selected chapter without replacing it. A Change is mutable coordination for one intended Output in one Product; it declares no product, architecture, or methodology truth.
+The governing methodology is the Change chapter selected by the consumer repository's `spx.config.yaml`. An accepted `methodology.version` is exactly `4.0`, or exactly `4.0.N` with `N` one or more decimal digits representing a non-negative integer. Both accepted forms select `versions/4.0/methodology/change/changes.md` inside the declared `methodology.source`. An absent configuration, absent `methodology` block, the sentinel `installed`, another major or minor line, a non-integer patch component, an extra version component, and a prerelease suffix are invalid selections. The invalid-selection diagnostic contains the observed value — `absent` when no value exists — and the accepted forms `4.0` and `4.0.N`, where `N` is a non-negative integer. This reference operationalizes the selected chapter without replacing it. A Change is mutable coordination for one intended Output in one Product; it declares no product, architecture, or methodology truth. Its body carries content only; every state and every authority event is read from the store.
 
 </authority>
 
@@ -22,34 +22,45 @@ Every Change begins with YAML front matter containing exactly these required key
 | `title`        | Non-empty string naming the intended Output.                                |
 | `product`      | Non-empty string naming exactly one owning Product.                         |
 | `maturity`     | `Proposed`, `Framed`, `Sliced`, or `Executable`.                            |
-| `lifecycle`    | `Available`, `Claimed`, `Applied`, `Refined`, or `Abandoned`.               |
+| `lifecycle`    | `Available`, `Claimed`, `Submitted`, `Applied`, `Refined`, or `Abandoned`.  |
 | `refined_from` | Immutable list of canonical predecessor Change identities; `[]` for a root. |
 | `blocked_by`   | Mutable list of canonical blocker Change identities; `[]` when unblocked.   |
 
 Each required key appears exactly once. The `compatibility-boundary` rule governs a candidate whose front matter omits, repeats, or adds a key. For a candidate inside the contract, an invalid value type or value is a defect. Store coordinates, issue identities, holder data, timestamps, and verification data stay outside front matter.
 
-The body contains exactly these top-level sections in this order:
+The body opens with `## Intent`. Each Maturity adds its sections after the Intent, in this order:
 
-1. `# Output`
-2. `# Value`
-3. `# Frame`
-4. `# Activities`
+| Section                   | First required at | Rule                   |
+| ------------------------- | ----------------- | ---------------------- |
+| `## Intent`               | Proposed          | `intent`               |
+| `## Nodes`                | Framed            | `nodes`                |
+| `## Assertion operations` | Framed            | `assertion-operations` |
+| `## Decisions`            | Framed            | `decisions`            |
+| `## Slice`                | Sliced            | `slice`                |
+| `## Activities`           | Executable        | `activities`           |
 
-Missing, reordered, duplicated, or unknown top-level sections are defects. Subsections may refine the four sections. Front-matter values are never restated or maintained as body lines.
+A Proposed record may also carry `## Decisions` holding its open questions. Every section present stands in this order, appears once, and is a level-two heading; a missing required section, a reordered or duplicated section, and an unknown level-two section are defects. Subsections may refine a section. Front-matter values are never restated or maintained as body lines.
 
 </rule>
 
-<rule id="output-and-value">
+<rule id="intent">
 
-`# Output` states the decision or spec evolution, lower-layer reconciliation, or combination the Change produces. The title names the same Output. Preserve observable behavior, consequential exclusions, and operator-approved prototype constraints when they shape the Output.
+`## Intent` carries four parts, each a labeled line or paragraph:
 
-`# Value` states why the operator conditionally prioritizes the Output for Build refinement using one established form: truth brought to a lower layer, operator judgment, a prototype question, or an Output and the condition it moves. Keep detail proportional to consequences. NEVER invent beneficiaries, measurements, business benefits, research, or rejected alternatives to lengthen the record.
+- **What** — the Output the Change achieves: a decision or spec evolution, a lower-layer reconciliation, or both. The title names the same Output.
+- **Why** — what makes the work worth doing, in one established form: truth brought to a lower layer, an operator judgment, a prototype question, or an Output and the condition it moves.
+- **Observation** — optional: the observed state that gives rise to the Change. It is present only where such an observation exists.
+- **Evidence** — the observable result by which anyone checks that the Output is achieved.
+
+What, Why, and Evidence are required. Preserve observable behavior, consequential exclusions, and operator-approved prototype constraints when they shape the Output. Keep detail proportional to consequences. NEVER invent beneficiaries, measurements, business benefits, research, or rejected alternatives to lengthen the record.
+
+When the Change derives from a raw submission, the Intent restates that submission in the proposer's terms as What, Why, Observation, and Evidence; an unclear part is recorded as an open question under `## Decisions`, never answered by invention.
 
 </rule>
 
 <rule id="received-input-boundary">
 
-Preserve the proposal in the proposer's terms while excluding provider conversations, transcripts, prompt copies, and received conversation input from the Change record. The coordination system owns native issue history. Reusable learning belongs in the owning Product's knowledge root when separately authored.
+Preserve the proposal in the proposer's terms while excluding provider conversations, transcripts, prompt copies, cost estimates, resource accounting, routine local commands, and received conversation input from the record. The coordination store owns native issue history. Reusable learning belongs in the owning Product's knowledge root when separately authored.
 
 </rule>
 
@@ -69,45 +80,69 @@ When a blocker becomes `Refined`, follow its successors. Applied leaves satisfy 
 
 </rule>
 
-<rule id="frame">
+<rule id="nodes">
 
-`# Frame` carries only facts established at the declared Maturity. From Framed onward it identifies every affected or intended Node, each Assertion operation, every Decision needed to preserve product intent, and each affected node's target malleability as `spec`, `verification`, or `implementation`. A node's target malleability is the value the node declares once the Change is applied; a Change that neither hardens nor softens a node carries the node's current declared value, and an absent field means `implementation`, the floor. Target malleability is a per-node fact; the record carries no Change-wide target. Existing references resolve; intended references are labeled as intended. The Frame carries `Intent attestation: attested by the operator on <date>.` from Framed onward.
-
-From Sliced onward the Frame identifies one repository, resolved dependencies and sequence, and the named accountable person. At Executable it also states, for every Node the changeset touches, everything the Executable Definition of Ready's `executable-state-evidence` criterion requires. An operator-approved prototype exception remains explicit with its scope. The Change never overrides a Decision or Assertion; Activities author truth changes before dependent implementation.
+`## Nodes` is a table with one row per affected or intended Node, carrying its full `spx/...` path, its target malleability, and, from Executable, its required state. A Node's target malleability is the value the Node declares once the Change is applied: `spec`, `verification`, or `implementation`, an absent field meaning `implementation`. A row whose target malleability differs from the Node's declared malleability also names the declared value. The malleability order from most to least malleable is `spec`, `verification`, `implementation`; the least malleable target is the row value latest in that order. Target malleability is a per-Node fact; the record carries no Change-wide target. Existing paths resolve; an intended Node is labeled as intended.
 
 </rule>
 
-<rule id="maturity-and-authority">
+<rule id="assertion-operations">
 
-Maturity records refinement readiness and may move backward when its Definition of Ready becomes false. Lifecycle records ownership or termination and changes independently. Applied, Refined, and Abandoned are terminal Lifecycle values.
+`## Assertion operations` names each addition, amendment, or removal of an assertion or decision rule by its owning Node or decision record and its exact target. A Change never overrides a Decision or Assertion; Activities author truth changes before dependent implementation.
 
-Advancement requires the target level's complete Definition of Ready and authority. From Framed onward, the in-Frame Intent attestation records the operator's approval of the complete Frame. Sliced additionally names the accountable person, and Executable remains inside that attested Frame. Claude may advance Sliced to Executable by resolving implementation detail inside the Frame. A reopened product or architecture judgment blocks Executable advancement.
+</rule>
 
-A Claimed holder writes a Handoff and releases the Change before lowering Maturity. Author, Fixer, and Verifier roles hold no claim and gain no integration authority from editing or auditing the record.
+<rule id="decisions">
+
+`## Decisions` holds each question that can change the intended Output or that preserves product intent, with its answer once settled. At Proposed it holds the known open questions unanswered; from Framed every such question carries its answer, and an operator-approved prototype exception stands as an answered Decision with its scope.
+
+</rule>
+
+<rule id="slice">
+
+`## Slice` names the one repository, the one vertical slice — one coherent, independently integrable unit whose dependencies and sequence are resolved — and its observable check.
 
 </rule>
 
 <rule id="activities">
 
-`# Activities` contains the mutable ordered execution plan another holder needs to coordinate. Each Activity names the result it produces and the target needed to continue. Executable Activities are sufficient to proceed without reopening product or architecture judgment.
+`## Activities` contains the mutable ordered execution plan another holder needs to coordinate. Each Activity names one result on one Node and the round that produces it.
 
-Routine command logs, run tokens, verdicts, findings, verification history, cost estimates, resource accounting, and session narrative stay outside the Change. A Handoff carries transient continuation: branch or changeset, completed and next Activities, blockers, and non-obvious hazards.
+Routine command logs, run tokens, verdicts, findings, verification history, and session narrative stay outside the Change. A Handoff carries transient continuation: branch or changeset, completed and next Activities, blockers, and non-obvious hazards.
+
+</rule>
+
+<rule id="body-authority">
+
+The body carries no attestation, accountable-person, priority, or overrule text. A line that records who approved, attested, prioritized, confirmed, or is accountable for the Change, or that overrides a rule, is a defect wherever it stands in the body.
+
+</rule>
+
+<rule id="maturity-and-authority">
+
+Maturity records refinement readiness and may move backward when its Definition of Ready becomes false. Lifecycle records holding, submission, or termination and changes independently. Applied, Refined, and Abandoned are terminal Lifecycle values.
+
+Maturity advances past Proposed, Framed, and Sliced only when the target level's complete Definition of Ready holds and the store shows the Product's Maintainer's move of the Change out of `Submitted` at the Maturity it leaves. At Proposed that move is the priority decision; at Framed it attests that the Change captures the operator's intent; at Sliced it confirms the slice. The Refiner advances Sliced to Executable inside the authority of the confirmed slice, with no further move, by resolving implementation detail; a reopened product or architecture judgment blocks Executable advancement.
+
+Authority is read from the store and never from the body. The store's field-change event for the Lifecycle move out of `Submitted` gives the actor and the time; the confirmation comment posted with that move names the delegate that performed it, the operator it acts for, its agent harness, and its agent session. A move out of `Submitted` that posts a rejection comment grants no authority, and `author-change` lowers Maturity after it. The Lifecycle reference's `authority-read` rule names the store reads.
+
+A Claimed holder writes a Handoff and releases the Change before lowering Maturity. Author, Fixer, and Verifier roles hold no claim and gain no integration authority from editing or auditing the record.
 
 </rule>
 
 <rule id="store-independence">
 
-Each of the six fields has exactly one home in each place that holds the Change, and no place writes a field twice. The local draft carries all six as its front matter above the four sections. A coordination store holds each field in the one native feature the persisting skill assigns it for that store, and its body holds the four sections with no front matter and no lineage line. Persistence writes each field to its home and the four sections to the body, reads each back unchanged, and reports success only then; importing a published Change into a draft reads each field from its home. A coordination-store limit never shapes the record.
+Each of the six fields has exactly one home in each place that holds the Change, and no place writes a field twice. The local draft carries all six as its front matter above the body. A coordination store holds each field in the one native feature the Lifecycle reference's `canonical-state` rule assigns it for that store, and its body holds the Intent and the sections the Maturity adds, with no front matter and no lineage line. Persistence writes each field to its home and the body to the store body, reads each back unchanged, and reports success only then; importing a published Change into a draft reads each field from its home. A coordination-store limit never shapes the record.
 
-Store commands, provider identifiers, issue and field identifiers, revision selectors, concurrency observations, and holder observations are workflow state outside the record.
+Store commands, provider identifiers, issue and field identifiers, revision selectors, concurrency observations, holder observations, field-change events, and Lifecycle comments are store state outside the record.
 
 </rule>
 
 <rule id="compatibility-boundary">
 
-Inventory the front-matter key occurrences before interpreting the body. A candidate is inside the contract only when it carries each of the six closed-set keys exactly once and no other key. Stripped front matter, a missing or repeated required key, and any extra key — including `change_ref` — place the candidate outside the contract.
+Inventory the front-matter key occurrences before interpreting the body. A candidate is inside the contract only when it carries each of the six closed-set keys exactly once and no other key, and its body does not open with `# Output`. Stripped front matter, a missing or repeated required key, and any extra key — including `change_ref` — place the candidate outside the contract, and so does a body that opens with `# Output`.
 
-A candidate outside the contract receives no judgment, migration, alias, inferred front matter, or body-line lineage interpretation; report it as outside the contract with the expected and observed key inventories. Body shape never establishes compatibility. A candidate carrying the exact closed key set remains judgeable when a value, top-level section, body line, or Maturity-specific requirement violates the record contract or selected Definition of Ready.
+A candidate outside the contract receives no judgment, migration, alias, inferred front matter, or body-line lineage interpretation; report it as outside the contract with the expected and observed key inventories, or with the observed opening heading. A record in the `# Output` form takes the Intent form at its next revision through `author-change`; no other workflow rewrites it. A candidate inside the contract remains judgeable when a value, section, body line, or Maturity-specific requirement violates the record contract or the selected Definition of Ready.
 
 </rule>
 
