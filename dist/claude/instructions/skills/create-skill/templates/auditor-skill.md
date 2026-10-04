@@ -78,7 +78,14 @@ These objects are the sanctioned SPX audit payload schema for this auditor; use 
     "skillOwningPluginName": "{{owning-plugin}}",
     "invocationRole": "leaf-skill"
   },
-  "recordedByRunDriver": "<replace-with-supplied-six-field-object>",
+  "recordedByRunDriver": {
+    "producerKind": "<supplied>",
+    "agentName": "<supplied>",
+    "agentOwningPluginName": "<supplied>",
+    "skillName": "<supplied>",
+    "skillOwningPluginName": "<supplied>",
+    "invocationRole": "<supplied>"
+  },
   "producerProvenance": {
     "agentOwningPluginVersion": "<owning-plugin-version>",
     "skillOwningPluginVersion": "<owning-plugin-version>",
@@ -98,8 +105,19 @@ A finding copies its unit's `expectedProducer` object as `producerIdentity` and 
 ```json
 {
   "unitId": "<accepted-unit-key>",
-  "producerIdentity": "<accepted-unit-expectedProducer-object>",
-  "producerProvenance": "<accepted-unit-producerProvenance-object>",
+  "producerIdentity": {
+    "producerKind": "skill",
+    "agentName": "<supplied-agent-name>",
+    "agentOwningPluginName": "<supplied-agent-owning-plugin>",
+    "skillName": "audit-{{subject}}",
+    "skillOwningPluginName": "{{owning-plugin}}",
+    "invocationRole": "leaf-skill"
+  },
+  "producerProvenance": {
+    "agentOwningPluginVersion": "<owning-plugin-version>",
+    "skillOwningPluginVersion": "<owning-plugin-version>",
+    "toolVersion": "<exact-spx-version>"
+  },
   "rule": "<violated-rule-id>",
   "severity": "<blocking-or-debt>",
   "location": "<file-and-line-or-section>",
