@@ -98,7 +98,9 @@ def _run(adapter: Path, request: dict, timeout: float) -> dict:
             check=False,
         )
     except subprocess.TimeoutExpired as error:
-        raise AdapterError(f"{adapter.name}: no answer within {timeout:.0f}s") from error
+        raise AdapterError(
+            f"{adapter.name}: no answer within {timeout:.0f}s"
+        ) from error
     try:
         result = json.loads(completed.stdout)
     except json.JSONDecodeError as error:
