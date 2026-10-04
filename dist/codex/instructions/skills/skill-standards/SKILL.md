@@ -44,7 +44,7 @@ For language-specific skill prose that references a foundation, use the unqualif
 4. A composition step invokes only capabilities required by the workflow; it never discovers or invokes adjacent skills speculatively.
 5. Reference-only prose may name foundational concepts without invocation, while reference skills are loaded through the runtime's skill-invocation capability when their full standards govern the work.
 
-**Caller independence:** A skill governs its own behavior and nothing else. It never names, describes, detects, constrains, refuses, branches on, or otherwise depends on its caller or invocation context. The dependency runs one way: a caller may know the skill it invokes; the skill never knows its callers. The harness environment its commands execute in is not a caller (`references/command-capabilities.md` `<payload_commands>`).
+**Caller independence:** A skill governs its own behavior and nothing else. It never names, describes, detects, constrains, refuses, branches on, or otherwise depends on its caller or invocation context. The dependency runs one way: a caller may know the skill it invokes; the skill never knows its callers. The harness environment its commands execute in is not a caller (`${SKILL_DIR}/references/command-capabilities.md` `<payload_commands>`).
 
 Context placement, agent selection, and dispatch policy belong to the caller. A skill remains independently invocable even when the product normally reaches it through an agent or another skill. Correct an invalid invocation in the router, agent, or composing skill that made the decision; never add a dispatch gate or caller check to the invoked skill.
 
@@ -186,7 +186,7 @@ Don't over-engineer simple skills. Don't under-specify complex ones.
 
 When a foundation skill requires the same material on every fresh invocation, inline that canonical material and govern the total eager payload instead of the SKILL.md line count. The exception requires the same material on every invocation, removal of mandatory secondary reads, separate conditional detail, internal consistency, improved effectiveness, and a rendered payload of at most 40,000 Unicode code points measured by every audit. Never use it to inline optional detail or avoid routing.
 
-This skill invokes the exception for itself. An author needs its structure table, its command-capability rules, and its path boundary on one invocation, and each of its six references carries conditional detail rather than a mandatory read. Measure the skill as installed, which is the payload an invocation loads:
+This skill invokes the exception for itself. An author needs its structure table, its command-capability rules, and its path boundary on one invocation, and each of its seven references carries conditional detail rather than a mandatory read. Measure the skill as installed, which is the payload an invocation loads:
 
 ```bash
 python3 -c "from pathlib import Path; print(len(Path('${SKILL_DIR}/SKILL.md').read_text(encoding='utf-8')))"
