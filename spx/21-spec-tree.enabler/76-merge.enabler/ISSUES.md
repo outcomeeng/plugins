@@ -175,9 +175,11 @@ Successor: a Proposed Change filed after outcomeeng/changes#91 merges, carrying 
 
 Revisit and settlement condition: each rule stated once with cross-references, semantic tag names in `manage-pr`, distinct trigger terms in the two descriptions, and one typed skill audit per revised skill approving with no `conciseness` finding.
 
-## The lifecycle evals leave three behaviors unmodeled
+## The lifecycle evals leave four behaviors unmodeled
 
-The deterministic mapping tests cover the declared and absent `DEPLOY` and `RELEASE` decisions, and the `transport-selection` and `local-completion-boundary` eval suites cover transport selection and the completion boundary. Three behaviors have no eval case:
+The deterministic mapping tests cover the declared and absent `DEPLOY` and `RELEASE` decisions, and the `transport-selection` and `local-completion-boundary` eval suites cover transport selection and the completion boundary. Four behaviors have no eval case:
+
+- A declared `PREVIEW` runs after `VERIFICATION_READINESS` holds and before `MERGE_READINESS` advances the lifecycle, and an absent `PREVIEW` is a no-op that never blocks merge, deploy, release or close. `spx/21-spec-tree.enabler/76-merge.enabler/merge.md` and `spx/15-merging.pdr.md` declare the phase, and no eval under `evals/` mentions it.
 
 - A declared `DEPLOY` awaits `DEPLOYMENT_READINESS`, an absent `DEPLOY` skips the phase, a declared `RELEASE` awaits `RELEASE_READINESS`, runs after `MERGE` and after any declared `DEPLOY`, an absent `RELEASE` skips the phase, and a flow that stops after `MERGE` fails when `RELEASE` is declared. These are lifecycle eval cases for the subject of skill orchestration rather than the mapping helper.
 - The `transport-selection` eval's ten cases model the selector through `input.overlay_transport_selector` (`none`, `direct-push`, `manage-github-pr`), and the `none` cases cover the default-fallthrough outcome an absent overlay produces. The present-but-silent against file-absent distinction is not modeled. An explicit absent-overlay case needs a new `cases.jsonl` entry, a `prompt.md` change that tells the producing skill the file is absent, and a baseline run in `history.jsonl`. Surfaced by the local `changes-reviewer` on PR #333 as `DEBT [evidence]`.
@@ -185,7 +187,7 @@ The deterministic mapping tests cover the declared and absent `DEPLOY` and `RELE
 
 **Impact.** The outcome of each is covered by another path, and evals are not part of the `just check` or CI gate, so the gap is incremental evidence completeness.
 
-**Settlement condition.** The three eval cases exist with baseline runs in their `history.jsonl`.
+**Settlement condition.** The four eval cases exist with baseline runs in their `history.jsonl`.
 
 ## A merging decision governs the apply flow's Verifier dispatches
 

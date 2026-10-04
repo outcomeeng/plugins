@@ -35,6 +35,10 @@ The changes-reviewer requires a test to pin `SIGNAL_GRACE_SECONDS` to the spec's
 
 `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/21-evidence-types.pdr.md` carries 10 audit rules, past the roughly-7 signal in `spx/21-spec-tree.enabler/54-decomposing.enabler/decomposing.md`. The count is accepted: the rules are one decision's verification surface over one subject, the assertion-type by execution-level cross-product, and its cell-composition rule binds the per-type sections to the level semantics. Splitting execution-level rules from per-type permission rules would separate the composition from the sections it composes and re-open the per-language divergence the decision exists to close. A Verifier skips this decomposition signal.
 
+**Revisit condition.** The decision gains a rule outside the assertion-type by execution-level cross-product, or the cell-composition rule moves out of it, after which the execution-level rules and the per-type permission rules separate.
+
 ## The test-verification spec is a deliberate superset node
 
 `test-verification.md` carries roughly 24 Compliance assertions, past the same signal. The node is the single language-neutral superset of the test-evidence seam rules, and every language test-standard node cites it and declares only its language delta. Decomposing the superset into per-concern children would re-fragment the union the design unifies, and language nodes would cite a parent whose rules are spread across children, reintroducing the cross-language drift the superset removes. A Verifier skips this decomposition signal.
+
+**Revisit condition.** A Compliance assertion falls outside the test-evidence seam rules the language test-standard nodes cite, or a language test-standard node stops citing the node for a rule, after which that concern separates into its own node.

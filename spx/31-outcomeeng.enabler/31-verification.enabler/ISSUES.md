@@ -89,6 +89,8 @@ The bundled review and audit runners record no skipped generated extent in a run
 
 `outcomeeng/catalog/plugin_catalog.py` reading `.claude-plugin/marketplace.json` and `outcomeeng_evals/ci_triggers.py` discovering `eval.toml` files are generators consuming their own declared inputs. They generate; they derive no generated-source attribution, so `15-generated-attribution.pdr.md` places no migration obligation on them. A Verifier skips this class.
 
+**Revisit condition.** Either generator begins deriving generated-source attribution, which brings the migration obligation, or `15-generated-attribution.pdr.md` states that a generator consuming only its own declared inputs carries none, after which this entry is deleted.
+
 ## A merging decision governs the apply flow's Verifier dispatches
 
 `spx/15-merging.pdr.md` is titled "Agent Authority over Merging" and opens on the `VERIFY -> PREVIEW -> MERGE -> DEPLOY -> RELEASE -> CLOSE` lifecycle, while its dispatch-readiness, repeated-class, finish-before-wait and bounded-projection rules bind the apply flow's per-node and whole-changeset gates as well. The rules' natural owner is `14-verification.pdr.md`, which already decides who dispatches an agentic verification, the Author and Verifier isolation, the defect-class sweep, the commit-before-read boundary and the deterministic-before-agentic ordering.

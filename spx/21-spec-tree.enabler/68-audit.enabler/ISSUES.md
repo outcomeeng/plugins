@@ -351,7 +351,7 @@ Remaining audit run-set convergence moves onto SPX prior-context restoration onc
 
 ## The audit-runtime-evidence branch is unpartitioned
 
-`origin/work/audit-runtime-evidence` changed 59 paths across implementation-audit contracts, Python authoring guidance, distribution code and repository configuration when it was recorded. It is unpartitioned and unpublished. The audit-owned merge cycle holds the implementation-auditor run contract, the coverage inventory, the wrapper configuration, the governing audit declarations, the co-located tests and the required generated output. Python authoring or distribution changes that can merge and verify without that contract belong to their owning nodes.
+`origin/work/audit-runtime-evidence` changed 59 paths across implementation-audit contracts, Python authoring guidance, distribution code and repository configuration when it was recorded. It is unpartitioned and unpublished, so its implementation-auditor run contract, coverage inventory, wrapper configuration, audit declarations and co-located tests share one history with Python authoring and distribution changes that belong to other nodes.
 
 **Settlement condition.** The branch is replaced by the audit pull request, one implementation-audit behavior with one verification story and one rollback story, and its other changes go to their owning nodes. This is one merge cycle of the aggregate that `spx/21-spec-tree.enabler/65-apply.enabler/ISSUES.md` records.
 

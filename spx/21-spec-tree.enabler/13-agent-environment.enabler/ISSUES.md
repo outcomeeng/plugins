@@ -6,8 +6,6 @@ Known defects, contradictions and gaps in this node. Coordination note; not spec
 
 `21-identity.enabler/identity.md` declares session identity as the variable each agent publishes: `$CLAUDE_CODE_SESSION_ID` under Claude Code and Pi, `$CODEX_THREAD_ID` under Codex, and every skill that consumes identity reads that variable. The `$CLAUDE_ENV_FILE` exports the `spx` hook runner still writes (the session identity, the worktree claim path and the two project-directory variables) remain asserted here because the pinned floor still produces them. Asserting their absence before the floor advances would leave these tests describing a CLI the gate does not run, against the published-capability rule in the root `CLAUDE.md`. `outcomeeng/changes#117` carries the `spx` side: SPX exports nothing into any coding agent's environment.
 
-`21-identity.enabler/identity.md` still says that a `PLAN.md` in this node records the export's retirement; this entry records it, and the sentence points here when the spec next changes.
-
 **Settlement condition.** The `spx` CLI removes the `$CLAUDE_ENV_FILE` exports, an `@outcomeeng/spx` release carrying the removal is published, and `REQUIRED_SPX_VERSION` in `outcomeeng/validation/spx_version.py` and `SPX_VERSION` in `.github/workflows/check.yml` advance to it. One changeset then retires the export assertions, re-deriving each edit against the current default branch:
 
 - the `l1` scenario that asserts `CLAUDE_SESSION_ID` reaches `$CLAUDE_ENV_FILE` and the `l3` scenario that asserts `CLAUDE_SESSION_ID`, `CLAUDE_PROJECT_DIR` and `PROJECT_DIR` in `agent-environment.md`, keeping the worktree-occupancy claim each also asserts;

@@ -48,9 +48,7 @@
 
 ## The preserved aggregate branch holds claims no merge cycle has drained
 
-`origin/work/strict-finding-disposition` preserves an aggregate of 103 commits that changed 189 paths when it was recorded at `5f26a67a9aef9327e57fd5e02d130c8363578a07` against `origin/main` at `b8503c8147f9291a67d828e649baff0d9c078d9c`; it now points at `b913114806c4cabbb2009d94572050621700d483`. It is recovery material and never enters whole-changeset verification or publication as one pull request. `/apply` drains it through dependency-ordered merge cycles, one independently mergeable cycle at a time, over the nodes that own its behavioral claims: test-verification, the eval harness, reviewing-changes, audit, the TypeScript code standards and merge.
-
-Each cycle synchronizes with current `origin/main` through `/sync-base`, loads the owning node's context and notes, reconstructs one behavioral claim from the preserved source without replaying tangled commits, treats generated `dist/claude/` and `dist/codex/` files as fan-out from their `src/plugins/` producer when judging review load, completes the node's deterministic, auditor, review, merge and cleanup gates, then recomputes the aggregate against the new `origin/main`.
+`origin/work/strict-finding-disposition` preserves an aggregate of 103 commits that changed 189 paths when it was recorded at `5f26a67a9aef9327e57fd5e02d130c8363578a07` against `origin/main` at `b8503c8147f9291a67d828e649baff0d9c078d9c`; it now points at `b913114806c4cabbb2009d94572050621700d483`. It is recovery material and never enters whole-changeset verification or publication as one pull request. Its behavioral claims belong to the nodes that own them: test-verification, the eval harness, reviewing-changes, audit, the TypeScript code standards and merge, and no merge cycle has drained them.
 
 **Settlement condition.** Every preserved behavioral claim is merged, explicitly superseded by current product truth, or retained in its owning node's `ISSUES.md` with a concrete revisit condition.
 

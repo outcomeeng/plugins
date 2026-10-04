@@ -67,9 +67,9 @@ corrected least-privilege tool and profile configuration.
 
 ## The auditor's verdict persists as direct structured JSON
 
-The direct structured JSON verdict remains the auditor's output until SPX exposes a changeset-coherence audit payload and projection contract. The persistence work resumes when SPX delivers a published changeset-coherence contract, an `@outcomeeng/spx` release carrying it is published, and this repository's required SPX floor and CI pin advance to that release. It then replaces the direct-only relay with one SPX verification run over the exact committed scope, preserves `APPROVED`, `REJECTED` and `UNKNOWN`, the semantic clusters, the findings, the publication authorization and the dependency-ordered review-unit sequence in the rendered projection, and adds deterministic contract coverage and migrates the producer-coupled eval expectations without changing the semantic verdict model.
+The direct structured JSON verdict is the auditor's output, and no SPX verification run records it, because SPX exposes no changeset-coherence audit payload or projection contract.
 
-**Settlement condition.** The three gate conditions hold and the migration lands.
+**Settlement condition.** SPX publishes a changeset-coherence contract in an `@outcomeeng/spx` release, this repository's required SPX floor and CI pin advance to that release, and the verdict persists through one SPX verification run over the exact committed scope. The rendered projection preserves `APPROVED`, `REJECTED` and `UNKNOWN`, the semantic clusters, the findings, the publication authorization and the dependency-ordered review-unit sequence, with deterministic contract coverage and migrated producer-coupled eval expectations, under an unchanged semantic verdict model.
 
 ## The compliance section holds eleven assertions
 
