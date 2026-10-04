@@ -41,7 +41,7 @@ A run-recording objective names the sealed run as the verdict. Its `<verdict_for
 <run_keys>
 A run-recording auditor keys each scope unit by its audit class, audit kind, concern, and subject path, and each finding by its unit's key and the violated rule ID, `<unit-key>:<rule-id>`. The same subject and rule yield the same key in every run, so a later run's finding is comparable with an earlier run's on the same file and rule. A finding lists every location in its file that breaks its rule, because one file carries at most one finding per rule. A key never carries an ordinal or any position in the run's finding list.
 
-Every rule ID a run-recording auditor records names a rule in the rule catalog of the standard it enforces. A defect no catalog rule names is a gap in the standard: the auditor records it as a `filed` finding under the catalog's `standard-gap` rule, which rejects nothing, and never mints a rule ID for one run.
+Every rule ID a run-recording auditor records names a rule in the rule catalog of the standard it enforces. The auditor judges only against those rules and never mints a rule ID for one run.
 </run_keys>
 
 <success_criteria_shape>
