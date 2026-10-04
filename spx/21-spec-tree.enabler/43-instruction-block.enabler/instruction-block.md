@@ -5,11 +5,16 @@ malleability: spec
 
 # Instruction Block
 
-PROVIDES deterministic generation and validation of a managed Spec Tree instruction surface in a product's root agent-harness instruction files — `CLAUDE.md` for Claude Code and `AGENTS.md` for Codex — composed of a generated router block rendered from the harness templates committed under `dist/`, `shared` regions kept byte-identical across both files, and independent product content free to differ per file, scoped to the project's enabled languages and rendered per agent harness
+PROVIDES deterministic generation and validation of a managed Spec Tree instruction surface in a product's root agent-harness instruction files — `CLAUDE.md` for Claude Code and `AGENTS.md` for Codex — composed of a generated router block rendered from the built per-harness templates, `shared` regions kept byte-identical across both files, and independent product content free to differ per file, scoped to the project's enabled languages and rendered per agent harness
 SO THAT every agent working a spec-tree project
 CAN retain the Spec Tree routing instructions and reach the product's own phase commands across compaction while preserving the product's other root instructions and keeping the two root files consistent
 
 ## Assertions
+
+- ALWAYS: generation emits and validates, in both harness routers, one `## Authority Hierarchy` line that ranks the operator rules the router states above every installed skill.
+- ALWAYS: generation emits and validates, in both harness routers' `## Change Lifecycle` section, that the operator reviews a published Change, never a local draft, and that a draft is audited, then published.
+- ALWAYS: generation emits and validates, in both harness routers' `### Sub-agent dispatch` section, that an audit or review round beyond a skill's round ceiling runs only when a session other than the one whose work is verified authorizes it with specific instructions that make that round the one that passes, that no session authorizes its own extra round, and that a session authorizes extra rounds for the sessions it supervises, directly or through a session it supervises in turn.
+- ALWAYS: generation emits and validates, in both harness routers' `### Operator questions` section, that the operator watches no session; that only questions of product judgment reach the operator; that the Refiner interviews the operator directly, one question at a time, each question establishing from facts that each option is feasible and quoting the passage and link it rests on; that no supervising session relays a batch of questions; and that a question from any other session goes to that session's supervising session, which a session receiving an operator answer informs.
 
 ### Scenarios
 
