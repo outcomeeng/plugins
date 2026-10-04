@@ -45,11 +45,15 @@ Use skill `instructions:instructions-plugin`. Invoke it with the verb `version` 
 
 <execution_sequence>
 
-1. **Start the run.** From the repository root, pipe the request as the run's retained input:
+1. **Start the run.** From the repository root, send the request as the run's retained input over stdin. An interactive Claude Code or Codex session uses the quoted heredoc:
 
    ```bash
-   printf '%s\n' '<request-json-on-one-line>' | spx verification run start --verification-type audit --scope-type changeset --scope '<base>..<head>' --input stdin
+   spx verification run start --verification-type audit --scope-type changeset --scope '<base>..<head>' --input stdin <<'REQUEST_JSON'
+   <request-json>
+   REQUEST_JSON
    ```
+
+   A programmatic Claude Code or Codex run, or a hosted runner, whose parser requires one physical command line per call pipes the request instead: `printf '%s\n' '<request-json-on-one-line>' | spx verification run start --verification-type audit --scope-type changeset --scope '<base>..<head>' --input stdin`, with every apostrophe in the request encoded as the single-quote splice `'"'"'`.
 
    Capture the exact `runToken` and use it for every later command. Read the returned `resolvedScope` and require every changed bundle file in it; a changed file the scope omits returns `BLOCKED` with the run preserved.
 2. **Load the standards.** Read `/skill-standards`, then `spx/local/skills.md` at the repository root when it exists, then `/skill-standards`' `references/rule-catalog.md`. Read `/agent-prompt-standards` through the `Use skill` instruction above, including its `<rule_catalog>`. Read each further reference the catalog row's section names when a changed file reaches that rule: `references/script-standards.md` for bundled scripts, `references/command-capabilities.md` for command-capability fields, `references/auditor-skeleton.md` for an `audit-*` skill. Read `${SKILL_DIR}/references/xml-structure-examples.md` and `${SKILL_DIR}/references/operational-effectiveness-examples.md` for annotated violation examples. A required standard that cannot be read returns `BLOCKED` with the run preserved.
