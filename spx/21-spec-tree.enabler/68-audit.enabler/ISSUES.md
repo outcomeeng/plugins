@@ -370,3 +370,11 @@ The audit side of the divergence between `spec-tree:implementation-auditor` run 
 **Impact.** Each audit of the skill raises the three warnings again, and the third records a conflict between the skill standard and the decision.
 
 **Settlement condition.** The failure-reference trigger names the preventive records, the skill states that journal writes through SPX are the audit's output, and the standard and the decision agree on how a consumer script reaches a provider skill.
+
+## Two compliance tests of this node back no assertion and the lifecycle harness chooses the terminal status
+
+**Evidence.** `spec-tree:test-evidence-auditor` on this node reported two warnings on evidence the registry-selection changeset left alone. `test_implementation_audit_unit_ids_are_subject_specific` and `test_implementation_audit_payloads_reject_empty_subject` in `spx/21-spec-tree.enabler/68-audit.enabler/tests/test_implementation_audit_contract.compliance.l1.py` link to no compliance assertion of this spec (`alignment`). `observe_implementation_audit_lifecycle` in `outcomeeng_testing/harnesses/audit_verification_run_contract.py` picks the terminal status it submits to `finish`, so a reader cannot see from the linked l3 test which status the scenario submits (`test-owned data`). The same audit reported the `assert harness()` shape recorded in the first entry of this note as four rejected findings on the trio, wrapper, retired-wrapper and retired-skill assertions.
+
+**Impact.** Evidence without an owning assertion proves a claim no one declared, and the hidden status choice leaves the scenario's case outside its test.
+
+**Settlement condition.** Each of the two compliance tests backs a declared assertion on the node that owns unit identity, or moves there, and the lifecycle test submits the terminal status at its own call site.
