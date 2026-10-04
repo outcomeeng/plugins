@@ -87,7 +87,7 @@ Handoff:
 - Worktree: <the assigned worktree root>
 ```
 
-The `Session:` and `Worktree:` lines are the only optional lines, and each appears at most once, after the five. The Handoff records what was true when it was posted; refinement of the Output belongs in the body, before the release. A release that moves the Change to `Submitted` posts its Handoff before it writes `Submitted`, and its Next Activity names the confirmation the Change waits for: `confirmation: <Maturity>`.
+The `Session:` and `Worktree:` lines are the only optional lines, and each appears at most once, after the five. The Handoff records what was true when it was posted; refinement of the Output belongs in the body, before the release. A release that moves the Change to `Submitted` runs only at `Proposed`, `Framed`, or `Sliced`, posts its Handoff before it writes `Submitted`, and its Next Activity names the confirmation the Change waits for: `confirmation: <Maturity>`.
 
 </rule>
 
@@ -104,7 +104,7 @@ Confirmation: <Maturity>
 - Session: <the agent session id>
 ```
 
-A rejection replaces the first line with `Rejection: <Maturity>` and adds `- Reason: <the operator's stated reason>` after the `Session:` line. `<Maturity>` is the Change's current Maturity. The comment names the delegate and the operator because every session acts through one account, so the field-change event's actor names the account and never the delegate.
+A rejection replaces the first line with `Rejection: <Maturity>` and adds `- Reason: <the operator's stated reason>` after the `Session:` line. `<Maturity>` is the Change's current Maturity: `Proposed`, `Framed`, or `Sliced`. The comment names the delegate and the operator because every session acts through one account, so the field-change event's actor names the account and never the delegate.
 
 </rule>
 
