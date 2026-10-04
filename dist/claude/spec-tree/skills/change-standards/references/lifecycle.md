@@ -7,7 +7,7 @@
 
 <scope>
 
-This reference operationalizes the Lifecycle, authority, and Handoff rules of the Change chapter `change-record.md` names, for the store `spx/local/coordination.md` declares; it replaces nothing in the chapter. Lifecycle records who holds a Change, whether it waits for the Product's Maintainer, or how it ended, and moves independently of Maturity.
+This reference operationalizes the Lifecycle, authority, and Handoff rules of the Change chapter `<authority>` names, for the store `spx/local/coordination.md` declares; it replaces nothing in the chapter. Lifecycle records who holds a Change, whether it waits for the Product's Maintainer, or how it ended, and moves independently of Maturity.
 
 </scope>
 

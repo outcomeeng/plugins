@@ -1,6 +1,6 @@
 <definition_of_ready maturity="Proposed" cumulative="true">
 
-Judge every criterion; this table is the complete criterion set for Proposed Maturity, so apply no criterion outside it. Each criterion judges the record against the shared rule it names in `change-record.md`.
+Judge every criterion; this table is the complete criterion set for Proposed Maturity, so apply no criterion outside it. Each criterion judges the record against the record rule it names in `<record_rules>`.
 
 | ID                        | Criterion                                                                                                                                        |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
