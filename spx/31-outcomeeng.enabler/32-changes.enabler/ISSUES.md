@@ -162,29 +162,17 @@ Impact: the `attestation-required` stop and the audit-isolation rule cannot be l
 
 Revisit and settlement condition: each concern stands in its own bullet; one typed skill audit of `author-change` then raises no `principle_cohesion` finding.
 
-## DEBT [decidability]: the Applied precondition rests on undefined terms
-
-Defect class: `decidability`.
-
-Finding: the Lifecycle section of `54-change-record.pdr.md` requires for `Applied` that "the Assertions and evidence governing the Change's Nodes" are "satisfied" and "the Output delivered", terms whose meaning comes only from the foundation's node-state and delivery-boundary definitions.
-
-Evidence: `spec-tree:pdr-auditor` finding `invalid-draft-rule`, severity `WARNING`, on `spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md` at head `9e5aa8f2f0aa09d8e161620b8c6733165d1ef1b8`, in an audit that approved.
-
-Impact: two Verifiers can differ on what "satisfied" requires for a Node the Frame does not require `Passing`.
-
-Revisit and settlement condition: the decision states the Applied precondition in terms of the state each Frame requires for its Nodes and the delivery boundary; one PDR audit then raises no finding against the rule.
-
 ## DEBT [term-ownership]: Change skills use terms and grants their bundles do not define
 
 Defect class: `term-ownership`.
 
-Finding: `change-standards` uses `VERIFICATION_READINESS` and the coverage predicate in `executable-state-evidence` and `<merge_composition>` without naming the skill that defines them. The four `author-change` workflows read "the router's store configuration", a phrase the router never defines, while `SKILL.md` names `spx/local/coordination.md`. `audit-change` grants `printf` without a narrower pattern, and shows `recordedByRunDriver`, `producerIdentity`, and `producerProvenance` as string placeholders in a JSON template whose prose requires objects. The Executable `# Activities` criterion of `54-change-record.pdr.md` names its subject "an agent" where the Executor Role is meant.
+Finding: `change-standards` uses `VERIFICATION_READINESS` and the coverage predicate in `executable-state-evidence` and `<merge_composition>` without naming the skill that defines them. The four `author-change` workflows read "the router's store configuration", a phrase the router never defines, while `SKILL.md` names `spx/local/coordination.md`. `audit-change` grants `printf` without a narrower pattern, and shows `recordedByRunDriver`, `producerIdentity`, and `producerProvenance` as string placeholders in a JSON template whose prose requires objects.
 
-Evidence: `instructions:skill-auditor` finding f-008 (rule `undefined-cross-skill-term`) against `src/plugins/spec-tree/skills/change-standards/references/dor-executable.md:14`, f-007 (rule `ambiguous_reference`) against `src/plugins/spec-tree/skills/author-change/workflows/proposed.md:3`, and f-011, f-012, f-014 against `src/plugins/spec-tree/skills/audit-change/SKILL.md:9` and `:213`, each severity `WARNING`, in the typed skill audits on head `e383a009d0eefd79ad595c5e1febb8ac670e9253`, all approved for those findings; `spec-tree:pdr-auditor` finding `consistency-violation`, severity `WARNING`, on `spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md` at that head, in an audit that approved.
+Evidence: `instructions:skill-auditor` finding f-008 (rule `undefined-cross-skill-term`) against `src/plugins/spec-tree/skills/change-standards/references/dor-executable.md:14`, f-007 (rule `ambiguous_reference`) against `src/plugins/spec-tree/skills/author-change/workflows/proposed.md:3`, and f-011, f-012, f-014 against `src/plugins/spec-tree/skills/audit-change/SKILL.md:9` and `:213`, each severity `WARNING`, in the typed skill audits on head `e383a009d0eefd79ad595c5e1febb8ac670e9253`, all approved for those findings.
 
 Impact: a consumer that loads only one of these skills meets a term or input it cannot resolve, and the audit skill's `printf` grant is broader than its workflow.
 
-Revisit and settlement condition: each term names its owning skill or is defined where used, the workflows name `spx/local/coordination.md`, the `printf` grant is narrowed, the template shows object placeholders, and the Executable criterion names the Executor; one typed skill audit of each skill and one PDR audit then raise none of these findings.
+Revisit and settlement condition: each term names its owning skill or is defined where used, the workflows name `spx/local/coordination.md`, the `printf` grant is narrowed, and the template shows object placeholders; one typed skill audit of each skill then raises none of these findings.
 
 ## DEBT [entry-conditions]: author-change leaves two entry points and one trigger phrase unstated
 
