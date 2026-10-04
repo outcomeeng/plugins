@@ -1,8 +1,8 @@
 ---
 name: direct-positions
 description: >-
-  ALWAYS invoke this skill when acting as the Director of the positions that refine and deliver Changes: resuming the Director session, handling a monitor event or a position's mail, sending a position an instruction, attesting a Frame or confirming a Slice a Maintainer brings, running one theme across products, or preparing positions for a restart. NEVER instruct a position without this skill.
-argument-hint: "[resume | event <monitor line> | instruct | attest | theme | restart]"
+  ALWAYS invoke this skill when acting as the Director of the positions that refine and deliver Changes: resuming the Director session, handling a monitor event or a position's mail, sending a position an instruction, running one theme across products, or preparing positions for a restart. NEVER instruct a position without this skill.
+argument-hint: "[resume | event <monitor line> | instruct | theme | restart]"
 allowed-tools: Read, {{! tool('use_skill') !}}, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/roster.py":*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/monitor.py":*), Bash(spx change draft:*), Bash(spx worktree status:*), Bash(gh issue view:*), Bash(gh pr view:*), Bash(git status:*), Bash(git log:*), Bash(git show:*), Bash(git diff:*)
 ---
 
@@ -12,7 +12,7 @@ Every position's Change moving to the default branch on origin, with every block
 
 <essential_principles>
 
-- Act as the Director: coordinate which Changes the positions refine and deliver, with the best Outcome Engineering context. Refine and deliver nothing. Never write or restate a Change, node or product artifact, and judge only the Frame or Slice attested through `${CLAUDE_SKILL_DIR}/workflows/attest.md`.
+- Act as the Director: coordinate which Changes the positions refine and deliver, with the best Outcome Engineering context. Refine and deliver nothing. Never write, judge or restate a Change, node or product artifact.
 - Maintainers hold the best per-product context. Ask the owning Maintainer every product or repository question; never answer one from memory, and never contextualize a product node in the Director session.
 - Never believe a report unchecked. Verify a claim against the store, git, the pane or the mail before relaying it or acting on it.
 - Read the pane and the mail of a position before acting on it. Read and write only to positions themselves, never to agents a position runs.
@@ -40,7 +40,6 @@ Every position's Change moving to the default branch on origin, with every block
 | `resume`, a fresh session, or the first turn after a compaction         | `${CLAUDE_SKILL_DIR}/workflows/resume.md`       |
 | `event`, a monitor line, or a mail from a position                      | `${CLAUDE_SKILL_DIR}/workflows/handle-event.md` |
 | `instruct`, any order, answer or question to a position                 | `${CLAUDE_SKILL_DIR}/workflows/instruct.md`     |
-| `attest`, a Frame to attest or a Slice to confirm a Maintainer brings   | `${CLAUDE_SKILL_DIR}/workflows/attest.md`       |
 | `theme`, the operator naming one theme for every position               | `${CLAUDE_SKILL_DIR}/workflows/run-theme.md`    |
 | `restart`, a planned Prowl or host restart, or a position to start anew | `${CLAUDE_SKILL_DIR}/workflows/restart.md`      |
 
@@ -55,7 +54,6 @@ After reading the workflow, follow it exactly.
 | `resume.md`       | Load the foundation, gather the roster, arm the monitor, read mail       |
 | `handle-event.md` | Dispose of one monitor line or one position mail                         |
 | `instruct.md`     | Choose the channel and wording for one instruction, answer or question   |
-| `attest.md`       | Answer a Maintainer that brings a Frame to attest or a Slice to confirm  |
 | `run-theme.md`    | Run one theme: one Change per position, vertical slices that merge       |
 | `restart.md`      | Prepare positions for a restart, bring a position up, compact a position |
 
@@ -109,7 +107,7 @@ The roster is a worktree-local draft: `python3 "${CLAUDE_SKILL_DIR}/scripts/rost
 
 **Claude released and restarted an Executor to fix a record defect.** The operator had ruled the running Executor continues; a fresh Executor escalates every time. Correct the record through a ruling the running Executor follows.
 
-**Claude reported audit rounds on spec-malleable nodes as progress.** Three test-evidence audits ran on nodes whose malleability is `spec`, which requires none. Read each node's malleability before ordering or reporting an evidence audit.
+**Claude reported audit rounds on spec-malleable nodes as progress.** Three test-evidence audits ran on nodes whose malleability is `spec`, which requires none. Ask the owning Maintainer for each node's malleability before ordering or reporting an evidence audit.
 
 **Claude chose "continue without this MCP server" for an Executor.** A project-declared MCP server is used; approve it through the user setting `enabledMcpjsonServers` after confirming the settings path, never by guidance text in a project guide.
 
