@@ -18,7 +18,8 @@ Tested inputs and error cases: changeset-scope and dependent
 verification-run suites exercise origin/HEAD base detection, missing-origin
 rejection, named-branch detection, detached-HEAD refusal, branch slug collision
 suffixes, diff-range expansion with and without pathspec filters, empty diff
-matches, staged and unstaged changes, remote-tracking three-dot branch scope,
+matches, rename records carrying source and destination paths, staged and
+unstaged changes, remote-tracking three-dot branch scope,
 arbitrary base refs, base-advanced-after-branch-off exclusion, git failure
 propagation, and the stale-base refusal — a head behind the fetched base tip,
 a lagging local remote-tracking ref the fetch corrects, and a current head —
@@ -60,6 +61,10 @@ STATE_FILE_BRANCH_KEY = cast(str, _CONTRACT["STATE_FILE_BRANCH_KEY"])
 STATE_FILE_SUFFIX = cast(str, _CONTRACT["STATE_FILE_SUFFIX"])
 COMMIT_PEEL_SUFFIX = cast(str, _CONTRACT["COMMIT_PEEL_SUFFIX"])
 BRANCH_SLUG_SUFFIX_SEPARATOR = cast(str, _CONTRACT["BRANCH_SLUG_SUFFIX_SEPARATOR"])
+TWO_PATH_STATUS_PREFIXES = cast(tuple[str, ...], _CONTRACT["TWO_PATH_STATUS_PREFIXES"])
+NAME_STATUS_FIELD_SEPARATOR = "\0"
+ONE_PATH_RECORD_LENGTH = 1
+TWO_PATH_RECORD_LENGTH = 2
 RANGE_SEPARATOR = "..."
 # A head behind the fetched base is refused with its own exit code so a caller
 # never mistakes it for a selector the resolver could not read (argparse's 2).
@@ -260,12 +265,14 @@ def expand_diff_range(
 ) -> list[str]:
     """Return the file paths changed in the given git diff range.
 
-    Equivalent to ``git diff --name-only <range_spec> [-- <pat1> <pat2> ...]``
-    run inside ``repo``. The ``patterns`` argument is a list of pathspec
-    patterns (e.g. ``["*.ts", "*.tsx"]``); when omitted or empty, no
-    pathspec filter is applied and every file changed in the range is
-    returned. The result preserves the order produced by git and is
-    de-duplicated implicitly by git (each path appears at most once).
+    Reads ``git diff --name-status -z <range_spec> [-- <pat1> <pat2> ...]``
+    run inside ``repo``. A rename or copy record contributes both its source
+    and its destination path; every other record contributes its one path,
+    so the set matches the name-status inventory a verification run seals.
+    The ``patterns`` argument is a list of pathspec patterns (e.g.
+    ``["*.ts", "*.tsx"]``); when omitted or empty, no pathspec filter is
+    applied and every file changed in the range is returned. The result
+    preserves the order produced by git, and each path appears at most once.
 
     Empty output means the range produced no matching paths — not an
     error. Callers distinguish this from a git failure by treating empty
@@ -277,7 +284,7 @@ def expand_diff_range(
     domain-specific error catch and translate; this helper propagates the
     raw subprocess error so the caller decides the recovery policy.
     """
-    cmd = ["git", "diff", "--name-only", range_spec]
+    cmd = ["git", "diff", "--name-status", "-z", range_spec]
     if patterns:
         cmd.append("--")
         cmd.extend(patterns)
@@ -288,7 +295,30 @@ def expand_diff_range(
         text=True,
         check=True,
     )
-    return [line for line in result.stdout.splitlines() if line]
+    return name_status_paths(result.stdout)
+
+
+def name_status_paths(output: str) -> list[str]:
+    """Return every path the records of ``git diff --name-status -z`` name.
+
+    Each record is a status field followed by one path, or by a source and a
+    destination path when the status is a rename or a copy. Paths keep the
+    order git reports them in, and a path named by several records appears
+    once.
+    """
+    fields = output.split(NAME_STATUS_FIELD_SEPARATOR)
+    paths: dict[str, None] = {}
+    index = 0
+    while index < len(fields) and fields[index]:
+        path_count = (
+            TWO_PATH_RECORD_LENGTH
+            if fields[index].startswith(TWO_PATH_STATUS_PREFIXES)
+            else ONE_PATH_RECORD_LENGTH
+        )
+        for path in fields[index + 1 : index + 1 + path_count]:
+            paths[path] = None
+        index += 1 + path_count
+    return list(paths)
 
 
 def remote_tracking_ref(base_ref: str) -> str:

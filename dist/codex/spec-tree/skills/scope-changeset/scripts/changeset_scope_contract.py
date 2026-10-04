@@ -19,3 +19,6 @@ STATE_FILE_BRANCH_KEY = "branch"
 STATE_FILE_SUFFIX = ".md"
 COMMIT_PEEL_SUFFIX = "^{commit}"
 BRANCH_SLUG_SUFFIX_SEPARATOR = "--"
+# Git name-status letters whose records name two paths: a rename and a copy
+# carry their source and their destination; every other record names one path.
+TWO_PATH_STATUS_PREFIXES = ("R", "C")
