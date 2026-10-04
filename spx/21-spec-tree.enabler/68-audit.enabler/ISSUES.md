@@ -358,3 +358,15 @@ The audit side of the divergence between `spec-tree:implementation-auditor` run 
 **Impact.** A direct `/audit-implementation HEAD` invocation without injected identity always returns `BLOCKED`, so the skill is not independently invocable, and the standard and the decision contradict each other.
 
 **Settlement condition.** The contradiction is settled in the governing layer: either the decision and the SPX run contract make the run-driver identity optional and derived, or `/skill-standards` admits a declared request-data input from the wrapper agent.
+
+## The implementation audit skill carries three standards warnings on unedited text
+
+**Evidence.** `instructions:skill-auditor` reported, on `src/plugins/spec-tree/skills/audit-implementation` during the registry-selection changeset, three warnings on text that changeset left alone:
+
+- `<failure_modes>` loads the failure reference only after a failure, so the preventive records (`finding_before_standards`, `transcribed_inventory`, `coverage_stated_as_findings`) reach Claude too late (`failure-modes-load-trigger`).
+- `allowed-tools` grants `Bash(spx verification run:*)`, which covers the state-changing `start`, `scope add`, `finding add` and `finish` subcommands, while `/skill-standards` limits audit skills to read-only Bash verbs; the skill never says why persisting the verdict is the audit's output and not a modification (`audit-read-only-allowed-tools`).
+- `resolve_scope.py` builds paths into the `scope-changeset` and `select-artifacts` provider skills, which `/skill-standards` command-capabilities reads as a cross-skill file reference, while `spx/13-plugin-and-runtime-conventions.adr.md` decides that a consumer script reaches a provider by a `__file__`-relative import (`cross-skill-file-reference`).
+
+**Impact.** Each audit of the skill raises the three warnings again, and the third records a conflict between the skill standard and the decision.
+
+**Settlement condition.** The failure-reference trigger names the preventive records, the skill states that journal writes through SPX are the audit's output, and the standard and the decision agree on how a consumer script reaches a provider skill.
