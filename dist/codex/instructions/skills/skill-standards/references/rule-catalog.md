@@ -15,8 +15,6 @@ Each row names one rule this skill states and gives it a stable ID. The section 
 
 A skill-audit finding names exactly one rule ID from this catalog or from the `/agent-prompt-standards` `<rule_catalog>`, carries that rule's severity, and lists every location in the file that breaks the rule. No finding names a rule outside the two catalogs.
 
-A defect neither catalog names is recorded under `standard-gap` with severity `filed`: it reaches the standard's owner and rejects nothing.
-
 </catalog_contract>
 
 <structure_rules>
@@ -116,6 +114,5 @@ A defect neither catalog names is recorded under `standard-gap` with severity `f
 | `auditor-run-keys`                   | blocking | `references/auditor-skeleton.md` `<run_keys>`               | A run-recording auditor keys each unit by subject and concern and each finding by its unit key and rule ID, never by ordinal |
 | `auditor-catalog-rules`              | blocking | `references/auditor-skeleton.md` `<run_keys>`               | Every rule a run-recording auditor records comes from the catalog of the standard it enforces                                |
 | `auditor-success-criteria-soundness` | debt     | `references/auditor-skeleton.md` `<success_criteria_shape>` | Success criteria state verdict soundness, never a re-list of steps                                                           |
-| `standard-gap`                       | filed    | `<catalog_contract>`                                        | A defect no catalog rule names, recorded for the standard's owner                                                            |
 
 </auditor_rules>
