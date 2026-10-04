@@ -11,6 +11,8 @@ CAN derive every changeset's branch, slug, base ref, head/base commit IDs, and c
 
 ## Assertions
 
+- Given a changeset whose diff carries a rename record, when `expand_diff_range` or `branch_scope` resolves it, then the changed-path set carries both the source and the destination path of that record
+
 ### Scenarios
 
 - Given `refs/remotes/origin/HEAD` resolves, when `detect_base_ref` runs, then it returns the bare base branch name configured there ([test](tests/test_changeset_scope.scenario.l1.py))
