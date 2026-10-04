@@ -45,11 +45,15 @@ Use skill `instructions:instructions-plugin`. Invoke it with the verb `version` 
 
 <execution_sequence>
 
-1. **Start the run.** From the repository root, pipe the request as the run's retained input:
+1. **Start the run.** From the repository root, send the request as the run's retained input over stdin. An interactive Claude Code or Codex session uses the quoted heredoc:
 
    ```bash
-   printf '%s\n' '<request-json-on-one-line>' | spx verification run start --verification-type audit --scope-type changeset --scope '<base>..<head>' --input stdin
+   spx verification run start --verification-type audit --scope-type changeset --scope '<base>..<head>' --input stdin <<'REQUEST_JSON'
+   <request-json>
+   REQUEST_JSON
    ```
+
+   A programmatic Claude Code or Codex run, or a hosted runner, whose parser requires one physical command line per call pipes the request instead: `printf '%s\n' '<request-json-on-one-line>' | spx verification run start --verification-type audit --scope-type changeset --scope '<base>..<head>' --input stdin`, with every apostrophe in the request encoded as the single-quote splice `'"'"'`.
 
    Capture the exact `runToken` and use it for every later command. Read the returned `resolvedScope` and require the target in it; a scope that omits the target returns `BLOCKED` with the run preserved.
 2. **Load the standards.** Read `instructions:subagent-standards` and `instructions:agent-prompt-standards` through the `Use skill` instructions above, including each skill's `<rule_catalog>`. They own the rules; creator workflow references supply no additional standard. A required standard that cannot be read returns `BLOCKED` with the run preserved.
