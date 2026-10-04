@@ -2,16 +2,17 @@
 name: audit-implementation
 description: >-
   Implementation audit methodology — judges a changeset's implementation
-  against its governing decisions, specs, and language standards, covering
-  per-language code, test, and architecture concerns, finding falsifiability,
-  and completeness of the inspection.
+  against its governing decisions, specs, and the standards of each concern
+  skill the artifact registry selects for its changed paths, covering code,
+  test, and architecture concerns, finding falsifiability, and completeness of
+  the inspection.
 argument-hint: "<HEAD | branch | base...head | worktree:selector>"
 allowed-tools: Read, Bash(python3 "${SKILL_DIR}/scripts/resolve_scope.py":*), Bash(git rev-parse:*), Bash(git status:*), Bash(git show:*), Bash(spx verification run:*), Bash(printf:*), Glob, Grep
 ---
 
 <objective>
 
-An authoritative SPX projection and raw run token for the requested implementation scope, judged against its governing decisions and specs and each language's code, test, and architecture standards, carrying `terminalStatus` (`approved` or `rejected`) and findings that name the artifact, the violated rule, and observed-versus-expected evidence. A run that cannot reach that projection yields a `BLOCKED` diagnostic naming the request failure, command failure, or absent prerequisite that stopped it.
+An authoritative SPX projection and raw run token for the requested implementation scope, judged against its governing decisions and specs and the standards of every concern skill the artifact registry selects for its changed paths, carrying `terminalStatus` (`approved` or `rejected`) and findings that name the artifact, the violated rule, and observed-versus-expected evidence. A run that cannot reach that projection yields a `BLOCKED` diagnostic naming the request failure, command failure, or absent prerequisite that stopped it.
 
 </objective>
 
@@ -20,16 +21,16 @@ An authoritative SPX projection and raw run token for the requested implementati
 - NEVER edit source, tests, specs, commits, branches, or pull requests — the audit is read-only over the audited project tree.
 - ALWAYS persist audit state through `spx verification run`; NEVER use legacy journal commands, plugin-side verdict scripts, markdown comments, `.spx/audits/`, or tracked files as audit state.
 - NEVER run deterministic verification — the audit composes agentic concern audits only.
-- NEVER include language-specific file extensions, commands, examples, or evidence patterns beyond the dispatch template `audit-{lang}-{code|tests|architecture}`.
+- NEVER include a list of artifact kinds, language names, file extensions, audit skill names, commands, examples, or evidence patterns — the artifact registry the scope resolver reads carries every kind and the skills it selects, and each concern skill owns its policy.
 - ALWAYS treat the `spx verification run` command exit code as payload validity; NEVER hand-validate emitted payload JSON after SPX accepts it.
 - NEVER end a run because work remains, time has passed, context is tight, or reading is unfinished — a stop names the failed command with its exit code and stderr, or the absent prerequisite.
 - NEVER assign `incomplete` or `skipped` to a required coverage unit; neither describes an admissible terminal state for required coverage.
 - NEVER derive a subject body from a single commit's patch, or leave a truncated read unrecovered — a partial read is re-issued, never converted into coverage evidence.
 - NEVER hand-transcribe the resolved changed-path set into a payload — the resolver's own output reaches the run through a pipe, because a retyped inventory drops and substitutes paths without any later step noticing.
-- NEVER invoke a skill to discover whether a language is installed — the installed skill inventory this context carries is the discovery source, and a failed invocation is not discovery evidence.
+- NEVER select a skill from the installed skill inventory, and NEVER invoke a skill to discover whether a kind is installed — the registry selection in the run's sealed start input is the only selection source; the inventory this context carries decides only whether a selected skill runs or is recorded as `missing-skill`, and a failed invocation is not selection evidence.
 - ALWAYS record coverage as `<coverage_model>` states; a run that narrows a set or records a unit only where it found something states its findings as its coverage.
 - NEVER let a raised finding or a rejected terminal status shorten the inspection: rejection is a verdict about what was inspected, never permission to leave a concern or a resolved path unrecorded.
-- ALWAYS start the verification run after resolving the target's Git metadata and validating the run-driver identity, before reading changed project file bodies or loading language concern standards — every substantive project inspection and concern result belongs to the open run.
+- ALWAYS start the verification run after resolving the target's Git metadata and validating the run-driver identity, before reading changed project file bodies or loading concern standards — every substantive project inspection and concern result belongs to the open run.
 
 </constraints>
 
@@ -45,14 +46,16 @@ Run these stages in order. Each names what holds before the next begins, and
    identities unchanged for the rest of the run.
 2. **Open the run.** Start the run per `<verification_run_contract>` before any
    project inspection or standards load, so every later stage belongs to it.
-3. **Load.** Read each discovered governing node's context, each concern's
-   governing standards, and the audited repository's declared `spx/local/`
-   overlays.
+3. **Load.** Read each discovered governing node's context, the governing
+   standards of each selected concern skill, and the audited repository's
+   declared `spx/local/` overlays.
 4. **Enumerate.** Build the complete expected coverage inventory per
    `<coverage_model>` before invoking any concern, reading the path set from the
-   `resolvedScope` the `start` result returned, never from a retyped list. Every
-   resolved path enters the inventory — claimed by a concern or left to another
-   auditor — and a unit enters planned, without a status.
+   `resolvedScope` the `start` result returned and each path's artifact
+   selection from the run's sealed start input, never from a retyped list or a
+   re-run of the resolver. Every resolved path enters the inventory — claimed by
+   a concern or left to another auditor — and a unit enters planned, without a
+   status.
 5. **Inspect.** Read each subject body completely from the resolved
    `base..head` scope, re-issuing a truncated or partial read in bounded
    ranges until the body is complete, per the subject-body constraint.
@@ -155,7 +158,7 @@ advisory audit never supplies reusable gate evidence.
 <verification_run_contract>
 
 After validating the request, start one audit run as the first audit action. Do
-this before loading language concern standards, inspecting the changeset, or
+this before loading concern standards, inspecting the changeset, or
 invoking concern skills, so the returned run token identifies the in-flight
 audit from its beginning:
 
@@ -180,8 +183,10 @@ Governing nodes are discovered after start and accompany the concern inputs and
 coverage evidence. The command returns a JSON locator; extract its `runToken`
 field exactly and use that token for every later command, and read its
 `resolvedScope` array as the run's sealed inventory — the path set stage 4
-enumerates and stage 7 reconciles against. Never pass the whole locator as
-`--run`.
+enumerates and stage 7 reconciles against. The resolver also recorded, under
+`artifact_selection` in that input, the registered artifacts and audit skills
+each path selects; `<coverage_model>` reads it back with
+`spx verification run input`. Never pass the whole locator as `--run`.
 
 Execute every state-changing `spx verification run` command serially: a tool
 response or batch contains at most one `start`, `scope add`, `finding add`, or
@@ -211,21 +216,21 @@ required.
   "coverageStatus": "<audited|not-applicable|missing-skill|unsupported>",
   "priorContext": {
     "changedFilePartition": "<the exact resolved path>",
-    "languagePartition": "<language-when-known>",
+    "languagePartition": "<selected-kind-when-known>",
     "concernPartition": "<code|tests|architecture|coverage-gap>"
   },
   "expectedProducer": {
     "producerKind": "skill",
     "agentName": "<run-driver-agent-name>",
     "agentOwningPluginName": "<run-driver-agent-owning-plugin-name>",
-    "skillName": "audit-<lang>-<concern>",
-    "skillOwningPluginName": "<lang>",
+    "skillName": "<selected-audit-skill>",
+    "skillOwningPluginName": "<selected-audit-skill-plugin>",
     "invocationRole": "leaf-skill"
   },
   "recordedByRunDriver": "<the six producer fields of the run-driver identity>",
   "producerProvenance": {
     "agentOwningPluginVersion": "<spec-tree-plugin-version>",
-    "skillOwningPluginVersion": "<language-plugin-version>",
+    "skillOwningPluginVersion": "<selected-audit-skill-plugin-version>",
     "toolVersion": "<spx-version-when-known>"
   }
 }
@@ -250,8 +255,15 @@ field shown is required, and `producerProvenance` is omitted:
 }
 ```
 
+When the selection names an artifact-type audit skill for the path, the
+accounting record names it: its `unitId` reads
+`implementation:unknown:coverage-gap:<plugin>:<audit>:<the exact resolved path>`
+and its `expectedProducer` is the run-driver identity with `skillName` set to
+that `<audit>` and `skillOwningPluginName` set to that `<plugin>`. One path
+selected by several artifact-type skills carries one record per skill.
+
 `languagePartition` is the only optional prior-context field. Omit it when the
-language is unknown; never replace `priorContext` with top-level partition
+kind is unknown; never replace `priorContext` with top-level partition
 fields. Use `coverage-gap` with `producerProvenance` omitted, because no leaf
 skill executed, for a missing producer, an unsupported subject, and the
 accounting record `<coverage_model>` requires for an unclaimed resolved path.
@@ -278,9 +290,9 @@ expected text lives under `evidence`.
 ```
 
 The idempotency key is a command argument, never a payload field. A scope
-unit's key is the value its payload carries in `unitId`: audit class, language
+unit's key is the value its payload carries in `unitId`: audit class, kind
 partition, concern partition, and subject path joined with `:` —
-`implementation:<lang>:<concern>:<subject-path>`. A finding's key extends its
+`implementation:<kind>:<concern>:<subject-path>`. A finding's key extends its
 unit's key with the violated rule — `<stable-scope-key>:<rule>`.
 
 Keep the rule segment colon-free. SPX never parses the key back into segments,
@@ -288,8 +300,8 @@ so a `:` inside a subject path is not a separator; a colon-free rule makes the
 last `:` the boundary between subject path and rule, and a colon inside the rule
 collides two distinct findings on one key.
 
-The key always carries a language segment, even though
-`priorContext.languagePartition` may be omitted. Render an unknown language as
+The key always carries a kind segment, even though
+`priorContext.languagePartition` may be omitted. Render an unknown kind as
 the literal `unknown`; the key substitutes no default for a segment left out.
 
 Pass every key as one single-quoted argument, `--idempotency-key
@@ -354,32 +366,28 @@ The final response relays the rendered SPX projection and run token. Do not summ
 
 <coverage_model>
 
-Build an expected coverage inventory before invoking any language concern skill. Discover programming-language plugins by reading the installed skill inventory this context carries for `code-{lang}` names — a name absent from that inventory is a language that is not installed, and invoking a concern skill is dispatch to a discovered language, never a probe for whether one exists — then validate the complete read-only `audit-{lang}-{code|tests|architecture}` trio for each discovered language before invoking any concern. Never load a write-capable `code-{lang}` skill inside the audit — the skill-composition grant cannot be narrowed to names discovered at run time, so this rule is the containment — and never create a language partition from a file extension, filename, or artifact class alone.
+Build the expected coverage inventory from the selection the scope resolver recorded in the run's sealed start input, before invoking any concern skill. Read the `artifact_selection` array back from that input — `spx verification run input --verification-type audit --scope-type changeset --scope <base>..<head> --run '{run-token}'`, field `content` — never from a re-run of the resolver and never from a reading of the paths. For each resolved path it holds the registered artifacts whose detection matches the path, most specific first, a kind with a match adding its detection-less artifacts; each artifact carries its `kind`, `role`, `plugin`, `audit` skill, and `contract`. Dispatch exactly the skills that selection names, validating each against the installed skill inventory this context carries before invoking any concern. The inventory never selects: it decides only whether a selected skill is invoked or recorded as a required `missing-skill` unit, and invoking a skill is dispatch to a selected artifact, never a probe for whether a kind is installed. Never load a write-capable author skill inside the audit — the skill-composition grant cannot be narrowed to names selected at run time, so this rule is the containment — and never create a partition from a file extension, filename, or artifact class the registry did not select.
 
-Only paths claimed by a discovered programming-language implementation skill belong to implementation-audit coverage. Leave every other artifact class to its artifact-type auditor and the whole-changeset review; never manufacture a language name, a missing concern skill, or an unsupported unit for a path outside implementation-audit ownership.
+Dispatch only a skill whose `contract` is `concern`. A path whose registered artifact's audit skill carries the `artifact-type` contract, a path matching no registered artifact, and a matched path whose selected concern skill returns `NOT_APPLICABLE` stay with their artifact-type auditor and the whole-changeset review; never manufacture a kind, a missing skill, or an unsupported unit for such a path.
 
-Leaving a path to another auditor is not leaving it unaccounted for. Record every resolved path no concern claimed as the accounting record shown in `<verification_run_contract>`, with the exact resolved path as its `subject`: reconciliation matches inventory paths against recorded subjects, so a `subject` that is anything but the literal path leaves that path unaccounted forever. The record says the path was considered and left to another auditor; it claims no coverage, creates no language partition, and rejects no run, and it makes the run's own recorded subject set equal its sealed inventory.
+Leaving a path to another auditor is not leaving it unaccounted for. Record every resolved path no concern claimed as the accounting record shown in `<verification_run_contract>`, with the exact resolved path as its `subject`: reconciliation matches inventory paths against recorded subjects, so a `subject` that is anything but the literal path leaves that path unaccounted forever. The record says the path was considered and left to another auditor, and names that auditor's skill as `<plugin>:<audit>` when the selection carries one for the path; it claims no coverage, creates no kind partition, and rejects no run, and it makes the run's own recorded subject set equal its sealed inventory.
 
-Give every complete trio the **complete** resolved three-dot changed-path set,
+Give every selected concern skill the **complete** resolved three-dot changed-path set,
 the resolved endpoint identities, discovered governing context, and the advisory
 live file list when requested. Never pre-filter that set by extension,
-directory, or a guess at applicability: each concern skill owns its language's
-applicability and answers for the paths it claims, and a set narrowed before
+directory, or a guess at applicability: the selection decides which skills run, each concern skill owns its applicability within its selected match and answers for the paths it claims, and a set narrowed before
 dispatch produces a run whose coverage silently matches that guess rather than
 the changeset. Require inspection of the selected committed bodies for committed
-audits. Each read-only concern skill owns language-specific applicability and
-identifies the subject paths it audited or returns `NOT_APPLICABLE`; the
+audits. Each read-only concern skill identifies the subject paths it audited or returns `NOT_APPLICABLE`; the
 orchestration never substitutes its own file-pattern table. Build the
-pre-invocation inventory by discovered language and concern, then expand each
+pre-invocation inventory by selected kind and concern skill, then expand each
 concern's result into subject-path units when its coverage status is settled: a
 required unit settles on a final status, an accounting record settles on `skipped`.
-A discovered language with an incomplete trio records each missing concern
-as one required `missing-skill` unit whose `subject` and
-`priorContext.changedFilePartition` name the absent skill
-(`audit-<lang>-<concern>`) rather than a path — no concern claimed a path, so
+A selected concern skill absent from the installed inventory records one required `missing-skill` unit whose `subject` and
+`priorContext.changedFilePartition` name the absent skill as `<plugin>:<audit>` rather than a path — no concern claimed a path, so
 none is attached — with that skill as `expectedProducer`, and rejects the run.
 The reconciler never counts a `missing-skill` unit as a subject outside the
-inventory; the paths themselves stay accounted by the language's other concerns
+inventory; the paths themselves stay accounted by the kind's other concerns
 or by accounting records.
 
 Each expected unit carries the scope payload in `<verification_run_contract>`: one resolved path as its `subject` — inspected by a concern, or accounted for as unclaimed — with `recordedByRunDriver` present on every unit so a missing-skill, unsupported, or accounting unit still identifies its recorder, `expectedProducer` naming the concern skill expected to cover it or the run-driver identity for an accounting record, and `producerProvenance` only where a concern skill executed. A concern's completion is every expected path unit carrying `coverageStatus: audited`; its finding count is the count of accepted finding rows for those path-scoped units.
@@ -391,26 +399,26 @@ Each expected unit carries the scope payload in `<verification_run_contract>`: o
 - After a concern returns, queue one path-scoped row per inspected path, carrying a stable path-scoped unit id, the exact path in `subject`, and `coverageStatus: audited`. NEVER record fewer rows than the concern returned paths, and NEVER collapse several inspected paths into one representative row — the recorded subject set is the evidence that the inspection happened, so a reduced set is an unverifiable claim.
 - Queue that concern's complete scope rows BEFORE any of its findings. A finding is recorded against coverage already accepted, never in place of it; recording a row only where a finding landed states the findings as the coverage.
 - Queue each returned finding after those scope rows, associated with its matching path-scoped unit.
-- Persist queued units one `spx verification run scope add` command at a time, ordered by language discovery order then concern order `code`, `tests`, `architecture`, preserving each command result before the next mutation.
+- Persist queued units one `spx verification run scope add` command at a time, ordered by the order each kind first appears in the selection, then concern order `code`, `tests`, `architecture`, preserving each command result before the next mutation.
 - Derive the concern's finding count from the accepted finding rows; NEVER emit a custom count SPX discards.
 - A concern returning no complete result for a required unit MUST name the failed operation or absent prerequisite. When it names neither, drive the concern to a final result rather than recording a non-audited status.
 - NEVER manufacture a completed result from Claude's own inspection in place of a concern result.
 
-A missing required concern skill or an unsupported path already claimed by a recognized implementation-language partition rejects the run through accepted coverage status and the evidence-derived terminal rollup. A required unit that receives no concern result reaches no admissible status, so the run returns BLOCKED under `<verdict_format>` naming the failed operation or absent prerequisite rather than sealing. Do not continue concern dispatch after detecting an absent required skill for a recognized language partition; queue the complete final gap inventory, persist it serially, finish, and render the rejected run. An SPX command or payload rejection is a command failure and returns BLOCKED under `<verdict_format>` rather than becoming coverage evidence.
+A missing selected concern skill or an unsupported path already claimed by a selected kind rejects the run through accepted coverage status and the evidence-derived terminal rollup. A required unit that receives no concern result reaches no admissible status, so the run returns BLOCKED under `<verdict_format>` naming the failed operation or absent prerequisite rather than sealing. Do not continue concern dispatch after detecting an absent selected skill; queue the complete final gap inventory, persist it serially, finish, and render the rejected run. An SPX command or payload rejection is a command failure and returns BLOCKED under `<verdict_format>` rather than becoming coverage evidence.
 
 </coverage_model>
 
 <skill_map>
 
-For each language partition, compose the required implementation concern skills with the owned instruction, the discovered language name in place:
+For each selected concern skill, compose it with the owned instruction, the selection's `plugin` and `audit` in place: Use skill `{plugin}:{audit}`. The selection entry's `role` fixes its concern partition and its `kind` fixes the unit's kind partition:
 
-| Concern      | Composition instruction                       |
-| ------------ | --------------------------------------------- |
-| Code         | Use skill `{lang}:audit-{lang}-code`.         |
-| Tests        | Use skill `{lang}:audit-{lang}-tests`.        |
-| Architecture | Use skill `{lang}:audit-{lang}-architecture`. |
+| Registry role    | Concern partition |
+| ---------------- | ----------------- |
+| `implementation` | `code`            |
+| `tests`          | `tests`           |
+| `architecture`   | `architecture`    |
 
-The composition contract is the plugin-qualified skill name. The orchestration does not embed per-language file globs, commands, test naming, architecture examples, or local standards. Each concern skill owns its policy and returns findings for its concern only.
+The composition contract is the plugin-qualified skill name. The orchestration does not embed per-kind file globs, commands, test naming, architecture examples, or local standards. Each concern skill owns its policy and returns findings for its concern only.
 
 </skill_map>
 
@@ -422,7 +430,7 @@ Record each accepted concern finding through `spx verification run finding add`,
 
 <terminal_model>
 
-Finish the run only after the stage 7 reconciler exits zero. Record missing required skills, unsupported paths claimed by recognized implementation-language partitions, finding counts, and deterministic verification state in accepted scope and finding payload fields instead of terminal metadata.
+Finish the run only after the stage 7 reconciler exits zero. Record missing required skills, unsupported paths claimed by a selected kind, finding counts, and deterministic verification state in accepted scope and finding payload fields instead of terminal metadata.
 
 Compute the terminal status from accepted coverage and finding evidence: `approved` when every required non-gap unit is `audited` or `not-applicable` and no finding exists; `rejected` when a required unit is uncovered or any finding exists. Pass that evidence-derived value through `finish --terminal-status`. Do not pass terminal metadata for audit runs; the run's coverage and findings already carry the facts behind the terminal value.
 
@@ -485,7 +493,7 @@ boundary; preserve the exact diagnostic and apply the no-retry rule, since these
 
 <success_criteria>
 
-- The verdict covers every required implementation concern for every language partition in the supplied scope: code, tests, and architecture.
+- The verdict covers every concern skill the registry selects for the supplied scope: the code, tests, and architecture concerns of every selected kind.
 - A missing required concern skill after run start appears as `missing-skill` rejected coverage in the projection, and a blocked run names the exact malformed request field or failed SPX command that prevented a valid completed projection; the projection's `terminalStatus` is the sole determination.
 - Every rejected finding is falsifiable: it names the stable producer identity, unit, violated rule or principle, severity, location, message, and observed-versus-expected evidence.
 - Every missing-skill, unsupported-path, and accounting unit appears in the rendered projection rather than in prose, and each audited concern preserves its complete inspected-path set as path-scoped units whose `subject` fields are the exact paths, audited only after that concern completes, with finding counts derived from accepted finding rows rather than a custom field.
@@ -493,6 +501,6 @@ boundary; preserve the exact diagnostic and apply the no-retry rule, since these
 - Every gate-eligible run addresses an exact committed head with no live-file additions and established passing deterministic evidence; an explicit `worktree:` target includes the complete discovered modified and untracked path list and supplies no reusable gate evidence.
 - The sealed run is self-describing: its recorded subject set equals the inventory its own start input carries, no recorded subject lies outside that inventory, every required unit carries a final status and every unclaimed path its accounting record, and every finding references an accepted unit of its own concern — so a reader establishes the inspection's completeness from the run without the run driver's account of it.
 - A run that reaches no admissible status for a required unit returns the blocked diagnostic naming a concrete failed operation or absent prerequisite, never a sealed projection; a head behind the fetched base returns the resolver's stale-base refusal before any subject is read.
-- No plugin-side verdict script, legacy journal command, deterministic verification command, or language-specific file pattern can affect the determination outside the SPX-recorded run.
+- No plugin-side verdict script, legacy journal command, deterministic verification command, or kind-specific file pattern can affect the determination outside the SPX-recorded run.
 
 </success_criteria>
