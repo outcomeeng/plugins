@@ -79,6 +79,38 @@ CONFLICT_ABORT = "git rebase --abort"
 #: Schema version of the readiness-preservation proof embedded in the result.
 READINESS_SCHEMA_VERSION = 1
 
+# Serialized result vocabulary. Every key the JSON result carries is owned
+# here, so callers and evidence read the payload through these names rather
+# than re-declaring them.
+RESULT_STATUS_KEY = "status"
+RESULT_BASE_REF_KEY = "base_ref"
+RESULT_REMOTE_REF_KEY = "remote_ref"
+RESULT_BRANCH_KEY = "branch"
+RESULT_DETAIL_KEY = "detail"
+RESULT_PRESERVATION_KEY = "preservation"
+RESULT_CONFLICT_KEY = "conflict"
+
+# Git-fact keys shared by the preservation proof and the conflict details.
+OLD_BASE_OID_KEY = "old_base_oid"
+NEW_BASE_OID_KEY = "new_base_oid"
+OLD_HEAD_OID_KEY = "old_head_oid"
+NEW_HEAD_OID_KEY = "new_head_oid"
+BASE_DELTA_PATHS_KEY = "base_delta_paths"
+BRANCH_PATHS_BEFORE_KEY = "branch_paths_before"
+BRANCH_PATHS_AFTER_KEY = "branch_paths_after"
+PATH_OVERLAP_KEY = "path_overlap"
+
+# Preservation-proof keys.
+PRESERVATION_SCHEMA_VERSION_KEY = "schema_version"
+BRANCH_PATCH_CHANGED_KEY = "branch_patch_changed"
+BRANCH_DIFF_UNCHANGED_KEY = "branch_diff_unchanged"
+
+# Conflict-detail keys.
+CONFLICT_SUMMARY_KEY = "summary"
+CONFLICTED_PATHS_KEY = "conflicted_paths"
+CONFLICT_GIT_OUTPUT_KEY = "git_output"
+CONFLICT_OPERATOR_OPTIONS_KEY = "operator_options"
+
 
 def _load_changeset_scope() -> ModuleType:
     """Load the canonical ``changeset_scope`` module via importlib and cache it."""
@@ -124,6 +156,7 @@ remote_tracking_ref = _changeset_scope.remote_tracking_ref
 detect_current_branch = _changeset_scope.detect_current_branch
 BaseRefNotConfiguredError = _changeset_scope.BaseRefNotConfiguredError
 DetachedHeadError = _changeset_scope.DetachedHeadError
+ORIGIN_REMOTE_NAME: str = _changeset_scope.ORIGIN_REMOTE_NAME
 
 
 class SyncStatus(str, Enum):
@@ -184,17 +217,17 @@ class Preservation:
     def to_json_dict(self) -> dict[str, object]:
         """Serialize the proof with the schema version and stable keys."""
         return {
-            "schema_version": READINESS_SCHEMA_VERSION,
-            "old_base_oid": self.old_base_oid,
-            "new_base_oid": self.new_base_oid,
-            "old_head_oid": self.old_head_oid,
-            "new_head_oid": self.new_head_oid,
-            "base_delta_paths": self.base_delta_paths,
-            "branch_paths_before": self.branch_paths_before,
-            "branch_paths_after": self.branch_paths_after,
-            "path_overlap": self.path_overlap,
-            "branch_patch_changed": self.branch_patch_changed,
-            "branch_diff_unchanged": self.branch_diff_unchanged,
+            PRESERVATION_SCHEMA_VERSION_KEY: READINESS_SCHEMA_VERSION,
+            OLD_BASE_OID_KEY: self.old_base_oid,
+            NEW_BASE_OID_KEY: self.new_base_oid,
+            OLD_HEAD_OID_KEY: self.old_head_oid,
+            NEW_HEAD_OID_KEY: self.new_head_oid,
+            BASE_DELTA_PATHS_KEY: self.base_delta_paths,
+            BRANCH_PATHS_BEFORE_KEY: self.branch_paths_before,
+            BRANCH_PATHS_AFTER_KEY: self.branch_paths_after,
+            PATH_OVERLAP_KEY: self.path_overlap,
+            BRANCH_PATCH_CHANGED_KEY: self.branch_patch_changed,
+            BRANCH_DIFF_UNCHANGED_KEY: self.branch_diff_unchanged,
         }
 
 
@@ -227,15 +260,15 @@ class ConflictDetails:
     def to_json_dict(self) -> dict[str, object]:
         """Serialize conflict details with stable keys."""
         return {
-            "summary": self.summary,
-            "conflicted_paths": self.conflicted_paths,
-            "old_head_oid": self.old_head_oid,
-            "new_base_oid": self.new_base_oid,
-            "base_delta_paths": self.base_delta_paths,
-            "branch_paths_before": self.branch_paths_before,
-            "path_overlap": self.path_overlap,
-            "git_output": self.git_output,
-            "operator_options": self.operator_options,
+            CONFLICT_SUMMARY_KEY: self.summary,
+            CONFLICTED_PATHS_KEY: self.conflicted_paths,
+            OLD_HEAD_OID_KEY: self.old_head_oid,
+            NEW_BASE_OID_KEY: self.new_base_oid,
+            BASE_DELTA_PATHS_KEY: self.base_delta_paths,
+            BRANCH_PATHS_BEFORE_KEY: self.branch_paths_before,
+            PATH_OVERLAP_KEY: self.path_overlap,
+            CONFLICT_GIT_OUTPUT_KEY: self.git_output,
+            CONFLICT_OPERATOR_OPTIONS_KEY: self.operator_options,
         }
 
 
@@ -268,17 +301,17 @@ class SyncBaseResult:
     def to_json_dict(self) -> dict[str, object]:
         """Serialize to a JSON-ready dict with stable keys."""
         return {
-            "status": self.status.value,
-            "base_ref": self.base_ref,
-            "remote_ref": self.remote_ref,
-            "branch": self.branch,
-            "detail": self.detail,
-            "preservation": (
+            RESULT_STATUS_KEY: self.status.value,
+            RESULT_BASE_REF_KEY: self.base_ref,
+            RESULT_REMOTE_REF_KEY: self.remote_ref,
+            RESULT_BRANCH_KEY: self.branch,
+            RESULT_DETAIL_KEY: self.detail,
+            RESULT_PRESERVATION_KEY: (
                 self.preservation.to_json_dict()
                 if self.preservation is not None
                 else None
             ),
-            "conflict": (
+            RESULT_CONFLICT_KEY: (
                 self.conflict.to_json_dict() if self.conflict is not None else None
             ),
         }
@@ -504,14 +537,14 @@ def _sync_detached(
     old_head_oid = _rev(repo, "HEAD")
 
     if fetch:
-        fetched = _git(repo, "fetch", "origin", base_ref)
+        fetched = _git(repo, "fetch", ORIGIN_REMOTE_NAME, base_ref)
         if fetched.returncode != 0:
             return SyncBaseResult(
                 SyncStatus.GIT_FAILURE,
                 base_ref,
                 remote_ref,
                 None,
-                f"detached HEAD: git fetch origin {base_ref} failed: "
+                f"detached HEAD: git fetch {ORIGIN_REMOTE_NAME} {base_ref} failed: "
                 f"{fetched.stderr.strip()}",
             )
 
@@ -657,14 +690,14 @@ def _sync_resolved_base(
     old_head_oid = _rev(repo, "HEAD")
 
     if fetch:
-        fetched = _git(repo, "fetch", "origin", base_ref)
+        fetched = _git(repo, "fetch", ORIGIN_REMOTE_NAME, base_ref)
         if fetched.returncode != 0:
             return SyncBaseResult(
                 SyncStatus.GIT_FAILURE,
                 base_ref,
                 remote_ref,
                 branch,
-                f"git fetch origin {base_ref} failed: {fetched.stderr.strip()}",
+                f"git fetch {ORIGIN_REMOTE_NAME} {base_ref} failed: {fetched.stderr.strip()}",
             )
 
     resolved = _git(
