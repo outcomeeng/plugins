@@ -9,7 +9,7 @@ allowed-tools: Read, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/select_artifacts.
 ---
 
 <objective>
-One selection record per supplied path — the registered artifacts whose detection matches it, most specific first, and the audit skill each names — with a canonical Python reader for the rendered artifact registry.
+One selection record per supplied path — for each registered kind the path matches, that kind's most specific matching artifact and its detection-less artifacts, in kind declaration order, each with the audit skill it names — with a canonical Python reader for the rendered artifact registry.
 </objective>
 
 <invocation>
@@ -22,13 +22,13 @@ When one or more paths are supplied, select for them through this skill's own co
 python3 "${CLAUDE_SKILL_DIR}/scripts/select_artifacts.py" "<path>" ["<path>" ...]
 ```
 
-Pass each repository-relative path as one literal argument. The command reads the rendered `artifact-registry.json` beside the script and prints one JSON array with one record per path in the supplied order: `path`, and `artifacts` as the ordered selection of `{kind, role, plugin, audit, contract}` records. A path matching no registered artifact yields an empty `artifacts` list. A missing, unrendered, or malformed registry exits 2 with no selection and, on stderr, `error: artifact selection failed`, the cause, and the repair — reinstall or update the spec-tree plugin so the rendered registry ships beside the script; report it as `blocked` with that line and never fabricate a selection.
+Pass each repository-relative path as one literal argument. The command reads the rendered `artifact-registry.json` beside the script and prints one JSON array with one record per path in the supplied order: `path`, and `artifacts` as the ordered selection of `{kind, role, plugin, audit, contract}` records. A path matching no registered artifact yields an empty `artifacts` list. A registry file that is missing, not valid JSON, or lacks a `kinds` list exits 2 with no selection and, on stderr, `error: artifact selection failed`, the cause, and the repair — reinstall or update the spec-tree plugin so the rendered registry ships beside the script; report it as `blocked` with that line and never fabricate a selection.
 
 </invocation>
 
 <api_surface>
 
-The reader lives in `${CLAUDE_SKILL_DIR}/scripts/select_artifacts.py`, imported by sibling skills' scripts through the marketplace skill-co-located importlib convention (no path is hardcoded in agent prose). It is the only shipped reader of the rendered registry; a sibling script carries no copy of the document or its field names.
+The reader lives in `${CLAUDE_SKILL_DIR}/scripts/select_artifacts.py`, and importable as a module through a `__file__`-relative path (no path is hardcoded in agent prose). It is the only shipped reader of the rendered registry, and it owns the document's field names.
 
 | Symbol                                 | Purpose                                                                                                               |
 | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
@@ -38,7 +38,7 @@ The reader lives in `${CLAUDE_SKILL_DIR}/scripts/select_artifacts.py`, imported 
 | `select_artifacts(path, registry)`     | The artifacts one path selects: the most specific match per kind, then that kind's detection-less artifacts, in order |
 | `selection_for_paths(paths, registry)` | One selection record per path, in the supplied order                                                                  |
 
-A record's `plugin` names the plugin that ships the artifact's audit skill, `audit` is `null` for an artifact no audit skill governs, and `contract` is `concern` for a skill the implementation audit dispatches or `artifact-type` for a skill its own artifact-type auditor invokes.
+A record's `plugin` names the plugin that ships the artifact's audit skill, `audit` is `null` for an artifact no audit skill governs, and `contract` is the audit contract the registry declares for that skill, `concern` or `artifact-type`.
 
 </api_surface>
 
@@ -51,7 +51,7 @@ A path matches an artifact when its extension or filename is declared by that ar
 <success_criteria>
 
 - A selection printed by the command is byte-equal, per path, to `select_artifacts` applied to the rendered registry beside the script.
-- The registry's field vocabulary, its reader, and the selection rule exist once, in this skill's script; every sibling consumer reaches them by import.
+- The registry's field vocabulary, its reader, and the selection rule exist once, in this skill's script.
 - The module imports only the Python standard library.
 
 </success_criteria>

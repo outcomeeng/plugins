@@ -21,7 +21,7 @@ An authoritative SPX projection and raw run token for the requested implementati
 - NEVER edit source, tests, specs, commits, branches, or pull requests — the audit is read-only over the audited project tree.
 - ALWAYS persist audit state through `spx verification run`; NEVER use legacy journal commands, plugin-side verdict scripts, markdown comments, `.spx/audits/`, or tracked files as audit state.
 - NEVER run deterministic verification — the audit composes agentic concern audits only.
-- NEVER include a list of artifact kinds, language names, file extensions, audit skill names, commands, examples, or evidence patterns — the artifact registry the scope resolver reads carries every kind and the skills it selects, and each concern skill owns its policy.
+- NEVER state a list of artifact kinds, language names, file extensions, or audit skill names in this skill's text — the artifact registry the scope resolver reads carries every kind and the skills it selects, the run reads each skill name from that selection, and each concern skill owns its policy.
 - ALWAYS treat the `spx verification run` command exit code as payload validity; NEVER hand-validate emitted payload JSON after SPX accepts it.
 - NEVER end a run because work remains, time has passed, context is tight, or reading is unfinished — a stop names the failed command with its exit code and stderr, or the absent prerequisite.
 - NEVER assign `incomplete` or `skipped` to a required coverage unit; neither describes an admissible terminal state for required coverage.
@@ -255,12 +255,11 @@ field shown is required, and `producerProvenance` is omitted:
 }
 ```
 
-When the selection names an artifact-type audit skill for the path, the
-accounting record names it: its `unitId` reads
+When the selection names an artifact-type audit skill for the path, its
+accounting record names it: `unitId` reads
 `implementation:unknown:coverage-gap:<plugin>:<audit>:<the exact resolved path>`
-and its `expectedProducer` is the run-driver identity with `skillName` set to
-that `<audit>` and `skillOwningPluginName` set to that `<plugin>`. One path
-selected by several artifact-type skills carries one record per skill.
+and `expectedProducer` is the run-driver identity with that `skillName` and
+`skillOwningPluginName`; each such skill gets its own record.
 
 `languagePartition` is the only optional prior-context field. Omit it when the
 kind is unknown; never replace `priorContext` with top-level partition
@@ -410,13 +409,7 @@ A missing selected concern skill or an unsupported path already claimed by a sel
 
 <skill_map>
 
-For each selected concern skill, compose it with the owned instruction, the selection's `plugin` and `audit` in place: Use skill `{plugin}:{audit}`. The selection entry's `role` fixes its concern partition and its `kind` fixes the unit's kind partition:
-
-| Registry role    | Concern partition |
-| ---------------- | ----------------- |
-| `implementation` | `code`            |
-| `tests`          | `tests`           |
-| `architecture`   | `architecture`    |
+For each selected concern skill, compose it with the owned instruction, the selection's `plugin` and `audit` in place: Use skill `{plugin}:{audit}`. The selection entry's `role` fixes its concern partition — `implementation` maps to `code`, while `tests` and `architecture` keep their names — and its `kind` fixes the unit's kind partition.
 
 The composition contract is the plugin-qualified skill name. The orchestration does not embed per-kind file globs, commands, test naming, architecture examples, or local standards. Each concern skill owns its policy and returns findings for its concern only.
 

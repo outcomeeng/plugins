@@ -3,17 +3,14 @@
 The artifact registry the build renders beside this script declares every
 artifact kind the marketplace ships, the artifacts each kind produces, the
 features that detect each artifact in a path, and the skills that govern it.
-This module is the one reader of that document: sibling skills' scripts reach
-it through the marketplace skill-co-located ``__file__``-relative import and
-carry no reader or field vocabulary of their own.
+This module is the one reader of that document, importable through a
+``__file__``-relative path.
 
-Tested before this script is bundled by the artifact-registry node's
-``test_artifact_registry.mapping.l1.py`` (the rendered data file equals the
+Tested before this script is bundled: the rendered data file equals the
 declaration and each shipped copy equals a fresh render; one path per
-registered artifact selecting it and its kind's detection-less artifacts; the
-most specific of two matches; every unregistered path selecting nothing) and,
-through the implementation-audit resolver, by the audit node's
-``test_implementation_scope.compliance.l1.py``.
+registered artifact selects it and its kind's detection-less artifacts; the
+most specific of two matches wins; every unregistered path selects nothing;
+and the selection is emitted for every resolved path of a changeset.
 """
 
 from __future__ import annotations
@@ -123,7 +120,7 @@ def _optional_text(value: object) -> str | None:
 def select_artifacts(
     path: str, registry: Mapping[str, object]
 ) -> list[dict[str, str | None]]:
-    """Return the registered artifacts ``path`` selects, most specific first.
+    """Return the registered artifacts ``path`` selects, in kind declaration order.
 
     Within one kind the most specific matching detection wins, and of two
     matches of equal specificity the earlier-declared artifact wins; a kind

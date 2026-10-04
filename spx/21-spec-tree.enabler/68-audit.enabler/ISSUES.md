@@ -334,3 +334,27 @@ Remaining audit run-set convergence moves onto SPX prior-context restoration onc
 The audit side of the divergence between `spec-tree:implementation-auditor` run `2026-09-22_20-40-39-797-98d0f564dc05`, which approved `src/plugins/coding-agents/skills/orchestrate-officers/scripts/derive_ledger.py`, and `spec-tree:changes-reviewer` run `2026-09-22_20-40-26-221-404eea4ba809`, which rejected it by executing it. An audit that reads code approves a contract violation that executing the code exposes.
 
 **Settlement condition.** A decision states whether an implementation audit of a shipped executable executes it. The full entry is in `spx/31-outcomeeng.enabler/31-verification.enabler/ISSUES.md`.
+
+## Stage 7 of the implementation audit routes no stale-base exit from the reconciler
+
+**Evidence.** `src/plugins/spec-tree/skills/audit-implementation/SKILL.md` stage 7 routes the reconciler's exits 0, 1 and 2. The reconciler re-resolves the selector through the changeset-scope provider, which exits 3 with a `stale-base` diagnostic when the base advanced during the run. `instructions:skill-auditor` reported the missing route as a warning (`unhandled_command_outcome`) on the registry-selection changeset.
+
+**Impact.** A run whose base moves between `start` and stage 7 has no stated outcome, so the run driver improvises between a blocked diagnostic and a new run.
+
+**Settlement condition.** Stage 7 states that exit 3 returns the blocked diagnostic carrying the reconciler's stale-base stderr, and a test pins the routing.
+
+## The implementation audit chooses its stdin command form by the kind of caller
+
+**Evidence.** `src/plugins/spec-tree/skills/audit-implementation/SKILL.md` selects the quoted heredoc for interactive sessions and the one-line `printf` pipe for programmatic runners, as `spx/15-agent-tools.pdr.md` requires of tool guidance. `instructions:skill-auditor` reported the caller-dependent branch as a warning (`caller_independence`) on the registry-selection changeset.
+
+**Impact.** `/skill-standards` `<skill_organization>` holds that a skill never branches on its invocation context, so the two decisions disagree and each audit of the skill raises the conflict again.
+
+**Settlement condition.** The two sources agree on one form: either `/skill-standards` admits harness-scoped command forms, or the skill states one form that holds in both environments.
+
+## The implementation audit requires its caller's identity
+
+**Evidence.** `src/plugins/spec-tree/skills/audit-implementation/SKILL.md` requires the six run-driver producer fields in the invocation context, returns `BLOCKED` with `runToken: not-started` when they are absent, and writes them into every scope payload as `recordedByRunDriver`. `instructions:skill-auditor` rejected the dependency (`caller_independence`) on the registry-selection changeset. `spx/21-spec-tree.enabler/17-audit.adr.md` decides that the `implementation-auditor` supplies its identity as explicit request data.
+
+**Impact.** A direct `/audit-implementation HEAD` invocation without injected identity always returns `BLOCKED`, so the skill is not independently invocable, and the standard and the decision contradict each other.
+
+**Settlement condition.** The contradiction is settled in the governing layer: either the decision and the SPX run contract make the run-driver identity optional and derived, or `/skill-standards` admits a declared request-data input from the wrapper agent.
