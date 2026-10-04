@@ -3,7 +3,7 @@
 - `<catalog_contract>` — what a rule ID binds and how a finding uses it
 - `<structure_rules>` — organization, frontmatter, naming, descriptions, XML structure
 - `<disclosure_rules>` — progressive disclosure, conciseness, skill types, reference skills
-- `<capability_rules>` — arguments, dynamic context, tool restriction, file references
+- `<capability_rules>` — arguments, dynamic context, tool restriction, payload commands, file references
 - `<boundary_rules>` — path boundary, scripts, hooks, platform constraints
 - `<auditor_rules>` — the auditor skeleton
 
@@ -81,6 +81,7 @@ A skill-audit finding names exactly one rule ID from this catalog or from the `/
 | `dynamic-context-scoped`        | debt     | `references/command-capabilities.md` `<dynamic_context>`           | Each `<context>` command runs on every load, so it injects only state the skill reads, filtered to bounded output, for trigger-time orientation            |
 | `allowed-tools-narrowest`       | blocking | `references/command-capabilities.md` `<tool_restriction_security>` | `allowed-tools` grants the narrowest set the task needs, with Bash restricted to specific verbs                                                            |
 | `no-unneeded-destructive-tools` | blocking | `references/command-capabilities.md` `<tool_restriction_security>` | No destructive or network tool the task does not need is granted                                                                                           |
+| `payload-command-forms`         | blocking | `references/command-capabilities.md` `<payload_commands>`          | A payload-bearing command states its stdin form for each supported harness environment, never a form a caller selects                                      |
 | `product-file-reference`        | debt     | `references/command-capabilities.md` `<file_references>`           | A product file is referenced with `@`                                                                                                                      |
 | `skill-dir-token`               | blocking | `references/runtime-variables.md` `<skill_file_references>`        | A bundled file is reached through the skill-directory token, never a repository, generated, or legacy plugin path, and source never spells the Codex token |
 
