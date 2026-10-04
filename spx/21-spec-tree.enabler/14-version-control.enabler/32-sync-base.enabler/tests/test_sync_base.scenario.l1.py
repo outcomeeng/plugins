@@ -21,9 +21,11 @@ from outcomeeng_testing.harnesses.sync_base import (
     build_untracked_only_behind_base_repo,
     detach_head,
     head_oid,
+    head_parent_oids,
     load_sync_base_module,
     repository_root,
     resolve_ref,
+    unmerged_index_entries,
 )
 
 
@@ -38,7 +40,12 @@ def test_behind_base_branch_is_rebased_onto_remote_tracking_base(
     assert result.status is module.SyncStatus.REBASED
     assert result.remote_ref == handle.remote_ref
     assert result.branch == handle.feature_branch
-    # The feature commit's effect survives the rebase (it was replayed)...
+    # The branch's own commit was replayed onto the fetched base tip: HEAD has
+    # exactly one parent, and it is that tip — a merge would add a second.
+    assert head_parent_oids(handle.repo) == [
+        resolve_ref(handle.repo, handle.remote_ref)
+    ]
+    # The feature commit's effect survives the replay...
     assert (handle.repo / handle.feature_file).exists()
     # ...and the base advance the branch was behind is now present.
     assert (handle.repo / handle.base_file).exists()
@@ -62,28 +69,67 @@ def test_rebase_conflict_stops_with_active_conflict_details(
 ) -> None:
     module = load_sync_base_module()
     handle = build_conflicting_repo(repository_root(tmp_path))
+    branch_head_before = head_oid(handle.repo)
 
     result = module.sync_base(handle.repo)
 
     assert result.status is module.SyncStatus.CONFLICT
-    assert result.conflict is not None
-    assert result.conflict.summary == module.CONFLICT_SUMMARY
-    assert result.conflict.conflicted_paths == [handle.conflict_file]
+    details = result.conflict
+    assert details is not None
+    # Summary and conflicted paths.
+    assert details.summary == module.CONFLICT_SUMMARY
+    assert details.conflicted_paths == [handle.conflict_file]
+    # Base and branch git facts: the replay that stopped is the branch head as it
+    # stood before synchronization onto the fetched base tip, and the conflict
+    # file is the one path both the base advance and the branch changed.
+    assert details.old_head_oid == branch_head_before
+    assert details.new_base_oid == resolve_ref(handle.repo, handle.remote_ref)
+    assert details.base_delta_paths == [handle.conflict_file]
+    assert details.branch_paths_before == [handle.conflict_file]
+    assert details.path_overlap == [handle.conflict_file]
+    # Git's own conflict text.
     assert f"CONFLICT (content): Merge conflict in {handle.conflict_file}" in (
-        result.conflict.git_output
+        details.git_output
     )
-    assert module.CONFLICT_ABORT in result.conflict.operator_options
-    assert module.CONFLICT_CONTINUE in result.conflict.operator_options
-    # The rebase remains active so the operator can inspect, continue, or abort.
-    assert (handle.repo / ".git" / "rebase-merge").exists() or (
-        handle.repo / ".git" / "rebase-apply"
-    ).exists()
-    assert "<<<<<<<" in (handle.repo / handle.conflict_file).read_text(encoding="utf-8")
+    # Operator options to inspect, continue, or abort.
+    for option in (
+        module.CONFLICT_INSPECT_STATUS,
+        module.CONFLICT_INSPECT_DIFF,
+        module.CONFLICT_INSPECT_STAGES,
+        module.CONFLICT_CONTINUE,
+        module.CONFLICT_ABORT,
+    ):
+        assert option in details.operator_options
+    # The rebase remains active: the index still holds the conflict's unmerged
+    # stages, and the working file still carries both sides of the conflict.
+    assert handle.conflict_file in unmerged_index_entries(handle.repo)
+    conflicted_text = (handle.repo / handle.conflict_file).read_text(encoding="utf-8")
+    assert handle.base_content in conflicted_text
+    assert handle.feature_content in conflicted_text
+    # The serialized result carries exactly the result fields, so no opaque
+    # action token stands beside them, and the conflict details carry exactly
+    # the structured conflict fields.
     payload = result.to_json_dict()
-    assert payload["conflict"] is not None
-    assert "git_output" in payload["conflict"]
-    assert "stderr" not in payload["conflict"]
-    assert "action_token" not in payload
+    assert set(payload) == {
+        module.RESULT_STATUS_KEY,
+        module.RESULT_BASE_REF_KEY,
+        module.RESULT_REMOTE_REF_KEY,
+        module.RESULT_BRANCH_KEY,
+        module.RESULT_DETAIL_KEY,
+        module.RESULT_PRESERVATION_KEY,
+        module.RESULT_CONFLICT_KEY,
+    }
+    assert set(payload[module.RESULT_CONFLICT_KEY]) == {
+        module.CONFLICT_SUMMARY_KEY,
+        module.CONFLICTED_PATHS_KEY,
+        module.OLD_HEAD_OID_KEY,
+        module.NEW_BASE_OID_KEY,
+        module.BASE_DELTA_PATHS_KEY,
+        module.BRANCH_PATHS_BEFORE_KEY,
+        module.PATH_OVERLAP_KEY,
+        module.CONFLICT_GIT_OUTPUT_KEY,
+        module.CONFLICT_OPERATOR_OPTIONS_KEY,
+    }
 
 
 @pytest.mark.parametrize("edit", tracked_edits())
@@ -123,7 +169,11 @@ def test_untracked_only_behind_base_rebases_not_dirty_tree(
 
     assert result.status is module.SyncStatus.REBASED
     assert result.conflict is None
-    # The rebase ran: the base advance is present and the feature commit survived.
+    # The rebase ran: the feature commit was replayed onto the fetched base tip,
+    # the base advance is present, and the feature commit survived.
+    assert head_parent_oids(handle.repo) == [
+        resolve_ref(handle.repo, handle.remote_ref)
+    ]
     assert (handle.repo / handle.base_file).exists()
     assert (handle.repo / handle.feature_file).exists()
 
@@ -284,5 +334,8 @@ def test_explicit_valid_base_rebases_onto_that_base_not_origin_head(
     result = module.sync_base(handle.repo, base_ref=handle.alternate_ref)
     assert result.status is module.SyncStatus.REBASED
     assert result.remote_ref == handle.alternate_remote_ref
+    assert head_parent_oids(handle.repo) == [
+        resolve_ref(handle.repo, handle.alternate_remote_ref)
+    ]
     assert (handle.repo / handle.alternate_file).exists()
     assert (handle.repo / handle.feature_file).exists()

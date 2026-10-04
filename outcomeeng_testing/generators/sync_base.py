@@ -79,6 +79,11 @@ def repository_domain() -> RepositoryDomain:
     )
 
 
+def remote_name() -> str:
+    """Generate a Git remote name distinct from any name a contract ships."""
+    return f"remote-{uuid4()}"
+
+
 @dataclass(frozen=True)
 class TrackedEdit:
     staged: bool
