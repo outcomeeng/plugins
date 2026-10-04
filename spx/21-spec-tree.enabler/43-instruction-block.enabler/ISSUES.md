@@ -148,3 +148,14 @@ The typed skill audit that approved `src/plugins/spec-tree/skills/update-instruc
 - The success criteria require the no-verb render to reproduce each written router block, but Step 5 never runs that render; `--check` alone passes a hand-edit inside the router.
 
 **Settlement condition**: the never-rerun rule names the `--from` exception where it is stated, the `dirty` report states that the run ends with nothing written, Step 5 runs the no-verb render comparison, and a typed skill audit approves the surface without these warnings.
+
+## Two retained rules of the operator's former project-instruction file live nowhere
+
+The operator's project-level instruction file, outside this repository, is deleted. Each of its sections was reviewed against the router block and the `/understand` foundation. Three need no action, because the foundation's `<imperfection_protocol>` carries them in broader wording, and the rest landed in the router or were dropped. Two retained rules exist in no instruction surface:
+
+- A failed skill invocation is diagnosed and reported, never substituted by reading the skill file, pre-compaction context or memory. The router carries this rule for a failed subagent launch only. It is a stop trigger under When to Invoke Skills.
+- An observation is classified before it is called a finding, and expected state is never a finding. The Known, Likely, Investigate and Fix vocabulary of the former section is not retained.
+
+**Impact.** Both rules are unenforced; nothing cites them, so their absence is quiet.
+
+**Settlement condition.** Both rules land in the router template, with the pinned `*_POLICY_REQUIREMENTS` tuples in `outcomeeng/distribution/instruction_block.py` and the spec assertions moving in the same changeset, against the measured byte budget the entry above records.

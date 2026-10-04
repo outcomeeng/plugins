@@ -336,3 +336,27 @@ failed invocation rather than approval evidence.
 **Evidence**: `instructions:subagent-auditor` finding `f-001` against
 `src/plugins/spec-tree/agents/implementation-auditor.md` on Change #76 head
 `843ddd709b058970d414ec755cc10121ff6bb5ff`.
+
+## The implementation-auditor has no executable agent or eval coverage
+
+The audit surface uses the published `spx verification run` lifecycle, and `spx/21-spec-tree.enabler/17-audit.adr.md` declares the target surface: one spec-tree-owned `implementation-auditor` wrapper agent composes the `audit-{lang}-code`, `audit-{lang}-tests` and `audit-{lang}-architecture` skills inside one isolated verifier context and records one audit verification run. Language plugins ship skills only. No executable agent or eval covers representative implementation-auditor runs over a one-language, a multi-language and an unsupported-file scope.
+
+**Settlement condition.** Agent or eval coverage exists for those three scopes, once the agentic runner can be exercised deterministically.
+
+## Audit run-set convergence does not use SPX prior-context restoration
+
+Remaining audit run-set convergence moves onto SPX prior-context restoration once the plugin smoke path proves the single-run lifecycle.
+
+**Settlement condition.** The audit skills restore prior context through `spx verification run` and carry no convergence mechanism of their own. `outcomeeng/changes#327` carries the artifact-type auditors' move onto the same contract.
+
+## The audit-runtime-evidence branch is unpartitioned
+
+`origin/work/audit-runtime-evidence` changed 59 paths across implementation-audit contracts, Python authoring guidance, distribution code and repository configuration when it was recorded. It is unpartitioned and unpublished. The audit-owned merge cycle holds the implementation-auditor run contract, the coverage inventory, the wrapper configuration, the governing audit declarations, the co-located tests and the required generated output. Python authoring or distribution changes that can merge and verify without that contract belong to their owning nodes.
+
+**Settlement condition.** The branch is replaced by the audit pull request, one implementation-audit behavior with one verification story and one rollback story, and its other changes go to their owning nodes. This is one merge cycle of the aggregate that `spx/21-spec-tree.enabler/65-apply.enabler/ISSUES.md` records.
+
+## An implementation audit and a changeset review read one shipped executable to opposite verdicts
+
+The audit side of the divergence between `spec-tree:implementation-auditor` run `2026-09-22_20-40-39-797-98d0f564dc05`, which approved `src/plugins/coding-agents/skills/orchestrate-officers/scripts/derive_ledger.py`, and `spec-tree:changes-reviewer` run `2026-09-22_20-40-26-221-404eea4ba809`, which rejected it by executing it. An audit that reads code approves a contract violation that executing the code exposes.
+
+**Settlement condition.** A decision states whether an implementation audit of a shipped executable executes it. The full entry is in `spx/31-outcomeeng.enabler/31-verification.enabler/ISSUES.md`.

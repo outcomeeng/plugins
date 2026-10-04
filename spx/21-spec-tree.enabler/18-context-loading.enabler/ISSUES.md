@@ -28,7 +28,7 @@ Two further readings show the same gap from the CLI side. `spx diagnose` reports
 
 **Interim**: the managed instruction block instructs Claude to read the methodology source and version from `spx.config.yaml` at the repository root, to read it again whenever `/understand` runs, and to treat an absent file, a missing `methodology` block, or a `methodology.version` of the sentinel `installed` as no declared methodology version, never inferring one from a plugin's distribution version, a changelog, or prose. The instruction reads the same declaration the SPX CLI resolves, so it is consistent with the `NEVER` assertion above; the `installed` sentinel is spx's default and resolves to the methodology the installed spec-tree plugin declares, which stays undeclared until the plugin declares what it provides, the gap `spx/15-validation.enabler/32-plugin-manifest.enabler/ISSUES.md` records; it stands in for the manifest until the consumption slice lands and is removed in that change.
 
-**Resolution shape**: land the consumption slice in `PLAN.md` (floor and pin advanced to a release whose bundle satisfies the contract, `/contextualize` reading the bundle), emit the `methodology` block in the manifest, retag the assertion's evidence against the CLI output, and delete the interim instruction-block line in the same change.
+**Resolution shape**: land the consumption slice described in "The skill enumerates the read-set locally" below (floor and pin advanced to a release whose bundle satisfies the contract, `/contextualize` reading the bundle), emit the `methodology` block in the manifest, retag the assertion's evidence against the CLI output, and delete the interim instruction-block line in the same change.
 
 **Evidence**: `spx spec context show --json spx/21-spec-tree.enabler/18-context-loading.enabler` on 0.6.26; `spx diagnose --format json` `methodology-context` record; `outcomeeng/validation/spx_version.py` line 87 and `.github/workflows/check.yml` line 31.
 
@@ -53,3 +53,27 @@ Impact: the manifest's lifecycle lines drift from the merge policy they copy, an
 Successor: a Proposed Change filed after outcomeeng/changes#91 merges.
 
 Revisit and settlement condition: the four lifecycle fields derived from the read overlay or the merge policy, criteria reduced to falsifiable marker properties, fences labelled `text`, and one typed skill audit approving with no `conciseness` finding.
+
+## The skill enumerates the read-set locally
+
+`13-context-enumeration.adr.md` decides that a target's complete read-set derives from the SPX CLI's context bundle, with the deterministic tree walk and the cited-governance resolver living in the CLI as a trusted third party per `spx/12-shipped-scripting.adr.md`. The shipped `/contextualize` skill keeps structural enumeration local: per level it globs the ADRs and PDRs, reads every one, and requires the glob count to equal the read count. It already reads explicit full-path ADR and PDR citations from the loaded specs and decisions.
+
+The published CLI supplies the bundle as `spx spec context show --json`, whose schema-2 output carries `schemaVersion`, `methodology`, `productDir`, `targets`, `bootstrap`, `read`, `listed` and `coverage`. The earlier contract it replaced emitted `documents`, `methodology`, `productDir`, `siblings` and `target`, omitted a cited governance decision observed for this node, and exposed no citation provenance, guides, local overlays, bootstrap flag or schema version. Whether the schema-2 bundle satisfies the decision's contract (ordered and byte-identical for one tree and target, every decision at a level emitted, only lower-index siblings read, cited governance decisions with their citing file, coordination notes never adding citations, guides and the lifecycle overlay outside the read loop, bootstrap, and a non-zero exit naming a missing required spec) is established against the decision when the slice starts.
+
+**Impact.** The agent counts files itself, so a skipped decision or a read higher-index sibling is possible; the structural enumeration is judged by `[audit]` where a deterministic grader could judge CLI output.
+
+**Settlement condition.** The bundle satisfies the decision's contract, `REQUIRED_SPX_VERSION` in `outcomeeng/validation/spx_version.py` and `SPX_VERSION` in `.github/workflows/check.yml` advance to a release carrying it, and one changeset then:
+
+- rewrites Steps 1 to 3 of `src/plugins/spec-tree/skills/contextualize/SKILL.md` to run `spx spec context show --json <target>`, read every path in `read`, read the guides and the lifecycle overlay `spx/local/merging.md` outside that loop, list the remaining local overlays without reading them, and enumerate exactly those paths and the cited-governance provenance in the `<SPEC_TREE_CONTEXT>` manifest;
+- retags the read-completeness, lower-index-sibling and determinism assertions in `context-loading.md` from `[audit]` to `[test]` against the CLI output, because the enumeration is then code and the determinism claim gains a deterministic grader; until the complete contract publishes, those assertions and the decision's rules stay `[audit]`, and the foundation-manifest assertions keep their own `[test]` evidence;
+- runs `just build-skills`, then `instructions:skill-auditor` on the edited skill and the spec and test-evidence auditor gates.
+
+**Related.** `outcomeeng/changes#346` makes the decision name the capability by the command the CLI ships, and `outcomeeng/changes#320` carries complete Product Tree context through `list` and `show`.
+
+## A Verifier's context load rebases the branch it audits
+
+`/contextualize` requires `/sync-base` before it reads product truth, and the test-evidence audit skill loads `/contextualize` for its target node. A Verifier's agent session therefore fetches, rebases the Author's branch onto its base and resolves conflicts on its own, while other Verifiers dispatched against the same committed head are still running. `spec-tree:audit-implementation` states that an audit never synchronizes, rebases or otherwise mutates the audited subject; the test-evidence path carries no such guard.
+
+**Evidence.** Rollout `agent-a4cedd803fc1a5758.jsonl` of the test-evidence audit dispatched against head `f07db1bbaf225ec031d7a777f02c166daa588871` on 2026-09-16 invoked `spec-tree:sync-base`, ran `sync_base.py`, resolved two version and changelog conflicts with `git add` and `git rebase --continue`, and finished at `15d4309e69c26804cd1b04676248a529fd0235b9`. The concurrent implementation audit, run `2026-09-16_12-40-04-694-a2e206a2d753`, then found its sealed head superseded, and the Author's deterministic gate had run on the pre-rebase head only.
+
+**Settlement condition.** A Verifier-mode context load reads the committed subject without `/sync-base`, or `/sync-base` reports behind-base without moving the checkout when its caller is a Verifier, and the audit skills that load context select it, so the clean committed head the dispatch-readiness record names stays the audited head.
