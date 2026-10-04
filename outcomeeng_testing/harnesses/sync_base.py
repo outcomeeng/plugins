@@ -80,18 +80,21 @@ class RemoteVocabulary:
         return f"{self.ref_prefix}{base_branch}"
 
 
-def _remote_vocabulary(
-    sync_module: ModuleType, contract_path: pathlib.Path
-) -> RemoteVocabulary:
+def _remote_vocabulary(contract_path: pathlib.Path) -> RemoteVocabulary:
+    """Read the remote vocabulary from the changeset-scope contract at ``contract_path``.
+
+    The contract owns both values, so a repository built from them is chosen
+    independently of the synchronizer under test.
+    """
     contract = runpy.run_path(str(contract_path))
     return RemoteVocabulary(
-        remote_name=str(sync_module.ORIGIN_REMOTE_NAME),
+        remote_name=str(contract["ORIGIN_REMOTE_NAME"]),
         ref_prefix=str(contract["ORIGIN_REF_PREFIX"]),
     )
 
 
 #: The shipped remote vocabulary every default repository is built with.
-REMOTE = _remote_vocabulary(load_sync_base_module(), CHANGESET_SCOPE_CONTRACT_PATH)
+REMOTE = _remote_vocabulary(CHANGESET_SCOPE_CONTRACT_PATH)
 
 
 @dataclass(frozen=True)
@@ -100,7 +103,8 @@ class RelocatedRemoteSync:
 
     ``module`` is the copied ``sync_base`` module, which reaches the copied
     changeset-scope primitives the way the shipped skill reaches its sibling.
-    ``remote`` is the vocabulary that copy's contract declares.
+    ``remote`` is the vocabulary read from that copy's contract, never from the
+    copied synchronizer.
     """
 
     module: ModuleType
@@ -147,9 +151,7 @@ def load_sync_base_with_remote_name(
     module = _load_module(
         f"sync_base_{uuid4().hex}", sync_dir / SYNC_BASE_MODULE_PATH.name
     )
-    return RelocatedRemoteSync(
-        module=module, remote=_remote_vocabulary(module, contract_path)
-    )
+    return RelocatedRemoteSync(module=module, remote=_remote_vocabulary(contract_path))
 
 
 def _git(repo: pathlib.Path, *args: str, cwd: pathlib.Path | None = None) -> str:
@@ -806,9 +808,9 @@ def build_detached_untracked_only_behind_base_repo(
 def build_detached_no_remote_repo(root: pathlib.Path) -> DetachedRepo:
     """Build a detached worktree with no remote to fetch the base from.
 
-    A standalone repository (no clone, no remote) with HEAD detached: the base
-    cannot be fetched and no remote base resolves, so synchronization reports a
-    hard git failure rather than advancing.
+    A standalone repository (no clone, no remote) with HEAD detached at the
+    generated base branch's only commit: the base cannot be fetched and its
+    remote-tracking ref ``remote_ref`` does not resolve.
     """
     data = repository_domain()
     repo = root / "repo"

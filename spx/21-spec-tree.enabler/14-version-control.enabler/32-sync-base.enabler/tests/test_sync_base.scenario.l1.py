@@ -285,20 +285,47 @@ def test_detached_untracked_only_behind_base_is_advanced(
     assert (handle.repo / handle.base_file).exists()
 
 
-def test_detached_head_with_no_remote_reports_hard_git_failure(
+def test_detached_head_whose_base_fetch_fails_reports_hard_git_failure(
     tmp_path: pathlib.Path,
 ) -> None:
-    # A detached worktree with no origin remote cannot fetch or resolve a base, so
-    # the detached case stays a hard git failure — the only genuinely
-    # non-advanceable detached outcome alongside divergence.
+    # A detached worktree with no remote: the caller names its base, so the run
+    # passes base resolution and reaches the detached topology, where fetching
+    # that base from the absent remote fails. The detached case stays a hard git
+    # failure and the worktree is not advanced.
     module = load_sync_base_module()
     handle = build_detached_no_remote_repo(repository_root(tmp_path))
 
-    result = module.sync_base(handle.repo)
+    result = module.sync_base(handle.repo, base_ref=handle.base_ref)
+
+    assert result.status is module.SyncStatus.GIT_FAILURE
+    # The detached path reports no branch; an attached run would name one.
+    assert result.branch is None
+    assert result.base_ref == handle.base_ref
+    assert result.remote_ref == handle.remote_ref
+    assert result.conflict is None
+    assert result.preservation is None
+    # No advance was attempted: HEAD is still the parked commit.
+    assert head_oid(handle.repo) == handle.detached_oid
+
+
+def test_detached_head_whose_remote_base_does_not_resolve_reports_hard_git_failure(
+    tmp_path: pathlib.Path,
+) -> None:
+    # The same detached worktree synchronized without fetching: nothing fails to
+    # fetch, but the base's remote-tracking ref does not resolve to a commit, so
+    # the detached case stays a hard git failure and the worktree is not advanced.
+    module = load_sync_base_module()
+    handle = build_detached_no_remote_repo(repository_root(tmp_path))
+
+    result = module.sync_base(handle.repo, base_ref=handle.base_ref, fetch=False)
 
     assert result.status is module.SyncStatus.GIT_FAILURE
     assert result.branch is None
+    assert result.base_ref == handle.base_ref
+    assert result.remote_ref == handle.remote_ref
     assert result.conflict is None
+    assert result.preservation is None
+    assert head_oid(handle.repo) == handle.detached_oid
 
 
 def test_explicit_base_ref_overrides_origin_head(
