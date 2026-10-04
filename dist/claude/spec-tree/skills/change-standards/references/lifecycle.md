@@ -35,9 +35,11 @@ A Change's successors are the store records whose `Predecessors` value names its
 
 Authority is read from the store, never from the body. Read the issue's field-change events with `gh api graphql --paginate -f query='query($o:String!,$r:String!,$n:Int!,$endCursor:String){repository(owner:$o,name:$r){issue(number:$n){timelineItems(first:100,after:$endCursor,itemTypes:[ISSUE_FIELD_CHANGED_EVENT]){pageInfo{hasNextPage endCursor} nodes{... on IssueFieldChangedEvent{createdAt actor{login} previousValue newValue issueField{... on IssueFieldSingleSelect{name} ... on IssueFieldText{name}}}}}}}}' -f o=<owner> -f r=<repo> -F n=<N>`, and its comments with the issue read `canonical-state` names.
 
-The authority for leaving Maturity `M` is one confirmation: a `Lifecycle` event whose `previousValue` is `Submitted` and whose `newValue` is `Available`, posted while `Maturity` held `M`, together with the newest `Confirmation:` comment under `confirmation-record` posted before that event and after the move into `Submitted` that it ends, naming `M`. `Maturity` held `M` at an event's time when `M` is the `newValue` of the newest `Maturity` event before it; with no earlier `Maturity` event, the `previousValue` of the oldest later one; with no `Maturity` event at all, the current `Maturity`. A move out of `Submitted` whose comment in that interval is a `Rejection:` grants no authority, and so does an event without its comment or a comment without its event.
+A move out of `Submitted` is a `Lifecycle` event whose `previousValue` is `Submitted` and whose `newValue` is `Available`. Its deciding comment is the newest `Confirmation:` or `Rejection:` comment under `confirmation-record` posted after the move into `Submitted` that it ends and before the move itself; `complete-readback` selects the same comment. `Maturity` held `M` at an event's time when `M` is the `newValue` of the newest `Maturity` event before it; with no earlier `Maturity` event, the `previousValue` of the oldest later one; with no `Maturity` event at all, the current `Maturity`.
 
-Report each authority found with the event's `actor` login and `createdAt` and the comment's lines verbatim. When no confirmation exists for `M`, report that the store shows no authority for leaving `M`; a body line never stands in for it.
+The authority for leaving Maturity `M` is one move out of `Submitted`, posted while `Maturity` held `M`, whose deciding comment is a `Confirmation:` naming `M`. A move whose deciding comment is a `Rejection:` grants no authority, and so does a move with no deciding comment or a comment with no move. The move is the Product's Maintainer's as the store records it: the comment's `For:` line names the operator the move acts for, and the event's `actor` names the account that wrote it; no other store state identifies the Maintainer.
+
+Report each authority found with the event's `actor` login and `createdAt` and the deciding comment's lines verbatim. When no confirmation exists for `M`, report that the store shows no authority for leaving `M`; a body line never stands in for it.
 
 </rule>
 
@@ -49,7 +51,7 @@ A transition records each successful write in its declared order. When a require
 
 <rule id="complete-readback">
 
-A transition completes only after re-reading the issue and its fields and finding every value equal to the intended state: Product equals the overlay Product, Maturity is unchanged, Lifecycle equals the target value, the assignee list equals the intended holder set, and the transition's own record is the one its rule selects: for a claim, the winning Claim under `claim-record` is the exact comment the transition posted; for a release, a confirmation, or a close, the newest `Handoff:`, `Confirmation:` or `Rejection:`, or terminal comment is. Report the readback values verbatim.
+A transition completes only after re-reading the issue and its fields and finding every value equal to the intended state: Product equals the overlay Product, Maturity is unchanged, Lifecycle equals the target value, the assignee list equals the intended holder set, and the transition's own record is the one its rule selects: for a claim, the winning Claim under `claim-record` is the exact comment the transition posted; for a confirmation, the deciding comment under `authority-read` is the exact `Confirmation:` or `Rejection:` comment the transition posted; for a release or a close, the newest `Handoff:` or terminal comment is. Report the readback values verbatim.
 
 </rule>
 
