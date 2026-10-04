@@ -1,5 +1,5 @@
 name = "instructions_subagent-auditor"
-description = "ALWAYS invoke when auditing, reviewing, or evaluating custom agent configuration files for best practices compliance, or when the user asks to audit a custom agent."
+description = "Verifier running `/audit-subagent`: a calling skill launches it by exact name with one definition path when its gate requires an independent audit of a custom agent configuration a changeset changes."
 model = "gpt-6.1-sol"
 model_reasoning_effort = "high"
 web_search = "disabled"
