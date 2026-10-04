@@ -655,15 +655,17 @@ def _resolve_default_base(repo: pathlib.Path) -> str | SyncBaseResult:
 def sync_base(
     repo: pathlib.Path, *, base_ref: str | None = None, fetch: bool = True
 ) -> SyncBaseResult:
-    """Bring ``repo``'s current branch current with its fetched base.
+    """Bring ``repo``'s checkout current with its fetched base.
 
     ``base_ref`` is the bare base-branch name to synchronize onto. When omitted
     it is resolved from ``origin/HEAD`` through the shared changeset-scope
     primitives; callers that track a non-default base (a stacked pull request
     whose base is another feature branch) pass it explicitly. The base is
-    fetched (unless ``fetch=False``) and the branch is rebased onto
-    ``origin/<base>`` when it is behind. Returns a :class:`SyncBaseResult`;
-    never raises for an ordinary git outcome.
+    fetched (unless ``fetch=False``). An attached branch behind the base is
+    rebased onto ``origin/<base>``; a clean detached HEAD that is an ancestor
+    of the base is advanced with ``git switch --detach origin/<base>``, and a
+    diverged detached HEAD is reported without moving. Returns a
+    :class:`SyncBaseResult`; never raises for an ordinary git outcome.
     """
     if base_ref is None:
         resolved_base = _resolve_default_base(repo)
@@ -806,7 +808,11 @@ def _sync_resolved_base(
 def main(argv: list[str] | None = None) -> int:
     """CLI entry point: synchronize and print the result as JSON."""
     parser = argparse.ArgumentParser(
-        description="Rebase the current branch onto its fetched base.",
+        description=(
+            "Bring the checkout current with its fetched base: rebase an "
+            "attached branch onto origin/<base>, or advance a clean ancestor "
+            "detached HEAD to origin/<base>."
+        ),
     )
     parser.add_argument(
         "repo",

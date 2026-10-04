@@ -10,6 +10,17 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.104.1
+
+### Fixed
+
+- **`/sync-base` reports base-sync preservation for a branch whose diff holds bytes that are not valid UTF-8.** The synchronizer reads the diff that feeds `git patch-id --stable` as raw bytes. A clean rebase of such a branch now returns `rebased` with a readiness-preservation proof. Before this fix, the synchronizer stopped with a decoding error and printed no JSON result.
+
+### Changed
+
+- **`/sync-base` creates recovery checkpoints only through `/commit-changes`.** The skill composes `spec-tree:commit-changes` by exact name, and its command policy lists `git switch -c` for creating the owning branch of a dirty-tree checkpoint. Its tool grant no longer includes `git branch`, so a `git branch` command the skill runs, `git branch -D` among them, now asks for approval.
+- **`/sync-base` names a coordination-note branch in its result.** When the skill commits an unrelated coordination note to its own branch, the result names that branch and its full head identity as pending `/merge`.
+
 ## 0.104.0
 
 ### Changed
