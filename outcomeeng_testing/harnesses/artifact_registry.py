@@ -111,6 +111,11 @@ def observe_manifests_step(
     ``removing`` names one registered skill whose directory the copy of the
     Claude Code generated surface does not carry. The copy hard-links every
     committed file it can, so removing a directory never touches the repository.
+
+    The injected runner stands in for the `claude plugin validate` subprocess
+    alone — a configurable fake of the external-tool boundary, chosen because
+    the real command costs a process per plugin per case. Every check of the
+    step, the registered-skill check included, runs for real.
     """
     with TemporaryDirectory() as temporary_directory:
         root = Path(temporary_directory)
