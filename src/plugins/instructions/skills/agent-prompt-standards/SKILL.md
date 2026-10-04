@@ -233,7 +233,7 @@ Never invent failure modes. If a skill is new and hasn't failed yet, omit the se
 
 <rule_catalog>
 
-Each row names one rule this skill states and gives it a stable ID; the section column is the rule's authority. An ID never changes meaning, and a retired ID is never reused. An audit finding on prompt text names one of these IDs, carries its severity, and lists every location in its file that breaks the rule. Description wording follows `/skill-standards` `<descriptions>` and carries that catalog's IDs; in a skill file, a conciseness finding carries `/skill-standards`' `conciseness` ID.
+Each row names one rule this skill states and gives it a stable ID; the section column is the rule's authority. An ID never changes meaning, and a retired ID is never reused. An audit finding on prompt text names one of these IDs, carries its severity, and lists every location in its file that breaks the rule. Description wording follows `/skill-standards` `<descriptions>` and carries that catalog's IDs; in a skill file, a conciseness finding carries `/skill-standards`' `conciseness` ID and a concreteness finding its `concrete-over-abstract` ID.
 
 | Rule ID                         | Severity | Section                  | Rule                                                                                              |
 | ------------------------------- | -------- | ------------------------ | ------------------------------------------------------------------------------------------------- |
