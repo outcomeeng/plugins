@@ -82,7 +82,7 @@ points against the 40,000-code-point ceiling `skill-standards`
 description and Codex frontmatter sentences with it.
 
 **Impact.** The next small edit to a Claude-only section tips the reference past
-the ceiling and turns a routine change into a must-fix on this reference.
+the ceiling and turns a routine change into a blocking finding on this reference.
 
 **Settlement condition.** Conditional detail leaves the eager body for its
 reference — the `<context>` bash-block constraints at lines 274-280, already

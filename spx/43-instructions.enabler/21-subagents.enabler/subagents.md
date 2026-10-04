@@ -8,7 +8,7 @@ The subagents-about-subagents cluster is three peers with distinct roles:
 
 - `/create-subagent` routes subagent creation and editing.
 - `/subagent-standards` owns the canonical rules — configuration fields, tool grants, model selection, context isolation, and the invocation contract. Loaded by the other two.
-- `/audit-subagent` evaluates one subagent configuration against `/subagent-standards` and `/agent-prompt-standards`, producing structured verdicts without modifying files.
+- `/audit-subagent` evaluates one subagent configuration against `/subagent-standards` and `/agent-prompt-standards`, recording a sealed verification run and modifying no subject or product file.
 
 ## Assertions
 
