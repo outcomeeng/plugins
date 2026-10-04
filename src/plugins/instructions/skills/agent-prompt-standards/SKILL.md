@@ -233,16 +233,20 @@ Never invent failure modes. If a skill is new and hasn't failed yet, omit the se
 
 Each row names one rule this skill states and gives it a stable ID; the section column is the rule's authority. An ID never changes meaning, and a retired ID is never reused. An audit finding on prompt text names one of these IDs, carries its severity, and lists every location in its file that breaks the rule. Description wording follows `/skill-standards` `<descriptions>` and carries that catalog's IDs; in a skill file, a conciseness finding carries `/skill-standards`' `conciseness` ID.
 
-| Rule ID                    | Severity | Section                  | Rule                                                                                              |
-| -------------------------- | -------- | ------------------------ | ------------------------------------------------------------------------------------------------- |
-| `voice-subject`            | blocking | `<voice>`                | Instructions use the imperative, behavioral claims name Claude, and no text uses a banned subject |
-| `objective-output-shape`   | blocking | `<objective_shape>`      | An objective names the output and its shape, never an actor or an activity                        |
-| `objective-one-sentence`   | debt     | `<objective_shape>`      | An objective is one sentence whose every clause is a property of the output                       |
-| `constraint-strong-modals` | debt     | `<constraint_language>`  | A constraint block uses MUST, NEVER, or ALWAYS, never a weak modal                                |
-| `banned-phrases`           | debt     | `<anti_patterns>`        | Prompt text carries none of the banned phrases                                                    |
-| `structural-anti-patterns` | debt     | `<anti_patterns>`        | Prompt text carries none of the structural anti-patterns                                          |
-| `prompt-conciseness`       | debt     | `<conciseness>`          | A prompt sentence never restates what Claude already knows                                        |
-| `failure-mode-evidence`    | debt     | `<failure_mode_writing>` | A failure mode records a real occurrence as what happened, why, and how to avoid it               |
+| Rule ID                         | Severity | Section                  | Rule                                                                                              |
+| ------------------------------- | -------- | ------------------------ | ------------------------------------------------------------------------------------------------- |
+| `voice-subject`                 | blocking | `<voice>`                | Instructions use the imperative, behavioral claims name Claude, and no text uses a banned subject |
+| `description-no-subject`        | debt     | `<voice>`                | A frontmatter `description` names no subject                                                      |
+| `objective-output-shape`        | blocking | `<objective_shape>`      | An objective names the output and its shape, never an actor or an activity                        |
+| `objective-one-sentence`        | debt     | `<objective_shape>`      | An objective is one sentence whose every clause is a property of the output                       |
+| `objective-criteria-distinct`   | debt     | `<objective_shape>`      | The objective and `<success_criteria>` never restate each other                                   |
+| `constraint-strong-modals`      | debt     | `<constraint_language>`  | A constraint block uses MUST, NEVER, or ALWAYS, never a weak modal                                |
+| `constraint-rationale`          | debt     | `<constraint_language>`  | A hardened constraint carries its rationale after a dash                                          |
+| `banned-phrases`                | debt     | `<anti_patterns>`        | Prompt text carries none of the banned phrases                                                    |
+| `structural-anti-patterns`      | debt     | `<anti_patterns>`        | Prompt text carries none of the structural anti-patterns                                          |
+| `prompt-conciseness`            | debt     | `<conciseness>`          | A prompt sentence never restates what Claude already knows                                        |
+| `prompt-concrete-over-abstract` | debt     | `<conciseness>`          | A prompt requirement names its concrete threshold or command                                      |
+| `failure-mode-evidence`         | debt     | `<failure_mode_writing>` | A failure mode records a real occurrence as what happened, why, and how to avoid it               |
 
 </rule_catalog>
 
