@@ -14,6 +14,7 @@ import argparse
 import fcntl
 import hashlib
 import json
+import math
 import os
 import re
 import sys
@@ -338,9 +339,9 @@ def _positive_seconds(text: str) -> float:
         raise argparse.ArgumentTypeError(
             f"{text!r} is not a number of seconds"
         ) from error
-    if not seconds > 0:
+    if not (math.isfinite(seconds) and seconds > 0):
         raise argparse.ArgumentTypeError(
-            f"{text!r} must be a positive number of seconds"
+            f"{text!r} must be a positive, finite number of seconds"
         )
     return seconds
 

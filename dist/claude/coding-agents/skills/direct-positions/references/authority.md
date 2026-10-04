@@ -51,12 +51,12 @@ Nothing on the Change board needs the operator: priority, Frame attestation, Sli
 
 <lifecycle_skills>
 
-Read the lifecycle skill before ordering anything it covers; the skills state their own procedure and outrank orders:
+Before ordering anything a lifecycle skill covers, use that skill; each states its own procedure and outranks orders:
 
-- `spec-tree:claim-change` — Claim, checkout of the Handoff's branch, sync.
-- `spec-tree:release-change` — only the winning claimant releases; it checkpoints uncommitted work, pushes, and writes a five-line Handoff.
-- `spec-tree:close-change` — Applied, Refined or Abandoned with their preconditions.
-- `spec-tree:merge` — the only route to the default branch.
+- Use skill `spec-tree:claim-change` for a Claim, the checkout of the Handoff's branch and the sync.
+- Use skill `spec-tree:release-change`; only the winning claimant releases, and it checkpoints uncommitted work, pushes, and writes a five-line Handoff.
+- Use skill `spec-tree:close-change` for Applied, Refined or Abandoned with their preconditions.
+- Use skill `spec-tree:merge`; it is the only route to the default branch.
 
 Malleability lives only in a spec's front matter. A node's malleability selects its gates: `spec` needs Validate, reachability tests and a result for every tagged assertion; `verification` adds a result for every assertion; `implementation` adds evidence that passes audit. A changeset merges by the least malleable node it touches.
 
