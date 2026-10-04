@@ -115,6 +115,12 @@ CONFLICT_OPERATOR_OPTIONS_KEY = "operator_options"
 def _load_changeset_scope() -> ModuleType:
     """Load the canonical ``changeset_scope`` module via importlib and cache it."""
     resolved_path = _CHANGESET_SCOPE_PATH.resolve()
+    if not resolved_path.is_file():
+        raise RuntimeError(
+            "sync-base requires the scope-changeset skill's changeset_scope.py "
+            f"at {resolved_path}, the sibling skill directory in the same "
+            "installed plugin; reinstall the plugin so both skills ship together"
+        )
     cached = sys.modules.get("changeset_scope")
     if cached is not None and _module_origin(cached) == resolved_path:
         return cached
@@ -132,7 +138,10 @@ def _load_changeset_scope() -> ModuleType:
         resolved_path,
     )
     if spec is None or spec.loader is None:
-        raise RuntimeError(f"Cannot load changeset_scope from {_CHANGESET_SCOPE_PATH}")
+        raise RuntimeError(
+            f"Cannot load changeset_scope from {resolved_path}: Python found no "
+            "module loader for the scope-changeset skill's script"
+        )
     module = importlib.util.module_from_spec(spec)
     sys.modules[module_name] = module
     spec.loader.exec_module(module)

@@ -18,8 +18,9 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 ### Changed
 
-- **`/sync-base` creates recovery checkpoints only through `/commit-changes`.** The skill composes `spec-tree:commit-changes` by exact name, and its command policy lists `git switch -c` for creating the owning branch of a dirty-tree checkpoint. Its tool grant no longer includes `git branch`, so a `git branch` command the skill runs, `git branch -D` among them, now asks for approval.
-- **`/sync-base` names a coordination-note branch in its result.** When the skill commits an unrelated coordination note to its own branch, the result names that branch and its full head identity as pending `/merge`.
+- **`/sync-base` creates recovery checkpoints only through `/commit-changes`.** The skill composes `spec-tree:commit-changes` by exact name, and every `git switch` it runs during dirty-tree recovery is named in its command policy. Its tool grant no longer includes `git branch`, so a `git branch` command the skill runs, `git branch -D` among them, now asks for approval. The grant now includes `git switch` and the path-specific `git checkout --ours` and `git checkout --theirs` that conflict reconciliation already sanctioned. The policy forbids `git switch` with a force, discard, or merge option.
+- **`/sync-base` commits an unrelated coordination note on a branch cut from the base.** The skill first commits objective paths on the objective branch. It then moves the uncommitted note onto `work/<note-slug>` cut from `origin/<base>`, commits it there, and switches back to the objective branch or detached head before it re-runs the synchronizer. The result names the note branch and its full head identity as pending `/merge`.
+- **`/sync-base` reads lane mapping from `spx/local/merging.md`.** Review reuse and the narrowest verification lane after a sync or a resolved conflict read the project's merge overlay. When that overlay is absent, the skill falls back to the full gate.
 
 ## 0.104.0
 
