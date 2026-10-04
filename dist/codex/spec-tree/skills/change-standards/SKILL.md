@@ -29,7 +29,7 @@ Read `${SKILL_DIR}/references/change-record.md` completely for every selection. 
 
 NEVER load another Maturity's Definition of Ready in the same invocation. Each Definition of Ready is cumulative and complete for its level.
 
-`change-record.md` states the record rules, and each Definition of Ready states criteria that judge a record against those rules by identifier; neither carries a store command. `lifecycle.md` carries the store-binding, canonical-state, authority-read, ordered-write, complete-readback, write-inspection, inert-stdin, claim-record, handoff-record, confirmation-record, and terminal-record rules, together with the store commands those rules name; it alone assigns each field's home in the declared store and names the reads that establish authority, so a record rule that needs a field home or an authority read applies under the `Lifecycle` selection.
+`change-record.md` states the record rules, and each Definition of Ready states criteria that judge a record against those rules by identifier; neither carries a store command. `lifecycle.md` carries the store-binding, canonical-state, authority-read, ordered-write, complete-readback, write-inspection, inert-stdin, claim-record, handoff-record, confirmation-record, and terminal-record rules, together with the store commands those rules name; it alone assigns each field's home in the declared store and names the store reads — fields, lineage, blockers, and authority. A criterion whose evidence is store state, such as the blocker graph of `*-relationships`, is judged from those reads, which a separate `Lifecycle` load supplies; a Maturity selection never infers that state from the record alone.
 
 </loading_contract>
 
@@ -37,7 +37,7 @@ NEVER load another Maturity's Definition of Ready in the same invocation. Each D
 
 - Each record rule is stated once, in `change-record.md`; a Definition of Ready criterion cites the rule it applies by identifier and adds only the level's own condition.
 - Exactly one selected reference is loaded beside `change-record.md`: the cumulative Definition of Ready for a Maturity, or the Lifecycle rules.
-- Every loaded criterion has a stable identifier and can be judged from the complete record and necessary repository references.
+- Every loaded criterion has a stable identifier and can be judged from the complete record, the store state the `Lifecycle` reads return, and necessary repository references.
 - The authority for each Maturity advance is read from the store's field-change events and confirmation comments under `authority-read`, and no rule or criterion requires body authority text.
 - The four Maturity values, the six Lifecycle values, lineage, blockers, authority, product truth, and continuation remain distinct.
 
