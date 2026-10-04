@@ -205,3 +205,15 @@ Finding: `reconcile` and the finding readers of `audit_change_run.py` block with
 Impact: the runner's refusal of a malformed projection is unobserved, so a regression there reads a run with no coverage as an empty one.
 
 Revisit and settlement condition: the runner's SPX boundary admits a controlled implementation of its command runner that renders a malformed projection, and a linked case asserts the `unreadable-output` block for each malformed shape.
+
+## DEBT [internal-consistency]: author-change forbids interpolation and then interpolates the title
+
+Defect class: `internal-consistency`.
+
+Finding: `author-change` says to NEVER interpolate record content into executable shell syntax, and its persistence step then puts the record's `title` into `gh issue create` and `gh issue edit` as a single-quoted `--title` argument. That form is legitimate only under the `inert-stdin` rule of `change-standards`, which the skill cites separately, so the absolute prohibition reads as forbidding the step the persistence workflow requires.
+
+Evidence: `instructions:skill-auditor` finding f-009 (rule `internal_consistency`), severity `WARNING`, against `src/plugins/spec-tree/skills/author-change/SKILL.md:34`, in the typed skill audit of `author-change` on head `7682aa69f9042b1221456caf7274ca937c083232`, which approved with no must-fix finding. The lines lie outside the audit-change runner changeset's diff.
+
+Impact: Claude meets two absolute instructions that disagree on the title write.
+
+Revisit and settlement condition: the prohibition is scoped to the `inert-stdin` rule, or the title step cites that rule's single-quote form; one typed skill audit of `author-change` then raises no `internal_consistency` finding.

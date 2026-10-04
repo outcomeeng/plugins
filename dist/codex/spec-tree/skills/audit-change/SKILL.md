@@ -21,7 +21,7 @@ A result on one local Change record: a verdict against `change-standards` and th
 - NEVER write a file. Every request and payload passes to the runner on stdin and every result returns on stdout; the SPX run journal holds the run.
 - ALWAYS reach the candidate, every repository path, and the SPX store only through the bundled runner, `python3 "${SKILL_DIR}/scripts/audit_change_run.py"`; the runner's SPX journal appends are the audit's only write path. NEVER invoke `rm`, `mktemp`, `spx`, `git`, `realpath`, or `printf`, redirect shell output to a file, or run a bundled script any other way.
 - ALWAYS issue each runner invocation as its own command, never chained to another command with `&&` or `;` and never piped into a command that masks its exit status — a chained command loses the payload of the one behind it and leaves the run unsealed. A nonzero runner exit ends the audit with `BLOCKED` naming the request's `operation` and the exit status.
-- ALWAYS take the candidate's content from `read-candidate` and every reference answer from `resolve-reference`. The composed `spec-tree:change-standards` and `spec-tree:spec-tree-plugin` skills read their own skill-directory files. `allowed-tools` grants only the runner invocation and, where the harness has one, the skill-composition tool.
+- ALWAYS take the candidate's content from `read-candidate` and every reference answer from `resolve-reference`. The composed `spec-tree:change-standards` and `spec-tree:spec-tree-plugin` skills read their own skill-directory files. `allowed-tools` grants only the runner invocation and, where the harness has one, the skill-composition tool, and grants no Read, Grep, or Glob: the runner is the audit's only read path, and its SPX journal appends make its grant a write grant rather than a read-only one.
 - NEVER run deterministic verification, publish a Change, or delegate this audit to another session.
 - ALWAYS judge contract-form content only against `spec-tree:change-standards` loaded with the candidate's declared Maturity, as step 3 of `<execution_sequence>` loads it. The standards load the common contract and exactly one cumulative Definition of Ready; this skill owns the audit procedure.
 - NEVER require a Git commit, changeset, remote issue, or remote revision as the audit subject. The local file's complete retained content is the subject.
@@ -124,8 +124,7 @@ A blocked result names exactly one of these reasons:
    and selected criterion, and record each defect with its violated rule and
    concrete observed-versus-expected evidence. A concise maintenance record can
    satisfy every applicable requirement; never manufacture missing benefits,
-   research,
-   questionnaires, or alternatives as findings.
+   research, questionnaires, or alternatives as findings.
 6. **Record.** Once the complete inspection has finished, request `add-scope`
    for the root unit, then each child unit, then `add-finding` for each
    finding in `<persistence_contract>` order. A judged rule uses `audited`
@@ -234,7 +233,7 @@ If blocked before a completed verdict, return:
 
 ```text
 BLOCKED
-result: <the runner's blocked result object unchanged, or {"operation":null,"status":"blocked","reason":"<missing-input-or-missing-prerequisite>","detail":"<exact absent field or prerequisite>","runToken":"not-started"}>
+result: <the runner's blocked result object unchanged; or, for a nonzero runner exit that printed no readable result, {"operation":"<the request's operation>","status":"blocked","reason":"runner-exit","detail":"exit status <n>, no readable result","runToken":"<the run token, or not-started>"}; or {"operation":null,"status":"blocked","reason":"<missing-input-or-missing-prerequisite>","detail":"<exact absent field or prerequisite>","runToken":"not-started"}>
 judgmentStatus: <complete|incomplete>
 judgedFindings: <complete-JSON-array>
 ```
