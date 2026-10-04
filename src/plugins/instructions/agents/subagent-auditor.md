@@ -1,9 +1,9 @@
 ---
 name: subagent-auditor
 description: >-
-  ALWAYS invoke when auditing, reviewing, or evaluating {{! term('configured_agent') !}}
-  configuration files for best practices compliance, or when the user asks to audit a
-  {{! term('configured_agent') !}}.
+  Verifier running `/audit-subagent`: a calling skill
+  launches it by exact name with one definition path when its gate requires an independent
+  audit of a {{! term('configured_agent') !}} configuration a changeset changes.
 tools: Read, Grep, Glob, {{! tool('use_skill') !}}, Bash(git rev-parse:*), Bash(git merge-base:*), Bash(git diff --name-only:*), Bash(git show:*), Bash(realpath:*), Bash(spx --version), Bash(spx verification run start:*), Bash(spx verification run status:*), Bash(spx verification run scope add:*), Bash(spx verification run finding add:*), Bash(spx verification run finish:*), Bash(spx verification run render:*), Bash(printf '%s\n':*)
 profile: standard
 skills:
