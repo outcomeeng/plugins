@@ -30,13 +30,19 @@ The objective names the verdict, not the activity:
 - ✅ "A verdict on one ADR against the ADR evidence model — APPROVED, or REJECTED with each finding naming the section, the violated rule, and the evidence. Findings fall in three categories: section structure, atemporal voice, and per-rule tag validity."
 - ✅ "A verdict on implementation code — APPROVED, or REJECTED with each finding naming the design flaw, the violated rule, and the evidence."
 - ✅ "A verdict on test evidence — APPROVED, or REJECTED with each finding naming the assertion or evidence artifact, the failed evidence property, and the evidence."
-- ✅ "A sealed `spx verification run` on one skill bundle against `/skill-standards` — terminal status `approved` with no finding, or `rejected` with each finding naming the bundle file, the location, the violated rule, and the evidence — or a `BLOCKED` diagnostic naming the failed prerequisite or command."
+- ✅ "A sealed `spx verification run` on the files of one skill bundle a changeset changes, against `/skill-standards` — terminal status `approved` with no finding, or `rejected` with each finding naming the file, the rule ID, every violating location, and the evidence — or a `BLOCKED` diagnostic naming the failed prerequisite or command."
 
 Code-auditor and test-auditor objectives use the APPROVED/REJECTED field form above. Their `<verdict_format>` owns the detailed row schema and may group findings by concern; the objective stays stable when a language adds or renames a row.
 
 A run-recording objective names the sealed run as the verdict. Its `<verdict_format>` returns the run token and the rendered projection unchanged, the projection's terminal status is the verdict, and every recorded finding rejects the run whatever its severity.
 
 </objective_examples>
+
+<run_keys>
+A run-recording auditor keys each scope unit by its audit class, audit kind, concern, and subject path, and each finding by its unit's key and the violated rule ID, `<unit-key>:<rule-id>`. The same subject and rule yield the same key in every run, so a later run's finding is comparable with an earlier run's on the same file and rule. A finding lists every location in its file that breaks its rule, because one file carries at most one finding per rule. A key never carries an ordinal or any position in the run's finding list.
+
+Every rule ID a run-recording auditor records names a rule in the rule catalog of the standard it enforces. A defect no catalog rule names is a gap in the standard: the auditor records it as a `filed` finding under the catalog's `standard-gap` rule, which rejects nothing, and never mints a rule ID for one run.
+</run_keys>
 
 <success_criteria_shape>
 An auditor's `<success_criteria>` states verdict soundness, never a re-list of the workflow steps:
