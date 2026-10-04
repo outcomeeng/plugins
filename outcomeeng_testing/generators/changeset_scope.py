@@ -18,6 +18,7 @@ class ChangesetScopeCase:
     merged_file: str
     feature_file: str
     working_file: str
+    renamed_file: str
 
 
 @dataclass(frozen=True)
@@ -46,6 +47,7 @@ def changeset_scope_cases() -> Iterator[ChangesetScopeCase]:
             merged_file=f"merged/{token}.txt",
             feature_file=f"feature/{token}.txt",
             working_file=f"working-{token}.py",
+            renamed_file=f"renamed/{token}.txt",
         )
 
 

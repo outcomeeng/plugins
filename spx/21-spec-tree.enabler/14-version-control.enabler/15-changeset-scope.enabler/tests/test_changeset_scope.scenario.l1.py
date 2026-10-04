@@ -11,6 +11,9 @@ Covers the Scenario assertions in ``../changeset-scope.md``:
   the base, while scoping against the stale local ref re-includes them.
 - ``detect_current_branch`` returns the branch name on a named checkout and
   raises ``DetachedHeadError`` on a detached HEAD.
+- A changeset whose diff carries a rename record resolves, through both
+  ``expand_diff_range`` and ``branch_scope``, to a changed-path set carrying
+  the rename's source and destination paths.
 - ``branch_slug`` appends the deterministic ``--<sha8>`` suffix when the state
   dir holds a state file (at the base-slug path) recording a different branch,
   and returns the bare base slug otherwise.
@@ -34,7 +37,9 @@ from outcomeeng_testing.harnesses.changeset_scope import (
     detach_head,
     generated_changeset_scope_cases,
     git_commit_oid,
+    git_rename_records,
     git_three_dot_scope,
+    renamed_file_repo,
     repo_without_origin,
     run_changeset_scope,
     stale_local_base_repo,
@@ -88,6 +93,27 @@ def test_stale_local_base_ref_does_not_widen_scope() -> None:
             assert git_three_dot_scope(stale.repo, stale.base_ref) == tuple(
                 sorted((stale.feature_file, stale.merged_file))
             )
+
+
+def test_rename_record_carries_source_and_destination_paths() -> None:
+    for scenario in generated_changeset_scope_cases():
+        with renamed_file_repo(scenario) as renamed:
+            origin_base = CHANGESET_SCOPE_CONTRACT.ORIGIN_REF_PREFIX + renamed.base_ref
+            assert git_rename_records(renamed.repo, origin_base) == (
+                (renamed.source_file, renamed.destination_file),
+            )
+            expanded = CHANGESET_SCOPE.expand_diff_range(
+                origin_base
+                + CHANGESET_SCOPE.RANGE_SEPARATOR
+                + CHANGESET_SCOPE_CONTRACT.HEAD_REF,
+                repo=renamed.repo,
+            )
+            assert sorted(expanded) == sorted(
+                (renamed.source_file, renamed.destination_file)
+            )
+            assert sorted(
+                CHANGESET_SCOPE.branch_scope(renamed.base_ref, repo=renamed.repo)
+            ) == sorted((renamed.source_file, renamed.destination_file))
 
 
 def test_detect_current_branch_returns_name_then_raises_on_detached_head() -> None:

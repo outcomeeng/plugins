@@ -11,13 +11,12 @@ CAN derive every changeset's branch, slug, base ref, head/base commit IDs, and c
 
 ## Assertions
 
-- Given a changeset whose diff carries a rename record, when `expand_diff_range` or `branch_scope` resolves it, then the changed-path set carries both the source and the destination path of that record
-
 ### Scenarios
 
 - Given `refs/remotes/origin/HEAD` resolves, when `detect_base_ref` runs, then it returns the bare base branch name configured there ([test](tests/test_changeset_scope.scenario.l1.py))
 - Given `refs/remotes/origin/HEAD` is unset, when `detect_base_ref` runs, then it raises `BaseRefNotConfiguredError`; the committed-scope command reports the failure with a nonzero exit and no JSON result rather than guessing a consumer repository's default branch ([test](tests/test_changeset_scope.scenario.l1.py))
 - Given a bare base name, when `remote_tracking_ref` runs, then it composes the remote-tracking ref `origin/<base>`, and `branch_scope` diffs the three-dot range `origin/<base>...HEAD` returning the changed-file set since the merge base ([test](tests/test_changeset_scope.scenario.l1.py))
+- Given a changeset whose diff carries a rename record, when `expand_diff_range` or `branch_scope` resolves it, then the changed-path set carries both the source and the destination path of that record ([test](tests/test_changeset_scope.scenario.l1.py))
 - Given a local branch ref that lags its remote-tracking ref, when the committed-scope command resolves `HEAD` or an explicit three-dot range against `origin/<base>`, then it returns full endpoint identities and the changed-file set excludes commits already merged into the base — a stale local ref does not widen the scope ([test](tests/test_changeset_scope.scenario.l1.py))
 - Given a checkout on a named branch, when `detect_current_branch` runs, then it returns that branch name; on a detached HEAD it raises `DetachedHeadError` rather than returning the `HEAD` placeholder ([test](tests/test_changeset_scope.scenario.l1.py))
 - Given a git ref that resolves to a commit, when `commit_oid` runs, then it returns the full object ID of that commit so journal run-state identity is stamped with concrete commit IDs rather than symbolic refs ([test](tests/test_changeset_scope.scenario.l1.py))

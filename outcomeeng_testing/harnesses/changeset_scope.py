@@ -13,6 +13,9 @@ Exposes:
 - ``build_base_advanced_after_branch_repo``. Constructs a diverged repository
   where the base gains a commit after the feature branches, distinguishing a
   merge-base three-dot diff from a two-dot tip-to-tip diff.
+- ``build_renamed_file_repo``. A repository whose feature branch only renames a
+  file the published base carries, so its diff holds one rename record; the
+  ``git_rename_records`` observation reports the rename records Git sees.
 - ``build_repo_without_origin``. A repository with a branch and a commit but no
   ``refs/remotes/origin/HEAD`` symbolic ref, for the base-ref fallback paths.
 - ``build_repo_with_modified_spaced_note``. A repository whose only working-tree
@@ -448,6 +451,47 @@ def build_lagging_remote_tracking_repo(
     )
 
 
+@dataclass(frozen=True)
+class RenamedFileRepo:
+    """A repo whose feature branch only renames a file the base already carries.
+
+    ``source_file`` is committed on the base, which ``origin/<base_ref>``
+    publishes; the feature branch moves it unchanged to ``destination_file``,
+    so Git records the change as a rename between those two paths.
+    """
+
+    repo: pathlib.Path
+    base_ref: str
+    feature_branch: str
+    source_file: str
+    destination_file: str
+
+
+def build_renamed_file_repo(
+    repo: pathlib.Path,
+    scenario: ChangesetScopeCase | None = None,
+) -> RenamedFileRepo:
+    """Build a changeset whose only change is a rename of a base file.
+
+    Sequence: initial commit A on the base, published as ``origin/<base>``;
+    branch the feature from A and move the initial file, content unchanged,
+    to the generated rename destination in one commit F.
+    """
+    scenario = _initialize_changeset_repo(repo, scenario)
+    _publish_origin_base(repo, scenario, _git(repo, "rev-parse", "HEAD"))
+    _git(repo, "switch", "-q", "-c", scenario.feature_branch)
+    (repo / scenario.renamed_file).parent.mkdir(parents=True, exist_ok=True)
+    _git(repo, "mv", scenario.initial_file, scenario.renamed_file)
+    _git(repo, "commit", "-q", "-m", scenario.renamed_file)
+    return RenamedFileRepo(
+        repo=repo,
+        base_ref=scenario.base_branch,
+        feature_branch=scenario.feature_branch,
+        source_file=scenario.initial_file,
+        destination_file=scenario.renamed_file,
+    )
+
+
 def build_repo_without_origin(
     repo: pathlib.Path,
     scenario: ChangesetScopeCase | None = None,
@@ -525,6 +569,15 @@ def lagging_remote_tracking_repo(
     """Yield a repository whose local remote-tracking ref lags its remote."""
     with temporary_changeset_scope() as paths:
         yield build_lagging_remote_tracking_repo(paths.repo, scenario)
+
+
+@contextmanager
+def renamed_file_repo(
+    scenario: ChangesetScopeCase | None = None,
+) -> Iterator[RenamedFileRepo]:
+    """Yield a repository whose changeset is one rename, cleaned up on exit."""
+    with temporary_changeset_scope() as paths:
+        yield build_renamed_file_repo(paths.repo, scenario)
 
 
 @contextmanager
@@ -632,6 +685,46 @@ def git_three_dot_scope(repo: pathlib.Path, ref: str) -> tuple[str, ...]:
     contract = load_changeset_scope_contract_module()
     output = _git(repo, "diff", "--name-only", f"{ref}...{contract.HEAD_REF}")
     return tuple(output.splitlines())
+
+
+# Git's name-status letters: rename and copy records carry two paths, every
+# other record one.
+GIT_RENAME_STATUS_PREFIX = "R"
+GIT_TWO_PATH_STATUS_PREFIXES = (GIT_RENAME_STATUS_PREFIX, "C")
+
+
+def git_rename_records(repo: pathlib.Path, ref: str) -> tuple[tuple[str, str], ...]:
+    """Return the ``(source, destination)`` rename records Git reports for a scope.
+
+    Reads ``git diff --name-status -z -M`` over the merge-base range from
+    ``ref`` to ``HEAD`` with isolated Git configuration, so the observation
+    names the rename records the diff carries independently of the module
+    under test and of operator diff settings.
+    """
+    contract = load_changeset_scope_contract_module()
+    fields = [
+        field
+        for field in _git(
+            repo,
+            "diff",
+            "--name-status",
+            "-z",
+            "-M",
+            f"{ref}...{contract.HEAD_REF}",
+        ).split("\0")
+        if field
+    ]
+    records: list[tuple[str, str]] = []
+    index = 0
+    while index < len(fields):
+        status = fields[index]
+        if not status.startswith(GIT_TWO_PATH_STATUS_PREFIXES):
+            index += 2
+            continue
+        if status.startswith(GIT_RENAME_STATUS_PREFIX):
+            records.append((fields[index + 1], fields[index + 2]))
+        index += 3
+    return tuple(records)
 
 
 def run_merge_classifier(repo: pathlib.Path) -> subprocess.CompletedProcess[str]:
