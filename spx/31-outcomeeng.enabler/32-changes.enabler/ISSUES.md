@@ -226,6 +226,20 @@ Finding: two warnings stand against `audit-change` after its approving audit. Th
 
 Evidence: `instructions:skill-auditor` findings f-008 (rule `audit-skill-read-only-allowed-tools`) and f-009 (rule `progressive-disclosure-conditional-detail`), each severity `WARNING`, against `src/plugins/spec-tree/skills/audit-change/SKILL.md`, in the typed skill audit of `audit-change` on head `007c3871de7b82f7592325be191d26fbfa8aee8d`, which approved with no must-fix finding.
 
-Impact: each later audit of the skill raises the grant warning again, and the table's size pulls against the review rule that it name every blocked condition.
+The typed skill audit on head `95da1302cb72c523328f0d7d02b3a05b23df603b` approved again with no must-fix finding and raised the grant deviation as f-007 (rule `audit-allowed-tools-read-only`) and two further warnings: the `result:` placeholder of the BLOCKED block packs three result shapes into one line joined by "; or" (f-008, rule `verdict-format-legibility`, against `SKILL.md` line 236), and the constraint that forbids piping "into a command that masks its exit status" implies that some piping is allowed although the runner-only constraint forbids every other command (f-009, rule `constraint-precision`, against `SKILL.md` line 23). The piping wording is the wording the changes spec states for the same rule.
 
-Revisit and settlement condition: `/skill-standards` or `spx/local/skills.md` records the journal-writing grant as a sanctioned exception to the audit read-only rule, and the exhaustive condition text moves to a bundled reference the skill loads only for a blocked result; one typed skill audit of `audit-change` then raises neither warning.
+Impact: each later audit of the skill raises the grant warning again, the table's size pulls against the review rule that it name every blocked condition, a reader matches a stop condition against one compound placeholder, and the piping qualifier reads as an exception.
+
+Revisit and settlement condition: `/skill-standards` or `spx/local/skills.md` records the journal-writing grant as a sanctioned exception to the audit read-only rule, the exhaustive condition text moves to a bundled reference the skill loads only for a blocked result, each BLOCKED result shape stands as its own labeled shape, and the skill and the changes spec state the piping prohibition without the qualifier; one typed skill audit of `audit-change` then raises none of the warnings.
+
+## DEBT [subagent-contract]: change-auditor restates the skill's result contract and carries a description-match description
+
+Defect class: `subagent-contract`.
+
+Finding: two warnings stand against the `change-auditor` definition. Its `<output_format>` restates the skill's result contract field by field, and its list of fields for a failed command omits `liveSha256`, `sha256`, and `retainedSha256`, which the skill's `<verdict_format>` carries for `candidate-changed` and `retained-input-mismatch`. Its description is directive description-match wording, although the owning skills dispatch the role by exact configured name.
+
+Evidence: `instructions:subagent-auditor` findings f-003 (rule `description-style/exact-name-invocation`) and f-004 (rule `configuration/thin-wrapper-contract-copy`), each severity `WARNING`, against `src/plugins/spec-tree/agents/change-auditor.md` lines 3 and 91, in the typed subagent audit on head `95da1302cb72c523328f0d7d02b3a05b23df603b`, which rejected on the standing findings f-001 and f-002 recorded in the native-artifact node and in the `adr-pdr-compliance` entry above. The directive description is the wording every spec-tree agent definition carries.
+
+Impact: the wrapper's copied field list drifts each time the runner contract changes, and a relaying session can take the narrower list as the expected shape; the description invites a launch the calling skills have not instructed.
+
+Revisit and settlement condition: the wrapper points at the skill's `<verdict_format>` for the completed, `OUTSIDE_CONTRACT`, and runner-blocked shapes and keeps only its own pre-run diagnostic shape, and the description states its subject and the conditions under which the owning skills invoke the role in passive wording; one typed subagent audit of `change-auditor` then raises neither warning.
