@@ -6,6 +6,8 @@ description: >-
 allowed-tools: Read
 ---
 
+Use skill `instructions:skill-standards`.
+
 <objective>
 The agent-prompt writing conventions — voice, description style, constraint language, objective shape, and anti-patterns — for the text within SKILL.md files and custom agent developer instructions, enforced across every creator and auditor skill.
 </objective>

@@ -106,10 +106,10 @@ Skills use **pure XML structure** — no markdown headings (`#`, `##`, `###`) an
 
 **Required tags (every skill):**
 
-| Tag                  | Content                                                                                                                                                                                       |
-| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `<objective>`        | The observable **output** the skill produces, in a definite shape — one sentence, not an actor or an activity, not a summary of the skill. See `/agent-prompt-standards` `<objective_shape>`. |
-| `<success_criteria>` | The properties that prove the output is sound — not a re-list of the workflow steps.                                                                                                          |
+| Tag                  | Content                                                                                                                                                                                                   |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `<objective>`        | The observable **output** the skill produces, in a definite shape — one sentence, not an actor or an activity, not a summary of the skill. `/agent-prompt-standards` `<objective_shape>` owns that shape. |
+| `<success_criteria>` | The properties that prove the output is sound — not a re-list of the workflow steps.                                                                                                                      |
 
 **Router-pattern tags** (skills that route to multiple workflows):
 
