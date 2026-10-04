@@ -13,7 +13,7 @@ Use skill `instructions:skill-standards`.
 Use skill `instructions:agent-prompt-standards`.
 
 <objective>
-A sealed `spx verification run` on one skill bundle against `/skill-standards` and `/agent-prompt-standards` — terminal status `approved` with no finding, or `rejected` with each blocking or debt finding naming the bundle file, the location, the violated rule, and the evidence — or a `BLOCKED` diagnostic naming the failed prerequisite or command.
+A sealed `spx verification run` on one skill bundle against `/skill-standards` and `/agent-prompt-standards` — terminal status `approved` with no finding, or `rejected` with each blocking or debt finding naming the location, the violated rule, and the evidence — or a `BLOCKED` diagnostic naming the failed prerequisite or command.
 </objective>
 
 <constraints>
@@ -57,7 +57,7 @@ Use skill `instructions:instructions-plugin`. Invoke it with the verb `version` 
    python3 -c 'from pathlib import Path; import sys; print(len(Path(sys.argv[1]).read_text(encoding="utf-8")))' "<rendered-SKILL.md>"
    ```
 
-4. **Judge.** Evaluate the bundle against every applicable rule of the loaded standards, using their actual text, never memory; a creator skill's workflow references are authoring guidance, never standards. Record malformed frontmatter, a reference to a file that does not exist, and a bundled plugin file reached through a repository-local authored or generated plugin path, a legacy plugin-root path, or an authored Codex-only skill-directory token as blocking findings. Record each finding with the bundle file it names, its location, the violated rule, a blocking or debt severity, a message, and observed-versus-expected evidence. An observation that a rule holds is not a finding and is not recorded.
+4. **Judge.** Evaluate the bundle against every applicable rule of the loaded standards, using their actual text, never memory; a creator skill's workflow references are authoring guidance, never standards. Record malformed frontmatter, a reference to a file that does not exist, and a bundled plugin file reached through a repository-local authored or generated plugin path, a legacy plugin-root path, or an authored Codex-only skill-directory token as blocking findings. Record each finding with its location, the violated rule, a blocking or debt severity, a message, and observed-versus-expected evidence. An observation that a rule holds is not a finding and is not recorded.
 5. **Record.** Once judgment is complete, add the root unit, then one child unit per bundle file in path order, then each finding against the unit of the file it names, and every finding that names no bundle file against the root, under `<persistence_contract>`.
 6. **Reconcile.** Read `spx verification run status` with the same type, scope, and token. Require exactly one root unit, one child unit for every bundle file, and an accepted unit for every finding. Re-read the live `SKILL.md` and compare it with the retained input; a changed or missing file returns `BLOCKED` with the run preserved.
 7. **Finish and render.** Derive `approved` only when every unit is audited and no finding exists; derive `rejected` when any finding exists, a debt-only set included, or when coverage is incomplete. Run:
@@ -182,7 +182,7 @@ The verdict is sound when:
 
 - Every applicable rule in the loaded standards was judged, with none skipped.
 - The sealed run carries one root unit and one child unit per bundle file, and its terminal status is `approved` only with no finding and full coverage.
-- Each finding is falsifiable: it names the bundle file, the location, the violated rule, and the observed-versus-expected evidence.
+- Each finding is falsifiable: it names the location, the violated rule, and the observed-versus-expected evidence.
 - The same bundle, standards, and run-driver identity yield the same findings and finding keys.
 
 </success_criteria>
