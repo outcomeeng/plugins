@@ -1,6 +1,6 @@
 <required_reading>
 
-Read `/skill-standards` and `/agent-prompt-standards`. Read `spx/local/skills.md` when the target repository provides it.
+The router's `<reference_loading>` supplies every standard this route reads.
 
 </required_reading>
 
@@ -55,7 +55,7 @@ When the operator explicitly requests updates, require an authoritative replacem
 
 <step name="validate_updates">
 
-When updates were applied, confirm each updated claim matches its recorded primary evidence, every bundled citation resolves, structure remains valid, and focused checks for changed commands or examples pass. Run repository checks and obtain from a fresh typed `instructions_skill-auditor` launch a sealed run over the complete bundle whose terminal status is `approved`.
+When updates were applied, confirm each updated claim matches its recorded primary evidence, every bundled citation resolves, structure remains valid, and focused checks for changed commands or examples pass. Run repository checks, apply every catalog rule to each changed file, and return the bundle ready for independent verification.
 
 </step>
 
@@ -66,6 +66,6 @@ When updates were applied, confirm each updated claim matches its recorded prima
 - Every changeable external claim has a location, primary source, and explicit status.
 - The overall verdict follows mechanically from the row statuses.
 - Audit-only verification changes no file.
-- Authorized updates match primary evidence, pass repository checks, and receive from a typed `instructions_skill-auditor` launch a sealed run whose terminal status is `approved`.
+- Authorized updates match primary evidence, pass repository checks, satisfy every catalog rule, and return ready for independent verification.
 
 </success_criteria>

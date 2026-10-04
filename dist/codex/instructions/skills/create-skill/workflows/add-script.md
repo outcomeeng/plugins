@@ -1,6 +1,6 @@
 <required_reading>
 
-Read `/skill-standards` and `/agent-prompt-standards`, including `/skill-standards`'s `references/runtime-variables.md` and the script-standards reference named by `<script_standards>`. Read `${SKILL_DIR}/references/technical-patterns.md` for executable-automation security, dependencies, failure handling, side effects, and cleanup. Read `spx/local/skills.md` when the target repository provides it. Load the target repository's implementation and test skills for the selected script language before writing code or tests.
+Read `/skill-standards`' `references/runtime-variables.md` and `references/script-standards.md`. Read `${SKILL_DIR}/references/technical-patterns.md` for executable-automation security, dependencies, failure handling, side effects, and cleanup. Load the target repository's implementation and test skills for the selected script language before writing code or tests.
 
 </required_reading>
 
@@ -32,7 +32,7 @@ Cite the script from each consuming workflow through the target skill's runtime 
 
 <step name="validate">
 
-Run the script tests and the target repository's canonical skill build and deterministic checks, then obtain from a fresh typed `instructions_skill-auditor` launch a sealed run over the complete bundle whose terminal status is `approved`. Remove the script when it cannot meet the declared test or portability contract.
+Run the script tests and the target repository's canonical skill build and deterministic checks, then apply every catalog rule to each changed file and return the bundle ready for independent verification. Remove the script when it cannot meet the declared test or portability contract.
 
 </step>
 
@@ -43,6 +43,6 @@ Run the script tests and the target repository's canonical skill build and deter
 - The script provides a deterministic capability that workflow prose alone cannot supply.
 - Its invocation, inputs, outputs, exit statuses, side effects, ceilings, and cleanup owner are explicit.
 - Success, failure, and cleanup tests pass through the target repository's declared test workflow.
-- Every bundled citation resolves, repository checks pass, and a typed `instructions_skill-auditor` launch returns a sealed run over the complete bundle whose terminal status is `approved`.
+- Every bundled citation resolves, repository checks pass, every catalog rule holds for each changed file, and the bundle returns ready for independent verification.
 
 </success_criteria>

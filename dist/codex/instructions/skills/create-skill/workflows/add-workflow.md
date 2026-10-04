@@ -1,6 +1,6 @@
 <required_reading>
 
-Read `/skill-standards` and `/agent-prompt-standards`, including `/skill-standards`'s `references/runtime-variables.md`. Read `${SKILL_DIR}/references/test-patterns.md` for activation, routing, and fresh-context validation. Read `${SKILL_DIR}/references/reusability-patterns.md` when the new route introduces variable request shapes or tool choices. Read `spx/local/skills.md` when the target repository provides it.
+Read `/skill-standards`' `references/runtime-variables.md`. Read `${SKILL_DIR}/references/test-patterns.md` for activation, routing, and fresh-context validation. Read `${SKILL_DIR}/references/reusability-patterns.md` when the new route introduces variable request shapes or tool choices.
 
 </required_reading>
 
@@ -32,7 +32,7 @@ Add the trigger and exact `${SKILL_DIR}/workflows/{descriptive-name}.md` path to
 
 <step name="validate">
 
-Exercise the new trigger and its nearest adjacent trigger. Confirm each selects exactly one intended route, every bundled link resolves, repository checks pass, and a fresh typed `instructions_skill-auditor` launch returns a sealed run over the complete bundle whose terminal status is `approved`.
+Exercise the new trigger and its nearest adjacent trigger. Confirm each selects exactly one intended route, every bundled link resolves, repository checks pass, and every catalog rule holds for each changed file; return the bundle ready for independent verification.
 
 </step>
 
@@ -43,6 +43,6 @@ Exercise the new trigger and its nearest adjacent trigger. Confirm each selects 
 - The new route represents a distinct intent and produces an output named by its success criteria.
 - The workflow conforms to `/skill-standards` and loads only required references.
 - Routing selects the new workflow for representative input without displacing adjacent routes.
-- Repository checks pass and a typed `instructions_skill-auditor` launch returns a sealed run over the complete bundle whose terminal status is `approved`.
+- Repository checks pass, every catalog rule holds for each changed file, and the bundle returns ready for independent verification.
 
 </success_criteria>

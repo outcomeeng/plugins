@@ -1,6 +1,6 @@
 <required_reading>
 
-Read `/skill-standards` and `/agent-prompt-standards` before authoring. Read `spx/local/skills.md` when the target repository provides it. Read the matching template and any authoring references selected below before writing the skill.
+Read the matching template and any authoring references selected below before writing the skill.
 
 </required_reading>
 
@@ -68,15 +68,15 @@ Instantiate the selected template with the resolved requirements. Apply `/skill-
 
 </step>
 
-<step name="validate">
+<step name="exercise">
 
-Run the target repository's canonical skill build and deterministic checks. Dispatch the typed `{{! subagent_name('instructions', 'skill-auditor') !}}` over the complete skill bundle. If the role is unavailable or returns no sealed `spx verification run`, return `BLOCKED`; never substitute an in-context `/audit-skill` invocation. Repair every finding the run records before publication. When the target repository declares no deterministic skill check, apply the closest available validation surface to every applicable `/skill-standards` and `/agent-prompt-standards` check before dispatching the audit.
+Invoke the skill against representative input. Confirm that it selects the intended workflow, loads only the required references, produces the objective's output shape, and satisfies each success criterion. Iterate on observed failures before validating.
 
 </step>
 
-<step name="exercise">
+<step name="validate">
 
-Invoke the skill against representative input. Confirm that it selects the intended workflow, loads only the required references, produces the objective's output shape, and satisfies each success criterion. Iterate on observed failures.
+Apply every rule in `/skill-standards`' `references/rule-catalog.md` and `/agent-prompt-standards`' `<rule_catalog>` to each file of the finished bundle, and repair every violation. Run the target repository's canonical skill build and deterministic checks; when the repository declares no deterministic skill check, apply the closest available validation surface. Return the bundle ready for independent verification. An edit after this step returns to it.
 
 </step>
 
@@ -89,6 +89,6 @@ Invoke the skill against representative input. Confirm that it selects the inten
 - Every reviewed plugin skill has a naming-classification row, with only proven violations or explicit operator-directed names changed.
 - The complete bundle passes `/skill-standards` progressive-disclosure and reference-integrity checks.
 - The complete bundle passes `/skill-standards` command-capability checks.
-- Any bundled scripts pass success and failure tests, repository checks pass, and the typed `{{! subagent_name('instructions', 'skill-auditor') !}}` returns a sealed run whose terminal status is `approved`.
+- Any bundled scripts pass success and failure tests, repository checks pass, every catalog rule holds for each bundle file, and the bundle returns ready for independent verification.
 
 </success_criteria>

@@ -1,8 +1,8 @@
 ---
 name: create-skill
 description: >-
-  ALWAYS invoke this skill when creating, editing, or improving SKILL.md files or bundled workflows, references, templates, and scripts; explaining skill patterns; or verifying that skill content is current.
-allowed-tools: Read, Glob, Grep, Edit, Write, Bash, collaboration.spawn_agent, collaboration.wait_agent, WebFetch, WebSearch
+  ALWAYS invoke this skill when creating, editing, improving, or repairing SKILL.md files or bundled workflows, references, templates, and scripts; explaining skill patterns; or verifying that skill content is current.
+allowed-tools: Read, Glob, Grep, Edit, Write, Bash, WebFetch, WebSearch
 ---
 
 Use skill `instructions:skill-standards`.
@@ -17,15 +17,13 @@ A skill-authoring request routed to its matching typed workflow.
 
 - Before any material skill change, apply `/skill-standards` and the repository overlay's required plugin-wide naming review.
 - Classify every skill name independently. A shared word, suffix, or grammatical number never establishes a batch rename.
-- Keep audit-only work read-only. Apply changes only when the operator requested creation or improvement.
-- Dispatch every skill audit through the typed `instructions_skill-auditor` role. If the role is unavailable or returns no sealed `spx verification run`, report `BLOCKED`; never invoke `/audit-skill` in the authoring context.
+- Apply every catalog rule in `/skill-standards`' `references/rule-catalog.md` and `/agent-prompt-standards`' `<rule_catalog>` to the finished bundle before returning it.
+- Return every produced or repaired bundle ready for independent verification. Never dispatch `instructions_skill-auditor`, invoke `/audit-skill`, or wait on an audit verdict; this skill ends at a bundle ready for verification.
 
 </essential_principles>
 
 <reference_loading>
-Before creating, editing, or auditing any skill, read `/skill-standards`, then check for `spx/local/skills.md` at the repository root and read it if it exists.
-
-Also read `/agent-prompt-standards` for voice, description style, constraint language, and anti-pattern conventions before writing prompt text.
+The `Use skill` instructions above load `/skill-standards` and `/agent-prompt-standards` once for every route. Before creating, editing, or repairing any skill, also read `/skill-standards`' `references/rule-catalog.md`, then `spx/local/skills.md` at the repository root when it exists.
 
 When the skill takes arguments, injects state-dependent context, restricts tools, or references files, read `/skill-standards`'s `references/command-capabilities.md` before authoring that surface.
 
@@ -39,7 +37,7 @@ Before any route creates or materially changes skill content, apply `/skill-stan
 | Current name | Skill type | Governing naming form | Proposed name or keep | Reason |
 | ------------ | ---------- | --------------------- | --------------------- | ------ |
 
-Read the source that declares any overlapping methodology vocabulary and inspect relevant file history before classifying a name as defective. Never infer a batch rename from a shared lexical token, suffix, or grammatical number. Apply only explicit operator-directed renames and names the classification proves nonconforming. Audit-only requests and read-only pattern questions skip this mutation gate.
+Read the source that declares any overlapping methodology vocabulary and inspect relevant file history before classifying a name as defective. Never infer a batch rename from a shared lexical token, suffix, or grammatical number. Apply only explicit operator-directed renames and names the classification proves nonconforming. Read-only pattern and content-currency questions skip this mutation gate.
 
 </material_change_name_review>
 
@@ -49,7 +47,7 @@ When the request already identifies one intent below, skip this menu and route d
 What would you like to do?
 
 1. Create a new skill
-2. Audit or improve an existing skill
+2. Repair or improve an existing skill
 3. Add a workflow
 4. Add a reference
 5. Add a template
@@ -63,17 +61,17 @@ What would you like to do?
 
 <routing>
 
-| Response                                         | Workflow                                        |
-| ------------------------------------------------ | ----------------------------------------------- |
-| 1, "create", "new", "build"                      | `${SKILL_DIR}/workflows/create-new-skill.md`    |
-| 2, "audit", "improve", "review", "check quality" | `${SKILL_DIR}/workflows/audit-skill.md`         |
-| 3, "add workflow"                                | `${SKILL_DIR}/workflows/add-workflow.md`        |
-| 4, "add reference"                               | `${SKILL_DIR}/workflows/add-reference.md`       |
-| 5, "add template"                                | `${SKILL_DIR}/workflows/add-template.md`        |
-| 6, "add script"                                  | `${SKILL_DIR}/workflows/add-script.md`          |
-| 7, "upgrade to router"                           | `${SKILL_DIR}/workflows/upgrade-to-router.md`   |
-| 8, "patterns", "understand patterns"             | `${SKILL_DIR}/workflows/understand-patterns.md` |
-| 9, "verify content", "current"                   | `${SKILL_DIR}/workflows/verify-skill.md`        |
+| Response                               | Workflow                                        |
+| -------------------------------------- | ----------------------------------------------- |
+| 1, "create", "new", "build"            | `${SKILL_DIR}/workflows/create-new-skill.md`    |
+| 2, "repair", "improve", "fix findings" | `${SKILL_DIR}/workflows/repair-skill.md`        |
+| 3, "add workflow"                      | `${SKILL_DIR}/workflows/add-workflow.md`        |
+| 4, "add reference"                     | `${SKILL_DIR}/workflows/add-reference.md`       |
+| 5, "add template"                      | `${SKILL_DIR}/workflows/add-template.md`        |
+| 6, "add script"                        | `${SKILL_DIR}/workflows/add-script.md`          |
+| 7, "upgrade to router"                 | `${SKILL_DIR}/workflows/upgrade-to-router.md`   |
+| 8, "patterns", "understand patterns"   | `${SKILL_DIR}/workflows/understand-patterns.md` |
+| 9, "verify content", "current"         | `${SKILL_DIR}/workflows/verify-skill.md`        |
 
 **After reading the workflow, follow it exactly.**
 
@@ -98,7 +96,7 @@ All in `${SKILL_DIR}/workflows/`:
 | Workflow                 | Purpose                                |
 | ------------------------ | -------------------------------------- |
 | `create-new-skill.md`    | Build a skill from scratch             |
-| `audit-skill.md`         | Check skill against best practices     |
+| `repair-skill.md`        | Repair a skill from audit findings     |
 | `add-workflow.md`        | Add a workflow to existing skill       |
 | `add-reference.md`       | Add a reference to existing skill      |
 | `add-template.md`        | Add a reusable skill template          |
@@ -131,7 +129,7 @@ All in `${SKILL_DIR}/templates/`:
 - For every route, one canonical trigger and its nearest adjacent trigger select exactly the intended workflow, and every routing target exists in `<workflows_index>`.
 - Each selected workflow loads only the standards and conditional references its route requires.
 - Each selected workflow produces the output declared by its own success criteria.
-- A produced or improved skill passes the target repository's deterministic skill checks and receives from the typed `instructions_skill-auditor` a sealed run over the complete bundle whose terminal status is `approved`.
+- A produced or repaired skill satisfies every catalog rule its author applied, passes the target repository's deterministic skill checks, and returns ready for independent verification.
 
 </success_criteria>
 

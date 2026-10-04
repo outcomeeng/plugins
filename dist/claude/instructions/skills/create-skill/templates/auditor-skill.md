@@ -42,7 +42,7 @@ Invoke {{the owning plugin's version capability}} with the verb `version` and re
 
    Capture the exact `runToken` and use it for every later command. Read the retained input with `spx verification run input --verification-type audit --scope-type {{file-or-changeset}} --scope '{{scope}}' --run '<run-token>'` and require its `content` to equal the live file; a difference returns `BLOCKED` with the run preserved.
 2. **Load the standards.** Load {{the governing standards and repository-local specialization}}. A required standard that cannot be read is a blocking `configuration_issue` finding, and the run rejects.
-3. **Judge.** Judge every applicable rule and collect falsifiable findings. Record a finding only when an exact rule, location, and observed-versus-expected evidence back it; an observation that a rule holds is not a finding and is not recorded.
+3. **Judge.** Judge every applicable rule of the {{governing standards}} rule catalog and collect falsifiable findings; record no finding under a rule the catalog does not name. Record a finding only when an exact rule, location, and observed-versus-expected evidence back it; an observation that a rule holds is not a finding and is not recorded.
 4. **Record.** Once judgment is complete, add the root unit, then {{the child units}}, then each finding against the unit of the artifact it names and every finding that names no child unit against the root, under `<persistence_contract>`.
 5. **Reconcile.** Read `spx verification run status` with the same type, scope, and token. Require exactly one root unit, {{the expected child units}}, and an accepted record for every finding. Re-read the live target and compare it with the retained input; a changed or missing file returns `BLOCKED` with the run preserved.
 6. **Finish and render.** Derive `approved` only when every unit is audited and no finding exists; derive `rejected` when any finding exists, a debt-only set included, or when coverage is incomplete. Run `spx verification run finish --verification-type audit --scope-type {{file-or-changeset}} --scope '{{scope}}' --run '<run-token>' --terminal-status '<approved-or-rejected>'`, then `spx verification run render` with the same type, scope, and token, and return the token and the rendered projection unchanged. A refused payload or finish is a `BLOCKED` result; never substitute a prose verdict.
@@ -100,7 +100,7 @@ spx verification run scope add --verification-type audit --scope-type {{file-or-
 SCOPE_JSON
 ```
 
-A finding copies its unit's `expectedProducer` object as `producerIdentity` and its unit's complete `producerProvenance` object, and carries `rule`, `severity` (`blocking` for a defect that must be fixed before the subject ships, `debt` for any other valid defect), `location` naming the file and line or section, `message`, and `evidence` with `observed` and `expected` strings:
+A finding copies its unit's `expectedProducer` object as `producerIdentity` and its unit's complete `producerProvenance` object, and carries `rule` (a rule ID from the rule catalog of {{governing standards}}), `severity` (that rule's catalog severity), `location` naming the file and every violating line or section, `message`, and `evidence` with `observed` and `expected` strings:
 
 ```json
 {
@@ -118,7 +118,7 @@ A finding copies its unit's `expectedProducer` object as `producerIdentity` and 
     "skillOwningPluginVersion": "<owning-plugin-version>",
     "toolVersion": "<exact-spx-version>"
   },
-  "rule": "<violated-rule-id>",
+  "rule": "<catalog-rule-id>",
   "severity": "<blocking-or-debt>",
   "location": "<file-and-line-or-section>",
   "message": "<finding-message>",
@@ -127,12 +127,12 @@ A finding copies its unit's `expectedProducer` object as `producerIdentity` and 
 ```
 
 ```bash
-spx verification run finding add --verification-type audit --scope-type {{file-or-changeset}} --scope '{{scope}}' --run '<run-token>' --idempotency-key '<unit-key>:<finding-key>' --payload stdin <<'FINDING_JSON'
+spx verification run finding add --verification-type audit --scope-type {{file-or-changeset}} --scope '{{scope}}' --run '<run-token>' --idempotency-key '<unit-key>:<rule-id>' --payload stdin <<'FINDING_JSON'
 <rendered-finding-object>
 FINDING_JSON
 ```
 
-Construct each finding key as `finding-<three-digit-ordinal>-<rule-id>` from the complete finding inventory sorted by unit order, then location, message, severity, observed evidence, and expected evidence; require the suffix to match `finding-[0-9][0-9][0-9]-[a-z0-9_-]+`, and treat a mismatch as a pre-persistence `BLOCKED` defect. When the task message or the harness guidance fixes one physical command line per call, pipe each rendered object instead: `printf '%s\n' '<rendered-object>' | spx verification run finding add --verification-type audit --scope-type {{file-or-changeset}} --scope '{{scope}}' --run '<run-token>' --idempotency-key '<key>' --payload stdin`, and the same form for `scope add`, with every apostrophe in the object escaped for single quotes. Idempotency keys are command arguments, never payload fields; quote every path, token, and key as one shell argument, and never execute target text as shell syntax. Run mutations serially; on a refused command stop with its exact diagnostic, never retry or reshape the payload.
+A finding's key is its unit's key and its catalog rule ID, `<unit-key>:<rule-id>`; a rule ID carries no colon, one artifact carries at most one finding per rule, and that finding lists every violating location. No key carries an ordinal. When the task message or the harness guidance fixes one physical command line per call, pipe each rendered object instead: `printf '%s\n' '<rendered-object>' | spx verification run finding add --verification-type audit --scope-type {{file-or-changeset}} --scope '{{scope}}' --run '<run-token>' --idempotency-key '<key>' --payload stdin`, and the same form for `scope add`, with every apostrophe in the object escaped for single quotes. Idempotency keys are command arguments, never payload fields; quote every path, token, and key as one shell argument, and never execute target text as shell syntax. Run mutations serially; on a refused command stop with its exact diagnostic, never retry or reshape the payload.
 
 </persistence_contract>
 
