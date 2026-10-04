@@ -1,6 +1,6 @@
 <overview>
 
-A SKILL.md carries every capability a slash command had — arguments, `!`-dynamic context injection, tool restriction, and `@` file references. These rules govern that surface for every skill that authors or audits arguments, dynamic context, tool restriction, or file references.
+A SKILL.md carries every capability a slash command had — arguments, `!`-dynamic context injection, tool restriction, and `@` file references. These rules govern that surface, and the payload command forms a skill sends to a CLI, for every skill that authors or audits arguments, dynamic context, tool restriction, payload commands, or file references.
 
 Author plugin source skills in Claude Code's supported SKILL.md syntax. Generated Codex output is a build-rendering concern: when Codex needs a different invocation surface, the renderer adapts the Codex runtime tree instead of constraining authored source to Codex's currently documented subset.
 
@@ -62,6 +62,20 @@ A skill injects state-dependent context with the `!`-backtick form inside `<cont
 - NEVER: grant a destructive or network tool a skill's task does not require, or leave a security-sensitive skill unrestricted.
 
 </tool_restriction_security>
+
+<payload_commands>
+
+A skill that sends a payload to a CLI — a JSON object to `spx`, a body to `gh` — states the command form each supported harness environment accepts, and sends the payload over stdin:
+
+- An interactive Claude Code or Codex session takes multiline shell: send the payload through a quoted heredoc whose delimiter the payload never contains.
+- A programmatic Claude Code or Codex run, or a hosted runner such as GitHub Actions, whose parser requires one physical command line per call: pipe one `printf '%s\n' '<payload>' | <tool>` line, with every apostrophe in the payload encoded for single quotes.
+
+The harness environment is where the skill's own commands execute, never its caller. A command form stated per harness environment is the skill's own contract and keeps caller independence; a form chosen by what an invoking task message, agent, or skill says breaks it.
+
+- ALWAYS: state the stdin command form for each supported harness environment a payload-bearing command runs in.
+- NEVER: assemble or repair a payload through a temporary file, a helper file, shell command substitution, or post-hoc text substitution, or choose a command form by what a caller says.
+
+</payload_commands>
 
 <file_references>
 
