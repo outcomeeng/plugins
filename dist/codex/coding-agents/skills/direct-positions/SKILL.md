@@ -67,9 +67,10 @@ After reading the workflow, follow it exactly.
 | ------------------------ | ----------------------------------------------------------------------------------- |
 | `authority.md`           | Who decides what: positions, ranks, the Director's delegation, the operator's share |
 | `classifier-triggers.md` | The Director actions the harness classifier refuses                                 |
+| `monitor-internals.md`   | The watch file, the monitor's signals, its state and lock, arming, and the roster   |
 | `status-report.md`       | The STATUS template positions mail every 15 minutes and the step-in triggers        |
 
-The monitor's internals — signals, state file, lock and context tiers — are in `${SKILL_DIR}/README.md`. Read it only when a monitor line is unclear or the monitor misbehaves.
+Read `${SKILL_DIR}/references/monitor-internals.md` when a monitor line is unclear or the monitor misbehaves, and when writing the watch file.
 
 </reference_index>
 

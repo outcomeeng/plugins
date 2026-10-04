@@ -1,8 +1,10 @@
-# direct-positions: monitor and roster
+<overview>
 
 The skill bundles one monitor for every watched position and a roster that lists them. Both read sessions only through the sibling `operate-prowl`, `operate-herdr` and `operate-agent-mail` adapters, so they own no Prowl, herdr or agent-mail command grammar.
 
-## Watch file
+</overview>
+
+<watch_file>
 
 `.spx/worktree/director/watch.json` in the Director's worktree:
 
@@ -35,7 +37,9 @@ The skill bundles one monitor for every watched position and a roster that lists
 - Both scripts reject a missing or malformed watch file, and the monitor rejects a malformed state file or an `--every` that is not a positive, finite number of seconds. Each exits with status 2 and names the defect on standard error.
 - `report_background: false` silences `WAITING-ON-BACKGROUND` for a position that rests on its own monitor.
 
-## Signals
+</watch_file>
+
+<signals>
 
 | Signal                  | Meaning                                                                                              |
 | ----------------------- | ---------------------------------------------------------------------------------------------------- |
@@ -53,14 +57,22 @@ The skill bundles one monitor for every watched position and a roster that lists
 
 A compaction tier is reported once per 5% step. Prowl's status stays `working` while a session's own monitor runs; the environment reads the screen state `idle` under a `working` status as idle with background work.
 
-## State and lock
+</signals>
+
+<state_and_lock>
 
 `state.json` holds the last mail id and each session's last state, timestamps, pane digest and reported tiers. Only the monitor writes it. `state.json.lock` holds the loop's process id under an exclusive file lock taken atomically; a re-arm finds the lock held and exits with `WATCH-DUPLICATE`, so a re-arm never doubles signals. A lock file left by a process that is gone is taken over.
 
-## Arming
+</state_and_lock>
+
+<arming>
 
 The harness caps a monitor at 30 minutes. Arm it through the harness monitor tool at the maximum timeout and re-arm it on every expiry notice: an expired monitor sees nothing, and mail arriving in the gap shows on the next run. A watch run as a backgrounded shell dies at the shell's limit with no notice, so never use one.
 
-## Roster
+</arming>
+
+<roster>
 
 `roster.py WATCH.json` prints one Markdown row per position — mail name, backend, worktree, pane, server state, context — and one row per group member. A failed inventory shows as `inventory failed` with the adapter's message, never as `absent`. Pipe it to `spx change draft create --input stdin` to keep it in the worktree across reboots.
+
+</roster>

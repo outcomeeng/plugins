@@ -58,6 +58,6 @@ Before ordering anything a lifecycle skill covers, use that skill; each states i
 - Use skill `spec-tree:close-change` for Applied, Refined or Abandoned with their preconditions.
 - Use skill `spec-tree:merge`; it is the only route to the default branch.
 
-Malleability lives only in a spec's front matter. A node's malleability selects its gates: `spec` needs Validate, reachability tests and a result for every tagged assertion; `verification` adds a result for every assertion; `implementation` adds evidence that passes audit. A changeset merges by the least malleable node it touches.
+Read each node's malleability in its spec's front matter before ordering or reporting any evidence audit; use skill `spec-tree:understand` for the gates a malleability selects.
 
 </lifecycle_skills>

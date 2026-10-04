@@ -216,6 +216,7 @@ class Rig:
             for name in self.scripts.environment.BACKENDS
         }
         self.inbox = ControlledInbox(self.scripts)
+        self.production_inbox = False
         self.state: dict[str, Any] = {}
         self.now = CLOCK_START
 
@@ -242,6 +243,10 @@ class Rig:
         if text is not None:
             backend.texts[handle] = text
 
+    def read_mail_through_the_adapter(self) -> None:
+        """Poll with the production inbox reader, which runs the mail adapter in the channel."""
+        self.production_inbox = True
+
     def vacate(self) -> None:
         """End the first entry's session."""
         self.backends[self.watch["sessions"][0]["backend"]].inventory = []
@@ -267,7 +272,7 @@ class Rig:
             self.state,
             self.now,
             backends=self.backends,
-            inbox=self.inbox,
+            inbox=None if self.production_inbox else self.inbox,
         )
 
 
