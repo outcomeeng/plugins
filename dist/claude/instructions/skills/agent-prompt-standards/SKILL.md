@@ -3,8 +3,10 @@ name: agent-prompt-standards
 user-invocable: false
 description: >-
   Agent prompt writing conventions enforced across all creator and auditor skills. Loaded by other skills, not invoked directly.
-allowed-tools: Read
+allowed-tools: Read, Skill
 ---
+
+Use skill `instructions:skill-standards`.
 
 <objective>
 The agent-prompt writing conventions — voice, description style, constraint language, objective shape, and anti-patterns — for the text within SKILL.md files and subagent system prompts, enforced across every creator and auditor skill.
