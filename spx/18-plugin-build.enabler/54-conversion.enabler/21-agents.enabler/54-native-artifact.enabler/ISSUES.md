@@ -14,6 +14,8 @@ Impact: every generated Codex verifier whose governing workflow requires shell-b
 
 Settlement condition: select and deliver either an owned companion rules artifact with complete generation, installation, ownership, collision, upgrade, and cleanup semantics, or a dedicated persistence tool available only to configured verifiers. Apply the selected mechanism to every generated Codex verifier and prove both required SPX persistence and rejection of mutation outside the boundary.
 
+Further instance: `instructions:subagent-auditor` finding `f-001` (rule `capabilities/material-restriction-prompt-only`, severity `REJECT`) on `src/plugins/spec-tree/agents/change-auditor.md` line 6, in the subagent audit of head `73c02c3602897fcb5598b3122996e30b65d34537`: `tools: Bash(python3:*), Read, {{! tool('use_skill') !}}` grants `Bash(python3:*)`, which admits every `python3` command rather than the bundled runner alone, emitted as `tools: Bash(python3:*), Read, Skill` in `dist/claude/spec-tree/agents/change-auditor.md` and as manual-review guidance only in `dist/codex/spec-tree/skills/spec-tree-plugin/agents/spec-tree_change-auditor.toml`, so the wrapper's no-file rule and its runner-only command boundary exist only as prompt text; Change [outcomeeng/changes#162](https://github.com/outcomeeng/changes/issues/162) leaves this grant unchanged.
+
 Proposed Change: `.spx/worktree/change-drafts/d000b94a-99d8-4527-82f4-64fea4fd477d.md` (`d000b94a-99d8-4527-82f4-64fea4fd477d`).
 
 ## DEBT [source-ownership]: scenario source vocabulary at line 45

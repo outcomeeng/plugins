@@ -32,13 +32,13 @@ Revisit and settlement condition: each check named against its granted command, 
 
 Defect class: `single-location`.
 
-Finding: the first success criterion of `change-standards` states that each record requirement has one canonical statement in the shared reference, while the Definition of Ready tables restate requirements the shared `change-record.md` rules already state: `proposed-input-boundary` restates `received-input-boundary`, and `framed-authority` restates the Intent attestation text the `frame` rule carries. `audit-change` states the `expectedProducer` derivation three times: in prose at lines 167-169, again at lines 170-175, and in the JSON template at lines 200-208. Its last success criterion (lines 396-398) restates its third (lines 386-388): both say the candidate and product content stay unchanged and the only mutation is the SPX verification-run journal.
+Finding: the first success criterion of `change-standards` states that each record requirement has one canonical statement in the shared reference, while the Definition of Ready tables restate requirements the shared `change-record.md` rules already state: `proposed-input-boundary` restates `received-input-boundary`, and `framed-authority` restates the Intent attestation text the `frame` rule carries. `author-change` `<persistence>` restates the field-home table and the blocker read command that `canonical-state` in `lifecycle.md` owns, and its `<essential_principles>` restates the `change-auditor` dispatch rule that `<audit_gate>` governs.
 
-Evidence: `instructions:skill-auditor` finding f-011, severity `WARNING`, against `src/plugins/spec-tree/skills/change-standards/SKILL.md:36`, in the typed skill audit of `change-standards` on head `98e924f4f88200425e649c3034f6fb0336f2bcf8`. The typed skill audit of `audit-change` on head `c8f2bede8959e0ae489ec3691578f85cb5495852`, which approved with no must-fix finding, added finding f-010 (rule `conciseness_redundancy`), severity `WARNING`, against `src/plugins/spec-tree/skills/audit-change/SKILL.md:170`, and finding f-012 (rule `success_criteria_duplication`), severity `WARNING`, against `src/plugins/spec-tree/skills/audit-change/SKILL.md:396`. The typed skill audit of `change-standards` on head `b0ace02701a73ce0cb4c34b5f1df924217779889` added finding f-008 (rule `single-canonical-statement`), severity `WARNING`, against `src/plugins/spec-tree/skills/change-standards/SKILL.md:36`: the target-malleability definition stands in the `frame` rule of `change-record.md` and again in the `framed-nodes`, `sliced-frame`, and `executable-frame` criteria. The typed skill audit of `author-change` on that head added finding f-008 (rule `single-location-duplication`), severity `WARNING`, against `src/plugins/spec-tree/skills/author-change/SKILL.md:94`: `<persistence>` restates the field-home table and the blocker read command that `canonical-state` in `lifecycle.md` owns. The typed skill audit of `change-standards` on head `303923264a553bd518a68e93f5c228fd30565196` raised the target-malleability restatement again as f-009, and the audit on head `3e9758d4d25e8ac5ae90d29c9592430ce02d417a` added that the literal Intent attestation line stands in both `change-record.md` and `dor-framed.md`, and the typed skill audit of `author-change` on that head added f-009 (rule `conciseness_duplication`), severity `WARNING`, against `src/plugins/spec-tree/skills/author-change/SKILL.md:23`: `<essential_principles>` restates the `change-auditor` dispatch rule that `<audit_gate>` governs.
+Evidence: `instructions:skill-auditor` finding f-011, severity `WARNING`, against `src/plugins/spec-tree/skills/change-standards/SKILL.md:36`, in the typed skill audit of `change-standards` on head `98e924f4f88200425e649c3034f6fb0336f2bcf8`. The typed skill audit of `change-standards` on head `b0ace02701a73ce0cb4c34b5f1df924217779889` added finding f-008 (rule `single-canonical-statement`), severity `WARNING`, against `src/plugins/spec-tree/skills/change-standards/SKILL.md:36`: the target-malleability definition stands in the `frame` rule of `change-record.md` and again in the `framed-nodes`, `sliced-frame`, and `executable-frame` criteria. The typed skill audit of `author-change` on that head added finding f-008 (rule `single-location-duplication`), severity `WARNING`, against `src/plugins/spec-tree/skills/author-change/SKILL.md:94`: `<persistence>` restates the field-home table and the blocker read command that `canonical-state` in `lifecycle.md` owns. The typed skill audit of `change-standards` on head `303923264a553bd518a68e93f5c228fd30565196` raised the target-malleability restatement again as f-009, and the audit on head `3e9758d4d25e8ac5ae90d29c9592430ce02d417a` added that the literal Intent attestation line stands in both `change-record.md` and `dor-framed.md`, and the typed skill audit of `author-change` on that head added f-009 (rule `conciseness_duplication`), severity `WARNING`, against `src/plugins/spec-tree/skills/author-change/SKILL.md:23`: `<essential_principles>` restates the `change-auditor` dispatch rule that `<audit_gate>` governs.
 
-Impact: the `change-standards` success criterion cannot be met as written, so an auditor judging the skill against it either raises the restatement again or accepts a criterion the bundle does not hold. A restated requirement can drift from its other statement without any check reporting the split: the three `audit-change` statements of the producer split can disagree, and its duplicated success criterion stops the list from naming distinct soundness properties, as `<success_criteria_shape>` asks.
+Impact: the `change-standards` success criterion cannot be met as written, so an auditor judging the skill against it either raises the restatement again or accepts a criterion the bundle does not hold. A restated requirement can drift from its other statement without any check reporting the split.
 
-Revisit and settlement condition: either each Definition of Ready criterion that restates a shared rule cites that rule by its identifier instead of restating its text, or the success criterion states the relation the bundle actually holds between shared rules and Maturity criteria; `audit-change` states the `expectedProducer` derivation once and carries one success criterion for unchanged candidate and product content with the SPX journal as the only mutation; one typed skill audit of each skill then raises no finding against those statements.
+Revisit and settlement condition: either each Definition of Ready criterion that restates a shared rule cites that rule by its identifier instead of restating its text, or the success criterion states the relation the bundle actually holds between shared rules and Maturity criteria; one typed skill audit of each of `change-standards` and `author-change` then raises no finding against those statements.
 
 ## DEBT [precondition]: the Change skills assume a GitHub store without stating the precondition or a blocked result for another store
 
@@ -52,43 +52,15 @@ Impact: a consumer repository whose coordination overlay is absent or declares a
 
 Revisit and settlement condition: each of the two skills states the store kind its commands require and names the blocked result for a store of another kind, `author-change` also naming it for an absent overlay as `lifecycle.md` `store-binding` already does; one typed skill audit of each skill then raises no `precondition` finding.
 
-## DEBT [caller-independence]: audit-change describes its invocation context
+## DEBT [caller-independence]: the instructions auditors record a run-driver identity the rule reads as dependence on the caller
 
 Defect class: `caller-independence`.
 
-Finding: the request contract of `audit-change` describes the context the skill is invoked in. It says the explicit data inputs "are the same for direct and composed execution" and forbids reading identity from hidden invocation context or detecting who invoked the skill. The behavior itself does not depend on the caller; only the wording names the invocation context and the invoker.
+Finding: `/skill-standards` caller independence reads the required `runDriver` input of `instructions:audit-skill` as dependence on the caller: `instructions:skill-auditor` finding f-012 (rule `caller_independence`), severity `REJECT`, against `src/plugins/instructions/skills/audit-skill/SKILL.md:35` at head `add3e3e862f7512a55e8b9655d07f78412abe87c`. The same finding stands against `src/plugins/instructions/skills/audit-subagent/SKILL.md:34` (f-008) and against the `runDriver` input of `/create-skill`'s auditor template, `src/plugins/instructions/skills/create-skill/templates/auditor-skill.md` (f-012), at head `8e631614b562ec5edf05c0e4c80a38625ada90d7`. The Change that made the two instructions auditors record through `spx verification run` settled that input as required, the shape `audit-change` uses, and the typed skill audit of `audit-change` on head `7682aa69f9042b1221456caf7274ca937c083232` raised no `caller_independence` finding. A run-driver identity recorded as provenance, with no branching on it, is input data rather than dependence on the caller, and `/skill-standards` states no such distinction.
 
-Evidence: `instructions:skill-auditor` finding f-009 (rule `caller_independence`), severity `WARNING`, against `src/plugins/spec-tree/skills/audit-change/SKILL.md:40`, in the typed skill audit of `audit-change` on head `c8f2bede8959e0ae489ec3691578f85cb5495852`, which approved with no must-fix finding.
+Impact: each later audit of those skills raises the finding again, though their behavior meets the rule and no edit to them satisfies it.
 
-Impact: `/skill-standards` caller independence requires that a skill never names or describes its caller or invocation context. The contract falls short of that rule even though its behavior meets it, so each later audit of the skill raises the finding again.
-
-The same rule reads the required `runDriver` input of `instructions:audit-skill` as dependence on the caller: `instructions:skill-auditor` finding f-012 (rule `caller_independence`), severity `REJECT`, against `src/plugins/instructions/skills/audit-skill/SKILL.md:35` at head `add3e3e862f7512a55e8b9655d07f78412abe87c`. The same finding stands against `src/plugins/instructions/skills/audit-subagent/SKILL.md:34` (f-008) and against the `runDriver` input of `/create-skill`'s auditor template, `src/plugins/instructions/skills/create-skill/templates/auditor-skill.md` (f-012), at head `8e631614b562ec5edf05c0e4c80a38625ada90d7`. The Change that made the two instructions auditors record through `spx verification run` settled that input as required, the shape `audit-change` uses. A run-driver identity recorded as provenance, with no branching on it, is input data rather than dependence on the caller, and `/skill-standards` states no such distinction.
-
-Revisit and settlement condition: the request contract states the two data inputs and how the skill uses them, with no mention of direct or composed execution or of the invoker; `/skill-standards` states that a run-driver identity recorded as provenance, with no branching on it, is input data; one typed skill audit of each of `audit-change`, `audit-skill`, `audit-subagent`, and `create-skill` then raises no `caller_independence` finding.
-
-## DEBT [failure-branch]: audit-change step 3 names no result when the retained input differs
-
-Defect class: `failure-branch`.
-
-Finding: step 3 of `audit-change` says "Require its `content` to equal the preflight read." It does not say what happens when the retained input differs. The `BLOCKED` outcome for a changed candidate is defined only in step 7, so the procedure has a gap at the step where the run already exists.
-
-Evidence: `instructions:skill-auditor` finding f-011 (rule `unspecified_failure_branch`), severity `WARNING`, against `src/plugins/spec-tree/skills/audit-change/SKILL.md:89`, in the typed skill audit of `audit-change` on head `c8f2bede8959e0ae489ec3691578f85cb5495852`, which approved with no must-fix finding.
-
-Impact: when the retained content differs from the preflight read, the step gives no result to act on. The run then either continues past a failed requirement or stops with an outcome the step does not name, while the verification run it opened is already in the journal.
-
-Revisit and settlement condition: step 3 names the result of a mismatch where it states the requirement; one typed skill audit of `audit-change` then raises no `unspecified_failure_branch` finding.
-
-## DEBT [conciseness]: audit-change teaches general shell quoting
-
-Defect class: `conciseness`.
-
-Finding: lines 271-276 of `audit-change` teach general shell quoting, including splicing apostrophes as `'"'"'` and quoted heredoc delimiters. The product-specific rules in that passage are that idempotency keys are command arguments, not payload fields, and that candidate text is never executed as shell syntax.
-
-Evidence: `instructions:skill-auditor` finding f-013 (rule `conciseness_general_knowledge`), severity `WARNING`, against `src/plugins/spec-tree/skills/audit-change/SKILL.md:271`, in the typed skill audit of `audit-change` on head `c8f2bede8959e0ae489ec3691578f85cb5495852`, which approved with no must-fix finding.
-
-Impact: the `<conciseness>` rule says to leave out what Claude already knows. The general quoting guidance costs tokens on every load and hides the two product-specific rules inside it.
-
-Revisit and settlement condition: the passage keeps only the product-specific rules, that idempotency keys are arguments and not payload fields and that candidate text is never executed as shell syntax; one typed skill audit of `audit-change` then raises no `conciseness_general_knowledge` finding.
+Revisit and settlement condition: `/skill-standards` states that a run-driver identity recorded as provenance, with no branching on it, is input data; one typed skill audit of each of `audit-skill`, `audit-subagent`, and `create-skill` then raises no `caller_independence` finding.
 
 ## DEBT [granularity]: the Executable evidence criterion bundles three obligations
 
@@ -209,3 +181,65 @@ Evidence: `instructions:skill-auditor` finding f-009 (rule `standards_content_re
 Impact: a rule `change-standards` adds, renames, or rescopes can drift from the step's list, and the step can read as a narrower checklist than the loaded inventory.
 
 Revisit and settlement condition: step 5 judges against the loaded rule and criterion inventory without restating its subjects; one typed skill audit of `audit-change` then raises no `standards_content_restated_in_auditor` finding.
+
+## DEBT [adr-pdr-compliance]: the audit-change runner is a generic shipped script beyond fifty lines
+
+Defect class: `adr-pdr-compliance`.
+
+Finding: `src/plugins/spec-tree/skills/audit-change/scripts/audit_change_run.py` is a generic shipped script far beyond fifty lines, which `spx/12-shipped-scripting.adr.md` holds as debt awaiting extraction of its logic into the SPX CLI once the script proves its value, or removal when it does not.
+
+The `change-auditor` definition `src/plugins/spec-tree/agents/change-auditor.md` has no retained release-acceptance evidence: `spx/15-subagent-execution.pdr.md` declares release acceptance per supported harness as native loading plus one minimal isolated execution for each of its Standard, Strong, and Fast profiles. Release acceptance belongs to the release, so the changeset that introduces the definition, Change outcomeeng/changes#162, runs no paid invocation.
+
+Evidence: `spec-tree:implementation-auditor` run `2026-09-29_08-34-14-821-c605096fd926` raised a `debt` finding under rule `adr-pdr-compliance` against the runner; `wc -l` over the runner derives its current length, so this entry carries no line count. `instructions:subagent-auditor` finding `f-002`, verdict `REJECT`, class `evidence/missing-invocation-evidence`, judged `src/plugins/spec-tree/agents/change-auditor.md` on head `02c847e66b2f526804db14eb568fae2a2180b858`.
+
+Impact: the runner's state, branching, and result contracts ship inside a plugin that a consumer repository cannot version independently or repair without a marketplace release. No execution claim stands for the `change-auditor` definition on any harness or profile until release acceptance retains its evidence.
+
+Revisit and settlement condition: once the runner proves its value in use, its logic moves into the SPX CLI, tested there and consumed by the plugins product as a trusted third-party component, leaving `audit-change` its instruction and no script; a runner that does not prove its value is removed rather than extracted. The definition's gap settles when release acceptance retains, for every supported harness, native loading and one minimal isolated execution of each Standard, Strong, and Fast profile, judged by an independent Auditor with no retry or substitution after a failed or unusable launch.
+
+## DEBT [evidence]: the runner's unreadable-output blocks reach no linked test
+
+Defect class: `evidence`.
+
+Finding: `reconcile` and the finding readers of `audit_change_run.py` block with `unreadable-output` when the rendered projection carries no `auditScopeUnits` array of objects or a finding without an integer `seq` and a payload object. `tests/test_audit_change_run.compliance.l1.py` drives the runner against the real SPX store, which never renders such a projection, so removing either block leaves every linked test passing. The same holds for the other blocked-result branches the real store never reaches: the runner's command wrapper on an `OSError`, a `ValueError`, or undecodable output, the line reader on unparseable or empty command output, the findings reader on a findings group that is not an array, the `retained-input-mismatch` block of `start`, the `OSError` branch of the stdin read in `main`, and the serializer's `RecursionError` fallback. The test-evidence audit of the changes node on head `c9124f951d82668d846e303686b236a52f72a309` raised this as a `WARNING` coverage finding against `src/plugins/spec-tree/skills/audit-change/scripts/audit_change_run.py`.
+
+Impact: the runner's refusal of a malformed projection is unobserved, so a regression there reads a run with no coverage as an empty one.
+
+Revisit and settlement condition: the runner's SPX boundary admits a controlled implementation of its command runner that renders a malformed projection, and a linked case asserts the `unreadable-output` block for each malformed shape.
+
+## DEBT [internal-consistency]: author-change forbids interpolation and then interpolates the title
+
+Defect class: `internal-consistency`.
+
+Finding: `author-change` says to NEVER interpolate record content into executable shell syntax, and its persistence step then puts the record's `title` into `gh issue create` and `gh issue edit` as a single-quoted `--title` argument. That form is legitimate only under the `inert-stdin` rule of `change-standards`, which the skill cites separately, so the absolute prohibition reads as forbidding the step the persistence workflow requires.
+
+Evidence: `instructions:skill-auditor` finding f-009 (rule `internal_consistency`), severity `WARNING`, against `src/plugins/spec-tree/skills/author-change/SKILL.md:34`, in the typed skill audit of `author-change` on head `7682aa69f9042b1221456caf7274ca937c083232`, which approved with no must-fix finding. The lines lie outside the audit-change runner changeset's diff.
+
+Impact: Claude meets two absolute instructions that disagree on the title write.
+
+Revisit and settlement condition: the prohibition is scoped to the `inert-stdin` rule, or the title step cites that rule's single-quote form; one typed skill audit of `author-change` then raises no `internal_consistency` finding.
+
+## DEBT [skill-contract]: audit-change's grant deviation and its inline reason table stay open
+
+Defect class: `skill-contract`.
+
+Finding: two warnings stand against `audit-change` after its approving audit. The `allowed-tools` grant omits the `Read`, `Grep`, and `Glob` baseline that `/skill-standards` requires of audit skills, because the runner is the audit's only read path and its journal appends make the grant a write grant; the skill states the deviation, and no standard or overlay records it. The reason table in `<runner_contract>` states every blocked condition inline, so each invocation loads text the workflow needs only to relay a blocked result unchanged, while the completeness of that table is itself a review requirement.
+
+Evidence: `instructions:skill-auditor` findings f-008 (rule `audit-skill-read-only-allowed-tools`) and f-009 (rule `progressive-disclosure-conditional-detail`), each severity `WARNING`, against `src/plugins/spec-tree/skills/audit-change/SKILL.md`, in the typed skill audit of `audit-change` on head `007c3871de7b82f7592325be191d26fbfa8aee8d`, which approved with no must-fix finding.
+
+The typed skill audit on head `95da1302cb72c523328f0d7d02b3a05b23df603b` approved again with no must-fix finding and raised the grant deviation as f-007 (rule `audit-allowed-tools-read-only`) and two further warnings: the `result:` placeholder of the BLOCKED block packs three result shapes into one line joined by "; or" (f-008, rule `verdict-format-legibility`, against `SKILL.md` line 236), and the constraint that forbids piping "into a command that masks its exit status" implies that some piping is allowed although the runner-only constraint forbids every other command (f-009, rule `constraint-precision`, against `SKILL.md` line 23). The piping wording is the wording the changes spec states for the same rule.
+
+Impact: each later audit of the skill raises the grant warning again, the table's size pulls against the review rule that it name every blocked condition, a reader matches a stop condition against one compound placeholder, and the piping qualifier reads as an exception.
+
+Revisit and settlement condition: `/skill-standards` or `spx/local/skills.md` records the journal-writing grant as a sanctioned exception to the audit read-only rule, the exhaustive condition text moves to a bundled reference the skill loads only for a blocked result, each BLOCKED result shape stands as its own labeled shape, and the skill and the changes spec state the piping prohibition without the qualifier; one typed skill audit of `audit-change` then raises none of the warnings.
+
+## DEBT [subagent-contract]: change-auditor restates the skill's result contract and carries a description-match description
+
+Defect class: `subagent-contract`.
+
+Finding: two warnings stand against the `change-auditor` definition. Its `<output_format>` restates the skill's result contract field by field, and its list of fields for a failed command omits `liveSha256`, `sha256`, and `retainedSha256`, which the skill's `<verdict_format>` carries for `candidate-changed` and `retained-input-mismatch`. Its description is directive description-match wording, although the owning skills dispatch the role by exact configured name.
+
+Evidence: `instructions:subagent-auditor` findings f-003 (rule `description-style/exact-name-invocation`) and f-004 (rule `configuration/thin-wrapper-contract-copy`), each severity `WARNING`, against `src/plugins/spec-tree/agents/change-auditor.md` lines 3 and 91, in the typed subagent audit on head `95da1302cb72c523328f0d7d02b3a05b23df603b`, which rejected on the standing findings f-001 and f-002 recorded in the native-artifact node and in the `adr-pdr-compliance` entry above. The directive description is the wording every spec-tree agent definition carries.
+
+Impact: the wrapper's copied field list drifts each time the runner contract changes, and a relaying session can take the narrower list as the expected shape; the description invites a launch the calling skills have not instructed.
+
+Revisit and settlement condition: the wrapper points at the skill's `<verdict_format>` for the completed, `OUTSIDE_CONTRACT`, and runner-blocked shapes and keeps only its own pre-run diagnostic shape, and the description states its subject and the conditions under which the owning skills invoke the role in passive wording; one typed subagent audit of `change-auditor` then raises neither warning.
