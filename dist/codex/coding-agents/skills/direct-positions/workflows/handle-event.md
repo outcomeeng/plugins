@@ -10,7 +10,7 @@
 
    | Signal                               | Disposition                                                                                                                                                       |
    | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-   | `MAIL`                               | Read the record with bodies; handle it by step 2; record the receipt.                                                                                             |
+   | `MAIL`                               | Use skill `coding-agents:operate-agent-mail` to read the record with bodies and, after handling it by step 2, to record the receipt.                              |
    | `BLOCKED`                            | Read the pane. A question or an approval: route it by the authority map. Send nothing into the pane unless the operator says to handle it.                        |
    | `WENT-IDLE`                          | Read the pane's last lines. A finished leg with a next step its skill names: leave it. An idle position with open work: send its next step through `instruct.md`. |
    | `WAITING-ON-BACKGROUND`              | Nothing; the harness re-invokes the session.                                                                                                                      |
