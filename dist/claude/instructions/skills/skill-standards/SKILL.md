@@ -22,6 +22,10 @@ This is a reference skill. Composing skills invoke these standards explicitly be
 When another skill loads this reference inside a repository, check for `spx/local/skills.md` at the repository root. Read that file after this reference if it exists and apply it as the repo-local specialization (e.g., marketplace-specific naming conventions or additional constraints). A local overlay supplements skill behavior; it does not declare product truth.
 </repo_local_overlay>
 
+<rule_catalog>
+Every rule this skill and its references state carries one stable rule ID in `${CLAUDE_SKILL_DIR}/references/rule-catalog.md`. Read it before auditing a skill or recording a finding.
+</rule_catalog>
+
 <skill_organization>
 
 Skills follow a **reference pattern** to avoid duplication:
@@ -248,13 +252,7 @@ This table is representative, not exhaustive: a skill may add semantically named
 
 **Close every tag.** Unclosed tags break parsing.
 
-**`<context>` bash blocks fire on every skill load.** Every `!`command`` line inside `<context>` runs unconditionally each time the skill is invoked — including false-positive activations triggered by directive descriptions matching adjacent terms. Heavy commands (session lists, full file contents, cache enumerations) compound the per-load tax.
-
-Constraints:
-
-- Filter expensive commands (`spx session list --status doing,todo`, `git log -10`, `head -N`) so output stays bounded.
-- Move data into the workflow file that actually consumes it when the skill loader doesn't need it for trigger evaluation. The `<context>` block is for trigger-time orientation, not workflow inputs.
-- Avoid commands whose output grows monotonically (archives, full caches, full file trees).
+**`<context>` commands run on every skill load.** Their rules live in `${CLAUDE_SKILL_DIR}/references/command-capabilities.md` `<dynamic_context>`.
 
 **Semantic names:** `<workflow>` not `<steps>`, `<success_criteria>` not `<done>`, `<anti_patterns>` not `<dont_do>`.
 
