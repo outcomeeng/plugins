@@ -1,0 +1,3 @@
+docs/outside.md
+spx/54-gamma.capability/ISSUES.md
+spx/54-gamma.capability/untouched-forms.md

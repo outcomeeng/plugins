@@ -56,8 +56,10 @@ target-version = "py313"
 # outcomeeng/vendor/ holds vendored third-party code (e.g. Anthropic's
 # skill validator under outcomeeng/vendor/anthropics_skills/) that is not
 # written to this repo's strict typing standards — exclude it from the
-# type check and ignore type errors for the package.
-exclude = ["outcomeeng/vendor/"]
+# type check and ignore type errors for the package. The link-conversion fixture
+# trees repeat the same inert test-file names under `input/` and `expected/`, so
+# mypy would read them as duplicate modules.
+exclude = ["outcomeeng/vendor/", "outcomeeng_testing/fixtures/link_conversion/"]
 
 [[tool.mypy.overrides]]
 module = "outcomeeng.vendor.*"
