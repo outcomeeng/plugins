@@ -37,3 +37,36 @@ The repository has no `spx/` directory. Its root agent guide declares `make veri
 - `src/server/routes.py`
 - `tests/test_routes.py`
 - `README.md`
+
+## Fixture 4
+
+The repository has a product tree under `spx/`, rooted at `spx/shop.spec.md`, which declares `kind: product`. The changeset changes these paths:
+
+- `spx/40-pricing.capability/tests/test_discount.mapping.l1.py` (a `[test]` file linked from `spx/40-pricing.capability/pricing.spec.md`)
+- `src/pricing/discount.py` (imported by that linked test)
+
+Front matter of the touched node's spec:
+
+- `spx/40-pricing.capability/pricing.spec.md`: `id: 01a0ebba-0000-7000-8000-000000000004`, `malleability: verification`
+
+## Fixture 5
+
+The repository has a product tree under `spx/`, rooted at `spx/shop.spec.md`, which declares `kind: product`. The changeset changes these paths:
+
+- `spx/shop.spec.md` (the root spec)
+- `spx/20-billing.capability/billing.spec.md`
+
+Front matter of each changed spec:
+
+- `spx/shop.spec.md`: `id: 01a0ebba-0000-7000-8000-000000000000`, `kind: product`
+- `spx/20-billing.capability/billing.spec.md`: `id: 01a0ebba-0000-7000-8000-000000000001`, `malleability: spec`
+
+## Fixture 6
+
+The repository has a product tree under `spx/`, rooted at `spx/shop.spec.md`, which declares `kind: product`. The changeset changes this path:
+
+- `spx/20-billing.capability/billing.outcome.md` (the outcome record of `spx/20-billing.capability`)
+
+Front matter of the touched node's spec:
+
+- `spx/20-billing.capability/billing.spec.md`: `id: 01a0ebba-0000-7000-8000-000000000001`, `malleability: spec`

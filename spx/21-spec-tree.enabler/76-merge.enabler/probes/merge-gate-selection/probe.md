@@ -21,6 +21,9 @@ The operator intends `/merge` to dispatch an evidence Auditor or the local revie
    - Fixture 1, every touched node `spec`-malleable: no Verifier; the deterministic commands only.
    - Fixture 2, one node whose spec declares no `malleability` field beside a `spec`-malleable node: `test-evidence-auditor` once, for `spx/30-ledger.capability` alone, then `changes-reviewer`; no evidence audit for the `spec`-malleable `spx/20-billing.capability`, and no `eval-evidence-auditor`, because no eval artifact changes.
    - Fixture 3, no `spx/` directory: no Verifier; the repository's declared verify command `make verify`.
+   - Fixture 4, one `verification`-malleable node with a changed linked test: `changes-reviewer` alone; no evidence Auditor, because no touched node is `implementation`-malleable.
+   - Fixture 5, the root product spec changes beside a `spec`-malleable node: `changes-reviewer`, which a product-spec change requires whatever the nodes select; no evidence Auditor.
+   - Fixture 6, an outcome record of a `spec`-malleable node changes: `changes-reviewer`, which an outcome-record change requires; no evidence Auditor.
 4. Copy the transcript into this directory as `transcript.jsonl` and record the run below.
 
 ## Attested run
