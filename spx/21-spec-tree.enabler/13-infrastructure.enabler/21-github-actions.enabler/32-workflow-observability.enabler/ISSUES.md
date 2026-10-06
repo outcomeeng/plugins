@@ -31,3 +31,11 @@ shipped skill to its instruction with no scripts. The mutation gate carries the
 product-level compliance rule that state-changing operations occur only with an
 explicit user instruction in the same turn, so its port preserves that boundary
 rather than relaxing it. Revisit when the capability publishes.
+
+## `inspect-github-actions` reads the newest runs at a bound the page-bound property reads as a completeness bound
+
+`src/plugins/spec-tree/skills/inspect-github-actions/SKILL.md` lines 66 and 70 list workflow runs with `gh run list --commit "$HEAD_SHA" --limit 5` and `gh run list --branch "$BRANCH" --limit 5`. Each is a most-recent-N read, for which a full result of five is the expected answer. Product property 3 of `spx/15-agent-tools.pdr.md` requires a `gh` list call whose result fills its bound to return a blocked result, and draws no line between a read that needs the whole collection and a read that takes the newest N, so a commit or branch with five or more runs reads as blocked.
+
+`spec-tree:changes-reviewer` run `2026-10-06_18-56-26-316-837e0b2a122f` on head `27de076ed368f5eee6477012d9526a89a8af2b77` raised this as a `consistency` finding against the decision at line 15.
+
+**Settlement condition.** The decision states that a read ordered by recency which takes the newest N is outside the blocked-result clause, or the skill returns a blocked result at its bound; the decision and the skill then agree under one PDR audit and one typed skill audit of `inspect-github-actions`.

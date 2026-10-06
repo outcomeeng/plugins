@@ -109,3 +109,11 @@ Most bullets of the `<success_criteria>` of `src/plugins/spec-tree/skills/manage
 **Impact.** A reader of the skill meets a tracking mechanism that does not exist, two step numbers for one command, and a Step 6 command outside the grant.
 
 **Settlement condition.** Each of the seven findings is resolved in the skill and its script, and one typed skill audit of `manage-pr` then raises none of them.
+
+## 6. The review-thread resolver pages GraphQL connections without a page count
+
+`src/plugins/spec-tree/skills/manage-pr/scripts/resolve_review_thread.py` discovers a review thread from a review-comment ID by reading `reviewThreads(first: 100, after: $threadsAfter)` and, for each thread, `comments(first: 100, after: $commentsAfter)`. The loops at lines 183 and 264 continue while `hasNextPage` stays true and carry no page count, and `managing-pr.md` line 28 requires the discovery to page through both connections before declaring a review comment absent. The rationale of `spx/15-agent-tools.pdr.md` names an unbounded paginated GraphQL read as the hazard to the account-wide GraphQL budget, and product property 3 reaches the `gh` calls a skill's text instructs, so a call a shipped script issues is outside the property and its audit rule.
+
+`spec-tree:changes-reviewer` run `2026-10-06_18-56-26-316-837e0b2a122f` on head `27de076ed368f5eee6477012d9526a89a8af2b77` raised this as a `consistency` finding against the script at line 183.
+
+**Settlement condition.** A decision states whether the page-bound rule covers calls a shipped script issues, and the script bounds each loop with a page count and ends in a deterministic error naming the bound; `managing-pr.md` line 28 and its linked test follow.

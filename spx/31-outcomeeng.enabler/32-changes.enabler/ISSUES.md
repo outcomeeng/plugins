@@ -260,13 +260,25 @@ Revisit and settlement condition: the rule states the five required lines and th
 
 Defect class: `bound`.
 
-Finding: product property 3 of `spx/15-agent-tools.pdr.md` requires a skill that reads a collection endpoint to name its page bound, and two Change skills read the blocker collection `gh api repos/<store>/issues/<N>/dependencies/blocked_by` with none. `src/plugins/spec-tree/skills/release-change/SKILL.md` step 4 (line 33) composes the Handoff's `Blockers` line from the bare call, and `src/plugins/spec-tree/skills/author-change/SKILL.md` line 112 reads the native blockers with it. The `allowed-tools` grants of `release-change` (line 9) and `execute-change` (line 6) are the exact string `Bash(gh api repos/*/issues/*/dependencies/blocked_by)`, which matches the bare form and no form that adds `--method GET -F per_page=100`.
+Finding: product property 3 of `spx/15-agent-tools.pdr.md` requires a skill that reads a collection endpoint to name its page bound, and two Change skills read the blocker collection `gh api repos/<store>/issues/<N>/dependencies/blocked_by` with none. `src/plugins/spec-tree/skills/release-change/SKILL.md` step 4 (line 33) composes the Handoff's `Blockers` line from the bare call, and `src/plugins/spec-tree/skills/author-change/SKILL.md` line 112 reads the native blockers with it. The `allowed-tools` grants of `release-change` (line 9) and `execute-change` (line 6) are the exact string `Bash(gh api repos/*/issues/*/dependencies/blocked_by)`, which matches the bare form and no form that adds `--method GET -F per_page=100`. `execute-change` step 3 (line 84) reads a Change's blockers under `canonical-state`, so it follows the bounded form that its own grant cannot run.
 
 Evidence: a search of `src/plugins/` for `blocked_by` at head `8757b2d484f3f29773abc3a4cb8d6dfd66322197` returns those two body reads and the two grants. The `change-standards` reference `lifecycle.md` names the bounded form for the same read.
 
 Impact: a Change with more blockers than the endpoint returns per page gives a Handoff or a blocker comparison built from a partial read, with no blocked result naming the bound.
 
 Revisit and settlement condition: `release-change` and `author-change` read the blockers as one page of 100 and return a blocked result naming `100 blockers, one page` when the page holds 100 entries, the grants of `release-change` and `execute-change` admit that form, and one typed skill audit of each of `release-change`, `execute-change`, and `author-change` follows the edit. The edit lands with the `author-change` revision of Change outcomeeng/changes#333, which changes the same skill.
+
+## DEBT [bound]: claim-change lists candidates at a bound and returns no blocked result when the list fills it
+
+Defect class: `bound`.
+
+Finding: `src/plugins/spec-tree/skills/claim-change/SKILL.md` step 1 (line 23) lists candidate Changes with `gh issue list --repo <store> --state open --json number,title,assignees,url --limit 50` and offers up to three from the list. The call names its bound. Product property 3 of `spx/15-agent-tools.pdr.md` also requires a call whose result fills its bound to return a blocked result naming the bound, and step 1 returns none when 50 issues come back, so a store with more open issues than the bound reports a partial list, or `No candidate`, as complete.
+
+Evidence: `spec-tree:changes-reviewer` run `2026-10-06_18-56-26-316-837e0b2a122f` on head `27de076ed368f5eee6477012d9526a89a8af2b77`, finding `consistency` against `claim-change/SKILL.md:23`. The Observation of outcomeeng/changes#168 lists the `--limit 50` read as already bounded and places no skill edit for it in that Change's Nodes.
+
+Impact: `claim-change` can offer a partial candidate set as the whole store.
+
+Revisit and settlement condition: step 1 returns a blocked candidate listing that names `50 issues` when the list returns 50 entries, or the decision states which reads the blocked-result clause covers; one typed skill audit of `claim-change` follows the edit.
 
 ## DEBT [tooling-limit]: the GitHub GraphQL budget belongs to the account, and the REST rate-limit endpoint misreports it
 
