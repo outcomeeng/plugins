@@ -271,13 +271,7 @@ This table is representative, not exhaustive: a skill may add semantically named
 
 **Close every tag.** Unclosed tags break parsing.
 
-**`<context>` bash blocks fire on every skill load.** Every `!`command`` line inside `<context>` runs unconditionally each time the skill is invoked — including false-positive activations triggered by directive descriptions matching adjacent terms. Heavy commands (session lists, full file contents, cache enumerations) compound the per-load tax.
-
-Constraints:
-
-- Filter expensive commands (`spx session list --status doing,todo`, `git log -10`, `head -N`) so output stays bounded.
-- Move data into the workflow file that actually consumes it when the skill loader doesn't need it for trigger evaluation. The `<context>` block is for trigger-time orientation, not workflow inputs.
-- Avoid commands whose output grows monotonically (archives, full caches, full file trees).
+**`<context>` bash blocks fire on every skill load.** `${CLAUDE_SKILL_DIR}/references/command-capabilities.md` `<dynamic_context>` carries the firing and filtering rules.
 
 **Semantic names:** `<workflow>` not `<steps>`, `<success_criteria>` not `<done>`, `<anti_patterns>` not `<dont_do>`.
 
@@ -522,5 +516,7 @@ One content may name a prohibited path: the rule prohibiting it. A standard list
 **A permission prompt is a result, not an obstacle.** When a tool layer declines a path, that decline is the boundary working. Never document a way around it — a shell redirect standing in for a refused tool write, a broader permission substituted for a narrow one, a path rewritten to dodge a check. Name a path inside the boundary instead. A skill that teaches evasion converts one operator's approval into every future session's bypass.
 
 **An automated classifier's refusal admits one retrace-bound retry.** A decline names its source: the operator refusing a permission prompt, a guard — a hook or a dangerous-command guard — naming its rule, or the harness's permission classifier stating that it refused. Only a classifier refusal of a request the operator's instruction already authorized admits a retry, only where the skill directs one, and only after Claude retraces the request as sent, the classifier's reason, and each step that shaped the request. The retry carries only the correction the retrace found, never a rewording that hides the objection; a second refusal, and every other decline, is the result.
+
+**A dangerous-command guard block follows the router's rule.** A block on a command holding one operation ends that command family. A block on a compound command — several operations joined by `&&`, `||`, `;` or a pipe, or one operation carrying a shell variable, a command substitution or a glob — admits one rerun of its parts one at a time with every string written literally, and a part the guard blocks on its own ends that part's family. The retry rule above governs classifier refusals alone.
 
 </path_boundary>

@@ -38,10 +38,11 @@ Examples:
 
 <dynamic_context>
 
-A skill injects state-dependent context with the `!`-backtick form inside `<context>` — the same mechanism a command used. The firing-and-filtering rules in `<xml_structure>`'s `<context>` guidance govern it: every `!` line runs on every skill load, including false-positive activations, so:
+A skill injects state-dependent context with the `!`-backtick form inside `<context>` — the same mechanism a command used. Every `!`command`` line inside `<context>` runs unconditionally each time the skill is invoked, including false-positive activations triggered by directive descriptions matching adjacent terms, so heavy commands (session lists, full file contents, cache enumerations) compound a per-load tax:
 
 - Load context only when it is directly relevant to the skill's task — a security-review skill needs git state; a pure-reasoning skill needs none.
-- Filter every command so output stays bounded (`--status`, `head -N`, `--oneline`) and never grows monotonically.
+- Filter every command so output stays bounded (`spx session list --status doing,todo`, `git log -10`, `head -N`) and never grows monotonically — archives, full caches, and full file trees do.
+- Move data into the workflow file that consumes it when the skill loader does not need it for trigger evaluation; the `<context>` block is for trigger-time orientation, not workflow inputs.
 
 - ALWAYS: scope `<context>` `!` commands to state the skill actually consumes, filtered to bounded output.
 - NEVER: inject state-dependent context the skill does not read, or an unfiltered command whose output grows per load.

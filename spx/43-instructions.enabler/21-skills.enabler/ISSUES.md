@@ -73,29 +73,6 @@ Source: `instructions:skill-auditor` finding rule `stale_cross_reference`, sever
 [Change #92](https://github.com/outcomeeng/changes/issues/92) carries the
 standards-skill pass that owns it.
 
-## The Claude render of `skill-standards` sits 62 code points under the eager-payload ceiling
-
-`dist/claude/instructions/skills/skill-standards/SKILL.md` measures 39938 code
-points against the 40,000-code-point ceiling `skill-standards`
-`<eager_foundation_exception>` declares for itself, after Change #332 admits the
-`spx verification run` journal verbs in the audit-skill grant rule and aligns the audit
-description and Codex frontmatter sentences with it.
-
-**Impact.** The next small edit to a Claude-only section tips the reference past
-the ceiling and turns a routine change into a blocking finding on this reference.
-
-**Settlement condition.** Conditional detail leaves the eager body for its
-reference — the `<context>` bash-block constraints at lines 274-280, already
-carried by `references/command-capabilities.md` `<dynamic_context>`, are one
-candidate — so a routine edit has room.
-
-Source: `instructions:skill-auditor` finding rule `eager_payload_headroom`, severity
-`WARNING`, on head `524b9c46c7960a106d84ef856b4020a0ce904b16` during Change #76,
-remeasured by the skill auditor on head `913a65e5b370ffa846bfe7a47be4a551e6a9c547`
-during Change #200;
-[Change #92](https://github.com/outcomeeng/changes/issues/92) carries the
-standards-skill pass that owns it.
-
 ## `script-standards.md` states the testing-record requirement with a weak modal
 
 `src/plugins/instructions/skills/skill-standards/references/script-standards.md:32`,
@@ -346,3 +323,18 @@ Source: `instructions:skill-auditor` finding `f-015`, rule
 **Settlement condition.** A session runs one of the surfaces the sweep names to the point where it issues its `python3` command and records whether the harness admits the command under the declared grant or prompts for it; the established behavior then fixes one spelling across the whole population. An executed invocation is the only evidence that closes this.
 
 **Related.** "A non-interactive git guard sits on the command that cannot prompt", in `spx/21-spec-tree.enabler/76-merge.enabler/32-github-pr.enabler/ISSUES.md`, asks whether the Bash grant matcher tolerates an `ENV=value` prefix. One executed invocation that reports the matcher's behavior on an unexpanded token and on an environment-variable prefix answers both.
+
+## `skill-standards` carries four findings no other entry records
+
+**Evidence.** `instructions:skill-auditor` run `2026-10-06_18-37-53-397-59929467e6ad` on `src/plugins/instructions/skills/skill-standards` raised eight `debt` findings. The entries above record four of them: `progressive-disclosure-exception-reference` (the stale cross-reference entry), `caller-independence` on `<repo_local_overlay>` (the entry on the context that loads the skill), `eager-foundation-exception` (the justification entry), and `constraint-language-weak-modal` (the `script-standards.md` entry). This entry records the other four:
+
+- `reference-skills-duplication` on `<descriptions>` and `<conciseness>`, which `agent-prompt-standards` restates in `<description_style>` and `<conciseness>`.
+- `caller-independence` on the `<xml_structure>` intelligence-rules table, whose row label reads "Auditor (agent-preloaded)".
+- `conciseness-concrete-over-abstract` on `<progressive_disclosure>`, whose token-efficiency figures understate a 40,000-code-point eager payload.
+- `path-boundary-deleting-command`, where `<path_boundary>` states that no skill directs a deleting command while `<progressive_disclosure>` directs `git rm` for an orphaned reference file.
+
+**Standing.** The four findings lie on text the changeset leaves untouched. The diff of the skill against `origin/main` holds three hunks: `SKILL.md:274` (the `<context>` paragraph, replaced by a one-line pointer), `SKILL.md:520-521` (the added guard-block paragraph, after the classifier-refusal paragraph in `<path_boundary>`), and `references/command-capabilities.md:41` and `references/command-capabilities.md:44-45` (the `<dynamic_context>` rules). None falls in `<descriptions>`, `<conciseness>`, the intelligence-rules table, the token-efficiency sentence of `<progressive_disclosure>`, or the scratch-storage paragraph of `<path_boundary>`.
+
+**Impact.** The standard restates a standard it defers to, labels a skill class by its caller, quotes a token figure its own limits falsify, and leaves the scope of its deleting-command ban unstated.
+
+**Settlement condition.** Each standard has one owning skill with the other pointing to it, the auditor row names its class by output, the figure is accurate or cut, the ban states its scope so the orphan-file instruction sits inside it or is rewritten, and a typed skill audit of `skill-standards` raises no such finding.
