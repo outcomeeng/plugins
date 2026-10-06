@@ -11,6 +11,10 @@ Markdown files it reaches in place and prints one JSON document on stdout:
 ``rewritten`` lists each changed file as a path from ROOT. ``unconvertible``
 lists each citation the script cannot convert as ``file``, ``line``, ``form``
 and ``target``; the run continues past it.
+
+The exit status is 0 when no citation remains unconvertible, 3 after the
+complete report when any does, and 1 when ROOT holds no ``spx/`` directory or
+another error stops the run.
 """
 
 from __future__ import annotations
@@ -32,7 +36,9 @@ MARKDOWN_SUFFIX = ".md"
 DECISION_SUFFIXES = (".adr.md", ".pdr.md")
 FORM_BARE_PROSE = "text-decision"
 FORM_UNRESOLVABLE = "broken"
-USAGE_ERROR_EXIT = 2
+EXIT_OK = 0
+EXIT_ERROR = 1
+EXIT_UNCONVERTIBLE = 3
 NODE_KINDS = (
     "enabler",
     "outcome",
@@ -309,15 +315,19 @@ def main(argv: Sequence[str] | None = None) -> int:
         default=[SPEC_TREE_DIRECTORY],
         help="files or directories beneath ROOT to convert",
     )
-    arguments = parser.parse_args(argv)
+    try:
+        arguments = parser.parse_args(argv)
+    except SystemExit as request:
+        return EXIT_OK if request.code in (0, None) else EXIT_ERROR
     root = arguments.root.resolve()
     if not (root / SPEC_TREE_DIRECTORY).is_dir():
         print(
             f"error: {root} holds no {SPEC_TREE_DIRECTORY}/ directory", file=sys.stderr
         )
-        return USAGE_ERROR_EXIT
-    print(render_result(convert_tree(root, arguments.paths)))
-    return 0
+        return EXIT_ERROR
+    result = convert_tree(root, arguments.paths)
+    print(render_result(result))
+    return EXIT_UNCONVERTIBLE if result.unconvertible else EXIT_OK
 
 
 if __name__ == "__main__":

@@ -51,6 +51,7 @@ EXPECTED_REWRITTEN_FILE: Final = FIXTURE_ROOT / "expected-rewrote.txt"
 EXPECTED_REPORT_FILE: Final = FIXTURE_ROOT / "expected-report.tsv"
 UNTOUCHED_FILES_FILE: Final = FIXTURE_ROOT / "untouched-forms.txt"
 OUTSIDE_SPEC_TREE_FIXTURE: Final = INPUT_TREE / "docs"
+CONVERTIBLE_ONLY_TREE: Final = FIXTURE_ROOT / "convertible-only"
 
 LINK_CONVERSION_PROPERTY_SEED: Final = 20261006
 LINK_CONVERSION_PROPERTY_EXAMPLES: Final = 25
@@ -131,7 +132,7 @@ def convert_product_root(root: Path) -> ConversionObservation:
         check=False,
         timeout=CONVERSION_TIMEOUT_SECONDS,
     )
-    if completed.returncode != 0:
+    if not completed.stdout.strip():
         return ConversionObservation(completed.returncode, completed.stderr, (), ())
     document = json.loads(completed.stdout)
     return ConversionObservation(

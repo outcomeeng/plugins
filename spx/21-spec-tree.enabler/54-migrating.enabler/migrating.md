@@ -11,13 +11,16 @@ CAN adopt the 4.0 methodology without hand-editing each citation
 
 ## Assertions
 
+- ALWAYS: the conversion exits with status 0 when no citation remains unconvertible, with status 3 after printing the complete report when any does, and with status 1 when the root holds no `spx/` or another error stops the run, so a caller learns of leftover work from the exit status alone.
 - ALWAYS: one node-directory pattern serves every check the conversion makes, and it admits every node kind of the 3.x and 4.0 grammars and every fractional index.
 - ALWAYS: the conversion ships as one standalone Python file that uses only the standard library and runs on the floor of the supported Python window, per `spx/12-shipped-scripting.adr.md`.
 
 ### Scenarios
 
 - Given two product roots that hold the same tree, when the conversion runs over each with that root as its parameter, then both trees convert to the same tree and the same report ([test](tests/test_migrating.scenario.l1.py))
-- Given a root that holds no `spx/` directory, when the conversion runs, then it fails and changes no file ([test](tests/test_migrating.scenario.l1.py))
+- Given a root that holds no `spx/` directory, when the conversion runs, then it exits with its error status and changes no file ([test](tests/test_migrating.scenario.l1.py))
+- Given a tree that leaves citations the conversion cannot convert, when the conversion runs, then it exits with its unconvertible status after printing the complete report ([test](tests/test_migrating.scenario.l1.py))
+- Given a tree whose citations all convert, when the conversion runs, then it reports nothing and exits with its success status ([test](tests/test_migrating.scenario.l1.py))
 
 ### Mappings
 

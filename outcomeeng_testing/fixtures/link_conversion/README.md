@@ -8,6 +8,7 @@ One small product root in two states. `input/` carries every citation form. `exp
 - `expected-rewrote.txt`: the files whose content changes, one path from the root per line, sorted bytewise.
 - `expected-report.tsv`: the citations a run cannot convert. Columns: file, line, form, target. Sorted by file, then line.
 - `untouched-forms.txt`: the files that hold convertible-looking forms the conversion must leave as written.
+- `convertible-only/`: a small tree whose citations all convert, so a run reports nothing.
 
 The tree has root decisions (`15-merging.pdr.md`, `20-storage.adr.md`), a 4.0 node with a child domain and a variant (`32-alpha.capability`), a 3.x node with a child outcome and a fractional-index insert (`40-legacy.enabler`), and a sibling node (`54-gamma.capability`).
 
