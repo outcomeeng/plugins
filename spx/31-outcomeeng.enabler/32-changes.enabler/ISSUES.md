@@ -280,6 +280,18 @@ Impact: `claim-change` can offer a partial candidate set as the whole store.
 
 Revisit and settlement condition: step 1 returns a blocked candidate listing that names `50 issues` when the list returns 50 entries, or the decision states which reads the blocked-result clause covers; one typed skill audit of `claim-change` follows the edit.
 
+## DEBT [bound]: the Change store reads carry nested connections at first:50 with no blocked result
+
+Defect class: `bound`.
+
+Finding: product property 3 of `spx/15-agent-tools.pdr.md` covers a `gh api graphql` call reading a connection and requires a named page bound and a blocked result when the result fills it. The queries of `src/plugins/spec-tree/skills/change-standards/references/lifecycle.md` read connections named at `first:50` with no blocked result: `issueFieldValues(first:50)` in the field read (line 19) and in the nested read of the successor query (line 23), and `issueFields(first:50)` in the field-id resolution (line 21). `src/plugins/coding-agents/skills/orchestrate-change/SKILL.md` line 52 reads `issueFieldValues(first:50)` the same way. The successor query's outer `issues(first:100)` connection carries its page count and blocked result.
+
+Evidence: `spec-tree:changes-reviewer` run `2026-10-06_19-01-19-956-109edd5dce9a` on head `7ab8c651a26303d97d3b99534f17a215c2bf2a66`, finding `consistency` against `lifecycle.md:23`. Each query names its bound, and none returns a blocked result when a connection returns 50 nodes.
+
+Impact: an organization that defines 50 or more issue fields, or an issue that carries 50 or more field values, drops a `Predecessors`, `Lifecycle`, or other value from the read with no blocked result.
+
+Revisit and settlement condition: the decision states whether the blocked-result clause covers a nested connection read at a fixed size, or each of these reads states that a connection returning 50 nodes is a blocked read naming `50 issue fields`; one typed skill audit of each of `change-standards` and `orchestrate-change` follows the edit.
+
 ## DEBT [tooling-limit]: the GitHub GraphQL budget belongs to the account, and the REST rate-limit endpoint misreports it
 
 Defect class: `tooling-limit`.

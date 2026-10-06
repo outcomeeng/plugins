@@ -135,7 +135,7 @@ genuinely changes a case outcome.
 
 ## The merge-readiness decision table carries no worked trace
 
-`src/plugins/spec-tree/skills/manage-pr/SKILL.md` `<merge_readiness_decision_table>` enumerates eleven rules over named predicate fields with no example tracing one concrete `gh pr view --json` field set through a matched rule to its emitted guard verdict.
+`src/plugins/spec-tree/skills/manage-pr/SKILL.md` `<merge_readiness_decision_table>` enumerates twelve rules over named predicate fields with no example tracing one concrete `gh pr view --json` field set through a matched rule to its emitted guard verdict.
 
 **Resolution shape**: add one worked trace — sample JSON fragment, matched rule number, emitted `guard_verdict` — gated by `instructions:skill-auditor`.
 
