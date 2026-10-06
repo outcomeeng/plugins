@@ -20,7 +20,7 @@ The marker binds post-merge ownership. Present means Step 9 returns the closeout
 
 <step name="pr_wait_and_reentry_policy">
 
-`/manage-pr` is the re-entry point for an open pull request. When the user asks to manage, wait on, or continue a PR lifecycle, invoke `/manage-pr <pr-number|url|branch>` and inspect live GitHub and repository state before acting. When no pointer is provided, resolve the PR from the current branch with bare `gh pr view`.
+`/manage-pr` is the re-entry point for an open pull request: each pass inspects live GitHub and repository state for the PR pointer before acting. When no pointer is provided, resolve the PR from the current branch with bare `gh pr view`.
 
 Action tokens are pass-local observations derived from the current live inspection. `WAIT_FOR_REVIEW`, `WAIT_FOR_CHECKS`, `FIX_FINDING:<item>`, `MENTION_REVIEW_NEEDED:<trigger-phrase>`, `MERGE_BLOCKED:<reason>`, `AWAIT_DEPLOYMENT_AUTHORIZATION`, and `AWAIT_RELEASE_AUTHORIZATION` never store PR state and never authorize a later wait, fix, deploy, release, or closeout without a fresh `/manage-pr` inspection pass. The mutation guard verdict `MERGE_READY:<head-sha>` is also pass-local and never authorizes a later merge without a fresh `/manage-pr` inspection pass for the same inspected head. After compaction, restart from Step 0; the foundation and node context reload only at the first product-content access, per Step 0. After foreground wait completion, a push, a review arrival, an operator reply, or any new user turn, discard prior token and guard-verdict authority and return to Step 1 for the PR pointer.
 
