@@ -169,6 +169,8 @@ Finding: one typed skill audit per skill on the Change Lifecycle changeset (head
 
 Evidence: `instructions:skill-auditor` verdicts on the four skills, findings f-008 to f-011 (`merging-standards`), f-010 to f-012 (`merge`), f-009, f-011, f-012 (`manage-pr`), f-008 and f-010 (`manage-github-pr`).
 
+The `skill-auditor` run `2026-10-06_17-37-07-566-b107366e081e` on `manage-pr` raised the same class as debt `conciseness`: the `gh pr view --json` command pair stated three times, the post-watch re-inspection sentence twice verbatim, and the clean current-head review predicate four times. Run `2026-10-06_18-23-28-029-1d92c59bd0d9` added the activation guidance restating the description, the heartbeat prohibition stated twice, the reload rule stated three times, and the `VERIFICATION_READINESS` joint-fixpoint predicates restated in the workflow, a failure mode and the success criteria.
+
 Impact: every load of these skills pays for restated payload, and one rule edited in one of its copies drifts from the others.
 
 Successor: a Proposed Change filed after outcomeeng/changes#91 merges, carrying the CLOSE-teaching consolidation entry above as well.
