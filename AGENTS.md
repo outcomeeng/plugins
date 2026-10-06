@@ -43,9 +43,11 @@ When a named subagent is unavailable, invoke the owning plugin's `/<plugin>-plug
 
 ### Dangerous-command guard
 
-🛑 **STOP TRIGGER — a dangerous-command guard (DCG) block terminates the attempted command family.** Treat the blocked attempt as a mistake.
+🛑 **STOP TRIGGER — a dangerous-command guard (DCG) block on a command holding one operation terminates that command family.** Treat the blocked attempt as a mistake. A block on a compound command splits it once.
 
-- **NEVER** retry it by reformulating, splitting, rewriting, removing the flagged clause, or substituting an equivalent command to evade the guard.
+- A **compound command** is several operations joined by `&&`, `||`, `;` or a pipe, or one operation carrying a shell variable, a command substitution or a glob. A heredoc that feeds one command holds one operation, and so does a pipe whose first stage only supplies the payload the one reading command consumes on stdin.
+- **ALWAYS** run the parts of a blocked compound command again one at a time, each with every string written literally. A part the guard blocks on its own terminates that part's family; split no part further.
+- **NEVER** retry a blocked command by reformulating, rewriting, removing the flagged clause, or substituting an equivalent command to evade the guard.
 - **NEVER** pass dynamic branch names to `git branch -d` or `git branch -D`: variables, command substitutions, arrays, and globs are denied, including when quoted or placed after `--`. Type every branch name literally; delete several literal names in one command.
 - **ALWAYS** follow the active skills, repository instructions, and declared overlays to find a sanctioned operation that accomplishes the goal.
 - When no sanctioned operation exists, abandon the goal, report the blocked command with secrets redacted, explain its purpose and the guard's reason, ask the operator for direction, and stop.

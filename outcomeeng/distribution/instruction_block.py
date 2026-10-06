@@ -173,11 +173,19 @@ AUTHORITY_HIERARCHY_POLICY_REQUIREMENTS: Final = (
     ("Codex guide filename", "`AGENTS.md` for Codex"),
 )
 DANGEROUS_COMMAND_GUARD_STOP_TRIGGER_REQUIREMENT: Final = (
-    "a dangerous-command guard (DCG) block terminates the attempted command family"
+    "a dangerous-command guard (DCG) block on a command holding one operation "
+    "terminates that command family"
+)
+DANGEROUS_COMMAND_GUARD_COMPOUND_SPLIT_REQUIREMENT: Final = (
+    "run the parts of a blocked compound command again one at a time, each with "
+    "every string written literally"
+)
+DANGEROUS_COMMAND_GUARD_PART_TERMINAL_REQUIREMENT: Final = (
+    "part the guard blocks on its own terminates that part's family"
 )
 DANGEROUS_COMMAND_GUARD_RETRY_PROHIBITION_REQUIREMENT: Final = (
-    "NEVER** retry it by reformulating, splitting, rewriting, removing the flagged "
-    "clause, or substituting an equivalent command to evade the guard"
+    "NEVER** retry a blocked command by reformulating, rewriting, removing the "
+    "flagged clause, or substituting an equivalent command to evade the guard"
 )
 DANGEROUS_COMMAND_GUARD_SANCTIONED_PATH_REQUIREMENT: Final = (
     "follow the active skills, repository instructions, and declared overlays to "
@@ -192,6 +200,14 @@ DANGEROUS_COMMAND_GUARD_POLICY_REQUIREMENTS: Final = (
     (
         "dangerous-command guard stop trigger",
         DANGEROUS_COMMAND_GUARD_STOP_TRIGGER_REQUIREMENT,
+    ),
+    (
+        "dangerous-command guard compound split",
+        DANGEROUS_COMMAND_GUARD_COMPOUND_SPLIT_REQUIREMENT,
+    ),
+    (
+        "dangerous-command guard part terminal",
+        DANGEROUS_COMMAND_GUARD_PART_TERMINAL_REQUIREMENT,
     ),
     (
         "dangerous-command guard retry prohibition",

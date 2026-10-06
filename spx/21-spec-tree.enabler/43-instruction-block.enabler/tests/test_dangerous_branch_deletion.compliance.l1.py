@@ -36,6 +36,29 @@ def test_dcg_policy_rejects_each_missing_operative_requirement() -> None:
             assert requirement_name in str(raised.value)
 
 
+def test_dcg_policy_rejects_a_guard_that_prohibits_splitting_a_compound_command() -> (
+    None
+):
+    documents = evidence.rendered_instruction_blocks()
+    retry_prohibition = source.DANGEROUS_COMMAND_GUARD_RETRY_PROHIBITION_REQUIREMENT
+
+    for agent_harness, document in documents.items():
+        router = source.managed_router_block(document)
+        guard_section = source.dangerous_command_guard_policy_section(router)
+        assert retry_prohibition in guard_section
+        violating_section = guard_section.replace(
+            retry_prohibition,
+            retry_prohibition.replace("reformulating,", "reformulating, splitting,"),
+            1,
+        )
+
+        with pytest.raises(source.AuthorityHierarchyPolicyError) as raised:
+            source.validate_dangerous_command_guard_policy(
+                {agent_harness: violating_section}
+            )
+        assert "retry prohibition" in str(raised.value)
+
+
 def test_dcg_policy_rejects_quoted_guard_section() -> None:
     documents = evidence.rendered_instruction_blocks()
 
