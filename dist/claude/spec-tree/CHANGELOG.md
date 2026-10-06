@@ -14,7 +14,7 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 ### Changed
 
-- **Collection reads in the Change lifecycle and merge skills name their page bound.** `change-standards` reads a store's issues 100 per page, at most 10 pages, and a Change's blockers as one page of 100. `merging-standards` and `manage-pr` read review-thread comments 100 per page, at most 10 pages. A read that reaches its bound is blocked and names the bound — `MERGE_BLOCKED:review-thread-comments-bound` for review-thread comments — instead of deriving a successor or evaluating readiness from a partial result. GitHub's GraphQL budget belongs to the account, so one unbounded read stops every session on it.
+- **The successor, blocker, and review-thread reads name their page bound.** `change-standards` reads a store's issues 100 per page, at most 10 pages, and a Change's blockers as one page of 100. `merging-standards` and `manage-pr` read review-thread comments 100 per page, at most 10 pages. A read that reaches one of these bounds is blocked and names the bound — `MERGE_BLOCKED:review-thread-comments-bound` for review-thread comments — instead of deriving a successor or evaluating readiness from a partial result. Other collection reads in the spec-tree skills keep the bounds they carried. GitHub's GraphQL budget belongs to the account, so one unbounded read stops every session on it.
 
 ## 0.101.3
 
