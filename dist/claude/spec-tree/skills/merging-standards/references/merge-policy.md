@@ -358,6 +358,7 @@ All `VERIFICATION_READINESS` predicates are re-established before every push, no
 
 The guard withholds the merge command and emits the existing action token when any predicate fails:
 
+- `MERGE_BLOCKED:review-thread-comments-bound` when the review-thread comments read fills its bound — page 10 returns 100 comments — before any other predicate is evaluated.
 - `WAIT_FOR_REVIEW` when current-head review output is absent, or the review-kind check is missing or non-terminal.
 - `WAIT_FOR_CHECKS` when a non-review required check is queued, in progress, pending, expected, or otherwise non-terminal.
 - `MENTION_REVIEW_NEEDED:<trigger-phrase>` when the review-kind check is skipped because the PR modifies the Reviewer's own workflow file.
