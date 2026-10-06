@@ -19,7 +19,7 @@ The operator intends `/merge` to dispatch an evidence Auditor or the local revie
 2. In that directory, run `claude -p --restricted --strict-mcp-config --disable-slash-commands --tools Read,Glob,Grep --no-session-persistence --output-format stream-json --verbose` with the contents of `prompt.md` on stdin, and capture standard output as the transcript.
 3. Read the final JSON object of the transcript and compare it with the expected selection:
    - Fixture 1, every touched node `spec`-malleable: no Verifier; the deterministic commands only.
-   - Fixture 2, one node whose spec declares no `malleability` field: `test-evidence-auditor`, then `changes-reviewer`; no `eval-evidence-auditor`, because no eval artifact changes.
+   - Fixture 2, one node whose spec declares no `malleability` field beside a `spec`-malleable node: `test-evidence-auditor` once, for `spx/30-ledger.capability` alone, then `changes-reviewer`; no evidence audit for the `spec`-malleable `spx/20-billing.capability`, and no `eval-evidence-auditor`, because no eval artifact changes.
    - Fixture 3, no Product Tree: no Verifier; the repository's declared verify command `make verify`.
 4. Copy the transcript into this directory as `transcript.jsonl` and record the run below.
 
