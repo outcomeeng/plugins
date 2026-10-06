@@ -6,10 +6,13 @@ Agent-facing tool interfaces present command forms by harness environment. Skill
 
 Claude Code, Codex, and hosted runners do not share one shell contract. Interactive sessions can read and approve multiline commands, while programmatic runners may require one physical shell line, reject command continuations, sandbox filesystem writes, or parse pipelines as separately approved operations. Teaching the command form by harness keeps the skill surface safe without pushing users into temporary files or post-hoc repairs.
 
+GitHub's GraphQL budget belongs to the account, not to a session, so one unbounded paginated read spends the budget that every session on that account shares. A page bound written in the skill text keeps any one call from spending it, and a blocked result at the bound shows a partial read as partial.
+
 ## Product properties
 
 1. Agent-facing tool guidance is scoped by environment: interactive Claude Code and Codex sessions, programmatic Claude Code and Codex runs, and hosted programmatic runners such as GitHub Actions.
 2. Payload-bearing commands receive their body over stdin. Interactive guidance prefers quoted heredocs when the harness accepts multiline shell. Programmatic guidance uses one physical `printf '%s\n' ... | <tool>` line when the runner requires a single command line.
+3. A skill that instructs a `gh` call reading a list or a paginated result names that call's page bound in its own text — a `--limit`, a page size with a page count, or a single page — and a call that reaches its bound with pages remaining returns a blocked result naming the bound.
 
 ## Verification
 
@@ -18,3 +21,4 @@ Claude Code, Codex, and hosted runners do not share one shell contract. Interact
 - ALWAYS: skills and agents that instruct Claude to call `spx`, `gh`, or another CLI present command forms by supported harness environment — interactive Claude Code and Codex, programmatic Claude Code and Codex, and hosted programmatic runners such as GitHub Actions when relevant ([audit])
 - ALWAYS: payload-bearing tool guidance uses stdin-oriented command forms and names the safe form for each supported harness; interactive forms may use quoted heredocs, and programmatic forms use one physical `printf '%s\n' ... | <tool>` line where runner parsers require it ([audit])
 - NEVER: payload-bearing tool guidance routes through temporary files, helper files, shell command substitution, or post-hoc text substitution to assemble or repair the body ([audit])
+- NEVER: skill guidance instructs an unbounded `gh` list or paginated read, including `--paginate` without a page count, or reads a partial result at its page bound as complete ([audit])
