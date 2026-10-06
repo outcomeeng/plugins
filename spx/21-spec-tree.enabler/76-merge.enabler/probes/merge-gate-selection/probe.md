@@ -25,12 +25,12 @@ The operator intends `/merge` to dispatch an evidence Auditor or the local revie
 
 ## Attested run
 
-- Date: 2026-10-06, against the committed head `243b164336e0ce8bfa15b3c57d8509e167bb4216` with `dist/claude/` rebuilt from it.
+- Date: 2026-10-06, against the committed head `2642503aa3ea4c0f1a892f7d5d8b974638934064` with `dist/claude/` rebuilt from it.
 - Observations: the session read the three files and no other source, then reported these selections:
-  - Fixture 1: no Verifier, the deterministic commands only.
+  - Fixture 1: no Verifier, the touched-scope validation and testing commands only; it named `billing.spec.md` an output spec, not the product spec.
   - Fixture 2: `test-evidence-auditor` once, for `spx/30-ledger.capability`, then `changes-reviewer`, with no evidence audit for `spx/20-billing.capability` and no `eval-evidence-auditor`.
-  - Fixture 3: no Verifier, Validate and `make verify`.
-- An earlier working run on the previous head selected `changes-reviewer` for fixture 1, reading the billing node's spec as a product spec, and audited the `spec`-malleable billing node in fixture 2. The skill text was repaired to define a product spec as the spec of a `.product` node and to audit only `implementation`-malleable nodes' evidence before this run.
+  - Fixture 3: no Verifier, Validate and `make verify`, citing the absent `spx/` directory.
+- An earlier working run selected `changes-reviewer` for fixture 1, reading the billing node's spec as a product spec, and audited the `spec`-malleable billing node in fixture 2. The skill text was repaired to define a product spec as the spec of a `.product` node and to audit only `implementation`-malleable nodes' evidence; a second run on head `243b164336e0ce8bfa15b3c57d8509e167bb4216` passed, and later skill edits made this run necessary.
 - Artifacts: [transcript](transcript.jsonl), [fixtures](fixtures.md), [prompt](prompt.md)
 
 ## Verdict
