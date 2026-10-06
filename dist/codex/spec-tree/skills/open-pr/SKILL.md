@@ -22,7 +22,7 @@ Production-relevance recognition, merge command, and local deterministic verific
 
 Walk these steps in order. Every step is a routine workflow operation — verify, review, push, open — and runs directly. The opening flow contains no operator-confirmation pauses.
 
-**Step 0 — Load references.** Use skill `spec-tree:merging-standards`. It supplies the shared vocabulary. Use skill `spec-tree:commit-changes`. It supplies the commit type and scope classification. Follow /merging-standards `<reference_index>` and directly read its `merge-policy.md` reference before Step 1; invoking the compact loader alone does not load the tagged policy sections used below.
+**Step 0 — Load references.** Use skill `spec-tree:merging-standards`. It supplies the shared vocabulary. Use skill `spec-tree:commit-changes`. It supplies the commit type and scope classification. Use skill `spec-tree:sync-base`. It brings the branch current when a push is rejected. Follow /merging-standards `<reference_index>` and directly read its `merge-policy.md` reference before Step 1; invoking the compact loader alone does not load the tagged policy sections used below.
 
 **Step 1 — GATE: Pre-flight.** Run `spx worktree status` from the assigned root and require a fresh passing /merging-standards `<occupancy_preflight>` before any checkout-sensitive mutation. Run `<repository_target_gate>`, every overlay-declared preflight check per `<overlay_safety_checks>`, then `<branch_hygiene>` checks. Every condition must hold or the flow stops at the first failed condition. Run this step before the push even when an earlier lifecycle entry already ran a preflight before branch or commit work; the later check guards the checkout state at publication time.
 
@@ -128,7 +128,7 @@ The single-quoted heredoc terminator (`<<'EOF'`) disables shell expansion inside
 
 Do not use `--fill`. If both `--fill` and `--body-file` are passed, the explicit body wins; `--fill` is then dead weight.
 
-**Step 6 — Start the first management pass.** Resolve the PR number, then invoke /manage-pr on that PR. `/manage-pr` owns pending checks, CI review waits, reinspection, merge gates, and post-merge closeout evidence.
+**Step 6 — Start the first management pass.** Use skill `spec-tree:manage-pr`. Resolve the PR number, then invoke `/manage-pr` on that PR. `/manage-pr` owns pending checks, CI review waits, reinspection, merge gates, and post-merge closeout evidence.
 
 **Exit.** Surface the PR URL. The managing flow takes over.
 
