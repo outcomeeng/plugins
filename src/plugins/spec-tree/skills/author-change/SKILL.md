@@ -22,7 +22,7 @@ A complete store-independent Change record in the Intent form, authored locally,
 - Ask only about a consequential operator-owned choice that supplied intent and repository truth leave unresolved. Ask one focused question at a time and state how its answer changes the record.
 - Write no body authority line, as `body-authority` requires. The store's field-change events and confirmation comments carry every authority event; advance Maturity only under `<authority_gate>`.
 - Dispatch the configured `change-auditor` in an isolated verifier session after the candidate stabilizes. NEVER replace it with an in-conversation audit.
-- Keep remote content unchanged until the complete local candidate passes audit. A local draft grants no remote claim or integration authority.
+- Keep remote content unchanged until the complete local candidate passes audit, except the Maturity lowering `<revision_safety>` states. A local draft grants no remote claim or integration authority.
 
 </essential_principles>
 
