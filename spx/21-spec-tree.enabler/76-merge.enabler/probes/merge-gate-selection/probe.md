@@ -25,13 +25,17 @@ The operator intends `/merge` to dispatch an evidence Auditor or the local revie
 
 ## Attested run
 
-- Date: pending
-- Observations: pending
-- Artifacts: [fixtures](fixtures.md), [prompt](prompt.md); the transcript joins them with the attested run
+- Date: 2026-10-06, against the committed head `243b164336e0ce8bfa15b3c57d8509e167bb4216` with `dist/claude/` rebuilt from it.
+- Observations: the session read the three files and no other source, then reported these selections:
+  - Fixture 1: no Verifier, the deterministic commands only.
+  - Fixture 2: `test-evidence-auditor` once, for `spx/30-ledger.capability`, then `changes-reviewer`, with no evidence audit for `spx/20-billing.capability` and no `eval-evidence-auditor`.
+  - Fixture 3: no Verifier, Validate and `make verify`.
+- An earlier working run on the previous head selected `changes-reviewer` for fixture 1, reading the billing node's spec as a product spec, and audited the `spec`-malleable billing node in fixture 2. The skill text was repaired to define a product spec as the spec of a `.product` node and to audit only `implementation`-malleable nodes' evidence before this run.
+- Artifacts: [transcript](transcript.jsonl), [fixtures](fixtures.md), [prompt](prompt.md)
 
 ## Verdict
 
-Pending the attested run.
+Passing: every fixture's selection matches the expected selection in the protocol, so a session reading only the shipped `/merge` skill and its merge policy dispatches the Verifiers the merge composition selects and no others.
 
 ## Limitations
 
