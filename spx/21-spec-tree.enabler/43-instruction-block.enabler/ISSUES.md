@@ -159,3 +159,19 @@ The operator's project-level instruction file, outside this repository, is delet
 **Impact.** Both rules are unenforced; nothing cites them, so their absence is quiet.
 
 **Settlement condition.** Both rules land in the router template, with the pinned `*_POLICY_REQUIREMENTS` tuples in `outcomeeng/distribution/instruction_block.py` and the spec assertions moving in the same changeset, against the measured byte budget the entry above records.
+
+## `/update-instruction-block` constraints and one failure mode carry maintenance guidance
+
+**Evidence.** `instructions:skill-auditor` run `2026-10-06_18-29-09-881-bf896c5bec99` on `src/plugins/spec-tree/skills/update-instruction-block` raised a `debt` finding (rule `conciseness`) against `SKILL.md`: constraint 1 forbids editing the deterministic logic "here" without saying whether it means the skill body or an invocation, constraint 7 forbids copying the template into another skill, and Failure 3 describes keeping the template under `understand`. An invocation neither edits the skill body nor relocates its template.
+
+**Impact.** Every invocation loads guidance that governs how the bundle is maintained, and the first constraint names its target ambiguously.
+
+**Settlement condition.** Each constraint and failure mode changes what an invocation does, maintenance guidance lives outside the runtime body, and a typed skill audit of the surface raises no `conciseness` finding.
+
+## The bundled generator silently drops flags that do not apply to the selected verb
+
+**Evidence.** The same run raised a `debt` finding (rule `validation-rule`) against `src/plugins/spec-tree/skills/update-instruction-block/scripts/instruction_block.py`: `main()` rejects `--adopt` without `--write`, yet `--from` without `--reconcile` is parsed and ignored, and verbs supplied together, such as `--check --write` or `--reconcile --write`, run only the first matched verb with exit 0 and no diagnostic.
+
+**Impact.** An operator answer carried by a flag that does not apply is discarded behind a clean exit, the failure mode the `--adopt` guard exists to prevent.
+
+**Settlement condition.** The generator rejects `--from` outside `--reconcile` and verbs supplied together, with a message naming the valid combination, a test over a violating invocation covers each rejection, and a typed skill audit raises no `validation-rule` finding on the script.
