@@ -73,3 +73,23 @@ The description of `src/plugins/spec-tree/skills/manage-pr/SKILL.md` triggers on
 **Why it is large:** separating the triggers changes which skill a consumer's request selects across the GitHub-PR transport, so both descriptions change together and both skills take the typed skill auditor; the merge-composition changeset edits neither description.
 
 **Settlement condition:** the two descriptions carry trigger terms that select one skill for a request to manage an open PR, and one typed skill audit of each raises no `description-distinct` finding.
+
+## 7. The PR-management skill wraps every section in a generic step tag
+
+`src/plugins/spec-tree/skills/manage-pr/SKILL.md` marks its re-entry policy, its PR identity field list, its whole Step 0-9 workflow, its merge-readiness decision table and its merge command selection each as `<step name="...">`, and its prose refers to sections as "the `pr_identity_fields` step". The tag name carries no meaning, and the workflow section nests further `<step>` tags inside numbered steps.
+
+**Evidence:** `skill-auditor` run `2026-10-06_18-51-23-618-78110f586d6b`, finding rule `semantic-tag-names`, severity `debt`, on lines 21, 33, 47, 98 and 137, none of which the merge-composition changeset touches.
+
+**Why it is large:** renaming the sections changes every in-file reference and the cross-skill references other merge-lifecycle skills make to these sections, an editorial pass gated by the typed skill auditor.
+
+**Settlement condition:** each section carries a semantic tag such as `<workflow>` or `<merge_readiness_decision_table>`, prose refers to sections by tag name, and one typed skill audit of `manage-pr` raises no `semantic-tag-names` finding.
+
+## 8. The PR-management success criteria re-list the workflow steps
+
+Most bullets of the `<success_criteria>` of `src/plugins/spec-tree/skills/manage-pr/SKILL.md` restate a workflow step, such as loading the references, inspecting three surfaces, checking base drift and running the foreground wait, instead of stating a property of the merged PR or the closeout-ready result.
+
+**Evidence:** `skill-auditor` run `2026-10-06_18-51-23-618-78110f586d6b`, finding rule `success-criteria-properties`, severity `debt`; its cited bullets sit on lines 250, 251, 252, 256, 261 and 264, outside the changed lines 255 and 259 of the merge-composition changeset.
+
+**Why it is large:** rewriting the criteria as output properties restates what proves a management pass sound for every step, together with the step restatements entry 5 records, an editorial pass gated by the typed skill auditor.
+
+**Settlement condition:** each success criterion states a property of the merged PR, the closeout-ready result or the reported blocking condition, and one typed skill audit of `manage-pr` raises no `success-criteria-properties` finding.
