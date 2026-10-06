@@ -164,6 +164,8 @@ The operator's project-level instruction file, outside this repository, is delet
 
 **Evidence.** `instructions:skill-auditor` run `2026-10-06_18-29-09-881-bf896c5bec99` on `src/plugins/spec-tree/skills/update-instruction-block` raised a `debt` finding (rule `conciseness`) against `SKILL.md`: constraint 1 forbids editing the deterministic logic "here" without saying whether it means the skill body or an invocation, constraint 7 forbids copying the template into another skill, and Failure 3 describes keeping the template under `understand`. An invocation neither edits the skill body nor relocates its template.
 
+**Standing.** The finding lies on text the changeset leaves untouched: the diff of this skill against `origin/main` holds the hunks `templates/instruction-block.md:57` and `templates/instruction-block.md:59-61` and no hunk in `SKILL.md`.
+
 **Impact.** Every invocation loads guidance that governs how the bundle is maintained, and the first constraint names its target ambiguously.
 
 **Settlement condition.** Each constraint and failure mode changes what an invocation does, maintenance guidance lives outside the runtime body, and a typed skill audit of the surface raises no `conciseness` finding.
@@ -172,6 +174,20 @@ The operator's project-level instruction file, outside this repository, is delet
 
 **Evidence.** The same run raised a `debt` finding (rule `validation-rule`) against `src/plugins/spec-tree/skills/update-instruction-block/scripts/instruction_block.py`: `main()` rejects `--adopt` without `--write`, yet `--from` without `--reconcile` is parsed and ignored, and verbs supplied together, such as `--check --write` or `--reconcile --write`, run only the first matched verb with exit 0 and no diagnostic.
 
+Run `2026-10-06_18-35-55-521-02765947702d` raised the same finding as `script-validation-rule` at `scripts/instruction_block.py:1601-1623` and `scripts/instruction_block.py:1670-1742`.
+
+**Standing.** The finding lies on text the changeset leaves untouched: the diff holds no hunk in `scripts/instruction_block.py`.
+
 **Impact.** An operator answer carried by a flag that does not apply is discarded behind a clean exit, the failure mode the `--adopt` guard exists to prevent.
 
 **Settlement condition.** The generator rejects `--from` outside `--reconcile` and verbs supplied together, with a message naming the valid combination, a test over a violating invocation covers each rejection, and a typed skill audit raises no `validation-rule` finding on the script.
+
+## The `/update-instruction-block` frontmatter description names the root instruction file `CLAUDE.md`
+
+**Evidence.** `instructions:skill-auditor` run `2026-10-06_18-35-55-521-02765947702d` raised a `debt` finding (rule `voice-yaml-frontmatter-exception`) at `src/plugins/spec-tree/skills/update-instruction-block/SKILL.md:3-4`: the description spells the filename `CLAUDE.md`, and `agent-prompt-standards` `<voice>` states that a description cannot contain the word "claude".
+
+**Standing.** The finding lies on text the changeset leaves untouched: the diff holds no hunk in `SKILL.md`.
+
+**Impact.** The description breaks the frontmatter rule that every other `SKILL.md` under `src/plugins/` follows, and a typed skill audit of the skill stays rejected until it changes.
+
+**Settlement condition.** The description names the root instruction files without the word "claude", and a typed skill audit raises no `voice-yaml-frontmatter-exception` finding on `SKILL.md`.
