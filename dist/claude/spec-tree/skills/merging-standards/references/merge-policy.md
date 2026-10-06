@@ -420,10 +420,12 @@ gh pr view <pr-number> --json reviews,comments \
   --jq '{reviews: [.reviews[] | {author: .author.login, state, submittedAt}],
          comments: [.comments[] | {author: .author.login, createdAt, excerpt: .body[0:160]}]}'
 
-# Review-thread comments tied to specific lines
-gh api repos/<owner>/<repo>/pulls/<pr-number>/comments --paginate \
+# Review-thread comments tied to specific lines: page <page> of 100 comments
+gh api repos/<owner>/<repo>/pulls/<pr-number>/comments --method GET -F per_page=100 -F page=<page> \
   --jq '.[] | {id, node_id, author: .user.login, path, line, createdAt: .created_at, excerpt: .body[0:160]}'
 ```
+
+Read the review-thread comments page by page, from page 1 to at most page 10, and stop at the first page that returns fewer than 100 comments. A page that returns 100 comments fills its bound and cannot show whether more pages remain, so page 10 returning 100 comments is a blocked read: emit `MERGE_BLOCKED:review-thread-comments-bound`, name the bound `100 comments per page, 10 pages`, and evaluate no readiness predicate from the partial view.
 
 **NEVER drop `comments` from the `gh pr view --json` argument list.** The `comments` field carries PR-level issue comments — a distinct surface from `reviews` (formal review submissions) and from `gh api repos/<owner>/<repo>/pulls/<n>/comments` (review-thread comments tied to specific lines). Dropping `comments` to "trim the JSON" silently loses that third surface; a valid `BLOCKING` or `DEBT` finding posted there is invisible to the inspection, and `MERGE_READINESS` evaluates against a partial view.
 

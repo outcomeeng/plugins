@@ -37,10 +37,10 @@ Every PR-state `gh pr view --json` command that participates in a management pas
 ```bash
 gh pr view <pr-number-or-url-or-branch> --json number,url,headRefName,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
 gh pr view --json number,url,headRefName,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
-gh api repos/<owner>/<repo>/pulls/<pr-number>/comments --paginate
+gh api repos/<owner>/<repo>/pulls/<pr-number>/comments --method GET -F per_page=100 -F page=<page>
 ```
 
-The `reviews` field carries formal review submissions. The `comments` field carries PR-level issue comments. The review-thread comments surface is the separate `gh api repos/<owner>/<repo>/pulls/<pr-number>/comments --paginate` call.
+The `reviews` field carries formal review submissions. The `comments` field carries PR-level issue comments. The review-thread comments surface is the separate `gh api` call above, read from page 1 to at most page 10 at 100 comments per page; a tenth page that returns 100 comments is the blocked read /merging-standards `<review_inspection>` states, and the pass emits `MERGE_BLOCKED:review-thread-comments-bound` instead of evaluating readiness.
 
 </step>
 

@@ -22,8 +22,10 @@ Every valid review finding answered in the head branch, and — when any finding
 With `base` resolved, settle the number. A URL's `owner/name` segments must equal that `base`; a mismatch stops the flow rather than being reconciled. When `$ARGUMENTS` is empty, look the pull request up for the current branch and stop when none exists:
 
 ```bash
-gh pr list --repo "<base>" --head "$(git branch --show-current)" --json number,headRefName,headRepository,headRepositoryOwner
+gh pr list --repo "<base>" --head "$(git branch --show-current)" --limit 100 --json number,headRefName,headRepository,headRepositoryOwner
 ```
+
+The list is bounded at 100 pull requests. When it returns 100 entries it fills its bound and cannot show whether more match, so stop and report the blocked lookup with the bound `100 pull requests` instead of selecting from a partial list.
 
 `--head` filters by branch name only — `gh` does not accept `<owner>:<branch>` there — so two forks carrying the same branch name both match. Select the entry whose `headRepositoryOwner` and `headRepository` equal the resolved `head`, and stop when none does rather than taking the first.
 
@@ -38,8 +40,10 @@ gh pr view "<number>" --repo "<base>" --json state,isDraft,reviewDecision,mergeS
 Read review threads through the API when line-anchored comments matter, because `gh pr view` carries the PR-level conversation and not the comments tied to a file and line:
 
 ```bash
-gh api repos/"<base>"/pulls/"<number>"/comments --paginate --jq '.[] | {user: .user.login, in_reply_to_id, path, line, body}'
+gh api repos/"<base>"/pulls/"<number>"/comments --method GET -F per_page=100 -F page=<page> --jq '.[] | {user: .user.login, in_reply_to_id, path, line, body}'
 ```
+
+Read page 1 to at most page 10 at 100 comments per page, and stop at the first page that returns fewer than 100. A tenth page that returns 100 comments fills its bound and cannot show whether more comments remain, so stop and report the blocked read with the bound `100 comments per page, 10 pages` instead of selecting findings from a partial read.
 
 That endpoint returns every line-anchored comment on the pull request, not only a reviewer's. Keeping `user` and `in_reply_to_id` is what separates the three kinds it mixes: a maintainer's finding, a reply this flow posted on an earlier pass, and a line comment from anyone else. Dropping them leaves Step 5 rereading its own answers as new findings and re-fixing what it already fixed, pass after pass, on a repository the operator does not control. Read the authenticated login, which is the side of that comparison the pull request does not supply — Step 4 gates on it too, and this is the read both use:
 
@@ -49,7 +53,7 @@ gh api user --jq '.login'
 
 Take as findings the comments carrying no `in_reply_to_id` from a login other than that one, and read the rest as the thread around them.
 
-Read the state one time — a maintainer answers on their own schedule, and `/contribution-standards` forbids polling, watching, and sleeping on the artifact.
+Read the state one time — a maintainer answers on their own schedule, and `/contribution-standards` forbids polling, watching, and sleeping on the artifact. The pages of the review-thread comments read, up to the bound above, are one read of that surface.
 
 Report `state`, `reviewDecision`, and each required check's conclusion verbatim. `reviewDecision` stays `CHANGES_REQUESTED` until the maintainer looks again; nothing on the contributor's side clears it, and that is not a defect to work around.
 
@@ -187,7 +191,7 @@ The opening line states what was confirmed and what was pushed, in that order, a
 
 <constraints>
 
-- MUST read the pull request's state exactly once per invocation and return without waiting.
+- MUST read the pull request's state exactly once per invocation, the pages of its review-thread comments counting as one read, and return without waiting.
 - NEVER fix, commit, push, or comment when `state` is `CLOSED` or `MERGED`. Report that outcome and return; nobody is going to act on a reply to a finished pull request.
 - NEVER move the branch or push when `headRepositoryOwner`/`headRepository` do not equal the resolved `head`. A number or URL names a pull request from any fork, and Step 6 pushes this checkout's `HEAD`.
 - MUST end the pass at Step 3 when it has no finding to verify. Every command from Step 4 onward moves this checkout's branch or writes to the base repository, and a state-only invocation asked for neither.
@@ -227,7 +231,7 @@ The opening line states what was confirmed and what was pushed, in that order, a
 <success_criteria>
 
 - The `<UPSTREAM_TARGET>` marker read for this pass carries `classification="upstream-contribution"`, established before any write.
-- The pull request's state was read once, and `state`, `reviewDecision`, and each required check's conclusion appear verbatim.
+- The pull request's state was read once, its review-thread comments counting as one read across their pages, and `state`, `reviewDecision`, and each required check's conclusion appear verbatim.
 - A `state` of `CLOSED` or `MERGED`, a head repository other than the resolved `head`, and a pass with no finding to verify each returned what Step 3 read, left this checkout's branch where it was, and wrote nothing; every criterion below covers a pass that continued.
 - The pull request's `author.login` was compared against the authenticated login before the branch moved, and one the operator did not open was authorized in that turn.
 - The review-thread read kept each comment's author and reply parent, and the findings it selected exclude every reply this flow posted on an earlier pass.

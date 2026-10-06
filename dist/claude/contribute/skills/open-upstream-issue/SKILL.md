@@ -24,9 +24,11 @@ An issue needs no head repository, so `upstream-contribution`, `head-ambiguous`,
 **Step 3 — Search before filing.** Search the base repository for an existing issue describing the same observation:
 
 ```bash
-gh search issues --repo "<base>" --state open "<distinguishing terms>"
-gh search issues --repo "<base>" --state closed "<distinguishing terms>"
+gh search issues --repo "<base>" --state open --limit 100 "<distinguishing terms>"
+gh search issues --repo "<base>" --state closed --limit 100 "<distinguishing terms>"
 ```
+
+Each search is bounded at 100 results. A search that returns 100 results fills its bound and cannot show whether more match, so stop and report the blocked search with the bound `100 results per search` and decide no duplicate from a partial result; narrow the distinguishing terms and search again only on the operator's instruction.
 
 Both states are searched because `gh search issues --state` accepts only `open` or `closed`; passing `all` fails the command and would stop the flow before duplicate detection runs. A closed issue matters as much as an open one — it may record that the maintainer already rejected this report.
 
