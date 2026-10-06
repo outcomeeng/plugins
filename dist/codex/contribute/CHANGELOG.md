@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.2.8
+
+### Changed
+
+- **`manage-upstream-pr` and `open-upstream-issue` name the bound of every `gh` collection read.** `manage-upstream-pr` lists pull requests with `--limit 100` and reads review-thread comments one page of 100 at a time, up to 10 pages. `open-upstream-issue` searches with `--limit 100`. A read whose result fills its bound stops with a blocked report that names the bound, because a full result cannot show whether more remain; `open-upstream-issue` never concludes that no duplicate exists from such a result.
+
 ## 0.2.7
 
 ### Changed
