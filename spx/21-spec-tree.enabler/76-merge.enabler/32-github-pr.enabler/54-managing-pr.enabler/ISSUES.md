@@ -53,3 +53,23 @@ Revisit condition:
 The extraction is a cross-repo port into `@outcomeeng/spx`, a separate product, and the plugins product may depend on the resulting capability only once it is published to npm and `REQUIRED_SPX_VERSION` advances to it. That sequencing puts the fix outside any changeset confined to this repository.
 
 **Resolution shape**: port thread resolution into the SPX CLI, publish it, advance the floor, and reduce the shipped skill to its instruction with no script. Thread resolution mutates pull-request state, so the ported surface keeps that mutation behind the same explicit-instruction boundary the product-level compliance rule requires and the `inspect-github-actions` mutation gate enforces today, tracked in `spx/21-spec-tree.enabler/13-infrastructure.enabler/21-github-actions.enabler/32-workflow-observability.enabler/ISSUES.md`. Revisit when the capability publishes.
+
+## 5. The PR-management skill restates its rules across workflow, failure modes and success criteria
+
+`src/plugins/spec-tree/skills/manage-pr/SKILL.md` states several rules more than once: the clean current-head review predicate at four or five sites, the post-watch re-read rule at five sites with two verbatim, the `gh pr view --json` command pair at three sites, the foreground wait command at five sites, the `--return-closeout` marker semantics at three sites, the merge-composition qualifier on the evidence Auditors and the local review at five sites, and the pass-local token rule at three sites. Each copy must be kept in sync by hand. The cross-skill entry `DEBT [conciseness]` in `spx/21-spec-tree.enabler/76-merge.enabler/ISSUES.md` carries the same class for the other merge-lifecycle skills.
+
+**Evidence:** `skill-auditor` runs `2026-10-06_18-23-28-029-1d92c59bd0d9` and `2026-10-06_18-27-45-474-4a44c6857fb0`, finding rule `conciseness`, severity `debt`.
+
+**Why it is large:** stating each rule once means restructuring the skill around owning steps and references, an editorial pass over the whole file gated by the typed skill auditor, not a bounded edit inside the merge-composition changeset.
+
+**Settlement condition:** each rule stated once at its owning step and referenced by step or tag name elsewhere, and one typed skill audit of `manage-pr` raising no `conciseness` finding.
+
+## 6. The PR-management skill's description overlaps the GitHub-PR lifecycle skill's trigger
+
+The description of `src/plugins/spec-tree/skills/manage-pr/SKILL.md` triggers on "managing, waiting on, or continuing an open pull request lifecycle", and the description of `src/plugins/spec-tree/skills/manage-github-pr/SKILL.md` triggers on "open or manage a GitHub pull request"; both fire on a request to manage a PR.
+
+**Evidence:** `skill-auditor` run `2026-10-06_18-27-45-474-4a44c6857fb0`, finding rule `description-distinct`, severity `debt`.
+
+**Why it is large:** separating the triggers changes which skill a consumer's request selects across the GitHub-PR transport, so both descriptions change together and both skills take the typed skill auditor; the merge-composition changeset edits neither description.
+
+**Settlement condition:** the two descriptions carry trigger terms that select one skill for a request to manage an open PR, and one typed skill audit of each raises no `description-distinct` finding.
