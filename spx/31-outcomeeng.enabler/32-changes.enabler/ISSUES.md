@@ -243,3 +243,15 @@ Evidence: `instructions:subagent-auditor` findings f-003 (rule `description-styl
 Impact: the wrapper's copied field list drifts each time the runner contract changes, and a relaying session can take the narrower list as the expected shape; the description invites a launch the calling skills have not instructed.
 
 Revisit and settlement condition: the wrapper points at the skill's `<verdict_format>` for the completed, `OUTSIDE_CONTRACT`, and runner-blocked shapes and keeps only its own pre-run diagnostic shape, and the description states its subject and the conditions under which the owning skills invoke the role in passive wording; one typed subagent audit of `change-auditor` then raises neither warning.
+
+## DEBT [ambiguity]: the handoff-record rule says "exactly" and then admits optional lines
+
+Defect class: `ambiguity`.
+
+Finding: the `handoff-record` rule of `src/plugins/spec-tree/skills/change-standards/references/lifecycle.md` says a Handoff is one comment carrying "exactly these lines", and the sentence after its template admits optional context lines after the five.
+
+Evidence: `instructions:skill-auditor` run `2026-10-06_18-43-56-339-bb1779a50595`, rule `audit-skill-ambiguity`, severity `debt`, against `src/plugins/spec-tree/skills/change-standards/references/lifecycle.md` lines 59-71 at head `4be7a922d11c27af632039953b5baf36db8b999f`, the post-edit audit of the page-bound changeset. That changeset's diff of the file is line 23 alone, so the finding lies outside the changed text.
+
+Impact: a Handoff author cannot tell whether the two optional lines break the "exactly" requirement, and `release-change` states a matching "exactly the five continuation lines" criterion.
+
+Revisit and settlement condition: the rule states the five required lines and the two optional lines in one consistent statement, and `release-change` matches it; one typed skill audit of `change-standards` then raises no `audit-skill-ambiguity` finding.
