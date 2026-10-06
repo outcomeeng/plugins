@@ -69,7 +69,7 @@ The touched-scope principle is `/merging-standards` `<local_deterministic_scope>
 
 Marketplace installation changes include `just verify-marketplace-installation` in the focused deterministic scope. This command runs the repository-installation node's complete pytest-discovered evidence in disposable homes and performs no persistent installation.
 
-When the full `just check-full` bundle is required, it is the terminal local deterministic gate. Run the focused lane first, then all applicable evidence auditors and agentic reviews to convergence, then run `just check-full` once against the clean committed head. Never run `just check-full` before those agentic checks, inside an agent, or concurrently with another heavy command. Any change after it invalidates the result and reopens the affected agentic gates before the next full-gate run.
+When the full `just check-full` bundle is required, it is the terminal local deterministic gate. Run the focused lane first, then exactly the evidence Auditors and the review that the merge composition in `merging-standards` `<authority_gates>` selects for the changeset, to convergence — none for a changeset whose touched nodes are all `spec`-malleable — then run `just check-full` once against the clean committed head. Never run `just check-full` before those agentic checks, inside an agent, or concurrently with another heavy command. Any change after it invalidates the result and reopens the affected agentic gates before the next full-gate run.
 
 ## GitHub PR follow-up version finalization
 

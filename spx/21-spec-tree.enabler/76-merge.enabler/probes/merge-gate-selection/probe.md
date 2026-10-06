@@ -1,0 +1,38 @@
+# Merge gate selection
+
+The protocol lives at `probes/merge-gate-selection/probe.md`, the target of the merge node's `[probe]` assertion on the merge composition. Working runs stay in an ignored `runs/` inside this directory; the attested run retains its transcript beside this file.
+
+## Intent
+
+The operator intends `/merge` to dispatch an evidence Auditor or the local review only where the merge composition selects it from the least malleable node the changeset touches. The uncertainty is whether a session that reads only the shipped skill text reaches that selection: a skill whose wording still reads as "review every changeset" passes every deterministic check and keeps dispatching Verifiers the methodology does not require. Only a session reading the text and naming its dispatches settles it.
+
+## Environment and preconditions
+
+- The changeset is committed, and `just build-skills` has regenerated `dist/claude/` from it.
+- A scratch directory created with `mktemp -d` holds exactly three files: `dist/claude/spec-tree/skills/merge/SKILL.md` copied as `merge-SKILL.md`, `dist/claude/spec-tree/skills/merging-standards/references/merge-policy.md` copied as `merge-policy.md`, and `fixtures.md` from this directory.
+- The session runs as a headless Claude Code process in that scratch directory, restricted to file-reading tools, with skills, MCP servers, and user, project, and local settings disabled, so it carries none of the Author's context and reaches no other source.
+- No `spec-tree:probe` skill exists in the runtime catalog, and the subagent tool would start a session inside the Author's harness context. A separate headless process in a directory holding only the three files is the launch that gives the session no Author context and no repository access.
+
+## Protocol
+
+1. Create the scratch directory and copy the three files into it.
+2. In that directory, run `claude -p --restricted --strict-mcp-config --disable-slash-commands --tools Read,Glob,Grep --no-session-persistence --output-format stream-json --verbose` with the contents of `prompt.md` on stdin, and capture standard output as the transcript.
+3. Read the final JSON object of the transcript and compare it with the expected selection:
+   - Fixture 1, every touched node `spec`-malleable: no Verifier; the deterministic commands only.
+   - Fixture 2, one node whose spec declares no `malleability` field: `test-evidence-auditor`, then `changes-reviewer`; no `eval-evidence-auditor`, because no eval artifact changes.
+   - Fixture 3, no Product Tree: no Verifier; the repository's declared verify command `make verify`.
+4. Copy the transcript into this directory as `transcript.jsonl` and record the run below.
+
+## Attested run
+
+- Date: pending
+- Observations: pending
+- Artifacts: [fixtures](fixtures.md), [prompt](prompt.md); the transcript joins them with the attested run
+
+## Verdict
+
+Pending the attested run.
+
+## Limitations
+
+The protocol exercises the GitHub-PR path's verification predicates as the skill text states them, through a session that reads and reports rather than one that dispatches real Verifiers against a live repository. Direct-push publication and `MERGE_READINESS` are not exercised.
