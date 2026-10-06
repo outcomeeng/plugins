@@ -255,3 +255,15 @@ Evidence: `instructions:skill-auditor` run `2026-10-06_18-43-56-339-bb1779a50595
 Impact: a Handoff author cannot tell whether the two optional lines break the "exactly" requirement, and `release-change` states a matching "exactly the five continuation lines" criterion.
 
 Revisit and settlement condition: the rule states the five required lines and the two optional lines in one consistent statement, and `release-change` matches it; one typed skill audit of `change-standards` then raises no `audit-skill-ambiguity` finding.
+
+## DEBT [tooling-limit]: the GitHub GraphQL budget belongs to the account, and the REST rate-limit endpoint misreports it
+
+Defect class: `tooling-limit`.
+
+Finding: GitHub's GraphQL budget is one per account, shared by every session that authenticates as that account. One unbounded paginated GraphQL query spends the budget for all of them, after which every session stops at its next GitHub call, Executors and attestations included. The REST rate-limit endpoint does not show the stop: while GraphQL refused calls, the endpoint still reported thousands of GraphQL points remaining.
+
+Evidence: the Observation of outcomeeng/changes#168 records a query whose cursor variable `gh` did not recognise, which refetched its first page 575 times in the background and spent the account's GraphQL budget. `gh api graphql --paginate` fills the cursor from a variable named `$endCursor`; any other name leaves the cursor unset, so each page request repeats the first. The Change store's reads, among them the `Predecessors` read of `src/plugins/spec-tree/skills/change-standards/references/lifecycle.md`, are the heaviest users of that budget in this product.
+
+Impact: a session cannot learn from the REST endpoint whether its next GraphQL call will succeed, so a refusal arrives with no earlier signal, and the refusal reaches every session on the account at once. The page bound written in each skill's text keeps any one call from spending the budget; it does not give a session a way to read what remains.
+
+Revisit and settlement condition: GitHub reports the GraphQL budget consistently across its REST and GraphQL interfaces, or a read that establishes GraphQL availability without spending the budget is documented and the Change skills cite it in their blocked results.
