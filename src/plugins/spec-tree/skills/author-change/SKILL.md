@@ -5,7 +5,7 @@ description: >-
   Engineering Change record. NEVER use it to author a spec or review a code
   changeset.
 argument-hint: "<local Change path and intent | existing Change reference and revision>"
-allowed-tools: Read, Write, Edit, Grep, Glob, {{! tool('use_skill') !}},{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}},{!% endif %!} Bash(gh issue view:*), Bash(gh issue list:*), Bash(gh issue create:*), Bash(gh issue edit:*), Bash(gh api graphql:*), Bash(gh api repos/*/issues/*:*), Bash(spx change draft create:*), Bash(spx change draft list:*), Bash(spx verification run input:*), Bash(spx verification run status:*), Bash(spx verification run render:*), Bash(printf:*)
+allowed-tools: Read, Write, Edit, Grep, Glob, {{! tool('use_skill') !}},{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}},{!% endif %!} Bash(gh issue view:*), Bash(gh issue list:*), Bash(gh issue create:*), Bash(gh issue edit:*), Bash(gh api graphql:*), Bash(gh api repos/*/issues/*/dependencies/blocked_by:*), Bash(gh api repos/*/issues/*/dependencies/blocked_by/*:*), Bash(gh api repos/*/issues/* --jq .id), Bash(spx change draft create:*), Bash(spx change draft list:*), Bash(spx verification run input:*), Bash(spx verification run status:*), Bash(spx verification run render:*), Bash(printf:*)
 ---
 
 <objective>
@@ -72,7 +72,7 @@ For an existing Change, read its complete current body, each field from its stor
 
 A claim held by another holder blocks takeover. Terminal Lifecycle blocks ordinary resumption. A split or coalescence creates successor Changes as the Sliced workflow states and never rewrites an existing Change's `refined_from`. A published record whose body opens with `# Output` takes the Intent form at this revision under `compatibility-boundary`: author the new record from the proposal it carries, and never convert the old body in place. Reconcile an existing local candidate with the store representation before overwriting either.
 
-Maturity moves backward only under `maturity-and-authority`. A Claimed holder writes a Handoff and releases the Change before lowering Maturity. When the newest move out of `Submitted` carries a `Rejection:` naming `Framed` or `Sliced` and `Maturity` still holds that level, lower it one level through the single-select write under `canonical-state` before any further refinement; a rejection at `Proposed` leaves `Proposed` without the priority decision.
+Maturity moves backward only under `maturity-and-authority`. A Claimed holder writes a Handoff and releases the Change before lowering Maturity. When the newest move out of `Submitted` carries a `Rejection:` naming `Framed` or `Sliced` and `Maturity` still holds that level, lower it one level through the single-select write under `canonical-state`, which the `Lifecycle` selection of `spec-tree:change-standards` loads, before any further refinement; a rejection at `Proposed` leaves `Proposed` without the priority decision.
 
 </revision_safety>
 
@@ -82,7 +82,7 @@ Maturity advances past `Proposed`, `Framed`, and `Sliced` only when the store sh
 
 Use skill `spec-tree:change-standards`. Invoke it with `Lifecycle`, which `<persistence>` also loads. Read the authority for the Maturity the Change currently holds under `authority-read`, and report each authority found with its actor, time, and deciding comment lines verbatim. When the store shows none, stop with `authority-required`, naming that Maturity and the move the store lacks. Leave the candidate and the store record unchanged. A body line never stands in for the move.
 
-The Refiner obtains the move by persisting the record at the Maturity it reached and releasing the Change with the `submit` result, which `<result>` states. The Product's Maintainer then confirms or rejects it through `spec-tree:confirm-change`.
+The Refiner persists the record at the Maturity it reached. The Change then reaches `Submitted` as `handoff-record` states, and the Product's Maintainer's confirmation or rejection ends it as `confirmation-record` states.
 
 </authority_gate>
 
@@ -140,9 +140,9 @@ Any mismatch or partial write is a failed persistence result. Preserve the local
 
 <result>
 
-Return the canonical Change reference, exact persisted Maturity and Lifecycle, whether the operation created or revised the Change, the equality result for every front-matter field, and the next Activity or unresolved operator question.
+Return the canonical Change reference, exact persisted Maturity and Lifecycle, whether the operation created or revised the Change, the equality result for every front-matter field, and the next Activity or unresolved operator question. A stop at `<authority_gate>` returns the result `authority-required` instead, naming the Maturity the Change holds and the move the store lacks.
 
-Use skill `spec-tree:release-change`. Invoke it only when this session holds the Change (Lifecycle `Claimed`, with the winning Claim naming this session's assigned worktree root) and work stops or transfers with continuation remaining; a Change this session does not hold needs no release. Request the `submit` result when the persisted Maturity is `Proposed`, `Framed`, or `Sliced` and the record now waits for the Product's Maintainer's decision at that Maturity; an `Executable` Change is never submitted. Preserve any unaudited local candidate locally and leave the published Change unchanged.
+Use skill `spec-tree:release-change`. Invoke it only when this session holds the Change (Lifecycle `Claimed`, with the winning Claim naming this session's assigned worktree root) and work stops or transfers with continuation remaining; a Change this session does not hold needs no release. Preserve any unaudited local candidate locally and leave the published Change unchanged.
 
 </result>
 
