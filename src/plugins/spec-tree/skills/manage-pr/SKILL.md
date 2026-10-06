@@ -14,7 +14,7 @@ The pull request merged into the base branch on origin with one stable closeout-
 
 `$ARGUMENTS` accepts one optional PR pointer and the optional exact marker `--return-closeout`. Remove the marker before pointer resolution. Treat the remaining complete trimmed value as a PR number, PR URL, or branch name and pass that same value to every pointer-bearing inspection command; when it is empty, resolve the PR from the current branch with bare `gh pr view`. Reject duplicate markers, unknown flags, or more than one pointer.
 
-The marker binds post-merge ownership. Present means Step 9 returns the closeout-ready result and performs no Change disposition. Absent means `/manage-pr` owns direct-invocation closure and disposes of the held Change per /merging-standards `<close_phase>` when its remaining-work disposition is complete.
+The marker binds post-merge ownership. Present means Step 9 returns the closeout-ready result and performs no Change disposition. Absent means `/manage-pr` closes and disposes of the held Change per /merging-standards `<close_phase>` when its remaining-work disposition is complete.
 
 </input>
 
