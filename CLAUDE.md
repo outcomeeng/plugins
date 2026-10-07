@@ -29,7 +29,7 @@ These instructions explain WHEN to invoke spec-tree skills for this product. The
 
 ### Dangerous-command guard
 
-🛑 **STOP TRIGGER — a dangerous-command guard (DCG) block on a command holding one operation terminates that command family.** Treat the blocked attempt as a mistake. A block on a compound command splits it once.
+🛑 **STOP TRIGGER — a dangerous-command guard (DCG) block on a command holding one operation with every string written literally terminates that command family.** Treat the blocked attempt as a mistake. A block on a compound command splits it once.
 
 - A **compound command** is several operations joined by `&&`, `||`, `;` or a pipe, or one operation carrying a shell variable, a command substitution or a glob. A heredoc that feeds one command holds one operation, and so does a pipe whose first stage only supplies the payload the one reading command consumes on stdin.
 - **ALWAYS** run the parts of a blocked compound command again one at a time, each with every string written literally. A part the guard blocks on its own terminates that part's family; split no part further.

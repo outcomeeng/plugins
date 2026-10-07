@@ -36,7 +36,7 @@ def test_dcg_policy_rejects_each_missing_operative_requirement() -> None:
             assert requirement_name in str(raised.value)
 
 
-def test_dcg_policy_rejects_a_guard_that_prohibits_splitting_a_compound_command() -> (
+def test_dcg_policy_rejects_a_retry_prohibition_that_adds_splitting_to_its_list() -> (
     None
 ):
     documents = evidence.rendered_instruction_blocks()

@@ -6,6 +6,13 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.20.1
+
+### Changed
+
+- **`/skill-standards` admits one split rerun after a dangerous-command guard block on a compound command.** A skill may rely on Claude running the parts of a blocked compound command again one at a time with every string written literally; each value resolves first (a substitution's inner command runs on its own, a variable is the literal Claude assigned or the output of `printenv <name>`, a glob is the entries of a listing of its literal directory), and a part the guard blocks on its own ends that part's family. A block on one operation written entirely in literals still admits no retry. The classifier-refusal retry keeps its own condition that a skill directs it. This reverses the 0.19.1 statement that a guard block admits no retry.
+- **`/skill-standards` no longer invokes the eager-foundation exception for itself.** The skill renders under the 500-line limit the exception lifts, so `<eager_foundation_exception>` covers foundation skills only.
+
 ## 0.20.0
 
 ### Breaking

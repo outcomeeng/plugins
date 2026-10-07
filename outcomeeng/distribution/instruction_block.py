@@ -174,7 +174,16 @@ AUTHORITY_HIERARCHY_POLICY_REQUIREMENTS: Final = (
 )
 DANGEROUS_COMMAND_GUARD_STOP_TRIGGER_REQUIREMENT: Final = (
     "a dangerous-command guard (DCG) block on a command holding one operation "
-    "terminates that command family"
+    "with every string written literally terminates that command family"
+)
+DANGEROUS_COMMAND_GUARD_COMPOUND_DEFINITION_REQUIREMENT: Final = (
+    "several operations joined by `&&`, `||`, `;` or a pipe, or one operation "
+    "carrying a shell variable, a command substitution or a glob"
+)
+DANGEROUS_COMMAND_GUARD_SINGLE_OPERATION_FORMS_REQUIREMENT: Final = (
+    "A heredoc that feeds one command holds one operation, and so does a pipe "
+    "whose first stage only supplies the payload the one reading command "
+    "consumes on stdin"
 )
 DANGEROUS_COMMAND_GUARD_COMPOUND_SPLIT_REQUIREMENT: Final = (
     "run the parts of a blocked compound command again one at a time, each with "
@@ -200,6 +209,14 @@ DANGEROUS_COMMAND_GUARD_POLICY_REQUIREMENTS: Final = (
     (
         "dangerous-command guard stop trigger",
         DANGEROUS_COMMAND_GUARD_STOP_TRIGGER_REQUIREMENT,
+    ),
+    (
+        "dangerous-command guard compound definition",
+        DANGEROUS_COMMAND_GUARD_COMPOUND_DEFINITION_REQUIREMENT,
+    ),
+    (
+        "dangerous-command guard single-operation forms",
+        DANGEROUS_COMMAND_GUARD_SINGLE_OPERATION_FORMS_REQUIREMENT,
     ),
     (
         "dangerous-command guard compound split",
