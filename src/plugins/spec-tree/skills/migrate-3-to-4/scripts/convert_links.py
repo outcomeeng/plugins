@@ -66,6 +66,7 @@ INLINE = re.compile(
     r"|(?P<code>(?P<ticks>`+)(?P<body>.+?)(?P=ticks))"
 )
 CODE_SPAN_DECISION = re.compile(r"[A-Za-z0-9_./-]+\.(?:adr|pdr)\.md")
+CODE_SPAN_HELD_DECISION = re.compile(r"[A-Za-z0-9_./-]*[A-Za-z0-9]\.(?:adr|pdr)\.md")
 PROSE_DECISION = re.compile(r"[A-Za-z0-9_./{}-]*\.(?:adr|pdr)\.md")
 
 
@@ -206,7 +207,11 @@ class LineConverter:
 
     def _code_span(self, match: re.Match[str]) -> str:
         body = match["body"]
-        if not CODE_SPAN_DECISION.fullmatch(body) or has_placeholder(body):
+        if has_placeholder(body):
+            return match[0]
+        if not CODE_SPAN_DECISION.fullmatch(body):
+            for held in CODE_SPAN_HELD_DECISION.finditer(body):
+                self._report(FORM_BARE_PROSE, held[0])
             return match[0]
         target = resolve_target(self._context, body)
         if target is None:

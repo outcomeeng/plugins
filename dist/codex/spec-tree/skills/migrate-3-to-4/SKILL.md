@@ -61,7 +61,7 @@ Run the same command a second time. Its `rewritten` list is empty and its exit s
 
 <step name="report">
 
-Present the complete report of the first run: the rewritten files, then every unconvertible citation with its file, line, form, and target. The form `text-decision` is a decision path written as bare prose; the form `broken` is a target that does not exist. Leave each reported citation unchanged for the operator. After exit status 3, state that the operator resolves each reported citation and runs the conversion again.
+Present the complete report of the first run: the rewritten files, then every unconvertible citation with its file, line, form, and target. The form `text-decision` is a decision path written as bare prose or held in a code span beside other text; the form `broken` is a target that does not exist. Leave each reported citation unchanged for the operator. After exit status 3, state that the operator resolves each reported citation and runs the conversion again.
 
 </step>
 
@@ -77,6 +77,19 @@ git status --short
 
 </workflow>
 
+<testing>
+
+The conversion ran over fixture trees before release, with these recorded results:
+
+- A tree holding every citation form — a code span, a link to a decision of the citing node, `../`, leading-slash, out-of-node and descendant-node links, a reference definition, and a fenced block — converts to the expected tree byte for byte, `rewritten` lists exactly the changed files, and the run exits 3 with the expected report.
+- A tree whose citations all convert prints no report line and exits 0.
+- A second run over a converted tree rewrites nothing and prints the same report.
+- A root without `spx/` exits 1 and changes no file.
+- A tree holding an undecodable file exits 1, names the file, and lists the files already rewritten.
+- A path with a template placeholder stays unchanged and unreported; a bare prose path and a decision path a code span holds beside other text each print as `text-decision` and stay unchanged.
+
+</testing>
+
 <constraints>
 
 - NEVER rewrite a reported citation by reading its surrounding prose or by guessing its target; the operator names the intended target.
@@ -91,5 +104,6 @@ git status --short
 - The second run's `rewritten` list is empty and its exit status equals the first run's.
 - Every rewritten file and every unconvertible citation, with its file, line, form, and target, appears in the presented report.
 - Every citation the report lists as unconvertible stands unchanged in its file.
+- A decision path the run leaves as text outside a link appears in the report as `text-decision` or `broken`, so a run that exits 0 leaves none.
 
 </success_criteria>
