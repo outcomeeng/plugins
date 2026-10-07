@@ -13,8 +13,8 @@ lists each citation the script cannot convert as ``file``, ``line``, ``form``
 and ``target``; the run continues past it.
 
 The exit status is 0 when no citation remains unconvertible, 3 after the
-complete report when any does, and 1 when ROOT holds no ``spx/`` directory or
-another error stops the run.
+complete report when any does, and 1 when ROOT holds no ``spx/`` directory, a
+PATH is missing or lies outside ROOT, or another error stops the run.
 """
 
 from __future__ import annotations
@@ -306,6 +306,15 @@ def render_result(result: ConversionResult) -> str:
     return json.dumps(document, indent=2, sort_keys=True)
 
 
+def path_error(root: Path, path: str) -> str | None:
+    target = (root / path).resolve()
+    if not target.is_relative_to(root):
+        return f"error: {path} lies outside {root}"
+    if not target.exists():
+        return f"error: {path} does not exist beneath {root}"
+    return None
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=DESCRIPTION)
     parser.add_argument("root", type=Path, help="product root that holds spx/")
@@ -325,6 +334,11 @@ def main(argv: Sequence[str] | None = None) -> int:
             f"error: {root} holds no {SPEC_TREE_DIRECTORY}/ directory", file=sys.stderr
         )
         return EXIT_ERROR
+    for path in arguments.paths:
+        message = path_error(root, path)
+        if message is not None:
+            print(message, file=sys.stderr)
+            return EXIT_ERROR
     result = convert_tree(root, arguments.paths)
     print(render_result(result))
     return EXIT_UNCONVERTIBLE if result.unconvertible else EXIT_OK
