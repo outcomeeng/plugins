@@ -110,7 +110,7 @@ Most bullets of the `<success_criteria>` of `src/plugins/spec-tree/skills/manage
 
 **Settlement condition.** Each of the seven findings is resolved in the skill and its script, and one typed skill audit of `manage-pr` then raises none of them.
 
-## 6. The review-thread resolver pages GraphQL connections without a page count
+## 10. The review-thread resolver pages GraphQL connections without a page count
 
 `src/plugins/spec-tree/skills/manage-pr/scripts/resolve_review_thread.py` discovers a review thread from a review-comment ID by reading `reviewThreads(first: 100, after: $threadsAfter)` and, for each thread, `comments(first: 100, after: $commentsAfter)`. The loops at lines 183 and 264 continue while `hasNextPage` stays true and carry no page count, and `managing-pr.md` line 28 requires the discovery to page through both connections before declaring a review comment absent. The rationale of `spx/15-agent-tools.pdr.md` names an unbounded paginated GraphQL read as the hazard to the account-wide GraphQL budget, and product property 3 reaches the `gh` calls a skill's text instructs, so a call a shipped script issues is outside the property and its audit rule.
 
