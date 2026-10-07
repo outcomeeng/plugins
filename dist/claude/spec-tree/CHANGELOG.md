@@ -10,6 +10,12 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.103.0
+
+### Added
+
+- **`/migrate-3-to-4` converts a 3.x tree's decision citations and forbidden link forms to tree-absolute links.** The skill runs one standalone script over the product root: a decision path written as a code span, a decision link of the citing node, and every `../`, leading-slash, out-of-node and descendant-node link become a Markdown link with a tree-absolute href, and fenced code blocks stay untouched. It prints the rewritten files and every citation it cannot convert, a bare path in prose or a broken target, and leaves those unchanged for the operator. Exit status 0 means nothing remains unconvertible, 3 means the report lists leftover citations, and 1 means an error stopped the run, with the files already rewritten listed. A second run must rewrite nothing.
+
 ## 0.102.0
 
 ### Breaking
