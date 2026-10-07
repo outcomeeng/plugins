@@ -338,3 +338,13 @@ Source: `instructions:skill-auditor` finding `f-015`, rule
 **Impact.** The output statement does not match the delivered standards, so an author reading the objective misses areas the standard governs.
 
 **Settlement condition.** The objective states one scope that covers every standards area the skill defines, and a typed skill audit of `skill-standards` raises no `objective-shape` finding.
+
+## `skill-standards` prescribes a reference description that names its callers and a Validator output the auditor skeleton forbids
+
+**Evidence.** `instructions:skill-auditor` run `2026-10-07_07-18-22-277-67e02ea2545a` on `src/plugins/instructions/skills/skill-standards` raised two `debt` findings, rule `internal-consistency`: the reference-skill description template at `SKILL.md:181-187` and `SKILL.md:402-415` prescribes "Loaded by other skills, not invoked directly", which names the skill's callers, while `<skill_organization>` bars a skill from naming or describing its caller; and the Validator row of `<skill_types>` at `SKILL.md:382` prescribes "Pass/fail verdicts, scores" and a scoring rubric, while `references/auditor-skeleton.md` outputs a verdict and names "scored instead of judged" as a failure mode. The same run re-raised the findings the entries above record: `objective-shape`, `cross-reference-accuracy`, `reference-skill-duplication`, `caller-independence` and `constraint-language`.
+
+**Standing.** The findings lie on text the changeset leaves untouched. The diff of the skill against `origin/main` holds hunks at `SKILL.md:274`, `SKILL.md:298` (removed paragraph) and `SKILL.md:512-514`, and none falls in `<descriptions>`, `<skill_types>` or `<reference_skills>`.
+
+**Impact.** An auditor applying both rules gets conflicting verdicts on every reference skill, and a quality-checking audit skill that follows the Validator row ships scores its own skeleton forbids.
+
+**Settlement condition.** The reference-skill description template describes only the standardized subject, the Validator row and the auditor skeleton state one output, and a typed skill audit of `skill-standards` raises neither finding.

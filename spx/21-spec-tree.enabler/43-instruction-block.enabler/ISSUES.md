@@ -191,3 +191,18 @@ Run `2026-10-06_18-35-55-521-02765947702d` raised the same finding as `script-va
 **Impact.** The description breaks the frontmatter rule that every other `SKILL.md` under `src/plugins/` follows, and a typed skill audit of the skill stays rejected until it changes.
 
 **Settlement condition.** The description names the root instruction files without the word "claude", and a typed skill audit raises no `voice-yaml-frontmatter-exception` finding on `SKILL.md`.
+
+## `/update-instruction-block` states staleness twice, recommends a refused adoption, and reports a removal nothing establishes
+
+**Evidence.** `instructions:skill-auditor` run `2026-10-07_07-18-25-437-b58472784b8d` on `src/plugins/spec-tree/skills/update-instruction-block` raised four `debt` findings:
+
+- `conciseness` at `SKILL.md:34` and `SKILL.md:47`: `<context>` and workflow step 2 list the same stale conditions, and `<context>` line 32 and `<constraints>` line 157 both state that the script owns the deterministic logic.
+- `operational-effectiveness` at `SKILL.md:77`: for a mutual delegation, the Recommend rule yields an adoption that line 80 states the generator always refuses, yet step 3 labels it `(Recommended)`.
+- `operational-effectiveness` at `SKILL.md:94`: step 5 requires the closing report to state whether obsolete `spx/` instruction files were removed, and no snapshot or command output establishes it.
+- `script-contract-accuracy` at `scripts/instruction_block.py:1235-1243` against `SKILL.md:39`, `SKILL.md:92` and `SKILL.md:159`: the skill says the write removes retired generated files under `spx/`, while the script unlinks any `spx/CLAUDE.md` or `spx/AGENTS.md` without the retired-generated recognition it applies to root files.
+
+**Standing.** The findings lie on text the changeset leaves untouched: the diff of the skill against `origin/main` holds the hunks `templates/instruction-block.md:57` and `templates/instruction-block.md:59-61` and no hunk in `SKILL.md` or `scripts/instruction_block.py`.
+
+**Impact.** The staleness rule can drift between its two copies, the operator question offers a recommended answer the generator refuses, a report item has no source, and a product-authored guide under `spx/` can be deleted while the skill says only generated files are affected.
+
+**Settlement condition.** Each stale condition and the script-ownership statement appears once, the mutual-delegation case routes to its refusal before the operator question, the removal report derives from a named snapshot or output, the script removes only recognized retired output or the skill states what it removes, and a typed skill audit raises none of the four findings.
