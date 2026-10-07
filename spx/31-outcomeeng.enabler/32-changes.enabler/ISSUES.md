@@ -302,6 +302,21 @@ Impact: a reader of the skill meets a statement about other skills' behavior and
 
 Revisit and settlement condition: step 6 states only the marker the skill emits, the target-selection rule lives in the skills that read the marker or in the shared Lifecycle standard, step 7 states the outcome for every `Branch or PR` value and for a failed fetch or switch and names how a fresh branch is chosen, and one typed skill audit of `claim-change` raises neither finding.
 
+## DEBT [skill-audit]: close-change names no current-state source for the merge commit and uses the noun Frame
+
+Defect class: `skill-audit`.
+
+Finding: `instructions:skill-auditor` run `2026-10-07_09-02-30-051-33c271dd97cd` at head `917d6106fd969e4baf593ab7b568f0740869537f` rejected the audit of `close-change` on two findings. The changeset's diff of `src/plugins/spec-tree/skills/close-change/SKILL.md` against base `0ec15959925f92f0b14891fe2cebd729651bf470` is line 26, step 2's report of a `Submitted` Change, and line 62, its success criterion. Both findings lie on step 3's `Applied` precondition, lines 28 to 30, which the changeset does not change:
+
+- Rule `ambiguous-instruction`, severity `blocking`, lines 28 and 29 (`Integrated`): the check reads "the merge commit the record or conversation names" and no loaded rule names a record field that holds it, no grant reads a pull request's merge commit, and no current-state test separates a Change with no changeset from one whose merge commit nobody named.
+- Rule `undefined-term`, severity `debt`, line 30 (`Evidence satisfied`): the check reads "the Frame's Nodes" and "the state the Frame requires", and the loaded standards define no noun Frame; they name the `## Nodes` section under the `nodes` rule.
+
+Evidence: the sealed run above and the diff range named in the finding.
+
+Impact: an `Applied` close can pass its integration check on a merge commit that only the conversation names, and a reader meets a noun the standards do not define.
+
+Revisit and settlement condition: step 3 names the current-state source of the merge commit with the grant that reads it and the current-state test that establishes a Change has no changeset, the evidence check names the `## Nodes` section and the state each node requires, and one typed skill audit of `close-change` raises neither finding.
+
 ## DEBT [bound]: close-change routes no blocked result for a successor read that reaches its bound
 
 Defect class: `bound`.
