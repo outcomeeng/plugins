@@ -30,7 +30,7 @@ CAN adopt the 4.0 methodology without hand-editing each citation
 - A conversion maps each link's fragment and title, and its file's line count, to themselves ([test](tests/test_migrating.mapping.l1.py))
 - A reference-style definition maps under the rules of an inline link ([test](tests/test_migrating.mapping.l1.py))
 - The conversion lists each file it changes and no other ([test](tests/test_migrating.mapping.l1.py))
-- A citation the conversion cannot convert maps to a report line with its file, line, form, and target, and the run continues; a bare path in prose maps to `text-decision`, a target that does not exist maps to `broken`, and neither is rewritten ([test](tests/test_migrating.mapping.l1.py))
+- A citation the conversion cannot convert maps to a report line with its file, line, form, and target, and the run continues; a bare path in prose, or a decision path a code span holds beside other text, maps to `text-decision`, a target that does not exist maps to `broken`, and neither is rewritten ([test](tests/test_migrating.mapping.l1.py))
 - A file that carries only converted citation forms maps to itself, and the report lists the same citations ([test](tests/test_migrating.mapping.l1.py))
 
 ### Properties
