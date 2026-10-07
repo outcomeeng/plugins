@@ -86,7 +86,7 @@ The conversion ran over fixture trees before release, with these recorded result
 - A second run over a converted tree rewrites nothing and prints the same report.
 - A root without `spx/` exits 1 and changes no file.
 - A path with a template placeholder stays unchanged and unreported; a bare prose path and a decision path a code span holds beside other text each print as `text-decision` and stay unchanged, including a concrete path beside a placeholder path in one code span.
-- A link to a file outside `spx/` prints as `outside-tree`, and an assertion evidence link that would need a changed href prints as `evidence-link`; both stay unchanged.
+- A link to a file outside `spx/` prints as `outside-tree`, and an assertion evidence link that would need a changed href prints as `evidence-link`; both stay unchanged. An evidence use inside a fenced block names no label, so a definition with that label converts.
 
 </testing>
 

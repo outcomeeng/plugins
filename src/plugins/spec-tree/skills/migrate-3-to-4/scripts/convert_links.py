@@ -286,22 +286,38 @@ def closes_fence(line: str, fence: str) -> bool:
     return len(stripped) >= len(fence) and set(stripped) == {fence[0]}
 
 
-def convert_text(context: FileContext, text: str) -> tuple[str, list[Finding]]:
-    converted: list[str] = []
-    findings: list[Finding] = []
+def fenced_lines(lines: Sequence[str]) -> list[bool]:
+    """Return, for each line, whether a fence line or fenced content holds it."""
+    fenced: list[bool] = []
     fence: str | None = None
-    evidence_labels = frozenset(
-        use["label"].casefold() for use in EVIDENCE_REFERENCE_USE.finditer(text)
-    )
-    for number, line in enumerate(text.split("\n"), start=1):
+    for line in lines:
         if fence is not None:
-            converted.append(line)
+            fenced.append(True)
             if closes_fence(line, fence):
                 fence = None
             continue
         opening = FENCE_OPEN.match(line)
         if opening is not None:
             fence = opening[1]
+        fenced.append(opening is not None)
+    return fenced
+
+
+def convert_text(context: FileContext, text: str) -> tuple[str, list[Finding]]:
+    converted: list[str] = []
+    findings: list[Finding] = []
+    lines = text.split("\n")
+    fenced = fenced_lines(lines)
+    evidence_labels = frozenset(
+        use["label"].casefold()
+        for line, inside_fence in zip(lines, fenced, strict=True)
+        if not inside_fence
+        for use in EVIDENCE_REFERENCE_USE.finditer(line)
+    )
+    for number, (line, inside_fence) in enumerate(
+        zip(lines, fenced, strict=True), start=1
+    ):
+        if inside_fence:
             converted.append(line)
             continue
         converter = LineConverter(context, number, evidence_labels)

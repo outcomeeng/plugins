@@ -31,3 +31,8 @@ Code span non-decision: `tests/test_alpha.mapping.l1.py`.
 Code span, placeholder beside a path: `NN-decision.pdr.md with 18-alpha-parse.adr.md`.
 - Reference-style evidence link that climbs (reported, untouched): [test][ev]
 [ev]: ../32-alpha.capability/tests/test_alpha.mapping.l1.py
+- Reference-style link whose label an evidence use inside a fence also names (converted): [merging][fx]
+```text
+[test][fx]
+```
+[fx]: ../15-merging.pdr.md
