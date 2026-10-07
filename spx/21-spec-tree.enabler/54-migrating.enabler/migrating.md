@@ -41,3 +41,4 @@ CAN adopt the 4.0 methodology without hand-editing each citation
 
 - NEVER: the conversion changes a fenced code block, a link that already carries its full path from `spx/`, a link to a non-decision file inside the citing node, an external or in-page link, or a path with a template placeholder — a brace pair or a bare `NN-` index ([test](tests/test_migrating.compliance.l1.py))
 - NEVER: the conversion changes a file other than a Markdown file beneath the root's `spx/` ([test](tests/test_migrating.compliance.l1.py))
+- ALWAYS: the `/migrate-3-to-4` skill runs the conversion with the product root as its parameter, presents the complete report, and leaves every unconvertible citation unchanged for the operator, never rewriting one by its own reading ([audit])
