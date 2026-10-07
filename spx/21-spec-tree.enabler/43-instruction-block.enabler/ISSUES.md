@@ -171,7 +171,7 @@ Run `2026-10-06_18-35-55-521-02765947702d` raised the same finding as `script-va
 
 **Settlement condition.** The generator rejects `--from` outside `--reconcile` and verbs supplied together, with a message naming the valid combination, a test over a violating invocation covers each rejection, and a typed skill audit raises no `validation-rule` finding on the script.
 
-## `/update-instruction-block` reports a removal nothing establishes and unlinks `spx/` instruction files by name
+## `/update-instruction-block` reports the removal of obsolete `spx/` instruction files and unlinks them by name
 
 **Evidence.** `instructions:skill-auditor` run `2026-10-07_07-18-25-437-b58472784b8d` on `src/plugins/spec-tree/skills/update-instruction-block` raised two `debt` findings:
 
@@ -180,6 +180,6 @@ Run `2026-10-06_18-35-55-521-02765947702d` raised the same finding as `script-va
 
 **Standing.** Unjudged. For the report finding, the advisor lacked the script output and the complete reporting inputs; the absence of a Step 1 snapshot does not prove that no later output can establish a removal. For the script finding, the established fact is that the loop removes designated obsolete filenames without inspecting content; missing is whether those exact filenames are declared wholly owned reserved generated artifacts, or whether foreign content may validly occupy them, and without that path-ownership contract the advisor could not decide whether filename selection suffices.
 
-**Impact.** A report item has no source, and a product-authored guide under `spx/` can be deleted while the skill says only generated files are affected.
+**Impact.** If no output establishes the removal, a report item has no source; if foreign content can occupy those filenames, a product-authored guide under `spx/` can be deleted.
 
 **Settlement condition.** The removal report derives from a named snapshot or output, the path-ownership contract for the obsolete `spx/` instruction filenames is declared, and the script removes only recognized retired output or the skill states what it removes.
