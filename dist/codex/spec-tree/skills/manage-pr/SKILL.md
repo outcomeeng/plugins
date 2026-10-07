@@ -37,10 +37,10 @@ Every PR-state `gh pr view --json` command that participates in a management pas
 ```bash
 gh pr view <pr-number-or-url-or-branch> --json number,url,headRefName,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
 gh pr view --json number,url,headRefName,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
-gh api repos/<owner>/<repo>/pulls/<pr-number>/comments --paginate
+gh api repos/<owner>/<repo>/pulls/<pr-number>/comments --method GET -F per_page=100 -F page=<page>
 ```
 
-The `reviews` field carries formal review submissions. The `comments` field carries PR-level issue comments. The review-thread comments surface is the separate `gh api repos/<owner>/<repo>/pulls/<pr-number>/comments --paginate` call.
+The `reviews` field carries formal review submissions. The `comments` field carries PR-level issue comments. The review-thread comments surface is the separate `gh api` call above, which passes `--method GET` explicitly because `gh api` sends a POST when `-F` parameters are present and no method is given; it is read from page 1 to at most page 10 at 100 comments per page; a tenth page that returns 100 comments is the blocked read /merging-standards `<review_inspection>` states, and the pass emits `MERGE_BLOCKED:review-thread-comments-bound` instead of evaluating readiness.
 
 </step>
 
@@ -99,17 +99,18 @@ Start every Step 8 pass with the live gate tuple in prose: PR number, head SHA, 
 
 Classify `MERGE_READINESS` in this order. The first matching rule wins; once a rule matches, ignore every later predicate even when a later predicate also fails.
 
-1. Missing or non-terminal review-kind check -> `merge_readiness: "WITHHOLD"`, `blocking_predicate: "review-nonterminal"`, `guard_verdict: "WAIT_FOR_REVIEW"`, `merge_command_allowed: false`, `autonomous_action: "wait"`, `pr_comment_body: null`.
-2. Current-head CI review exists with a valid `BLOCKING` or in-scope `DEBT` finding -> `merge_readiness: "WITHHOLD"`, `blocking_predicate: "review-valid-finding"`, `guard_verdict: "FIX_FINDING:<id>"`, `merge_command_allowed: false`, `autonomous_action: "fix-finding"`, `pr_comment_body: null`.
-3. Review-kind check skipped because the PR modifies the reviewer's own workflow file and current-head CI review is absent -> `merge_readiness: "WITHHOLD"`, `blocking_predicate: "review-skipped-self-modifying-workflow"`, `guard_verdict: "MENTION_REVIEW_NEEDED:<trigger-phrase>"`, `merge_command_allowed: false`, `autonomous_action: "post-review-trigger-comment"`, `pr_comment_body: "<trigger-phrase> review"`.
-4. Review-kind check skipped for any other reason -> `merge_readiness: "WITHHOLD"`, `blocking_predicate: "review-check-skipped"`, `guard_verdict: "MERGE_BLOCKED:review-check-skipped"`, `merge_command_allowed: false`, `autonomous_action: "block"`, `pr_comment_body: null`.
-5. Review-kind check failed, cancelled, timed out, requires action, or is neutral -> `merge_readiness: "WITHHOLD"`, `blocking_predicate: "review-check-failed"`, `guard_verdict: "MERGE_BLOCKED:review-check-failed"`, `merge_command_allowed: false`, `autonomous_action: "block"`, `pr_comment_body: null`.
-6. Current-head CI review absent after the review-kind check guard -> `merge_readiness: "WITHHOLD"`, `blocking_predicate: "review-absent"`, `guard_verdict: "WAIT_FOR_REVIEW"`, `merge_command_allowed: false`, `autonomous_action: "wait"`, `pr_comment_body: null`.
-7. Non-review required check non-terminal -> `merge_readiness: "WITHHOLD"`, `blocking_predicate: "check-not-terminal-green"`, `guard_verdict: "WAIT_FOR_CHECKS"`, `merge_command_allowed: false`, `autonomous_action: "wait"`, `pr_comment_body: null`.
-8. Non-review required check terminal-but-not-success or absent -> `merge_readiness: "WITHHOLD"`, `blocking_predicate: "check-failed-or-absent"`, `guard_verdict: "MERGE_BLOCKED:<reason>"`, `merge_command_allowed: false`, `autonomous_action: "block"`, `pr_comment_body: null`.
-9. Branch hygiene or PR-state predicate failed -> `merge_readiness: "WITHHOLD"`, `blocking_predicate: "branch-hygiene"`, `guard_verdict: "MERGE_BLOCKED:<reason>"`, `merge_command_allowed: false`, `autonomous_action: "block"`, `pr_comment_body: null`.
-10. Head SHA, fetched branch head, or status-check head mismatch -> `merge_readiness: "WITHHOLD"`, `blocking_predicate: "head-mismatch"`, `guard_verdict: "MERGE_BLOCKED:<reason>"`, `merge_command_allowed: false`, `autonomous_action: "block"`, `pr_comment_body: null`.
-11. Otherwise -> `merge_readiness: "HOLD"`, `blocking_predicate: "none"`, `guard_verdict: "MERGE_READY:<head-sha>"`, `merge_command_allowed: true`, `autonomous_action: "merge"`, `pr_comment_body: null`.
+1. Review-thread comments read to their bound with page 10 returning 100 comments -> `merge_readiness: "WITHHOLD"`, `blocking_predicate: "review-thread-comments-bound"`, `guard_verdict: "MERGE_BLOCKED:review-thread-comments-bound"`, `merge_command_allowed: false`, `autonomous_action: "block"`, `pr_comment_body: null`.
+2. Missing or non-terminal review-kind check -> `merge_readiness: "WITHHOLD"`, `blocking_predicate: "review-nonterminal"`, `guard_verdict: "WAIT_FOR_REVIEW"`, `merge_command_allowed: false`, `autonomous_action: "wait"`, `pr_comment_body: null`.
+3. Current-head CI review exists with a valid `BLOCKING` or in-scope `DEBT` finding -> `merge_readiness: "WITHHOLD"`, `blocking_predicate: "review-valid-finding"`, `guard_verdict: "FIX_FINDING:<id>"`, `merge_command_allowed: false`, `autonomous_action: "fix-finding"`, `pr_comment_body: null`.
+4. Review-kind check skipped because the PR modifies the reviewer's own workflow file and current-head CI review is absent -> `merge_readiness: "WITHHOLD"`, `blocking_predicate: "review-skipped-self-modifying-workflow"`, `guard_verdict: "MENTION_REVIEW_NEEDED:<trigger-phrase>"`, `merge_command_allowed: false`, `autonomous_action: "post-review-trigger-comment"`, `pr_comment_body: "<trigger-phrase> review"`.
+5. Review-kind check skipped for any other reason -> `merge_readiness: "WITHHOLD"`, `blocking_predicate: "review-check-skipped"`, `guard_verdict: "MERGE_BLOCKED:review-check-skipped"`, `merge_command_allowed: false`, `autonomous_action: "block"`, `pr_comment_body: null`.
+6. Review-kind check failed, cancelled, timed out, requires action, or is neutral -> `merge_readiness: "WITHHOLD"`, `blocking_predicate: "review-check-failed"`, `guard_verdict: "MERGE_BLOCKED:review-check-failed"`, `merge_command_allowed: false`, `autonomous_action: "block"`, `pr_comment_body: null`.
+7. Current-head CI review absent after the review-kind check guard -> `merge_readiness: "WITHHOLD"`, `blocking_predicate: "review-absent"`, `guard_verdict: "WAIT_FOR_REVIEW"`, `merge_command_allowed: false`, `autonomous_action: "wait"`, `pr_comment_body: null`.
+8. Non-review required check non-terminal -> `merge_readiness: "WITHHOLD"`, `blocking_predicate: "check-not-terminal-green"`, `guard_verdict: "WAIT_FOR_CHECKS"`, `merge_command_allowed: false`, `autonomous_action: "wait"`, `pr_comment_body: null`.
+9. Non-review required check terminal-but-not-success or absent -> `merge_readiness: "WITHHOLD"`, `blocking_predicate: "check-failed-or-absent"`, `guard_verdict: "MERGE_BLOCKED:<reason>"`, `merge_command_allowed: false`, `autonomous_action: "block"`, `pr_comment_body: null`.
+10. Branch hygiene or PR-state predicate failed -> `merge_readiness: "WITHHOLD"`, `blocking_predicate: "branch-hygiene"`, `guard_verdict: "MERGE_BLOCKED:<reason>"`, `merge_command_allowed: false`, `autonomous_action: "block"`, `pr_comment_body: null`.
+11. Head SHA, fetched branch head, or status-check head mismatch -> `merge_readiness: "WITHHOLD"`, `blocking_predicate: "head-mismatch"`, `guard_verdict: "MERGE_BLOCKED:<reason>"`, `merge_command_allowed: false`, `autonomous_action: "block"`, `pr_comment_body: null`.
+12. Otherwise -> `merge_readiness: "HOLD"`, `blocking_predicate: "none"`, `guard_verdict: "MERGE_READY:<head-sha>"`, `merge_command_allowed: true`, `autonomous_action: "merge"`, `pr_comment_body: null`.
 
 Ignore host mergeability. `mergeable: MERGEABLE`, `mergeStateStatus: CLEAN`, and a successful `gh pr merge` response never authorize the merge command.
 
@@ -249,6 +250,7 @@ The managing flow satisfies its contract when, at minimum:
 
 - /merging-standards and /commit-changes are loaded before any inspection or push, `merge-policy.md` is read directly from /merging-standards `<reference_index>` before any tagged policy section is used, and every management pass gets a fresh `spx worktree status` proof through `<occupancy_preflight>` before checkout-sensitive mutation.
 - Each pass inspects all three surfaces from /merging-standards `<review_inspection>`.
+- A review-thread comments read whose page 10 returned 100 comments ended the pass with `MERGE_BLOCKED:review-thread-comments-bound`, naming the bound `100 comments per page, 10 pages`, and evaluated no readiness predicate from the partial read.
 - Each pass checks base drift in the same checkpoint as review inspection; a branch behind `origin/<base>` is rebased per /merging-standards `<base_sync>` before the queue is driven, regardless of whether a review has landed or carries findings.
 - Every finding is labeled with one of `BLOCKING` / `DEBT` — never `FOLLOW-UP`, never a severity rank, never a legacy class label — and acted on by validity and phase, never by severity.
 - The work queue fixes every valid in-scope finding the open-PR review surfaces — no deferral of in-scope work; a `DEBT` finding the author judges out of scope is recorded in `ISSUES.md` / `PLAN.md` with a recorded reason and tracked, not a merge blocker.

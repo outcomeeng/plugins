@@ -135,7 +135,7 @@ genuinely changes a case outcome.
 
 ## The merge-readiness decision table carries no worked trace
 
-`src/plugins/spec-tree/skills/manage-pr/SKILL.md` `<merge_readiness_decision_table>` enumerates eleven rules over named predicate fields with no example tracing one concrete `gh pr view --json` field set through a matched rule to its emitted guard verdict.
+`src/plugins/spec-tree/skills/manage-pr/SKILL.md` `<merge_readiness_decision_table>` enumerates twelve rules over named predicate fields with no example tracing one concrete `gh pr view --json` field set through a matched rule to its emitted guard verdict.
 
 **Resolution shape**: add one worked trace — sample JSON fragment, matched rule number, emitted `guard_verdict` — gated by `instructions:skill-auditor`.
 
@@ -196,3 +196,15 @@ The deterministic mapping tests cover the declared and absent `DEPLOY` and `RELE
 The dispatch-readiness, repeated-class, finish-before-wait and bounded-projection rules of `spx/15-merging.pdr.md` are realized for the merge lifecycle in `merge.md` and the `merging-standards` skill, and `/merge`, `/open-pr` and `/manage-pr` cite `<verification_dispatch_readiness>` at every Verifier dispatch site they own. `opening-pr.md` declares the readiness record as its own assertion, and `managing-pr.md` declares the readiness record and the finish-before-wait ordering, because `/manage-pr` owns the foreground check wait. The rules bind agentic dispatch, whose natural owner is `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`.
 
 **Settlement condition.** The rules relocate into the verification decision, `spx/15-merging.pdr.md` reduces to the merge-lifecycle specialization that cites them, and the realizing assertions in this node and its two PR-lifecycle children re-point; `merging-standards` keeps the section text its transports read. The full entry is in `spx/31-outcomeeng.enabler/31-verification.enabler/ISSUES.md`.
+
+## `merging-standards` names its callers and leans on a sibling reference
+
+`instructions:skill-auditor` run `2026-10-06_18-43-57-247-9ea41c113e7a` rejected the post-edit audit of `merging-standards` at head `4be7a922d11c27af632039953b5baf36db8b999f` on three `debt` findings, none of them on changed text. The changeset's diff of the bundle is `src/plugins/spec-tree/skills/merging-standards/references/merge-policy.md` lines 410-411 and 415-416; `action-tokens.md` is outside it.
+
+- Rule `caller-independence`, `references/action-tokens.md` lines 3 and 12-13: the reference assigns token emission to "The managing flow" and ends the `AWAIT_*` follow-ups at "`/manage-pr` re-inspects state", while `SKILL.md` line 23 declares the lifecycle behavior caller-independent.
+- Rule `reference-one-level-deep`, `references/action-tokens.md` lines 3 and 7-10: the reference directs the reader to `<pr_check_wait>` and `<base_sync>`, tagged sections that exist only in `merge-policy.md`, while `SKILL.md` line 42 says a bundled reference never dispatches another bundled reference.
+- Rule `caller-independence`, `references/merge-policy.md` lines 32, 58, 239, and 344 (`<overlay_safety_checks>`, `<branch_state_closeout>`, `<base_sync>`, `<authority_gates>`): the standard assigns obligations to "the opening flow", "the managing flow", "the GitHub-PR orchestration flow", and `release-change`.
+
+**Impact.** The standard cannot be applied by a caller that names it without also taking on the callers it names, and `action-tokens.md` is incomplete without a read of `merge-policy.md`.
+
+**Settlement condition.** Each obligation states itself against the lifecycle operation it governs without naming a consuming skill, `action-tokens.md` carries the conditions its follow-ups depend on or `SKILL.md`'s `<reference_index>` names the co-required reference, and one typed skill audit of `merging-standards` then raises none of the three findings.

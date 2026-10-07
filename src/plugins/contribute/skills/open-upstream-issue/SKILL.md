@@ -24,9 +24,11 @@ An issue needs no head repository, so `upstream-contribution`, `head-ambiguous`,
 **Step 3 — Search before filing.** Search the base repository for an existing issue describing the same observation:
 
 ```bash
-gh search issues --repo "<base>" --state open "<distinguishing terms>"
-gh search issues --repo "<base>" --state closed "<distinguishing terms>"
+gh search issues --repo "<base>" --state open --limit 100 "<distinguishing terms>"
+gh search issues --repo "<base>" --state closed --limit 100 "<distinguishing terms>"
 ```
+
+Each search is bounded at 100 results. A search that returns 100 results fills its bound and cannot show whether more match, so stop and report the blocked search with the bound `100 results per search`. NEVER conclude that no duplicate exists from a result that fills its bound. Narrow the distinguishing terms and search again only on the operator's instruction.
 
 Both states are searched because `gh search issues --state` accepts only `open` or `closed`; passing `all` fails the command and would stop the flow before duplicate detection runs. A closed issue matters as much as an open one — it may record that the maintainer already rejected this report.
 
@@ -139,6 +141,7 @@ The title names what the run observed rather than the precedence bug it suspects
 
 - The `<UPSTREAM_TARGET>` marker read for this pass carries `classification="upstream-contribution"`, `"head-ambiguous"`, or `"fork-absent"`, and its `base` and `permission` values appear verbatim.
 - A search for an existing issue ran and its result is reported.
+- A search that returned 100 results reported the blocked search with the bound `100 results per search` and filed nothing.
 - A search that matched surfaced that issue's URL and filed nothing; every criterion below covers a pass that filed.
 - The operator authorized this issue against the resolved base in the turn it was filed.
 - The body carries tool versions, the base commit observed against, the exact command, and a negative control.

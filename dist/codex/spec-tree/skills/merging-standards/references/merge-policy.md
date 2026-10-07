@@ -358,6 +358,7 @@ All `VERIFICATION_READINESS` predicates are re-established before every push, no
 
 The guard withholds the merge command and emits the existing action token when any predicate fails:
 
+- `MERGE_BLOCKED:review-thread-comments-bound` when the review-thread comments read fills its bound — page 10 returns 100 comments — before any other predicate is evaluated.
 - `WAIT_FOR_REVIEW` when current-head review output is absent, or the review-kind check is missing or non-terminal.
 - `WAIT_FOR_CHECKS` when a non-review required check is queued, in progress, pending, expected, or otherwise non-terminal.
 - `MENTION_REVIEW_NEEDED:<trigger-phrase>` when the review-kind check is skipped because the PR modifies the Reviewer's own workflow file.
@@ -420,10 +421,12 @@ gh pr view <pr-number> --json reviews,comments \
   --jq '{reviews: [.reviews[] | {author: .author.login, state, submittedAt}],
          comments: [.comments[] | {author: .author.login, createdAt, excerpt: .body[0:160]}]}'
 
-# Review-thread comments tied to specific lines
-gh api repos/<owner>/<repo>/pulls/<pr-number>/comments --paginate \
+# Review-thread comments tied to specific lines: page <page> of 100 comments
+gh api repos/<owner>/<repo>/pulls/<pr-number>/comments --method GET -F per_page=100 -F page=<page> \
   --jq '.[] | {id, node_id, author: .user.login, path, line, createdAt: .created_at, excerpt: .body[0:160]}'
 ```
+
+Read the review-thread comments page by page, from page 1 to at most page 10, and stop at the first page that returns fewer than 100 comments. A page that returns 100 comments fills its bound and cannot show whether more pages remain, so page 10 returning 100 comments is a blocked read: emit `MERGE_BLOCKED:review-thread-comments-bound`, name the bound `100 comments per page, 10 pages`, and evaluate no readiness predicate from the partial view.
 
 **NEVER drop `comments` from the `gh pr view --json` argument list.** The `comments` field carries PR-level issue comments — a distinct surface from `reviews` (formal review submissions) and from `gh api repos/<owner>/<repo>/pulls/<n>/comments` (review-thread comments tied to specific lines). Dropping `comments` to "trim the JSON" silently loses that third surface; a valid `BLOCKING` or `DEBT` finding posted there is invisible to the inspection, and `MERGE_READINESS` evaluates against a partial view.
 
@@ -571,6 +574,7 @@ The flows that consume this vocabulary satisfy their contracts when, at minimum:
 - Blocking waits begin only after every independent Author-side inspection, repair, scan, check, record update, and required commit is complete.
 - Waiting for CI review or checks uses the exact PR-check wait command from `<pr_check_wait>`.
 - All three surfaces in `<review_inspection>` are inspected after every push, with `comments` always present in the `gh pr view --json` field list.
+- A review-thread comments read whose page 10 returned 100 comments is the blocked read `<review_inspection>` states: the pass emits `MERGE_BLOCKED:review-thread-comments-bound`, names the bound `100 comments per page, 10 pages`, and evaluates no readiness predicate from the partial read.
 - Every finding is labeled with one of `BLOCKING` / `DEBT` — never `FOLLOW-UP`, never a severity rank, never a legacy class label — and acted on by validity and phase, never by severity.
 - Every Auditor verdict from a local Auditor agent (per `<auditor_verdicts>`) is handled by its subject: `REJECTED` or `UNKNOWN` overall verdicts, `FAIL` or `UNKNOWN` rows, and `REJECT` findings on an in-slice subject are fixed or resolved in the slice, not deferred to `ISSUES.md`, and rows on an out-of-PR subject are tracked in the owning node's `ISSUES.md` with the reason recorded.
 - Merge runs only when `MERGE_READINESS` holds and the mutation-point guard has just produced `MERGE_READY:<head-sha>`: the current-head CI review has no unresolved valid `BLOCKING` or `DEBT` finding, every other required check is terminal-green, branch hygiene and PR-state hold on the freshly inspected head, and the inspected head SHA matches the fetched remote branch head and status-check head. `MERGE_READINESS` carries no time-based settle.

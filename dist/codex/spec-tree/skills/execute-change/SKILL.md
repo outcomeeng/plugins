@@ -3,7 +3,7 @@ name: execute-change
 description: >-
   ALWAYS invoke this skill when a session executes one claimed Executable Change as its Executor. NEVER run a Change's Activities without this skill.
 argument-hint: "[#N | owner/repo#N | issue-url]"
-allowed-tools: Read, Glob, Grep, collaboration.spawn_agent, collaboration.wait_agent, Bash(git status:*), Bash(git rev-parse:*), Bash(git log:*), Bash(git fetch:*), Bash(git switch:*), Bash(gh issue view:*), Bash(gh pr view:*), Bash(gh api graphql:*), Bash(gh api repos/*/issues/*/dependencies/blocked_by), Bash(spx worktree status:*)
+allowed-tools: Read, Glob, Grep, collaboration.spawn_agent, collaboration.wait_agent, Bash(git status:*), Bash(git rev-parse:*), Bash(git log:*), Bash(git fetch:*), Bash(git switch:*), Bash(gh issue view:*), Bash(gh pr view:*), Bash(gh api graphql:*), Bash(gh api repos/*/issues/*/dependencies/blocked_by --method GET -F per_page=100), Bash(spx worktree status:*)
 ---
 
 <objective>

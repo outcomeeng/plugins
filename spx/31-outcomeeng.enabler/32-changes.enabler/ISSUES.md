@@ -243,3 +243,92 @@ Evidence: `instructions:subagent-auditor` findings f-003 (rule `description-styl
 Impact: the wrapper's copied field list drifts each time the runner contract changes, and a relaying session can take the narrower list as the expected shape; the description invites a launch the calling skills have not instructed.
 
 Revisit and settlement condition: the wrapper points at the skill's `<verdict_format>` for the completed, `OUTSIDE_CONTRACT`, and runner-blocked shapes and keeps only its own pre-run diagnostic shape, and the description states its subject and the conditions under which the owning skills invoke the role in passive wording; one typed subagent audit of `change-auditor` then raises neither warning.
+
+## DEBT [ambiguity]: the handoff-record rule says "exactly" and then admits optional lines
+
+Defect class: `ambiguity`.
+
+Finding: the `handoff-record` rule of `src/plugins/spec-tree/skills/change-standards/references/lifecycle.md` says a Handoff is one comment carrying "exactly these lines", and the sentence after its template admits optional context lines after the five.
+
+Evidence: `instructions:skill-auditor` run `2026-10-06_18-43-56-339-bb1779a50595`, rule `audit-skill-ambiguity`, severity `debt`, against `src/plugins/spec-tree/skills/change-standards/references/lifecycle.md` lines 59-71 at head `4be7a922d11c27af632039953b5baf36db8b999f`, the post-edit audit of the page-bound changeset. That changeset's diff of the file is line 23 alone, so the finding lies outside the changed text.
+
+Impact: a Handoff author cannot tell whether the two optional lines break the "exactly" requirement, and `release-change` states a matching "exactly the five continuation lines" criterion.
+
+Revisit and settlement condition: the rule states the five required lines and the two optional lines in one consistent statement, and `release-change` matches it; one typed skill audit of `change-standards` then raises no `audit-skill-ambiguity` finding.
+
+## DEBT [bound]: author-change reads a Change's blockers without a named page bound
+
+Defect class: `bound`.
+
+Finding: product property 3 of `spx/15-agent-tools.pdr.md` requires a skill that reads a collection endpoint to name its page bound, and `src/plugins/spec-tree/skills/author-change/SKILL.md` line 112 reads the native blockers with the bare call `gh api repos/<store>/issues/<N>/dependencies/blocked_by`. The `change-standards` reference `lifecycle.md`, `release-change` step 4, and the `allowed-tools` grants of `release-change` and `execute-change` name the bounded form `--method GET -F per_page=100` for the same read.
+
+Evidence: a search of `src/plugins/` for `blocked_by` returns the `author-change` read at line 112 as the one blocker read that names no page size; the `author-change` grant is the prefix `Bash(gh api repos/*/issues/*:*)`, which admits the bounded form.
+
+Impact: a Change with more blockers than the endpoint returns per page gives a blocker comparison in `author-change` built from a partial read, with no blocked result naming the bound.
+
+Revisit and settlement condition: `author-change` reads the blockers as one page of 100 and returns a blocked result naming `100 blockers, one page` when the page holds 100 entries, and one typed skill audit of `author-change` follows the edit. The edit lands with the `author-change` revision of Change outcomeeng/changes#333, which changes the same skill.
+
+## DEBT [skill-audit]: release-change carries four skill-audit debt findings on untouched text
+
+Defect class: `skill-audit`.
+
+Finding: `instructions:skill-auditor` runs `2026-10-07_06-54-14-356-29144e907dbd` and `2026-10-07_07-00-31-515-9145a4b7a10a` rejected the audits of `release-change` on `debt` findings, the first at head `d9fa8e14bf24d13be6b4ef928134643b134a96c0` and the second at head `9d7f098b0afb894c102143d3bc4e2aaeaa993588`. The changeset's diff of `src/plugins/spec-tree/skills/release-change/SKILL.md` against the base is line 9, the `gh api repos/*/issues/*/dependencies/blocked_by` grant, and line 33, step 4. The first run's `ambiguity` finding on step 4 lay on changed text and is fixed; the second run raised none there. The remaining findings lie on text the changeset does not change:
+
+- Rule `objective-shape`, line 13 (`<objective>`): the objective names "step 2" and the readback, which belong to `<workflow>`.
+- Rule `internal-consistency` or `ambiguous_instruction`, line 27 (step 3.1): the default-branch stop promises no store write, while step 2 has already revised the Change body through `author-change`.
+- Rule `ambiguous_instruction`, line 38 (step 6): the readback compares Maturity with "the value read after step 2 completes", and no step instructs that read.
+- Rule `tool-restriction-security`, line 9 (`allowed-tools`): the grants `Bash(git branch --show-current)` and the operator-question tool appear in no workflow step. Line 9 is a changed line, and the changeset changes only its blocker-read grant.
+
+Evidence: the two sealed runs above; the diff range is the one named in the finding.
+
+Impact: a reader of the skill meets a stop guarantee that a prior store write contradicts, a readback comparison with no defined source, and two grants no step uses.
+
+Revisit and settlement condition: the objective names only properties of the released state, step 3.1 is evaluated before the first store write or names the step 2 write, a step reads and retains Maturity after step 2, the unused grants are removed, and one typed skill audit of `release-change` raises none of these findings.
+
+## DEBT [bound]: close-change routes no blocked result for a successor read that reaches its bound
+
+Defect class: `bound`.
+
+Finding: the successor read of `src/plugins/spec-tree/skills/change-standards/references/lifecycle.md` (`canonical-state`) returns a blocked read that names `100 issues per page, 10 pages` when the store's `issues` connection still has `hasNextPage` true after page 10, and derives no successor from it. `src/plugins/spec-tree/skills/close-change/SKILL.md` step 3, `Refined` branch (line 32), reads successors under `canonical-state` and routes two outcomes: zero records refuses the close as "Output continues nowhere", and a named successor the store does not hold refuses naming it. Its `<result>` and its success criteria name no blocked-read outcome, so in a store past the bound the derived set is empty and the close is refused for a false reason with the bound dropped.
+
+Evidence: `spec-tree:changes-reviewer` run `2026-10-07_07-21-26-874-21ad0d862cb0` on head `da009a7f1d3d3145258259d9055d7a6a61482044`, finding `consistency` against `close-change/SKILL.md:32`. The Observation of outcomeeng/changes#168 places no skill edit for `close-change` in that Change's Nodes.
+
+Impact: a Change in a store with more issues than the bound cannot be closed `Refined`, and the refusal names no bound.
+
+Revisit and settlement condition: `close-change` step 3, its `<result>` and its success criteria carry a blocked outcome for a successor read that reaches its bound, which refuses the close and names `100 issues per page, 10 pages`, and one typed skill audit of `close-change` follows the edit.
+
+## DEBT [bound]: claim-change lists candidates at a bound and returns no blocked result when the list fills it
+
+Defect class: `bound`.
+
+Finding: `src/plugins/spec-tree/skills/claim-change/SKILL.md` step 1 (line 23) lists candidate Changes with `gh issue list --repo <store> --state open --json number,title,assignees,url --limit 50` and offers up to three from the list. The call names its bound. Product property 3 of `spx/15-agent-tools.pdr.md` also requires a call whose result fills its bound to return a blocked result naming the bound, and step 1 returns none when 50 issues come back, so a store with more open issues than the bound reports a partial list, or `No candidate`, as complete.
+
+Evidence: `spec-tree:changes-reviewer` run `2026-10-06_18-56-26-316-837e0b2a122f` on head `27de076ed368f5eee6477012d9526a89a8af2b77`, finding `consistency` against `claim-change/SKILL.md:23`. The Observation of outcomeeng/changes#168 lists the `--limit 50` read as already bounded and places no skill edit for it in that Change's Nodes.
+
+Impact: `claim-change` can offer a partial candidate set as the whole store.
+
+Revisit and settlement condition: step 1 returns a blocked candidate listing that names `50 issues` when the list returns 50 entries, or the decision states which reads the blocked-result clause covers; one typed skill audit of `claim-change` follows the edit.
+
+## DEBT [bound]: the Change store reads carry nested connections at first:50 with no blocked result
+
+Defect class: `bound`.
+
+Finding: product property 3 of `spx/15-agent-tools.pdr.md` covers a `gh api graphql` call reading a connection and requires a named page bound and a blocked result when the result fills it. The queries of `src/plugins/spec-tree/skills/change-standards/references/lifecycle.md` read connections named at `first:50` with no blocked result: `issueFieldValues(first:50)` in the field read (line 19) and in the nested read of the successor query (line 23), and `issueFields(first:50)` in the field-id resolution (line 21). `src/plugins/coding-agents/skills/orchestrate-change/SKILL.md` line 52 reads `issueFieldValues(first:50)` the same way. The successor query's outer `issues(first:100)` connection carries its page count and blocked result.
+
+Evidence: `spec-tree:changes-reviewer` run `2026-10-06_19-01-19-956-109edd5dce9a` on head `7ab8c651a26303d97d3b99534f17a215c2bf2a66`, finding `consistency` against `lifecycle.md:23`. Each query names its bound, and none returns a blocked result when a connection returns 50 nodes.
+
+Impact: an organization that defines 50 or more issue fields, or an issue that carries 50 or more field values, drops a `Predecessors`, `Lifecycle`, or other value from the read with no blocked result.
+
+Revisit and settlement condition: the decision states whether the blocked-result clause covers a nested connection read at a fixed size, or each of these reads states that a connection returning 50 nodes is a blocked read naming `50 issue fields`; one typed skill audit of each of `change-standards` and `orchestrate-change` follows the edit.
+
+## DEBT [tooling-limit]: the GitHub GraphQL budget belongs to the account, and the REST rate-limit endpoint misreports it
+
+Defect class: `tooling-limit`.
+
+Finding: GitHub's GraphQL budget is one per account, shared by every session that authenticates as that account. One unbounded paginated GraphQL query spends the budget for all of them, after which every session stops at its next GitHub call, Executors and attestations included. The REST rate-limit endpoint does not show the stop: while GraphQL refused calls, the endpoint still reported thousands of GraphQL points remaining.
+
+Evidence: the Observation of outcomeeng/changes#168 records a query whose cursor variable `gh` did not recognise, which refetched its first page 575 times in the background and spent the account's GraphQL budget. `gh api graphql --paginate` fills the cursor from a variable named `$endCursor`; any other name leaves the cursor unset, so each page request repeats the first. The Change store's reads, among them the `Predecessors` read of `src/plugins/spec-tree/skills/change-standards/references/lifecycle.md`, are the heaviest users of that budget in this product.
+
+Impact: a session cannot learn from the REST endpoint whether its next GraphQL call will succeed, so a refusal arrives with no earlier signal, and the refusal reaches every session on the account at once. The page bound written in each skill's text keeps any one call from spending the budget; it does not give a session a way to read what remains.
+
+Revisit and settlement condition: GitHub reports the GraphQL budget consistently across its REST and GraphQL interfaces, or a read that establishes GraphQL availability without spending the budget is documented and the Change skills cite it in their blocked results.

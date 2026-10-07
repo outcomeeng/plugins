@@ -93,3 +93,29 @@ Most bullets of the `<success_criteria>` of `src/plugins/spec-tree/skills/manage
 **Why it is large:** rewriting the criteria as output properties restates what proves a management pass sound for every step, together with the step restatements entry 5 records, an editorial pass gated by the typed skill auditor.
 
 **Settlement condition:** each success criterion states a property of the merged PR, the closeout-ready result or the reported blocking condition, and one typed skill audit of `manage-pr` raises no `success-criteria-properties` finding.
+
+## 9. `manage-pr` carries seven skill-audit debt findings
+
+`instructions:skill-auditor` run `2026-10-06_18-43-57-466-ceb2c552ad89` rejected the post-edit audit of `manage-pr` at head `4be7a922d11c27af632039953b5baf36db8b999f` on seven `debt` findings. The changeset's diff of `src/plugins/spec-tree/skills/manage-pr/SKILL.md` is lines 40 and 43; the script is outside it. No finding lies on changed text.
+
+- Rule `ambiguous-instruction`, `SKILL.md` line 240 (`<failure_modes>`, "Used GitHub mergeability as authority"): the avoidance step ends "emit the wait token and refresh tracking", and no section defines a tracking mechanism.
+- Rule `internal-consistency`, `SKILL.md` line 236 (`<failure_modes>`, "Wait-token-only without the foreground wait"): the failure mode attributes the foreground wait to Step 8, and the workflow assigns it to Step 7.
+- Rule `anti-pattern-repeating-skill-name`, `SKILL.md` lines 23 and 27 (`pr_wait_and_reentry_policy`): the body invokes `/manage-pr` and names it as the actor.
+- Rule `xml-semantic-names`, `SKILL.md` lines 47-159 (`the_managing_flow`): Steps 0-9 sit in a `step` container with three nested `step` tags while the other steps are bold-prose paragraphs.
+- Rule `tool-restriction-grant-coverage`, `SKILL.md` frontmatter line 6 and Step 6 at line 72: Step 6 instructs `mktemp -d`, and `allowed-tools` grants no `mktemp` pattern.
+- Rule `conciseness`, `SKILL.md` lines 90, 133, and 153, and the clean-review predicate at lines 118, 130, 232, and 256: the wait-routing instruction and the predicate definition are restated.
+- Rule `script-validation-message`, `scripts/resolve_review_thread.py` line 237 (`iter_thread_comments`): a malformed review-thread node `id` raises the CLI-argument message `thread_id must be a GitHub node ID` instead of naming the response field.
+
+`instructions:skill-auditor` run `2026-10-07_06-38-38-191-06ac6f474845` rejected the audit of `manage-pr` at head `3f9a679fe2e4b2531e671242bb8242cb7c14dc8c` on eight `debt` findings. The changeset's diff of `src/plugins/spec-tree/skills/manage-pr/SKILL.md` against the base is lines 40 and 43 and the decision table rows at lines 102 to 113; the script is outside it. No finding lies on changed text. The run repeats six of the seven findings above (`anti-pattern-repeating-skill-name`, `xml-semantic-names`, `conciseness`, the step-number inconsistency and the undefined tracking action, and `script-validation-message` at lines 146 and 237 of the script) and adds the `description-trigger-conflict` finding that entry 6 records. It raised no `tool-restriction-grant-coverage` finding.
+
+**Impact.** A reader of the skill meets a tracking mechanism that does not exist, two step numbers for one command, and a Step 6 command outside the grant.
+
+**Settlement condition.** Each of the seven findings is resolved in the skill and its script, and one typed skill audit of `manage-pr` then raises none of them.
+
+## 10. The review-thread resolver pages GraphQL connections without a page count
+
+`src/plugins/spec-tree/skills/manage-pr/scripts/resolve_review_thread.py` discovers a review thread from a review-comment ID by reading `reviewThreads(first: 100, after: $threadsAfter)` and, for each thread, `comments(first: 100, after: $commentsAfter)`. The loops at lines 183 and 264 continue while `hasNextPage` stays true and carry no page count, and `managing-pr.md` line 28 requires the discovery to page through both connections before declaring a review comment absent. The rationale of `spx/15-agent-tools.pdr.md` names an unbounded paginated GraphQL read as the hazard to the account-wide GraphQL budget, and product property 3 reaches the `gh` calls a skill's text instructs, so a call a shipped script issues is outside the property and its audit rule.
+
+`spec-tree:changes-reviewer` run `2026-10-06_18-56-26-316-837e0b2a122f` on head `27de076ed368f5eee6477012d9526a89a8af2b77` raised this as a `consistency` finding against the script at line 183.
+
+**Settlement condition.** A decision states whether the page-bound rule covers calls a shipped script issues, and the script bounds each loop with a page count and ends in a deterministic error naming the bound; `managing-pr.md` line 28 and its linked test follow.

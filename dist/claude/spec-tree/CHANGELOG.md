@@ -10,6 +10,12 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.101.4
+
+### Changed
+
+- **The successor, blocker, and review-thread reads name their page bound.** `change-standards` reads a store's issues 100 per page, at most 10 pages, and a Change's blockers as one page of 100; `release-change` composes its Handoff `Blockers` line from that bounded read and stops on a full page, and `release-change` and `execute-change` grant exactly that form. `merging-standards` and `manage-pr` read review-thread comments 100 per page, at most 10 pages. A read that reaches one of these bounds is blocked and names the bound — `MERGE_BLOCKED:review-thread-comments-bound` for review-thread comments — instead of deriving a successor or evaluating readiness from a partial result. Other collection reads in the spec-tree skills keep the bounds they carried. GitHub's GraphQL budget belongs to the account, so one unbounded read stops every session on it.
+
 ## 0.101.3
 
 ### Changed
