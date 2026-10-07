@@ -49,7 +49,7 @@ It prints one JSON document:
 
 `rewritten` lists each changed file as a path from the product root. `unconvertible` lists each citation the conversion cannot convert, with its `file`, `line`, `form`, and `target`; the run continues past each one. Exit status 0 means no citation remains unconvertible. Exit status 3 means the report lists at least one, after the conversion rewrote every other citation.
 
-Exit status 1 means the root holds no `spx/` or another error stopped the run, and the conversion may already have rewritten files before it stopped. Report the error message, run `git status --short`, report every changed file as a partial rewrite, and stop. Report any other exit status verbatim as an error and stop.
+Exit status 1 means the root holds no `spx/` or another error stopped the run, and the conversion may already have rewritten files before it stopped. Report the error message, which names the files already rewritten, report those files as a partial rewrite, and stop. Report any other exit status verbatim as an error and stop.
 
 </step>
 
@@ -67,7 +67,7 @@ Present the complete report of the first run: the rewritten files, then every un
 
 <step name="review">
 
-Show which files the run changed:
+Show the working tree's changes; the files the conversion rewrote are the ones the first run's `rewritten` list names:
 
 ```bash
 git status --short
@@ -104,6 +104,6 @@ The conversion ran over fixture trees before release, with these recorded result
 - The second run's `rewritten` list is empty and its exit status equals the first run's.
 - Every rewritten file and every unconvertible citation, with its file, line, form, and target, appears in the presented report.
 - Every citation the report lists as unconvertible stands unchanged in its file.
-- A decision path the run leaves as text outside a link appears in the report as `text-decision` or `broken`, so a run that exits 0 leaves none.
+- A decision path the run leaves as text outside a link and a fenced block, and carrying no template placeholder, appears in the report as `text-decision` or `broken`, so a run that exits 0 leaves none.
 
 </success_criteria>
