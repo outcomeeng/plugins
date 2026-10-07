@@ -42,7 +42,14 @@ from outcomeeng_testing.harnesses.property_evidence import run_replayable_proper
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 CONVERSION_SCRIPT_PATH: Final = (
-    REPO_ROOT / "prototypes" / "migrate-3-to-4" / "convert_links.py"
+    REPO_ROOT
+    / "src"
+    / "plugins"
+    / "spec-tree"
+    / "skills"
+    / "migrate-3-to-4"
+    / "scripts"
+    / "convert_links.py"
 )
 FIXTURE_ROOT: Final = REPO_ROOT / "outcomeeng_testing" / "fixtures" / "link_conversion"
 INPUT_TREE: Final = FIXTURE_ROOT / "input"
