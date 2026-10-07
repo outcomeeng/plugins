@@ -106,6 +106,8 @@ Most bullets of the `<success_criteria>` of `src/plugins/spec-tree/skills/manage
 - Rule `conciseness`, `SKILL.md` lines 90, 133, and 153, and the clean-review predicate at lines 118, 130, 232, and 256: the wait-routing instruction and the predicate definition are restated.
 - Rule `script-validation-message`, `scripts/resolve_review_thread.py` line 237 (`iter_thread_comments`): a malformed review-thread node `id` raises the CLI-argument message `thread_id must be a GitHub node ID` instead of naming the response field.
 
+`instructions:skill-auditor` run `2026-10-07_06-38-38-191-06ac6f474845` rejected the audit of `manage-pr` at head `3f9a679fe2e4b2531e671242bb8242cb7c14dc8c` on eight `debt` findings. The changeset's diff of `src/plugins/spec-tree/skills/manage-pr/SKILL.md` against the base is lines 40 and 43 and the decision table rows at lines 102 to 113; the script is outside it. No finding lies on changed text. The run repeats six of the seven findings above (`anti-pattern-repeating-skill-name`, `xml-semantic-names`, `conciseness`, the step-number inconsistency and the undefined tracking action, and `script-validation-message` at lines 146 and 237 of the script) and adds the `description-trigger-conflict` finding that entry 6 records. It raised no `tool-restriction-grant-coverage` finding.
+
 **Impact.** A reader of the skill meets a tracking mechanism that does not exist, two step numbers for one command, and a Step 6 command outside the grant.
 
 **Settlement condition.** Each of the seven findings is resolved in the skill and its script, and one typed skill audit of `manage-pr` then raises none of them.
