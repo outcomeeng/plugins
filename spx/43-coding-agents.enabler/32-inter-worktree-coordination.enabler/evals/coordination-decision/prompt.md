@@ -220,7 +220,7 @@ Recorded exercised payload/results:
 
 **An overridden socket was read as an empty environment.** Claude pointed the CLI at a non-default socket, saw an inventory with none of the expected panes, and concluded the recipient was gone. The socket belonged to a different instance — a verification harness, not the operator's live application. Confirm the inventory contains the expected panes before concluding a target is absent, per `<environment_traps>`.
 
-**Target resolution was rebuilt around scratch files.** Claude wrote the `agents` result and discovery result through dynamic redirects under `$SP`. The dangerous-command guard terminated the command because the shell would open an unproved path with truncation. Claude then rewrote the same operation as a Python script, bypassing the stop instead of using a sanctioned capability. Invoke `resolve-target` over direct stdin, keep its returned JSON as the tool result, and stop when a guard terminates that command family; never reformulate the blocked operation.
+**Target resolution was rebuilt around scratch files.** Claude wrote the `agents` result and discovery result through dynamic redirects under `$SP`. The dangerous-command guard blocked the command because the redirect carried a shell variable and the shell would open an unproved path with truncation. Claude then rewrote the same operation as a Python script instead of rerunning its parts with literal strings. Invoke `resolve-target` over direct stdin and keep its returned JSON as the tool result. When a guard blocks a compound command, rerun its parts once, one at a time, with every string written literally; a part the guard blocks on its own ends that family. Rewriting the blocked operation as another program stays forbidden.
 
 </failure_modes>
 
@@ -2079,7 +2079,7 @@ Recorded exercised payload/results:
 
 **A pane UUID was requested from the operator.** Claude asked which pane to send to, when the operator had already named the target the only way they can — by worktree or working directory. Resolve the operator's naming against the live inventory and report the target back in the same terms.
 
-**A blocked redirect was rewritten as another program.** Claude redirected public inventory and discovery JSON into `$SP/agents.json` and `$SP/discovery.json`. The dangerous-command guard terminated the dynamic truncating redirect and instructed Claude to ask for authority. Claude wrote a Python replacement and continued, discarding the guard result. Use `/operate-prowl`'s `resolve-target` result directly in the active tool context. When a guard terminates a command family, stop that family and follow the sanctioned operation or ask the operator; never reformulate it.
+**A blocked redirect was rewritten as another program.** Claude redirected public inventory and discovery JSON into `$SP/agents.json` and `$SP/discovery.json`. The dangerous-command guard blocked the redirect, a compound command because it carried a shell variable. Claude wrote a Python replacement and continued, discarding the guard result. Use `/operate-prowl`'s `resolve-target` result directly in the active tool context. When a guard blocks a compound command, rerun its parts once, one at a time, with every string written literally; a part the guard blocks on its own ends that family. Rewriting the blocked operation as another program stays forbidden.
 
 </failure_modes>
 

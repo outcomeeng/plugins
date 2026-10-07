@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.11.1
+
+### Changed
+
+- **`/message-agents` and `/operate-prowl` take the split rerun after a guard block on a variable-carrying redirect.** A dangerous-command guard block on a redirect into a `$SP` scratch path is a compound command: Claude reruns its parts once, one at a time, with every string written literally, and a part the guard blocks on its own ends that family. Rewriting the blocked operation as another program stays forbidden.
+
 ## 0.11.0
 
 ### Breaking

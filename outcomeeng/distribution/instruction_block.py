@@ -177,13 +177,24 @@ DANGEROUS_COMMAND_GUARD_STOP_TRIGGER_REQUIREMENT: Final = (
     "with every string written literally terminates that command family"
 )
 DANGEROUS_COMMAND_GUARD_COMPOUND_DEFINITION_REQUIREMENT: Final = (
-    "several operations joined by `&&`, `||`, `;` or a pipe, or one operation "
-    "carrying a shell variable, a command substitution or a glob"
+    "two or more operations joined or separated by `&&`, `||`, `;`, `&`, a "
+    "newline, a pipe or a subshell, or one operation whose words the shell "
+    "expands: a variable, a command substitution, a glob, or a tilde, brace, "
+    "arithmetic or process-substitution expansion"
 )
 DANGEROUS_COMMAND_GUARD_SINGLE_OPERATION_FORMS_REQUIREMENT: Final = (
-    "A heredoc that feeds one command holds one operation, and so does a pipe "
-    "whose first stage only supplies the payload the one reading command "
-    "consumes on stdin"
+    "A heredoc that feeds one command holds one operation unless its delimiter "
+    "is unquoted and its body expands, and so does a pipe whose first stage "
+    "only supplies the payload the one reading command consumes on stdin"
+)
+DANGEROUS_COMMAND_GUARD_VALUE_RESOLUTION_REQUIREMENT: Final = (
+    "Resolve each value first: a command or process substitution's inner "
+    "command runs on its own and its output is the literal; a variable's value "
+    "is the literal assigned to it or the output of `printenv <name>` run on "
+    "its own; a glob's matches are the entries a listing of its literal "
+    "directory returns; a tilde, brace or arithmetic expansion is written out "
+    "as the words it produces. Then run the operation once with literal "
+    "arguments"
 )
 DANGEROUS_COMMAND_GUARD_COMPOUND_SPLIT_REQUIREMENT: Final = (
     "run the parts of a blocked compound command again one at a time, each with "
@@ -221,6 +232,10 @@ DANGEROUS_COMMAND_GUARD_POLICY_REQUIREMENTS: Final = (
     (
         "dangerous-command guard compound split",
         DANGEROUS_COMMAND_GUARD_COMPOUND_SPLIT_REQUIREMENT,
+    ),
+    (
+        "dangerous-command guard value resolution",
+        DANGEROUS_COMMAND_GUARD_VALUE_RESOLUTION_REQUIREMENT,
     ),
     (
         "dangerous-command guard part terminal",

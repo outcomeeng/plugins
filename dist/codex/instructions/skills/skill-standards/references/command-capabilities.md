@@ -1,6 +1,6 @@
 <overview>
 
-A SKILL.md carries every capability a slash command had — arguments, `!`-dynamic context injection, tool restriction, and `@` file references. These rules govern that surface for every skill that authors or audits arguments, dynamic context, tool restriction, or file references.
+A SKILL.md carries every capability a slash command had — arguments, `!`-dynamic context injection, tool restriction, and `@` file references. These rules govern that surface for every skill that authors or audits arguments, dynamic context, tool restriction, or file references, and `<guard_block_partition>` classifies a command a dangerous-command guard blocks.
 
 Author plugin source skills in Claude Code's supported SKILL.md syntax. Generated Codex output is a build-rendering concern: when Codex needs a different invocation surface, the renderer adapts the Codex runtime tree instead of constraining authored source to Codex's currently documented subset.
 
@@ -77,3 +77,28 @@ Run `python3 "${SKILL_DIR}/scripts/<bundled-script>.py" <args>`
 NEVER write Codex's skill-directory token in source. NEVER reference bundled plugin files with repository-local authored or generated plugin paths, or with legacy plugin-root paths. If a skill needs a file owned by another skill or another plugin, name the owning workflow or capability rather than manufacturing a cross-plugin filesystem path.
 
 </file_references>
+
+<guard_block_partition>
+
+A dangerous-command guard block on one command ends its command family or admits one split rerun, and the command's class decides which. The two classes are complements: every blocked command is exactly one of them.
+
+**One operation.** A single simple command whose every word is a literal, with no shell expansion. A heredoc that feeds one command is one operation unless its delimiter is unquoted and its body expands, and so is a pipe whose first stage only supplies the payload the one reading command consumes on stdin, because no split of either leaves a smaller command that runs. A block on one operation ends its command family.
+
+**Compound command.** Every other blocked command:
+
+- two or more operations joined or separated by `&&`, `||`, `;`, `&`, a newline, a pipe or a subshell;
+- one operation whose words the shell expands: a variable, a command substitution, a glob, or a tilde, brace, arithmetic or process-substitution expansion;
+- a heredoc with an unquoted delimiter whose body expands.
+
+A block on a compound command admits one rerun of its parts one at a time with every string written literally. Each value resolves before the operation runs:
+
+- a command substitution's or process substitution's inner command runs first on its own, and its output is the literal;
+- a variable's value is the literal Claude assigned it, or the output of `printenv <name>` run on its own;
+- a glob's matches are the entries `ls <directory>` or the file-search tool lists for its literal directory;
+- a tilde, brace or arithmetic expansion is written out as the literal words it produces.
+
+The operation then runs once with literal arguments. A part the guard blocks on its own is one operation and ends its family; split no part further.
+
+- NEVER: rewrite a blocked operation as another program, strip its flagged clause, or substitute an equivalent command — the rerun changes no operation and removes only the composition the guard objected to.
+
+</guard_block_partition>
