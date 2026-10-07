@@ -3,8 +3,9 @@
 Usage: convert_links.py ROOT [PATH ...]
 
 ROOT is the product root, the directory that holds ``spx/``. Each PATH is a
-file or directory beneath ROOT; the default is ``spx``. The script rewrites the
-Markdown files it reaches in place and prints one JSON document on stdout:
+file or directory beneath ``ROOT/spx``; the default is ``spx``. The script
+rewrites the Markdown files it reaches in place and prints one JSON document on
+stdout:
 
     {"schemaVersion": 1, "rewritten": [...], "unconvertible": [...]}
 
@@ -14,7 +15,7 @@ and ``target``; the run continues past it.
 
 The exit status is 0 when no citation remains unconvertible, 3 after the
 complete report when any does, and 1 when ROOT holds no ``spx/`` directory, a
-PATH is missing or lies outside ROOT, or another error stops the run.
+PATH is missing or lies outside ``ROOT/spx``, or another error stops the run.
 """
 
 from __future__ import annotations
@@ -380,11 +381,12 @@ def render_result(result: ConversionResult) -> str:
 
 
 def path_error(root: Path, path: str) -> str | None:
+    spec_tree = (root / SPEC_TREE_DIRECTORY).resolve()
     target = (root / path).resolve()
-    if not target.is_relative_to(root):
-        return f"error: {path} lies outside {root}"
+    if not target.is_relative_to(spec_tree):
+        return f"error: {path} lies outside {spec_tree}"
     if not target.exists():
-        return f"error: {path} does not exist beneath {root}"
+        return f"error: {path} does not exist beneath {spec_tree}"
     return None
 
 
@@ -395,7 +397,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "paths",
         nargs="*",
         default=[SPEC_TREE_DIRECTORY],
-        help="files or directories beneath ROOT to convert",
+        help="files or directories beneath ROOT/spx to convert",
     )
     try:
         arguments = parser.parse_args(argv)

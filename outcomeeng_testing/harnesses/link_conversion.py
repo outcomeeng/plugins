@@ -146,11 +146,14 @@ def tree_files(root: Path) -> dict[str, bytes]:
     }
 
 
-def convert_product_root(root: Path) -> ConversionObservation:
-    """Run the script over a product root and parse its result document."""
+def convert_product_root(root: Path, *paths: str) -> ConversionObservation:
+    """Run the script over a product root and parse its result document.
+
+    Each given path is passed to the script as an explicit PATH argument.
+    """
     fields = load_link_conversion_module().ResultField
     completed = subprocess.run(  # noqa: S603 — argv is the script's own command contract.
-        [sys.executable, str(CONVERSION_SCRIPT_PATH), str(root)],
+        [sys.executable, str(CONVERSION_SCRIPT_PATH), str(root), *paths],
         capture_output=True,
         text=True,
         check=False,
