@@ -28,6 +28,18 @@ Impact: a split or coalescence leaves open whether the successor carries the sou
 
 Revisit and settlement condition: step 2 names the successor's Maturity and the disposition of the source's completed Framed content, and one typed skill audit of `author-change` raises no `ambiguous-instruction` finding on it.
 
+## DEBT [composition]: author-change and release-change each compose the other
+
+Defect class: `composition`.
+
+Finding: `author-change`'s `<result>` composes `spec-tree:release-change` when the session holds the Change and "work stops or transfers with continuation remaining", and `release-change` step 2 composes `spec-tree:author-change` for the body revision while the session still holds the Change. `instructions:skill-auditor` run `2026-10-07_09-58-47-435-8a2d1e9aadb0` at head `84f119bf70464dc83a71927ce8c0d18e73bc39dc` raised it as a `blocking` finding, rule `unambiguous-instruction`: the release condition is not decidable from the skill's own state, and a revision inside a release can end by invoking a nested release. Base `0ec15959925f92f0b14891fe2cebd729651bf470` already carried both compositions and the condition; the changeset adds only the `submit` sentence, which is decidable from the persisted Maturity.
+
+Evidence: the sealed run above and the base text of both skills.
+
+Impact: every audit of `author-change` can raise the finding again, so its gate cannot close on this surface alone.
+
+Revisit and settlement condition: one of the two compositions is removed or made decidable from the composing skill's own inputs, and one typed skill audit of `author-change` and of `release-change` raises neither the nested-release finding nor a caller-dependence finding.
+
 ## DEBT [success-criteria]: author-change's Framed workflow states an unfalsifiable completeness criterion
 
 Defect class: `success-criteria`.
