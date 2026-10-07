@@ -21,7 +21,7 @@ Use skill `spec-tree:change-standards`. Invoke it with `Lifecycle`; it loads the
 <workflow>
 
 1. **Resolve the target.** Resolve the store and Product under `store-binding`. Read the first token of `$ARGUMENTS` as the target and an optional second token as the worktree root to claim for. An issue reference — `#N`, `owner/repo#N`, or an issue URL — names the Change; an `owner/repo` that differs from the overlay store is a blocked operation. When the argument is empty, list candidates with `gh issue list --repo <store> --state open --json number,title,assignees,url --limit 50`, read each candidate's Product, Maturity, and Lifecycle under `canonical-state`, and offer up to three through the structured-question tool: Changes whose Product equals the overlay Product, Lifecycle is `Available`, and assignee list is empty — Executable first, then any Maturity — each labelled with number, title, and Maturity. No candidate is a report, not a claim.
-2. **Verify the precondition.** Read the issue and its fields under `canonical-state`. A claim starts only when the issue is `OPEN`, Product equals the overlay Product, Maturity is one declared value, Lifecycle is `Available`, and the assignee list is empty. Any other state reports the terminal state, field mismatch, or holder verbatim and stops without mutation.
+2. **Verify the precondition.** Read the issue and its fields under `canonical-state`. A claim starts only when the issue is `OPEN`, Product equals the overlay Product, Maturity is one declared value, Lifecycle is `Available`, and the assignee list is empty. A Change at Lifecycle `Submitted` is reported as waiting for the Product's Maintainer's confirmation or rejection, and any other state reports the terminal state, field mismatch, or holder verbatim; each stops without mutation.
 3. **Resolve identities.** Resolve the current account once with `gh api user --jq .login`, require one non-empty login, and record it as `<current-login>`. Resolve the agent session id verbatim from `{!% if target == 'claude' %!}printenv CLAUDE_CODE_SESSION_ID{!% else %!}printenv CODEX_THREAD_ID{!% endif %!}` and this session's assigned worktree root from `git rev-parse --show-toplevel`. The claim root is the worktree root step 1 read, which must be an absolute path with no `.` or `..` segment, or this session's assigned root when step 1 read none. An empty value or a malformed claim root stops before any write.
 4. **Claim in order**, recording each successful write under `ordered-write`:
    1. `gh issue edit <N> --repo <store> --add-assignee @me`.
@@ -59,7 +59,7 @@ Return the issue URL, the readback values verbatim, the Maturity, the newest `Ha
 
 <success_criteria>
 
-- The Change was claimable from current store state before the first write, and any other state produced a report with no mutation.
+- The Change was claimable from current store state before the first write, and any other state produced a report with no mutation; a `Submitted` Change was reported as waiting for the Product's Maintainer's confirmation or rejection.
 - The claimed state reads back complete: Lifecycle `Claimed`, exactly the winning account as assignee, this session's Claim as the earliest since the last Handoff, and Product and Maturity unchanged.
 - A losing concurrent claim removed only its own holder record, verified the winner unchanged, reported `owned_elsewhere`, and executed nothing.
 - Every failed transition stopped before later mutation and reported the ordered successful writes, the failed operation, and the complete observed state.
