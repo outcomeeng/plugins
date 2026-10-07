@@ -5,7 +5,7 @@ description: >-
   Engineering Change record. NEVER use it to author a spec or review a code
   changeset.
 argument-hint: "<local Change path and intent | existing Change reference and revision>"
-allowed-tools: Read, Write, Edit, Grep, Glob, collaboration.spawn_agent, collaboration.wait_agent, Bash(gh issue view:*), Bash(gh issue list:*), Bash(gh issue create:*), Bash(gh issue edit:*), Bash(gh api graphql:*), Bash(gh api repos/*/issues/*/dependencies/blocked_by:*), Bash(gh api repos/*/issues/*/dependencies/blocked_by/*:*), Bash(gh api repos/*/issues/* --jq .id), Bash(spx change draft create:*), Bash(spx change draft list:*), Bash(spx verification run input:*), Bash(spx verification run status:*), Bash(spx verification run render:*), Bash(printf:*)
+allowed-tools: Read, Write, Edit, Grep, Glob, collaboration.spawn_agent, collaboration.wait_agent, Bash(gh issue view:*), Bash(gh issue create:*), Bash(gh issue edit:*), Bash(gh api graphql:*), Bash(gh api repos/*/issues/*/dependencies/blocked_by:*), Bash(gh api repos/*/issues/*/dependencies/blocked_by/*:*), Bash(gh api repos/*/issues/* --jq .id), Bash(spx change draft create:*), Bash(spx change draft list:*), Bash(spx verification run input:*), Bash(spx verification run render:*), Bash(printf:*)
 ---
 
 <objective>

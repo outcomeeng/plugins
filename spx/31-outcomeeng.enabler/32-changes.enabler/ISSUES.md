@@ -8,6 +8,8 @@ Finding: `author-change` grants `Bash(spx verification run input:*)`, `Bash(spx 
 
 Evidence: `src/plugins/spec-tree/skills/author-change/SKILL.md:8` declares all three grants, and the hosted review at [PR #583](https://github.com/outcomeeng/plugins/pull/583#issuecomment-5730664407) identified no corresponding invocation in the workflow. `instructions:skill-auditor` run `2026-10-07_08-30-45-540-0d732cbf18ec` raised it again as rule `allowed-tools-narrowest-grant` for `Bash(spx verification run status:*)` at `SKILL.md:8`, and run `2026-10-07_08-39-58-900-2429c7e936a6` a third time; the grant is unchanged from the base.
 
+The repair of Change outcomeeng/changes#333 removes the `status` grant and the unused `gh issue list` grant from `author-change`; `input` and `render` stay, because the audit gate runs `spx verification run input` and the returned `renderCommand`. Typed skill audit run `2026-10-07_09-44-30-979-fd4d185edb62` raised the `status` grant a fourth time before that removal.
+
 Impact: the skill carries excess capability beyond the authority required by its delegating workflow.
 
 Successor: the Proposed Change filed after Change #89 merges for the agent-run-journal sequence collision, carrying this defect as its second item.

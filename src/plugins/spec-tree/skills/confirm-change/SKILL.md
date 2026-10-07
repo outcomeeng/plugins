@@ -20,7 +20,7 @@ Use skill `spec-tree:change-standards`. Invoke it with `Lifecycle`; it loads the
 
 <workflow>
 
-1. **Resolve the target.** Resolve the store and Product under `store-binding`. Read the first token of `$ARGUMENTS` as the issue reference — `#N`, `owner/repo#N`, or an issue URL; a reference whose repository differs from the overlay store, in the `owner/repo#N` form or in an issue URL, is a blocked operation, and an absent reference stops the invocation naming the missing reference. Read an optional second token that equals `reject` exactly, followed by the operator's stated reason as the rest of the text; any other second token is refused naming `reject` as the one accepted value, and a `reject` with no reason asks for the reason through the structured-question tool, continues the rejection with the answer, and stops without a write on an empty answer.
+1. **Resolve the target.** Resolve the store and Product under `store-binding`. Read the first token of `$ARGUMENTS` as the issue reference — `#N`, `owner/repo#N`, or an issue URL; a reference whose repository differs from the overlay store, in the `owner/repo#N` form or in an issue URL, is a blocked operation, and an absent reference stops the invocation naming the missing reference. Read an optional second token that equals `reject` exactly, followed by the operator's stated reason as the rest of the text; any other second token is refused naming `reject` as the one accepted value, and a `reject` with no reason asks for the reason through the structured-question tool, continues the rejection with the answer, and stops without a write on an empty answer. The confirmation or rejection is the operator's stated decision in this conversation; when the conversation holds none, ask for it through the structured-question tool before any write.
 2. **Verify the precondition.** Read the issue and its fields under `canonical-state`. A confirmation or rejection starts only when the issue is `OPEN`, Product equals the overlay Product, Lifecycle is `Submitted`, the assignee list is empty, and Maturity is `Proposed`, `Framed`, or `Sliced`. Any other state is reported verbatim and stops without mutation.
 3. **Resolve identities.** Resolve the session id from `{!% if target == 'claude' %!}printenv CLAUDE_CODE_SESSION_ID{!% else %!}printenv CODEX_THREAD_ID{!% endif %!}`. The harness is `{!% if target == 'claude' %!}Claude Code{!% else %!}Codex{!% endif %!}`. Take the delegate — the name this session acts under — and the operator it acts for from the name each has been given in this conversation, copied verbatim; when either is absent, ask for it through the structured-question tool, and never infer a name. An empty value stops before any write.
 4. **Compose the comment** under `confirmation-record`: `Confirmation: <Maturity>` with the Maturity read in step 2, or `Rejection: <Maturity>` when the second token is `reject`, then the lines `Delegate`, `For`, `Harness`, and `Session` in that order, and for a rejection the `Reason` line last. Inspect the text under `write-inspection`.
@@ -33,14 +33,14 @@ Use skill `spec-tree:change-standards`. Invoke it with `Lifecycle`; it loads the
 
 <result>
 
-Return the issue URL, the readback values verbatim, and whether the comment is a confirmation or a rejection with its Maturity. A confirmed Change at `Proposed`, `Framed`, or `Sliced` is claimable through `claim-change` and may advance past that Maturity through `author-change`; a rejected Change is claimable and `author-change` lowers its Maturity.
+Return the issue URL, the readback values verbatim, and whether the comment is a confirmation or a rejection with its Maturity. A confirmed Change at `Proposed`, `Framed`, or `Sliced` is claimable through `claim-change` and may advance past that Maturity through `author-change`; a rejected Change is claimable, `author-change` lowers a rejection at `Framed` or `Sliced` one level, and a rejection at `Proposed` leaves `Proposed`.
 
 </result>
 
 <success_criteria>
 
 - The Change was `Submitted` and at `Proposed`, `Framed`, or `Sliced` from current store state before the first write, and any other state produced a report with no mutation.
-- The comment carries exactly the lines `confirmation-record` states for its kind, names the delegate and the operator without inference, and passed `write-inspection` before posting.
+- The comment records the operator's stated decision, carries exactly the lines `confirmation-record` states for its kind, names the delegate and the operator without inference, and passed `write-inspection` before posting.
 - The comment was posted before Lifecycle moved, and the move wrote neither Maturity nor any body section.
 - The readback shows Lifecycle `Available`, an empty assignee list, Product and Maturity unchanged, and the exact posted comment as the deciding comment.
 - Every failed transition stopped before later mutation and reported the ordered successful writes, the failed operation, and the complete observed state.
