@@ -59,6 +59,11 @@ EXPECTED_REPORT_FILE: Final = FIXTURE_ROOT / "expected-report.tsv"
 UNTOUCHED_FILES_FILE: Final = FIXTURE_ROOT / "untouched-forms.txt"
 OUTSIDE_SPEC_TREE_FIXTURE: Final = INPUT_TREE / "docs"
 CONVERTIBLE_ONLY_TREE: Final = FIXTURE_ROOT / "convertible-only"
+# A fixture tree models a product tree whose nodes carry a `tests/` directory, but the
+# placement rule bans a `tests/` directory under the test-infrastructure home, so the
+# stored tree names it `test-files` and each copy restores the name the script sees.
+STORED_TESTS_DIRECTORY: Final = "test-files"
+MATERIALIZED_TESTS_DIRECTORY: Final = "tests"
 
 LINK_CONVERSION_PROPERTY_SEED: Final = 20261006
 LINK_CONVERSION_PROPERTY_EXAMPLES: Final = 25
@@ -120,10 +125,22 @@ def load_link_conversion_module() -> ModuleType:
     return _load_source_module("convert_links", CONVERSION_SCRIPT_PATH)
 
 
+def _materialized_path(relative: Path) -> str:
+    """Return a path from a tree root with each stored tests directory renamed."""
+    return "/".join(
+        MATERIALIZED_TESTS_DIRECTORY if part == STORED_TESTS_DIRECTORY else part
+        for part in relative.parts
+    )
+
+
 def tree_files(root: Path) -> dict[str, bytes]:
-    """Return the bytes of every file under a root, keyed by path from that root."""
+    """Return the bytes of every file under a root, keyed by path from that root.
+
+    A stored tests directory keys as the directory the script sees, so a stored
+    fixture tree and a materialized copy of it compare equal.
+    """
     return {
-        path.relative_to(root).as_posix(): path.read_bytes()
+        _materialized_path(path.relative_to(root)): path.read_bytes()
         for path in sorted(root.rglob("*"))
         if path.is_file()
     }
@@ -160,10 +177,17 @@ def convert_product_root(root: Path) -> ConversionObservation:
 
 @contextmanager
 def copied_tree(source: Path) -> Iterator[Path]:
-    """Yield a temporary copy of a tree and remove it on exit."""
+    """Yield a temporary copy of a tree, with its tests directories restored."""
     with TemporaryDirectory() as tmp:
         root = Path(tmp) / "root"
         shutil.copytree(source, root)
+        for stored in sorted(
+            root.rglob(STORED_TESTS_DIRECTORY),
+            key=lambda path: len(path.parts),
+            reverse=True,
+        ):
+            if stored.is_dir():
+                stored.rename(stored.with_name(MATERIALIZED_TESTS_DIRECTORY))
         yield root
 
 
