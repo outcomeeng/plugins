@@ -132,12 +132,14 @@ A blocked result names exactly one of these reasons:
 6. **Read authority.** Use skill `spec-tree:change-standards`.
    Invoke it with `Lifecycle`; it loads the common contract and the Lifecycle
    rules. When the request carries `issue`, request `read-authority` with it;
-   a blocked result returns `BLOCKED`. When it carries none, the Change has no
-   store record, so its events and comments are empty. Judge
-   `maturity-and-authority` from those events and comments under
+   a blocked result returns `BLOCKED`. Judge the authority clauses of
+   `maturity-and-authority` from the returned events and comments under
    `authority-read`, for every Maturity level the declared Maturity has
    passed, and record a finding naming each level whose authority the store
-   does not show, with the event or comment observed as evidence.
+   does not show, with the event or comment observed as evidence. When the
+   request carries no `issue`, the Change has no store record and no authority
+   event exists yet: judge no authority, record no authority finding, and
+   judge the rest of the rule as usual.
 7. **Record.** Once the complete inspection has finished, request `add-scope`
    for the root unit, then each child unit, then `add-finding` for each
    finding in `<persistence_contract>` order. A judged rule uses `audited`
@@ -231,7 +233,7 @@ observedKeys: <JSON-array-of-key-occurrences-in-source-order>
 
 This result is neither approval nor rejection and creates no SPX run.
 
-For a completed verdict, return only the `finish` result object, unchanged:
+For a completed verdict, return only the `finish` result object, unchanged, and, when the request carried no `issue`, the one line `authority not judged: no store record` before it:
 
 | Field           | Content                                                                                                                                                                      |
 | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -297,7 +299,7 @@ the runner over stdin and stdout, and return the `finish` result, whose
 - Every common record rule and every criterion in the one Definition of Ready
   selected by the declared maturity has a reconciled judgment; every rejected
   finding names the violated rule, artifact location, and supporting evidence.
-- Authority is judged only from the store's field-change events and comments that `read-authority` returned, or from their absence when the request names no issue, and never from the body.
+- Authority is judged only from the store's field-change events and comments that `read-authority` returned and never from the body; a request that names no issue judges no authority, and its verdict says so.
 - The audit's only state change is its own SPX verification-run journal; no
   file is written, and the candidate, product content, Change store, claims,
   and knowledge bundles remain unchanged.
