@@ -250,6 +250,7 @@ The managing flow satisfies its contract when, at minimum:
 
 - /merging-standards and /commit-changes are loaded before any inspection or push, `merge-policy.md` is read directly from /merging-standards `<reference_index>` before any tagged policy section is used, and every management pass gets a fresh `spx worktree status` proof through `<occupancy_preflight>` before checkout-sensitive mutation.
 - Each pass inspects all three surfaces from /merging-standards `<review_inspection>`.
+- A review-thread comments read whose page 10 returned 100 comments ended the pass with `MERGE_BLOCKED:review-thread-comments-bound`, naming the bound `100 comments per page, 10 pages`, and evaluated no readiness predicate from the partial read.
 - Each pass checks base drift in the same checkpoint as review inspection; a branch behind `origin/<base>` is rebased per /merging-standards `<base_sync>` before the queue is driven, regardless of whether a review has landed or carries findings.
 - Every finding is labeled with one of `BLOCKING` / `DEBT` — never `FOLLOW-UP`, never a severity rank, never a legacy class label — and acted on by validity and phase, never by severity.
 - The work queue fixes every valid in-scope finding the open-PR review surfaces — no deferral of in-scope work; a `DEBT` finding the author judges out of scope is recorded in `ISSUES.md` / `PLAN.md` with a recorded reason and tracked, not a merge blocker.

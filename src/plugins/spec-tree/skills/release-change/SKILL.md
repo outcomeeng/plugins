@@ -60,6 +60,7 @@ Return the issue URL, the readback values verbatim, the pushed branch or PR, and
 - This session's worktree held the Change from current store state before the first write, and any other state produced a report with no mutation.
 - Every session-owned change is committed; a checkout carrying local work has its work branch on origin at the local tip, the overlay-declared preflight and post-cleanup checks passed around the detach, and no longer has the branch checked out; a clean checkout without local work names `none` as `Branch or PR`.
 - The Handoff carries exactly the five continuation lines, refinement landed in the body before it, and it passed `write-inspection` before posting.
+- A blocker read that returned a page of 100 entries stopped the release before the Handoff posted and named the bound `100 blockers, one page`.
 - The released state reads back complete: Lifecycle `Available`, an empty assignee list, the exact new Handoff as the newest `Handoff:`, Product equal to the overlay Product, and Maturity equal to the value read after step 2 completes.
 - Every failed transition stopped before later mutation and reported the ordered successful writes, the failed operation, and the complete observed state.
 
