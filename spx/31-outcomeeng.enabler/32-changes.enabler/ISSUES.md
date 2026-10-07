@@ -256,17 +256,17 @@ Impact: a Handoff author cannot tell whether the two optional lines break the "e
 
 Revisit and settlement condition: the rule states the five required lines and the two optional lines in one consistent statement, and `release-change` matches it; one typed skill audit of `change-standards` then raises no `audit-skill-ambiguity` finding.
 
-## DEBT [bound]: release-change and author-change read a Change's blockers without a named page bound
+## DEBT [bound]: author-change reads a Change's blockers without a named page bound
 
 Defect class: `bound`.
 
-Finding: product property 3 of `spx/15-agent-tools.pdr.md` requires a skill that reads a collection endpoint to name its page bound, and two Change skills read the blocker collection `gh api repos/<store>/issues/<N>/dependencies/blocked_by` with none. `src/plugins/spec-tree/skills/release-change/SKILL.md` step 4 (line 33) composes the Handoff's `Blockers` line from the bare call, and `src/plugins/spec-tree/skills/author-change/SKILL.md` line 112 reads the native blockers with it. The `allowed-tools` grants of `release-change` (line 9) and `execute-change` (line 6) are the exact string `Bash(gh api repos/*/issues/*/dependencies/blocked_by)`, which matches the bare form and no form that adds `--method GET -F per_page=100`. `execute-change` step 3 (line 84) reads a Change's blockers under `canonical-state`, so it follows the bounded form that its own grant cannot run.
+Finding: product property 3 of `spx/15-agent-tools.pdr.md` requires a skill that reads a collection endpoint to name its page bound, and `src/plugins/spec-tree/skills/author-change/SKILL.md` line 112 reads the native blockers with the bare call `gh api repos/<store>/issues/<N>/dependencies/blocked_by`. The `change-standards` reference `lifecycle.md`, `release-change` step 4, and the `allowed-tools` grants of `release-change` and `execute-change` name the bounded form `--method GET -F per_page=100` for the same read.
 
-Evidence: a search of `src/plugins/` for `blocked_by` at head `8757b2d484f3f29773abc3a4cb8d6dfd66322197` returns those two body reads and the two grants. The `change-standards` reference `lifecycle.md` names the bounded form for the same read.
+Evidence: a search of `src/plugins/` for `blocked_by` returns the `author-change` read at line 112 as the one blocker read that names no page size; the `author-change` grant is the prefix `Bash(gh api repos/*/issues/*:*)`, which admits the bounded form.
 
-Impact: a Change with more blockers than the endpoint returns per page gives a Handoff or a blocker comparison built from a partial read, with no blocked result naming the bound.
+Impact: a Change with more blockers than the endpoint returns per page gives a blocker comparison in `author-change` built from a partial read, with no blocked result naming the bound.
 
-Revisit and settlement condition: `release-change` and `author-change` read the blockers as one page of 100 and return a blocked result naming `100 blockers, one page` when the page holds 100 entries, the grants of `release-change` and `execute-change` admit that form, and one typed skill audit of each of `release-change`, `execute-change`, and `author-change` follows the edit. The edit lands with the `author-change` revision of Change outcomeeng/changes#333, which changes the same skill.
+Revisit and settlement condition: `author-change` reads the blockers as one page of 100 and returns a blocked result naming `100 blockers, one page` when the page holds 100 entries, and one typed skill audit of `author-change` follows the edit. The edit lands with the `author-change` revision of Change outcomeeng/changes#333, which changes the same skill.
 
 ## DEBT [bound]: claim-change lists candidates at a bound and returns no blocked result when the list fills it
 
