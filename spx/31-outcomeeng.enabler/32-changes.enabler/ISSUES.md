@@ -279,7 +279,9 @@ Finding: `instructions:skill-auditor` runs `2026-10-07_06-54-14-356-29144e907dbd
 - Rule `ambiguous_instruction`, line 38 (step 6): the readback compares Maturity with "the value read after step 2 completes", and no step instructs that read.
 - Rule `tool-restriction-security`, line 9 (`allowed-tools`): the grants `Bash(git branch --show-current)` and the operator-question tool appear in no workflow step. Line 9 is a changed line, and the changeset changes only its blocker-read grant.
 
-Evidence: the two sealed runs above; the diff range is the one named in the finding.
+A third run, `2026-10-07_08-52-18-926-0f98a52ab60b` at head `5261c8caaab4cdb1b7ba770e09cf242d2e792f7d` over the diff range `0ec15959925f92f0b14891fe2cebd729651bf470` to that head, rejected on two `debt` findings: the grants of line 10 (`Bash(git branch --show-current)` and the operator-question tool) and the contradiction between step 3.1 and the step 2 store write, which the success criterion for an `Executable` refusal repeated. The criterion lies on text the `submit` result added and now says "refused without further mutation after the body revision"; the grants and step 3.1 lie on untouched text and stay here.
+
+Evidence: the three sealed runs above; the diff range is the one named in each finding.
 
 Impact: a reader of the skill meets a stop guarantee that a prior store write contradicts, a readback comparison with no defined source, and two grants no step uses.
 
