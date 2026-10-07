@@ -28,6 +28,18 @@ Impact: a split or coalescence leaves open whether the successor carries the sou
 
 Revisit and settlement condition: step 2 names the successor's Maturity and the disposition of the source's completed Framed content, and one typed skill audit of `author-change` raises no `ambiguous-instruction` finding on it.
 
+## DEBT [consistency]: author-change's one-Change principle and success criterion leave out the Sliced split route
+
+Defect class: `consistency`.
+
+Finding: `author-change` says "Operate on one Change" in `<essential_principles>` and "Exactly one local candidate and one configured-store Change represent the intended Output" in `<success_criteria>`, while `workflows/sliced.md` claims several source Changes, authors several successors, and closes the sources `Refined` in one invocation. `instructions:skill-auditor` run `2026-10-07_10-03-28-916-5ca49b9de058` at head `e0d4b31a2ce2fe2b26eb8ea77dead1fecc610b21` raised it as rule `internal-consistency`, severity `debt`. Base `0ec15959925f92f0b14891fe2cebd729651bf470` carries all three texts, and the changeset changes none of them.
+
+Evidence: the sealed run above and the base text of the three places.
+
+Impact: a reader cannot tell whether the split route is in scope or how its success is judged.
+
+Revisit and settlement condition: the principle and the success criteria state the split and coalescence route as an explicit exception with its own success condition, and one typed skill audit of `author-change` raises no finding on it.
+
 ## DEBT [composition]: author-change and release-change each compose the other
 
 Defect class: `composition`.
