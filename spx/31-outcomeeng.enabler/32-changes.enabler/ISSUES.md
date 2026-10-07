@@ -6,7 +6,7 @@ Defect class: `capability`.
 
 Finding: `author-change` grants `Bash(spx verification run input:*)`, `Bash(spx verification run status:*)`, and `Bash(spx verification run render:*)`, although its delegating workflow does not use them.
 
-Evidence: `src/plugins/spec-tree/skills/author-change/SKILL.md:8` declares all three grants, and the hosted review at [PR #583](https://github.com/outcomeeng/plugins/pull/583#issuecomment-5730664407) identified no corresponding invocation in the workflow.
+Evidence: `src/plugins/spec-tree/skills/author-change/SKILL.md:8` declares all three grants, and the hosted review at [PR #583](https://github.com/outcomeeng/plugins/pull/583#issuecomment-5730664407) identified no corresponding invocation in the workflow. `instructions:skill-auditor` run `2026-10-07_08-30-45-540-0d732cbf18ec` raised it again as rule `allowed-tools-narrowest-grant` for `Bash(spx verification run status:*)` at `SKILL.md:8`; the grant is unchanged from the base.
 
 Impact: the skill carries excess capability beyond the authority required by its delegating workflow.
 
@@ -254,7 +254,7 @@ Evidence: a search of `src/plugins/` for `blocked_by` returns the `author-change
 
 Impact: a Change with more blockers than the endpoint returns per page gives a blocker comparison in `author-change` built from a partial read, with no blocked result naming the bound.
 
-Revisit and settlement condition: `author-change` reads the blockers as one page of 100 and returns a blocked result naming `100 blockers, one page` when the page holds 100 entries, and one typed skill audit of `author-change` follows the edit. The edit lands with the `author-change` revision of Change outcomeeng/changes#333, which changes the same skill.
+Revisit and settlement condition: `author-change` reads the blockers as one page of 100 and returns a blocked result naming `100 blockers, one page` when the page holds 100 entries, and one typed skill audit of `author-change` follows the edit. The edit landed with the `author-change` revision of Change outcomeeng/changes#333, in `<persistence>` step 3 and its readback, after the two skill-auditor runs the cap allows; the audit that follows it remains.
 
 ## DEBT [skill-audit]: release-change carries four skill-audit debt findings on untouched text
 

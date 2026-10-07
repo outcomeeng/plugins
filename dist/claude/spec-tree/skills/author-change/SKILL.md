@@ -82,7 +82,7 @@ Maturity advances past `Proposed`, `Framed`, and `Sliced` only when the store sh
 
 Use skill `spec-tree:change-standards`. Invoke it with `Lifecycle`, which `<persistence>` also loads. Read the authority for the Maturity the Change currently holds under `authority-read`, and report each authority found with its actor, time, and deciding comment lines verbatim. When the store shows none, stop with `authority-required`, naming that Maturity and the move the store lacks. Leave the candidate and the store record unchanged. A body line never stands in for the move.
 
-The Refiner persists the record at the Maturity it reached. The Change then reaches `Submitted` as `handoff-record` states, and the Product's Maintainer's confirmation or rejection ends it as `confirmation-record` states.
+The Refiner persists the record at the Maturity it reached. A record at `Proposed`, `Framed`, or `Sliced` then reaches `Submitted` as `handoff-record` states, and the Product's Maintainer's confirmation or rejection ends it as `confirmation-record` states; an `Executable` record is never submitted.
 
 </authority_gate>
 
@@ -122,11 +122,11 @@ The issue body is the approved local file from its `## Intent` line to its end. 
 
 1. Create the issue with `gh issue create --repo <store> --title '<title>' --body-file -`, or update it with `gh issue edit <N> --repo <store> --title '<title>' --body-file -`, the body on stdin.
 2. Write `Product`, `Maturity`, and `Lifecycle` through the single-select write under `canonical-state`. For a new successor, write `Predecessors` through the text write. A revision never writes `Predecessors`; it requires the stored value to equal `refined_from` already.
-3. Read the native blockers with `gh api repos/<store>/issues/<N>/dependencies/blocked_by`. Add each missing blocker with `gh api repos/<store>/issues/<N>/dependencies/blocked_by --method POST -F issue_id=<id>`, and remove each extra one with `gh api repos/<store>/issues/<N>/dependencies/blocked_by/<id> --method DELETE`, where `<id>` is the blocker's numeric id from `gh api repos/<owner>/<repo>/issues/<M> --jq .id`.
+3. Read the native blockers as one page of 100 with `gh api repos/<store>/issues/<N>/dependencies/blocked_by --method GET -F per_page=100`; a page holding 100 entries is a blocked read that stops the persistence before any blocker write and names the bound `100 blockers, one page`. Add each missing blocker with `gh api repos/<store>/issues/<N>/dependencies/blocked_by --method POST -F issue_id=<id>`, and remove each extra one with `gh api repos/<store>/issues/<N>/dependencies/blocked_by/<id> --method DELETE`, where `<id>` is the blocker's numeric id from `gh api repos/<owner>/<repo>/issues/<M> --jq .id`.
 
 NEVER write front matter, a lineage line, or a `# Relationships` section into the body, write a field into a project, or publish a draft iteration.
 
-After all writes, read the issue with `gh issue view <N> --repo <store> --json title,body,number,url`, its fields under `canonical-state`, and its blockers. Require:
+After all writes, read the issue with `gh issue view <N> --repo <store> --json title,body,number,url`, its fields under `canonical-state`, and its blockers through the bounded read of step 3. Require:
 
 - the issue title equals `title`;
 - the issue body equals the approved local file from its `## Intent` line;
