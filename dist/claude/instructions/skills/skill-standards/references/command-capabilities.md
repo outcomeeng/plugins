@@ -5,7 +5,7 @@
 - `<dynamic_context>` — `!`-backtick context injection
 - `<tool_restriction_security>` — `allowed-tools` as a security boundary
 - `<file_references>` — `@` product files and the skill-directory token
-- `<guard_block_partition>` — the two command classes a dangerous-command guard block decides between
+- `<guard_block_partition>` — the three outcomes a dangerous-command guard block decides between
 
 </contents>
 
@@ -91,19 +91,21 @@ NEVER write Codex's skill-directory token in source. NEVER reference bundled plu
 
 <guard_block_partition>
 
-A dangerous-command guard block on one command ends its command family or admits one split rerun, and the command's class decides which. The two classes are complements: every blocked command is exactly one of them.
+A dangerous-command guard block on one command ends its command family or admits one split rerun, and the command decides which. The three outcomes partition every blocked command: it falls in exactly one.
 
 **One operation.** A single simple command whose every word is a literal, with no shell expansion. A heredoc that feeds one command is one operation unless its delimiter is unquoted and its body expands, and so is a pipe whose first stage only supplies the payload the one reading command consumes on stdin, because no split of either leaves a smaller command that runs; either form is compound when any word of the command or of its payload stage expands. A block on one operation ends its command family.
 
+**A composition the parts cannot carry.** A command holding a process substitution, a pipe between two operations, a background `&`, or a subshell. A process substitution has no literal form, because `<(cmd)` hands the command a path to a stream and not the stream's text; a pipe carries a stream, a background `&` carries concurrency, and a subshell carries shell state such as a `cd`. Parts run one at a time carry none of these. A block on such a command ends its command family, even when it also holds a join or an expansion.
+
 **Compound command.** Every other blocked command:
 
-- two or more operations joined or separated by `&&`, `||`, `;`, `&`, a newline, a pipe or a subshell, except the heredoc and payload-pipe forms above while every word of them is a literal;
-- one operation whose words the shell expands: a variable, a command substitution, a glob, or a tilde, brace, arithmetic or process-substitution expansion;
+- two or more operations joined or separated by `&&`, `||`, `;` or a newline;
+- one operation whose words the shell expands: a variable, a command substitution, a glob, or a tilde, brace or arithmetic expansion;
 - a heredoc with an unquoted delimiter whose body expands.
 
-A block on a compound command admits one rerun of its parts one at a time with every string written literally. Each value resolves before the operation runs:
+A block on a compound command admits one rerun of its parts one at a time with every string written literally, in their original order: after `&&` the next part runs only when the part before it exited zero, after `||` only when it exited nonzero, and after `;` or a newline regardless. Each value resolves before the operation runs:
 
-- a command substitution's or process substitution's inner command runs first on its own, and its output is the literal;
+- a command substitution's inner command runs first on its own, and its output is the literal;
 - a variable's value is the literal Claude assigned it, or the output of `printenv <name>` run on its own;
 - a glob's matches are the entries of `ls <directory>` or the file-search tool for its literal directory that match the pattern, and a glob with a wildcard in a directory component resolves through the file-search tool on the full pattern;
 - a tilde, brace or arithmetic expansion is written out as the literal words it produces;
