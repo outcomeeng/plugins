@@ -24,3 +24,8 @@
 Bare prose: the parse rule lives in 18-alpha-parse.adr.md.
 Code span relative: [`spx/32-alpha.capability/18-alpha-parse.adr.md`](spx/32-alpha.capability/18-alpha-parse.adr.md); code span climb: [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md).
 Code span non-decision: `tests/test_alpha.mapping.l1.py`.
+- Link out of the tree, climbing (reported, untouched): [outside](../../docs/outside.md)
+- Link out of the tree, leading slash (reported, untouched): [outside](/docs/outside.md)
+- Evidence link into a descendant node (reported, untouched): [test](21-alpha-child.domain/tests/test_child.scenario.l1.py)
+- Evidence link that climbs (reported, untouched): [test](../32-alpha.capability/tests/test_alpha.mapping.l1.py)
+Code span, placeholder beside a path: `NN-decision.pdr.md with 18-alpha-parse.adr.md`.

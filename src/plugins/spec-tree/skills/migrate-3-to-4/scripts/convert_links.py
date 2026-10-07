@@ -36,6 +36,9 @@ MARKDOWN_SUFFIX = ".md"
 DECISION_SUFFIXES = (".adr.md", ".pdr.md")
 FORM_BARE_PROSE = "text-decision"
 FORM_UNRESOLVABLE = "broken"
+FORM_OUTSIDE_TREE = "outside-tree"
+FORM_EVIDENCE_LINK = "evidence-link"
+EVIDENCE_LINK_TEXTS = frozenset({"test", "eval", "probe"})
 EXIT_OK = 0
 EXIT_ERROR = 1
 EXIT_UNCONVERTIBLE = 3
@@ -146,6 +149,10 @@ def resolve_target(context: FileContext, path: str) -> Path | None:
     return target
 
 
+def is_in_spec_tree(context: FileContext, target: Path) -> bool:
+    return target.is_relative_to(context.root / SPEC_TREE_DIRECTORY)
+
+
 def reaches_into_descendant(context: FileContext, target: Path) -> bool:
     if not target.is_relative_to(context.node_directory):
         return False
@@ -180,7 +187,7 @@ class LineConverter:
         file = self._context.file.relative_to(self._context.root).as_posix()
         self.findings.append(Finding(file, self._line_number, form, target))
 
-    def _convert_href(self, href: str) -> str | None:
+    def _convert_href(self, href: str, text: str | None = None) -> str | None:
         """Return the converted href, or None when the href stays as written."""
         path, separator, fragment = href.partition("#")
         if SCHEME.match(href) or not path or has_placeholder(path):
@@ -191,11 +198,17 @@ class LineConverter:
             return None
         if not needs_conversion(self._context, path, target):
             return None
+        if not is_in_spec_tree(self._context, target):
+            self._report(FORM_OUTSIDE_TREE, href)
+            return None
+        if text in EVIDENCE_LINK_TEXTS:
+            self._report(FORM_EVIDENCE_LINK, href)
+            return None
         return tree_absolute(self._context, path, target) + separator + fragment
 
     def _link(self, match: re.Match[str]) -> str:
         href = match["href"]
-        converted = self._convert_href(href)
+        converted = self._convert_href(href, match["text"])
         if converted is None:
             return match[0]
         old_path = href.partition("#")[0]
@@ -207,15 +220,21 @@ class LineConverter:
 
     def _code_span(self, match: re.Match[str]) -> str:
         body = match["body"]
-        if has_placeholder(body):
-            return match[0]
         if not CODE_SPAN_DECISION.fullmatch(body):
-            for held in CODE_SPAN_HELD_DECISION.finditer(body):
-                self._report(FORM_BARE_PROSE, held[0])
+            for path in PROSE_DECISION.finditer(body):
+                if has_placeholder(path[0]):
+                    continue
+                for held in CODE_SPAN_HELD_DECISION.finditer(path[0]):
+                    self._report(FORM_BARE_PROSE, held[0])
+            return match[0]
+        if has_placeholder(body):
             return match[0]
         target = resolve_target(self._context, body)
         if target is None:
             self._report(FORM_UNRESOLVABLE, body)
+            return match[0]
+        if not is_in_spec_tree(self._context, target):
+            self._report(FORM_OUTSIDE_TREE, body)
             return match[0]
         converted = tree_absolute(self._context, body, target)
         return f"[`{converted}`]({converted})"

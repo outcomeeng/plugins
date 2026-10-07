@@ -7,7 +7,7 @@ allowed-tools: Read, Bash(git rev-parse:*), Bash(git status:*), Bash(python3 "${
 
 <objective>
 
-Every decision citation in the product's `spx/` tree written as a Markdown link with a tree-absolute href, every `../`, leading-slash, out-of-node, and descendant-node link carrying a tree-absolute href, and each citation the conversion cannot convert listed in a report and left unchanged.
+Every decision citation in the product's `spx/` tree written as a Markdown link with a tree-absolute href, every `../`, leading-slash, out-of-node, and descendant-node link to a file in `spx/` carrying a tree-absolute href, and each citation the conversion cannot convert listed in a report and left unchanged. Text inside a fenced code block and a path carrying a template placeholder fall outside the conversion and the report.
 
 </objective>
 
@@ -37,7 +37,7 @@ The conversion rewrites the Markdown files beneath `<product-root>/spx/`:
 
 - A code span holding a decision path becomes a Markdown inline link whose text and href are the full path from `spx/`.
 - A link to a decision record, including a decision of the citing node, gets the full path from `spx/` as its href; its text becomes that path only when its text was the path it replaces.
-- A link that climbs with `../`, leads with a slash, leaves its node, or reaches into a descendant node gets a tree-absolute href; its text stays.
+- A link to a file in `spx/` that climbs with `../`, leads with a slash, leaves its node, or reaches into a descendant node gets a tree-absolute href; its text stays. A link to a file outside `spx/`, and an assertion evidence link that would need a changed href, stay as written and are reported.
 - A reference-style definition follows the rules of an inline link and stays a reference definition.
 - Fenced code blocks stay untouched.
 
@@ -61,7 +61,7 @@ Run the same command a second time. Its `rewritten` list is empty and its exit s
 
 <step name="report">
 
-Present the complete report of the first run: the rewritten files, then every unconvertible citation with its file, line, form, and target. The form `text-decision` is a decision path written as bare prose or held in a code span beside other text; the form `broken` is a target that does not exist. Leave each reported citation unchanged for the operator. After exit status 3, state that the operator resolves each reported citation and runs the conversion again.
+Present the complete report of the first run: the rewritten files, then every unconvertible citation with its file, line, form, and target. The form `text-decision` is a decision path written as bare prose or held in a code span beside other text; the form `broken` is a target that does not exist; the form `outside-tree` is a link to a file outside `spx/`, which no 4.0 link shape reaches; the form `evidence-link` is an assertion evidence link, a link whose text is `test`, `eval`, or `probe`, that leaves its node, which only moves the assertion or its evidence repairs. Leave each reported citation unchanged for the operator. After exit status 3, state that the operator resolves each reported citation and runs the conversion again.
 
 </step>
 
@@ -86,7 +86,8 @@ The conversion ran over fixture trees before release, with these recorded result
 - A second run over a converted tree rewrites nothing and prints the same report.
 - A root without `spx/` exits 1 and changes no file.
 - A tree holding an undecodable file exits 1, names the file, and lists the files already rewritten.
-- A path with a template placeholder stays unchanged and unreported; a bare prose path and a decision path a code span holds beside other text each print as `text-decision` and stay unchanged.
+- A path with a template placeholder stays unchanged and unreported; a bare prose path and a decision path a code span holds beside other text each print as `text-decision` and stay unchanged, including a concrete path beside a placeholder path in one code span.
+- A link to a file outside `spx/` prints as `outside-tree`, and an assertion evidence link that would need a changed href prints as `evidence-link`; both stay unchanged.
 
 </testing>
 
@@ -104,6 +105,6 @@ The conversion ran over fixture trees before release, with these recorded result
 - The second run's `rewritten` list is empty and its exit status equals the first run's.
 - Every rewritten file and every unconvertible citation, with its file, line, form, and target, appears in the presented report.
 - Every citation the report lists as unconvertible stands unchanged in its file.
-- A decision path the run leaves as text outside a link and a fenced block, and carrying no template placeholder, appears in the report as `text-decision` or `broken`, so a run that exits 0 leaves none.
+- A decision path the run leaves as text outside a link and a fenced block, and carrying no template placeholder, appears in the report as `text-decision` or `broken`, so a run that exits 0 leaves none; a link to a file outside `spx/` and an assertion evidence link that leaves its node appear as `outside-tree` and `evidence-link`.
 
 </success_criteria>

@@ -26,6 +26,9 @@ The tree has root decisions (`15-merging.pdr.md`, `20-storage.adr.md`), a 4.0 no
 | Reference-style definition | alpha.spec.md | tree-absolute |
 | Bare prose path | demo.spec.md; merging; alpha.spec.md; alpha ISSUES.md; legacy-insert.md | untouched, reported as `text-decision` |
 | Unresolvable target: relative, tree-absolute, code span, `../` | storage; gamma.spec.md | untouched, reported as `broken` |
+| Link to a file outside `spx/`: `../` or leading slash | alpha.spec.md | untouched, reported as `outside-tree` |
+| Assertion evidence link (text `test`, `eval`, or `probe`) that needs a changed href: into a descendant node, or climbing | alpha.spec.md | untouched, reported as `evidence-link` |
+| Code span holding a placeholder path beside a concrete decision path | alpha.spec.md | untouched, the concrete path reported as `text-decision` |
 | Link inside a backtick or tilde fence | demo.spec.md; untouched-forms.md | untouched |
 | Same-node link to a non-decision file, external link, `mailto:`, in-page anchor | alpha.spec.md; demo.spec.md; untouched-forms.md | untouched |
 | Placeholder path: prose, bare `NN-` index, braces, braced directory | gamma ISSUES.md | untouched, not reported |
