@@ -40,7 +40,7 @@ For language-specific skill prose that references a foundation, use the unqualif
 4. A composition step invokes only capabilities required by the workflow; it never discovers or invokes adjacent skills speculatively.
 5. Reference-only prose may name foundational concepts without invocation, while reference skills are loaded through the runtime's skill-invocation capability when their full standards govern the work.
 
-**Caller independence:** A skill governs its own behavior and nothing else. It never names, describes, detects, constrains, refuses, branches on, or otherwise depends on its caller or invocation context. The dependency runs one way: a caller may know the skill it invokes; the skill never knows its callers.
+**Caller independence:** A skill governs its own behavior and nothing else. It never names, describes, detects, constrains, refuses, branches on, or otherwise depends on its caller or invocation context. A description may state the skill's invocation contract — for example, that other skills load it and a user does not invoke it — because its behavior never depends on who the caller is. The dependency runs one way: a caller may know the skill it invokes; the skill never knows its callers.
 
 Context placement, agent selection, and dispatch policy belong to the caller. A skill remains independently invocable even when the product normally reaches it through an agent or another skill. Correct an invalid invocation in the router, agent, or composing skill that made the decision; never add a dispatch gate or caller check to the invoked skill.
 

@@ -463,10 +463,12 @@ def _validated_handback_plan(
             )
         return None
     value = _object(plan, HANDBACK_PLAN_FIELD)
-    if set(value) != HANDBACK_PLAN_FIELDS:
+    unexpected, missing = _field_sets(value, HANDBACK_PLAN_FIELDS)
+    if unexpected or missing:
         raise MessageError(
             DeliveryStatus.INVALID_SCHEMA,
-            "handbackPlan must contain the complete environment capability result.",
+            "handbackPlan must contain the complete environment capability result "
+            f"({_field_mismatch(unexpected, missing)}).",
         )
     if (
         value.get(SCHEMA_VERSION_FIELD) != HANDBACK_PLAN_SCHEMA_VERSION
@@ -921,10 +923,12 @@ def _checked_success_transport(
     transport: object, command_exit_code: int | None
 ) -> dict[str, object]:
     value = _object(transport, TRANSPORT_FIELD)
-    if set(value) != TRANSPORT_SUCCESS_FIELDS:
+    unexpected, missing = _field_sets(value, TRANSPORT_SUCCESS_FIELDS)
+    if unexpected or missing:
         raise MessageError(
             DeliveryStatus.INVALID_SCHEMA,
-            "A delivered result requires the complete checked transport fields.",
+            "A delivered result requires the complete checked transport fields "
+            f"({_field_mismatch(unexpected, missing)}).",
         )
     if value.get(SCHEMA_VERSION_FIELD) != TRANSPORT_SCHEMA_VERSION:
         raise MessageError(
@@ -1231,9 +1235,16 @@ def mail_delivery_result(
             <= present
             <= MAIL_FAILURE_REQUIRED_FIELDS | MAIL_FAILURE_OPTIONAL_FIELDS
         ):
+            unexpected = sorted(
+                present - MAIL_FAILURE_REQUIRED_FIELDS - MAIL_FAILURE_OPTIONAL_FIELDS
+            )
+            missing = sorted(MAIL_FAILURE_REQUIRED_FIELDS - present)
             raise MessageError(
                 DeliveryStatus.INVALID_SCHEMA,
-                "A failed capability result carries its status and detail.",
+                "A failed capability result carries its status and detail "
+                f"({_field_mismatch(unexpected, missing)}); accepted fields: "
+                f"required {sorted(MAIL_FAILURE_REQUIRED_FIELDS)}, "
+                f"optional {sorted(MAIL_FAILURE_OPTIONAL_FIELDS)}.",
             )
         return {
             SCHEMA_VERSION_FIELD: SCHEMA_VERSION,

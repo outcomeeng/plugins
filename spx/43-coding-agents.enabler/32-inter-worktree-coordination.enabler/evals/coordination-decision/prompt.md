@@ -172,7 +172,7 @@ Completion travels by push, never by pull. The sender's environment blocks polli
 
 Two environment conditions silently break a handback. The generated block names both instead of leaving the recipient to discover them.
 
-**The CLI may not be on `PATH`.** A recipient whose shell cannot resolve the command reads the failure as "the environment is unavailable" and abandons the handback. The executable bundled inside the application resolves when `PATH` does not, so the return address carries the command form that works in the recipient's environment rather than a bare command name.
+**The CLI may not be on `PATH`.** Every Prowl command runs the bare `prowl` name, so a shell that cannot resolve it returns `prowl-unavailable` with its detail. That result means the CLI is missing from the environment, not that the recipient is absent; report the detail and stop.
 
 **A non-default socket may belong to a different instance.** When the socket is overridden, the CLI talks to whichever instance owns that socket — which can be another agent's verification harness holding no real panes rather than the operator's live application. An empty or unrecognizable pane inventory is that condition, not an absent recipient. Confirm the inventory contains the expected panes before concluding a target is gone, and use the same socket value for every command in the exchange.
 
@@ -850,6 +850,22 @@ def _allowed_fields(operation: Operation) -> frozenset[str]:
     return OPERATION_CONTRACTS[operation].allowed_fields
 
 
+def _describe_shapes(contract: OperationContract) -> str:
+    return "; ".join(
+        f"required {sorted(shape.required_fields)}, optional {sorted(shape.optional_fields)}"
+        for shape in contract.request_shapes
+    )
+
+
+def _field_set_message(subject: str, unexpected: list[str], missing: list[str]) -> str:
+    details: list[str] = []
+    if unexpected:
+        details.append(f"unsupported: {', '.join(unexpected)}")
+    if missing:
+        details.append(f"missing: {', '.join(missing)}")
+    return f"{subject} must contain exactly the source-owned fields ({'; '.join(details)})."
+
+
 def _validated_request(request: object) -> tuple[Operation, dict[str, object]]:
     value = _object(request, "request")
     unexpected = sorted(set(value) - REQUEST_FIELDS)
@@ -892,7 +908,8 @@ def _validated_request(request: object) -> tuple[Operation, dict[str, object]]:
     ):
         raise ProwlEnvironmentError(
             ExecutionStatus.INVALID_SCHEMA,
-            f"{operation.value} arguments do not match a source-owned request shape.",
+            f"{operation.value} arguments do not match a source-owned request shape; "
+            f"accepted shapes: {_describe_shapes(OPERATION_CONTRACTS[operation])}.",
         )
     _one_selector(arguments)
 
@@ -1472,7 +1489,7 @@ def _validated_handback(
     if unexpected or missing:
         raise ProwlEnvironmentError(
             ExecutionStatus.INVALID_SCHEMA,
-            "Handback must contain exactly the source-owned fields.",
+            _field_set_message("Handback", unexpected, missing),
         )
     if handback.get(SCHEMA_VERSION_FIELD) != HANDBACK_SCHEMA_VERSION:
         raise ProwlEnvironmentError(
@@ -1594,7 +1611,7 @@ def _validated_delegation(value: object) -> dict[str, object]:
     if unexpected or missing:
         raise ProwlEnvironmentError(
             ExecutionStatus.INVALID_SCHEMA,
-            "Delegation request must contain exactly the source-owned request fields.",
+            _field_set_message("Delegation request", unexpected, missing),
         )
     if request.get(SCHEMA_VERSION_FIELD) != DELEGATION_SCHEMA_VERSION:
         raise ProwlEnvironmentError(
@@ -1699,7 +1716,7 @@ def _validated_terminal(value: object) -> dict[str, object]:
     if unexpected or missing:
         raise ProwlEnvironmentError(
             ExecutionStatus.INVALID_SCHEMA,
-            "Terminal handback must contain exactly the source-owned terminal fields.",
+            _field_set_message("Terminal handback", unexpected, missing),
         )
     if terminal.get(SCHEMA_VERSION_FIELD) != DELEGATION_SCHEMA_VERSION:
         raise ProwlEnvironmentError(
@@ -1963,7 +1980,7 @@ One message delivered on the route its request selects — a message record in t
 
 <route_selection>
 
-The request shape selects the route. A request carrying `recipient` as an agent-mail name, `correlation`, `body`, and `ackRequired` is a mail request and follows `<mail_route>`. A request carrying `recipientPath`, `facts`, and a pane-bound kind and no `correlation` or `body` is a Prowl request and follows `<workflow>`. A request that mixes the two is `invalid-schema`; the bundled script rejects fields outside the selected route's shape.
+The request shape selects the route. A request carrying `recipient` as an agent-mail name, `correlation`, `body`, and `ackRequired` is a mail request and follows `<mail_route>`. A request carrying `recipientPath`, `facts`, and a pane-bound kind and no `correlation` or `body` is a Prowl request and follows `<workflow>`. A request carrying `line` and `agents` resolves a doorbell and follows `<mail_route>` step 8. A request that mixes the two shapes, a request that matches neither, and an empty or whitespace request are `invalid-schema` before any discovery or delivery; the bundled script rejects fields outside the selected route's shape. The recovery names the route's own required fields: `kind`, `correlation`, `sender`, `recipient`, `subject`, `body`, and `ackRequired` for the mail route, and `recipientPath`, `kind`, `subject`, and `facts` for the Prowl route.
 
 </route_selection>
 
@@ -2047,7 +2064,7 @@ Every operation exits 0 on its success shape — `record` present for `mail-requ
 - ALWAYS preserve a production request's complete source-generated `handback` block unchanged.
 - ALWAYS require the matching complete successful `/operate-prowl plan-handback` result before building a production request.
 - NEVER accept or construct a handback command, return-pane field, or cross-skill adapter path.
-- ALWAYS retain each complete command result in the active tool context and feed it into the next source-owned operation; no scratch file or shell redirect is part of this workflow.
+- ALWAYS retain each complete command result in the active tool context and feed it into the next source-owned operation; no scratch file and no redirect that writes a result to a path is part of this workflow, while the heredoc and pipe stdin forms in `<command_forms>` stay part of it.
 - NEVER scan transcript files, use another terminal multiplexer, or ask the operator to relay a message as a fallback.
 - NEVER select an endpoint by title, focus, position, inferred prose, or an undeclared environment.
 - NEVER convert transport success or a stored record into acknowledgement, agreement, ownership, mutation authorization, or continuation state.
@@ -2058,7 +2075,7 @@ Every operation exits 0 on its success shape — `record` present for `mail-requ
 
 Before release, exercise `coordination_reference`, `build_envelope`, `send_request`, `delivery_request`, and `delivery_result` with complete resolver identities and controlled environment-result payloads. Run the documented `build` stdin form and require `delivery.status: "ready"`; run the documented `result` form with a complete successful `send` payload and require `status: "delivered"`, then remove or alter each required transport field and require rejection. The matrix covers authoritative `toPane` selection from ambiguous candidates, caller exclusion, optional run-identity preservation and rejection, accepted and rejected acknowledgements, all message kinds, complete HEAD/status validation, exact mutation target/state matching, a production request that preserves the source-generated handback block only with its matching complete `plan-handback` result, rejection of caller-authored executable handback fields, malformed identities and optional fields, and transport results that never establish acknowledgement, agreement, authorization, or ownership.
 
-The mail route's exercised properties: every record kind maps to a record the agent-mail capability accepts unchanged; the capability's checked `send` result over the store's captured reply maps to `delivered` with the store id and the doorbell line, and a rejected or absent store maps to `delivery-failed` with the capability's status and detail; generated doorbells parse back to their sender and id; a sender absent from the inventory and a line carrying more than the doorbell are rejected; a delivered result requires every checked capability field and a zero exit code; a same-worktree delegation whose authority is other than exactly the sender as owner and `gitMutation: false` reaches no record.
+The mail route's exercised properties: every record kind maps to a record the agent-mail capability accepts unchanged; the capability's checked `send` result over the store's captured reply maps to `delivered` with the store id and the doorbell line, and a rejected or absent store maps to `delivery-failed` with the capability's status and detail; generated doorbells parse back to their sender and id; a sender absent from the inventory and a line carrying more than the doorbell are rejected; a delivered result requires every checked capability field and a zero exit code; a delegation request carrying an `authority` other than exactly the sender as owner and `gitMutation: false` reaches no record, while an absent `authority` is the sender's obligation and the script rejects nothing for lacking it.
 
 Recorded exercised payload/results:
 
@@ -2090,7 +2107,7 @@ Recorded exercised payload/results:
 - A production request preserves one source-generated handback block only when the complete successful `plan-handback` result carries the same block, and rejects every caller-authored executable handback field.
 - Delivery passes only after `/operate-prowl` returns a checked successful result whose public input record confirms trailing Enter was sent; every failure preserves its exact status, detail, and command exit code when present.
 - A mail delivery passes only when `mail-result` returns `status: "delivered"` from a `succeeded` capability result whose `data.record` carries the store-assigned `id`; the doorbell text is `[<sender>] mail <id>` and `doorbell.submitted` is true only with a checked Prowl `send` result carrying `trailing_enter_sent: true`.
-- A `delivery-failed` mail result preserves the capability's exact status and detail, and a same-worktree `delegation-request` whose `authority` is other than exactly `owner` equal to `sender` and `gitMutation: false` produces no record.
+- A `delivery-failed` mail result preserves the capability's exact status and detail, and a `delegation-request` carrying an `authority` other than exactly `owner` equal to `sender` and `gitMutation: false` produces no record; an absent `authority` is the sender's obligation and the script rejects nothing for lacking it.
 - Caller, recipient, mutation-target, and observed-state identities validate before delivery.
 - Transport delivery remains distinct from acknowledgement, agreement, authorization, ownership, and continuation.
 

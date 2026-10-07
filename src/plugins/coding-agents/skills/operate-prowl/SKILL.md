@@ -160,7 +160,7 @@ Completion travels by push, never by pull. The sender's environment blocks polli
 
 Two environment conditions silently break a handback. The generated block names both instead of leaving the recipient to discover them.
 
-**The CLI may not be on `PATH`.** A recipient whose shell cannot resolve the command reads the failure as "the environment is unavailable" and abandons the handback. The executable bundled inside the application resolves when `PATH` does not, so the return address carries the command form that works in the recipient's environment rather than a bare command name.
+**The CLI may not be on `PATH`.** Every Prowl command runs the bare `prowl` name, so a shell that cannot resolve it returns `prowl-unavailable` with its detail. That result means the CLI is missing from the environment, not that the recipient is absent; report the detail and stop.
 
 **A non-default socket may belong to a different instance.** When the socket is overridden, the CLI talks to whichever instance owns that socket — which can be another agent's verification harness holding no real panes rather than the operator's live application. An empty or unrecognizable pane inventory is that condition, not an absent recipient. Confirm the inventory contains the expected panes before concluding a target is gone, and use the same socket value for every command in the exchange.
 

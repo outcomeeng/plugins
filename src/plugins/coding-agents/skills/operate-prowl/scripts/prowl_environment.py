@@ -605,6 +605,22 @@ def _allowed_fields(operation: Operation) -> frozenset[str]:
     return OPERATION_CONTRACTS[operation].allowed_fields
 
 
+def _describe_shapes(contract: OperationContract) -> str:
+    return "; ".join(
+        f"required {sorted(shape.required_fields)}, optional {sorted(shape.optional_fields)}"
+        for shape in contract.request_shapes
+    )
+
+
+def _field_set_message(subject: str, unexpected: list[str], missing: list[str]) -> str:
+    details: list[str] = []
+    if unexpected:
+        details.append(f"unsupported: {', '.join(unexpected)}")
+    if missing:
+        details.append(f"missing: {', '.join(missing)}")
+    return f"{subject} must contain exactly the source-owned fields ({'; '.join(details)})."
+
+
 def _validated_request(request: object) -> tuple[Operation, dict[str, object]]:
     value = _object(request, "request")
     unexpected = sorted(set(value) - REQUEST_FIELDS)
@@ -647,7 +663,8 @@ def _validated_request(request: object) -> tuple[Operation, dict[str, object]]:
     ):
         raise ProwlEnvironmentError(
             ExecutionStatus.INVALID_SCHEMA,
-            f"{operation.value} arguments do not match a source-owned request shape.",
+            f"{operation.value} arguments do not match a source-owned request shape; "
+            f"accepted shapes: {_describe_shapes(OPERATION_CONTRACTS[operation])}.",
         )
     _one_selector(arguments)
 
@@ -1227,7 +1244,7 @@ def _validated_handback(
     if unexpected or missing:
         raise ProwlEnvironmentError(
             ExecutionStatus.INVALID_SCHEMA,
-            "Handback must contain exactly the source-owned fields.",
+            _field_set_message("Handback", unexpected, missing),
         )
     if handback.get(SCHEMA_VERSION_FIELD) != HANDBACK_SCHEMA_VERSION:
         raise ProwlEnvironmentError(
@@ -1349,7 +1366,7 @@ def _validated_delegation(value: object) -> dict[str, object]:
     if unexpected or missing:
         raise ProwlEnvironmentError(
             ExecutionStatus.INVALID_SCHEMA,
-            "Delegation request must contain exactly the source-owned request fields.",
+            _field_set_message("Delegation request", unexpected, missing),
         )
     if request.get(SCHEMA_VERSION_FIELD) != DELEGATION_SCHEMA_VERSION:
         raise ProwlEnvironmentError(
@@ -1454,7 +1471,7 @@ def _validated_terminal(value: object) -> dict[str, object]:
     if unexpected or missing:
         raise ProwlEnvironmentError(
             ExecutionStatus.INVALID_SCHEMA,
-            "Terminal handback must contain exactly the source-owned terminal fields.",
+            _field_set_message("Terminal handback", unexpected, missing),
         )
     if terminal.get(SCHEMA_VERSION_FIELD) != DELEGATION_SCHEMA_VERSION:
         raise ProwlEnvironmentError(
