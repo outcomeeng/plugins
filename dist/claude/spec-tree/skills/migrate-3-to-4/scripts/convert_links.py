@@ -61,7 +61,10 @@ NODE_DIRECTORY = re.compile(
 SCHEME = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*:")
 FENCE_OPEN = re.compile(r"^ {0,3}(`{3,}|~{3,})")
 REFERENCE_DEFINITION = re.compile(
-    r"^(?P<lead>\s*\[[^\]]+\]:\s*)(?P<href>\S+)(?P<rest>.*)$"
+    r"^(?P<lead>\s*\[(?P<label>[^\]]+)\]:\s*)(?P<href>\S+)(?P<rest>.*)$"
+)
+EVIDENCE_REFERENCE_USE = re.compile(
+    rf"\[(?:{'|'.join(sorted(EVIDENCE_LINK_TEXTS))})\]\[(?P<label>[^\]]+)\]"
 )
 INLINE = re.compile(
     r"(?P<link>(?P<bang>!?)\[(?P<text>(?:[^\[\]`]|`[^`]*`|\[[^\]]*\])*)\]"
@@ -178,16 +181,22 @@ def tree_absolute(context: FileContext, path: str, target: Path) -> str:
 class LineConverter:
     """Convert one Markdown line and collect the citations it cannot convert."""
 
-    def __init__(self, context: FileContext, line_number: int) -> None:
+    def __init__(
+        self,
+        context: FileContext,
+        line_number: int,
+        evidence_labels: frozenset[str] = frozenset(),
+    ) -> None:
         self._context = context
         self._line_number = line_number
+        self._evidence_labels = evidence_labels
         self.findings: list[Finding] = []
 
     def _report(self, form: str, target: str) -> None:
         file = self._context.file.relative_to(self._context.root).as_posix()
         self.findings.append(Finding(file, self._line_number, form, target))
 
-    def _convert_href(self, href: str, text: str | None = None) -> str | None:
+    def _convert_href(self, href: str, *, evidence: bool = False) -> str | None:
         """Return the converted href, or None when the href stays as written."""
         path, separator, fragment = href.partition("#")
         if SCHEME.match(href) or not path or has_placeholder(path):
@@ -201,14 +210,16 @@ class LineConverter:
         if not is_in_spec_tree(self._context, target):
             self._report(FORM_OUTSIDE_TREE, href)
             return None
-        if text in EVIDENCE_LINK_TEXTS:
+        if evidence:
             self._report(FORM_EVIDENCE_LINK, href)
             return None
         return tree_absolute(self._context, path, target) + separator + fragment
 
     def _link(self, match: re.Match[str]) -> str:
         href = match["href"]
-        converted = self._convert_href(href, match["text"])
+        converted = self._convert_href(
+            href, evidence=match["text"] in EVIDENCE_LINK_TEXTS
+        )
         if converted is None:
             return match[0]
         old_path = href.partition("#")[0]
@@ -248,7 +259,12 @@ class LineConverter:
     def convert(self, line: str) -> str:
         definition = REFERENCE_DEFINITION.match(line)
         if definition is not None:
-            converted = self._convert_href(definition["href"])
+            label = definition["label"]
+            converted = self._convert_href(
+                definition["href"],
+                evidence=label in EVIDENCE_LINK_TEXTS
+                or label.casefold() in self._evidence_labels,
+            )
             if converted is None:
                 return line
             return f"{definition['lead']}{converted}{definition['rest']}"
@@ -274,6 +290,9 @@ def convert_text(context: FileContext, text: str) -> tuple[str, list[Finding]]:
     converted: list[str] = []
     findings: list[Finding] = []
     fence: str | None = None
+    evidence_labels = frozenset(
+        use["label"].casefold() for use in EVIDENCE_REFERENCE_USE.finditer(text)
+    )
     for number, line in enumerate(text.split("\n"), start=1):
         if fence is not None:
             converted.append(line)
@@ -285,7 +304,7 @@ def convert_text(context: FileContext, text: str) -> tuple[str, list[Finding]]:
             fence = opening[1]
             converted.append(line)
             continue
-        converter = LineConverter(context, number)
+        converter = LineConverter(context, number, evidence_labels)
         converted.append(converter.convert(line))
         findings.extend(converter.findings)
     return "\n".join(converted), findings

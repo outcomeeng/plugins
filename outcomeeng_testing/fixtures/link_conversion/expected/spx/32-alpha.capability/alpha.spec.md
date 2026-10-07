@@ -29,3 +29,5 @@ Code span non-decision: `tests/test_alpha.mapping.l1.py`.
 - Evidence link into a descendant node (reported, untouched): [test](21-alpha-child.domain/tests/test_child.scenario.l1.py)
 - Evidence link that climbs (reported, untouched): [test](../32-alpha.capability/tests/test_alpha.mapping.l1.py)
 Code span, placeholder beside a path: `NN-decision.pdr.md with 18-alpha-parse.adr.md`.
+- Reference-style evidence link that climbs (reported, untouched): [test][ev]
+[ev]: ../32-alpha.capability/tests/test_alpha.mapping.l1.py

@@ -61,7 +61,7 @@ Run the same command a second time. Its `rewritten` list is empty and its exit s
 
 <step name="report">
 
-Present the complete report of the first run: the rewritten files, then every unconvertible citation with its file, line, form, and target. The form `text-decision` is a decision path written as bare prose or held in a code span beside other text; the form `broken` is a target that does not exist; the form `outside-tree` is a link to a file outside `spx/`, which no 4.0 link shape reaches; the form `evidence-link` is an assertion evidence link, a link whose text is `test`, `eval`, or `probe`, that leaves its node, which only moves the assertion or its evidence repairs. Leave each reported citation unchanged for the operator. After exit status 3, state that the operator resolves each reported citation and runs the conversion again.
+Present the complete report of the first run: the rewritten files, then every unconvertible citation with its file, line, form, and target. The form `text-decision` is a decision path written as bare prose or held in a code span beside other text; the form `broken` is a target that does not exist; the form `outside-tree` is a link to a file outside `spx/`, which no 4.0 link shape reaches; the form `evidence-link` is an assertion evidence link, a link whose text is `test`, `eval`, or `probe`, written inline or in the reference style, that leaves its node, which only moves the assertion or its evidence repairs. Leave each reported citation unchanged for the operator. After exit status 3, state that the operator resolves each reported citation and runs the conversion again.
 
 </step>
 
