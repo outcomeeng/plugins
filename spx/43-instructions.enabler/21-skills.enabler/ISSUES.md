@@ -330,3 +330,11 @@ Source: `instructions:skill-auditor` finding `f-015`, rule
 **Impact.** The standard restates a standard it defers to, labels a skill class by its caller, quotes a token figure its own limits falsify, and leaves the scope of its deleting-command ban unstated.
 
 **Settlement condition.** Each standard has one owning skill with the other pointing to it, the auditor row names its class by output, the figure is accurate or cut, the ban states its scope so the orphan-file instruction sits inside it or is rewritten, and a typed skill audit of `skill-standards` raises no such finding.
+
+## `skill-standards` objective omits standards areas the body governs
+
+**Evidence.** `instructions:skill-auditor` run `2026-10-07_06-18-02-483-532e3746730b` on `src/plugins/instructions/skills/skill-standards` raised a `debt` finding, rule `objective-shape`, on `SKILL.md:10` (`<objective>`). The objective lists frontmatter, XML structure, naming, descriptions, progressive disclosure, skill types, reference patterns, code-fence and bash constraints, validation and script testing, while the body also governs caller independence and composition, the eager-foundation exception, conciseness, runtime variables and hooks, and path and decline handling. The changeset's diff against `origin/main` holds no hunk in `<objective>`.
+
+**Impact.** The output statement does not match the delivered standards, so an author reading the objective misses areas the standard governs.
+
+**Settlement condition.** The objective states one scope that covers every standards area the skill defines, and a typed skill audit of `skill-standards` raises no `objective-shape` finding.
