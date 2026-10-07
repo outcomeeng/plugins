@@ -12,7 +12,7 @@ allowed-tools: Bash(python3 "${SKILL_DIR}/scripts/audit_change_run.py":*)
 
 <objective>
 
-A result on one local Change record: a verdict against `change-standards` and the Definition of Ready for its declared Maturity, with authority judged from the store's events, either `approved` or `rejected` with each finding naming the violated rule, the artifact location, and the evidence; the complete `BLOCKED` diagnostic; or the `OUTSIDE_CONTRACT` result for a front-matter key-set mismatch.
+A sealed `spx verification run` on one local Change record, whose terminal status is `approved` or `rejected` against `change-standards` and the Definition of Ready for its declared Maturity, with authority judged from the store's events and each finding naming the violated rule, the artifact location, and the evidence; the complete `BLOCKED` diagnostic when the run cannot finish; or the `OUTSIDE_CONTRACT` result for a front-matter key-set mismatch.
 
 </objective>
 
