@@ -129,8 +129,14 @@ A blocked result names exactly one of these reasons:
    research, questionnaires, or alternatives as findings.
 6. **Read authority.** Use skill `spec-tree:change-standards`.
    Invoke it with `Lifecycle`; it loads the common contract and the Lifecycle
-   rules. When the request carries `issue`, request `read-authority` with it;
-   a blocked result returns `BLOCKED`. Judge the authority clauses of
+   rules. When the request carries `issue`, first request `read-candidate`
+   with `path` `spx/local/coordination.md` and read the Change store from the
+   `Repository:` line `store-binding` names. An `issue` whose `owner/repo`
+   differs from that store, an absent overlay, or an overlay that declares no
+   store returns `BLOCKED` with the Prerequisite shape, the reason
+   `missing-prerequisite`, and a detail naming the declared store and the
+   `issue`'s `owner/repo`; no `read-authority` request follows. Then request
+   `read-authority` with `issue`; a blocked result returns `BLOCKED`. Judge the authority clauses of
    `maturity-and-authority` from the returned events and comments under
    `authority-read`, for every Maturity level the declared Maturity has
    passed, and record a finding naming each level whose authority the store
