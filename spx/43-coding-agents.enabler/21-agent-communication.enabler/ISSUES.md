@@ -12,6 +12,8 @@ Known defects, contradictions and gaps in this node. Coordination note; not spec
 - `objective-output-coverage` at `SKILL.md:28` (`<mail_route>` step 8): the doorbell-resolution output has no place in the objective or the success criteria.
 - `description-distinct-triggers` at `SKILL.md:4`: the description claims "sending a message record", the trigger the `operate-agent-mail` description also claims.
 - `success-criteria-consistency` at `SKILL.md:21`, `SKILL.md:110` and `SKILL.md:142` (run `2026-10-07_10-12-43-230-e30afb06559b`): step 1 says the script rejects no same-worktree delegation request that lacks `authority`, while `<testing>` and `<success_criteria>` require that a same-worktree request whose authority is other than exactly the sender as owner with Git mutation forbidden produces no record, and no request field says whether a delegation is same-worktree.
+- `caller-independence` at `SKILL.md:34` (run `2026-10-07_10-22-02-701-3582867addbb`): step 1 says the request may carry `toPane` only as a complete identity assertion from an upstream coordination plan, which conditions the input on the context that produced it.
+- `script-validation-messages` at `scripts/agent_message.py:466-470`, `924-928` and `1229-1237` (same run): three field-set rejections name neither the unexpected nor the missing fields, while the script's other field-set checks report them through `_field_mismatch`.
 
 **Standing.** The findings lie on text the changeset leaves untouched: the diff of the skill against `origin/main` holds one hunk, the closing failure-mode paragraph at `SKILL.md:131`.
 
