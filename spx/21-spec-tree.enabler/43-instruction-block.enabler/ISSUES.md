@@ -141,13 +141,12 @@ the five prose-coupling assertions.
 
 ## `/update-instruction-block` workflow warnings left after its approving skill audit
 
-The typed skill audit that approved `src/plugins/spec-tree/skills/update-instruction-block` on head `164eb9e842474b3a0ae1904bf3b61568b30ccd73` raised three warnings on the workflow text:
+The typed skill audit that approved `src/plugins/spec-tree/skills/update-instruction-block` on head `164eb9e842474b3a0ae1904bf3b61568b30ccd73` raised two warnings on the workflow text:
 
-- Step 3's never-rerun rule omits the `--reconcile --from` exception that GATE 3 states later, so a reader in order may refuse the tie-break rerun.
 - The `dirty` report says the operator must commit or set aside the edit and then re-run, without saying whether the run ends there, while the recency-tie branch commits through `spec-tree:commit-changes`.
 - The success criteria require the no-verb render to reproduce each written router block, but Step 5 never runs that render; `--check` alone passes a hand-edit inside the router.
 
-**Settlement condition**: the never-rerun rule names the `--from` exception where it is stated, the `dirty` report states that the run ends with nothing written, Step 5 runs the no-verb render comparison, and a typed skill audit approves the surface without these warnings.
+**Settlement condition**: the `dirty` report states that the run ends with nothing written, Step 5 runs the no-verb render comparison, and a typed skill audit approves the surface without these warnings.
 
 ## Two retained rules of the operator's former project-instruction file live nowhere
 
@@ -160,59 +159,27 @@ The operator's project-level instruction file, outside this repository, is delet
 
 **Settlement condition.** Both rules land in the router template, with the pinned `*_POLICY_REQUIREMENTS` tuples in `outcomeeng/distribution/instruction_block.py` and the spec assertions moving in the same changeset, against the measured byte budget the entry above records.
 
-## `/update-instruction-block` constraints and one failure mode carry maintenance guidance
-
-**Evidence.** `instructions:skill-auditor` run `2026-10-06_18-29-09-881-bf896c5bec99` on `src/plugins/spec-tree/skills/update-instruction-block` raised a `debt` finding (rule `conciseness`) against `SKILL.md`: constraint 1 forbids editing the deterministic logic "here" without saying whether it means the skill body or an invocation, constraint 7 forbids copying the template into another skill, and Failure 3 describes keeping the template under `understand`. An invocation neither edits the skill body nor relocates its template.
-
-**Standing.** The finding lies on text the changeset leaves untouched: the diff of this skill against `origin/main` holds the hunks `templates/instruction-block.md:57` and `templates/instruction-block.md:59-61` and no hunk in `SKILL.md`.
-
-**Impact.** Every invocation loads guidance that governs how the bundle is maintained, and the first constraint names its target ambiguously.
-
-**Settlement condition.** Each constraint and failure mode changes what an invocation does, maintenance guidance lives outside the runtime body, and a typed skill audit of the surface raises no `conciseness` finding.
-
 ## The bundled generator silently drops flags that do not apply to the selected verb
 
 **Evidence.** The same run raised a `debt` finding (rule `validation-rule`) against `src/plugins/spec-tree/skills/update-instruction-block/scripts/instruction_block.py`: `main()` rejects `--adopt` without `--write`, yet `--from` without `--reconcile` is parsed and ignored, and verbs supplied together, such as `--check --write` or `--reconcile --write`, run only the first matched verb with exit 0 and no diagnostic.
 
 Run `2026-10-06_18-35-55-521-02765947702d` raised the same finding as `script-validation-rule` at `scripts/instruction_block.py:1601-1623` and `scripts/instruction_block.py:1670-1742`.
 
-**Standing.** The finding lies on text the changeset leaves untouched: the diff holds no hunk in `scripts/instruction_block.py`.
+**Standing.** Unjudged. The advisor could not judge it from the supplied fragment: the branch starts do not show their return paths, all flag validations or the fate of `--from`. Ignoring an accepted conflicting flag would be a real validation defect, but the fragment cannot establish that it occurs.
 
 **Impact.** An operator answer carried by a flag that does not apply is discarded behind a clean exit, the failure mode the `--adopt` guard exists to prevent.
 
 **Settlement condition.** The generator rejects `--from` outside `--reconcile` and verbs supplied together, with a message naming the valid combination, a test over a violating invocation covers each rejection, and a typed skill audit raises no `validation-rule` finding on the script.
 
-## The `/update-instruction-block` frontmatter description names the root instruction file `CLAUDE.md`
+## `/update-instruction-block` reports a removal nothing establishes and unlinks `spx/` instruction files by name
 
-**Evidence.** `instructions:skill-auditor` run `2026-10-06_18-35-55-521-02765947702d` raised a `debt` finding (rule `voice-yaml-frontmatter-exception`) at `src/plugins/spec-tree/skills/update-instruction-block/SKILL.md:3-4`: the description spells the filename `CLAUDE.md`, and `agent-prompt-standards` `<voice>` states that a description cannot contain the word "claude".
+**Evidence.** `instructions:skill-auditor` run `2026-10-07_07-18-25-437-b58472784b8d` on `src/plugins/spec-tree/skills/update-instruction-block` raised two `debt` findings:
 
-**Standing.** The finding lies on text the changeset leaves untouched: the diff holds no hunk in `SKILL.md`.
-
-**Impact.** The description breaks the frontmatter rule that every other `SKILL.md` under `src/plugins/` follows, and a typed skill audit of the skill stays rejected until it changes.
-
-**Settlement condition.** The description names the root instruction files without the word "claude", and a typed skill audit raises no `voice-yaml-frontmatter-exception` finding on `SKILL.md`.
-
-## `/update-instruction-block` states staleness twice, recommends a refused adoption, and reports a removal nothing establishes
-
-**Evidence.** `instructions:skill-auditor` run `2026-10-07_07-18-25-437-b58472784b8d` on `src/plugins/spec-tree/skills/update-instruction-block` raised four `debt` findings:
-
-- `conciseness` at `SKILL.md:34` and `SKILL.md:47`: `<context>` and workflow step 2 list the same stale conditions, and `<context>` line 32 and `<constraints>` line 157 both state that the script owns the deterministic logic.
-- `operational-effectiveness` at `SKILL.md:77`: for a mutual delegation, the Recommend rule yields an adoption that line 80 states the generator always refuses, yet step 3 labels it `(Recommended)`.
 - `operational-effectiveness` at `SKILL.md:94`: step 5 requires the closing report to state whether obsolete `spx/` instruction files were removed, and no snapshot or command output establishes it.
 - `script-contract-accuracy` at `scripts/instruction_block.py:1235-1243` against `SKILL.md:39`, `SKILL.md:92` and `SKILL.md:159`: the skill says the write removes retired generated files under `spx/`, while the script unlinks any `spx/CLAUDE.md` or `spx/AGENTS.md` without the retired-generated recognition it applies to root files.
 
-**Standing.** The findings lie on text the changeset leaves untouched: the diff of the skill against `origin/main` holds the hunks `templates/instruction-block.md:57` and `templates/instruction-block.md:59-61` and no hunk in `SKILL.md` or `scripts/instruction_block.py`.
+**Standing.** Unjudged. For the report finding, the advisor lacked the script output and the complete reporting inputs; the absence of a Step 1 snapshot does not prove that no later output can establish a removal. For the script finding, the established fact is that the loop removes designated obsolete filenames without inspecting content; missing is whether those exact filenames are declared wholly owned reserved generated artifacts, or whether foreign content may validly occupy them, and without that path-ownership contract the advisor could not decide whether filename selection suffices.
 
-**Impact.** The staleness rule can drift between its two copies, the operator question offers a recommended answer the generator refuses, a report item has no source, and a product-authored guide under `spx/` can be deleted while the skill says only generated files are affected.
+**Impact.** A report item has no source, and a product-authored guide under `spx/` can be deleted while the skill says only generated files are affected.
 
-**Settlement condition.** Each stale condition and the script-ownership statement appears once, the mutual-delegation case routes to its refusal before the operator question, the removal report derives from a named snapshot or output, the script removes only recognized retired output or the skill states what it removes, and a typed skill audit raises none of the four findings.
-
-## `/update-instruction-block` Step 3 batches every repair into one edit while the recency-tie rerun refuses a dirty root file
-
-**Evidence.** `instructions:skill-auditor` run `2026-10-07_10-09-10-895-5ffc8c8cd1be` on `src/plugins/spec-tree/skills/update-instruction-block` raised one `debt` finding, rule `operational-effectiveness-internal-consistency`, at `SKILL.md:55` and `SKILL.md:66`: Step 3 directs one edit batch for every reported ambiguity, yet the recency-tie rerun `--reconcile --from` reports `dirty: {file}` and applies nothing once an Edit repair for a one-sided region or a malformed fence has dirtied a root file, and the skill does not order the rerun before those edits or commit them first.
-
-**Standing.** The finding lies on text the changeset leaves untouched: the diff of the skill against `origin/main` holds only the hunks in `templates/instruction-block.md`.
-
-**Impact.** A pass that reports a recency tie beside a one-sided or malformed report leaves the tie unresolved with no stated order that resolves it.
-
-**Settlement condition.** Step 3 orders the `--from` rerun before any Edit repair, or commits every uncommitted root-file change before the rerun, and scopes the one-edit-batch instruction to match; a typed skill audit raises no such finding.
+**Settlement condition.** The removal report derives from a named snapshot or output, the path-ownership contract for the obsolete `spx/` instruction filenames is declared, and the script removes only recognized retired output or the skill states what it removes.
