@@ -51,6 +51,11 @@ anywhere and every process it starts:
 
 None of these writes a file outside the SPX store, and none starts a process
 other than ``git`` and ``spx``; the generated requests start none.
+
+``read-authority`` starts ``gh`` and is tested apart from those runs, in this
+process over replayed store pages: a read that ends before the bound returns
+every entry, and a connection that keeps reporting a further page blocks after
+the bound with ``page-bound-reached`` naming it.
 """
 
 from __future__ import annotations
@@ -80,6 +85,7 @@ class Operation(StrEnum):
     ADD_FINDING = "add-finding"
     RECONCILE = "reconcile"
     FINISH = "finish"
+    READ_AUTHORITY = "read-authority"
 
 
 class RequestField(StrEnum):
@@ -92,6 +98,7 @@ class RequestField(StrEnum):
     PAYLOAD = "payload"
     ORDINAL = "ordinal"
     TERMINAL_STATUS = "terminalStatus"
+    ISSUE = "issue"
 
 
 class ResultField(StrEnum):
@@ -122,6 +129,17 @@ class ResultField(StrEnum):
     STDERR = "stderr"
     RETAINED_SHA256 = "retainedSha256"
     LIVE_SHA256 = "liveSha256"
+    ISSUE = "issue"
+    EVENTS = "events"
+    COMMENTS = "comments"
+    BOUND = "bound"
+    CREATED_AT = "createdAt"
+    ACTOR = "actor"
+    FIELD = "field"
+    PREVIOUS_VALUE = "previousValue"
+    NEW_VALUE = "newValue"
+    AUTHOR = "author"
+    BODY = "body"
 
 
 class ResultStatus(StrEnum):
@@ -142,6 +160,7 @@ class BlockReason(StrEnum):
     RETAINED_INPUT_MISMATCH = "retained-input-mismatch"
     COMMAND_FAILED = "command-failed"
     UNREADABLE_OUTPUT = "unreadable-output"
+    PAGE_BOUND_REACHED = "page-bound-reached"
 
 
 class Resolution(StrEnum):
@@ -158,6 +177,13 @@ class TerminalStatus(StrEnum):
 
     APPROVED = "approved"
     REJECTED = "rejected"
+
+
+class AuthorityRead(StrEnum):
+    """The two store connections ``read-authority`` reads, in the order it reads them."""
+
+    EVENTS = "events"
+    COMMENTS = "comments"
 
 
 class ExitCode(IntEnum):
@@ -189,6 +215,29 @@ class SpxField(StrEnum):
     SEVERITY = "severity"
 
 
+class StoreField(StrEnum):
+    """Fields of the store's GraphQL answer that ``read-authority`` reads."""
+
+    DATA = "data"
+    REPOSITORY = "repository"
+    ISSUE = "issue"
+    TIMELINE_ITEMS = "timelineItems"
+    COMMENTS = "comments"
+    PAGE_INFO = "pageInfo"
+    HAS_NEXT_PAGE = "hasNextPage"
+    END_CURSOR = "endCursor"
+    NODES = "nodes"
+    CREATED_AT = "createdAt"
+    ACTOR = "actor"
+    AUTHOR = "author"
+    LOGIN = "login"
+    PREVIOUS_VALUE = "previousValue"
+    NEW_VALUE = "newValue"
+    ISSUE_FIELD = "issueField"
+    NAME = "name"
+    BODY = "body"
+
+
 NOT_STARTED: Final = "not-started"
 NOT_APPLICABLE: Final = "none"
 NUL: Final = "\x00"
@@ -216,6 +265,38 @@ GIT_EXECUTABLE: Final = "git"
 _GIT_TOPLEVEL: Final = (GIT_EXECUTABLE, "rev-parse", "--show-toplevel")
 _SPX_VERSION: Final = (SPX_EXECUTABLE, "--version")
 _RUN_COMMAND: Final = (SPX_EXECUTABLE, "verification", "run")
+GH_EXECUTABLE: Final = "gh"
+_GRAPHQL: Final = (GH_EXECUTABLE, "api", "graphql")
+
+#: One store read takes pages of this many entries, at most this many pages.
+AUTHORITY_PAGE_SIZE: Final = 100
+AUTHORITY_MAX_PAGES: Final = 10
+
+_QUERY_HEAD: Final = (
+    "query($o:String!,$r:String!,$n:Int!,$after:String)"
+    "{repository(owner:$o,name:$r){issue(number:$n){"
+)
+_AUTHORITY_QUERIES: Final[Mapping[AuthorityRead, str]] = {
+    AuthorityRead.EVENTS: (
+        f"{_QUERY_HEAD}{StoreField.TIMELINE_ITEMS}"
+        f"(first:{AUTHORITY_PAGE_SIZE},after:$after,"
+        "itemTypes:[ISSUE_FIELD_CHANGED_EVENT])"
+        "{pageInfo{hasNextPage endCursor} nodes{... on IssueFieldChangedEvent"
+        "{createdAt actor{login} previousValue newValue issueField"
+        "{... on IssueFieldSingleSelect{name} ... on IssueFieldText{name}}}}}}}}"
+    ),
+    AuthorityRead.COMMENTS: (
+        f"{_QUERY_HEAD}{StoreField.COMMENTS}(first:{AUTHORITY_PAGE_SIZE},after:$after)"
+        "{pageInfo{hasNextPage endCursor} nodes{createdAt author{login} body}}}}}"
+    ),
+}
+_AUTHORITY_CONNECTIONS: Final[Mapping[AuthorityRead, StoreField]] = {
+    AuthorityRead.EVENTS: StoreField.TIMELINE_ITEMS,
+    AuthorityRead.COMMENTS: StoreField.COMMENTS,
+}
+ISSUE_IDENTITY_PATTERN: Final = re.compile(
+    r"([A-Za-z0-9][A-Za-z0-9-]*)/([A-Za-z0-9._-]+)#([1-9][0-9]*)"
+)
 
 #: The fields each operation's request carries besides ``operation``.
 REQUIRED_FIELDS: Final[Mapping[Operation, frozenset[RequestField]]] = {
@@ -238,6 +319,7 @@ REQUIRED_FIELDS: Final[Mapping[Operation, frozenset[RequestField]]] = {
     Operation.FINISH: frozenset(
         {RequestField.PATH, RequestField.RUN_TOKEN, RequestField.TERMINAL_STATUS}
     ),
+    Operation.READ_AUTHORITY: frozenset({RequestField.ISSUE}),
 }
 
 
@@ -536,6 +618,19 @@ def _terminal_status(request: Mapping[str, object]) -> TerminalStatus:
     return TerminalStatus(terminal)
 
 
+def _issue_identity(request: Mapping[str, object]) -> tuple[str, str, str]:
+    """Return ``(owner, repository, number)`` of the canonical issue identity."""
+    named = request.get(RequestField.ISSUE)
+    found = ISSUE_IDENTITY_PATTERN.fullmatch(named) if isinstance(named, str) else None
+    if found is None:
+        raise Blocked(
+            BlockReason.INVALID_REQUEST,
+            f"{RequestField.ISSUE} must match {ISSUE_IDENTITY_PATTERN.pattern}",
+        )
+    owner, repository, number = found.groups()
+    return owner, repository, number
+
+
 #: The field checks ``validate_request`` applies to each operation, in order.
 _REQUEST_CHECKS: Final[
     Mapping[Operation, tuple[Callable[[Mapping[str, object]], object], ...]]
@@ -555,6 +650,7 @@ _REQUEST_CHECKS: Final[
     ),
     Operation.RECONCILE: (_candidate_path, _run_token),
     Operation.FINISH: (_candidate_path, _run_token, _terminal_status),
+    Operation.READ_AUTHORITY: (_issue_identity,),
 }
 
 
@@ -932,6 +1028,120 @@ def _finish(context: _Context, request: Mapping[str, object]) -> dict[str, objec
     }
 
 
+def _connection(
+    answer: Mapping[str, object], kind: AuthorityRead
+) -> Mapping[str, object]:
+    """Return the connection of ``kind`` from one store answer, or block."""
+    node: object = answer
+    for key in (StoreField.DATA, StoreField.REPOSITORY, StoreField.ISSUE):
+        node = node.get(key) if isinstance(node, dict) else None
+    connection = (
+        node.get(_AUTHORITY_CONNECTIONS[kind]) if isinstance(node, dict) else None
+    )
+    if not isinstance(connection, dict):
+        raise Blocked(
+            BlockReason.UNREADABLE_OUTPUT,
+            f"store answer carries no {_AUTHORITY_CONNECTIONS[kind]} connection",
+        )
+    return connection
+
+
+def _login(person: object) -> object:
+    return person.get(StoreField.LOGIN) if isinstance(person, dict) else None
+
+
+def _event(node: Mapping[str, object]) -> dict[str, object]:
+    field = node.get(StoreField.ISSUE_FIELD)
+    return {
+        ResultField.CREATED_AT: node.get(StoreField.CREATED_AT),
+        ResultField.ACTOR: _login(node.get(StoreField.ACTOR)),
+        ResultField.FIELD: field.get(StoreField.NAME)
+        if isinstance(field, dict)
+        else None,
+        ResultField.PREVIOUS_VALUE: node.get(StoreField.PREVIOUS_VALUE),
+        ResultField.NEW_VALUE: node.get(StoreField.NEW_VALUE),
+    }
+
+
+def _comment(node: Mapping[str, object]) -> dict[str, object]:
+    return {
+        ResultField.CREATED_AT: node.get(StoreField.CREATED_AT),
+        ResultField.AUTHOR: _login(node.get(StoreField.AUTHOR)),
+        ResultField.BODY: node.get(StoreField.BODY),
+    }
+
+
+_AUTHORITY_ENTRIES: Final[
+    Mapping[AuthorityRead, Callable[[Mapping[str, object]], dict[str, object]]]
+] = {AuthorityRead.EVENTS: _event, AuthorityRead.COMMENTS: _comment}
+
+
+def _read_connection(
+    context: _Context, kind: AuthorityRead, identity: tuple[str, str, str]
+) -> list[dict[str, object]]:
+    """Read every entry of one connection within the page bound, or block."""
+    owner, repository, number = identity
+    entries: list[dict[str, object]] = []
+    cursor: str | None = None
+    for _page in range(AUTHORITY_MAX_PAGES):
+        argv = [
+            *_GRAPHQL,
+            "-f",
+            f"query={_AUTHORITY_QUERIES[kind]}",
+            "-f",
+            f"o={owner}",
+            "-f",
+            f"r={repository}",
+            "-F",
+            f"n={number}",
+        ]
+        if cursor is not None:
+            argv += ["-f", f"after={cursor}"]
+        connection = _connection(
+            _json_lines(_command(context, argv, cwd=context.cwd))[-1], kind
+        )
+        nodes = connection.get(StoreField.NODES)
+        info = connection.get(StoreField.PAGE_INFO)
+        if not isinstance(nodes, list) or not isinstance(info, dict):
+            raise Blocked(
+                BlockReason.UNREADABLE_OUTPUT,
+                f"{kind} page carries no nodes array and pageInfo object",
+            )
+        if not all(isinstance(node, dict) for node in nodes):
+            raise Blocked(
+                BlockReason.UNREADABLE_OUTPUT,
+                f"{kind} page holds an entry that is not an object",
+            )
+        entries.extend(_AUTHORITY_ENTRIES[kind](node) for node in nodes)
+        if info.get(StoreField.HAS_NEXT_PAGE) is not True:
+            return entries
+        cursor = info.get(StoreField.END_CURSOR)
+        if not isinstance(cursor, str) or not cursor:
+            raise Blocked(
+                BlockReason.UNREADABLE_OUTPUT,
+                f"{kind} page reports a further page and no end cursor",
+            )
+    bound = f"{AUTHORITY_PAGE_SIZE} {kind} per page, {AUTHORITY_MAX_PAGES} pages"
+    raise Blocked(
+        BlockReason.PAGE_BOUND_REACHED,
+        f"the {kind} read is not complete at {bound}",
+        evidence={ResultField.BOUND: bound},
+    )
+
+
+def _read_authority(
+    context: _Context, request: Mapping[str, object]
+) -> dict[str, object]:
+    identity = _issue_identity(request)
+    return {
+        ResultField.ISSUE: request[RequestField.ISSUE],
+        ResultField.EVENTS: _read_connection(context, AuthorityRead.EVENTS, identity),
+        ResultField.COMMENTS: _read_connection(
+            context, AuthorityRead.COMMENTS, identity
+        ),
+    }
+
+
 _HANDLERS: Final[
     Mapping[Operation, Callable[[_Context, Mapping[str, object]], dict[str, object]]]
 ] = {
@@ -943,6 +1153,7 @@ _HANDLERS: Final[
     Operation.ADD_FINDING: _add_finding,
     Operation.RECONCILE: _reconcile,
     Operation.FINISH: _finish,
+    Operation.READ_AUTHORITY: _read_authority,
 }
 
 
