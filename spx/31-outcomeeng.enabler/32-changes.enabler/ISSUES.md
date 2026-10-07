@@ -285,6 +285,18 @@ Impact: a reader of the skill meets a stop guarantee that a prior store write co
 
 Revisit and settlement condition: the objective names only properties of the released state, step 3.1 is evaluated before the first store write or names the step 2 write, a step reads and retains Maturity after step 2, the unused grants are removed, and one typed skill audit of `release-change` raises none of these findings.
 
+## DEBT [bound]: close-change routes no blocked result for a successor read that reaches its bound
+
+Defect class: `bound`.
+
+Finding: the successor read of `src/plugins/spec-tree/skills/change-standards/references/lifecycle.md` (`canonical-state`) returns a blocked read that names `100 issues per page, 10 pages` when the store's `issues` connection still has `hasNextPage` true after page 10, and derives no successor from it. `src/plugins/spec-tree/skills/close-change/SKILL.md` step 3, `Refined` branch (line 32), reads successors under `canonical-state` and routes two outcomes: zero records refuses the close as "Output continues nowhere", and a named successor the store does not hold refuses naming it. Its `<result>` and its success criteria name no blocked-read outcome, so in a store past the bound the derived set is empty and the close is refused for a false reason with the bound dropped.
+
+Evidence: `spec-tree:changes-reviewer` run `2026-10-07_07-21-26-874-21ad0d862cb0` on head `da009a7f1d3d3145258259d9055d7a6a61482044`, finding `consistency` against `close-change/SKILL.md:32`. The Observation of outcomeeng/changes#168 places no skill edit for `close-change` in that Change's Nodes.
+
+Impact: a Change in a store with more issues than the bound cannot be closed `Refined`, and the refusal names no bound.
+
+Revisit and settlement condition: `close-change` step 3, its `<result>` and its success criteria carry a blocked outcome for a successor read that reaches its bound, which refuses the close and names `100 issues per page, 10 pages`, and one typed skill audit of `close-change` follows the edit.
+
 ## DEBT [bound]: claim-change lists candidates at a bound and returns no blocked result when the list fills it
 
 Defect class: `bound`.
