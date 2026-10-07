@@ -123,7 +123,7 @@ python3 "${CLAUDE_SKILL_DIR}/scripts/prowl_environment.py" delegate <<'JSON'
 JSON
 ```
 
-For a production request carried by `/message-agents`, generate the same block without sending a delegation. Submit exactly `sender`, `recipient`, and `completionText` to `plan-handback` and preserve the returned `handback` object unchanged:
+To generate the block without sending a delegation, submit exactly `sender`, `recipient`, and `completionText` to `plan-handback` and preserve the returned `handback` object unchanged:
 
 ```bash
 printf '%s\n' '{"sender":{"agent":"agent-a","pane":"11111111-1111-4111-8111-111111111111","worktree":"/repo-a","branch":"work/a","repository":"/repo.git","run":"run-a"},"recipient":{"agent":"agent-b","pane":"22222222-2222-4222-8222-222222222222","worktree":"/repo-b","branch":"work/b","repository":"/repo.git","run":"run-b"},"completionText":"Requested artifact completed."}' | python3 "${CLAUDE_SKILL_DIR}/scripts/prowl_environment.py" plan-handback

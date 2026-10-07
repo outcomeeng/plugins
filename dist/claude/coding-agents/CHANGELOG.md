@@ -11,6 +11,7 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 ### Changed
 
 - **`/message-agents` and `/operate-prowl` take the split rerun after a guard block on a variable-carrying redirect.** A dangerous-command guard block on a redirect into a `$SP` scratch path is a compound command: Claude reruns its parts once, one at a time, with every string written literally and each value resolved first — a command or process substitution's inner command run on its own, a variable's assigned literal or `printenv` output, a glob's matches from a listing of its literal directory or from the file-search tool when a directory component has a wildcard, a tilde, brace or arithmetic expansion written out — a secret value never printed or written into a command and ending the command family, and a part the guard blocks on its own ending that part's family. Rewriting the blocked operation as another program stays forbidden.
+- **`/operate-prowl` and `/message-agents` state their input rules without naming a calling workflow.** `plan-handback` takes exactly `sender`, `recipient` and `completionText` whoever supplies them, and a request's `toPane` is valid as a complete pane identity matching the selected candidate.
 
 ## 0.11.0
 

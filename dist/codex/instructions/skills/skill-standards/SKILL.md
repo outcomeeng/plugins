@@ -15,11 +15,11 @@ Skills conform to these standards when, at minimum: (a) SKILL.md is under 500 li
 </success_criteria>
 
 <reference_note>
-This is a reference skill. Composing skills invoke these standards explicitly before authoring or auditing. It is not a standalone workflow.
+This is a reference skill: it standardizes skill authoring and carries no standalone workflow.
 </reference_note>
 
 <repo_local_overlay>
-When another skill loads this reference inside a repository, check for `spx/local/skills.md` at the repository root. Read that file after this reference if it exists and apply it as the repo-local specialization (e.g., marketplace-specific naming conventions or additional constraints). A local overlay supplements skill behavior; it does not declare product truth.
+Inside a repository, check for `spx/local/skills.md` at the repository root. Read that file after this reference if it exists and apply it as the repo-local specialization (e.g., marketplace-specific naming conventions or additional constraints). A local overlay supplements skill behavior; it does not declare product truth.
 </repo_local_overlay>
 
 <skill_organization>
@@ -186,7 +186,7 @@ When a foundation skill requires the same material on every fresh invocation, in
 
 <progressive_disclosure>
 
-Keep SKILL.md under 500 lines unless the eager-foundation exception below applies. Move detailed patterns into descriptively named files one level below `references/`. Cite every bundled reference from the skill or the workflow that requires it. Avoid nested reference chains, orphaned files, and duplicated standards.
+Keep SKILL.md under 500 lines unless `<eager_foundation_exception>` applies. Move detailed patterns into descriptively named files one level below `references/`. Cite every bundled reference from the skill or the workflow that requires it. Avoid nested reference chains, orphaned files, and duplicated standards.
 
 Apply `<eager_foundation_exception>`. A 500-line overview followed immediately by mandatory references is not progressive disclosure; total eagerly loaded content is the relevant cost.
 

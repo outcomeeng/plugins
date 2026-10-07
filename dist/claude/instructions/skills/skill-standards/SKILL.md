@@ -15,11 +15,11 @@ Skills conform to these standards when, at minimum: (a) SKILL.md is under 500 li
 </success_criteria>
 
 <reference_note>
-This is a reference skill. Composing skills invoke these standards explicitly before authoring or auditing. It is not a standalone workflow.
+This is a reference skill: it standardizes skill authoring and carries no standalone workflow.
 </reference_note>
 
 <repo_local_overlay>
-When another skill loads this reference inside a repository, check for `spx/local/skills.md` at the repository root. Read that file after this reference if it exists and apply it as the repo-local specialization (e.g., marketplace-specific naming conventions or additional constraints). A local overlay supplements skill behavior; it does not declare product truth.
+Inside a repository, check for `spx/local/skills.md` at the repository root. Read that file after this reference if it exists and apply it as the repo-local specialization (e.g., marketplace-specific naming conventions or additional constraints). A local overlay supplements skill behavior; it does not declare product truth.
 </repo_local_overlay>
 
 <skill_organization>
@@ -281,7 +281,7 @@ SKILL.md is an overview. Reference files carry detail. Claude loads reference fi
 
 **Rules:**
 
-- Keep SKILL.md under 500 lines unless the eager-foundation exception below applies.
+- Keep SKILL.md under 500 lines unless `<eager_foundation_exception>` applies.
 - References live in `references/` one level deep from SKILL.md. Do not nest references that read other references — Claude may only partially read transitive files.
 - Reference files over 100 lines need a table of contents at the top, so partial reads still see the full scope.
 - Use forward slashes in every path — `references/guide.md`, never `references\guide.md`. Works across platforms.
