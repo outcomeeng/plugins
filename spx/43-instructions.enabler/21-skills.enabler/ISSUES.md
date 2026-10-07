@@ -53,26 +53,6 @@ skill bodies — and the tag is applied.
 `b0a6237f359687bd40a01755af6f4ff2d88387b2`, finding `DEBT [evidence]` at
 `spx/43-instructions.enabler/21-skills.enabler/skills.md:15`, during Change #76.
 
-## `skill-standards` names the eager-foundation exception by a section that does not hold it
-
-`src/plugins/instructions/skills/skill-standards/SKILL.md:14` (`<success_criteria>`
-(a)) points to "the eager-foundation exception in `<progressive_disclosure>`", and
-`<progressive_disclosure>` at lines 320 and 346 says "unless the eager-foundation
-exception below applies", while the exception lives in its own
-`<eager_foundation_exception>` tag at line 301, which precedes
-`<progressive_disclosure>`.
-
-**Impact.** An author following the tag-by-name convention this skill prescribes
-lands on a section that does not hold the rule.
-
-**Settlement condition.** `<success_criteria>` names `<eager_foundation_exception>`
-and both `<progressive_disclosure>` branches drop "below".
-
-Source: `instructions:skill-auditor` finding rule `stale_cross_reference`, severity
-`WARNING`, on head `524b9c46c7960a106d84ef856b4020a0ce904b16` during Change #76;
-[Change #92](https://github.com/outcomeeng/changes/issues/92) carries the
-standards-skill pass that owns it.
-
 ## `script-standards.md` states the testing-record requirement with a weak modal
 
 `src/plugins/instructions/skills/skill-standards/references/script-standards.md:32`,
@@ -274,14 +254,6 @@ Source: `instructions:skill-auditor` finding `f-015`, rule
 
 **Settlement condition**: every pseudo-XML example uses a `text` fence with matched delimiters; one typed skill audit raises no such finding.
 
-## `skill-standards` describes the context that loads it
-
-**Evidence**: `instructions:skill-auditor` warning f-010 (rule `caller_independence`) on `src/plugins/instructions/skills/skill-standards/SKILL.md:22` at head `8e631614b562ec5edf05c0e4c80a38625ada90d7`: `<repo_local_overlay>` opens "When another skill loads this reference inside a repository", and line 18 describes its callers, while the same skill's caller-independence rule bars a skill from naming or describing its caller or invocation context.
-
-**Impact**: the canonical standard does not hold its own rule, so an auditor can cite it as a counterexample.
-
-**Settlement condition**: the overlay rule and the reference note state their behavior without naming who loads the skill; one typed skill audit raises no `caller_independence` finding against them.
-
 ## `audit-skill`'s annotated examples grade in a vocabulary the run does not record
 
 **Evidence**: the built `instructions:skill-auditor` run `2026-10-03_22-58-55-808-4bb7d31783f5` on `src/plugins/instructions/skills/audit-skill` at head `8e631614b562ec5edf05c0e4c80a38625ada90d7` raised debt findings (rule `severity-vocabulary-mismatch`) against `references/operational-effectiveness-examples.md` lines 5, 31, 56, 95 and `references/xml-structure-examples.md` lines 5, 31, 53, 88, 116, 130: the examples flag violations as critical or recommendation, while `SKILL.md` records only the `blocking` and `debt` severities and states no mapping.
@@ -318,14 +290,14 @@ Source: `instructions:skill-auditor` finding `f-015`, rule
 
 ## `skill-standards` carries four findings no other entry records
 
-**Evidence.** `instructions:skill-auditor` run `2026-10-06_18-37-53-397-59929467e6ad` on `src/plugins/instructions/skills/skill-standards` raised eight `debt` findings. The entries above record three of them: `progressive-disclosure-exception-reference` (the stale cross-reference entry), `caller-independence` on `<repo_local_overlay>` (the entry on the context that loads the skill), and `constraint-language-weak-modal` (the `script-standards.md` entry). The self-justification finding, `eager-foundation-exception`, is settled by removing the paragraph that invoked the exception for the skill. This entry records four others:
+**Evidence.** `instructions:skill-auditor` run `2026-10-06_18-37-53-397-59929467e6ad` on `src/plugins/instructions/skills/skill-standards` raised eight `debt` findings. The changeset repairs three of them: `progressive-disclosure-exception-reference` and `caller-independence` on `<repo_local_overlay>` and the reference note. The self-justification finding, `eager-foundation-exception`, is settled by removing the paragraph that invoked the exception for the skill. The `constraint-language-weak-modal` finding is the `script-standards.md` entry above. This entry records four others:
 
 - `reference-skills-duplication` on `<descriptions>` and `<conciseness>`, which `agent-prompt-standards` restates in `<description_style>` and `<conciseness>`.
 - `caller-independence` on the `<xml_structure>` intelligence-rules table, whose row label reads "Auditor (agent-preloaded)".
 - `conciseness-concrete-over-abstract` on `<progressive_disclosure>`, whose token-efficiency figures understate a 40,000-code-point eager payload.
 - `path-boundary-deleting-command`, where `<path_boundary>` states that no skill directs a deleting command while `<progressive_disclosure>` directs `git rm` for an orphaned reference file.
 
-**Standing.** The four findings lie on text the changeset leaves untouched. The diff of the skill against `origin/main` holds these hunks: `SKILL.md:97` and `SKILL.md:107` (the command-capability pointers naming `<guard_block_partition>`), `SKILL.md:274` (the `<context>` paragraph, replaced by a one-line pointer), `SKILL.md:298` (the paragraph in `<eager_foundation_exception>` that invoked the exception for the skill, with its measurement command, removed), `SKILL.md:512-514` (the closing sentence of the classifier-refusal paragraph and the added guard-block paragraph in `<path_boundary>`), and in `references/command-capabilities.md` the `<contents>` block at lines 1-11, the `<overview>` sentence at line 14, the `<dynamic_context>` rules at lines 52 and 55-56, and the `<guard_block_partition>` section at lines 92-116. None falls in `<descriptions>`, `<conciseness>`, the intelligence-rules table, the token-efficiency sentence of `<progressive_disclosure>`, or the scratch-storage paragraph of `<path_boundary>`.
+**Standing.** The four findings lie on text the changeset leaves untouched. The diff of the skill against `origin/main` holds these hunks: `SKILL.md:18` (the reference note), `SKILL.md:22` (the overlay read), `SKILL.md:97` and `SKILL.md:107` (the command-capability pointers naming `<guard_block_partition>`), `SKILL.md:274` (the `<context>` paragraph, replaced by a one-line pointer), `SKILL.md:298` (the paragraph in `<eager_foundation_exception>` that invoked the exception for the skill, with its measurement command, removed), `SKILL.md:512-514` (the closing sentence of the classifier-refusal paragraph and the added guard-block paragraph in `<path_boundary>`), and in `references/command-capabilities.md` the `<contents>` block at lines 1-11, the `<overview>` sentence at line 14, the `<dynamic_context>` rules at lines 52 and 55-56, and the `<guard_block_partition>` section at lines 92-116. None falls in `<descriptions>`, `<conciseness>`, the intelligence-rules table, the token-efficiency sentence of `<progressive_disclosure>`, or the scratch-storage paragraph of `<path_boundary>`.
 
 **Impact.** The standard restates a standard it defers to, labels a skill class by its caller, quotes a token figure its own limits falsify, and leaves the scope of its deleting-command ban unstated.
 
@@ -343,7 +315,7 @@ Source: `instructions:skill-auditor` finding `f-015`, rule
 
 **Evidence.** `instructions:skill-auditor` run `2026-10-07_07-18-22-277-67e02ea2545a` on `src/plugins/instructions/skills/skill-standards` raised two `debt` findings, rule `internal-consistency`: the reference-skill description template at `SKILL.md:181-187` and `SKILL.md:402-415` prescribes "Loaded by other skills, not invoked directly", which names the skill's callers, while `<skill_organization>` bars a skill from naming or describing its caller; and the Validator row of `<skill_types>` at `SKILL.md:382` prescribes "Pass/fail verdicts, scores" and a scoring rubric, while `references/auditor-skeleton.md` outputs a verdict and names "scored instead of judged" as a failure mode. The same run re-raised the findings the entries above record: `objective-shape`, `cross-reference-accuracy`, `reference-skill-duplication`, `caller-independence` and `constraint-language`.
 
-**Standing.** The findings lie on text the changeset leaves untouched. The diff of the skill against `origin/main` holds hunks at `SKILL.md:97`, `SKILL.md:107`, `SKILL.md:274`, `SKILL.md:298` (removed paragraph) and `SKILL.md:512-514`, and none falls in `<descriptions>`, `<skill_types>` or `<reference_skills>`.
+**Standing.** The findings lie on text the changeset leaves untouched. The diff of the skill against `origin/main` holds hunks at `SKILL.md:18`, `SKILL.md:22`, `SKILL.md:97`, `SKILL.md:107`, `SKILL.md:274`, `SKILL.md:308`, `SKILL.md:298` (removed paragraph) and `SKILL.md:512-514`, and none falls in `<descriptions>`, `<skill_types>` or `<reference_skills>`.
 
 **Impact.** An auditor applying both rules gets conflicting verdicts on every reference skill, and a quality-checking audit skill that follows the Validator row ships scores its own skeleton forbids.
 
