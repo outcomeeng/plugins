@@ -16,10 +16,11 @@ or generated repository docs
 warrant no plugin bump. The marketplace sync wrapper uses the same distribution
 boundary: those changes alone do not refresh plugin caches.
 
-The opening protocol owns version writes. Ordinary commits neither initiate a
-bump nor ask for one. Never hand-edit a manifest `version` field:
-`just bump` writes each affected plugin's source manifests
-(`.claude-plugin/plugin.json` and `.codex-plugin/plugin.json`) in lockstep.
+The managing protocol owns version writes, at merge time. The PR opens
+without a version commit. Ordinary commits neither initiate a bump nor ask for
+one. Never hand-edit a manifest `version` field: `just bump` writes each
+affected plugin's source manifests (`.claude-plugin/plugin.json` and
+`.codex-plugin/plugin.json`) in lockstep.
 
 ### Segment selection
 
@@ -48,47 +49,20 @@ Use the selected base's remote ref for a stacked branch. The segment is the
 second positional argument; recipe flags such as `--segment` and
 `segment=minor` are invalid.
 
-## Final pre-opening commit
+## No version commit before opening
 
-Complete ordinary changes and their verification before finalizing versions.
-For a changeset that warrants a bump, the bump is the final content-changing
-step before publication: it produces the last commit before the pull request
-opens, after the branch is current with its selected base.
-
-1. Invoke `/sync-base` for the assigned worktree and selected base. Require
-   `already_current` or `rebased` and record its full head and base identities.
-   Do not derive currency from an earlier verification result.
-2. Run `just bump` against that base, with the explicit segment when the policy
-   above requires it. Then run `just build-skills` so generated trees carry the
-   source versions.
-3. Commit the version changes and their generated output together through
-   `/commit-changes`. The commit workflow commits these supplied files without
-   initiating a bump of its own.
-4. Re-establish `VERIFICATION_READINESS` on this exact clean committed head:
-   the selected deterministic lane, every applicable audit, and local review.
-   A pre-bump result cannot establish readiness for a changed diff. If a repair
-   changes content, return to ordinary work and finalize the repaired branch
-   again before opening.
-5. Before the opening push and ready PR creation, invoke `/sync-base` again
-   and require its successful result for the exact candidate head. Base
-   advancement returns to step 2 and reopens the verification that the
-   preservation proof invalidates.
-6. Run `just bump-check` against the selected base on that head. Any nonzero
-   exit blocks opening. Require the checked head to be the pushed and opened
-   head; a later content change or base advancement invalidates the check.
+The opening protocol writes no version. A changeset that warrants a bump opens
+its PR on verified content, and the version commit follows when the content is
+final. `spx/local/merging.md` declares that step for `/manage-pr`, which reads
+that overlay during open-PR management. The plugin version policy above
+supplies its distribution boundary and segment selection.
 
 A changeset with no plugin-distribution change skips version writing and its
 version commit. It still passes the opening protocol's other checks.
 
 `just bump-check` verifies that affected manifests agree and are ahead of the
-base. The full CI gate does not run this comparison; this opening check is
+base. The full CI gate does not run this comparison; the merge-time check is
 required even when all CI-related verification is green.
-
-## Open PR updates
-
-`spx/local/merging.md` declares follow-up version finalization for `/manage-pr`,
-which reads that overlay during open-PR management. The plugin version policy
-above supplies its distribution boundary and segment selection.
 
 ## Other pre-flight additions
 
@@ -112,7 +86,7 @@ Append to the default template from `/open-pr`:
 ```text
 ## Versioning
 
-- <plugin>: <old> → <new> (<MAJOR | MINOR | PATCH>)
+- <plugin>: <MAJOR | MINOR | PATCH>, written before merge
 
 ## Validation
 

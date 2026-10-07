@@ -71,10 +71,11 @@ Marketplace installation changes include `just verify-marketplace-installation` 
 
 When the full `just check-full` bundle is required, it is the terminal local deterministic gate. Run the focused lane first, then exactly the evidence Auditors and the review that the merge composition in `merging-standards` `<authority_gates>` selects for the changeset, to convergence — none for a changeset whose touched nodes are all `spec`-malleable — then run `just check-full` once against the clean committed head. Never run `just check-full` before those agentic checks, inside an agent, or concurrently with another heavy command. Any change after it invalidates the result and reopens the affected agentic gates before the next full-gate run.
 
-## GitHub PR follow-up version finalization
+## GitHub PR version finalization
 
-`/manage-pr` applies this entry after synchronizing an open PR's branch and
-before establishing `VERIFICATION_READINESS` for a follow-up push. Read the
+The PR opens without a version commit. `/manage-pr` applies this entry once the
+PR's content is final: every valid finding is fixed and no content push is
+pending, and before the mutation-point guard for the merge. Read the
 `Plugin version policy` section in `spx/local/open-pr.md` for the distribution
 boundary, segment selection, and recipe argument convention; this entry adds
 the managing workflow's execution point without restating that policy.
@@ -85,8 +86,8 @@ the first positional argument to both `just bump` and `just bump-check`;
 a stacked or retargeted PR uses its synchronized base, without falling back
 to the recipes' `origin/main` default.
 
-After a rebase or retarget, a changeset within the declared distribution
-boundary repeats version finalization before its next push:
+A changeset within the declared distribution boundary finalizes its version in
+this order:
 
 1. Require `/sync-base` to return `already_current` or `rebased` for the
    candidate head and selected PR base, then bind `version_base_ref` as above.
@@ -97,28 +98,25 @@ boundary repeats version finalization before its next push:
    version commit is created. The bump preserves manifests still ahead of
    the synchronized base and writes the next version from that base when
    it catches up or advances.
-3. Re-establish `VERIFICATION_READINESS` for the resulting clean committed
-   head. A version write changes the diff and invalidates affected earlier
-   verification; the base-sync preservation proof permits reuse only for
-   the unchanged diff and unrelated base movement it proves.
+3. Run `just bump-check "$version_base_ref"` on the clean committed head; a
+   nonzero exit blocks the push.
+4. Push the version commit under `/merging-standards` `<push_semantics>` and
+   return to the check wait. The push fires the required checks and the CI
+   review on the new head, and `MERGE_READINESS` reads that head.
 
-A content-only review edit does not initiate another bump. When review newly
-affects a plugin, finalize that plugin under the referenced policy before
-the push. If review changes the required segment for an already-bumped
-plugin, restore only its source manifests to the selected base's versions,
-then run `just bump "$version_base_ref"` with the corrected second positional
-segment, rebuild, commit, and re-establish readiness. An explicit segment
+A version commit changes only manifests, changelogs, and generated output, so
+it re-runs no evidence Auditor and no local review; its local lane is the
+generated-output parity of step 2 and the check of step 3. A rebase or
+retarget after the version commit, or base advancement before the merge,
+repeats steps 1 to 4 from the new base. If review changes the required
+segment for an already-bumped plugin, restore only its source manifests to the
+selected base's versions, then run `just bump "$version_base_ref"` with the
+corrected second positional segment, rebuild, and commit. An explicit segment
 alone does not override the skip for a plugin already ahead of the base.
 
-Before every follow-up push, require a fresh successful `/sync-base` result
-for the candidate head and selected PR base and bind `version_base_ref` from
-that result. A rebase or retarget returns to version finalization above.
-Run `just bump-check "$version_base_ref"` on the exact clean committed head
-being pushed; a nonzero exit blocks the push. A subsequent content change
-or base advancement invalidates that check. Changes outside the referenced
-distribution boundary skip version writing and retain every other readiness
-requirement. The current-head CI review and checks decide merge readiness;
-the final merge writes no version and merges the reviewed head.
+Changes outside the referenced distribution boundary skip version writing. The
+current-head CI review and checks decide merge readiness; the final merge
+writes no version and merges the reviewed head.
 
 ## Governance surfaces (base-sync review reuse)
 
