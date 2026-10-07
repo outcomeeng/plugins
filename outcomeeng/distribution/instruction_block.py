@@ -177,25 +177,31 @@ DANGEROUS_COMMAND_GUARD_STOP_TRIGGER_REQUIREMENT: Final = (
     "with every string written literally terminates that command family"
 )
 DANGEROUS_COMMAND_GUARD_UNCARRIED_COMPOSITION_REQUIREMENT: Final = (
-    "holds a process substitution, a pipe between two operations, a "
-    "background `&`, or a subshell"
+    "holds a process substitution, a pipe between two operations other than "
+    "the payload pipe below, a background `&`, a subshell, or a list that "
+    "mixes `&&` and `||`"
 )
 DANGEROUS_COMMAND_GUARD_UNCARRIED_TERMINAL_REQUIREMENT: Final = (
     "a block on it terminates its command family, even when it also holds a "
     "join or an expansion"
 )
 DANGEROUS_COMMAND_GUARD_COMPOUND_DEFINITION_REQUIREMENT: Final = (
-    "two or more operations joined or separated by `&&`, `||`, `;` or a "
-    "newline, or one operation whose words the shell expands: a variable, a "
-    "command substitution, a glob, or a tilde, brace or arithmetic expansion, "
-    "or a heredoc with an unquoted delimiter whose body expands"
+    "two or more operations separated by `;` or a newline, or joined by `&&` "
+    "alone or by `||` alone, or one operation whose words the shell expands: a "
+    "variable, a command substitution, a glob, or a tilde, brace or arithmetic "
+    "expansion, or a heredoc with an unquoted delimiter whose body expands"
 )
 DANGEROUS_COMMAND_GUARD_SINGLE_OPERATION_FORMS_REQUIREMENT: Final = (
     "A heredoc that feeds one command holds one operation unless its delimiter "
     "is unquoted and its body expands, and so does a pipe whose first stage "
     "only supplies the payload the one reading command consumes on stdin, so "
-    "neither counts as a join or separator; either form is compound when any "
-    "word of the command or of its payload stage expands"
+    "neither counts as a join or separator"
+)
+DANGEROUS_COMMAND_GUARD_PAYLOAD_PIPE_REQUIREMENT: Final = (
+    "When any word of such a pipe or of its payload stage expands, its values "
+    "are resolved first and the same pipe runs once with literal words; it is "
+    "never split, and when the guard blocks that literal pipe the command "
+    "family ends"
 )
 DANGEROUS_COMMAND_GUARD_VALUE_RESOLUTION_REQUIREMENT: Final = (
     "Resolve each value first: a command substitution's inner "
@@ -217,9 +223,10 @@ DANGEROUS_COMMAND_GUARD_COMPOUND_SPLIT_REQUIREMENT: Final = (
     "every string written literally"
 )
 DANGEROUS_COMMAND_GUARD_CONTROL_FLOW_REQUIREMENT: Final = (
-    "after `&&` the next part runs only when the part before it exited zero, "
-    "after `||` only when it exited nonzero, and after `;` or a newline "
-    "regardless"
+    "`;` and a newline separate lists, and each list runs regardless of the "
+    "one before; within a list, parts joined by `&&` alone run while the part "
+    "before them succeeded, and parts joined by `||` alone run until one "
+    "succeeds"
 )
 DANGEROUS_COMMAND_GUARD_PART_TERMINAL_REQUIREMENT: Final = (
     "part the guard blocks on its own terminates that part's family"
@@ -261,6 +268,10 @@ DANGEROUS_COMMAND_GUARD_POLICY_REQUIREMENTS: Final = (
     (
         "dangerous-command guard single-operation forms",
         DANGEROUS_COMMAND_GUARD_SINGLE_OPERATION_FORMS_REQUIREMENT,
+    ),
+    (
+        "dangerous-command guard payload pipe",
+        DANGEROUS_COMMAND_GUARD_PAYLOAD_PIPE_REQUIREMENT,
     ),
     (
         "dangerous-command guard compound split",

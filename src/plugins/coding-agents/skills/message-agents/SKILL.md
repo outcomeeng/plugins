@@ -7,12 +7,12 @@ allowed-tools: Bash(printf:*), {{! tool('use_skill') !}}, Bash(python3 "${CLAUDE
 ---
 
 <objective>
-One message delivered on the route its request selects — a message record in the agent-mail store with its one-line doorbell, or a source-owned coordination envelope submitted into one complete Prowl pane — with delivery kept distinct from acknowledgement, agreement, authorization, and ownership.
+One message delivered on the route its request selects — a message record in the agent-mail store with its one-line doorbell, or a source-owned coordination envelope submitted into one complete Prowl pane — with delivery kept distinct from acknowledgement, agreement, authorization, and ownership, or a doorbell line from the caller's own pane resolved to its sender and store id.
 </objective>
 
 <route_selection>
 
-The request shape selects the route. A request carrying `recipient` as an agent-mail name, `correlation`, `body`, and `ackRequired` is a mail request and follows `<mail_route>`. A request carrying `recipientPath`, `facts`, and a pane-bound kind and no `correlation` or `body` is a Prowl request and follows `<workflow>`. A request carrying `line` and `agents` resolves a doorbell and follows `<mail_route>` step 8. A request that mixes the two shapes, a request that matches neither, and an empty or whitespace request are `invalid-schema` before any discovery or delivery; the bundled script rejects fields outside the selected route's shape. The recovery names the route's own required fields: `kind`, `correlation`, `sender`, `recipient`, `subject`, `body`, and `ackRequired` for the mail route, and `recipientPath`, `kind`, `subject`, and `facts` for the Prowl route.
+The request shape selects one of three routes. A request carrying `recipient` as an agent-mail name, `correlation`, `body`, and `ackRequired` is a mail request and follows `<mail_route>`. A request carrying `recipientPath`, `facts`, and a pane-bound kind and no `correlation` or `body` is a Prowl request and follows `<workflow>`. A request carrying `line` and `agents` is a doorbell resolution and follows `<mail_route>` step 8. A request that mixes the fields of two of these shapes, a request that matches none, and an empty or whitespace request are `invalid-schema` before any discovery or delivery; the bundled script rejects fields outside the selected route's shape. The recovery names each route's own required fields: `kind`, `correlation`, `sender`, `recipient`, `subject`, `body`, and `ackRequired` for the mail route; `recipientPath`, `kind`, `subject`, and `facts` for the Prowl route; and `line` and `agents` for the doorbell route.
 
 </route_selection>
 
@@ -140,6 +140,7 @@ Recorded exercised payload/results:
 - Delivery passes only after `/operate-prowl` returns a checked successful result whose public input record confirms trailing Enter was sent; every failure preserves its exact status, detail, and command exit code when present.
 - A mail delivery passes only when `mail-result` returns `status: "delivered"` from a `succeeded` capability result whose `data.record` carries the store-assigned `id`; the doorbell text is `[<sender>] mail <id>` and `doorbell.submitted` is true only with a checked Prowl `send` result carrying `trailing_enter_sent: true`.
 - A `delivery-failed` mail result preserves the capability's exact status and detail, and a `delegation-request` carrying an `authority` other than exactly `owner` equal to `sender` and `gitMutation: false` produces no record; an absent `authority` is the sender's obligation and the script rejects nothing for lacking it.
+- A doorbell resolution returns the sender and id only for a sender present in the supplied inventory, and then reads the record through the agent-mail capability.
 - Caller, recipient, mutation-target, and observed-state identities validate before delivery.
 - Transport delivery remains distinct from acknowledgement, agreement, authorization, ownership, and continuation.
 
