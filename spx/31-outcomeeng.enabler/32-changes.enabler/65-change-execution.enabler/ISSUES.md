@@ -87,3 +87,11 @@
 **Impact**: an Executor resumed after a compaction finds no marker and stops with `not-held` instead of asking for the issue reference.
 
 **Settlement condition**: step 1 carries the compaction caveat the Lifecycle skills state, and one typed skill audit of `execute-change` raises no `compaction_marker_survival` finding.
+
+## `/execute-change` carries two skill-audit debt findings on untouched text
+
+**Evidence**: `instructions:skill-auditor` run `2026-10-07_06-57-56-424-f64221b6b17a` rejected the audit of `execute-change` at head `9d7f098b0afb894c102143d3bc4e2aaeaa993588` on two `debt` findings. The changeset's diff of `src/plugins/spec-tree/skills/execute-change/SKILL.md` against the base is line 6, the `gh api repos/*/issues/*/dependencies/blocked_by` grant; no finding lies on changed text. Rule `success-criteria-soundness`, `SKILL.md` lines 121-127: the success criteria cover only the `closed` and `released` results, so a correct `not-held`, `unavailable` or `release-refused` result cannot be judged against them. Rule `unresolved-ambiguity`, `SKILL.md` line 92 (step 6): a valid `/merge` finding goes to a Fixer of the definition whose round produced the named file, with no route when no round of this session produced it, as after a resume from a Handoff.
+
+**Impact**: a result that is correct but not `closed` or `released` has no criterion that judges it, and an Executor resumed from a Handoff has no stated route for a finding on a file an earlier session produced.
+
+**Settlement condition**: each declared result has a success criterion, step 6 states a route for a finding whose file has no producing round in this session, and one typed skill audit of `execute-change` raises neither finding.

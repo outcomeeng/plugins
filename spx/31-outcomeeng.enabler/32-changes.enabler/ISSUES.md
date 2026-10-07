@@ -268,6 +268,23 @@ Impact: a Change with more blockers than the endpoint returns per page gives a b
 
 Revisit and settlement condition: `author-change` reads the blockers as one page of 100 and returns a blocked result naming `100 blockers, one page` when the page holds 100 entries, and one typed skill audit of `author-change` follows the edit. The edit lands with the `author-change` revision of Change outcomeeng/changes#333, which changes the same skill.
 
+## DEBT [skill-audit]: release-change carries four skill-audit debt findings on untouched text
+
+Defect class: `skill-audit`.
+
+Finding: `instructions:skill-auditor` runs `2026-10-07_06-54-14-356-29144e907dbd` and `2026-10-07_07-00-31-515-9145a4b7a10a` rejected the audits of `release-change` on `debt` findings, the first at head `d9fa8e14bf24d13be6b4ef928134643b134a96c0` and the second at head `9d7f098b0afb894c102143d3bc4e2aaeaa993588`. The changeset's diff of `src/plugins/spec-tree/skills/release-change/SKILL.md` against the base is line 9, the `gh api repos/*/issues/*/dependencies/blocked_by` grant, and line 33, step 4. The first run's `ambiguity` finding on step 4 lay on changed text and is fixed; the second run raised none there. The remaining findings lie on text the changeset does not change:
+
+- Rule `objective-shape`, line 13 (`<objective>`): the objective names "step 2" and the readback, which belong to `<workflow>`.
+- Rule `internal-consistency` or `ambiguous_instruction`, line 27 (step 3.1): the default-branch stop promises no store write, while step 2 has already revised the Change body through `author-change`.
+- Rule `ambiguous_instruction`, line 38 (step 6): the readback compares Maturity with "the value read after step 2 completes", and no step instructs that read.
+- Rule `tool-restriction-security`, line 9 (`allowed-tools`): the grants `Bash(git branch --show-current)` and the operator-question tool appear in no workflow step. Line 9 is a changed line, and the changeset changes only its blocker-read grant.
+
+Evidence: the two sealed runs above; the diff range is the one named in the finding.
+
+Impact: a reader of the skill meets a stop guarantee that a prior store write contradicts, a readback comparison with no defined source, and two grants no step uses.
+
+Revisit and settlement condition: the objective names only properties of the released state, step 3.1 is evaluated before the first store write or names the step 2 write, a step reads and retains Maturity after step 2, the unused grants are removed, and one typed skill audit of `release-change` raises none of these findings.
+
 ## DEBT [bound]: claim-change lists candidates at a bound and returns no blocked result when the list fills it
 
 Defect class: `bound`.
