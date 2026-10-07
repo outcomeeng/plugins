@@ -21,7 +21,7 @@ A sealed `spx verification run` on one local Change record, whose terminal statu
 - NEVER mutate the candidate or product content: repository files, claims, Changes, comments, and issue fields remain unchanged. The audit's own SPX verification-run journal is the only state it writes.
 - NEVER write a file. Every request and payload passes to the runner on stdin and every result returns on stdout; the SPX run journal holds the run.
 - ALWAYS reach the candidate, every repository path, and the SPX store only through the bundled runner, `python3 "${CLAUDE_SKILL_DIR}/scripts/audit_change_run.py"`; the runner's SPX journal appends are the audit's only write path. NEVER invoke `rm`, `mktemp`, `spx`, `git`, `realpath`, or `printf`, redirect shell output to a file, or run a bundled script any other way.
-- ALWAYS issue each runner invocation as its own command, never chained to another command with `&&` or `;` and never piped into a command that masks its exit status — a chained command loses the payload of the one behind it and leaves the run unsealed. A nonzero runner exit ends the audit with `BLOCKED` naming the request's `operation` and the exit status.
+- ALWAYS issue each runner invocation as its own command, never chained to another command with `&&` or `;` and never piped into another command — a chained command loses the payload of the one behind it and leaves the run unsealed. A nonzero runner exit ends the audit with `BLOCKED` naming the request's `operation` and the exit status.
 - ALWAYS take the candidate's content from `read-candidate`, every reference answer from `resolve-reference`, and every authority fact from `read-authority`. NEVER judge authority from a body line, a front-matter value, or the conversation. The composed `spec-tree:change-standards` and `spec-tree:spec-tree-plugin` skills read their own skill-directory files. `allowed-tools` grants only the runner invocation and, where the harness has one, the skill-composition tool, and grants no Read, Grep, or Glob: the runner is the audit's only read path, and its SPX journal appends make its grant a write grant rather than a read-only one.
 - NEVER run deterministic verification, publish a Change, or delegate this audit to another session.
 - ALWAYS judge contract-form content only against `spec-tree:change-standards`, loaded with the candidate's declared Maturity as step 3 of `<execution_sequence>` loads it, and with `Lifecycle` as step 6 loads it for authority. The standards own the record rules, the cumulative Definitions of Ready, and the authority rules; this skill owns the audit procedure.
@@ -115,11 +115,9 @@ A blocked result names exactly one of these reasons:
    Ready: one root unit for the complete file and one child per common rule
    and criterion. Never shorten the inventory because a record is concise.
 5. **Judge.** Judge front-matter types, values, immutable root-or-successor
-   lineage, and mutable blockers. Then judge the body in the Intent form: the
-   `## Intent` section with What, Why, any Observation, and Evidence, and each
-   section the declared Maturity adds — Nodes with every node's target
-   malleability and required state, Assertion operations, Decisions, Slice,
-   and Activities — together, and every body line against `body-authority`.
+   lineage, and mutable blockers. Then judge each body section against the
+   loaded rule and criterion inventory, together with every other section the
+   declared Maturity requires, and every body line against `body-authority`.
    At Executable, judge the Frame's stated `VERIFICATION_READINESS`
    predicates, results with their producers, and decision-record audits against
    the composition the loaded Definition of Ready's `<merge_composition>`
@@ -183,7 +181,14 @@ Every scope payload has this shape; replace each placeholder with its observed v
     "skillOwningPluginName": "spec-tree",
     "invocationRole": "leaf-skill"
   },
-  "recordedByRunDriver": "<the six-field runDriver object, unchanged>",
+  "recordedByRunDriver": {
+    "producerKind": "<runDriver.producerKind>",
+    "agentName": "<runDriver.agentName>",
+    "agentOwningPluginName": "<runDriver.agentOwningPluginName>",
+    "skillName": "<runDriver.skillName>",
+    "skillOwningPluginName": "<runDriver.skillOwningPluginName>",
+    "invocationRole": "<runDriver.invocationRole>"
+  },
   "producerProvenance": {
     "agentOwningPluginVersion": "<agentOwningPluginVersion argument>",
     "skillOwningPluginVersion": "<spec-tree plugin version>",
@@ -192,13 +197,24 @@ Every scope payload has this shape; replace each placeholder with its observed v
 }
 ```
 
-Every finding payload has this shape. `producerIdentity` and `producerProvenance` are copies of the accepted unit's `expectedProducer` and complete `producerProvenance` objects; `rule` is the exact lowercase rule or criterion ID; `severity` is `blocking` or `debt`.
+Every finding payload has this shape. `producerIdentity` and `producerProvenance` equal the accepted unit's `expectedProducer` and complete `producerProvenance` objects; `rule` is the exact lowercase rule or criterion ID; `severity` is `blocking` or `debt`.
 
 ```json
 {
   "unitId": "<accepted-unit-key>",
-  "producerIdentity": "<accepted-unit-expectedProducer-object>",
-  "producerProvenance": "<accepted-unit-producerProvenance-object>",
+  "producerIdentity": {
+    "producerKind": "skill",
+    "agentName": "<runDriver.agentName>",
+    "agentOwningPluginName": "<runDriver.agentOwningPluginName>",
+    "skillName": "audit-change",
+    "skillOwningPluginName": "spec-tree",
+    "invocationRole": "leaf-skill"
+  },
+  "producerProvenance": {
+    "agentOwningPluginVersion": "<agentOwningPluginVersion argument>",
+    "skillOwningPluginVersion": "<spec-tree plugin version>",
+    "toolVersion": "<toolVersion>"
+  },
   "rule": "<violated-rule-id>",
   "severity": "<blocking-or-debt>",
   "location": "<file-and-section-or-line>",
@@ -248,11 +264,17 @@ If blocked before a completed verdict, return:
 
 ```text
 BLOCKED
-result: <the runner's blocked result object unchanged; or, for a nonzero runner exit that printed no readable result, {"operation":"<the request's operation>","status":"blocked","reason":"runner-exit","detail":"exit status <n>, no readable result","runToken":"<the run token, or not-started>"}; or {"operation":null,"status":"blocked","reason":"<missing-input-or-missing-prerequisite>","detail":"<exact absent field or prerequisite>","runToken":"not-started"}>
+result: <the result object of the one blocked shape below that applies>
 runnerExit: <the exit status of the runner invocation that produced result, or none when no runner call ran>
 judgmentStatus: <complete|incomplete>
 judgedFindings: <complete-JSON-array>
 ```
+
+The blocked shapes of `result`:
+
+- Runner shape: the runner's blocked result object, unchanged.
+- Exit shape, for a nonzero runner exit that printed no readable result: `{"operation":"<the request's operation>","status":"blocked","reason":"runner-exit","detail":"exit status <n>, no readable result","runToken":"<the run token, or not-started>"}`.
+- Prerequisite shape, for a missing input or prerequisite before any runner call: `{"operation":null,"status":"blocked","reason":"<missing-input-or-missing-prerequisite>","detail":"<exact absent field or prerequisite>","runToken":"not-started"}`.
 
 `runnerExit` names the runner's own exit status, which is nonzero for every blocked result; the `exitCode` inside `result` is the status of a child `git` or `spx` command. `judgmentStatus` is `complete` when the complete rule inventory was judged before the stop and `incomplete` otherwise. `judgedFindings` holds every finding judged before the stop in the complete finding-payload shape, including every debt finding and every finding not yet accepted, or an empty array when none were judged. Preserve already-recorded evidence; never publish a replacement verdict or write findings into the Change.
 

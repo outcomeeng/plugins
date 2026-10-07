@@ -19,6 +19,6 @@ Use skill `spec-tree:change-standards`. Invoke it with `Framed`; it loads the co
 - The store showed the Product's Maintainer's move out of `Submitted` at `Proposed` before Maturity advanced to `Framed`.
 - Output-affecting questions are settled in `## Decisions` and the record carries no attestation line.
 - Every affected node retains its own target malleability.
-- Nodes, Assertion operations, and Decisions are complete enough to preserve product intent.
+- Every criterion of the loaded Framed Definition of Ready holds for `## Nodes`, `## Assertion operations`, and `## Decisions`.
 
 </success_criteria>
