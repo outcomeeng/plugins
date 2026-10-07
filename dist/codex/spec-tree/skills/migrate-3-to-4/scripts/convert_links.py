@@ -96,9 +96,7 @@ class ConversionResult:
 class ConversionError(Exception):
     """A Markdown file could not be read, decoded, or written."""
 
-    def __init__(
-        self, file: str, cause: Exception, rewritten: tuple[str, ...]
-    ) -> None:
+    def __init__(self, file: str, cause: Exception, rewritten: tuple[str, ...]) -> None:
         super().__init__(f"{file}: {cause}")
         self.file = file
         self.cause = cause
