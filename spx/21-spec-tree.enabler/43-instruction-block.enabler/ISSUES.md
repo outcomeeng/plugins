@@ -206,3 +206,23 @@ Run `2026-10-06_18-35-55-521-02765947702d` raised the same finding as `script-va
 **Impact.** The staleness rule can drift between its two copies, the operator question offers a recommended answer the generator refuses, a report item has no source, and a product-authored guide under `spx/` can be deleted while the skill says only generated files are affected.
 
 **Settlement condition.** Each stale condition and the script-ownership statement appears once, the mutual-delegation case routes to its refusal before the operator question, the removal report derives from a named snapshot or output, the script removes only recognized retired output or the skill states what it removes, and a typed skill audit raises none of the four findings.
+
+## The compound-command definition leaves constructed commands in neither class
+
+**Evidence.** The local `changes-reviewer` run `2026-10-07_07-25-07-421-5661ead4268f` raised a `debt` finding at `src/plugins/spec-tree/skills/update-instruction-block/templates/instruction-block.md:57-59`. The guard partitions blocked commands into one operation written entirely in literals, which ends its family, and a compound command defined as several operations joined by `&&`, `||`, `;` or a pipe, or one operation carrying a shell variable, a command substitution or a glob. Three constructed commands reach no class or both: two operations separated by a newline, by `&` or inside a subshell; one operation carrying tilde expansion, brace expansion, arithmetic expansion or process substitution; and a heredoc with an unquoted delimiter whose body contains `$VAR`, which holds one operation by the heredoc sentence and carries a shell variable by the compound definition. The same partition appears in the root instruction files, both `dist/` renders of the template, `/skill-standards` `<path_boundary>`, the assertions in `instruction-block.md` and `skills.md`, and the pinned requirement constants in `outcomeeng/distribution/instruction_block.py`.
+
+**Why it is not settled here.** The partition is the published Decision of the Change that carries this changeset: the Decision "What counts as a compound command?" fixes the definition and the heredoc and payload-pipe sentence. Widening it changes the Decision and every surface that states it, so it needs a revision of the Change record.
+
+**Impact.** A session classifying one of the three constructed commands applies no rule or two, and the router and `/skill-standards` give no tie-break.
+
+**Settlement condition.** One revision defines the classes as complements, for example a single literal operation as one simple command whose every word is a literal with no shell expansion, and every other blocked command as compound, and states which class a heredoc body with expansions falls into; the template, the pinned tuples, the two assertions and the `/skill-standards` paragraph then change together.
+
+## Two coding-agents failure modes teach the retired outcome for a variable-carrying block
+
+**Evidence.** The same run raised a `debt` finding against `src/plugins/coding-agents/skills/message-agents/SKILL.md:131`: its failure mode narrates a redirect into `$SP/agents.json` and `$SP/discovery.json` as a block that terminated the command family, and its remedy says to stop that family or ask the operator. The guard rule now treats one operation carrying a shell variable as a compound command whose block admits one split rerun with the variable resolved to its literal value. Parallel sites: `src/plugins/coding-agents/skills/operate-prowl/SKILL.md:211` and its copies in `spx/43-coding-agents.enabler/32-inter-worktree-coordination.enabler/evals/coordination-decision/prompt.md` at lines 223 and 2082.
+
+**Why it is not settled here.** The two skills and the eval prompt copies belong to the coding-agents plugin, which the Change's Nodes do not name. Rewriting them takes a skill-auditor gate on each skill, a coding-agents version bump and changelog entry, and regenerated eval prompts for the coordination-decision eval.
+
+**Impact.** A session loading either skill reads the stop-the-family outcome for exactly the command class the guard rule now splits.
+
+**Settlement condition.** Both failure modes describe a variable-carrying block under the split-rerun rule, stating the literal-path rerun as the admitted retry and the Python rewrite as the forbidden reformulation, or use a single fully literal operation as the example; the eval prompt copies regenerate; a typed skill audit of each skill raises no finding on the rewritten failure mode.
