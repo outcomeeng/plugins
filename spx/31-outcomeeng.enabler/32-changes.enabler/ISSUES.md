@@ -6,13 +6,25 @@ Defect class: `capability`.
 
 Finding: `author-change` grants `Bash(spx verification run input:*)`, `Bash(spx verification run status:*)`, and `Bash(spx verification run render:*)`, although its delegating workflow does not use them.
 
-Evidence: `src/plugins/spec-tree/skills/author-change/SKILL.md:8` declares all three grants, and the hosted review at [PR #583](https://github.com/outcomeeng/plugins/pull/583#issuecomment-5730664407) identified no corresponding invocation in the workflow. `instructions:skill-auditor` run `2026-10-07_08-30-45-540-0d732cbf18ec` raised it again as rule `allowed-tools-narrowest-grant` for `Bash(spx verification run status:*)` at `SKILL.md:8`; the grant is unchanged from the base.
+Evidence: `src/plugins/spec-tree/skills/author-change/SKILL.md:8` declares all three grants, and the hosted review at [PR #583](https://github.com/outcomeeng/plugins/pull/583#issuecomment-5730664407) identified no corresponding invocation in the workflow. `instructions:skill-auditor` run `2026-10-07_08-30-45-540-0d732cbf18ec` raised it again as rule `allowed-tools-narrowest-grant` for `Bash(spx verification run status:*)` at `SKILL.md:8`, and run `2026-10-07_08-39-58-900-2429c7e936a6` a third time; the grant is unchanged from the base.
 
 Impact: the skill carries excess capability beyond the authority required by its delegating workflow.
 
 Successor: the Proposed Change filed after Change #89 merges for the agent-run-journal sequence collision, carrying this defect as its second item.
 
 Revisit and settlement condition: remove all three unused verification-run grants and pass one typed skill audit over the revised `author-change` surface.
+
+## DEBT [skill-audit]: author-change's Sliced workflow leaves a successor's Maturity unstated
+
+Defect class: `skill-audit`.
+
+Finding: `instructions:skill-auditor` run `2026-10-07_08-39-58-900-2429c7e936a6` at head `229758261d4ce3887351a08e25d81b51b226c062` raised `ambiguous-instruction` against `src/plugins/spec-tree/skills/author-change/workflows/sliced.md` step 2 (line 10): the step authors each successor "as a new Change through this skill" and never states the successor's target Maturity or what becomes of the source's Framed Nodes, Assertion operations, and Decisions, while `<authority_gate>` persists every new Change at `Proposed`. The changeset's diff of `sliced.md` against the base is lines 3, 9, 12, 19, 20 and 22; line 10 is outside it.
+
+Evidence: the sealed run above.
+
+Impact: a split or coalescence leaves open whether the successor carries the source's framed content or re-frames it after its own confirmation at `Proposed`.
+
+Revisit and settlement condition: step 2 names the successor's Maturity and the disposition of the source's completed Framed content, and one typed skill audit of `author-change` raises no `ambiguous-instruction` finding on it.
 
 ## DEBT [specificity]: author-change and change-standards leave checks unnamed
 

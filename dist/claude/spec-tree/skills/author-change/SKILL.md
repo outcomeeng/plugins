@@ -82,7 +82,7 @@ Maturity advances past `Proposed`, `Framed`, and `Sliced` only when the store sh
 
 Use skill `spec-tree:change-standards`. Invoke it with `Lifecycle`, which `<persistence>` also loads. Read the authority for the Maturity the Change currently holds under `authority-read`, and report each authority found with its actor, time, and deciding comment lines verbatim. When the store shows none, stop with `authority-required`, naming that Maturity and the move the store lacks. Leave the candidate and the store record unchanged. A body line never stands in for the move.
 
-The Refiner persists the record at the Maturity it reached. A record at `Proposed`, `Framed`, or `Sliced` then reaches `Submitted` as `handoff-record` states, and the Product's Maintainer's confirmation or rejection ends it as `confirmation-record` states; an `Executable` record is never submitted.
+The Refiner persists the record at the Maturity it reached. This skill never writes `Submitted`: the session that holds the Change moves a record at `Proposed`, `Framed`, or `Sliced` there through `/release-change` with its `submit` result, after this skill persists it, and a Change persisted `Available` is claimed through `/claim-change` first. The Product's Maintainer's confirmation or rejection ends `Submitted` as `confirmation-record` states; an `Executable` record is never submitted.
 
 </authority_gate>
 
@@ -142,7 +142,7 @@ Any mismatch or partial write is a failed persistence result. Preserve the local
 
 Return the canonical Change reference, exact persisted Maturity and Lifecycle, whether the operation created or revised the Change, the equality result for every front-matter field, and the next Activity or unresolved operator question. A stop at `<authority_gate>` returns the result `authority-required` instead, naming the Maturity the Change holds and the move the store lacks.
 
-Use skill `spec-tree:release-change`. Invoke it only when this session holds the Change (Lifecycle `Claimed`, with the winning Claim naming this session's assigned worktree root) and work stops or transfers with continuation remaining; a Change this session does not hold needs no release. Preserve any unaudited local candidate locally and leave the published Change unchanged.
+Use skill `spec-tree:release-change`. Invoke it only when this session holds the Change (Lifecycle `Claimed`, with the winning Claim naming this session's assigned worktree root) and work stops or transfers with continuation remaining; a Change this session does not hold needs no release. Invoke it with `submit` when the persisted record is at `Proposed`, `Framed`, or `Sliced` and waits for the Product's Maintainer's confirmation. Preserve any unaudited local candidate locally and leave the published Change unchanged.
 
 </result>
 
