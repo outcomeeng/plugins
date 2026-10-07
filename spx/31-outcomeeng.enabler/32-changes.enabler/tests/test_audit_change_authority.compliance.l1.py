@@ -5,7 +5,7 @@ The rule is the spec assertion for the ``audit-change`` runner's
 comments at a stated page size and for at most a stated number of pages, and
 returns a blocked result naming the bound when the read fills it. The page size
 and page count come from that assertion's text, and the entries each page holds
-come from the recorded store pages the harness replays, so no expected value is
+come from the store pages the harness replays, so no expected value is
 chosen here. The violating case is a store that keeps reporting a further page
 for one connection, which no read may follow past the bound.
 """
@@ -28,7 +28,7 @@ Reason = runner.BlockReason
 ExitCode = runner.ExitCode
 
 
-def test_a_read_that_ends_before_the_bound_returns_every_recorded_entry() -> None:
+def test_a_read_that_ends_before_the_bound_returns_every_entry() -> None:
     bound = spec_page_bound()
 
     observed = read_authority(filled=None)

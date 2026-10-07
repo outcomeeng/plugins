@@ -4,14 +4,15 @@ Backs the ``[test]`` evidence that the operation reads a Change's field-change
 events and comments within a page bound and blocks when a read fills it. The
 runner reaches the store only through its injected command seam, so the harness
 passes the runner a recording collaborator that answers each ``gh api graphql``
-call with a page the store returned when that page was recorded. Every
-recorded page is an inert fixture file under
-``outcomeeng_testing/fixtures/audit_change_authority``: a final page ends its
-connection, and a "more" page reports a further page, which is what the store
-returns once a connection holds more entries than one page.
+call with a page in the shape of the store's answer. Every page is an inert
+fixture file under ``outcomeeng_testing/fixtures/audit_change_authority``,
+written with invented logins, dates, and cursors because the Change store is
+private and this repository is public: a final page ends its connection, and a
+"more" page reports a further page, which is what the store returns once a
+connection holds more entries than one page.
 
 The collaborator exposes the calls it received and the harness exposes what the
-recorded pages hold; every predicate belongs to the linked test. The page bound
+pages hold; every predicate belongs to the linked test. The page bound
 the test compares against comes from the spec assertion text, read here by
 path, because the assertion is the rule under test.
 """
@@ -36,8 +37,8 @@ _FIXTURES_DIR: Final = (
     REPO_ROOT / "outcomeeng_testing" / "fixtures" / "audit_change_authority"
 )
 
-#: The Change the recorded pages were read from.
-RECORDED_ISSUE: Final = "outcomeeng/changes#333"
+#: An invented Change identity the replayed pages answer for.
+REPLAYED_ISSUE: Final = "example-org/example-changes#1"
 
 _BOUND_PHRASE: Final = re.compile(
     r"`read-authority` operation reads .*? at (\d+) per page and at most (\d+) pages"
@@ -72,8 +73,8 @@ class StoreCall:
 
 
 @dataclass(frozen=True)
-class RecordedPage:
-    """What one recorded store page holds."""
+class ReplayedPage:
+    """What one replayed store page holds."""
 
     node_count: int
     end_cursor: str
@@ -87,7 +88,7 @@ class AuthorityObservation:
     exit_code: int
     result: dict[str, object]
     calls: tuple[StoreCall, ...]
-    pages: dict[StrEnum, RecordedPage]
+    pages: dict[StrEnum, ReplayedPage]
 
     def calls_for(self, kind: StrEnum) -> tuple[StoreCall, ...]:
         return tuple(call for call in self.calls if call.kind == kind)
@@ -101,17 +102,17 @@ def spec_page_bound() -> PageBound:
     return PageBound(page_size=int(found.group(1)), max_pages=int(found.group(2)))
 
 
-def _recorded_path(kind: StrEnum, *, more: bool) -> Path:
+def _fixture_path(kind: StrEnum, *, more: bool) -> Path:
     return _FIXTURES_DIR / f"{kind}-{'more' if more else 'final'}.json"
 
 
-def _recorded_page(kind: StrEnum, *, more: bool) -> tuple[str, RecordedPage]:
-    recorded = json.loads(_recorded_path(kind, more=more).read_text(encoding="utf-8"))
+def _fixture_page(kind: StrEnum, *, more: bool) -> tuple[str, ReplayedPage]:
+    recorded = json.loads(_fixture_path(kind, more=more).read_text(encoding="utf-8"))
     connection = next(iter(recorded["data"]["repository"]["issue"].values()))
     info = connection["pageInfo"]
     # The CLI prints an answer as one line of JSON; the fixture file is indented
     # by the repository formatter, so the replay serves it as one line again.
-    return json.dumps(recorded), RecordedPage(
+    return json.dumps(recorded), ReplayedPage(
         node_count=len(connection["nodes"]),
         end_cursor=info["endCursor"],
         has_next_page=info["hasNextPage"],
@@ -119,7 +120,7 @@ def _recorded_page(kind: StrEnum, *, more: bool) -> tuple[str, RecordedPage]:
 
 
 class _StoreReplay:
-    """Answer each store call with the recorded page for its connection."""
+    """Answer each store call with the replayed page for its connection."""
 
     def __init__(self, answers: dict[StrEnum, str]) -> None:
         self._answers = answers
@@ -148,21 +149,21 @@ class _StoreReplay:
 
 
 def read_authority(*, filled: StrEnum | None) -> AuthorityObservation:
-    """Request ``read-authority`` for the recorded Change.
+    """Request ``read-authority`` for the replayed Change.
 
     The store answers every call for the ``filled`` kind with a page that
     reports a further page; every other call receives a final page. ``None``
     gives every connection a final page.
     """
     answers: dict[StrEnum, str] = {}
-    pages: dict[StrEnum, RecordedPage] = {}
+    pages: dict[StrEnum, ReplayedPage] = {}
     for kind in AuthorityRead:
-        answers[kind], pages[kind] = _recorded_page(kind, more=kind == filled)
+        answers[kind], pages[kind] = _fixture_page(kind, more=kind == filled)
     replay = _StoreReplay(answers)
     request = json.dumps(
         {
             _runner.RequestField.OPERATION: _runner.Operation.READ_AUTHORITY,
-            _runner.RequestField.ISSUE: RECORDED_ISSUE,
+            _runner.RequestField.ISSUE: REPLAYED_ISSUE,
         }
     )
     code, result = _runner.execute(request, cwd=Path.cwd(), runner=replay)
