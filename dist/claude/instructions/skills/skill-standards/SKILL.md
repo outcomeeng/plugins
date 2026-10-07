@@ -273,12 +273,6 @@ Don't over-engineer simple skills. Don't under-specify complex ones.
 
 When a foundation skill requires the same material on every fresh invocation, inline that canonical material and govern the total eager payload instead of the SKILL.md line count. The exception requires the same material on every invocation, removal of mandatory secondary reads, separate conditional detail, internal consistency, improved effectiveness, and a rendered payload of at most 40,000 Unicode code points measured by every audit. Never use it to inline optional detail or avoid routing.
 
-This skill invokes the exception for itself. An author needs its structure table and its path boundary on one invocation, and each of its six references carries conditional detail rather than a mandatory read. Measure the skill as installed, which is the payload an invocation loads:
-
-```bash
-python3 -c "from pathlib import Path; print(len(Path('${CLAUDE_SKILL_DIR}/SKILL.md').read_text(encoding='utf-8')))"
-```
-
 </eager_foundation_exception>
 
 <progressive_disclosure>
@@ -470,7 +464,7 @@ One content may name a prohibited path: the rule prohibiting it. A standard list
 
 **A permission prompt is a result, not an obstacle.** When a tool layer declines a path, that decline is the boundary working. Never document a way around it — a shell redirect standing in for a refused tool write, a broader permission substituted for a narrow one, a path rewritten to dodge a check. Name a path inside the boundary instead. A skill that teaches evasion converts one operator's approval into every future session's bypass.
 
-**An automated classifier's refusal admits one retrace-bound retry.** A decline names its source: the operator refusing a permission prompt, a guard — a hook or a dangerous-command guard — naming its rule, or the harness's permission classifier stating that it refused. Only a classifier refusal of a request the operator's instruction already authorized admits a retry, only where the skill directs one, and only after Claude retraces the request as sent, the classifier's reason, and each step that shaped the request. The retry carries only the correction the retrace found, never a rewording that hides the objection; a second refusal, and every other decline except the split rerun below, is the result.
+**An automated classifier's refusal admits one retrace-bound retry.** A decline names its source: the operator refusing a permission prompt, a guard — a hook or a dangerous-command guard — naming its rule, or the harness's permission classifier stating that it refused. Apart from the split rerun below, only a classifier refusal of a request the operator's instruction already authorized admits a retry, only where the skill directs one, and only after Claude retraces the request as sent, the classifier's reason, and each step that shaped the request. The retry carries only the correction the retrace found, never a rewording that hides the objection; a second refusal, and every other decline, is the result.
 
 **A dangerous-command guard block on a compound command admits one split rerun.** A block on a command holding one operation ends that command family. A block on a compound command — several operations joined by `&&`, `||`, `;` or a pipe, or one operation carrying a shell variable, a command substitution or a glob — admits one rerun of its parts one at a time with every string written literally; a part the guard blocks on its own ends that part's family. This rerun is the only retry a guard decline admits.
 
