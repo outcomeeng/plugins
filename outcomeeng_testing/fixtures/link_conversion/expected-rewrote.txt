@@ -1,0 +1,16 @@
+spx/15-merging.pdr.md
+spx/20-storage.adr.md
+spx/32-alpha.capability/17-alpha-format.adr.md
+spx/32-alpha.capability/18-alpha-parse.adr.md
+spx/32-alpha.capability/21-alpha-child.domain/15-child-rule.pdr.md
+spx/32-alpha.capability/21-alpha-child.domain/alpha-child.spec.md
+spx/32-alpha.capability/25-alpha-split.variant/alpha-split.spec.md
+spx/32-alpha.capability/ISSUES.md
+spx/32-alpha.capability/alpha.spec.md
+spx/32-alpha.capability/probes/p1/probe.md
+spx/40-legacy.enabler/10-legacy-choice.adr.md
+spx/40-legacy.enabler/20-legacy-child.outcome/legacy-child.md
+spx/40-legacy.enabler/20.54-legacy-insert.enabler/legacy-insert.md
+spx/40-legacy.enabler/legacy.md
+spx/54-gamma.capability/gamma.spec.md
+spx/demo.spec.md

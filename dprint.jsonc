@@ -17,6 +17,7 @@
     "**/*-lock.json",
     "**/semgrep_*.yaml",
     "outcomeeng/vendor/**",
+    "outcomeeng_testing/fixtures/link_conversion/**",
     "pyproject.toml",
   ],
   "dockerfile": {},
