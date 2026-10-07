@@ -50,20 +50,20 @@ Impact: the runner's refusal of a malformed projection is unobserved, so a regre
 
 Revisit and settlement condition: the runner's SPX boundary admits a controlled implementation of its command runner that renders a malformed projection, and a linked case asserts the `unreadable-output` block for each malformed shape.
 
-## DEBT [skill-contract]: audit-change's reason table stays inline and its verdict returns the reduced finish result
+## DEBT [skill-contract]: audit-change's grants deviate from the audit baseline, its reason table stays inline and its verdict returns the reduced finish result
 
 Defect class: `skill-contract`.
 
-Judgment: Change outcomeeng/changes#333 settled three findings on `audit-change`: the journal-writing grant is recorded as a sanctioned exception in `spx/local/skills.md`, the BLOCKED result states its three shapes as labeled shapes, and the piping prohibition reads "never piped into another command" in the skill and in `changes.md`. Two findings are not valid against their governing text and stay recorded as judged:
+Judgment: Change outcomeeng/changes#333 settled two findings on `audit-change`: the BLOCKED result states its three shapes as labeled shapes, and the piping prohibition reads "never piped into another command" in the skill and in `changes.md`. One deviation is a separate larger concern whose fix belongs in the audit-grant rule of `/skill-standards` in the instructions plugin, which Change outcomeeng/changes#344 edits: `/skill-standards` requires an audit skill to add `allowed-tools: Read, Grep, Glob`, while `audit-change` grants the runner invocation and the skill-composition tool and no Read, Grep, or Glob, because the runner's journal appends make its grant a write grant; its constraints state the deviation. Two findings are not valid against their governing text and stay recorded as judged:
 
-- Rules `progressive-disclosure-conditional-detail` and `conciseness`, against the reason table of `<runner_contract>`: moving the table to a bundled reference needs a Read grant, which the skill declines under `spx/local/skills.md` ("grants that runner invocation and the skill-composition tool and no Read, Grep, or Glob"), and the table is the complete inventory a blocked result is matched against.
+- Rules `progressive-disclosure-conditional-detail` and `conciseness`, against the reason table of `<runner_contract>`: moving the table to a bundled reference needs a Read grant, which the skill declines in its constraints ("grants no Read, Grep, or Glob: the runner is the audit's only read path"), and the table is the complete inventory a blocked result is matched against.
 - Rules `auditor-verdict-format` and `auditor-skeleton-verdict-format`, against `<verdict_format>`: the completed verdict returns the unchanged `finish` result, which omits the projection's `events` and `auditScopeUnits`. `changes.md` states that result as the contract: "whose result carries the run token, the rendered projection's run-level fields, every finding payload verbatim, and the one command that reproduces the complete rendered projection from the sealed run".
 
 Evidence: `instructions:skill-auditor` runs `2026-10-07_09-05-51-393-d08dac7359db` and `2026-10-07_09-31-07-355-24f22aa9dd57`, and the earlier runs on heads `007c3871de7b82f7592325be191d26fbfa8aee8d` and `95da1302cb72c523328f0d7d02b3a05b23df603b`.
 
-Impact: each later audit of the skill can raise the two findings again.
+Impact: each later audit of the skill can raise the grant deviation and the two judged findings again.
 
-Revisit and settlement condition: the audit standards state that an audit skill with a journal-writing runner may hold its reason inventory inline and may return a reduced result the owning spec declares; one typed skill audit of `audit-change` then raises neither finding.
+Revisit and settlement condition: the audit standards state that an audit skill whose only read path is a bundled runner that appends to the SPX verification-run journal grants that runner and the skill-composition tool and no Read, Grep, or Glob, may hold its reason inventory inline, and may return a reduced result the owning spec declares; one typed skill audit of `audit-change` then raises none of the three findings.
 
 ## DEBT [subagent-contract]: change-auditor restates the skill's result contract and carries a description-match description
 

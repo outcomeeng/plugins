@@ -11,10 +11,6 @@ ALWAYS: Any material change to a skill implies auditing every skill name in the 
 ALWAYS: Before proposing a skill rename, classify every reviewed skill by current name, skill type, governing naming form, proposed name or keep disposition, and reason. Read declared methodology vocabulary and relevant file history before treating a name as defective. A shared token, suffix, or grammatical number never proves a batch rename.
 ALWAYS: New agents are named in actor form and ALWAYS differ from the skill name they implement. For example, `adr-auditor` implements `audit-adr`.
 
-## Audit Skills With A Journal-Writing Runner
-
-ALWAYS: An audit skill whose only read path is a bundled runner that appends to the SPX verification-run journal grants that runner invocation and the skill-composition tool and no Read, Grep, or Glob, because the runner's journal appends make its grant a write grant. The audit read-only baseline does not apply to such a skill, and the skill states the deviation in its constraints. `audit-change` is the one instance.
-
 ## Version Bumps
 
 ALWAYS: A skill change that requires a plugin version bump follows `spx/local/open-pr.md`, which owns the full version policy and runs `just bump`, then `just build-skills`, in the final pre-opening protocol after base synchronization. Ordinary skill-authoring commits neither initiate nor request a bump; ordinary source regeneration still runs through `just build-skills`. NEVER hand-edit a manifest `version` field.

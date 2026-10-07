@@ -32,7 +32,7 @@ Run from the selected Product repository. For a new file, send the complete cand
 
 For resumption without an exact path, use `spx change draft list` and inspect only the descriptors needed to identify the candidate. An ambiguous match requires a focused identity question. Preserve an existing candidate until its relationship to the selected store record is established. NEVER delete a draft automatically after publication.
 
-Send record content as data through a quoted heredoc delimiter absent from the record or the harness's literal stdin facility. A programmatic one-line runner uses one physical `printf '%s\n' '<safely-quoted-content>' | <command>` line. NEVER interpolate record content into executable shell syntax or create a temporary payload file; the one exception is the single-quoted `--title` argument that `<persistence>` writes under `inert-stdin`.
+Send record content as data through a quoted heredoc delimiter absent from the record or the harness's literal stdin facility. A programmatic one-line runner uses one physical `printf '%s\n' '<safely-quoted-content>' | <command>` line. NEVER interpolate record content into executable shell syntax or create a temporary payload file; the exceptions are the single-quoted arguments `inert-stdin` admits: the `--title` that `<persistence>` writes and the search argument of the Proposed workflow's store search.
 
 </local_draft>
 
