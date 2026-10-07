@@ -93,6 +93,18 @@ class ConversionResult:
     unconvertible: tuple[Finding, ...]
 
 
+class ConversionError(Exception):
+    """A Markdown file could not be read, decoded, or written."""
+
+    def __init__(
+        self, file: str, cause: Exception, rewritten: tuple[str, ...]
+    ) -> None:
+        super().__init__(f"{file}: {cause}")
+        self.file = file
+        self.cause = cause
+        self.rewritten = rewritten
+
+
 @dataclass(frozen=True)
 class FileContext:
     root: Path
@@ -279,13 +291,17 @@ def convert_tree(
     rewritten: list[str] = []
     findings: list[Finding] = []
     for file in markdown_files(root, paths):
+        name = file.relative_to(root).as_posix()
         context = FileContext(root, file, locate_node_directory(root, file))
-        original = file.read_bytes().decode("utf-8")
-        converted, file_findings = convert_text(context, original)
-        findings.extend(file_findings)
-        if converted != original:
-            file.write_bytes(converted.encode("utf-8"))
-            rewritten.append(file.relative_to(root).as_posix())
+        try:
+            original = file.read_bytes().decode("utf-8")
+            converted, file_findings = convert_text(context, original)
+            findings.extend(file_findings)
+            if converted != original:
+                file.write_bytes(converted.encode("utf-8"))
+                rewritten.append(name)
+        except (OSError, UnicodeError) as cause:
+            raise ConversionError(name, cause, tuple(rewritten)) from cause
     return ConversionResult(tuple(rewritten), tuple(findings))
 
 
@@ -339,7 +355,17 @@ def main(argv: Sequence[str] | None = None) -> int:
         if message is not None:
             print(message, file=sys.stderr)
             return EXIT_ERROR
-    result = convert_tree(root, arguments.paths)
+    try:
+        result = convert_tree(root, arguments.paths)
+    except ConversionError as failure:
+        print(
+            f"error: cannot convert {failure.file}: {failure.cause}; make the file "
+            f"readable UTF-8 Markdown, then run the conversion again. "
+            f"Files already rewritten stay converted: "
+            f"{', '.join(failure.rewritten) or 'none'}",
+            file=sys.stderr,
+        )
+        return EXIT_ERROR
     print(render_result(result))
     return EXIT_UNCONVERTIBLE if result.unconvertible else EXIT_OK
 

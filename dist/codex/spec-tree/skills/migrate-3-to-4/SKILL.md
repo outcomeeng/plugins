@@ -2,7 +2,7 @@
 name: migrate-3-to-4
 description: >-
   ALWAYS invoke this skill when converting the decision citations of a 3.x Spec Tree product to the tree-absolute Markdown links the 4.0 methodology requires, or when `spx` rejects a decision cited as a code span, a bare path, or a node-local link. NEVER convert those citations by hand or by search and replace.
-allowed-tools: Read, Bash(git rev-parse:*), Bash(git status:*), Bash(python3:*)
+allowed-tools: Read, Bash(git rev-parse:*), Bash(git status:*), Bash(python3 "${SKILL_DIR}/scripts/convert_links.py":*)
 ---
 
 <objective>
