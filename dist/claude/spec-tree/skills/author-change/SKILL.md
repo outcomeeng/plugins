@@ -15,7 +15,7 @@ A complete store-independent Change record in the Intent form, authored locally,
 <essential_principles>
 
 - Operate on one Change. Resolve new-versus-existing identity and the requested target Maturity before routing.
-- Use skill `spec-tree:change-standards`. Invoke it with exactly the target Maturity. It loads the common record contract and only that Maturity's cumulative Definition of Ready.
+- Use skill `spec-tree:change-standards` once per purpose. Invoke it with exactly the target Maturity for drafting and the audit gate; it loads the common record contract and only that Maturity's cumulative Definition of Ready. Invoke it with `Lifecycle` for revision safety, the authority gate, and persistence; it loads the Lifecycle rules. The one-Maturity rule governs the Definitions of Ready alone.
 - Load `spx/local/coordination.md` when present for the Change store and Product. Store coordinates and revision selectors remain outside the record.
 - Preserve an explicitly selected local working file inside the Product repository. Otherwise use `<local_draft>` to obtain an SPX-managed file. Every refinement and repair changes that one file.
 - Keep provider conversations, transcripts, prompt copies, and received conversation input out of the Change record. Preserve established intent in the Intent and the sections the Maturity adds.
@@ -107,26 +107,17 @@ Audit results remain in SPX and the conversation. NEVER write audit bookkeeping 
 
 Publication requires unchanged local content approved by `<audit_gate>`, the authority `<authority_gate>` names for the target Maturity, and revision authority for an existing store record. Re-read the remote representation immediately before mutation and reconcile any intervening edit locally; re-audit a changed candidate.
 
-Use skill `spec-tree:change-standards`. Invoke it with `Lifecycle` for the store rules: `store-binding` resolves the store and blocks an absent overlay or a store of another kind, `canonical-state` names each field's home and the commands that read and write it, and `inert-stdin` and `write-inspection` govern every text sent to the store. Use `gh` only, and resolve the issue, field, option, and blocker ids from live reads; hardcode none of them. Each front-matter field has one home, and nothing else in the store holds it:
-
-| Record field   | Home in the store                                                                                                     |
-| -------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `title`        | The issue title                                                                                                       |
-| `product`      | The issue field `Product`                                                                                             |
-| `maturity`     | The issue field `Maturity`                                                                                            |
-| `lifecycle`    | The issue field `Lifecycle`                                                                                           |
-| `refined_from` | The text issue field `Predecessors`: the identities in order, separated by a comma and one space; no value for a root |
-| `blocked_by`   | The issue's native dependencies                                                                                       |
+Use skill `spec-tree:change-standards`. Invoke it with `Lifecycle` for the store rules: `store-binding` resolves the store and blocks an absent overlay or a store of another kind, `canonical-state` names each front-matter field's one home, the commands that read and write each field, and the bounded blocker read, and `inert-stdin` and `write-inspection` govern every text sent to the store. Use `gh` only, and resolve the issue, field, option, and blocker ids from live reads; hardcode none of them. Nothing else in the store holds a field that `canonical-state` assigns a home.
 
 The issue body is the approved local file from its `## Intent` line to its end. Write in this order, recording each successful write:
 
 1. Create the issue with `gh issue create --repo <store> --title '<title>' --body-file -`, or update it with `gh issue edit <N> --repo <store> --title '<title>' --body-file -`, the body on stdin.
 2. Write `Product`, `Maturity`, and `Lifecycle` through the single-select write under `canonical-state`. For a new successor, write `Predecessors` through the text write. A revision never writes `Predecessors`; it requires the stored value to equal `refined_from` already.
-3. Read the native blockers as one page of 100 with `gh api repos/<store>/issues/<N>/dependencies/blocked_by --method GET -F per_page=100`; a page holding 100 entries is a blocked read that stops the persistence before any blocker write and names the bound `100 blockers, one page`. Add each missing blocker with `gh api repos/<store>/issues/<N>/dependencies/blocked_by --method POST -F issue_id=<id>`, and remove each extra one with `gh api repos/<store>/issues/<N>/dependencies/blocked_by/<id> --method DELETE`, where `<id>` is the blocker's numeric id from `gh api repos/<owner>/<repo>/issues/<M> --jq .id`.
+3. Read the native blockers under `canonical-state`; a blocked read stops the persistence before any blocker write. Add each missing blocker with `gh api repos/<store>/issues/<N>/dependencies/blocked_by --method POST -F issue_id=<id>`, and remove each extra one with `gh api repos/<store>/issues/<N>/dependencies/blocked_by/<id> --method DELETE`, where `<id>` is the blocker's numeric id from `gh api repos/<owner>/<repo>/issues/<M> --jq .id`.
 
 NEVER write front matter, a lineage line, or a `# Relationships` section into the body, write a field into a project, or publish a draft iteration.
 
-After all writes, read the issue with `gh issue view <N> --repo <store> --json title,body,number,url`, its fields under `canonical-state`, and its blockers through the bounded read of step 3. Require:
+After all writes, read the issue with `gh issue view <N> --repo <store> --json title,body,number,url`, its fields under `canonical-state`, and its blockers under `canonical-state`. Require:
 
 - the issue title equals `title`;
 - the issue body equals the approved local file from its `## Intent` line;
