@@ -13,7 +13,7 @@ CAN adopt the 4.0 methodology without hand-editing each citation
 
 - ALWAYS: the conversion exits with status 0 when no citation remains unconvertible, with status 3 after printing the complete report when any does, and with status 1 when the root holds no `spx/` or another error stops the run, so a caller learns of leftover work from the exit status alone.
 - ALWAYS: one node-directory pattern serves every check the conversion makes, and it admits every node kind of the 3.x and 4.0 grammars and every fractional index.
-- ALWAYS: the conversion ships as one standalone Python file that uses only the standard library and runs on the floor of the supported Python window, per [`spx/12-shipped-scripting.adr.md`](spx/12-shipped-scripting.adr.md).
+- ALWAYS: the conversion ships as one standalone Python file that uses only the standard library and runs on the floor of the supported Python window, per `spx/12-shipped-scripting.adr.md`.
 
 ### Scenarios
 
