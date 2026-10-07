@@ -119,6 +119,11 @@ class FileContext:
 
 
 def has_placeholder(path: str) -> bool:
+    """Tell whether any segment of a slash-joined path is a template placeholder.
+
+    A placeholder in one segment makes the whole path a pattern, so the path is
+    neither converted nor reported.
+    """
     return any(
         "{" in segment or "}" in segment or segment.startswith(PLACEHOLDER_INDEX_PREFIX)
         for segment in path.split("/")

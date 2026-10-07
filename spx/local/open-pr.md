@@ -53,7 +53,9 @@ second positional argument; recipe flags such as `--segment` and
 
 The opening protocol writes no version. A changeset that warrants a bump opens
 its PR on verified content, and the version commit follows when the content is
-final. `spx/local/merging.md` declares that step for `/manage-pr`, which reads
+final. From that push on, the PR's diff carries the version commit as the last
+commit, and the CI review of that head reads it as part of the changeset; this
+is the merge-time step, not a pre-opening bump. `spx/local/merging.md` declares that step for `/manage-pr`, which reads
 that overlay during open-PR management. The plugin version policy above
 supplies its distribution boundary and segment selection.
 

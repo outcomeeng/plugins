@@ -109,8 +109,9 @@ this order:
    return to the check wait. The push fires the required checks and the CI
    review on the new head, and `MERGE_READINESS` reads that head.
 
-A version commit changes only manifests, changelog headings, and generated
-output, so it re-runs no evidence Auditor and no local review; its local lane
+The head the mutation-point guard reads carries the version commit as its last
+commit, so the merged diff includes the bump. A version commit changes only
+manifests, changelog headings, and generated output, so it re-runs no evidence Auditor and no local review; its local lane
 is the generated-output parity of step 2, the heading comparison of step 3,
 and the check of step 4. A rebase or
 retarget after the version commit, or base advancement before the merge,
