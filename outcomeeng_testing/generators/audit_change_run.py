@@ -217,6 +217,13 @@ def _malformed_values(
         )
     if field == fields.PAYLOAD:
         return _malformed_payloads(runner, operation)
+    if field == fields.ISSUE:
+        return st.one_of(
+            _non_strings(),
+            st.text().filter(
+                lambda text: not runner.ISSUE_IDENTITY_PATTERN.fullmatch(text)
+            ),
+        )
     raise ValueError(f"no declared form for request field {field!r}")
 
 

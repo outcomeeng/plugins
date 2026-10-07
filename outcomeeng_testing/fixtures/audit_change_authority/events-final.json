@@ -1,0 +1,48 @@
+{
+  "data": {
+    "repository": {
+      "issue": {
+        "timelineItems": {
+          "pageInfo": { "hasNextPage": false, "endCursor": "events-cursor-after-last-page" },
+          "nodes": [
+            {
+              "createdAt": "2031-02-03T04:05:06Z",
+              "actor": { "login": "example-maintainer" },
+              "previousValue": "Available",
+              "newValue": "Claimed",
+              "issueField": { "name": "Lifecycle" }
+            },
+            {
+              "createdAt": "2031-02-03T05:10:11Z",
+              "actor": { "login": "example-maintainer" },
+              "previousValue": "Proposed",
+              "newValue": "Framed",
+              "issueField": { "name": "Maturity" }
+            },
+            {
+              "createdAt": "2031-02-03T05:12:13Z",
+              "actor": { "login": "example-maintainer" },
+              "previousValue": "Claimed",
+              "newValue": "Submitted",
+              "issueField": { "name": "Lifecycle" }
+            },
+            {
+              "createdAt": "2031-02-04T06:15:16Z",
+              "actor": { "login": "example-maintainer" },
+              "previousValue": "Submitted",
+              "newValue": "Available",
+              "issueField": { "name": "Lifecycle" }
+            },
+            {
+              "createdAt": "2031-02-04T07:20:21Z",
+              "actor": { "login": "example-maintainer" },
+              "previousValue": "Available",
+              "newValue": "Claimed",
+              "issueField": { "name": "Lifecycle" }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "data": {
+    "repository": {
+      "issue": {
+        "comments": {
+          "pageInfo": { "hasNextPage": false, "endCursor": "comments-cursor-after-last-page" },
+          "nodes": [
+            {
+              "createdAt": "2031-02-04T06:15:15Z",
+              "author": { "login": "example-maintainer" },
+              "body": "Confirmation: Framed\n\n- Delegate: example-delegate\n- For: example-operator\n- Harness: example-harness\n- Session: example-session\n"
+            }
+          ]
+        }
+      }
+    }
+  }
+}
