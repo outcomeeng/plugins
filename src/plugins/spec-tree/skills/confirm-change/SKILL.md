@@ -9,7 +9,7 @@ allowed-tools: Read, Bash(gh issue view:*), Bash(gh issue comment:*), Bash(gh ap
 ---
 
 <objective>
-One `Submitted` Change moved to `Available` in the declared store, with one `Confirmation:` or `Rejection:` comment naming the delegate, the operator it acts for, the harness, and the session as the deciding comment of that move, and the complete state read back; or a report naming why the Change cannot be confirmed or rejected, with nothing written.
+One `Submitted` Change moved to `Available` in the declared store, with one `Confirmation:` or `Rejection:` comment naming the delegate, the operator it acts for, the harness, and the session as the deciding comment of that move, and the complete state read back; or a report naming why the Change cannot be confirmed or rejected, listing each write that landed before the step that stopped it.
 </objective>
 
 <required_reading>
