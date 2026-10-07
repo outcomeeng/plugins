@@ -287,6 +287,21 @@ Impact: a reader of the skill meets a stop guarantee that a prior store write co
 
 Revisit and settlement condition: the objective names only properties of the released state, step 3.1 is evaluated before the first store write or names the step 2 write, a step reads and retains Maturity after step 2, the unused grants are removed, and one typed skill audit of `release-change` raises none of these findings.
 
+## DEBT [skill-audit]: claim-change carries two skill-audit debt findings on untouched text
+
+Defect class: `skill-audit`.
+
+Finding: `instructions:skill-auditor` run `2026-10-07_08-56-10-509-00e01382e95f` at head `e72782baf7b84d35c41258660d70117f7548a5c2` rejected the audit of `claim-change` on two `debt` findings. The changeset's diff of `src/plugins/spec-tree/skills/claim-change/SKILL.md` against base `0ec15959925f92f0b14891fe2cebd729651bf470` is line 24, step 2's report of a `Submitted` Change, and line 62, its success criterion. Both findings lie on text the changeset does not change:
+
+- Rule `caller-independence`, line 41 (step 6): the marker paragraph states which marker the release and close skills act on, a selection rule that belongs to those skills or to the shared Lifecycle standard.
+- Rule `skill-intent-ambiguity`, line 42 (step 7): the step states no outcome for a Handoff branch absent on origin or for a failed fetch or switch, and no rule for the fresh branch name when another worktree holds the branch.
+
+Evidence: the sealed run above and the diff range named in the finding.
+
+Impact: a reader of the skill meets a statement about other skills' behavior and a checkout step that stays silent on two failure inputs.
+
+Revisit and settlement condition: step 6 states only the marker the skill emits, the target-selection rule lives in the skills that read the marker or in the shared Lifecycle standard, step 7 states the outcome for every `Branch or PR` value and for a failed fetch or switch and names how a fresh branch is chosen, and one typed skill audit of `claim-change` raises neither finding.
+
 ## DEBT [bound]: close-change routes no blocked result for a successor read that reaches its bound
 
 Defect class: `bound`.
