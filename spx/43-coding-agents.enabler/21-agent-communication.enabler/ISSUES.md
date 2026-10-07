@@ -11,6 +11,7 @@ Known defects, contradictions and gaps in this node. Coordination note; not spec
 - `empty-arguments` at `SKILL.md:15` (`<route_selection>`): an empty request or one matching neither shape has no stated route, and the one empty-input rule names only the Prowl fields.
 - `objective-output-coverage` at `SKILL.md:28` (`<mail_route>` step 8): the doorbell-resolution output has no place in the objective or the success criteria.
 - `description-distinct-triggers` at `SKILL.md:4`: the description claims "sending a message record", the trigger the `operate-agent-mail` description also claims.
+- `success-criteria-consistency` at `SKILL.md:21`, `SKILL.md:110` and `SKILL.md:142` (run `2026-10-07_10-12-43-230-e30afb06559b`): step 1 says the script rejects no same-worktree delegation request that lacks `authority`, while `<testing>` and `<success_criteria>` require that a same-worktree request whose authority is other than exactly the sender as owner with Git mutation forbidden produces no record, and no request field says whether a delegation is same-worktree.
 
 **Standing.** The findings lie on text the changeset leaves untouched: the diff of the skill against `origin/main` holds one hunk, the closing failure-mode paragraph at `SKILL.md:131`.
 

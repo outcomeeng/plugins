@@ -206,3 +206,13 @@ Run `2026-10-06_18-35-55-521-02765947702d` raised the same finding as `script-va
 **Impact.** The staleness rule can drift between its two copies, the operator question offers a recommended answer the generator refuses, a report item has no source, and a product-authored guide under `spx/` can be deleted while the skill says only generated files are affected.
 
 **Settlement condition.** Each stale condition and the script-ownership statement appears once, the mutual-delegation case routes to its refusal before the operator question, the removal report derives from a named snapshot or output, the script removes only recognized retired output or the skill states what it removes, and a typed skill audit raises none of the four findings.
+
+## `/update-instruction-block` Step 3 batches every repair into one edit while the recency-tie rerun refuses a dirty root file
+
+**Evidence.** `instructions:skill-auditor` run `2026-10-07_10-09-10-895-5ffc8c8cd1be` on `src/plugins/spec-tree/skills/update-instruction-block` raised one `debt` finding, rule `operational-effectiveness-internal-consistency`, at `SKILL.md:55` and `SKILL.md:66`: Step 3 directs one edit batch for every reported ambiguity, yet the recency-tie rerun `--reconcile --from` reports `dirty: {file}` and applies nothing once an Edit repair for a one-sided region or a malformed fence has dirtied a root file, and the skill does not order the rerun before those edits or commit them first.
+
+**Standing.** The finding lies on text the changeset leaves untouched: the diff of the skill against `origin/main` holds only the hunks in `templates/instruction-block.md`.
+
+**Impact.** A pass that reports a recency tie beside a one-sided or malformed report leaves the tie unresolved with no stated order that resolves it.
+
+**Settlement condition.** Step 3 orders the `--from` rerun before any Edit repair, or commits every uncommitted root-file change before the rerun, and scopes the one-edit-batch instruction to match; a typed skill audit raises no such finding.
