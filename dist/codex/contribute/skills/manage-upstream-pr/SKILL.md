@@ -232,6 +232,7 @@ The opening line states what was confirmed and what was pushed, in that order, a
 
 - The `<UPSTREAM_TARGET>` marker read for this pass carries `classification="upstream-contribution"`, established before any write.
 - The pull request's state was read once, its review-thread comments counting as one read across their pages, and `state`, `reviewDecision`, and each required check's conclusion appear verbatim.
+- A pull request list that returned 100 entries, or a tenth page of review-thread comments that returned 100 comments, ended the pass as the blocked lookup or read, naming the bound `100 pull requests` or `100 comments per page, 10 pages`, and selected nothing from the partial result.
 - A `state` of `CLOSED` or `MERGED`, a head repository other than the resolved `head`, and a pass with no finding to verify each returned what Step 3 read, left this checkout's branch where it was, and wrote nothing; every criterion below covers a pass that continued.
 - The pull request's `author.login` was compared against the authenticated login before the branch moved, and one the operator did not open was authorized in that turn.
 - The review-thread read kept each comment's author and reply parent, and the findings it selected exclude every reply this flow posted on an earlier pass.

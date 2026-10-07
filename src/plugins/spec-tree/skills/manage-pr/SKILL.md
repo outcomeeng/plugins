@@ -40,7 +40,7 @@ gh pr view --json number,url,headRefName,baseRefName,state,isDraft,mergeStateSta
 gh api repos/<owner>/<repo>/pulls/<pr-number>/comments --method GET -F per_page=100 -F page=<page>
 ```
 
-The `reviews` field carries formal review submissions. The `comments` field carries PR-level issue comments. The review-thread comments surface is the separate `gh api` call above, read from page 1 to at most page 10 at 100 comments per page; a tenth page that returns 100 comments is the blocked read /merging-standards `<review_inspection>` states, and the pass emits `MERGE_BLOCKED:review-thread-comments-bound` instead of evaluating readiness.
+The `reviews` field carries formal review submissions. The `comments` field carries PR-level issue comments. The review-thread comments surface is the separate `gh api` call above, which passes `--method GET` explicitly because `gh api` sends a POST when `-F` parameters are present and no method is given; it is read from page 1 to at most page 10 at 100 comments per page; a tenth page that returns 100 comments is the blocked read /merging-standards `<review_inspection>` states, and the pass emits `MERGE_BLOCKED:review-thread-comments-bound` instead of evaluating readiness.
 
 </step>
 
