@@ -82,7 +82,7 @@ Maturity advances past `Proposed`, `Framed`, and `Sliced` only when the store sh
 
 Use skill `spec-tree:change-standards`. Invoke it with `Lifecycle`, which `<persistence>` also loads. Read the authority for the Maturity the Change currently holds under `authority-read`, and report each authority found with its actor, time, and deciding comment lines verbatim. When the store shows none, stop with `authority-required`, naming that Maturity and the move the store lacks. Leave the candidate and the store record unchanged. A body line never stands in for the move.
 
-The Refiner persists the record at the Maturity it reached. This skill never writes `Submitted`: the session that holds the Change moves a record at `Proposed`, `Framed`, or `Sliced` there through `/release-change` with its `submit` result, after this skill persists it, and a Change persisted `Available` is claimed through `/claim-change` first. The Product's Maintainer's confirmation or rejection ends `Submitted` as `confirmation-record` states; an `Executable` record is never submitted.
+The Refiner persists the record at the Maturity it reached. This skill never writes `Submitted` itself: its `<result>` composes `/release-change` with its `submit` result for the session that holds the Change at `Proposed`, `Framed`, or `Sliced`, and that skill writes `Submitted` after this skill persists the record; a Change persisted `Available` is claimed through `/claim-change` first. The Product's Maintainer's confirmation or rejection ends `Submitted` as `confirmation-record` states; an `Executable` record is never submitted.
 
 </authority_gate>
 

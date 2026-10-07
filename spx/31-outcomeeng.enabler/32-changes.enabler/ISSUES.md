@@ -28,6 +28,18 @@ Impact: a split or coalescence leaves open whether the successor carries the sou
 
 Revisit and settlement condition: step 2 names the successor's Maturity and the disposition of the source's completed Framed content, and one typed skill audit of `author-change` raises no `ambiguous-instruction` finding on it.
 
+## DEBT [success-criteria]: author-change's Framed workflow states an unfalsifiable completeness criterion
+
+Defect class: `success-criteria`.
+
+Finding: the `<success_criteria>` of `src/plugins/spec-tree/skills/author-change/workflows/framed.md` says "Nodes, Assertion operations, and Decisions are complete enough to preserve product intent", which names no observable check. `instructions:skill-auditor` run `2026-10-07_09-48-43-612-bc7e7a129b7c` raised it as rule `success-criteria-verifiable` against the diff range from base `0ec15959925f92f0b14891fe2cebd729651bf470` to head `add737f9295bd32958f8eda514160bbc306beb22`; the changeset does not change that line.
+
+Evidence: the sealed run above.
+
+Impact: a reader cannot establish from that criterion whether the Framed workflow is complete.
+
+Revisit and settlement condition: the criterion names a falsifiable property, such as every Framed Definition of Ready criterion holding for those sections, and one typed skill audit of `author-change` raises no finding on it.
+
 ## DEBT [specificity]: author-change and change-standards leave checks unnamed
 
 Defect class: `specificity`.
