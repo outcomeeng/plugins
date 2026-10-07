@@ -33,7 +33,7 @@ Use skill `spec-tree:change-standards`. Invoke it with `Lifecycle`; it loads the
 
 <result>
 
-Return the issue URL, the readback values verbatim, and whether the comment is a confirmation or a rejection with its Maturity. A confirmed Change at `Proposed`, `Framed`, or `Sliced` is claimable through `claim-change` and may advance past that Maturity through `author-change`; a rejected Change is claimable, `author-change` lowers a rejection at `Framed` or `Sliced` one level, and a rejection at `Proposed` leaves `Proposed`.
+Return the issue URL, the readback values verbatim, whether the comment is a confirmation or a rejection with its Maturity, and the next step: `claim-change` claims the Change, and the next Maturity write after a rejection follows `maturity-and-authority`.
 
 </result>
 
