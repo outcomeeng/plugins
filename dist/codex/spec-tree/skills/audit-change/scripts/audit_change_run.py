@@ -51,6 +51,11 @@ anywhere and every process it starts:
 
 None of these writes a file outside the SPX store, and none starts a process
 other than ``git`` and ``spx``; the generated requests start none.
+
+``read-authority`` starts ``gh`` and is tested apart from those runs, in this
+process over recorded store pages: a read that ends before the bound returns
+every entry, and a connection that keeps reporting a further page blocks after
+the bound with ``page-bound-reached`` naming it.
 """
 
 from __future__ import annotations
