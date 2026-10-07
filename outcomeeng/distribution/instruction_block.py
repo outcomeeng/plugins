@@ -185,9 +185,9 @@ DANGEROUS_COMMAND_GUARD_COMPOUND_DEFINITION_REQUIREMENT: Final = (
 DANGEROUS_COMMAND_GUARD_SINGLE_OPERATION_FORMS_REQUIREMENT: Final = (
     "A heredoc that feeds one command holds one operation unless its delimiter "
     "is unquoted and its body expands, and so does a pipe whose first stage "
-    "only supplies the payload the one reading command consumes on stdin; "
-    "either form is compound when any word of the command or of its payload "
-    "stage expands"
+    "only supplies the payload the one reading command consumes on stdin, so "
+    "neither counts as a join or separator; either form is compound when any "
+    "word of the command or of its payload stage expands"
 )
 DANGEROUS_COMMAND_GUARD_VALUE_RESOLUTION_REQUIREMENT: Final = (
     "Resolve each value first: a command or process substitution's inner "

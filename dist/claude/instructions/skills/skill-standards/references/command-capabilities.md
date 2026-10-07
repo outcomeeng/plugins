@@ -97,7 +97,7 @@ A dangerous-command guard block on one command ends its command family or admits
 
 **Compound command.** Every other blocked command:
 
-- two or more operations joined or separated by `&&`, `||`, `;`, `&`, a newline, a pipe or a subshell;
+- two or more operations joined or separated by `&&`, `||`, `;`, `&`, a newline, a pipe or a subshell, except the heredoc and payload-pipe forms above while every word of them is a literal;
 - one operation whose words the shell expands: a variable, a command substitution, a glob, or a tilde, brace, arithmetic or process-substitution expansion;
 - a heredoc with an unquoted delimiter whose body expands.
 
