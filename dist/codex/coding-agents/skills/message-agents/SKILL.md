@@ -128,7 +128,7 @@ Recorded exercised payload/results:
 
 **A pane UUID was requested from the operator.** Claude asked which pane to send to, when the operator had already named the target the only way they can — by worktree or working directory. Resolve the operator's naming against the live inventory and report the target back in the same terms.
 
-**A blocked redirect was rewritten as another program.** Claude redirected public inventory and discovery JSON into `$SP/agents.json` and `$SP/discovery.json`. The dangerous-command guard blocked the redirect, a compound command because it carried a shell variable. Claude wrote a Python replacement and continued, discarding the guard result. Use `/operate-prowl`'s `resolve-target` result directly in the active tool context. When a guard blocks a compound command, rerun its parts once, one at a time, with every string written literally; a part the guard blocks on its own ends that family. Rewriting the blocked operation as another program stays forbidden.
+**A blocked redirect was rewritten as another program.** Claude redirected public inventory and discovery JSON into `$SP/agents.json` and `$SP/discovery.json`. The dangerous-command guard blocked the redirect, a compound command because it carried a shell variable. Claude wrote a Python replacement and continued, discarding the guard result. Use `/operate-prowl`'s `resolve-target` result directly in the active tool context. When a guard blocks a compound command, rerun its parts once, one at a time, with every string written literally and each value resolved first as the router's guard rule states; a part the guard blocks on its own ends that part's family. Rewriting the blocked operation as another program stays forbidden.
 
 </failure_modes>
 

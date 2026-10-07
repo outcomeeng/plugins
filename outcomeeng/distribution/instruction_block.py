@@ -185,16 +185,24 @@ DANGEROUS_COMMAND_GUARD_COMPOUND_DEFINITION_REQUIREMENT: Final = (
 DANGEROUS_COMMAND_GUARD_SINGLE_OPERATION_FORMS_REQUIREMENT: Final = (
     "A heredoc that feeds one command holds one operation unless its delimiter "
     "is unquoted and its body expands, and so does a pipe whose first stage "
-    "only supplies the payload the one reading command consumes on stdin"
+    "only supplies the payload the one reading command consumes on stdin; "
+    "either form is compound when any word of the command or of its payload "
+    "stage expands"
 )
 DANGEROUS_COMMAND_GUARD_VALUE_RESOLUTION_REQUIREMENT: Final = (
     "Resolve each value first: a command or process substitution's inner "
     "command runs on its own and its output is the literal; a variable's value "
     "is the literal assigned to it or the output of `printenv <name>` run on "
-    "its own; a glob's matches are the entries a listing of its literal "
-    "directory returns; a tilde, brace or arithmetic expansion is written out "
-    "as the words it produces. Then run the operation once with literal "
-    "arguments"
+    "its own; a glob's matches are the entries of a listing of its literal "
+    "directory that match the pattern, and a glob with a wildcard in a "
+    "directory component resolves through the file-search tool on the full "
+    "pattern; a tilde, brace or arithmetic expansion is written out as the "
+    "words it produces. Then run the operation once with literal arguments"
+)
+DANGEROUS_COMMAND_GUARD_SECRET_VALUE_REQUIREMENT: Final = (
+    "A value that is a secret — a token, key or credential — is never printed "
+    "or written into a command; when resolving one would do that, the block "
+    "terminates that command family"
 )
 DANGEROUS_COMMAND_GUARD_COMPOUND_SPLIT_REQUIREMENT: Final = (
     "run the parts of a blocked compound command again one at a time, each with "
@@ -236,6 +244,10 @@ DANGEROUS_COMMAND_GUARD_POLICY_REQUIREMENTS: Final = (
     (
         "dangerous-command guard value resolution",
         DANGEROUS_COMMAND_GUARD_VALUE_RESOLUTION_REQUIREMENT,
+    ),
+    (
+        "dangerous-command guard secret value",
+        DANGEROUS_COMMAND_GUARD_SECRET_VALUE_REQUIREMENT,
     ),
     (
         "dangerous-command guard part terminal",

@@ -1,3 +1,14 @@
+<contents>
+
+- `<overview>` — the command-capability surface and the portable syntax
+- `<arguments>` — `argument-hint`, `$ARGUMENTS`, named and positional arguments
+- `<dynamic_context>` — `!`-backtick context injection
+- `<tool_restriction_security>` — `allowed-tools` as a security boundary
+- `<file_references>` — `@` product files and the skill-directory token
+- `<guard_block_partition>` — the two command classes a dangerous-command guard block decides between
+
+</contents>
+
 <overview>
 
 A SKILL.md carries every capability a slash command had — arguments, `!`-dynamic context injection, tool restriction, and `@` file references. These rules govern that surface for every skill that authors or audits arguments, dynamic context, tool restriction, or file references, and `<guard_block_partition>` classifies a command a dangerous-command guard blocks.
@@ -82,7 +93,7 @@ NEVER write Codex's skill-directory token in source. NEVER reference bundled plu
 
 A dangerous-command guard block on one command ends its command family or admits one split rerun, and the command's class decides which. The two classes are complements: every blocked command is exactly one of them.
 
-**One operation.** A single simple command whose every word is a literal, with no shell expansion. A heredoc that feeds one command is one operation unless its delimiter is unquoted and its body expands, and so is a pipe whose first stage only supplies the payload the one reading command consumes on stdin, because no split of either leaves a smaller command that runs. A block on one operation ends its command family.
+**One operation.** A single simple command whose every word is a literal, with no shell expansion. A heredoc that feeds one command is one operation unless its delimiter is unquoted and its body expands, and so is a pipe whose first stage only supplies the payload the one reading command consumes on stdin, because no split of either leaves a smaller command that runs; either form is compound when any word of the command or of its payload stage expands. A block on one operation ends its command family.
 
 **Compound command.** Every other blocked command:
 
@@ -94,8 +105,9 @@ A block on a compound command admits one rerun of its parts one at a time with e
 
 - a command substitution's or process substitution's inner command runs first on its own, and its output is the literal;
 - a variable's value is the literal Claude assigned it, or the output of `printenv <name>` run on its own;
-- a glob's matches are the entries `ls <directory>` or the file-search tool lists for its literal directory;
-- a tilde, brace or arithmetic expansion is written out as the literal words it produces.
+- a glob's matches are the entries of `ls <directory>` or the file-search tool for its literal directory that match the pattern, and a glob with a wildcard in a directory component resolves through the file-search tool on the full pattern;
+- a tilde, brace or arithmetic expansion is written out as the literal words it produces;
+- a value that is a secret — a token, key or credential — is never printed or written into a command; when resolving one would do that, the block ends the command family.
 
 The operation then runs once with literal arguments. A part the guard blocks on its own is one operation and ends its family; split no part further.
 
