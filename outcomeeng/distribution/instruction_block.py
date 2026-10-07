@@ -180,7 +180,8 @@ DANGEROUS_COMMAND_GUARD_COMPOUND_DEFINITION_REQUIREMENT: Final = (
     "two or more operations joined or separated by `&&`, `||`, `;`, `&`, a "
     "newline, a pipe or a subshell, or one operation whose words the shell "
     "expands: a variable, a command substitution, a glob, or a tilde, brace, "
-    "arithmetic or process-substitution expansion"
+    "arithmetic or process-substitution expansion, or a heredoc with an "
+    "unquoted delimiter whose body expands"
 )
 DANGEROUS_COMMAND_GUARD_SINGLE_OPERATION_FORMS_REQUIREMENT: Final = (
     "A heredoc that feeds one command holds one operation unless its delimiter "
