@@ -93,22 +93,28 @@ this order:
    candidate head and selected PR base, then bind `version_base_ref` as above.
 2. Run `just bump "$version_base_ref"`, supplying the explicit segment as
    the second positional argument when the referenced policy requires it.
-   Then run `just build-skills` and commit changed manifests and generated
-   output together through `/commit-changes`. When no files change, no
-   version commit is created. The bump preserves manifests still ahead of
-   the synchronized base and writes the next version from that base when
-   it catches up or advances.
-3. Run `just bump-check "$version_base_ref"` on the clean committed head; a
+   Then run `just build-skills`. When no files change, no version commit is
+   created. The bump preserves manifests still ahead of the synchronized base
+   and writes the next version from that base when it catches up or advances.
+3. Compare the top version heading of each bumped plugin's `CHANGELOG.md` with
+   the version `just bump` wrote. The content commits author that heading
+   before any bump runs, and `just bump` never reads it, so a base that
+   advanced or a changed segment leaves the two apart. Rewrite a differing
+   heading to the written version, leave the entry text as written, and run
+   `just build-skills` again. Commit the manifests, the changed headings, and
+   the generated output together through `/commit-changes`.
+4. Run `just bump-check "$version_base_ref"` on the clean committed head; a
    nonzero exit blocks the push.
-4. Push the version commit under `/merging-standards` `<push_semantics>` and
+5. Push the version commit under `/merging-standards` `<push_semantics>` and
    return to the check wait. The push fires the required checks and the CI
    review on the new head, and `MERGE_READINESS` reads that head.
 
-A version commit changes only manifests, changelogs, and generated output, so
-it re-runs no evidence Auditor and no local review; its local lane is the
-generated-output parity of step 2 and the check of step 3. A rebase or
+A version commit changes only manifests, changelog headings, and generated
+output, so it re-runs no evidence Auditor and no local review; its local lane
+is the generated-output parity of step 2, the heading comparison of step 3,
+and the check of step 4. A rebase or
 retarget after the version commit, or base advancement before the merge,
-repeats steps 1 to 4 from the new base. If review changes the required
+repeats steps 1 to 5 from the new base. If review changes the required
 segment for an already-bumped plugin, restore only its source manifests to the
 selected base's versions, then run `just bump "$version_base_ref"` with the
 corrected second positional segment, rebuild, and commit. An explicit segment
