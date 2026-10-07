@@ -9,7 +9,7 @@ allowed-tools: Read, Write, Edit, Grep, Glob, {{! tool('use_skill') !}},{!% if t
 ---
 
 <objective>
-A complete store-independent Change record in the Intent form, authored locally, independently approved at its declared Maturity, persisted through the configured store, and read back equal; or the `authority-required` result, which leaves the candidate and the store record unchanged.
+A complete store-independent Change record in the Intent form, authored locally, independently approved at its declared Maturity, persisted through the configured store, and read back equal, or the successor Changes and the `Refined` sources of a split or coalescence under the Sliced workflow; or the `authority-required` result, which leaves the candidate and the store record unchanged.
 </objective>
 
 <essential_principles>
@@ -82,7 +82,7 @@ Maturity advances past `Proposed`, `Framed`, and `Sliced` only when the store sh
 
 Use skill `spec-tree:change-standards`. Invoke it with `Lifecycle`, which `<persistence>` also loads. Read the authority for the Maturity the Change currently holds under `authority-read`, and report each authority found with its actor, time, and deciding comment lines verbatim. When the store shows none, stop with `authority-required`, naming that Maturity and the move the store lacks. Leave the candidate and the store record unchanged. A body line never stands in for the move.
 
-The Refiner persists the record at the Maturity it reached. This skill never writes `Submitted` itself: its `<result>` composes `/release-change` with its `submit` result for the session that holds the Change at `Proposed`, `Framed`, or `Sliced`, and that skill writes `Submitted` after this skill persists the record. This skill never claims the Change it persists: that Change stays `Available` and unsubmitted until a session claims it, and only the Sliced workflow claims other Changes, the sources it splits or coalesces. The Product's Maintainer's confirmation or rejection ends `Submitted` as `confirmation-record` states; an `Executable` record is never submitted.
+The Refiner persists the record at the Maturity it reached. This skill never writes `Submitted` itself: its `<result>` composes `/release-change` with its `submit` result for the session that holds the Change at `Proposed`, `Framed`, or `Sliced`, and that skill writes `Submitted` after this skill persists the record. Persisting never claims a Change: a new Change is persisted `Available` and stays unsubmitted until a session claims it, and a revision keeps the Lifecycle the store holds. Only the Sliced workflow claims Changes, the sources it splits or coalesces. The Product's Maintainer's confirmation or rejection ends `Submitted` as `confirmation-record` states; an `Executable` record is never submitted.
 
 </authority_gate>
 
@@ -165,7 +165,8 @@ Use skill `spec-tree:release-change`. Invoke it only when this session holds the
 
 <success_criteria>
 
-- Exactly one local candidate and one configured-store Change represent the intended Output.
+- Exactly one local candidate and one configured-store Change represent the intended Output, except in a split or coalescence, whose Sliced workflow states its own success criteria.
+- An `authority-required` stop left the candidate and the store record unchanged and named the Maturity the Change holds and the move the store lacks.
 - The candidate satisfies the one cumulative Definition of Ready loaded for its declared Maturity, and its Maturity above `Proposed` rests on the store's authority for the level it left.
 - Triage asks only questions whose answers change the Output, its Decisions, Maturity, risk, or ownership.
 - The complete unchanged record receives an independent approved audit before publication.

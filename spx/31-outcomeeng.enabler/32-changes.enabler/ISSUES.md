@@ -28,6 +28,21 @@ Impact: a split or coalescence leaves open whether the successor carries the sou
 
 Revisit and settlement condition: step 2 names the successor's Maturity and the disposition of the source's completed Framed content, and one typed skill audit of `author-change` raises no `ambiguous-instruction` finding on it.
 
+## DEBT [skill-audit]: author-change's persistence interpolates the title and its Proposed workflow names no duplicate search
+
+Defect class: `skill-audit`.
+
+Finding: `instructions:skill-auditor` run `2026-10-07_10-08-51-548-3b09ab0ae860` at head `644a59cb4491197a7d0af63476e051dbcfefe9d7`, the final run above the cap that `outcomeeng/changes#333` allows, raised two findings on text the changeset does not change:
+
+- Rule `internal-consistency`, severity `blocking`, `<persistence>` step 1: the issue create and edit commands write `--title '<title>'`, which the finding reads against the NEVER rule of `<local_draft>` that record content is never interpolated into shell syntax. Base `0ec15959925f92f0b14891fe2cebd729651bf470` carries the same step, and the `inert-stdin` rule of the Lifecycle reference states that every other interpolated argument is one single-quoted argument with a literal apostrophe written as `'"'"'`.
+- Rule `concrete-over-abstract`, severity `debt`, `workflows/proposed.md` step 1: the search of the configured store for the same intended Output names no command, and the workflow loads only the Proposed selection of `change-standards`.
+
+Evidence: the sealed run above and the base text of both steps.
+
+Impact: each audit of `author-change` can raise both again, and the blocking one reads two rules of the skill as contradictory.
+
+Revisit and settlement condition: the title reaches the store as inert data under one stated rule, the duplicate search names its read, and one typed skill audit of `author-change` raises neither finding.
+
 ## DEBT [consistency]: author-change's one-Change principle and success criterion leave out the Sliced split route
 
 Defect class: `consistency`.
@@ -35,6 +50,8 @@ Defect class: `consistency`.
 Finding: `author-change` says "Operate on one Change" in `<essential_principles>` and "Exactly one local candidate and one configured-store Change represent the intended Output" in `<success_criteria>`, while `workflows/sliced.md` claims several source Changes, authors several successors, and closes the sources `Refined` in one invocation. `instructions:skill-auditor` run `2026-10-07_10-03-28-916-5ca49b9de058` at head `e0d4b31a2ce2fe2b26eb8ea77dead1fecc610b21` raised it as rule `internal-consistency`, severity `debt`. Base `0ec15959925f92f0b14891fe2cebd729651bf470` carries all three texts, and the changeset changes none of them.
 
 Evidence: the sealed run above and the base text of the three places.
+
+The final run of Change outcomeeng/changes#333 repaired the objective and the first success criterion to name the split route; the principle "Operate on one Change" in `<essential_principles>` still leaves it out, and the repair is unaudited.
 
 Impact: a reader cannot tell whether the split route is in scope or how its success is judged.
 
@@ -49,6 +66,8 @@ Finding: `author-change`'s `<result>` composes `spec-tree:release-change` when t
 Evidence: the sealed run above and the base text of both skills.
 
 Impact: every audit of `author-change` can raise the finding again, so its gate cannot close on this surface alone.
+
+Successor: the Proposed Change outcomeeng/changes#397 carries this defect.
 
 Revisit and settlement condition: one of the two compositions is removed or made decidable from the composing skill's own inputs, and one typed skill audit of `author-change` and of `release-change` raises neither the nested-release finding nor a caller-dependence finding.
 
