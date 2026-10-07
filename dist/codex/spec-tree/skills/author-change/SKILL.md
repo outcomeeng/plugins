@@ -72,7 +72,7 @@ For an existing Change, read its complete current body, each field from its stor
 
 A claim held by another holder blocks takeover. Terminal Lifecycle blocks ordinary resumption. A split or coalescence creates successor Changes as the Sliced workflow states and never rewrites an existing Change's `refined_from`. A published record whose body opens with `# Output` takes the Intent form at this revision under `compatibility-boundary`: author the new record from the proposal it carries, and never convert the old body in place. Reconcile an existing local candidate with the store representation before overwriting either.
 
-Maturity moves backward only under `maturity-and-authority`. A Claimed holder writes a Handoff and releases the Change before lowering Maturity. When the newest move out of `Submitted` carries a `Rejection:` naming `Framed` or `Sliced` and `Maturity` still holds that level, lower it one level through the single-select write under `canonical-state`, which the `Lifecycle` selection of `spec-tree:change-standards` loads, before any further refinement; a rejection at `Proposed` leaves `Proposed` without the priority decision.
+Maturity moves backward only under `maturity-and-authority`. A Claimed holder writes a Handoff and releases the Change before lowering Maturity. When the newest move out of `Submitted` carries a `Rejection:` naming `Framed` or `Sliced` and `Maturity` still holds that level, lower it one level before any further refinement: Use skill `spec-tree:change-standards`, invoke it with `Lifecycle`, and write the lower value through the single-select write under `canonical-state`; a rejection at `Proposed` leaves `Proposed` without the priority decision.
 
 </revision_safety>
 
