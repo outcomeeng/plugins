@@ -10,6 +10,12 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.101.5
+
+### Changed
+
+- **`/sync-base` finishes a conflicted rebase or asks the agent's superior, and never leaves one waiting.** Finishing the rebase is the default. When cherry-picking the commits that still matter or redoing the change from the base takes clearly less work, or when evidence cannot decide product intent, Claude sends its superior — the agent that assigned the work, or the operator when no agent did — where the rebase stands, the route it recommends and what each route keeps, and then acts on the decision. `git rebase --abort` runs only on that decision, and Claude no longer ends its work or releases a Change with a rebase active and no decision asked. `/contextualize` resumes after that decision is carried out.
+
 ## 0.101.4
 
 ### Changed

@@ -2,7 +2,7 @@
 name: sync-base
 description: >-
   ALWAYS invoke this skill to bring a branch behind its base current — before reading product truth, before verifying, and before every merge push. NEVER rebase a behind-base branch by hand or bring it current with git reset.
-allowed-tools: Read, Edit, {{! tool('use_skill') !}}, {{! tool('ask_user') !}}, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/sync_base.py":*), Bash(git status:*), Bash(git rev-parse:*), Bash(git symbolic-ref:*), Bash(git branch:*), Bash(git switch -c:*), Bash(git merge-base:*), Bash(git rev-list:*), Bash(git diff:*), Bash(git ls-files:*), Bash(git show:*), Bash(git add:*), Bash(git rebase --continue:*)
+allowed-tools: Read, Edit, {{! tool('use_skill') !}}, {{! tool('ask_user') !}}, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/sync_base.py":*), Bash(git status:*), Bash(git rev-parse:*), Bash(git symbolic-ref:*), Bash(git branch:*), Bash(git switch -c:*), Bash(git merge-base:*), Bash(git rev-list:*), Bash(git diff:*), Bash(git ls-files:*), Bash(git show:*), Bash(git add:*), Bash(git rebase --continue:*), Bash(git rebase --abort)
 ---
 
 <objective>
@@ -19,13 +19,13 @@ python3 "${CLAUDE_SKILL_DIR}/scripts/sync_base.py" [repo] [--base <branch>]
 
 It resolves the base ref and `origin/<base>` through the shared changeset-scope primitives and fetches the base. When an attached branch is behind, it rebases the branch onto the fetched base. When a clean detached HEAD is an ancestor of the fetched base, it advances the worktree with `git switch --detach origin/<base>`; a detached HEAD carrying commits absent from the base fails without moving. The base defaults to `origin/HEAD`; pass `--base <branch>` when the changeset tracks a non-default base (a stacked pull request whose base is another feature branch). It prints a JSON result (`status`, `base_ref`, `remote_ref`, `branch`, `detail`, `preservation` on a clean outcome, and `conflict` on an active rebase conflict) and exits:
 
-| `status`          | exit | meaning                                                                                                                                              | how Claude acts                                                                                                                                            |
-| ----------------- | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `already_current` | 0    | the branch is not behind the base                                                                                                                    | proceed                                                                                                                                                    |
-| `rebased`         | 0    | the branch was rebased onto `origin/<base>`                                                                                                          | proceed; use `<readiness_preservation>` to identify which verification and review evidence the base movement invalidated                                   |
-| `conflict`        | 3    | the rebase stopped with active conflict state; the result's `conflict` object names the conflicted paths, git facts, git conflict text, and options  | reconcile per `<conflict_reconciliation>`; stop for the operator only after deterministic evidence cannot decide product intent, leaving the rebase active |
-| `dirty_tree`      | 4    | the branch is behind, but uncommitted changes to tracked files block the rebase; no rebase is attempted and the tree is left untouched               | classify ownership per `<dirty_tree_resolution>`; commit authorized changes to the right branch, leave operator-owned work untouched, and re-run           |
-| `git_failure`     | 1    | a diverged detached HEAD carrying its own commits, an unresolved base, or a failed fetch — a clean behind-base detached HEAD is advanced, not failed | report `detail`; do not rebase                                                                                                                             |
+| `status`          | exit | meaning                                                                                                                                              | how Claude acts                                                                                                                                       |
+| ----------------- | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `already_current` | 0    | the branch is not behind the base                                                                                                                    | proceed                                                                                                                                               |
+| `rebased`         | 0    | the branch was rebased onto `origin/<base>`                                                                                                          | proceed; use `<readiness_preservation>` to identify which verification and review evidence the base movement invalidated                              |
+| `conflict`        | 3    | the rebase stopped with active conflict state; the result's `conflict` object names the conflicted paths, git facts, git conflict text, and options  | finish the rebase per `<conflict_reconciliation>`; when another route is cheaper or evidence cannot decide, ask your superior and act on its decision |
+| `dirty_tree`      | 4    | the branch is behind, but uncommitted changes to tracked files block the rebase; no rebase is attempted and the tree is left untouched               | classify ownership per `<dirty_tree_resolution>`; commit authorized changes to the right branch, leave operator-owned work untouched, and re-run      |
+| `git_failure`     | 1    | a diverged detached HEAD carrying its own commits, an unresolved base, or a failed fetch — a clean behind-base detached HEAD is advanced, not failed | report `detail`; do not rebase                                                                                                                        |
 
 These statuses and exit codes belong to the primitive. Complete this workflow only after `already_current` or `rebased` establishes currency for the recorded checkout and base. A checkpoint alone establishes no currency, and a successful synchronization establishes neither working-tree cleanliness nor verification readiness. In particular, an already-current checkout may carry pending edits; those edits alone require no recovery checkpoint.
 
@@ -52,7 +52,19 @@ The branch routing above is the merge lifecycle's routing applied early — the 
 
 <conflict_reconciliation>
 
-A `conflict` outcome means a rebase is active. Do not abort it reflexively. Read the `conflict` object, inspect the repository state, and reconcile every conflict that deterministic evidence can decide:
+A `conflict` outcome means a rebase is active. Your job is to finish it. Do not abort it on your own, and do not leave it waiting for someone to notice.
+
+Your superior is whoever assigned you this work: the agent that gave you the task, such as an Executor, a Maintainer or a Director, or the operator when no agent did. Reach an agent the way it reaches you, by mail or by a message into its session; reach the operator through the structured-question tool.
+
+**Check the cost first.** `git status` names the commit the rebase stopped at and how many remain. Before reconciling, and again whenever a conflict resists, compare finishing the rebase with the cheapest alternative: cherry-picking only the commits that still matter onto `origin/<base>`, or redoing the change from `origin/<base>` using the old branch as reference. When an alternative takes clearly less work, stop and send your superior:
+
+- where the rebase stands: the commit it stopped at, the commits still to replay, and the conflicts so far by kind;
+- the route you suggest and why it takes less work than finishing the rebase;
+- what each route keeps and loses, and the branch or commit that keeps the old work reachable.
+
+Leave the rebase active while you wait. Then do what your superior decides: continue the rebase, or run `git rebase --abort` and take the route it chose.
+
+**Otherwise, reconcile.** Read the `conflict` object, inspect the repository state, and reconcile every conflict that deterministic evidence can decide:
 
 1. Inspect:
    - `git status`
@@ -75,7 +87,9 @@ A `conflict` outcome means a rebase is active. Do not abort it reflexively. Read
 5. Continue with `git rebase --continue`.
 6. Return the resolved-path scope and the narrowest deterministic verification command the project overlay declares. Run that command through its governing workflow after the rebase completes; when the overlay cannot classify the paths, return the full deterministic gate command.
 
-Stop for the operator only when the remaining conflict is a product-intent conflict: specs, decisions, tests, newer session state, and git facts do not choose which behavior should survive. The human-facing report must say `Base sync stopped: rebase conflict requires reconciliation`, list conflicted paths, summarize every attempted reconciliation class, explain why evidence did not decide, and present the exact manual options from the `conflict.operator_options` list. Leave the rebase active. The operator can inspect, resolve and continue, or run `git rebase --abort`.
+When a remaining conflict is a product-intent conflict — specs, decisions, tests, newer session state, and git facts do not choose which behavior should survive — ask your superior. The report says `Base sync stopped: rebase conflict requires reconciliation`, lists the conflicted paths, summarizes every reconciliation you attempted, explains why evidence did not decide, gives the options from the `conflict.operator_options` list, and recommends one. Leave the rebase active while you wait, then do what your superior decides.
+
+Never end your work, release a Change, or hand off with a rebase active and no decision asked for. A rebase nobody owns stays in the worktree until someone finds it.
 
 </conflict_reconciliation>
 
@@ -95,7 +109,7 @@ Explicitly disallowed:
 - `git checkout .` or `git restore .` to wipe conflict state.
 - Blanket `git checkout --ours .` or `git checkout --theirs .`.
 - Creating another worktree to escape the assigned one.
-- Running `git rebase --abort` automatically at operator handoff. Offer it as an operator option instead.
+- `git rebase --abort`, unless your superior decided it under `<conflict_reconciliation>`.
 
 Use `--ours` or `--theirs` only for a specific path after classification has already decided the product result. The checkout flag is the mechanical file update, never the decision.
 
@@ -125,7 +139,7 @@ The proof scopes pre-push local work only. It never satisfies a merge gate: curr
 - A `dirty_tree` result is a precondition, never a conflict — tracked changes blocking base movement are resolved through `<dirty_tree_resolution>`, never by stashing and never surfaced as a conflict.
 - Authorized session-owned tracked changes that block base movement are checkpointed on the owning branch and re-synced through `<dirty_tree_resolution>`; verification state alone never blocks the checkpoint.
 - The bundled synchronizer fetches the base and, when movement is required, advances the current checkout through exactly one topology-appropriate operation: rebase for an attached branch, or `git switch --detach` for an ancestor detached HEAD. It never commits or stashes the working tree; the skill may create an owning branch and invoke `/commit-changes` to resolve a `dirty_tree` result before rerunning it.
-- A conflicted rebase remains active at operator handoff — Claude offers `git rebase --abort` as an option and does not run it automatically.
+- A conflicted rebase is finished, or handed to the superior with an assessment and a recommended route; Claude runs `git rebase --abort` only on the superior's decision and never stops with a rebase active and no decision asked for.
 - One base derivation — the base ref and `origin/<base>` come from the changeset-scope primitives, never re-derived here.
 
 </invariants>
@@ -199,6 +213,14 @@ What happened: Claude said base synchronization was paused during an interview e
 Why it failed: A conversation label was treated as a change in authority, leaving the prerequisite unresolved.
 
 How to avoid: Apply the operator's actual path-scoped authority and explicit limits, complete authorized recovery, and report any remaining blocked action with its evidence.
+
+**Failure 5: A rebase was left for an operator who never came.**
+
+What happened: Claude stopped a rebase of a long-lived branch at commit 2 of 21, reported the first conflict, and released its Change with the rebase still active. The worktree stayed blocked for sixteen days, the Change closed in the meantime, and its successor redid the work from the base anyway.
+
+Why it failed: The stop waited for an operator to inspect it. Nobody owned it, and nobody weighed finishing the rebase against cherry-picking or redoing the change from the base.
+
+How to avoid: Check the cost before reconciling, send your superior an assessment and a recommended route when another route takes less work, and act on its decision before ending your work.
 
 </failure_modes>
 
