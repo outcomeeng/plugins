@@ -230,6 +230,8 @@ The typed skill audit on head `95da1302cb72c523328f0d7d02b3a05b23df603b` approve
 
 A typed skill audit of `audit-change` after the Intent-form revision of Change outcomeeng/changes#333 — run `2026-10-07_09-05-51-393-d08dac7359db` at head `665f888251de94a6a2632e59a2bb88acebdea3f2`, over the diff range from base `0ec15959925f92f0b14891fe2cebd729651bf470` to that head — rejected on four `debt` findings. They repeat the grant deviation (rule `audit-allowed-tools`) and the reason table's size (rule `conciseness`, `<runner_contract>` lines 78 to 90), and add the objective's silence on the sealed run (rule `auditor-objective-shape`) and the completed verdict's reduced `finish` result, which drops the projection's `events` and `auditScopeUnits` (rule `auditor-verdict-format`, `<verdict_format>`). The changeset edited the objective sentence, and the next commit repairs the finding on it; the verdict format and the grant lie on text the changeset does not change, and the table gained one operation row and one blocked-reason row on its existing shape.
 
+A second run, `2026-10-07_09-31-07-355-24f22aa9dd57` at head `125d5e885dfcc9007e01054d99b46720fdb930f6`, raised two `debt` findings, the grant deviation (rule `audit-allowed-tools`) and the reduced `finish` result in `<verdict_format>` (rule `auditor-skeleton-verdict-format`), both on text the changeset does not change, and none on the objective or the authority behavior it changed.
+
 Impact: each later audit of the skill raises the grant warning again, the table's size pulls against the review rule that it name every blocked condition, a reader matches a stop condition against one compound placeholder, and the piping qualifier reads as an exception.
 
 Revisit and settlement condition: `/skill-standards` or `spx/local/skills.md` records the journal-writing grant as a sanctioned exception to the audit read-only rule, the exhaustive condition text moves to a bundled reference the skill loads only for a blocked result, each BLOCKED result shape stands as its own labeled shape, and the skill and the changes spec state the piping prohibition without the qualifier; one typed skill audit of `audit-change` then raises none of the warnings.
@@ -282,6 +284,8 @@ Finding: `instructions:skill-auditor` runs `2026-10-07_06-54-14-356-29144e907dbd
 - Rule `tool-restriction-security`, line 9 (`allowed-tools`): the grants `Bash(git branch --show-current)` and the operator-question tool appear in no workflow step. Line 9 is a changed line, and the changeset changes only its blocker-read grant.
 
 A third run, `2026-10-07_08-52-18-926-0f98a52ab60b` at head `5261c8caaab4cdb1b7ba770e09cf242d2e792f7d` over the diff range `0ec15959925f92f0b14891fe2cebd729651bf470` to that head, rejected on two `debt` findings: the grants of line 10 (`Bash(git branch --show-current)` and the operator-question tool) and the contradiction between step 3.1 and the step 2 store write, which the success criterion for an `Executable` refusal repeated. The criterion lies on text the `submit` result added and now says "refused without further mutation after the body revision"; the grants and step 3.1 lie on untouched text and stay here.
+
+A fourth run, `2026-10-07_09-28-31-047-0b978879f41e` at head `125d5e885dfcc9007e01054d99b46720fdb930f6`, raised the same two `debt` findings on the same untouched text, the grants of line 10 and the order of step 2 and step 3.1, and none on text the changeset changed.
 
 Evidence: the three sealed runs above; the diff range is the one named in each finding.
 
