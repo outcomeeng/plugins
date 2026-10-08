@@ -49,7 +49,7 @@ The overall verdict is `CURRENT` only when every inventory row is `current`. Any
 
 <step name="apply_authorized_updates">
 
-When the operator explicitly requests updates, require an authoritative replacement for every changed claim, resolve the exact authored paths, and never convert an `unverifiable` row into guessed guidance. Apply each evidence-backed replacement through the creator workflow. Do not add a persistent verification timestamp; source evidence and current repository validation establish currency without a stale-prone marker.
+When the operator explicitly requests updates, require an authoritative replacement for every changed claim, resolve the exact authored paths, and never convert an `unverifiable` row into guessed guidance. Apply each evidence-backed replacement through `${CLAUDE_SKILL_DIR}/workflows/repair-skill.md`, one requested-change row per replacement. Do not add a persistent verification timestamp; source evidence and current repository validation establish currency without a stale-prone marker.
 
 </step>
 

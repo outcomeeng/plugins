@@ -35,7 +35,7 @@ Complete the router's `<material_change_name_review>` before applying any change
 
 <step name="repair">
 
-For each finding row, repair every location it names and every other violation of the same catalog rule in the bundle, so the repair removes the defect class rather than one occurrence. Apply each requested change through the authoring rules the router loads. Preserve unaffected content, and keep every standard in its owning reference skill rather than copying it into the target.
+For each finding row, repair every location it names and every other violation of the same catalog rule in the bundle, so the repair removes the defect class rather than one occurrence. Apply each requested change under the `/skill-standards` and `/agent-prompt-standards` rules. Preserve unaffected content, and keep every standard in its owning reference skill rather than copying it into the target.
 
 </step>
 
