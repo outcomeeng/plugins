@@ -36,7 +36,7 @@ The Rust delta is the discriminator in Rust terms: a `pub` item in the product c
 
 ## The Rust node still carries nine compliance assertions
 
-The subtractive reduction removed the restated language-neutral seam assertions from `rust.md`, which cites `test-verification.md` and `15-test-infrastructure.pdr.md` for them, and left 9 Compliance assertions where it had 15. That is above the roughly-7 signal in `spx/21-spec-tree.enabler/54-decomposing.enabler/decomposing.md`. Duplication no longer forces a decomposition, and assertion count does not close it. Rust has no test-standards subtree to absorb the residual deltas, unlike its Python and TypeScript siblings.
+The subtractive reduction removed the restated language-neutral seam assertions from `rust.md`, which cites `test-verification.md` and [`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md) for them, and left 9 Compliance assertions where it had 15. That is above the roughly-7 signal in `spx/21-spec-tree.enabler/54-decomposing.enabler/decomposing.md`. Duplication no longer forces a decomposition, and assertion count does not close it. Rust has no test-standards subtree to absorb the residual deltas, unlike its Python and TypeScript siblings.
 
 **Settlement condition.** A Rust test-standards subtree is warranted and `/decompose` creates it, or a Verifier skips the signal on the grounds this entry records.
 

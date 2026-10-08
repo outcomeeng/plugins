@@ -10,7 +10,7 @@ Known defects, contradictions and gaps in this node. Coordination note; not spec
 
 ## The shipped harness has not crossed into this subtree
 
-The shipped harness under `outcomeeng_evals/` and the specs under `spx/13-infrastructure.enabler/25-eval-harness.enabler` stay authoritative for it until its cutover, when they re-home into this subtree with the execution machinery consumed from the external component `18-verification-component.adr.md` names. The shipped eval-evidence auditor `spx/21-spec-tree.enabler/68-audit.enabler/32-audit-eval-evidence.enabler` aligns to the adapter-invoked coupling model in the same cutover; its producer-coupling verdict model is superseded by the adapter-derived decision and recorded in that node's `ISSUES.md`.
+The shipped harness under `outcomeeng_evals/` and the specs under `spx/13-infrastructure.enabler/25-eval-harness.enabler` stay authoritative for it until its cutover, when they re-home into this subtree with the execution machinery consumed from the external component [`spx/31-outcomeeng.enabler/31-verification.enabler/18-verification-component.adr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/18-verification-component.adr.md) names. The shipped eval-evidence auditor `spx/21-spec-tree.enabler/68-audit.enabler/32-audit-eval-evidence.enabler` aligns to the adapter-invoked coupling model in the same cutover; its producer-coupling verdict model is superseded by the adapter-derived decision and recorded in that node's `ISSUES.md`.
 
 **Settlement condition.** The harness and the auditor move together: the cutover completes, the old node retires, and the auditor judges the coupling mode the harness produces.
 

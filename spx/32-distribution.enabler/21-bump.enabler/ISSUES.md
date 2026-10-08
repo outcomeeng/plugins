@@ -12,7 +12,7 @@ Two implementations of one grammar drift. The local regex already had to grow a 
 
 **Resolution shape**: move the directive grammar, the `Directive` types, and the authored-source filter into the stdlib-only `outcomeeng/distribution/contracts.py`, which both modules already import, and have `build.py` and `bump.py` consume them from that one owner. `DirectiveSyntaxError` needs a home that does not subclass `BuildError`, or the error hierarchy needs splitting.
 
-**Why this is larger than the bump changeset**: the move restructures the core of `build.py` and lands on `spx/18-plugin-build.enabler`, whose spec and `15-build-architecture.adr.md` both describe the directive system as build-owned. Aligning that node's declarations is the substance of the work, and it belongs to a changeset scoped to the build node rather than riding on a bump attribution fix.
+**Why this is larger than the bump changeset**: the move restructures the core of `build.py` and lands on `spx/18-plugin-build.enabler`, whose spec and [`spx/18-plugin-build.enabler/15-build-architecture.adr.md`](spx/18-plugin-build.enabler/15-build-architecture.adr.md) both describe the directive system as build-owned. Aligning that node's declarations is the substance of the work, and it belongs to a changeset scoped to the build node rather than riding on a bump attribution fix.
 
 **Evidence**: `implementation-auditor` run `2026-08-16_14-37-36-503-a91d084361f9`, two debt findings against `outcomeeng/distribution/bump.py`.
 

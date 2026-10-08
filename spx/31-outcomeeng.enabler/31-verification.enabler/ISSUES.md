@@ -62,7 +62,7 @@ and `/audit-adr` and `/audit-pdr` reject the decision on every run.
 **Resolution shape**: route each rule through `/verify` to select its type from
 the verdict its real subject can produce, then group the rules under the matching
 subsection and apply that subsection's tag. Several rules in
-`21-adapter-contract.adr.md` describe deterministic process behavior — bounded
+[`spx/31-outcomeeng.enabler/31-verification.enabler/21-agentic-verification.enabler/21-adapter-contract.adr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/21-agentic-verification.enabler/21-adapter-contract.adr.md) describe deterministic process behavior — bounded
 subprocess, no resident watcher, verbatim telemetry fields — so the sweep may
 select `### Testing` for some rules rather than sending all three decisions to
 `### Audit`.

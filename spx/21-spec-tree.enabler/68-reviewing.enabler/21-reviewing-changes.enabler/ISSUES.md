@@ -258,7 +258,7 @@ against `src/plugins/spec-tree/agents/changes-reviewer.md` on Change #76 head
 
 ## Two Verifier rules collide on pinning a spec-declared tuning value
 
-The changes-reviewer requires a test to pin `SIGNAL_GRACE_SECONDS` to the spec's two-second grace period with an independent literal, citing the mutation-check rule in `15-test-infrastructure.pdr.md`, and three review runs raised it as blocking. The test-evidence-auditor rejects exactly that literal as a source-ownership violation, citing [`spx/12-shipped-scripting.adr.md`](spx/12-shipped-scripting.adr.md). The operator ruled that the ADR governs, and the reviewer finding is dropped as unbacked.
+The changes-reviewer requires a test to pin `SIGNAL_GRACE_SECONDS` to the spec's two-second grace period with an independent literal, citing the mutation-check rule in [`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md), and three review runs raised it as blocking. The test-evidence-auditor rejects exactly that literal as a source-ownership violation, citing [`spx/12-shipped-scripting.adr.md`](spx/12-shipped-scripting.adr.md). The operator ruled that the ADR governs, and the reviewer finding is dropped as unbacked.
 
 **Settlement condition.** One of the two decisions is amended so a reviewer and an evidence auditor reading both reach one verdict. The full entry is in `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/ISSUES.md`.
 
