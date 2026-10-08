@@ -74,7 +74,7 @@ A failed resolution, a path escaping the root or naming no regular file, or a mi
 
 Use skill `spec-tree:understand` when the live `<SPEC_TREE_FOUNDATION>` marker is absent or lacks `Template root`. A marker still absent after that returns `BLOCKED` with `runToken: not-started`.
 
-The ADR's governing node is the directory containing it, `spx/` for a product-root ADR. Read its context read-only, never invoking `/contextualize` or `/sync-base`: the product spec, then each spec and every decision record along the path from `spx/` to the governing node, then every decision a loaded spec or decision cites by full `spx/` path. The ADR under audit is excluded from this read wherever it appears, as a decision record on the path or as a citation; every judgment this skill makes of the ADR, including Step 6 draft-rule consistency and Step 7 classification, reads it only from the replayed run input. Those steps read the rest of this context. A spec missing on that path returns `BLOCKED` with `runToken: not-started` naming the missing file.
+The ADR's governing node is the directory containing it, `spx/` for a product-root ADR. Read its context read-only, never invoking `/contextualize` or `/sync-base`: the product spec, then each spec and every decision record along the path from `spx/` to the governing node, then every decision a loaded spec or decision cites by full `spx/` path. The ADR under audit is excluded from this read wherever it appears, as a decision record on the path or as a citation; every judgment this skill makes of the ADR, including Step 6 draft-rule consistency and Step 7 classification, reads it only from the replayed run input. Those steps read the rest of this context, and Step 7 adds only the evidence reads it names. A spec missing on that path returns `BLOCKED` with `runToken: not-started` naming the missing file.
 
 </step>
 
@@ -145,7 +145,7 @@ For each routed rule:
 
 **Step 7: Compose language-specific architecture concerns**
 
-Classify the ADR from its governed implementation surface: the paths and skills its rules name, and the implementation the governing node's linked evidence reaches, read from the context Step 2 loaded. When the decision constrains no implementation language, it is language-neutral: record no language unit and skip composition. Otherwise preserve every implementation-language partition the decision constrains, including cross-language decisions; the repository's predominant language never narrows that set.
+Classify the ADR from its governed implementation surface, read only from these sources: the paths and skills the ADR's rules name, read from the replayed input; the evidence links in the governing node's spec, loaded in Step 2; and, read-only, each linked evidence file together with the files it imports or names. Read no other file for classification. When the decision constrains no implementation language, it is language-neutral: record no language unit and skip composition. Otherwise preserve every implementation-language partition the decision constrains, including cross-language decisions; the repository's predominant language never narrows that set.
 
 For every discovered partition, Use skill `{lang}:audit-{lang}-architecture` and pass the ADR path. When the governed context establishes no reliable partition for a language-specific ADR, record the language unit for `unknown` with the finding `language-routing-unavailable`. When the language skill is not installed, record its language unit as `missing-skill`, which rejects the run without a finding.
 
