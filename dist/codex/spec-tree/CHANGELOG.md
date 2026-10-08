@@ -14,7 +14,7 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 ### Changed
 
-- **The router tells a session to move a file it needs gone to the user's trash.** The instruction block's No File Removal section keeps forbidding every command that deletes a file and now directs a file a task needs gone, outside the exempted removals, to the trash command the host supplies, such as `trash` on macOS, where the operator can restore it. A host with no trash command leaves the file in place and the session reports it to the operator, and scratch files stay in place. A repository refreshes its root `CLAUDE.md` and `AGENTS.md` through `/update-instruction-block` to receive the section.
+- **The router tells a session to move a file it needs gone to the user's trash.** The instruction block's No File Removal section keeps forbidding every command that deletes a file and now directs a file a task needs gone, outside the exempted removals, to the trash command the host supplies, such as `trash` on macOS, where the operator can restore it. A host with no trash command leaves the file in place and the session reports it to the operator, and scratch files stay in place. A repository refreshes its root instruction files through `/update-instruction-block` to receive the section.
 
 ## 0.103.1
 
