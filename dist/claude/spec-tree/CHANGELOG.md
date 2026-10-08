@@ -10,6 +10,12 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.103.2
+
+### Changed
+
+- **The router tells a session to move a file it needs gone to the user's trash.** The instruction block's No File Removal section keeps forbidding every command that deletes a file and now directs a file a task needs gone, outside the exempted removals, to the trash command the host supplies, such as `trash` on macOS, where the operator can restore it. A host with no trash command leaves the file in place and the session reports it to the operator, an instruction from the operator or the repository to keep a file or to report it without removing it takes precedence, and scratch files stay in place. The template advances to 0.41.0, so `/update-instruction-block` re-renders a consumer's router block once its recorded version is behind and the section reaches the root instruction files.
+
 ## 0.103.1
 
 ### Requires
