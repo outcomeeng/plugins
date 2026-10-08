@@ -345,7 +345,7 @@ The audit side of the divergence between `spec-tree:implementation-auditor` run 
 
 ## The implementation audit chooses its stdin command form by the kind of caller
 
-**Evidence.** `src/plugins/spec-tree/skills/audit-implementation/SKILL.md` selects the quoted heredoc for interactive sessions and the one-line `printf` pipe for programmatic runners, as `spx/15-agent-tools.pdr.md` requires of tool guidance. `instructions:skill-auditor` reported the caller-dependent branch as a warning (`caller_independence`) on the registry-selection changeset.
+**Evidence.** `src/plugins/spec-tree/skills/audit-implementation/SKILL.md` selects the quoted heredoc for interactive sessions and the one-line `printf` pipe for programmatic runners, as [`spx/15-agent-tools.pdr.md`](spx/15-agent-tools.pdr.md) requires of tool guidance. `instructions:skill-auditor` reported the caller-dependent branch as a warning (`caller_independence`) on the registry-selection changeset.
 
 **Impact.** `/skill-standards` `<skill_organization>` holds that a skill never branches on its invocation context, so the two decisions disagree and each audit of the skill raises the conflict again.
 
@@ -353,7 +353,7 @@ The audit side of the divergence between `spec-tree:implementation-auditor` run 
 
 ## The implementation audit requires its caller's identity
 
-**Evidence.** `src/plugins/spec-tree/skills/audit-implementation/SKILL.md` requires the six run-driver producer fields in the invocation context, returns `BLOCKED` with `runToken: not-started` when they are absent, and writes them into every scope payload as `recordedByRunDriver`. `instructions:skill-auditor` rejected the dependency (`caller_independence`) on the registry-selection changeset. `spx/21-spec-tree.enabler/17-audit.adr.md` decides that the `implementation-auditor` supplies its identity as explicit request data.
+**Evidence.** `src/plugins/spec-tree/skills/audit-implementation/SKILL.md` requires the six run-driver producer fields in the invocation context, returns `BLOCKED` with `runToken: not-started` when they are absent, and writes them into every scope payload as `recordedByRunDriver`. `instructions:skill-auditor` rejected the dependency (`caller_independence`) on the registry-selection changeset. [`spx/21-spec-tree.enabler/17-audit.adr.md`](spx/21-spec-tree.enabler/17-audit.adr.md) decides that the `implementation-auditor` supplies its identity as explicit request data.
 
 **Impact.** A direct `/audit-implementation HEAD` invocation without injected identity always returns `BLOCKED`, so the skill is not independently invocable, and the standard and the decision contradict each other.
 
@@ -366,7 +366,7 @@ The audit side of the divergence between `spec-tree:implementation-auditor` run 
 - `<failure_modes>` loads the failure reference only after a failure, so the preventive records (`finding_before_standards`, `transcribed_inventory`, `coverage_stated_as_findings`) reach Claude too late (`failure-modes-load-trigger`).
 - `allowed-tools` grants `Bash(spx verification run:*)`, which covers the state-changing `start`, `scope add`, `finding add` and `finish` subcommands, while `/skill-standards` limits audit skills to read-only Bash verbs; the skill never says why persisting the verdict is the audit's output and not a modification (`audit-read-only-allowed-tools`).
 - The skill composes a concern skill whose name it reads from the registry selection at run time, while `/skill-standards` requires a parent to name the exact installed skill it composes; the `concern` contract filter contains the dispatch and the skill states the exception (`skill-tool-composition`).
-- `resolve_scope.py` builds paths into the `scope-changeset` and `select-artifacts` provider skills, which `/skill-standards` command-capabilities reads as a cross-skill file reference, while `spx/13-plugin-and-runtime-conventions.adr.md` decides that a consumer script reaches a provider by a `__file__`-relative import (`cross-skill-file-reference`).
+- `resolve_scope.py` builds paths into the `scope-changeset` and `select-artifacts` provider skills, which `/skill-standards` command-capabilities reads as a cross-skill file reference, while [`spx/13-plugin-and-runtime-conventions.adr.md`](spx/13-plugin-and-runtime-conventions.adr.md) decides that a consumer script reaches a provider by a `__file__`-relative import (`cross-skill-file-reference`).
 
 **Impact.** Each audit of the skill raises these warnings again, and the last two record conflicts between the skill standard and the decision.
 
