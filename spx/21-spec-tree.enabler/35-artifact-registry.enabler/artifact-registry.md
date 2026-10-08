@@ -22,6 +22,8 @@ The build renders the declaration into one data file beside the shipped reader t
 - ALWAYS: the build renders the registry into the data file beside the provider skill's reader, and the rendered file equals the declaration it renders ([test](tests/test_artifact_registry.mapping.l1.py))
 - For every registered artifact, one path matching its detection selects that artifact and its audit skill; a path matching two artifacts of one kind selects the most specific; a kind with a match selects its detection-less architecture artifact; a path matching nothing selects nothing ([test](tests/test_artifact_registry.mapping.l1.py))
 
+- For every extension a registered code kind detects as its implementation, the instruction block's extension-to-language mapping names that kind's language, and every extension that mapping carries is one a registered code kind declares for the same language ([test](tests/test_artifact_registry.mapping.l1.py))
+
 ### Compliance
 
 - ALWAYS: the registry is one source-owned declaration in which every registered kind names each artifact it produces, its detection features or its selecting artifact, and the author, audit and standards skills that govern it; the kinds are the four code kinds with their implementation, test and architecture artifacts, decision records, specs, skills, subagent definitions, prose and the Change record ([audit])
