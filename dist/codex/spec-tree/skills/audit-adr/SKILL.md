@@ -88,7 +88,7 @@ From the repository root, start one run on the ADR:
 spx verification run start --verification-type audit --scope-type file --scope '<adr-path>' --input '<adr-path>'
 ```
 
-Capture the exact `runToken` and use it for every later command. Read the retained input with `spx verification run input --verification-type audit --scope-type file --scope '<adr-path>' --run '<run-token>'`; its `content` is the one copy of the ADR the audit judges. Identify its sections: the opening decision statement, Rationale (optional), Invariants (optional), and Verification. Record the root unit under `<persistence_contract>`.
+Capture the exact `runToken` and use it for every later command. Read the retained input with `spx verification run input --verification-type audit --scope-type file --scope '<adr-path>' --run '<run-token>'`; its `content` is the one copy of the ADR the audit judges. Record the root unit under `<persistence_contract>`.
 
 Read `decisions/decision-name.adr.md` beneath the `Template root` the foundation marker records; the template remains owned by `/understand`.
 
@@ -102,9 +102,9 @@ Steps 4 through 7 each record their unit, then its findings, as soon as that uni
 
 Derive the valid section set in full from the canonical ADR template loaded in Step 3 — never from memory or a transcribed copy. A structural finding that contradicts the canonical template is unbacked: drop it. When the template cannot be loaded, record `template-missing` naming the blocked read.
 
-Verify the decision is stated in the opening (no "Purpose" preamble) and a `## Verification` section is present. Rationale and Invariants are optional — Invariants appears only when the decision establishes algebraic properties.
+Identify the ADR's sections and compare them with that set, including which sections the template marks required, optional, or conditional, and where it places the decision statement.
 
-**No decision statement, or no Verification section → finding `missing-section`.**
+**A required section or the decision statement absent where the template places it → finding `missing-section`.**
 
 </step>
 
@@ -134,10 +134,7 @@ A tagged rule must have the matching routed subsection. When `### Testing` conta
 
 For each routed rule:
 
-1. The tag is valid for its subsection:
-   - under `### Testing` → one of `scenario`, `mapping`, `conformance`, `property`, `compliance`;
-   - under `### Eval` → `([eval])`;
-   - under `### Audit` → `([audit])`.
+1. The tag is the one the canonical template requires for its subsection — never a tag list recalled from memory.
 2. Under `### Testing`, the declared assertion type is compatible with the claim's quantifier and evidence shape under the loaded litmus. A universal claim cannot carry `scenario`. Record a declared type whose required domain or oracle contradicts the claim, citing the claim and the loaded criterion; do not choose among compatible types or require executable evidence for a declaration.
 
 **A routed rule with a missing, unsupported, duplicate, or subsection-mismatched tag → finding `invalid-tag`. An assertion type that contradicts the claim's shape → finding `assertion-type-mismatch`.**
@@ -156,7 +153,7 @@ Before consuming a composed result, validate it against the invoked skill's decl
 
 From a validated result, record every finding of every row against that language's unit: retain its `rule`, `severity`, `message`, `observed`, and `expected`, and use its file or row location as `location`. An `INFO` observation is not a finding and is not recorded.
 
-One case is not a composition failure. When the governed context establishes that the changeset itself ships the ADR's language plugin, unpublished and uninstalled in this session, no `audit-<lang>-architecture` skill can exist yet. Judge the decision directly against the skill files its rules name and the cross-language decisions, and record the language unit with this skill as its producer and every finding of that direct judgment. An absent installed skill alone never establishes unpublished status.
+One case is not a composition failure. When the skill files the ADR's rules name exist in the checkout as the language plugin's own authored source, and no `audit-<lang>-architecture` skill is installed in this session, the plugin is unpublished and its architecture skill cannot exist yet. Judge the decision directly against those skill files and the cross-language decisions, and record the language unit with this skill as its producer and every finding of that direct judgment. An absent installed skill alone never establishes unpublished status: without that authored source in the checkout, the unit is `missing-skill`.
 
 </step>
 
