@@ -291,13 +291,3 @@ Source: `instructions:skill-auditor` finding `f-015`, rule
 **Settlement condition.** A session runs one of the surfaces the sweep names to the point where it issues its `python3` command and records whether the harness admits the command under the declared grant or prompts for it; the established behavior then fixes one spelling across the whole population. An executed invocation is the only evidence that closes this.
 
 **Related.** "A non-interactive git guard sits on the command that cannot prompt", in `spx/21-spec-tree.enabler/76-merge.enabler/32-github-pr.enabler/ISSUES.md`, asks whether the Bash grant matcher tolerates an `ENV=value` prefix. One executed invocation that reports the matcher's behavior on an unexpanded token and on an environment-variable prefix answers both.
-
-## `skill-standards` restates rules that `agent-prompt-standards` states
-
-**Evidence.** `instructions:skill-auditor` run `2026-10-06_18-37-53-397-59929467e6ad` on `src/plugins/instructions/skills/skill-standards` raised a `debt` finding, rule `reference-skills-duplication`, on `<descriptions>` and `<conciseness>`, which `agent-prompt-standards` restates in `<description_style>` and `<conciseness>`.
-
-**Standing.** Unjudged. The advisor could not judge it without the paired passages: naming two sections that cover the same domain does not establish duplicated rule ownership, because one section can refer to or specialize the other.
-
-**Impact.** A rule stated in two skills can drift between them.
-
-**Settlement condition.** The paired passages are compared, and each rule has one owning skill with the other pointing to it, or the comparison shows one specializes the other.
