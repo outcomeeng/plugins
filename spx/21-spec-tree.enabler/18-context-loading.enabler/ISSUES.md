@@ -22,7 +22,7 @@ The count is the wrong unit. What binds is each decision's `### Audit` and `### 
 
 ## The context manifest carries no methodology declaration
 
-`context-loading.md` declares that the `/contextualize` manifest states the methodology source and version the repository follows, taken from the `methodology` block of the SPX CLI's context bundle. The bundle exists: `spx spec context show --json` on the installed `@outcomeeng/spx` 0.6.26 emits `methodology.source` `outcomeeng/methodology` and `methodology.version` `4.0` for this repository. The skill does not consume it. The floor and the CI pin sit at 0.7.2, above the 0.6.16 release that introduced the subcommand, so consumption of the bundle waits only on the published contract. The `<SPEC_TREE_CONTEXT>` marker therefore names no methodology version, and a session learns it only by reading the spx configuration file by hand.
+`context-loading.md` declares that the `/contextualize` manifest states the methodology source and version the repository follows, taken from the `methodology` block of the SPX CLI's context bundle. The bundle exists: `spx spec context show --json` on the installed `@outcomeeng/spx` 0.6.26 emits `methodology.source` `outcomeeng/methodology` and `methodology.version` `4.0` for this repository. The skill does not consume it. The floor and the CI pin sit at 0.8.0, above the 0.6.16 release that introduced the subcommand, so consumption of the bundle waits only on the published contract. The `<SPEC_TREE_CONTEXT>` marker therefore names no methodology version, and a session learns it only by reading the spx configuration file by hand.
 
 Two further readings show the same gap from the CLI side. `spx diagnose` reports `methodology-context` as `unavailable` with `observedSource` and `observedVersion` absent, because no installed methodology package is configured. `spx spec context show --understand`, which serves the foundation payload from that package, fails for the same reason: `methodology.packageDir` is unset. Whether the `/understand` foundation is delivered through that payload is a separate decision the context-enumeration ADR does not yet make.
 
@@ -30,7 +30,7 @@ Two further readings show the same gap from the CLI side. `spx diagnose` reports
 
 **Resolution shape**: land the consumption slice described in "The skill enumerates the read-set locally" below (floor and pin advanced to a release whose bundle satisfies the contract, `/contextualize` reading the bundle), emit the `methodology` block in the manifest, retag the assertion's evidence against the CLI output, and delete the interim instruction-block line in the same change.
 
-**Evidence**: `spx spec context show --json spx/21-spec-tree.enabler/18-context-loading.enabler` on 0.6.26; `spx diagnose --format json` `methodology-context` record; `outcomeeng/validation/spx_version.py` and `.github/workflows/check.yml`, which both place the floor and the pin at 0.7.2.
+**Evidence**: `spx spec context show --json spx/21-spec-tree.enabler/18-context-loading.enabler` on 0.6.26; `spx diagnose --format json` `methodology-context` record; `outcomeeng/validation/spx_version.py` and `.github/workflows/check.yml`, which both place the floor and the pin at 0.8.0.
 
 ## The context walk reads fewer sibling contracts than the foundation declares
 
