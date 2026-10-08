@@ -230,7 +230,7 @@ Every rule the sections above state carries exactly one row below: one stable id
 
 - **Identifier.** Lowercase snake_case, unique across this catalog and the `/skill-standards` rule catalog. An identifier is never renamed and never reassigned; a retired rule's row is removed, and its identifier stays unused.
 - **Severity.** `blocking` marks a defect that must be fixed before the prompt ships; `debt` marks any other valid defect. A rule's severity is the one its row declares, never one chosen per finding.
-- **Finding key.** A finding against these conventions is keyed `<unit>:<rule-id>`: the unit that covers the file it names, and the identifier of the one rule it violates.
+- **Finding key.** A finding against these conventions is keyed `<unit>:<rule-id>`: the unit that covers the file it names, and the identifier of the one rule it violates. Every violation of one rule within one unit forms that one finding, which names each location.
 - **Closed vocabulary.** A finding names an identifier from this catalog or from the `/skill-standards` rule catalog. A defect no row covers is a gap in the standard: the rule enters the stating section and this catalog before any finding cites it.
 
 | Identifier                       | Severity | Rule                                                                                                                               | Stated in                |
@@ -238,6 +238,7 @@ Every rule the sections above state carries exactly one row below: one stable id
 | `instruction_not_imperative`     | debt     | An instruction drops its subject and uses imperative mood.                                                                         | `<voice>`                |
 | `behavioral_claim_subject`       | debt     | A behavioral claim, tendency, or failure mode names Claude as its subject.                                                         | `<voice>`                |
 | `banned_subject`                 | debt     | Prompt text never uses "the agent", "the model", or "you" as a subject.                                                            | `<voice>`                |
+| `description_subject`            | debt     | A frontmatter description names no subject.                                                                                        | `<voice>`                |
 | `claude_in_frontmatter`          | blocking | The `name` and `description` fields never contain the word "claude".                                                               | `<voice>`                |
 | `actor_or_activity_objective`    | blocking | An `<objective>` names the output and its required shape, never opening with an actor or a bare activity verb.                     | `<objective_shape>`      |
 | `objective_non_output_clause`    | debt     | An `<objective>` is one sentence, two only for an output with two distinct parts, and every clause names a property of the output. | `<objective_shape>`      |
@@ -252,6 +253,7 @@ Every rule the sections above state carries exactly one row below: one stable id
 | `motivational_prose`             | debt     | Prompt text states constraints rather than urging care.                                                                            | `<anti_patterns>`        |
 | `skill_name_repetition`          | debt     | Prompt text never restates the name its frontmatter carries.                                                                       | `<anti_patterns>`        |
 | `empty_disclaimer`               | debt     | Prompt text carries no disclaimer that names no concrete failure.                                                                  | `<anti_patterns>`        |
+| `removable_sentence`             | debt     | A prompt carries no sentence whose removal leaves Claude's effectiveness at the task unchanged.                                    | `<conciseness>`          |
 | `known_content`                  | debt     | A prompt omits knowledge Claude already has.                                                                                       | `<conciseness>`          |
 | `abstract_guidance`              | debt     | Guidance states concrete commands and thresholds rather than abstractions.                                                         | `<conciseness>`          |
 | `failure_mode_structure`         | debt     | A failure mode states what happened, why it failed, and how to avoid it.                                                           | `<failure_mode_writing>` |

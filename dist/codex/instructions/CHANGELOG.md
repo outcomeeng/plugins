@@ -18,7 +18,7 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 - **Description wording and conciseness each have one home.** `/agent-prompt-standards` `<description_style>` owns description wording for skills and subagents alike: the directive form, the NEVER clause, artifact-before-language order, and user speech. `/skill-standards` `<descriptions>` selects directive or passive style by invocation path and points to that wording. `/agent-prompt-standards` `<conciseness>` owns the sentence-removal test and concrete-over-abstract guidance, and `/skill-standards` `<conciseness>` points to it. The rules `redundant_never_clause`, `artifact_language_order`, `known_content`, and `abstract_guidance` move to the `/agent-prompt-standards` catalog under the same identifiers, and the first two now apply on both harnesses rather than only on Claude Code.
 - **"try to" is a weak modal, not a phrase banned everywhere.** `/agent-prompt-standards` `<anti_patterns>` no longer lists "try to", "the agent", or "you should". Weak modals are judged by `<constraint_language>`, which bars them only in constraint blocks, and banned subjects by `<voice>`.
 
-- **The auditor skeleton keys findings by catalog rule.** An auditor's verdict keys each finding by its unit and the identifier the governing standard's rule catalog gives the violated rule, and names no identifier outside that catalog.
+- **The auditor skeleton keys findings by catalog rule.** An auditor's verdict keys each finding by its unit and the identifier the governing standard's rule catalog gives the violated rule, and names no identifier outside that catalog. Every violation of one rule within one unit forms that one finding, which names each location.
 
 ## 0.20.1
 

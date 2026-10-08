@@ -19,7 +19,7 @@ Every rule `SKILL.md` and its references state carries exactly one row below: on
 
 - **Identifier.** Lowercase snake_case, unique across this catalog and the `/agent-prompt-standards` rule catalog. An identifier is never renamed and never reassigned; a retired rule's row is removed, and its identifier stays unused.
 - **Severity.** `blocking` marks a defect that must be fixed before the skill ships; `debt` marks any other valid defect. A rule's severity is the one its row declares, never one chosen per finding.
-- **Finding key.** A finding against these standards is keyed `<unit>:<rule-id>`: the unit that covers the file it names, and the identifier of the one rule it violates.
+- **Finding key.** A finding against these standards is keyed `<unit>:<rule-id>`: the unit that covers the file it names, and the identifier of the one rule it violates. Every violation of one rule within one unit forms that one finding, which names each location.
 - **Closed vocabulary.** A finding names an identifier from this catalog or from the `/agent-prompt-standards` rule catalog. A defect no row covers is a gap in the standard: the rule enters the stating section and this catalog before any finding cites it.
 
 </catalog_contract>
