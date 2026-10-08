@@ -176,6 +176,7 @@ The bundled synchronizer is covered before release by this real-git test matrix:
 | detached HEAD behind the fetched base with a tracked edit   | exit 4; `status=dirty_tree`; HEAD and working tree unchanged; no `conflict`         |
 | clean detached HEAD at the fetched base tip                 | exit 0; `status=already_current`; HEAD unchanged; non-null `preservation`           |
 | explicit `--base` naming a non-default branch               | exit 0; `status=rebased` onto that branch's `origin/<base>`, not `origin/HEAD`      |
+| branch diff holding bytes that are not valid UTF-8          | exit 0; `status=rebased`; `preservation` reports an unchanged branch patch identity |
 | `--no-fetch` with a remote base that does not resolve       | exit 1; `status=git_failure`; detached HEAD unchanged                               |
 | detached HEAD carrying a commit absent from the base        | exit 1; `status=git_failure`; HEAD unchanged                                        |
 | missing `origin` during fetch                               | exit 1; `status=git_failure`; actionable `detail`                                   |
