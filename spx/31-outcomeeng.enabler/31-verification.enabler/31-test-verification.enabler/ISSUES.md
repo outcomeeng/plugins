@@ -42,3 +42,11 @@ The changes-reviewer requires a test to pin `SIGNAL_GRACE_SECONDS` to the spec's
 `test-verification.md` carries roughly 24 Compliance assertions, past the same signal. The node is the single language-neutral superset of the test-evidence seam rules, and every language test-standard node cites it and declares only its language delta. Decomposing the superset into per-concern children would re-fragment the union the design unifies, and language nodes would cite a parent whose rules are spread across children, reintroducing the cross-language drift the superset removes. A Verifier skips this decomposition signal.
 
 **Revisit condition.** A Compliance assertion falls outside the test-evidence seam rules the language test-standard nodes cite, or a language test-standard node stops citing the node for a rule, after which that concern separates into its own node.
+
+## Two seam rules carry the audit tag where eval evidence once linked
+
+**Evidence.** `test-verification.md` declares two rules: the linked executed test owns every behavioral predicate and assertion API call, and expected outputs for generated inputs derive from the input, an independent oracle, or a source outside the module under test. Both linked `evals/full-chain-ownership/eval.toml` of `spx/21-spec-tree.enabler/68-audit.enabler/32-audit-tests.enabler` as `[eval]` evidence. The 4.0 link grammar admits an assertion link only as a node-local path into the tag's own directory, so no link from this node reaches that eval, and both rules carry `([audit])`. The `32-audit-tests.enabler` node keeps the eval linked from its `/audit-tests` assertion in `audit-tests.md`.
+
+**Impact.** The two rules rest on audit evidence alone, and no eval under this node scores them.
+
+**Settlement condition.** An eval under this node's `evals/` scores the two rules and each assertion links it as `[eval]`, or the audit tags stand and gain their rule slugs when the tree adopts the `[audit:{rule-slug}]` form.

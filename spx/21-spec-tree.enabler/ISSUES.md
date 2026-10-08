@@ -225,3 +225,11 @@ Revisit and settlement condition: one conditional paragraph moved into the refer
 **Impact:** the skill can change without invalidating node-specific evidence, and its governing node must be inferred from plugin ownership instead of derived from a declared audit assertion or linked verification path.
 
 **Settlement condition:** a spec assertion under the owning Spec Tree node names the refocus skill surface and routes its activation and workflow contract to current evidence.
+
+## The delivered-value assertion carries the audit tag where eval evidence once linked
+
+**Evidence:** The `spec-tree.md` assertion that the `/understand` skill declares delivered value as value merged to the default branch through `/merge` linked `76-merge.enabler/evals/local-completion-boundary/eval.toml` as `[eval]` evidence. The 4.0 link grammar admits an assertion link only as a node-local path into the tag's own directory, so no link from this node reaches an eval in `76-merge.enabler`, and the assertion carries `([audit])`. The `76-merge.enabler` node keeps the eval linked from its own assertions in `merge.md`. That eval grades a status-assessment simulation, recorded in the `76-merge.enabler` node's `ISSUES.md`, and never graded the `/understand` text.
+
+**Impact:** The assertion rests on audit evidence alone, and no eval scores the `/understand` skill's delivered-value declaration.
+
+**Settlement condition:** An eval under this node's `evals/` scores the `/understand` skill's delivered-value declaration and the assertion links it as `[eval]`, or the audit tag stands and gains its rule slug when the tree adopts the `[audit:{rule-slug}]` form.
