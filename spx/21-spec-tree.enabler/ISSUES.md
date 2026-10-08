@@ -228,7 +228,7 @@ Revisit and settlement condition: one conditional paragraph moved into the refer
 
 ## The delivered-value assertion carries the audit tag where eval evidence once linked
 
-**Evidence:** The `spec-tree.md` assertion that the `/understand` skill declares delivered value as value merged to the default branch through `/merge` linked `76-merge.enabler/evals/local-completion-boundary/eval.toml` as `[eval]` evidence. The 4.0 link grammar admits an assertion link only as a node-local path into the tag's own directory, so no link from this node reaches an eval in `76-merge.enabler`, and the assertion carries `([audit])`. The `76-merge.enabler` node keeps the eval linked from its own assertions in `merge.md`. That eval grades a status-assessment simulation, recorded in the `76-merge.enabler` node's `ISSUES.md`, and never graded the `/understand` text.
+**Evidence:** The `spec-tree.md` assertion that the `/understand` skill declares delivered value as value merged to the default branch through `/merge` linked `76-merge.enabler/evals/local-completion-boundary/eval.toml` as `[eval]` evidence. The `spx-link-shape` rule of `@outcomeeng/spx` 0.8.0 rejects that path with "should not enter a descendant node's directory", and rejects its tree-absolute form as "an assertion evidence link; link evidence node-local from inside the asserting node", so the assertion carries `([audit])`. The `76-merge.enabler` node keeps the eval linked from its own assertions in `merge.md`. That eval grades a status-assessment simulation, recorded in the `76-merge.enabler` node's `ISSUES.md`, and never graded the `/understand` text.
 
 **Impact:** The assertion rests on audit evidence alone, and no eval scores the `/understand` skill's delivered-value declaration.
 

@@ -45,7 +45,7 @@ The changes-reviewer requires a test to pin `SIGNAL_GRACE_SECONDS` to the spec's
 
 ## Two seam rules carry the audit tag where eval evidence once linked
 
-**Evidence.** `test-verification.md` declares two rules: the linked executed test owns every behavioral predicate and assertion API call, and expected outputs for generated inputs derive from the input, an independent oracle, or a source outside the module under test. Both linked `evals/full-chain-ownership/eval.toml` of `spx/21-spec-tree.enabler/68-audit.enabler/32-audit-tests.enabler` as `[eval]` evidence. The 4.0 link grammar admits an assertion link only as a node-local path into the tag's own directory, so no link from this node reaches that eval, and both rules carry `([audit])`. The `32-audit-tests.enabler` node keeps the eval linked from its `/audit-tests` assertion in `audit-tests.md`.
+**Evidence.** `test-verification.md` declares two rules: the linked executed test owns every behavioral predicate and assertion API call, and expected outputs for generated inputs derive from the input, an independent oracle, or a source outside the module under test. Both linked `evals/full-chain-ownership/eval.toml` of `spx/21-spec-tree.enabler/68-audit.enabler/32-audit-tests.enabler` as `[eval]` evidence. The `spx-link-shape` rule of `@outcomeeng/spx` 0.8.0 rejects the relative path that climbs out of this node, and rejects its tree-absolute form as "an assertion evidence link; link evidence node-local from inside the asserting node", so both rules carry `([audit])`. The `32-audit-tests.enabler` node keeps the eval linked from its `/audit-tests` assertion in `audit-tests.md`.
 
 **Impact.** The two rules rest on audit evidence alone, and no eval under this node scores them.
 
