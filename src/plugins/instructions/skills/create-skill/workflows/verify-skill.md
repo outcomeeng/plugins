@@ -43,7 +43,7 @@ Representative rows:
 | `SKILL.md:42`            | `$ARGUMENTS` preserves free-form input               | `/skill-standards` `references/command-capabilities.md` | `current`         | `none`                                                                               |
 | `workflows/create.md:18` | Authored source uses `${SKILL_DIR}` for bundle paths | `/skill-standards` `references/command-capabilities.md` | `update-required` | Replace `${SKILL_DIR}` with `${CLAUDE_SKILL_DIR}` {!# no-codex-skill-dir-rewrite #!} |
 
-The overall verdict is `CURRENT` only when every inventory row is `current`. Any `update-required`, `broken`, or `unverifiable` row prevents that verdict.
+The overall verdict is `CURRENT` when every inventory row is `current`, and `STALE` when any row is `update-required`, `broken`, or `unverifiable`.
 
 </step>
 
