@@ -4,7 +4,7 @@ The spec-tree plugin package identifies its methodology resource surface through
 
 ## Rationale
 
-The SPX CLI consumes the package's resource surface as structured package data — the same trusted-third-party structured-data boundary `spx/21-spec-tree.enabler/18-context-loading.enabler/13-context-enumeration.adr.md` establishes for tree enumeration — rather than parsing skill prose or inferring resource groups from directory layout, while authored curation keeps catalog order meaningful and package-check validation closes the drift between the manifest and the shipped files.
+The SPX CLI consumes the package's resource surface as structured package data — the same trusted-third-party structured-data boundary [`spx/21-spec-tree.enabler/18-context-loading.enabler/13-context-enumeration.adr.md`](spx/21-spec-tree.enabler/18-context-loading.enabler/13-context-enumeration.adr.md) establishes for tree enumeration — rather than parsing skill prose or inferring resource groups from directory layout, while authored curation keeps catalog order meaningful and package-check validation closes the drift between the manifest and the shipped files.
 
 ## Invariants
 

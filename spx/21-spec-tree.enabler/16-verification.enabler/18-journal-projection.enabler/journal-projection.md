@@ -25,6 +25,6 @@ CAN stream runs and produce surfaces through one shared, type-agnostic projectio
 ### Compliance
 
 - ALWAYS: the projection is a pure function of its inputs — it builds each domain event from that event's data and renders the rollup and human-readable surface from an event prefix supplied as data, touching no journal backend, filesystem, or network — so it is verified at `l1` without a real journal and without mocking ([audit])
-- NEVER: the projection exposes a builder that emits a whole run's events from a finished result — it offers one builder per domain event so the consuming skill appends each as the run advances, never a batch dump, per `spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md` ([audit])
+- NEVER: the projection exposes a builder that emits a whole run's events from a finished result — it offers one builder per domain event so the consuming skill appends each as the run advances, never a batch dump, per [`spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md`](spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md) ([audit])
 - NEVER: the projection reads or writes the journal channel, a filesystem path, or a network resource directly — the consuming skill drives the channel and passes event data to and from the pure projection ([audit])
 - ALWAYS: the projection helper lives in one dedicated shared scripts home imported by every agentic verification consumer, not duplicated or co-located per consumer ([audit])

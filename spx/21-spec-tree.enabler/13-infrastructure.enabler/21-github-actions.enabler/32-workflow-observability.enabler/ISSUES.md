@@ -16,7 +16,7 @@ threshold:
   (191 lines) — the state-changing-command gate that holds GitHub mutations
   behind explicit user instruction in the same turn.
 
-Past fifty lines `spx/12-shipped-scripting.adr.md` makes a shipped script debt
+Past fifty lines [`spx/12-shipped-scripting.adr.md`](spx/12-shipped-scripting.adr.md) makes a shipped script debt
 whose logic moves into the SPX CLI once the script proves its value; all three
 have proven their value in use, so extraction is what they owe.
 

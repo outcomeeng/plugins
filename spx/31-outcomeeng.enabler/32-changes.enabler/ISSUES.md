@@ -30,9 +30,9 @@ Revisit and settlement condition: one of the two compositions is removed or made
 
 Defect class: `adr-pdr-compliance`.
 
-Finding: `src/plugins/spec-tree/skills/audit-change/scripts/audit_change_run.py` is a generic shipped script far beyond fifty lines, which `spx/12-shipped-scripting.adr.md` holds as debt awaiting extraction of its logic into the SPX CLI once the script proves its value, or removal when it does not.
+Finding: `src/plugins/spec-tree/skills/audit-change/scripts/audit_change_run.py` is a generic shipped script far beyond fifty lines, which [`spx/12-shipped-scripting.adr.md`](spx/12-shipped-scripting.adr.md) holds as debt awaiting extraction of its logic into the SPX CLI once the script proves its value, or removal when it does not.
 
-The `change-auditor` definition `src/plugins/spec-tree/agents/change-auditor.md` has no retained release-acceptance evidence: `spx/15-subagent-execution.pdr.md` declares release acceptance per supported harness as native loading plus one minimal isolated execution for each of its Standard, Strong, and Fast profiles. Release acceptance belongs to the release, so the changeset that introduces the definition, Change outcomeeng/changes#162, runs no paid invocation.
+The `change-auditor` definition `src/plugins/spec-tree/agents/change-auditor.md` has no retained release-acceptance evidence: [`spx/15-subagent-execution.pdr.md`](spx/15-subagent-execution.pdr.md) declares release acceptance per supported harness as native loading plus one minimal isolated execution for each of its Standard, Strong, and Fast profiles. Release acceptance belongs to the release, so the changeset that introduces the definition, Change outcomeeng/changes#162, runs no paid invocation.
 
 Evidence: `spec-tree:implementation-auditor` run `2026-09-29_08-34-14-821-c605096fd926` raised a `debt` finding under rule `adr-pdr-compliance` against the runner; `wc -l` over the runner derives its current length, so this entry carries no line count. `instructions:subagent-auditor` finding `f-002`, verdict `REJECT`, class `evidence/missing-invocation-evidence`, judged `src/plugins/spec-tree/agents/change-auditor.md` on head `02c847e66b2f526804db14eb568fae2a2180b858`.
 
@@ -105,7 +105,7 @@ Revisit and settlement condition: `/skill-standards` states that a run-driver id
 
 Defect class: `bound`.
 
-Finding: product property 3 of `spx/15-agent-tools.pdr.md` covers a `gh api graphql` call reading a connection and requires a named page bound and a blocked result when the result fills it. `src/plugins/coding-agents/skills/orchestrate-change/SKILL.md` line 52 reads `issueFieldValues(first:50)` with no blocked result when the connection returns 50 nodes. Change outcomeeng/changes#333 added that blocked result to the `canonical-state` rule of `src/plugins/spec-tree/skills/change-standards/references/lifecycle.md`, which carried the other nested reads; the Change edits no file of `orchestrate-change`.
+Finding: product property 3 of [`spx/15-agent-tools.pdr.md`](spx/15-agent-tools.pdr.md) covers a `gh api graphql` call reading a connection and requires a named page bound and a blocked result when the result fills it. `src/plugins/coding-agents/skills/orchestrate-change/SKILL.md` line 52 reads `issueFieldValues(first:50)` with no blocked result when the connection returns 50 nodes. Change outcomeeng/changes#333 added that blocked result to the `canonical-state` rule of `src/plugins/spec-tree/skills/change-standards/references/lifecycle.md`, which carried the other nested reads; the Change edits no file of `orchestrate-change`.
 
 Evidence: `spec-tree:changes-reviewer` run `2026-10-06_19-01-19-956-109edd5dce9a` on head `7ab8c651a26303d97d3b99534f17a215c2bf2a66`, finding `consistency` against `lifecycle.md:23`; the `orchestrate-change` read names its bound and returns no blocked result at 50 nodes.
 

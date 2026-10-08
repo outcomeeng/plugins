@@ -232,7 +232,7 @@ repair.
 ## The scope resolver crossed the shipped-script size threshold
 
 `src/plugins/spec-tree/skills/audit-implementation/scripts/resolve_scope.py` is
-268 lines. `spx/12-shipped-scripting.adr.md` holds that a generic shipped script
+268 lines. [`spx/12-shipped-scripting.adr.md`](spx/12-shipped-scripting.adr.md) holds that a generic shipped script
 beyond fifty lines is debt awaiting extraction into the SPX CLI once it proves
 its value.
 
@@ -339,7 +339,7 @@ failed invocation rather than approval evidence.
 
 ## The implementation-auditor has no executable agent or eval coverage
 
-The audit surface uses the published `spx verification run` lifecycle, and `spx/21-spec-tree.enabler/17-audit.adr.md` declares the target surface: one spec-tree-owned `implementation-auditor` wrapper agent composes the `audit-{lang}-code`, `audit-{lang}-tests` and `audit-{lang}-architecture` skills inside one isolated verifier context and records one audit verification run. Language plugins ship skills only. No executable agent or eval covers representative implementation-auditor runs over a one-language, a multi-language and an unsupported-file scope.
+The audit surface uses the published `spx verification run` lifecycle, and [`spx/21-spec-tree.enabler/17-audit.adr.md`](spx/21-spec-tree.enabler/17-audit.adr.md) declares the target surface: one spec-tree-owned `implementation-auditor` wrapper agent composes the `audit-{lang}-code`, `audit-{lang}-tests` and `audit-{lang}-architecture` skills inside one isolated verifier context and records one audit verification run. Language plugins ship skills only. No executable agent or eval covers representative implementation-auditor runs over a one-language, a multi-language and an unsupported-file scope.
 
 **Settlement condition.** Agent or eval coverage exists for those three scopes, once the agentic runner can be exercised deterministically.
 

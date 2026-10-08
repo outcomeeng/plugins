@@ -16,7 +16,7 @@
 
 **Resolution shape**: fold the sequencing bullets into `<objective>`, `<reference_note>`, or the protocol phase that already prescribes the read order, and scope `<success_criteria>` to properties inspectable in the artifact.
 
-**Revisit condition**: `python-test-standards` and `typescript-test-standards` carry the test-standards half verbatim, so correcting rust alone diverges it from two untouched siblings — the divergence `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`'s defect-class-sweep rule exists to prevent. Resolve as one pass across the three language plugins, each with its own `skill-auditor` gate and version bump.
+**Revisit condition**: `python-test-standards` and `typescript-test-standards` carry the test-standards half verbatim, so correcting rust alone diverges it from two untouched siblings — the divergence [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md)'s defect-class-sweep rule exists to prevent. Resolve as one pass across the three language plugins, each with its own `skill-auditor` gate and version bump.
 
 **Evidence**: raised by `instructions:skill-auditor` against `rust-test-standards` and `architect-rust` during the predicate-seam correction.
 
@@ -36,7 +36,7 @@ The Rust delta is the discriminator in Rust terms: a `pub` item in the product c
 
 ## The Rust node still carries nine compliance assertions
 
-The subtractive reduction removed the restated language-neutral seam assertions from `rust.md`, which cites `test-verification.md` and `15-test-infrastructure.pdr.md` for them, and left 9 Compliance assertions where it had 15. That is above the roughly-7 signal in `spx/21-spec-tree.enabler/54-decomposing.enabler/decomposing.md`. Duplication no longer forces a decomposition, and assertion count does not close it. Rust has no test-standards subtree to absorb the residual deltas, unlike its Python and TypeScript siblings.
+The subtractive reduction removed the restated language-neutral seam assertions from `rust.md`, which cites `test-verification.md` and [`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md) for them, and left 9 Compliance assertions where it had 15. That is above the roughly-7 signal in `spx/21-spec-tree.enabler/54-decomposing.enabler/decomposing.md`. Duplication no longer forces a decomposition, and assertion count does not close it. Rust has no test-standards subtree to absorb the residual deltas, unlike its Python and TypeScript siblings.
 
 **Settlement condition.** A Rust test-standards subtree is warranted and `/decompose` creates it, or a Verifier skips the signal on the grounds this entry records.
 

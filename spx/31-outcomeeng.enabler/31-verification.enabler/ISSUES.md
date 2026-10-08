@@ -28,7 +28,7 @@ over-broad claim.
 `[prompt_source]`, or split it into one relation for the generated twelve and an
 explicit non-generated classification for the seven. The governing decision is
 this node's
-`spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md`,
+[`spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md),
 which owns whether a declaration may claim a file its generator never writes.
 
 **Evidence.** An earlier form of this entry recorded the inverse defect — the
@@ -39,7 +39,7 @@ which converts the original risk into the live one recorded above.
 
 **Why this is separate.** The fix edits `spx/local/generated-sources.toml`, a
 governance surface whose governing decision is this node's
-`15-generated-attribution.pdr.md`, and it must classify all nineteen `prompt.md`
+[`spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md), and it must classify all nineteen `prompt.md`
 files. That belongs to this node's decision, not to a changeset that renames
 skills.
 
@@ -50,11 +50,11 @@ skills.
 decision follows it. Three decisions in this subtree place their rules directly
 under a bare `## Verification` with no subsection and no tag on any rule:
 
-| Decision                                                              | Untagged rules |
-| --------------------------------------------------------------------- | -------------- |
-| `18-verification-component.adr.md`                                    | 4              |
-| `21-agentic-verification.enabler/21-adapter-contract.adr.md`          | 6              |
-| `21-conformance-verification.enabler/15-skill-instrumentation.pdr.md` | 6              |
+| Decision                                                                                                                                                                                                                                         | Untagged rules |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------- |
+| [`spx/31-outcomeeng.enabler/31-verification.enabler/18-verification-component.adr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/18-verification-component.adr.md)                                                                       | 4              |
+| [`spx/31-outcomeeng.enabler/31-verification.enabler/21-agentic-verification.enabler/21-adapter-contract.adr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/21-agentic-verification.enabler/21-adapter-contract.adr.md)                   | 6              |
+| [`spx/31-outcomeeng.enabler/31-verification.enabler/21-conformance-verification.enabler/15-skill-instrumentation.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/21-conformance-verification.enabler/15-skill-instrumentation.pdr.md) | 6              |
 
 An untagged rule names no verification type, so nothing selects evidence for it
 and `/audit-adr` and `/audit-pdr` reject the decision on every run.
@@ -62,20 +62,20 @@ and `/audit-adr` and `/audit-pdr` reject the decision on every run.
 **Resolution shape**: route each rule through `/verify` to select its type from
 the verdict its real subject can produce, then group the rules under the matching
 subsection and apply that subsection's tag. Several rules in
-`21-adapter-contract.adr.md` describe deterministic process behavior — bounded
+[`spx/31-outcomeeng.enabler/31-verification.enabler/21-agentic-verification.enabler/21-adapter-contract.adr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/21-agentic-verification.enabler/21-adapter-contract.adr.md) describe deterministic process behavior — bounded
 subprocess, no resident watcher, verbatim telemetry fields — so the sweep may
 select `### Testing` for some rules rather than sending all three decisions to
 `### Audit`.
 
 **Evidence.** Surfaced by the `/audit-pdr` verdict that rejected
-`spx/14-skill-naming.pdr.md` for exactly this defect. That PDR is fixed in the
+[`spx/14-skill-naming.pdr.md`](spx/14-skill-naming.pdr.md) for exactly this defect. That PDR is fixed in the
 changeset that found it; the defect-class sweep across the touched node reaches
 these three, which sit under decisions this changeset does not otherwise govern
 and whose contexts are not loaded.
 
 ## The agentic runners carry no generated-extent skip mechanics
 
-The bundled review and audit runners record no skipped generated extent in a run journal. The skip-and-record disposition `15-generated-attribution.pdr.md` declares reaches agentic runs through the root-instruction rule their agents load, which cannot emit scope-evidence journal events.
+The bundled review and audit runners record no skipped generated extent in a run journal. The skip-and-record disposition [`spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md) declares reaches agentic runs through the root-instruction rule their agents load, which cannot emit scope-evidence journal events.
 
 **Settlement condition.** The `spx` verification scope projection ships and the review and audit runners consume its projection in place of the instruction prose.
 
@@ -87,17 +87,17 @@ The bundled review and audit runners record no skipped generated extent in a run
 
 ## Generators that consume their own declared inputs carry no migration obligation
 
-`outcomeeng/catalog/plugin_catalog.py` reading `.claude-plugin/marketplace.json` and `outcomeeng_evals/ci_triggers.py` discovering `eval.toml` files are generators consuming their own declared inputs. They generate; they derive no generated-source attribution, so `15-generated-attribution.pdr.md` places no migration obligation on them. A Verifier skips this class.
+`outcomeeng/catalog/plugin_catalog.py` reading `.claude-plugin/marketplace.json` and `outcomeeng_evals/ci_triggers.py` discovering `eval.toml` files are generators consuming their own declared inputs. They generate; they derive no generated-source attribution, so [`spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md) places no migration obligation on them. A Verifier skips this class.
 
-**Revisit condition.** Either generator begins deriving generated-source attribution, which brings the migration obligation, or `15-generated-attribution.pdr.md` states that a generator consuming only its own declared inputs carries none, after which this entry is deleted.
+**Revisit condition.** Either generator begins deriving generated-source attribution, which brings the migration obligation, or [`spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md) states that a generator consuming only its own declared inputs carries none, after which this entry is deleted.
 
 ## A merging decision governs the apply flow's Verifier dispatches
 
-`spx/15-merging.pdr.md` is titled "Agent Authority over Merging" and opens on the `VERIFY -> PREVIEW -> MERGE -> DEPLOY -> RELEASE -> CLOSE` lifecycle, while its dispatch-readiness, repeated-class, finish-before-wait and bounded-projection rules bind the apply flow's per-node and whole-changeset gates as well. The rules' natural owner is `14-verification.pdr.md`, which already decides who dispatches an agentic verification, the Author and Verifier isolation, the defect-class sweep, the commit-before-read boundary and the deterministic-before-agentic ordering.
+[`spx/15-merging.pdr.md`](spx/15-merging.pdr.md) is titled "Agent Authority over Merging" and opens on the `VERIFY -> PREVIEW -> MERGE -> DEPLOY -> RELEASE -> CLOSE` lifecycle, while its dispatch-readiness, repeated-class, finish-before-wait and bounded-projection rules bind the apply flow's per-node and whole-changeset gates as well. The rules' natural owner is [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md), which already decides who dispatches an agentic verification, the Author and Verifier isolation, the defect-class sweep, the commit-before-read boundary and the deterministic-before-agentic ordering.
 
-**Settlement condition.** The readiness record, repeated-class invalidation, finish-before-wait and bounded-projection rules move into `14-verification.pdr.md`, `spx/15-merging.pdr.md` reduces to the merge-lifecycle specialization that cites them, and the realizing assertions in `spx/21-spec-tree.enabler/76-merge.enabler/merge.md`, `spx/21-spec-tree.enabler/65-apply.enabler/apply.md` and the two PR-lifecycle node specs re-point; `merging-standards` keeps the section text its merge transports read.
+**Settlement condition.** The readiness record, repeated-class invalidation, finish-before-wait and bounded-projection rules move into [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md), [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md) reduces to the merge-lifecycle specialization that cites them, and the realizing assertions in `spx/21-spec-tree.enabler/76-merge.enabler/merge.md`, `spx/21-spec-tree.enabler/65-apply.enabler/apply.md` and the two PR-lifecycle node specs re-point; `merging-standards` keeps the section text its merge transports read.
 
-**Revisit condition.** A third workflow outside the delivery path needs the readiness record, or `14-verification.pdr.md` is next restructured.
+**Revisit condition.** A third workflow outside the delivery path needs the readiness record, or [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md) is next restructured.
 
 ## An implementation audit and a changeset review read one shipped executable to opposite verdicts
 
@@ -105,6 +105,6 @@ On head `ccaef088c98007c963125af0fc621040d1f6b51b`, `spec-tree:implementation-au
 
 **Impact.** An implementation audit's approval of an executable carries no claim about the behavior the code's declared contract makes, so the two verdicts cannot both stand as gate evidence for one claim.
 
-**Settlement condition.** A decision states whether an implementation audit of a shipped executable executes it, so that audit's scope and verdict claim say so, or whether the verdict about executed behavior belongs only to a Verifier that executes, so the audit's approval is scoped to what reading establishes. `14-verification.pdr.md` bars an agentic run from running deterministic verification; whether a one-off execution of the subject is that is part of what is unsettled.
+**Settlement condition.** A decision states whether an implementation audit of a shipped executable executes it, so that audit's scope and verdict claim say so, or whether the verdict about executed behavior belongs only to a Verifier that executes, so the audit's approval is scoped to what reading establishes. [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md) bars an agentic run from running deterministic verification; whether a one-off execution of the subject is that is part of what is unsettled.
 
 **Related.** The two Verifier rules that collide on pinning a spec-declared tuning value, in the verification subtree's test-verification node, record two Verifiers reading two decisions to opposite verdicts, which amending one decision resolves.

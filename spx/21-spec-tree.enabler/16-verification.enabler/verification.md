@@ -11,17 +11,17 @@ CAN compose against one append-only run-journal contract, one projection discipl
 
 ## Verification types
 
-The six verification types and the two axes that classify them — verdict mode and purpose — are declared in the inline `/understand` `<verification_model>` and grounded for this product in `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`. This enabler is the home of the agentic types' shared architecture, decided in `spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md`; review and audit implement it.
+The six verification types and the two axes that classify them — verdict mode and purpose — are declared in the inline `/understand` `<verification_model>` and grounded for this product in [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md). This enabler is the home of the agentic types' shared architecture, decided in [`spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md`](spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md); review and audit implement it.
 
 ## Assertions
 
 ### Compliance
 
-Each rule enforces a guarantee of `spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md`.
+Each rule enforces a guarantee of [`spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md`](spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md).
 
 - ALWAYS: every agentic verification run records its durable facts as appended events on one journal that is the run's sole source of truth ([audit])
-- ALWAYS: every agentic verification run streams its events live — opening the journal at the start and appending each domain event (scope entered, scope advanced as each unit of scope is examined, finding reported the instant it is raised, run completed) at the moment the run reaches it — so the journal reflects the run's progress in flight, per `spx/15-audit-result-delivery.pdr.md` ([audit])
-- NEVER: an agentic verification run computes a finished result and appends its events as one batch at completion — an opaque run that reveals nothing until it finishes defeats the in-flight legibility the journal exists to provide, per `spx/15-audit-result-delivery.pdr.md` ([audit])
+- ALWAYS: every agentic verification run streams its events live — opening the journal at the start and appending each domain event (scope entered, scope advanced as each unit of scope is examined, finding reported the instant it is raised, run completed) at the moment the run reaches it — so the journal reflects the run's progress in flight, per [`spx/15-audit-result-delivery.pdr.md`](spx/15-audit-result-delivery.pdr.md) ([audit])
+- NEVER: an agentic verification run computes a finished result and appends its events as one batch at completion — an opaque run that reveals nothing until it finishes defeats the in-flight legibility the journal exists to provide, per [`spx/15-audit-result-delivery.pdr.md`](spx/15-audit-result-delivery.pdr.md) ([audit])
 - ALWAYS: every output surface an agentic verification run produces — markdown report, pull-request comment, findings JSON, check summary — is a projection rendered from the journal's event history ([audit])
 - ALWAYS: every agentic verification skill addresses the journal through one backend-neutral channel and hard-codes no storage path, backend, or surface ([audit])
 - ALWAYS: appended events carry strictly increasing, contiguous sequence numbers, and reads resume from a cursor ([audit])

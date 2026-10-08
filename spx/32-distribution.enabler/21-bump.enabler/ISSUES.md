@@ -6,13 +6,13 @@ Known follow-ups for the bump node. Coordination note; not spec truth.
 
 `outcomeeng/distribution/build.py` owns the authoritative directive grammar — `_DIRECTIVE_RE`, `_DIRECTIVE_BODY_RE`, `_is_jinja_control_block`, `_directive_argument`, the `Directive` types, and `DirectiveSyntaxError` — together with the authored-source filter `plugin_source_files` and `_is_authored_source_file`. `outcomeeng/distribution/bump.py`'s `_real_include_index_probe` re-derives both: a local `_INCLUDE_DIRECTIVE` regex over the shared block delimiters, and a local ignored-directory and ignored-suffix filter.
 
-Bump cannot import the build to reach them. `build.py` imports Jinja2, and `spx/32-distribution.enabler/21-bump.enabler/15-bump-shape.adr.md` forbids this module a third-party dependency, so importing the build would take Jinja2 into bump's graph through the back door.
+Bump cannot import the build to reach them. `build.py` imports Jinja2, and [`spx/32-distribution.enabler/21-bump.enabler/15-bump-shape.adr.md`](spx/32-distribution.enabler/21-bump.enabler/15-bump-shape.adr.md) forbids this module a third-party dependency, so importing the build would take Jinja2 into bump's graph through the back door.
 
 Two implementations of one grammar drift. The local regex already had to grow a second quote branch to match the literal `format_directive` emits through `repr()`, and any future directive-syntax change reaches only one of the two.
 
 **Resolution shape**: move the directive grammar, the `Directive` types, and the authored-source filter into the stdlib-only `outcomeeng/distribution/contracts.py`, which both modules already import, and have `build.py` and `bump.py` consume them from that one owner. `DirectiveSyntaxError` needs a home that does not subclass `BuildError`, or the error hierarchy needs splitting.
 
-**Why this is larger than the bump changeset**: the move restructures the core of `build.py` and lands on `spx/18-plugin-build.enabler`, whose spec and `15-build-architecture.adr.md` both describe the directive system as build-owned. Aligning that node's declarations is the substance of the work, and it belongs to a changeset scoped to the build node rather than riding on a bump attribution fix.
+**Why this is larger than the bump changeset**: the move restructures the core of `build.py` and lands on `spx/18-plugin-build.enabler`, whose spec and [`spx/18-plugin-build.enabler/15-build-architecture.adr.md`](spx/18-plugin-build.enabler/15-build-architecture.adr.md) both describe the directive system as build-owned. Aligning that node's declarations is the substance of the work, and it belongs to a changeset scoped to the build node rather than riding on a bump attribution fix.
 
 **Evidence**: `implementation-auditor` run `2026-08-16_14-37-36-503-a91d084361f9`, two debt findings against `outcomeeng/distribution/bump.py`.
 
@@ -75,7 +75,7 @@ Its evidence link names `tests/test_bump.property.l1.py`. The spec audit on comm
 
 Both rows concern one classification question. The assertion reads as a universal over an open path domain, which supports property evidence; the auditor reads it as a mapping over a finite set of path classes. The domain and quantifier determine the evidence type, so the two readings require resolution through verification selection.
 
-**Disposition and reason**: filed under `spx/15-merging.pdr.md` by operator instruction. The path-attribution assertion and its linked property evidence are outside the amendment in [Change #113](https://github.com/outcomeeng/changes/issues/113), which changes the ahead-of-base assertion's rationale and the opening sentence. This finding requires no repair or investigation round in that Change and does not block its merge.
+**Disposition and reason**: filed under [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md) by operator instruction. The path-attribution assertion and its linked property evidence are outside the amendment in [Change #113](https://github.com/outcomeeng/changes/issues/113), which changes the ahead-of-base assertion's rationale and the opening sentence. This finding requires no repair or investigation round in that Change and does not block its merge.
 
 **Settlement condition**: on the node's next evidence change, select the quantifier and evidence type through `/verify` and its `/test` routing. If property stands, establish evidence with a generator over the declared path domain. If mapping stands, establish evidence over the complete finite source-owned class set. Align the assertion heading and linked evidence with that selection.
 

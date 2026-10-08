@@ -48,7 +48,7 @@ Surfaced by `claude-review` on PR 25 (2026-05-14).
 
 `outcomeeng/spec_tree_structure.py` exports both `NodeKind.ENABLER` / `NodeKind.OUTCOME` and module-level aliases `NODE_KIND_ENABLER` / `NODE_KIND_OUTCOME`. Tests import the alias form. The dual spelling is harmless but leaves unclear whether the aliases are intentional source-owned protocol constants or convenience names.
 
-Governed by `spx/21-spec-tree.enabler/spec-tree.md` and the source-ownership rules in `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`.
+Governed by `spx/21-spec-tree.enabler/spec-tree.md` and the source-ownership rules in [`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md).
 
 Required handling:
 
@@ -62,7 +62,7 @@ Surfaced by `claude-review` on PR 25 (2026-05-14).
 
 `spx/21-spec-tree.enabler/tests/test_spec_tree.mapping.l1.py` constructs invalid node names through inline transformations such as removing separators, stripping the kind suffix, and prefixing a formatted valid name. The tests are behaviorally correct, but some cases are hard to audit because the invalid shape is implicit in string operations rather than named by a source-owned invalid-case generator or a small explanatory comment.
 
-Governed by `spx/21-spec-tree.enabler/spec-tree.md` and `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`.
+Governed by `spx/21-spec-tree.enabler/spec-tree.md` and [`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md).
 
 Required handling:
 
@@ -174,7 +174,7 @@ Preserved refs and observed heads:
 
 ## The tree's audit assertions keep the pathless tag while the foundation declares the slug form
 
-**Evidence:** The `/understand` foundation and `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` declare the audit tag as `[audit:{rule-slug}]`, the rule slug keying the result in the status claim. Every `[audit]` assertion in this tree, including the ones those two artifacts carry, uses the pathless `([audit])` form, which is the form the installed SPX CLI parses; `spx validation markdown` rejects no other form because it recognizes no other form.
+**Evidence:** The `/understand` foundation and [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md) declare the audit tag as `[audit:{rule-slug}]`, the rule slug keying the result in the status claim. Every `[audit]` assertion in this tree, including the ones those two artifacts carry, uses the pathless `([audit])` form, which is the form the installed SPX CLI parses; `spx validation markdown` rejects no other form because it recognizes no other form.
 
 **Impact:** An audit result in this tree has no rule slug to key on, so the status claim the 4.0 projector writes cannot attribute an audit verdict to its assertion until the tree retags.
 
@@ -225,3 +225,11 @@ Revisit and settlement condition: one conditional paragraph moved into the refer
 **Impact:** the skill can change without invalidating node-specific evidence, and its governing node must be inferred from plugin ownership instead of derived from a declared audit assertion or linked verification path.
 
 **Settlement condition:** a spec assertion under the owning Spec Tree node names the refocus skill surface and routes its activation and workflow contract to current evidence.
+
+## The delivered-value assertion carries the audit tag where eval evidence once linked
+
+**Evidence:** The `spec-tree.md` assertion that the `/understand` skill declares delivered value as value merged to the default branch through `/merge` linked `76-merge.enabler/evals/local-completion-boundary/eval.toml` as `[eval]` evidence. The `spx-link-shape` rule of `@outcomeeng/spx` 0.8.0 rejects that path with "should not enter a descendant node's directory", and rejects its tree-absolute form as "an assertion evidence link; link evidence node-local from inside the asserting node", so the assertion carries `([audit])`. The `76-merge.enabler` node keeps the eval linked from its own assertions in `merge.md`. That eval grades a status-assessment simulation, recorded in the `76-merge.enabler` node's `ISSUES.md`, and never graded the `/understand` text.
+
+**Impact:** The assertion rests on audit evidence alone, and no eval scores the `/understand` skill's delivered-value declaration.
+
+**Settlement condition:** An eval under this node's `evals/` scores the `/understand` skill's delivered-value declaration and the assertion links it as `[eval]`, or the audit tag stands and gains its rule slug when the tree adopts the `[audit:{rule-slug}]` form.

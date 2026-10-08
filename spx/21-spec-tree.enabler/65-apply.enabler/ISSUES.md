@@ -4,7 +4,7 @@
 
 ## Add a language-neutral artifact route
 
-**Evidence.** [`src/plugins/spec-tree/skills/apply/SKILL.md`](../../../src/plugins/spec-tree/skills/apply/SKILL.md) lines 50-60 require exactly one supported implementation language before Steps 3-8 and stop when no language-specific skill trio applies. [`spx/21-spec-tree.enabler/65-apply.enabler/apply.md`](apply.md) defines a general apply lifecycle whose selected slice can include language-neutral methodology artifacts.
+**Evidence.** `src/plugins/spec-tree/skills/apply/SKILL.md` lines 50-60 require exactly one supported implementation language before Steps 3-8 and stop when no language-specific skill trio applies. [`spx/21-spec-tree.enabler/65-apply.enabler/apply.md`](apply.md) defines a general apply lifecycle whose selected slice can include language-neutral methodology artifacts.
 
 **Impact.** A skill-only or documentation-only slice selected through `/slice` cannot continue through `/apply` without inventing irrelevant architecture, test, and code work or stopping before the artifact-specific authoring workflow.
 
@@ -56,6 +56,6 @@
 
 ## A merging decision governs the apply flow's Verifier dispatches
 
-`apply.md` declares all four rules of `spx/15-merging.pdr.md` product property 3 for the apply flow: each per-node and whole-changeset Verifier dispatch is preceded by the readiness record, a repeated rejected defect class stops the queue for a widened repair, the flow carries only the bounded projection of each Verifier result, and every independent Author-side action finishes before a blocking check or Verifier wait. `/apply` reaches the record through `<verification_checkpoint>` and the projection through `<result_carryover>`. The decision is titled for merging and opens on the delivery lifecycle, while these four rules concern agentic dispatch, whose natural owner is `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`.
+`apply.md` declares all four rules of [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md) product property 3 for the apply flow: each per-node and whole-changeset Verifier dispatch is preceded by the readiness record, a repeated rejected defect class stops the queue for a widened repair, the flow carries only the bounded projection of each Verifier result, and every independent Author-side action finishes before a blocking check or Verifier wait. `/apply` reaches the record through `<verification_checkpoint>` and the projection through `<result_carryover>`. The decision is titled for merging and opens on the delivery lifecycle, while these four rules concern agentic dispatch, whose natural owner is [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md).
 
 **Settlement condition.** The rules relocate into the verification decision and the realizing assertions in `apply.md` re-point to them. The full entry is in `spx/31-outcomeeng.enabler/31-verification.enabler/ISSUES.md`.

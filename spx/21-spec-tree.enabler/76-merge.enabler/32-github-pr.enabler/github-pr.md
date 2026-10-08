@@ -7,7 +7,7 @@ malleability: spec
 
 PROVIDES the GitHub-PR merge transport — the `/manage-github-pr` lifecycle orchestration that takes a ready changeset from intent through pull-request publication, merge, declared deploy, declared release, and close, invoked by `/merge` when it selects this transport
 SO THAT a developer on either runtime
-CAN take a change through the governed commit, PR, verification, preview, merge, deploy, release, and handoff protocols without choosing each internal protocol by hand, per `spx/15-merging.pdr.md`
+CAN take a change through the governed commit, PR, verification, preview, merge, deploy, release, and handoff protocols without choosing each internal protocol by hand, per [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md)
 
 ## Assertions
 
@@ -23,16 +23,16 @@ CAN take a change through the governed commit, PR, verification, preview, merge,
 
 - ALWAYS: this product's `spx/local/open-pr.md` directs plugin-distribution changes to receive their bump in the last commit before pull-request opening, after `/sync-base` returns `already_current` or `rebased` for the candidate head: `just bump`, then `just build-skills`, committed together; its opening checks require `just bump-check` to exit zero on the exact head being published and preserve `VERIFICATION_READINESS` for that head ([audit])
 - ALWAYS: after a later rebase of an open pull request's branch, this product's merge overlay — read by the managing workflow before a follow-up push — states that the bump step runs again on the synchronized base before the push, writing nothing when the branch's manifests are still ahead of the base and the next version from the base when they are behind, with the bump policy referenced from the opening overlay rather than restated ([audit]).
-- ALWAYS: `/manage-github-pr` ships as a user-invocable `SKILL.md` under `plugins/spec-tree/skills/manage-github-pr/`, with no command wrapper, so it activates on both runtimes per `spx/13-plugin-and-runtime-conventions.adr.md` ([audit])
+- ALWAYS: `/manage-github-pr` ships as a user-invocable `SKILL.md` under `plugins/spec-tree/skills/manage-github-pr/`, with no command wrapper, so it activates on both runtimes per [`spx/13-plugin-and-runtime-conventions.adr.md`](spx/13-plugin-and-runtime-conventions.adr.md) ([audit])
 - ALWAYS: `/open-pr` ships as an internal `SKILL.md` under `plugins/spec-tree/skills/open-pr/`, with no direct command wrapper ([audit])
 - ALWAYS: `/manage-github-pr` remains user-invocable as the GitHub PR transport entry point ([audit])
 - ALWAYS: `/open-pr` remains an internal protocol with `user-invocable: false`, loaded only by `/manage-github-pr`, run once per opening, and never used as an automation re-entry target ([audit])
 - ALWAYS: `/manage-pr` is loaded by `/manage-github-pr` and remains user-invocable as the direct management entry point for an existing PR number, PR URL, or branch with an open PR ([audit])
 - ALWAYS: the GitHub-PR transport's `/manage-github-pr` orchestration is selected by `/merge`, not by itself — `/manage-github-pr` assumes this transport and reads `spx/local/merging.md` only for the transport's configuration, never to decide whether a PR is the transport ([audit])
-- ALWAYS: drive the lifecycle from a determined changeset without an up-front operator proposal by default; only when the merge overlay opts into a pre-mutation confirmation, present the changeset and intended lifecycle through the runtime's structured-question tool and obtain confirmation before the first mutating action — branch creation, commit, push, PR open, or merge — per `spx/15-merging.pdr.md` ([audit])
-- ALWAYS: GitHub-PR transport skills present `gh` payload input by supported harness environment, per `spx/15-agent-tools.pdr.md`, and present GitHub PR check waiting as exactly `gh pr checks <pr-number> --watch --fail-fast --interval 30` in one foreground command ([audit])
+- ALWAYS: drive the lifecycle from a determined changeset without an up-front operator proposal by default; only when the merge overlay opts into a pre-mutation confirmation, present the changeset and intended lifecycle through the runtime's structured-question tool and obtain confirmation before the first mutating action — branch creation, commit, push, PR open, or merge — per [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md) ([audit])
+- ALWAYS: GitHub-PR transport skills present `gh` payload input by supported harness environment, per [`spx/15-agent-tools.pdr.md`](spx/15-agent-tools.pdr.md), and present GitHub PR check waiting as exactly `gh pr checks <pr-number> --watch --fail-fast --interval 30` in one foreground command ([audit])
 - ALWAYS: drive the lifecycle by invoking the governing skills — `/apply` or the language coding skills for implementation, `/commit-changes`, `/open-pr`, and `/manage-pr` — never reimplementing their protocols ([audit])
-- NEVER: merge directly — the merge executes only through `/manage-pr`'s `MERGE_READINESS` authority, and any declared deploy or release action executes after merge through `DEPLOYMENT_READINESS` or `RELEASE_READINESS`, per `spx/15-merging.pdr.md` ([audit])
+- NEVER: merge directly — the merge executes only through `/manage-pr`'s `MERGE_READINESS` authority, and any declared deploy or release action executes after merge through `DEPLOYMENT_READINESS` or `RELEASE_READINESS`, per [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md) ([audit])
 
 ## Eval Coverage Model
 

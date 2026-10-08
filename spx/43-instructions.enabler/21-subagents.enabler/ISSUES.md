@@ -152,7 +152,7 @@ implementation. Because the auditor has no canonical-rules owner to load,
 `<evaluation_areas>` and `<anti_patterns>` rulebook that restates
 `/agent-prompt-standards`. The same defect class sits in
 `src/plugins/instructions/skills/audit-skill/SKILL.md` against `/skill-standards`;
-`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` property 7
+[`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md) property 7
 requires both to be swept together, so fixing one alone is an invalid single-site fix.
 
 **Resolution shape.** Author `/subagent-standards` as a reference skill owning the
@@ -174,7 +174,7 @@ context, because a verdict a later invocation cannot reproduce is not evidence. 
 `[test]` evidence follows the structural-constraint shape
 `spx/15-validation.enabler/32-hook-safety.enabler` uses — a source-owned validator
 exercised against violating cases, never a scan asserting this repository's own files
-comply, which would be the second declaration `spx/12-shipped-scripting.adr.md` forbids.
+comply, which would be the second declaration [`spx/12-shipped-scripting.adr.md`](spx/12-shipped-scripting.adr.md) forbids.
 `outcomeeng/distribution/profiles.py` owns complete native configurations for all
 roles, with Standard as the default. `outcomeeng/distribution/agents.py` rejects
 independent native fields, and the source guard checks authored assignments
@@ -187,7 +187,7 @@ The per-invocation-scope assertion — `/audit-subagent` judges exactly one conf
 per invocation — carries `[audit]` as an explicit interim so no evidence link dangles.
 Its real verification type is evaluate: `/audit-subagent` is an LLM-driven producer
 emitting a structured verdict whose `target` a grader scores, which
-`spx/15-spec-coverage.adr.md` sends to the eval lane. The interim tag was an operator
+[`spx/15-spec-coverage.adr.md`](spx/15-spec-coverage.adr.md) sends to the eval lane. The interim tag was an operator
 decision (2026-09-07). `spx/43-instructions.enabler/ISSUES.md` entry 4 records the
 matching gap for `/audit-skill`; both auditors need the instructions plugin's first eval
 suite. Author `evals/invocation-scope/` (producer
@@ -245,7 +245,7 @@ and this node's spec records that the declarations exist. Scheduled as
 **Evidence:** `instructions:subagent-auditor` finding `f-002`, severity `REJECT`, on
 `src/plugins/instructions/agents/skill-auditor.md` and on
 `src/plugins/instructions/agents/subagent-auditor.md` at head
-`add3e3e862f7512a55e8b9655d07f78412abe87c`: `spx/15-subagent-execution.pdr.md` declares per-harness, per-profile release
+`add3e3e862f7512a55e8b9655d07f78412abe87c`: [`spx/15-subagent-execution.pdr.md`](spx/15-subagent-execution.pdr.md) declares per-harness, per-profile release
 acceptance — native loading and one minimal isolated execution for every profile — and the
 tree retains no acceptance artifact for the Claude or the Codex Standard row either
 definition selects, and no exact-definition minimal isolated invocation of either. The

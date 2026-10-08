@@ -14,7 +14,7 @@ The `/align` audit flags a child node's `[test]`-evidence compliance rule as a "
 
 ### Concrete example
 
-The marketplace ADR `spx/13-plugin-and-runtime-conventions.adr.md` carries:
+The marketplace ADR [`spx/13-plugin-and-runtime-conventions.adr.md`](spx/13-plugin-and-runtime-conventions.adr.md) carries:
 
 - `NEVER: a helper or skill instruction spawns a daemon, background keep-alive, streaming-log command, open-ended watcher, or agent-owned polling loop ... ([audit])`
 

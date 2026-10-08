@@ -122,7 +122,7 @@ definitions a plugin ships and audits without adding behavior the skills lack.
   carries none ([audit])
 - ALWAYS: launch every audit and review without inherited authoring history or
   an author-written context packet, following the isolation rule in
-  `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`;
+  [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md);
   native invocation guidance explicitly disables history inheritance when the
   tool otherwise enables it by default ([audit])
 - ALWAYS: root-guide invocation prose refers to the exposed native tool schema

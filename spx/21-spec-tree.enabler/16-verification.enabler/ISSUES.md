@@ -11,7 +11,7 @@ Required handling:
 
 ## Downstream enforcement for `[audit]` decision-rule modes
 
-`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` carries `[audit]` rules under `## Verification` / `### Audit`. Establish how `[audit]` decision-rule modes are enforced downstream: either author node-spec `[audit]` assertions an audit skill checks against each rule, or refine `spx/21-spec-tree.enabler/32-decisions.enabler/decisions.md` so it recognizes audit/eval enforcement for `[audit]`/`[eval]` modes.
+[`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md) carries `[audit]` rules under `## Verification` / `### Audit`. Establish how `[audit]` decision-rule modes are enforced downstream: either author node-spec `[audit]` assertions an audit skill checks against each rule, or refine `spx/21-spec-tree.enabler/32-decisions.enabler/decisions.md` so it recognizes audit/eval enforcement for `[audit]`/`[eval]` modes.
 
 ## Missing `[eval]` evidence on verification skill judgment surfaces
 

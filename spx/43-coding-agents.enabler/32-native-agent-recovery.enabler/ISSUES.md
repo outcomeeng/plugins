@@ -15,7 +15,7 @@ any executed test: `tests/test_native_agent_recovery.mapping.l1.py` delegates to
 and aggregated into a returned failure list — including the two Hypothesis inner callbacks, whose
 invariants append to an outer list rather than calling an assertion API.
 
-`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`
+[`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md)
 governs the opposite arrangement: the linked executed test owns every behavioral predicate and
 assertion API call, while a harness exposes observations and never returns a verdict. A function that
 returns a failure list is a verdict-shaped helper, so a mutation to any governed rule is caught by

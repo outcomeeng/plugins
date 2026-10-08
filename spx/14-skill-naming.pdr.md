@@ -4,7 +4,7 @@ A skill's name states the artifact one invocation acts on. A workflow skill invo
 
 ## Rationale
 
-Product engineers type the skill name and reason about scope from it, so a name whose grammatical number disagrees with one invocation misstates what a single call does before the skill runs. Naming the artifact per invocation gives every plugin one decidable rule in place of per-plugin convention, and it refines the invocation-artifact decision in `spx/13-plugin-and-runtime-conventions.adr.md` by fixing what the `/<skill-name>` token says.
+Product engineers type the skill name and reason about scope from it, so a name whose grammatical number disagrees with one invocation misstates what a single call does before the skill runs. Naming the artifact per invocation gives every plugin one decidable rule in place of per-plugin convention, and it refines the invocation-artifact decision in [`spx/13-plugin-and-runtime-conventions.adr.md`](spx/13-plugin-and-runtime-conventions.adr.md) by fixing what the `/<skill-name>` token says.
 
 ## Product properties
 

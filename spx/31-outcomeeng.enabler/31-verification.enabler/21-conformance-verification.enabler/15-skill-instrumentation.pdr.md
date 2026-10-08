@@ -18,7 +18,7 @@ A model-printed token is a self-report, and feeding self-reports to a determinis
 - NEVER: a model-emitted, prose-instructed, or narrative-derived token enters conformance evidence
 - ALWAYS: trace events are written to the sidecar path named by the environment, one event per line in append mode; when the path is unset the emitter is a silent no-op and the skill runs unchanged
 - NEVER: a token or emitter diagnostic reaches stdout or stderr
-- ALWAYS: the emitter shipped inside a plugin is standard-library-only Python per `spx/13-plugin-and-runtime-conventions.adr.md`
+- ALWAYS: the emitter shipped inside a plugin is standard-library-only Python per [`spx/13-plugin-and-runtime-conventions.adr.md`](spx/13-plugin-and-runtime-conventions.adr.md)
 - ALWAYS: contract rules express required states, forbidden states and transitions, partial ordering, cardinality bounds, terminal states, delegation, and budget ceilings — never strict whole-sequence equality
 - ALWAYS: a conformance verdict derives from the ordered, instance-partitioned trace through a pure function with no model, network, clock, or filesystem access beyond its two inputs
 - ALWAYS: a state counts as reached only when its event records success; a failed attempt stays visible in the trace without satisfying a requirement or cardinality bound

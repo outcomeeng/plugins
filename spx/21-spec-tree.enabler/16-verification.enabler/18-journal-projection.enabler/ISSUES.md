@@ -11,7 +11,7 @@ The `project-run-journal` skill ships two scripts past the fifty-line threshold:
 - `src/plugins/spec-tree/skills/project-run-journal/scripts/render_review_run.py`
   (346 lines) — the compact inspection surface for a sealed review journal run.
 
-Past fifty lines `spx/12-shipped-scripting.adr.md` makes a shipped script debt
+Past fifty lines [`spx/12-shipped-scripting.adr.md`](spx/12-shipped-scripting.adr.md) makes a shipped script debt
 whose logic moves into the SPX CLI once the script proves its value; both have
 proven their value in use across the audit and review surfaces, so extraction is
 what they owe.

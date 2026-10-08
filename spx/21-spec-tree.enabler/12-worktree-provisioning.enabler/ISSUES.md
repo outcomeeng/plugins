@@ -6,7 +6,7 @@
 476 lines — three-layout classification (single tree, compliant bare-repo pool,
 non-compliant), pool provisioning, the push of every local ref to the remote,
 and the carry-across of a prior checkout's gitignored state. Past fifty lines
-`spx/12-shipped-scripting.adr.md` makes a shipped script debt whose logic moves
+[`spx/12-shipped-scripting.adr.md`](spx/12-shipped-scripting.adr.md) makes a shipped script debt whose logic moves
 into the SPX CLI once the script proves its value; the provisioner has proven
 its value in use, so extraction is what it owes.
 
@@ -45,7 +45,7 @@ selection.
 
 ## The property test declares Hypothesis settings the harness owns
 
-`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`
+[`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md)
 places property-run execution configuration — seed selection, run counts, replay
 input, and failure diagnostics — in a property-test harness.
 `tests/test_worktree_provisioning.property.l1.py` declares `@settings(...)`
