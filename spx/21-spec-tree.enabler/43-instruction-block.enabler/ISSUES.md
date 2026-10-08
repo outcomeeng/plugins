@@ -183,3 +183,17 @@ Run `2026-10-06_18-35-55-521-02765947702d` raised the same finding as `script-va
 **Impact.** If no output establishes the removal, a report item has no source; if foreign content can occupy those filenames, a product-authored guide under `spx/` can be deleted.
 
 **Settlement condition.** The removal report derives from a named snapshot or output, the path-ownership contract for the obsolete `spx/` instruction filenames is declared, and the script removes only recognized retired output or the skill states what it removes.
+
+## The guard's block-partition rule leaves three shell-semantics cases unclassified
+
+**Evidence.** The local review run `2026-10-08_04-23-21-545-648ad0927de6` on head `58641becfa49b5ec824b5040415481695b404bef` approved the changeset and raised three `warning` findings against the router template `src/plugins/spec-tree/skills/update-instruction-block/templates/instruction-block.md:60` and `<guard_block_partition>` in `src/plugins/instructions/skills/skill-standards/references/command-capabilities.md`:
+
+- A list whose part changes shell state that later parts depend on (`cd`, `pushd`, `export`, `set`, `umask`) matches the compound-command definition, so a block splits it into separate calls that do not carry that state.
+- A shell control structure (a loop, conditional, `case`, brace group, or function definition) matches the compound-command definition, and splitting it yields fragments that do not run.
+- A payload pipe or heredoc with an expanding word falls in two classes, the one-operation class that ends its family and the compound class that splits, while the text reruns it once unsplit.
+
+**Standing.** The Director accepted this rule text as it stands without the advisor's bounded check, in mail 9324.
+
+**Impact.** A guard-blocked list that carries shell state, a control structure, or an expanding payload has no single outcome the rule's text can execute.
+
+**Settlement condition.** One Change decides the three classes, names each one's outcome in the router template, the `<guard_block_partition>` reference, the pinned requirement tuples in `outcomeeng/distribution/instruction_block.py`, and the instruction-block and skills spec assertions together, and regenerates the shipped trees.
