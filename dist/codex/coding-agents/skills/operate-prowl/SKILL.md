@@ -123,7 +123,7 @@ python3 "${SKILL_DIR}/scripts/prowl_environment.py" delegate <<'JSON'
 JSON
 ```
 
-For a production request carried by `/message-agents`, generate the same block without sending a delegation. Submit exactly `sender`, `recipient`, and `completionText` to `plan-handback` and preserve the returned `handback` object unchanged:
+To generate the block without sending a delegation, submit exactly `sender`, `recipient`, and `completionText` to `plan-handback` and preserve the returned `handback` object unchanged:
 
 ```bash
 printf '%s\n' '{"sender":{"agent":"agent-a","pane":"11111111-1111-4111-8111-111111111111","worktree":"/repo-a","branch":"work/a","repository":"/repo.git","run":"run-a"},"recipient":{"agent":"agent-b","pane":"22222222-2222-4222-8222-222222222222","worktree":"/repo-b","branch":"work/b","repository":"/repo.git","run":"run-b"},"completionText":"Requested artifact completed."}' | python3 "${SKILL_DIR}/scripts/prowl_environment.py" plan-handback
@@ -160,7 +160,7 @@ Completion travels by push, never by pull. The sender's environment blocks polli
 
 Two environment conditions silently break a handback. The generated block names both instead of leaving the recipient to discover them.
 
-**The CLI may not be on `PATH`.** A recipient whose shell cannot resolve the command reads the failure as "the environment is unavailable" and abandons the handback. The executable bundled inside the application resolves when `PATH` does not, so the return address carries the command form that works in the recipient's environment rather than a bare command name.
+**The CLI may not be on `PATH`.** Every Prowl command runs the bare `prowl` name, so a shell that cannot resolve it returns `prowl-unavailable` with its detail. That result means the CLI is missing from the environment, not that the recipient is absent; report the detail and stop.
 
 **A non-default socket may belong to a different instance.** When the socket is overridden, the CLI talks to whichever instance owns that socket — which can be another agent's verification harness holding no real panes rather than the operator's live application. An empty or unrecognizable pane inventory is that condition, not an absent recipient. Confirm the inventory contains the expected panes before concluding a target is gone, and use the same socket value for every command in the exchange.
 
@@ -208,7 +208,7 @@ Recorded exercised payload/results:
 
 **An overridden socket was read as an empty environment.** Claude pointed the CLI at a non-default socket, saw an inventory with none of the expected panes, and concluded the recipient was gone. The socket belonged to a different instance — a verification harness, not the operator's live application. Confirm the inventory contains the expected panes before concluding a target is absent, per `<environment_traps>`.
 
-**Target resolution was rebuilt around scratch files.** Claude wrote the `agents` result and discovery result through dynamic redirects under `$SP`. The dangerous-command guard terminated the command because the shell would open an unproved path with truncation. Claude then rewrote the same operation as a Python script, bypassing the stop instead of using a sanctioned capability. Invoke `resolve-target` over direct stdin, keep its returned JSON as the tool result, and stop when a guard terminates that command family; never reformulate the blocked operation.
+**Target resolution was rebuilt around scratch files.** Claude wrote the `agents` result and discovery result through dynamic redirects under `$SP`. The dangerous-command guard blocked the command because the redirect carried a shell variable and the shell would open an unproved path with truncation. Claude then rewrote the same operation as a Python script instead of rerunning its parts with literal strings. Invoke `resolve-target` over direct stdin and keep its returned JSON as the tool result; the scratch redirect is no part of the workflow. Rewriting the blocked operation as another program is forbidden.
 
 </failure_modes>
 

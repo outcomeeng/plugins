@@ -6,6 +6,15 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.11.1
+
+### Changed
+
+- **The `/message-agents` and `/operate-prowl` failure modes for a blocked scratch redirect name the lesson and no longer restate the guard's rerun rule.** The rule lives in the router and in `/skill-standards`, so each failure mode keeps its account of the blocked `$SP` redirect, directs Claude to the `resolve-target` result in place of the redirect, and forbids rewriting the blocked operation as another program.
+- **`/operate-prowl` and `/message-agents` state their input rules without naming a calling workflow.** `plan-handback` takes exactly `sender`, `recipient` and `completionText` whoever supplies them, and a request's `toPane` is valid as a complete pane identity matching the selected candidate.
+- **`/operate-prowl` states what its script does when the CLI is missing and names the fields it rejects.** Every Prowl command runs the bare `prowl` name, so an unresolvable CLI returns `prowl-unavailable` with its detail; the skill no longer claims a PATH-independent return address. A rejected request names the unexpected and missing fields, and a shape mismatch names the accepted shapes.
+- **`/message-agents` states its empty-input and no-match cases, its authority obligation and its redirect ban precisely.** Route selection covers the mail, Prowl and doorbell-resolution routes and names the required fields of each for an empty or unmatched request, the objective and success criteria cover the doorbell resolution, an absent `authority` on a same-worktree delegation is the sender's obligation while an `authority` of any other shape reaches no record, the ban on redirects excludes the heredoc and pipe stdin forms, and the script's three field-set rejections name the unexpected and missing fields.
+
 ## 0.11.0
 
 ### Breaking

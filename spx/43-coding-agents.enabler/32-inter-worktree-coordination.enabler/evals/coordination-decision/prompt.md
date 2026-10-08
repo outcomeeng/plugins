@@ -135,7 +135,7 @@ python3 "${CLAUDE_SKILL_DIR}/scripts/prowl_environment.py" delegate <<'JSON'
 JSON
 ```
 
-For a production request carried by `/message-agents`, generate the same block without sending a delegation. Submit exactly `sender`, `recipient`, and `completionText` to `plan-handback` and preserve the returned `handback` object unchanged:
+To generate the block without sending a delegation, submit exactly `sender`, `recipient`, and `completionText` to `plan-handback` and preserve the returned `handback` object unchanged:
 
 ```bash
 printf '%s\n' '{"sender":{"agent":"agent-a","pane":"11111111-1111-4111-8111-111111111111","worktree":"/repo-a","branch":"work/a","repository":"/repo.git","run":"run-a"},"recipient":{"agent":"agent-b","pane":"22222222-2222-4222-8222-222222222222","worktree":"/repo-b","branch":"work/b","repository":"/repo.git","run":"run-b"},"completionText":"Requested artifact completed."}' | python3 "${CLAUDE_SKILL_DIR}/scripts/prowl_environment.py" plan-handback
@@ -172,7 +172,7 @@ Completion travels by push, never by pull. The sender's environment blocks polli
 
 Two environment conditions silently break a handback. The generated block names both instead of leaving the recipient to discover them.
 
-**The CLI may not be on `PATH`.** A recipient whose shell cannot resolve the command reads the failure as "the environment is unavailable" and abandons the handback. The executable bundled inside the application resolves when `PATH` does not, so the return address carries the command form that works in the recipient's environment rather than a bare command name.
+**The CLI may not be on `PATH`.** Every Prowl command runs the bare `prowl` name, so a shell that cannot resolve it returns `prowl-unavailable` with its detail. That result means the CLI is missing from the environment, not that the recipient is absent; report the detail and stop.
 
 **A non-default socket may belong to a different instance.** When the socket is overridden, the CLI talks to whichever instance owns that socket — which can be another agent's verification harness holding no real panes rather than the operator's live application. An empty or unrecognizable pane inventory is that condition, not an absent recipient. Confirm the inventory contains the expected panes before concluding a target is gone, and use the same socket value for every command in the exchange.
 
@@ -220,7 +220,7 @@ Recorded exercised payload/results:
 
 **An overridden socket was read as an empty environment.** Claude pointed the CLI at a non-default socket, saw an inventory with none of the expected panes, and concluded the recipient was gone. The socket belonged to a different instance — a verification harness, not the operator's live application. Confirm the inventory contains the expected panes before concluding a target is absent, per `<environment_traps>`.
 
-**Target resolution was rebuilt around scratch files.** Claude wrote the `agents` result and discovery result through dynamic redirects under `$SP`. The dangerous-command guard terminated the command because the shell would open an unproved path with truncation. Claude then rewrote the same operation as a Python script, bypassing the stop instead of using a sanctioned capability. Invoke `resolve-target` over direct stdin, keep its returned JSON as the tool result, and stop when a guard terminates that command family; never reformulate the blocked operation.
+**Target resolution was rebuilt around scratch files.** Claude wrote the `agents` result and discovery result through dynamic redirects under `$SP`. The dangerous-command guard blocked the command because the redirect carried a shell variable and the shell would open an unproved path with truncation. Claude then rewrote the same operation as a Python script instead of rerunning its parts with literal strings. Invoke `resolve-target` over direct stdin and keep its returned JSON as the tool result; the scratch redirect is no part of the workflow. Rewriting the blocked operation as another program is forbidden.
 
 </failure_modes>
 
@@ -850,6 +850,22 @@ def _allowed_fields(operation: Operation) -> frozenset[str]:
     return OPERATION_CONTRACTS[operation].allowed_fields
 
 
+def _describe_shapes(contract: OperationContract) -> str:
+    return "; ".join(
+        f"required {sorted(shape.required_fields)}, optional {sorted(shape.optional_fields)}"
+        for shape in contract.request_shapes
+    )
+
+
+def _field_set_message(subject: str, unexpected: list[str], missing: list[str]) -> str:
+    details: list[str] = []
+    if unexpected:
+        details.append(f"unsupported: {', '.join(unexpected)}")
+    if missing:
+        details.append(f"missing: {', '.join(missing)}")
+    return f"{subject} must contain exactly the source-owned fields ({'; '.join(details)})."
+
+
 def _validated_request(request: object) -> tuple[Operation, dict[str, object]]:
     value = _object(request, "request")
     unexpected = sorted(set(value) - REQUEST_FIELDS)
@@ -892,7 +908,8 @@ def _validated_request(request: object) -> tuple[Operation, dict[str, object]]:
     ):
         raise ProwlEnvironmentError(
             ExecutionStatus.INVALID_SCHEMA,
-            f"{operation.value} arguments do not match a source-owned request shape.",
+            f"{operation.value} arguments do not match a source-owned request shape; "
+            f"accepted shapes: {_describe_shapes(OPERATION_CONTRACTS[operation])}.",
         )
     _one_selector(arguments)
 
@@ -1472,7 +1489,7 @@ def _validated_handback(
     if unexpected or missing:
         raise ProwlEnvironmentError(
             ExecutionStatus.INVALID_SCHEMA,
-            "Handback must contain exactly the source-owned fields.",
+            _field_set_message("Handback", unexpected, missing),
         )
     if handback.get(SCHEMA_VERSION_FIELD) != HANDBACK_SCHEMA_VERSION:
         raise ProwlEnvironmentError(
@@ -1594,7 +1611,7 @@ def _validated_delegation(value: object) -> dict[str, object]:
     if unexpected or missing:
         raise ProwlEnvironmentError(
             ExecutionStatus.INVALID_SCHEMA,
-            "Delegation request must contain exactly the source-owned request fields.",
+            _field_set_message("Delegation request", unexpected, missing),
         )
     if request.get(SCHEMA_VERSION_FIELD) != DELEGATION_SCHEMA_VERSION:
         raise ProwlEnvironmentError(
@@ -1699,7 +1716,7 @@ def _validated_terminal(value: object) -> dict[str, object]:
     if unexpected or missing:
         raise ProwlEnvironmentError(
             ExecutionStatus.INVALID_SCHEMA,
-            "Terminal handback must contain exactly the source-owned terminal fields.",
+            _field_set_message("Terminal handback", unexpected, missing),
         )
     if terminal.get(SCHEMA_VERSION_FIELD) != DELEGATION_SCHEMA_VERSION:
         raise ProwlEnvironmentError(
@@ -1958,12 +1975,12 @@ allowed-tools: Bash(printf:*), Skill, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/
 ---
 
 <objective>
-One message delivered on the route its request selects — a message record in the agent-mail store with its one-line doorbell, or a source-owned coordination envelope submitted into one complete Prowl pane — with delivery kept distinct from acknowledgement, agreement, authorization, and ownership.
+One message delivered on the route its request selects — a message record in the agent-mail store with its one-line doorbell, or a source-owned coordination envelope submitted into one complete Prowl pane — with delivery kept distinct from acknowledgement, agreement, authorization, and ownership, or a doorbell line from the caller's own pane resolved to its sender and store id.
 </objective>
 
 <route_selection>
 
-The request shape selects the route. A request carrying `recipient` as an agent-mail name, `correlation`, `body`, and `ackRequired` is a mail request and follows `<mail_route>`. A request carrying `recipientPath`, `facts`, and a pane-bound kind and no `correlation` or `body` is a Prowl request and follows `<workflow>`. A request that mixes the two is `invalid-schema`; the bundled script rejects fields outside the selected route's shape.
+The request shape selects one of three routes. A request carrying `recipient` as an agent-mail name, `correlation`, `body`, and `ackRequired` is a mail request and follows `<mail_route>`. A request carrying `recipientPath`, `facts`, and a pane-bound kind and no `correlation` or `body` is a Prowl request and follows `<workflow>`. A request carrying `line` and `agents` is a doorbell resolution and follows `<mail_route>` step 8. A request that mixes the fields of two of these shapes, a request that matches none, and an empty or whitespace request are `invalid-schema` before any discovery or delivery; the bundled script rejects fields outside the selected route's shape. The recovery names each route's own required fields: `kind`, `correlation`, `sender`, `recipient`, `subject`, `body`, and `ackRequired` for the mail route; `recipientPath`, `kind`, `subject`, and `facts` for the Prowl route; and `line` and `agents` for the doorbell route.
 
 </route_selection>
 
@@ -1982,7 +1999,7 @@ The request shape selects the route. A request carrying `recipient` as an agent-
 
 <workflow>
 
-1. Read `$ARGUMENTS`. When it is empty or whitespace, stop with `invalid-schema` and require one JSON message request containing `recipientPath`, `kind`, `subject`, and `facts`; perform no discovery or delivery. Otherwise interpret it as that request, with `recipientPath` holding the recipient's absolute worktree, repository, or working-directory path and with any applicable coordination fields. The request may carry `toPane` only as a complete identity assertion from an upstream coordination plan and may carry `handback` only as the complete structured block returned by `/operate-prowl plan-handback`. When required data is absent, stop and name it before discovery or delivery; never invent message data or ask for a pane UUID.
+1. Read `$ARGUMENTS`. When it is empty or whitespace, stop with `invalid-schema` and require one JSON message request containing `recipientPath`, `kind`, `subject`, and `facts`; perform no discovery or delivery. Otherwise interpret it as that request, with `recipientPath` holding the recipient's absolute worktree, repository, or working-directory path and with any applicable coordination fields. The request may carry `toPane` only as a complete pane identity that matches the selected candidate and may carry `handback` only as the complete structured block returned by `/operate-prowl plan-handback`. When required data is absent, stop and name it before discovery or delivery; never invent message data or ask for a pane UUID.
 2. Use skill `coding-agents:operate-prowl` once for `resolve-target` with the supplied path. Preserve the complete result. It returns the checked inventory, complete caller and participants, and non-caller candidates whose `sendRequestTemplate` already selects each pane with immediate-return mode and normal trailing-Enter behavior.
 3. Require a complete resolved caller and one selected candidate. On `identity-ambiguous` with `caller: null`, report the exact detail as an unresolved caller-identity conflict and stop; never ask the operator to select from the empty candidate set. Otherwise, when the request carries `toPane`, match it against the captured non-caller candidates before considering cardinality: exactly one matching candidate selects it, while zero or multiple matches stop with `invalid-identity`. Without `toPane`, use the sole candidate on `succeeded`. On `identity-ambiguous`, use `AskUserQuestion` for one single-select question: number candidates in resolver order, show each candidate's complete pane, worktree, branch, and repository, and map the answer back to that exact captured candidate and its `sendRequestTemplate` without rerunning resolution. When the runtime's option cap is below the candidate count, include the complete numbered inventory in the question and accept an exact candidate number through its free-form response; never omit a candidate. On `identity-unavailable`, report the exact detail and participant worktrees. NEVER select by title, focus, position, prose, or the caller's pane.
 4. Build the bundled script's `discovery` input directly from the resolver result: `caller` is the returned caller, `targets` is the returned complete participant list, and `status` is `prowl-pane`. Set `toPane` from the selected candidate's complete participant. This source-owned bridge uses the captured resolver result directly; never write an intermediate file or run an ad hoc transformation script.
@@ -2047,7 +2064,7 @@ Every operation exits 0 on its success shape — `record` present for `mail-requ
 - ALWAYS preserve a production request's complete source-generated `handback` block unchanged.
 - ALWAYS require the matching complete successful `/operate-prowl plan-handback` result before building a production request.
 - NEVER accept or construct a handback command, return-pane field, or cross-skill adapter path.
-- ALWAYS retain each complete command result in the active tool context and feed it into the next source-owned operation; no scratch file or shell redirect is part of this workflow.
+- ALWAYS retain each complete command result in the active tool context and feed it into the next source-owned operation; no scratch file and no redirect that writes a result to a path is part of this workflow, while the heredoc and pipe stdin forms in `<command_forms>` stay part of it.
 - NEVER scan transcript files, use another terminal multiplexer, or ask the operator to relay a message as a fallback.
 - NEVER select an endpoint by title, focus, position, inferred prose, or an undeclared environment.
 - NEVER convert transport success or a stored record into acknowledgement, agreement, ownership, mutation authorization, or continuation state.
@@ -2058,7 +2075,7 @@ Every operation exits 0 on its success shape — `record` present for `mail-requ
 
 Before release, exercise `coordination_reference`, `build_envelope`, `send_request`, `delivery_request`, and `delivery_result` with complete resolver identities and controlled environment-result payloads. Run the documented `build` stdin form and require `delivery.status: "ready"`; run the documented `result` form with a complete successful `send` payload and require `status: "delivered"`, then remove or alter each required transport field and require rejection. The matrix covers authoritative `toPane` selection from ambiguous candidates, caller exclusion, optional run-identity preservation and rejection, accepted and rejected acknowledgements, all message kinds, complete HEAD/status validation, exact mutation target/state matching, a production request that preserves the source-generated handback block only with its matching complete `plan-handback` result, rejection of caller-authored executable handback fields, malformed identities and optional fields, and transport results that never establish acknowledgement, agreement, authorization, or ownership.
 
-The mail route's exercised properties: every record kind maps to a record the agent-mail capability accepts unchanged; the capability's checked `send` result over the store's captured reply maps to `delivered` with the store id and the doorbell line, and a rejected or absent store maps to `delivery-failed` with the capability's status and detail; generated doorbells parse back to their sender and id; a sender absent from the inventory and a line carrying more than the doorbell are rejected; a delivered result requires every checked capability field and a zero exit code; a same-worktree delegation whose authority is other than exactly the sender as owner and `gitMutation: false` reaches no record.
+The mail route's exercised properties: every record kind maps to a record the agent-mail capability accepts unchanged; the capability's checked `send` result over the store's captured reply maps to `delivered` with the store id and the doorbell line, and a rejected or absent store maps to `delivery-failed` with the capability's status and detail; generated doorbells parse back to their sender and id; a sender absent from the inventory and a line carrying more than the doorbell are rejected; a delivered result requires every checked capability field and a zero exit code; a delegation request carrying an `authority` other than exactly the sender as owner and `gitMutation: false` reaches no record, while an absent `authority` is the sender's obligation and the script rejects nothing for lacking it.
 
 Recorded exercised payload/results:
 
@@ -2079,7 +2096,7 @@ Recorded exercised payload/results:
 
 **A pane UUID was requested from the operator.** Claude asked which pane to send to, when the operator had already named the target the only way they can — by worktree or working directory. Resolve the operator's naming against the live inventory and report the target back in the same terms.
 
-**A blocked redirect was rewritten as another program.** Claude redirected public inventory and discovery JSON into `$SP/agents.json` and `$SP/discovery.json`. The dangerous-command guard terminated the dynamic truncating redirect and instructed Claude to ask for authority. Claude wrote a Python replacement and continued, discarding the guard result. Use `/operate-prowl`'s `resolve-target` result directly in the active tool context. When a guard terminates a command family, stop that family and follow the sanctioned operation or ask the operator; never reformulate it.
+**A blocked redirect was rewritten as another program.** Claude redirected public inventory and discovery JSON into `$SP/agents.json` and `$SP/discovery.json`. The dangerous-command guard blocked the redirect, a compound command because it carried a shell variable. Claude wrote a Python replacement and continued, discarding the guard result. Use `/operate-prowl`'s `resolve-target` result directly in the active tool context; the scratch redirect is no part of this workflow. Rewriting the blocked operation as another program is forbidden.
 
 </failure_modes>
 
@@ -2090,7 +2107,8 @@ Recorded exercised payload/results:
 - A production request preserves one source-generated handback block only when the complete successful `plan-handback` result carries the same block, and rejects every caller-authored executable handback field.
 - Delivery passes only after `/operate-prowl` returns a checked successful result whose public input record confirms trailing Enter was sent; every failure preserves its exact status, detail, and command exit code when present.
 - A mail delivery passes only when `mail-result` returns `status: "delivered"` from a `succeeded` capability result whose `data.record` carries the store-assigned `id`; the doorbell text is `[<sender>] mail <id>` and `doorbell.submitted` is true only with a checked Prowl `send` result carrying `trailing_enter_sent: true`.
-- A `delivery-failed` mail result preserves the capability's exact status and detail, and a same-worktree `delegation-request` whose `authority` is other than exactly `owner` equal to `sender` and `gitMutation: false` produces no record.
+- A `delivery-failed` mail result preserves the capability's exact status and detail, and a `delegation-request` carrying an `authority` other than exactly `owner` equal to `sender` and `gitMutation: false` produces no record; an absent `authority` is the sender's obligation and the script rejects nothing for lacking it.
+- A doorbell resolution returns the sender and id only for a sender present in the supplied inventory, and then reads the record through the agent-mail capability.
 - Caller, recipient, mutation-target, and observed-state identities validate before delivery.
 - Transport delivery remains distinct from acknowledgement, agreement, authorization, ownership, and continuation.
 

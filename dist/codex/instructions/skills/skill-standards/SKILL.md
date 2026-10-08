@@ -11,15 +11,15 @@ The canonical standards for skill authoring — frontmatter, XML structure, nami
 </objective>
 
 <success_criteria>
-Skills conform to these standards when, at minimum: (a) SKILL.md is under 500 lines unless it qualifies for the eager-foundation exception in `<progressive_disclosure>`, (b) the body uses pure XML structure with no markdown headings, (c) `<objective>` and `<success_criteria>` tags are present, (d) the description matches the invocation path — directive when description-match activation applies, passive when invoked only by exact name or a parent capability — (e) the skill is independent of its caller, and (f) an `/audit-skill` run on the skill seals `approved`.
+Skills conform to these standards when, at minimum: (a) SKILL.md is under 500 lines unless it qualifies for `<eager_foundation_exception>`, (b) the body uses pure XML structure with no markdown headings, (c) `<objective>` and `<success_criteria>` tags are present, (d) the description matches the invocation path — directive when description-match activation applies, passive when invoked only by exact name or a parent capability — (e) the skill is independent of its caller, and (f) an `/audit-skill` run on the skill seals `approved`.
 </success_criteria>
 
 <reference_note>
-This is a reference skill. Composing skills invoke these standards explicitly before authoring or auditing. It is not a standalone workflow.
+This is a reference skill: it standardizes skill authoring and carries no standalone workflow.
 </reference_note>
 
 <repo_local_overlay>
-When another skill loads this reference inside a repository, check for `spx/local/skills.md` at the repository root. Read that file after this reference if it exists and apply it as the repo-local specialization (e.g., marketplace-specific naming conventions or additional constraints). A local overlay supplements skill behavior; it does not declare product truth.
+Inside a repository, check for `spx/local/skills.md` at the repository root. Read that file after this reference if it exists and apply it as the repo-local specialization (e.g., marketplace-specific naming conventions or additional constraints). A local overlay supplements skill behavior; it does not declare product truth.
 </repo_local_overlay>
 
 <skill_organization>
@@ -40,7 +40,7 @@ For language-specific skill prose that references a foundation, use the unqualif
 4. A composition step invokes only capabilities required by the workflow; it never discovers or invokes adjacent skills speculatively.
 5. Reference-only prose may name foundational concepts without invocation, while reference skills are loaded through the runtime's skill-invocation capability when their full standards govern the work.
 
-**Caller independence:** A skill governs its own behavior and nothing else. It never names, describes, detects, constrains, refuses, branches on, or otherwise depends on its caller or invocation context. The dependency runs one way: a caller may know the skill it invokes; the skill never knows its callers.
+**Caller independence:** A skill governs its own behavior and nothing else. It never names, describes, detects, constrains, refuses, branches on, or otherwise depends on its caller or invocation context. A description may state the skill's invocation contract — for example, that other skills load it and a user does not invoke it — because its behavior never depends on who the caller is. The dependency runs one way: a caller may know the skill it invokes; the skill never knows its callers.
 
 Context placement, agent selection, and dispatch policy belong to the caller. A skill remains independently invocable even when the product normally reaches it through an agent or another skill. Correct an invalid invocation in the router, agent, or composing skill that made the decision; never add a dispatch gate or caller check to the invoked skill.
 
@@ -54,7 +54,7 @@ Every Codex SKILL.md starts with YAML frontmatter and uses only fields accepted 
 
 Reference skills stay hidden from ordinary user selection while remaining available to composed workflows through Codex's documented skill invocation surface. Audit skills change no file beyond the `spx verification run` journal their own verbs write. A field or reachability behavior without a documented Codex contract is omitted.
 
-Read `${SKILL_DIR}/references/command-capabilities.md` before authoring arguments, dynamic context, tool restrictions, or file references for Codex.
+Read `${SKILL_DIR}/references/command-capabilities.md` before authoring arguments, dynamic context, tool restrictions, or file references for Codex, and read its `<guard_block_partition>` when a dangerous-command guard blocks a command.
 
 </frontmatter>
 
@@ -157,13 +157,7 @@ This table is representative, not exhaustive: a skill may add semantically named
 
 **Close every tag.** Unclosed tags break parsing.
 
-**`<context>` bash blocks fire on every skill load.** Every `!`command`` line inside `<context>` runs unconditionally each time the skill is invoked — including false-positive activations triggered by directive descriptions matching adjacent terms. Heavy commands (session lists, full file contents, cache enumerations) compound the per-load tax.
-
-Constraints:
-
-- Filter expensive commands (`spx session list --status doing,todo`, `git log -10`, `head -N`) so output stays bounded.
-- Move data into the workflow file that actually consumes it when the skill loader doesn't need it for trigger evaluation. The `<context>` block is for trigger-time orientation, not workflow inputs.
-- Avoid commands whose output grows monotonically (archives, full caches, full file trees).
+**`<context>` bash blocks fire on every skill load.** `${SKILL_DIR}/references/command-capabilities.md` `<dynamic_context>` carries the firing and filtering rules.
 
 **Semantic names:** `<workflow>` not `<steps>`, `<success_criteria>` not `<done>`, `<anti_patterns>` not `<dont_do>`.
 
@@ -188,17 +182,11 @@ Don't over-engineer simple skills. Don't under-specify complex ones.
 
 When a foundation skill requires the same material on every fresh invocation, inline that canonical material and govern the total eager payload instead of the SKILL.md line count. The exception requires the same material on every invocation, removal of mandatory secondary reads, separate conditional detail, internal consistency, improved effectiveness, and a rendered payload of at most 40,000 Unicode code points measured by every audit. Never use it to inline optional detail or avoid routing.
 
-This skill invokes the exception for itself. An author needs its structure table, its command-capability rules, and its path boundary on one invocation, and each of its six references carries conditional detail rather than a mandatory read. Measure the skill as installed, which is the payload an invocation loads:
-
-```bash
-python3 -c "from pathlib import Path; print(len(Path('${SKILL_DIR}/SKILL.md').read_text(encoding='utf-8')))"
-```
-
 </eager_foundation_exception>
 
 <progressive_disclosure>
 
-Keep SKILL.md under 500 lines unless the eager-foundation exception below applies. Move detailed patterns into descriptively named files one level below `references/`. Cite every bundled reference from the skill or the workflow that requires it. Avoid nested reference chains, orphaned files, and duplicated standards.
+Keep SKILL.md under 500 lines unless `<eager_foundation_exception>` applies. Move detailed patterns into descriptively named files one level below `references/`. Cite every bundled reference from the skill or the workflow that requires it. Avoid nested reference chains, orphaned files, and duplicated standards.
 
 Apply `<eager_foundation_exception>`. A 500-line overview followed immediately by mandatory references is not progressive disclosure; total eagerly loaded content is the relevant cost.
 
@@ -363,6 +351,8 @@ One content may name a prohibited path: the rule prohibiting it. A standard list
 
 **A permission prompt is a result, not an obstacle.** When a tool layer declines a path, that decline is the boundary working. Never document a way around it — a shell redirect standing in for a refused tool write, a broader permission substituted for a narrow one, a path rewritten to dodge a check. Name a path inside the boundary instead. A skill that teaches evasion converts one operator's approval into every future session's bypass.
 
-**An automated classifier's refusal admits one retrace-bound retry.** A decline names its source: the operator refusing a permission prompt, a guard — a hook or a dangerous-command guard — naming its rule, or the harness's permission classifier stating that it refused. Only a classifier refusal of a request the operator's instruction already authorized admits a retry, only where the skill directs one, and only after Claude retraces the request as sent, the classifier's reason, and each step that shaped the request. The retry carries only the correction the retrace found, never a rewording that hides the objection; a second refusal, and every other decline, is the result.
+**An automated classifier's refusal admits one retrace-bound retry.** A decline names its source: the operator refusing a permission prompt, a guard — a hook or a dangerous-command guard — naming its rule, or the harness's permission classifier stating that it refused. Apart from the split rerun below, only a classifier refusal of a request the operator's instruction already authorized admits a retry, only where the skill directs one, and only after Claude retraces the request as sent, the classifier's reason, and each step that shaped the request. The retry carries only the correction the retrace found, never a rewording that hides the objection; a second refusal, and every other decline, is the result.
+
+**A dangerous-command guard block on a compound command admits one split rerun.** A block on a command holding one operation with every string written literally ends that command family, and so does a block on a command whose composition the parts cannot carry: a process substitution, a pipe between two operations other than a payload pipe, a background `&`, a subshell, or a list that mixes `&&` and `||`. A block on a compound command — lists separated by `;` or a newline, parts joined by `&&` alone or by `||` alone, and shell expansions — admits one rerun of its parts one at a time, in their original order, with every string written literally; a part the guard blocks on its own ends that part's family, and a payload pipe is never split. `${SKILL_DIR}/references/command-capabilities.md` `<guard_block_partition>` defines the three outcomes and how each value resolves to a literal. The rerun needs no skill's direction and is the only retry a guard decline admits.
 
 </path_boundary>

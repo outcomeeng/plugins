@@ -173,11 +173,67 @@ AUTHORITY_HIERARCHY_POLICY_REQUIREMENTS: Final = (
     ("Codex guide filename", "`AGENTS.md` for Codex"),
 )
 DANGEROUS_COMMAND_GUARD_STOP_TRIGGER_REQUIREMENT: Final = (
-    "a dangerous-command guard (DCG) block terminates the attempted command family"
+    "a dangerous-command guard (DCG) block on a command holding one operation "
+    "with every string written literally terminates that command family"
+)
+DANGEROUS_COMMAND_GUARD_UNCARRIED_COMPOSITION_REQUIREMENT: Final = (
+    "holds a process substitution, a pipe between two operations other than "
+    "the payload pipe below, a background `&`, a subshell, or a list that "
+    "mixes `&&` and `||`"
+)
+DANGEROUS_COMMAND_GUARD_UNCARRIED_TERMINAL_REQUIREMENT: Final = (
+    "a block on it terminates its command family, even when it also holds a "
+    "join or an expansion"
+)
+DANGEROUS_COMMAND_GUARD_COMPOUND_DEFINITION_REQUIREMENT: Final = (
+    "two or more operations separated by `;` or a newline, or joined by `&&` "
+    "alone or by `||` alone, or one operation whose words the shell expands: a "
+    "variable, a command substitution, a glob, or a tilde, brace or arithmetic "
+    "expansion, or a heredoc with an unquoted delimiter whose body expands"
+)
+DANGEROUS_COMMAND_GUARD_SINGLE_OPERATION_FORMS_REQUIREMENT: Final = (
+    "A heredoc that feeds one command holds one operation unless its delimiter "
+    "is unquoted and its body expands, and so does a pipe whose first stage "
+    "only supplies the payload the one reading command consumes on stdin, so "
+    "neither counts as a join or separator"
+)
+DANGEROUS_COMMAND_GUARD_PAYLOAD_PIPE_REQUIREMENT: Final = (
+    "When any word of such a pipe or of its payload stage expands, its values "
+    "are resolved first and the same pipe runs once with literal words; it is "
+    "never split, and when the guard blocks that literal pipe the command "
+    "family ends"
+)
+DANGEROUS_COMMAND_GUARD_VALUE_RESOLUTION_REQUIREMENT: Final = (
+    "Resolve each value first: a command substitution's inner "
+    "command runs on its own and its output is the literal; a variable's value "
+    "is the literal assigned to it or the output of `printenv <name>` run on "
+    "its own; a glob's matches are the entries of a listing of its literal "
+    "directory that match the pattern, and a glob with a wildcard in a "
+    "directory component resolves through the file-search tool on the full "
+    "pattern; a tilde, brace or arithmetic expansion is written out as the "
+    "words it produces. Then run the operation once with literal arguments"
+)
+DANGEROUS_COMMAND_GUARD_SECRET_VALUE_REQUIREMENT: Final = (
+    "A value that is a secret — a token, key or credential — is never printed "
+    "or written into a command; when resolving one would do that, the block "
+    "terminates that command family"
+)
+DANGEROUS_COMMAND_GUARD_COMPOUND_SPLIT_REQUIREMENT: Final = (
+    "run the parts of a blocked compound command again one at a time, each with "
+    "every string written literally"
+)
+DANGEROUS_COMMAND_GUARD_CONTROL_FLOW_REQUIREMENT: Final = (
+    "`;` and a newline separate lists, and each list runs regardless of the "
+    "one before; within a list, parts joined by `&&` alone run while the part "
+    "before them succeeded, and parts joined by `||` alone run until one "
+    "succeeds"
+)
+DANGEROUS_COMMAND_GUARD_PART_TERMINAL_REQUIREMENT: Final = (
+    "part the guard blocks on its own terminates that part's family"
 )
 DANGEROUS_COMMAND_GUARD_RETRY_PROHIBITION_REQUIREMENT: Final = (
-    "NEVER** retry it by reformulating, splitting, rewriting, removing the flagged "
-    "clause, or substituting an equivalent command to evade the guard"
+    "NEVER** retry a blocked command by reformulating, rewriting, removing the "
+    "flagged clause, or substituting an equivalent command to evade the guard"
 )
 DANGEROUS_COMMAND_GUARD_SANCTIONED_PATH_REQUIREMENT: Final = (
     "follow the active skills, repository instructions, and declared overlays to "
@@ -192,6 +248,46 @@ DANGEROUS_COMMAND_GUARD_POLICY_REQUIREMENTS: Final = (
     (
         "dangerous-command guard stop trigger",
         DANGEROUS_COMMAND_GUARD_STOP_TRIGGER_REQUIREMENT,
+    ),
+    (
+        "dangerous-command guard uncarried composition",
+        DANGEROUS_COMMAND_GUARD_UNCARRIED_COMPOSITION_REQUIREMENT,
+    ),
+    (
+        "dangerous-command guard uncarried terminal",
+        DANGEROUS_COMMAND_GUARD_UNCARRIED_TERMINAL_REQUIREMENT,
+    ),
+    (
+        "dangerous-command guard compound definition",
+        DANGEROUS_COMMAND_GUARD_COMPOUND_DEFINITION_REQUIREMENT,
+    ),
+    (
+        "dangerous-command guard control flow",
+        DANGEROUS_COMMAND_GUARD_CONTROL_FLOW_REQUIREMENT,
+    ),
+    (
+        "dangerous-command guard single-operation forms",
+        DANGEROUS_COMMAND_GUARD_SINGLE_OPERATION_FORMS_REQUIREMENT,
+    ),
+    (
+        "dangerous-command guard payload pipe",
+        DANGEROUS_COMMAND_GUARD_PAYLOAD_PIPE_REQUIREMENT,
+    ),
+    (
+        "dangerous-command guard compound split",
+        DANGEROUS_COMMAND_GUARD_COMPOUND_SPLIT_REQUIREMENT,
+    ),
+    (
+        "dangerous-command guard value resolution",
+        DANGEROUS_COMMAND_GUARD_VALUE_RESOLUTION_REQUIREMENT,
+    ),
+    (
+        "dangerous-command guard secret value",
+        DANGEROUS_COMMAND_GUARD_SECRET_VALUE_REQUIREMENT,
+    ),
+    (
+        "dangerous-command guard part terminal",
+        DANGEROUS_COMMAND_GUARD_PART_TERMINAL_REQUIREMENT,
     ),
     (
         "dangerous-command guard retry prohibition",

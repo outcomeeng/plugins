@@ -1,6 +1,17 @@
+<contents>
+
+- `<overview>` — the command-capability surface and the portable syntax
+- `<arguments>` — `argument-hint`, `$ARGUMENTS`, named and positional arguments
+- `<dynamic_context>` — `!`-backtick context injection
+- `<tool_restriction_security>` — `allowed-tools` as a security boundary
+- `<file_references>` — `@` product files and the skill-directory token
+- `<guard_block_partition>` — the three outcomes a dangerous-command guard block decides between
+
+</contents>
+
 <overview>
 
-A SKILL.md carries every capability a slash command had — arguments, `!`-dynamic context injection, tool restriction, and `@` file references. These rules govern that surface for every skill that authors or audits arguments, dynamic context, tool restriction, or file references.
+A SKILL.md carries every capability a slash command had — arguments, `!`-dynamic context injection, tool restriction, and `@` file references. These rules govern that surface for every skill that authors or audits arguments, dynamic context, tool restriction, or file references, and `<guard_block_partition>` classifies a command a dangerous-command guard blocks.
 
 Author plugin source skills in Claude Code's supported SKILL.md syntax. Generated Codex output is a build-rendering concern: when Codex needs a different invocation surface, the renderer adapts the Codex runtime tree instead of constraining authored source to Codex's currently documented subset.
 
@@ -38,10 +49,11 @@ Examples:
 
 <dynamic_context>
 
-A skill injects state-dependent context with the `!`-backtick form inside `<context>` — the same mechanism a command used. The firing-and-filtering rules in `<xml_structure>`'s `<context>` guidance govern it: every `!` line runs on every skill load, including false-positive activations, so:
+A skill injects state-dependent context with the `!`-backtick form inside `<context>` — the same mechanism a command used. Every `!`command`` line inside `<context>` runs unconditionally each time the skill is invoked, including false-positive activations triggered by directive descriptions matching adjacent terms, so heavy commands (session lists, full file contents, cache enumerations) compound a per-load tax:
 
 - Load context only when it is directly relevant to the skill's task — a security-review skill needs git state; a pure-reasoning skill needs none.
-- Filter every command so output stays bounded (`--status`, `head -N`, `--oneline`) and never grows monotonically.
+- Filter every command so output stays bounded (`spx session list --status doing,todo`, `git log -10`, `head -N`) and never grows monotonically — archives, full caches, and full file trees do.
+- Move data into the workflow file that consumes it when the skill loader does not need it for trigger evaluation; the `<context>` block is for trigger-time orientation, not workflow inputs.
 
 - ALWAYS: scope `<context>` `!` commands to state the skill actually consumes, filtered to bounded output.
 - NEVER: inject state-dependent context the skill does not read, or an unfiltered command whose output grows per load.
@@ -76,3 +88,31 @@ Run `python3 "${CLAUDE_SKILL_DIR}/scripts/<bundled-script>.py" <args>`
 NEVER write Codex's skill-directory token in source. NEVER reference bundled plugin files with repository-local authored or generated plugin paths, or with legacy plugin-root paths. If a skill needs a file owned by another skill or another plugin, name the owning workflow or capability rather than manufacturing a cross-plugin filesystem path.
 
 </file_references>
+
+<guard_block_partition>
+
+A dangerous-command guard block on one command ends its command family or admits one split rerun, and the command decides which. The three outcomes partition every blocked command: it falls in exactly one.
+
+**One operation.** A single simple command whose every word is a literal, with no shell expansion. A heredoc that feeds one command is one operation unless its delimiter is unquoted and its body expands, and so is a pipe whose first stage only supplies the payload the one reading command consumes on stdin, because no split of either leaves a smaller command that runs. When any word of such a pipe or of its payload stage expands, its values resolve first and the same pipe runs once with literal words; it is never split, and when the guard blocks that literal pipe the command family ends. A block on one operation ends its command family.
+
+**A composition the parts cannot carry.** A command holding a process substitution, a pipe between two operations other than the payload pipe above, a background `&`, a subshell, or a list that mixes `&&` and `||`. A process substitution has no literal form, because `<(cmd)` hands the command a path to a stream and not the stream's text; a pipe carries a stream, a background `&` carries concurrency, a subshell carries shell state such as a `cd`, and a mixed list carries a status through a skipped part. Parts run one at a time carry none of these. A block on such a command ends its command family, even when it also holds a join or an expansion.
+
+**Compound command.** Every other blocked command:
+
+- two or more operations separated by `;` or a newline, or joined by `&&` alone or by `||` alone;
+- one operation whose words the shell expands: a variable, a command substitution, a glob, or a tilde, brace or arithmetic expansion;
+- a heredoc with an unquoted delimiter whose body expands.
+
+A block on a compound command admits one rerun of its parts one at a time with every string written literally, in their original order: `;` and a newline separate lists, and each list runs regardless of the one before; within a list, parts joined by `&&` alone run while the part before them succeeded, and parts joined by `||` alone run until one succeeds. Each value resolves before the operation runs:
+
+- a command substitution's inner command runs first on its own, and its output is the literal;
+- a variable's value is the literal Claude assigned it, or the output of `printenv <name>` run on its own;
+- a glob's matches are the entries of `ls <directory>` or the file-search tool for its literal directory that match the pattern, and a glob with a wildcard in a directory component resolves through the file-search tool on the full pattern;
+- a tilde, brace or arithmetic expansion is written out as the literal words it produces;
+- a value that is a secret — a token, key or credential — is never printed or written into a command; when resolving one would do that, the block ends the command family.
+
+The operation then runs once with literal arguments. A part the guard blocks on its own is one operation and ends its family; split no part further.
+
+- NEVER: rewrite a blocked operation as another program, strip its flagged clause, or substitute an equivalent command — the rerun changes no operation and removes only the composition the guard objected to.
+
+</guard_block_partition>

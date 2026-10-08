@@ -141,13 +141,12 @@ the five prose-coupling assertions.
 
 ## `/update-instruction-block` workflow warnings left after its approving skill audit
 
-The typed skill audit that approved `src/plugins/spec-tree/skills/update-instruction-block` on head `164eb9e842474b3a0ae1904bf3b61568b30ccd73` raised three warnings on the workflow text:
+The typed skill audit that approved `src/plugins/spec-tree/skills/update-instruction-block` on head `164eb9e842474b3a0ae1904bf3b61568b30ccd73` raised two warnings on the workflow text:
 
-- Step 3's never-rerun rule omits the `--reconcile --from` exception that GATE 3 states later, so a reader in order may refuse the tie-break rerun.
 - The `dirty` report says the operator must commit or set aside the edit and then re-run, without saying whether the run ends there, while the recency-tie branch commits through `spec-tree:commit-changes`.
 - The success criteria require the no-verb render to reproduce each written router block, but Step 5 never runs that render; `--check` alone passes a hand-edit inside the router.
 
-**Settlement condition**: the never-rerun rule names the `--from` exception where it is stated, the `dirty` report states that the run ends with nothing written, Step 5 runs the no-verb render comparison, and a typed skill audit approves the surface without these warnings.
+**Settlement condition**: the `dirty` report states that the run ends with nothing written, Step 5 runs the no-verb render comparison, and a typed skill audit approves the surface without these warnings.
 
 ## Two retained rules of the operator's former project-instruction file live nowhere
 
@@ -159,3 +158,42 @@ The operator's project-level instruction file, outside this repository, is delet
 **Impact.** Both rules are unenforced; nothing cites them, so their absence is quiet.
 
 **Settlement condition.** Both rules land in the router template, with the pinned `*_POLICY_REQUIREMENTS` tuples in `outcomeeng/distribution/instruction_block.py` and the spec assertions moving in the same changeset, against the measured byte budget the entry above records.
+
+## The bundled generator silently drops flags that do not apply to the selected verb
+
+**Evidence.** The same run raised a `debt` finding (rule `validation-rule`) against `src/plugins/spec-tree/skills/update-instruction-block/scripts/instruction_block.py`: `main()` rejects `--adopt` without `--write`, yet `--from` without `--reconcile` is parsed and ignored, and verbs supplied together, such as `--check --write` or `--reconcile --write`, run only the first matched verb with exit 0 and no diagnostic.
+
+Run `2026-10-06_18-35-55-521-02765947702d` raised the same finding as `script-validation-rule` at `scripts/instruction_block.py:1601-1623` and `scripts/instruction_block.py:1670-1742`.
+
+**Standing.** Unjudged. The advisor could not judge it from the supplied fragment: the branch starts do not show their return paths, all flag validations or the fate of `--from`. Ignoring an accepted conflicting flag would be a real validation defect, but the fragment cannot establish that it occurs.
+
+**Impact.** An operator answer carried by a flag that does not apply is discarded behind a clean exit, the failure mode the `--adopt` guard exists to prevent.
+
+**Settlement condition.** The generator rejects `--from` outside `--reconcile` and verbs supplied together, with a message naming the valid combination, a test over a violating invocation covers each rejection, and a typed skill audit raises no `validation-rule` finding on the script.
+
+## `/update-instruction-block` reports the removal of obsolete `spx/` instruction files and unlinks them by name
+
+**Evidence.** `instructions:skill-auditor` run `2026-10-07_07-18-25-437-b58472784b8d` on `src/plugins/spec-tree/skills/update-instruction-block` raised two `debt` findings:
+
+- `operational-effectiveness` at `SKILL.md:94`: step 5 requires the closing report to state whether obsolete `spx/` instruction files were removed, and no snapshot or command output establishes it.
+- `script-contract-accuracy` at `scripts/instruction_block.py:1235-1243` against `SKILL.md:39`, `SKILL.md:92` and `SKILL.md:159`: the skill says the write removes retired generated files under `spx/`, while the script unlinks any `spx/CLAUDE.md` or `spx/AGENTS.md` without the retired-generated recognition it applies to root files.
+
+**Standing.** Unjudged. For the report finding, the advisor lacked the script output and the complete reporting inputs; the absence of a Step 1 snapshot does not prove that no later output can establish a removal. For the script finding, the established fact is that the loop removes designated obsolete filenames without inspecting content; missing is whether those exact filenames are declared wholly owned reserved generated artifacts, or whether foreign content may validly occupy them, and without that path-ownership contract the advisor could not decide whether filename selection suffices.
+
+**Impact.** If no output establishes the removal, a report item has no source; if foreign content can occupy those filenames, a product-authored guide under `spx/` can be deleted.
+
+**Settlement condition.** The removal report derives from a named snapshot or output, the path-ownership contract for the obsolete `spx/` instruction filenames is declared, and the script removes only recognized retired output or the skill states what it removes.
+
+## The guard's block-partition rule leaves three shell-semantics cases unclassified
+
+**Evidence.** The local review run `2026-10-08_04-23-21-545-648ad0927de6` on head `58641becfa49b5ec824b5040415481695b404bef` approved the changeset and raised three `warning` findings against the router template `src/plugins/spec-tree/skills/update-instruction-block/templates/instruction-block.md:60` and `<guard_block_partition>` in `src/plugins/instructions/skills/skill-standards/references/command-capabilities.md`:
+
+- A list whose part changes shell state that later parts depend on (`cd`, `pushd`, `export`, `set`, `umask`) matches the compound-command definition, so a block splits it into separate calls that do not carry that state.
+- A shell control structure (a loop, conditional, `case`, brace group, or function definition) matches the compound-command definition, and splitting it yields fragments that do not run.
+- A payload pipe or heredoc with an expanding word falls in two classes, the one-operation class that ends its family and the compound class that splits, while the text reruns it once unsplit.
+
+**Standing.** The Director accepted this rule text as it stands without the advisor's bounded check, in mail 9324.
+
+**Impact.** A guard-blocked list that carries shell state, a control structure, or an expanding payload has no single outcome the rule's text can execute.
+
+**Settlement condition.** One Change decides the three classes, names each one's outcome in the router template, the `<guard_block_partition>` reference, the pinned requirement tuples in `outcomeeng/distribution/instruction_block.py`, and the instruction-block and skills spec assertions together, and regenerates the shipped trees.

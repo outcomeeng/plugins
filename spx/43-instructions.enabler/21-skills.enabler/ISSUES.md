@@ -53,55 +53,16 @@ skill bodies — and the tag is applied.
 `b0a6237f359687bd40a01755af6f4ff2d88387b2`, finding `DEBT [evidence]` at
 `spx/43-instructions.enabler/21-skills.enabler/skills.md:15`, during Change #76.
 
-## `skill-standards` names the eager-foundation exception by a section that does not hold it
-
-`src/plugins/instructions/skills/skill-standards/SKILL.md:14` (`<success_criteria>`
-(a)) points to "the eager-foundation exception in `<progressive_disclosure>`", and
-`<progressive_disclosure>` at lines 320 and 346 says "unless the eager-foundation
-exception below applies", while the exception lives in its own
-`<eager_foundation_exception>` tag at line 301, which precedes
-`<progressive_disclosure>`.
-
-**Impact.** An author following the tag-by-name convention this skill prescribes
-lands on a section that does not hold the rule.
-
-**Settlement condition.** `<success_criteria>` names `<eager_foundation_exception>`
-and both `<progressive_disclosure>` branches drop "below".
-
-Source: `instructions:skill-auditor` finding rule `stale_cross_reference`, severity
-`WARNING`, on head `524b9c46c7960a106d84ef856b4020a0ce904b16` during Change #76;
-[Change #92](https://github.com/outcomeeng/changes/issues/92) carries the
-standards-skill pass that owns it.
-
-## The Claude render of `skill-standards` sits 62 code points under the eager-payload ceiling
-
-`dist/claude/instructions/skills/skill-standards/SKILL.md` measures 39938 code
-points against the 40,000-code-point ceiling `skill-standards`
-`<eager_foundation_exception>` declares for itself, after Change #332 admits the
-`spx verification run` journal verbs in the audit-skill grant rule and aligns the audit
-description and Codex frontmatter sentences with it.
-
-**Impact.** The next small edit to a Claude-only section tips the reference past
-the ceiling and turns a routine change into a blocking finding on this reference.
-
-**Settlement condition.** Conditional detail leaves the eager body for its
-reference — the `<context>` bash-block constraints at lines 274-280, already
-carried by `references/command-capabilities.md` `<dynamic_context>`, are one
-candidate — so a routine edit has room.
-
-Source: `instructions:skill-auditor` finding rule `eager_payload_headroom`, severity
-`WARNING`, on head `524b9c46c7960a106d84ef856b4020a0ce904b16` during Change #76,
-remeasured by the skill auditor on head `913a65e5b370ffa846bfe7a47be4a551e6a9c547`
-during Change #200;
-[Change #92](https://github.com/outcomeeng/changes/issues/92) carries the
-standards-skill pass that owns it.
-
 ## `script-standards.md` states the testing-record requirement with a weak modal
 
 `src/plugins/instructions/skills/skill-standards/references/script-standards.md:32`,
 inside `<script_testing_rule>`, reads "The skill's documentation should record what
 was tested and with what inputs"; `/agent-prompt-standards` `<constraint_language>`
 bars "should" from a rule block.
+
+**Standing.** Unjudged. The advisor could not judge it without the line's surrounding
+constraint context: a weak modal is barred from a constraint, while recommendation and
+trade-off language can legitimately use one, so the line's location alone does not decide.
 
 **Impact.** The testing-record requirement reads as optional beside the preceding
 "must be tested" sentence.
@@ -289,14 +250,6 @@ Source: `instructions:skill-auditor` finding `f-015`, rule
 
 **Settlement condition**: the isolation requirement is stated directly or conditioned on the surfaces existing, the loads stand once, and one typed skill audit of `create-skill` raises neither finding.
 
-## `skill-standards` justifies its eager-foundation exception by material it does not inline
-
-**Evidence**: `instructions:skill-auditor` warning f-008 (rule `eager_foundation_justification_accuracy`) on `src/plugins/instructions/skills/skill-standards/SKILL.md:305` at head `add3e3e862f7512a55e8b9655d07f78412abe87c`: the self-application names "its command-capability rules" as inline, while the body routes them to `references/command-capabilities.md` as a conditional read, and the exception's opening covers foundation skills while this is a reference skill.
-
-**Impact**: the self-application cannot be checked against the exception's same-material and no-mandatory-read conditions.
-
-**Settlement condition**: the justification names only inline material and states why the exception covers a reference skill; one typed skill audit raises no such finding.
-
 ## `audit-skill`'s structure examples use `xml` fences for pseudo-XML
 
 **Evidence**: `instructions:skill-auditor` warning f-009 (rule `repository-markdown-pseudo-xml-fence`) on `src/plugins/instructions/skills/audit-skill/references/xml-structure-examples.md` at head `add3e3e862f7512a55e8b9655d07f78412abe87c`: pseudo-XML examples sit in `xml` fences, some closed by mismatched four-backtick fences.
@@ -304,14 +257,6 @@ Source: `instructions:skill-auditor` finding `f-015`, rule
 **Impact**: dprint `markup_fmt` may rewrite the examples, and fence boundaries are ambiguous to a reader.
 
 **Settlement condition**: every pseudo-XML example uses a `text` fence with matched delimiters; one typed skill audit raises no such finding.
-
-## `skill-standards` describes the context that loads it
-
-**Evidence**: `instructions:skill-auditor` warning f-010 (rule `caller_independence`) on `src/plugins/instructions/skills/skill-standards/SKILL.md:22` at head `8e631614b562ec5edf05c0e4c80a38625ada90d7`: `<repo_local_overlay>` opens "When another skill loads this reference inside a repository", and line 18 describes its callers, while the same skill's caller-independence rule bars a skill from naming or describing its caller or invocation context.
-
-**Impact**: the canonical standard does not hold its own rule, so an auditor can cite it as a counterexample.
-
-**Settlement condition**: the overlay rule and the reference note state their behavior without naming who loads the skill; one typed skill audit raises no `caller_independence` finding against them.
 
 ## `audit-skill`'s annotated examples grade in a vocabulary the run does not record
 
@@ -346,3 +291,13 @@ Source: `instructions:skill-auditor` finding `f-015`, rule
 **Settlement condition.** A session runs one of the surfaces the sweep names to the point where it issues its `python3` command and records whether the harness admits the command under the declared grant or prompts for it; the established behavior then fixes one spelling across the whole population. An executed invocation is the only evidence that closes this.
 
 **Related.** "A non-interactive git guard sits on the command that cannot prompt", in `spx/21-spec-tree.enabler/76-merge.enabler/32-github-pr.enabler/ISSUES.md`, asks whether the Bash grant matcher tolerates an `ENV=value` prefix. One executed invocation that reports the matcher's behavior on an unexpanded token and on an environment-variable prefix answers both.
+
+## `skill-standards` restates rules that `agent-prompt-standards` states
+
+**Evidence.** `instructions:skill-auditor` run `2026-10-06_18-37-53-397-59929467e6ad` on `src/plugins/instructions/skills/skill-standards` raised a `debt` finding, rule `reference-skills-duplication`, on `<descriptions>` and `<conciseness>`, which `agent-prompt-standards` restates in `<description_style>` and `<conciseness>`.
+
+**Standing.** Unjudged. The advisor could not judge it without the paired passages: naming two sections that cover the same domain does not establish duplicated rule ownership, because one section can refer to or specialize the other.
+
+**Impact.** A rule stated in two skills can drift between them.
+
+**Settlement condition.** The paired passages are compared, and each rule has one owning skill with the other pointing to it, or the comparison shows one specializes the other.
