@@ -2,14 +2,15 @@
 name: audit-adr
 description: >-
   ADR audit methodology — judges one ADR against the ADR evidence model,
-  covering section structure, atemporal voice, and per-rule tag validity.
+  covering section structure, atemporal voice, and per-rule tag validity, and
+  records the judgment through an SPX file-scoped verification run.
 argument-hint: "<adr-file-path>"
-allowed-tools: Read, Grep, Glob, Skill, Bash(git branch --show-current:*)
+allowed-tools: Read, Grep, Glob, Skill, Bash(git rev-parse:*), Bash(realpath:*), Bash(spx --version), Bash(spx verification run start:*), Bash(spx verification run input:*), Bash(spx verification run status:*), Bash(spx verification run scope add:*), Bash(spx verification run finding add:*), Bash(spx verification run finish:*), Bash(spx verification run render:*), Bash(printf '%s\n':*)
 ---
 
 <objective>
 
-A verdict on one ADR against the ADR evidence model — APPROVED or REJECTED, with findings naming the section, rule, and evidence for section structure, atemporal voice, or per-rule declaration form and tag fitness.
+A sealed `spx verification run` on one ADR against the ADR evidence model — terminal status `approved` with no finding, or `rejected` with each finding naming the section, the violated rule, and the evidence for section structure, atemporal voice, per-rule declaration form and tag fitness, or a composed language-architecture concern — or a `BLOCKED` diagnostic naming the failed prerequisite or command.
 
 </objective>
 
@@ -27,80 +28,103 @@ Apply the canonical template's authoring and routed forms. Untagged rules direct
 
 ADRs state architecture truth. "The build emits one wheel per plugin" — not "We switched to per-plugin wheels because the monolith broke."
 
-**BINARY VERDICT.**
+**THE SEALED RUN IS THE VERDICT.**
 
-`APPROVED` or `REJECTED`. An unavailable required inspection is a rejection with evidence naming the blocked inspection; it never becomes an approval through an unevaluated row.
+The run's terminal status is `approved` or `rejected`. An unavailable required inspection is a blocking finding naming the blocked inspection, so it rejects the run; it never becomes an approval through an unjudged unit.
 
 **LANGUAGE COMPOSITION BOUNDARY.**
 
-Language-specific ADR concerns — testability-in-Verification (dependency injection, no-mocking), execution-level accuracy — are composed from `/audit-<lang>-architecture` in Step 5b. The language skill judges only those concerns; this skill owns section structure, atemporal voice, and tag validity from the canonical template.
+Language-specific ADR concerns — testability-in-Verification (dependency injection, no-mocking), execution-level accuracy — are composed from `/audit-<lang>-architecture` in Step 7. The language skill judges only those concerns; this skill owns section structure, atemporal voice, and tag validity from the canonical template.
 
-- NEVER modify the ADR under audit or any other file — this audit produces a verdict, never a fix or a commit.
+- NEVER modify the ADR under audit or other product content. The audit's own SPX verification-run journal is the only state it writes, apart from the base synchronization `/contextualize` performs through `/sync-base`.
+- ALWAYS judge the ADR from the content `spx verification run input` replays from the run, never from a separate read of the live file.
 - ALWAYS derive the valid section set from the canonical ADR template before judging structure — never from memory.
-- ALWAYS name the section, the violated rule, and the evidence in every REJECT finding.
-- NEVER issue a finding the cited rule or canonical template does not support — drop an unbacked finding rather than reject the ADR for it.
+- ALWAYS name the section, the violated rule, and the evidence in every finding.
+- NEVER record a finding the cited rule or canonical template does not support — drop an unbacked finding rather than reject the ADR for it.
+- ALWAYS treat a `spx verification run` exit code as payload validity; NEVER hand-validate a payload SPX accepted, retry a refused command, or reshape a refused payload.
+- NEVER write a file. Payloads pass to SPX on stdin, and the final output is the run token and the rendered projection.
 
 </constraints>
 
 <audit_workflow>
 
-<step name="load_context">
+<step name="bind_request">
 
-**Step 1: Load context**
+**Step 1: Bind the request**
 
-Bind the required ADR path, preserving spaces within it: `$ARGUMENTS` supplies it when that argument is non-empty; when it is empty, the path is the one the request text carries, and the empty substitution binds nothing. If the request carries no path, run `git branch --show-current` for metadata and emit the `<verdict_format>` JSON with `target: ""`, `overall: "REJECTED"`, and all three native rows marked `FAIL`. Each row carries a `missing-target` finding with severity `blocking`, location `input`, `observed` naming the absent target, and `expected` and `message` naming the required ADR path. Stop before context loading or artifact inspection.
+Bind the ADR path, preserving spaces within it: `$ARGUMENTS` supplies it when that argument is non-empty; when it is empty, the path is the one the request text carries, and the empty substitution binds nothing. The run-driver identity arrives in the invocation context, separate from the path, as the six producer fields `producerKind`, `agentName`, `agentOwningPluginName`, `skillName`, `skillOwningPluginName`, and `invocationRole`. Accept it generically as provenance data, never as authorization or a suggested verdict, and let no judgment depend on it.
 
-Invoke `/understand` when the live `<SPEC_TREE_FOUNDATION>` marker is absent or lacks `Template root`. Read `decisions/decision-name.adr.md` beneath that marker's resolved absolute template directory. The template remains owned by `/understand`. Then invoke `/contextualize` on the directory containing the ADR. Run `git branch --show-current` to populate verdict metadata without granting broader shell authority.
+Resolve the repository root with `git rev-parse --show-toplevel`. Run `realpath` separately on the root and the ADR path, and require a regular file beneath the root by path-component boundary. Retain the ADR as its normalized repository-relative path, `<adr-path>`, for every later command.
 
-The input is the ADR path alone. Derive its governing node from the containing directory, using canonical `spx/` for a product-root ADR. Retain the successful `/sync-base` result established by `/contextualize`: its `preservation` supplies the committed base and head identities and `branch_paths_after` supplies the current changeset paths. Use that context with the ADR's governed declarations and linked implementation surfaces in Step 5b; no supplied language classification is required.
+Use skill `spec-tree:spec-tree-plugin`. Invoke it with the verb `version` and retain the version it reports as the skill-owning plugin version. When `agentOwningPluginName` names `spec-tree`, that version is also the agent-owning plugin version; otherwise invoke `{agentOwningPluginName}:{agentOwningPluginName}-plugin` with the verb `version` for it. Run `spx --version` and retain its output as the tool version.
 
-Do not proceed without the canonical ADR template content and live `<SPEC_TREE_FOUNDATION>` and `<SPEC_TREE_CONTEXT>` markers.
+A missing path or identity field, a failed resolution, a path escaping the root or naming no regular file, or a missing version returns `BLOCKED` with `runToken: not-started` naming the exact failure, before any run starts.
 
 </step>
 
-<step name="read_adr">
+<step name="load_context">
 
-**Step 2: Read the ADR**
+**Step 2: Load context**
 
-Read the ADR under audit. Identify its sections: the opening decision statement, Rationale (optional), Invariants (optional), and Verification.
+Use skill `spec-tree:understand` when the live `<SPEC_TREE_FOUNDATION>` marker is absent or lacks `Template root`. Use skill `spec-tree:contextualize` on the directory containing the ADR, `spx/` for a product-root ADR. Retain the `/sync-base` result it establishes: its `preservation` supplies the committed base and head identities and `branch_paths_after` the current changeset paths, which Step 7 uses with the ADR's governed declarations and linked implementation surfaces; no supplied language classification is required.
+
+A missing `<SPEC_TREE_FOUNDATION>` or `<SPEC_TREE_CONTEXT>` marker after these invocations returns `BLOCKED` with `runToken: not-started`.
+
+</step>
+
+<step name="open_run">
+
+**Step 3: Open the run and record the root**
+
+From the repository root, start one run on the ADR:
+
+```bash
+spx verification run start --verification-type audit --scope-type file --scope '<adr-path>' --input '<adr-path>'
+```
+
+Capture the exact `runToken` and use it for every later command. Read the retained input with `spx verification run input --verification-type audit --scope-type file --scope '<adr-path>' --run '<run-token>'`; its `content` is the one copy of the ADR the audit judges. Identify its sections: the opening decision statement, Rationale (optional), Invariants (optional), and Verification. Record the root unit under `<persistence_contract>`.
+
+Read `decisions/decision-name.adr.md` beneath the `Template root` the foundation marker records; the template remains owned by `/understand`.
+
+Steps 4 through 7 each record their unit, then its findings, as soon as that unit's judgment is complete, so the run shows each property's result before the next property is judged.
 
 </step>
 
 <step name="audit_structure">
 
-**Step 3: Section structure**
+**Step 4: Section structure**
 
-Use the canonical ADR template guidance loaded in Step 1 to derive the valid section set in full — never from memory or a transcribed copy. A structural finding that contradicts the canonical template is unbacked: drop it rather than rejecting the ADR. If the template guidance cannot be loaded, reject with `template-missing` and name the blocked read.
+Derive the valid section set in full from the canonical ADR template loaded in Step 3 — never from memory or a transcribed copy. A structural finding that contradicts the canonical template is unbacked: drop it. When the template cannot be loaded, record `template-missing` naming the blocked read.
 
 Verify the decision is stated in the opening (no "Purpose" preamble) and a `## Verification` section is present. Rationale and Invariants are optional — Invariants appears only when the decision establishes algebraic properties.
 
-**No decision statement, or no Verification section → REJECT — "missing-section."**
+**No decision statement, or no Verification section → finding `missing-section`.**
 
 </step>
 
 <step name="audit_voice">
 
-**Step 4: Atemporal voice**
+**Step 5: Atemporal voice**
 
 Check EVERY section for temporal language:
 
-| Temporal (REJECT)                     | Atemporal (correct)             |
+| Temporal (finding)                    | Atemporal (correct)             |
 | ------------------------------------- | ------------------------------- |
 | "We decided to use X because Y broke" | "X governs Z"                   |
 | "Currently the build does X"          | "The build does X"              |
 | "After profiling, we added caching"   | "Caching reduces latency for Z" |
 
-**Any temporal language in any section → REJECT — "temporal-voice."**
+**Any temporal language in any section → finding `temporal-voice`.**
 
 </step>
 
 <step name="audit_tag_validity">
 
-**Step 5: Per-rule tag validity and assertion-type fit**
+**Step 6: Per-rule tag validity and assertion-type fit**
 
-Read each rule's placement before judging tags. An untagged rule directly under `## Verification` has the canonical authoring form. For every such rule, identify its subject, the condition it constrains, and a concrete observation that would violate it. Reject a vague, ambiguous, or unfalsifiable rule with `invalid-draft-rule` in the `tag-validity` row, mark that row `FAIL`, and quote the rule with the missing or ambiguous criterion. For example, `ALWAYS: improve quality` fails because it names no observable condition. Check each draft rule against the decision statement and governing decisions; a contradiction also produces `invalid-draft-rule`, citing both conflicting declarations. Select no evidence type or tag during these checks.
+Read each rule's placement before judging tags. An untagged rule directly under `## Verification` has the canonical authoring form. For every such rule, identify its subject, the condition it constrains, and a concrete observation that would violate it. Record `invalid-draft-rule` for a vague, ambiguous, or unfalsifiable rule, quoting the rule with the missing or ambiguous criterion. For example, `ALWAYS: improve quality` fails because it names no observable condition. Check each draft rule against the decision statement and governing decisions; a contradiction also produces `invalid-draft-rule`, citing both conflicting declarations. Select no evidence type or tag during these checks.
 
-A tagged rule must have the matching routed subsection. When `### Testing` contains rules, invoke `spec-tree:test-evidence-standards` and load its assertion-type litmus. Apply that reference and the loaded foundation's assertion-type definitions to the declared claim and tag. If the required reference cannot load, emit a blocking `test-standards-unavailable` finding and a failed `tag-validity` row. Judge declaration compatibility only; evidence completeness belongs to evidence auditing. Never invoke the mutating `/test` authoring workflow, select a replacement tag, or change the ADR during this audit.
+A tagged rule must have the matching routed subsection. When `### Testing` contains rules, use skill `spec-tree:test-evidence-standards` and load its assertion-type litmus. Apply that litmus and the loaded foundation's assertion-type definitions to the declared claim and tag. When the reference cannot load, record `test-standards-unavailable`. Judge declaration compatibility only; evidence completeness belongs to evidence auditing. Never invoke the mutating `/test` authoring workflow, select a replacement tag, or change the ADR during this audit.
 
 For each routed rule:
 
@@ -108,64 +132,149 @@ For each routed rule:
    - under `### Testing` → one of `scenario`, `mapping`, `conformance`, `property`, `compliance`;
    - under `### Eval` → `([eval])`;
    - under `### Audit` → `([audit])`.
-2. Under `### Testing`, the declared assertion type is compatible with the claim's quantifier and evidence shape under the loaded foundation and shared assertion-type litmus. A universal claim cannot carry `scenario`. Reject a declared type whose required domain or oracle contradicts the claim, citing the claim and the loaded criterion; do not choose among compatible types or require executable evidence for a declaration.
+2. Under `### Testing`, the declared assertion type is compatible with the claim's quantifier and evidence shape under the loaded litmus. A universal claim cannot carry `scenario`. Record a declared type whose required domain or oracle contradicts the claim, citing the claim and the loaded criterion; do not choose among compatible types or require executable evidence for a declaration.
 
-An unsupported bare mechanism tag, a tag disagreeing with its subsection, a missing tag inside a routed subsection, more than one tag, or an assertion type that contradicts the claim's shape is invalid.
-
-**A routed rule with a missing, unsupported, duplicate, or subsection-mismatched tag → REJECT — "invalid-tag." An assertion type that contradicts the claim's shape → REJECT — "assertion-type-mismatch."**
+**A routed rule with a missing, unsupported, duplicate, or subsection-mismatched tag → finding `invalid-tag`. An assertion type that contradicts the claim's shape → finding `assertion-type-mismatch`.**
 
 </step>
 
 <step name="compose_language">
 
-**Step 5b: Compose language-specific architecture concerns**
+**Step 7: Compose language-specific architecture concerns**
 
-This skill owns section structure, atemporal voice, and tag validity from the canonical template. Language-specific architecture concerns — dependency injection, no-mocking, execution-level accuracy — are owned by the language audit skill, not by this one.
+Classify the ADR from its governed implementation surface and the committed changeset retained in Step 2. When the decision constrains no implementation language, it is language-neutral: record no language unit and skip composition. Otherwise preserve every implementation-language partition the decision constrains, including cross-language decisions; the repository's predominant language never narrows that set.
 
-Classify the ADR from its governed implementation surface and the committed changeset established in Step 1. When the decision constrains no implementation language, classify it as language-neutral and skip composition. Otherwise preserve every implementation-language partition the decision constrains, including cross-language decisions; the repository's predominant language never narrows that set.
+For every discovered partition, Use skill `{lang}:audit-{lang}-architecture` and pass the ADR path. When the governed context establishes no reliable partition for a language-specific ADR, record the language unit for `unknown` with the finding `language-routing-unavailable`. When the language skill is not installed, record its language unit as `missing-skill`, which rejects the run without a finding.
 
-For every discovered partition: Use skill `{lang}:audit-{lang}-architecture`. Pass the ADR path. The language skill judges only language-specific concerns and never re-judges section structure, voice, or tags. When a language-specific ADR has no reliable partition or the required skill cannot load, append a `FAIL` row named `language-routing-unavailable` or `language-skill-unavailable` with a blocking finding.
+Before consuming a composed result, validate it against the invoked skill's declared verdict contract: the schema and skill identity, matching target, every required concern row exactly once, allowed statuses, required finding fields, explanations for `NOT_APPLICABLE`, at least one finding on every `FAIL` row, and agreement between the rows and the overall result. An absent, malformed, incomplete, mismatched, or inconsistent result produces the finding `language-result-invalid`, identifying the failed contract check; accept no partial rows from that result. This boundary validates returned structure without repeating the language audit's judgment.
 
-Before consuming a composed result, validate it against the invoked skill's declared verdict contract: the schema and skill identity, matching target, every required concern row exactly once, allowed statuses, required finding fields, explanations for `NOT_APPLICABLE`, and agreement between the rows and overall result. An absent, malformed, incomplete, mismatched, or inconsistent result produces a `FAIL` row and blocking finding named `language-result-invalid`, identifying the failed contract check; accept no partial rows from that result. This boundary validates returned structure without repeating the language audit's judgment.
+From a validated result, record every finding of every row against that language's unit: retain its `rule`, `severity`, `message`, `observed`, and `expected`, and use its file or row location as `location`. An `INFO` observation is not a finding and is not recorded.
 
-Append only validated rows. Qualify each composed row name with its language to preserve distinct concerns across partitions. Map its findings to this verdict's fields: retain the rule, message, observed, and expected evidence, use the child location or file as `location`, and mark findings that reject the ADR as `blocking`. A composed `FAIL` always rejects the ADR; no omitted row or empty result counts as passing coverage.
-
-One case is not a composition failure. When the governed context establishes that the changeset itself ships the ADR's language plugin, unpublished and uninstalled in this session, no `audit-<lang>-architecture` skill can exist yet. Judge the decision directly against the skill files its rules name and the cross-language decisions, and record a row named `language-skill-unpublished` as `NOT_APPLICABLE` with the evidence establishing that case. An absent installed skill alone never establishes unpublished status.
+One case is not a composition failure. When the governed context establishes that the changeset itself ships the ADR's language plugin, unpublished and uninstalled in this session, no `audit-<lang>-architecture` skill can exist yet. Judge the decision directly against the skill files its rules name and the cross-language decisions, and record the language unit with this skill as its producer and every finding of that direct judgment. An absent installed skill alone never establishes unpublished status.
 
 </step>
 
-<step name="verdict">
+<step name="reconcile_and_finish">
 
-**Step 6: Issue verdict**
+**Step 8: Reconcile, finish, and render**
 
-Scan all findings and native or composed rows. If any row is `FAIL`, issue `REJECTED`; otherwise issue `APPROVED`.
+Read `spx verification run status` with the same type, scope, and token. Require exactly one root unit, one unit per evidence-model property, one unit per discovered language partition, and an accepted unit for every finding; record any missing unit or finding and read the status again. Re-read the live ADR and compare it with the retained input; a changed or missing file returns `BLOCKED` with the run preserved.
+
+Derive `approved` only when every unit is `audited` and no finding exists; derive `rejected` when any finding exists, or any unit is `missing-skill`. Then run:
+
+```bash
+spx verification run finish --verification-type audit --scope-type file --scope '<adr-path>' --run '<run-token>' --terminal-status '<approved-or-rejected>'
+```
+
+Then run `spx verification run render` with the same type, scope, and token, and return the token and the rendered projection unchanged.
 
 </step>
+
+<persistence_contract>
+
+Units record in this order: the root, then `section-structure`, `atemporal-voice`, `tag-validity`, then one language unit per partition in the order Step 7 discovered them. Every unit carries `subject: <adr-path>`, `coverageRequirement: required`, and `parentUnitId` equal to the root's `unitId` on every unit except the root, which omits it.
+
+| Unit              | `unitId`                             | `auditClass`     | `auditKind`    | `priorContext.concernPartition` | `coverageStatus`             | `skillName`, `skillOwningPluginName` of `expectedProducer`                                                                            |
+| ----------------- | ------------------------------------ | ---------------- | -------------- | ------------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Root              | `adr:root:<adr-path>`                | `spec`           | `adr`          | `adr`                           | `audited`                    | `audit-adr`, `spec-tree`                                                                                                              |
+| Evidence property | `adr:<property>:<adr-path>`          | `spec`           | `adr`          | the property name               | `audited`                    | `audit-adr`, `spec-tree`                                                                                                              |
+| Language concern  | `adr:architecture:<lang>:<adr-path>` | `implementation` | `architecture` | `architecture`                  | `audited` or `missing-skill` | `audit-<lang>-architecture`, `<lang>` when a validated result is consumed or the skill is missing; otherwise `audit-adr`, `spec-tree` |
+
+A language unit adds `priorContext.languagePartition: <lang>`. The expected producer has `producerKind: skill`, the supplied identity's `agentName` and `agentOwningPluginName`, the skill named in the table, and `invocationRole: leaf-skill`. `recordedByRunDriver` carries the supplied six-field identity unchanged. `producerProvenance` carries the agent-owning and skill-owning plugin versions from Step 1 and the exact `spx --version` output as `toolVersion`; a `missing-skill` unit omits it because no skill executed.
+
+These objects are the sanctioned SPX audit payload schema for this auditor; use their fields exactly, never derive a replacement schema from command help, and never alter a refused payload by guesswork. Render each scope payload with observed values in place of the placeholders:
+
+```json
+{
+  "unitId": "<unit-key>",
+  "parentUnitId": "<root-unit-key-for-a-child-only>",
+  "auditClass": "<spec-or-implementation>",
+  "auditKind": "<adr-or-architecture>",
+  "subject": "<adr-path>",
+  "coverageRequirement": "required",
+  "coverageStatus": "<audited-or-missing-skill>",
+  "priorContext": {
+    "changedFilePartition": "<adr-path>",
+    "languagePartition": "<lang-for-a-language-unit-only>",
+    "concernPartition": "<adr-property-or-architecture>"
+  },
+  "expectedProducer": {
+    "producerKind": "skill",
+    "agentName": "<supplied-agent-name>",
+    "agentOwningPluginName": "<supplied-agent-owning-plugin>",
+    "skillName": "<producing-skill>",
+    "skillOwningPluginName": "<producing-skill-plugin>",
+    "invocationRole": "leaf-skill"
+  },
+  "recordedByRunDriver": {
+    "producerKind": "<supplied>",
+    "agentName": "<supplied>",
+    "agentOwningPluginName": "<supplied>",
+    "skillName": "<supplied>",
+    "skillOwningPluginName": "<supplied>",
+    "invocationRole": "<supplied>"
+  },
+  "producerProvenance": {
+    "agentOwningPluginVersion": "<agent-owning-plugin-version>",
+    "skillOwningPluginVersion": "<spec-tree-plugin-version>",
+    "toolVersion": "<exact-spx-version>"
+  }
+}
+```
+
+A finding copies its unit's `expectedProducer` object as `producerIdentity` and its unit's complete `producerProvenance` object, and carries `rule`, `severity`, `location` naming the section or quoted rule, `message`, and `evidence` with `observed` and `expected` strings. A native finding is `blocking`; a composed finding keeps the severity the language skill gave it, `blocking` or `debt`. Native rules are `missing-section`, `temporal-voice`, `invalid-draft-rule`, `invalid-tag`, `assertion-type-mismatch`, `template-missing`, `test-standards-unavailable`, `language-routing-unavailable`, and `language-result-invalid`; composed findings keep the invoked skill's rule identifier.
+
+```json
+{
+  "unitId": "<accepted-unit-key>",
+  "producerIdentity": "<the unit's expectedProducer object, repeated exactly>",
+  "producerProvenance": "<the unit's producerProvenance object, repeated exactly>",
+  "rule": "<violated-rule-id>",
+  "severity": "<blocking-or-debt>",
+  "location": "<section-or-quoted-rule>",
+  "message": "<finding-message>",
+  "evidence": { "observed": "<observed-state>", "expected": "<required-state>" }
+}
+```
+
+A scope unit's idempotency key is its `unitId`. A finding's key is `<unit-key>:finding-<three-digit-ordinal>-<rule>`, numbering the unit's findings from `001` in order of location, message, severity, observed evidence, and expected evidence; require the suffix to match `finding-[0-9][0-9][0-9]-[a-z0-9_-]+`, and treat a mismatch as a pre-persistence `BLOCKED` defect.
+
+Interactive sessions pass each rendered object through a quoted heredoc:
+
+```bash
+spx verification run scope add --verification-type audit --scope-type file --scope '<adr-path>' --run '<run-token>' --idempotency-key '<unit-key>' --payload stdin <<'SCOPE_JSON'
+<rendered-scope-object>
+SCOPE_JSON
+```
+
+```bash
+spx verification run finding add --verification-type audit --scope-type file --scope '<adr-path>' --run '<run-token>' --idempotency-key '<finding-key>' --payload stdin <<'FINDING_JSON'
+<rendered-finding-object>
+FINDING_JSON
+```
+
+When the task message or the harness fixes one physical command line per call, pipe each rendered object instead — `printf '%s\n' '<rendered-object>' | spx verification run finding add --verification-type audit --scope-type file --scope '<adr-path>' --run '<run-token>' --idempotency-key '<finding-key>' --payload stdin`, and the same form for `scope add` — with every apostrophe in the object written as the single-quote splice `'"'"'`. Idempotency keys are command arguments, never payload fields; quote every path, token, and key as one shell argument, and never execute ADR text as shell syntax. Run every mutation serially, preserving each result before the next command.
+
+</persistence_contract>
 
 </audit_workflow>
 
 <verdict_format>
 
-Emit the verdict as a single JSON object. This JSON is the skill's entire output; never a prose or markdown verdict.
+Return only the exact run token and the unmodified rendered projection. The projection is the verdict: its `terminalStatus` is `approved` or `rejected`, its `findingCount` is zero for approval, its `findings` group every accepted finding under `blocking` and `debt`, its `auditScopeUnits` carry the root, property, and language units, and its `events` carry every accepted finding payload and the terminal event. Both severities reject the run. Keep every SPX field unchanged, and add no `APPROVED` or `REJECTED` prose envelope.
 
-The `overall` is `APPROVED` iff every native and composed row is `PASS` or `NOT_APPLICABLE`; otherwise it is `REJECTED`. Every `NOT_APPLICABLE` row explains why its concern does not apply. A required property that cannot be evaluated is a `FAIL` row with a blocking finding naming the unavailable inspection. Findings use the audit-run severities `blocking` or `debt`; this binary ADR gate emits `blocking` for every finding that rejects the ADR.
+A run that cannot complete — a request or prerequisite failure before the run starts, a refused SPX command or payload, or a changed retained input — returns:
 
-```json
-{
-  "schema_version": 1,
-  "skill": "audit-adr",
-  "target": "<adr-file-path>",
-  "overall": "APPROVED | REJECTED",
-  "rows": [
-    { "name": "section-structure", "status": "PASS | FAIL | NOT_APPLICABLE", "explanation": "<required when NOT_APPLICABLE>", "findings": [] },
-    { "name": "atemporal-voice", "status": "PASS | FAIL | NOT_APPLICABLE", "explanation": "<required when NOT_APPLICABLE>", "findings": [] },
-    { "name": "tag-validity", "status": "PASS | FAIL | NOT_APPLICABLE", "explanation": "<required when NOT_APPLICABLE>", "findings": [] }
-  ],
-  "metadata": { "branch": "<branch>" }
-}
+```text
+BLOCKED
+runToken: <exact-token-if-start-succeeded-or-not-started>
+command: <exact-failed-command, or request for a failure before the run starts>
+payloadKey: <unitId-or-finding-idempotency-key-or-none>
+exitCode: <exact-exit-code-or-none>
+stderr: <exact-stderr-or-none>
+judgmentStatus: <complete|incomplete>
+judgedFindings: <JSON array of every finding judged before the stop, in the finding-payload shape>
 ```
-
-Each finding carries `rule`, `severity: "blocking"`, `location`, `message`, `observed`, and `expected`. Native findings use `missing-target`, `missing-section`, `temporal-voice`, `invalid-draft-rule`, `invalid-tag`, `assertion-type-mismatch`, `template-missing`, `test-standards-unavailable`, `language-routing-unavailable`, `language-skill-unavailable`, or `language-result-invalid`; validated composed findings retain the invoked skill's rule identifier.
 
 </verdict_format>
 
@@ -181,7 +290,7 @@ How to avoid: The ADR audit checks form — structure, voice, tag validity. Cont
 
 Claude saw a `### Testing` rule — a universal ALWAYS/NEVER claim — tagged `([scenario])`, and passed it because a tag was present and named one of the five assertion types. A scenario proves one case; it cannot establish a claim about every case, so the assertion ships unverified — phantom green. The quantifier mismatch is a deterministic error, not a matter of taste.
 
-How to avoid: Step 5 verifies the assertion type fits the claim's shape per the `/test` router. Reject a universal tagged `scenario` (and any type the router would not produce for the claim). The one line the audit does not cross is relitigating a choice the router leaves open between equally-valid types — that, and only that, is `/test`'s to decide.
+How to avoid: Step 6 judges the assertion type against the `spec-tree:test-evidence-standards` assertion-type litmus, which realizes the `/test` router's selection rule without invoking `/test`. Record a universal tagged `scenario`, and any type whose required domain or oracle contradicts the claim. The one line the audit does not cross is choosing among types the litmus leaves equally valid.
 
 **Failure 3: Applied routed tag requirements to authoring declarations**
 
@@ -193,9 +302,9 @@ Claude rejected untagged authoring rules because the routed-form tag requirement
 
 The verdict is sound when:
 
-- Every ADR rule was judged with none skipped — section structure, atemporal voice, and per-rule tag validity and assertion-type fit; when a language is in scope, the composed `/audit-<lang>-architecture` rows are judged too (coverage-complete).
-- The verdict states one `APPROVED` or `REJECTED` overall determination, every native and composed row carrying `PASS`, `FAIL`, or explained `NOT_APPLICABLE`, with no rule left unevaluated.
-- Each REJECT finding is falsifiable: it names the section, the violated rule, and the evidence — the missing section, the temporal phrase, or the mismatched tag.
-- The same ADR yields the same verdict.
+- Every ADR rule was judged with none skipped — section structure, atemporal voice, and per-rule tag validity and assertion-type fit; when a language is in scope, every composed `/audit-<lang>-architecture` concern is recorded too (coverage-complete).
+- The sealed run carries one root unit, one unit per evidence-model property, and one unit per discovered language partition, and its terminal status is `approved` only with no finding and every unit `audited`.
+- Each finding is falsifiable: it names the section, the violated rule, and the evidence — the missing section, the temporal phrase, or the mismatched tag.
+- The same ADR, standards, and run-driver identity yield the same units, finding keys, and terminal status.
 
 </success_criteria>
