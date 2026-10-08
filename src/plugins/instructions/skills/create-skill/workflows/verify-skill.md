@@ -38,10 +38,10 @@ Return a report with these fields for every claim:
 
 Representative rows:
 
-| Location                 | Claim                                                | Evidence                                                | Status            | Required change                                                                      |
-| ------------------------ | ---------------------------------------------------- | ------------------------------------------------------- | ----------------- | ------------------------------------------------------------------------------------ |
-| `SKILL.md:42`            | `$ARGUMENTS` preserves free-form input               | `/skill-standards` `references/command-capabilities.md` | `current`         | `none`                                                                               |
-| `workflows/create.md:18` | Authored source uses `${SKILL_DIR}` for bundle paths | `/skill-standards` `references/command-capabilities.md` | `update-required` | Replace `${SKILL_DIR}` with `${CLAUDE_SKILL_DIR}` {!# no-codex-skill-dir-rewrite #!} |
+| Location                  | Claim                                                    | Evidence                                      | Status            | Required change                                             |
+| ------------------------- | -------------------------------------------------------- | --------------------------------------------- | ----------------- | ----------------------------------------------------------- |
+| `SKILL.md:42`             | `gh pr list` returns at most 30 pull requests by default | `gh pr list --help` and the GitHub CLI manual | `current`         | `none`                                                      |
+| `workflows/release.md:18` | Node.js 18 is the active LTS line                        | The Node.js release schedule at `nodejs.org`  | `update-required` | Replace with the active LTS line the release schedule names |
 
 The overall verdict is `CURRENT` when every inventory row is `current`, and `STALE` when any row is `update-required`, `broken`, or `unverifiable`.
 
