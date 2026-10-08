@@ -5,7 +5,7 @@
 - `<naming_and_description_rules>` — skill names and descriptions
 - `<structure_rules>` — XML structure, tags, and the auditor skeleton
 - `<disclosure_rules>` — line limits, the eager payload, and reference files
-- `<organization_rules>` — composition, caller independence, skill types, and conciseness
+- `<organization_rules>` — composition, caller independence, skill types, and standards extraction
 - `<command_capability_rules>` — arguments, dynamic context, tool grants, and file references
 - `<platform_and_script_rules>` — code fences and bundled scripts
 - `<harness_rules>` — rules only this harness's standards state
@@ -97,8 +97,6 @@ Every rule `SKILL.md` and its references state carries exactly one row below: on
 | `skill_type_sections`          | debt     | A skill carries the key sections its skill type requires.                                                                         | `SKILL.md` `<skill_types>`                              |
 | `partial_standards_extraction` | debt     | Standards a creator and an auditor share live in a reference skill, never in one skill's `references/`.                           | `SKILL.md` `<reference_skills>`                         |
 | `duplicated_standards`         | debt     | One home holds each standard; no skill restates another skill's rules.                                                            | `SKILL.md` `<reference_skills>`                         |
-| `known_content`                | debt     | A skill omits knowledge the executing harness already has.                                                                        | `SKILL.md` `<conciseness>`                              |
-| `abstract_guidance`            | debt     | Guidance states concrete commands and thresholds rather than abstractions.                                                        | `SKILL.md` `<conciseness>`                              |
 
 </organization_rules>
 

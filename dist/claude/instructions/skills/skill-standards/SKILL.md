@@ -132,39 +132,9 @@ name: typescript-unit-framework # Wrong order
 
 The description field governs skill selection. Claude has a character budget for all skill metadata — when exceeded, skills become invisible.
 
-**Activation rates by style** (Seleznov, 650 automated trials, Feb 2026):
+This section selects a description's style by invocation path. `/agent-prompt-standards` `<description_style>` governs the wording within that style: the directive form, the NEVER clause, artifact-before-language order, and user speech.
 
-| Style         | Activation | Pattern                          |
-| ------------- | ---------- | -------------------------------- |
-| Passive       | ~77%       | `Use when…`                      |
-| Expanded      | ~93%       | `…or any X-related task`         |
-| **Directive** | **~100%**  | `ALWAYS invoke… NEVER X without` |
-
-**Use directive descriptions for description-match entry points:**
-
-```yaml
-description: >-
-  ALWAYS invoke this skill when <triggers>.
-```
-
-**NEVER constraint — add only when it disambiguates.** A NEVER line helps when:
-
-- The skill is the only one with that negative (e.g., `NEVER work on the spec tree without loading context` — only contextualizing says this).
-- Claude has a strong built-in alternative the negative prevents (e.g., `NEVER run git commit without this skill` — Claude would just run `git commit` directly).
-
-Omit NEVER when multiple skills share the same negative (adds noise) or the ALWAYS trigger is already specific enough.
-
-**Language-after-artifact** (matches user speech):
-
-```yaml
-# ✅ "audit ADRs for Python"
-ALWAYS invoke this skill when auditing ADRs for Python.
-
-# ❌ "audit Python ADRs"
-ALWAYS invoke this skill when auditing Python ADRs.
-```
-
-**Match user speech over formal jargon:** Use abbreviations users would use (ADR not Architecture Decision Record). Avoid corporate speak.
+**Description-match entry points** take a directive description.
 
 **Reference skills** use `user-invocable: false` with a passive description:
 
@@ -311,32 +281,7 @@ SKILL.md → references/advanced.md → references/details.md → actual info
 
 <conciseness>
 
-The context window is shared. A skill competes for tokens with the system prompt, conversation history, other skills' metadata, and the user's request.
-
-**Test every sentence:** "Does removing this reduce the skill's effectiveness at the task?" If no — cut it.
-
-**What the executing runtime already knows (never include):**
-
-- General programming knowledge
-- Language syntax and standard-library APIs
-- Common design patterns
-- How to use its own tools
-
-**What the executing runtime needs (include):**
-
-- Product-specific conventions that contradict common patterns
-- Domain knowledge not in training data
-- Failure modes from actual usage (not hypotheticals)
-- Verification commands and thresholds
-
-**Concrete over abstract:**
-
-```text
-❌ "Ensure coverage is maintained"
-✅ "Coverage delta must be ≤0.5%. Run: pnpm test --coverage | grep target.ts"
-```
-
-**When to elaborate:** the concept is domain-specific (not general programming), the pattern is non-obvious or counterintuitive, or context affects behavior in subtle ways.
+Every sentence of a skill and its bundled files meets `/agent-prompt-standards` `<conciseness>`, which owns the sentence-removal test, what to omit and include, and concrete-over-abstract guidance.
 
 </conciseness>
 

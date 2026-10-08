@@ -198,32 +198,7 @@ Apply `<eager_foundation_exception>`. A 500-line overview followed immediately b
 
 <conciseness>
 
-The context window is shared. A skill competes for tokens with the developer instructions, conversation history, other skills' metadata, and the user's request.
-
-**Test every sentence:** "Does removing this reduce the skill's effectiveness at the task?" If no — cut it.
-
-**What the executing runtime already knows (never include):**
-
-- General programming knowledge
-- Language syntax and standard-library APIs
-- Common design patterns
-- How to use its own tools
-
-**What the executing runtime needs (include):**
-
-- Product-specific conventions that contradict common patterns
-- Domain knowledge not in training data
-- Failure modes from actual usage (not hypotheticals)
-- Verification commands and thresholds
-
-**Concrete over abstract:**
-
-```text
-❌ "Ensure coverage is maintained"
-✅ "Coverage delta must be ≤0.5%. Run: pnpm test --coverage | grep target.ts"
-```
-
-**When to elaborate:** the concept is domain-specific (not general programming), the pattern is non-obvious or counterintuitive, or context affects behavior in subtle ways.
+Every sentence of a skill and its bundled files meets `/agent-prompt-standards` `<conciseness>`, which owns the sentence-removal test, what to omit and include, and concrete-over-abstract guidance.
 
 </conciseness>
 

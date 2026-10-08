@@ -5,7 +5,7 @@
 - `<naming_and_description_rules>` — skill names and descriptions
 - `<structure_rules>` — XML structure, tags, and the auditor skeleton
 - `<disclosure_rules>` — line limits, the eager payload, and reference files
-- `<organization_rules>` — composition, caller independence, skill types, and conciseness
+- `<organization_rules>` — composition, caller independence, skill types, and standards extraction
 - `<command_capability_rules>` — arguments, dynamic context, tool grants, and file references
 - `<platform_and_script_rules>` — code fences and bundled scripts
 - `<harness_rules>` — rules only this harness's standards state
@@ -97,8 +97,6 @@ Every rule `SKILL.md` and its references state carries exactly one row below: on
 | `skill_type_sections`          | debt     | A skill carries the key sections its skill type requires.                                                                         | `SKILL.md` `<skill_types>`                              |
 | `partial_standards_extraction` | debt     | Standards a creator and an auditor share live in a reference skill, never in one skill's `references/`.                           | `SKILL.md` `<reference_skills>`                         |
 | `duplicated_standards`         | debt     | One home holds each standard; no skill restates another skill's rules.                                                            | `SKILL.md` `<reference_skills>`                         |
-| `known_content`                | debt     | A skill omits knowledge the executing harness already has.                                                                        | `SKILL.md` `<conciseness>`                              |
-| `abstract_guidance`            | debt     | Guidance states concrete commands and thresholds rather than abstractions.                                                        | `SKILL.md` `<conciseness>`                              |
 
 </organization_rules>
 
@@ -141,8 +139,6 @@ Every rule `SKILL.md` and its references state carries exactly one row below: on
 | `description_listing_cap`                  | debt     | `description` with `when_to_use` stays within the listing cap, key trigger first.                                                                                                    | `SKILL.md` `<frontmatter>`                                           |
 | `disable_model_invocation_on_loaded_skill` | blocking | A skill another skill or a subagent loads never sets `disable-model-invocation: true`.                                                                                               | `SKILL.md` `<frontmatter>`, `<descriptions>`                         |
 | `automation_target_not_user_invocable`     | blocking | A skill an automation loop re-enters stays user-invocable.                                                                                                                           | `SKILL.md` `<frontmatter>`                                           |
-| `redundant_never_clause`                   | debt     | A description carries a NEVER clause only where it disambiguates.                                                                                                                    | `SKILL.md` `<descriptions>`                                          |
-| `artifact_language_order`                  | debt     | A description names the artifact before the language.                                                                                                                                | `SKILL.md` `<descriptions>`                                          |
 | `audit_description_routing`                | debt     | An audit skill's description states its subject, judgment, and criteria, and no routing, dispatch, preload, agent, or execution-context statement.                                   | `SKILL.md` `<descriptions>`                                          |
 | `reference_toc_missing`                    | debt     | A reference file over 100 lines opens with a table of contents.                                                                                                                      | `SKILL.md` `<progressive_disclosure>`                                |
 | `backslash_path`                           | debt     | Every path uses forward slashes.                                                                                                                                                     | `SKILL.md` `<progressive_disclosure>`                                |
