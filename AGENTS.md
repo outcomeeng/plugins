@@ -162,7 +162,7 @@ DENY   git stash clear
 
 ## No File Removal
 
-**NEVER** run `rm`, `rm -f`, `rmdir`, `unlink`, or any other command that deletes a file, including a scratch file, a file under `$TMPDIR`, and the session scratchpad. Write each command without a cleanup step. Git cleanup that a governing skill flow runs, such as the `/merge` flow's branch cleanup, a tracked file that a governing skill flow removes through Git, such as `/refactor`'s `git rm -r` of a consolidated node, a file removal that a skill's bundled script performs, and a removal that a command the repository's own instructions declare performs, such as its clean target, stay outside this rule.
+**NEVER** run `rm`, `rm -f`, `rmdir`, `unlink`, or any other command that deletes a file, including a scratch file, a file under `$TMPDIR`, and the session scratchpad. Write each command without a cleanup step. Git cleanup that a governing skill flow runs, such as the `/merge` flow's branch cleanup, a tracked file that a governing skill flow removes through Git, such as `/refactor`'s `git rm -r` of a consolidated node, a file removal that a skill's bundled script performs, and a removal that a command the repository's own instructions declare performs, such as its clean target, stay outside this rule. A file a task needs gone, outside those removals, goes to the user's trash through the trash command the host supplies, such as `trash` on macOS, where the operator can restore it. Where the host supplies none, leave the file in place and report it to the operator. Scratch files stay in place.
 
 ## Autonomy Boundary
 
