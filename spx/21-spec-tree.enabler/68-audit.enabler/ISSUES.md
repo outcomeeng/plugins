@@ -365,7 +365,7 @@ The audit side of the divergence between `spec-tree:implementation-auditor` run 
 
 - `<failure_modes>` loads the failure reference only after a failure, so the preventive records (`finding_before_standards`, `transcribed_inventory`, `coverage_stated_as_findings`) reach Claude too late (`failure-modes-load-trigger`).
 - `allowed-tools` grants `Bash(spx verification run:*)`, which covers the state-changing `start`, `scope add`, `finding add` and `finish` subcommands, while `/skill-standards` limits audit skills to read-only Bash verbs; the skill never says why persisting the verdict is the audit's output and not a modification (`audit-read-only-allowed-tools`).
-- The skill composes a concern skill whose name it reads from the registry selection at run time, while `/skill-standards` requires a parent to name the exact installed skill it composes; the `concern` contract filter contains the dispatch and the skill states the exception (`skill-tool-composition`).
+- The skill composes a concern skill whose name it reads from the registry selection at run time, while `/skill-standards` requires a parent to name the exact installed skill it composes; the `concern` contract filter contains the dispatch and the skill states the exception (`skill-tool-composition`). The typed skill audit run `2026-10-08_04-58-52-337-9d7f2e94ea2f` on the repaired changeset raised the same conflict as one `blocking` finding (`skill-composition-exact-name`): registry selection is this Change's design, so the skill reads the name to compose at run time and cannot name it in advance, and the standard grants no exception for that.
 - `resolve_scope.py` builds paths into the `scope-changeset` and `select-artifacts` provider skills, which `/skill-standards` command-capabilities reads as a cross-skill file reference, while [`spx/13-plugin-and-runtime-conventions.adr.md`](spx/13-plugin-and-runtime-conventions.adr.md) decides that a consumer script reaches a provider by a `__file__`-relative import (`cross-skill-file-reference`).
 
 **Impact.** Each audit of the skill raises these warnings again, and the last two record conflicts between the skill standard and the decision.
@@ -387,3 +387,19 @@ The audit side of the divergence between `spec-tree:implementation-auditor` run 
 **Impact.** The unit key and the producer shape of that record rest on the skill text and the payload builder alone.
 
 **Settlement condition.** A scenario of this node records the accounting unit for a path the registry selects an artifact-type audit skill for, and asserts the sealed projection carries that kind in the unit key and that skill as its expected producer.
+
+## The verdict format lists three BLOCKED causes while stage 7 routes a fourth
+
+**Evidence.** `instructions:skill-auditor` run `2026-10-08_04-58-52-337-9d7f2e94ea2f` reported, as `debt` (`internal-consistency`) on text the registry-selection changeset left alone, that `<verdict_format>` in `src/plugins/spec-tree/skills/audit-implementation/SKILL.md` returns `BLOCKED` for three causes — target preparation fails, SPX rejects a command, a required unit cannot reach a final status — while stage 7 returns the blocked diagnostic for a reconciler exit 1 that names drifted, unexpected, or nonfinal subjects. The reconciler writes that verdict to stdout, so the diagnostic template's `payloadSource`, `exitCode`, and `stderr` fields have no stated values for the case.
+
+**Impact.** A run driver that reaches stage 7 with a drifted inventory must choose values for fields the skill leaves undefined.
+
+**Settlement condition.** `<verdict_format>` lists every cause the workflow routes to `BLOCKED`, including reconciler drift, and states the diagnostic field values for each.
+
+## The provenance fields name no source for the plugin and tool versions
+
+**Evidence.** The same run reported, as `debt` (`ambiguous-instruction`), that `<verification_run_contract>` requires `producerProvenance` values for the spec-tree plugin version, the selected audit skill's plugin version, and the spx version, while no step names how each is obtained and `allowed-tools` grants no command that reads them. The cited text predates the registry-selection changeset; the entry above on the run driver's inconsistent plugin version records the same absent source.
+
+**Impact.** Every run driver improvises the version values, which is how two sealed runs minutes apart carry different plugin versions.
+
+**Settlement condition.** Each required provenance value has a named executable source the skill grants, or the field is omitted where no source exists.
