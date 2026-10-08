@@ -5,15 +5,15 @@ This file is loaded by `/commit-changes` in this repository.
 ## Plugin versions
 
 The commit workflow never runs a plugin version bump and never asks for one.
-Commits before pull-request opening preserve the unbumped source manifests;
-generated plugin trees still follow the source through `just build-skills`.
+Commits before the merge-time version step preserve the unbumped source
+manifests; generated plugin trees still follow the source through
+`just build-skills`.
 
-`spx/local/open-pr.md` owns the bump policy, its final pre-opening commit,
-and the opening check against the current base. `spx/local/merging.md`
-declares follow-up version finalization after a later rebase by reference
-to that policy.
-When that protocol supplies changed manifests and generated output,
+`spx/local/open-pr.md` owns the bump policy. `spx/local/merging.md` runs
+`just bump` as the merge-time step, after base synchronization and once review
+and checks are green on the final content, and repeats it after a later rebase.
+When that step supplies changed manifests and generated output,
 `/commit-changes` commits the supplied files without initiating another bump.
 
 Never hand-edit a manifest `version` field. Version writes belong to the
-opening protocol's `just bump` operation.
+merge-time step's `just bump` operation.
