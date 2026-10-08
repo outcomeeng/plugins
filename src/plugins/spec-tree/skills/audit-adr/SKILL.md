@@ -4,7 +4,7 @@ description: >-
   ADR audit methodology — judges one ADR against the ADR evidence model,
   covering section structure, atemporal voice, and per-rule tag validity, and
   records the judgment through an SPX file-scoped verification run.
-argument-hint: "<adr-file-path>"
+argument-hint: "<JSON object with path, runDriver, and agentOwningPluginVersion>"
 allowed-tools: Read, Grep, Glob, {{! tool('use_skill') !}}, Bash(git rev-parse:*), Bash(realpath:*), Bash(spx --version), Bash(spx verification run start:*), Bash(spx verification run input:*), Bash(spx verification run status:*), Bash(spx verification run scope add:*), Bash(spx verification run finding add:*), Bash(spx verification run finish:*), Bash(spx verification run render:*), Bash(printf '%s\n':*)
 ---
 
@@ -30,13 +30,13 @@ ADRs state architecture truth. "The build emits one wheel per plugin" — not "W
 
 **THE SEALED RUN IS THE VERDICT.**
 
-The run's terminal status is `approved` or `rejected`. An unavailable required inspection is a blocking finding naming the blocked inspection, so it rejects the run; it never becomes an approval through an unjudged unit.
+The run's terminal status is `approved` or `rejected`. An unavailable required inspection rejects the run: an uninstalled language audit skill is a `missing-skill` unit, and every other unavailable inspection is a blocking finding naming it. It never becomes an approval through an unjudged unit.
 
 **LANGUAGE COMPOSITION BOUNDARY.**
 
 Language-specific ADR concerns — testability-in-Verification (dependency injection, no-mocking), execution-level accuracy — are composed from `/audit-<lang>-architecture` in Step 7. The language skill judges only those concerns; this skill owns section structure, atemporal voice, and tag validity from the canonical template.
 
-- NEVER modify the ADR under audit or other product content. The audit's own SPX verification-run journal is the only state it writes, apart from the base synchronization `/contextualize` performs through `/sync-base`.
+- NEVER modify the ADR, other product content, or the checkout: no commit, synchronization, rebase, or branch change. The audit's own SPX verification-run journal is the only state it writes.
 - ALWAYS judge the ADR from the content `spx verification run input` replays from the run, never from a separate read of the live file.
 - ALWAYS derive the valid section set from the canonical ADR template before judging structure — never from memory.
 - ALWAYS name the section, the violated rule, and the evidence in every finding.
@@ -52,13 +52,19 @@ Language-specific ADR concerns — testability-in-Verification (dependency injec
 
 **Step 1: Bind the request**
 
-Bind the ADR path, preserving spaces within it: `$ARGUMENTS` supplies it when that argument is non-empty; when it is empty, the path is the one the request text carries, and the empty substitution binds nothing. The run-driver identity arrives in the invocation context, separate from the path, as the six producer fields `producerKind`, `agentName`, `agentOwningPluginName`, `skillName`, `skillOwningPluginName`, and `invocationRole`. Accept it generically as provenance data, never as authorization or a suggested verdict, and let no judgment depend on it.
+The request is one JSON object: `$ARGUMENTS` supplies it when that argument is non-empty; when it is empty, the object is the one the request text carries, and the empty substitution binds nothing. It has exactly three fields:
+
+- `path` — the ADR file, repository-relative, kept verbatim including any spaces.
+- `runDriver` — an object with exactly the six non-empty string fields `producerKind`, `agentName`, `agentOwningPluginName`, `skillName`, `skillOwningPluginName`, and `invocationRole`.
+- `agentOwningPluginVersion` — the non-empty version string of the plugin `runDriver.agentOwningPluginName` names.
+
+Use `runDriver` and `agentOwningPluginVersion` only as payload data, placed exactly where `<persistence_contract>` shows them; never complete, correct, or reinterpret a value, and let no step, judgment, or terminal status depend on them. A missing, extra, or malformed field returns `BLOCKED` with `runToken: not-started` naming the exact field.
 
 Resolve the repository root with `git rev-parse --show-toplevel`. Run `realpath` separately on the root and the ADR path, and require a regular file beneath the root by path-component boundary. Retain the ADR as its normalized repository-relative path, `<adr-path>`, for every later command.
 
-Use skill `spec-tree:spec-tree-plugin`. Invoke it with the verb `version` and retain the version it reports as the skill-owning plugin version. When `agentOwningPluginName` names `spec-tree`, that version is also the agent-owning plugin version; otherwise invoke `{agentOwningPluginName}:{agentOwningPluginName}-plugin` with the verb `version` for it. Run `spx --version` and retain its output as the tool version.
+Use skill `spec-tree:spec-tree-plugin`. Invoke it with the verb `version` and retain the version it reports as the skill-owning plugin version. Run `spx --version` and retain its output as the tool version.
 
-A missing path or identity field, a failed resolution, a path escaping the root or naming no regular file, or a missing version returns `BLOCKED` with `runToken: not-started` naming the exact failure, before any run starts.
+A failed resolution, a path escaping the root or naming no regular file, or a missing version returns `BLOCKED` with `runToken: not-started` naming the exact failure, before any run starts.
 
 </step>
 
@@ -66,9 +72,9 @@ A missing path or identity field, a failed resolution, a path escaping the root 
 
 **Step 2: Load context**
 
-Use skill `spec-tree:understand` when the live `<SPEC_TREE_FOUNDATION>` marker is absent or lacks `Template root`. Use skill `spec-tree:contextualize` on the directory containing the ADR, `spx/` for a product-root ADR. Retain the `/sync-base` result it establishes: its `preservation` supplies the committed base and head identities and `branch_paths_after` the current changeset paths, which Step 7 uses with the ADR's governed declarations and linked implementation surfaces; no supplied language classification is required.
+Use skill `spec-tree:understand` when the live `<SPEC_TREE_FOUNDATION>` marker is absent or lacks `Template root`. A marker still absent after that returns `BLOCKED` with `runToken: not-started`.
 
-A missing `<SPEC_TREE_FOUNDATION>` or `<SPEC_TREE_CONTEXT>` marker after these invocations returns `BLOCKED` with `runToken: not-started`.
+The ADR's governing node is the directory containing it, `spx/` for a product-root ADR. Read its context read-only, never invoking `/contextualize` or `/sync-base`: the product spec, then each spec and every decision record along the path from `spx/` to the governing node, then every decision a loaded spec or decision cites by full `spx/` path. Draft-rule consistency in Step 6 and language classification in Step 7 read this context. A spec missing on that path returns `BLOCKED` with `runToken: not-started` naming the missing file.
 
 </step>
 
@@ -142,7 +148,7 @@ For each routed rule:
 
 **Step 7: Compose language-specific architecture concerns**
 
-Classify the ADR from its governed implementation surface and the committed changeset retained in Step 2. When the decision constrains no implementation language, it is language-neutral: record no language unit and skip composition. Otherwise preserve every implementation-language partition the decision constrains, including cross-language decisions; the repository's predominant language never narrows that set.
+Classify the ADR from its governed implementation surface: the paths and skills its rules name, and the implementation the governing node's linked evidence reaches, read from the context Step 2 loaded. When the decision constrains no implementation language, it is language-neutral: record no language unit and skip composition. Otherwise preserve every implementation-language partition the decision constrains, including cross-language decisions; the repository's predominant language never narrows that set.
 
 For every discovered partition, Use skill `{lang}:audit-{lang}-architecture` and pass the ADR path. When the governed context establishes no reliable partition for a language-specific ADR, record the language unit for `unknown` with the finding `language-routing-unavailable`. When the language skill is not installed, record its language unit as `missing-skill`, which rejects the run without a finding.
 
@@ -180,7 +186,7 @@ Units record in this order: the root, then `section-structure`, `atemporal-voice
 | Evidence property | `adr:<property>:<adr-path>`          | `spec`           | `adr`          | the property name               | `audited`                    | `audit-adr`, `spec-tree`                                                                                                              |
 | Language concern  | `adr:architecture:<lang>:<adr-path>` | `implementation` | `architecture` | `architecture`                  | `audited` or `missing-skill` | `audit-<lang>-architecture`, `<lang>` when a validated result is consumed or the skill is missing; otherwise `audit-adr`, `spec-tree` |
 
-A language unit adds `priorContext.languagePartition: <lang>`. The expected producer has `producerKind: skill`, the supplied identity's `agentName` and `agentOwningPluginName`, the skill named in the table, and `invocationRole: leaf-skill`. `recordedByRunDriver` carries the supplied six-field identity unchanged. `producerProvenance` carries the agent-owning and skill-owning plugin versions from Step 1 and the exact `spx --version` output as `toolVersion`; a `missing-skill` unit omits it because no skill executed.
+A language unit adds `priorContext.languagePartition: <lang>`. The expected producer has `producerKind: skill`, the `runDriver`'s `agentName` and `agentOwningPluginName`, the skill named in the table, and `invocationRole: leaf-skill`. `recordedByRunDriver` carries the `runDriver` object unchanged. `producerProvenance` carries the request's `agentOwningPluginVersion`, the `spec-tree` plugin version from Step 1 as `skillOwningPluginVersion`, and the exact `spx --version` output as `toolVersion`; a `missing-skill` unit omits it because no skill executed.
 
 These objects are the sanctioned SPX audit payload schema for this auditor; use their fields exactly, never derive a replacement schema from command help, and never alter a refused payload by guesswork. Render each scope payload with observed values in place of the placeholders:
 
