@@ -5,6 +5,7 @@ import pytest
 from outcomeeng.distribution.artifact_registry import (
     ARTIFACT_KINDS,
     ArtifactKind,
+    ArtifactRole,
     artifact_registry_document,
 )
 from outcomeeng.distribution.contracts import Target
@@ -16,6 +17,7 @@ from outcomeeng_testing.generators.artifact_registry import (
     unregistered_paths,
 )
 from outcomeeng_testing.harnesses.artifact_registry import (
+    instruction_block_language_by_extension,
     kind_entries,
     load_select_artifacts_module,
     rendered_registry_document,
@@ -77,3 +79,31 @@ def test_a_path_matching_two_artifacts_of_one_kind_selects_the_most_specific(
 @pytest.mark.parametrize("path", unregistered_paths())
 def test_a_path_matching_no_registered_artifact_selects_nothing(path: str) -> None:
     assert _selected(path) == []
+
+
+def _implementation_pairs() -> tuple[tuple[str, str], ...]:
+    """Derive the (extension, language) pairs the registry's code kinds declare."""
+    return tuple(
+        (extension, kind.name)
+        for kind in ARTIFACT_KINDS
+        for artifact in kind.artifacts
+        if artifact.role == ArtifactRole.IMPLEMENTATION
+        and artifact.detection is not None
+        for extension in artifact.detection.extensions
+    )
+
+
+@pytest.mark.parametrize(("extension", "language"), _implementation_pairs())
+def test_each_registered_code_extension_names_the_language_the_instruction_block_renders(
+    extension: str, language: str
+) -> None:
+    assert instruction_block_language_by_extension().get(extension) == language
+
+
+@pytest.mark.parametrize(
+    ("extension", "language"), sorted(instruction_block_language_by_extension().items())
+)
+def test_each_instruction_block_extension_is_a_pair_the_registry_declares(
+    extension: str, language: str
+) -> None:
+    assert (extension, language) in _implementation_pairs()

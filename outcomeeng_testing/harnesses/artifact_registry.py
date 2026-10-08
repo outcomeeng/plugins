@@ -37,6 +37,7 @@ from outcomeeng.validation.audit_artifacts import (
 )
 from outcomeeng.validation.plugins import main
 from outcomeeng_testing.harnesses.dist_tree import DistTreeReader
+from outcomeeng_testing.harnesses.instruction_block import load_instruction_block_module
 from outcomeeng_testing.harnesses.plugin_manifest import RecordingValidationRunner
 
 # ``parents[2]`` reaches the repository root from
@@ -87,6 +88,11 @@ def load_select_artifacts_module() -> ModuleType:
         / ARTIFACT_REGISTRY_PROVIDER.script_relative_path
     )
     return load_shipped_module("select_artifacts", path)
+
+
+def instruction_block_language_by_extension() -> Mapping[str, str]:
+    """Observe the extension-to-language pairs the instruction block renders sections for."""
+    return dict(load_instruction_block_module().LANGUAGE_BY_EXTENSION)
 
 
 def kind_entries(document: Mapping[str, object]) -> Mapping[str, object]:
