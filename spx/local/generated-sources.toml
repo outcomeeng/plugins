@@ -20,6 +20,7 @@ sources = [
   "src/templates/**",
   "dprint.jsonc",
   "outcomeeng/validation/spx_version.py",
+  "outcomeeng/distribution/artifact_registry.py",
 ]
 generator = ["outcomeeng/distribution/**"]
 regenerate = "just build-skills"

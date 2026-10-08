@@ -10,12 +10,17 @@ an optional unit carrying the same status, exact inventory agreement, drift in
 both directions, a recorded subject outside the inventory, a missing-skill unit
 naming its absent skill, an advisory live path beside the committed inventory, a reconcile request carrying no sealed
 scope identity, a run token the CLI cannot read, a CLI that cannot be launched,
-a run document shaped so the comparison cannot run, and a head behind the
-fetched base relayed as the stale-base refusal).
+a run document shaped so the comparison cannot run, a head behind the
+fetched base relayed as the stale-base refusal, and the registry selection
+emitted per resolved path), and by the artifact-registry node's
+``test_artifact_registry.mapping.l1.py`` (one path per registered artifact
+selecting it and its kind's detection-less artifacts, the most specific of two
+matches, and an unregistered path selecting nothing).
 
-The provider is reached by the installed tree's `__file__`-relative layout,
-the plugin build's contract for logic one provider skill owns and several
-consumers execute.
+The changeset-scope and select-artifacts providers are reached by the
+installed tree's `__file__`-relative layout, the plugin build's contract for
+logic one provider skill owns and several consumers execute; this script
+carries no registry reader or field vocabulary of its own.
 """
 
 from __future__ import annotations
@@ -33,7 +38,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     # The provider skill publishes the process-boundary Protocol every consumer
-    # accepts; `_provider()` loads the same module by path at run time.
+    # accepts; `_scope_provider()` loads the same module by path at run time.
     from changeset_scope import Runner
 
 ERROR_PREFIX = "error: implementation scope resolution failed"
@@ -59,6 +64,9 @@ MISSING_SKILL_STATUS = "missing-skill"
 FINAL_COVERAGE_STATUSES = frozenset(
     {"audited", "not-applicable", MISSING_SKILL_STATUS, "unsupported"}
 )
+# The run input carries the select-artifacts provider's selection for every
+# resolved path, and for every live path an advisory audit adds, under this key.
+SELECTION_KEY = "artifact_selection"
 
 
 class AuditField(StrEnum):
@@ -84,15 +92,16 @@ class ReconcileField(StrEnum):
     RECONCILED = "reconciled"
 
 
-def _provider() -> ModuleType:
-    cached = sys.modules.get("changeset_scope")
+def _sibling_provider(skill: str, module_name: str) -> ModuleType:
+    """Load a sibling provider skill's script by the installed tree's layout."""
+    cached = sys.modules.get(module_name)
     if cached is not None:
         return cached
     skills = pathlib.Path(__file__).resolve().parents[2]
-    path = skills / "scope-changeset" / "scripts" / "changeset_scope.py"
-    spec = importlib.util.spec_from_file_location("changeset_scope", path)
+    path = skills / skill / "scripts" / f"{module_name}.py"
+    spec = importlib.util.spec_from_file_location(module_name, path)
     if spec is None or spec.loader is None:
-        raise ImportError(f"cannot load changeset_scope from {path}")
+        raise ImportError(f"cannot load {module_name} from {path}")
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
     try:
@@ -102,6 +111,14 @@ def _provider() -> ModuleType:
         del sys.modules[spec.name]
         raise
     return module
+
+
+def _scope_provider() -> ModuleType:
+    return _sibling_provider("scope-changeset", "changeset_scope")
+
+
+def _selection_provider() -> ModuleType:
+    return _sibling_provider("select-artifacts", "select_artifacts")
 
 
 def read_run_document(
@@ -251,7 +268,7 @@ def main(argv: list[str] | None = None, runner: Runner = subprocess.run) -> int:
         )
         return EXIT_COMMAND_FAILURE
     try:
-        scope = _provider()
+        scope = _scope_provider()
     except (ImportError, OSError) as exc:
         print(f"{ERROR_PREFIX}: {exc}", file=sys.stderr)
         return EXIT_COMMAND_FAILURE
@@ -278,6 +295,24 @@ def main(argv: list[str] | None = None, runner: Runner = subprocess.run) -> int:
                 file=sys.stderr,
             )
             return EXIT_COMMAND_FAILURE
+    # The selection is set after the merge, so no run-input key displaces it.
+    try:
+        selection = _selection_provider()
+        registry = selection.load_artifact_registry()
+    except (ImportError, OSError, ValueError) as exc:
+        print(f"{ERROR_PREFIX}: {exc}", file=sys.stderr)
+        return EXIT_COMMAND_FAILURE
+    changed = resolved[scope.ScopeField.CHANGED_PATHS]
+    live = resolved.get(LIVE_PATHS_KEY) or []
+    if not isinstance(live, list) or not all(isinstance(p, str) for p in live):
+        print(
+            f"{ERROR_PREFIX}: {LIVE_PATHS_KEY} must be a list of path strings",
+            file=sys.stderr,
+        )
+        return EXIT_COMMAND_FAILURE
+    resolved[SELECTION_KEY] = selection.selection_for_paths(
+        [*changed, *(path for path in live if path not in changed)], registry
+    )
     print(json.dumps(resolved, sort_keys=True))
     return 0
 

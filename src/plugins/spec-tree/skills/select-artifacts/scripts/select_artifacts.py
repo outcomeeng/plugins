@@ -1,0 +1,193 @@
+"""Select the registered artifacts a changed path names, from the rendered registry.
+
+The artifact registry the build renders beside this script declares every
+artifact kind the marketplace ships, the artifacts each kind produces, the
+features that detect each artifact in a path, and the skills that govern it.
+This module is the one reader of that document, importable through a
+``__file__``-relative path.
+
+Tested before this script is bundled: the rendered data file equals the
+declaration and each shipped copy equals a fresh render; one path per
+registered artifact selects it and its kind's detection-less artifacts; the
+most specific of two matches wins; every unregistered path selects nothing;
+and the selection is emitted for every resolved path of a changeset.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import pathlib
+import sys
+from collections.abc import Mapping, Sequence
+from enum import StrEnum
+from pathlib import PurePosixPath
+
+ARTIFACT_REGISTRY_FILENAME = "artifact-registry.json"
+ERROR_PREFIX = "error: artifact selection failed"
+REPAIR_HINT = (
+    "reinstall or update the spec-tree plugin so the rendered registry ships "
+    "beside this script"
+)
+EXIT_COMMAND_FAILURE = 2
+
+
+class RegistryField(StrEnum):
+    """Fields of the rendered artifact registry."""
+
+    KINDS = "kinds"
+    NAME = "name"
+    PLUGIN = "plugin"
+    ARTIFACTS = "artifacts"
+    ROLE = "role"
+    DETECTION = "detection"
+    EXTENSIONS = "extensions"
+    PATH_GLOBS = "path_globs"
+    FILENAMES = "filenames"
+    AUDIT = "audit"
+    CONTRACT = "contract"
+
+
+class SelectionField(StrEnum):
+    """Fields of the per-path selection this module emits."""
+
+    PATH = "path"
+    ARTIFACTS = "artifacts"
+    KIND = "kind"
+    ROLE = "role"
+    PLUGIN = "plugin"
+    AUDIT = "audit"
+    CONTRACT = "contract"
+
+
+def load_artifact_registry() -> Mapping[str, object]:
+    """Read the rendered artifact registry beside this script."""
+    path = pathlib.Path(__file__).resolve().parent / ARTIFACT_REGISTRY_FILENAME
+    try:
+        with path.open(encoding="utf-8") as handle:
+            registry = json.load(handle)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"{path} is not a rendered artifact registry: {exc}") from exc
+    if not isinstance(registry, dict):
+        raise ValueError(
+            f"{path} is not a rendered artifact registry: "
+            f"the top-level document is {type(registry).__name__}, not an object"
+        )
+    if not isinstance(registry.get(RegistryField.KINDS), list):
+        raise ValueError(
+            f"{path} is not a rendered artifact registry: "
+            f"the {RegistryField.KINDS.value!r} field is absent or not a list"
+        )
+    return registry
+
+
+def _strings(record: Mapping[str, object], field: str) -> tuple[str, ...]:
+    """Return the string list ``record`` carries under ``field``, or nothing."""
+    values = record.get(field)
+    return tuple(str(v) for v in values) if isinstance(values, list) else ()
+
+
+def _records(record: Mapping[str, object], field: str) -> list[Mapping[str, object]]:
+    """Return the object list ``record`` carries under ``field``, or nothing."""
+    values = record.get(field)
+    return (
+        [v for v in values if isinstance(v, dict)] if isinstance(values, list) else []
+    )
+
+
+def _detection(artifact: Mapping[str, object]) -> Mapping[str, object] | None:
+    """Return the artifact's detection record, or ``None`` for a kind-selected artifact."""
+    detection = artifact.get(RegistryField.DETECTION)
+    return detection if isinstance(detection, dict) else None
+
+
+def _detection_matches(path: str, detection: Mapping[str, object]) -> bool:
+    """Return whether ``path`` carries a declared extension or filename under every glob."""
+    posix = PurePosixPath(path)
+    if posix.suffix.lstrip(".") not in _strings(
+        detection, RegistryField.EXTENSIONS
+    ) and posix.name not in _strings(detection, RegistryField.FILENAMES):
+        return False
+    return all(
+        posix.full_match(glob) for glob in _strings(detection, RegistryField.PATH_GLOBS)
+    )
+
+
+def _specificity(detection: Mapping[str, object]) -> int:
+    """Rank a matched detection: every path glob it carries makes it more specific."""
+    return len(_strings(detection, RegistryField.PATH_GLOBS))
+
+
+def _optional_text(value: object) -> str | None:
+    """Return ``value`` as text, or ``None`` when the registry declares none."""
+    return None if value is None else str(value)
+
+
+def select_artifacts(
+    path: str, registry: Mapping[str, object]
+) -> list[dict[str, str | None]]:
+    """Return the registered artifacts ``path`` selects, in kind declaration order.
+
+    Within one kind the most specific matching detection wins, and of two
+    matches of equal specificity the earlier-declared artifact wins; a kind
+    with a match then selects each of its detection-less artifacts in
+    declaration order. A path matching no detection selects nothing.
+    """
+    selection: list[dict[str, str | None]] = []
+    for kind in _records(registry, RegistryField.KINDS):
+        artifacts = _records(kind, RegistryField.ARTIFACTS)
+        matched = [
+            (detection, artifact)
+            for artifact in artifacts
+            if (detection := _detection(artifact)) is not None
+            and _detection_matches(path, detection)
+        ]
+        if not matched:
+            continue
+        # ``max`` keeps the first of equally specific matches, so a tie
+        # resolves to declaration order.
+        winner = max(matched, key=lambda match: _specificity(match[0]))[1]
+        selected = [winner, *(a for a in artifacts if _detection(a) is None)]
+        selection.extend(
+            {
+                SelectionField.KIND: str(kind.get(RegistryField.NAME)),
+                SelectionField.ROLE: str(artifact.get(RegistryField.ROLE)),
+                SelectionField.PLUGIN: str(kind.get(RegistryField.PLUGIN)),
+                SelectionField.AUDIT: _optional_text(artifact.get(RegistryField.AUDIT)),
+                SelectionField.CONTRACT: str(artifact.get(RegistryField.CONTRACT)),
+            }
+            for artifact in selected
+        )
+    return selection
+
+
+def selection_for_paths(
+    paths: Sequence[str], registry: Mapping[str, object]
+) -> list[dict[str, object]]:
+    """Return one selection record per path, in the supplied order."""
+    return [
+        {
+            SelectionField.PATH: path,
+            SelectionField.ARTIFACTS: select_artifacts(path, registry),
+        }
+        for path in paths
+    ]
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "paths", nargs="+", help="repository-relative paths to select for"
+    )
+    args = parser.parse_args(argv)
+    try:
+        registry = load_artifact_registry()
+    except (OSError, ValueError) as exc:
+        print(f"{ERROR_PREFIX}: {exc}; {REPAIR_HINT}", file=sys.stderr)
+        return EXIT_COMMAND_FAILURE
+    print(json.dumps(selection_for_paths(args.paths, registry), sort_keys=True))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

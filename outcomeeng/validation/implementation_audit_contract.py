@@ -201,26 +201,38 @@ ACCOUNTING_RECORD_KIND: Final = "coverage-gap"
 UNKNOWN_LANGUAGE_SEGMENT: Final = "unknown"
 
 
-def implementation_audit_accounting_unit_id(*, subject_path: str) -> str:
-    """Return the stable identity for one unclaimed path's accounting record."""
+def implementation_audit_accounting_unit_id(
+    *, subject_path: str, kind: str = UNKNOWN_LANGUAGE_SEGMENT
+) -> str:
+    """Return the stable identity for one unclaimed path's accounting record.
+
+    ``kind`` is the registered kind that selected an artifact-type audit skill
+    for the path, or the unknown literal when the registry selected nothing.
+    """
     return (
-        f"{IMPLEMENTATION_AUDIT_CLASS}:{UNKNOWN_LANGUAGE_SEGMENT}:"
-        f"{ACCOUNTING_RECORD_KIND}:{subject_path}"
+        f"{IMPLEMENTATION_AUDIT_CLASS}:{kind}:{ACCOUNTING_RECORD_KIND}:{subject_path}"
     )
 
 
-def implementation_audit_accounting_payload(*, subject_path: str) -> dict[str, object]:
+def implementation_audit_accounting_payload(
+    *,
+    subject_path: str,
+    kind: str = UNKNOWN_LANGUAGE_SEGMENT,
+    audit_skill: tuple[str, str] | None = None,
+) -> dict[str, object]:
     """Return the accounting record for a resolved path no language concern claimed.
 
     The record states that the path was considered and left to its
     artifact-type auditor: it claims no coverage, names no language, and never
-    rejects a run. No leaf skill is expected to cover it, so the run driver's
-    own identity stands as its expected producer, and no provenance is recorded.
+    rejects a run. No leaf skill executed, so no provenance is recorded. The run
+    driver's own identity stands as its expected producer unless the registry
+    selected an artifact-type audit skill ``(plugin, skill)`` for the path, in
+    which case that skill is the expected producer.
     """
     subject_path = _require_subject_path(subject_path)
     return {
         ScopeUnitField.UNIT_ID: implementation_audit_accounting_unit_id(
-            subject_path=subject_path
+            subject_path=subject_path, kind=kind
         ),
         ScopeUnitField.AUDIT_CLASS: IMPLEMENTATION_AUDIT_CLASS,
         ScopeUnitField.AUDIT_KIND: ACCOUNTING_RECORD_KIND,
@@ -231,8 +243,24 @@ def implementation_audit_accounting_payload(*, subject_path: str) -> dict[str, o
             PriorContextField.CHANGED_FILE_PARTITION: subject_path,
             PriorContextField.CONCERN_PARTITION: ACCOUNTING_RECORD_KIND,
         },
-        ScopeUnitField.EXPECTED_PRODUCER: implementation_audit_run_driver_identity(),
+        ScopeUnitField.EXPECTED_PRODUCER: _accounting_expected_producer(audit_skill),
         ScopeUnitField.RECORDED_BY_RUN_DRIVER: implementation_audit_run_driver_identity(),
+    }
+
+
+def _accounting_expected_producer(
+    audit_skill: tuple[str, str] | None,
+) -> dict[str, object]:
+    run_driver = implementation_audit_run_driver_identity()
+    if audit_skill is None:
+        return run_driver
+    plugin, skill = audit_skill
+    return {
+        **run_driver,
+        "producerKind": "skill",
+        "skillName": skill,
+        "skillOwningPluginName": plugin,
+        "invocationRole": "leaf-skill",
     }
 
 

@@ -1,0 +1,326 @@
+{
+  "kinds": [
+    {
+      "name": "python",
+      "plugin": "python",
+      "artifacts": [
+        {
+          "role": "implementation",
+          "detection": {
+            "extensions": [
+              "py"
+            ],
+            "path_globs": [],
+            "filenames": []
+          },
+          "author": "code-python",
+          "audit": "audit-python-code",
+          "standard": "python-standards",
+          "contract": "concern"
+        },
+        {
+          "role": "tests",
+          "detection": {
+            "extensions": [
+              "py"
+            ],
+            "path_globs": [
+              "spx/**/tests/**"
+            ],
+            "filenames": []
+          },
+          "author": "test-python",
+          "audit": "audit-python-tests",
+          "standard": "python-test-standards",
+          "contract": "concern"
+        },
+        {
+          "role": "architecture",
+          "detection": null,
+          "author": "architect-python",
+          "audit": "audit-python-architecture",
+          "standard": "python-architecture-standards",
+          "contract": "concern"
+        }
+      ]
+    },
+    {
+      "name": "typescript",
+      "plugin": "typescript",
+      "artifacts": [
+        {
+          "role": "implementation",
+          "detection": {
+            "extensions": [
+              "ts"
+            ],
+            "path_globs": [],
+            "filenames": []
+          },
+          "author": "code-typescript",
+          "audit": "audit-typescript-code",
+          "standard": "typescript-standards",
+          "contract": "concern"
+        },
+        {
+          "role": "tests",
+          "detection": {
+            "extensions": [
+              "ts"
+            ],
+            "path_globs": [
+              "spx/**/tests/**"
+            ],
+            "filenames": []
+          },
+          "author": "test-typescript",
+          "audit": "audit-typescript-tests",
+          "standard": "typescript-test-standards",
+          "contract": "concern"
+        },
+        {
+          "role": "architecture",
+          "detection": null,
+          "author": "architect-typescript",
+          "audit": "audit-typescript-architecture",
+          "standard": "typescript-architecture-standards",
+          "contract": "concern"
+        }
+      ]
+    },
+    {
+      "name": "rust",
+      "plugin": "rust",
+      "artifacts": [
+        {
+          "role": "implementation",
+          "detection": {
+            "extensions": [
+              "rs"
+            ],
+            "path_globs": [],
+            "filenames": []
+          },
+          "author": "code-rust",
+          "audit": "audit-rust-code",
+          "standard": "rust-standards",
+          "contract": "concern"
+        },
+        {
+          "role": "tests",
+          "detection": {
+            "extensions": [
+              "rs"
+            ],
+            "path_globs": [
+              "spx/**/tests/**"
+            ],
+            "filenames": []
+          },
+          "author": "test-rust",
+          "audit": "audit-rust-tests",
+          "standard": "rust-test-standards",
+          "contract": "concern"
+        },
+        {
+          "role": "architecture",
+          "detection": null,
+          "author": "architect-rust",
+          "audit": "audit-rust-architecture",
+          "standard": "rust-architecture-standards",
+          "contract": "concern"
+        }
+      ]
+    },
+    {
+      "name": "go",
+      "plugin": "go",
+      "artifacts": [
+        {
+          "role": "implementation",
+          "detection": {
+            "extensions": [
+              "go"
+            ],
+            "path_globs": [],
+            "filenames": []
+          },
+          "author": "code-go",
+          "audit": "audit-go-code",
+          "standard": "go-standards",
+          "contract": "concern"
+        },
+        {
+          "role": "tests",
+          "detection": {
+            "extensions": [
+              "go"
+            ],
+            "path_globs": [
+              "spx/**/tests/**"
+            ],
+            "filenames": []
+          },
+          "author": "test-go",
+          "audit": "audit-go-tests",
+          "standard": "go-test-standards",
+          "contract": "concern"
+        },
+        {
+          "role": "architecture",
+          "detection": null,
+          "author": "architect-go",
+          "audit": "audit-go-architecture",
+          "standard": "go-architecture-standards",
+          "contract": "concern"
+        }
+      ]
+    },
+    {
+      "name": "decisions",
+      "plugin": "spec-tree",
+      "artifacts": [
+        {
+          "role": "adr",
+          "detection": {
+            "extensions": [
+              "md"
+            ],
+            "path_globs": [
+              "spx/**/*.adr.md"
+            ],
+            "filenames": []
+          },
+          "author": "author",
+          "audit": "audit-adr",
+          "standard": "understand",
+          "contract": "artifact-type"
+        },
+        {
+          "role": "pdr",
+          "detection": {
+            "extensions": [
+              "md"
+            ],
+            "path_globs": [
+              "spx/**/*.pdr.md"
+            ],
+            "filenames": []
+          },
+          "author": "author",
+          "audit": "audit-pdr",
+          "standard": "understand",
+          "contract": "artifact-type"
+        }
+      ]
+    },
+    {
+      "name": "specs",
+      "plugin": "spec-tree",
+      "artifacts": [
+        {
+          "role": "spec",
+          "detection": {
+            "extensions": [
+              "md"
+            ],
+            "path_globs": [
+              "spx/**/*.spec.md"
+            ],
+            "filenames": []
+          },
+          "author": "author",
+          "audit": "audit-specs",
+          "standard": "understand",
+          "contract": "artifact-type"
+        }
+      ]
+    },
+    {
+      "name": "skills",
+      "plugin": "instructions",
+      "artifacts": [
+        {
+          "role": "skill",
+          "detection": {
+            "extensions": [],
+            "path_globs": [],
+            "filenames": [
+              "SKILL.md"
+            ]
+          },
+          "author": "create-skill",
+          "audit": "audit-skill",
+          "standard": "skill-standards",
+          "contract": "artifact-type"
+        }
+      ]
+    },
+    {
+      "name": "subagents",
+      "plugin": "instructions",
+      "artifacts": [
+        {
+          "role": "subagent",
+          "detection": {
+            "extensions": [
+              "md"
+            ],
+            "path_globs": [
+              "**/agents/*.md"
+            ],
+            "filenames": []
+          },
+          "author": "create-subagent",
+          "audit": "audit-subagent",
+          "standard": "subagent-standards",
+          "contract": "artifact-type"
+        }
+      ]
+    },
+    {
+      "name": "prose",
+      "plugin": "prose",
+      "artifacts": [
+        {
+          "role": "prose",
+          "detection": {
+            "extensions": [
+              "md"
+            ],
+            "path_globs": [
+              "docs/**/*.md"
+            ],
+            "filenames": []
+          },
+          "author": "author-prose",
+          "audit": "audit-prose",
+          "standard": "prose-standards",
+          "contract": "artifact-type"
+        }
+      ]
+    },
+    {
+      "name": "changes",
+      "plugin": "spec-tree",
+      "artifacts": [
+        {
+          "role": "change",
+          "detection": {
+            "extensions": [
+              "md"
+            ],
+            "path_globs": [
+              "**/change-drafts/*.md"
+            ],
+            "filenames": []
+          },
+          "author": "author-change",
+          "audit": "audit-change",
+          "standard": "change-standards",
+          "contract": "artifact-type"
+        }
+      ]
+    }
+  ]
+}

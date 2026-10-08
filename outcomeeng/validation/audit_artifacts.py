@@ -11,6 +11,7 @@ from outcomeeng.distribution.build import (
     agent_slug,
 )
 from outcomeeng.distribution.contracts import MARKDOWN_FILE_SUFFIX
+from outcomeeng.distribution.artifact_registry import registered_skills
 from outcomeeng.distribution.orchestration import (
     CLAUDE_DIST_PLUGINS_DIR,
     CODEX_DIST_PLUGINS_DIR,
@@ -78,6 +79,39 @@ def check_audit_artifact_contract(root: Path) -> list[str]:
                 expected_languages=expected_languages,
             )
         )
+    return errors
+
+
+def check_registered_skills(root: Path) -> list[str]:
+    """Return registered-skill violations under ``root``.
+
+    Every skill a registered artifact names must be shipped by the plugin that
+    owns the artifact's kind, on every plugin surface the repository carries.
+    """
+    return [
+        error
+        for surface in audit_contract_surfaces(root)
+        for error in check_registered_skill_surface(surface)
+    ]
+
+
+def check_registered_skill_surface(surface: Path) -> list[str]:
+    """Return the registered artifacts naming a skill ``surface`` does not ship."""
+    errors: list[str] = []
+    for registered in registered_skills():
+        skill_path = (
+            surface
+            / registered.plugin
+            / SKILLS_DIR_NAME
+            / registered.skill
+            / SKILL_FILENAME
+        )
+        if not skill_path.is_file():
+            errors.append(
+                f"{skill_path}: registered {registered.kind} {registered.role.value} "
+                f"artifact names skill {registered.skill} that plugin "
+                f"{registered.plugin} does not ship"
+            )
     return errors
 
 

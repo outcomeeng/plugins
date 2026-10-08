@@ -263,32 +263,6 @@ carries it.
 transcribed-inventory hole, then to 268 closing the coverage-accounting hole,
 both recorded against `outcomeeng/changes#47`.
 
-## A missing language plugin is invisible to the implementation audit
-
-Language discovery reads the installed `code-{lang}` skill inventory, and the
-contract forbids recognizing a language from a changed path, so the installed
-surface defines the universe of languages the run can see. A `.rs` change in a
-repository without the rust plugin reaches no concern, becomes an accounting
-record left to its artifact-type auditor, and the run can seal `approved`. The
-rule against extension-derived partitions exists for a narrower reason — a
-workflow YAML once produced `missing required skill: audit-yaml-kind` — and it
-overshoots by also hiding a language the marketplace ships but the consumer has
-not installed.
-
-**Resolution shape**: a language oracle independent of the plugin inventory,
-rendered into the shipped skill at build time from the source-owned language
-surface and its file extensions, so a recognized language with no installed
-trio becomes a required `missing-skill` unit while an unrecognized path stays an
-accounting record. Tracked as
-<https://github.com/outcomeeng/changes/issues/64>, which generalizes the same
-registry to agent instructions and prose.
-
-**Evidence.** Surfaced by a live `spec-tree:implementation-auditor` run on
-spec-tree 0.94.2 (session `b99a883c-8c51-402b-8f44-7eab326575fb`, subagent
-`aa0aa721a3fc5350c`) that probed for python and rust by invoking their audit
-skills; the probe itself is repaired in the 0.95.2 discovery contract, the
-visibility gap is not.
-
 ## The skill's payload templates and the contract module declare the same shapes twice
 
 `src/plugins/spec-tree/skills/audit-implementation/SKILL.md` carries the scope
@@ -360,3 +334,72 @@ Remaining audit run-set convergence moves onto SPX prior-context restoration onc
 The audit side of the divergence between `spec-tree:implementation-auditor` run `2026-09-22_20-40-39-797-98d0f564dc05`, which approved `src/plugins/coding-agents/skills/orchestrate-officers/scripts/derive_ledger.py`, and `spec-tree:changes-reviewer` run `2026-09-22_20-40-26-221-404eea4ba809`, which rejected it by executing it. An audit that reads code approves a contract violation that executing the code exposes.
 
 **Settlement condition.** A decision states whether an implementation audit of a shipped executable executes it. The full entry is in `spx/31-outcomeeng.enabler/31-verification.enabler/ISSUES.md`.
+
+## Stage 7 of the implementation audit routes no stale-base exit from the reconciler
+
+**Evidence.** `src/plugins/spec-tree/skills/audit-implementation/SKILL.md` stage 7 routes the reconciler's exits 0, 1 and 2. The reconciler re-resolves the selector through the changeset-scope provider, which exits 3 with a `stale-base` diagnostic when the base advanced during the run. `instructions:skill-auditor` reported the missing route as a warning (`unhandled_command_outcome`) on the registry-selection changeset.
+
+**Impact.** A run whose base moves between `start` and stage 7 has no stated outcome, so the run driver improvises between a blocked diagnostic and a new run.
+
+**Settlement condition.** Stage 7 states that exit 3 returns the blocked diagnostic carrying the reconciler's stale-base stderr, and a test pins the routing.
+
+## The implementation audit chooses its stdin command form by the kind of caller
+
+**Evidence.** `src/plugins/spec-tree/skills/audit-implementation/SKILL.md` selects the quoted heredoc for interactive sessions and the one-line `printf` pipe for programmatic runners, as [`spx/15-agent-tools.pdr.md`](spx/15-agent-tools.pdr.md) requires of tool guidance. `instructions:skill-auditor` reported the caller-dependent branch as a warning (`caller_independence`) on the registry-selection changeset.
+
+**Impact.** `/skill-standards` `<skill_organization>` holds that a skill never branches on its invocation context, so the two decisions disagree and each audit of the skill raises the conflict again.
+
+**Settlement condition.** The two sources agree on one form: either `/skill-standards` admits harness-scoped command forms, or the skill states one form that holds in both environments.
+
+## The implementation audit requires its caller's identity
+
+**Evidence.** `src/plugins/spec-tree/skills/audit-implementation/SKILL.md` requires the six run-driver producer fields in the invocation context, returns `BLOCKED` with `runToken: not-started` when they are absent, and writes them into every scope payload as `recordedByRunDriver`. `instructions:skill-auditor` rejected the dependency (`caller_independence`) on the registry-selection changeset. [`spx/21-spec-tree.enabler/17-audit.adr.md`](spx/21-spec-tree.enabler/17-audit.adr.md) decides that the `implementation-auditor` supplies its identity as explicit request data.
+
+**Impact.** A direct `/audit-implementation HEAD` invocation without injected identity always returns `BLOCKED`, so the skill is not independently invocable, and the standard and the decision contradict each other.
+
+**Settlement condition.** The contradiction is settled in the governing layer: either the decision and the SPX run contract make the run-driver identity optional and derived, or `/skill-standards` admits a declared request-data input from the wrapper agent.
+
+## The implementation audit skill carries standards warnings on unedited text
+
+**Evidence.** `instructions:skill-auditor` reported, on `src/plugins/spec-tree/skills/audit-implementation` during the registry-selection changeset, four warnings on text that changeset left alone:
+
+- `<failure_modes>` loads the failure reference only after a failure, so the preventive records (`finding_before_standards`, `transcribed_inventory`, `coverage_stated_as_findings`) reach Claude too late (`failure-modes-load-trigger`).
+- `allowed-tools` grants `Bash(spx verification run:*)`, which covers the state-changing `start`, `scope add`, `finding add` and `finish` subcommands, while `/skill-standards` limits audit skills to read-only Bash verbs; the skill never says why persisting the verdict is the audit's output and not a modification (`audit-read-only-allowed-tools`).
+- The skill composes a concern skill whose name it reads from the registry selection at run time, while `/skill-standards` requires a parent to name the exact installed skill it composes; the `concern` contract filter contains the dispatch (`skill-tool-composition`). The typed skill audit run `2026-10-08_04-58-52-337-9d7f2e94ea2f` on the repaired changeset raised the same conflict as one `blocking` finding (`skill-composition-exact-name`, `SKILL.md` `<skill_map>`). The skill claims no exception. Registry selection is this Change's design, so the skill reads the name to compose at run time and cannot name it in advance, and the standard has no provision for composing a skill named in a declared registry. The Director accepted this conflict as debt for the registry-selection merge.
+- `resolve_scope.py` builds paths into the `scope-changeset` and `select-artifacts` provider skills, which `/skill-standards` command-capabilities reads as a cross-skill file reference, while [`spx/13-plugin-and-runtime-conventions.adr.md`](spx/13-plugin-and-runtime-conventions.adr.md) decides that a consumer script reaches a provider by a `__file__`-relative import (`cross-skill-file-reference`).
+
+**Impact.** Each audit of the skill raises these warnings again, and the last two record conflicts between the skill standard and the decision.
+
+**Settlement condition.** The failure-reference trigger names the preventive records, the skill states that journal writes through SPX are the audit's output, either the standard admits composition of a skill named in a declared registry or the skill names each composable audit skill, and the standard and the decision agree on how a consumer script reaches a provider skill.
+
+## Two compliance tests of this node back no assertion and the lifecycle harness chooses the terminal status
+
+**Evidence.** `spec-tree:test-evidence-auditor` on this node reported two warnings on evidence the registry-selection changeset left alone. `test_implementation_audit_unit_ids_are_subject_specific` and `test_implementation_audit_payloads_reject_empty_subject` in `spx/21-spec-tree.enabler/68-audit.enabler/tests/test_implementation_audit_contract.compliance.l1.py` link to no compliance assertion of this spec (`alignment`). `observe_implementation_audit_lifecycle` in `outcomeeng_testing/harnesses/audit_verification_run_contract.py` picks the terminal status it submits to `finish`, so a reader cannot see from the linked l3 test which status the scenario submits (`test-owned data`). The same audit reported the `assert harness()` shape recorded in the first entry of this note as four rejected findings on the trio, wrapper, retired-wrapper and retired-skill assertions.
+
+**Impact.** Evidence without an owning assertion proves a claim no one declared, and the hidden status choice leaves the scenario's case outside its test.
+
+**Settlement condition.** Each of the two compliance tests backs a declared assertion on the node that owns unit identity, or moves there, and the lifecycle test submits the terminal status at its own call site.
+
+## The accounting record that names an artifact-type audit skill has no lifecycle evidence
+
+**Evidence.** `implementation_audit_accounting_payload` in `outcomeeng/validation/implementation_audit_contract.py` accepts a registered kind and an artifact-type audit skill, and `src/plugins/spec-tree/skills/audit-implementation/SKILL.md` prescribes the record that carries them. The lifecycle scenario of this node records only an accounting unit for a path no registered artifact matches, so no executed run seals a unit whose `expectedProducer` names an artifact-type skill.
+
+**Impact.** The unit key and the producer shape of that record rest on the skill text and the payload builder alone.
+
+**Settlement condition.** A scenario of this node records the accounting unit for a path the registry selects an artifact-type audit skill for, and asserts the sealed projection carries that kind in the unit key and that skill as its expected producer.
+
+## The verdict format lists three BLOCKED causes while stage 7 routes a fourth
+
+**Evidence.** `instructions:skill-auditor` run `2026-10-08_04-58-52-337-9d7f2e94ea2f` reported, as `debt` (`internal-consistency`) on text the registry-selection changeset left alone, that `<verdict_format>` in `src/plugins/spec-tree/skills/audit-implementation/SKILL.md` returns `BLOCKED` for three causes — target preparation fails, SPX rejects a command, a required unit cannot reach a final status — while stage 7 returns the blocked diagnostic for a reconciler exit 1 that names drifted, unexpected, or nonfinal subjects. The reconciler writes that verdict to stdout, so the diagnostic template's `payloadSource`, `exitCode`, and `stderr` fields have no stated values for the case.
+
+**Impact.** A run driver that reaches stage 7 with a drifted inventory must choose values for fields the skill leaves undefined.
+
+**Settlement condition.** `<verdict_format>` lists every cause the workflow routes to `BLOCKED`, including reconciler drift, and states the diagnostic field values for each.
+
+## The provenance fields name no source for the plugin and tool versions
+
+**Evidence.** The same run reported, as `debt` (`ambiguous-instruction`), that `<verification_run_contract>` requires `producerProvenance` values for the spec-tree plugin version, the selected audit skill's plugin version, and the spx version, while no step names how each is obtained and `allowed-tools` grants no command that reads them. The cited text predates the registry-selection changeset; the entry above on the run driver's inconsistent plugin version records the same absent source.
+
+**Impact.** Every run driver improvises the version values, which is how two sealed runs minutes apart carry different plugin versions.
+
+**Settlement condition.** Each required provenance value has a named executable source the skill grants, or the field is omitted where no source exists.

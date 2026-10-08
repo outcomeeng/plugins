@@ -5,7 +5,7 @@ Observed implementation-audit failures and their causes and prevention.
 <contents>
 - `request_preparation`
 - `concern_inventory`
-- `language_ownership`
+- `kind_ownership`
 - `finding_persistence`
 - `coverage_evidence`
 - `serial_persistence`
@@ -19,7 +19,7 @@ Observed implementation-audit failures and their causes and prevention.
 - `transcribed_inventory`
 - `vacuous_reconciliation`
 - `coverage_stated_as_findings`
-- `language_probe_by_invocation`
+- `kind_probe_by_invocation`
 - `empty_argument_taken_as_selector`
 
 </contents>
@@ -42,25 +42,25 @@ without a retry or substitute scope.
 
 **A missing concern skill appeared after one concern already ran**
 
-What happened: Claude invoked one concern skill before validating that the complete `audit-{lang}-{code|tests|architecture}` trio existed for every language partition.
+What happened: Claude invoked one concern skill before validating that every concern skill the registry selected was installed.
 
 Why it failed: The coverage inventory belongs before concern dispatch, so a late missing-skill discovery can leave other concern results without a complete expected-unit classification.
 
-How to avoid: Validate and record the complete concern-skill trio for every language partition before invoking any concern skill. Record an absent required skill as `missing-skill`, then finish and render the rejected run.
+How to avoid: Validate and record every selected concern skill against the installed inventory before invoking any concern skill. Record an absent selected skill as `missing-skill` naming `<plugin>:<audit>`, then finish and render the rejected run.
 
 </concern_inventory>
 
-<language_ownership>
+<kind_ownership>
 
-**Every changed file extension became a required language partition**
+**Every changed file extension became a required partition**
 
-What happened: Claude treated documentation and manifest suffixes as programming languages, required concern skills that do not exist, rejected the run before dispatch, and skipped an installed implementation-language concern trio.
+What happened: Claude treated documentation and manifest suffixes as programming languages, required concern skills that do not exist, rejected the run before dispatch, and skipped a selected concern skill.
 
-Why it failed: Implementation-audit ownership comes from installed `code-{lang}` skill surfaces and their scope guidance, not from the set of suffixes present in a changeset. Artifact-specific auditors and whole-changeset review own files outside those programming-language surfaces.
+Why it failed: Implementation-audit ownership comes from the registry selection the scope resolver recorded for each path, not from the set of suffixes present in a changeset. Artifact-type auditors and whole-changeset review own paths whose registered audit skill follows another contract and paths no registered artifact matches.
 
-How to avoid: Discover languages from installed `code-{lang}` skills, validate the required concern trio for every discovered language before dispatch, then let each complete concern trio claim applicable paths or return `NOT_APPLICABLE`; omit non-implementation artifacts from the coverage inventory.
+How to avoid: Read the selection from the run's sealed start input, validate each selected concern skill before dispatch, then let each concern skill claim applicable paths or return `NOT_APPLICABLE`; record every other path as an accounting unit, naming `<plugin>:<audit>` when the selection carries an artifact-type skill for it.
 
-</language_ownership>
+</kind_ownership>
 
 <finding_persistence>
 
@@ -125,7 +125,7 @@ in `<verification_run_contract>` and relay the complete blocked diagnostic from
 **An unquoted idempotency key split the command**
 
 What happened: Claude passed
-`--idempotency-key implementation:<lang>:tests:reports/audit report` without
+`--idempotency-key implementation:<kind>:tests:reports/audit report` without
 quotes. The shell split the key at the space, so `spx` received a truncated key
 and a stray argument.
 
@@ -290,7 +290,7 @@ exit reaches `finish`.
 **A run recorded a unit only where it found something, then let the rejection end it**
 
 What happened: Claude started the run with the complete 48-path inventory
-piped in, loaded all three concern skills for the recognized language, and read
+piped in, loaded the concern skills the selection named, and read
 fourteen subject bodies. It then recorded two scope units — both `code`, both
 for paths carrying its one finding — added that finding, and finished
 `rejected`. Twelve inspected paths, every `tests` unit, and every
@@ -314,29 +314,17 @@ shape by naming the paths the run left unaccounted.
 
 </coverage_stated_as_findings>
 
-<language_probe_by_invocation>
+<kind_probe_by_invocation>
 
-**Languages were discovered by invoking skills that did not exist**
+**Kinds were discovered by invoking skills that did not exist**
 
-What happened: A run on a TypeScript changeset loaded the complete TypeScript
-trio, then invoked `python:audit-python-code` and `rust:audit-rust-code` "to
-probe whether the python and rust concern trios are loadable", received
-`Unknown skill` for both, and read the two errors as evidence that no other
-language was installed.
+What happened: A run on a TypeScript changeset loaded the complete TypeScript concern skills, then invoked `python:audit-python-code` and `rust:audit-rust-code` "to probe whether the python and rust concern skills are loadable", received `Unknown skill` for both, and read the two errors as evidence that no other language was installed.
 
-Why it failed: The skill named installed `code-{lang}` skills as the discovery
-source but never said how to read that inventory, so the run driver fell back
-to trial invocation. A failed invocation is one step from a manufactured
-`missing-skill` unit: a run that records those errors as coverage seals
-`rejected` for two languages the changeset never touched, and the language set
-the run records becomes the driver's guess rather than the installed surface.
-The run avoided that outcome by prose judgment alone.
+Why it failed: The run selected skills by trial invocation instead of reading the registry selection. A failed invocation is one step from a manufactured `missing-skill` unit: a run that records those errors as coverage seals `rejected` for two kinds the changeset never touched, and the kind set the run records becomes the driver's guess rather than the registry's selection.
 
-How to avoid: Read the installed skill inventory this context already carries
-for `code-{lang}` names; a name absent from it is a language that is not
-installed. Invoke a concern skill only as dispatch to a discovered language.
+How to avoid: Select skills only from `artifact_selection` in the run's sealed start input. Read the installed skill inventory this context already carries to decide whether a selected skill runs or is recorded as `missing-skill`. Invoke a concern skill only as dispatch to a selected artifact.
 
-</language_probe_by_invocation>
+</kind_probe_by_invocation>
 
 <empty_argument_taken_as_selector>
 

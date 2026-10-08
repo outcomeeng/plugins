@@ -19,7 +19,13 @@ from outcomeeng_testing.harnesses.changeset_scope import (
     remote_base_oid,
     stale_local_base_repo,
 )
+from outcomeeng_testing.generators.artifact_registry import (
+    detected_artifacts,
+    path_matching,
+    unregistered_paths,
+)
 from outcomeeng_testing.generators.changeset_scope import distinct_subject_paths
+from outcomeeng_testing.harnesses.artifact_registry import load_select_artifacts_module
 from outcomeeng_testing.harnesses.implementation_scope import (
     ABSENT_RUN_TOKEN,
     AUDIT_FIELD,
@@ -37,6 +43,8 @@ from outcomeeng_testing.harnesses.implementation_scope import (
     SCOPE_IDENTITY_OPTION,
     SENTINEL_SCOPE_IDENTITY,
     audit_scope_unit,
+    feature_paths_repo,
+    load_resolve_scope_module,
     reconcile,
     run_implementation_scope,
     run_implementation_scope_against_recorded_run,
@@ -406,3 +414,90 @@ def test_a_head_behind_the_fetched_base_is_relayed_as_the_stale_base_refusal() -
             CHANGESET_SCOPE.STALE_BASE_STATUS
         )
         assert diagnostic[CHANGESET_SCOPE.StaleBaseField.TIP] == tip
+
+
+def test_the_resolver_emits_the_registry_selection_for_every_resolved_path() -> None:
+    resolver = load_resolve_scope_module()
+    field = load_select_artifacts_module().SelectionField
+    cases = detected_artifacts()
+    unregistered = unregistered_paths()
+    paths = [*(path_matching(detected) for detected in cases), *unregistered]
+    # The violating input: a caller-supplied selection under the resolver's own
+    # key, naming a skill no registered artifact names for any of these paths.
+    (forged_skill,) = distinct_subject_paths(1)
+    forged = json.dumps(
+        {
+            resolver.SELECTION_KEY: [
+                {
+                    field.PATH: path,
+                    field.ARTIFACTS: [
+                        {
+                            field.KIND: forged_skill,
+                            field.ROLE: forged_skill,
+                            field.AUDIT: forged_skill,
+                        }
+                    ],
+                }
+                for path in paths
+            ]
+        }
+    )
+    with feature_paths_repo(paths) as stale:
+        completed = run_implementation_scope(
+            stale.repo, CHANGESET_SCOPE.HEAD_REF, audit_input=forged
+        )
+
+    assert completed.returncode == 0, completed.stderr
+    document = json.loads(completed.stdout)
+    selection = {
+        entry[field.PATH]: entry[field.ARTIFACTS]
+        for entry in document[resolver.SELECTION_KEY]
+    }
+    assert list(selection) == document[CHANGESET_SCOPE.ScopeField.CHANGED_PATHS]
+    assert forged_skill not in json.dumps(document[resolver.SELECTION_KEY])
+    for detected, path in zip(cases, paths, strict=False):
+        first = selection[path][0]
+        assert (first[field.KIND], first[field.ROLE], first[field.AUDIT]) == (
+            detected.kind.name,
+            detected.artifact.role,
+            detected.artifact.audit,
+        )
+    for path in unregistered:
+        assert selection[path] == [], path
+
+
+def test_an_advisory_live_path_receives_a_registry_selection() -> None:
+    resolver = load_resolve_scope_module()
+    field = load_select_artifacts_module().SelectionField
+    (detected, *_) = detected_artifacts()
+    (committed, *_) = unregistered_paths()
+    live_path = path_matching(detected)
+    audit_input = json.dumps({LIVE_PATHS_KEY: [live_path]})
+    with feature_paths_repo([committed]) as stale:
+        completed = run_implementation_scope(
+            stale.repo, CHANGESET_SCOPE.HEAD_REF, audit_input=audit_input
+        )
+
+    assert completed.returncode == 0, completed.stderr
+    document = json.loads(completed.stdout)
+    selection = {
+        entry[field.PATH]: entry[field.ARTIFACTS]
+        for entry in document[resolver.SELECTION_KEY]
+    }
+    changed = document[CHANGESET_SCOPE.ScopeField.CHANGED_PATHS]
+    assert committed in changed
+    assert list(selection) == [*changed, live_path]
+    assert selection[live_path][0][field.KIND] == detected.kind.name
+
+
+def test_a_live_path_list_that_is_not_a_list_of_strings_is_rejected() -> None:
+    audit_input = json.dumps({LIVE_PATHS_KEY: "not-a-list"})
+    (committed, *_) = unregistered_paths()
+    with feature_paths_repo([committed]) as stale:
+        completed = run_implementation_scope(
+            stale.repo, CHANGESET_SCOPE.HEAD_REF, audit_input=audit_input
+        )
+
+    assert completed.returncode == EXIT_COMMAND_FAILURE
+    assert ERROR_PREFIX in completed.stderr
+    assert completed.stdout == ""
