@@ -11,7 +11,7 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 ### Added
 
 - **`/skill-standards` carries a rule catalog.** `references/rule-catalog.md` gives every rule the skill and its references state one stable identifier and one severity, `blocking` or `debt`, and names the section that states it. A finding against these standards is keyed `<unit>:<rule-id>` and cites only a catalog identifier, so one rule keeps one name and one severity across audit runs.
-- **`/agent-prompt-standards` carries a rule catalog.** Its `<rule_catalog>` section gives every rule the prompt-writing conventions state one stable identifier and one severity, and names the section that states it. Identifiers are unique across this catalog and the `/skill-standards` catalog, and a finding against either cites only an identifier the two catalogs hold.
+- **`/agent-prompt-standards` carries a rule catalog.** Its `<rule_catalog>` section gives every rule the prompt-writing conventions state one stable identifier and one severity, and names the section that states it. One catalog contract, stated in `/skill-standards` `references/rule-catalog.md`, governs both catalogs: identifiers are unique across the two, and a finding against either cites only an identifier the two catalogs hold.
 
 ### Changed
 

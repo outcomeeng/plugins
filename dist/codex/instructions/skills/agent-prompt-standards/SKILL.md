@@ -38,8 +38,6 @@ Two-tier hierarchy:
 
 **YAML frontmatter exception:** The `name` and `description` fields cannot contain the word "claude" per validation rules. Omit any subject in descriptions and word them per `<description_style>`.
 
-**Evidence:** Anthropic-authored skills use "Claude" as the named subject ~70 times. "The agent" appears zero times. Imperative mood is the most common voice for direct instructions.
-
 </voice>
 
 <objective_shape>
@@ -202,7 +200,7 @@ If no — cut it.
 
 <failure_mode_writing>
 
-Failure modes are among the most valuable content in a skill. Write them from actual experience, not speculation.
+Write failure modes from actual experience, not speculation.
 
 **Structure each failure mode:**
 
@@ -226,12 +224,7 @@ Never invent failure modes. If a skill is new and hasn't failed yet, omit the se
 
 <rule_catalog>
 
-Every rule the sections above state carries exactly one row below: one stable identifier, one severity, and the section that states it. The stating section is authoritative for what the rule requires; the row names the rule and fixes its identifier and severity. Recommendations and patterns those sections offer without requiring them carry no row.
-
-- **Identifier.** Lowercase snake_case, unique across this catalog and the `/skill-standards` rule catalog. An identifier is never renamed and never reassigned; a retired rule's row is removed, and its identifier stays unused.
-- **Severity.** `blocking` marks a defect that must be fixed before the prompt ships; `debt` marks any other valid defect. A rule's severity is the one its row declares, never one chosen per finding.
-- **Finding key.** A finding against these conventions is keyed `<unit>:<rule-id>`: the unit that covers the file it names, and the identifier of the one rule it violates. Every violation of one rule within one unit forms that one finding, which names each location.
-- **Closed vocabulary.** A finding names an identifier from this catalog or from the `/skill-standards` rule catalog. A defect no row covers is a gap in the standard: the rule enters the stating section and this catalog before any finding cites it.
+Every rule the sections above state carries exactly one row below, giving it one stable identifier and one severity and naming the section that states it. The stating section is authoritative for what the rule requires. Recommendations and patterns those sections offer without requiring them carry no row. The identifier, severity, finding-key, and closed-vocabulary rules for this catalog are the catalog contract `/skill-standards` states for both rule catalogs.
 
 | Identifier                       | Severity | Rule                                                                                                                               | Stated in                |
 | -------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
