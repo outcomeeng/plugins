@@ -411,7 +411,7 @@ A missing selected concern skill or an unsupported path already claimed by a sel
 
 For each selected concern skill, compose it with the owned instruction, the selection's `plugin` and `audit` in place: Use skill `{plugin}:{audit}`. The selection entry's `role` fixes its concern partition — `implementation` maps to `code`, while `tests` and `architecture` keep their names — and its `kind` fixes the unit's kind partition.
 
-The composition contract is the plugin-qualified skill name. Composing a name read from the selection at run time is the one exception to naming each composed skill in advance: the registry's `concern` contract filter contains the dispatch, so only registry-selected concern skills run. The orchestration does not embed per-kind file globs, commands, test naming, architecture examples, or local standards. Each concern skill owns its policy and returns findings for its concern only.
+The composition contract is the plugin-qualified skill name the selection carries; the registry's `concern` contract filter contains the dispatch, so only registry-selected concern skills run. The orchestration does not embed per-kind file globs, commands, test naming, architecture examples, or local standards. Each concern skill owns its policy and returns findings for its concern only.
 
 </skill_map>
 
