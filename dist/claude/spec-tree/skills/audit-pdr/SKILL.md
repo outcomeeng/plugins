@@ -34,7 +34,7 @@ PDRs state atemporal product truth without historical context. No references to 
 The run's terminal status is `approved` or `rejected`. A property this audit cannot evaluate rejects the run through a blocking finding naming the missing evidence; it never becomes an approval through an unjudged unit.
 
 - NEVER edit the PDR or other product content, and NEVER commit, stash, or create a branch. `/contextualize`'s base synchronization is the only checkout change the audit admits, and the audit's own SPX verification-run journal is the only state it writes.
-- ALWAYS make every judgment of the PDR from the content `spx verification run input` replays from the run, never from the copy `/contextualize` loaded or a separate read of the live file. Step 8 compares the live file with the retained input before the run finishes.
+- ALWAYS make every judgment of the PDR from the content `spx verification run input` replays from the run, never from the copy `/contextualize` loaded or a separate read of the live file. Step 9 compares the live file with the retained input before the run finishes.
 - ALWAYS read the PDR evidence model and the canonical PDR template before judging — derive the rule set and the section set from them, never from memory.
 - ALWAYS name the section, the violated rule, and the evidence in every finding.
 - NEVER record a finding the cited rule does not support — drop an unbacked finding rather than reject the PDR for it.
@@ -333,7 +333,7 @@ Claude saw a well-structured PDR with a clear decision statement and a Verificat
 
 Why it failed: Claude treated structural completeness as proof of correct content classification.
 
-How to avoid: Step 4 classifies every statement. "Would a user be able to determine this?" is the test.
+How to avoid: Step 4 classifies every statement. "Would the product document's declared audience observe or operate this?" is the test.
 
 **Failure 2: Accepted non-observable properties**
 
@@ -341,7 +341,7 @@ Claude saw "Product properties: Database connections are pooled with a maximum o
 
 Why it failed: Claude treated an implementation detail measurable by a specialist as a guarantee observable by the product's users.
 
-How to avoid: Step 5 asks "Is this falsifiable from the user's perspective?"
+How to avoid: Step 5 asks whether each property is observable from the user's perspective and whether a scenario violates it.
 
 **Failure 3: Approved a universal claim tagged as a scenario**
 
