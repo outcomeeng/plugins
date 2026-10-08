@@ -46,7 +46,8 @@ The base ref and its remote-tracking form are resolved through the shared
 changeset-scope primitives, never re-derived here. The primitives ship under a
 runtime-substituted plugin skill directory and are not importable by package
 name, so they are loaded through ``importlib`` and re-exported with object
-identity preserved.
+identity preserved. When that sibling script is absent or fails to load, the
+script prints a ``git_failure`` result naming the expected path and exits 1.
 """
 
 from __future__ import annotations
@@ -112,11 +113,19 @@ CONFLICT_GIT_OUTPUT_KEY = "git_output"
 CONFLICT_OPERATOR_OPTIONS_KEY = "operator_options"
 
 
+class ChangesetScopeUnavailableError(RuntimeError):
+    """The sibling changeset-scope script is absent or cannot be loaded."""
+
+
 def _load_changeset_scope() -> ModuleType:
-    """Load the canonical ``changeset_scope`` module via importlib and cache it."""
+    """Load the canonical ``changeset_scope`` module via importlib and cache it.
+
+    Raises :class:`ChangesetScopeUnavailableError` naming the expected path when
+    the sibling script is absent or fails to load.
+    """
     resolved_path = _CHANGESET_SCOPE_PATH.resolve()
     if not resolved_path.is_file():
-        raise RuntimeError(
+        raise ChangesetScopeUnavailableError(
             "sync-base requires the scope-changeset skill's changeset_scope.py "
             f"at {resolved_path}, the sibling skill directory in the same "
             "installed plugin; reinstall the plugin so both skills ship together"
@@ -138,13 +147,21 @@ def _load_changeset_scope() -> ModuleType:
         resolved_path,
     )
     if spec is None or spec.loader is None:
-        raise RuntimeError(
+        raise ChangesetScopeUnavailableError(
             f"Cannot load changeset_scope from {resolved_path}: Python found no "
             "module loader for the scope-changeset skill's script"
         )
     module = importlib.util.module_from_spec(spec)
     sys.modules[module_name] = module
-    spec.loader.exec_module(module)
+    try:
+        spec.loader.exec_module(module)
+    except Exception as exc:
+        del sys.modules[module_name]
+        raise ChangesetScopeUnavailableError(
+            f"Cannot load changeset_scope from {resolved_path}: "
+            f"{type(exc).__name__}: {exc}; reinstall the plugin so the "
+            "scope-changeset skill's script ships intact"
+        ) from exc
     return module
 
 
@@ -153,19 +170,6 @@ def _module_origin(module: ModuleType) -> pathlib.Path | None:
     if not isinstance(module_file, str):
         return None
     return pathlib.Path(module_file).resolve()
-
-
-_changeset_scope = _load_changeset_scope()
-
-# Re-export the canonical primitives. ``is`` identity holds — these are the same
-# function/class objects the changeset-scope module defines, so sync-base never
-# re-implements base, remote-tracking, or branch derivation.
-detect_base_ref = _changeset_scope.detect_base_ref
-remote_tracking_ref = _changeset_scope.remote_tracking_ref
-detect_current_branch = _changeset_scope.detect_current_branch
-BaseRefNotConfiguredError = _changeset_scope.BaseRefNotConfiguredError
-DetachedHeadError = _changeset_scope.DetachedHeadError
-ORIGIN_REMOTE_NAME: str = _changeset_scope.ORIGIN_REMOTE_NAME
 
 
 class SyncStatus(str, Enum):
@@ -324,6 +328,33 @@ class SyncBaseResult:
                 self.conflict.to_json_dict() if self.conflict is not None else None
             ),
         }
+
+
+def _unavailable_scope_result(error: ChangesetScopeUnavailableError) -> SyncBaseResult:
+    """The ``git_failure`` result for a run whose base cannot be derived at all."""
+    return SyncBaseResult(SyncStatus.GIT_FAILURE, "", "", None, str(error))
+
+
+try:
+    _changeset_scope = _load_changeset_scope()
+except ChangesetScopeUnavailableError as _unavailable:
+    # Run as a script, the primitive's contract still holds: exit 1 carries a
+    # ``git_failure`` JSON result with an actionable detail, never a traceback.
+    if __name__ == "__main__":
+        _failure = _unavailable_scope_result(_unavailable)
+        print(json.dumps(_failure.to_json_dict()))
+        raise SystemExit(_failure.exit_code) from None
+    raise
+
+# Re-export the canonical primitives. ``is`` identity holds — these are the same
+# function/class objects the changeset-scope module defines, so sync-base never
+# re-implements base, remote-tracking, or branch derivation.
+detect_base_ref = _changeset_scope.detect_base_ref
+remote_tracking_ref = _changeset_scope.remote_tracking_ref
+detect_current_branch = _changeset_scope.detect_current_branch
+BaseRefNotConfiguredError = _changeset_scope.BaseRefNotConfiguredError
+DetachedHeadError = _changeset_scope.DetachedHeadError
+ORIGIN_REMOTE_NAME: str = _changeset_scope.ORIGIN_REMOTE_NAME
 
 
 def _git(

@@ -15,6 +15,7 @@ An entry is written by the changeset that ships the change. A later changeset ad
 ### Fixed
 
 - **`/sync-base` reports base-sync preservation for a branch whose diff holds bytes that are not valid UTF-8.** The synchronizer reads the diff that feeds `git patch-id --stable` as raw bytes. A clean rebase of such a branch now returns `rebased` with a readiness-preservation proof. Before this fix, the synchronizer stopped with a decoding error and printed no JSON result.
+- **`/sync-base` reports a missing `scope-changeset` script as a `git_failure` result.** When the sibling `scope-changeset` skill's `changeset_scope.py` is absent from the installed plugin or fails to load, the synchronizer prints a `git_failure` JSON result whose `detail` names the expected path and exits 1. Before this fix, it exited 1 with a Python traceback and no JSON result.
 
 ### Changed
 
