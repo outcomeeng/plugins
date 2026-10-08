@@ -41,7 +41,11 @@ from typing import Final
 # The lowest published @outcomeeng/spx version whose capabilities the shipped
 # skills and their tests depend on. Raise this when a skill starts to rely on a
 # newer spx capability; the CI pin must then advance to a published version at or
-# above it. spx 0.7.2 is the first release whose project-configuration
+# above it. spx 0.8.0 is the first release whose `spx validation markdown`
+# enforces the 4.0 link shapes (`spx-link-shape`): a link is node-local or
+# tree-absolute, and a decision cited as text is rejected; this repository's
+# `spx/` tree conforms and the gate's `markdown` step runs that rule. spx 0.7.2
+# is the first release whose project-configuration
 # methodology version accepts the `MAJOR.MINOR` form; the shipped `/diagnose`
 # skill invokes the CLI in consumer repositories whose declaration can be
 # `4.0`, so that parser behavior is part of the floor's contract. spx 0.7.0 is
@@ -98,7 +102,7 @@ VERIFICATION_RUN_REQUIRED_COMMANDS: Final = (
     "finish",
     "render",
 )
-REQUIRED_SPX_VERSION: Final = "0.7.2"
+REQUIRED_SPX_VERSION: Final = "0.8.0"
 
 _REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 WORKFLOW_PATH: Final = _REPO_ROOT / ".github" / "workflows" / "check.yml"
