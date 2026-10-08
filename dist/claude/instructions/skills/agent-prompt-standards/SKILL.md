@@ -36,7 +36,7 @@ Two-tier hierarchy:
 | "the model" | Too generic, distances Claude from its own identity                                                              |
 | "you"       | Ambiguous — could address Claude or the user                                                                     |
 
-**YAML frontmatter exception:** The `name` and `description` fields cannot contain the word "claude" per validation rules. Omit any subject in descriptions and apply the invocation-specific style in `<description_style>`.
+**YAML frontmatter exception:** The `name` and `description` fields cannot contain the word "claude" per validation rules. Omit any subject in descriptions and word them per `<description_style>`.
 
 **Evidence:** Anthropic-authored skills use "Claude" as the named subject ~70 times. "The agent" appears zero times. Imperative mood is the most common voice for direct instructions.
 
@@ -64,7 +64,7 @@ This mirrors the methodology's output / outcome / impact distinction — asserti
 
 <description_style>
 
-**The invocation path selects the style; this section governs the wording.** For a skill, `/skill-standards` `<descriptions>` selects directive or passive wording by invocation path. The directive wording below applies to every description-match entry point, skill or subagent.
+**The owning structure standard selects the style; this section governs the wording.** `/skill-standards` `<descriptions>` selects directive or passive wording for a skill, and `/subagent-standards` owns a subagent definition's frontmatter, its description among it. The wording below applies to every description written in the directive style.
 
 **Directive descriptions for reliable activation.**
 
@@ -268,7 +268,7 @@ A prompt that follows these conventions:
 - Uses imperative mood for instructions, "Claude" for failure modes and tendencies
 - Never uses "the agent", "the model", or "you" as a subject
 - States its `<objective>` as one output-shaped sentence per `<objective_shape>`, with no actor, activity, or clause about when or how it runs
-- Uses the description style its invocation path requires, worded per `<description_style>`
+- Uses the description style its owning structure standard selects, worded per `<description_style>`
 - Uses strong modal verbs (MUST/NEVER/ALWAYS) in constraint blocks
 - Contains no banned phrases or structural anti-patterns
 - Includes only information Claude doesn't already have
