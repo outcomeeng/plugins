@@ -18,6 +18,10 @@ Skills conform to these standards when, at minimum: (a) SKILL.md is under 500 li
 This is a reference skill: it standardizes skill authoring and carries no standalone workflow.
 </reference_note>
 
+<rule_catalog>
+Every rule this skill and its references state has one stable identifier and one severity in `${SKILL_DIR}/references/rule-catalog.md`. Read it before recording or repairing a finding against these standards.
+</rule_catalog>
+
 <repo_local_overlay>
 Inside a repository, check for `spx/local/skills.md` at the repository root. Read that file after this reference if it exists and apply it as the repo-local specialization (e.g., marketplace-specific naming conventions or additional constraints). A local overlay supplements skill behavior; it does not declare product truth.
 </repo_local_overlay>
@@ -50,7 +54,7 @@ Context placement, agent selection, and dispatch policy belong to the caller. A 
 
 <frontmatter>
 
-Every Codex SKILL.md starts with YAML frontmatter and uses only fields accepted by Codex's current skill validator. `name` matches the skill directory, `description` states the selection contract, and tool restrictions grant only capabilities the workflow needs. Do not project Claude-only visibility, preload, heartbeat, hook, or invocation semantics onto Codex fields.
+Every Codex SKILL.md starts with YAML frontmatter and uses only fields accepted by Codex's current skill validator. `name` matches the skill directory, `description` states the selection contract, and tool restrictions grant only capabilities the workflow needs. Do not project Claude-only visibility, preload, heartbeat, hook, or invocation semantics onto Codex fields. Frontmatter declares no model or reasoning override; a skill retains its invoking session's configuration.
 
 Reference skills stay hidden from ordinary user selection while remaining available to composed workflows through Codex's documented skill invocation surface. Audit skills change no file beyond the `spx verification run` journal their own verbs write. A field or reachability behavior without a documented Codex contract is omitted.
 

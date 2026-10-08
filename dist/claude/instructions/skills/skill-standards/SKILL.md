@@ -18,6 +18,10 @@ Skills conform to these standards when, at minimum: (a) SKILL.md is under 500 li
 This is a reference skill: it standardizes skill authoring and carries no standalone workflow.
 </reference_note>
 
+<rule_catalog>
+Every rule this skill and its references state has one stable identifier and one severity in `${CLAUDE_SKILL_DIR}/references/rule-catalog.md`. Read it before recording or repairing a finding against these standards.
+</rule_catalog>
+
 <repo_local_overlay>
 Inside a repository, check for `spx/local/skills.md` at the repository root. Read that file after this reference if it exists and apply it as the repo-local specialization (e.g., marketplace-specific naming conventions or additional constraints). A local overlay supplements skill behavior; it does not declare product truth.
 </repo_local_overlay>

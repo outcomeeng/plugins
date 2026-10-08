@@ -6,6 +6,16 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.21.0
+
+### Added
+
+- **`/skill-standards` carries a rule catalog.** `references/rule-catalog.md` gives every rule the skill and its references state one stable identifier and one severity, `blocking` or `debt`, and names the section that states it. A finding against these standards is keyed `<unit>:<rule-id>` and cites only a catalog identifier, so one rule keeps one name and one severity across audit runs.
+
+### Changed
+
+- **The auditor skeleton keys findings by catalog rule.** An auditor's verdict keys each finding by its unit and the identifier the governing standard's rule catalog gives the violated rule, and names no identifier outside that catalog.
+
 ## 0.20.1
 
 ### Changed
