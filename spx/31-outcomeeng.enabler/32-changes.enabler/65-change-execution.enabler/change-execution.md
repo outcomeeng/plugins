@@ -9,7 +9,7 @@ PROVIDES the execution of one Executable Change by its Executor — confirming t
 SO THAT an Executor session started for a Change
 CAN deliver the Change's Output while producing no artifact itself
 
-The spec-tree plugin ships one subagent definition per skill an Executor session or its rounds run: `change-executor` fronts `/execute-change`, `change-author` fronts `/author`, `change-verifier` fronts `/verify`, `change-tester` fronts `/test`, `change-implementer` fronts `/implement-change`, `change-skill-author` fronts `instructions:create-skill`, and `change-subagent-author` fronts `instructions:create-subagent`. Each Fixer is a fresh session of the definition its round's Author used, per `spx/15-agent-terminology.pdr.md`.
+The spec-tree plugin ships one subagent definition per skill an Executor session or its rounds run: `change-executor` fronts `/execute-change`, `change-author` fronts `/author`, `change-verifier` fronts `/verify`, `change-tester` fronts `/test`, `change-implementer` fronts `/implement-change`, `change-skill-author` fronts `instructions:create-skill`, and `change-subagent-author` fronts `instructions:create-subagent`. Each Fixer is a fresh session of the definition its round's Author used, per [`spx/15-agent-terminology.pdr.md`](spx/15-agent-terminology.pdr.md).
 
 ## Assertions
 

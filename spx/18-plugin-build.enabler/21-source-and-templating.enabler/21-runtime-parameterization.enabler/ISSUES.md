@@ -4,7 +4,7 @@ Known defects, contradictions and gaps in this node. Coordination note; not spec
 
 ## The node and its specs use the prohibited agent-concept term
 
-`spx/15-agent-terminology.pdr.md` maps `runtime`, `per-runtime` and `runtime-specific` to `agent`, `per-agent` and `agent-specific` where the subject is a selectable coding agent. This node's name and its spec use the term in that sense: "runtime-divergent", "per-runtime registry" and "No runtime is the source language", which mean per-agent target rendering. "Runtime" stays valid for execution-time behavior and for an execution environment such as Python.
+[`spx/15-agent-terminology.pdr.md`](spx/15-agent-terminology.pdr.md) maps `runtime`, `per-runtime` and `runtime-specific` to `agent`, `per-agent` and `agent-specific` where the subject is a selectable coding agent. This node's name and its spec use the term in that sense: "runtime-divergent", "per-runtime registry" and "No runtime is the source language", which mean per-agent target rendering. "Runtime" stays valid for execution-time behavior and for an execution environment such as Python.
 
 **Settlement condition.** The node and its spec align to the decision's required wording. The node name encodes the term, so the sweep includes a `/refactor` node rename and is structural, as the entry in `spx/18-plugin-build.enabler/ISSUES.md` records.
 

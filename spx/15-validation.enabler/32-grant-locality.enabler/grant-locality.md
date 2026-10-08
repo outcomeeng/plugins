@@ -6,7 +6,7 @@ CAN keep a shared script reachable through a consumer-owned entrypoint whose cou
 
 A grant that walks out of the skill directory puts the provider skill's name and internal script layout into a permission, where no import graph, type checker, or test follows it. Renaming the provider or moving its `scripts/` directory leaves every such grant matching nothing, and the call falls back to a permission prompt instead of failing. Ownership by a provider skill with a `__file__`-relative import from the consumer's own entrypoint keeps that coupling in Python, where a moved module raises at load.
 
-Grant locality is decided by `spx/13-plugin-and-runtime-conventions.adr.md`; this node is its deterministic enforcement over shipped skill frontmatter.
+Grant locality is decided by [`spx/13-plugin-and-runtime-conventions.adr.md`](spx/13-plugin-and-runtime-conventions.adr.md); this node is its deterministic enforcement over shipped skill frontmatter.
 
 ## Assertions
 

@@ -31,7 +31,7 @@ The tests under `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-chan
 Required handling:
 
 - Rewrite the test evidence through `/test` and run the required test-evidence audit before accepting it.
-- Align the evidence chain with `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`, `spx/15-test-language.adr.md`, and the Python test standards.
+- Align the evidence chain with [`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md), [`spx/15-test-language.adr.md`](spx/15-test-language.adr.md), and the Python test standards.
 - Keep `tests/` limited to typed assertion files; move harness, generator, fixture, and source-owned vocabulary responsibilities to their governed homes.
 
 ## 3. Review finding validation belongs in SPX
@@ -97,9 +97,9 @@ Review scope is the raw changed-file set, so a changeset that edits authored plu
 
 `compute_diff.py` applies no path classification; the reviewer receives every changed path.
 
-This is a separate larger concern rather than a bounded fix: the changeset definition is declared at product level in `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` as `the files changed between the base ref and HEAD`, governing all five verification types, so narrowing review scope amends a decision above this node rather than a script inside it. It also runs against `spx/15-merging.pdr.md` and this node's own rule that the reviewer resolves its own scope and treats caller-supplied scope as non-authoritative — a generated-path exclusion must be established as the reviewer's own derivation, never a caller filter, and the two must be told apart in the declaration. `dist/` is this repository's generated root; a consumer's differs, so the exclusion has to be a declared property of the project rather than a hardcoded path, and `spx/12-shipped-scripting.adr.md` sends a shipped script's logic to the SPX CLI once it passes fifty lines and proves its value.
+This is a separate larger concern rather than a bounded fix: the changeset definition is declared at product level in [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md) as `the files changed between the base ref and HEAD`, governing all five verification types, so narrowing review scope amends a decision above this node rather than a script inside it. It also runs against [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md) and this node's own rule that the reviewer resolves its own scope and treats caller-supplied scope as non-authoritative — a generated-path exclusion must be established as the reviewer's own derivation, never a caller filter, and the two must be told apart in the declaration. `dist/` is this repository's generated root; a consumer's differs, so the exclusion has to be a declared property of the project rather than a hardcoded path, and [`spx/12-shipped-scripting.adr.md`](spx/12-shipped-scripting.adr.md) sends a shipped script's logic to the SPX CLI once it passes fifty lines and proves its value.
 
-Governing decision settled: `spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md` amends the product-level scope model — the exclusion is a property of agentic verification only (deterministic verification keeps the complete changeset), the generated roots are a committed project-supplied declaration at `spx/local/generated-sources.toml` (never a hardcoded `dist/`), and findings about generated content resolve to the declaring relation's sources.
+Governing decision settled: [`spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md) amends the product-level scope model — the exclusion is a property of agentic verification only (deterministic verification keeps the complete changeset), the generated roots are a committed project-supplied declaration at `spx/local/generated-sources.toml` (never a hardcoded `dist/`), and findings about generated content resolve to the declaring relation's sources.
 
 Required handling:
 
@@ -115,7 +115,7 @@ The `review-changes` skill ships four scripts past the fifty-line threshold:
 - `src/plugins/spec-tree/skills/review-changes/scripts/journal_emit.py` (508 lines) — the adapter bridging the review-result schema to the shared run-journal projection.
 - `src/plugins/spec-tree/skills/review-changes/scripts/compute_diff.py` (423 lines) — base-ref and head-ref precedence resolution plus the committed, staged, unstaged, and untracked diff bundle.
 
-Past fifty lines `spx/12-shipped-scripting.adr.md` makes a shipped script debt whose logic moves into the SPX CLI once the script proves its value; all four have proven their value in use, so extraction is what they owe. `21-script-decomposition.adr.md` already names `compute_diff.py`, `journal_emit.py`, and `review_result.py` as stop-gap modules, so their extraction completes a decomposition this node has already decided rather than opening a new one.
+Past fifty lines [`spx/12-shipped-scripting.adr.md`](spx/12-shipped-scripting.adr.md) makes a shipped script debt whose logic moves into the SPX CLI once the script proves its value; all four have proven their value in use, so extraction is what they owe. [`spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/21-script-decomposition.adr.md`](spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/21-script-decomposition.adr.md) already names `compute_diff.py`, `journal_emit.py`, and `review_result.py` as stop-gap modules, so their extraction completes a decomposition this node has already decided rather than opening a new one.
 
 The extraction is a cross-repo port into `@outcomeeng/spx`, a separate product, and the plugins product may depend on the resulting capability only once it is published to npm and `REQUIRED_SPX_VERSION` advances to it. That sequencing puts the fix outside any changeset confined to this repository.
 
@@ -125,7 +125,7 @@ The extraction is a cross-repo port into `@outcomeeng/spx`, a separate product, 
 
 ## 10. Agentic verification judges a mandated architectural seam without the decision that mandates it
 
-A review of a shipped-script changeset raised the injected `Runner` Protocol in `src/plugins/spec-tree/skills/update-instruction-block/scripts/instruction_block.py` as unexercised surface, and offered two remedies: delete the seam, or add an ADR rule mandating it plus a test injecting a controlled `Runner`. Both are blocked by decisions above the node under review. `spx/12-shipped-scripting.adr.md` requires the seam (`shipped Python that invokes external tools accepts a dependency-injected runner implementing a Protocol at the orchestration boundary`), as does `spx/13-plugin-and-runtime-conventions.adr.md`; the same shipped-scripting decision permits a controlled runner only under `/test` Stage 5 exception 1 or 2, and git is an L1 real dependency that Stage 4 terminates on, so no exception opens. A node-level ADR rule restating a product-level one is misplacement besides.
+A review of a shipped-script changeset raised the injected `Runner` Protocol in `src/plugins/spec-tree/skills/update-instruction-block/scripts/instruction_block.py` as unexercised surface, and offered two remedies: delete the seam, or add an ADR rule mandating it plus a test injecting a controlled `Runner`. Both are blocked by decisions above the node under review. [`spx/12-shipped-scripting.adr.md`](spx/12-shipped-scripting.adr.md) requires the seam (`shipped Python that invokes external tools accepts a dependency-injected runner implementing a Protocol at the orchestration boundary`), as does [`spx/13-plugin-and-runtime-conventions.adr.md`](spx/13-plugin-and-runtime-conventions.adr.md); the same shipped-scripting decision permits a controlled runner only under `/test` Stage 5 exception 1 or 2, and git is an L1 real dependency that Stage 4 terminates on, so no exception opens. A node-level ADR rule restating a product-level one is misplacement besides.
 
 Both surfaces resolve scope from the changed-file set, and neither product-level decision appears in a diff confined to one skill, so the mandate is invisible from the scope alone. Every shipped script in the marketplace carries this seam, so the false positive recurs on each one and costs a round to refute each time.
 
@@ -135,7 +135,7 @@ The cost is not symmetric across the two surfaces. A review states findings and 
 
 **Why it is separate**: the fix changes what context an agentic verification run loads, which belongs to this node's scope derivation and its eventual SPX extraction (entry 9), not to any changeset that happens to ship a script carrying the seam.
 
-**Evidence**: review run `2026-08-05_13-13-52-179-c96364b3dc5f`, one debt finding on an otherwise approved review. Then implementation-audit run `2026-08-05_21-52-18-042-b561b26753fb` on the same script, `terminalStatus: rejected` on the single finding `design-coherence: speculative dependency-injection seam with no consumer`, whose stated expectation — that a seam arrive with a consumer or be deferred — is the opposite of what `spx/12-shipped-scripting.adr.md` requires, and whose asked-for test consumer that same decision permits only under a `/test` Stage 5 exception no L1 git dependency opens. Both were dropped as unbacked after `/test` routing and the two decisions above.
+**Evidence**: review run `2026-08-05_13-13-52-179-c96364b3dc5f`, one debt finding on an otherwise approved review. Then implementation-audit run `2026-08-05_21-52-18-042-b561b26753fb` on the same script, `terminalStatus: rejected` on the single finding `design-coherence: speculative dependency-injection seam with no consumer`, whose stated expectation — that a seam arrive with a consumer or be deferred — is the opposite of what [`spx/12-shipped-scripting.adr.md`](spx/12-shipped-scripting.adr.md) requires, and whose asked-for test consumer that same decision permits only under a `/test` Stage 5 exception no L1 git dependency opens. Both were dropped as unbacked after `/test` routing and the two decisions above.
 
 Revisit entries 5 and 6 when review moves from `spx journal --type review` to `spx verification run`. Exercise the migration with an in-progress inspection before seal, repeated inspection of one file, restored prior-run context, and a final projection whose unique covered-unit count equals the changeset scope.
 
@@ -175,7 +175,7 @@ Objective: merge the review prompt single-source cleanup without carrying the lo
 - `src/plugins/spec-tree/skills/review-changes/references/review-prompt.md`: preserve the tightened review prompt that forbids deterministic verification, requires streaming single-finding objects, rejects caller steering, and keeps rule citations grounded in loaded context.
 - `src/plugins/spec-tree/skills/review-changes/scripts/review_run.py`: preserve scope-coverage enforcement before `finish` when the implementation still needs it on current `origin/main`.
 - `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md`: update assertions so the bundled prompt is the sole review context and repository-root prompt files are not loaded.
-- `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/21-script-decomposition.adr.md`: keep the decision aligned with the single runner and journal-only durable state.
+- [`spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/21-script-decomposition.adr.md`](spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/21-script-decomposition.adr.md): keep the decision aligned with the single runner and journal-only durable state.
 - Co-located tests for the retained behavior: preserve only the assertions required for bundled-prompt single source, raw token output, no root prompt loading, scope coverage, and journal event behavior.
 - Generated `dist/claude/spec-tree/**` and `dist/codex/spec-tree/**`: regenerate from `src/plugins/spec-tree/**` with `just build-skills`; do not hand-copy generated content from the discarded branch.
 
@@ -211,7 +211,7 @@ The extraction includes this node's spec, review prompt, journal runner and resu
 
 ## The property test declares Hypothesis settings the harness owns
 
-`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`
+[`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md)
 places property-run execution configuration — seed selection, run counts, replay
 input, and failure diagnostics — in a property-test harness.
 `tests/test_review_result.property.l1.py` declares `@settings(...)` Hypothesis
@@ -258,7 +258,7 @@ against `src/plugins/spec-tree/agents/changes-reviewer.md` on Change #76 head
 
 ## Two Verifier rules collide on pinning a spec-declared tuning value
 
-The changes-reviewer requires a test to pin `SIGNAL_GRACE_SECONDS` to the spec's two-second grace period with an independent literal, citing the mutation-check rule in `15-test-infrastructure.pdr.md`, and three review runs raised it as blocking. The test-evidence-auditor rejects exactly that literal as a source-ownership violation, citing `spx/12-shipped-scripting.adr.md`. The operator ruled that the ADR governs, and the reviewer finding is dropped as unbacked.
+The changes-reviewer requires a test to pin `SIGNAL_GRACE_SECONDS` to the spec's two-second grace period with an independent literal, citing the mutation-check rule in `15-test-infrastructure.pdr.md`, and three review runs raised it as blocking. The test-evidence-auditor rejects exactly that literal as a source-ownership violation, citing [`spx/12-shipped-scripting.adr.md`](spx/12-shipped-scripting.adr.md). The operator ruled that the ADR governs, and the reviewer finding is dropped as unbacked.
 
 **Settlement condition.** One of the two decisions is amended so a reviewer and an evidence auditor reading both reach one verdict. The full entry is in `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/ISSUES.md`.
 

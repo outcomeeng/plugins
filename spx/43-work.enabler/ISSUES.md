@@ -15,7 +15,7 @@ The `sanitize-powerpoint` skill ships two scripts past the fifty-line threshold:
 - `src/plugins/work/skills/sanitize-powerpoint/scripts/pptx_audit.py` (407 lines) — the read-only six-dimension deck audit reporting structural-integrity, layout-type, font, color, naming, and trim findings.
 - `src/plugins/work/skills/sanitize-powerpoint/scripts/pptx_repack.py` (134 lines) — the content-surgical repackage that rebuilds a `.pptx` from an extracted working directory in the original member order and verifies the result.
 
-Past fifty lines `spx/12-shipped-scripting.adr.md` makes a shipped script debt whose logic moves into the SPX CLI once the script proves its value; both have proven their value in use, so extraction is what they owe.
+Past fifty lines [`spx/12-shipped-scripting.adr.md`](spx/12-shipped-scripting.adr.md) makes a shipped script debt whose logic moves into the SPX CLI once the script proves its value; both have proven their value in use, so extraction is what they owe.
 
 The extraction is a cross-repo port into `@outcomeeng/spx`, a separate product, and the plugins product may depend on the resulting capability only once it is published to npm and `REQUIRED_SPX_VERSION` advances to it. That sequencing puts the fix outside any changeset confined to this repository. This pair also raises a scope question the other extractions do not: deck sanitation is document craft rather than spec-tree machinery, so whether the SPX CLI is the right home is itself undecided — the alternative the ADR names is removal, if the capability proves unwanted.
 

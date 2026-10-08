@@ -47,7 +47,7 @@ from a production module the changeset's Frame does not name. The round against 
 
 ## Pending plugins' prior owned definitions have no reconciliation evidence
 
-The reconciliation assertion states that a pending plugin's prior owned definitions are preserved, and both `spx/12-marketplace-state.adr.md` and `21-installation-architecture.adr.md` require it, but no harness case combines a pending-publication plugin with agent-home reconciliation: `observe_agent_home_reconciliation` builds both preflights from a changed catalog with every plugin published. The clause therefore reaches no predicate, and the same observer retires one agent source rather than dropping a plugin from the home selection, so the clause that prunes owned definitions of plugins outside the catalog-bounded selection is likewise never driven. The plan builder also composes the agent-home plan before any command runs, so a plugin that turns out pending during execution still has its checkout definitions in the desired set; whether the applied plan copies definitions for unavailable skill content, against the decision, is undetermined until the scenario exists.
+The reconciliation assertion states that a pending plugin's prior owned definitions are preserved, and both [`spx/12-marketplace-state.adr.md`](spx/12-marketplace-state.adr.md) and [`spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/21-installation-architecture.adr.md`](spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/21-installation-architecture.adr.md) require it, but no harness case combines a pending-publication plugin with agent-home reconciliation: `observe_agent_home_reconciliation` builds both preflights from a changed catalog with every plugin published. The clause therefore reaches no predicate, and the same observer retires one agent source rather than dropping a plugin from the home selection, so the clause that prunes owned definitions of plugins outside the catalog-bounded selection is likewise never driven. The plan builder also composes the agent-home plan before any command runs, so a plugin that turns out pending during execution still has its checkout definitions in the desired set; whether the applied plan copies definitions for unavailable skill content, against the decision, is undetermined until the scenario exists.
 
 **Resolution shape**: add a harness scenario that installs, then re-runs with one plugin unpublished, and assert that the pending plugin's recorded definitions are neither pruned nor rewritten; if the scenario shows the plan copying definitions for a pending plugin, defer agent-home plan composition until the pending set is known. That is a new reconciliation capability with its own harness and a likely production change, independent of the machine-wide Claude Code refresh.
 
@@ -186,7 +186,7 @@ gate on macOS, or when a contributor reports the gate hanging with no output.
 `src/templates/plugin/scripts/place_agents.py` — rendered once per plugin as
 `skills/<plugin>-plugin/scripts/place_agents.py` — carries the ownership-record
 parser, the digest-bound collision detector, the atomic writer, and the
-scope-split classifier at 333 lines. `spx/12-shipped-scripting.adr.md`
+scope-split classifier at 333 lines. [`spx/12-shipped-scripting.adr.md`](spx/12-shipped-scripting.adr.md)
 sets fifty lines as the point where a generic shipped script becomes debt
 awaiting extraction into the SPX CLI once proven, or removal when it is not,
 and exempts only runtime-specific adapter logic whose extraction would couple
@@ -201,7 +201,7 @@ time in `outcomeeng/distribution/installation.py`, which argues the logic is
 generic rather than Codex-bound.
 
 **Resolution shape**: choose one of the two paths the ADR admits and record it —
-amend `21-installation-architecture.adr.md` to name the placement script a
+amend [`spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/21-installation-architecture.adr.md`](spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/21-installation-architecture.adr.md) to name the placement script a
 Codex-specific adapter kept plugin-local under the exemption, or schedule the
 extraction into `spx` and reduce the shipped script to the skill instruction the
 ADR prescribes for a proven script. The duplicated algorithm in
@@ -216,7 +216,7 @@ fifty-line version.
 
 ## Cross-plugin agent-home cleanup is reachable only through the maintainers' installer
 
-`spx/12-marketplace-state.adr.md` separates a plugin's namespace-bounded
+[`spx/12-marketplace-state.adr.md`](spx/12-marketplace-state.adr.md) separates a plugin's namespace-bounded
 placement from marketplace-scope reconciliation — the pass that prunes
 definitions of plugins later removed or renamed from the catalog under the
 marketplace's recorded ownership. The shipped `place_agents.py` implements only
@@ -252,7 +252,7 @@ reports a record whose target version has no cache directory with
 `UNREFRESHABLE_RECORD_WARNING`, and `unresolved_target_warnings` reports a
 record whose plugin resolves to no target version with
 `UNRESOLVED_TARGET_RECORD_WARNING`; both are blocking, and
-`21-installation-architecture.adr.md` declares both in prose.
+[`spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/21-installation-architecture.adr.md`](spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/21-installation-architecture.adr.md) declares both in prose.
 
 The unresolved disposition now reaches a declaration and a case in the shape
 where its domain and the rewrite's diverge: the scenario assertion linking
@@ -311,7 +311,7 @@ pathless entry, a versionless entry, and one well-formed record in another
 checkout. The invocation checkout records nothing there, so the run's
 continuation past either defect is observed for the rewrite disposition and for
 the bootstrap install and enable, never for the native update of a record the
-invocation checkout holds. `21-installation-architecture.adr.md` states that
+invocation checkout holds. [`spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/21-installation-architecture.adr.md`](spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/21-installation-architecture.adr.md) states that
 neither defect settles anything about the rest of the machine's records, and the
 native update is one of the dispositions that rest carries, so a regression that
 abandoned that branch on a defect would leave every linked test passing.
@@ -438,10 +438,10 @@ re-applies the checkout's declared plugin selection in a `finally` block through
 selection back into the checkout's settings.
 `test_failed_persistent_run_restores_the_committed_selection` in
 `tests/test_repository_installation.compliance.l1.py` asserts that write. The
-decisions say the opposite: `spx/12-marketplace-state.adr.md` states that
+decisions say the opposite: [`spx/12-marketplace-state.adr.md`](spx/12-marketplace-state.adr.md) states that
 verification reports an unexpected selection or activation change as failure and
 preserves the diagnostic state, and that refresh never restores an old settings
-snapshot; `21-installation-architecture.adr.md` states that unexpected changes
+snapshot; [`spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/21-installation-architecture.adr.md`](spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/21-installation-architecture.adr.md) states that unexpected changes
 are terminal diagnostics with no snapshot restoration or compensating activation
 writes; and the node spec's untagged assertion states that the run retains the
 changed state for diagnosis without restoring an earlier settings snapshot. No
@@ -664,7 +664,7 @@ outcomeeng/changes#180.
 
 ## Release acceptance for the Executor profile and the gpt-6 Codex configurations is unretained
 
-`spx/15-subagent-execution.pdr.md` requires release acceptance for every profile of each harness, and the release-acceptance assertion in `repository-installation.md` requires configuration, native loading, and one minimal isolated execution result for each. `outcomeeng.distribution.profiles.AGENT_PROFILES` carries the Executor profile, and every Codex profile names a gpt-6 model: Standard and Executor `gpt-6.1-sol`, Strong `gpt-6-astra`, Fast `gpt-6-luna`. `native_profile_rows` therefore derives `claude-executor`, `codex-standard`, `codex-strong`, `codex-executor`, and `codex-fast` rows whose configurations no retained run covers.
+[`spx/15-subagent-execution.pdr.md`](spx/15-subagent-execution.pdr.md) requires release acceptance for every profile of each harness, and the release-acceptance assertion in `repository-installation.md` requires configuration, native loading, and one minimal isolated execution result for each. `outcomeeng.distribution.profiles.AGENT_PROFILES` carries the Executor profile, and every Codex profile names a gpt-6 model: Standard and Executor `gpt-6.1-sol`, Strong `gpt-6-astra`, Fast `gpt-6-luna`. `native_profile_rows` therefore derives `claude-executor`, `codex-standard`, `codex-strong`, `codex-executor`, and `codex-fast` rows whose configurations no retained run covers.
 
 **Impact**: no artifact shows the Claude Code `sonnet` configuration at high effort, or any gpt-6 Codex configuration, loading and executing as a native subagent. A combined acceptance claim for either harness is therefore incomplete.
 

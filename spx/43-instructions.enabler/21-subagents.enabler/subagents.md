@@ -16,7 +16,7 @@ The subagents-about-subagents cluster is three peers with distinct roles:
 
 - ALWAYS: subagent configuration guidance specifies a target path or scope as the
   complete task prompt and delegates context discovery to the owning skill while
-  preserving its output contract, per `spx/15-subagent-execution.pdr.md`; guidance
+  preserving its output contract, per [`spx/15-subagent-execution.pdr.md`](spx/15-subagent-execution.pdr.md); guidance
   judges native sandbox and approval fields against the governing context's
   execution-boundary declaration before applying the harness contract ([audit]).
 - ALWAYS: `/subagent-standards` admits a definition that inherits the invoking
@@ -34,14 +34,14 @@ The subagents-about-subagents cluster is three peers with distinct roles:
   acceptance as invocation evidence when the owning node's spec or a decision on
   the path from the root that reaches it by index declares that acceptance:
   native loading and one minimal isolated execution for every declared profile,
-  as `spx/15-subagent-execution.pdr.md` requires. Every other definition retains
+  as [`spx/15-subagent-execution.pdr.md`](spx/15-subagent-execution.pdr.md) requires. Every other definition retains
   its exact-definition minimal isolated invocation. The auditor names the
   declaration and acceptance artifact it read ([audit]).
 - ALWAYS: subagent invocation guidance requires plugin authorization and an active
   skill's explicit call request, uses the native tool schema, and requires analysis
   and reporting of a failed launch or unusable result without retry or substitution ([audit]).
 - ALWAYS: configuration guidance selects one central Standard, Strong, Executor, or Fast
-  profile declared in `spx/15-subagent-execution.pdr.md` and obtains the complete
+  profile declared in [`spx/15-subagent-execution.pdr.md`](spx/15-subagent-execution.pdr.md) and obtains the complete
   native configuration together; Standard is the default, Strong, Executor, and Fast
   require explicit governing selection, and independent model or reasoning
   overrides and product-defined profiles are forbidden ([audit]).

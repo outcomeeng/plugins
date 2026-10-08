@@ -30,7 +30,7 @@ edit to the current diff.
 — base-ref and remote-tracking resolution, behind-base detection, the
 attached-branch rebase and the detached-head advance, the dirty-tree
 precondition, structured conflict reporting, and the readiness-preservation
-proof. Past fifty lines `spx/12-shipped-scripting.adr.md` makes a shipped script
+proof. Past fifty lines [`spx/12-shipped-scripting.adr.md`](spx/12-shipped-scripting.adr.md) makes a shipped script
 debt whose logic moves into the SPX CLI once the script proves its value; the
 synchronizer has proven its value in use, so extraction is what it owes.
 

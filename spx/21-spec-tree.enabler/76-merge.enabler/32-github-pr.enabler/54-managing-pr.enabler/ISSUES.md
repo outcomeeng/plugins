@@ -48,7 +48,7 @@ Revisit condition:
 
 ## 4. Review-thread resolver extraction awaits a published SPX CLI capability
 
-`src/plugins/spec-tree/skills/manage-pr/scripts/resolve_review_thread.py` runs to 313 lines — resolution of one GitHub pull-request review thread. Past fifty lines `spx/12-shipped-scripting.adr.md` makes a shipped script debt whose logic moves into the SPX CLI once the script proves its value; the resolver has proven its value in use, so extraction is what it owes.
+`src/plugins/spec-tree/skills/manage-pr/scripts/resolve_review_thread.py` runs to 313 lines — resolution of one GitHub pull-request review thread. Past fifty lines [`spx/12-shipped-scripting.adr.md`](spx/12-shipped-scripting.adr.md) makes a shipped script debt whose logic moves into the SPX CLI once the script proves its value; the resolver has proven its value in use, so extraction is what it owes.
 
 The extraction is a cross-repo port into `@outcomeeng/spx`, a separate product, and the plugins product may depend on the resulting capability only once it is published to npm and `REQUIRED_SPX_VERSION` advances to it. That sequencing puts the fix outside any changeset confined to this repository.
 
@@ -114,7 +114,7 @@ Most bullets of the `<success_criteria>` of `src/plugins/spec-tree/skills/manage
 
 ## 10. The review-thread resolver pages GraphQL connections without a page count
 
-`src/plugins/spec-tree/skills/manage-pr/scripts/resolve_review_thread.py` discovers a review thread from a review-comment ID by reading `reviewThreads(first: 100, after: $threadsAfter)` and, for each thread, `comments(first: 100, after: $commentsAfter)`. The loops at lines 183 and 264 continue while `hasNextPage` stays true and carry no page count, and `managing-pr.md` line 28 requires the discovery to page through both connections before declaring a review comment absent. The rationale of `spx/15-agent-tools.pdr.md` names an unbounded paginated GraphQL read as the hazard to the account-wide GraphQL budget, and product property 3 reaches the `gh` calls a skill's text instructs, so a call a shipped script issues is outside the property and its audit rule.
+`src/plugins/spec-tree/skills/manage-pr/scripts/resolve_review_thread.py` discovers a review thread from a review-comment ID by reading `reviewThreads(first: 100, after: $threadsAfter)` and, for each thread, `comments(first: 100, after: $commentsAfter)`. The loops at lines 183 and 264 continue while `hasNextPage` stays true and carry no page count, and `managing-pr.md` line 28 requires the discovery to page through both connections before declaring a review comment absent. The rationale of [`spx/15-agent-tools.pdr.md`](spx/15-agent-tools.pdr.md) names an unbounded paginated GraphQL read as the hazard to the account-wide GraphQL budget, and product property 3 reaches the `gh` calls a skill's text instructs, so a call a shipped script issues is outside the property and its audit rule.
 
 `spec-tree:changes-reviewer` run `2026-10-06_18-56-26-316-837e0b2a122f` on head `27de076ed368f5eee6477012d9526a89a8af2b77` raised this as a `consistency` finding against the script at line 183.
 

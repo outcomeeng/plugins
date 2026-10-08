@@ -70,7 +70,7 @@ Valid:
 Rejected:
 
 19. Rows hand-extended past the source-owned enumeration — the domain is no longer source-owned (source-owned-values assertions in `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/test-verification.md`).
-20. The expected column copied from the implementation's lookup table — a tautology (the evidence-chain rules in `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`).
+20. The expected column copied from the implementation's lookup table — a tautology (the evidence-chain rules in [`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md)).
 21. The production module's internal table transcribed into the test instead of imported — source ownership copied to the test.
 22. One example presented as the mapping — quantifier mismatch.
 23. Parameterization rows chosen in the test file rather than imported or generated — test-owned data.
@@ -93,7 +93,7 @@ Valid:
 
 Rejected:
 
-31. The module's own validation routine as the oracle for its own output — self-validation (the evidence-chain oracle rules in `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`).
+31. The module's own validation routine as the oracle for its own output — self-validation (the evidence-chain oracle rules in [`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md)).
 32. A hand-rolled checker in a harness duplicating production parsing logic — the oracle is a copy of the implementation.
 33. The expected canonical output produced by the production serializer under test — oracle coupled to the production path (the oracle-independence assertions in `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/test-verification.md`).
 34. A spec-declared token asserted equal between a test constant and the source — a second declaration, not an oracle; the agreement is audit evidence per this section.
@@ -114,9 +114,9 @@ Valid:
 
 Rejected:
 
-40. Property-framework syntax around one example — scenario evidence impersonating property (the framework-syntax `NEVER` rule in `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`).
+40. Property-framework syntax around one example — scenario evidence impersonating property (the framework-syntax `NEVER` rule in [`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md)).
 41. A generator that is a constant-only wrapper of a source-owned singleton — the constant-only `NEVER` assertion in `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/test-verification.md`.
-42. A generator filtering candidates through the production acceptance predicate — the generator owns the verdict's shape (the acceptance-function rule in `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`).
+42. A generator filtering candidates through the production acceptance predicate — the generator owns the verdict's shape (the acceptance-function rule in [`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md)).
 43. Seed or run count set in the test file — test-owned run configuration (the property-harness assertion in `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/test-verification.md`).
 44. Failure output lacking seed and replay path — the failing run is not reproducible from its evidence.
 45. The expected output computed by calling the function under test on the generated input — oracle equals the production path.
@@ -135,7 +135,7 @@ Valid:
 
 Rejected:
 
-51. Conforming-only evidence — nothing proves the boundary rejects anything (the violating-case rules in `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`).
+51. Conforming-only evidence — nothing proves the boundary rejects anything (the violating-case rules in [`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md)).
 52. A test that still passes with the enforcement disabled — no falsifiability.
 53. A fixture file exporting violating token strings — the isolated-strings fixture `NEVER` assertion in `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/test-verification.md`.
 54. Violating cases invented as an author's edge bag rather than derived from the rule's stated boundary — case provenance fails.

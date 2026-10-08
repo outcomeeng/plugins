@@ -8,7 +8,7 @@ is the CLI entrypoint for the shared `resolve_committed_scope` provider in
 It emits base and head commit identity plus the changed-file set as one JSON
 object so the audit resolves its own scope. The entrypoint and provider each
 exceed fifty lines. Past fifty lines
-`spx/12-shipped-scripting.adr.md` makes a shipped script debt whose logic moves
+[`spx/12-shipped-scripting.adr.md`](spx/12-shipped-scripting.adr.md) makes a shipped script debt whose logic moves
 into the SPX CLI once the script proves its value; the resolver has proven its
 value in use, so extraction is what it owes.
 
@@ -79,4 +79,4 @@ The Compliance section holds eleven assertions, above the guideline of about sev
 
 ## The node names no declared generated-source relationship
 
-`changeset-coherence.md` and the shipped `src/plugins/spec-tree/skills/audit-changeset-coherence/SKILL.md` require declared generated-source relationship evidence without naming `spx/local/generated-sources.toml` or citing `spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md`. The entry in `spx/31-outcomeeng.enabler/31-verification.enabler/ISSUES.md` carries the settlement condition.
+`changeset-coherence.md` and the shipped `src/plugins/spec-tree/skills/audit-changeset-coherence/SKILL.md` require declared generated-source relationship evidence without naming `spx/local/generated-sources.toml` or citing [`spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md). The entry in `spx/31-outcomeeng.enabler/31-verification.enabler/ISSUES.md` carries the settlement condition.

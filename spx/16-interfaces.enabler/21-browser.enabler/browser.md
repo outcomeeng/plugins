@@ -8,5 +8,5 @@ CAN read, comment on, and restructure the tree directly in a browser while stayi
 
 ### Compliance
 
-- ALWAYS: apply the product's own vendored design system — the tokens and component vocabulary this product owns, independent of any other product's design system — per `spx/16-interfaces.enabler/21-browser.enabler/13-rendering.adr.md` ([audit])
-- ALWAYS: exchange browser interactions and agent-side updates over the MCP transport — per `spx/16-interfaces.enabler/21-browser.enabler/15-transport.adr.md` ([audit])
+- ALWAYS: apply the product's own vendored design system — the tokens and component vocabulary this product owns, independent of any other product's design system — per [`spx/16-interfaces.enabler/21-browser.enabler/13-rendering.adr.md`](spx/16-interfaces.enabler/21-browser.enabler/13-rendering.adr.md) ([audit])
+- ALWAYS: exchange browser interactions and agent-side updates over the MCP transport — per [`spx/16-interfaces.enabler/21-browser.enabler/15-transport.adr.md`](spx/16-interfaces.enabler/21-browser.enabler/15-transport.adr.md) ([audit])

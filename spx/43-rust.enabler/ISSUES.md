@@ -16,7 +16,7 @@
 
 **Resolution shape**: fold the sequencing bullets into `<objective>`, `<reference_note>`, or the protocol phase that already prescribes the read order, and scope `<success_criteria>` to properties inspectable in the artifact.
 
-**Revisit condition**: `python-test-standards` and `typescript-test-standards` carry the test-standards half verbatim, so correcting rust alone diverges it from two untouched siblings — the divergence `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`'s defect-class-sweep rule exists to prevent. Resolve as one pass across the three language plugins, each with its own `skill-auditor` gate and version bump.
+**Revisit condition**: `python-test-standards` and `typescript-test-standards` carry the test-standards half verbatim, so correcting rust alone diverges it from two untouched siblings — the divergence [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md)'s defect-class-sweep rule exists to prevent. Resolve as one pass across the three language plugins, each with its own `skill-auditor` gate and version bump.
 
 **Evidence**: raised by `instructions:skill-auditor` against `rust-test-standards` and `architect-rust` during the predicate-seam correction.
 

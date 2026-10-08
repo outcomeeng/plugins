@@ -7,7 +7,7 @@ malleability: spec
 
 PROVIDES the pull-request opening protocol — `VERIFICATION_READINESS` evaluation, branch push with an explicit destination ref, ready pull-request creation, and the first management pass
 SO THAT the GitHub-PR transport's `/manage-github-pr` orchestration
-CAN publish a changeset as a ready-for-review pull request the moment `VERIFICATION_READINESS` holds, per `spx/15-merging.pdr.md`
+CAN publish a changeset as a ready-for-review pull request the moment `VERIFICATION_READINESS` holds, per [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md)
 
 ## Assertions
 
@@ -20,7 +20,7 @@ CAN publish a changeset as a ready-for-review pull request the moment `VERIFICAT
 - ALWAYS: `/open-pr` resolves the pull-request target repository, the push target repository, and the operator's access class on the target before the opening push, reports the three resolved values, and stops when the access class is not `ADMIN`, `MAINTAIN`, or `WRITE`, or when the two repositories differ because the checkout is a fork whose base resolved to the upstream ([audit])
 - NEVER: `/open-pr` derives the pull-request target from the checkout's own repository identity — a fork reports itself there while the pull request opens against its parent, so the comparison guarding the fork case would compare one repository with itself and pass for every checkout ([audit])
 - NEVER: `/open-pr` establishes the access class from a remote URL, an authenticated account name, or a successful push — one account holds different permissions across repositories, so only the target's own viewer permission decides ([audit])
-- ALWAYS: `/open-pr` re-establishes the selected transport's `VERIFICATION_READINESS` predicates — deterministic verification and any declared local agentic verification — on the diff the opening push publishes, per `spx/15-merging.pdr.md` ([audit])
-- ALWAYS: `/open-pr` presents `gh pr create --body-file -` payload input by supported harness environment — quoted heredoc for interactive Claude Code and Codex sessions, and one physical `printf '%s\n' ... | gh pr create ... --body-file -` line for programmatic runners that require single-line commands — per `spx/15-agent-tools.pdr.md` ([audit])
-- NEVER: open the pull request as a draft as a gating mechanism, or add a separate gated draft-to-ready promotion — the pull request opens ready once `VERIFICATION_READINESS` holds, per `spx/15-merging.pdr.md` ([audit])
-- ALWAYS: each pre-push Verifier dispatch `/open-pr` makes — every applicable evidence Auditor and the local `changes-reviewer` — is preceded by the readiness record bound to the exact clean committed head the push would publish, per `spx/15-merging.pdr.md` ([audit])
+- ALWAYS: `/open-pr` re-establishes the selected transport's `VERIFICATION_READINESS` predicates — deterministic verification and any declared local agentic verification — on the diff the opening push publishes, per [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md) ([audit])
+- ALWAYS: `/open-pr` presents `gh pr create --body-file -` payload input by supported harness environment — quoted heredoc for interactive Claude Code and Codex sessions, and one physical `printf '%s\n' ... | gh pr create ... --body-file -` line for programmatic runners that require single-line commands — per [`spx/15-agent-tools.pdr.md`](spx/15-agent-tools.pdr.md) ([audit])
+- NEVER: open the pull request as a draft as a gating mechanism, or add a separate gated draft-to-ready promotion — the pull request opens ready once `VERIFICATION_READINESS` holds, per [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md) ([audit])
+- ALWAYS: each pre-push Verifier dispatch `/open-pr` makes — every applicable evidence Auditor and the local `changes-reviewer` — is preceded by the readiness record bound to the exact clean committed head the push would publish, per [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md) ([audit])

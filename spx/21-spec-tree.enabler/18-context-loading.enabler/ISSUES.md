@@ -34,11 +34,11 @@ Two further readings show the same gap from the CLI side. `spx diagnose` reports
 
 ## The context walk reads fewer sibling contracts than the foundation declares
 
-**Evidence:** The `/understand` foundation declares the methodology 4.0 walk, which reads every sibling's published contract at each level and treats only a named lower-index provider as a constraint. `/contextualize` reads lower-index sibling specs only and lists same-index and higher-index siblings without reading them; `context-loading.md` asserts that behavior, and `13-context-enumeration.adr.md` fixes it as an invariant of the read order.
+**Evidence:** The `/understand` foundation declares the methodology 4.0 walk, which reads every sibling's published contract at each level and treats only a named lower-index provider as a constraint. `/contextualize` reads lower-index sibling specs only and lists same-index and higher-index siblings without reading them; `context-loading.md` asserts that behavior, and [`spx/21-spec-tree.enabler/18-context-loading.enabler/13-context-enumeration.adr.md`](spx/21-spec-tree.enabler/18-context-loading.enabler/13-context-enumeration.adr.md) fixes it as an invariant of the read order.
 
 **Impact:** A consumer's awareness of its peers and consumers is missing from the loaded context, and a provider scopes its mandate without the consumer contracts the walk is meant to supply.
 
-**Settlement condition:** `13-context-enumeration.adr.md` states the 4.0 read order, `context-loading.md` asserts it, and `/contextualize` reads every sibling contract at each level with prerequisite and awareness distinguished in the manifest.
+**Settlement condition:** [`spx/21-spec-tree.enabler/18-context-loading.enabler/13-context-enumeration.adr.md`](spx/21-spec-tree.enabler/18-context-loading.enabler/13-context-enumeration.adr.md) states the 4.0 read order, `context-loading.md` asserts it, and `/contextualize` reads every sibling contract at each level with prerequisite and awareness distinguished in the manifest.
 
 ## DEBT [conciseness]: the context loader restates lifecycle policy and its own steps
 
@@ -56,7 +56,7 @@ Revisit and settlement condition: the four lifecycle fields derived from the rea
 
 ## The skill enumerates the read-set locally
 
-`13-context-enumeration.adr.md` decides that a target's complete read-set derives from the SPX CLI's context bundle, with the deterministic tree walk and the cited-governance resolver living in the CLI as a trusted third party per `spx/12-shipped-scripting.adr.md`. The shipped `/contextualize` skill keeps structural enumeration local: per level it globs the ADRs and PDRs, reads every one, and requires the glob count to equal the read count. It already reads explicit full-path ADR and PDR citations from the loaded specs and decisions.
+[`spx/21-spec-tree.enabler/18-context-loading.enabler/13-context-enumeration.adr.md`](spx/21-spec-tree.enabler/18-context-loading.enabler/13-context-enumeration.adr.md) decides that a target's complete read-set derives from the SPX CLI's context bundle, with the deterministic tree walk and the cited-governance resolver living in the CLI as a trusted third party per [`spx/12-shipped-scripting.adr.md`](spx/12-shipped-scripting.adr.md). The shipped `/contextualize` skill keeps structural enumeration local: per level it globs the ADRs and PDRs, reads every one, and requires the glob count to equal the read count. It already reads explicit full-path ADR and PDR citations from the loaded specs and decisions.
 
 The published CLI supplies the bundle as `spx spec context show --json`, whose schema-2 output carries `schemaVersion`, `methodology`, `productDir`, `targets`, `bootstrap`, `read`, `listed` and `coverage`. The earlier contract it replaced emitted `documents`, `methodology`, `productDir`, `siblings` and `target`, omitted a cited governance decision observed for this node, and exposed no citation provenance, guides, local overlays, bootstrap flag or schema version. Whether the schema-2 bundle satisfies the decision's contract (ordered and byte-identical for one tree and target, every decision at a level emitted, only lower-index siblings read, cited governance decisions with their citing file, coordination notes never adding citations, guides and the lifecycle overlay outside the read loop, bootstrap, and a non-zero exit naming a missing required spec) is established against the decision when the slice starts.
 

@@ -4,7 +4,7 @@ The verification toolchain's runtime machinery — the trace event schema implem
 
 ## Rationale
 
-This mirrors the trusted-third-party lifecycle in `spx/12-shipped-scripting.adr.md`: proven logic lives in a component fully tested in its own right that this product consumes rather than maintains inline. Verification machinery serves any product consuming the methodology, so binding it to this repository's release cycle would couple every consumer's harness upgrade to a marketplace release and foreclose independent adoption of the conformance tooling; a separately versioned component gives the checker, schema, and adapters their own test, release, and publication cycle. The rejected alternative — implementing the verification machinery inside this repository — keeps every capability change a marketplace concern and makes the marketplace's own CI the only consumer that can prove it.
+This mirrors the trusted-third-party lifecycle in [`spx/12-shipped-scripting.adr.md`](spx/12-shipped-scripting.adr.md): proven logic lives in a component fully tested in its own right that this product consumes rather than maintains inline. Verification machinery serves any product consuming the methodology, so binding it to this repository's release cycle would couple every consumer's harness upgrade to a marketplace release and foreclose independent adoption of the conformance tooling; a separately versioned component gives the checker, schema, and adapters their own test, release, and publication cycle. The rejected alternative — implementing the verification machinery inside this repository — keeps every capability change a marketplace concern and makes the marketplace's own CI the only consumer that can prove it.
 
 ## Verification
 

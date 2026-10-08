@@ -5,7 +5,7 @@ malleability: spec
 
 # Worktree Provisioning
 
-PROVIDES the `init-worktrees` provisioning flow that classifies a checkout's git layout and brings a single or non-compliant checkout into the bare-repository worktree pool of `spx/21-spec-tree.enabler/11-repository-layout.pdr.md`, pushing every local ref to the remote and carrying a prior checkout's gitignored state across
+PROVIDES the `init-worktrees` provisioning flow that classifies a checkout's git layout and brings a single or non-compliant checkout into the bare-repository worktree pool of [`spx/21-spec-tree.enabler/11-repository-layout.pdr.md`](spx/21-spec-tree.enabler/11-repository-layout.pdr.md), pushing every local ref to the remote and carrying a prior checkout's gitignored state across
 SO THAT the Change Lifecycle, reviewing, and merging workflows
 CAN assume the shared-`.spx/` bare-pool topology without re-deriving or repairing it
 
@@ -36,4 +36,4 @@ CAN assume the shared-`.spx/` bare-pool topology without re-deriving or repairin
 - ALWAYS: `init-worktrees` requires the container basename to equal the origin repository name, so the pool nests as `<repo>/<repo>` and is never scattered across the multi-repository workspace that holds it ([test](tests/test_worktree_provisioning.scenario.l1.py))
 - NEVER: `init-worktrees` deletes a prior checkout's working tree itself — it renames the prior checkout aside to a husk, carries its gitignored state into the new pool, and emits the exact husk-removal command for the operator to run last ([audit])
 - ALWAYS: `init-worktrees` keeps the prior-husk removal the operator's action — the skill itself runs only the classification, push, provisioning, and clean commands and never the husk removal; it re-classifies to confirm the `pool` verdict (valid independent of the husk, which sits outside the container) and then emits the husk-removal command as the final step, blocking on the operator's confirmation that it ran ([audit])
-- ALWAYS: the provisioning helper complies with `spx/13-plugin-and-runtime-conventions.adr.md` — stdlib `python3` only, paths resolved via `${CLAUDE_SKILL_DIR}` — and reads or writes nothing outside the target container and the installed plugin tree, except pushing an explicitly provided prior checkout's refs to its remote and relocating that prior checkout's gitignored artifacts into the container ([audit])
+- ALWAYS: the provisioning helper complies with [`spx/13-plugin-and-runtime-conventions.adr.md`](spx/13-plugin-and-runtime-conventions.adr.md) — stdlib `python3` only, paths resolved via `${CLAUDE_SKILL_DIR}` — and reads or writes nothing outside the target container and the installed plugin tree, except pushing an explicitly provided prior checkout's refs to its remote and relocating that prior checkout's gitignored artifacts into the container ([audit])

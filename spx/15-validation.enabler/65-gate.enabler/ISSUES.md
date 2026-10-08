@@ -4,7 +4,7 @@ Known follow-ups for the gate node. Coordination note; not spec truth.
 
 ## The signal harness owns the predicates its linked tests should own
 
-`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`
+[`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md)
 requires that the executed test own every behavioral predicate and assertion API
 call, and that a harness expose observations, resource handles, or callback
 inputs without calling an assertion API, returning a pass/fail verdict, or
@@ -51,7 +51,7 @@ harness is already in context.
 
 ## The property tests declare Hypothesis settings the harness owns
 
-`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`
+[`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md)
 places property-run execution configuration — seed selection, run counts, replay
 input, and failure diagnostics — in a property-test harness.
 `tests/test_gate.property.l1.py` declares `@settings(max_examples=MAX_EXAMPLES,

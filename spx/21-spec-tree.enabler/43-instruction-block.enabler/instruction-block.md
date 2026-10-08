@@ -47,7 +47,7 @@ CAN retain the Spec Tree routing instructions and reach the product's own phase 
 
 ### Mappings
 
-- Generation and the `--check` verb measure each rendered root instruction file's byte size against the 32768-byte combined Codex project-doc ceiling declared in `spx/21-spec-tree.enabler/43-instruction-block.enabler/21-render-model.adr.md` and map it to a per-file report carrying the exact size and breach state ([test](tests/test_budget_measurement.mapping.l1.py))
+- Generation and the `--check` verb measure each rendered root instruction file's byte size against the 32768-byte combined Codex project-doc ceiling declared in [`spx/21-spec-tree.enabler/43-instruction-block.enabler/21-render-model.adr.md`](spx/21-spec-tree.enabler/43-instruction-block.enabler/21-render-model.adr.md) and map it to a per-file report carrying the exact size and breach state ([test](tests/test_budget_measurement.mapping.l1.py))
 - For every agent harness and enabled-language subset, rendering the canonical instruction-block template maps to a router block with exactly one blank line between its opening marker and first body content ([test](tests/test_router_spacing.mapping.l1.py))
 - Each supported CLI flag maps to a duplicate-flag rejection when it appears more than once in raw arguments, before argument parsing reads a template or repository path ([test](tests/test_instruction_block.mapping.l1.py))
 - Over the languages the template defines blocks for, a language's block appears in a rendered router block when the language is in the detected enabled set and is omitted otherwise ([test](tests/test_instruction_block.mapping.l1.py))
@@ -75,7 +75,7 @@ CAN retain the Spec Tree routing instructions and reach the product's own phase 
 ### Compliance
 
 - ALWAYS: both generated root guides preserve the standing-request sentence in
-  `spx/15-subagent-execution.pdr.md` verbatim within explicit authorization for
+  [`spx/15-subagent-execution.pdr.md`](spx/15-subagent-execution.pdr.md) verbatim within explicit authorization for
   every subagent supplied by their listed plugins. An active skill must explicitly
   instruct each launch; availability, task wording, and role-description matching
   supply no launch instruction ([audit]).

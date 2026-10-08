@@ -32,7 +32,7 @@ Deterministic coverage needs a harness that materializes a bare-repository pool 
 
 ## Transport classifier extraction awaits a published SPX CLI capability
 
-`src/plugins/spec-tree/skills/merge/scripts/classify_changeset.py` runs to 161 lines — the coordination-note-only classification over the full changed-file set, committed branch scope plus uncommitted working-tree changes, with counts computed over the whole set so a large changeset is never misclassified from a truncated sample. Past fifty lines `spx/12-shipped-scripting.adr.md` makes a shipped script debt whose logic moves into the SPX CLI once the script proves its value; the classifier has proven its value in use, so extraction is what it owes.
+`src/plugins/spec-tree/skills/merge/scripts/classify_changeset.py` runs to 161 lines — the coordination-note-only classification over the full changed-file set, committed branch scope plus uncommitted working-tree changes, with counts computed over the whole set so a large changeset is never misclassified from a truncated sample. Past fifty lines [`spx/12-shipped-scripting.adr.md`](spx/12-shipped-scripting.adr.md) makes a shipped script debt whose logic moves into the SPX CLI once the script proves its value; the classifier has proven its value in use, so extraction is what it owes.
 
 The extraction is a cross-repo port into `@outcomeeng/spx`, a separate product, and the plugins product may depend on the resulting capability only once it is published to npm and `REQUIRED_SPX_VERSION` advances to it. That sequencing puts the fix outside any changeset confined to this repository.
 
@@ -50,7 +50,7 @@ The status is technically traceable to the transport-selection policy in `spx/21
 
 ## Generated instruction-block lifecycle vocabulary window
 
-`spx/15-merging.pdr.md` declares four readiness gates and the lifecycle `VERIFY -> PREVIEW -> MERGE -> DEPLOY -> RELEASE -> CLOSE`, while the generated instruction blocks still teach the installed `merging-standards` vocabulary until the shared methodology PR updates `src/plugins/spec-tree/skills/merging-standards/SKILL.md` and regenerates instruction-block output.
+[`spx/15-merging.pdr.md`](spx/15-merging.pdr.md) declares four readiness gates and the lifecycle `VERIFY -> PREVIEW -> MERGE -> DEPLOY -> RELEASE -> CLOSE`, while the generated instruction blocks still teach the installed `merging-standards` vocabulary until the shared methodology PR updates `src/plugins/spec-tree/skills/merging-standards/SKILL.md` and regenerates instruction-block output.
 
 Required handling:
 
@@ -67,15 +67,15 @@ the producing merge lifecycle behavior:
 
 - `local-completion-boundary` simulates status assessment in
   [`prompt.md`](evals/local-completion-boundary/prompt.md); replacing
-  [`src/plugins/spec-tree/skills/merge/SKILL.md`](../../../src/plugins/spec-tree/skills/merge/SKILL.md)
-  or [`spx/local/merging.md`](../../local/merging.md) would not change the
+  `src/plugins/spec-tree/skills/merge/SKILL.md`
+  or [`spx/local/merging.md`](spx/local/merging.md) would not change the
   evaluated behavior.
 - `local-completion-boundary` covers the local-stop/local-pause branch, but not
   continuation through default-branch merge, declared deploy/release phases, and
   closeout.
 - `transport-selection` grades a static prompt/case model without materializing
   or directly invoking
-  [`src/plugins/spec-tree/skills/merge/SKILL.md`](../../../src/plugins/spec-tree/skills/merge/SKILL.md).
+  `src/plugins/spec-tree/skills/merge/SKILL.md`.
 - Both suites hard-code the policy in the prompt, so the grader can keep passing
   after the producer changes.
 
@@ -97,7 +97,7 @@ on those paths starts a job that cannot detect the change that started it.
 Those four trigger paths therefore carry no `owned_paths` declaration and no
 generated trigger entry. Declaring them would assert a producer coupling the
 suite does not have.
-[`spx/13-infrastructure.enabler/25-eval-harness.enabler/57-producer-coupled-skill-evals.adr.md`](../../13-infrastructure.enabler/25-eval-harness.enabler/57-producer-coupled-skill-evals.adr.md)
+[`spx/13-infrastructure.enabler/25-eval-harness.enabler/57-producer-coupled-skill-evals.adr.md`](spx/13-infrastructure.enabler/25-eval-harness.enabler/57-producer-coupled-skill-evals.adr.md)
 requires a skill eval to couple to its real producer through direct invocation,
 harness-mediated invocation, or source-derived prompt materialization, and
 refuses a prompt-only simulation as evidence for that producer. This suite does
@@ -181,11 +181,11 @@ Revisit and settlement condition: each rule stated once with cross-references, s
 
 The deterministic mapping tests cover the declared and absent `DEPLOY` and `RELEASE` decisions, and the `transport-selection` and `local-completion-boundary` eval suites cover transport selection and the completion boundary. Four behaviors have no eval case:
 
-- A declared `PREVIEW` runs after `VERIFICATION_READINESS` holds and before `MERGE_READINESS` advances the lifecycle, and an absent `PREVIEW` is a no-op that never blocks merge, deploy, release or close. `spx/21-spec-tree.enabler/76-merge.enabler/merge.md` and `spx/15-merging.pdr.md` declare the phase, and no eval under `evals/` mentions it.
+- A declared `PREVIEW` runs after `VERIFICATION_READINESS` holds and before `MERGE_READINESS` advances the lifecycle, and an absent `PREVIEW` is a no-op that never blocks merge, deploy, release or close. `spx/21-spec-tree.enabler/76-merge.enabler/merge.md` and [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md) declare the phase, and no eval under `evals/` mentions it.
 
 - A declared `DEPLOY` awaits `DEPLOYMENT_READINESS`, an absent `DEPLOY` skips the phase, a declared `RELEASE` awaits `RELEASE_READINESS`, runs after `MERGE` and after any declared `DEPLOY`, an absent `RELEASE` skips the phase, and a flow that stops after `MERGE` fails when `RELEASE` is declared. These are lifecycle eval cases for the subject of skill orchestration rather than the mapping helper.
 - The `transport-selection` eval's ten cases model the selector through `input.overlay_transport_selector` (`none`, `direct-push`, `manage-github-pr`), and the `none` cases cover the default-fallthrough outcome an absent overlay produces. The present-but-silent against file-absent distinction is not modeled. An explicit absent-overlay case needs a new `cases.jsonl` entry, a `prompt.md` change that tells the producing skill the file is absent, and a baseline run in `history.jsonl`. Surfaced by the local `changes-reviewer` on PR #333 as `DEBT [evidence]`.
-- The assigned-worktree discipline in `merge.md` is `[audit]`-backed and anchored by the `[audit]` rule "the agent conducts the changeset's git work in the assigned worktree" in `spx/15-merging.pdr.md`. No `[eval]` case exercises the recovery path: an assigned worktree on the default branch or a detached HEAD, or a branch owned by another worktree, where the lifecycle creates a task branch in the assigned worktree and continues rather than emitting a `STOP`. The case needs an eval that models worktree-state inputs, which the two existing harnesses do not, plus a `prompt.md` and a baseline `history.jsonl` run. Surfaced by the same review.
+- The assigned-worktree discipline in `merge.md` is `[audit]`-backed and anchored by the `[audit]` rule "the agent conducts the changeset's git work in the assigned worktree" in [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md). No `[eval]` case exercises the recovery path: an assigned worktree on the default branch or a detached HEAD, or a branch owned by another worktree, where the lifecycle creates a task branch in the assigned worktree and continues rather than emitting a `STOP`. The case needs an eval that models worktree-state inputs, which the two existing harnesses do not, plus a `prompt.md` and a baseline `history.jsonl` run. Surfaced by the same review.
 
 **Impact.** The outcome of each is covered by another path, and evals are not part of the `just check` or CI gate, so the gap is incremental evidence completeness.
 
@@ -193,9 +193,9 @@ The deterministic mapping tests cover the declared and absent `DEPLOY` and `RELE
 
 ## A merging decision governs the apply flow's Verifier dispatches
 
-The dispatch-readiness, repeated-class, finish-before-wait and bounded-projection rules of `spx/15-merging.pdr.md` are realized for the merge lifecycle in `merge.md` and the `merging-standards` skill, and `/merge`, `/open-pr` and `/manage-pr` cite `<verification_dispatch_readiness>` at every Verifier dispatch site they own. `opening-pr.md` declares the readiness record as its own assertion, and `managing-pr.md` declares the readiness record and the finish-before-wait ordering, because `/manage-pr` owns the foreground check wait. The rules bind agentic dispatch, whose natural owner is `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`.
+The dispatch-readiness, repeated-class, finish-before-wait and bounded-projection rules of [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md) are realized for the merge lifecycle in `merge.md` and the `merging-standards` skill, and `/merge`, `/open-pr` and `/manage-pr` cite `<verification_dispatch_readiness>` at every Verifier dispatch site they own. `opening-pr.md` declares the readiness record as its own assertion, and `managing-pr.md` declares the readiness record and the finish-before-wait ordering, because `/manage-pr` owns the foreground check wait. The rules bind agentic dispatch, whose natural owner is [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md).
 
-**Settlement condition.** The rules relocate into the verification decision, `spx/15-merging.pdr.md` reduces to the merge-lifecycle specialization that cites them, and the realizing assertions in this node and its two PR-lifecycle children re-point; `merging-standards` keeps the section text its transports read. The full entry is in `spx/31-outcomeeng.enabler/31-verification.enabler/ISSUES.md`.
+**Settlement condition.** The rules relocate into the verification decision, [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md) reduces to the merge-lifecycle specialization that cites them, and the realizing assertions in this node and its two PR-lifecycle children re-point; `merging-standards` keeps the section text its transports read. The full entry is in `spx/31-outcomeeng.enabler/31-verification.enabler/ISSUES.md`.
 
 ## `merging-standards` names its callers and leans on a sibling reference
 

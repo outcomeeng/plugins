@@ -217,7 +217,7 @@ Convergence requires a verdict to be a function of its subject. Where the same V
 returns opposite judgments on unchanged input, repair chases noise, and a changeset cannot converge,
 because the next round raises what this one blessed and dropping a finding as unbacked is
 indistinguishable from dropping a finding the next round will restore. It also makes the
-finding-disposition rule in `spx/15-merging.pdr.md` undecidable for this auditor: a finding whose
+finding-disposition rule in [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md) undecidable for this auditor: a finding whose
 severity is unstable across runs on unchanged text carries no `blocking`-versus-`debt` reading to
 act on, and the repeated-class invalidation rule in the same decision reads a re-raised reversal as
 a failed repair invariant when no repair was owed.

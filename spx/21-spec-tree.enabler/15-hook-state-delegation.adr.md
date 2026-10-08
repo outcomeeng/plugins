@@ -11,12 +11,12 @@ A plugin-shipped hook script is the wrong place to reimplement `.spx/` state, gi
 - The spec-tree plugin ships exactly one runtime hook, on `SessionStart`.
 - The `SessionStart` hook delegates to `spx hook run session-start`; the `spx` CLI performs the `$CLAUDE_ENV_FILE` identity and project-dir writes and the worktree-occupancy claim. The hook embeds no `.spx/`, git, transcript, or session logic of its own.
 - `.spx/` state logic is owned by the `spx` CLI — invoked by skills and by the `SessionStart` hook — and is never reimplemented in a plugin-shipped script.
-- The `SessionStart` hook conforms to `spx/15-hook-safety.pdr.md`: a non-blocking event, an inline-guard command with a valid-empty-result floor, an explicit timeout, an environment kill switch, and `spx` resolved as a PATH-probed optional dependency.
+- The `SessionStart` hook conforms to [`spx/15-hook-safety.pdr.md`](spx/15-hook-safety.pdr.md): a non-blocking event, an inline-guard command with a valid-empty-result floor, an explicit timeout, an environment kill switch, and `spx` resolved as a PATH-probed optional dependency.
 
 ## Verification
 
 ### Audit
 
 - ALWAYS: the spec-tree plugin ships exactly one runtime hook — a `SessionStart` hook that delegates to `spx hook run session-start`, and which on the disabled-or-absent path exits with a valid empty result and writes nothing ([audit])
-- ALWAYS: the `SessionStart` hook satisfies `spx/15-hook-safety.pdr.md` — non-blocking event, inline-guard command with a valid-empty-result floor, explicit timeout, environment kill switch, and `spx` resolved as a PATH-probed optional dependency ([audit])
+- ALWAYS: the `SessionStart` hook satisfies [`spx/15-hook-safety.pdr.md`](spx/15-hook-safety.pdr.md) — non-blocking event, inline-guard command with a valid-empty-result floor, explicit timeout, environment kill switch, and `spx` resolved as a PATH-probed optional dependency ([audit])
 - NEVER: a plugin-shipped hook script reimplements `.spx/` state, git inspection, transcript parsing, or session and worktree logic the `spx` CLI owns — the hook delegates to the CLI ([audit])

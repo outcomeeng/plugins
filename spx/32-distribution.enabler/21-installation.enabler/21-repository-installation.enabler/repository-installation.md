@@ -72,7 +72,7 @@ CAN refresh exactly the selected plugins in every Claude Code checkout on the ma
 - ALWAYS: release acceptance is established independently for each supported
   harness and retains configuration, native loading, and one minimal isolated
   execution result for every profile of that harness declared in
-  `spx/15-subagent-execution.pdr.md`. Evidence for one harness establishes no
+  [`spx/15-subagent-execution.pdr.md`](spx/15-subagent-execution.pdr.md). Evidence for one harness establishes no
   execution claim for another; a combined acceptance claim requires complete
   evidence for every harness it names. Each row derives
   its complete configuration from the central profile owner, uses disposable
