@@ -8,7 +8,7 @@ allowed-tools: Read, Grep, Glob, Skill, Bash(git rev-parse:*), Bash(realpath:*),
 ---
 
 <objective>
-A sealed `spx verification run` on {{scope}} against {{governing standards}} — terminal status `approved` with no finding, or `rejected` with each finding naming the artifact location, the violated rule, and the evidence — or a `BLOCKED` diagnostic naming the failed prerequisite or command.
+A sealed `spx verification run` on {{scope}} against {{governing standards}} — terminal status `approved` with no finding, or `rejected` with each finding naming the artifact location, the violated rule's catalog identifier, and the evidence — or a `BLOCKED` diagnostic naming the failed prerequisite or command.
 </objective>
 
 <constraints>
@@ -41,8 +41,8 @@ Invoke {{the owning plugin's version capability}} with the verb `version` and re
    ```
 
    Capture the exact `runToken` and use it for every later command. Read the retained input with `spx verification run input --verification-type audit --scope-type {{file-or-changeset}} --scope '{{scope}}' --run '<run-token>'` and require its `content` to equal the live file; a difference returns `BLOCKED` with the run preserved.
-2. **Load the standards.** Load {{the governing standards and repository-local specialization}}. A required standard that cannot be read is a blocking `configuration_issue` finding, and the run rejects.
-3. **Judge.** Judge every applicable rule and collect falsifiable findings. Record a finding only when an exact rule, location, and observed-versus-expected evidence back it; an observation that a rule holds is not a finding and is not recorded.
+2. **Load the standards.** Load {{the governing standards, their rule catalogs, and the repository-local specialization}}. A required standard or catalog that cannot be read returns `BLOCKED` with the run preserved, before any judgment.
+3. **Judge.** Judge every applicable catalog rule and collect falsifiable findings. Record a finding only when a catalog rule identifier, a location, and observed-versus-expected evidence back it; a defect no catalog row covers is not recorded, and an observation that a rule holds is not a finding. Every violation of one rule within one unit forms one finding that names each location.
 4. **Record.** Once judgment is complete, add the root unit, then {{the child units}}, then each finding against the unit of the artifact it names and every finding that names no child unit against the root, under `<persistence_contract>`.
 5. **Reconcile.** Read `spx verification run status` with the same type, scope, and token. Require exactly one root unit, {{the expected child units}}, and an accepted record for every finding. Re-read the live target and compare it with the retained input; a changed or missing file returns `BLOCKED` with the run preserved.
 6. **Finish and render.** Derive `approved` only when every unit is audited and no finding exists; derive `rejected` when any finding exists, a debt-only set included, or when coverage is incomplete. Run `spx verification run finish --verification-type audit --scope-type {{file-or-changeset}} --scope '{{scope}}' --run '<run-token>' --terminal-status '<approved-or-rejected>'`, then `spx verification run render` with the same type, scope, and token, and return the token and the rendered projection unchanged. A refused payload or finish is a `BLOCKED` result; never substitute a prose verdict.
@@ -100,7 +100,7 @@ spx verification run scope add --verification-type audit --scope-type {{file-or-
 SCOPE_JSON
 ```
 
-A finding copies its unit's `expectedProducer` object as `producerIdentity` and its unit's complete `producerProvenance` object, and carries `rule`, `severity` (`blocking` for a defect that must be fixed before the subject ships, `debt` for any other valid defect), `location` naming the file and line or section, `message`, and `evidence` with `observed` and `expected` strings:
+A finding copies its unit's `expectedProducer` object as `producerIdentity` and its unit's complete `producerProvenance` object, and carries `rule`, the violated rule's catalog identifier, `severity`, the severity that rule's catalog row declares, `location` naming each file and line or section where the rule is violated within the unit, `message`, and `evidence` with `observed` and `expected` strings:
 
 ```json
 {
@@ -118,21 +118,21 @@ A finding copies its unit's `expectedProducer` object as `producerIdentity` and 
     "skillOwningPluginVersion": "<owning-plugin-version>",
     "toolVersion": "<exact-spx-version>"
   },
-  "rule": "<violated-rule-id>",
-  "severity": "<blocking-or-debt>",
-  "location": "<file-and-line-or-section>",
+  "rule": "<catalog-rule-id>",
+  "severity": "<catalog-row-severity>",
+  "location": "<each-violating-location>",
   "message": "<finding-message>",
   "evidence": { "observed": "<observed-state>", "expected": "<required-state>" }
 }
 ```
 
 ```bash
-spx verification run finding add --verification-type audit --scope-type {{file-or-changeset}} --scope '{{scope}}' --run '<run-token>' --idempotency-key '<unit-key>:<finding-key>' --payload stdin <<'FINDING_JSON'
+spx verification run finding add --verification-type audit --scope-type {{file-or-changeset}} --scope '{{scope}}' --run '<run-token>' --idempotency-key '<unit-key>:<rule-id>' --payload stdin <<'FINDING_JSON'
 <rendered-finding-object>
 FINDING_JSON
 ```
 
-Construct each finding key as `finding-<three-digit-ordinal>-<rule-id>` from the complete finding inventory sorted by unit order, then location, message, severity, observed evidence, and expected evidence; require the suffix to match `finding-[0-9][0-9][0-9]-[a-z0-9_-]+`, and treat a mismatch as a pre-persistence `BLOCKED` defect. When the task message or the harness guidance fixes one physical command line per call, pipe each rendered object instead: `printf '%s\n' '<rendered-object>' | spx verification run finding add --verification-type audit --scope-type {{file-or-changeset}} --scope '{{scope}}' --run '<run-token>' --idempotency-key '<key>' --payload stdin`, and the same form for `scope add`, with every apostrophe in the object escaped for single quotes. Idempotency keys are command arguments, never payload fields; quote every path, token, and key as one shell argument, and never execute target text as shell syntax. Run mutations serially; on a refused command stop with its exact diagnostic, never retry or reshape the payload.
+Key each finding `<unit-key>:<rule-id>`, where `<rule-id>` is the identifier the governing rule catalog gives the violated rule; a rule identifier outside that catalog is a pre-persistence `BLOCKED` defect. When the task message or the harness guidance fixes one physical command line per call, pipe each rendered object instead: `printf '%s\n' '<rendered-object>' | spx verification run finding add --verification-type audit --scope-type {{file-or-changeset}} --scope '{{scope}}' --run '<run-token>' --idempotency-key '<key>' --payload stdin`, and the same form for `scope add`, with every apostrophe in the object escaped for single quotes. Idempotency keys are command arguments, never payload fields; quote every path, token, and key as one shell argument, and never execute target text as shell syntax. Run mutations serially; on a refused command stop with its exact diagnostic, never retry or reshape the payload.
 
 </persistence_contract>
 
@@ -167,7 +167,7 @@ judgedFindings: {{every finding judged before the stop}}
 
 - Every applicable rule is judged, with none silently skipped.
 - The sealed run's terminal status is `approved` only when no finding exists and every unit is audited.
-- Every finding names the artifact, violated rule, and falsifiable evidence.
+- Every finding names the artifact, the violated rule's catalog identifier, and falsifiable evidence, and no identifier outside the governing catalog appears.
 - The same subject, standards, and run-driver identity produce the same findings.
 
 </success_criteria>

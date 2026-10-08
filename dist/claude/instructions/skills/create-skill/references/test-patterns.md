@@ -111,7 +111,7 @@ For each iteration:
 3. Exercise the affected cases in a fresh context.
 4. Compare with the recorded baseline and prior passing cases.
 5. Repair regressions before widening the change.
-6. Obtain the required independent audit after deterministic checks pass.
+6. Return the bundle for independent verification once the deterministic checks pass on it.
 
 </feedback_loop>
 
@@ -121,6 +121,6 @@ For each iteration:
 - Cases describe observable evidence and reject the original failure.
 - Fresh-context results pass without relying on authoring history.
 - Adjacent triggers and prior passing cases remain intact.
-- Repository checks and the required independent audit pass on the exact committed bundle.
+- Repository checks pass on the exact bundle the cases passed on.
 
 </success_criteria>
