@@ -68,10 +68,16 @@ def load_artifact_registry() -> Mapping[str, object]:
             registry = json.load(handle)
     except json.JSONDecodeError as exc:
         raise ValueError(f"{path} is not a rendered artifact registry: {exc}") from exc
-    if not isinstance(registry, dict) or not isinstance(
-        registry.get(RegistryField.KINDS), list
-    ):
-        raise ValueError(f"{path} is not a rendered artifact registry")
+    if not isinstance(registry, dict):
+        raise ValueError(
+            f"{path} is not a rendered artifact registry: "
+            f"the top-level document is {type(registry).__name__}, not an object"
+        )
+    if not isinstance(registry.get(RegistryField.KINDS), list):
+        raise ValueError(
+            f"{path} is not a rendered artifact registry: "
+            f"the {RegistryField.KINDS.value!r} field is absent or not a list"
+        )
     return registry
 
 

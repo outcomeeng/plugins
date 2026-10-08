@@ -14,7 +14,7 @@ One selection record per supplied path — for each registered kind the path mat
 
 <invocation>
 
-When `$ARGUMENTS` is empty, load the API reference below without executing a command. Script consumers import the provider.
+When `$ARGUMENTS` is empty, load the API reference below without executing a command. A script in a sibling skill of the same plugin imports the reader by file location: from its own `__file__` it climbs to the plugin's `skills/` directory and loads `select-artifacts/scripts/select_artifacts.py`.
 
 When one or more paths are supplied, select for them through this skill's own command:
 
@@ -28,7 +28,7 @@ Pass each repository-relative path as one literal argument. The command reads th
 
 <api_surface>
 
-The reader lives in `${SKILL_DIR}/scripts/select_artifacts.py`, and a module imports it through a `__file__`-relative path (no path is hardcoded in agent prose). It is the only shipped reader of the rendered registry, and it owns the document's field names.
+The reader lives in `${SKILL_DIR}/scripts/select_artifacts.py`, and a sibling skill's script imports it as the invocation section states. It is the only shipped reader of the rendered registry, and it owns the document's field names.
 
 | Symbol                                 | Purpose                                                                                                               |
 | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
