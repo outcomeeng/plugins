@@ -76,7 +76,7 @@ Invoke the skill against representative input. Confirm that it selects the inten
 
 <step name="validate">
 
-Run the target repository's canonical skill build and deterministic checks over the exercised bundle, and confirm the complete bundle violates no rule in the `/skill-standards` or `/agent-prompt-standards` rule catalog. When the target repository declares no deterministic skill check, apply the closest available validation surface to every applicable catalog rule. An edit made after validation returns to `exercise`. Return the bundle in the exact state validation passed.
+Run the target repository's canonical skill build and deterministic checks over the exercised bundle, and confirm the complete bundle violates no rule in the `/skill-standards` or `/agent-prompt-standards` rule catalog. An edit made after validation returns to `exercise`. Return the bundle in the exact state validation passed.
 
 </step>
 

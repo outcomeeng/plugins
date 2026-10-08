@@ -15,7 +15,7 @@ A skill-authoring request routed to its matching typed workflow.
 
 <essential_principles>
 
-- Apply every rule in the `/skill-standards` and `/agent-prompt-standards` rule catalogs to the bundle a route produces or changes, and return that bundle ready for independent verification once the target repository's deterministic skill checks pass.
+- Apply every rule in the `/skill-standards` and `/agent-prompt-standards` rule catalogs to the bundle a route produces or changes, and return that bundle ready for independent verification once the target repository's deterministic skill checks pass. Where a route runs repository checks and the target repository declares no deterministic skill check, apply the closest available validation surface to every applicable catalog rule, and name that surface in the result.
 - Dispatch no skill auditor and wait on no audit verdict. A verdict on a skill comes from `/audit-skill` run in an agent session separate from the one that authored the skill; the findings it records enter this skill as repair input.
 - Apply changes only for a request to create, improve, or repair a skill. Pattern questions and verification without requested updates change no file.
 
@@ -23,8 +23,6 @@ A skill-authoring request routed to its matching typed workflow.
 
 <reference_loading>
 When the skill takes arguments, injects state-dependent context, restricts tools, or references files, read `/skill-standards`'s `references/command-capabilities.md` before authoring that surface.
-
-This skill provides routing, workflows, templates, and domain-workflow references for creating skills. It does not restate standards.
 </reference_loading>
 
 <material_change_name_review>
