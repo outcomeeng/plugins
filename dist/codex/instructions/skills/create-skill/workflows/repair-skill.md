@@ -41,13 +41,13 @@ For each finding row, repair every location it names and every other violation o
 
 <step name="exercise">
 
-Invoke the repaired skill against representative input for every route, output, or failure behavior the repair touched. Confirm each selects its intended workflow, loads only its required references, and produces its declared output. Fix each observed failure before validation.
+Build the bundle with the target repository's canonical skill build — or, where the harness loads authored source unrendered, use the authored bundle directly. Exercise it in a context that loads the built skill rather than the files this session edited. Invoke it against representative input for every route, output, or failure behavior the repair touched. Confirm each selects its intended workflow, loads only its required references, and produces its declared output. Fix each observed failure before validation.
 
 </step>
 
 <step name="validate">
 
-Run the target repository's canonical skill build and deterministic checks over the exercised bundle. Confirm every finding row's locations and same-rule instances are repaired, every bundled citation resolves, and the bundle violates no rule in either catalog. An edit made after validation returns to `exercise`.
+Run the target repository's deterministic skill checks over the exercised build. Confirm every finding row's locations and same-rule instances are repaired, every bundled citation resolves, and the bundle violates no rule in either catalog. An edit made after validation returns to `exercise`.
 
 </step>
 

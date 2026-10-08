@@ -41,7 +41,7 @@ Rewrite the bundle from `${CLAUDE_SKILL_DIR}/templates/router-skill.md` by apply
 
 <step name="validate_equivalence">
 
-Map every preserved behavior from the pre-upgrade inventory to its new location. Confirm no route, constraint, reference, or asset disappeared; remove only content proven duplicated or obsolete. Exercise every route plus one ambiguous input and fix each observed failure, then run repository checks and confirm the bundle violates no rule in the `/skill-standards` or `/agent-prompt-standards` rule catalog. An edit made after these checks repeats this step.
+Map every preserved behavior from the pre-upgrade inventory to its new location. Confirm no route, constraint, reference, or asset disappeared; remove only content proven duplicated or obsolete. Build the bundle with the target repository's canonical skill build — or, where the harness loads authored source unrendered, use the authored bundle directly. Exercise it in a context that loads the built skill rather than the files this session edited. Exercise every route plus one ambiguous input against it and fix each observed failure, then run repository checks and confirm the bundle violates no rule in the `/skill-standards` or `/agent-prompt-standards` rule catalog. An edit made after these checks repeats this step.
 
 </step>
 

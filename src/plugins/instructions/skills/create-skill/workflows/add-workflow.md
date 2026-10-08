@@ -32,7 +32,7 @@ Add the trigger and exact `${CLAUDE_SKILL_DIR}/workflows/{descriptive-name}.md` 
 
 <step name="validate">
 
-Exercise the new trigger and its nearest adjacent trigger, and fix each observed failure. Then confirm each selects exactly one intended route, every bundled link resolves, repository checks pass, and the bundle violates no rule in the `/skill-standards` or `/agent-prompt-standards` rule catalog. An edit made after these checks repeats this step.
+Build the bundle with the target repository's canonical skill build — or, where the harness loads authored source unrendered, use the authored bundle directly. Exercise it in a context that loads the built skill rather than the files this session edited. Exercise the new trigger and its nearest adjacent trigger against it, and fix each observed failure. Then confirm each selects exactly one intended route, every bundled link resolves, repository checks pass, and the bundle violates no rule in the `/skill-standards` or `/agent-prompt-standards` rule catalog. An edit made after these checks repeats this step.
 
 </step>
 

@@ -70,13 +70,13 @@ Instantiate the selected template with the resolved requirements. Apply `/skill-
 
 <step name="exercise">
 
-Invoke the skill against representative input. Confirm that it selects the intended workflow, loads only the required references, produces the objective's output shape, and satisfies each success criterion. Fix each observed failure before validation.
+Build the bundle with the target repository's canonical skill build — or, where the harness loads authored source unrendered, use the authored bundle directly. Exercise it in a context that loads the built skill rather than the files this session edited. Invoke it against representative input. Confirm that it selects the intended workflow, loads only the required references, produces the objective's output shape, and satisfies each success criterion. Fix each observed failure before validation.
 
 </step>
 
 <step name="validate">
 
-Run the target repository's canonical skill build and deterministic checks over the exercised bundle, and confirm the complete bundle violates no rule in the `/skill-standards` or `/agent-prompt-standards` rule catalog. An edit made after validation returns to `exercise`. Return the bundle in the exact state validation passed.
+Run the target repository's deterministic skill checks over the exercised build, and confirm the complete bundle violates no rule in the `/skill-standards` or `/agent-prompt-standards` rule catalog. An edit made after validation returns to `exercise`. Return the bundle in the exact state validation passed.
 
 </step>
 
