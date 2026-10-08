@@ -16,7 +16,7 @@ Known imperfections in the position-direction node that its changeset does not s
 
 `environment.py` and `position_mail.py` build the paths of the sibling adapter scripts from their own location (`parents[2]`), so a rename or move of an adapter skill breaks the roster and the monitor in a consumer installation without a build failure.
 
-**Evidence.** `instructions:skill-auditor` finding `f-009`, severity `WARNING`, rule `cross_skill_file_path`. `spx/13-plugin-and-runtime-conventions.adr.md` sanctions reaching a provider skill's logic from the consumer's own script by a `__file__`-relative path, and the position-direction node's fourth assertion states that the scripts reach the adapters only through those scripts.
+**Evidence.** `instructions:skill-auditor` finding `f-009`, severity `WARNING`, rule `cross_skill_file_path`. [`spx/13-plugin-and-runtime-conventions.adr.md`](spx/13-plugin-and-runtime-conventions.adr.md) sanctions reaching a provider skill's logic from the consumer's own script by a `__file__`-relative path, and the position-direction node's fourth assertion states that the scripts reach the adapters only through those scripts.
 
 **Settlement condition.** The adapter skills publish a location contract that the scripts consume in place of the sibling directory layout, or a decision names the layout as the contract; the assertion that names the sibling adapter scripts changes with it.
 
