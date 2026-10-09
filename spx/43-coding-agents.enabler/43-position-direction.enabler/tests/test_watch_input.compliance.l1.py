@@ -1,14 +1,19 @@
 from pathlib import Path
 
-from outcomeeng_testing.generators.position_direction import invalid_intervals
+from outcomeeng_testing.generators.position_direction import invalid_durations
 from outcomeeng_testing.harnesses.position_direction import (
+    ARGUMENT_TRIAL_DEADLINE_SECONDS,
+    INVALID_DEADLINES,
     INVALID_INTERVALS,
+    LOOP_INTERVAL_SECONDS,
     MONITOR_SCRIPT,
     ROSTER_SCRIPT,
     VALID_WATCH_FIXTURE,
     check_examples,
     copy_into,
     invocation,
+    load_scripts,
+    loop_invocation,
     run_script,
     scratch_dir,
     state_fixture,
@@ -17,6 +22,8 @@ from outcomeeng_testing.harnesses.position_direction import (
     watch_fixture,
     watch_fixture_defect,
 )
+
+monitor = load_scripts().monitor
 
 
 def test_a_watch_file_that_violates_the_contract_is_rejected_naming_the_defect() -> (
@@ -70,7 +77,15 @@ def test_an_argument_list_that_departs_from_the_usage_is_rejected() -> None:
             missing_one = arguments[:-1]
             one_extra = [*arguments, VALID_WATCH_FIXTURE]
             unknown_option = [*arguments, "--no-such-option"]
-            for departing in (missing_one, one_extra, unknown_option):
+            departures = [missing_one, one_extra, unknown_option]
+            if script == MONITOR_SCRIPT:
+                # A loop with no deadline would poll without end.
+                departures.append(
+                    loop_invocation(
+                        VALID_WATCH_FIXTURE, state, LOOP_INTERVAL_SECONDS, None
+                    )
+                )
+            for departing in departures:
                 completed = run_script(script, departing)
                 assert completed.returncode != 0, f"{script} accepted {departing}"
                 assert completed.stderr.strip() != "", f"{script} named no defect"
@@ -83,16 +98,34 @@ def test_an_interval_that_is_not_a_positive_finite_number_is_rejected() -> None:
         def rejected(interval: str) -> None:
             completed = run_script(
                 MONITOR_SCRIPT,
-                [
-                    *invocation(MONITOR_SCRIPT, VALID_WATCH_FIXTURE, state),
-                    "--every",
+                loop_invocation(
+                    VALID_WATCH_FIXTURE,
+                    state,
                     interval,
-                ],
+                    ARGUMENT_TRIAL_DEADLINE_SECONDS,
+                ),
             )
-            assert completed.returncode != 0, f"accepted --every {interval}"
-            assert "--every" in completed.stderr
+            assert completed.returncode != 0, f"accepted interval {interval!r}"
+            assert monitor.EVERY_OPTION in completed.stderr, completed.stderr
 
-        check_examples(invalid_intervals(), rejected, INVALID_INTERVALS)
+        check_examples(invalid_durations(), rejected, INVALID_INTERVALS)
+
+
+def test_a_deadline_that_is_not_a_positive_finite_number_is_rejected() -> None:
+    with scratch_dir() as directory:
+        state = Path(directory) / "state.json"
+
+        def rejected(deadline: str) -> None:
+            completed = run_script(
+                MONITOR_SCRIPT,
+                loop_invocation(
+                    VALID_WATCH_FIXTURE, state, LOOP_INTERVAL_SECONDS, deadline
+                ),
+            )
+            assert completed.returncode != 0, f"accepted deadline {deadline!r}"
+            assert monitor.DEADLINE_OPTION in completed.stderr, completed.stderr
+
+        check_examples(invalid_durations(), rejected, INVALID_DEADLINES)
 
 
 def test_a_watch_file_that_keeps_the_contract_is_accepted() -> None:
