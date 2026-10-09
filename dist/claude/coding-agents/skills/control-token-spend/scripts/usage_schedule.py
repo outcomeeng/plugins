@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+
 import hashlib
 import json
 import os
@@ -11,10 +12,11 @@ import subprocess
 import sys
 import time
 from dataclasses import dataclass
-from enum import Enum
+from enum import Enum, StrEnum
 from pathlib import Path
 from typing import Protocol
 
+from usage_accounting import AccountingField
 from usage_accounting import Config, Json
 from usage_reports import atomic_write, json_write
 
@@ -31,8 +33,65 @@ SCRIPT_NAMES = (
 )
 INSTALL_NAME = "installation.json"
 CONFIG_NAME = "configuration.json"
+AISE_QUERY_PREFIX = (
+    "--index-refresh",
+    "existing-only",
+    "--skip-release-notification",
+    "--threads",
+    "1",
+    "messages",
+    "search",
+    "error|failed|timeout|retry|rejected",
+    "--query-mode",
+    "regex",
+    "--provider",
+    "claude",
+)
+AISE_QUERY_SUFFIX = (
+    "--limit",
+    "12",
+    "--context",
+    "0",
+    "--lines-per-message",
+    "5",
+    "--field-view-chars",
+    "1000",
+    "--format",
+    "json",
+)
+AISE_START_OPTION = "--since"
+AISE_END_OPTION = "--until"
+AISE_DATABASE_OPTION = "--database"
+AISE_VERSION_OPTION = "--version"
+
 SUPPORTED_PYTHON = ((3, 13), (3, 14))
 MODES = ("detect", "hourly")
+
+
+LAUNCHCTL = "/bin/launchctl"
+
+
+class LaunchctlOperation(StrEnum):
+    BOOTSTRAP = "bootstrap"
+    BOOTOUT = "bootout"
+    PRINT = "print"
+
+
+class JobOperation(StrEnum):
+    STATUS = "status"
+    STOP = "stop"
+    RESTART = "restart"
+
+
+class ScheduleField(StrEnum):
+    """Wire fields consumed by the module's public evidence contract."""
+
+    PROGRAMARGUMENTS = "ProgramArguments"
+    ASSETS = "assets"
+    JOBS = "jobs"
+    LOADED = "loaded"
+    PLIST = "plist"
+    STATUS = "status"
 
 
 class JobStatus(str, Enum):
@@ -142,12 +201,12 @@ def manifest(root: Path) -> Json | None:
         or value.get("root") != str(root)
     ):
         raise ValueError(f"Invalid managed installation identity: {path}")
-    recorded_jobs = value.get("jobs")
+    recorded_jobs = value.get(ScheduleField.JOBS)
     if not isinstance(recorded_jobs, list) or len(recorded_jobs) != len(MODES):
         raise ValueError(f"Invalid managed jobs: {path}")
     assets = root / "assets" / str(value.get("asset_version"))
     if (
-        value.get("assets") != str(assets)
+        value.get(ScheduleField.ASSETS) != str(assets)
         or len(assets.name) != 64
         or any(c not in "0123456789abcdef" for c in assets.name)
     ):
@@ -164,7 +223,7 @@ def manifest(root: Path) -> Json | None:
             raise ValueError(f"Invalid managed job label: {path}")
         labels.add(label)
         location = Path(str(job.get("path")))
-        settings = job.get("plist")
+        settings = job.get(ScheduleField.PLIST)
         if (
             not location.is_absolute()
             or location.name != label + ".plist"
@@ -184,7 +243,7 @@ def manifest(root: Path) -> Json | None:
         ]
         if (
             settings.get("Label") != label
-            or settings.get("ProgramArguments") != expected
+            or settings.get(ScheduleField.PROGRAMARGUMENTS) != expected
             or settings.get("WorkingDirectory") != str(root)
         ):
             raise ValueError(f"Managed job does not match installed assets: {path}")
@@ -196,7 +255,7 @@ def investigate(
 ) -> Json:
     if executable is None and database is None:
         return {
-            "status": InvestigationStatus.NOT_SELECTED,
+            ScheduleField.STATUS: InvestigationStatus.NOT_SELECTED,
             "gap": "Optional existing-index investigation was not selected.",
         }
     if executable is None or database is None:
@@ -207,16 +266,16 @@ def investigate(
     )
     if not executable.is_file() or not database.is_file():
         return {
-            "status": InvestigationStatus.UNAVAILABLE,
+            ScheduleField.STATUS: InvestigationStatus.UNAVAILABLE,
             "gap": "Existing investigation executable or database is absent.",
             "executable": str(executable),
             "database": str(database),
         }
     try:
-        version = checked(runner, (str(executable), "--version")).stdout.strip()
+        version = checked(runner, (str(executable), AISE_VERSION_OPTION)).stdout.strip()
         if version != AISE_VERSION:
             return {
-                "status": InvestigationStatus.INCOMPATIBLE,
+                ScheduleField.STATUS: InvestigationStatus.INCOMPATIBLE,
                 "observed_version": version,
                 "supported_version": AISE_VERSION,
                 "gap": "Optional query skipped; the supported command contract differs.",
@@ -225,38 +284,18 @@ def investigate(
             runner,
             (
                 str(executable),
-                "--database",
+                AISE_DATABASE_OPTION,
                 str(database),
-                "--index-refresh",
-                "existing-only",
-                "--skip-release-notification",
-                "--threads",
-                "1",
-                "messages",
-                "search",
-                "error|failed|timeout|retry|rejected",
-                "--query-mode",
-                "regex",
-                "--provider",
-                "claude",
-                "--since",
-                measurement["start_utc"],
-                "--until",
-                measurement["end_exclusive_utc"],
-                "--limit",
-                "12",
-                "--context",
-                "0",
-                "--lines-per-message",
-                "5",
-                "--field-view-chars",
-                "1000",
-                "--format",
-                "json",
+                *AISE_QUERY_PREFIX,
+                AISE_START_OPTION,
+                measurement[AccountingField.START_UTC],
+                AISE_END_OPTION,
+                measurement[AccountingField.END_EXCLUSIVE_UTC],
+                *AISE_QUERY_SUFFIX,
             ),
         )
         return {
-            "status": InvestigationStatus.QUERIED,
+            ScheduleField.STATUS: InvestigationStatus.QUERIED,
             "version": version,
             "source": AISE_SOURCE,
             "database": str(database),
@@ -272,7 +311,7 @@ def investigate(
         subprocess.TimeoutExpired,
     ) as error:
         return {
-            "status": InvestigationStatus.FAILED,
+            ScheduleField.STATUS: InvestigationStatus.FAILED,
             "gap": f"Optional investigation failed; accounting preserved: {error}",
         }
 
@@ -282,7 +321,7 @@ def install_plan(
 ) -> Json:
     if platform != "darwin":
         return {
-            "status": "unsupported",
+            ScheduleField.STATUS: "unsupported",
             "platform": platform,
             "gap": "Managed scheduling requires macOS launchd.",
         }
@@ -301,7 +340,7 @@ def install_plan(
         )
         value = {
             "Label": label,
-            "ProgramArguments": [
+            ScheduleField.PROGRAMARGUMENTS: [
                 str(python),
                 "-B",
                 str(assets / "usage_control.py"),
@@ -322,17 +361,17 @@ def install_plan(
             {
                 "label": label,
                 "path": str(agents_directory / (label + ".plist")),
-                "plist": value,
+                ScheduleField.PLIST: value,
             }
         )
     return {
         "schema_version": 1,
-        "status": "planned",
+        ScheduleField.STATUS: "planned",
         "asset_version": version,
-        "assets": str(assets),
+        ScheduleField.ASSETS: str(assets),
         "root": str(config.root),
-        "configuration": config.effective(),
-        "jobs": jobs,
+        AccountingField.CONFIGURATION: config.effective(),
+        ScheduleField.JOBS: jobs,
         "python": str(python),
         "source_dependencies": list(SCRIPT_NAMES),
     }
@@ -353,29 +392,31 @@ def install(
     plan = install_plan(
         config, source, Path(sys.executable).resolve(), agents_directory, platform
     )
-    if plan["status"] == "unsupported" or not activate:
+    if plan[ScheduleField.STATUS] == "unsupported" or not activate:
         return plan
     installed_path = config.root / INSTALL_NAME
     prior = manifest(config.root)
     owned_paths = (
-        {job["path"] for job in prior.get("jobs", [])}
+        {job["path"] for job in prior.get(ScheduleField.JOBS, [])}
         if isinstance(prior, dict)
         else set()
     )
-    for job in plan["jobs"]:
+    for job in plan[ScheduleField.JOBS]:
         path = Path(job["path"])
         if path.is_symlink() or (path.exists() and str(path) not in owned_paths):
             raise ValueError(
                 f"Unowned launch agent exists: {path}; inspect it before installation"
             )
         if path.exists() and isinstance(prior, dict):
-            old = next(item for item in prior["jobs"] if item["path"] == str(path))
-            if path.read_bytes() != plistlib.dumps(old["plist"]):
+            old = next(
+                item for item in prior[ScheduleField.JOBS] if item["path"] == str(path)
+            )
+            if path.read_bytes() != plistlib.dumps(old[ScheduleField.PLIST]):
                 raise ValueError(
                     f"Managed launch agent changed externally: {path}; inspect it before replacement"
                 )
     domain = f"gui/{os.getuid()}"
-    assets = Path(plan["assets"])
+    assets = Path(plan[ScheduleField.ASSETS])
     assets.mkdir(parents=True, exist_ok=True)
     for name in SCRIPT_NAMES:
         destination = assets / name
@@ -386,25 +427,30 @@ def install(
             )
         atomic_write(destination, data)
     json_write(config.root / CONFIG_NAME, config.effective())
-    plan["status"] = "installing"
+    plan[ScheduleField.STATUS] = "installing"
     json_write(installed_path, plan)
-    for job in plan["jobs"]:
+    for job in plan[ScheduleField.JOBS]:
         path = Path(job["path"])
-        atomic_write(path, plistlib.dumps(job["plist"]))
+        atomic_write(path, plistlib.dumps(job[ScheduleField.PLIST]))
         if prior:
             result = runner.run(
-                ("/bin/launchctl", "print", domain + "/" + job["label"])
+                (LAUNCHCTL, LaunchctlOperation.PRINT, domain + "/" + job["label"])
             )
             if result.returncode == 0:
                 checked(
-                    runner, ("/bin/launchctl", "bootout", domain + "/" + job["label"])
+                    runner,
+                    (
+                        LAUNCHCTL,
+                        LaunchctlOperation.BOOTOUT,
+                        domain + "/" + job["label"],
+                    ),
                 )
             elif not absent(result):
                 raise RuntimeError(
                     f"Cannot establish managed job status: {result.stderr[:2000]}"
                 )
-        checked(runner, ("/bin/launchctl", "bootstrap", domain, str(path)))
-    plan["status"] = "installed"
+        checked(runner, (LAUNCHCTL, LaunchctlOperation.BOOTSTRAP, domain, str(path)))
+    plan[ScheduleField.STATUS] = "installed"
     plan["retention_gaps"] = retain_assets(config.root, assets)
     json_write(installed_path, plan)
     return plan
@@ -466,27 +512,27 @@ def retain_assets(root: Path, active: Path) -> list[str]:
 def jobs(root: Path, operation: str, runner: Runner, platform: str) -> Json:
     if platform != "darwin":
         return {
-            "status": JobStatus.UNSUPPORTED,
+            ScheduleField.STATUS: JobStatus.UNSUPPORTED,
             "platform": platform,
             "operation": operation,
         }
     installation = root / INSTALL_NAME
     if not installation.exists():
         return {
-            "status": JobStatus.NOT_INSTALLED,
+            ScheduleField.STATUS: JobStatus.NOT_INSTALLED,
             "operation": operation,
             "root": str(root),
         }
     value = manifest(root)
     if value is None:
-        return {"status": JobStatus.NOT_INSTALLED, "operation": operation}
+        return {ScheduleField.STATUS: JobStatus.NOT_INSTALLED, "operation": operation}
     domain = f"gui/{os.getuid()}"
     result: Json = {
         "operation": operation,
-        "installation_status": value.get("status"),
-        "jobs": [],
+        "installation_status": value.get(ScheduleField.STATUS),
+        ScheduleField.JOBS: [],
     }
-    for job in value["jobs"]:
+    for job in value[ScheduleField.JOBS]:
         label, path = str(job["label"]), Path(job["path"])
         if label not in tuple(LABEL_PREFIX + "." + mode for mode in MODES):
             raise ValueError(
@@ -495,41 +541,49 @@ def jobs(root: Path, operation: str, runner: Runner, platform: str) -> Json:
         if path.name != label + ".plist" or path.is_symlink():
             raise ValueError(f"Invalid managed launch-agent path: {path}")
         handle = domain + "/" + label
-        observed = runner.run(("/bin/launchctl", "print", handle))
+        observed = runner.run((LAUNCHCTL, LaunchctlOperation.PRINT, handle))
         if observed.returncode and not absent(observed):
-            result["jobs"].append(
+            result[ScheduleField.JOBS].append(
                 {
                     "label": label,
-                    "loaded": None,
+                    ScheduleField.LOADED: None,
                     "returncode": observed.returncode,
                     "stdout": observed.stdout,
                     "stderr": observed.stderr,
                 }
             )
-            result["status"] = JobStatus.FAILED
+            result[ScheduleField.STATUS] = JobStatus.FAILED
             continue
-        if operation == "stop" and observed.returncode == 0:
-            observed = checked(runner, ("/bin/launchctl", "bootout", handle))
-        elif operation == "restart":
-            if not path.exists() or path.read_bytes() != plistlib.dumps(job["plist"]):
+        if operation == JobOperation.STOP and observed.returncode == 0:
+            observed = checked(runner, (LAUNCHCTL, LaunchctlOperation.BOOTOUT, handle))
+        elif operation == JobOperation.RESTART:
+            if not path.exists() or path.read_bytes() != plistlib.dumps(
+                job[ScheduleField.PLIST]
+            ):
                 raise ValueError(
                     f"Managed launch agent unavailable or changed: {path}; reconcile installation first"
                 )
             if observed.returncode == 0:
-                checked(runner, ("/bin/launchctl", "bootout", handle))
-            checked(runner, ("/bin/launchctl", "bootstrap", domain, str(path)))
-            observed = runner.run(("/bin/launchctl", "print", handle))
-        result["jobs"].append(
+                checked(runner, (LAUNCHCTL, LaunchctlOperation.BOOTOUT, handle))
+            checked(
+                runner, (LAUNCHCTL, LaunchctlOperation.BOOTSTRAP, domain, str(path))
+            )
+            observed = runner.run((LAUNCHCTL, LaunchctlOperation.PRINT, handle))
+        result[ScheduleField.JOBS].append(
             {
                 "label": label,
                 "returncode": observed.returncode,
                 "stdout": observed.stdout,
                 "stderr": observed.stderr,
-                "loaded": observed.returncode == 0 if operation != "stop" else False,
+                ScheduleField.LOADED: observed.returncode == 0
+                if operation != JobOperation.STOP
+                else False,
             }
         )
-    if result.get("status") != JobStatus.FAILED:
-        result["status"] = (
-            JobStatus.INSPECTED if operation == "status" else JobStatus.COMPLETED
+    if result.get(ScheduleField.STATUS) != JobStatus.FAILED:
+        result[ScheduleField.STATUS] = (
+            JobStatus.INSPECTED
+            if operation == JobOperation.STATUS
+            else JobStatus.COMPLETED
         )
     return result

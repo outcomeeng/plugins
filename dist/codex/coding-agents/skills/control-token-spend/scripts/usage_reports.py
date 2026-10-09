@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+
 import csv
 import hashlib
 import html
@@ -10,8 +11,10 @@ import json
 import os
 import tempfile
 from collections import Counter
+from enum import StrEnum
 from pathlib import Path
 
+from usage_accounting import AccountingField
 from usage_accounting import (
     EXCERPT_CHARS,
     TOKEN_KEYS,
@@ -25,6 +28,9 @@ MAX_SCREEN_ROWS = 20_000
 MAX_EXAMPLES = 20
 MAX_RANKED = 50
 MAX_REPORTS = 96
+REPORT_DIRECTORY = "reports"
+ALERT_DIRECTORY = "alerts"
+RETENTION_NAME = "retention-status.json"
 REPORT_NAME = "report.html"
 MEASUREMENT_NAME = "measurements.json"
 CSV_NAME = "sessions.csv"
@@ -45,6 +51,25 @@ td:first-child{max-width:260px;overflow-wrap:anywhere}pre{white-space:pre-wrap;o
 @media(max-width:600px){main{padding:20px 14px}.metric{border-right:0}table{font-size:11px}}
 @media(prefers-reduced-motion:no-preference){details[open]>div{animation:appear .15s ease-out}@keyframes appear{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}}
 """
+
+
+class ReportSection(StrEnum):
+    CONSUMPTION = "Consumption breakdown"
+    CONTEXT = "Context growth"
+    CACHE = "Cache analysis"
+    USEFUL_WORK = "Waste and useful work"
+
+
+UNKNOWN_OUTPUT = "Delivered output and usefulness remain unknown until independent store, merge or pinned verification evidence establishes them."
+
+
+class ReportField(StrEnum):
+    """Wire fields consumed by the module's public evidence contract."""
+
+    MEASUREMENT = "measurement"
+    MODEL_INVOCATIONS = "model_invocations"
+    REFERENCES = "references"
+    REPORT_GAPS = "report_gaps"
 
 
 def atomic_write(path: Path, content: str | bytes) -> None:
@@ -73,8 +98,8 @@ def behavior(evidence: Evidence, measurement: Json) -> Json:
     rows = evidence.db.execute(
         "SELECT * FROM behavior WHERE stamp>=? AND stamp<? ORDER BY stamp,identity LIMIT ?",
         (
-            measurement["start_utc"],
-            measurement["end_exclusive_utc"],
+            measurement[AccountingField.START_UTC],
+            measurement[AccountingField.END_EXCLUSIVE_UTC],
             MAX_SCREEN_ROWS + 1,
         ),
     ).fetchall()
@@ -89,14 +114,15 @@ def behavior(evidence: Evidence, measurement: Json) -> Json:
     characters = errors = launches = 0
     results = user_turns = 0
     for row in rows[:MAX_SCREEN_ROWS]:
-        if row["kind"] == "user_turn":
+        if row[AccountingField.KIND] == "user_turn":
             user_turns += 1
             continue
         item = json.loads(row["payload"])
         item["reference"] = (
-            "e" + hashlib.sha256(row["identity"].encode()).hexdigest()[:24]
+            "e"
+            + hashlib.sha256(row[AccountingField.IDENTITY].encode()).hexdigest()[:24]
         )
-        if row["kind"] == "tool_use":
+        if row[AccountingField.KIND] == "tool_use":
             name = row["tool"]
             tools[name] += 1
             launches += name.lower() in ("agent", "task")
@@ -141,7 +167,7 @@ def behavior(evidence: Evidence, measurement: Json) -> Json:
             key: count for key, count in tools.items() if key.startswith("mcp__")
         },
         "agent_launches": launches,
-        "native_child_requests": measurement["child_requests"],
+        "native_child_requests": measurement[AccountingField.CHILD_REQUESTS],
         "read_or_search_operands": dict(paths.most_common(MAX_RANKED)),
         "shell_commands": dict(commands.most_common(MAX_RANKED)),
         "tool_results": results,
@@ -149,8 +175,8 @@ def behavior(evidence: Evidence, measurement: Json) -> Json:
         "explicit_tool_errors": errors,
         "large_results": examples,
         "repeated_calls": repeated,
-        "references": references,
-        "gaps": (
+        ReportField.REFERENCES: references,
+        AccountingField.GAPS: (
             ["Behavior query bound reached; counts are partial."] if bounded else []
         )
         + [
@@ -222,7 +248,7 @@ def csv_sessions(measurement: Json) -> str:
     )
     writer = csv.writer(output)
     writer.writerow(keys)
-    for session, group in measurement["sessions"].items():
+    for session, group in measurement[AccountingField.SESSIONS].items():
         writer.writerow(
             [session if key == "session" else group.get(key) for key in keys]
         )
@@ -230,20 +256,20 @@ def csv_sessions(measurement: Json) -> str:
 
 
 def render(measurement: Json, screening: Json, previous: Json | None) -> str:
-    total = measurement["api_equivalent_usd"]
+    total = measurement[AccountingField.API_EQUIVALENT_USD]
     components = sorted(
         measurement["cost_components"].items(), key=lambda item: item[1], reverse=True
     )
     ranked = sorted(
-        measurement["sessions"].items(),
-        key=lambda item: item[1]["api_equivalent_usd"],
+        measurement[AccountingField.SESSIONS].items(),
+        key=lambda item: item[1][AccountingField.API_EQUIVALENT_USD],
         reverse=True,
     )
     dashboard = (
         '<header><span class="badge">LOCAL USAGE EVIDENCE</span><h1>Consumption control</h1><p class="window">'
-        + escape(measurement["start_utc"])
+        + escape(measurement[AccountingField.START_UTC])
         + " → "
-        + escape(measurement["end_exclusive_utc"])
+        + escape(measurement[AccountingField.END_EXCLUSIVE_UTC])
         + ' · UTC · end exclusive</p><p><a href="measurements.json">Read JSON</a> · <a href="sessions.csv">Read CSV</a> · <a href="evidence.html">Inspect transcripts</a></p></header>'
     )
     dashboard += (
@@ -256,9 +282,12 @@ def render(measurement: Json, screening: Json, previous: Json | None) -> str:
             + "</strong></div>"
             for label, value in (
                 ("API-equivalent estimate", f"${total:,.2f}"),
-                ("LLM requests", f"{measurement['requests']:,}"),
-                ("Native child requests", f"{measurement['child_requests']:,}"),
-                ("Coverage gaps", len(measurement["gaps"])),
+                ("LLM requests", f"{measurement[AccountingField.REQUESTS]:,}"),
+                (
+                    "Native child requests",
+                    f"{measurement[AccountingField.CHILD_REQUESTS]:,}",
+                ),
+                ("Coverage gaps", len(measurement[AccountingField.GAPS])),
             )
         )
         + "</div>"
@@ -274,10 +303,10 @@ def render(measurement: Json, screening: Json, previous: Json | None) -> str:
     )
     conclusion += "<p>These values explain measured API-equivalent consumption. The subscription allowance has no established conversion from these amounts.</p>"
     if previous:
-        conclusion += f"<p>Previous interval: ${previous['api_equivalent_usd']:,.2f} across {previous['requests']:,} requests; compare coverage before interpreting the change.</p>"
+        conclusion += f"<p>Previous interval: ${previous[AccountingField.API_EQUIVALENT_USD]:,.2f} across {previous[AccountingField.REQUESTS]:,} requests; compare coverage before interpreting the change.</p>"
     dashboard += detail("Executive conclusion", conclusion, True)
     dashboard += detail(
-        "Consumption breakdown",
+        ReportSection.CONSUMPTION,
         table(
             (
                 "Session",
@@ -297,10 +326,10 @@ def render(measurement: Json, screening: Json, previous: Json | None) -> str:
                     session,
                     g["first_utc"],
                     g["duration_seconds"],
-                    g["model"],
-                    g["requests"],
+                    g[AccountingField.MODEL],
+                    g[AccountingField.REQUESTS],
                     *[g[k] for k in TOKEN_KEYS],
-                    f"${g['api_equivalent_usd']:.4f}",
+                    f"${g[AccountingField.API_EQUIVALENT_USD]:.4f}",
                     f"{g['share_measured_cost']:.1%}"
                     if g["share_measured_cost"] is not None
                     else "unknown",
@@ -309,12 +338,34 @@ def render(measurement: Json, screening: Json, previous: Json | None) -> str:
             ],
         )
         + table(
+            ("Model", "Requests", "API-equivalent estimate", "Share"),
+            [
+                [
+                    name,
+                    value[AccountingField.REQUESTS],
+                    f"${value[AccountingField.API_EQUIVALENT_USD]:.4f}",
+                    f"{value['share_measured_cost']:.1%}"
+                    if value["share_measured_cost"] is not None
+                    else "unknown",
+                ]
+                for name, value in sorted(
+                    measurement[AccountingField.MODELS].items(),
+                    key=lambda pair: pair[1][AccountingField.API_EQUIVALENT_USD],
+                    reverse=True,
+                )[:MAX_RANKED]
+            ],
+        )
+        + table(
             ("Workspace", "Requests", "API-equivalent estimate"),
             [
-                [name, value["requests"], f"${value['api_equivalent_usd']:.4f}"]
+                [
+                    name,
+                    value[AccountingField.REQUESTS],
+                    f"${value[AccountingField.API_EQUIVALENT_USD]:.4f}",
+                ]
                 for name, value in sorted(
-                    measurement["workspaces"].items(),
-                    key=lambda pair: pair[1]["api_equivalent_usd"],
+                    measurement[AccountingField.WORKSPACES].items(),
+                    key=lambda pair: pair[1][AccountingField.API_EQUIVALENT_USD],
                     reverse=True,
                 )[:MAX_RANKED]
             ],
@@ -333,7 +384,7 @@ def render(measurement: Json, screening: Json, previous: Json | None) -> str:
         + "<p>Component shares establish accounting contribution. Exact attribution to a tool, skill, or plugin remains unknown.</p>",
     )
     dashboard += detail(
-        "Context growth",
+        ReportSection.CONTEXT,
         table(
             (
                 "Session",
@@ -346,13 +397,13 @@ def render(measurement: Json, screening: Json, previous: Json | None) -> str:
             [
                 [
                     session,
-                    f"{g['early_context_mean']:,.0f}",
-                    f"{g['late_context_mean']:,.0f}",
-                    f"{g['context_growth_ratio']:.2f}×"
-                    if g["context_growth_ratio"] is not None
+                    f"{g[AccountingField.EARLY_CONTEXT_MEAN]:,.0f}",
+                    f"{g[AccountingField.LATE_CONTEXT_MEAN]:,.0f}",
+                    f"{g[AccountingField.CONTEXT_GROWTH_RATIO]:.2f}×"
+                    if g[AccountingField.CONTEXT_GROWTH_RATIO] is not None
                     else "unknown",
-                    f"${g['early_cost_mean']:.5f}",
-                    f"${g['late_cost_mean']:.5f}",
+                    f"${g[AccountingField.EARLY_COST_MEAN]:.5f}",
+                    f"${g[AccountingField.LATE_COST_MEAN]:.5f}",
                 ]
                 for session, g in ranked[:MAX_RANKED]
             ],
@@ -360,7 +411,7 @@ def render(measurement: Json, screening: Json, previous: Json | None) -> str:
         + "<p>Samples use up to ten requests from each end, capped at one quarter of session requests. Input includes uncached input, cache reads and cache writes. Unpriced requests weaken cost comparisons.</p>",
     )
     dashboard += detail(
-        "Cache analysis",
+        ReportSection.CACHE,
         table(
             ("Usage field", "Tokens", "Estimated component"),
             [
@@ -368,7 +419,7 @@ def render(measurement: Json, screening: Json, previous: Json | None) -> str:
                 for key in TOKEN_KEYS
             ],
         )
-        + f"<p>Cache-read share of measured input: {escape(format(measurement['cache_read_share'], '.1%') if measurement['cache_read_share'] is not None else 'unknown')}. Cache-write duration assumptions: {measurement['pricing_assumption_requests']:,} requests.</p>",
+        + f"<p>Cache-read share of measured input: {escape(format(measurement[AccountingField.CACHE_READ_SHARE], '.1%') if measurement[AccountingField.CACHE_READ_SHARE] is not None else 'unknown')}. Cache-write duration assumptions: {measurement['pricing_assumption_requests']:,} requests.</p>",
     )
     links = (
         "<ul>"
@@ -411,8 +462,10 @@ def render(measurement: Json, screening: Json, previous: Json | None) -> str:
         + "</pre>",
     )
     dashboard += detail(
-        "Waste and useful work",
-        "<p>Measured work includes processing context, creating cache entries and producing output. Repeated calls are inspection candidates; their necessity is unverified. Delivered output and usefulness remain unknown until independent store, merge or pinned verification evidence establishes them.</p>",
+        ReportSection.USEFUL_WORK,
+        "<p>Measured work includes processing context, creating cache entries and producing output. Repeated calls are inspection candidates; their necessity is unverified. "
+        + UNKNOWN_OUTPUT
+        + "</p>",
     )
     dashboard += detail(
         "Highest-leverage checks",
@@ -421,11 +474,16 @@ def render(measurement: Json, screening: Json, previous: Json | None) -> str:
     dashboard += detail(
         "Missing evidence",
         "<pre>"
-        + escape(json.dumps(measurement["gaps"] + screening["gaps"], indent=2))
+        + escape(
+            json.dumps(
+                measurement[AccountingField.GAPS] + screening[AccountingField.GAPS],
+                indent=2,
+            )
+        )
         + '</pre><p>Local transcript coverage does not establish account-wide completeness, subscription-quota conversion, or exact retained-context content. Pricing source: <a href="'
         + escape(measurement["pricing"]["source"])
         + '">Read pricing</a>.</p>',
-        bool(measurement["gaps"]),
+        bool(measurement[AccountingField.GAPS]),
     )
     return page("Consumption control", dashboard)
 
@@ -435,22 +493,26 @@ def write_report(
 ) -> Path:
     identity = hashlib.sha256(
         encoded(
-            {"measurement": measurement, "screening": screening, "previous": previous}
+            {
+                ReportField.MEASUREMENT: measurement,
+                "screening": screening,
+                "previous": previous,
+            }
         ).encode()
     ).hexdigest()
-    directory = root / "reports" / identity
+    directory = root / REPORT_DIRECTORY / identity
     envelope = {
         "schema_version": 1,
-        "measurement": measurement,
+        ReportField.MEASUREMENT: measurement,
         "previous": previous,
         "behavior": screening,
         "artifact_identity": identity,
-        "model_invocations": 0,
+        ReportField.MODEL_INVOCATIONS: 0,
     }
     json_write(directory / MEASUREMENT_NAME, envelope)
     atomic_write(directory / CSV_NAME, csv_sessions(measurement))
     evidence_body = '<header><h1>Transcript evidence</h1><p><a href="report.html">Read report</a></p></header>'
-    for reference, item in screening["references"].items():
+    for reference, item in screening[ReportField.REFERENCES].items():
         source = Path(item["source"])
         evidence_body += (
             '<section class="evidence" id="'
@@ -464,9 +526,9 @@ def write_report(
             + '</p><p><a href="'
             + escape(source.as_uri())
             + '">Open source</a> · UUID: '
-            + escape(item["uuid"])
+            + escape(item[AccountingField.UUID])
             + "</p><pre>"
-            + escape(item["excerpt"])
+            + escape(item[AccountingField.EXCERPT])
             + "</pre><p>Excerpt truncated: "
             + escape(item["truncated"])
             + "</p></section>"
@@ -478,18 +540,21 @@ def write_report(
         {
             "artifact_identity": identity,
             "path": str(directory / REPORT_NAME),
-            "start_utc": measurement["start_utc"],
-            "end_exclusive_utc": measurement["end_exclusive_utc"],
+            AccountingField.START_UTC: measurement[AccountingField.START_UTC],
+            AccountingField.END_EXCLUSIVE_UTC: measurement[
+                AccountingField.END_EXCLUSIVE_UTC
+            ],
         },
     )
     json_write(
-        root / "retention-status.json", {"report_gaps": retain_reports(root, directory)}
+        root / RETENTION_NAME,
+        {ReportField.REPORT_GAPS: retain_reports(root, directory)},
     )
     return directory / REPORT_NAME
 
 
 def retain_reports(root: Path, current: Path) -> list[str]:
-    reports = root / "reports"
+    reports = root / REPORT_DIRECTORY
     gaps: list[str] = []
     candidates: list[tuple[float, Path]] = []
     with os.scandir(reports) as entries:
@@ -539,7 +604,7 @@ def retain_reports(root: Path, current: Path) -> list[str]:
 
 
 def retain_alerts(root: Path, cutoff: str) -> list[str]:
-    directory = root / "alerts"
+    directory = root / ALERT_DIRECTORY
     if not directory.exists():
         return []
     if directory.is_symlink():
@@ -569,12 +634,17 @@ def retain_alerts(root: Path, cutoff: str) -> list[str]:
                     continue
                 value = json.loads(path.read_text())
                 alert = value.get("signal") if isinstance(value, dict) else None
-                if not isinstance(alert, dict) or alert.get("identity") != identity:
+                if (
+                    not isinstance(alert, dict)
+                    or alert.get(AccountingField.IDENTITY) != identity
+                ):
                     gaps.append(
                         f"alert retention preserved unrecognized record: {path}"
                     )
                     continue
-                if timestamp(str(alert.get("end_exclusive_utc"))) < timestamp(cutoff):
+                if timestamp(
+                    str(alert.get(AccountingField.END_EXCLUSIVE_UTC))
+                ) < timestamp(cutoff):
                     path.unlink()
             except (OSError, ValueError, AttributeError) as error:
                 gaps.append(f"alert retention failed: {path}: {error}")

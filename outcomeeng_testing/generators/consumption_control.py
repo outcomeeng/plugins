@@ -34,3 +34,10 @@ def growing_contexts() -> st.SearchStrategy[list[int]]:
     return st.lists(
         st.integers(min_value=1, max_value=10_000), min_size=2, max_size=32
     ).map(sorted)
+
+
+def unsupported_models() -> st.SearchStrategy[str]:
+    """Vary an explicitly unsupported namespace outside every released price key."""
+    return st.text(
+        alphabet="abcdefghijklmnopqrstuvwxyz0123456789", min_size=1, max_size=30
+    ).map(lambda suffix: "unsupported-model-" + suffix)

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from enum import StrEnum
+
 import argparse
 import datetime as dt
 import fcntl
@@ -13,6 +15,9 @@ import sys
 from pathlib import Path
 from typing import TextIO
 
+from usage_accounting import AccountingField
+from usage_reports import ReportField, ALERT_DIRECTORY
+from usage_schedule import ScheduleField
 from usage_accounting import (
     DEFAULT_PROJECTS,
     DEFAULT_ROOT,
@@ -58,41 +63,62 @@ OVERLAP_STATUS = "overlap_skipped"
 ALREADY_RECORDED_STATUS = "already_recorded"
 
 
+class Option(StrEnum):
+    ROOT = "--root"
+    PROJECTS = "--projects"
+    START = "--start"
+    END = "--end"
+    ACTIVATE = "--activate"
+    LAUNCH_AGENTS_DIR = "--launch-agents-dir"
+    AISE = "--aise"
+    AISE_DATABASE = "--aise-database"
+
+
+class ControlField(StrEnum):
+    """Wire fields consumed by the module's public evidence contract."""
+
+    ARTIFACT = "artifact"
+    INVESTIGATION = "investigation"
+    SIGNALS = "signals"
+
+
 def parser() -> argparse.ArgumentParser:
     value = argparse.ArgumentParser(
         description="Bounded local usage evidence and advisory spending signals."
     )
     value.add_argument("operation", choices=OPERATIONS, nargs="?", default="report")
     value.add_argument(
-        "--root",
+        Option.ROOT,
         type=Path,
         default=DEFAULT_ROOT,
         help="Stable operator-owned state and artifact root",
     )
     value.add_argument(
-        "--projects",
+        Option.PROJECTS,
         type=Path,
         help="Read-only transcript root; defaults to the saved installation or ~/.claude/projects",
     )
-    value.add_argument("--start", help="Inclusive ISO 8601 measurement start")
+    value.add_argument(Option.START, help="Inclusive ISO 8601 measurement start")
     value.add_argument(
-        "--end", help="Exclusive ISO 8601 measurement end; defaults to now"
+        Option.END, help="Exclusive ISO 8601 measurement end; defaults to now"
     )
     value.add_argument(
-        "--activate",
+        Option.ACTIVATE,
         action="store_true",
         help="Explicitly install and activate launchd jobs; install otherwise returns a plan",
     )
     value.add_argument(
-        "--launch-agents-dir", type=Path, default=Path.home() / "Library/LaunchAgents"
+        Option.LAUNCH_AGENTS_DIR,
+        type=Path,
+        default=Path.home() / "Library/LaunchAgents",
     )
     value.add_argument(
-        "--aise",
+        Option.AISE,
         type=Path,
         help="Explicit optional supported existing-index query executable",
     )
     value.add_argument(
-        "--aise-database",
+        Option.AISE_DATABASE,
         type=Path,
         help="Explicit existing investigation index; never built or refreshed here",
     )
@@ -175,34 +201,36 @@ def worker(
             config.root, iso(end - dt.timedelta(days=RETENTION_DAYS))
         )
         if retention_gaps:
-            collection["gaps"].extend(retention_gaps)
+            collection[AccountingField.GAPS].extend(retention_gaps)
             collection["history_complete"] = False
             with evidence.db:
                 evidence.set_setting("collection", encoded(collection))
         if args.operation == "collect":
             return {
-                "status": "collected",
+                ScheduleField.STATUS: "collected",
                 "collection": collection,
-                "configuration": config.effective(),
-                "model_invocations": 0,
+                AccountingField.CONFIGURATION: config.effective(),
+                ReportField.MODEL_INVOCATIONS: 0,
             }
         if args.operation == "detect":
             current = evidence.measure(end - QUARTER, end)
             week_start, _ = config.period(end)
-            weekly = (
+            weekly: Json = (
                 evidence.measure(week_start, end)
                 if week_start < end
                 else {
-                    "api_equivalent_usd": 0,
-                    "start_utc": iso(end),
-                    "end_exclusive_utc": iso(end),
-                    "gaps": [],
+                    AccountingField.API_EQUIVALENT_USD: 0,
+                    AccountingField.START_UTC: iso(end),
+                    AccountingField.END_EXCLUSIVE_UTC: iso(end),
+                    AccountingField.GAPS: [],
                 }
             )
             emitted = []
             for value in signals(config, current, weekly, end):
-                identity = value["identity"]
-                value["evidence"] = str(config.root / "alerts" / (identity + ".json"))
+                identity = value[AccountingField.IDENTITY]
+                value["evidence"] = str(
+                    config.root / ALERT_DIRECTORY / (identity + ".json")
+                )
                 with evidence.db:
                     prior = evidence.db.execute(
                         "SELECT payload FROM signals WHERE identity=?", (identity,)
@@ -210,8 +238,8 @@ def worker(
                     if prior:
                         emitted.append(
                             {
-                                "identity": identity,
-                                "status": ALREADY_RECORDED_STATUS,
+                                AccountingField.IDENTITY: identity,
+                                ScheduleField.STATUS: ALREADY_RECORDED_STATUS,
                                 "evidence": value["evidence"],
                             }
                         )
@@ -226,50 +254,60 @@ def worker(
                     )
                 emitted.append(
                     {
-                        "identity": identity,
-                        "status": "recorded",
+                        AccountingField.IDENTITY: identity,
+                        ScheduleField.STATUS: "recorded",
                         "evidence": value["evidence"],
                     }
                 )
             return {
-                "status": "signals_recorded"
+                ScheduleField.STATUS: "signals_recorded"
                 if emitted
                 else "coverage_incomplete"
-                if current["gaps"] or weekly["gaps"]
+                if current[AccountingField.GAPS] or weekly[AccountingField.GAPS]
                 else "below_measured_thresholds",
-                "signals": emitted,
-                "start_utc": current["start_utc"],
-                "end_exclusive_utc": current["end_exclusive_utc"],
-                "api_equivalent_usd": current["api_equivalent_usd"],
-                "weekly_api_equivalent_usd": weekly["api_equivalent_usd"],
-                "configuration": config.effective(),
-                "gaps": sorted(set(current["gaps"] + weekly["gaps"])),
-                "model_invocations": 0,
-                "subscription_usage_conversion": None,
+                ControlField.SIGNALS: emitted,
+                AccountingField.START_UTC: current[AccountingField.START_UTC],
+                AccountingField.END_EXCLUSIVE_UTC: current[
+                    AccountingField.END_EXCLUSIVE_UTC
+                ],
+                AccountingField.API_EQUIVALENT_USD: current[
+                    AccountingField.API_EQUIVALENT_USD
+                ],
+                "weekly_api_equivalent_usd": weekly[AccountingField.API_EQUIVALENT_USD],
+                AccountingField.CONFIGURATION: config.effective(),
+                AccountingField.GAPS: sorted(
+                    set(current[AccountingField.GAPS] + weekly[AccountingField.GAPS])
+                ),
+                ReportField.MODEL_INVOCATIONS: 0,
+                AccountingField.SUBSCRIPTION_USAGE_CONVERSION: None,
             }
         report_end = (
             end.replace(minute=0, second=0, microsecond=0)
             if args.operation == "hourly"
             else end
         )
-        start = timestamp(args.start, "--start") if args.start else report_end - HOUR
+        start = timestamp(args.start, Option.START) if args.start else report_end - HOUR
         current = evidence.measure(start, report_end)
         previous = evidence.measure(start - (report_end - start), start)
         screening = behavior(evidence, current)
         investigation = investigate(runner, args.aise, args.aise_database, current)
-        current["investigation"] = investigation
+        current[ControlField.INVESTIGATION] = investigation
         path = write_report(config.root, current, screening, previous)
         return {
-            "status": "report_created",
-            "artifact": str(path),
-            "start_utc": current["start_utc"],
-            "end_exclusive_utc": current["end_exclusive_utc"],
-            "requests": current["requests"],
-            "usage": {key: current[key] for key in TOKEN_KEYS},
-            "api_equivalent_usd": current["api_equivalent_usd"],
-            "gaps": current["gaps"],
-            "configuration": config.effective(),
-            "model_invocations": 0,
+            ScheduleField.STATUS: "report_created",
+            ControlField.ARTIFACT: str(path),
+            AccountingField.START_UTC: current[AccountingField.START_UTC],
+            AccountingField.END_EXCLUSIVE_UTC: current[
+                AccountingField.END_EXCLUSIVE_UTC
+            ],
+            AccountingField.REQUESTS: current[AccountingField.REQUESTS],
+            AccountingField.USAGE: {key: current[key] for key in TOKEN_KEYS},
+            AccountingField.API_EQUIVALENT_USD: current[
+                AccountingField.API_EQUIVALENT_USD
+            ],
+            AccountingField.GAPS: current[AccountingField.GAPS],
+            AccountingField.CONFIGURATION: config.effective(),
+            ReportField.MODEL_INVOCATIONS: 0,
         }
 
 
@@ -293,7 +331,7 @@ def execute(
                     print(
                         json.dumps(
                             {
-                                "status": OVERLAP_STATUS,
+                                ScheduleField.STATUS: OVERLAP_STATUS,
                                 "operation": args.operation,
                                 "root": str(root),
                             }
@@ -318,17 +356,18 @@ def execute(
         print(json.dumps(result), file=output)
         return (
             SUCCESS_EXIT
-            if result["status"] in ("inspected", "completed", "not_installed")
+            if result[ScheduleField.STATUS]
+            in ("inspected", "completed", "not_installed")
             else FAILURE_EXIT
         )
-    end = timestamp(args.end, "--end") if args.end else dt.datetime.now(UTC)
+    end = timestamp(args.end, Option.END) if args.end else dt.datetime.now(UTC)
     config = configuration(args, end)
     effective_end = (
         end.replace(minute=0, second=0, microsecond=0)
         if args.operation == "hourly"
         else end
     )
-    if args.start and timestamp(args.start, "--start") >= effective_end:
+    if args.start and timestamp(args.start, Option.START) >= effective_end:
         raise ValueError("measurement window: --start must precede --end")
     if (args.aise is None) != (args.aise_database is None):
         raise ValueError("investigation: supply both --aise and --aise-database")
@@ -344,9 +383,9 @@ def execute(
             print(
                 json.dumps(
                     {
-                        "status": OVERLAP_STATUS,
+                        ScheduleField.STATUS: OVERLAP_STATUS,
                         "root": str(root),
-                        "model_invocations": 0,
+                        ReportField.MODEL_INVOCATIONS: 0,
                     }
                 ),
                 file=output,
@@ -372,7 +411,7 @@ def execute(
             print(json.dumps(result), file=output)
             return (
                 FAILURE_EXIT
-                if result["status"] in ("failed", "unsupported")
+                if result[ScheduleField.STATUS] in ("failed", "unsupported")
                 else SUCCESS_EXIT
             )
         except (
@@ -383,7 +422,7 @@ def execute(
             sqlite3.Error,
         ) as error:
             result = {
-                "status": "failed",
+                ScheduleField.STATUS: "failed",
                 "operation": args.operation,
                 "error": str(error),
                 "generated_at_utc": iso(dt.datetime.now(UTC)),
@@ -403,7 +442,11 @@ def main() -> int:
     except (OSError, ValueError, RuntimeError, TimeoutError, sqlite3.Error) as error:
         print(
             json.dumps(
-                {"status": "failed", "operation": args.operation, "error": str(error)}
+                {
+                    ScheduleField.STATUS: "failed",
+                    "operation": args.operation,
+                    "error": str(error),
+                }
             ),
             file=sys.stderr,
         )

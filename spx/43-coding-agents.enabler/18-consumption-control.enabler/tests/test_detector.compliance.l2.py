@@ -10,6 +10,25 @@ def test_repeated_signal_has_one_durable_record() -> None:
     with workspace() as work:
         observed = detector_observation(work)
         assert observed.first_count
+        assert all(
+            record[observed.fields.CONFIGURATION] == observed.configuration
+            for record in observed.durable_records
+        )
+        assert all(
+            (
+                record[observed.fields.START_UTC],
+                record[observed.fields.END_EXCLUSIVE_UTC],
+            )
+            == observed.expected_window
+            for record in observed.durable_records
+        )
+        assert {
+            record[observed.fields.IDENTITY] for record in observed.durable_records
+        } == set(observed.first_identities)
+        assert all(
+            record[observed.fields.CONFIGURATION] == observed.configuration
+            for record in observed.emitted_records
+        )
         assert observed.first_count == observed.second_count == observed.durable_count
         assert observed.first_identities == observed.second_identities
         assert all(
