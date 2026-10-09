@@ -9,7 +9,8 @@ dependency on artifacts, then express that dependency in the skill's workflow.
 | Independent  | Several explicitly requested tasks read independent committed subjects  |
 | Verification | A completed authoring subject is judged in an isolated verifier session |
 
-The native tool schema and root guide own invocation mechanics. This reference
+The native tool schema and the root harness instruction file `/subagent-standards`
+`<invocation>` names own invocation mechanics. This reference
 supplies no additional launch trigger or tool-call schema.
 
 </dependency_design>
