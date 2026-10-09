@@ -3,7 +3,7 @@ name: execute-change
 description: >-
   ALWAYS invoke this skill when a session executes one claimed Executable Change as its Executor. NEVER run a Change's Activities without this skill.
 argument-hint: "[#N | owner/repo#N | issue-url]"
-allowed-tools: Read, Glob, Grep, collaboration.spawn_agent, collaboration.wait_agent, Bash(git status:*), Bash(git rev-parse:*), Bash(git fetch:*), Bash(git switch:*), Bash(gh issue view:*), Bash(gh pr view:*), Bash(gh api graphql:*), Bash(gh api repos/*/issues/*/dependencies/blocked_by --method GET -F per_page=100), Bash(spx worktree status:*)
+allowed-tools: Read
 ---
 
 <objective>
@@ -41,7 +41,7 @@ A Fixer is a fresh session of the definition the round's Author used. The task m
 
 A round whose fronted skill is not installed returns a `blocked` result naming that skill.
 
-Each Verifier is the configured auditor or reviewer for the evidence obligation the Change's Frame states, launched with a target-only task message. A `change-verifier` session produces verification routing and evidence through `/verify` and is an Author or Fixer, never a Verifier; its result is no verdict. The Verifier of a `spec-tree_change-skill-author` round is `instructions_skill-auditor`, and the Verifier of a `spec-tree_change-subagent-author` round is `instructions_subagent-auditor`:
+Each Verifier is the configured auditor or reviewer for the evidence obligation the Change's Frame states, launched with a target-only task message. A `spec-tree_change-verifier` session produces verification routing and evidence through `/verify` and is an Author or Fixer, never a Verifier; its result is no verdict. The Verifier of a `spec-tree_change-skill-author` round is `instructions_skill-auditor`, and the Verifier of a `spec-tree_change-subagent-author` round is `instructions_subagent-auditor`:
 
 | Subject the obligation names        | Verifier                                |
 | ----------------------------------- | --------------------------------------- |
