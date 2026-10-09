@@ -12,15 +12,16 @@ The skills-about-skills cluster is three peers with distinct roles:
 
 ## Assertions
 
-- ALWAYS: a composing skill names each static dependency — one `plugin:skill` name with no argument — through the shared `require_skill` directive, states a dependency that carries an argument or a run-time-resolved name as the owned `Use skill` sentence with that value in place, and declares skill-use capability through the optional `tool('use_skill')` frontmatter token, so every generated agent surface receives its native instruction and capability set.
-- ALWAYS: `/create-skill` applies the `/skill-standards` and `/agent-prompt-standards` rule catalogs to the bundle it produces or improves and returns that bundle ready for independent verification.
-- ALWAYS: `/create-skill` carries no route that dispatches a skill auditor or waits on an audit verdict, and it repairs a bundle from supplied findings through a repair workflow that repairs and exercises the bundle before validating it.
 - ALWAYS: `/audit-skill` records one changeset-scoped verification run with one unit for each bundle file the changeset changes, keyed `instructions:skill:file:<path>`, keys each finding `<unit>:<rule-id>`, and returns `BLOCKED` when the changeset leaves the bundle unchanged or a governing standard is unreadable.
 - ALWAYS: every rule identifier `/audit-skill` records names a rule in the `/skill-standards` or `/agent-prompt-standards` rule catalog, and no finding is recorded under an identifier outside those catalogs.
-- ALWAYS: `/skill-standards` and `/agent-prompt-standards` each own one rule catalog that gives every rule one stable identifier and one severity, and the `/skill-standards` auditor skeleton keys each finding by its unit and its catalog rule identifier.
-- ALWAYS: `/skill-standards`' auditor skeleton admits a sealed `spx verification run` projection as an auditor's verdict format, in which each finding's key names its catalog rule identifier.
 
 ### Compliance
+
+- ALWAYS: a composing skill names each static dependency — one `plugin:skill` name with no argument — through the shared `require_skill` directive, states a dependency that carries an argument or a run-time-resolved name as the owned `Use skill` sentence with that value in place, and declares skill-use capability through the optional `tool('use_skill')` frontmatter token, so every generated agent surface receives its native instruction and capability set ([audit])
+- ALWAYS: `/create-skill` applies the `/skill-standards` and `/agent-prompt-standards` rule catalogs to the bundle it produces or improves and returns that bundle ready for independent verification ([audit])
+- ALWAYS: `/create-skill` carries no route that dispatches a skill auditor or waits on an audit verdict, and it repairs a bundle from supplied findings through a repair workflow that repairs and exercises the bundle before validating it ([audit])
+- ALWAYS: `/skill-standards` and `/agent-prompt-standards` each own one rule catalog that gives every rule one stable identifier and one severity, and the `/skill-standards` auditor skeleton keys each finding by its unit and its catalog rule identifier ([audit])
+- ALWAYS: `/skill-standards`' auditor skeleton admits a sealed `spx verification run` projection as an auditor's verdict format, in which each finding's key names its catalog rule identifier ([audit])
 
 - ALWAYS: skill-authoring and audit guidance forbids model and reasoning
   overrides in skill frontmatter; a skill retains its invoking agent session's
