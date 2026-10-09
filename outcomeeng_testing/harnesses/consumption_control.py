@@ -447,6 +447,7 @@ def installation_observation(work: Workspace) -> InstallationObservation:
 class NativeInstallationObservation:
     status: str
     expected_status: str
+    expected_job_count: int
     installed_loaded: tuple[object, ...]
     stopped_loaded: tuple[object, ...]
     restarted_loaded: tuple[object, ...]
@@ -459,7 +460,7 @@ def native_installation_observation(work: Workspace) -> NativeInstallationObserv
     if sys.platform != "darwin":
         status = schedule.jobs(work.config.root, "status", runner, sys.platform)
         return NativeInstallationObservation(
-            status["status"], schedule.JobStatus.UNSUPPORTED, (), (), (), ()
+            status["status"], schedule.JobStatus.UNSUPPORTED, 0, (), (), (), ()
         )
     domain = f"gui/{os.getuid()}"
     for mode in schedule.MODES:
@@ -484,15 +485,18 @@ def native_installation_observation(work: Workspace) -> NativeInstallationObserv
             True,
         )
         installed = schedule.jobs(work.config.root, "status", runner, sys.platform)
-        stopped = schedule.jobs(work.config.root, "stop", runner, sys.platform)
+        schedule.jobs(work.config.root, "stop", runner, sys.platform)
+        stopped = schedule.jobs(work.config.root, "status", runner, sys.platform)
         restarted = schedule.jobs(work.config.root, "restart", runner, sys.platform)
     finally:
         cleanup = schedule.jobs(work.config.root, "stop", runner, sys.platform)
         if cleanup["status"] != schedule.JobStatus.COMPLETED:
             raise RuntimeError(f"Native installation cleanup failed: {cleanup}")
+        cleanup = schedule.jobs(work.config.root, "status", runner, sys.platform)
     return NativeInstallationObservation(
         installed["status"],
-        schedule.JobStatus.COMPLETED,
+        schedule.JobStatus.INSPECTED,
+        len(schedule.MODES),
         tuple(job["loaded"] for job in installed["jobs"]),
         tuple(job["loaded"] for job in stopped["jobs"]),
         tuple(job["loaded"] for job in restarted["jobs"]),
