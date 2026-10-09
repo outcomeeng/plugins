@@ -16,28 +16,6 @@ and improvement workflows without granting them to read-only routes.
 Source: skill-auditor finding `f-003`, rule `overbroad_allowed_tools`, severity
 `WARNING`.
 
-## `script-standards.md` states the testing-record requirement with a weak modal
-
-`src/plugins/instructions/skills/skill-standards/references/script-standards.md:32`,
-inside `<script_testing_rule>`, reads "The skill's documentation should record what
-was tested and with what inputs"; `/agent-prompt-standards` `<constraint_language>`
-bars "should" from a rule block.
-
-**Standing.** Unjudged. The advisor could not judge it without the line's surrounding
-constraint context: a weak modal is barred from a constraint, while recommendation and
-trade-off language can legitimately use one, so the line's location alone does not decide.
-
-**Impact.** The testing-record requirement reads as optional beside the preceding
-"must be tested" sentence.
-
-**Settlement condition.** The sentence reads "records what was tested and with what
-inputs".
-
-Source: `instructions:skill-auditor` finding rule `weak_modal_in_rule`, severity
-`WARNING`, on head `524b9c46c7960a106d84ef856b4020a0ce904b16` during Change #76;
-[Change #92](https://github.com/outcomeeng/changes/issues/92) carries the
-standards-skill pass that owns it.
-
 ## The skill auditor returns opposite verdicts on unchanged skill text
 
 `instructions:skill-auditor` ran against `src/plugins/coding-agents/skills/orchestrate-officers/`
@@ -232,11 +210,3 @@ Source: `instructions:skill-auditor` finding `f-015`, rule
 **Settlement condition.** A session runs one of the surfaces the sweep names to the point where it issues its `python3` command and records whether the harness admits the command under the declared grant or prompts for it; the established behavior then fixes one spelling across the whole population. An executed invocation is the only evidence that closes this.
 
 **Related.** "A non-interactive git guard sits on the command that cannot prompt", in `spx/21-spec-tree.enabler/76-merge.enabler/32-github-pr.enabler/ISSUES.md`, asks whether the Bash grant matcher tolerates an `ENV=value` prefix. One executed invocation that reports the matcher's behavior on an unexpanded token and on an environment-variable prefix answers both.
-
-## A payload command form chosen by invocation context reads as caller coupling
-
-**Evidence.** Two consecutive `instructions:skill-auditor` runs on `src/plugins/instructions/skills/audit-skill` raised the same defect class against `<persistence_contract>`: run `2026-10-08_23-59-02-046-60281722eddf` on head `47200e88bfaba2dda1aa8c8a3e361a6397021697` (rule `caller-independence`, debt) against a form selected "when the task message or the harness guidance fixes one physical command line", and run `2026-10-09_00-04-36-338-85df736b5c3d` on head `e4071ca261297ae56072c0501ad6a609cb3bcc10` (rule `caller_independence`, debt) against the repair that selected the form by interactive versus programmatic harness. [`spx/15-agent-tools.pdr.md`](spx/15-agent-tools.pdr.md) asks guidance to name the safe payload form for each supported harness, and `spec-tree:audit-implementation` states both forms keyed the same way.
-
-**Impact.** A skill that follows the agent-tools decision with per-environment forms draws a caller-coupling finding from the skill auditor, so the repaired class can recur in every skill that carries payload commands.
-
-**Settlement condition.** `/skill-standards` states whether a payload form selected by harness environment is a runtime property or invocation-context coupling, consistent with [`spx/15-agent-tools.pdr.md`](spx/15-agent-tools.pdr.md); `audit-skill` carries one `printf` form valid in every harness until then.
