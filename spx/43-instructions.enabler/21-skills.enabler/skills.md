@@ -12,8 +12,6 @@ The skills-about-skills cluster is three peers with distinct roles:
 
 ## Assertions
 
-- ALWAYS: the `/skill-standards` caller-independence rule reads a payload command form a skill selects by harness environment, as [`spx/15-agent-tools.pdr.md`](spx/15-agent-tools.pdr.md) requires, as a property of the run and never as dependence on the caller
-
 ### Compliance
 
 - ALWAYS: a composing skill names each static dependency — one `plugin:skill` name with no argument — through the shared `require_skill` directive, states a dependency that carries an argument or a run-time-resolved name as the owned `Use skill` sentence with that value in place, and declares skill-use capability through the optional `tool('use_skill')` frontmatter token, so every generated agent surface receives its native instruction and capability set ([audit])
@@ -31,6 +29,7 @@ The skills-about-skills cluster is three peers with distinct roles:
 - ALWAYS: `/skill-standards` owns every rule `/audit-skill` enforces — standards and enforcement stay in one place so drift cannot open between them ([audit])
 - ALWAYS: `/create-skill` and `/audit-skill` load `/skill-standards` before doing any authoring or evaluation work — prevents memory-based assessment ([audit])
 - ALWAYS: a skill governs its own behavior and remains independent of the agent, skill, or context that invokes it ([audit])
+- ALWAYS: the `/skill-standards` caller-independence rule reads a payload command form a skill selects by harness environment, as [`spx/15-agent-tools.pdr.md`](spx/15-agent-tools.pdr.md) requires, as a property of the run and never as dependence on the caller ([audit])
 - ALWAYS: `/skill-standards` requires a workflow step writing outside the invocation checkout to obtain confirmation naming the absolute destination before that write, and `/audit-skill` flags an unconfirmed one as blocking — resolving a path establishes where it is, never permission to write there ([audit])
 - NEVER: `/skill-standards` permits skill content that frames a permission prompt, sandbox refusal, or tool-layer decline as an obstacle and documents a route around it, and `/audit-skill` flags such content as blocking — a documented bypass turns one operator's approval into a standing one for every session that loads the skill ([audit])
 - ALWAYS: before proposing or applying a skill rename, `/create-skill` classifies every skill the repository requires reviewing by current name, skill type, governing naming form, proposed name or keep disposition, and reason; it reads declared methodology vocabulary and relevant file history before calling a name defective, and never infers a batch rename from a shared token, suffix, or grammatical number ([audit])
