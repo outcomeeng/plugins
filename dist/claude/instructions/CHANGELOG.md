@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.21.1
+
+### Changed
+
+- **`skill-auditor` and `subagent-auditor` run on Sonnet at medium effort in Claude Code.** The Standard profile they select now resolves to `model: sonnet`, `effort: medium` for Claude. They ran on Opus at medium effort before. Their Codex configuration is unchanged.
+
 ## 0.21.0
 
 ### Added

@@ -2,26 +2,6 @@
 
 Known defects in the subagent cluster. Coordination note; not spec truth.
 
-## Auditor model policy does not account for the prose strong-model assignment
-
-`src/plugins/prose/agents/prose-auditor.md` selects the central Strong profile.
-The shared policy selects Standard by default and permits an explicitly governed
-Strong selection; it supplies no role-specific justification. The prose node owns the
-unresolved justification for that exception:
-`spx/43-prose.enabler/ISSUES.md`, under "Strong model selection for prose auditing
-has no recorded justification".
-
-**Required handling.** During the model-selection rules' migration into
-`/subagent-standards`, reconcile the general auditor rule with the prose node's
-decision. Preserve Standard by default and explicitly governed Strong selection,
-then align authoring guidance,
-audit enforcement, and both agent-harness outputs. Do not infer a justified
-exception from an existing generated model selection.
-
-**Disposition and revisit condition.** Tracked at the operator's request. Resolve
-alongside the prose node's model-tier decision and before treating the shared
-auditor model policy as settled.
-
 ## The auditor skeleton's worked example states its categories in a second sentence
 
 `src/plugins/instructions/skills/audit-subagent/SKILL.md` and

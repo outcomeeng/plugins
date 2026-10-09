@@ -142,7 +142,7 @@ AGENT_PROFILES: Final[ProfileRegistry] = MappingProxyType(
         Target.CLAUDE: MappingProxyType(
             {
                 AgentProfile.STANDARD: ClaudeConfiguration(
-                    ClaudeModel.OPUS, ClaudeEffort.MEDIUM
+                    ClaudeModel.SONNET, ClaudeEffort.MEDIUM
                 ),
                 AgentProfile.STRONG: ClaudeConfiguration(
                     ClaudeModel.OPUS, ClaudeEffort.HIGH

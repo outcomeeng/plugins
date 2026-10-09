@@ -84,7 +84,7 @@ and its system prompt in the body. Keep operational settings such as `tools`,
 
 | Profile  | Native configuration             |
 | -------- | -------------------------------- |
-| Standard | `model=opus`, `effort=medium`    |
+| Standard | `model=sonnet`, `effort=medium`  |
 | Strong   | `model=opus`, `effort=high`      |
 | Executor | `model=sonnet`, `effort=high`    |
 | Fast     | `model=haiku`, no `effort` field |

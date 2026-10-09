@@ -16,7 +16,7 @@ auditing and preserves the skill's result contract.
 ---
 name: spec-auditor
 description: ALWAYS invoke when the governing skill requests an audit of one spec node.
-model: "opus"
+model: "sonnet"
 effort: "medium"
 skills: spec-tree:audit-specs
 ---
@@ -40,7 +40,7 @@ Use the profile selected by the governing requirement.
 Standard:
 
 ```yaml
-model: "opus"
+model: "sonnet"
 effort: "medium"
 ```
 

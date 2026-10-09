@@ -72,7 +72,7 @@ definitions a plugin ships and audits without adding behavior the skills lack.
    | Codex  | Strong   | `model = "gpt-6-astra"`, `model_reasoning_effort = "high"` |
    | Codex  | Executor | `model = "gpt-6.1-sol"`, `model_reasoning_effort = "high"` |
    | Codex  | Fast     | `model = "gpt-6-luna"`, `model_reasoning_effort = "high"`  |
-   | Claude | Standard | `model: opus`, `effort: medium`                            |
+   | Claude | Standard | `model: sonnet`, `effort: medium`                          |
    | Claude | Strong   | `model: opus`, `effort: high`                              |
    | Claude | Executor | `model: sonnet`, `effort: high`                            |
    | Claude | Fast     | `model: haiku`; no effort field                            |

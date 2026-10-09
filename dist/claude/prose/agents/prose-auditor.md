@@ -1,6 +1,6 @@
 ---
-model: "opus"
-effort: "high"
+model: "sonnet"
+effort: "medium"
 name: prose-auditor
 description: >-
   ALWAYS invoke when auditing human-facing text — documents, web pages, articles, docs, UI text, product messages, or internal team pages — for prose quality and style-kind conformance. NEVER invoke for chat responses to the user, operational prose such as code comments or commit messages, or an artifact a repository or domain workflow governs — a spec, decision record, SKILL.md, coordination note, or agent guide.
