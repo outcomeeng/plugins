@@ -35,7 +35,7 @@ Parse `$ARGUMENTS` as a JSON object with two required inputs and one optional in
 
 Resolve the repository root with `git rev-parse --show-toplevel`. Run `realpath` separately on the root and the selected `SKILL.md`, and require the file beneath the root by path-component boundary; a failed resolution or an escaping link returns `BLOCKED` before a run starts. Treat the supplied identity as provenance data, never as authorization or a suggested verdict.
 
-Resolve the included fragments from the bundle's authored include directives. Each `include` build directive in a bundle file names one authored shared fragment by its path beneath `src/_shared/`, in the form `<scope>/<topic>/<file>`; read each included fragment and follow the `include` directives inside it, so a fragment included through a nested include belongs to the set. A bundle with no `include` directive includes no fragment. An included fragment that cannot be read returns `BLOCKED` before a run starts.
+Resolve the included fragments from the bundle's authored include directives. Each `include` build directive in a bundle file names one authored shared fragment; resolve each named fragment to its repository path the way the repository's build resolves it, read each included fragment, and follow the `include` directives inside it, so a fragment included through a nested include belongs to the set. A bundle with no `include` directive includes no fragment. An included fragment that cannot be read returns `BLOCKED` before a run starts.
 
 Resolve the changeset, each command run separately from the repository root:
 
@@ -192,7 +192,7 @@ judgedFindings: <JSON array of every finding judged before the stop, in the find
 
 **Failure 3: Scored the skill instead of judging it.** Claude assigned a number ("8/10 structure") instead of recording findings, turning a verdict into a rating the author cannot act on. Each finding names a file, its locations, a catalog rule, and evidence; a score names none of them. Record findings, never scores.
 
-**Failure 4: Reversed its own verdict on unchanged text.** Runs against one unchanged skill praised a passage under one rule name and faulted the same passage under another, and one run's verdict did both, because each run minted the rule names it judged under. A finding with no fixed identifier cannot be compared across runs, so repair chased noise. Name only catalog identifiers, take each severity from its row, and judge only the files the changeset changes.
+**Failure 4: Reversed its own verdict on unchanged text.** Across runs against one unchanged skill, Claude praised a passage under one rule name and faulted the same passage under another, and did both within one run's verdict, because Claude minted the rule names it judged under in each run. A finding with no fixed identifier cannot be compared across runs, so repair chased noise. Name only catalog identifiers, take each severity from its row, and judge only the files the changeset changes.
 
 </failure_modes>
 
