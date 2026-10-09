@@ -147,8 +147,8 @@ The root harness instruction file is the repository's `CLAUDE.md`.
 <placement>
 
 - ALWAYS: write product-owned definitions inside the invocation checkout by default.
-- ALWAYS: obtain operator confirmation naming the absolute destination before a
-  user-scope create, edit, or delete outside that checkout. One approval covers one write.
+- A user-scope create, edit, or delete outside that checkout is an external write, whose
+  confirmation `/skill-standards` `<path_boundary>` governs.
 - NEVER: widen a checkout-scoped request because the role could serve other products.
 - ALWAYS: deliver marketplace-owned definitions through their owning plugin's build
   and installation workflow, with the plugin's invoked skills in the same scope.
@@ -212,7 +212,6 @@ Every rule the sections above state carries exactly one row below, giving it one
 | `launch_retry_or_substitution`    | blocking | A launch is one call under the current native tool schema, and a failed launch or unusable result is analyzed and reported without retry, substitution, or a replacement audit.                                                                            | `<invocation>`            |
 | `result_contract_altered`         | blocking | The invoked skill's result contract and finding-repair workflow are preserved.                                                                                                                                                                             | `<invocation>`            |
 | `checkout_placement`              | debt     | A product-owned definition is written inside the invocation checkout by default.                                                                                                                                                                           | `<placement>`             |
-| `unconfirmed_user_scope_write`    | blocking | A user-scope create, edit, or delete outside the checkout follows operator confirmation naming the absolute destination, one approval per write.                                                                                                           | `<placement>`             |
 | `widened_scope`                   | blocking | A checkout-scoped request is never widened because the role could serve other products.                                                                                                                                                                    | `<placement>`             |
 | `marketplace_delivery`            | blocking | A marketplace-owned definition is delivered through its owning plugin's build and installation workflow, with the plugin's invoked skills in the same scope.                                                                                               | `<placement>`             |
 | `generated_definition_edit`       | blocking | A generated marketplace definition is never hand-edited.                                                                                                                                                                                                   | `<placement>`             |
