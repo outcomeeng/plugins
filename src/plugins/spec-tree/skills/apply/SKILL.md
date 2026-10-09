@@ -70,7 +70,7 @@ A sealed run or complete `BLOCKED` diagnostic under `<auditor_verdict>`, and a r
 
 <auditor_verdict>
 
-The `{{! subagent_name('spec-tree', 'adr-auditor') !}}`, `{{! subagent_name('spec-tree', 'pdr-auditor') !}}`, `{{! subagent_name('spec-tree', 'spec-auditor') !}}`, `{{! subagent_name('spec-tree', 'test-evidence-auditor') !}}`, `{{! subagent_name('spec-tree', 'eval-evidence-auditor') !}}`, `{{! subagent_name('spec-tree', 'changeset-coherence-auditor') !}}`, and `{{! subagent_name('spec-tree', 'implementation-auditor') !}}` agents each record their audit as a sealed `spx verification run`. Whichever of them a gate dispatches returns exactly one of two final results, and the gate reads its verdict from that result alone:
+The `{{! subagent_name('spec-tree', 'adr-auditor') !}}`, `{{! subagent_name('spec-tree', 'pdr-auditor') !}}`, `{{! subagent_name('spec-tree', 'test-evidence-auditor') !}}`, `{{! subagent_name('spec-tree', 'eval-evidence-auditor') !}}`, and `{{! subagent_name('spec-tree', 'implementation-auditor') !}}` agents this flow dispatches each record their audit as a sealed `spx verification run`, as do the `{{! subagent_name('spec-tree', 'spec-auditor') !}}` and `{{! subagent_name('spec-tree', 'changeset-coherence-auditor') !}}` agents, which no step of this flow dispatches; a result of theirs that this flow receives is read by the same rule. Every such Auditor returns exactly one of two final results, and the gate reads its verdict from that result alone:
 
 - **Sealed run** — the `spx verification run` token and the rendered projection. The projection's `terminalStatus` is the verdict: `approved` approves the subject; `rejected` rejects it whatever its finding count, including a run that records no finding because a required unit stayed uncovered.
 - **`BLOCKED` diagnostic** — the gate is blocked and holds no verdict. The diagnostic is complete when it carries every field the dispatched agent's output contract declares, beginning with the run token or `not-started`. A run whose payload or finish `spx` refused is blocked even though the run started. Repair the boundary the diagnostic names — the request, a prerequisite, the refused payload or finish, the installation, or the skill load — before a new launch.
@@ -142,7 +142,7 @@ Step 0 and Steps 1–2 are language-independent. Steps 3–8 use the detected la
 | 1    | Load methodology         | {!% require_skill 'spec-tree:understand' %!}                                                                                        | same                                            | same                                        | same                                    |
 | 2    | Load context             | Use skill `spec-tree:contextualize` for `{full-spx-node-path}`.                                                                     | same                                            | same                                        | same                                    |
 | 3    | Architect                | {!% require_skill 'typescript:architect-typescript' %!}                                                                             | {!% require_skill 'python:architect-python' %!} | {!% require_skill 'rust:architect-rust' %!} | {!% require_skill 'go:architect-go' %!} |
-| 4    | Architecture audit       | `{{! subagent_name('spec-tree', 'adr-auditor') !}}` agent                                                                           | same                                            | same                                        | same                                    |
+| 4    | Decision audit           | `{{! subagent_name('spec-tree', 'adr-auditor') !}}`, `{{! subagent_name('spec-tree', 'pdr-auditor') !}}` agents                     | same                                            | same                                        | same                                    |
 | 5    | Establish evidence       | {!% require_skill 'spec-tree:verify' %!}                                                                                            | same                                            | same                                        | same                                    |
 | 6    | Evidence audit           | `{{! subagent_name('spec-tree', 'test-evidence-auditor') !}}`, `{{! subagent_name('spec-tree', 'eval-evidence-auditor') !}}` agents | same                                            | same                                        | same                                    |
 | 7    | Implement                | {!% require_skill 'typescript:code-typescript' %!}                                                                                  | {!% require_skill 'python:code-python' %!}      | {!% require_skill 'rust:code-rust' %!}      | {!% require_skill 'go:code-go' %!}      |
@@ -194,17 +194,17 @@ Load the full context hierarchy for the specific node — parent chain, sibling 
 
 Invoke the architecting skill for the detected language.
 
-Produce the ADR(s) for the work item. The architecture must be complete before audit.
+Produce every ADR or PDR the work item needs and record the paths of the decisions this step creates or changes. The architecture must be complete before audit. When the governing decisions already decide the work item, the recorded set is empty.
 
-Before the architecture audit, use skill `spec-tree:verify` separately for every new or changed ADR/PDR path. This moves each decision rule into its canonical verification subsection and supplies that subsection's tag before the auditor judges the decision. Keep target-node assertion routing in Step 5; this pre-audit decision routing creates no executable evidence link inside the decision record.
+Before the Step 4 decision audit, use skill `spec-tree:verify` separately for every new or changed ADR/PDR path. This moves each decision rule into its canonical verification subsection and supplies that subsection's tag before the auditor judges the decision. Keep target-node assertion routing in Step 5; this pre-audit decision routing creates no executable evidence link inside the decision record.
 
 </step>
 
-<step number="4" name="Architecture audit" gate="true">
+<step number="4" name="Decision audit" gate="true">
 
-Dispatch `{{! subagent_name('spec-tree', 'adr-auditor') !}}` with only the ADR path. The invoked `audit-adr` discovers its governing node, committed changeset, and implementation-language partitions, then composes each applicable `audit-{lang}-architecture` concern inside its isolated agent session. Read its result under `<auditor_verdict>`.
+For each ADR path Step 3 recorded, dispatch `{{! subagent_name('spec-tree', 'adr-auditor') !}}` with only that ADR path. The invoked `audit-adr` discovers its governing node, committed changeset, and implementation-language partitions, then composes each applicable `audit-{lang}-architecture` concern inside its isolated agent session. For each PDR path Step 3 recorded, dispatch `{{! subagent_name('spec-tree', 'pdr-auditor') !}}` with only that PDR path. Read every result under `<auditor_verdict>`. When Step 3 recorded no decision path, this step dispatches nothing and its gate holds.
 
-When the scope is cross-node (see `<scope_detection>`), enumerate the ADRs governing every affected implementation surface across the whole changeset and dispatch each ADR path separately. This gate passes only when every required ADR audit's sealed run renders `terminalStatus: approved`.
+When the scope is cross-node (see `<scope_detection>`), enumerate the ADRs governing every affected implementation surface across the whole changeset and dispatch each ADR path separately. This gate passes only when every dispatched decision audit's sealed run renders `terminalStatus: approved`.
 
 Before invoking the audit, apply `<stabilized_diff_rule>` and `<verification_checkpoint>`; carry its result forward under `<result_carryover>`.
 
@@ -308,8 +308,6 @@ Use skill `spec-tree:merge`. It selects the transport and drives the change to t
 
 The flow is complete only when the change reaches the default branch on origin, or an explicit merge lifecycle gate blocks with no independent local action remaining. A clean working tree, a local commit, or a branch ahead of base is never the endpoint for default-branch work.
 
-Claude tends to report the flow done the moment Step 9 converges and tests pass — while nothing has been committed, pushed, reviewed at integration time, or merged. That treatment of local readiness as completion is the exact failure this step exists to prevent.
-
 </step>
 
 </workflow>
@@ -326,7 +324,7 @@ If the full deterministic gate fails, fix the reported defect, run the focused t
 
 Steps 4, 6, 8, and applicable Step 8a are blocking audit gates; each reads its Auditor's sealed run or complete `BLOCKED` diagnostic under `<auditor_verdict>`. Step 9 is a blocking whole-changeset review gate that runs whenever the change reaches beyond the target node. Step 10 is the terminal lifecycle boundary for default-branch work.
 
-- Before starting Step 5: require every Step 4 sealed run to render `terminalStatus: approved`. If a run is absent or its status differs, stop and invoke or repair Step 4.
+- Before starting Step 5: require a Step 4 sealed run rendering `terminalStatus: approved` for every decision path Step 4 dispatched. If a run is absent or its status differs, stop and invoke or repair Step 4.
 - Before starting Step 7: require every Step 6 sealed run to render `terminalStatus: approved`. If a run is absent or its status differs, stop and invoke or repair Step 6.
 - Before considering implementation complete: inspect the Step 8 rendered projection. If `terminalStatus` is absent or differs from `approved`, stop — invoke or repair Step 8.
 - Before Step 8 for Go, Rust, or TypeScript, require Step 7a's usable `simplified` or `unchanged` result for the implementation being verified, with every resulting edit inspected, verified, and committed.
@@ -363,7 +361,7 @@ This is not slower. The ad hoc script takes the same effort as a test, but the s
 <success_criteria>
 
 - Every product-declared touched-scope deterministic command exits zero on the final committed subject.
-- Every applicable architecture, test-evidence, eval-evidence, and implementation audit carries a run token whose rendered projection shows `terminalStatus: approved` for the exact committed subject.
+- Every applicable decision, test-evidence, eval-evidence, and implementation audit carries a run token whose rendered projection shows `terminalStatus: approved` for the exact committed subject.
 - A cross-node changeset carries a raw Step 9 review run token whose sealed projection renders successfully, with every valid finding fixed, including every in-scope same-class instance; unbacked findings are dropped.
 - `git rev-parse HEAD` matches the final gate subject and `git status --porcelain` is empty.
 - The requested delivery boundary has observable completion: default-branch work has reached the default branch on origin through `/merge`'s selected transport and every declared release action reports success or no-op; proposal, analysis, review, or local-only work reaches its explicitly selected boundary; an explicit lifecycle gate reports its blocking token only after no independent action remains.
