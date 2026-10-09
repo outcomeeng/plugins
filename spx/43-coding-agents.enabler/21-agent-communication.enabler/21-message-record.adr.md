@@ -1,6 +1,6 @@
 # Message Record and Delivery Routes
 
-One Python 3.13+ standard-library script shipped inside `/message-agents` declares the message record this node owns — `schema`, `id`, `correlation`, `kind`, `sender`, `recipient`, `subject`, `body`, and `ackRequired`, with the kinds a sender writes — and validates every delivery result on the node's two routes: the mail route, where a checked `send` result of the agent-mail capability carrying a store-assigned `id` is delivery and the doorbell is the one pane line `[<Label> <<StableName>>] mail <id>` when the send result carries the sender's label and `[<StableName>] mail <id>` otherwise, with a label that is empty, carries a line break, or carries any of `[`, `]`, `<`, `>` rendering the unlabeled form, and the Prowl submission route, where checked public Prowl input evidence that trailing Enter submitted the turn is delivery. The script reads each capability's public result by its own field constants, executes no command, opens no store, and imports no other skill's script; the agent-mail adapter maps the record this node declares onto the store's fields and reads them back.
+One Python 3.13+ standard-library script shipped inside `/message-agents` declares the message record this node owns — `schema`, `id`, `correlation`, `kind`, `sender`, `recipient`, `subject`, `body`, and `ackRequired`, with the kinds a sender writes — and validates every delivery result on the node's two routes: the mail route, where a checked `send` result of the agent-mail capability carrying a store-assigned `id` is delivery and the doorbell is the one pane line `[<Label> <<StableName>>] mail <id>` when the send result carries the sender's label and `[<StableName>] mail <id>` otherwise, with a label that is empty, is not printable (`str.isprintable()` fails), or carries any of `[`, `]`, `<`, `>` rendering the unlabeled form, and the Prowl submission route, where checked public Prowl input evidence that trailing Enter submitted the turn is delivery. The script reads each capability's public result by its own field constants, executes no command, opens no store, and imports no other skill's script; the agent-mail adapter maps the record this node declares onto the store's fields and reads them back.
 
 ## Rationale
 
@@ -12,7 +12,7 @@ The doorbell carries no payload because a pane collapses a pasted block to a pla
 
 - Every record the script builds for the mail route is a record the agent-mail capability's `send` accepts unchanged.
 - The doorbell text the script renders from a delivered result, labeled or unlabeled, parses back to the same stable sender name and id.
-- A doorbell is one line and carries a label only when the label is non-empty and holds no line break and none of `[`, `]`, `<`, `>`; every other label, and an absent one, renders the unlabeled form.
+- A doorbell is one line and carries a label only when the label is non-empty, `str.isprintable()` holds for it, and it holds none of `[`, `]`, `<`, `>`; every other label, and an absent one, renders the unlabeled form.
 - A delivery result on either route carries `acknowledged`, `agreed`, and `ownershipEstablished` as false.
 - A delivered mail result carries the store-assigned `id` verbatim from the capability's result and no other id.
 
@@ -21,7 +21,7 @@ The doorbell carries no payload because a pane collapses a pasted block to a pla
 ### Testing
 
 - ALWAYS: every kind a sender writes maps to one record carrying exactly the fields this node declares, and the agent-mail capability's `send` accepts that record unchanged ([mapping])
-- ALWAYS: a checked succeeded `send` result of the agent-mail capability maps to the delivered mail result carrying the record's store-assigned id verbatim and the doorbell line `[<Label> <<StableName>>] mail <id>` when the result carries the sender's renderable label and `[<StableName>] mail <id>` otherwise, a label that is empty, carries a line break, or carries any of `[`, `]`, `<`, `>` mapping to the unlabeled form; a failed or unavailable result maps to `delivery-failed` with the capability's status and detail preserved ([mapping])
+- ALWAYS: a checked succeeded `send` result of the agent-mail capability maps to the delivered mail result carrying the record's store-assigned id verbatim and the doorbell line `[<Label> <<StableName>>] mail <id>` when the result carries the sender's renderable label and `[<StableName>] mail <id>` otherwise, a label that is empty, is not printable (`str.isprintable()` fails), or carries any of `[`, `]`, `<`, `>` mapping to the unlabeled form; a failed or unavailable result maps to `delivery-failed` with the capability's status and detail preserved ([mapping])
 - ALWAYS: a rendered doorbell, labeled or not, parses back to its stable sender name and id ([property])
 - NEVER: a doorbell whose stable sender name is absent from the supplied inventory resolves to a sender, whatever label it carries ([compliance])
 - NEVER: a delivered result on either route establishes acknowledgement, agreement, ownership, or mutation authorization ([compliance])
