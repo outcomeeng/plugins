@@ -14,14 +14,6 @@
 
 **Revisit condition.** Resolve this entry before the next language-neutral artifact slice enters `/apply`, or in the next change to `/apply` language detection or Steps 3-8, whichever occurs first.
 
-## `apply` grants `Read, Edit` while its steps create files and search the node
-
-**Evidence.** `src/plugins/spec-tree/skills/apply/SKILL.md:7` declares `allowed-tools: Read, Edit`. Steps 3, 5, and 7 create new ADR, test, and implementation files, and `<scope_detection>` and `<stabilized_diff_rule>` read the touched node's files. `instructions:skill-auditor` finding rule `allowed_tools_missing_write_and_search`, severity `WARNING`, on head `524b9c46c7960a106d84ef856b4020a0ce904b16` during Change #76.
-
-**Impact.** File creation and same-class sweeps run behind per-call approval prompts inside a flow that line 29 says must not stop between nodes.
-
-**Settlement condition.** The grant carries the file-creation and read-only search capabilities the flow itself performs, per `/skill-standards` `<tool_restriction_security>`'s "narrowest the task needs" rule. [Change #95](https://github.com/outcomeeng/changes/issues/95) carries the `/apply` pass that owns it.
-
 ## `apply` states three conditions more than once
 
 **Evidence.** The Step 0 condition appears at `<invocation_modes>` line 22, footnote § line 144, and Step 0 line 156; the Step 9 skip condition at `<scope_detection>` line 57, footnote † line 145, Step 9 line 280, and `<review_gates>` line 327; the Step-9-as-done tendency at Step 10 line 304 and Failure 1 line 350, all in `src/plugins/spec-tree/skills/apply/SKILL.md`. `instructions:skill-auditor` finding rule `redundant_restatement`, severity `WARNING`, on head `524b9c46c7960a106d84ef856b4020a0ce904b16` during Change #76.

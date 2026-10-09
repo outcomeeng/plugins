@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill before implementing any spec-tree work item.
   NEVER write code, tests, or architecture for a spec-tree node without this skill.
 argument-hint: "[full-spx-node-path | plan-or-proposal]"
-allowed-tools: Read, Edit, {{! tool('use_skill') !}},{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}},{!% endif %!} {{! tool('ask_user') !}}, Bash(git status:*), Bash(git rev-parse:*), Bash(git diff:*), Bash(spx validation:*), Bash(spx spec status:*), Bash(spx test:*), Bash(just test:*), Bash(just check:*), Bash(just check-full:*), Bash(just verify:*), Bash(just validate:*), Bash(pnpm test:*), Bash(pnpm run test:*), Bash(pnpm run check:*), Bash(pnpm run lint:*), Bash(pnpm run typecheck:*), Bash(pnpm run validate:*), Bash(pnpm run verify:*), Bash(npm test:*), Bash(npm run test:*), Bash(npm run check:*), Bash(npm run lint:*), Bash(npm run typecheck:*), Bash(npm run validate:*), Bash(npm run verify:*), Bash(yarn test:*), Bash(yarn run test:*), Bash(yarn run check:*), Bash(yarn run lint:*), Bash(yarn run typecheck:*), Bash(yarn run validate:*), Bash(yarn run verify:*), Bash(bun test:*), Bash(bun run test:*), Bash(bun run check:*), Bash(bun run lint:*), Bash(bun run typecheck:*), Bash(bun run validate:*), Bash(bun run verify:*), Bash(uv run pytest:*), Bash(pytest:*), Bash(cargo test:*), Bash(cargo check:*), Bash(cargo clippy:*), Bash(cargo fmt --check:*), Bash(go test:*), Bash(go vet:*), Bash(make test:*), Bash(make check:*), Bash(make verify:*), Bash(make validate:*)
+allowed-tools: Read, Edit, Write, Grep, Glob, {{! tool('use_skill') !}},{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}},{!% endif %!} {{! tool('ask_user') !}}, Bash(git status:*), Bash(git rev-parse:*)
 ---
 
 <objective>
@@ -54,7 +54,7 @@ Before starting Step 3, determine the change's scope — this determination gove
 - **Node-local** — the entire diff stays within the target node's own directory (its spec, its `tests/`, and the implementation files that node governs).
 - **Cross-node** — the work touches anything else: a refactor, a move, a consolidation, a cross-cutting rename, a shared enabler, a sibling spec, or any file outside the target node.
 
-When the scope is cross-node, every audit gate — Steps 4, 6, and 8 — runs at **whole-changeset** scope, not only the target node, and Step 9 is REQUIRED before the flow may be declared complete. A per-node audit reads only the target node's files; it cannot see a regression the change introduced in a file the node does not own. Carry the determination through Steps 4, 6, and 8 — each gate step restates the scope requirement at its point of action.
+When the scope is cross-node, each audit gate covers the **whole changeset** in the form its dispatch takes — Step 4 every ADR and PDR governing an affected surface, Step 6 every governed node whose evidence the change touches, Step 8 the committed changeset selector it always receives — and Step 9 is REQUIRED before the flow may be declared complete. A target-node-only audit cannot see a regression the change introduced in a file the node does not own. Carry the determination through Steps 4 and 6, which restate their cross-node dispatch at the point of action.
 
 </scope_detection>
 
@@ -70,7 +70,7 @@ A sealed run or complete `BLOCKED` diagnostic under `<auditor_verdict>`, and a r
 
 <auditor_verdict>
 
-The `{{! subagent_name('spec-tree', 'adr-auditor') !}}`, `{{! subagent_name('spec-tree', 'pdr-auditor') !}}`, `{{! subagent_name('spec-tree', 'test-evidence-auditor') !}}`, `{{! subagent_name('spec-tree', 'eval-evidence-auditor') !}}`, and `{{! subagent_name('spec-tree', 'implementation-auditor') !}}` agents this flow dispatches each record their audit as a sealed `spx verification run`, as do the `{{! subagent_name('spec-tree', 'spec-auditor') !}}` and `{{! subagent_name('spec-tree', 'changeset-coherence-auditor') !}}` agents, which no step of this flow dispatches; a result of theirs that this flow receives is read by the same rule. Every such Auditor returns exactly one of two final results, and the gate reads its verdict from that result alone:
+The `{{! subagent_name('spec-tree', 'adr-auditor') !}}`, `{{! subagent_name('spec-tree', 'pdr-auditor') !}}`, `{{! subagent_name('spec-tree', 'test-evidence-auditor') !}}`, `{{! subagent_name('spec-tree', 'eval-evidence-auditor') !}}`, and `{{! subagent_name('spec-tree', 'implementation-auditor') !}}` agents this flow dispatches each record their audit as a sealed `spx verification run`. Each returns exactly one of two final results, and the gate reads its verdict from that result alone:
 
 - **Sealed run** — the `spx verification run` token and the rendered projection. The projection's `terminalStatus` is the verdict: `approved` approves the subject; `rejected` rejects it whatever its finding count, including a run that records no finding because a required unit stayed uncovered.
 - **`BLOCKED` diagnostic** — the gate is blocked and holds no verdict. The diagnostic is complete when it carries every field the dispatched agent's output contract declares, beginning with the run token or `not-started`. A run whose payload or finish `spx` refused is blocked even though the run started. Repair the boundary the diagnostic names — the request, a prerequisite, the refused payload or finish, the installation, or the skill load — before a new launch.
@@ -264,7 +264,7 @@ An absent or malformed result stops this node before Step 8 with the exact failu
 
 Dispatch `{{! subagent_name('spec-tree', 'implementation-auditor') !}}` with only the committed scope selector: `HEAD` for the current branch, or an explicit three-dot range for a selected base. The invoked skill discovers the repository, governing nodes, verification context, and language partitions; the wrapper supplies its own run-driver identity internally.
 
-When the scope is cross-node (see `<scope_detection>`), point this audit at the **whole changeset**, not only the target node — Step 4 audits the committed scope while Step 6 fans out across every affected governed evidence node and type. Those audit lenses remain necessary but insufficient, so the distinct whole-diff review in Step 9 stays required for cross-cutting effects no single audit lens catches.
+The committed scope selector already spans the whole changeset, so a cross-node change needs no other Step 8 dispatch. The audit lenses of Steps 4, 6, and 8 remain necessary but insufficient, so the distinct whole-diff review in Step 9 stays required for cross-cutting effects no single audit lens catches.
 
 Before invoking the audit, apply `<stabilized_diff_rule>` and `<verification_checkpoint>`; carry its result forward under `<result_carryover>`.
 
