@@ -5,7 +5,7 @@ description: >-
 profile: standard
 targets:
   - claude
-disallowedTools: "{{! tool('ask_user') !}}"
+disallowedTools: Agent, {{! tool('ask_user') !}}
 skills:
   - instructions:create-skill
 ---
