@@ -12,6 +12,8 @@ The skills-about-skills cluster is three peers with distinct roles:
 
 ## Assertions
 
+- ALWAYS: the `/skill-standards` caller-independence rule reads a payload command form a skill selects by harness environment, as [`spx/15-agent-tools.pdr.md`](spx/15-agent-tools.pdr.md) requires, as a property of the run and never as dependence on the caller
+
 ### Compliance
 
 - ALWAYS: a composing skill names each static dependency — one `plugin:skill` name with no argument — through the shared `require_skill` directive, states a dependency that carries an argument or a run-time-resolved name as the owned `Use skill` sentence with that value in place, and declares skill-use capability through the optional `tool('use_skill')` frontmatter token, so every generated agent surface receives its native instruction and capability set ([audit])
