@@ -16,6 +16,26 @@ def usage_snapshots() -> st.SearchStrategy[tuple[tuple[int, ...], tuple[int, ...
     return st.tuples(counts, counts)
 
 
+def duration_snapshots() -> st.SearchStrategy[tuple[tuple[int, ...], tuple[int, ...]]]:
+    """Cumulative native snapshots vary both cache-duration counters independently."""
+    base = st.tuples(
+        st.integers(min_value=0, max_value=1_000_000),
+        st.integers(min_value=0, max_value=1_000_000),
+        st.integers(min_value=1, max_value=1_000_000),
+        st.integers(min_value=1, max_value=1_000_000),
+        st.integers(min_value=1, max_value=1_000_000),
+    )
+    increment = st.tuples(
+        *(st.integers(min_value=0, max_value=1_000_000) for _ in range(5))
+    )
+    return st.tuples(base, increment).map(
+        lambda values: (
+            values[0],
+            tuple(a + b for a, b in zip(*values, strict=True)),
+        )
+    )
+
+
 def spending_cases() -> st.SearchStrategy[tuple[int, int, int]]:
     return st.tuples(
         st.integers(min_value=1, max_value=100_000),

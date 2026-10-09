@@ -11,6 +11,7 @@ import json
 import os
 import tempfile
 from collections import Counter
+from decimal import Decimal
 from enum import StrEnum
 from pathlib import Path
 
@@ -70,6 +71,33 @@ class ReportField(StrEnum):
     MODEL_INVOCATIONS = "model_invocations"
     REFERENCES = "references"
     REPORT_GAPS = "report_gaps"
+
+
+class NumberFormat(StrEnum):
+    """Public numeric presentation policy for frozen report measurements."""
+
+    SUMMARY_COST = ",.2f"
+    COST = ".4f"
+    REQUEST_COST = ".5f"
+    COUNT = ","
+    CONTEXT = ",.0f"
+    SHARE = ".1%"
+    GROWTH = ".2f"
+
+
+def display_number(value: int | float | Decimal | None, style: NumberFormat) -> str:
+    if value is None:
+        return "unknown"
+    text = format(value, style)
+    if style in (
+        NumberFormat.SUMMARY_COST,
+        NumberFormat.COST,
+        NumberFormat.REQUEST_COST,
+    ):
+        return "$" + text
+    if style == NumberFormat.GROWTH:
+        return text + "×"
+    return text
 
 
 def atomic_write(path: Path, content: str | bytes) -> None:
@@ -281,11 +309,21 @@ def render(measurement: Json, screening: Json, previous: Json | None) -> str:
             + escape(value)
             + "</strong></div>"
             for label, value in (
-                ("API-equivalent estimate", f"${total:,.2f}"),
-                ("LLM requests", f"{measurement[AccountingField.REQUESTS]:,}"),
+                (
+                    "API-equivalent estimate",
+                    display_number(total, NumberFormat.SUMMARY_COST),
+                ),
+                (
+                    "LLM requests",
+                    display_number(
+                        measurement[AccountingField.REQUESTS], NumberFormat.COUNT
+                    ),
+                ),
                 (
                     "Native child requests",
-                    f"{measurement[AccountingField.CHILD_REQUESTS]:,}",
+                    display_number(
+                        measurement[AccountingField.CHILD_REQUESTS], NumberFormat.COUNT
+                    ),
                 ),
                 ("Coverage gaps", len(measurement[AccountingField.GAPS])),
             )
@@ -329,10 +367,12 @@ def render(measurement: Json, screening: Json, previous: Json | None) -> str:
                     g[AccountingField.MODEL],
                     g[AccountingField.REQUESTS],
                     *[g[k] for k in TOKEN_KEYS],
-                    f"${g[AccountingField.API_EQUIVALENT_USD]:.4f}",
-                    f"{g['share_measured_cost']:.1%}"
-                    if g["share_measured_cost"] is not None
-                    else "unknown",
+                    display_number(
+                        g[AccountingField.API_EQUIVALENT_USD], NumberFormat.COST
+                    ),
+                    display_number(
+                        g[AccountingField.SHARE_MEASURED_COST], NumberFormat.SHARE
+                    ),
                 ]
                 for session, g in ranked[:MAX_RANKED]
             ],
@@ -343,10 +383,12 @@ def render(measurement: Json, screening: Json, previous: Json | None) -> str:
                 [
                     name,
                     value[AccountingField.REQUESTS],
-                    f"${value[AccountingField.API_EQUIVALENT_USD]:.4f}",
-                    f"{value['share_measured_cost']:.1%}"
-                    if value["share_measured_cost"] is not None
-                    else "unknown",
+                    display_number(
+                        value[AccountingField.API_EQUIVALENT_USD], NumberFormat.COST
+                    ),
+                    display_number(
+                        value[AccountingField.SHARE_MEASURED_COST], NumberFormat.SHARE
+                    ),
                 ]
                 for name, value in sorted(
                     measurement[AccountingField.MODELS].items(),
@@ -361,7 +403,9 @@ def render(measurement: Json, screening: Json, previous: Json | None) -> str:
                 [
                     name,
                     value[AccountingField.REQUESTS],
-                    f"${value[AccountingField.API_EQUIVALENT_USD]:.4f}",
+                    display_number(
+                        value[AccountingField.API_EQUIVALENT_USD], NumberFormat.COST
+                    ),
                 ]
                 for name, value in sorted(
                     measurement[AccountingField.WORKSPACES].items(),
@@ -377,7 +421,13 @@ def render(measurement: Json, screening: Json, previous: Json | None) -> str:
         table(
             ("Measured component", "Estimate", "Contribution"),
             [
-                [key, f"${amount:.4f}", f"{amount / total:.1%}" if total else "unknown"]
+                [
+                    key,
+                    display_number(amount, NumberFormat.COST),
+                    display_number(
+                        amount / total if total else None, NumberFormat.SHARE
+                    ),
+                ]
                 for key, amount in components
             ],
         )
@@ -397,13 +447,21 @@ def render(measurement: Json, screening: Json, previous: Json | None) -> str:
             [
                 [
                     session,
-                    f"{g[AccountingField.EARLY_CONTEXT_MEAN]:,.0f}",
-                    f"{g[AccountingField.LATE_CONTEXT_MEAN]:,.0f}",
-                    f"{g[AccountingField.CONTEXT_GROWTH_RATIO]:.2f}×"
-                    if g[AccountingField.CONTEXT_GROWTH_RATIO] is not None
-                    else "unknown",
-                    f"${g[AccountingField.EARLY_COST_MEAN]:.5f}",
-                    f"${g[AccountingField.LATE_COST_MEAN]:.5f}",
+                    display_number(
+                        g[AccountingField.EARLY_CONTEXT_MEAN], NumberFormat.CONTEXT
+                    ),
+                    display_number(
+                        g[AccountingField.LATE_CONTEXT_MEAN], NumberFormat.CONTEXT
+                    ),
+                    display_number(
+                        g[AccountingField.CONTEXT_GROWTH_RATIO], NumberFormat.GROWTH
+                    ),
+                    display_number(
+                        g[AccountingField.EARLY_COST_MEAN], NumberFormat.REQUEST_COST
+                    ),
+                    display_number(
+                        g[AccountingField.LATE_COST_MEAN], NumberFormat.REQUEST_COST
+                    ),
                 ]
                 for session, g in ranked[:MAX_RANKED]
             ],
@@ -415,11 +473,18 @@ def render(measurement: Json, screening: Json, previous: Json | None) -> str:
         table(
             ("Usage field", "Tokens", "Estimated component"),
             [
-                [key, measurement[key], f"${measurement['cost_components'][key]:.4f}"]
+                [
+                    key,
+                    measurement[key],
+                    display_number(
+                        measurement[AccountingField.COST_COMPONENTS][key],
+                        NumberFormat.COST,
+                    ),
+                ]
                 for key in TOKEN_KEYS
             ],
         )
-        + f"<p>Cache-read share of measured input: {escape(format(measurement[AccountingField.CACHE_READ_SHARE], '.1%') if measurement[AccountingField.CACHE_READ_SHARE] is not None else 'unknown')}. Cache-write duration assumptions: {measurement['pricing_assumption_requests']:,} requests.</p>",
+        + f"<p>Cache-read share of measured input: {escape(display_number(measurement[AccountingField.CACHE_READ_SHARE], NumberFormat.SHARE))}. Cache-write duration assumptions: {measurement['pricing_assumption_requests']:,} requests.</p>",
     )
     links = (
         "<ul>"

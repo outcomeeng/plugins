@@ -29,6 +29,7 @@ from outcomeeng_testing.generators.consumption_control import (
     growing_contexts,
     usage_snapshots,
     unsupported_models,
+    duration_snapshots,
 )
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
 
@@ -79,14 +80,13 @@ def fixture() -> dict[str, Any]:
 
 @dataclass(frozen=True)
 class AccountingObservation:
-    reconciled: tuple[int, ...]
-    expected: tuple[int, ...]
-    cost: Decimal
-    oracle_cost: Decimal
-    identities: tuple[str, ...]
-    native_parent: str
+    normalized: tuple[dict[str, Any] | None, ...]
+    reconciled: dict[str, Any] | None
+    components: dict[str, Decimal] | None
+    snapshots: tuple[tuple[int, ...], tuple[int, ...]]
+    rates: tuple[Decimal, ...]
+    fields: Any
     expected_parent: str
-    child: bool
 
 
 def accounting_observation(
@@ -100,54 +100,50 @@ def accounting_observation(
         / accounting.SUBAGENT_DIRECTORY
         / "agent-captured.jsonl"
     )
-    for ordinal, tokens in enumerate(snapshots):
+    for ordinal, counters in enumerate(snapshots):
         row = fixture()
         row[AccountingField.UUID] += str(ordinal)
         usage = row[AccountingField.MESSAGE][AccountingField.USAGE]
+        tokens = (counters[0], counters[1], counters[2] + counters[3], counters[4])
         usage.update(zip(accounting.FIELDS, tokens, strict=True))
         usage[AccountingField.CACHE_CREATION] = {
-            AccountingField.EPHEMERAL_5M_INPUT_TOKENS: 0,
-            AccountingField.EPHEMERAL_1H_INPUT_TOKENS: tokens[2],
+            AccountingField.EPHEMERAL_5M_INPUT_TOKENS: counters[2],
+            AccountingField.EPHEMERAL_1H_INPUT_TOKENS: counters[3],
         }
         value, _ = accounting.request(row, source)
-        if value is None:
-            raise RuntimeError("Generated positive usage was not normalized")
         normalized.append(value)
-    result = accounting.reconcile(*normalized)
-    components = accounting.cost(result)
-    if components is None:
-        raise RuntimeError("Captured standard model unexpectedly has no pricing")
-    expected = tuple(max(a, b) for a, b in zip(*snapshots, strict=True))
+    result = (
+        accounting.reconcile(*normalized)
+        if all(value is not None for value in normalized)
+        else None
+    )
+    components = accounting.cost(result) if result is not None else None
     external = json.loads((FIXTURES / "pricing.json").read_text())["per_million"]
     rates = tuple(
         Decimal(external[key])
         for key in (
             "input_tokens",
             "cache_read_input_tokens",
+            "ephemeral_5m_input_tokens",
             "ephemeral_1h_input_tokens",
             "output_tokens",
         )
     )
-    oracle = sum(
-        (Decimal(value) * rate for value, rate in zip(expected, rates, strict=True)),
-        Decimal(),
-    ) / Decimal(1_000_000)
     return AccountingObservation(
-        tuple(result[AccountingField.TOKENS]),
-        expected,
-        sum(components.values(), Decimal()),
-        oracle,
-        tuple(value[AccountingField.IDENTITY] for value in normalized),
-        result[AccountingField.PARENT],
+        tuple(normalized),
+        result,
+        components,
+        snapshots,
+        rates,
+        AccountingField,
         fixture()[AccountingField.SESSIONID],
-        result[AccountingField.CHILD],
     )
 
 
 def accounting_property(check: Callable[[AccountingObservation], None]) -> None:
     @seed(SEED)
     @settings(max_examples=EXAMPLES, deadline=None)
-    @given(usage_snapshots())
+    @given(duration_snapshots())
     def run(snapshots: tuple[tuple[int, ...], tuple[int, ...]]) -> None:
         check(accounting_observation(snapshots))
 
@@ -406,9 +402,13 @@ class ReportReader(HTMLParser):
 @dataclass(frozen=True)
 class ReportObservation:
     html_rows: dict[str, list[tuple[str, ...]]]
-    expected_rows: dict[str, list[tuple[str, ...]]]
+    measurement: dict[str, Any]
+    fields: Any
+    sections: Any
+    formats: Any
+    display: Callable[..., str]
+    token_keys: tuple[str, ...]
     headline_values: tuple[str, ...]
-    expected_headline_values: tuple[str, ...]
     verified_outputs: object
     unknown_output_text: str
     json_usage: tuple[int, ...]
@@ -443,59 +443,15 @@ def report_observation(work: Workspace) -> ReportObservation:
     reader = ReportReader()
     reader.feed(path.read_text())
     sections = reports.ReportSection
-    expected_rows: dict[str, list[tuple[str, ...]]] = {
-        sections.CONSUMPTION: [
-            (
-                name,
-                str(group[AccountingField.REQUESTS]),
-                f"${group[AccountingField.API_EQUIVALENT_USD]:.4f}",
-                f"{group[AccountingField.SHARE_MEASURED_COST]:.1%}",
-            )
-            for name, group in measured[AccountingField.MODELS].items()
-        ],
-        sections.CACHE: [
-            (
-                key,
-                str(measured[key]),
-                f"${measured[AccountingField.COST_COMPONENTS][key]:.4f}",
-            )
-            for key in accounting.TOKEN_KEYS
-        ],
-        sections.CONTEXT: [
-            (
-                name,
-                f"{group[AccountingField.EARLY_CONTEXT_MEAN]:,.0f}",
-                f"{group[AccountingField.LATE_CONTEXT_MEAN]:,.0f}",
-                f"{group[AccountingField.CONTEXT_GROWTH_RATIO]:.2f}×",
-                f"${group[AccountingField.EARLY_COST_MEAN]:.5f}",
-                f"${group[AccountingField.LATE_COST_MEAN]:.5f}",
-            )
-            for name, group in measured[AccountingField.SESSIONS].items()
-        ],
-    }
-    for name, group in measured[AccountingField.SESSIONS].items():
-        expected_rows[sections.CONSUMPTION].append(
-            (
-                name,
-                group[AccountingField.FIRST_UTC],
-                str(group[AccountingField.DURATION_SECONDS]),
-                group[AccountingField.MODEL],
-                str(group[AccountingField.REQUESTS]),
-                *(str(group[key]) for key in accounting.TOKEN_KEYS),
-                f"${group[AccountingField.API_EQUIVALENT_USD]:.4f}",
-                f"{group[AccountingField.SHARE_MEASURED_COST]:.1%}",
-            )
-        )
     return ReportObservation(
         reader.rows,
-        expected_rows,
+        measured,
+        AccountingField,
+        sections,
+        reports.NumberFormat,
+        reports.display_number,
+        accounting.TOKEN_KEYS,
         tuple(reader.headlines),
-        (
-            f"${measured[AccountingField.API_EQUIVALENT_USD]:,.2f}",
-            f"{measured[AccountingField.REQUESTS]:,}",
-            f"{measured[AccountingField.CHILD_REQUESTS]:,}",
-            str(len(measured[AccountingField.GAPS])),
-        ),
         actual[AccountingField.VERIFIED_OUTPUTS],
         reports.UNKNOWN_OUTPUT,
         tuple(actual[key] for key in accounting.TOKEN_KEYS),
