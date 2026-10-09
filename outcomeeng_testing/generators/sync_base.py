@@ -1,11 +1,27 @@
 """Variable Git names and text for synchronization topology construction."""
 
+import secrets
 from dataclasses import dataclass
 from uuid import uuid4
+
+_NON_ASCII_BYTES = range(0x80, 0x100)
+_LINE_FEED = b"\n"
 
 
 def _text() -> str:
     return f"{uuid4()}\n"
+
+
+def invalid_utf8_payload() -> bytes:
+    """Generate a text-diffable line whose bytes are not valid UTF-8.
+
+    Any byte at or above 0x80 immediately followed by an ASCII line feed is
+    ill-formed UTF-8: a lone continuation byte, or a lead byte missing its
+    continuation. The payload carries no NUL, so git diffs it as text and the
+    raw byte reaches the diff output.
+    """
+    stray = bytes([secrets.choice(_NON_ASCII_BYTES)])
+    return str(uuid4()).encode("ascii") + stray + _LINE_FEED
 
 
 @dataclass(frozen=True)
@@ -61,6 +77,11 @@ def repository_domain() -> RepositoryDomain:
         alternate_message=str(uuid4()),
         rename_message=str(uuid4()),
     )
+
+
+def remote_name() -> str:
+    """Generate a Git remote name distinct from any name a contract ships."""
+    return f"remote-{uuid4()}"
 
 
 @dataclass(frozen=True)

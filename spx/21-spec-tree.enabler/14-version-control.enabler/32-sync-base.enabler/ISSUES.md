@@ -55,3 +55,27 @@ A Verifier's context load runs `/sync-base`, which fetches, rebases the audited 
 **Evidence.** Rollout `agent-a4cedd803fc1a5758.jsonl` of the test-evidence audit dispatched against head `f07db1bbaf225ec031d7a777f02c166daa588871` on 2026-09-16 rebased the branch to `15d4309e69c26804cd1b04676248a529fd0235b9`; implementation-audit run `2026-09-16_12-40-04-694-a2e206a2d753` then found its sealed head superseded.
 
 **Settlement condition.** `/sync-base` reports behind-base without moving the checkout when the caller selects it, or the context load reads the committed subject without calling it; the decision lives with the entry in `spx/21-spec-tree.enabler/18-context-loading.enabler/ISSUES.md`.
+
+## The conflict handoff to a superior meets the node's audit rule and fails `/skill-standards` caller independence
+
+**Evidence.** Skill-auditor run `2026-10-08_23-39-23-724-b13324f3337e` rejected the `sync-base` skill on the conflict handoff in `<conflict_reconciliation>` of `src/plugins/spec-tree/skills/sync-base/SKILL.md`, which defines a superior as whoever assigned the work and sends that superior an assessment. That text follows the ALWAYS `[audit]` assertion in `spx/21-spec-tree.enabler/14-version-control.enabler/32-sync-base.enabler/sync-base.md` that the skill sends its superior an assessment with a recommended route and acts on the superior's decision, and the `### Audit` rule of [`spx/21-spec-tree.enabler/14-version-control.enabler/32-sync-base.enabler/13-base-sync-mechanism.adr.md`](spx/21-spec-tree.enabler/14-version-control.enabler/32-sync-base.enabler/13-base-sync-mechanism.adr.md) that names the same handoff. `/skill-standards` rejects the same text as a dependency on the caller.
+
+**Impact.** No wording of the conflict handoff satisfies both the node's declarations and the skill standard, so every typed skill audit of the `sync-base` skill rejects either the handoff the spec and ADR require or the skill text that omits it.
+
+**Settlement condition.** The spec and the ADR, or `/skill-standards`, change so the two agree on how the skill addresses the party that decides a conflict route.
+
+## `_CHANGESET_SCOPE_PATH` meets the provider-import decisions and fails the `/skill-standards` bundled-file-reference rule
+
+**Evidence.** Skill-auditor run `2026-10-08_23-39-23-724-b13324f3337e` flagged `_CHANGESET_SCOPE_PATH` in `src/plugins/spec-tree/skills/sync-base/scripts/sync_base.py`, which resolves `scope-changeset/scripts/changeset_scope.py` relative to `__file__` across the skill directory boundary, as a cross-skill file path. [`spx/13-plugin-and-runtime-conventions.adr.md`](spx/13-plugin-and-runtime-conventions.adr.md) requires a consumer to reach a provider skill's shared logic from its own `scripts/` entrypoint by a `__file__`-relative import, and [`spx/21-spec-tree.enabler/14-version-control.enabler/15-changeset-scope.enabler/13-changeset-derivation.adr.md`](spx/21-spec-tree.enabler/14-version-control.enabler/15-changeset-scope.enabler/13-changeset-derivation.adr.md) requires sync-base to reach the changeset primitives only by import from that one script. `/skill-standards` flags that one file-relative load.
+
+**Impact.** The load the two decisions require is the reference the skill standard rejects, so every typed skill audit of the `sync-base` skill reports a bundled-file-reference finding that no repair inside the skill can clear without violating a decision.
+
+**Settlement condition.** The two decisions, or `/skill-standards`, change so the two agree on how a consumer skill's script loads its provider skill's script.
+
+## The missing-provider-script case has no `[test]` assertion
+
+**Evidence.** When `scripts/changeset_scope.py` of the scope-changeset skill is absent beside the sync-base skill, `src/plugins/spec-tree/skills/sync-base/scripts/sync_base.py` raises `ChangesetScopeUnavailableError` at load and, run as a script, prints a result with status `git_failure` and a `detail` naming the expected path, then exits 1. No assertion in `spx/21-spec-tree.enabler/14-version-control.enabler/32-sync-base.enabler/sync-base.md` states that case, and no linked test under `spx/21-spec-tree.enabler/14-version-control.enabler/32-sync-base.enabler/tests/` exercises it.
+
+**Impact.** The primitive's contract that every run yields a structured status holds for this case only by implementation; a change that turns it back into a traceback or another exit code passes every linked test.
+
+**Settlement condition.** `spx/21-spec-tree.enabler/14-version-control.enabler/32-sync-base.enabler/sync-base.md` carries an assertion for the missing-provider-script case with a linked test.

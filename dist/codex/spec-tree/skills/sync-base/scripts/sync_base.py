@@ -46,7 +46,8 @@ The base ref and its remote-tracking form are resolved through the shared
 changeset-scope primitives, never re-derived here. The primitives ship under a
 runtime-substituted plugin skill directory and are not importable by package
 name, so they are loaded through ``importlib`` and re-exported with object
-identity preserved.
+identity preserved. When that sibling script is absent or fails to load, the
+script prints a ``git_failure`` result naming the expected path and exits 1.
 """
 
 from __future__ import annotations
@@ -79,10 +80,56 @@ CONFLICT_ABORT = "git rebase --abort"
 #: Schema version of the readiness-preservation proof embedded in the result.
 READINESS_SCHEMA_VERSION = 1
 
+# Serialized result vocabulary. Every key the JSON result carries is owned
+# here, so callers and evidence read the payload through these names rather
+# than re-declaring them.
+RESULT_STATUS_KEY = "status"
+RESULT_BASE_REF_KEY = "base_ref"
+RESULT_REMOTE_REF_KEY = "remote_ref"
+RESULT_BRANCH_KEY = "branch"
+RESULT_DETAIL_KEY = "detail"
+RESULT_PRESERVATION_KEY = "preservation"
+RESULT_CONFLICT_KEY = "conflict"
+
+# Git-fact keys shared by the preservation proof and the conflict details.
+OLD_BASE_OID_KEY = "old_base_oid"
+NEW_BASE_OID_KEY = "new_base_oid"
+OLD_HEAD_OID_KEY = "old_head_oid"
+NEW_HEAD_OID_KEY = "new_head_oid"
+BASE_DELTA_PATHS_KEY = "base_delta_paths"
+BRANCH_PATHS_BEFORE_KEY = "branch_paths_before"
+BRANCH_PATHS_AFTER_KEY = "branch_paths_after"
+PATH_OVERLAP_KEY = "path_overlap"
+
+# Preservation-proof keys.
+PRESERVATION_SCHEMA_VERSION_KEY = "schema_version"
+BRANCH_PATCH_CHANGED_KEY = "branch_patch_changed"
+BRANCH_DIFF_UNCHANGED_KEY = "branch_diff_unchanged"
+
+# Conflict-detail keys.
+CONFLICT_SUMMARY_KEY = "summary"
+CONFLICTED_PATHS_KEY = "conflicted_paths"
+CONFLICT_GIT_OUTPUT_KEY = "git_output"
+CONFLICT_OPERATOR_OPTIONS_KEY = "operator_options"
+
+
+class ChangesetScopeUnavailableError(RuntimeError):
+    """The sibling changeset-scope script is absent or cannot be loaded."""
+
 
 def _load_changeset_scope() -> ModuleType:
-    """Load the canonical ``changeset_scope`` module via importlib and cache it."""
+    """Load the canonical ``changeset_scope`` module via importlib and cache it.
+
+    Raises :class:`ChangesetScopeUnavailableError` naming the expected path when
+    the sibling script is absent or fails to load.
+    """
     resolved_path = _CHANGESET_SCOPE_PATH.resolve()
+    if not resolved_path.is_file():
+        raise ChangesetScopeUnavailableError(
+            "sync-base requires the scope-changeset skill's changeset_scope.py "
+            f"at {resolved_path}, the sibling skill directory in the same "
+            "installed plugin; reinstall the plugin so both skills ship together"
+        )
     cached = sys.modules.get("changeset_scope")
     if cached is not None and _module_origin(cached) == resolved_path:
         return cached
@@ -100,10 +147,21 @@ def _load_changeset_scope() -> ModuleType:
         resolved_path,
     )
     if spec is None or spec.loader is None:
-        raise RuntimeError(f"Cannot load changeset_scope from {_CHANGESET_SCOPE_PATH}")
+        raise ChangesetScopeUnavailableError(
+            f"Cannot load changeset_scope from {resolved_path}: Python found no "
+            "module loader for the scope-changeset skill's script"
+        )
     module = importlib.util.module_from_spec(spec)
     sys.modules[module_name] = module
-    spec.loader.exec_module(module)
+    try:
+        spec.loader.exec_module(module)
+    except Exception as exc:
+        del sys.modules[module_name]
+        raise ChangesetScopeUnavailableError(
+            f"Cannot load changeset_scope from {resolved_path}: "
+            f"{type(exc).__name__}: {exc}; reinstall the plugin so the "
+            "scope-changeset skill's script ships intact"
+        ) from exc
     return module
 
 
@@ -112,18 +170,6 @@ def _module_origin(module: ModuleType) -> pathlib.Path | None:
     if not isinstance(module_file, str):
         return None
     return pathlib.Path(module_file).resolve()
-
-
-_changeset_scope = _load_changeset_scope()
-
-# Re-export the canonical primitives. ``is`` identity holds — these are the same
-# function/class objects the changeset-scope module defines, so sync-base never
-# re-implements base, remote-tracking, or branch derivation.
-detect_base_ref = _changeset_scope.detect_base_ref
-remote_tracking_ref = _changeset_scope.remote_tracking_ref
-detect_current_branch = _changeset_scope.detect_current_branch
-BaseRefNotConfiguredError = _changeset_scope.BaseRefNotConfiguredError
-DetachedHeadError = _changeset_scope.DetachedHeadError
 
 
 class SyncStatus(str, Enum):
@@ -184,17 +230,17 @@ class Preservation:
     def to_json_dict(self) -> dict[str, object]:
         """Serialize the proof with the schema version and stable keys."""
         return {
-            "schema_version": READINESS_SCHEMA_VERSION,
-            "old_base_oid": self.old_base_oid,
-            "new_base_oid": self.new_base_oid,
-            "old_head_oid": self.old_head_oid,
-            "new_head_oid": self.new_head_oid,
-            "base_delta_paths": self.base_delta_paths,
-            "branch_paths_before": self.branch_paths_before,
-            "branch_paths_after": self.branch_paths_after,
-            "path_overlap": self.path_overlap,
-            "branch_patch_changed": self.branch_patch_changed,
-            "branch_diff_unchanged": self.branch_diff_unchanged,
+            PRESERVATION_SCHEMA_VERSION_KEY: READINESS_SCHEMA_VERSION,
+            OLD_BASE_OID_KEY: self.old_base_oid,
+            NEW_BASE_OID_KEY: self.new_base_oid,
+            OLD_HEAD_OID_KEY: self.old_head_oid,
+            NEW_HEAD_OID_KEY: self.new_head_oid,
+            BASE_DELTA_PATHS_KEY: self.base_delta_paths,
+            BRANCH_PATHS_BEFORE_KEY: self.branch_paths_before,
+            BRANCH_PATHS_AFTER_KEY: self.branch_paths_after,
+            PATH_OVERLAP_KEY: self.path_overlap,
+            BRANCH_PATCH_CHANGED_KEY: self.branch_patch_changed,
+            BRANCH_DIFF_UNCHANGED_KEY: self.branch_diff_unchanged,
         }
 
 
@@ -227,15 +273,15 @@ class ConflictDetails:
     def to_json_dict(self) -> dict[str, object]:
         """Serialize conflict details with stable keys."""
         return {
-            "summary": self.summary,
-            "conflicted_paths": self.conflicted_paths,
-            "old_head_oid": self.old_head_oid,
-            "new_base_oid": self.new_base_oid,
-            "base_delta_paths": self.base_delta_paths,
-            "branch_paths_before": self.branch_paths_before,
-            "path_overlap": self.path_overlap,
-            "git_output": self.git_output,
-            "operator_options": self.operator_options,
+            CONFLICT_SUMMARY_KEY: self.summary,
+            CONFLICTED_PATHS_KEY: self.conflicted_paths,
+            OLD_HEAD_OID_KEY: self.old_head_oid,
+            NEW_BASE_OID_KEY: self.new_base_oid,
+            BASE_DELTA_PATHS_KEY: self.base_delta_paths,
+            BRANCH_PATHS_BEFORE_KEY: self.branch_paths_before,
+            PATH_OVERLAP_KEY: self.path_overlap,
+            CONFLICT_GIT_OUTPUT_KEY: self.git_output,
+            CONFLICT_OPERATOR_OPTIONS_KEY: self.operator_options,
         }
 
 
@@ -268,20 +314,47 @@ class SyncBaseResult:
     def to_json_dict(self) -> dict[str, object]:
         """Serialize to a JSON-ready dict with stable keys."""
         return {
-            "status": self.status.value,
-            "base_ref": self.base_ref,
-            "remote_ref": self.remote_ref,
-            "branch": self.branch,
-            "detail": self.detail,
-            "preservation": (
+            RESULT_STATUS_KEY: self.status.value,
+            RESULT_BASE_REF_KEY: self.base_ref,
+            RESULT_REMOTE_REF_KEY: self.remote_ref,
+            RESULT_BRANCH_KEY: self.branch,
+            RESULT_DETAIL_KEY: self.detail,
+            RESULT_PRESERVATION_KEY: (
                 self.preservation.to_json_dict()
                 if self.preservation is not None
                 else None
             ),
-            "conflict": (
+            RESULT_CONFLICT_KEY: (
                 self.conflict.to_json_dict() if self.conflict is not None else None
             ),
         }
+
+
+def _unavailable_scope_result(error: ChangesetScopeUnavailableError) -> SyncBaseResult:
+    """The ``git_failure`` result for a run whose base cannot be derived at all."""
+    return SyncBaseResult(SyncStatus.GIT_FAILURE, "", "", None, str(error))
+
+
+try:
+    _changeset_scope = _load_changeset_scope()
+except ChangesetScopeUnavailableError as _unavailable:
+    # Run as a script, the primitive's contract still holds: exit 1 carries a
+    # ``git_failure`` JSON result with an actionable detail, never a traceback.
+    if __name__ == "__main__":
+        _failure = _unavailable_scope_result(_unavailable)
+        print(json.dumps(_failure.to_json_dict()))
+        raise SystemExit(_failure.exit_code) from None
+    raise
+
+# Re-export the canonical primitives. ``is`` identity holds — these are the same
+# function/class objects the changeset-scope module defines, so sync-base never
+# re-implements base, remote-tracking, or branch derivation.
+detect_base_ref = _changeset_scope.detect_base_ref
+remote_tracking_ref = _changeset_scope.remote_tracking_ref
+detect_current_branch = _changeset_scope.detect_current_branch
+BaseRefNotConfiguredError = _changeset_scope.BaseRefNotConfiguredError
+DetachedHeadError = _changeset_scope.DetachedHeadError
+ORIGIN_REMOTE_NAME: str = _changeset_scope.ORIGIN_REMOTE_NAME
 
 
 def _git(
@@ -294,6 +367,23 @@ def _git(
         input=stdin,
         capture_output=True,
         text=True,
+        check=False,
+    )
+
+
+def _git_bytes(
+    repo: pathlib.Path, *args: str, stdin: bytes | None = None
+) -> subprocess.CompletedProcess[bytes]:
+    """Run a git command in ``repo``, capturing raw output bytes without raising.
+
+    A diff carries file content verbatim, which need not be valid UTF-8, so a
+    command whose output is a patch is read without text decoding.
+    """
+    return subprocess.run(  # noqa: S603 — fixed argv, no shell, args from callers
+        ["git", *args],  # noqa: S607
+        cwd=repo,
+        input=stdin,
+        capture_output=True,
         check=False,
     )
 
@@ -339,17 +429,20 @@ def _patch_id(repo: pathlib.Path, base: str, head: str) -> str | None:
     """Return the stable patch identity of ``base...head``, or ``None`` on failure.
 
     An empty diff yields the empty string, which compares equal across a sync
-    that left the branch's changes identical.
+    that left the branch's changes identical. The diff passes to ``patch-id`` as
+    raw bytes, so a branch whose content is not valid UTF-8 still has an
+    identity; the identity itself is a hexadecimal object name.
     """
-    diff = _git(repo, "diff", f"{base}...{head}")
+    diff = _git_bytes(repo, "diff", f"{base}...{head}")
     if diff.returncode != 0:
         return None
     if not diff.stdout.strip():
         return ""
-    identified = _git(repo, "patch-id", "--stable", stdin=diff.stdout)
+    identified = _git_bytes(repo, "patch-id", "--stable", stdin=diff.stdout)
     if identified.returncode != 0:
         return None
-    return identified.stdout.split()[0] if identified.stdout.strip() else ""
+    fields = identified.stdout.split()
+    return fields[0].decode("ascii") if fields else ""
 
 
 def _build_preservation(
@@ -484,14 +577,14 @@ def _sync_detached(
     old_head_oid = _rev(repo, "HEAD")
 
     if fetch:
-        fetched = _git(repo, "fetch", "origin", base_ref)
+        fetched = _git(repo, "fetch", ORIGIN_REMOTE_NAME, base_ref)
         if fetched.returncode != 0:
             return SyncBaseResult(
                 SyncStatus.GIT_FAILURE,
                 base_ref,
                 remote_ref,
                 None,
-                f"detached HEAD: git fetch origin {base_ref} failed: "
+                f"detached HEAD: git fetch {ORIGIN_REMOTE_NAME} {base_ref} failed: "
                 f"{fetched.stderr.strip()}",
             )
 
@@ -602,15 +695,17 @@ def _resolve_default_base(repo: pathlib.Path) -> str | SyncBaseResult:
 def sync_base(
     repo: pathlib.Path, *, base_ref: str | None = None, fetch: bool = True
 ) -> SyncBaseResult:
-    """Bring ``repo``'s current branch current with its fetched base.
+    """Bring ``repo``'s checkout current with its fetched base.
 
     ``base_ref`` is the bare base-branch name to synchronize onto. When omitted
     it is resolved from ``origin/HEAD`` through the shared changeset-scope
     primitives; callers that track a non-default base (a stacked pull request
     whose base is another feature branch) pass it explicitly. The base is
-    fetched (unless ``fetch=False``) and the branch is rebased onto
-    ``origin/<base>`` when it is behind. Returns a :class:`SyncBaseResult`;
-    never raises for an ordinary git outcome.
+    fetched (unless ``fetch=False``). An attached branch behind the base is
+    rebased onto ``origin/<base>``; a clean detached HEAD that is an ancestor
+    of the base is advanced with ``git switch --detach origin/<base>``, and a
+    diverged detached HEAD is reported without moving. Returns a
+    :class:`SyncBaseResult`; never raises for an ordinary git outcome.
     """
     if base_ref is None:
         resolved_base = _resolve_default_base(repo)
@@ -637,14 +732,14 @@ def _sync_resolved_base(
     old_head_oid = _rev(repo, "HEAD")
 
     if fetch:
-        fetched = _git(repo, "fetch", "origin", base_ref)
+        fetched = _git(repo, "fetch", ORIGIN_REMOTE_NAME, base_ref)
         if fetched.returncode != 0:
             return SyncBaseResult(
                 SyncStatus.GIT_FAILURE,
                 base_ref,
                 remote_ref,
                 branch,
-                f"git fetch origin {base_ref} failed: {fetched.stderr.strip()}",
+                f"git fetch {ORIGIN_REMOTE_NAME} {base_ref} failed: {fetched.stderr.strip()}",
             )
 
     resolved = _git(
@@ -753,7 +848,11 @@ def _sync_resolved_base(
 def main(argv: list[str] | None = None) -> int:
     """CLI entry point: synchronize and print the result as JSON."""
     parser = argparse.ArgumentParser(
-        description="Rebase the current branch onto its fetched base.",
+        description=(
+            "Bring the checkout current with its fetched base: rebase an "
+            "attached branch onto origin/<base>, or advance a clean ancestor "
+            "detached HEAD to origin/<base>."
+        ),
     )
     parser.add_argument(
         "repo",

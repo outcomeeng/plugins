@@ -10,6 +10,19 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.104.1
+
+### Fixed
+
+- **`/sync-base` reports base-sync preservation for a branch whose diff holds bytes that are not valid UTF-8.** The synchronizer reads the diff that feeds `git patch-id --stable` as raw bytes. A clean rebase of such a branch now returns `rebased` with a readiness-preservation proof. Before this fix, the synchronizer stopped with a decoding error and printed no JSON result.
+- **`/sync-base` reports a missing `scope-changeset` script as a `git_failure` result.** When the sibling `scope-changeset` skill's `changeset_scope.py` is absent from the installed plugin or fails to load, the synchronizer prints a `git_failure` JSON result whose `detail` names the expected path and exits 1. Before this fix, it exited 1 with a Python traceback and no JSON result.
+
+### Changed
+
+- **`/sync-base` creates recovery checkpoints only through `/commit-changes`.** The skill composes `spec-tree:commit-changes` by exact name, and every `git switch` it runs during dirty-tree recovery is named in its command policy. Its tool grant no longer includes `git branch`, so a `git branch` command the skill runs, `git branch -D` among them, now asks for approval. Its tool grant no longer includes `git switch -c`, so every `git switch` the skill runs during dirty-tree recovery asks for approval, and so does every `git checkout --ours` or `git checkout --theirs` during conflict reconciliation; a prefix grant for those commands would also admit the forms the command policy forbids, `git switch` with a force, discard, or merge option and a blanket `git checkout --ours .` or `git checkout --theirs .`. The grant keeps `git rebase --abort` and now grants `git rebase --continue` only in that exact form, since neither command takes an argument; the skill still runs `git rebase --abort` only on the decision of whoever decides the conflict route. The command policy lists the granted commands apart from the ones that ask for approval.
+- **`/sync-base` commits an unrelated coordination note on a branch cut from the base.** The skill first commits objective paths on the objective branch. It then moves the uncommitted note onto `work/<note-slug>` cut from `origin/<base>`, commits it there, and switches back to the objective branch or detached head before it re-runs the synchronizer. The result names the note branch and its full head identity as a separate changeset not yet on the default branch.
+- **`/sync-base` reads lane mapping from `spx/local/merging.md`.** Review reuse and the narrowest verification lane after a sync or a resolved conflict read the project's merge overlay. When that overlay is absent, the skill falls back to the full gate.
+
 ## 0.104.0
 
 ### Changed

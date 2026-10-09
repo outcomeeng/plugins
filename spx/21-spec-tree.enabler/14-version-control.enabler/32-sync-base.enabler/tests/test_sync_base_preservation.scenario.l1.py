@@ -4,14 +4,18 @@ from __future__ import annotations
 
 import pathlib
 
+import pytest
+
 from outcomeeng_testing.harnesses.sync_base import (
+    branch_diff_bytes,
     build_behind_base_repo,
     build_current_repo,
     build_detached_behind_base_repo,
     build_detached_current_repo,
+    build_non_utf8_branch_behind_base_repo,
     build_overlapping_base_repo,
+    build_prefetched_behind_base_repo,
     build_rename_base_repo,
-    fetch_base,
     load_sync_base_module,
     repository_root,
 )
@@ -77,10 +81,9 @@ def test_base_delta_accurate_when_caller_prefetched(
     tmp_path: pathlib.Path,
 ) -> None:
     module = load_sync_base_module()
-    handle = build_behind_base_repo(repository_root(tmp_path))
     # The caller already fetched the base before invoking sync-base, so the
     # remote-tracking ref already points at the advanced base.
-    fetch_base(handle.repo, handle.base_ref)
+    handle = build_prefetched_behind_base_repo(repository_root(tmp_path))
 
     result = module.sync_base(handle.repo)
     proof = result.preservation
@@ -152,3 +155,27 @@ def test_base_rename_surfaces_both_paths_in_base_delta(
     assert proof is not None
     assert handle.old_path in proof.base_delta_paths
     assert handle.new_path in proof.base_delta_paths
+
+
+def test_non_utf8_branch_diff_keeps_patch_identity_across_clean_rebase(
+    tmp_path: pathlib.Path,
+) -> None:
+    module = load_sync_base_module()
+    handle = build_non_utf8_branch_behind_base_repo(repository_root(tmp_path))
+    branch_diff = branch_diff_bytes(handle.repo, handle.remote_ref)
+
+    # Precondition: the branch's diff carries the payload's raw bytes, which no
+    # UTF-8 decoder accepts.
+    assert handle.feature_payload in branch_diff
+    with pytest.raises(UnicodeDecodeError):
+        branch_diff.decode("utf-8")
+
+    result = module.sync_base(handle.repo)
+    proof = result.preservation
+
+    assert result.status is module.SyncStatus.REBASED
+    assert proof is not None
+    assert handle.base_file in proof.base_delta_paths
+    assert proof.branch_paths_after == [handle.feature_file]
+    assert proof.path_overlap == []
+    assert proof.branch_patch_changed is False
