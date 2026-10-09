@@ -154,13 +154,7 @@ This section selects a description's style by invocation path. `/agent-prompt-st
 
 **Description-match entry points** take a directive description.
 
-**Reference skills** use `user-invocable: false` with a passive description:
-
-```yaml
-user-invocable: false
-description: >-
-  Python code standards enforced across all skills. Loaded by other skills, not invoked directly.
-```
+**Reference skills** carry a passive description, with the frontmatter `<reference_skills>` requires.
 
 **Protocol and loop-body skills** that a parent skill loads, or that a timer fires by exact name (a heartbeat re-entry target), keep a passive description while staying user-invocable — they are never reached by description-match, so a directive description would only cause false auto-activations. See the gate-by-role rules in `<frontmatter>`.
 
@@ -381,13 +375,6 @@ Before auditing: Use skill `typescript:typescript-test-standards`. Apply its com
 **Naming convention:** `{domain}-standards` for standards. Examples: `typescript-test-standards`, `skill-standards`, `agent-prompt-standards`.
 
 **Extraction completeness test.** When factoring a standards reference out of a builder/auditor pair, the extraction is complete only when the corresponding audit skill loads the new reference and nothing else for standards. If the auditor still reads files from the builder's `references/` directory for standards, content is still stranded there — finish the move. The same rule catches partial extractions: a standards file in a creator skill's `references/` directory that the auditor needs is a bug, not an architecture.
-
-**Anti-patterns:**
-
-- Directive descriptions (`ALWAYS`/`NEVER`) — cause false activations.
-- Shared content buried in one skill's `references/` — the skill-directory token is isolated per skill.
-- Same content duplicated across multiple `references/` — drifts.
-- Partial extraction: naming a new standards skill while leaving the meat in the builder's `references/` — the auditor keeps reading the old location and the rename becomes a lie.
 
 </reference_skills>
 

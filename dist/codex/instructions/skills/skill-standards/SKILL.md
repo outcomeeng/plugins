@@ -266,13 +266,6 @@ Before auditing: Use skill `typescript:typescript-test-standards`. Apply its com
 
 **Extraction completeness test.** When factoring a standards reference out of a builder/auditor pair, the extraction is complete only when the corresponding audit skill loads the new reference and nothing else for standards. If the auditor still reads files from the builder's `references/` directory for standards, content is still stranded there — finish the move. The same rule catches partial extractions: a standards file in a creator skill's `references/` directory that the auditor needs is a bug, not an architecture.
 
-**Anti-patterns:**
-
-- Directive descriptions (`ALWAYS`/`NEVER`) — cause false activations.
-- Shared content buried in one skill's `references/` — the skill-directory token is isolated per skill.
-- Same content duplicated across multiple `references/` — drifts.
-- Partial extraction: naming a new standards skill while leaving the meat in the builder's `references/` — the auditor keeps reading the old location and the rename becomes a lie.
-
 </reference_skills>
 
 <templates_and_variables>
