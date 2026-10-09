@@ -270,7 +270,7 @@ The committed scope selector already spans the whole changeset, so a cross-node 
 
 Before invoking the audit, apply `<stabilized_diff_rule>` and `<verification_checkpoint>`; carry its result forward under `<result_carryover>`.
 
-The implementation-auditor composes the installed `audit-{lang}-{code|tests|architecture}` concern skills and records the run through `spx verification run`. Do not invoke those concern skills directly from this workflow. Read its result under `<auditor_verdict>`. Its command-failure `BLOCKED` result also names the payload source, including for a failed preparation command. A missing-input diagnostic carries `runToken: not-started` and the exact missing selector or identity. A pre-run skill-load `BLOCKED` result is complete only when it carries run token `not-started`, required skill `spec-tree:audit-implementation`, and the exact load or availability failure.
+The implementation-auditor composes the installed `audit-{lang}-{code|tests|architecture}` concern skills and records the run through `spx verification run`. Do not invoke those concern skills directly from this workflow. Read its result under `<auditor_verdict>`.
 
 **Projection `terminalStatus: rejected` -> fix the defect class; complete `BLOCKED` diagnostic -> repair the named preparation, input, command, payload, installation, or skill-load boundary.** Verify and checkpoint the changed subject before a new audit. A failed launch or unusable result follows `<launch_contract>` immediately.
 
@@ -316,7 +316,7 @@ The flow is complete only when the change reaches the default branch on origin, 
 
 <terminal_full_gate>
 
-When `spx/local/merging.md`, the governing node, or the merge lifecycle requires a full deterministic bundle, run the repository's declared full deterministic gate exactly once at the terminal verification point: after Steps 4, 6, 8, applicable evidence-auditor gates, and Step 9 have converged on the same clean committed head. Do not run that full gate before those agentic checks, inside an auditor, or concurrently with another heavy command.
+When `spx/local/merging.md`, the governing node, or the merge lifecycle requires a full deterministic bundle, run the repository's declared full deterministic gate exactly once at the terminal verification point: after Step 8, applicable Step 8a, and Step 9 have converged on the same clean committed head, and while every Step 4 and Step 6 approval still holds. A Step 4 or Step 6 approval holds on a later head while no later commit changes the decision record or evidence artifact it audited; a later change to one reopens that gate, which re-dispatches on the new head before the full gate. Do not run that full gate before those agentic checks, inside an auditor, or concurrently with another heavy command.
 
 If the full deterministic gate fails, fix the reported defect, run the focused touched-scope checks, create a new checkpoint commit, rerun every invalidated agentic gate, and only then run the declared full gate again. A successful full gate is invalidated by any subsequent source, test, spec, generated-output, or configuration change.
 
