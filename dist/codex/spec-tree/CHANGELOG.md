@@ -10,6 +10,12 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.104.2
+
+### Changed
+
+- **`/execute-change` hands a skill-surface Fixer its repair block as repair input.** The Fixer rule names `instructions:create-subagent` alone as declaring no repair-block intake. A `change-skill-author` Fixer round, whose task message names the `improve` intent, reaches the `/create-skill` repair route, which takes each finding and each requested change the block supplies as one inventory row and returns a disposition for every row, so a defect the round's own checks do not reproduce still reaches the repair.
+
 ## 0.104.1
 
 ### Fixed
