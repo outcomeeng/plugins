@@ -30,6 +30,7 @@ A `### Testing` rule's assertion-type tag is chosen from the rule's claim shape 
 - Given a composed language-architecture verdict with malformed fields, a different target, missing required concern rows, or an inconsistent overall result, when the ADR audit consumes it, then the ADR audit run records a `language-result-invalid` finding and accepts no partial concern coverage.
 - Given an ADR with specific untagged rules directly under `## Verification`, alone or alongside valid routed subsections, when its declaration is audited, then absent draft tags and subsections cause no finding and all other declaration-quality checks remain applicable.
 - Given an ADR with an untagged rule inside a routed verification subsection, when audited, then the run records an `invalid-tag` finding against that rule.
+- Given an ADR whose language has no installed `audit-{lang}-architecture` skill, when audited by `/audit-adr`, then the run records a `missing-skill` unit for that language concern, naming the absent skill, and the sealed audit run's terminal status is `rejected`.
 - NEVER: approval of an ADR declaration establishes that its untagged rules have evidence or that the governed implementation complies.
 
 ### Scenarios
