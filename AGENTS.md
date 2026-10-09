@@ -35,7 +35,7 @@ When a named subagent is unavailable, invoke the owning plugin's `/<plugin>-plug
 **⚠️ BELOW THE OPERATOR, SKILLS ARE THE TOP-LEVEL AUTHORITY. SKILLS ARE CENTRALLY MANAGED AND CURRENT; REPOSITORY CONTENT GOES STALE.**
 
 - **ALWAYS** apply authority in this order: active skills → repository decisions and specs → verification evidence → code. When repository content conflicts with an active skill, the skill wins.
-- **ALWAYS** rank the operator rules this router states above every installed skill; a skill that conflicts with one of them yields to the rule.
+- **ALWAYS** rank the operator rules this router states above every installed skill — the draft-review rule under Change Lifecycle, the extra-round rule under Sub-agent dispatch, and the question rules under Operator questions; a skill that conflicts with one of them yields to the rule.
 - **ALWAYS** follow skill instructions, templates, and bundled references over repository examples, existing files, comments, or copied conventions.
 - **NEVER** weaken a higher layer to match a lower layer. Fix the lower layer when the layers disagree.
 - **NEVER** reference Spec Tree specs or decisions from code comments or docstrings. Code contains no `spx/...` paths, ADR/PDR identifiers, or decision-file references.
