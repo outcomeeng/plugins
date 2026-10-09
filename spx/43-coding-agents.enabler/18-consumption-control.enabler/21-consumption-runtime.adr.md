@@ -29,3 +29,4 @@ The runtime lives under `src/plugins/coding-agents/skills/control-token-spend/sc
 - ALWAYS: external commands cross an injected Protocol-typed runner; the default runner uses argument arrays, a finite timeout, bounded captured output and checked exit status ([audit]).
 - ALWAYS: filesystem collection, time and external command boundaries remain observable to independently owned harnesses, with semantic vocabulary owned by the production module that consumes it ([audit]).
 - ALWAYS: test harnesses, generators and inert transcript fixtures live in the repository's declared `outcomeeng_testing/` infrastructure home; linked node tests contain typed assertions only ([audit]).
+- NEVER: framework mocks replace runtime behavior or its external-command boundary; controlled runner implementations require an explicit failure-simulation or interaction-protocol exception selected through the test workflow ([audit]).
