@@ -236,28 +236,6 @@ Source: `instructions:skill-auditor` finding `f-015`, rule
 
 **Settlement condition**: the isolation requirement is stated directly or conditioned on the surfaces existing, the loads stand once, and one typed skill audit of `create-skill` raises neither finding.
 
-## `audit-skill`'s structure examples use `xml` fences for pseudo-XML
-
-**Evidence**: `instructions:skill-auditor` warning f-009 (rule `repository-markdown-pseudo-xml-fence`) on `src/plugins/instructions/skills/audit-skill/references/xml-structure-examples.md` at head `add3e3e862f7512a55e8b9655d07f78412abe87c`: pseudo-XML examples sit in `xml` fences, some closed by mismatched four-backtick fences.
-
-**Impact**: dprint `markup_fmt` may rewrite the examples, and fence boundaries are ambiguous to a reader.
-
-**Settlement condition**: every pseudo-XML example uses a `text` fence with matched delimiters; one typed skill audit raises no such finding.
-
-## `audit-skill`'s annotated examples grade in a vocabulary the run does not record
-
-**Evidence**: the built `instructions:skill-auditor` run `2026-10-03_22-58-55-808-4bb7d31783f5` on `src/plugins/instructions/skills/audit-skill` at head `8e631614b562ec5edf05c0e4c80a38625ada90d7` raised debt findings (rule `severity-vocabulary-mismatch`) against `references/operational-effectiveness-examples.md` lines 5, 31, 56, 95 and `references/xml-structure-examples.md` lines 5, 31, 53, 88, 116, 130: the examples flag violations as critical or recommendation, while `SKILL.md` records only the `blocking` and `debt` severities and states no mapping.
-
-**Impact**: an auditor reading an example grades by a label the run cannot record and maps it to a severity by its own judgment.
-
-**Settlement condition**: the examples use `blocking` and `debt`, or `SKILL.md` states the mapping; one typed skill audit of `audit-skill` raises no `severity-vocabulary-mismatch` finding.
-
-## Two audit-skill reference files over 100 lines carry no table of contents
-
-`/skill-standards` `<progressive_disclosure>` requires a table of contents at the top of every reference file over 100 lines, so partial reads still see the full scope. `src/plugins/instructions/skills/audit-skill/references/operational-effectiveness-examples.md` (116 lines) and `src/plugins/instructions/skills/audit-skill/references/xml-structure-examples.md` (140 lines) have none. The `create-subagent` references carry theirs.
-
-**Settlement condition.** Each file opens with a `## Contents` section or an XML `<contents>` block listing every top-level section, in the form its skill uses, and `instructions:skill-auditor` approves `audit-skill` afterward.
-
 ## Auditors read a conforming absent `<failure_modes>` section as a gap
 
 `/agent-prompt-standards` `<failure_mode_writing>` prescribes omitting `<failure_modes>` from a skill that has not failed yet: "Never invent failure modes... Add failure modes as they occur in real usage." A new skill therefore conforms by carrying no such section. `instructions:audit-skill` nonetheless raises the absence as a `worth-improving` warning, and its own remedy then restates the standard back: "once a real near-miss occurs", "do not fabricate one if none has occurred". `spec-tree:changes-reviewer` reads the same absence as a coordination-note gap. The warning is unactionable by construction: no edit satisfies it, and declining it leaves the next Verifier to raise it again. It fired six times over three skills and four verification rounds across the contribute-plugin consolidation, each costing a full re-audit or re-review cycle to answer with the same reasoning.
