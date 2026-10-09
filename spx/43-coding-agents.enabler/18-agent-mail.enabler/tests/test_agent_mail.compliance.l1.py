@@ -6,6 +6,7 @@ from outcomeeng_testing.harnesses.agent_mail import (
     common_dir_seeded_absent_store_runner,
     common_dir_seeded_runner,
     git_project_key_violation_source,
+    label_collision_variant,
     load_agent_mail,
     mail_command_source_texts,
     raw_mail_violation_source,
@@ -13,6 +14,7 @@ from outcomeeng_testing.harnesses.agent_mail import (
     run_cli_with_only_adapter_programs,
     run_cli_without_executables,
     run_generated_identities,
+    run_label_targeting_cases,
     store_program_names,
     store_response_payload,
     store_response_result,
@@ -147,3 +149,163 @@ def test_no_other_shipped_script_constructs_mail_commands_or_git_keys() -> None:
     assert module.raw_mail_command_violations(raw_source) == [raw_path]
     git_path, git_source = git_project_key_violation_source()
     assert module.git_project_key_violations(git_source) == [git_path]
+
+
+def test_a_label_in_a_target_position_is_passed_as_the_identity_never_resolved() -> (
+    None
+):
+    def assert_case(
+        module: ModuleType,
+        project_key: str,
+        label: str,
+        sender: str,
+        recipient: str,
+        collision: str,
+        message_id: int,
+    ) -> None:
+        def send(from_agent: str, to_agent: str) -> dict[str, object]:
+            return module.operation_request(
+                module.Operation.SEND,
+                record=module.message_record(
+                    kind=module.RecordKind.FACT,
+                    correlation=collision,
+                    sender=from_agent,
+                    recipient=to_agent,
+                    subject=collision,
+                    body=collision,
+                ),
+            )
+
+        targets = [
+            (
+                module.operation_request(
+                    module.Operation.REGISTER,
+                    agent=label,
+                    program=collision,
+                    agent_model=collision,
+                ),
+                module.NAME_OPTION,
+            ),
+            (
+                send(label, recipient),
+                module.PUBLIC_AM_RECORD_OPTIONS[module.SENDER_FIELD],
+            ),
+            (
+                send(sender, label),
+                module.PUBLIC_AM_RECORD_OPTIONS[module.RECIPIENT_FIELD],
+            ),
+            (
+                module.operation_request(module.Operation.INBOX, agent=label),
+                module.PUBLIC_AM_ARGUMENT_OPTIONS[module.AGENT_FIELD],
+            ),
+            (
+                module.operation_request(
+                    module.Operation.RECEIPT, agent=label, message_id=message_id
+                ),
+                module.PUBLIC_AM_ARGUMENT_OPTIONS[module.AGENT_FIELD],
+            ),
+        ]
+        for request, option in targets:
+            operation = module.Operation(request[module.OPERATION_FIELD])
+            arguments = cast(dict[str, object], request[module.ARGUMENTS_FIELD])
+            runner = common_dir_seeded_runner(
+                module, project_key, store_response_result(module, operation, arguments)
+            )
+
+            result = module.execute(request, runner)
+
+            assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED, (
+                operation
+            )
+            assert [argv[0] for argv, _ in runner.calls] == [
+                module.GIT_COMMAND,
+                module.AM_COMMAND,
+            ], (operation, runner.calls)
+            store_argv = runner.calls[1][0]
+            assert module.attached_option(option, label) in store_argv, operation
+            assert sum(label in part for part in store_argv) == 1, operation
+
+    run_label_targeting_cases(assert_case)
+
+
+def test_a_store_label_never_selects_the_sender_or_recipient_of_a_record() -> None:
+    def assert_case(
+        module: ModuleType,
+        project_key: str,
+        label: str,
+        sender: str,
+        recipient: str,
+        collision: str,
+        message_id: int,
+    ) -> None:
+        # The sender label is another agent's stable name, the shape a label
+        # that selected by name would be fooled by.
+        inbox_request = module.operation_request(
+            module.Operation.INBOX, agent=recipient, include_bodies=True
+        )
+        inbox_arguments = cast(dict[str, object], inbox_request[module.ARGUMENTS_FIELD])
+        inbox_variant = label_collision_variant(
+            module,
+            module.Operation.INBOX,
+            inbox_arguments,
+            sender_label=collision,
+            recipient_label=label,
+        )
+        inbox_runner = common_dir_seeded_runner(
+            module, project_key, inbox_variant.result
+        )
+
+        inbox_result = module.execute(inbox_request, inbox_runner)
+
+        assert inbox_result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
+        items = cast(
+            list[dict[str, object]], inbox_variant.payload[module.STORE_INBOX_FIELD]
+        )
+        records = cast(
+            list[dict[str, object]],
+            cast(dict[str, object], inbox_result[module.DATA_FIELD])[
+                module.RECORDS_FIELD
+            ],
+        )
+        assert len(records) == len(items) > 0, inbox_variant.capture
+        for record, item in zip(records, items, strict=True):
+            assert record[module.SENDER_FIELD] == item[module.STORE_FROM_FIELD], (
+                inbox_variant.capture
+            )
+            assert record[module.RECIPIENT_FIELD] == recipient
+        assert len(inbox_runner.calls) == 2
+
+        send_request = module.operation_request(
+            module.Operation.SEND,
+            record=module.message_record(
+                kind=module.RecordKind.FACT,
+                correlation=str(message_id),
+                sender=sender,
+                recipient=recipient,
+                subject=label,
+                body=label,
+            ),
+        )
+        send_variant = label_collision_variant(
+            module,
+            module.Operation.SEND,
+            cast(dict[str, object], send_request[module.ARGUMENTS_FIELD]),
+            sender_label=collision,
+            recipient_label=collision,
+        )
+        send_runner = common_dir_seeded_runner(module, project_key, send_variant.result)
+
+        send_result = module.execute(send_request, send_runner)
+
+        assert send_result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
+        record = cast(
+            dict[str, object],
+            cast(dict[str, object], send_result[module.DATA_FIELD])[
+                module.RECORD_FIELD
+            ],
+        )
+        assert record[module.SENDER_FIELD] == sender, send_variant.capture
+        assert record[module.RECIPIENT_FIELD] == recipient, send_variant.capture
+        assert len(send_runner.calls) == 2
+
+    run_label_targeting_cases(assert_case)

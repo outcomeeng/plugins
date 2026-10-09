@@ -46,6 +46,30 @@ def message_texts() -> st.SearchStrategy[str]:
     return st.text(min_size=1, max_size=200).filter(lambda text: text.strip() == text)
 
 
+def position_labels() -> st.SearchStrategy[str]:
+    """Human-readable labels the store records per agent: two words, the way a
+    position is named, so a label differs in shape from a stable name. The
+    store's recipient separator is excluded so a label stays one recipient."""
+    word = st.text(
+        alphabet=st.characters(
+            blacklist_categories=("Cc", "Cs", "Zs", "Zl", "Zp"),
+            blacklist_characters=",",
+        ),
+        min_size=1,
+        max_size=40,
+    )
+    return st.builds(lambda first, second: f"{first} {second}", word, word)
+
+
+def distinct_stable_names(
+    count: int, excluded: frozenset[str]
+) -> st.SearchStrategy[tuple[str, ...]]:
+    """``count`` pairwise distinct stable names, none among ``excluded``."""
+    return st.tuples(*(agent_names() for _ in range(count))).filter(
+        lambda names: len(set(names)) == count and not set(names) & excluded
+    )
+
+
 def coordination_references() -> st.SearchStrategy[str]:
     return st.uuids(version=4).map(str)
 
