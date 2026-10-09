@@ -1,34 +1,67 @@
 """A position's monitor.
 
 Each poll reads the watch file and the state file, emits one line per new
-signal, and writes the state file. With --every, the script polls in a loop
-under the harness monitor facility and holds a lock so a re-arm never doubles
-the signals; without it, the script polls once and exits.
+signal, and writes the state file. With --every and --deadline, the script
+polls in a loop until the deadline, measured from its start, and holds a lock
+so a re-arm never doubles the signals; with neither, it polls once and exits.
 
-Usage: python3 monitor.py WATCH.json STATE.json [--every SECONDS]
+Usage: python3 monitor.py WATCH.json STATE.json [--every SECONDS --deadline SECONDS]
 """
 
 from __future__ import annotations
 
+import argparse
+import fcntl
 import hashlib
 import json
+import math
 import os
 import re
 import sys
 import time
-from datetime import datetime, timezone
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from enum import StrEnum
 from pathlib import Path
+from typing import cast
 
 import environment
 import position_mail
+import watch_file
+
+
+class Signal(StrEnum):
+    MAIL = "MAIL"
+    BLOCKED = "BLOCKED"
+    WENT_IDLE = "WENT-IDLE"
+    WAITING_ON_BACKGROUND = "WAITING-ON-BACKGROUND"
+    STALLED = "STALLED"
+    ABSENT = "ABSENT"
+    WATCH_BROKEN = "WATCH-BROKEN"
+    WATCH_DUPLICATE = "WATCH-DUPLICATE"
+    COMPACT_NOW = "COMPACT-NOW"
+    COMPACT_IDLE = "COMPACT-IDLE"
+    COMPACT_AT_BOUNDARY = "COMPACT-AT-BOUNDARY"
+
 
 # Context tiers, most urgent first: (threshold, applies only when the turn has ended, signal).
 TIERS = (
-    (85, False, "COMPACT-NOW"),
-    (75, True, "COMPACT-IDLE"),
-    (75, False, "COMPACT-AT-BOUNDARY"),
+    (85, False, Signal.COMPACT_NOW),
+    (75, True, Signal.COMPACT_IDLE),
+    (75, False, Signal.COMPACT_AT_BOUNDARY),
 )
-ENDED = ("idle", "done")
+# A tier is reported once per step of this many percentage points.
+TIER_STEP_PERCENT = 5
+DEFAULT_BLOCKED_REMIND_MINUTES = 15
+# A failing source is reported when it fails on this many polls in a row.
+BROKEN_AFTER_POLLS = 2
+
+EVERY_OPTION = "--every"
+DEADLINE_OPTION = "--deadline"
+EXIT_INVALID = 2
+LOCK_SUFFIX = ".lock"
+MAIL_SOURCE = "mail"
 
 # The disposition each signal calls for, from the authority map and the Spec Tree foundation.
 GATE = (
@@ -38,7 +71,7 @@ GATE = (
 )
 RULES = {
     "note": "compact it now: /compact, wait for its context to drop, send its resume line",
-    "shape": "forward it to SnowyHeron with forward.py, then receipt; judge nothing in it",
+    "shape": "forward it to the owner its authority map names, then receipt; judge nothing in it",
     "status": "read its blocked and next lines; act only on a step-in trigger; a reported rejection: check the gate applied",
     "gate": GATE,
     "question": (
@@ -48,18 +81,51 @@ RULES = {
     "other": "verify it against the store or git before acting; receipt after handling",
     "blocked": (
         "read the pane: a read a higher rank ordered, approve; a guard or destructive prompt, "
-        "Escape and a redirect (one command at a time, trash for rm); never allow"
+        "Escape; never allow"
     ),
     "idle": "read its last lines: a finished leg its skill continues is left alone; open work gets its next step; a question to the operator it waits on is answered by its owner within 15 minutes, or asked through AskUserQuestion when none can",
+    "background": "its turn ended with work still running; the harness re-invokes it when that work ends",
+    "stalled": "read the pane and the transcript; a stall over 15 min is a step-in trigger",
+    "absent": "open work goes to restart.md",
     "executor": "its Orchestrator owns it: check the Orchestrator is disposing of it; never prompt an Executor",
-    "COMPACT-NOW": "order its note now; compact on 'note written'",
-    "COMPACT-IDLE": "order its note now; compact on 'note written'",
-    "COMPACT-AT-BOUNDARY": "order its note for the end of its current step",
+    Signal.COMPACT_NOW: "order its note now; compact on 'note written'",
+    Signal.COMPACT_IDLE: "order its note now; compact on 'note written'",
+    Signal.COMPACT_AT_BOUNDARY: "order its note for the end of its current step",
 }
 _GATE_WORDS = re.compile(
     r"\b(audits?|auditor|reviews?|reviewer|gates?|reject\w*|verdicts?|verifier|fixer|evidence|runs?)\b",
     re.IGNORECASE,
 )
+
+# Keys of the state file.
+MAIL_LAST_ID = "mail_last_id"
+BROKEN = "broken"
+SESSIONS = "sessions"
+STATE = "state"
+CHANGED_AT = "changed_at"
+CONTEXT = "context"
+PARKED = "parked"
+BLOCKED_SINCE = "blocked_since"
+BLOCKED_REPORTED_AT = "blocked_reported_at"
+DIGEST = "digest"
+ACTIVE_AT = "active_at"
+STALL_REPORTED = "stall_reported"
+REPORTED_TIERS = "tiers"
+ABSENT_STATE = "absent"
+
+type Entry = Mapping[str, object]
+type SessionState = dict[str, object]
+type Inbox = Callable[[str, str], list[position_mail.Record]]
+
+
+@dataclass(frozen=True)
+class Event:
+    signal: Signal
+    subject: str
+    detail: str
+
+    def line(self, watcher: str) -> str:
+        return f"[{watcher}] {self.signal} {self.subject}: {self.detail}"
 
 
 def mail_rule(subject: str) -> str:
@@ -82,272 +148,430 @@ def mail_rule(subject: str) -> str:
     return RULES["other"]
 
 
-def _broken(state: dict, key: str, error: object, emit) -> None:
-    """Report an adapter failure only when it repeats on the next poll."""
-    counts = state.setdefault("broken", {})
-    counts[key] = counts.get(key, 0) + 1
-    if counts[key] == 2:
-        emit(f"WATCH-BROKEN {key}: {error} (twice in a row)")
+class _Poll:
+    """One poll's state, clock, and the events it emits."""
+
+    def __init__(self, state: dict[str, object], now: datetime) -> None:
+        self.state = state
+        self.now = now
+        self.events: list[Event] = []
+
+    def emit(self, signal: Signal, subject: str, detail: str) -> None:
+        self.events.append(Event(signal, subject, detail))
+
+    def broken(self, source: str, error: Exception) -> None:
+        """Report a failing source only when it fails again on the next poll."""
+        counts = cast(dict[str, int], self.state.setdefault(BROKEN, {}))
+        counts[source] = counts.get(source, 0) + 1
+        if counts[source] == BROKEN_AFTER_POLLS:
+            detail = f"{error} ({BROKEN_AFTER_POLLS} polls in a row; polling goes on)"
+            self.emit(Signal.WATCH_BROKEN, source, detail)
+
+    def healthy(self, source: str) -> None:
+        cast(dict[str, int], self.state.setdefault(BROKEN, {})).pop(source, None)
+
+    def minutes_since(self, stamp: object) -> float | None:
+        if not isinstance(stamp, str) or not stamp:
+            return None
+        then = datetime.fromisoformat(stamp.replace("Z", "+00:00"))
+        return (self.now - then).total_seconds() / 60
 
 
-def _healthy(state: dict, key: str) -> None:
-    state.setdefault("broken", {}).pop(key, None)
-
-
-def _minutes_since(stamp: str | None, now: datetime) -> float | None:
-    if not stamp:
-        return None
-    then = datetime.fromisoformat(stamp.replace("Z", "+00:00"))
-    return (now - then).total_seconds() / 60
-
-
-def _mail(watch: dict, state: dict, emit) -> None:
-    mail = watch.get("mail")
+def _mail(watch: Mapping[str, object], run: _Poll, inbox: Inbox) -> None:
+    mail = cast(Mapping[str, str] | None, watch.get(watch_file.MAIL))
     if not mail:
         return
     try:
-        records = position_mail.inbox(mail["channel"], mail["agent"])
+        records = inbox(mail[watch_file.CHANNEL], mail[watch_file.AGENT])
     except position_mail.MailError as error:
-        _broken(state, "mail", error, emit)
+        run.broken(MAIL_SOURCE, error)
         return
-    _healthy(state, "mail")
-    last = state.get("mail_last_id", 0)
+    run.healthy(MAIL_SOURCE)
+    newest = max((record.id for record in records), default=0)
+    if MAIL_LAST_ID not in run.state:
+        # A fresh state file withholds the mail that existed before it.
+        run.state[MAIL_LAST_ID] = newest
+        return
+    last = cast(int, run.state[MAIL_LAST_ID])
     for record in sorted(records, key=lambda r: r.id):
         if record.id > last:
-            emit(
-                f"MAIL {record.id} from {record.sender}: {record.subject} → {mail_rule(record.subject)}"
+            detail = (
+                f"from {record.sender}: {record.subject} → {mail_rule(record.subject)}"
             )
-    state["mail_last_id"] = max([last] + [r.id for r in records])
+            run.emit(Signal.MAIL, str(record.id), detail)
+    run.state[MAIL_LAST_ID] = max(last, newest)
 
 
 def _targets(
-    watch: dict, inventories: dict
-) -> dict[str, tuple[environment.Session | None, dict]]:
+    watch: Mapping[str, object],
+    inventories: Mapping[str, list[environment.Session]],
+) -> dict[str, tuple[environment.Session | None, Entry]]:
     """Every watched name mapped to its live session (or None) and its watch entry."""
-    targets: dict[str, tuple[environment.Session | None, dict]] = {}
-    for entry in watch.get("sessions", []):
-        sessions = inventories.get(entry["backend"])
+    targets: dict[str, tuple[environment.Session | None, Entry]] = {}
+    for entry in cast(list[Entry], watch.get(watch_file.SESSIONS, [])):
+        sessions = inventories.get(cast(str, entry[watch_file.BACKEND]))
         if sessions is None:
             continue
         found = environment.find(
-            sessions, cwd=entry.get("cwd"), handle=entry.get("handle")
+            sessions,
+            cwd=cast(str | None, entry.get(watch_file.CWD)),
+            handle=cast(str | None, entry.get(watch_file.HANDLE)),
         )
-        targets[entry["position"]] = (found, entry)
-    for group in watch.get("groups", []):
-        sessions = inventories.get(group["backend"])
+        targets[cast(str, entry[watch_file.POSITION])] = (found, entry)
+    for group in cast(list[Entry], watch.get(watch_file.GROUPS, [])):
+        sessions = inventories.get(cast(str, group[watch_file.BACKEND]))
         if sessions is None:
             continue
+        label = cast(str, group[watch_file.LABEL])
         members = environment.under(
-            sessions, group["cwd_prefix"], group.get("exclude", [])
+            sessions,
+            cast(str, group[watch_file.CWD_PREFIX]),
+            cast(list[str], group.get(watch_file.EXCLUDE, [])),
         )
-        if not members and group.get("expect_members"):
-            targets[f"{group['label']}"] = (None, group)
+        if not members and group.get(watch_file.EXPECT_MEMBERS):
+            targets[label] = (None, group)
         for member in members:
-            targets[f"{group['label']} {member.handle}"] = (member, group)
+            targets[f"{label} {member.handle}"] = (member, group)
     return targets
 
 
-def _session(
-    name: str, session, entry: dict, previous: dict, now: datetime, emit, state: dict
-) -> dict:
-    # A group member is an Executor its Orchestrator owns: only a long block reaches the Director.
-    member = "cwd_prefix" in entry
-    if session is None:
-        if previous.get("state") != "absent" and not member:
-            emit(f"ABSENT {name}: no session → open work goes to restart.md")
-        return {"state": "absent"}
+def _blocked(
+    name: str,
+    entry: Entry,
+    previous: SessionState,
+    current: SessionState,
+    shown: str,
+    run: _Poll,
+) -> None:
+    """Report a block at once and again every remind interval; a group member only once it has lasted."""
+    member = watch_file.CWD_PREFIX in entry
+    was = previous.get(STATE)
+    remind = cast(
+        float,
+        entry.get(watch_file.BLOCKED_REMIND_MINUTES, DEFAULT_BLOCKED_REMIND_MINUTES),
+    )
+    since = run.minutes_since(previous.get(BLOCKED_REPORTED_AT))
+    held = run.minutes_since(previous.get(BLOCKED_SINCE))
+    due = was != environment.State.BLOCKED or since is None or since >= remind
+    if member:
+        # An Executor's prompt is its Orchestrator's; the Director checks only a long one.
+        due = (
+            was == environment.State.BLOCKED
+            and held is not None
+            and held >= remind
+            and (since is None or since >= remind)
+        )
+    if due:
+        lasted = held is not None and was == environment.State.BLOCKED
+        waited = f" for {held:.0f} min" if lasted else ""
+        rule = RULES["executor"] if member else RULES["blocked"]
+        run.emit(Signal.BLOCKED, name, f"{shown}{waited} → {rule}")
+        current[BLOCKED_REPORTED_AT] = run.now.isoformat()
+    else:
+        current[BLOCKED_REPORTED_AT] = previous.get(BLOCKED_REPORTED_AT)
+    current[BLOCKED_SINCE] = (
+        previous.get(BLOCKED_SINCE)
+        if was == environment.State.BLOCKED
+        else run.now.isoformat()
+    )
 
-    backend = environment.BACKENDS[session.backend]
+
+def _turn(
+    name: str,
+    session: environment.Session,
+    entry: Entry,
+    previous: SessionState,
+    background: bool,
+    shown: str,
+    run: _Poll,
+) -> bool:
+    """Report a turn's end; whether the session is parked on background work afterwards."""
+    member = watch_file.CWD_PREFIX in entry
+    was = previous.get(STATE)
+    parked = bool(previous.get(PARKED, False))
+    if was == environment.State.WORKING and session.state in environment.ENDED:
+        if background:
+            # The harness re-invokes the session when its work ends.
+            if entry.get(watch_file.REPORT_BACKGROUND, False) and not member:
+                detail = f"{shown} → {RULES['background']}"
+                run.emit(Signal.WAITING_ON_BACKGROUND, name, detail)
+            return True
+        if not member:
+            run.emit(Signal.WENT_IDLE, name, f"{shown} → {RULES['idle']}")
+        return False
+    if session.state in environment.ENDED and parked and not background:
+        if not member:
+            detail = f"{shown} after background work → {RULES['idle']}"
+            run.emit(Signal.WENT_IDLE, name, detail)
+        return False
+    if session.state == environment.State.WORKING:
+        return False
+    return parked
+
+
+def _stall(
+    name: str,
+    session: environment.Session,
+    entry: Entry,
+    previous: SessionState,
+    current: SessionState,
+    text: str | None,
+    run: _Poll,
+) -> None:
+    """Report a working pane whose text, digits removed, has not changed for `stall_minutes`.
+
+    Ticking timers and token counters in a hung session do not count as progress.
+    """
+    stall = cast(float | None, entry.get(watch_file.STALL_MINUTES))
+    if not stall or text is None:
+        return
+    digest = hashlib.sha256(re.sub(r"\d", "", text).encode()).hexdigest()
+    active_at = previous.get(ACTIVE_AT)
+    if digest != previous.get(DIGEST) or active_at is None:
+        active_at = run.now.isoformat()
+    current[DIGEST], current[ACTIVE_AT] = digest, active_at
+    quiet = run.minutes_since(active_at)
+    if (
+        session.state == environment.State.WORKING
+        and quiet is not None
+        and quiet >= stall
+    ):
+        if not previous.get(STALL_REPORTED):
+            member = watch_file.CWD_PREFIX in entry
+            rule = RULES["executor"] if member else RULES["stalled"]
+            detail = f"pane unchanged for {quiet:.0f} min while working → {rule}"
+            run.emit(Signal.STALLED, name, detail)
+        current[STALL_REPORTED] = True
+
+
+def _tiers(
+    name: str,
+    session: environment.Session,
+    entry: Entry,
+    previous: SessionState,
+    used: int | None,
+    run: _Poll,
+) -> dict[str, int]:
+    """Report the most urgent compaction tier due, once per step; the tiers reported in this step."""
+    if used is None or not entry.get(watch_file.CONTEXT_PERCENT):
+        return {}
+    reported = cast(dict[str, int], previous.get(REPORTED_TIERS, {}))
+    for threshold, ended_only, signal in TIERS:
+        if used >= threshold and (not ended_only or session.state in environment.ENDED):
+            step = used // TIER_STEP_PERCENT
+            if reported.get(str(signal)) != step:
+                detail = f"{used}% state={session.state} → {RULES[signal]}"
+                run.emit(signal, name, detail)
+            return {str(signal): step}
+    return {}
+
+
+def _session(
+    name: str,
+    session: environment.Session | None,
+    entry: Entry,
+    previous: SessionState,
+    backends: Mapping[str, environment.Backend],
+    run: _Poll,
+) -> SessionState:
+    member = watch_file.CWD_PREFIX in entry
+    if session is None:
+        if previous.get(STATE) != ABSENT_STATE and not member:
+            run.emit(Signal.ABSENT, name, f"no session → {RULES['absent']}")
+        return {STATE: ABSENT_STATE}
+
     text = None
     needs_text = (
-        entry.get("context_percent")
-        or entry.get("stall_minutes")
-        or (session.backend != "prowl" and session.state in ENDED)
+        entry.get(watch_file.CONTEXT_PERCENT)
+        or entry.get(watch_file.STALL_MINUTES)
+        or (
+            session.backend != environment.Prowl.name
+            and session.state in environment.ENDED
+        )
     )
     if needs_text:
         try:
-            text = backend.read(session)
-            _healthy(state, f"read {name}")
+            text = backends[session.backend].read(session)
+            run.healthy(name)
         except environment.AdapterError as error:
-            _broken(state, f"read {name}", error, emit)
+            run.broken(name, error)
     used = environment.context_percent(text) if text else None
     background = environment.background_work(session, text)
     shown = f"{used}%" if used is not None else "?%"
 
-    was = previous.get("state")
-    parked = previous.get("parked", False)
-    current = {
-        "state": session.state,
-        "changed_at": session.changed_at,
-        "context": used,
+    current: SessionState = {
+        STATE: str(session.state),
+        CHANGED_AT: session.changed_at,
+        CONTEXT: used,
     }
-
-    if session.state == "blocked":
-        # Reported on first sight, baseline included, and again every remind interval.
-        remind = entry.get("blocked_remind_minutes", 15)
-        since = _minutes_since(previous.get("blocked_reported_at"), now)
-        held = _minutes_since(previous.get("blocked_since"), now)
-        due = was != "blocked" or since is None or since >= remind
-        if member:
-            # An Executor's prompt is its Orchestrator's; the Director checks only a long one.
-            due = (
-                was == "blocked"
-                and held is not None
-                and held >= remind
-                and (since is None or since >= remind)
-            )
-        if due:
-            waited = (
-                f" for {held:.0f} min" if was == "blocked" and held is not None else ""
-            )
-            rule = RULES["executor"] if member else RULES["blocked"]
-            emit(f"BLOCKED {name} {shown}{waited} → {rule}")
-            current["blocked_reported_at"] = now.isoformat()
-        else:
-            current["blocked_reported_at"] = previous.get("blocked_reported_at")
-        current["blocked_since"] = (
-            previous.get("blocked_since") if was == "blocked" else now.isoformat()
-        )
-    elif was == "working" and session.state in ENDED:
-        if background:
-            # A position resting on its own monitor parks silently when its watch entry says so.
-            # The harness re-invokes the session when its work ends: nothing to do.
-            parked = True
-        elif not member:
-            emit(f"WENT-IDLE {name} {shown} → {RULES['idle']}")
-    elif session.state in ENDED and parked and not background:
-        parked = False
-        if not member:
-            emit(f"WENT-IDLE {name} {shown} after background work → {RULES['idle']}")
-    elif session.state == "working":
-        parked = False
-    current["parked"] = parked
-
-    # Activity is a change in the pane's text with every digit removed, so ticking
-    # timers and token counters in a hung session do not count as progress.
-    stall = entry.get("stall_minutes")
-    if stall and text is not None:
-        digest = hashlib.sha256(re.sub(r"\d", "", text).encode()).hexdigest()
-        active_at = previous.get("active_at")
-        if digest != previous.get("digest") or active_at is None:
-            active_at = now.isoformat()
-        current["digest"], current["active_at"] = digest, active_at
-        quiet = _minutes_since(active_at, now)
-        if session.state == "working" and quiet is not None and quiet >= stall:
-            if not previous.get("stall_reported"):
-                rule = (
-                    RULES["executor"]
-                    if member
-                    else "read the pane and the transcript; a stall over 15 min is a step-in trigger"
-                )
-                emit(
-                    f"STALLED {name}: pane unchanged for {quiet:.0f} min while working → {rule}"
-                )
-            current["stall_reported"] = True
-
-    reported = dict(previous.get("tiers", {}))
-    if used is not None and entry.get("context_percent"):
-        tier = next(
-            (t for t in TIERS if used >= t[0] and (not t[1] or session.state in ENDED)),
-            None,
-        )
-        if tier:
-            bucket = used // 5
-            if reported.get(tier[2]) != bucket:
-                emit(
-                    f"{tier[2]} {name} {used}% state={session.state} → {RULES[tier[2]]}"
-                )
-            reported = {tier[2]: bucket}
-        else:
-            reported = {}
-    current["tiers"] = reported
+    if session.state == environment.State.BLOCKED:
+        _blocked(name, entry, previous, current, shown, run)
+    current[PARKED] = _turn(name, session, entry, previous, background, shown, run)
+    _stall(name, session, entry, previous, current, text, run)
+    current[REPORTED_TIERS] = _tiers(name, session, entry, previous, used, run)
     return current
 
 
-def poll(watch: dict, state: dict, now: datetime) -> list[str]:
-    lines: list[str] = []
-    me = watch["position"]
+def poll(
+    watch: Mapping[str, object],
+    state: dict[str, object],
+    now: datetime,
+    backends: Mapping[str, environment.Backend] | None = None,
+    inbox: Inbox | None = None,
+) -> list[Event]:
+    """Poll every watched source once, updating `state`; the events this poll emits."""
+    backends = environment.BACKENDS if backends is None else backends
+    run = _Poll(state, now)
+    _mail(watch, run, position_mail.inbox if inbox is None else inbox)
 
-    def emit(text: str) -> None:
-        lines.append(f"[{me}] {text}")
-
-    _mail(watch, state, emit)
-
-    backends = {e["backend"] for e in watch.get("sessions", [])} | {
-        g["backend"] for g in watch.get("groups", [])
-    }
+    entries = [
+        *cast(list[Entry], watch.get(watch_file.SESSIONS, [])),
+        *cast(list[Entry], watch.get(watch_file.GROUPS, [])),
+    ]
     inventories: dict[str, list[environment.Session]] = {}
-    for name in sorted(backends):
+    for name in sorted({cast(str, entry[watch_file.BACKEND]) for entry in entries}):
         try:
-            inventories[name] = environment.BACKENDS[name].sessions()
-            _healthy(state, f"{name} inventory")
+            inventories[name] = backends[name].sessions()
+            run.healthy(name)
         except environment.AdapterError as error:
-            _broken(state, f"{name} inventory", error, emit)
+            run.broken(name, error)
 
-    seen = state.setdefault("sessions", {})
+    seen = cast(dict[str, SessionState], state.setdefault(SESSIONS, {}))
     targets = _targets(watch, inventories)
     for name, (session, entry) in targets.items():
-        seen[name] = _session(
-            name, session, entry, seen.get(name, {}), now, emit, state
-        )
-    # A group member that disappeared since the last poll.
-    for name in [
-        n for n in seen if n not in targets and seen[n].get("state") != "absent"
-    ]:
-        if any(name.startswith(g["label"] + " ") for g in watch.get("groups", [])):
-            # An Executor ending is its Orchestrator's to dispose of; recorded silently.
-            seen[name] = {"state": "absent"}
-    return lines
+        seen[name] = _session(name, session, entry, seen.get(name, {}), backends, run)
+    # A group member that ended since the last poll is its Orchestrator's to dispose of.
+    labels = [
+        cast(str, group[watch_file.LABEL])
+        for group in cast(list[Entry], watch.get(watch_file.GROUPS, []))
+    ]
+    for name in list(seen):
+        gone = name not in targets and seen[name].get(STATE) != ABSENT_STATE
+        if gone and any(name.startswith(f"{label} ") for label in labels):
+            seen[name] = {STATE: ABSENT_STATE}
+    return run.events
 
 
 def poll_once(watch_path: Path, state_path: Path) -> None:
-    watch = json.loads(watch_path.read_text())
-    state = json.loads(state_path.read_text()) if state_path.exists() else {}
-    first_run = not state
-    lines = poll(watch, state, datetime.now(timezone.utc))
+    """Poll once from the files, print every event, and write the state file."""
+    watch = watch_file.load(watch_path)
+    state = watch_file.load_state(state_path)
+    events = poll(watch, state, datetime.now(UTC))
     state_path.write_text(json.dumps(state, indent=2))
-    for line in lines:
-        # The baseline run withholds existing mail; every session signal shows at once.
-        if first_run and "] MAIL " in line:
-            continue
-        print(line, flush=True)
+    watcher = cast(str, watch[watch_file.POSITION])
+    for event in events:
+        print(event.line(watcher), flush=True)
 
 
-def holder(lock: Path) -> int | None:
-    """The live process id holding the lock, or None."""
+def _lock_holder(lock: Path) -> str:
     try:
-        pid = int(lock.read_text())
-        os.kill(pid, 0)
-        return pid
-    except (FileNotFoundError, ValueError, ProcessLookupError, PermissionError):
+        return lock.read_text().strip()
+    except OSError:
+        return ""
+
+
+def take_lock(state_path: Path) -> int | None:
+    """Hold the state file's lock; its descriptor, or None when a live loop holds it.
+
+    The kernel releases the lock when its process ends however it ends, so a
+    lock file whose process is gone is taken over by the next loop.
+    """
+    lock = Path(f"{state_path}{LOCK_SUFFIX}")
+    descriptor = os.open(lock, os.O_RDWR | os.O_CREAT, 0o644)
+    try:
+        fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        os.close(descriptor)
         return None
+    os.ftruncate(descriptor, 0)
+    os.write(descriptor, str(os.getpid()).encode())
+    return descriptor
 
 
-def main(argv: list[str]) -> int:
-    watch_path, state_path = Path(argv[0]), Path(argv[1])
-    if "--every" not in argv:
-        poll_once(watch_path, state_path)
-        return 0
-    interval = float(argv[argv.index("--every") + 1])
-    lock = Path(f"{state_path}.lock")
-    other = holder(lock)
-    if other is not None:
+def loop(watch_path: Path, state_path: Path, every: float, deadline: float) -> int:
+    """Poll every `every` seconds until `deadline` seconds after the start, holding the lock."""
+    end = time.monotonic() + deadline
+    descriptor = take_lock(state_path)
+    if descriptor is None:
+        holder = _lock_holder(Path(f"{state_path}{LOCK_SUFFIX}")) or "unknown"
         print(
-            f"WATCH-DUPLICATE another loop ({other}) already watches {state_path}; this copy exits",
+            f"{Signal.WATCH_DUPLICATE} another loop ({holder}) already watches "
+            f"{state_path}; this copy exits",
             flush=True,
         )
         return 0
-    lock.write_text(str(os.getpid()))
     try:
         while True:
             try:
                 poll_once(watch_path, state_path)
-            except Exception as error:  # a broken poll reports and the loop goes on
-                print(f"WATCH-BROKEN monitor.py poll failed: {error}", flush=True)
-            time.sleep(interval)
+            except (OSError, ValueError) as error:
+                # A broken poll reports and the loop goes on.
+                print(
+                    f"{Signal.WATCH_BROKEN} monitor.py poll failed: {error}", flush=True
+                )
+            remaining = end - time.monotonic()
+            if remaining <= 0:
+                return 0
+            time.sleep(min(every, remaining))
     finally:
-        if holder(lock) == os.getpid():
-            lock.unlink(missing_ok=True)
+        os.close(descriptor)
+
+
+def _seconds(text: str) -> float:
+    """A positive finite number of seconds."""
+    try:
+        value = float(text)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError(
+            f"{text!r} is not a number of seconds"
+        ) from error
+    if not math.isfinite(value) or value <= 0:
+        raise argparse.ArgumentTypeError(
+            f"{text!r} is not a positive finite number of seconds"
+        )
+    return value
+
+
+def _parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="monitor.py",
+        description="Poll the watched positions once, or in a loop that ends at a deadline.",
+    )
+    parser.add_argument("watch", type=Path, help="the watch file naming the positions")
+    parser.add_argument("state", type=Path, help="the state file this monitor writes")
+    parser.add_argument(
+        EVERY_OPTION,
+        type=_seconds,
+        metavar="SECONDS",
+        help="poll in a loop at this interval",
+    )
+    parser.add_argument(
+        DEADLINE_OPTION,
+        type=_seconds,
+        metavar="SECONDS",
+        help="end the loop this many seconds after the monitor starts",
+    )
+    return parser
+
+
+def main(argv: Sequence[str]) -> int:
+    parser = _parser()
+    arguments = parser.parse_args(argv)
+    every, deadline = arguments.every, arguments.deadline
+    if (every is None) != (deadline is None):
+        parser.error(
+            f"{EVERY_OPTION} and {DEADLINE_OPTION} go together: a loop needs a deadline"
+        )
+    try:
+        watch_file.load(arguments.watch)
+        watch_file.load_state(arguments.state)
+    except watch_file.InputError as error:
+        print(f"monitor.py: {error}", file=sys.stderr)
+        return EXIT_INVALID
+    if every is None:
+        poll_once(arguments.watch, arguments.state)
+        return 0
+    return loop(arguments.watch, arguments.state, every, deadline)
 
 
 if __name__ == "__main__":
