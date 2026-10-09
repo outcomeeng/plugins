@@ -1,6 +1,6 @@
 <required_reading>
 
-Read `/skill-standards` and `/agent-prompt-standards`, including `/skill-standards`'s `references/runtime-variables.md`. Read `spx/local/skills.md` when the target repository provides it.
+Read `/skill-standards`'s `references/runtime-variables.md`.
 
 </required_reading>
 
@@ -38,7 +38,7 @@ Add the file to the target skill's `<reference_index>`. Add it to `<required_rea
 
 <step name="validate">
 
-Run the target repository's canonical skill build and deterministic checks. Confirm the file exists, every citation resolves, no bundled file is orphaned, the body passes the reference-file checks in `/skill-standards`, and a fresh typed `instructions_skill-auditor` launch returns a sealed run over the complete bundle whose terminal status is `approved`.
+Run the target repository's canonical skill build and deterministic checks. Confirm the file exists, every citation resolves, no bundled file is orphaned, the body passes the reference-file checks in `/skill-standards`, and the bundle violates no rule in the `/skill-standards` or `/agent-prompt-standards` rule catalog.
 
 </step>
 
@@ -49,6 +49,6 @@ Run the target repository's canonical skill build and deterministic checks. Conf
 - The reference lives under the resolved authored skill path and has one documented purpose.
 - Every required consumer cites it, every citation resolves, and no unrelated workflow loads it.
 - Shared standards remain in their owning reference skill, with no duplicated rule catalog in the new file.
-- Repository checks pass and a typed `instructions_skill-auditor` launch returns a sealed run over the complete bundle whose terminal status is `approved`.
+- Repository checks pass and the bundle violates no catalog rule.
 
 </success_criteria>

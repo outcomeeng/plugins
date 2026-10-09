@@ -16,65 +16,6 @@ and improvement workflows without granting them to read-only routes.
 Source: skill-auditor finding `f-003`, rule `overbroad_allowed_tools`, severity
 `WARNING`.
 
-## Revalidate after exercise-driven edits
-
-`src/plugins/instructions/skills/create-skill/workflows/create-new-skill.md:79`
-allows the representative exercise to trigger iterative edits after deterministic
-checks and the skill audit have already completed. The final bundle can therefore
-differ from the bundle those gates evaluated.
-
-Required handling: run the representative exercise before final validation, or loop
-every exercise-driven edit back through deterministic checks and the complete-bundle
-skill audit before publication.
-
-Source: PR 458 review comment `3610850053`, classified as `DEBT` in the `evidence`
-category after merge.
-
-## The composing-skill assertion awaits verification selection
-
-The assertion under `## Assertions` in `skills.md` that a composing skill names each
-static dependency through the shared `require_skill` directive, states an argument- or
-run-time-named dependency as the owned `Use skill` sentence, and declares skill-use
-capability through the optional `tool('use_skill')` token is an authoring declaration
-with no tag; every other assertion in the file carries `[audit]`. It is the fifth
-declaration of the optional-capability class, beside the four
-`spx/18-plugin-build.enabler/ISSUES.md` records under "Optional tool-capability
-rendering has no deterministic evidence yet".
-
-**Impact.** The declaration is approved for form only; no evidence result attaches to
-it until a verification type is selected and tagged.
-
-**Settlement condition.** Verification is selected for the assertion — `[audit]`
-through the skill auditor's composed-dependency rule in `skill-standards`, or a
-`[test]` link once the authored-source compliance evidence Change #85 lands reaches
-skill bodies — and the tag is applied.
-
-**Evidence.** CI changeset review on PR #584, head
-`b0a6237f359687bd40a01755af6f4ff2d88387b2`, finding `DEBT [evidence]` at
-`spx/43-instructions.enabler/21-skills.enabler/skills.md:15`, during Change #76.
-
-## `script-standards.md` states the testing-record requirement with a weak modal
-
-`src/plugins/instructions/skills/skill-standards/references/script-standards.md:32`,
-inside `<script_testing_rule>`, reads "The skill's documentation should record what
-was tested and with what inputs"; `/agent-prompt-standards` `<constraint_language>`
-bars "should" from a rule block.
-
-**Standing.** Unjudged. The advisor could not judge it without the line's surrounding
-constraint context: a weak modal is barred from a constraint, while recommendation and
-trade-off language can legitimately use one, so the line's location alone does not decide.
-
-**Impact.** The testing-record requirement reads as optional beside the preceding
-"must be tested" sentence.
-
-**Settlement condition.** The sentence reads "records what was tested and with what
-inputs".
-
-Source: `instructions:skill-auditor` finding rule `weak_modal_in_rule`, severity
-`WARNING`, on head `524b9c46c7960a106d84ef856b4020a0ce904b16` during Change #76;
-[Change #92](https://github.com/outcomeeng/changes/issues/92) carries the
-standards-skill pass that owns it.
-
 ## The skill auditor returns opposite verdicts on unchanged skill text
 
 `instructions:skill-auditor` ran against `src/plugins/coding-agents/skills/orchestrate-officers/`
@@ -242,36 +183,6 @@ Source: `instructions:skill-auditor` finding `f-015`, rule
 `rendered_output_contradiction_and_portability`, severity `REJECT`, on head
 `913a65e5b370ffa846bfe7a47be4a551e6a9c547` during Change #200.
 
-## `/create-skill` assumes a spec tree and restates its standards loads
-
-**Evidence**: `instructions:skill-auditor` warnings on `src/plugins/instructions/skills/create-skill` at head `add3e3e862f7512a55e8b9655d07f78412abe87c`: f-010 (rule `plugin_portability_undefined_reference`) — `workflows/audit-skill.md:21` tells a consumer to persist requirements in decisions and specs and to follow the root guide's isolation mechanics, surfaces a repository without a spec tree lacks; f-011 (rule `conciseness_duplicated_loading`) — `SKILL.md` composes `/skill-standards` and `/agent-prompt-standards`, and `<reference_loading>` and every workflow's `<required_reading>` restate both loads and the overlay read.
-
-**Impact**: a consumer without a spec tree or a root guide meets an instruction it cannot resolve, and every route pays for the restated loads.
-
-**Settlement condition**: the isolation requirement is stated directly or conditioned on the surfaces existing, the loads stand once, and one typed skill audit of `create-skill` raises neither finding.
-
-## `audit-skill`'s structure examples use `xml` fences for pseudo-XML
-
-**Evidence**: `instructions:skill-auditor` warning f-009 (rule `repository-markdown-pseudo-xml-fence`) on `src/plugins/instructions/skills/audit-skill/references/xml-structure-examples.md` at head `add3e3e862f7512a55e8b9655d07f78412abe87c`: pseudo-XML examples sit in `xml` fences, some closed by mismatched four-backtick fences.
-
-**Impact**: dprint `markup_fmt` may rewrite the examples, and fence boundaries are ambiguous to a reader.
-
-**Settlement condition**: every pseudo-XML example uses a `text` fence with matched delimiters; one typed skill audit raises no such finding.
-
-## `audit-skill`'s annotated examples grade in a vocabulary the run does not record
-
-**Evidence**: the built `instructions:skill-auditor` run `2026-10-03_22-58-55-808-4bb7d31783f5` on `src/plugins/instructions/skills/audit-skill` at head `8e631614b562ec5edf05c0e4c80a38625ada90d7` raised debt findings (rule `severity-vocabulary-mismatch`) against `references/operational-effectiveness-examples.md` lines 5, 31, 56, 95 and `references/xml-structure-examples.md` lines 5, 31, 53, 88, 116, 130: the examples flag violations as critical or recommendation, while `SKILL.md` records only the `blocking` and `debt` severities and states no mapping.
-
-**Impact**: an auditor reading an example grades by a label the run cannot record and maps it to a severity by its own judgment.
-
-**Settlement condition**: the examples use `blocking` and `debt`, or `SKILL.md` states the mapping; one typed skill audit of `audit-skill` raises no `severity-vocabulary-mismatch` finding.
-
-## Two audit-skill reference files over 100 lines carry no table of contents
-
-`/skill-standards` `<progressive_disclosure>` requires a table of contents at the top of every reference file over 100 lines, so partial reads still see the full scope. `src/plugins/instructions/skills/audit-skill/references/operational-effectiveness-examples.md` (116 lines) and `src/plugins/instructions/skills/audit-skill/references/xml-structure-examples.md` (140 lines) have none. The `create-subagent` references carry theirs.
-
-**Settlement condition.** Each file opens with a `## Contents` section or an XML `<contents>` block listing every top-level section, in the form its skill uses, and `instructions:skill-auditor` approves `audit-skill` afterward.
-
 ## Auditors read a conforming absent `<failure_modes>` section as a gap
 
 `/agent-prompt-standards` `<failure_mode_writing>` prescribes omitting `<failure_modes>` from a skill that has not failed yet: "Never invent failure modes... Add failure modes as they occur in real usage." A new skill therefore conforms by carrying no such section. `instructions:audit-skill` nonetheless raises the absence as a `worth-improving` warning, and its own remedy then restates the standard back: "once a real near-miss occurs", "do not fabricate one if none has occurred". `spec-tree:changes-reviewer` reads the same absence as a coordination-note gap. The warning is unactionable by construction: no edit satisfies it, and declining it leaves the next Verifier to raise it again. It fired six times over three skills and four verification rounds across the contribute-plugin consolidation, each costing a full re-audit or re-review cycle to answer with the same reasoning.
@@ -291,13 +202,3 @@ Source: `instructions:skill-auditor` finding `f-015`, rule
 **Settlement condition.** A session runs one of the surfaces the sweep names to the point where it issues its `python3` command and records whether the harness admits the command under the declared grant or prompts for it; the established behavior then fixes one spelling across the whole population. An executed invocation is the only evidence that closes this.
 
 **Related.** "A non-interactive git guard sits on the command that cannot prompt", in `spx/21-spec-tree.enabler/76-merge.enabler/32-github-pr.enabler/ISSUES.md`, asks whether the Bash grant matcher tolerates an `ENV=value` prefix. One executed invocation that reports the matcher's behavior on an unexpanded token and on an environment-variable prefix answers both.
-
-## `skill-standards` restates rules that `agent-prompt-standards` states
-
-**Evidence.** `instructions:skill-auditor` run `2026-10-06_18-37-53-397-59929467e6ad` on `src/plugins/instructions/skills/skill-standards` raised a `debt` finding, rule `reference-skills-duplication`, on `<descriptions>` and `<conciseness>`, which `agent-prompt-standards` restates in `<description_style>` and `<conciseness>`.
-
-**Standing.** Unjudged. The advisor could not judge it without the paired passages: naming two sections that cover the same domain does not establish duplicated rule ownership, because one section can refer to or specialize the other.
-
-**Impact.** A rule stated in two skills can drift between them.
-
-**Settlement condition.** The paired passages are compared, and each rule has one owning skill with the other pointing to it, or the comparison shows one specializes the other.

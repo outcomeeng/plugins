@@ -55,7 +55,7 @@ A skill injects state-dependent context with the `!`-backtick form inside `<cont
 - Filter every command so output stays bounded (`spx session list --status doing,todo`, `git log -10`, `head -N`) and never grows monotonically — archives, full caches, and full file trees do.
 - Move data into the workflow file that consumes it when the skill loader does not need it for trigger evaluation; the `<context>` block is for trigger-time orientation, not workflow inputs.
 
-- ALWAYS: scope `<context>` `!` commands to state the skill actually consumes, filtered to bounded output.
+- ALWAYS: scope `<context>` `!` commands to state the skill actually consumes at trigger time, filtered to bounded output.
 - NEVER: inject state-dependent context the skill does not read, or an unfiltered command whose output grows per load.
 
 </dynamic_context>

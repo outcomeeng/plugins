@@ -18,6 +18,10 @@ Skills conform to these standards when, at minimum: (a) SKILL.md is under 500 li
 This is a reference skill: it standardizes skill authoring and carries no standalone workflow.
 </reference_note>
 
+<rule_catalog>
+Every rule this skill and its references state has one stable identifier and one severity in `${CLAUDE_SKILL_DIR}/references/rule-catalog.md`. Read it before recording or repairing a finding against these standards.
+</rule_catalog>
+
 <repo_local_overlay>
 Inside a repository, check for `spx/local/skills.md` at the repository root. Read that file after this reference if it exists and apply it as the repo-local specialization (e.g., marketplace-specific naming conventions or additional constraints). A local overlay supplements skill behavior; it does not declare product truth.
 </repo_local_overlay>
@@ -41,6 +45,8 @@ For language-specific skill prose that references a foundation, use the unqualif
 5. Reference-only prose may name foundational concepts without invocation, while reference skills are loaded through the runtime's skill-invocation capability when their full standards govern the work.
 
 **Caller independence:** A skill governs its own behavior and nothing else. It never names, describes, detects, constrains, refuses, branches on, or otherwise depends on its caller or invocation context. A description may state the skill's invocation contract — for example, that other skills load it and a user does not invoke it — because its behavior never depends on who the caller is. The dependency runs one way: a caller may know the skill it invokes; the skill never knows its callers.
+
+**The harness environment is not a caller.** The environment a skill runs in — an interactive session, a programmatic run, or a hosted runner — fixes the shell contract every command the skill instructs must meet, whoever invoked it. A skill that names the payload command form each environment accepts, such as a quoted heredoc where the harness accepts multiline shell and one physical `printf '%s\n' ... | <tool>` line where the runner requires a single command line, follows a property of its own run and depends on no caller. Choosing a form by who invoked the skill, by the agent or skill that dispatched it, or by what its task message asks for remains caller dependence.
 
 Context placement, agent selection, and dispatch policy belong to the caller. A skill remains independently invocable even when the product normally reaches it through an agent or another skill. Correct an invalid invocation in the router, agent, or composing skill that made the decision; never add a dispatch gate or caller check to the invoked skill.
 
@@ -128,47 +134,11 @@ name: typescript-unit-framework # Wrong order
 
 The description field governs skill selection. Claude has a character budget for all skill metadata — when exceeded, skills become invisible.
 
-**Activation rates by style** (Seleznov, 650 automated trials, Feb 2026):
+This section selects a description's style by invocation path. `/agent-prompt-standards` `<description_style>` governs the wording within that style: the directive form, the NEVER clause, artifact-before-language order, and user speech.
 
-| Style         | Activation | Pattern                          |
-| ------------- | ---------- | -------------------------------- |
-| Passive       | ~77%       | `Use when…`                      |
-| Expanded      | ~93%       | `…or any X-related task`         |
-| **Directive** | **~100%**  | `ALWAYS invoke… NEVER X without` |
+**Description-match entry points** take a directive description.
 
-**Use directive descriptions for description-match entry points:**
-
-```yaml
-description: >-
-  ALWAYS invoke this skill when <triggers>.
-```
-
-**NEVER constraint — add only when it disambiguates.** A NEVER line helps when:
-
-- The skill is the only one with that negative (e.g., `NEVER work on the spec tree without loading context` — only contextualizing says this).
-- Claude has a strong built-in alternative the negative prevents (e.g., `NEVER run git commit without this skill` — Claude would just run `git commit` directly).
-
-Omit NEVER when multiple skills share the same negative (adds noise) or the ALWAYS trigger is already specific enough.
-
-**Language-after-artifact** (matches user speech):
-
-```yaml
-# ✅ "audit ADRs for Python"
-ALWAYS invoke this skill when auditing ADRs for Python.
-
-# ❌ "audit Python ADRs"
-ALWAYS invoke this skill when auditing Python ADRs.
-```
-
-**Match user speech over formal jargon:** Use abbreviations users would use (ADR not Architecture Decision Record). Avoid corporate speak.
-
-**Reference skills** use `user-invocable: false` with a passive description:
-
-```yaml
-user-invocable: false
-description: >-
-  Python code standards enforced across all skills. Loaded by other skills, not invoked directly.
-```
+**Reference skills** carry a passive description, with the frontmatter `<reference_skills>` requires.
 
 **Protocol and loop-body skills** that a parent skill loads, or that a timer fires by exact name (a heartbeat re-entry target), keep a passive description while staying user-invocable — they are never reached by description-match, so a directive description would only cause false auto-activations. See the gate-by-role rules in `<frontmatter>`.
 
@@ -307,32 +277,7 @@ SKILL.md → references/advanced.md → references/details.md → actual info
 
 <conciseness>
 
-The context window is shared. A skill competes for tokens with the system prompt, conversation history, other skills' metadata, and the user's request.
-
-**Test every sentence:** "Does removing this reduce the skill's effectiveness at the task?" If no — cut it.
-
-**What the executing runtime already knows (never include):**
-
-- General programming knowledge
-- Language syntax and standard-library APIs
-- Common design patterns
-- How to use its own tools
-
-**What the executing runtime needs (include):**
-
-- Product-specific conventions that contradict common patterns
-- Domain knowledge not in training data
-- Failure modes from actual usage (not hypotheticals)
-- Verification commands and thresholds
-
-**Concrete over abstract:**
-
-```text
-❌ "Ensure coverage is maintained"
-✅ "Coverage delta must be ≤0.5%. Run: pnpm test --coverage | grep target.ts"
-```
-
-**When to elaborate:** the concept is domain-specific (not general programming), the pattern is non-obvious or counterintuitive, or context affects behavior in subtle ways.
+Every sentence of a skill and its bundled files meets `/agent-prompt-standards` `<conciseness>`, which owns the sentence-removal test, what to omit and include, and concrete-over-abstract guidance.
 
 </conciseness>
 
@@ -397,13 +342,6 @@ Before auditing: Use skill `typescript:typescript-test-standards`. Apply its com
 **Naming convention:** `{domain}-standards` for standards. Examples: `typescript-test-standards`, `skill-standards`, `agent-prompt-standards`.
 
 **Extraction completeness test.** When factoring a standards reference out of a builder/auditor pair, the extraction is complete only when the corresponding audit skill loads the new reference and nothing else for standards. If the auditor still reads files from the builder's `references/` directory for standards, content is still stranded there — finish the move. The same rule catches partial extractions: a standards file in a creator skill's `references/` directory that the auditor needs is a bug, not an architecture.
-
-**Anti-patterns:**
-
-- Directive descriptions (`ALWAYS`/`NEVER`) — cause false activations.
-- Shared content buried in one skill's `references/` — the skill-directory token is isolated per skill.
-- Same content duplicated across multiple `references/` — drifts.
-- Partial extraction: naming a new standards skill while leaving the meat in the builder's `references/` — the auditor keeps reading the old location and the rename becomes a lie.
 
 </reference_skills>
 

@@ -1,6 +1,6 @@
 <required_reading>
 
-Read `/skill-standards` and `/agent-prompt-standards`, including `/skill-standards`'s `references/runtime-variables.md`. Read `spx/local/skills.md` when the target repository provides it. Read every existing template and consuming workflow in the target skill before adding another.
+Read `/skill-standards`'s `references/runtime-variables.md`. Read every existing template and consuming workflow in the target skill before adding another.
 
 </required_reading>
 
@@ -32,7 +32,7 @@ Add the template to the target skill's template index and cite it from every con
 
 <step name="validate">
 
-Render one representative instance, verify that no unresolved placeholder remains, run the target repository's canonical skill checks, and obtain from a fresh typed `{{! subagent_name('instructions', 'skill-auditor') !}}` launch a sealed run over the complete bundle whose terminal status is `approved`.
+Render one representative instance, verify that no unresolved placeholder remains, run the target repository's canonical skill checks, and confirm the bundle violates no rule in the `/skill-standards` or `/agent-prompt-standards` rule catalog.
 
 </step>
 
@@ -43,6 +43,6 @@ Render one representative instance, verify that no unresolved placeholder remain
 - The template has one producing artifact and at least one cited consumer.
 - Variable placeholders and invariant content are distinguishable, with no repository-specific default hidden in the scaffold.
 - A representative render contains no unresolved placeholder and passes its artifact validation.
-- Repository checks pass and a typed `{{! subagent_name('instructions', 'skill-auditor') !}}` launch returns a sealed run over the complete bundle whose terminal status is `approved`.
+- Repository checks pass and the bundle violates no catalog rule.
 
 </success_criteria>

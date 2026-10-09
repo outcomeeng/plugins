@@ -1,11 +1,11 @@
 ---
 name: audit-skill
 description: >-
-  SKILL.md audit methodology — judges skill content for standards compliance,
-  operational effectiveness, portability, voice, and structure, and records the
-  judgment through an SPX file-scoped verification run.
-argument-hint: "<JSON object with path and runDriver>"
-allowed-tools: Read, Grep, Glob, Skill, Bash(python3 -c 'from pathlib import Path; import sys; print(len(Path(sys.argv[1]).read_text(encoding="utf-8")))':*), Bash(git rev-parse:*), Bash(realpath:*), Bash(spx --version), Bash(spx verification run start:*), Bash(spx verification run input:*), Bash(spx verification run status:*), Bash(spx verification run scope add:*), Bash(spx verification run finding add:*), Bash(spx verification run finish:*), Bash(spx verification run render:*), Bash(printf '%s\n':*)
+  SKILL.md audit methodology — judges the skill-bundle files and included
+  shared fragments a changeset changes against the skill-standards and agent-prompt-standards rule catalogs,
+  and records the judgment through an SPX changeset-scoped verification run.
+argument-hint: "<JSON object with path, runDriver, and optional base>"
+allowed-tools: Read, Grep, Glob, Skill, Bash(python3 -c 'from pathlib import Path; import sys; print(len(Path(sys.argv[1]).read_text(encoding="utf-8")))':*), Bash(git rev-parse:*), Bash(git diff:*), Bash(git status:*), Bash(realpath:*), Bash(spx --version), Bash(spx verification run start:*), Bash(spx verification run status:*), Bash(spx verification run scope add:*), Bash(spx verification run finding add:*), Bash(spx verification run finish:*), Bash(spx verification run render:*), Bash(printf '%s\n':*)
 ---
 
 Use skill `instructions:skill-standards`.
@@ -13,19 +13,17 @@ Use skill `instructions:skill-standards`.
 Use skill `instructions:agent-prompt-standards`.
 
 <objective>
-A sealed `spx verification run` on one skill bundle against `/skill-standards` and `/agent-prompt-standards` — terminal status `approved` with no finding, or `rejected` with each blocking or debt finding naming the location, the violated rule, and the evidence — or a `BLOCKED` diagnostic naming the failed prerequisite or command.
+A sealed changeset-scoped `spx verification run` over the files a changeset changes in one skill bundle and the shared fragments it includes, judged against the `/skill-standards` and `/agent-prompt-standards` rule catalogs — terminal status `approved` with no finding, or `rejected` with each finding keyed `<unit>:<rule-id>` and naming every location and the evidence — or a `BLOCKED` diagnostic naming the failed prerequisite or command.
 </objective>
 
 <constraints>
 
 - NEVER modify the target bundle or any product file; the only state this audit changes is its own SPX verification-run journal.
-- NEVER report a score; report contextual judgment across the full skill-authoring surface.
-- NEVER invent a requirement because a tag, example, or optional mechanism is absent; judge an absent failure-mode section under the loaded prompt standard.
-- MUST read the governing standards and the references their applicability rules require before evaluating.
-- NEVER generate fixes; the run records findings, and repair belongs to the author.
-- NEVER make assumptions about skill intent; record an ambiguity as a finding.
-- MUST complete every applicable standards area before finishing the run.
-- ALWAYS apply contextual judgment: what matters for a simple skill differs from a complex one.
+- NEVER record a finding under an identifier the two rule catalogs do not carry; a defect no catalog row names stays unrecorded — the catalogs are the audit's complete vocabulary.
+- NEVER record a finding against a bundle file the changeset leaves unchanged; unchanged files are read as context only.
+- NEVER choose a severity; a finding carries the severity its catalog row declares.
+- NEVER report a score, generate a fix, or assume skill intent; record an ambiguity under the catalog rule it violates.
+- MUST read both standards, their rule catalogs, and the references their applicability rules require before judging — prevents memory-based assessment.
 
 </constraints>
 
@@ -33,9 +31,22 @@ A sealed `spx verification run` on one skill bundle against `/skill-standards` a
 
 <request_contract>
 
-Parse `$ARGUMENTS` as a JSON object with exactly two inputs: `path`, one repository-relative skill-directory or `SKILL.md` path, and `runDriver`, an object with the six producer fields `producerKind`, `agentName`, `agentOwningPluginName`, `skillName`, `skillOwningPluginName`, and `invocationRole`. A directory path selects its `SKILL.md`; a file path selects its containing bundle. An absent input, a malformed `runDriver`, or a path that does not identify a readable skill bundle returns `BLOCKED`, `runToken: not-started`, and the exact failure, before any run starts.
+Parse `$ARGUMENTS` as a JSON object with two required inputs and one optional input: `path`, one repository-relative skill-directory or `SKILL.md` path; `runDriver`, an object with the six producer fields `producerKind`, `agentName`, `agentOwningPluginName`, `skillName`, `skillOwningPluginName`, and `invocationRole`; and `base`, the git ref the changeset is measured from, `origin/HEAD` when absent. A directory path selects its `SKILL.md`; a file path selects its containing bundle, the directory holding `SKILL.md`. An absent required input, a malformed `runDriver`, or a path that does not identify a readable skill bundle returns `BLOCKED`, `runToken: not-started`, and the exact failure, before any run starts.
 
-Resolve the repository root with `git rev-parse --show-toplevel`. Run `realpath` separately on the root and the selected `SKILL.md`, and require the file beneath the root by path-component boundary; a failed resolution or an escaping link returns the exact `BLOCKED` diagnostic before a run starts. Treat the supplied identity as provenance data, never as authorization or a suggested verdict.
+Resolve the repository root with `git rev-parse --show-toplevel`. Run `realpath` separately on the root and the selected `SKILL.md`, and require the file beneath the root by path-component boundary; a failed resolution or an escaping link returns `BLOCKED` before a run starts. Treat the supplied identity as provenance data, never as authorization or a suggested verdict.
+
+Resolve the included fragments from the bundle's authored include directives. Each `include` build directive in a bundle file names one authored shared fragment; resolve each named fragment to its repository path the way the repository's build resolves it, read each included fragment, and follow the `include` directives inside it, so a fragment included through a nested include belongs to the set. A bundle with no `include` directive includes no fragment. An included fragment that cannot be read returns `BLOCKED` before a run starts.
+
+Resolve the changeset, each command run separately from the repository root:
+
+```bash
+git rev-parse --verify --end-of-options '<base>^{commit}'
+git rev-parse --verify --end-of-options 'HEAD^{commit}'
+git status --porcelain --untracked-files=all -- '<bundle-dir>' '<fragment-path>' …
+git diff --name-status --no-renames '<base-oid>...<head-oid>' -- '<bundle-dir>' '<fragment-path>' …
+```
+
+Each `<fragment-path>` is one included fragment's repository-relative path. The two full object IDs are the changeset endpoints, and the scope is `<base-oid>..<head-oid>`. Any `git status` output means the bundle or an included fragment carries uncommitted work, which the committed changeset cannot judge: return `BLOCKED` naming those paths. Each `git diff` line names one changed file and its status — `A`, `M`, or `D` among them; the changed files are the changed bundle files and the changed included fragments together. An empty diff means the changeset changes neither a bundle file nor an included fragment: return `BLOCKED`. A failed command returns `BLOCKED` with its exact diagnostic.
 
 Use skill `instructions:instructions-plugin`. Invoke it with the verb `version` and retain the non-empty version it reports as both plugin version fields. Run `spx --version` and retain its non-empty output as the tool version. A missing version is a pre-run `BLOCKED` result.
 
@@ -43,27 +54,27 @@ Use skill `instructions:instructions-plugin`. Invoke it with the verb `version` 
 
 <execution_sequence>
 
-1. **Start the run.** From the repository root, with the selected `SKILL.md` as `<skill-file>`:
+1. **Start the run.** Render the start input as one JSON object `{"skill":"<skill-file>","base":"<base-oid>","head":"<head-oid>","changedFiles":["<path>", …]}`, the changed files in `git diff` order, and pass it on stdin in the form `<persistence_contract>` names for the run's harness environment; the one-line form is:
 
    ```bash
-   spx verification run start --verification-type audit --scope-type file --scope '<skill-file>' --input '<skill-file>'
+   printf '%s\n' '<rendered-input>' | spx verification run start --verification-type audit --scope-type changeset --scope '<base-oid>..<head-oid>' --input stdin
    ```
 
-   Capture the exact `runToken` and use it for every later command. Read the retained input with `spx verification run input --verification-type audit --scope-type file --scope '<skill-file>' --run '<run-token>'` and require its `content` to equal the live file; a difference returns `BLOCKED` with the run preserved.
-2. **Load the standards.** Read `/skill-standards`, then `spx/local/skills.md` at the repository root when it exists. Read `/agent-prompt-standards` through the `Use skill` instruction above. When the target bundles scripts, read `/skill-standards`' `references/script-standards.md`. When the target carries command-capability fields — `argument-hint` or `arguments`, `allowed-tools`, `!`-dynamic context, or `@` file references — read `/skill-standards`' `references/command-capabilities.md`. When the target is an `audit-*` skill, read `/skill-standards`' `references/auditor-skeleton.md`. Read `${CLAUDE_SKILL_DIR}/references/xml-structure-examples.md` and `${CLAUDE_SKILL_DIR}/references/operational-effectiveness-examples.md` for annotated violation examples. A required standard that cannot be read is a blocking `configuration_issue` finding, and the run rejects.
-3. **Read the bundle.** Read every file in the target bundle — `SKILL.md` and every file under `references/`, `workflows/`, `templates/`, `assets/`, and `scripts/`, uncited and orphaned files included. Retrieve the omitted ranges of a truncated read before judging an absence; a missing closing tag requires reading the actual end of the file. When the target uses `/skill-standards`' eager-foundation exception, run this counter against every rendered target `SKILL.md` and judge the exception's threshold from its integer output, never from an estimate:
+   Extract the `runToken` field of the returned locator and use exactly that token for every later command.
+2. **Load the standards.** Read `/skill-standards` and `/skill-standards`' `references/rule-catalog.md`, then `/agent-prompt-standards` and its `<rule_catalog>`, then `spx/local/skills.md` at the repository root when it exists — the overlay specializes catalog rules for the repository, and a finding under it cites the catalog rule it specializes. When the bundle carries scripts, read `/skill-standards`' `references/script-standards.md`. When the bundle carries command-capability fields — `argument-hint` or `arguments`, `allowed-tools`, `!`-dynamic context, or `@` file references — read `/skill-standards`' `references/command-capabilities.md`. When the target is an `audit-*` skill, read `/skill-standards`' `references/auditor-skeleton.md`. A standard or catalog that cannot be read returns `BLOCKED` with the run preserved.
+3. **Read the bundle.** Read every file in the bundle at the head — `SKILL.md` and every file under `references/`, `workflows/`, `templates/`, `assets/`, and `scripts/`, unchanged and uncited files included, because a changed file is judged against the bundle it sits in. Read every included fragment at the head as well. Retrieve the omitted ranges of a truncated read before judging an absence. When the bundle uses `/skill-standards`' eager-foundation exception, run this counter against every rendered target `SKILL.md` and judge `eager_payload_ceiling` from its integer output, never from an estimate:
 
    ```bash
    python3 -c 'from pathlib import Path; import sys; print(len(Path(sys.argv[1]).read_text(encoding="utf-8")))' "<rendered-SKILL.md>"
    ```
 
-4. **Judge.** Evaluate the bundle against every applicable rule of the loaded standards, using their actual text, never memory; a creator skill's workflow references are authoring guidance, never standards. Record malformed frontmatter, a reference to a file that does not exist, and a bundled plugin file reached through a repository-local authored or generated plugin path, a legacy plugin-root path, or an authored Codex-only skill-directory token as blocking findings. Record each finding with its location, the violated rule, a blocking or debt severity, a message, and observed-versus-expected evidence. An observation that a rule holds is not a finding and is not recorded.
-5. **Record.** Once judgment is complete, add the root unit, then one child unit per bundle file in path order, then each finding against the unit of the file it names, and every finding that names no bundle file against the root, under `<persistence_contract>`.
-6. **Reconcile.** Read `spx verification run status` with the same type, scope, and token. Require exactly one root unit, one child unit for every bundle file, and an accepted unit for every finding. Re-read the live `SKILL.md` and compare it with the retained input; a changed or missing file returns `BLOCKED` with the run preserved.
-7. **Finish and render.** Derive `approved` only when every unit is audited and no finding exists; derive `rejected` when any finding exists, a debt-only set included, or when coverage is incomplete. Run:
+4. **Judge.** Judge each changed file against every catalog row that applies to it, using the stating section's text, never memory; a creator skill's workflow references are authoring guidance, never standards. A changed fragment is judged under the same catalog rows as a bundle file, against the bundle that includes it. A deleted file is judged by what its deletion leaves behind: a citation of it, an orphaned sibling, or a broken route. A violation that spans files — an orphaned reference, a missing route target — belongs to the changed file whose change produced it. Group the violations into findings: every violation of one rule within one file forms one finding, carrying the row's identifier and severity, every location, a message, and observed-versus-expected evidence. An observation that a rule holds is not a finding.
+5. **Record.** Add one unit for each changed file in `git diff` order, then each finding against the unit of its file, under `<persistence_contract>`.
+6. **Reconcile.** Read `spx verification run status` with the same type, scope, and token. Require exactly one unit for each changed file and no other unit, and an accepted unit for every finding. Run `git rev-parse --verify 'HEAD^{commit}'` and the `git status` command again; a moved head or uncommitted bundle or fragment work returns `BLOCKED` with the run preserved.
+7. **Finish and render.** Derive `approved` only when every unit is audited and no finding exists; derive `rejected` when any finding exists, a debt-only set included. Run:
 
    ```bash
-   spx verification run finish --verification-type audit --scope-type file --scope '<skill-file>' --run '<run-token>' --terminal-status '<approved-or-rejected>'
+   spx verification run finish --verification-type audit --scope-type changeset --scope '<base-oid>..<head-oid>' --run '<run-token>' --terminal-status '<approved-or-rejected>'
    ```
 
    Then run `spx verification run render` with the same type, scope, and token, and return the token and the rendered projection unchanged. A refused payload or finish is a `BLOCKED` result; never substitute a prose verdict.
@@ -72,7 +83,7 @@ Use skill `instructions:instructions-plugin`. Invoke it with the verb `version` 
 
 <persistence_contract>
 
-Every unit uses `auditClass: instructions` and `auditKind: skill`. The root unit is `skill:root:<skill-file>` with concern partition `bundle`; each child is `skill:file:<bundle-file>` with `parentUnitId` equal to the root and concern partition `file`. Every unit's `subject` is `<skill-file>`, the run's scope, and its `priorContext.changedFilePartition` is the file the unit covers: `<skill-file>` for the root, the bundle file for a child. Omit `parentUnitId` on the root.
+Each unit's `unitId` is `instructions:skill:file:<path>`, the changed file's repository-relative path; its `subject` and its `priorContext.changedFilePartition` are that path, its concern partition is `file`, and it carries `auditClass: instructions` and `auditKind: skill`.
 
 The expected producer has `producerKind: skill`, the supplied run-driver's `agentName` and `agentOwningPluginName`, `skillName: audit-skill`, `skillOwningPluginName: instructions`, and `invocationRole: leaf-skill`. `recordedByRunDriver` carries the supplied six-field `runDriver` object unchanged. Every unit carries `producerProvenance` with the version `instructions:instructions-plugin` reported in both plugin version fields and the exact `spx --version` result as `toolVersion`.
 
@@ -80,16 +91,15 @@ These objects are the sanctioned SPX audit payload schema for this auditor; use 
 
 ```json
 {
-  "unitId": "<unit-key>",
-  "parentUnitId": "<root-unit-key-for-a-child-only>",
+  "unitId": "instructions:skill:file:<path>",
   "auditClass": "instructions",
   "auditKind": "skill",
-  "subject": "<skill-file>",
+  "subject": "<path>",
   "coverageRequirement": "required",
   "coverageStatus": "audited",
   "priorContext": {
-    "changedFilePartition": "<file-the-unit-covers>",
-    "concernPartition": "<bundle-or-file>"
+    "changedFilePartition": "<path>",
+    "concernPartition": "file"
   },
   "expectedProducer": {
     "producerKind": "skill",
@@ -115,34 +125,41 @@ These objects are the sanctioned SPX audit payload schema for this auditor; use 
 }
 ```
 
+Pass each rendered scope object to its command; the one-line form is:
+
 ```bash
-spx verification run scope add --verification-type audit --scope-type file --scope '<skill-file>' --run '<run-token>' --idempotency-key '<unit-key>' --payload stdin <<'SCOPE_JSON'
-<rendered-scope-object>
-SCOPE_JSON
+printf '%s\n' '<rendered-scope-object>' | spx verification run scope add --verification-type audit --scope-type changeset --scope '<base-oid>..<head-oid>' --run '<run-token>' --idempotency-key 'instructions:skill:file:<path>' --payload stdin
 ```
 
-A finding copies its unit's `expectedProducer` object as `producerIdentity` and its unit's complete `producerProvenance` object, and carries `rule`, `severity` (`blocking` for a defect that must be fixed before the skill ships, `debt` for any other valid defect), `location` naming the file and line or section, `message`, and `evidence` with `observed` and `expected` strings:
+A finding copies its unit's `expectedProducer` object as `producerIdentity` and its unit's complete `producerProvenance` object, and carries `rule`, the catalog identifier; `severity`, the row's `blocking` or `debt`; `location`, every file-and-line or section where the rule is violated within the unit, separated by `;`; `message`; and `evidence` with `observed` and `expected` strings:
 
 ```json
 {
-  "unitId": "<accepted-unit-key>",
+  "unitId": "instructions:skill:file:<path>",
   "producerIdentity": { "producerKind": "skill", "agentName": "<…>", "agentOwningPluginName": "<…>", "skillName": "audit-skill", "skillOwningPluginName": "instructions", "invocationRole": "leaf-skill" },
   "producerProvenance": { "agentOwningPluginVersion": "<…>", "skillOwningPluginVersion": "<…>", "toolVersion": "<…>" },
-  "rule": "<violated-rule-id>",
-  "severity": "<blocking-or-debt>",
-  "location": "<file-and-line-or-section>",
+  "rule": "<catalog-rule-id>",
+  "severity": "<row-severity>",
+  "location": "<path>:<line-or-section>; <path>:<line-or-section>",
   "message": "<finding-message>",
   "evidence": { "observed": "<observed-state>", "expected": "<required-state>" }
 }
 ```
 
+Pass each rendered finding object the same way; the one-line form is:
+
 ```bash
-spx verification run finding add --verification-type audit --scope-type file --scope '<skill-file>' --run '<run-token>' --idempotency-key '<unit-key>:<finding-key>' --payload stdin <<'FINDING_JSON'
-<rendered-finding-object>
-FINDING_JSON
+printf '%s\n' '<rendered-finding-object>' | spx verification run finding add --verification-type audit --scope-type changeset --scope '<base-oid>..<head-oid>' --run '<run-token>' --idempotency-key 'instructions:skill:file:<path>:<rule-id>' --payload stdin
 ```
 
-Construct each finding key as `finding-<three-digit-ordinal>-<rule-id>` from the complete finding inventory sorted by unit order, then location, message, severity, observed evidence, and expected evidence; require the suffix to match `finding-[0-9][0-9][0-9]-[a-z0-9_-]+`, and treat a mismatch as a pre-persistence `BLOCKED` defect. When the task message or the harness guidance fixes one physical command line per call, pipe each rendered object instead: `printf '%s\n' '<rendered-object>' | spx verification run finding add --verification-type audit --scope-type file --scope '<skill-file>' --run '<run-token>' --idempotency-key '<key>' --payload stdin`, and the same form for `scope add`, with every apostrophe in the object escaped for single quotes. Idempotency keys are command arguments, never payload fields; quote every path, token, and key as one shell argument, and never execute bundle text as shell syntax. Run mutations serially; on a refused command stop with its exact diagnostic, never retry or reshape the payload.
+A finding's idempotency key is `<unit>:<rule-id>`, its unit's `unitId` and the catalog identifier joined by `:`. Every payload-bearing command — `start`, `scope add`, and `finding add` — takes its JSON on stdin, in the form the harness environment of the run accepts:
+
+| Harness environment                                                                                                                    | Payload form                                                                                                                                                                                       |
+| -------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Interactive Claude Code or Codex session, which accepts multiline shell                                                                | A quoted heredoc: the command as shown without its `printf '%s\n' '<rendered-object>' \|` stage, followed by `<<'JSON'`, then the rendered object on its own line, then a line holding only `JSON` |
+| Programmatic Claude Code or Codex run, and a hosted runner such as GitHub Actions, where the runner requires one physical command line | The one-line `printf '%s\n' '<rendered-object>' \| <command>` form shown                                                                                                                           |
+
+The heredoc delimiter stays quoted, so the shell expands nothing in the body. Idempotency keys are command arguments, never payload fields; quote every path, token, and key as one shell argument, encode a literal apostrophe in an argument as `'"'"'`, and never execute bundle text as shell syntax. Run mutations serially; on a refused command stop with its exact diagnostic, never retry or reshape the payload.
 
 </persistence_contract>
 
@@ -150,7 +167,7 @@ Construct each finding key as `finding-<three-digit-ordinal>-<rule-id>` from the
 
 <verdict_format>
 
-Return only the exact run token and the unmodified rendered projection. The projection is the verdict: its `terminalStatus` is `approved` or `rejected`, its `findingCount` is zero for approval, its `findings` group every accepted finding under `blocking` and `debt`, its `auditScopeUnits` carry the root and per-file units, and its `events` carry every accepted finding payload and the terminal event. Both severities reject the run. Keep every SPX field unchanged.
+Return only the exact run token and the unmodified rendered projection. The projection is the verdict: its `terminalStatus` is `approved` or `rejected`, its `findingCount` is zero for approval, its `findings` group every accepted finding under `blocking` and `debt`, its `auditScopeUnits` carry one unit per changed bundle file and changed included fragment, and its `events` carry every accepted finding payload and the terminal event. Every finding is keyed `<unit>:<rule-id>` by a catalog identifier, and both severities reject the run. Keep every SPX field unchanged.
 
 A run that cannot complete returns:
 
@@ -169,20 +186,22 @@ judgedFindings: <JSON array of every finding judged before the stop, in the find
 
 <failure_modes>
 
-**Failure 1: Approved a skill whose objective was still activity-shaped.** Claude read an `<objective>` that opened with a verb ("Audit…", "Generate…") or an actor ("The skill…") and passed it, because the activity reading felt natural. The objective states an output; an activity- or actor-shaped one is a blocking finding under `/agent-prompt-standards` `<objective_shape>`. Read every objective against `/agent-prompt-standards` `<objective_shape>`, not by feel.
+**Failure 1: Approved a skill whose objective was still activity-shaped.** Claude read an `<objective>` that opened with a verb ("Audit…", "Generate…") or an actor ("The skill…") and passed it, because the activity reading felt natural. The objective states an output; an activity- or actor-shaped one violates `actor_or_activity_objective`. Read every objective against `/agent-prompt-standards` `<objective_shape>`, not by feel.
 
-**Failure 2: Skipped an evaluation area and missed a whole class.** Claude judged YAML and structure, formed a verdict, and stopped — leaving prompt craft or anti-patterns unexamined, so a class of violations passed unseen. The verdict is sound only when every evaluation area was judged; a skipped area yields an unsound verdict, not a shorter one. Cover every applicable rule in the loaded standards before finishing the run.
+**Failure 2: Skipped an evaluation area and missed a whole class.** Claude judged YAML and structure, formed a verdict, and stopped — leaving prompt craft or anti-patterns unexamined, so a class of violations passed unseen. The verdict is sound only when every applicable catalog row was judged; a skipped area yields an unsound verdict, not a shorter one. Walk both catalogs row by row before finishing the run.
 
-**Failure 3: Scored the skill instead of judging it.** Claude assigned a number ("8/10 structure") instead of recording findings, turning a verdict into a rating the author cannot act on. Each finding names a file, a location, a rule, and evidence; a score names none of them. Record findings, never scores.
+**Failure 3: Scored the skill instead of judging it.** Claude assigned a number ("8/10 structure") instead of recording findings, turning a verdict into a rating the author cannot act on. Each finding names a file, its locations, a catalog rule, and evidence; a score names none of them. Record findings, never scores.
+
+**Failure 4: Reversed its own verdict on unchanged text.** Across runs against one unchanged skill, Claude praised a passage under one rule name and faulted the same passage under another, and did both within one run's verdict, because Claude minted the rule names it judged under in each run. A finding with no fixed identifier cannot be compared across runs, so repair chased noise. Name only catalog identifiers, take each severity from its row, and judge only the files the changeset changes.
 
 </failure_modes>
 
 <success_criteria>
 The verdict is sound when:
 
-- Every applicable rule in the loaded standards was judged, with none skipped.
-- The sealed run carries one root unit and one child unit per bundle file, and its terminal status is `approved` only with no finding and full coverage.
-- Each finding is falsifiable: it names the location, the violated rule, and the observed-versus-expected evidence.
-- The same bundle, standards, and run-driver identity yield the same findings and finding keys.
+- Every applicable catalog row was judged against every changed file, with none skipped.
+- The sealed run carries one unit per changed bundle file and changed included fragment and no other, and its terminal status is `approved` only with no finding.
+- Each finding names a catalog identifier with that row's severity, every location of the violation within its unit, and the observed-versus-expected evidence.
+- The same changeset, standards, and run-driver identity yield the same units, findings, and finding keys.
 
 </success_criteria>

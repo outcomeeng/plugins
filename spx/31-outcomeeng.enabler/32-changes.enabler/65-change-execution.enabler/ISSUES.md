@@ -50,27 +50,19 @@
 
 ## A subagent-definition round carries no committed-head skill audit for its calling-skill update
 
-**Evidence**: `spec-tree:changes-reviewer` run `2026-10-03_21-54-22-438-ece57dd8f255` on head `1fd878a45b689558d17066797f74d806631edd92`, finding severity `DEBT`, category evidence, against `src/plugins/spec-tree/skills/execute-change/SKILL.md` and `change-execution.md`. `instructions:create-subagent` step 5 updates the calling skill through `instructions:create-skill`, whose typed skill audit runs inside the round over uncommitted work, while the Verifier pairing of a `change-subagent-author` round names `instructions:subagent-auditor` only.
+**Evidence**: `spec-tree:changes-reviewer` run `2026-10-03_21-54-22-438-ece57dd8f255` on head `1fd878a45b689558d17066797f74d806631edd92`, finding severity `DEBT`, category evidence, against `src/plugins/spec-tree/skills/execute-change/SKILL.md` and `change-execution.md`. `instructions:create-subagent` step 5 updates the calling skill through `instructions:create-skill`, which dispatches no skill audit, while the Verifier pairing of a `change-subagent-author` round names `instructions:subagent-auditor` only.
 
-**Impact**: when a Change's subagent-definition Activity also edits a calling skill, that edit reaches `/merge` with a committed-head skill audit only if the Change's Frame names a skill-surface obligation for it.
+**Impact**: when a Change's subagent-definition Activity also edits a calling skill, that edit reaches `/merge` with a skill audit only if the Change's Frame names a skill-surface obligation for it.
 
 **Settlement condition**: the pairing of a subagent-definition round names `instructions:skill-auditor` as well whenever the round's committed diff changes a skill surface, in the `execute-change` definitions text, its step 5.3 and the change-execution assertion, and one typed skill audit of `execute-change` then approves.
 
-## A round's launch of the typed auditors from inside its session is unexercised
+## `instructions:create-subagent` declares no repair-block intake for a Fixer round
 
-**Evidence**: `spec-tree:changes-reviewer` run `2026-10-03_22-47-33-122-09a416477991` on head `b46badf51dc7f3258eef8c0a4bee0fcd059b9938`, finding severity `DEBT`, category evidence. `change-skill-author` and `change-subagent-author` leave the Agent tool enabled, and their fronted skills launch `instructions:skill-auditor` from inside the round session: `instructions:create-skill` through its audit step, `instructions:create-subagent` through its calling-skill step. The retained runs in `probes/definition-invocation/probe.md` exercise only the `blocked` result for an uninstalled fronted skill, and its limitations leave that launch unexercised.
+**Evidence**: `spec-tree:changes-reviewer` run `2026-10-03_22-50-05-358-7abe73e44d07` on head `59622008c0a2f9b78310058eda2d61bce96f9f52`, finding severity `DEBT`, category consistency, against the Fixer rule of `src/plugins/spec-tree/skills/execute-change/SKILL.md`. A Fixer round of `change-skill-author` or `change-subagent-author` receives its Author's task message and a repair block of rejected verdicts and failed command output. The `improve` route of `instructions:create-skill` routes supplied findings to `workflows/repair-skill.md`, which takes each supplied finding and each requested change as one inventory row and returns a disposition for every row. `instructions:create-subagent` takes only its configuration target and declares no intake for a supplied block.
 
-**Impact**: when the agent harness refuses a subagent launch from a subagent session, every skill-surface or subagent-definition round returns `BLOCKED` from its fronted skill, and no retained evidence detects it before the first such Change executes.
+**Impact**: a `change-subagent-author` Fixer round started by a rejected verdict, a failed deterministic command or a `/merge` finding repairs only what its own catalog check of the definition finds, so a defect that check does not reproduce returns to the repeated-defect stop of `/execute-change`.
 
-**Settlement condition**: a retained attested run in which `change-skill-author`, with the `instructions` plugin installed, reaches the typed `instructions:skill-auditor` launch and receives its verdict, and the probe protocol covers the same run for `change-subagent-author`.
-
-## The instruction skills declare no repair-block intake for a Fixer round
-
-**Evidence**: `spec-tree:changes-reviewer` run `2026-10-03_22-50-05-358-7abe73e44d07` on head `59622008c0a2f9b78310058eda2d61bce96f9f52`, finding severity `DEBT`, category consistency, against the Fixer rule of `src/plugins/spec-tree/skills/execute-change/SKILL.md`. A Fixer round of `change-skill-author` or `change-subagent-author` receives its Author's task message and a repair block of rejected verdicts and failed command output. The `improve` route of `instructions:create-skill` repairs from the verdict of the skill audit it dispatches itself, and `instructions:create-subagent` declares no intake for a supplied block either.
-
-**Impact**: a Fixer round started by a failed deterministic command or by a `/merge` finding repairs only what its own fresh audit raises, so a defect that audit does not reproduce returns to the repeated-defect stop of `/execute-change`.
-
-**Settlement condition**: `instructions:create-skill` and `instructions:create-subagent` each declare an intake that joins a supplied repair block of verdicts and failed command output to the findings the round repairs, and the Fixer rule of `/execute-change` then drops its exception for the two skills.
+**Settlement condition**: `instructions:create-subagent` declares an intake that joins a supplied repair block of verdicts and failed command output to the findings the round repairs, and the Fixer rule of `/execute-change` then drops its exception for that skill.
 
 ## No route produces the invocation evidence of a subagent definition an Executor delivers
 
@@ -95,3 +87,11 @@
 **Impact**: a result that is correct but not `closed` or `released` has no criterion that judges it, and an Executor resumed from a Handoff has no stated route for a finding on a file an earlier session produced.
 
 **Settlement condition**: each declared result has a success criterion, step 6 states a route for a finding whose file has no producing round in this session, and one typed skill audit of `execute-change` raises neither finding.
+
+## The `definition-invocation` probe's attested runs predate its amended protocol
+
+**Evidence**: `probes/definition-invocation/probe.md` records its attested runs on subject commits `d090bb966859c3b4770a78a4ba2de5410d4fc53f`, `8a5ddbe8d21caa37a7db2d7d304b613c6805b9a8`, `6cbb66684b7e53b3314237b60681e50016757ac9` and `0942beb61734927d2f07fc7b81c66209e27f876b`. Its Limitations no longer state that a whole instruction round includes a launch of `instructions:skill-auditor` by `change-skill-author` or `change-subagent-author`, because neither `instructions:create-skill` nor `instructions:create-subagent` launches an auditor. No attested run covers the protocol as amended.
+
+**Impact**: the probe's `passed` verdict rests on a protocol text that has since changed, so the `[probe]` assertion of `change-execution.md` carries no attested result pinned to the current protocol.
+
+**Settlement condition**: a fresh attested run of the amended protocol, recorded in `probes/definition-invocation/probe.md` with its retained artifacts.

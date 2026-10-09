@@ -1,6 +1,6 @@
 <required_reading>
 
-Read `/skill-standards` and `/agent-prompt-standards`. Read `spx/local/skills.md` when the target repository provides it.
+Read only the pattern sources `load_pattern_source` selects for the question.
 
 </required_reading>
 

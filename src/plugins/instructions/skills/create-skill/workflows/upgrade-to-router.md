@@ -1,6 +1,6 @@
 <required_reading>
 
-Read `/skill-standards` and `/agent-prompt-standards`, including `/skill-standards`'s `references/runtime-variables.md`. Read `${CLAUDE_SKILL_DIR}/references/reusability-patterns.md`, `${CLAUDE_SKILL_DIR}/references/test-patterns.md`, and `${CLAUDE_SKILL_DIR}/templates/router-skill.md` before rewriting the target. Read `spx/local/skills.md` when the target repository provides it.
+Read `/skill-standards`'s `references/runtime-variables.md`. Read `${CLAUDE_SKILL_DIR}/references/reusability-patterns.md`, `${CLAUDE_SKILL_DIR}/references/test-patterns.md`, and `${CLAUDE_SKILL_DIR}/templates/router-skill.md` before rewriting the target.
 
 </required_reading>
 
@@ -41,7 +41,7 @@ Rewrite the bundle from `${CLAUDE_SKILL_DIR}/templates/router-skill.md` by apply
 
 <step name="validate_equivalence">
 
-Map every preserved behavior from the pre-upgrade inventory to its new location. Confirm no route, constraint, reference, or asset disappeared; remove only content proven duplicated or obsolete. Exercise every route plus one ambiguous input, run repository checks, and obtain from a fresh typed `{{! subagent_name('instructions', 'skill-auditor') !}}` launch a sealed run over the complete bundle whose terminal status is `approved`.
+Map every preserved behavior from the pre-upgrade inventory to its new location. Confirm no route, constraint, reference, or asset disappeared; remove only content proven duplicated or obsolete. Build the bundle with the target repository's canonical skill build — or, where the harness loads authored source unrendered, use the authored bundle directly. Exercise it in the execution context that `${CLAUDE_SKILL_DIR}/references/test-patterns.md` `<fresh_context_testing>` obtains, which loads the built bundle rather than the files this session edited. Exercise every route plus one ambiguous input against it and fix each observed failure, then run repository checks and confirm the bundle violates no rule in the `/skill-standards` or `/agent-prompt-standards` rule catalog. An edit made after these checks repeats this step.
 
 </step>
 
@@ -52,6 +52,6 @@ Map every preserved behavior from the pre-upgrade inventory to its new location.
 - The router conversion is justified by distinct intents or conditional detail.
 - Every preserved behavior has one destination, with no duplication or orphaned bundled file.
 - Every route resolves through an exact bundled path and produces its declared output.
-- Repository checks pass and a typed `{{! subagent_name('instructions', 'skill-auditor') !}}` launch returns a sealed run over the complete bundle whose terminal status is `approved`.
+- Repository checks pass and the bundle violates no catalog rule, on the exact state the exercise passed on.
 
 </success_criteria>

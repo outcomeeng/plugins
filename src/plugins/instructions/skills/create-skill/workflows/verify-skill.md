@@ -1,6 +1,6 @@
 <required_reading>
 
-Read `/skill-standards` and `/agent-prompt-standards`. Read `spx/local/skills.md` when the target repository provides it.
+Read the complete target bundle named in `resolve_target`; this route loads no conditional reference.
 
 </required_reading>
 
@@ -38,24 +38,24 @@ Return a report with these fields for every claim:
 
 Representative rows:
 
-| Location                 | Claim                                                | Evidence                                                | Status            | Required change                                                                      |
-| ------------------------ | ---------------------------------------------------- | ------------------------------------------------------- | ----------------- | ------------------------------------------------------------------------------------ |
-| `SKILL.md:42`            | `$ARGUMENTS` preserves free-form input               | `/skill-standards` `references/command-capabilities.md` | `current`         | `none`                                                                               |
-| `workflows/create.md:18` | Authored source uses `${SKILL_DIR}` for bundle paths | `/skill-standards` `references/command-capabilities.md` | `update-required` | Replace `${SKILL_DIR}` with `${CLAUDE_SKILL_DIR}` {!# no-codex-skill-dir-rewrite #!} |
+| Location                  | Claim                                                    | Evidence                                      | Status            | Required change                                             |
+| ------------------------- | -------------------------------------------------------- | --------------------------------------------- | ----------------- | ----------------------------------------------------------- |
+| `SKILL.md:42`             | `gh pr list` returns at most 30 pull requests by default | `gh pr list --help` and the GitHub CLI manual | `current`         | `none`                                                      |
+| `workflows/release.md:18` | Node.js 18 is the active LTS line                        | The Node.js release schedule at `nodejs.org`  | `update-required` | Replace with the active LTS line the release schedule names |
 
-The overall verdict is `CURRENT` only when every inventory row is `current`. Any `update-required`, `broken`, or `unverifiable` row prevents that verdict.
+The overall verdict is `CURRENT` when every inventory row is `current`, and `STALE` when any row is `update-required`, `broken`, or `unverifiable`.
 
 </step>
 
 <step name="apply_authorized_updates">
 
-When the operator explicitly requests updates, require an authoritative replacement for every changed claim, resolve the exact authored paths, and never convert an `unverifiable` row into guessed guidance. Apply each evidence-backed replacement through the creator workflow. Do not add a persistent verification timestamp; source evidence and current repository validation establish currency without a stale-prone marker.
+When the operator explicitly requests updates, require an authoritative replacement for every changed claim, resolve the exact authored paths, and never convert an `unverifiable` row into guessed guidance. Apply each evidence-backed replacement through `${CLAUDE_SKILL_DIR}/workflows/repair-skill.md`, one requested-change row per replacement. Do not add a persistent verification timestamp; source evidence and current repository validation establish currency without a stale-prone marker.
 
 </step>
 
 <step name="validate_updates">
 
-When updates were applied, confirm each updated claim matches its recorded primary evidence, every bundled citation resolves, structure remains valid, and focused checks for changed commands or examples pass. Run repository checks and obtain from a fresh typed `{{! subagent_name('instructions', 'skill-auditor') !}}` launch a sealed run over the complete bundle whose terminal status is `approved`.
+When updates were applied, confirm each updated claim matches its recorded primary evidence, every bundled citation resolves, structure remains valid, and focused checks for changed commands or examples pass. Run repository checks and confirm the bundle violates no rule in the `/skill-standards` or `/agent-prompt-standards` rule catalog.
 
 </step>
 
@@ -65,7 +65,7 @@ When updates were applied, confirm each updated claim matches its recorded prima
 
 - Every changeable external claim has a location, primary source, and explicit status.
 - The overall verdict follows mechanically from the row statuses.
-- Audit-only verification changes no file.
-- Authorized updates match primary evidence, pass repository checks, and receive from a typed `{{! subagent_name('instructions', 'skill-auditor') !}}` launch a sealed run whose terminal status is `approved`.
+- Verification without requested updates changes no file.
+- Authorized updates match primary evidence, pass repository checks, and leave the bundle violating no catalog rule.
 
 </success_criteria>

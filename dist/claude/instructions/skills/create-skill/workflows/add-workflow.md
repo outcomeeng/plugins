@@ -1,6 +1,6 @@
 <required_reading>
 
-Read `/skill-standards` and `/agent-prompt-standards`, including `/skill-standards`'s `references/runtime-variables.md`. Read `${CLAUDE_SKILL_DIR}/references/test-patterns.md` for activation, routing, and fresh-context validation. Read `${CLAUDE_SKILL_DIR}/references/reusability-patterns.md` when the new route introduces variable request shapes or tool choices. Read `spx/local/skills.md` when the target repository provides it.
+Read `/skill-standards`'s `references/runtime-variables.md`. Read `${CLAUDE_SKILL_DIR}/references/test-patterns.md` for activation, routing, and fresh-context validation. Read `${CLAUDE_SKILL_DIR}/references/reusability-patterns.md` when the new route introduces variable request shapes or tool choices.
 
 </required_reading>
 
@@ -32,7 +32,7 @@ Add the trigger and exact `${CLAUDE_SKILL_DIR}/workflows/{descriptive-name}.md` 
 
 <step name="validate">
 
-Exercise the new trigger and its nearest adjacent trigger. Confirm each selects exactly one intended route, every bundled link resolves, repository checks pass, and a fresh typed `instructions:skill-auditor` launch returns a sealed run over the complete bundle whose terminal status is `approved`.
+Build the bundle with the target repository's canonical skill build — or, where the harness loads authored source unrendered, use the authored bundle directly. Exercise it in the execution context that `${CLAUDE_SKILL_DIR}/references/test-patterns.md` `<fresh_context_testing>` obtains, which loads the built bundle rather than the files this session edited. Exercise the new trigger and its nearest adjacent trigger against it, and fix each observed failure. Then confirm each selects exactly one intended route, every bundled link resolves, repository checks pass, and the bundle violates no rule in the `/skill-standards` or `/agent-prompt-standards` rule catalog. An edit made after these checks repeats this step.
 
 </step>
 
@@ -43,6 +43,6 @@ Exercise the new trigger and its nearest adjacent trigger. Confirm each selects 
 - The new route represents a distinct intent and produces an output named by its success criteria.
 - The workflow conforms to `/skill-standards` and loads only required references.
 - Routing selects the new workflow for representative input without displacing adjacent routes.
-- Repository checks pass and a typed `instructions:skill-auditor` launch returns a sealed run over the complete bundle whose terminal status is `approved`.
+- Repository checks pass and the bundle violates no catalog rule, on the exact state the exercise passed on.
 
 </success_criteria>

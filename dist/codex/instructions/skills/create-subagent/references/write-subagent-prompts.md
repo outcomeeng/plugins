@@ -3,8 +3,8 @@
 1. Read the role's durable requirements and the owning skill.
 2. Identify the artifact one invocation produces or judges.
 3. Write the smallest wrapper that reaches the skill and preserves its result.
-4. For behavior with no owning skill, create that skill through `instructions:create-skill`
-   before placing workflow logic in a wrapper.
+4. For behavior with no owning skill, Use skill `instructions:create-skill` to create that
+   skill before placing workflow logic in a wrapper.
 5. Apply `/subagent-standards` and `/agent-prompt-standards` to the complete definition.
 
 </derive_the_prompt>
@@ -32,6 +32,7 @@ Read the wrapper as a fresh session receiving only its target:
 - Remove repeated workflow prose whose owner is already loaded through the skill.
 
 Examples clarify an observed ambiguity. Add one where it resolves that ambiguity;
-the root guide owns any example needed to explain native invocation mechanics.
+the root harness instruction file `/subagent-standards` `<invocation>` names owns any
+example needed to explain native invocation mechanics.
 
 </prompt_review>

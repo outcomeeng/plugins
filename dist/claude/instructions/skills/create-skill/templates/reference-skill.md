@@ -7,12 +7,12 @@ allowed-tools: Read
 ---
 
 <objective>
-The {{domain}} standards that {{consuming skills}} apply across {{scope}}.
+The {{domain}} standards {{scope}}.
 </objective>
 
 <reference_note>
 
-This is a declarative reference skill loaded by composing workflows. It is not a standalone procedure.
+This is a declarative reference skill: it standardizes {{domain}} and carries no standalone procedure.
 
 </reference_note>
 
@@ -25,8 +25,7 @@ This is a declarative reference skill loaded by composing workflows. It is not a
 
 <success_criteria>
 
-- Every consuming skill loads this reference before applying its rules.
-- Each rule has one canonical statement here and is absent from creator and auditor workflow references.
+- Each rule has one canonical statement here, with an observable boundary.
 - The description remains passive, the skill remains non-user-invocable, and the tool surface remains read-only.
 
 </success_criteria>

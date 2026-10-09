@@ -18,6 +18,10 @@ Skills conform to these standards when, at minimum: (a) SKILL.md is under 500 li
 This is a reference skill: it standardizes skill authoring and carries no standalone workflow.
 </reference_note>
 
+<rule_catalog>
+Every rule this skill and its references state has one stable identifier and one severity in `${SKILL_DIR}/references/rule-catalog.md`. Read it before recording or repairing a finding against these standards.
+</rule_catalog>
+
 <repo_local_overlay>
 Inside a repository, check for `spx/local/skills.md` at the repository root. Read that file after this reference if it exists and apply it as the repo-local specialization (e.g., marketplace-specific naming conventions or additional constraints). A local overlay supplements skill behavior; it does not declare product truth.
 </repo_local_overlay>
@@ -42,6 +46,8 @@ For language-specific skill prose that references a foundation, use the unqualif
 
 **Caller independence:** A skill governs its own behavior and nothing else. It never names, describes, detects, constrains, refuses, branches on, or otherwise depends on its caller or invocation context. A description may state the skill's invocation contract — for example, that other skills load it and a user does not invoke it — because its behavior never depends on who the caller is. The dependency runs one way: a caller may know the skill it invokes; the skill never knows its callers.
 
+**The harness environment is not a caller.** The environment a skill runs in — an interactive session, a programmatic run, or a hosted runner — fixes the shell contract every command the skill instructs must meet, whoever invoked it. A skill that names the payload command form each environment accepts, such as a quoted heredoc where the harness accepts multiline shell and one physical `printf '%s\n' ... | <tool>` line where the runner requires a single command line, follows a property of its own run and depends on no caller. Choosing a form by who invoked the skill, by the agent or skill that dispatched it, or by what its task message asks for remains caller dependence.
+
 Context placement, agent selection, and dispatch policy belong to the caller. A skill remains independently invocable even when the product normally reaches it through an agent or another skill. Correct an invalid invocation in the router, agent, or composing skill that made the decision; never add a dispatch gate or caller check to the invoked skill.
 
 **Composed skill dependencies.** A composing SKILL.md names each dependency with the instruction ``Use skill `{plugin}:{skill}`.`` and, on a harness that exposes a skill-composition tool, grants that tool as one complete `allowed-tools` item; on a harness without one it grants nothing for composition. Source authored for more than one harness never spells one harness's skill tool name.
@@ -50,7 +56,7 @@ Context placement, agent selection, and dispatch policy belong to the caller. A 
 
 <frontmatter>
 
-Every Codex SKILL.md starts with YAML frontmatter and uses only fields accepted by Codex's current skill validator. `name` matches the skill directory, `description` states the selection contract, and tool restrictions grant only capabilities the workflow needs. Do not project Claude-only visibility, preload, heartbeat, hook, or invocation semantics onto Codex fields.
+Every Codex SKILL.md starts with YAML frontmatter and uses only fields accepted by Codex's current skill validator. `name` matches the skill directory, `description` states the selection contract, and tool restrictions grant only capabilities the workflow needs. Do not project Claude-only visibility, preload, heartbeat, hook, or invocation semantics onto Codex fields. Frontmatter declares no model or reasoning override; a skill retains its invoking session's configuration.
 
 Reference skills stay hidden from ordinary user selection while remaining available to composed workflows through Codex's documented skill invocation surface. Audit skills change no file beyond the `spx verification run` journal their own verbs write. A field or reachability behavior without a documented Codex contract is omitted.
 
@@ -194,32 +200,7 @@ Apply `<eager_foundation_exception>`. A 500-line overview followed immediately b
 
 <conciseness>
 
-The context window is shared. A skill competes for tokens with the developer instructions, conversation history, other skills' metadata, and the user's request.
-
-**Test every sentence:** "Does removing this reduce the skill's effectiveness at the task?" If no — cut it.
-
-**What the executing runtime already knows (never include):**
-
-- General programming knowledge
-- Language syntax and standard-library APIs
-- Common design patterns
-- How to use its own tools
-
-**What the executing runtime needs (include):**
-
-- Product-specific conventions that contradict common patterns
-- Domain knowledge not in training data
-- Failure modes from actual usage (not hypotheticals)
-- Verification commands and thresholds
-
-**Concrete over abstract:**
-
-```text
-❌ "Ensure coverage is maintained"
-✅ "Coverage delta must be ≤0.5%. Run: pnpm test --coverage | grep target.ts"
-```
-
-**When to elaborate:** the concept is domain-specific (not general programming), the pattern is non-obvious or counterintuitive, or context affects behavior in subtle ways.
+Every sentence of a skill and its bundled files meets `/agent-prompt-standards` `<conciseness>`, which owns the sentence-removal test, what to omit and include, and concrete-over-abstract guidance.
 
 </conciseness>
 
@@ -284,13 +265,6 @@ Before auditing: Use skill `typescript:typescript-test-standards`. Apply its com
 **Naming convention:** `{domain}-standards` for standards. Examples: `typescript-test-standards`, `skill-standards`, `agent-prompt-standards`.
 
 **Extraction completeness test.** When factoring a standards reference out of a builder/auditor pair, the extraction is complete only when the corresponding audit skill loads the new reference and nothing else for standards. If the auditor still reads files from the builder's `references/` directory for standards, content is still stranded there — finish the move. The same rule catches partial extractions: a standards file in a creator skill's `references/` directory that the auditor needs is a bug, not an architecture.
-
-**Anti-patterns:**
-
-- Directive descriptions (`ALWAYS`/`NEVER`) — cause false activations.
-- Shared content buried in one skill's `references/` — the skill-directory token is isolated per skill.
-- Same content duplicated across multiple `references/` — drifts.
-- Partial extraction: naming a new standards skill while leaving the meat in the builder's `references/` — the auditor keeps reading the old location and the rename becomes a lie.
 
 </reference_skills>
 

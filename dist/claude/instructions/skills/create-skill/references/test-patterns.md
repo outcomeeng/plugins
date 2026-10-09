@@ -45,7 +45,7 @@ Add the smallest instruction, reference, template, or executable contract that a
 
 <step name="compare_and_iterate">
 
-Run the same cases with the changed skill in a fresh context. Compare against the baseline, record regressions, and repeat until the expected behavior holds without displacing adjacent behavior.
+Run the same cases with the changed skill in the execution context `<fresh_context_testing>` obtains. Compare against the baseline, record regressions, and repeat until the expected behavior holds without displacing adjacent behavior.
 
 </step>
 
@@ -86,6 +86,20 @@ Select scenarios from the skill's actual contracts; a fixed minimum never substi
 
 Use separate authoring and execution contexts. The authoring context carries design history that can hide missing instructions; the execution context sees only the shipped skill and task inputs.
 
+Obtain the execution context, and load the built bundle into it, by the first of these that applies:
+
+1. When the target repository declares a skill-exercise or eval command in its agent guide or skill-authoring overlay, run that command against the built bundle; the command owns how the bundle loads.
+
+2. Otherwise, start one non-interactive session that loads the built plugin directory for that session only — the plugin directory the build emitted, or the authored plugin directory where the harness loads authored source unrendered:
+
+   ```bash
+   claude -p --verbose --output-format stream-json --plugin-dir <built-plugin-dir> "<representative request>"
+   ```
+
+   The run counts only when the stream's `Base directory for this skill:` line names a path under `<built-plugin-dir>`. A base directory under an installed plugin cache means the session loaded an installed copy rather than the edited bundle.
+
+Never count a run of the edited files inside the authoring session as the exercise.
+
 Observe:
 
 - Unexpected exploration paths indicate unclear routing or missing constraints.
@@ -108,10 +122,10 @@ For each iteration:
 
 1. Apply one coherent change.
 2. Run the narrow deterministic checks.
-3. Exercise the affected cases in a fresh context.
+3. Exercise the affected cases in the execution context `<fresh_context_testing>` obtains.
 4. Compare with the recorded baseline and prior passing cases.
 5. Repair regressions before widening the change.
-6. Obtain the required independent audit after deterministic checks pass.
+6. Return the bundle for independent verification once the deterministic checks pass on it.
 
 </feedback_loop>
 
@@ -121,6 +135,6 @@ For each iteration:
 - Cases describe observable evidence and reject the original failure.
 - Fresh-context results pass without relying on authoring history.
 - Adjacent triggers and prior passing cases remain intact.
-- Repository checks and the required independent audit pass on the exact committed bundle.
+- Repository checks pass on the exact bundle the cases passed on.
 
 </success_criteria>
