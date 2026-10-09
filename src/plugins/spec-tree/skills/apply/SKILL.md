@@ -51,9 +51,9 @@ Proceed to Step 3 only after exactly one supported language and its required ski
 
 <scope_detection>
 
-Before starting Step 3, determine the change's scope — this determination governs every later gate:
+Before starting Step 3, classify the planned change; then, before each gate this classification governs — Steps 4, 6, and 9 — classify again from the changed paths of the committed `<base>..<head>` changeset. The committed classification decides the gate: a realized cross-node diff overrides a node-local plan.
 
-- **Node-local** — every changed path is either inside the target node's directory under `spx/` or an implementation file that only the target node's linked tests reach.
+- **Node-local** — every changed path is inside the target node's directory under `spx/`, an implementation file that only the target node's linked tests reach, or the removal of the target node's own `spx/EXCLUDE` entry.
 - **Cross-node** — the work touches anything else: a refactor, a move, a consolidation, a cross-cutting rename, a shared enabler, a sibling spec, or any file outside the target node.
 
 When the scope is cross-node, each audit gate covers the **whole changeset** in the form its dispatch takes — Step 4 every ADR and PDR governing an affected surface, Step 6 every governed node whose evidence the change touches, Step 8 the committed changeset selector it always receives — and Step 9 is REQUIRED before the flow may be declared complete. A target-node-only audit cannot see a regression the change introduced in a file the node does not own. Carry the determination through Steps 4 and 6, which restate their cross-node dispatch at the point of action.
