@@ -17,12 +17,12 @@
 
 Every rule `SKILL.md` and its references state carries exactly one row below: one stable identifier, one severity, and the section that states the rule. The stating section is authoritative for what the rule requires; the row names the rule and fixes its identifier and severity.
 
-The rules below govern this catalog and the `/agent-prompt-standards` rule catalog alike.
+The rules below govern every instructions rule catalog alike: this catalog, the `/agent-prompt-standards` rule catalog, and the `/subagent-standards` rule catalog.
 
-- **Identifier.** Lowercase snake_case, unique across both catalogs. An identifier is never renamed and never reassigned; a retired rule's row is removed, and its identifier stays unused.
+- **Identifier.** Lowercase snake_case, unique across those catalogs. An identifier is never renamed and never reassigned; a retired rule's row is removed, and its identifier stays unused.
 - **Severity.** `blocking` marks a defect that must be fixed before the skill or prompt ships; `debt` marks any other valid defect. A rule's severity is the one its row declares, never one chosen per finding.
-- **Finding key.** A finding against either catalog's rules is keyed `<unit>:<rule-id>`: the unit that covers the file it names, and the identifier of the one rule it violates. Every violation of one rule within one unit forms that one finding, which names each location.
-- **Closed vocabulary.** A finding names an identifier from one of the two catalogs. A defect no row covers is a gap in the standard: the rule enters its stating section and the owning catalog before any finding cites it.
+- **Finding key.** A finding against any of those catalogs' rules is keyed `<unit>:<rule-id>`: the unit that covers the file it names, and the identifier of the one rule it violates. Every violation of one rule within one unit forms that one finding, which names each location.
+- **Closed vocabulary.** A finding names an identifier from a catalog that governs its subject: a skill's from this catalog or the `/agent-prompt-standards` catalog, a subagent definition's from the `/subagent-standards` catalog or the `/agent-prompt-standards` catalog. A defect no row covers is a gap in the standard: the rule enters its stating section and the owning catalog before any finding cites it.
 
 </catalog_contract>
 

@@ -224,7 +224,7 @@ Never invent failure modes. If a skill is new and hasn't failed yet, omit the se
 
 <rule_catalog>
 
-Every rule the sections above state carries exactly one row below, giving it one stable identifier and one severity and naming the section that states it. The stating section is authoritative for what the rule requires. Recommendations and patterns those sections offer without requiring them carry no row. The identifier, severity, finding-key, and closed-vocabulary rules for this catalog are the catalog contract `/skill-standards` states for both rule catalogs.
+Every rule the sections above state carries exactly one row below, giving it one stable identifier and one severity and naming the section that states it. The stating section is authoritative for what the rule requires. Recommendations and patterns those sections offer without requiring them carry no row. The identifier, severity, finding-key, and closed-vocabulary rules for this catalog are the catalog contract `/skill-standards` states for every instructions rule catalog.
 
 | Identifier                       | Severity | Rule                                                                                                                               | Stated in                |
 | -------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
