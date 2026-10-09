@@ -87,3 +87,11 @@
 **Impact**: a result that is correct but not `closed` or `released` has no criterion that judges it, and an Executor resumed from a Handoff has no stated route for a finding on a file an earlier session produced.
 
 **Settlement condition**: each declared result has a success criterion, step 6 states a route for a finding whose file has no producing round in this session, and one typed skill audit of `execute-change` raises neither finding.
+
+## The `definition-invocation` probe's attested runs predate its amended protocol
+
+**Evidence**: `probes/definition-invocation/probe.md` records its attested runs on subject commits `d090bb966859c3b4770a78a4ba2de5410d4fc53f`, `8a5ddbe8d21caa37a7db2d7d304b613c6805b9a8`, `6cbb66684b7e53b3314237b60681e50016757ac9` and `0942beb61734927d2f07fc7b81c66209e27f876b`. Its Limitations no longer state that a whole instruction round includes a launch of `instructions:skill-auditor` by `change-skill-author` or `change-subagent-author`, because neither `instructions:create-skill` nor `instructions:create-subagent` launches an auditor. No attested run covers the protocol as amended.
+
+**Impact**: the probe's `passed` verdict rests on a protocol text that has since changed, so the `[probe]` assertion of `change-execution.md` carries no attested result pinned to the current protocol.
+
+**Settlement condition**: a fresh attested run of the amended protocol, recorded in `probes/definition-invocation/probe.md` with its retained artifacts.
