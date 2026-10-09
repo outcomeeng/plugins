@@ -31,7 +31,6 @@ A `### Testing` rule's assertion-type tag is chosen from the rule's claim shape 
 - Given an ADR with specific untagged rules directly under `## Verification`, alone or alongside valid routed subsections, when its declaration is audited, then absent draft tags and subsections cause no finding and all other declaration-quality checks remain applicable.
 - Given an ADR with an untagged rule inside a routed verification subsection, when audited, then the run records an `invalid-tag` finding against that rule.
 - Given an ADR whose language has no installed `audit-{lang}-architecture` skill, when audited by `/audit-adr`, then the run records a `missing-skill` unit for that language concern, naming the absent skill, and the sealed audit run's terminal status is `rejected`.
-- NEVER: approval of an ADR declaration establishes that its untagged rules have evidence or that the governed implementation complies.
 
 ### Scenarios
 
@@ -49,3 +48,4 @@ A `### Testing` rule's assertion-type tag is chosen from the rule's claim shape 
 - ALWAYS: verify each `### Testing` rule's assertion type fits the claim's quantifier per the `/test` router — a universal is never `scenario`; reject a type the router would not produce, without relitigating a choice the router leaves open ([audit])
 - ALWAYS: `/audit-adr` records its audit through `spx verification run` on a file scope anchored on the ADR path: one root unit with `auditKind` `adr`, one child per evidence-model property and per composed language concern, and every finding. It returns the run token and the rendered projection, or a blocked diagnostic when spx refuses a recorded payload or the finish, and the `adr-auditor` wrapper passes the raw target and its run-driver identity and relays them unchanged ([audit])
 - NEVER: classify ADR content as product-behavior-versus-architecture — an ADR's content is architecture by definition; that classification is the PDR audit's concern ([audit])
+- NEVER: approval of an ADR declaration establishes that its untagged rules have evidence or that the governed implementation complies ([audit])
