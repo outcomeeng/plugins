@@ -6,8 +6,10 @@ from outcomeeng_testing.harnesses.coding_agents import (
 
 
 def test_rendered_doorbells_parse_back_to_sender_and_id() -> None:
-    def assert_roundtrip(message: ModuleType, sender: str, message_id: int) -> None:
-        line = message.doorbell_text(sender, message_id)
+    def assert_roundtrip(
+        message: ModuleType, sender: str, message_id: int, label: str | None
+    ) -> None:
+        line = message.doorbell_text(sender, message_id, label)
         parsed = message.parse_doorbell(line, [sender])
 
         assert line.count("\n") == 0

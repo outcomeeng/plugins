@@ -1,13 +1,18 @@
 from typing import cast
 
-from outcomeeng_testing.generators.coding_agents import mail_record_input
+from outcomeeng_testing.generators.coding_agents import (
+    mail_record_input,
+    unrenderable_labels,
+)
 from outcomeeng_testing.harnesses.agent_mail import load_agent_mail
 from outcomeeng_testing.harnesses.coding_agents import (
     load_agent_message,
     observe_unresolved_repository_mail_send,
     observe_absent_store_mail_send,
+    observe_labeled_mail_send,
     observe_mail_send,
     observe_rejected_mail_send,
+    observe_unlabeled_field_mail_send,
     observe_unreadable_store_reply_mail_send,
     observe_unsupported_operation_mail_send,
 )
@@ -93,3 +98,45 @@ def test_checked_send_results_map_to_delivery_results() -> None:
     assert failed_statuses == set(capability.ExecutionStatus) - {
         capability.ExecutionStatus.SUCCEEDED
     }
+
+
+def test_send_result_label_maps_to_the_doorbell_form() -> None:
+    message = load_agent_message()
+    capability = load_agent_mail()
+    request = mail_record_input(message, 5, message.RecordKind.FACT)
+    sender = cast(str, request[message.SENDER_FIELD])
+    record = message.mail_request({**request})[message.RECORD_FIELD]
+
+    def doorbell_line(capability_result: dict[str, object]) -> str:
+        delivered = message.mail_delivery_result(capability_result)
+        doorbell = cast(dict[str, object], delivered[message.DOORBELL_FIELD])
+        return cast(str, doorbell[message.TEXT_FIELD])
+
+    # The captured send result carries a renderable sender label.
+    captured = observe_mail_send(message, record)
+    response = cast(dict[str, object], captured[capability.RESPONSE_FIELD])
+    label = response[capability.STORE_SENDER_DISPLAY_NAME_FIELD]
+    store_id = response[capability.STORE_ID_FIELD]
+    assert isinstance(label, str) and label
+    assert doorbell_line(captured) == f"[{label} <{sender}>] mail {store_id}"
+
+    # A null label and a reply carrying no label field are both unlabeled.
+    for unlabeled in (
+        observe_labeled_mail_send(message, record, None),
+        observe_unlabeled_field_mail_send(message, record),
+    ):
+        assert doorbell_line(unlabeled) == f"[{sender}] mail {store_id}"
+
+    # Every unrenderable label falls back to the unlabeled form while the full
+    # label stays in the store metadata the delivery result carries.
+    for unrenderable in unrenderable_labels():
+        sent = observe_labeled_mail_send(message, record, unrenderable)
+        delivered = message.mail_delivery_result(sent)
+        kept = cast(
+            dict[str, object],
+            cast(dict[str, object], delivered[message.CAPABILITY_FIELD])[
+                capability.RESPONSE_FIELD
+            ],
+        )
+        assert doorbell_line(sent) == f"[{sender}] mail {store_id}"
+        assert kept[capability.STORE_SENDER_DISPLAY_NAME_FIELD] == unrenderable
