@@ -1,8 +1,8 @@
 ---
 name: audit-skill
 description: >-
-  SKILL.md audit methodology — judges the skill-bundle files a changeset
-  changes against the skill-standards and agent-prompt-standards rule catalogs,
+  SKILL.md audit methodology — judges the skill-bundle files and included
+  shared fragments a changeset changes against the skill-standards and agent-prompt-standards rule catalogs,
   and records the judgment through an SPX changeset-scoped verification run.
 argument-hint: "<JSON object with path, runDriver, and optional base>"
 allowed-tools: Read, Grep, Glob, {{! tool('use_skill') !}}, Bash(python3 -c 'from pathlib import Path; import sys; print(len(Path(sys.argv[1]).read_text(encoding="utf-8")))':*), Bash(git rev-parse:*), Bash(git diff:*), Bash(git status:*), Bash(realpath:*), Bash(spx --version), Bash(spx verification run start:*), Bash(spx verification run status:*), Bash(spx verification run scope add:*), Bash(spx verification run finding add:*), Bash(spx verification run finish:*), Bash(spx verification run render:*), Bash(printf '%s\n':*)
@@ -13,7 +13,7 @@ allowed-tools: Read, Grep, Glob, {{! tool('use_skill') !}}, Bash(python3 -c 'fro
 {!% require_skill 'instructions:agent-prompt-standards' %!}
 
 <objective>
-A sealed changeset-scoped `spx verification run` over the files a changeset changes in one skill bundle, judged against the `/skill-standards` and `/agent-prompt-standards` rule catalogs — terminal status `approved` with no finding, or `rejected` with each finding keyed `<unit>:<rule-id>` and naming every location and the evidence — or a `BLOCKED` diagnostic naming the failed prerequisite or command.
+A sealed changeset-scoped `spx verification run` over the files a changeset changes in one skill bundle and the shared fragments it includes, judged against the `/skill-standards` and `/agent-prompt-standards` rule catalogs — terminal status `approved` with no finding, or `rejected` with each finding keyed `<unit>:<rule-id>` and naming every location and the evidence — or a `BLOCKED` diagnostic naming the failed prerequisite or command.
 </objective>
 
 <constraints>
@@ -35,16 +35,18 @@ Parse `$ARGUMENTS` as a JSON object with two required inputs and one optional in
 
 Resolve the repository root with `git rev-parse --show-toplevel`. Run `realpath` separately on the root and the selected `SKILL.md`, and require the file beneath the root by path-component boundary; a failed resolution or an escaping link returns `BLOCKED` before a run starts. Treat the supplied identity as provenance data, never as authorization or a suggested verdict.
 
+Resolve the included fragments from the bundle's authored include directives. Each `include` build directive in a bundle file names one authored shared fragment by its path beneath `src/_shared/`, in the form `<scope>/<topic>/<file>`; read each included fragment and follow the `include` directives inside it, so a fragment included through a nested include belongs to the set. A bundle with no `include` directive includes no fragment. An included fragment that cannot be read returns `BLOCKED` before a run starts.
+
 Resolve the changeset, each command run separately from the repository root:
 
 ```bash
 git rev-parse --verify --end-of-options '<base>^{commit}'
 git rev-parse --verify --end-of-options 'HEAD^{commit}'
-git status --porcelain --untracked-files=all -- '<bundle-dir>'
-git diff --name-status --no-renames '<base-oid>...<head-oid>' -- '<bundle-dir>'
+git status --porcelain --untracked-files=all -- '<bundle-dir>' '<fragment-path>' …
+git diff --name-status --no-renames '<base-oid>...<head-oid>' -- '<bundle-dir>' '<fragment-path>' …
 ```
 
-The two full object IDs are the changeset endpoints, and the scope is `<base-oid>..<head-oid>`. Any `git status` output means the bundle carries uncommitted work, which the committed changeset cannot judge: return `BLOCKED` naming those paths. Each `git diff` line names one changed bundle file and its status — `A`, `M`, or `D` among them. An empty diff means the changeset leaves the bundle unchanged: return `BLOCKED`. A failed command returns `BLOCKED` with its exact diagnostic.
+Each `<fragment-path>` is one included fragment's repository-relative path. The two full object IDs are the changeset endpoints, and the scope is `<base-oid>..<head-oid>`. Any `git status` output means the bundle or an included fragment carries uncommitted work, which the committed changeset cannot judge: return `BLOCKED` naming those paths. Each `git diff` line names one changed file and its status — `A`, `M`, or `D` among them; the changed files are the changed bundle files and the changed included fragments together. An empty diff means the changeset changes neither a bundle file nor an included fragment: return `BLOCKED`. A failed command returns `BLOCKED` with its exact diagnostic.
 
 Use skill `instructions:instructions-plugin`. Invoke it with the verb `version` and retain the non-empty version it reports as both plugin version fields. Run `spx --version` and retain its non-empty output as the tool version. A missing version is a pre-run `BLOCKED` result.
 
@@ -60,15 +62,15 @@ Use skill `instructions:instructions-plugin`. Invoke it with the verb `version` 
 
    Extract the `runToken` field of the returned locator and use exactly that token for every later command.
 2. **Load the standards.** Read `/skill-standards` and `/skill-standards`' `references/rule-catalog.md`, then `/agent-prompt-standards` and its `<rule_catalog>`, then `spx/local/skills.md` at the repository root when it exists — the overlay specializes catalog rules for the repository, and a finding under it cites the catalog rule it specializes. When the bundle carries scripts, read `/skill-standards`' `references/script-standards.md`. When the bundle carries command-capability fields — `argument-hint` or `arguments`, `allowed-tools`, `!`-dynamic context, or `@` file references — read `/skill-standards`' `references/command-capabilities.md`. When the target is an `audit-*` skill, read `/skill-standards`' `references/auditor-skeleton.md`. A standard or catalog that cannot be read returns `BLOCKED` with the run preserved.
-3. **Read the bundle.** Read every file in the bundle at the head — `SKILL.md` and every file under `references/`, `workflows/`, `templates/`, `assets/`, and `scripts/`, unchanged and uncited files included, because a changed file is judged against the bundle it sits in. Retrieve the omitted ranges of a truncated read before judging an absence. When the bundle uses `/skill-standards`' eager-foundation exception, run this counter against every rendered target `SKILL.md` and judge `eager_payload_ceiling` from its integer output, never from an estimate:
+3. **Read the bundle.** Read every file in the bundle at the head — `SKILL.md` and every file under `references/`, `workflows/`, `templates/`, `assets/`, and `scripts/`, unchanged and uncited files included, because a changed file is judged against the bundle it sits in. Read every included fragment at the head as well. Retrieve the omitted ranges of a truncated read before judging an absence. When the bundle uses `/skill-standards`' eager-foundation exception, run this counter against every rendered target `SKILL.md` and judge `eager_payload_ceiling` from its integer output, never from an estimate:
 
    ```bash
    python3 -c 'from pathlib import Path; import sys; print(len(Path(sys.argv[1]).read_text(encoding="utf-8")))' "<rendered-SKILL.md>"
    ```
 
-4. **Judge.** Judge each changed file against every catalog row that applies to it, using the stating section's text, never memory; a creator skill's workflow references are authoring guidance, never standards. A deleted file is judged by what its deletion leaves behind: a citation of it, an orphaned sibling, or a broken route. A violation that spans files — an orphaned reference, a missing route target — belongs to the changed file whose change produced it. Group the violations into findings: every violation of one rule within one file forms one finding, carrying the row's identifier and severity, every location, a message, and observed-versus-expected evidence. An observation that a rule holds is not a finding.
+4. **Judge.** Judge each changed file against every catalog row that applies to it, using the stating section's text, never memory; a creator skill's workflow references are authoring guidance, never standards. A changed fragment is judged under the same catalog rows as a bundle file, against the bundle that includes it. A deleted file is judged by what its deletion leaves behind: a citation of it, an orphaned sibling, or a broken route. A violation that spans files — an orphaned reference, a missing route target — belongs to the changed file whose change produced it. Group the violations into findings: every violation of one rule within one file forms one finding, carrying the row's identifier and severity, every location, a message, and observed-versus-expected evidence. An observation that a rule holds is not a finding.
 5. **Record.** Add one unit for each changed file in `git diff` order, then each finding against the unit of its file, under `<persistence_contract>`.
-6. **Reconcile.** Read `spx verification run status` with the same type, scope, and token. Require exactly one unit for each changed file and no other unit, and an accepted unit for every finding. Run `git rev-parse --verify 'HEAD^{commit}'` and the `git status` command again; a moved head or uncommitted bundle work returns `BLOCKED` with the run preserved.
+6. **Reconcile.** Read `spx verification run status` with the same type, scope, and token. Require exactly one unit for each changed file and no other unit, and an accepted unit for every finding. Run `git rev-parse --verify 'HEAD^{commit}'` and the `git status` command again; a moved head or uncommitted bundle or fragment work returns `BLOCKED` with the run preserved.
 7. **Finish and render.** Derive `approved` only when every unit is audited and no finding exists; derive `rejected` when any finding exists, a debt-only set included. Run:
 
    ```bash
@@ -165,7 +167,7 @@ The heredoc delimiter stays quoted, so the shell expands nothing in the body. Id
 
 <verdict_format>
 
-Return only the exact run token and the unmodified rendered projection. The projection is the verdict: its `terminalStatus` is `approved` or `rejected`, its `findingCount` is zero for approval, its `findings` group every accepted finding under `blocking` and `debt`, its `auditScopeUnits` carry one unit per changed bundle file, and its `events` carry every accepted finding payload and the terminal event. Every finding is keyed `<unit>:<rule-id>` by a catalog identifier, and both severities reject the run. Keep every SPX field unchanged.
+Return only the exact run token and the unmodified rendered projection. The projection is the verdict: its `terminalStatus` is `approved` or `rejected`, its `findingCount` is zero for approval, its `findings` group every accepted finding under `blocking` and `debt`, its `auditScopeUnits` carry one unit per changed bundle file and changed included fragment, and its `events` carry every accepted finding payload and the terminal event. Every finding is keyed `<unit>:<rule-id>` by a catalog identifier, and both severities reject the run. Keep every SPX field unchanged.
 
 A run that cannot complete returns:
 
@@ -198,7 +200,7 @@ judgedFindings: <JSON array of every finding judged before the stop, in the find
 The verdict is sound when:
 
 - Every applicable catalog row was judged against every changed file, with none skipped.
-- The sealed run carries one unit per changed bundle file and no other, and its terminal status is `approved` only with no finding.
+- The sealed run carries one unit per changed bundle file and changed included fragment and no other, and its terminal status is `approved` only with no finding.
 - Each finding names a catalog identifier with that row's severity, every location of the violation within its unit, and the observed-versus-expected evidence.
 - The same changeset, standards, and run-driver identity yield the same units, findings, and finding keys.
 
