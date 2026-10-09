@@ -6,6 +6,7 @@ from typing import cast
 from outcomeeng_testing.harnesses.agent_mail import (
     AbsentExecutableRunner,
     CapturedInboxResponse,
+    CapturedLabelResponse,
     RecordingRunner,
     common_dir_seeded_absent_store_runner,
     common_dir_seeded_runner,
@@ -15,6 +16,7 @@ from outcomeeng_testing.harnesses.agent_mail import (
     mail_pool,
     run_cli_project_key,
     run_inbox_row_mapping,
+    run_label_response_mapping,
     run_operation_mapping,
     run_project_key_mapping,
     run_recipient_boundary,
@@ -87,10 +89,17 @@ def test_agent_mail_operation_mappings() -> None:
                 )
                 in argv
             )
+            display_name_option = module.PUBLIC_AM_ARGUMENT_OPTIONS[
+                module.DISPLAY_NAME_FIELD
+            ]
+            assert (display_name_option in reading.options_seen) is (
+                module.DISPLAY_NAME_FIELD in arguments
+            )
             for field_name in (
                 module.PROGRAM_FIELD,
                 module.MODEL_FIELD,
                 module.TASK_FIELD,
+                module.DISPLAY_NAME_FIELD,
             ):
                 if field_name in arguments:
                     assert (
@@ -167,6 +176,60 @@ def test_agent_mail_operation_mappings() -> None:
 
     assert seen_operations == operations
     assert seen_kinds == {kind.value for kind in module.SENT_KINDS}
+
+
+def test_store_labels_map_verbatim_beside_the_message_record() -> None:
+    def assert_case(
+        module: ModuleType, project_key: str, captured: CapturedLabelResponse
+    ) -> None:
+        runner = common_dir_seeded_runner(module, project_key, captured.result)
+
+        result = module.execute(captured.request, runner)
+
+        assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED, (
+            captured.capture
+        )
+        response = cast(dict[str, object], result[module.RESPONSE_FIELD])
+        data = cast(dict[str, object], result[module.DATA_FIELD])
+        label_fields = (
+            module.STORE_SENDER_DISPLAY_NAME_FIELD,
+            module.STORE_TO_DISPLAY_NAMES_FIELD,
+        )
+        if captured.operation is module.Operation.REGISTER:
+            assert (
+                response[module.STORE_DISPLAY_NAME_FIELD]
+                == captured.payload[module.STORE_DISPLAY_NAME_FIELD]
+            ), captured.capture
+        elif captured.operation is module.Operation.SEND:
+            for field_name in label_fields:
+                assert field_name in response, (captured.capture, field_name)
+                assert response[field_name] == captured.payload[field_name], (
+                    captured.capture,
+                    field_name,
+                )
+            record = cast(dict[str, object], data[module.RECORD_FIELD])
+            assert set(record) == module.RECORD_FIELDS, captured.capture
+        else:
+            captured_items = cast(
+                list[dict[str, object]], captured.payload[module.STORE_INBOX_FIELD]
+            )
+            returned_items = cast(
+                list[dict[str, object]], response[module.STORE_INBOX_FIELD]
+            )
+            records = cast(list[dict[str, object]], data[module.RECORDS_FIELD])
+            assert len(returned_items) == len(captured_items) == len(records)
+            for returned, item, record in zip(
+                returned_items, captured_items, records, strict=True
+            ):
+                for field_name in label_fields:
+                    assert field_name in returned, (captured.capture, field_name)
+                    assert returned[field_name] == item[field_name], (
+                        captured.capture,
+                        field_name,
+                    )
+                assert set(record) == module.RECORD_FIELDS, captured.capture
+
+    run_label_response_mapping(assert_case)
 
 
 def test_inbox_rows_map_totally_onto_records() -> None:
