@@ -1,0 +1,16 @@
+Read durable, restart-safe inbox delivery events for one recipient
+
+Usage: am inbox-events [OPTIONS]
+
+Options:
+      --agent <AGENT>      Agent name (default: AGENT_NAME or AGENT_MAIL_AGENT)
+      --project <PROJECT>  Project key (default: AGENT_MAIL_PROJECT or current directory)
+      --after <AFTER>      Last fully processed delivery cursor. This is not a message ID
+      --limit <LIMIT>      Maximum events to return (1 through 1000) [default: 100]
+      --position-now       Return the current durable tail cursor with no events
+      --direct             Allow a direct SQLite read only when no daemon is reachable
+      --format <FORMAT>    Output format: table, json, or toon (default: auto-detect)
+      --json               Output JSON (shorthand for --format json)
+      --host <HOST>        Server host for HTTP mode (default: 127.0.0.1) [default: 127.0.0.1]
+      --port <PORT>        Server port for HTTP mode (default: 8765) [default: 8765]
+  -h, --help               Print help

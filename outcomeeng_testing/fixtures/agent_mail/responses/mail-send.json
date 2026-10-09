@@ -1,13 +1,17 @@
 {
-  "id": 36,
-  "subject": "officer1 registered",
-  "body_md": "AmberGull registered from herdr pane w1:p1; awaiting orders",
+  "id": 11,
+  "subject": "Capture: message with a thread",
+  "body_md": "Captured for the agent-mail adapter evidence: a message sent with a thread id.",
   "importance": "normal",
   "ack_required": false,
-  "thread_id": "probe-herdr",
-  "created_ts": "2026-09-18T01:35:42.664462Z",
-  "from": "AmberGull",
+  "thread_id": "capture-labels",
+  "created_ts": "2026-10-09T15:05:09.137018Z",
+  "from": "GoldenFinch",
+  "sender_display_name": "Capture Sender",
   "to": [
-    "PeachFrog"
-  ]
+    "SilverOtter"
+  ],
+  "to_display_names": {
+    "SilverOtter": "Capture Reader"
+  }
 }

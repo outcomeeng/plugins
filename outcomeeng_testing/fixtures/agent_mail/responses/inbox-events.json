@@ -1,0 +1,78 @@
+{
+  "events": [
+    {
+      "cursor": 10,
+      "message_id": 10,
+      "kind": "to",
+      "delivered_ts": "2026-10-09T15:05:09.099510Z",
+      "subject": "Contact approved: GoldenFinch -> SilverOtter",
+      "from": "GoldenFinch",
+      "sender_display_name": "Capture Sender",
+      "to_display_names": {
+        "SilverOtter": "Capture Reader"
+      },
+      "importance": "normal",
+      "ack_required": false
+    },
+    {
+      "cursor": 11,
+      "message_id": 11,
+      "kind": "to",
+      "delivered_ts": "2026-10-09T15:05:09.137018Z",
+      "subject": "Capture: message with a thread",
+      "from": "GoldenFinch",
+      "sender_display_name": "Capture Sender",
+      "to_display_names": {
+        "SilverOtter": "Capture Reader"
+      },
+      "importance": "normal",
+      "ack_required": false
+    },
+    {
+      "cursor": 12,
+      "message_id": 12,
+      "kind": "to",
+      "delivered_ts": "2026-10-09T15:05:09.254613Z",
+      "subject": "Capture: ack-required message without a thread",
+      "from": "GoldenFinch",
+      "sender_display_name": "Capture Sender",
+      "to_display_names": {
+        "SilverOtter": "Capture Reader"
+      },
+      "importance": "normal",
+      "ack_required": true
+    },
+    {
+      "cursor": 13,
+      "message_id": 13,
+      "kind": "to",
+      "delivered_ts": "2026-10-09T15:05:21.215299Z",
+      "subject": "Contact approved: IvoryCrane -> SilverOtter",
+      "from": "IvoryCrane",
+      "sender_display_name": null,
+      "to_display_names": {
+        "SilverOtter": "Capture Reader"
+      },
+      "importance": "normal",
+      "ack_required": false
+    },
+    {
+      "cursor": 14,
+      "message_id": 14,
+      "kind": "to",
+      "delivered_ts": "2026-10-09T15:05:21.252892Z",
+      "subject": "Capture: unlabeled sender, ack required",
+      "from": "IvoryCrane",
+      "sender_display_name": null,
+      "to_display_names": {
+        "SilverOtter": "Capture Reader"
+      },
+      "importance": "normal",
+      "ack_required": true
+    }
+  ],
+  "next_cursor": 14,
+  "has_more": false,
+  "oldest_available_cursor": 10,
+  "tail_cursor": 14
+}
