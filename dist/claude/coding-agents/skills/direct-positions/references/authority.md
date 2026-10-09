@@ -12,10 +12,9 @@ Positions are named `{Product} {Position}`; the Director takes no product. Ranke
 | ---- | ------------ | ------------------------------------------------------------------------------------------------------------- |
 | 1    | Director     | Order across products, the operating model, the board and the general override                                |
 | 2    | Maintainer   | One product's context; refinement of its Changes; its priority, Frame and Slice backlogs; abandon attestation |
-| 3    | Contributor  | Refinement and delivery of instruction-only Changes, without an Executor                                      |
+| 3    | Contributor  | Refinement and delivery of instruction-only Changes, without an Executor; studies and defect analysis         |
 | 4    | Orchestrator | Delivery mechanics: worktree, branch and salvage preparation, Executor start and checks                       |
 | 5    | Executor     | One claimed Executable Change through `/execute-change`                                                       |
-| 6    | Researcher   | Defect analysis and studies; plugin defects go to the Plugins Maintainer to fix                               |
 
 The Advisor holds the outside view. It reads Changes with a cleared context and records verdicts only; it never contextualizes. Its review follows a Director decision in batches; a revise verdict reopens the decision.
 
@@ -51,13 +50,13 @@ Everything inside a Product runs without the Director and the operator: the Main
 
 <lifecycle_skills>
 
-Before ordering anything a lifecycle skill covers, use that skill; each states its own procedure and outranks orders:
+Read the lifecycle skill before ordering anything it covers; the skills state their own procedure and outrank orders:
 
-- Use skill `spec-tree:claim-change` for a Claim, the checkout of the Handoff's branch and the sync.
-- Use skill `spec-tree:release-change`; only the winning claimant releases, and it checkpoints uncommitted work, pushes, and writes a five-line Handoff.
-- Use skill `spec-tree:close-change` for Applied, Refined or Abandoned with their preconditions.
-- Use skill `spec-tree:merge`; it is the only route to the default branch.
+- `spec-tree:claim-change` — Claim, checkout of the Handoff's branch, sync.
+- `spec-tree:release-change` — only the winning claimant releases; it checkpoints uncommitted work, pushes, and writes a five-line Handoff.
+- `spec-tree:close-change` — Applied, Refined or Abandoned with their preconditions.
+- `spec-tree:merge` — the only route to the default branch.
 
-Ask the owning Maintainer for a node's malleability before ordering or reporting any evidence audit; the Director reads no product node's spec.
+Malleability lives only in a spec's front matter. A node's malleability selects its gates: `spec` needs Validate, reachability tests and a result for every tagged assertion; `verification` adds a result for every assertion; `implementation` adds evidence that passes audit. A changeset merges by the least malleable node it touches.
 
 </lifecycle_skills>

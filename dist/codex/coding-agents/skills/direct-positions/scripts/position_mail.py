@@ -14,7 +14,6 @@ from pathlib import Path
 
 # The mail adapter ships in a sibling skill of this plugin.
 MAIL = Path(__file__).resolve().parents[2] / "operate-agent-mail/scripts/agent_mail.py"
-ADAPTER_TIMEOUT_SECONDS = 60
 
 
 @dataclass(frozen=True)
@@ -40,22 +39,15 @@ def inbox(channel: str, agent: str, limit: int = 30) -> list[Record]:
             "limit": limit,
         },
     }
-    try:
-        completed = subprocess.run(
-            ["python3", str(MAIL), "run"],
-            input=json.dumps(request),
-            capture_output=True,
-            text=True,
-            cwd=channel,
-            timeout=ADAPTER_TIMEOUT_SECONDS,
-            check=False,
-        )
-    except subprocess.TimeoutExpired as error:
-        raise MailError(
-            f"no answer within {ADAPTER_TIMEOUT_SECONDS}s reading the mail of {channel}"
-        ) from error
-    except OSError as error:
-        raise MailError(f"cannot read the mail of {channel}: {error}") from error
+    completed = subprocess.run(
+        ["python3", str(MAIL), "run"],
+        input=json.dumps(request),
+        capture_output=True,
+        text=True,
+        cwd=channel,
+        timeout=60,
+        check=False,
+    )
     try:
         result = json.loads(completed.stdout)
     except json.JSONDecodeError as error:
@@ -75,3 +67,4 @@ def inbox(channel: str, agent: str, limit: int = 30) -> list[Record]:
         )
         for record in result["data"].get("records", [])
     ]
+

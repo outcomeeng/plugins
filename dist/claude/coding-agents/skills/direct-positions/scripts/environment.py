@@ -10,46 +10,28 @@ import json
 import re
 import subprocess
 from dataclasses import dataclass
-from enum import StrEnum
 from pathlib import Path
-from typing import Protocol
 
 # The adapters ship in sibling skills of this plugin.
 ADAPTERS = Path(__file__).resolve().parents[2]
 PROWL = ADAPTERS / "operate-prowl/scripts/prowl_environment.py"
 HERDR = ADAPTERS / "operate-herdr/scripts/herdr_environment.py"
 
-ADAPTER_TIMEOUT_SECONDS = 30
-PANE_LINES = 15
-
-# Marks a Prowl session whose status stays `working` while its screen is idle.
-BACKGROUND_MARKER = "backgroundWork"
-
-
-class State(StrEnum):
-    """One state set for every backend."""
-
-    WORKING = "working"
-    IDLE = "idle"
-    BLOCKED = "blocked"
-    DONE = "done"
-    UNKNOWN = "unknown"
-
-
-ENDED = (State.IDLE, State.DONE)
+# One state set for every backend.
+STATES = ("working", "idle", "blocked", "done", "unknown")
 
 _PROWL_STATES = {
-    "working": State.WORKING,
-    "idle": State.IDLE,
-    "waiting": State.BLOCKED,
-    "blocked": State.BLOCKED,
-    "done": State.DONE,
+    "working": "working",
+    "idle": "idle",
+    "waiting": "blocked",
+    "blocked": "blocked",
+    "done": "done",
 }
 _HERDR_STATES = {
-    "working": State.WORKING,
-    "idle": State.IDLE,
-    "blocked": State.BLOCKED,
-    "done": State.DONE,
+    "working": "working",
+    "idle": "idle",
+    "blocked": "blocked",
+    "done": "done",
 }
 
 # "(659k/1M tokens) 66%" and "(0/1M tokens) 0%": the unit is optional on both sides.
@@ -65,26 +47,16 @@ _BACKGROUND = re.compile(
 
 @dataclass(frozen=True)
 class Session:
-    backend: str  # a key of BACKENDS
+    backend: str  # "prowl" or "herdr"
     handle: str  # pane id for prowl, agent name for herdr
     cwd: str
-    state: State
+    state: str  # one of STATES
     changed_at: str | None
     detail: str
 
 
 class AdapterError(RuntimeError):
     pass
-
-
-class Backend(Protocol):
-    """What the monitor and the roster read from one environment."""
-
-    name: str
-
-    def sessions(self) -> list[Session]: ...
-
-    def read(self, session: Session, lines: int = PANE_LINES) -> str: ...
 
 
 def _run(adapter: Path, request: dict, timeout: float) -> dict:
@@ -98,9 +70,7 @@ def _run(adapter: Path, request: dict, timeout: float) -> dict:
             check=False,
         )
     except subprocess.TimeoutExpired as error:
-        raise AdapterError(
-            f"{adapter.name}: no answer within {timeout:.0f}s"
-        ) from error
+        raise AdapterError(f"{adapter.name}: no answer within {timeout:.0f}s") from error
     try:
         result = json.loads(completed.stdout)
     except json.JSONDecodeError as error:
@@ -118,7 +88,7 @@ def _norm(path: str) -> str:
     return path.rstrip("/")
 
 
-def _prowl_state(agent: dict) -> State:
+def _prowl_state(agent: dict) -> str:
     """The session's state, with a finished turn read from the screen.
 
     Prowl's status stays `working` while a background task such as the
@@ -127,15 +97,15 @@ def _prowl_state(agent: dict) -> State:
     """
     status = agent.get("status")
     if status == "working" and agent.get("raw_state") == "idle":
-        return State.IDLE
-    return _PROWL_STATES.get(status, State.UNKNOWN)
+        return "idle"
+    return _PROWL_STATES.get(status, "unknown")
 
 
 def _prowl_detail(agent: dict) -> str:
     """The screen reason, marked as background work when an idle screen sits under a working status."""
     detail = agent.get("screen_reason") or agent.get("detection_reason") or ""
     if agent.get("status") == "working" and agent.get("raw_state") == "idle":
-        detail += f" {BACKGROUND_MARKER}"
+        detail += " backgroundWork"
     return detail
 
 
@@ -144,9 +114,7 @@ class Prowl:
 
     def sessions(self) -> list[Session]:
         result = _run(
-            PROWL,
-            {"schemaVersion": 1, "operation": "agents", "arguments": {}},
-            ADAPTER_TIMEOUT_SECONDS,
+            PROWL, {"schemaVersion": 1, "operation": "agents", "arguments": {}}, 30
         )
         found = []
         for agent in result["response"]["data"].get("agents", []):
@@ -167,14 +135,14 @@ class Prowl:
             )
         return found
 
-    def read(self, session: Session, lines: int = PANE_LINES) -> str:
+    def read(self, session: Session, lines: int = 15) -> str:
         request = {
             "schemaVersion": 1,
             "operation": "read",
             "arguments": {"pane": session.handle, "last": lines},
         }
-        result = _run(PROWL, request, ADAPTER_TIMEOUT_SECONDS)
-        return result["response"]["data"].get("text") or ""
+        return _run(PROWL, request, 30)["response"]["data"].get("text") or ""
+
 
 
 class Herdr:
@@ -182,9 +150,7 @@ class Herdr:
 
     def sessions(self) -> list[Session]:
         result = _run(
-            HERDR,
-            {"schemaVersion": 1, "operation": "inventory", "arguments": {}},
-            ADAPTER_TIMEOUT_SECONDS,
+            HERDR, {"schemaVersion": 1, "operation": "inventory", "arguments": {}}, 30
         )
         found = []
         for agent in result["response"].get("result", {}).get("agents", []):
@@ -193,24 +159,24 @@ class Herdr:
                     backend=self.name,
                     handle=agent.get("name"),
                     cwd=_norm(agent.get("cwd") or ""),
-                    state=_HERDR_STATES.get(agent.get("agent_status"), State.UNKNOWN),
+                    state=_HERDR_STATES.get(agent.get("agent_status"), "unknown"),
                     changed_at=None,
                     detail=agent.get("pane_id") or "",
                 )
             )
         return found
 
-    def read(self, session: Session, lines: int = PANE_LINES) -> str:
+    def read(self, session: Session, lines: int = 15) -> str:
         request = {
             "schemaVersion": 1,
             "operation": "read",
             "arguments": {"agent": session.handle, "lines": lines},
         }
-        result = _run(HERDR, request, ADAPTER_TIMEOUT_SECONDS)
-        return result["response"].get("output") or ""
+        return _run(HERDR, request, 30)["response"].get("output") or ""
 
 
-BACKENDS: dict[str, Backend] = {"prowl": Prowl(), "herdr": Herdr()}
+
+BACKENDS = {"prowl": Prowl(), "herdr": Herdr()}
 
 
 def background_work(session: Session, text: str | None) -> bool:
@@ -218,8 +184,8 @@ def background_work(session: Session, text: str | None) -> bool:
 
     Prowl reports this natively; herdr needs the pane text.
     """
-    if session.backend == Prowl.name:
-        return BACKGROUND_MARKER in session.detail
+    if session.backend == "prowl":
+        return "backgroundWork" in session.detail
     return bool(text and _BACKGROUND.search(text))
 
 

@@ -1,0 +1,69 @@
+# direct-positions: monitor and roster
+
+The skill bundles one monitor for every watched position and a roster that lists them. Both read sessions only through the sibling `operate-prowl`, `operate-herdr` and `operate-agent-mail` adapters, so they own no Prowl, herdr or agent-mail command grammar.
+
+## Watch file
+
+`<pool>/.spx/director/watch.json` in the Director's worktree:
+
+```json
+{
+  "position": "Methodology Director",
+  "mail": { "channel": "/abs/path/changes.git", "agent": "<Director mail name>" },
+  "sessions": [
+    {
+      "position": "SPX Maintainer",
+      "mail_name": "<registered mail name>",
+      "backend": "prowl",
+      "cwd": "/abs/path/spx/worktrees/maintainer",
+      "stall_minutes": 45,
+      "context_percent": 80,
+      "report_background": false,
+      "blocked_remind_minutes": 15
+    }
+  ],
+  "groups": [
+    { "label": "Executor", "backend": "herdr", "cwd_prefix": "/abs/path", "exclude": [] }
+  ]
+}
+```
+
+- `mail` names the agent-mail channel: the repository whose common Git directory keys the store, and the Director's own name. Omit it to watch sessions only.
+- A `sessions` entry matches its live session by `cwd`, or by `handle` (a Prowl pane id or a herdr agent name).
+- A `groups` entry watches every session under `cwd_prefix`, so Executors appear and disappear without editing the file.
+- `stall_minutes` and `context_percent` turn on pane reads for that entry; without them the monitor reads only the server state.
+
+## Signals
+
+Every signal ends with `→` and the disposition it calls for, taken from the authority map and the Spec Tree foundation, so each event leads to the action the Director owns and no other.
+
+| Signal                  | Meaning and disposition                                                                                                                                                                               |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `MAIL <id> from <name>` | A new record in the Director's inbox; the disposition comes from the subject: a note written, a shape review, a STATUS, a gate question, a Product question, or other                                 |
+| `BLOCKED`               | A position waits at an approval or question: approve an ordered read, Escape and redirect a guard or destructive prompt. An Executor shows only after `blocked_remind_minutes`, as its Orchestrator's |
+| `WENT-IDLE`             | A position moved from working to idle or done with no background work                                                                                                                                 |
+| `STALLED`               | The pane text, digits removed, has not changed for `stall_minutes` while working                                                                                                                      |
+| `COMPACT-NOW`           | Context at or above 85%: order the note now                                                                                                                                                           |
+| `COMPACT-IDLE`          | Context at or above 75% with the turn ended: order the note now                                                                                                                                       |
+| `COMPACT-AT-BOUNDARY`   | Context at or above 75% while working: order the note for the end of the step                                                                                                                         |
+| `ABSENT`                | No live session matches a position's entry                                                                                                                                                            |
+| `WATCH-BROKEN`          | The same adapter read failed on two polls in a row; the loop goes on                                                                                                                                  |
+| `WATCH-DUPLICATE`       | Another loop holds the lock for this state file; this copy exits                                                                                                                                      |
+
+A gate question in mail carries the foundation's gate rule: read the malleability of every touched node before any ruling. A turn that ends with background work, an Executor's finished leg and an Executor's end raise no signal: the harness re-invokes the session, and an Executor belongs to its Orchestrator. A compaction tier is reported once per 5% step. Prowl's status stays `working` while a session's own monitor runs; the environment reads the screen state `idle` under a `working` status as idle with background work.
+
+## State and lock
+
+`monitor.json` holds the last mail id and each session's last state, timestamps, pane digest and reported tiers. Only the monitor writes it. `monitor.json.lock` holds the loop's process id; a re-arm finds the live holder and exits with `WATCH-DUPLICATE`, so a re-arm never doubles signals. A stale lock whose process is gone is taken over.
+
+## Arming
+
+The harness caps a monitor at 30 minutes. Arm it through the harness monitor tool at the maximum timeout and re-arm it on every expiry notice: an expired monitor sees nothing, and mail arriving in the gap shows on the next run. A watch run as a backgrounded shell dies at the shell's limit with no notice, so never use one.
+
+## Roster
+
+`roster.py WATCH.json` prints one Markdown row per position — mail name, backend, worktree, pane, server state, context — and one row per group member. A failed inventory shows as `inventory failed` with the adapter's message, never as `absent`. Pipe it to `spx change draft create --input stdin` to keep it in the worktree across reboots.
+
+## Tests
+
+`tests/test_scripts.py` exercises the roster rendering and the monitor's signal edges over controlled inventories: `python3 -m pytest tests/`.
