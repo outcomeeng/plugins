@@ -30,22 +30,6 @@
 
 **Settlement condition.** Each condition is stated once at its point of action and cross-referenced by tag name elsewhere, per `/skill-standards` `<conciseness>`. [Change #95](https://github.com/outcomeeng/changes/issues/95) carries the `/apply` pass that owns it.
 
-## `apply` Step 5 names a skill the spec-tree plugin does not ship
-
-**Evidence.** `src/plugins/spec-tree/skills/apply/SKILL.md:206` says `/verify` routes eval work through a dedicated eval skill "when that capability is installed"; no such skill ships in the spec-tree plugin and `<skill_map>` carries no row for it. `instructions:skill-auditor` finding rule `unguarded_capability_name`, severity `WARNING`, on head `524b9c46c7960a106d84ef856b4020a0ce904b16` during Change #76.
-
-**Impact.** The name resolves nowhere in a consumer checkout, and `/audit-skill`'s broken-reference check flags it once the conditional is read literally.
-
-**Settlement condition.** Step 5 names only `/verify`'s own eval routing, or the unshipped skill name is gone. [Change #95](https://github.com/outcomeeng/changes/issues/95) carries the `/apply` pass that owns it.
-
-## `apply` Step 8 opens with a hard-wrapped paragraph
-
-**Evidence.** `src/plugins/spec-tree/skills/apply/SKILL.md:254-258` is wrapped mid-sentence at about eighty columns while every other paragraph in the file is one line. `instructions:skill-auditor` finding rule `hard_wrapped_prose`, severity `WARNING`, on head `524b9c46c7960a106d84ef856b4020a0ce904b16` during Change #76.
-
-**Impact.** Inconsistent dprint output and spurious diff noise on the next edit.
-
-**Settlement condition.** The paragraph is one line, matching the file's convention. [Change #95](https://github.com/outcomeeng/changes/issues/95) carries the `/apply` pass that owns it.
-
 ## The preserved aggregate branch holds claims no merge cycle has drained
 
 `origin/work/strict-finding-disposition` preserves an aggregate of 103 commits that changed 189 paths when it was recorded at `5f26a67a9aef9327e57fd5e02d130c8363578a07` against `origin/main` at `b8503c8147f9291a67d828e649baff0d9c078d9c`; it now points at `b913114806c4cabbb2009d94572050621700d483`. It is recovery material and never enters whole-changeset verification or publication as one pull request. Its behavioral claims belong to the nodes that own them: test-verification, the eval harness, reviewing-changes, audit, the TypeScript code standards and merge, and no merge cycle has drained them.
