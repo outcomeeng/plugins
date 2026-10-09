@@ -23,7 +23,7 @@ A sealed `spx verification run` on one spec node's `[test]` evidence or one comm
 <constraints>
 
 - NEVER modify the tests under audit or any other file, and NEVER commit, stash, synchronize, rebase, create a branch, or move the checkout. The audit's own SPX verification-run journal is the only state it writes.
-- NEVER run the project's coverage command, test command, linter, type-checker, or any other deterministic verification — the Author's agent session passes it on the changeset before dispatch, and CI re-runs it over the whole repository. Every Bash grant names an identity, path, worktree-status, or run-journal verb; none runs project verification, and no grant is added for parity with a composed skill.
+- NEVER run the project's coverage command, test command, linter, type-checker, or any other deterministic verification — a test or coverage result is a deterministic verdict, not audit evidence, so this audit judges evidence by reading it. Every Bash grant names an identity, path, worktree-status, or run-journal verb; none runs project verification, and no grant is added for parity with a composed skill.
 - ALWAYS judge a node target's assertions from the spec content `spx verification run input` replays from the run, never from a separate read of the live spec. Step 9 compares the live spec with the retained input before the run finishes.
 - ALWAYS complete the evidence-chain inventory of an assertion before recording its unit. An unresolved import, unread artifact, or unclassified role is an `incomplete-evidence-chain` finding; absence of an artifact is missing evidence, never permission to infer its contents.
 - ALWAYS name the assertion or evidence artifact, the failed property, the evidence, and the remediation target in every finding.
@@ -117,7 +117,7 @@ spx verification run start --verification-type audit --scope-type changeset --sc
 SCOPE_INPUT
 ```
 
-Capture the exact `runToken` and use it for every later command. Record the root unit under `<persistence_contract>`. Steps 5 through 7 record each assertion's unit and findings as soon as that assertion is judged, then its language units, so the run shows each result before the next assertion is judged.
+Capture the exact `runToken` and use it for every later command. Record the root unit under `<persistence_contract>`. Step 6 records each assertion's unit and findings as soon as that assertion is judged, and Step 7 records each language partition's units and findings as soon as that partition's result is validated, so the run shows each result before the next judgment begins.
 
 </step>
 
@@ -127,7 +127,7 @@ Capture the exact `runToken` and use it for every later command. Record the root
 
 Read each governing spec's `## Assertions` — the replayed content for a node target, the committed spec for a changeset target. Only assertions carrying `[test]` evidence enter this audit; `[eval]`, `[probe]`, and `[audit]` evidence belongs to other verification workflows. Number the `[test]` assertions of each spec from `001` in document order. For each, extract the assertion text, the assertion type, the linked test path, and whether the linked file exists.
 
-A node target audits every `[test]` assertion of its spec. A changeset target audits each `[test]` assertion whose linked test is a changed path or whose evidence chain, inventoried in Step 6, reaches one. A changed test or test-infrastructure path that no current `[test]` assertion links and no current evidence chain reaches is a **retired path**: record it as a `not-applicable` retired unit naming the reason, and never demand restoration of evidence a current spec no longer claims. A current `[test]` link to a missing file is a `missing-test-file` finding on that assertion's unit.
+A node target audits every `[test]` assertion of its spec. A changeset target audits each `[test]` assertion whose linked test is a changed path or whose evidence chain, inventoried in Step 6, reaches one. A changed test or test-infrastructure path that no current `[test]` assertion links and no current evidence chain reaches is a **retired path**, recorded after the language units as a `not-applicable` retired unit naming the reason; never demand restoration of evidence a current spec no longer claims. A current `[test]` link to a missing file is a `missing-test-file` finding on that assertion's unit.
 
 </step>
 
@@ -193,11 +193,11 @@ Coupling means exercising executable behavior. A test that reads a skill body, s
 
 **Step 7: Compose the language-specific test-evidence concerns**
 
-Language-specific concerns are owned by the installed `audit-<lang>-tests` skills. Derive one partition per linked test path: take the installed `audit-<lang>-tests` skills from the skill listing in context, load each language's `<lang>-test-standards`, and read its filename instantiation of `<subject>.<evidence>.<level>[.<runner>]`; the text after the last closing bracket is the declared suffix, whether `.test.ts`, `.py`, or `_test.go`. Map every linked test whose filename ends in an installed plugin's declared suffix to that language, never from an extension list this skill carries. A suffix no installed plugin declares, or an ambiguous partition, is an `unsupported` language unit carrying the `unsupported-language` finding with target `language-partition`.
+Language-specific concerns are owned by the `audit-<lang>-tests` skills. Derive one partition per linked test path from the language test standards: for each `<lang>-test-standards` skill in the skill listing in context, Use skill `{lang}:{lang}-test-standards` and read its filename instantiation of `<subject>.<evidence>.<level>[.<runner>]`; the text after the last closing bracket is the declared suffix, whether `.test.ts`, `.py`, or `_test.go`. Map every linked test whose filename ends in a declared suffix to that language, never from an extension list this skill carries. A suffix no installed test standard declares, or an ambiguous partition, is an `unsupported` language unit carrying the `unsupported-language` finding with target `language-partition`.
 
-For each partition, Use skill `{lang}:audit-{lang}-tests` and pass the governing node path and that partition's linked test paths, adding retired paths of that language for a changeset target. When the skill is not installed, record each of that language's units as `missing-skill`, which rejects the run without a finding. Validate each returned result against the composed concern contract in `<verdict_format>` — row names, required finding fields, allowed statuses, and agreement between findings, row statuses, and the overall value — and accept no partial rows from a result that fails it: record `language-result-invalid` naming the failed check.
+For each partition, check the skill listing in context for that language's `audit-<lang>-tests`. When it is absent, record each of that partition's units as `missing-skill`, which rejects the run without a finding. Otherwise, Use skill `{lang}:audit-{lang}-tests` and pass the governing node path and that partition's linked test paths, adding retired paths of that language for a changeset target. Validate each returned result against the composed concern contract in `<verdict_format>` — row names, required finding fields, allowed statuses, and agreement between findings, row statuses, and the overall value — and accept no partial rows from a result that fails it: record `language-result-invalid` naming the failed check.
 
-From a validated result, record one language unit per linked test path of that partition, then each finding: a `REJECT` finding as `blocking`, a `WARNING` as `debt`, and no `INFO` observation. A Gate 1 or Gate 2 finding records on the unit whose test path its `file` names, or on the partition's first language unit when its `file` names a shared artifact. A `NOT_APPLICABLE` result records each reported subject as a retired unit carrying the result's explanation. Language concerns reach the run only through the installed skill; never read a language plugin's `SKILL.md` from the checkout in its place.
+From a validated result, record one language unit per linked test path of that partition, then each finding: a `REJECT` finding as `blocking`, a `WARNING` as `debt`, and no `INFO` observation. A Gate 1 or Gate 2 finding records on the unit whose test path its `file` names, or on the partition's first language unit when its `file` names a shared artifact. A `NOT_APPLICABLE` result marks each reported subject a retired path, recorded with the other retired units after every partition and carrying the result's explanation. Language concerns reach the run only through the installed skill; never read a language plugin's `SKILL.md` from the checkout in its place.
 
 </step>
 
@@ -217,7 +217,7 @@ Derive `approved` only when every unit is `audited` or `not-applicable` and no f
 
 <persistence_contract>
 
-Units record in this order: the root, then for each assertion its assertion unit followed by its language units, with retired units after the assertion units of their governing node. `<anchor>` is `<spec-path>` for a node target and `<base>..<head>` for a changeset target. Every unit carries `auditClass: implementation`, `auditKind: tests`, `coverageRequirement: required`, and `parentUnitId` equal to its parent's `unitId` on every unit except the root, which omits it.
+Units record in this order: the root, then every assertion unit in Step 6's judging order, then the language units of each partition in Step 7's partition order, then the retired units. `<anchor>` is `<spec-path>` for a node target and `<base>..<head>` for a changeset target. Every unit carries `auditClass: implementation`, `auditKind: tests`, `coverageRequirement: required`, and `parentUnitId` equal to its parent's `unitId` on every unit except the root, which omits it.
 
 | Unit      | `unitId`                                               | Parent    | `subject`     | `priorContext.concernPartition` | `coverageStatus`                          | `skillName`, `skillOwningPluginName` of `expectedProducer`                                                                       |
 | --------- | ------------------------------------------------------ | --------- | ------------- | ------------------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
@@ -366,7 +366,7 @@ How to avoid: After coupling, check for replacement doubles; an import plus a mo
 
 **Failure 3: Re-ran the project's coverage command inside the audit**
 
-Claude ran the project's coverage command three times to measure a delta. Those runs added no audit evidence and repeated work the Author's agent session had already passed.
+Claude ran the project's coverage command three times to measure a delta. A measured delta judges no coupling, falsifiability, or alignment, so those runs added no audit evidence.
 
 How to avoid: Trace coverage by reading and name the path from the code. The skill grants no command that runs project verification.
 
@@ -404,7 +404,7 @@ How to avoid: Read the checkout's declared surfaces before reporting a symbol as
 
 A test-evidence audit loaded context through `/contextualize`, whose `/sync-base` rebased the branch and resolved two conflicts mid-audit, so a concurrent implementation audit found its sealed head superseded.
 
-How to avoid: Load context read-only in Step 3 and invoke neither `/contextualize` nor `/sync-base`; the audited head stays the dispatched head.
+How to avoid: Load context read-only in Step 3 and invoke neither `/contextualize` nor `/sync-base`; the audited head stays the head the run started on.
 
 </failure_modes>
 
