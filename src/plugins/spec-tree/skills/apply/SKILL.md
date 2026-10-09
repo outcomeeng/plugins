@@ -136,7 +136,7 @@ A complete `BLOCKED` diagnostic from either auditor blocks Step 8a until the nam
 
 <skill_map>
 
-Step 0 and Steps 1–2 are language-independent. Steps 3–8 use the detected language. Steps 9 and 10 are language-independent; Step 0 runs only when the work is described as a plan or proposal rather than a specific node or queue, Step 9 runs only for a cross-node change, and Step 10 runs unless the work is explicitly scoped to a proposal, analysis, review, or local-only change.
+Step 0 and Steps 1–2 are language-independent. Steps 3–8 use the detected language. Steps 9 and 10 are language-independent. Marked steps run only under the condition their footnote points to.
 
 | Step | Purpose                  | TypeScript                                                                                                                          | Python                                          | Rust                                        | Go                                      |
 | ---- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- | ------------------------------------------- | --------------------------------------- |
@@ -154,11 +154,11 @@ Step 0 and Steps 1–2 are language-independent. Steps 3–8 use the detected la
 | 9    | Whole-changeset review † | `{{! subagent_name('spec-tree', 'changes-reviewer') !}}` agent                                                                      | same                                            | same                                        | same                                    |
 | 10   | Merge ‡                  | {!% require_skill 'spec-tree:merge' %!}                                                                                             | same                                            | same                                        | same                                    |
 
-§ Step 0 runs only when the work is described as a plan or proposal rather than a specific node or queue; it selects the observable slice whose node set becomes the work queue (see `<invocation_modes>`).
-† Step 9 runs only for a cross-node change (see `<scope_detection>`).
-‡ Step 10 runs for any change destined for the default branch — skip only when the user explicitly scoped the work to a proposal, analysis, review, or local-only change (see the step).
+§ Condition in `<invocation_modes>`.
+† Condition in `<scope_detection>`.
+‡ Condition in Step 10.
 
-Run every step whose run condition holds — the conditions above and the condition each step states — through the exact skill or agent surface its language cell names; a cell that names no surface, such as Python's Step 7a, has nothing to invoke. Never substitute a named surface, skip a step whose run condition holds, or reorder the steps.
+Run every step whose run condition holds through the exact skill or agent surface its language cell names; a cell that names no surface, such as Python's Step 7a, has nothing to invoke. Never substitute a named surface, skip a step whose run condition holds, or reorder the steps.
 
 </skill_map>
 
@@ -166,7 +166,7 @@ Run every step whose run condition holds — the conditions above and the condit
 
 <step number="0" name="Select the slice" frequency="only for a plan or proposal">
 
-Use skill `spec-tree:slice` when the work is described as a plan or proposal rather than a specific node or queue, per `<invocation_modes>`; its node set becomes the work queue. Skip this step for a specific node or an `spx/EXCLUDE` list.
+Under the condition `<invocation_modes>` states, use skill `spec-tree:slice`; its node set becomes the work queue.
 
 </step>
 
@@ -286,7 +286,7 @@ Skip this step only when the diff changes no test or eval evidence surface named
 
 <step number="9" name="Whole-changeset review" gate="true" condition="the change is cross-node">
 
-Skip this step only when `<scope_detection>` classified the change node-local. For a cross-node change, this step is REQUIRED before the flow may be declared complete.
+Run this step under the condition `<scope_detection>` states.
 
 Before invoking the review, confirm every applicable Step 8a evidence-auditor run renders `terminalStatus: approved`, then apply `<verification_checkpoint>`. The reviewer must see the same committed diff whose touched evidence artifacts passed their artifact-type evidence audits.
 
