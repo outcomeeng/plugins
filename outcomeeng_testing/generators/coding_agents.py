@@ -8,7 +8,11 @@ from types import ModuleType
 
 from hypothesis import strategies as st
 
-from outcomeeng_testing.generators.agent_mail import agent_names, store_message_ids
+from outcomeeng_testing.generators.agent_mail import (
+    agent_names,
+    position_labels,
+    store_message_ids,
+)
 
 
 @dataclass(frozen=True)
@@ -67,9 +71,36 @@ def scoped_delegation_authority(
     return {**authority, module.WRITE_SCOPE_FIELD: [f"delegation-{ordinal}/answer.md"]}
 
 
-def doorbell_lines() -> st.SearchStrategy[tuple[str, int]]:
-    """Sender names and store ids over the doorbell's open domain."""
-    return st.tuples(agent_names(), store_message_ids())
+def unrenderable_labels() -> tuple[str, ...]:
+    """The finite set of labels a doorbell cannot carry: the empty label, a label
+    holding a line break, and a label holding one of the four bracket and angle
+    delimiters. The set follows the governing spec's statement of when a label
+    does not render."""
+    return (
+        "",
+        *(f"Front{line_break}Desk" for line_break in ("\n", "\r", "\r\n")),
+        *(f"Front{delimiter}Desk" for delimiter in ("[", "]", "<", ">")),
+    )
+
+
+def doorbell_labels() -> st.SearchStrategy[str | None]:
+    """Sender labels over the doorbell's open domain: absent, position-shaped,
+    free text without line separators, and every unrenderable label."""
+    free_text = st.text(
+        alphabet=st.characters(blacklist_categories=("Cs", "Cc", "Zl", "Zp")),
+        max_size=60,
+    )
+    return st.one_of(
+        st.none(),
+        position_labels(),
+        free_text,
+        st.sampled_from(unrenderable_labels()),
+    )
+
+
+def doorbell_lines() -> st.SearchStrategy[tuple[str, int, str | None]]:
+    """Sender names, store ids, and sender labels over the doorbell's open domain."""
+    return st.tuples(agent_names(), store_message_ids(), doorbell_labels())
 
 
 # The synthetic mutation-target status a proposal reports, and a status that
