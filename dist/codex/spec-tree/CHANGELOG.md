@@ -15,6 +15,7 @@ An entry is written by the changeset that ships the change. A later changeset ad
 ### Added
 
 - **`/audit-assertions` gives the verdict on a node spec's `[audit]` assertions.** Given one node spec, it judges each `[audit:{rule-slug}]` and pathless `[audit]` assertion against the subject that assertion names — the paths it names, the files defining an identifier it names, or else the node's spec and decision records — and judges no assertion carrying another tag. It records the judgment through `spx verification run` as one file-scoped run on the spec, with a root unit and one unit per `[audit]` assertion keyed by its rule slug, or by its ordinal among the spec's `[audit]` assertions when the tag carries no slug, and returns the run token with the rendered projection, whose terminal status is the verdict. It judges how no assertion is declared; that stays with `/audit-specs`. It takes a JSON request carrying the spec path and the run-driver identity, the shape `/audit-skill` takes.
+- **The `assertion-auditor` subagent runs `/audit-assertions` as an isolated Verifier.** Launched with only a node spec path, it passes that path unchanged and its own fixed run-driver identity to `/audit-assertions`, starts without the caller's authoring history, and returns the run token with the rendered projection unchanged, or the skill's complete blocked diagnostic. The projection's terminal status is the verdict on the spec's `[audit]` assertions.
 
 ## 0.104.0
 
