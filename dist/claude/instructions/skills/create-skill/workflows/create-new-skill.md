@@ -70,7 +70,7 @@ Instantiate the selected template with the resolved requirements. Apply `/skill-
 
 <step name="exercise">
 
-Build the bundle with the target repository's canonical skill build — or, where the harness loads authored source unrendered, use the authored bundle directly. Exercise it in a context that loads the built skill rather than the files this session edited. Invoke it against representative input. Confirm that it selects the intended workflow, loads only the required references, produces the objective's output shape, and satisfies each success criterion. Fix each observed failure before validation.
+Build the bundle with the target repository's canonical skill build — or, where the harness loads authored source unrendered, use the authored bundle directly. Exercise it in the execution context that `${CLAUDE_SKILL_DIR}/references/test-patterns.md` `<fresh_context_testing>` obtains, which loads the built bundle rather than the files this session edited. Invoke it against representative input. Confirm that it selects the intended workflow, loads only the required references, produces the objective's output shape, and satisfies each success criterion. Fix each observed failure before validation.
 
 </step>
 

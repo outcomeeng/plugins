@@ -41,7 +41,7 @@ For each finding row, repair every location it names and every other violation o
 
 <step name="exercise">
 
-Build the bundle with the target repository's canonical skill build — or, where the harness loads authored source unrendered, use the authored bundle directly. Exercise it in a context that loads the built skill rather than the files this session edited. Invoke it against representative input for every route, output, or failure behavior the repair touched. Confirm each selects its intended workflow, loads only its required references, and produces its declared output. Fix each observed failure before validation.
+Build the bundle with the target repository's canonical skill build — or, where the harness loads authored source unrendered, use the authored bundle directly. Exercise it in the execution context that `${SKILL_DIR}/references/test-patterns.md` `<fresh_context_testing>` obtains, which loads the built bundle rather than the files this session edited. Invoke it against representative input for every route, output, or failure behavior the repair touched. Confirm each selects its intended workflow, loads only its required references, and produces its declared output. Fix each observed failure before validation.
 
 </step>
 
