@@ -41,7 +41,7 @@ PDRs state atemporal product truth without historical context. No references to 
 
 **THE SEALED RUN IS THE VERDICT.**
 
-The run's terminal status is `approved` or `rejected`. A property this audit cannot evaluate rejects the run through a blocking finding naming the missing evidence; it never becomes an approval through an unjudged unit.
+The run's terminal status is `approved` or `rejected`. A property that owns a missing-evidence rule — `evidence-unavailable` for property quality, `template-missing` and `test-standards-unavailable` for tag validity — and cannot be evaluated rejects the run through that blocking finding, naming the missing evidence; it never becomes an approval through an unjudged unit. Content classification depends on the product document's declared audience, and Step 4 records it `not-applicable` when that document declares neither an audience nor an interaction surface.
 
 - NEVER edit the PDR or other product content, and NEVER commit, stash, create a branch, or move the checkout. The audit's own SPX verification-run journal is the only state it writes.
 - ALWAYS make every judgment of the PDR from the content `spx verification run input` replays from the run, never from a separate read of the live file. Step 9 compares the live file with the retained input before the run finishes.
@@ -111,7 +111,7 @@ Steps 4 through 8 each record their unit, then its findings, as soon as that uni
 
 **Step 4: Content classification**
 
-Name the declared audience and the interaction surfaces through which that audience operates the product, from the product document. "Observable" is judged against that audience: a statement is product behavior when the declared audience observes or operates it. For a product whose audience operates a command-line, filesystem, version-control, or other infrastructure surface, the CLI commands, on-disk layout, and version-control state that audience runs and inspects are observable product behavior — not architecture. The architecture line falls at what the audience never operates: the internal algorithm by which a tool reaches an observable result, the in-memory data structures it holds, the schema it persists, and the libraries it depends on.
+Name the declared audience and the interaction surfaces through which that audience operates the product, from the product document. When the product document declares neither an audience nor an interaction surface, no audience-dependent property applies to the PDR: record the `content-classification` unit with `coverageStatus: not-applicable`, record no `architecture-content` finding, and continue with Step 5. Otherwise, "observable" is judged against that audience: a statement is product behavior when the declared audience observes or operates it. For a product whose audience operates a command-line, filesystem, version-control, or other infrastructure surface, the CLI commands, on-disk layout, and version-control state that audience runs and inspects are observable product behavior — not architecture. The architecture line falls at what the audience never operates: the internal algorithm by which a tool reaches an observable result, the in-memory data structures it holds, the schema it persists, and the libraries it depends on.
 
 Then classify every statement in the PDR:
 
@@ -145,7 +145,7 @@ For each product property:
 3. Is it stable — does its guarantee hold across all applicable contexts, including failure and boundary conditions, as the evidence model requires?
    - "Theme selection persists across sessions" → assess persistence across session boundaries and failure conditions, without silently limiting the guarantee to successful sessions.
 
-**A non-observable or unfalsifiable property → finding `non-observable-property`. An unstable property → finding `unstable-property`.** Name the property and the context that breaks the guarantee. A criterion the PDR gives no evidence to evaluate → finding `evidence-unavailable` naming the missing evidence.
+**A non-observable or unfalsifiable property → finding `non-observable-property`. An unstable property → finding `unstable-property`.** Name the property and the context that breaks the guarantee. A criterion the PDR gives no evidence to evaluate → finding `evidence-unavailable` naming the missing evidence. When Step 4 recorded content classification `not-applicable`, question 1 depends on an audience the product document does not declare and does not apply; judge questions 2 and 3, record no finding for question 1, and record the unit `audited`.
 
 Untagged rules directly under `## Verification` have the canonical authoring form and are judged here. For every such rule, identify its subject, the observable condition it constrains, and a concrete observation that would violate it. **A vague, ambiguous, or unfalsifiable draft rule → finding `invalid-draft-rule`**, quoting the rule with the missing or ambiguous criterion. For example, `ALWAYS: improve quality` fails because it names no observable condition. Select no evidence type or tag during these checks; an absent draft tag alone causes no finding.
 
@@ -209,7 +209,7 @@ Compare the PDR against:
 
 Read `spx verification run status` with the same type, scope, and token. Require exactly one root unit, one unit per evidence-model property, and an accepted unit for every finding; record any missing unit or finding and read the status again. Re-read the live PDR and compare it with the retained input; a changed or missing file returns `BLOCKED` with the run preserved.
 
-Derive `approved` only when every unit is `audited` and no finding exists; derive `rejected` when any finding exists. Then run:
+Derive `approved` only when every unit is `audited`, or `not-applicable` where Step 4 recorded it, and no finding exists; derive `rejected` when any finding exists. Then run:
 
 ```bash
 spx verification run finish --verification-type audit --scope-type file --scope '<pdr-path>' --run '<run-token>' --terminal-status '<approved-or-rejected>'
@@ -221,7 +221,7 @@ Then run `spx verification run render` with the same type, scope, and token, and
 
 <persistence_contract>
 
-Units record in this order: the root, then `content-classification`, `property-quality`, `tag-validity`, `atemporal-voice`, and `consistency`. Every unit carries `subject: <pdr-path>`, `coverageRequirement: required`, `coverageStatus: audited`, and `parentUnitId` equal to the root's `unitId` on every unit except the root, which omits it.
+Units record in this order: the root, then `content-classification`, `property-quality`, `tag-validity`, `atemporal-voice`, and `consistency`. Every unit carries `subject: <pdr-path>`, `coverageRequirement: required`, `coverageStatus: audited` — except `content-classification`, which carries `not-applicable` when Step 4 records it so — and `parentUnitId` equal to the root's `unitId` on every unit except the root, which omits it.
 
 | Unit              | `unitId`                    | `auditClass` | `auditKind` | `priorContext.concernPartition` |
 | ----------------- | --------------------------- | ------------ | ----------- | ------------------------------- |
@@ -240,7 +240,7 @@ These objects are the sanctioned SPX audit payload schema for this auditor; use 
   "auditKind": "pdr",
   "subject": "<pdr-path>",
   "coverageRequirement": "required",
-  "coverageStatus": "audited",
+  "coverageStatus": "<audited-or-not-applicable>",
   "priorContext": {
     "changedFilePartition": "<pdr-path>",
     "concernPartition": "<pdr-or-property-name>"
@@ -372,9 +372,9 @@ How to avoid: Step 4 reads the product document's declared audience first and ju
 The verdict is sound when:
 
 - Every PDR rule was judged with none skipped — content classification, property quality (observability, falsifiability, and stability), per-rule tag validity and assertion-type fit, atemporal voice, and consistency (coverage-complete).
-- The sealed run carries one root unit and one unit per evidence-model property, and its terminal status is `approved` only with no finding and every unit `audited`.
+- The sealed run carries one root unit and one unit per evidence-model property, and its terminal status is `approved` only with no finding and every unit `audited`, except a `content-classification` unit recorded `not-applicable` for a product document that declares neither an audience nor an interaction surface.
 - Each finding is falsifiable: it names the section, the violated rule, and the evidence — the architecture content wrongly placed, the non-observable, unfalsifiable, or unstable property, the absent verification section or rules, the unverifiable rule or mismatched tag, the temporal phrase, or the contradicted product spec or ancestor PDR.
-- An absent or empty Verification section and an unevaluable property each record a finding, so neither can seal `approved` through an empty iteration.
+- An absent or empty Verification section records a finding, and so does a property that owns a missing-evidence rule when that evidence is missing, so neither can seal `approved` through an empty iteration or an unjudged unit.
 - The same PDR, standards, and run-driver identity yield the same units, finding keys, and terminal status.
 
 </success_criteria>
