@@ -12,10 +12,15 @@ from types import ModuleType
 from typing import Callable, cast
 
 from hypothesis import given, seed, settings
+from hypothesis import strategies as st
 
+from outcomeeng_testing.generators.agent_mail import agent_names, store_message_ids
 from outcomeeng_testing.generators.coding_agents import (
     doorbell_lines,
     message_content,
+    renderable_label_texts,
+    unrenderable_label_texts,
+    unrenderable_labels,
     unsupported_capability_operation,
 )
 from outcomeeng_testing.generators.prowl_environment import (
@@ -54,6 +59,8 @@ HANDBACK_PROPERTY_REPLAY_PATH = (
 )
 DOORBELL_PROPERTY_SEED = 2026091809
 DOORBELL_PROPERTY_EXAMPLES = 60
+DOORBELL_LABEL_SEED = 2026100901
+DOORBELL_LABEL_EXAMPLES = 120
 DOORBELL_PROPERTY_REPLAY_PATH = (
     "spx/43-coding-agents.enabler/21-agent-communication.enabler/tests/"
     "test_doorbell.property.l1.py"
@@ -449,5 +456,38 @@ def run_doorbell_roundtrip_property(
     run_replayable_property(
         generated_doorbell_property,
         seed_value=DOORBELL_PROPERTY_SEED,
+        replay_path=DOORBELL_PROPERTY_REPLAY_PATH,
+    )
+
+
+def run_doorbell_label_property(
+    assert_label: Callable[[ModuleType, str, int, str, bool], None],
+) -> None:
+    """Drive generated senders, ids, and labels built to be renderable or
+    unrenderable by construction; ``renderable`` states which construction made
+    the label while the linked test owns the law."""
+    message = load_agent_message()
+    constructed = st.one_of(
+        st.tuples(renderable_label_texts(), st.just(True)),
+        st.tuples(unrenderable_label_texts(), st.just(False)),
+        st.tuples(st.sampled_from(unrenderable_labels()), st.just(False)),
+    )
+
+    @seed(DOORBELL_LABEL_SEED)
+    @settings(
+        max_examples=DOORBELL_LABEL_EXAMPLES,
+        deadline=None,
+        print_blob=True,
+    )
+    @given(sender=agent_names(), message_id=store_message_ids(), label=constructed)
+    def generated_label_property(
+        sender: str, message_id: int, label: tuple[str, bool]
+    ) -> None:
+        text, renderable = label
+        assert_label(message, sender, message_id, text, renderable)
+
+    run_replayable_property(
+        generated_label_property,
+        seed_value=DOORBELL_LABEL_SEED,
         replay_path=DOORBELL_PROPERTY_REPLAY_PATH,
     )

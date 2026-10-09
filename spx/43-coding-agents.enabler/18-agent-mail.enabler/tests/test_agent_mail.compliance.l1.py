@@ -2,6 +2,7 @@ import json
 from types import ModuleType
 from typing import cast
 
+from outcomeeng_testing.generators.agent_mail import operation_requests
 from outcomeeng_testing.harnesses.agent_mail import (
     common_dir_seeded_absent_store_runner,
     common_dir_seeded_runner,
@@ -309,3 +310,27 @@ def test_a_store_label_never_selects_the_sender_or_recipient_of_a_record() -> No
         assert len(send_runner.calls) == 2
 
     run_label_targeting_cases(assert_case)
+
+
+def test_an_empty_string_is_rejected_in_every_text_field_but_the_display_name() -> None:
+    module = load_agent_mail()
+    rejected_fields: set[str] = set()
+    for request in operation_requests(module):
+        arguments = cast(dict[str, object], request[module.ARGUMENTS_FIELD])
+        for field_name in module.TEXT_ARGUMENT_FIELDS & set(arguments):
+            violating = {
+                **request,
+                module.ARGUMENTS_FIELD: {**arguments, field_name: ""},
+            }
+            if field_name == module.DISPLAY_NAME_FIELD:
+                module.command_for(violating, "/registered/project")
+                continue
+            rejected_fields.add(field_name)
+            try:
+                module.command_for(violating, "/registered/project")
+            except module.AgentMailError as error:
+                assert error.status is module.ExecutionStatus.INVALID_SCHEMA
+            else:
+                raise AssertionError(f"{field_name} accepted an empty string")
+
+    assert rejected_fields == module.TEXT_ARGUMENT_FIELDS - {module.DISPLAY_NAME_FIELD}

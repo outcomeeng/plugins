@@ -3,6 +3,7 @@ from pathlib import Path
 from types import ModuleType
 from typing import cast
 
+from outcomeeng_testing.generators.agent_mail import operation_requests
 from outcomeeng_testing.harnesses.agent_mail import (
     AbsentExecutableRunner,
     CapturedInboxResponse,
@@ -467,3 +468,51 @@ def test_store_responses_map_to_results_without_rewriting() -> None:
         assert no_store[module.STATUS_FIELD] == module.ExecutionStatus.STORE_UNAVAILABLE
 
     run_store_response_cases(assert_case)
+
+
+def test_an_empty_display_name_reaches_the_store_as_an_empty_value() -> None:
+    module = load_agent_mail()
+    project_key = "/registered/project"
+    registrations = [
+        cast(dict[str, object], request[module.ARGUMENTS_FIELD])
+        for request in operation_requests(module)
+        if module.Operation(request[module.OPERATION_FIELD])
+        is module.Operation.REGISTER
+    ]
+    empty = [
+        arguments
+        for arguments in registrations
+        if arguments.get(module.DISPLAY_NAME_FIELD) == ""
+    ]
+    absent = [
+        arguments
+        for arguments in registrations
+        if module.DISPLAY_NAME_FIELD not in arguments
+    ]
+    option = module.PUBLIC_AM_ARGUMENT_OPTIONS[module.DISPLAY_NAME_FIELD]
+
+    assert empty
+    assert absent
+    for arguments in empty:
+        request = module.operation_request(
+            module.Operation.REGISTER,
+            **{
+                name: arguments[field]
+                for name, field in module.ARGUMENT_NAMES.items()
+                if field in arguments
+            },
+        )
+        argv = module.command_for(request, project_key)
+        assert module.attached_option(option, "") in argv
+        assert sum(1 for word in argv if word.startswith(option)) == 1
+    for arguments in absent:
+        request = module.operation_request(
+            module.Operation.REGISTER,
+            **{
+                name: arguments[field]
+                for name, field in module.ARGUMENT_NAMES.items()
+                if field in arguments
+            },
+        )
+        argv = module.command_for(request, project_key)
+        assert not any(word.startswith(option) for word in argv)

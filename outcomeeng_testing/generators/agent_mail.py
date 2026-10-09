@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from itertools import combinations
 from types import ModuleType
+from typing import Literal
 
 from hypothesis import strategies as st
 
@@ -46,18 +47,39 @@ def message_texts() -> st.SearchStrategy[str]:
     return st.text(min_size=1, max_size=200).filter(lambda text: text.strip() == text)
 
 
-def position_labels() -> st.SearchStrategy[str]:
-    """Human-readable labels the store records per agent: two words, the way a
-    position is named, so a label differs in shape from a stable name. The
-    store's recipient separator is excluded so a label stays one recipient."""
-    word = st.text(
+# Unicode general categories whose members print: letters, marks, numbers,
+# punctuation, and symbols. Control, format, surrogate, private-use, unassigned,
+# and every separator category are outside it, so a label drawn from these
+# categories plus the ASCII space is printable by construction.
+UnicodeCategory = Literal[
+    "L", "M", "N", "P", "S", "Zs", "Zl", "Zp", "Cc", "Cf", "Co", "Cn"
+]
+PRINTABLE_CATEGORIES: tuple[UnicodeCategory, ...] = ("L", "M", "N", "P", "S")
+# The four delimiters a doorbell form is parsed by, and the store's recipient
+# separator: none of them occurs in a label meant to render as one recipient.
+DOORBELL_DELIMITER_CHARACTERS = "[]<>"
+RECIPIENT_SEPARATOR = ","
+
+
+def printable_label_words() -> st.SearchStrategy[str]:
+    """Non-empty words of printable characters free of the doorbell delimiters
+    and the recipient separator."""
+    return st.text(
         alphabet=st.characters(
-            blacklist_categories=("Cc", "Cs", "Zs", "Zl", "Zp"),
-            blacklist_characters=",",
+            categories=PRINTABLE_CATEGORIES,
+            exclude_characters=DOORBELL_DELIMITER_CHARACTERS + RECIPIENT_SEPARATOR,
         ),
         min_size=1,
         max_size=40,
     )
+
+
+def position_labels() -> st.SearchStrategy[str]:
+    """Human-readable labels the store records per agent: two words, the way a
+    position is named, so a label differs in shape from a stable name. Every
+    character prints and none is a doorbell delimiter or the store's recipient
+    separator, so a label renders and stays one recipient."""
+    word = printable_label_words()
     return st.builds(lambda first, second: f"{first} {second}", word, word)
 
 
@@ -170,6 +192,19 @@ def operation_requests(module: ModuleType) -> list[dict[str, object]]:
                         for field_name in fields
                     }
                     requests.append(module.operation_request(operation, **arguments))
+                    if module.DISPLAY_NAME_FIELD in fields:
+                        # The governing spec admits an empty display name on a
+                        # registration while every other text field stays
+                        # non-empty, so the empty value is its own request.
+                        requests.append(
+                            module.operation_request(
+                                operation,
+                                **{
+                                    **arguments,
+                                    argument_names[module.DISPLAY_NAME_FIELD]: "",
+                                },
+                            )
+                        )
     return requests
 
 
