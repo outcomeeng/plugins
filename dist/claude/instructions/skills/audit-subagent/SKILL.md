@@ -13,6 +13,8 @@ Use skill `instructions:agent-prompt-standards`.
 
 Use skill `instructions:subagent-standards`.
 
+Use skill `instructions:skill-standards`.
+
 <objective>
 A sealed changeset-scoped `spx verification run` over the one subagent definition a changeset changes, judged against the `/subagent-standards` and `/agent-prompt-standards` rule catalogs — terminal status `approved` with no finding, or `rejected` with each finding keyed `<unit>:<rule-id>` and naming every location and the evidence — or a `BLOCKED` diagnostic naming the failed prerequisite or command.
 </objective>
