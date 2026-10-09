@@ -14,6 +14,7 @@ The spec-tree plugin ships one subagent definition per skill an Executor session
 ## Assertions
 
 - ALWAYS: the seven definitions ship for Claude Code only, and `/execute-change` on Codex returns an explicit unavailable result
+- ALWAYS: `/execute-change` launches `assertion-auditor` as the Verifier for an evidence obligation on a node's `[audit]` assertions, and reads its verdict from the sealed run whose token the launch returns
 
 ### Compliance
 
