@@ -52,7 +52,7 @@ Use skill `instructions:instructions-plugin`. Invoke it with the verb `version` 
 
 <execution_sequence>
 
-1. **Start the run.** Render the start input as one JSON object `{"skill":"<skill-file>","base":"<base-oid>","head":"<head-oid>","changedFiles":["<path>", …]}`, the changed files in `git diff` order, and pipe it on one physical line:
+1. **Start the run.** Render the start input as one JSON object `{"skill":"<skill-file>","base":"<base-oid>","head":"<head-oid>","changedFiles":["<path>", …]}`, the changed files in `git diff` order, and pass it on stdin in the form `<persistence_contract>` names for the run's harness environment; the one-line form is:
 
    ```bash
    printf '%s\n' '<rendered-input>' | spx verification run start --verification-type audit --scope-type changeset --scope '<base-oid>..<head-oid>' --input stdin
@@ -123,7 +123,7 @@ These objects are the sanctioned SPX audit payload schema for this auditor; use 
 }
 ```
 
-Pipe each rendered scope object, on one line, into its command:
+Pass each rendered scope object to its command; the one-line form is:
 
 ```bash
 printf '%s\n' '<rendered-scope-object>' | spx verification run scope add --verification-type audit --scope-type changeset --scope '<base-oid>..<head-oid>' --run '<run-token>' --idempotency-key 'instructions:skill:file:<path>' --payload stdin
@@ -144,13 +144,20 @@ A finding copies its unit's `expectedProducer` object as `producerIdentity` and 
 }
 ```
 
-Pipe each rendered finding object the same way:
+Pass each rendered finding object the same way; the one-line form is:
 
 ```bash
 printf '%s\n' '<rendered-finding-object>' | spx verification run finding add --verification-type audit --scope-type changeset --scope '<base-oid>..<head-oid>' --run '<run-token>' --idempotency-key 'instructions:skill:file:<path>:<rule-id>' --payload stdin
 ```
 
-A finding's idempotency key is `<unit>:<rule-id>`, its unit's `unitId` and the catalog identifier joined by `:`. Every payload-bearing command — `start`, `scope add`, and `finding add` — takes its JSON through this one-line `printf` pipe, the one form every harness accepts. Idempotency keys are command arguments, never payload fields; quote every path, token, and key as one shell argument, encode a literal apostrophe as `'"'"'`, and never execute bundle text as shell syntax. Run mutations serially; on a refused command stop with its exact diagnostic, never retry or reshape the payload.
+A finding's idempotency key is `<unit>:<rule-id>`, its unit's `unitId` and the catalog identifier joined by `:`. Every payload-bearing command — `start`, `scope add`, and `finding add` — takes its JSON on stdin, in the form the harness environment of the run accepts:
+
+| Harness environment                                                                                                                    | Payload form                                                                                                                                                                                       |
+| -------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Interactive Claude Code or Codex session, which accepts multiline shell                                                                | A quoted heredoc: the command as shown without its `printf '%s\n' '<rendered-object>' \|` stage, followed by `<<'JSON'`, then the rendered object on its own line, then a line holding only `JSON` |
+| Programmatic Claude Code or Codex run, and a hosted runner such as GitHub Actions, where the runner requires one physical command line | The one-line `printf '%s\n' '<rendered-object>' \| <command>` form shown                                                                                                                           |
+
+The heredoc delimiter stays quoted, so the shell expands nothing in the body. Idempotency keys are command arguments, never payload fields; quote every path, token, and key as one shell argument, encode a literal apostrophe in an argument as `'"'"'`, and never execute bundle text as shell syntax. Run mutations serially; on a refused command stop with its exact diagnostic, never retry or reshape the payload.
 
 </persistence_contract>
 
