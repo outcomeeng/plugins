@@ -1,6 +1,6 @@
 # Shipped Scripting Lifecycle
 
-Scripting functionality shipped in a plugin — skill scripts and hooks — is a standalone Python script that runs on the two most recent Python feature releases. The older of the two is the floor, and the linter and type-checker that govern shipped scripts are pinned to that floor so a script never uses a feature the floor lacks. Shipped scripts assume a managed interpreter (Homebrew or equivalent), never the system macOS Python, which trails the language by years. A generic shipped script beyond fifty lines carries debt: once it proves its value its logic moves into the agent-neutral SPX CLI, and a script that never proves its value is removed rather than extracted. Agent-specific adapter logic remains plugin-local only when moving it into SPX would couple SPX to one coding agent and the adapter is deterministic, bounded, standard-library-only, and independently tested. A value the spec tree declares and a source complies with is verified by audit, because every oracle for that agreement is a second declaration. This complements the packaging and execution rules in [`spx/13-plugin-and-runtime-conventions.adr.md`](spx/13-plugin-and-runtime-conventions.adr.md).
+Scripting functionality shipped in a plugin — skill scripts and hooks — is a standalone Python script that runs on the two most recent Python feature releases. The older of the two is the floor, and the linter and type-checker that govern shipped scripts are pinned to that floor so a script never uses a feature the floor lacks. Shipped scripts assume a managed interpreter (Homebrew or equivalent), never the system macOS Python, which trails the language by years. Outside the consumption-evidence exception below, a generic shipped script beyond fifty lines carries debt: once it proves its value its logic moves into the agent-neutral SPX CLI, and a script that never proves its value is removed rather than extracted. Agent-specific adapter logic remains plugin-local only when moving it into SPX would couple SPX to one coding agent and the adapter is deterministic, bounded, standard-library-only, and independently tested. A value the spec tree declares and a source complies with is verified by audit, because every oracle for that agreement is a second declaration. This complements the packaging and execution rules in [`spx/13-plugin-and-runtime-conventions.adr.md`](spx/13-plugin-and-runtime-conventions.adr.md).
 
 ## Rationale
 
@@ -10,10 +10,17 @@ Testability does not decide where shipped logic lives, because a standalone scri
 
 A value the spec tree declares and a source complies with admits no test of their agreement. Any oracle for it is a third statement of the value — after the spec tree's declaration and the source's compliance — and the second of those three to declare rather than comply: read from the source under test it compares that source to itself and holds for whatever the source contains, and transcribed into a test or a harness it creates a declaration in an artifact with no authority to make one. Behavior that depends on such a value is tested by importing the value from its complying source and exercising what it changes; the agreement between the declaration and that source is audit evidence. A value with no behavior to exercise — a process exit code, a protocol token — therefore reaches only audit.
 
+## Consumption evidence boundary
+
+The consumption-control operation may package a deterministic Claude Code transcript collector and accounting engine as plugin-local standard-library Python. This exception covers bounded discovery, incremental parsing, request reconciliation, usage accounting, and the finite workers consuming that evidence. It creates no dependency on an unpublished SPX usage-evidence interface. The generic extraction rule continues to govern other shipped scripting.
+
+The collector reads original transcripts without changing them, exposes incomplete or incompatible evidence, preserves stable request identities and all four usage fields, and has independently verified accounting. Installed workers use stable operator-owned assets and persistent state outside a source checkout, execute once within explicit bounds, and exit. A scheduler owns repeated invocation; no agent session owns a daemon or watcher.
+
 ## Invariants
 
 - A plugin-local agent adapter performs a bounded operation and exits; it owns no daemon, background watcher, or open-ended polling loop.
 - An agent adapter reads only the coding agent's public interface and produces a versioned, machine-readable result.
+- Consumption evidence collection remains bounded, standard-library-only, read-only over original transcripts, and independently verifiable; the exception authorizes no other transcript scanner or open-ended worker.
 
 ## Verification
 
@@ -21,12 +28,12 @@ A value the spec tree declares and a source complies with admits no test of thei
 
 - ALWAYS: ship plugin scripting — skill scripts and hooks — as standalone Python scripts that run on the two most recent Python feature releases, from a managed interpreter, never the system macOS Python ([audit])
 - ALWAYS: pin the linter and type-checker that govern shipped scripts to the floor of the supported window — the older of the two most recent releases — so a shipped script never uses a feature the floor lacks ([audit])
-- ALWAYS: extract a generic shipped script's logic into the SPX CLI once the script proves its value, tested there and consumed by the plugins product as a trusted third-party component, leaving the skill its instruction and no script ([audit])
+- ALWAYS: extract a generic shipped script's logic into the SPX CLI once the script proves its value, tested there and consumed by the plugins product as a trusted third-party component, leaving the skill its instruction and no script, except for the bounded consumption-evidence collector and accounting engine this decision permits ([audit])
 - ALWAYS: agent-specific adapter logic remains plugin-local only when moving it into SPX would violate agent neutrality and the adapter is deterministic, bounded, standard-library-only, and independently tested ([audit])
 - ALWAYS: shipped Python that invokes external tools accepts a dependency-injected runner implementing a Protocol at the orchestration boundary, while its default runner owns subprocess execution ([audit])
 - ALWAYS: tests supply controlled runner implementations through explicit dependency injection only under `/test` Stage 5 exception 1 (failure simulation) or exception 2 (interaction protocols) for external-tool failure and interaction evidence ([audit])
 - ALWAYS: a test that depends on a value the spec tree declares imports that value from the source complying with the declaration, and exercises the behavior the value governs ([audit])
-- NEVER: a generic shipped script beyond fifty lines stands as settled — it is debt awaiting extraction once proven, or removal when it is not ([audit])
+- NEVER: a generic shipped script beyond fifty lines stands as settled outside the bounded consumption-evidence exception — it is debt awaiting extraction once proven, or removal when it is not ([audit])
 - NEVER: retain an unproven shipped script — a script that has not proven its value is removed rather than extracted ([audit])
 - NEVER: framework mocks replace shipped-script behavior or its external-tool boundary ([audit])
 - NEVER: a plugin-local agent adapter installs dependencies, starts a background process, or implements an open-ended polling wait ([audit])

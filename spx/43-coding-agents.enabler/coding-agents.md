@@ -20,5 +20,5 @@ CAN use environment capabilities without centralizing workflow ownership or reco
 - ALWAYS: the operating agent owns successful work, run identities, retry selection, checkpoints, results, and continuation state for its workflow ([audit])
 - NEVER: one coding-agent workflow takes ownership of another workflow's internal state, successful results, or continuation decisions ([audit])
 - NEVER: a coding-agent workflow edits, stages, stashes, checks out, resets, or commits in a sibling worktree; delegated mutation authority binds to exact environment and repository identities ([audit])
-- NEVER: a plugin skill scans harness transcript files or transcript directories; transcript discovery, parsing, normalization, and correlation belong to SPX ([audit])
+- NEVER: a plugin skill scans harness transcript files or transcript directories outside the bounded consumption-evidence exception in [`spx/12-shipped-scripting.adr.md`](spx/12-shipped-scripting.adr.md); other transcript discovery, parsing, normalization, and correlation belong to SPX ([audit])
 - NEVER: an agent-facing workflow constructs raw environment commands, invokes environment command help, or depends on a separate environment-control skill when a source-owned environment capability exists ([audit])
