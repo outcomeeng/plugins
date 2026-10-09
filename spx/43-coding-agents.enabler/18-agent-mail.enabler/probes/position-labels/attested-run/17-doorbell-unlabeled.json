@@ -1,0 +1,102 @@
+{
+  "step": "17-doorbell-unlabeled",
+  "startedUtc": "2026-10-09T17:43:22.929579+00:00",
+  "command": "python3 /Users/shz/Code/outcomeeng/plugins/worktrees/contributor-2/src/plugins/coding-agents/skills/message-agents/scripts/agent_message.py mail-result",
+  "cwd": "/Users/shz/.local/state/mcp-agent-mail/automatic-labels/20261009-1f309419/demo/project",
+  "request": {
+    "capabilityResult": {
+      "schemaVersion": 1,
+      "operation": "send",
+      "status": "succeeded",
+      "commandExitCode": 0,
+      "projectKey": "/Users/shz/.local/state/mcp-agent-mail/automatic-labels/20261009-1f309419/demo/project/.git",
+      "response": {
+        "id": 22,
+        "subject": "[fact] unlabeled send",
+        "body_md": "Send from a position with no label.",
+        "importance": "normal",
+        "ack_required": false,
+        "thread_id": "position-labels-probe",
+        "created_ts": "2026-10-09T17:43:22.842231Z",
+        "from": "CopperWren",
+        "sender_display_name": null,
+        "to": [
+          "SilverFinch"
+        ],
+        "to_display_names": {
+          "SilverFinch": "Probe Recipient"
+        }
+      },
+      "data": {
+        "record": {
+          "schema": 1,
+          "kind": "fact",
+          "ackRequired": false,
+          "correlation": "position-labels-probe",
+          "sender": "CopperWren",
+          "recipient": "SilverFinch",
+          "subject": "unlabeled send",
+          "body": "Send from a position with no label.",
+          "id": 22
+        }
+      }
+    },
+    "doorbellTransport": null
+  },
+  "exitCode": 0,
+  "result": {
+    "acknowledged": false,
+    "agreed": false,
+    "capability": {
+      "commandExitCode": 0,
+      "data": {
+        "record": {
+          "ackRequired": false,
+          "body": "Send from a position with no label.",
+          "correlation": "position-labels-probe",
+          "id": 22,
+          "kind": "fact",
+          "recipient": "SilverFinch",
+          "schema": 1,
+          "sender": "CopperWren",
+          "subject": "unlabeled send"
+        }
+      },
+      "operation": "send",
+      "projectKey": "/Users/shz/.local/state/mcp-agent-mail/automatic-labels/20261009-1f309419/demo/project/.git",
+      "response": {
+        "ack_required": false,
+        "body_md": "Send from a position with no label.",
+        "created_ts": "2026-10-09T17:43:22.842231Z",
+        "from": "CopperWren",
+        "id": 22,
+        "importance": "normal",
+        "sender_display_name": null,
+        "subject": "[fact] unlabeled send",
+        "thread_id": "position-labels-probe",
+        "to": [
+          "SilverFinch"
+        ],
+        "to_display_names": {
+          "SilverFinch": "Probe Recipient"
+        }
+      },
+      "schemaVersion": 1,
+      "status": "succeeded"
+    },
+    "commandExitCode": 0,
+    "correlation": "position-labels-probe",
+    "doorbell": {
+      "submitted": false,
+      "text": "[CopperWren] mail 22"
+    },
+    "id": 22,
+    "kind": "fact",
+    "ownershipEstablished": false,
+    "recipient": "SilverFinch",
+    "schemaVersion": 4,
+    "sender": "CopperWren",
+    "status": "delivered"
+  },
+  "stderr": ""
+}
