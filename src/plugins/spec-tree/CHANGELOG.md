@@ -10,11 +10,17 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.104.4
+
+### Fixed
+
+- **The 0.104.3 entry names the profile change without model identifiers.** It described commit `aabc117050212aa46ed8b46c29cbbd35c1f71713` with literal model names, which the marketplace's validation forbids in authored plugin content. The entry now describes the same change through the profiles. The released behavior is unchanged.
+
 ## 0.104.3
 
 ### Changed
 
-- **Every spec-tree subagent except `change-executor` runs on Sonnet at medium effort in Claude Code.** The Standard profile now resolves to `model: sonnet`, `effort: medium` for Claude; it resolved to Opus at medium effort before. The evidence and record auditors, `changes-reviewer`, the change-round subagents, and `instruction-block-updater` select Standard. `change-executor` keeps Sonnet at high effort. Codex configurations are unchanged.
+- **Every spec-tree subagent except `change-executor` runs on a new Claude configuration of the Standard profile.** In Claude Code, the Standard profile now resolves to the model the Executor profile uses, at medium effort. Before, it resolved to the Strong profile's model at medium effort. The evidence and record auditors, `changes-reviewer`, the change-round subagents, and `instruction-block-updater` select Standard. `change-executor` keeps the Executor profile. Codex configurations are unchanged.
 
 ## 0.104.2
 

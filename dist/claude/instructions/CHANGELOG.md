@@ -6,11 +6,17 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.21.2
+
+### Fixed
+
+- **The 0.21.1 entry names the profile change without model identifiers.** It described commit `aabc117050212aa46ed8b46c29cbbd35c1f71713` with literal model names, which the marketplace's validation forbids in authored plugin content. The entry now describes the same change through the profiles. The released behavior is unchanged.
+
 ## 0.21.1
 
 ### Changed
 
-- **`skill-auditor` and `subagent-auditor` run on Sonnet at medium effort in Claude Code.** The Standard profile they select now resolves to `model: sonnet`, `effort: medium` for Claude. They ran on Opus at medium effort before. Their Codex configuration is unchanged.
+- **`skill-auditor` and `subagent-auditor` run on a new Claude configuration of the Standard profile.** In Claude Code, the Standard profile they select now resolves to the model the Executor profile uses, at medium effort. Before, it resolved to the Strong profile's model at medium effort. Their Codex configuration is unchanged.
 
 ## 0.21.0
 

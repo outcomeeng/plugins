@@ -6,11 +6,17 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.12.7
+
+### Fixed
+
+- **The 0.12.6 entry names the profile change without model identifiers.** It described commit `aabc117050212aa46ed8b46c29cbbd35c1f71713` with literal model names, which the marketplace's validation forbids in authored plugin content. The entry now describes the same change through the profiles. The released behavior is unchanged.
+
 ## 0.12.6
 
 ### Changed
 
-- **`prose-auditor` runs on Sonnet at medium effort in Claude Code.** It selects the Standard profile instead of Strong, and Standard now resolves to `model: sonnet`, `effort: medium` for Claude. It ran on Opus at high effort before. In Codex it moves from the Strong configuration (`gpt-6-astra`, high) to the Standard one (`gpt-6.1-sol`, high).
+- **`prose-auditor` selects the Standard profile instead of Strong.** In Claude Code, Standard now resolves to the model the Executor profile uses, at medium effort; before, `prose-auditor` ran on the Strong configuration. In Codex it moves from the Strong configuration to the Standard one.
 
 ## 0.12.5
 
