@@ -127,7 +127,10 @@ def bodyless_answers() -> tuple[Path, ...]:
 def stored_body(answer: Path) -> str:
     """The issue body a replayed answer holds."""
     recorded = json.loads(answer.read_text(encoding="utf-8"))
-    return recorded["data"]["repository"]["issue"]["body"]
+    body = recorded["data"]["repository"]["issue"]["body"]
+    if not isinstance(body, str):
+        raise TypeError(f"replayed answer holds no body string: {answer}")
+    return body
 
 
 def recorded_failure() -> RecordedFailure:
