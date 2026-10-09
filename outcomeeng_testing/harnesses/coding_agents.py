@@ -12,10 +12,15 @@ from types import ModuleType
 from typing import Callable, cast
 
 from hypothesis import given, seed, settings
+from hypothesis import strategies as st
 
+from outcomeeng_testing.generators.agent_mail import agent_names, store_message_ids
 from outcomeeng_testing.generators.coding_agents import (
     doorbell_lines,
     message_content,
+    renderable_label_texts,
+    unrenderable_label_texts,
+    unrenderable_labels,
     unsupported_capability_operation,
 )
 from outcomeeng_testing.generators.prowl_environment import (
@@ -27,6 +32,7 @@ from outcomeeng_testing.harnesses.agent_mail import (
     common_dir_reply,
     failed_command_result,
     load_agent_mail,
+    store_response_payload,
     store_response_result,
     text_command_result,
 )
@@ -53,6 +59,8 @@ HANDBACK_PROPERTY_REPLAY_PATH = (
 )
 DOORBELL_PROPERTY_SEED = 2026091809
 DOORBELL_PROPERTY_EXAMPLES = 60
+DOORBELL_LABEL_SEED = 2026100901
+DOORBELL_LABEL_EXAMPLES = 120
 DOORBELL_PROPERTY_REPLAY_PATH = (
     "spx/43-coding-agents.enabler/21-agent-communication.enabler/tests/"
     "test_doorbell.property.l1.py"
@@ -292,6 +300,59 @@ def observe_mail_send(
     return _mail_send_result(message, record, runner)
 
 
+def _labeled_send_result(
+    message: ModuleType,
+    record: dict[str, object],
+    response: dict[str, object],
+) -> dict[str, object]:
+    agent_mail = load_agent_mail()
+    runner = MailRecordingRunner(
+        [
+            common_dir_reply(agent_mail),
+            text_command_result(agent_mail, json.dumps(response)),
+        ]
+    )
+    return _mail_send_result(message, record, runner)
+
+
+def observe_labeled_mail_send(
+    message: ModuleType, record: dict[str, object], label: str | None
+) -> dict[str, object]:
+    """The capability's checked send result over the captured store reply with the
+    sender's label replaced by ``label``; null is a label state the store reports.
+    The variant ranges over the label alone and names its capture,
+    ``responses/mail-send.json``."""
+    agent_mail = load_agent_mail()
+    captured = cast(
+        dict[str, object], store_response_payload(agent_mail, agent_mail.Operation.SEND)
+    )
+    return _labeled_send_result(
+        message,
+        record,
+        {**captured, agent_mail.STORE_SENDER_DISPLAY_NAME_FIELD: label},
+    )
+
+
+def observe_unlabeled_field_mail_send(
+    message: ModuleType, record: dict[str, object]
+) -> dict[str, object]:
+    """The capability's checked send result over the captured store reply with the
+    sender-label field removed: a reply that carries no label state at all."""
+    agent_mail = load_agent_mail()
+    captured = cast(
+        dict[str, object], store_response_payload(agent_mail, agent_mail.Operation.SEND)
+    )
+    return _labeled_send_result(
+        message,
+        record,
+        {
+            key: value
+            for key, value in captured.items()
+            if key != agent_mail.STORE_SENDER_DISPLAY_NAME_FIELD
+        },
+    )
+
+
 def observe_rejected_mail_send(
     message: ModuleType, record: dict[str, object]
 ) -> dict[str, object]:
@@ -376,7 +437,7 @@ def observe_doorbell_transport(
 
 
 def run_doorbell_roundtrip_property(
-    assert_roundtrip: Callable[[ModuleType, str, int], None],
+    assert_roundtrip: Callable[[ModuleType, str, int, str | None], None],
 ) -> None:
     """Drive generated doorbell senders and ids while the linked test owns the law."""
     message = load_agent_message()
@@ -388,12 +449,45 @@ def run_doorbell_roundtrip_property(
         print_blob=True,
     )
     @given(line=doorbell_lines())
-    def generated_doorbell_property(line: tuple[str, int]) -> None:
-        sender, message_id = line
-        assert_roundtrip(message, sender, message_id)
+    def generated_doorbell_property(line: tuple[str, int, str | None]) -> None:
+        sender, message_id, label = line
+        assert_roundtrip(message, sender, message_id, label)
 
     run_replayable_property(
         generated_doorbell_property,
         seed_value=DOORBELL_PROPERTY_SEED,
+        replay_path=DOORBELL_PROPERTY_REPLAY_PATH,
+    )
+
+
+def run_doorbell_label_property(
+    assert_label: Callable[[ModuleType, str, int, str, bool], None],
+) -> None:
+    """Drive generated senders, ids, and labels built to be renderable or
+    unrenderable by construction; ``renderable`` states which construction made
+    the label while the linked test owns the law."""
+    message = load_agent_message()
+    constructed = st.one_of(
+        st.tuples(renderable_label_texts(), st.just(True)),
+        st.tuples(unrenderable_label_texts(), st.just(False)),
+        st.tuples(st.sampled_from(unrenderable_labels()), st.just(False)),
+    )
+
+    @seed(DOORBELL_LABEL_SEED)
+    @settings(
+        max_examples=DOORBELL_LABEL_EXAMPLES,
+        deadline=None,
+        print_blob=True,
+    )
+    @given(sender=agent_names(), message_id=store_message_ids(), label=constructed)
+    def generated_label_property(
+        sender: str, message_id: int, label: tuple[str, bool]
+    ) -> None:
+        text, renderable = label
+        assert_label(message, sender, message_id, text, renderable)
+
+    run_replayable_property(
+        generated_label_property,
+        seed_value=DOORBELL_LABEL_SEED,
         replay_path=DOORBELL_PROPERTY_REPLAY_PATH,
     )

@@ -3,9 +3,11 @@ from pathlib import Path
 from types import ModuleType
 from typing import cast
 
+from outcomeeng_testing.generators.agent_mail import operation_requests
 from outcomeeng_testing.harnesses.agent_mail import (
     AbsentExecutableRunner,
     CapturedInboxResponse,
+    CapturedLabelResponse,
     RecordingRunner,
     common_dir_seeded_absent_store_runner,
     common_dir_seeded_runner,
@@ -15,6 +17,7 @@ from outcomeeng_testing.harnesses.agent_mail import (
     mail_pool,
     run_cli_project_key,
     run_inbox_row_mapping,
+    run_label_response_mapping,
     run_operation_mapping,
     run_project_key_mapping,
     run_recipient_boundary,
@@ -87,10 +90,17 @@ def test_agent_mail_operation_mappings() -> None:
                 )
                 in argv
             )
+            display_name_option = module.PUBLIC_AM_ARGUMENT_OPTIONS[
+                module.DISPLAY_NAME_FIELD
+            ]
+            assert (display_name_option in reading.options_seen) is (
+                module.DISPLAY_NAME_FIELD in arguments
+            )
             for field_name in (
                 module.PROGRAM_FIELD,
                 module.MODEL_FIELD,
                 module.TASK_FIELD,
+                module.DISPLAY_NAME_FIELD,
             ):
                 if field_name in arguments:
                     assert (
@@ -167,6 +177,60 @@ def test_agent_mail_operation_mappings() -> None:
 
     assert seen_operations == operations
     assert seen_kinds == {kind.value for kind in module.SENT_KINDS}
+
+
+def test_store_labels_map_verbatim_beside_the_message_record() -> None:
+    def assert_case(
+        module: ModuleType, project_key: str, captured: CapturedLabelResponse
+    ) -> None:
+        runner = common_dir_seeded_runner(module, project_key, captured.result)
+
+        result = module.execute(captured.request, runner)
+
+        assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED, (
+            captured.capture
+        )
+        response = cast(dict[str, object], result[module.RESPONSE_FIELD])
+        data = cast(dict[str, object], result[module.DATA_FIELD])
+        label_fields = (
+            module.STORE_SENDER_DISPLAY_NAME_FIELD,
+            module.STORE_TO_DISPLAY_NAMES_FIELD,
+        )
+        if captured.operation is module.Operation.REGISTER:
+            assert (
+                response[module.STORE_DISPLAY_NAME_FIELD]
+                == captured.payload[module.STORE_DISPLAY_NAME_FIELD]
+            ), captured.capture
+        elif captured.operation is module.Operation.SEND:
+            for field_name in label_fields:
+                assert field_name in response, (captured.capture, field_name)
+                assert response[field_name] == captured.payload[field_name], (
+                    captured.capture,
+                    field_name,
+                )
+            record = cast(dict[str, object], data[module.RECORD_FIELD])
+            assert set(record) == module.RECORD_FIELDS, captured.capture
+        else:
+            captured_items = cast(
+                list[dict[str, object]], captured.payload[module.STORE_INBOX_FIELD]
+            )
+            returned_items = cast(
+                list[dict[str, object]], response[module.STORE_INBOX_FIELD]
+            )
+            records = cast(list[dict[str, object]], data[module.RECORDS_FIELD])
+            assert len(returned_items) == len(captured_items) == len(records)
+            for returned, item, record in zip(
+                returned_items, captured_items, records, strict=True
+            ):
+                for field_name in label_fields:
+                    assert field_name in returned, (captured.capture, field_name)
+                    assert returned[field_name] == item[field_name], (
+                        captured.capture,
+                        field_name,
+                    )
+                assert set(record) == module.RECORD_FIELDS, captured.capture
+
+    run_label_response_mapping(assert_case)
 
 
 def test_inbox_rows_map_totally_onto_records() -> None:
@@ -334,16 +398,19 @@ def test_git_location_variables_leave_the_project_key_on_its_own_repository() ->
         expected_key = str(pool.bare)
         redirections = {probe.variable: probe.outcome for probe in confirmed}
 
-    for case, (exit_code, payload) in inside.items():
-        assert exit_code == 0, (case, payload, redirections)
-        assert payload[module.PROJECT_KEY_FIELD] == expected_key, (case, payload)
+    for inside_case, (exit_code, payload) in inside.items():
+        assert exit_code == 0, (inside_case, payload, redirections)
+        assert payload[module.PROJECT_KEY_FIELD] == expected_key, (
+            inside_case,
+            payload,
+        )
 
-    for case, (exit_code, payload) in outside.items():
-        assert exit_code != 0, (case, payload)
-        assert module.PROJECT_KEY_FIELD not in payload, (case, payload)
+    for outside_case, (exit_code, payload) in outside.items():
+        assert exit_code != 0, (outside_case, payload)
+        assert module.PROJECT_KEY_FIELD not in payload, (outside_case, payload)
         assert (
             payload[module.STATUS_FIELD] == module.ExecutionStatus.REPOSITORY_UNRESOLVED
-        ), (case, payload)
+        ), (outside_case, payload)
 
     # Git confirmed each of these against its own answer, so a removal list that
     # dropped one would leave the shape that confirmed it resolving the wrong
@@ -404,3 +471,51 @@ def test_store_responses_map_to_results_without_rewriting() -> None:
         assert no_store[module.STATUS_FIELD] == module.ExecutionStatus.STORE_UNAVAILABLE
 
     run_store_response_cases(assert_case)
+
+
+def test_an_empty_display_name_reaches_the_store_as_an_empty_value() -> None:
+    module = load_agent_mail()
+    project_key = "/registered/project"
+    registrations = [
+        cast(dict[str, object], request[module.ARGUMENTS_FIELD])
+        for request in operation_requests(module)
+        if module.Operation(request[module.OPERATION_FIELD])
+        is module.Operation.REGISTER
+    ]
+    empty = [
+        arguments
+        for arguments in registrations
+        if arguments.get(module.DISPLAY_NAME_FIELD) == ""
+    ]
+    absent = [
+        arguments
+        for arguments in registrations
+        if module.DISPLAY_NAME_FIELD not in arguments
+    ]
+    option = module.PUBLIC_AM_ARGUMENT_OPTIONS[module.DISPLAY_NAME_FIELD]
+
+    assert empty
+    assert absent
+    for arguments in empty:
+        request = module.operation_request(
+            module.Operation.REGISTER,
+            **{
+                name: arguments[field]
+                for name, field in module.ARGUMENT_NAMES.items()
+                if field in arguments
+            },
+        )
+        argv = module.command_for(request, project_key)
+        assert module.attached_option(option, "") in argv
+        assert sum(1 for word in argv if word.startswith(option)) == 1
+    for arguments in absent:
+        request = module.operation_request(
+            module.Operation.REGISTER,
+            **{
+                name: arguments[field]
+                for name, field in module.ARGUMENT_NAMES.items()
+                if field in arguments
+            },
+        )
+        argv = module.command_for(request, project_key)
+        assert not any(word.startswith(option) for word in argv)

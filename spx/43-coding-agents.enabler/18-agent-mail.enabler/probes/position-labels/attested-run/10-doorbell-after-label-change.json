@@ -1,0 +1,102 @@
+{
+  "step": "10-doorbell-after-label-change",
+  "startedUtc": "2026-10-09T17:43:07.236202+00:00",
+  "command": "python3 /Users/shz/Code/outcomeeng/plugins/worktrees/contributor-2/src/plugins/coding-agents/skills/message-agents/scripts/agent_message.py mail-result",
+  "cwd": "/Users/shz/.local/state/mcp-agent-mail/automatic-labels/20261009-1f309419/demo/project",
+  "request": {
+    "capabilityResult": {
+      "schemaVersion": 1,
+      "operation": "send",
+      "status": "succeeded",
+      "commandExitCode": 0,
+      "projectKey": "/Users/shz/.local/state/mcp-agent-mail/automatic-labels/20261009-1f309419/demo/project/.git",
+      "response": {
+        "id": 20,
+        "subject": "[fact] send after label change",
+        "body_md": "Body after the label change.",
+        "importance": "normal",
+        "ack_required": false,
+        "thread_id": "position-labels-probe",
+        "created_ts": "2026-10-09T17:43:07.147383Z",
+        "from": "CopperFinch",
+        "sender_display_name": "Renamed Sender",
+        "to": [
+          "SilverFinch"
+        ],
+        "to_display_names": {
+          "SilverFinch": "Probe Recipient"
+        }
+      },
+      "data": {
+        "record": {
+          "schema": 1,
+          "kind": "fact",
+          "ackRequired": false,
+          "correlation": "position-labels-probe",
+          "sender": "CopperFinch",
+          "recipient": "SilverFinch",
+          "subject": "send after label change",
+          "body": "Body after the label change.",
+          "id": 20
+        }
+      }
+    },
+    "doorbellTransport": null
+  },
+  "exitCode": 0,
+  "result": {
+    "acknowledged": false,
+    "agreed": false,
+    "capability": {
+      "commandExitCode": 0,
+      "data": {
+        "record": {
+          "ackRequired": false,
+          "body": "Body after the label change.",
+          "correlation": "position-labels-probe",
+          "id": 20,
+          "kind": "fact",
+          "recipient": "SilverFinch",
+          "schema": 1,
+          "sender": "CopperFinch",
+          "subject": "send after label change"
+        }
+      },
+      "operation": "send",
+      "projectKey": "/Users/shz/.local/state/mcp-agent-mail/automatic-labels/20261009-1f309419/demo/project/.git",
+      "response": {
+        "ack_required": false,
+        "body_md": "Body after the label change.",
+        "created_ts": "2026-10-09T17:43:07.147383Z",
+        "from": "CopperFinch",
+        "id": 20,
+        "importance": "normal",
+        "sender_display_name": "Renamed Sender",
+        "subject": "[fact] send after label change",
+        "thread_id": "position-labels-probe",
+        "to": [
+          "SilverFinch"
+        ],
+        "to_display_names": {
+          "SilverFinch": "Probe Recipient"
+        }
+      },
+      "schemaVersion": 1,
+      "status": "succeeded"
+    },
+    "commandExitCode": 0,
+    "correlation": "position-labels-probe",
+    "doorbell": {
+      "submitted": false,
+      "text": "[Renamed Sender <CopperFinch>] mail 20"
+    },
+    "id": 20,
+    "kind": "fact",
+    "ownershipEstablished": false,
+    "recipient": "SilverFinch",
+    "schemaVersion": 4,
+    "sender": "CopperFinch",
+    "status": "delivered"
+  },
+  "stderr": ""
+}

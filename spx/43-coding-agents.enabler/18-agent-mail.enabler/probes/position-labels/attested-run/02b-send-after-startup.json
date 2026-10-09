@@ -1,0 +1,61 @@
+{
+  "step": "02b-send-after-startup",
+  "startedUtc": "2026-10-09T17:42:30.879196+00:00",
+  "command": "python3 /Users/shz/Code/outcomeeng/plugins/worktrees/contributor-2/src/plugins/coding-agents/skills/operate-agent-mail/scripts/agent_mail.py run",
+  "cwd": "/Users/shz/.local/state/mcp-agent-mail/automatic-labels/20261009-1f309419/demo/project",
+  "request": {
+    "schemaVersion": 1,
+    "operation": "send",
+    "arguments": {
+      "record": {
+        "ackRequired": false,
+        "body": "First send after server startup.",
+        "correlation": "position-labels-probe",
+        "kind": "fact",
+        "recipient": "SilverOtter",
+        "schema": 1,
+        "sender": "CopperFinch",
+        "subject": "probe send right after startup"
+      }
+    }
+  },
+  "exitCode": 0,
+  "result": {
+    "schemaVersion": 1,
+    "operation": "send",
+    "status": "succeeded",
+    "commandExitCode": 0,
+    "projectKey": "/Users/shz/.local/state/mcp-agent-mail/automatic-labels/20261009-1f309419/demo/project/.git",
+    "response": {
+      "id": 17,
+      "subject": "[fact] probe send right after startup",
+      "body_md": "First send after server startup.",
+      "importance": "normal",
+      "ack_required": false,
+      "thread_id": "position-labels-probe",
+      "created_ts": "2026-10-09T17:42:31.043373Z",
+      "from": "CopperFinch",
+      "sender_display_name": "Probe Sender",
+      "to": [
+        "SilverOtter"
+      ],
+      "to_display_names": {
+        "SilverOtter": "Capture Reader"
+      }
+    },
+    "data": {
+      "record": {
+        "schema": 1,
+        "kind": "fact",
+        "ackRequired": false,
+        "correlation": "position-labels-probe",
+        "sender": "CopperFinch",
+        "recipient": "SilverOtter",
+        "subject": "probe send right after startup",
+        "body": "First send after server startup.",
+        "id": 17
+      }
+    }
+  },
+  "stderr": ""
+}

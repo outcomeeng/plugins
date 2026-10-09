@@ -25,6 +25,8 @@ from outcomeeng_testing.generators.agent_mail import (
     agent_names,
     common_dir_output,
     capture_row_ordinals,
+    distinct_stable_names,
+    position_labels,
     coordination_references,
     expected_project_key,
     message_records,
@@ -95,6 +97,11 @@ INBOX_ROW_REPLAY_PATH = PROJECT_KEY_MAPPING_REPLAY_PATH
 RECIPIENT_BOUNDARY_SEED = 2026091808
 RECIPIENT_BOUNDARY_EXAMPLES = 20
 RECIPIENT_BOUNDARY_REPLAY_PATH = PROJECT_KEY_MAPPING_REPLAY_PATH
+LABEL_RESPONSE_SEED = 2026100901
+LABEL_RESPONSE_EXAMPLES = 5
+LABEL_RESPONSE_REPLAY_PATH = PROJECT_KEY_MAPPING_REPLAY_PATH
+LABEL_TARGETING_SEED = 2026100902
+LABEL_TARGETING_EXAMPLES = 10
 COMPLIANCE_REPLAY_PATH = (
     "spx/43-coding-agents.enabler/18-agent-mail.enabler/tests/"
     "test_agent_mail.compliance.l1.py"
@@ -592,7 +599,7 @@ def run_terminal_property(
 
 
 def run_project_key_mapping(
-    assert_key: Callable[[ModuleType, str, object, str | None, str], None],
+    assert_key: Callable[[ModuleType, str, str, str | None, str], None],
 ) -> None:
     """Drive every shape the repository lookup's output takes, each built
     around a generated absolute path."""
@@ -679,6 +686,225 @@ def run_inbox_row_mapping(
         generated_rows,
         seed_value=INBOX_ROW_SEED,
         replay_path=INBOX_ROW_REPLAY_PATH,
+    )
+
+
+@dataclass(frozen=True)
+class CapturedLabelResponse:
+    """One captured store response that carries labels, with the request shape
+    that selects it and the path it was captured at."""
+
+    capture: str
+    operation: object
+    request: dict[str, object]
+    result: CommandResultContract
+    payload: dict[str, object]
+
+
+def _first_request(
+    module: ModuleType, operation: object, *, include_bodies: bool
+) -> dict[str, object]:
+    """The first registry request for ``operation``; an inbox request is
+    selected by whether it asks for bodies, a registration by carrying a
+    display name."""
+    for request in operation_requests(module):
+        arguments = cast(dict[str, object], request[module.ARGUMENTS_FIELD])
+        if module.Operation(request[module.OPERATION_FIELD]) is not operation:
+            continue
+        if operation is module.Operation.INBOX:
+            if (arguments.get(module.INCLUDE_BODIES_FIELD) is True) is include_bodies:
+                return request
+        elif operation is module.Operation.REGISTER:
+            if module.DISPLAY_NAME_FIELD in arguments:
+                return request
+        else:
+            return request
+    raise CaptureError(f"the registry declares no {operation} request to replay")
+
+
+def _label_rows(module: ModuleType, payload: dict[str, object]) -> list[object]:
+    rows = payload.get(module.STORE_INBOX_FIELD)
+    return list(cast(list[object], rows)) if rows is not None else [payload]
+
+
+def captured_label_responses(module: ModuleType) -> list[CapturedLabelResponse]:
+    """Every captured store response that carries labels: the registration, the
+    send, the inbox without bodies, and each inbox with bodies. Across the
+    captured rows both a labelled and an unlabelled sender appear, so null is
+    a case the capture owns."""
+    captures: list[tuple[object, bool, Path]] = [
+        (
+            module.Operation.REGISTER,
+            False,
+            _response_fixture_path(module, module.Operation.REGISTER, None),
+        ),
+        (
+            module.Operation.SEND,
+            False,
+            _response_fixture_path(module, module.Operation.SEND, None),
+        ),
+        (
+            module.Operation.INBOX,
+            False,
+            _response_fixture_path(module, module.Operation.INBOX, None),
+        ),
+        *(
+            (module.Operation.INBOX, True, path)
+            for path in _inbox_captures_with_bodies(module)
+        ),
+    ]
+    responses = [
+        CapturedLabelResponse(
+            str(path.relative_to(ROOT)),
+            operation,
+            _first_request(module, operation, include_bodies=include_bodies),
+            _result_from_path(module, path),
+            json.loads(path.read_text(encoding="utf-8")),
+        )
+        for operation, include_bodies, path in captures
+    ]
+    senders = [
+        cast(dict[str, object], row).get(module.STORE_SENDER_DISPLAY_NAME_FIELD)
+        for response in responses
+        if response.operation is module.Operation.INBOX
+        for row in _label_rows(module, response.payload)
+    ]
+    if not any(label is None for label in senders) or not any(
+        isinstance(label, str) for label in senders
+    ):
+        raise CaptureError(
+            "the captured inbox responses carry no row of each label state: "
+            "one with a sender label and one with null"
+        )
+    return responses
+
+
+def run_label_response_mapping(
+    assert_case: Callable[[ModuleType, str, CapturedLabelResponse], None],
+) -> None:
+    """Drive every captured label-bearing response through its request under
+    generated project keys."""
+    module = _load()
+    responses = captured_label_responses(module)
+
+    @seed(LABEL_RESPONSE_SEED)
+    @settings(max_examples=LABEL_RESPONSE_EXAMPLES, deadline=None, print_blob=True)
+    @given(project_key=project_key_paths())
+    def generated_case(project_key: str) -> None:
+        for response in responses:
+            assert_case(module, project_key, response)
+
+    run_replayable_property(
+        generated_case,
+        seed_value=LABEL_RESPONSE_SEED,
+        replay_path=LABEL_RESPONSE_REPLAY_PATH,
+    )
+
+
+@dataclass(frozen=True)
+class LabelCollisionVariant:
+    """A captured response whose labels are replaced by chosen text. The variant
+    ranges over the label values alone and names the capture it varies."""
+
+    capture: str
+    result: CommandResultContract
+    payload: dict[str, object]
+
+
+def label_collision_variant(
+    module: ModuleType,
+    operation: object,
+    arguments: dict[str, object],
+    *,
+    sender_label: str,
+    recipient_label: str,
+) -> LabelCollisionVariant:
+    """The captured response of ``operation`` with every sender label replaced by
+    ``sender_label`` and every recipient label by ``recipient_label``. A label
+    the capture does not carry is a capture gap."""
+    path = _response_fixture_path(module, operation, arguments)
+    payload = cast(dict[str, object], json.loads(path.read_text(encoding="utf-8")))
+    capture = str(path.relative_to(ROOT))
+
+    def relabelled(entry: dict[str, object]) -> dict[str, object]:
+        absent = [
+            name
+            for name in (
+                module.STORE_SENDER_DISPLAY_NAME_FIELD,
+                module.STORE_TO_DISPLAY_NAMES_FIELD,
+            )
+            if name not in entry
+        ]
+        if absent:
+            raise CaptureError(f"{capture} carries no {', '.join(absent)} to vary")
+        recipients = cast(dict[str, object], entry[module.STORE_TO_DISPLAY_NAMES_FIELD])
+        return {
+            **entry,
+            module.STORE_SENDER_DISPLAY_NAME_FIELD: sender_label,
+            module.STORE_TO_DISPLAY_NAMES_FIELD: {
+                name: recipient_label for name in recipients
+            },
+        }
+
+    if module.STORE_INBOX_FIELD in payload:
+        items = cast(list[dict[str, object]], payload[module.STORE_INBOX_FIELD])
+        varied = {**payload, module.STORE_INBOX_FIELD: [relabelled(i) for i in items]}
+    else:
+        varied = relabelled(payload)
+    return LabelCollisionVariant(
+        f"{capture} (labels replaced)",
+        cast(CommandResultContract, module.CommandResult(0, json.dumps(varied), "")),
+        varied,
+    )
+
+
+def _captured_stable_names(module: ModuleType) -> frozenset[str]:
+    """Every stable name the captured responses carry."""
+    names: set[str] = set()
+    for path in sorted(RESPONSE_FIXTURE_ROOT.glob("*.json")):
+        payload = cast(dict[str, object], json.loads(path.read_text(encoding="utf-8")))
+        for entry in (
+            payload,
+            *cast(list[dict[str, object]], payload.get("inbox", [])),
+        ):
+            for field_name in (module.STORE_NAME_FIELD, module.STORE_FROM_FIELD):
+                if isinstance(entry.get(field_name), str):
+                    names.add(cast(str, entry[field_name]))
+            recipients = entry.get(module.STORE_TO_FIELD)
+            if isinstance(recipients, list):
+                names.update(str(name) for name in recipients)
+    return frozenset(names)
+
+
+def run_label_targeting_cases(
+    assert_case: Callable[[ModuleType, str, str, str, str, str, int], None],
+) -> None:
+    """Drive a generated label, three pairwise distinct stable names none of
+    which a capture carries, a message id, and a project key through a linked
+    predicate."""
+    module = _load()
+    excluded = _captured_stable_names(module)
+
+    @seed(LABEL_TARGETING_SEED)
+    @settings(max_examples=LABEL_TARGETING_EXAMPLES, deadline=None, print_blob=True)
+    @given(
+        project_key=project_key_paths(),
+        label=position_labels(),
+        names=distinct_stable_names(3, excluded),
+        message_id=store_message_ids(),
+    )
+    def generated_case(
+        project_key: str, label: str, names: tuple[str, ...], message_id: int
+    ) -> None:
+        sender, recipient, collision = names
+        assert_case(
+            module, project_key, label, sender, recipient, collision, message_id
+        )
+
+    run_replayable_property(
+        generated_case,
+        seed_value=LABEL_TARGETING_SEED,
+        replay_path=COMPLIANCE_REPLAY_PATH,
     )
 
 

@@ -1,0 +1,48 @@
+{
+  "step": "09a-send-mail-request",
+  "startedUtc": "2026-10-09T17:43:06.946018+00:00",
+  "command": "python3 /Users/shz/Code/outcomeeng/plugins/worktrees/contributor-2/src/plugins/coding-agents/skills/message-agents/scripts/agent_message.py mail-request",
+  "cwd": "/Users/shz/.local/state/mcp-agent-mail/automatic-labels/20261009-1f309419/demo/project",
+  "request": {
+    "messageRequest": {
+      "kind": "fact",
+      "correlation": "position-labels-probe",
+      "sender": "CopperFinch",
+      "recipient": "SilverFinch",
+      "subject": "send after label change",
+      "body": "Body after the label change.",
+      "ackRequired": false
+    }
+  },
+  "exitCode": 0,
+  "result": {
+    "capability": {
+      "arguments": {
+        "record": {
+          "ackRequired": false,
+          "body": "Body after the label change.",
+          "correlation": "position-labels-probe",
+          "kind": "fact",
+          "recipient": "SilverFinch",
+          "schema": 1,
+          "sender": "CopperFinch",
+          "subject": "send after label change"
+        }
+      },
+      "operation": "send",
+      "schemaVersion": 1
+    },
+    "record": {
+      "ackRequired": false,
+      "body": "Body after the label change.",
+      "correlation": "position-labels-probe",
+      "kind": "fact",
+      "recipient": "SilverFinch",
+      "schema": 1,
+      "sender": "CopperFinch",
+      "subject": "send after label change"
+    },
+    "schemaVersion": 4
+  },
+  "stderr": ""
+}

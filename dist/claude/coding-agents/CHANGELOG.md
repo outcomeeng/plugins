@@ -6,6 +6,13 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.12.0
+
+### Added
+
+- **`/operate-agent-mail` registers, carries and shows a sender label.** A registration request takes an optional `displayName`, which the adapter passes to the store as `--display-name`; a blank `displayName` passes through unchanged and clears the label. An inbox item and a send result carry the sender's label as `sender_display_name` beside the message record, verbatim and `null` when the sender has none, and a send result also carries `to_display_names` for its recipients. The label never enters the message record, and no call refreshes a label already delivered.
+- **`/message-agents` renders the sender label in the mail doorbell.** A sender with a renderable label rings as `[<Label> <<StableName>>] mail <id>`, and a sender without one rings as `[<StableName>] mail <id>`. A label is unrenderable when it is empty, holds any character that does not print (a control or format character, a line or paragraph separator, or a space other than the ASCII space), or contains `[`, `]`, `<` or `>`. A label never selects or routes a message; the stable name does.
+
 ## 0.11.1
 
 ### Changed

@@ -1,0 +1,61 @@
+{
+  "step": "04b-send",
+  "startedUtc": "2026-10-09T17:42:51.242420+00:00",
+  "command": "python3 /Users/shz/Code/outcomeeng/plugins/worktrees/contributor-2/src/plugins/coding-agents/skills/operate-agent-mail/scripts/agent_mail.py run",
+  "cwd": "/Users/shz/.local/state/mcp-agent-mail/automatic-labels/20261009-1f309419/demo/project",
+  "request": {
+    "schemaVersion": 1,
+    "operation": "send",
+    "arguments": {
+      "record": {
+        "ackRequired": false,
+        "body": "Body for the labelled send.",
+        "correlation": "position-labels-probe",
+        "kind": "fact",
+        "recipient": "SilverFinch",
+        "schema": 1,
+        "sender": "CopperFinch",
+        "subject": "label surfaces check"
+      }
+    }
+  },
+  "exitCode": 0,
+  "result": {
+    "schemaVersion": 1,
+    "operation": "send",
+    "status": "succeeded",
+    "commandExitCode": 0,
+    "projectKey": "/Users/shz/.local/state/mcp-agent-mail/automatic-labels/20261009-1f309419/demo/project/.git",
+    "response": {
+      "id": 19,
+      "subject": "[fact] label surfaces check",
+      "body_md": "Body for the labelled send.",
+      "importance": "normal",
+      "ack_required": false,
+      "thread_id": "position-labels-probe",
+      "created_ts": "2026-10-09T17:42:51.408873Z",
+      "from": "CopperFinch",
+      "sender_display_name": "Probe Sender",
+      "to": [
+        "SilverFinch"
+      ],
+      "to_display_names": {
+        "SilverFinch": "Probe Recipient"
+      }
+    },
+    "data": {
+      "record": {
+        "schema": 1,
+        "kind": "fact",
+        "ackRequired": false,
+        "correlation": "position-labels-probe",
+        "sender": "CopperFinch",
+        "recipient": "SilverFinch",
+        "subject": "label surfaces check",
+        "body": "Body for the labelled send.",
+        "id": 19
+      }
+    }
+  },
+  "stderr": ""
+}

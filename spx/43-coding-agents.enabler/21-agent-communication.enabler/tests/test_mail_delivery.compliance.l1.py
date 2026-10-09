@@ -10,6 +10,7 @@ from outcomeeng_testing.generators.coding_agents import (
 from outcomeeng_testing.harnesses.coding_agents import (
     load_agent_message,
     observe_doorbell_transport,
+    observe_labeled_mail_send,
     observe_mail_send,
     public_message_context,
 )
@@ -36,6 +37,29 @@ def test_doorbell_sender_resolves_only_in_the_live_inventory() -> None:
         with pytest.raises(message.MessageError) as raised:
             message.parse_doorbell(malformed, [sender])
         assert raised.value.status == message.DeliveryStatus.INVALID_SCHEMA
+
+
+def test_doorbell_label_never_resolves_a_sender() -> None:
+    message = load_agent_message()
+    request = mail_record_input(message, 5, message.RecordKind.FACT)
+    sender = cast(str, request[message.SENDER_FIELD])
+    recipient = cast(str, request[message.RECIPIENT_FIELD])
+    record = message.mail_request({**request})[message.RECORD_FIELD]
+
+    # The sender's label is the stable name of an agent in the live inventory.
+    delivered = message.mail_delivery_result(
+        observe_labeled_mail_send(message, record, recipient)
+    )
+    doorbell = cast(dict[str, object], delivered[message.DOORBELL_FIELD])
+    line = cast(str, doorbell[message.TEXT_FIELD])
+    assert f"[{recipient} <{sender}>]" in line
+
+    with pytest.raises(message.MessageError) as raised:
+        message.parse_doorbell(line, [recipient])
+    assert raised.value.status == message.DeliveryStatus.INVALID_IDENTITY
+
+    resolved = message.parse_doorbell(line, [recipient, sender])
+    assert resolved[message.SENDER_FIELD] == sender
 
 
 def test_mail_delivery_requires_the_checked_capability_result() -> None:

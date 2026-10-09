@@ -17,7 +17,7 @@ A same-worktree delegation request carries the authority `spx/43-coding-agents.e
 
 ## Delivery routes
 
-On the mail route, the record in the store is delivery: a message is delivered when the agent-mail capability's checked `send` result carries the record with its store-assigned `id`. The doorbell into the recipient's pane is exactly one line, `[<sender>] mail <id>`, and nothing else; no JSON and no record body reaches a pane, and no message record lives under `.spx/`. Acknowledgement is the recipient's separate receipt. A pane line counts as a sender's doorbell only when its sender resolves in the live agent inventory. A doorbell into a Prowl pane is submitted as a turn; its submission evidence is the Prowl trailing-Enter record.
+On the mail route, the record in the store is delivery: a message is delivered when the agent-mail capability's checked `send` result carries the record with its store-assigned `id`. The doorbell into the recipient's pane is exactly one line, and nothing else: `[<Label> <<StableName>>] mail <id>` when the send result carries the sender's label, and `[<StableName>] mail <id>` otherwise. A label renders only when it is non-empty, `str.isprintable()` holds for it, and it holds none of `[`, `]`, `<`, `>`; any other label renders the unlabeled form. No JSON and no record body reaches a pane, and no message record lives under `.spx/`. Acknowledgement is the recipient's separate receipt. A pane line counts as a sender's doorbell only when its stable sender name resolves in the live agent inventory; sender resolution reads the stable name alone and never the label. A doorbell into a Prowl pane is submitted as a turn; its submission evidence is the Prowl trailing-Enter record.
 
 On the Prowl submission route, the envelope of ownership proposals, one-way facts, acknowledgements, mutation-state reports, and mutation authorizations travels as the pane text, and delivery is checked public Prowl input evidence that trailing Enter submitted the turn.
 
@@ -26,18 +26,20 @@ On the Prowl submission route, the envelope of ownership proposals, one-way fact
 ### Mappings
 
 - Every kind a sender writes maps to one message record carrying exactly the fields this node declares, and the agent-mail capability's `send` accepts that record unchanged ([test](tests/test_mail_record.mapping.l1.py))
-- A checked succeeded `send` result of the agent-mail capability maps to the delivered mail result carrying the record's store-assigned id verbatim and the doorbell line `[<sender>] mail <id>`; a failed or unavailable capability result maps to `delivery-failed` with its status and detail preserved ([test](tests/test_mail_record.mapping.l1.py))
+- A checked succeeded `send` result of the agent-mail capability maps to the delivered mail result carrying the record's store-assigned id verbatim and the doorbell line `[<Label> <<StableName>>] mail <id>` when the result carries a renderable sender label and `[<StableName>] mail <id>` when it carries no label or a label from the source-owned finite set of unrenderable labels, the full label staying in the store metadata the delivery result carries; a failed or unavailable capability result maps to `delivery-failed` with its status and detail preserved ([test](tests/test_mail_record.mapping.l1.py))
 - Ownership proposals, one-way facts, acknowledgements, mutation-state reports, mutation authorizations, and delivery failures map to distinct source-owned message and result states ([test](tests/test_agent_message.mapping.l1.py))
 - Every acknowledgement, mutation-state report, and mutation authorization preserves the complete active proposal reference, while every message that initiates a coordination reference receives a new UUID ([test](tests/test_agent_message.mapping.l1.py))
 
 ### Properties
 
-- A rendered doorbell parses back to its sender and id ([test](tests/test_doorbell.property.l1.py))
+- A rendered doorbell, labeled or not, is one line that parses back to its stable sender name and id ([test](tests/test_doorbell.property.l1.py))
+- A label renders labeled only when it is non-empty, `str.isprintable()` holds for it, and it holds none of `[`, `]`, `<`, `>`; every other label renders the unlabeled form ([test](tests/test_doorbell.property.l1.py))
 - Every valid source-generated structured handback block is preserved unchanged in a production request ([test](tests/test_agent_message.property.l1.py))
 
 ### Compliance
 
 - NEVER: a doorbell whose sender is absent from the supplied live inventory resolves to a sender ([test](tests/test_mail_delivery.compliance.l1.py))
+- NEVER: a doorbell's label resolves a sender; only its stable name is looked up in the live inventory ([test](tests/test_mail_delivery.compliance.l1.py))
 - ALWAYS: a mail delivery result is delivered only with the capability's checked succeeded `send` result, and a doorbell is submitted only with checked Prowl input evidence that trailing Enter was sent; an unsubmitted doorbell is reported beside the delivered message, never as a failed delivery ([test](tests/test_mail_delivery.compliance.l1.py))
 - NEVER: a same-worktree delegation request whose authority is other than exactly the sender as owner and Git mutation forbidden — a missing owner, another owner, Git mutation admitted, or any extra field — reaches a record ([test](tests/test_mail_delivery.compliance.l1.py))
 - NEVER: a message record or delivery record is written under `.spx/` or any other repository path; the store holds the record ([audit])

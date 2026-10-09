@@ -1,0 +1,61 @@
+{
+  "step": "14b-bracket-send",
+  "startedUtc": "2026-10-09T17:43:22.359823+00:00",
+  "command": "python3 /Users/shz/Code/outcomeeng/plugins/worktrees/contributor-2/src/plugins/coding-agents/skills/operate-agent-mail/scripts/agent_mail.py run",
+  "cwd": "/Users/shz/.local/state/mcp-agent-mail/automatic-labels/20261009-1f309419/demo/project",
+  "request": {
+    "schemaVersion": 1,
+    "operation": "send",
+    "arguments": {
+      "record": {
+        "ackRequired": false,
+        "body": "Send from a position whose label carries brackets.",
+        "correlation": "position-labels-probe",
+        "kind": "fact",
+        "recipient": "SilverFinch",
+        "schema": 1,
+        "sender": "CopperLark",
+        "subject": "bracket label send"
+      }
+    }
+  },
+  "exitCode": 0,
+  "result": {
+    "schemaVersion": 1,
+    "operation": "send",
+    "status": "succeeded",
+    "commandExitCode": 0,
+    "projectKey": "/Users/shz/.local/state/mcp-agent-mail/automatic-labels/20261009-1f309419/demo/project/.git",
+    "response": {
+      "id": 21,
+      "subject": "[fact] bracket label send",
+      "body_md": "Send from a position whose label carries brackets.",
+      "importance": "normal",
+      "ack_required": false,
+      "thread_id": "position-labels-probe",
+      "created_ts": "2026-10-09T17:43:22.470941Z",
+      "from": "CopperLark",
+      "sender_display_name": "Ops [lead] <west> ]",
+      "to": [
+        "SilverFinch"
+      ],
+      "to_display_names": {
+        "SilverFinch": "Probe Recipient"
+      }
+    },
+    "data": {
+      "record": {
+        "schema": 1,
+        "kind": "fact",
+        "ackRequired": false,
+        "correlation": "position-labels-probe",
+        "sender": "CopperLark",
+        "recipient": "SilverFinch",
+        "subject": "bracket label send",
+        "body": "Send from a position whose label carries brackets.",
+        "id": 21
+      }
+    }
+  },
+  "stderr": ""
+}

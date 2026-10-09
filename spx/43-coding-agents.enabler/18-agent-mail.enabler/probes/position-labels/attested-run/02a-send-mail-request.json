@@ -1,0 +1,48 @@
+{
+  "step": "02a-send-mail-request",
+  "startedUtc": "2026-10-09T17:42:27.476226+00:00",
+  "command": "python3 /Users/shz/Code/outcomeeng/plugins/worktrees/contributor-2/src/plugins/coding-agents/skills/message-agents/scripts/agent_message.py mail-request",
+  "cwd": "/Users/shz/.local/state/mcp-agent-mail/automatic-labels/20261009-1f309419/demo/project",
+  "request": {
+    "messageRequest": {
+      "kind": "fact",
+      "correlation": "position-labels-probe",
+      "sender": "CopperFinch",
+      "recipient": "SilverOtter",
+      "subject": "probe send right after startup",
+      "body": "First send after server startup.",
+      "ackRequired": false
+    }
+  },
+  "exitCode": 0,
+  "result": {
+    "capability": {
+      "arguments": {
+        "record": {
+          "ackRequired": false,
+          "body": "First send after server startup.",
+          "correlation": "position-labels-probe",
+          "kind": "fact",
+          "recipient": "SilverOtter",
+          "schema": 1,
+          "sender": "CopperFinch",
+          "subject": "probe send right after startup"
+        }
+      },
+      "operation": "send",
+      "schemaVersion": 1
+    },
+    "record": {
+      "ackRequired": false,
+      "body": "First send after server startup.",
+      "correlation": "position-labels-probe",
+      "kind": "fact",
+      "recipient": "SilverOtter",
+      "schema": 1,
+      "sender": "CopperFinch",
+      "subject": "probe send right after startup"
+    },
+    "schemaVersion": 4
+  },
+  "stderr": ""
+}
