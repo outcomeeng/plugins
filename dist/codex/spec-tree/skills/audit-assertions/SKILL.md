@@ -58,7 +58,7 @@ A named path that does not exist, or an identifier no file defines, is a finding
 
 <execution_sequence>
 
-1. **Load context.** Use skill `spec-tree:understand` when no live `<SPEC_TREE_FOUNDATION>` marker is present, then run `spx spec context show '<node-directory>' --json` on the node directory containing the spec and read the content of every entry it returns. The command reads the checkout as it stands and moves nothing, so the audit judges the head it was dispatched on. A nonzero exit returns `BLOCKED` with its exact stderr, `runToken: not-started`.
+1. **Load context.** Use skill `spec-tree:understand` when no live `<SPEC_TREE_FOUNDATION>` marker is present, then run `spx spec context show '<node-directory>' --json` on the node directory containing the spec and read the content of every entry it returns. The command reads the checkout as it stands and moves nothing, so the audit judges the checkout as it stands. A nonzero exit returns `BLOCKED` with its exact stderr, `runToken: not-started`.
 2. **Inventory.** Read the spec and build the assertion inventory under `<assertion_inventory>`.
 3. **Start the run.** From the repository root, with the spec as `<spec-file>`:
 
