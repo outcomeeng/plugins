@@ -198,8 +198,9 @@ Missing or stale run evidence is a `run-evidence` finding. A recorded commit tha
 
 After judging a gate across every `[eval]` assertion, record its unit before judging the next gate:
 
-- Every assertion decided and no finding: the unit is `audited`.
-- Every assertion decided with at least one finding: the unit is `audited`, followed by each finding.
+- No `[eval]` assertion in the replayed spec: the unit is `incomplete`, followed by exactly one `undecidable-gate` finding located at `<spec-path>` whose observed evidence names `no-eval-assertions`.
+- At least one assertion, every assertion decided, and no finding: the unit is `audited`.
+- At least one assertion, every assertion decided, and at least one finding: the unit is `audited`, followed by each finding.
 - Any assertion left undecided: the unit is `incomplete`, followed by every finding the gate raised and one `undecidable-gate` finding per undecided assertion naming that assertion and the absent prerequisite or unavailable evidence that kept it from being decided.
 
 </step>
@@ -374,7 +375,7 @@ How to avoid: Step 5e separates operational failures from behavioral pass eviden
 The verdict is sound when:
 
 - Every `[eval]` assertion's suite was judged on all five evidence properties with none skipped, and the sealed run carries one root unit and one unit per gate.
-- Every gate unit is `audited` only when each assertion's judgment for that gate was decided, and `incomplete` with an `undecidable-gate` finding naming the absent prerequisite otherwise.
+- Every gate unit is `audited` only when the spec carries at least one `[eval]` assertion and each assertion's judgment for that gate was decided, and `incomplete` with an `undecidable-gate` finding naming the absent prerequisite, or `no-eval-assertions`, otherwise.
 - The sealed run's terminal status is `approved` only with every unit `audited` and no finding.
 - Each finding is falsifiable: it names the assertion or eval artifact, the failed evidence property or undecided gate, and the evidentiary gap.
 - No deterministic command was run inside the audit; evidence quality was established by reading the eval artifacts, producing artifact, and committed run summaries.
