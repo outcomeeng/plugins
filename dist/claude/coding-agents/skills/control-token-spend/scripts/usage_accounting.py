@@ -106,6 +106,8 @@ class Config:
     def __post_init__(self) -> None:
         if not self.root.is_absolute() or not self.projects.is_absolute():
             raise ValueError("root and projects: use absolute resolved paths")
+        object.__setattr__(self, "root", self.root.resolve())
+        object.__setattr__(self, "projects", self.projects.resolve())
         if self.root.is_relative_to(self.projects) or self.projects.is_relative_to(
             self.root
         ):
