@@ -183,14 +183,6 @@ Source: `instructions:skill-auditor` finding `f-015`, rule
 `rendered_output_contradiction_and_portability`, severity `REJECT`, on head
 `913a65e5b370ffa846bfe7a47be4a551e6a9c547` during Change #200.
 
-## `/create-skill` assumes a spec tree and restates its standards loads
-
-**Evidence**: `instructions:skill-auditor` warnings on `src/plugins/instructions/skills/create-skill` at head `add3e3e862f7512a55e8b9655d07f78412abe87c`: f-010 (rule `plugin_portability_undefined_reference`) — `workflows/audit-skill.md:21` tells a consumer to persist requirements in decisions and specs and to follow the root guide's isolation mechanics, surfaces a repository without a spec tree lacks; f-011 (rule `conciseness_duplicated_loading`) — `SKILL.md` composes `/skill-standards` and `/agent-prompt-standards`, and `<reference_loading>` and every workflow's `<required_reading>` restate both loads and the overlay read.
-
-**Impact**: a consumer without a spec tree or a root guide meets an instruction it cannot resolve, and every route pays for the restated loads.
-
-**Settlement condition**: the isolation requirement is stated directly or conditioned on the surfaces existing, the loads stand once, and one typed skill audit of `create-skill` raises neither finding.
-
 ## Auditors read a conforming absent `<failure_modes>` section as a gap
 
 `/agent-prompt-standards` `<failure_mode_writing>` prescribes omitting `<failure_modes>` from a skill that has not failed yet: "Never invent failure modes... Add failure modes as they occur in real usage." A new skill therefore conforms by carrying no such section. `instructions:audit-skill` nonetheless raises the absence as a `worth-improving` warning, and its own remedy then restates the standard back: "once a real near-miss occurs", "do not fabricate one if none has occurred". `spec-tree:changes-reviewer` reads the same absence as a coordination-note gap. The warning is unactionable by construction: no edit satisfies it, and declining it leaves the next Verifier to raise it again. It fired six times over three skills and four verification rounds across the contribute-plugin consolidation, each costing a full re-audit or re-review cycle to answer with the same reasoning.
