@@ -147,8 +147,9 @@ A blocked result names exactly one of these reasons:
    changed section or front-matter value makes false — a section the
    revised Maturity newly requires, or a statement a changed section
    contradicts — and record each of their findings as `blocking`. Record a
-   finding on any other section as `debt`; that revision debt blocks neither
-   the verdict nor publication. Inspect every rule and criterion either way,
+   finding on any other section as `debt`; that revision debt leaves the run
+   `rejected`, because SPX seals `approved` only for a run with no finding,
+   and blocks neither publication nor the gate count. Inspect every rule and criterion either way,
    so a rule judged only on unchanged sections still records `audited`.
 7. **Read authority.** Use skill `spec-tree:change-standards`.
    Invoke it with `Lifecycle`; it loads the common contract and the Lifecycle
@@ -175,10 +176,12 @@ A blocked result names exactly one of these reasons:
    required unit that cannot be judged, returns `BLOCKED`; never finish it.
 10. **Finish.** With complete reconciled coverage of a record judged whole,
     derive `approved` when no finding exists and `rejected` when any finding
-    exists, including a finding set containing only `debt`. For a revision,
-    derive `rejected` when any `blocking` finding exists and `approved`
-    otherwise. Request `finish` with that `terminalStatus` and
-    return its result.
+    exists, including a finding set containing only `debt`. A revision follows
+    the same rule: it finishes `approved` when no finding exists and
+    `rejected` when any finding exists, so a revision whose findings are all
+    `debt` finishes `rejected`, and that rejection holds no `blocking`
+    finding. Request `finish` with that `terminalStatus` and return its
+    result.
 
 </execution_sequence>
 
@@ -347,7 +350,7 @@ the runner over stdin and stdout, and return the `finish` result, whose
 - Every common record rule and every criterion in the one Definition of Ready
   selected by the declared maturity has a reconciled judgment; every rejected
   finding names the violated rule, artifact location, and supporting evidence.
-- A revision of a published record is judged on its front matter, its changed sections, and the unchanged text they make false, against the published body `read-published` returned; every finding on another section is `debt` and leaves the verdict `approved` when no `blocking` finding exists; a record with no published body is judged whole.
+- A revision of a published record is judged on its front matter, its changed sections, and the unchanged text they make false, against the published body `read-published` returned; every finding on another section is `debt`, and a revision whose findings are all `debt` finishes `rejected` with no `blocking` finding; a record with no published body is judged whole.
 - Authority is judged only from the store's field-change events and comments that `read-authority` returned and never from the body; a request that names no issue judges no authority, and its verdict says so.
 - The audit's only state change is its own SPX verification-run journal; no
   file is written, and the candidate, product content, Change store, claims,
