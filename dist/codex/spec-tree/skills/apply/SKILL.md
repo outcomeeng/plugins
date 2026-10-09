@@ -204,7 +204,7 @@ Before the Step 4 decision audit, use skill `spec-tree:verify` separately for ev
 
 For each ADR path Step 3 recorded, dispatch `spec-tree_adr-auditor` with only that ADR path. The invoked `audit-adr` discovers its governing node, committed changeset, and implementation-language partitions, then composes each applicable `audit-{lang}-architecture` concern inside its isolated agent session. For each PDR path Step 3 recorded, dispatch `spec-tree_pdr-auditor` with only that PDR path. Read every result under `<auditor_verdict>`. When Step 3 recorded no decision path, this step dispatches nothing and its gate holds.
 
-When the scope is cross-node (see `<scope_detection>`), enumerate the ADRs governing every affected implementation surface across the whole changeset and dispatch each ADR path separately. This gate passes only when every dispatched decision audit's sealed run renders `terminalStatus: approved`.
+When the scope is cross-node (see `<scope_detection>`), enumerate the ADRs and PDRs governing every affected surface across the whole changeset and dispatch each decision path separately to its auditor. This gate passes only when every dispatched decision audit's sealed run renders `terminalStatus: approved`.
 
 Before invoking the audit, apply `<stabilized_diff_rule>` and `<verification_checkpoint>`; carry its result forward under `<result_carryover>`.
 
