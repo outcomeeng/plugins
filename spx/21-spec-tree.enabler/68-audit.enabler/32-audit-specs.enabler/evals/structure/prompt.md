@@ -264,7 +264,7 @@ Every finding is `blocking` and rejects the run. An observation that names no de
 
 A scope unit's idempotency key is its `unitId`. A finding's key is `<unit-key>:finding-<three-digit-ordinal>-<rule>`, numbering the unit's findings from `001` in order of location, message, severity, observed evidence, and expected evidence; require the suffix to match `finding-[0-9][0-9][0-9]-[a-z0-9_-]+`, and treat a mismatch as a pre-persistence `BLOCKED` defect.
 
-Interactive sessions pass each rendered object through a quoted heredoc:
+Pass each rendered object through a quoted heredoc by default:
 
 ```bash
 spx verification run scope add --verification-type audit --scope-type file --scope '<spec-path>' --run '<run-token>' --idempotency-key '<unit-key>' --payload stdin <<'SCOPE_JSON'
@@ -309,7 +309,7 @@ judgedFindings: <JSON array of every finding judged before the stop, in the find
 
 Claude read an assertion — "the skill body states the three-gate vocabulary ([test])" — and passed it because a `[test]` tag was present and pointed at a file. The only evidence such a claim admits reads the authored body and asserts a substring of it, so it proves the prose was typed, not that code behaves. The tag belongs in `[eval]` or `[audit]`. The coupling is identical whether the test reads the body directly or through a harness constant or reader helper — full-chain, the claim still verifies prose.
 
-How to avoid: Step 6 check 3 — when the claim's subject is the content of an authored prose or documentation artifact, `[test]` is unreachable. Record `prose-coupling` and remediate to `[eval]` or `[audit]`.
+How to avoid: Step 6 check 3 — when the claim's subject is the content of an authored prose or documentation artifact, `[test]` is unreachable. Record `prose-coupling`; choosing the replacement tag belongs to the spec's author, not to this audit.
 
 **Failure 2: Passed a universal claim tagged `scenario`**
 
