@@ -56,7 +56,7 @@ Before starting Step 3, classify the planned change; then, before each gate this
 - **Node-local** — every changed path is inside the target node's directory under `spx/`, an implementation file that only the target node's linked tests reach, or the removal of the target node's own `spx/EXCLUDE` entry.
 - **Cross-node** — the work touches anything else: a refactor, a move, a consolidation, a cross-cutting rename, a shared enabler, a sibling spec, or any file outside the target node.
 
-When the scope is cross-node, each audit gate covers the **whole changeset** in the form its dispatch takes. Steps 4 and 6 cover the **cross-node coverage set**: every ADR and PDR governing an affected surface for Step 4, and every governed node whose evidence the change touches for Step 6. Step 8 covers the committed changeset selector it always receives, and Step 9 is REQUIRED before the flow may be declared complete. A target-node-only audit cannot see a regression the change introduced in a file the node does not own. Carry the determination through Steps 4 and 6, which restate their cross-node dispatch at the point of action.
+When the scope is cross-node, each audit gate covers the **whole changeset** in the form its dispatch takes. Steps 4 and 6 cover the **cross-node coverage set**: every ADR and PDR governing an affected surface for Step 4, and every governed node whose evidence the change touches for Step 6. Step 8 covers the committed changeset selector it always receives, and Step 9 is REQUIRED before the flow may be declared complete.
 
 </scope_detection>
 
@@ -206,7 +206,7 @@ Before the Step 4 decision audit, use skill `spec-tree:verify` separately for ev
 
 For each ADR path Step 3 recorded, dispatch `spec-tree:adr-auditor` with only that ADR path. The invoked `audit-adr` discovers its governing node, committed changeset, and implementation-language partitions, then composes each applicable `audit-{lang}-architecture` concern inside its isolated agent session. For each PDR path Step 3 recorded, dispatch `spec-tree:pdr-auditor` with only that PDR path. Read every result under `<auditor_verdict>`. For a node-local change with no decision path recorded in Step 3, this step dispatches nothing and its gate holds.
 
-When the scope is cross-node (see `<scope_detection>`), enumerate the ADRs and PDRs governing every affected surface across the whole changeset and dispatch each decision path separately to its auditor. This gate passes only when every dispatched decision audit's sealed run renders `terminalStatus: approved`.
+When the scope is cross-node, dispatch each decision path in Step 4's cross-node coverage set (see `<scope_detection>`) separately to its auditor. This gate passes only when every dispatched decision audit's sealed run renders `terminalStatus: approved`.
 
 Before invoking the audit, apply `<stabilized_diff_rule>` and `<verification_checkpoint>`; carry its result forward under `<result_carryover>`.
 
@@ -230,7 +230,7 @@ Dispatch the auditor matching every path-bearing evidence artifact Step 5 create
 - For eval evidence, dispatch `spec-tree:eval-evidence-auditor` with only the canonical governing node path. The invoked audit discovers its `[eval]` assertions, eval artifacts, and real producers.
 - A pathless audit requirement creates no authoring artifact for Step 6. Its isolated verifier remains the workflow that produces the eventual audit verdict.
 
-When the scope is cross-node (see `<scope_detection>`), enumerate every governed node whose current linked test or eval evidence the change creates, modifies, or invalidates. Dispatch only each canonical node path, once per governed node and evidence type, in parallel when independent. Step 6 passes only when every applicable dispatched audit's sealed run renders `terminalStatus: approved`. A singular-node audit receives one node path; Step 8a covers the final changed evidence set and Step 9 reviews the whole changeset.
+When the scope is cross-node, dispatch each governed node in Step 6's cross-node coverage set (see `<scope_detection>`) — every node whose current linked test or eval evidence the change creates, modifies, or invalidates — as its canonical node path, once per evidence type, in parallel when independent. Step 6 passes only when every applicable dispatched audit's sealed run renders `terminalStatus: approved`.
 
 Before invoking the audit, apply `<stabilized_diff_rule>` and `<verification_checkpoint>`. Read each result under `<auditor_verdict>` and carry it forward under `<result_carryover>`.
 
@@ -266,7 +266,7 @@ An absent or malformed result stops this node before Step 8 with the exact failu
 
 Dispatch `spec-tree:implementation-auditor` with only the committed scope selector: `HEAD` for the current branch, or an explicit three-dot range for a selected base. The invoked skill discovers the repository, governing nodes, verification context, and language partitions; the wrapper supplies its own run-driver identity internally.
 
-The committed scope selector already spans the whole changeset, so a cross-node change needs no other Step 8 dispatch. The audit lenses of Steps 4, 6, and 8 remain necessary but insufficient, so the distinct whole-diff review in Step 9 stays required for cross-cutting effects no single audit lens catches.
+The committed scope selector already spans the whole changeset, so a cross-node change needs no other Step 8 dispatch.
 
 Before invoking the audit, apply `<stabilized_diff_rule>` and `<verification_checkpoint>`; carry its result forward under `<result_carryover>`.
 
@@ -286,7 +286,7 @@ Run `<evidence_auditor_gate>` whenever the stabilized diff creates or modifies a
 
 Run this step under the condition `<scope_detection>` states.
 
-Before invoking the review, confirm every applicable Step 8a evidence-auditor run renders `terminalStatus: approved`, then apply `<verification_checkpoint>`. The reviewer must see the same committed diff whose touched evidence artifacts passed their artifact-type evidence audits.
+Before invoking the review, apply `<verification_checkpoint>`. The reviewer must see the same committed diff whose touched evidence artifacts passed their artifact-type evidence audits.
 
 Dispatch `spec-tree:changes-reviewer` over the full committed changeset, passing only the raw scope token: `HEAD` for the current branch or an explicit committed range for a selected base. Never add a prose prompt, severity filter, or emphasis instruction. Collect the final message through the native result-collection capabilities and require it to be the raw review run token. A tool failure, terminal result without a final message, or non-token final message blocks Step 9 and follows `<launch_contract>`.
 
@@ -306,7 +306,7 @@ Local readiness is not delivered value. A Step 8 projection with `terminalStatus
 
 Use skill `spec-tree:merge`. It selects the transport and drives the change to the default branch under its own authority gates — this flow neither re-implements the merge protocol nor re-decides those gates. The `/merge` lifecycle owns commit, push, integration review, and merge.
 
-The flow is complete only when the change reaches the default branch on origin, or an explicit merge lifecycle gate blocks with no independent local action remaining. A clean working tree, a local commit, or a branch ahead of base is never the endpoint for default-branch work.
+The flow is complete only when the change reaches the default branch on origin, or an explicit merge lifecycle gate blocks with no independent local action remaining.
 
 </step>
 
@@ -334,7 +334,7 @@ Steps 4, 6, 8, and applicable Step 8a are blocking audit gates; each reads its A
 - Before invoking `/merge` when a full deterministic bundle is required: confirm the repository-declared full deterministic gate ran after every applicable agentic gate and against the current clean committed head. If any source, test, spec, generated-output, or configuration file changed afterward, rerun the invalidated agentic gates before running the declared full gate again.
 - Before declaring the flow complete for default-branch work: confirm the change reached the default branch on origin through Step 10's `/merge`, or that the user scoped the work to a proposal, analysis, review, or local-only change, or that an explicit merge lifecycle gate blocks with no independent local action remaining. A clean working tree, a local commit, or a branch ahead of base does not satisfy this — invoke Step 10.
 
-For a sealed run rendering `terminalStatus: rejected` or a complete `BLOCKED` diagnostic at Steps 4, 6, 8, or 8a, or valid findings at Step 9: fix the defect class or repair the named boundary, verify and checkpoint the changed subject, then audit that subject. Launch failures, unusable results, and blocked inspection of a valid review token follow `<launch_contract>` and Step 9; they never enter this relaunch loop.
+Launch failures, unusable results, and blocked inspection of a valid review token follow `<launch_contract>` and Step 9; they never enter the repair loop each gate step states.
 
 **3 consecutive `rejected` runs or complete `BLOCKED` diagnostics on the same audit gate (Steps 4, 6, 8, 8a) -> STOP.** Surface the stuck gate to the user via `AskUserQuestion`: report the gate, its most recent verdict and outstanding findings, the same-class sweep already performed, and what did not resolve. A convergence loop that keeps reopening valid findings is a signal Claude's approach is unstable; refactor the approach before asking the same gate again. Repeated valid Step 9 review findings never become this stop or an operator call: the loaded merging standard governs them, and `<stabilized_diff_rule>` widens the same-class repair and amends the invariant before the next review. A failed launch or unusable result stops on its first occurrence under `<launch_contract>`.
 
