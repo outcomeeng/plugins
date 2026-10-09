@@ -78,6 +78,18 @@ def fixture() -> dict[str, Any]:
     return json.loads((FIXTURES / "assistant.json").read_text())
 
 
+def published_number(value: int | float | Decimal | None, style: str) -> str:
+    """Independent standard-library formatting oracle over the public policy."""
+    reports = modules()[1]
+    if value is None:
+        return str(reports.UNKNOWN_NUMBER)
+    return (
+        str(reports.NUMBER_PREFIXES.get(style, ""))
+        + format(value, style)
+        + str(reports.NUMBER_SUFFIXES.get(style, ""))
+    )
+
+
 @dataclass(frozen=True)
 class AccountingObservation:
     normalized: tuple[dict[str, Any] | None, ...]
@@ -449,7 +461,7 @@ def report_observation(work: Workspace) -> ReportObservation:
         AccountingField,
         sections,
         reports.NumberFormat,
-        reports.display_number,
+        published_number,
         accounting.TOKEN_KEYS,
         tuple(reader.headlines),
         actual[AccountingField.VERIFIED_OUTPUTS],
@@ -823,10 +835,47 @@ class ContextObservation:
     late_cost: float
     growth: float
     cost_growth: float
+    factors: tuple[int, ...]
+    sample_limit: int
+    sample_divisor: int
+    unit_context: int
+    unit_cost: float
+    measurement: dict[str, Any]
+    fields: Any
+    unit_components: dict[str, float]
+    token_keys: tuple[str, ...]
 
 
 def context_property(check: Callable[[ContextObservation], None]) -> None:
     accounting, _, _, _ = modules()
+    captured = fixture()[AccountingField.MESSAGE][AccountingField.USAGE]
+    prices = json.loads((FIXTURES / "pricing.json").read_text())["per_million"]
+    independent_components = (
+        Decimal(captured[AccountingField.INPUT_TOKENS])
+        * Decimal(prices[AccountingField.INPUT_TOKENS]),
+        Decimal(captured[AccountingField.CACHE_READ_INPUT_TOKENS])
+        * Decimal(prices[AccountingField.CACHE_READ_INPUT_TOKENS]),
+        sum(
+            (
+                Decimal(captured[AccountingField.CACHE_CREATION][key])
+                * Decimal(prices[key])
+                for key in (
+                    AccountingField.EPHEMERAL_5M_INPUT_TOKENS,
+                    AccountingField.EPHEMERAL_1H_INPUT_TOKENS,
+                )
+            ),
+            Decimal(),
+        ),
+        Decimal(captured[AccountingField.OUTPUT_TOKENS])
+        * Decimal(prices[AccountingField.OUTPUT_TOKENS]),
+    )
+    oracle_components = dict(
+        zip(
+            accounting.TOKEN_KEYS,
+            (float(value / Decimal(1_000_000)) for value in independent_components),
+            strict=True,
+        )
+    )
     with workspace() as work, accounting.Evidence(work.config) as evidence:
 
         @seed(SEED)
@@ -848,7 +897,8 @@ def context_property(check: Callable[[ContextObservation], None]) -> None:
                     for field in usage[AccountingField.CACHE_CREATION]:
                         usage[AccountingField.CACHE_CREATION][field] *= factor
                     evidence.ingest(row, work.source, work.start, work.end)
-            value = evidence.measure(work.start, work.end)[AccountingField.SESSIONS][
+            measurement = evidence.measure(work.start, work.end)
+            value = measurement[AccountingField.SESSIONS][
                 fixture()[AccountingField.SESSIONID]
             ]
             check(
@@ -861,6 +911,15 @@ def context_property(check: Callable[[ContextObservation], None]) -> None:
                     value[AccountingField.LATE_COST_MEAN],
                     value[AccountingField.CONTEXT_GROWTH_RATIO],
                     value[AccountingField.COST_GROWTH_RATIO],
+                    tuple(factors),
+                    accounting.CONTEXT_SAMPLE_LIMIT,
+                    accounting.CONTEXT_SAMPLE_DIVISOR,
+                    sum(captured[key] for key in accounting.FIELDS[:3]),
+                    float(sum(independent_components, Decimal()) / Decimal(1_000_000)),
+                    measurement,
+                    AccountingField,
+                    oracle_components,
+                    accounting.TOKEN_KEYS,
                 )
             )
 

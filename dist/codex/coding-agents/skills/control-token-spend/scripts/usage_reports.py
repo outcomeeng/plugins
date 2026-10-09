@@ -85,19 +85,23 @@ class NumberFormat(StrEnum):
     GROWTH = ".2f"
 
 
+NUMBER_PREFIXES = {
+    NumberFormat.SUMMARY_COST: "$",
+    NumberFormat.COST: "$",
+    NumberFormat.REQUEST_COST: "$",
+}
+NUMBER_SUFFIXES = {NumberFormat.GROWTH: "×"}
+UNKNOWN_NUMBER = "unknown"
+
+
 def display_number(value: int | float | Decimal | None, style: NumberFormat) -> str:
     if value is None:
-        return "unknown"
-    text = format(value, style)
-    if style in (
-        NumberFormat.SUMMARY_COST,
-        NumberFormat.COST,
-        NumberFormat.REQUEST_COST,
-    ):
-        return "$" + text
-    if style == NumberFormat.GROWTH:
-        return text + "×"
-    return text
+        return UNKNOWN_NUMBER
+    return (
+        NUMBER_PREFIXES.get(style, "")
+        + format(value, style)
+        + NUMBER_SUFFIXES.get(style, "")
+    )
 
 
 def atomic_write(path: Path, content: str | bytes) -> None:
