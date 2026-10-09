@@ -5,28 +5,31 @@ The runner substitutes only the case's `input` object into `{input_json}`; grade
 ---
 name: audit-tests
 description: >-
-  Test-evidence audit methodology — judges whether a spec node's tests provide
-  behavior-coupled evidence its assertions are fulfilled, covering predicate
-  ownership, source ownership, coupling, falsifiability, and full-chain coverage.
-argument-hint: "<spec-node-path-or-evidence-scope>"
-allowed-tools: Read, Grep, Glob, Bash(git diff:*)
+  Test-evidence audit methodology — judges whether a spec node's tests, or a
+  committed changeset's test evidence, provide behavior-coupled evidence their
+  assertions are fulfilled, covering predicate ownership, source ownership,
+  coupling, falsifiability, and full-chain coverage, and records the judgment
+  through an SPX file- or changeset-scoped verification run.
+argument-hint: "<JSON object with target, runDriver, and agentOwningPluginVersion>"
+allowed-tools: Read, Grep, Glob, Bash(git rev-parse:*), Bash(git status --porcelain:*), Bash(realpath:*), Bash(spx --version), Bash(spx verification run start:*), Bash(spx verification run input:*), Bash(spx verification run status:*), Bash(spx verification run scope add:*), Bash(spx verification run finding add:*), Bash(spx verification run finish:*), Bash(spx verification run render:*), Bash(printf '%s\n':*)
 ---
 
 <objective>
 
-A verdict on whether a spec node's tests provide behavior-coupled evidence its assertions are fulfilled — APPROVED, REJECTED with each finding naming the assertion, the failed evidence property or cross-assertion architectural duplication, and the evidentiary gap, or NOT_APPLICABLE with the retired subjects and their lack of current evidence ownership explained.
+A sealed `spx verification run` on one spec node's `[test]` evidence or one committed changeset's test evidence — terminal status `approved` with no finding, or `rejected` with each finding naming the assertion or evidence artifact, the failed evidence property, the evidence, and the ownership target the remediation belongs to — or a `BLOCKED` diagnostic naming the failed prerequisite or command.
 
 </objective>
 
 <constraints>
 
-- NEVER modify the tests under audit or any other file — this audit produces a verdict, never a fix or a commit.
-- NEVER run the project's coverage command, test command, linter, type-checker, or any other deterministic verification inside the audit — deterministic verification on the changeset is a precondition, and CI re-runs it over the whole repository; establish coverage by reading whether the test drives execution into the assertion-relevant path.
-- ALWAYS name the assertion, the failed property, and the evidentiary gap in every REJECT finding.
-- ALWAYS construct every finding as one complete record containing `id`, `file`, `line`, `assertion`, `property`, `rule`, `severity`, `message`, and `remediation_target` before adding it to a row — required fields are never deferred to verdict rendering.
-- ALWAYS reject an incomplete evidence-chain inventory before approval; absence of an artifact is missing evidence, never permission to infer its contents.
-- NEVER issue a finding the evidence model does not support — drop an unbacked finding rather than reject the tests for it.
-- This skill grants no `Bash` capability, unlike the language auditors it composes. The omission is deliberate: the no-deterministic-verification constraint above is enforced at the tool-permission layer rather than by prose alone, and this base audit reaches every artifact it judges through `Read`, `Grep`, and `Glob`. Do not add a `Bash` grant for parity.
+- NEVER modify the tests under audit or any other file, and NEVER commit, stash, synchronize, rebase, create a branch, or move the checkout. The audit's own SPX verification-run journal is the only state it writes.
+- NEVER run the project's coverage command, test command, linter, type-checker, or any other deterministic verification — the Author's agent session passes it on the changeset before dispatch, and CI re-runs it over the whole repository. Every Bash grant names an identity, path, worktree-status, or run-journal verb; none runs project verification, and no grant is added for parity with a composed skill.
+- ALWAYS judge a node target's assertions from the spec content `spx verification run input` replays from the run, never from a separate read of the live spec. Step 9 compares the live spec with the retained input before the run finishes.
+- ALWAYS complete the evidence-chain inventory of an assertion before recording its unit. An unresolved import, unread artifact, or unclassified role is an `incomplete-evidence-chain` finding; absence of an artifact is missing evidence, never permission to infer its contents.
+- ALWAYS name the assertion or evidence artifact, the failed property, the evidence, and the remediation target in every finding.
+- NEVER record a finding the evidence model does not support — drop an unbacked finding rather than reject the tests for it.
+- ALWAYS treat a `spx verification run` exit code as payload validity; NEVER hand-validate a payload SPX accepted, retry a refused command, or reshape a refused payload.
+- NEVER write a file. Payloads pass to SPX on stdin, and the final output is the run token and the rendered projection.
 
 </constraints>
 
@@ -34,382 +37,316 @@ A verdict on whether a spec node's tests provide behavior-coupled evidence its a
 
 **PREDICATE AND OWNERSHIP SCREEN, THEN COUPLING.**
 
-The linked test function or callback owns every predicate and assertion API call. Screen the full chain for verdict logic and classify each test-file binding by semantic choice before checking imports. A test that imports nothing from the codebase will pass forever regardless of what any file contains. This is a prerequisite.
+The linked test function or callback owns every predicate and assertion API call. Screen the full chain for verdict logic and classify each test-file binding by semantic choice before checking imports. A test that imports nothing from the codebase passes forever regardless of what any file contains.
 
 **COMPLETE THE EVIDENCE CHAIN.**
 
-Start from every linked test and recursively follow repository imports through test infrastructure before judging evidence. Inventory each linked test, harness, generator, fixture reference, and applicable discovery artifact with its path, role, importing artifact, and inspection status. An unresolved import, unread artifact, or unclassified role is `incomplete-evidence-chain` and rejects the audit. Approval requires a complete inventory in verdict metadata.
-
-Four properties must hold, checked in strict order: coupling (the test exercises codebase behavior, not authored prose), falsifiability (a named mutation breaks it), alignment (it exercises the asserted behavior), and coverage (the test drives execution into the assertion-relevant path). A test missing any property has zero evidentiary value regardless of code quality.
+Start from every linked test and recursively follow repository imports through test infrastructure before judging evidence. Four properties then hold in strict order: coupling (the test exercises codebase behavior, not authored prose), falsifiability (a named mutation breaks it), alignment (it exercises the asserted behavior), and coverage (it drives execution into the assertion-relevant path). A test missing any property has zero evidentiary value regardless of code quality.
 
 **JUDGE COVERAGE BY READING.**
 
-Apply the no-deterministic-verification constraint above by establishing coverage from a source trace into the assertion-relevant code path.
+Establish coverage from a source trace into the assertion-relevant code path, never from a measured percentage.
 
 **NO MECHANICAL SUBSTITUTES.**
 
-Mocking patterns, skip patterns, type annotations — these are linting concerns (SemGrep, ESLint). The auditor evaluates evidence quality, not code quality signals. The declaration screen is a read step: identify declarations in the test file, then judge ownership from their evidence role.
-
-Apply the literal rule by reading the test's literals against their sources.
+Mocking patterns, skip patterns, and type annotations are linting concerns. The declaration screen is a read step: identify declarations in the test file, then judge ownership from their evidence role. Apply the literal rule by reading the test's literals against their sources.
 
 **TEST FILES OWN PREDICATES AND NO INDEPENDENT DATA OR CONFIGURATION.**
 
-Before coupling, inspect every executed test and imported infrastructure artifact. Every behavioral predicate and assertion API call remains lexically in the linked test function or callback. Reject a harness, generator, fixture, controlled implementation, or recording collaborator that accepts an expected outcome, returns a verdict, calls an assertion API, or exposes matcher-shaped verdict methods.
-
-Classify bindings by what they choose. Observation aliases, actual-result bindings, imported source-contract aliases, generated parameters, callback inputs, and resource handles are valid when they introduce no data or policy. A framework-provided temporary-directory handle, a local binding that receives a harness observation, and an assertion-local projection over observations are therefore valid. NEVER reject a binding merely because it is a parameter, assignment, alias, or local expression; moving those values into a harness would hide assertion flow and can move the predicate across the seam. Reject bindings that choose cases, expectations, runner settings, property configuration, setup policy, reusable data, generator domains, fixture payloads, or verdict rules. The remediation target is part of the finding: source contract, spec-governed harness, spec-governed generator, inert whole-payload fixture, independent oracle, or curated eval case data when generation is wasteful and not tractable.
+Reject a harness, generator, fixture, controlled implementation, or recording collaborator that accepts an expected outcome, returns a verdict, calls an assertion API, or exposes matcher-shaped verdict methods. Classify bindings by what they choose: observation aliases, actual-result bindings, imported source-contract aliases, generated parameters, callback inputs, and resource handles are valid when they introduce no data or policy. NEVER reject a binding merely because it is a parameter, assignment, alias, or local expression. Reject bindings that choose cases, expectations, runner settings, property configuration, setup policy, reusable data, generator domains, fixture payloads, or verdict rules, and name the owner: source contract, spec-governed harness, spec-governed generator, inert whole-payload fixture, independent oracle, or curated eval case data.
 
 </essential_principles>
 
 <audit_workflow>
 
-Bind the spec-node path or evidence scope: `$ARGUMENTS` supplies it when that argument is non-empty; when it is empty, the target is the one the request text carries, and the empty substitution binds nothing. Preserve any supplied language partitions and completed composition results. Resolve evidence paths to their governing node or lowest common ancestor before context loading; never infer a target from adjacent conversation.
+<step name="bind_request">
 
-If the request carries no target, return `REJECTED` with only `gate-1-assertion` as `FAIL`: one finding with `id: "f-001"`, this skill's file as `file`, `line: null`, `assertion: "missing target"`, `property: "evidence-chain-completeness"`, `rule: "missing-target"`, `severity: "REJECT"`, a message naming the required node or evidence scope, and `remediation_target: "language-partition"`. Set `target` to the supplied string and both evidence inventory arrays to empty; set `metadata.branch` to JSON `null`. Gate 2 has no established language applicability and is omitted.
+**Step 1: Bind the request**
+
+The request is one JSON object: `$ARGUMENTS` supplies it when that argument is non-empty; when it is empty, the object is the one the request text carries, and the empty substitution binds nothing. It has exactly three fields:
+
+- `target` — a spec node directory or its spec file, repository-relative, or a committed changeset selector: `HEAD`, a branch, or `base...head`.
+- `runDriver` — an object with exactly the six non-empty string fields `producerKind`, `agentName`, `agentOwningPluginName`, `skillName`, `skillOwningPluginName`, and `invocationRole`.
+- `agentOwningPluginVersion` — the non-empty version string of the plugin `runDriver.agentOwningPluginName` names.
+
+Use `runDriver` and `agentOwningPluginVersion` only as payload data, placed exactly where `<persistence_contract>` shows them; never complete, correct, or reinterpret a value, and let no step, judgment, or terminal status depend on them. A missing, extra, or malformed field returns `BLOCKED` with `runToken: not-started` naming the exact field.
+
+Resolve the repository root with `git rev-parse --show-toplevel` and run `realpath` separately on the root and on `target`. The target is a **node target** when it resolves beneath the root, by path-component boundary, to a directory below `spx/` whose name carries a node-kind suffix, or to the spec file directly inside such a directory; its spec, `<spec-path>`, is the directory's `{slug}.spec.md`, or the prior `{slug}.md` a 3.x-authored tree carries, as a normalized repository-relative path. A target directly under `spx/` is the product spec, which carries no `[test]` assertion: return `BLOCKED` with `runToken: not-started` naming `unsupported-target`. Every other target is a **changeset target**, passed unchanged as a selector to Step 3.
+
+Use skill `spec-tree:spec-tree-plugin`. Invoke it with the verb `version` and retain the version it reports as the skill-owning plugin version. Run `spx --version` and retain its output as the tool version. A failed resolution, a node directory without its spec, or a missing version returns `BLOCKED` with `runToken: not-started` naming the exact failure, before any run starts.
+
+</step>
 
 <step name="load_standards">
 
-**Step 0: Load shared test-evidence standards**
+**Step 2: Load the shared test-evidence standards**
 
-Use skill `spec-tree:test-evidence-standards`. Apply its complete predicate-seam, semantic-binding, case-provenance, oracle-independence, assertion-type-litmus, mutation litmus, and assertion-design-record rules. A missing reference blocks the audit because `/test` and `/audit-tests` must judge from the same standards.
+Use skill `spec-tree:test-evidence-standards`. Apply its complete predicate-seam, semantic-binding, case-provenance, oracle-independence, assertion-type-litmus, mutation-litmus, and assertion-design-record rules. When it cannot load, return `BLOCKED` with `runToken: not-started` naming `test-standards-unavailable`, because `/test` and this audit judge from the same standards.
 
 </step>
 
 <step name="load_context">
 
-**Step 1: Load context**
+**Step 3: Resolve the scope and load context**
 
-Invoke `/understand` when the live `<SPEC_TREE_FOUNDATION>` marker is absent, then invoke `/contextualize` on the spec node whose tests are being audited. This loads the spec's assertions, ancestor ADRs/PDRs, and the full hierarchy context.
+Use skill `spec-tree:understand` when the live `<SPEC_TREE_FOUNDATION>` marker is absent; a marker still absent after that returns `BLOCKED` with `runToken: not-started`.
 
-Do not proceed without live `<SPEC_TREE_FOUNDATION>` and `<SPEC_TREE_CONTEXT>` markers.
+For a changeset target, Use skill `spec-tree:scope-changeset` with the selector and consume its `<COMMITTED_CHANGESET_SCOPE>` marker: `<base>`, `<head>`, and the changed paths. A stale-base refusal returns `BLOCKED` with `runToken: not-started` naming `stale-base` and carrying the provider's diagnostic; any other provider failure returns `BLOCKED` with that diagnostic. Require `<head>` to equal `git rev-parse HEAD` and `git status --porcelain` to print nothing, so every live read below reads the committed subject; otherwise return `BLOCKED` with `runToken: not-started` naming `uncommitted-subject`. The governing node of a changed path is the node containing the `spx/**/tests/` file that is that path or that names it in its evidence chain; several governing nodes are judged together in one run.
+
+Load each governing node's context read-only, never invoking `/contextualize` or `/sync-base`, so the audit changes no checkout state: the product spec, then each spec and every decision record on the path from `spx/` to the node, then every decision a loaded spec or decision cites by full `spx/` path. A node target's own spec is excluded from this read; Step 4 replays it from the run. A spec missing on that path, or a cited decision that does not exist, returns `BLOCKED` with `runToken: not-started` naming the missing file and, for a citation, the citing file.
+
+</step>
+
+<step name="open_run">
+
+**Step 4: Open the run and record the root**
+
+For a node target, from the repository root:
+
+```bash
+spx verification run start --verification-type audit --scope-type file --scope '<spec-path>' --input '<spec-path>'
+```
+
+Read the retained input with `spx verification run input --verification-type audit --scope-type file --scope '<spec-path>' --run '<run-token>'`; its `content` is the one copy of the node spec this audit judges.
+
+For a changeset target, pass the provider's scope object — `base`, `head`, and `changed_paths` exactly as the marker carries them — as the run input on stdin, in the transport form `<persistence_contract>` selects:
+
+```bash
+spx verification run start --verification-type audit --scope-type changeset --scope '<base>..<head>' --input stdin <<'SCOPE_INPUT'
+<scope-object-on-one-line>
+SCOPE_INPUT
+```
+
+Capture the exact `runToken` and use it for every later command. Record the root unit under `<persistence_contract>`. Steps 5 through 7 record each assertion's unit and findings as soon as that assertion is judged, then its language units, so the run shows each result before the next assertion is judged.
 
 </step>
 
 <step name="map_assertions">
 
-**Step 2: Map assertions to test files**
+**Step 5: Map assertions and evidence paths**
 
-Read the spec's Assertions section. Only assertions carrying `[test]` evidence enter this audit. Skip assertions tagged `[eval]` or `[audit]`; their evidence belongs to other verification workflows.
+Read each governing spec's `## Assertions` — the replayed content for a node target, the committed spec for a changeset target. Only assertions carrying `[test]` evidence enter this audit; `[eval]`, `[probe]`, and `[audit]` evidence belongs to other verification workflows. Number the `[test]` assertions of each spec from `001` in document order. For each, extract the assertion text, the assertion type, the linked test path, and whether the linked file exists.
 
-For each included assertion, extract:
-
-| Field          | Extract                                                  |
-| -------------- | -------------------------------------------------------- |
-| Assertion text | The claim being tested                                   |
-| Assertion type | Scenario / Mapping / Conformance / Property / Compliance |
-| Test link      | Path from `([test](path))`                               |
-| Link status    | File exists or missing                                   |
-
-**Missing test file = finding.** Record it and continue to next assertion.
+A node target audits every `[test]` assertion of its spec. A changeset target audits each `[test]` assertion whose linked test is a changed path or whose evidence chain, inventoried in Step 6, reaches one. A changed test or test-infrastructure path that no current `[test]` assertion links and no current evidence chain reaches is a **retired path**: record it as a `not-applicable` retired unit naming the reason, and never demand restoration of evidence a current spec no longer claims. A current `[test]` link to a missing file is a `missing-test-file` finding on that assertion's unit.
 
 </step>
 
 <step name="full_chain_ownership">
 
-**Step 2b: Inventory the complete evidence chain**
+**Step 6: Judge each assertion's evidence chain**
 
-Starting from the test links mapped in Step 2, follow each repository import recursively. Record one inventory entry per artifact:
+For each in-scope assertion, judge in this order, then record its assertion unit and every finding against it.
 
-| Field               | Meaning                                                                                                                      |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `path`              | Repository-relative artifact path                                                                                            |
-| `role`              | `test`, `harness`, `generator`, `fixture`, `discovery`, or `production`                                                      |
-| `imported_from`     | Path that introduced the artifact, or null for root artifacts such as the linked test and applicable discovery configuration |
-| `inspection_status` | `inspected` or `unresolved`                                                                                                  |
+**Inventory.** Starting from the linked test, follow each repository import recursively and inventory every artifact by path, role (`test`, `harness`, `generator`, `fixture`, `discovery`, or `production`), importing artifact, and inspection status. Read every resolved artifact. A fixture consumed only by path is inventoried, and so is every applicable discovery or module-resolution artifact — `conftest.py` or pytest configuration, Vitest configuration, `Cargo.toml`, `go.mod` — even when it produces no finding. An import that cannot be resolved is an `incomplete-evidence-chain` finding located at the unresolved path, never at the thin test file; continue every check the available artifacts support, and report a property whose required evidence is unavailable as missing evidence rather than inferring it.
 
-Read every resolved artifact before continuing. A referenced fixture is inventoried even when consumed only by path. Include every applicable discovery or module-resolution artifact supplied in the evidence package: examples include `conftest.py` or pytest configuration, Vitest configuration, `Cargo.toml`, and `go.mod`. A discovery artifact remains in `metadata.evidence_chain` when it produces no finding. The final inventory MUST contain exactly one entry for every artifact used to resolve imports, ownership, collection, or discovery.
+**Testability.** Read the governed production source and identify the observable boundary, seam, or injection point through which a test can exercise the assertion-relevant behavior. When the source exposes none, record `untestable-source` located at the source file with remediation target `source-file`, naming the missing seam. Continue the remaining checks; the testability failure stands regardless of their results.
 
-If an import cannot be resolved from the audit evidence package or repository, add a `gate-1-assertion` REJECT finding against the unresolved repository-relative path with rule `incomplete-evidence-chain` and `remediation_target: "test-infrastructure"`. Do not attribute the finding to the thin test file. Continue every check supported by the available artifacts; report a property whose required evidence is unavailable as failed missing evidence rather than inferring a judgment from unread content.
+**Ownership.** Before coupling, enumerate every variable, constant, local function, fixture parameter, property-generated parameter, predicate, and assertion API call in the linked test, and classify its owner by reading its evidence role, never by a grep pattern or validation command. Resolve anything that looks like case data through the `/test-evidence-standards` per-assertion-type litmus first: a case the litmus assigns to the test is correctly owned there, and demanding that it move into a production module is source laundering.
 
-**Step 3: Testability precondition**
+| Binding or predicate role                                                                                                                       | Verdict                                            |
+| ----------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| Actual result, observation, resource handle, generated parameter, callback input, or imported-contract alias that introduces no choice          | Accept — assertion flow                            |
+| Behavioral predicate or assertion API call in the linked test function or callback                                                              | Accept — test-owned predicate                      |
+| Predicate, matcher, expected-value parameter, assertion call, or verdict helper in infrastructure                                               | `assertion-seam`, target `test-file`               |
+| Runner settings, seed policy, retries, setup policy, or lifecycle policy                                                                        | `test-owned-configuration`                         |
+| Test-invented case data, boundary bags, expected outputs, fixture contents, or generator domains the assertion type does not assign to the test | `test-owned-data`                                  |
+| Source-owned singleton shape or vocabulary copied into the test                                                                                 | `source-ownership`, target `source-contract`       |
+| Expected result derived from the production table, algorithm, parser, or branch logic that produces the actual result                           | `oracle-independence`, target `independent-oracle` |
 
-For each assertion, read the governed production source and identify the observable boundary, seam, or injection point through which a test can exercise the assertion-relevant behavior. Judge the source shape before judging the linked test.
+Casing and syntax are never evidence: renaming `MAPPING_RUNS` to `mappingRuns` or receiving a value through a parameter does not change what the binding chooses. A property test whose imported harness or wrapper owns no seed policy and reports no seed or replay path on failure is `missing-property-seed-reporting`.
 
-If the source exposes no way to observe or drive that behavior, add a `gate-1-assertion` REJECT finding against the source file with rule `untestable-source` and `remediation_target: "source-file"`. State the missing seam and its evidentiary consequence. Continue ownership and every other inspectable property check; preserve the testability failure regardless of those results.
+Apply the category checks to every imported test-infrastructure artifact; a value outside its category's allowed ownership is `source-ownership`:
 
-**Step 3a: Ownership across the evidence chain**
+| Artifact role | Allowed ownership                                                                      | `source-ownership` when it owns                                                                          |
+| ------------- | -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Harness       | Setup, teardown, cleanup, resource policy, access to real behavior, replay diagnostics | Protocol keys, command tokens, status values, expected outputs, arbitrary request payloads, domain truth |
+| Generator     | Variable domains with meaningful variation and shrinking                               | Copied protocol vocabulary, constant-only domains, hand-picked expected outputs                          |
+| Fixture       | Inert whole payload consumed by path or bytes                                          | Isolated tokens, values, expected outputs, executable exports                                            |
+| Discovery     | Test collection and registration policy                                                | Fixture bodies, domain values, generated cases, hidden setup policy                                      |
 
-Read each linked test file before coupling. Identify every variable, constant, local function, fixture parameter, property-generated parameter, predicate, and assertion API call and classify the proper owner:
+Judge a source symbol the test cites by declared-contract ownership: does production consume, emit, publish, register, or serialize it against a declared schema? An absent in-repository caller opens that question rather than settling it, so inspect the declared surfaces the checkout carries — packaging entry points and export declarations, plugin and protocol implementations, registry and reflective lookups, generated use, and declared schemas — before reporting the symbol as laundered, and name the surfaces inspected. Report it when none requires the symbol; a consumer outside the checkout is not evidence this audit can gather. Every `source-ownership` finding locates the artifact that copied the value and names `source-contract` as its target, even when the copy sits in a harness, generator, fixture, or discovery file. Judge the `/test-evidence-standards` `<assertion_design_record>` as one unit through the steps that own its fields: assertion mapping in Step 5, production subject in testability, case provenance in `source-ownership`, oracle owner in `oracle-independence`, and the rejected mutation with its failure observation in falsifiability.
 
-Use language syntax while reading to enumerate declarations, then classify ownership by reading the declaration and its evidence role. Do not outsource the verdict to a grep pattern or validation command.
+**Coupling.** Classify each import of the linked test: a test framework or a third-party library does not count; a codebase path counts. Zero codebase imports is `no-coupling`. Otherwise classify:
 
-Before applying the data rows, resolve anything that looks like case data through the per-assertion-type litmus from `/test-evidence-standards`, applied below. A case that litmus assigns to the test itself is correctly owned there and is never a REJECT; demanding it move into a production module is the source laundering the standard forbids.
+| Category           | Definition                                                                                        | Rule                                           |
+| ------------------ | ------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| Direct             | Imports the module under test                                                                     | Proceed                                        |
+| Indirect           | Imports a harness wrapping the module                                                             | Proceed — verify the harness has real coupling |
+| Transitive         | Imports a consumer of the module                                                                  | Proceed — verify the test level matches        |
+| Laundered indirect | Imports a test-infrastructure module that exists only to expose hardcoded values back to the test | `laundered-coupling`                           |
+| False              | Imports the module but never calls assertion-relevant functions                                   | `false-coupling`                               |
+| Partial            | Calls functions on wrong inputs or wrong code paths                                               | `partial-coupling`                             |
+| Severed            | Imports the module and replaces its behavior with a mock, fake, stub, or monkeypatch              | `severed-coupling`                             |
+| Prose-coupling     | Reads an authored prose or documentation body and asserts its content                             | `prose-coupling`                               |
 
-| Binding or predicate role                                                                                                                       | Verdict                                  |
-| ----------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| Actual result, observation, resource handle, generated parameter, callback input, or imported-contract alias that introduces no choice          | ACCEPT — assertion flow                  |
-| Behavioral predicate or assertion API call in the linked test function or callback                                                              | ACCEPT — test-owned predicate            |
-| Predicate, matcher, expected-value parameter, assertion call, or verdict helper in infrastructure                                               | REJECT — assertion seam                  |
-| Runner settings, seed policy, retries, setup policy, or lifecycle policy                                                                        | REJECT — test-owned configuration        |
-| Test-invented case data, boundary bags, expected outputs, fixture contents, or generator domains the assertion type does not assign to the test | REJECT — test-owned data                 |
-| Source-owned singleton shape or vocabulary copied into the test                                                                                 | REJECT — source ownership copied to test |
+Coupling means exercising executable behavior. A test that reads a skill body, spec body, prompt, or any other authored text and asserts its substrings is `prose-coupling`, directly or through a harness constant or reader function: its verification type belongs in `[eval]` or `[audit]`. Reading an authored source-code file for a structural lint that exercises a rule is not prose-coupling.
 
-Do not treat casing or syntax as evidence. Renaming `MAPPING_RUNS` to `mappingRuns`, changing an assignment to destructuring, or receiving a value through a parameter does not change what the binding chooses.
+**Falsifiability.** For each codebase import, write down a concrete mutation to the imported module that would make this test fail, as `Module`, `Mutation`, and `Impact`. No nameable mutation is `unfalsifiable`. A test double is legitimate only under one of the seven `/test` Stage 5 exception cases with its matching double: failure simulation (stub returning errors), interaction protocols (spy recording calls), time and concurrency (fake clock), safety (stub that records), combinatorial cost (configurable fake), observability (spy recording details), contract probes (contract stub).
 
-Use `predicate-ownership` with rule `assertion-seam` and remediation target `test-file` when infrastructure owns a predicate, matcher, expected-value parameter, assertion call, or verdict helper. Use `oracle-independence` with remediation target `independent-oracle` when an expected result derives from the production table, algorithm, parser, branch logic, or other implementation path that produces the actual result. Use `source-ownership` when the test copies a source-owned singleton shape or vocabulary. Use `declarations` for the remaining two REJECT rows — test-owned configuration and test-owned data — so a binding that chooses runner settings, seed policy, setup or lifecycle policy, boundary bags, expected outputs, fixture contents, generator domains, or case data the assertion type does not assign to the test always reports one property name rather than an invented one.
+**Alignment.** Answer whether the test exercises the exact behavior the assertion describes, and whether the assertion could be unfulfilled while the test passes; the second answering yes is `misaligned`. Judge the test against the executable source contract: when production exports and uses a contract the test imports while exercising the behavior, a change to that contract is intentional behavior change, so name a mutation to the consuming behavior. NEVER require a test to parse spec or decision Markdown or copy a literal from that prose as its oracle. The test strategy must fit the assertion type — scenario example-based with concrete Given/When/Then inputs, mapping parameterized over the input set, property through a property-based framework, conformance through a tool or schema, compliance against violating cases — and a mismatch is `strategy-mismatch`.
 
-For property-based tests, verify seed and replay behavior by reading the imported harness or property wrapper. If a property test has no harness-owned seed policy and no failure output that includes the seed or replay path, REJECT with `test-owned configuration` or `missing property seed reporting`.
-
-Apply category-specific ownership checks to every imported test-infrastructure artifact:
-
-| Artifact role | Allowed ownership                                                                      | REJECT with `source-ownership`                                                                              |
-| ------------- | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Harness       | Setup, teardown, cleanup, resource policy, access to real behavior, replay diagnostics | Protocol keys, command tokens, status values, expected outputs, arbitrary request payloads, or domain truth |
-| Generator     | Variable domains with meaningful variation and shrinking                               | Copied protocol vocabulary, constant-only domains, or hand-picked expected outputs                          |
-| Fixture       | Inert whole payload consumed by path or bytes                                          | Isolated tokens, values, expected outputs, or executable exports                                            |
-| Discovery     | Test collection and registration policy                                                | Fixture bodies, domain values, generated cases, or hidden setup policy                                      |
-
-Judge a source symbol the test cites by declared-contract ownership: does production consume it, emit it, publish it as API, register it, or serialize it against a declared schema? An absent in-repository caller opens that question rather than settling it, so inspect the declared surfaces the checkout carries — packaging entry points and export declarations, plugin and protocol implementations, registry and reflective lookups, generated use, and declared schemas — before reporting the symbol as laundered. Name the surfaces inspected in the finding. Report the finding when none of them requires the symbol: a consumer outside the checkout is not evidence this audit can gather, so its bare possibility never withholds a finding the declared surfaces support.
-
-For every case input, expected value, protocol key, command token, status value, rule identifier, and payload member, name its source and independent oracle in the inventory. Apply the per-assertion-type litmus questions from `/test-evidence-standards`. A value with no valid owner produces a `source-ownership` finding; an expectation derived from the production path under test produces an `oracle-independence` finding. The finding's `file` names the artifact that copied or coupled the value. Every `source-ownership` finding sets `remediation_target` to `source-contract`, even when the copied value appears in a harness, generator, fixture, discovery file, or test; the defect location never becomes the semantic owner. The `<assertion_design_record>` of `/test-evidence-standards` is judged as one unit through the steps and properties that already own its fields: the assertion through Step 2's assertion mapping, the production subject through Step 3's testability precondition, case provenance through `source-ownership`, oracle owner through `oracle-independence`, and the rejected mutation with its failure observation through `falsifiability` in Step 3c.
-
-</step>
-
-<step name="audit_coupling">
-
-**Step 3b: Coupling**
-
-Read the test file's import statements. Classify each import:
-
-| Import source                                  | Classification             |
-| ---------------------------------------------- | -------------------------- |
-| Test framework (vitest, pytest, jest)          | Framework — does not count |
-| Node modules / pip packages                    | Library — does not count   |
-| Codebase path (relative import, product alias) | Codebase — counts          |
-
-**Zero codebase imports → REJECT — "no coupling" (tautology).**
-
-If codebase imports exist, classify using this coupling taxonomy:
-
-| Category           | Definition                                                                                        | Verdict                                         |
-| ------------------ | ------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
-| Direct             | Test imports the module under test                                                                | Proceed                                         |
-| Indirect           | Test imports a harness wrapping the module                                                        | Proceed — verify harness has real coupling      |
-| Transitive         | Test imports a consumer of the module                                                             | Proceed — verify test level matches             |
-| Laundered indirect | Imports a test-infrastructure module that exists only to expose hardcoded values back to the test | REJECT — laundering                             |
-| False              | Imports module but never calls assertion-relevant functions                                       | REJECT                                          |
-| Partial            | Calls functions but on wrong inputs or wrong code paths                                           | REJECT                                          |
-| None               | Test imports only its test framework                                                              | REJECT — tautology                              |
-| Severed            | Imports the module under test and replaces its behavior with a mock, fake, stub, or monkeypatch   | REJECT — coupling severed                       |
-| Prose-coupling     | Reads an authored prose/doc body and asserts its content                                          | REJECT — couples to authored text, not behavior |
-
-Coupling means exercising executable **behavior**, never reading a document's content. A test whose "subject" is an authored prose or documentation artifact — a skill body, a spec body, a prompt, any text the product authors and maintains — that the test reads and asserts substrings of is NOT behavioral coupling, even when that artifact is the thing the assertion names. The text passes whatever it literally contains; no code runs. This holds full-chain: a harness that exposes the authored path as a constant, or a reader function that performs the read inside test infrastructure, does not convert a prose assertion into behavioral coupling — follow the read to its source and classify by what is ultimately exercised.
-
-**A test whose evidence is reading an authored prose or documentation body and asserting on its content → REJECT — "prose-coupling."** The claim verifies that prose was authored, not that code behaves; its verification type belongs in `[eval]` (a graded judgment over a producer's structured verdict) or `[audit]` (a semantic constraint), and the spec assertion is retagged accordingly. Reading an authored *source-code* file for a structural lint that exercises a rule is not prose-coupling; the discriminator is whether the subject is authored prose/documentation or executable behavior.
-
-</step>
-
-<step name="audit_falsifiability">
-
-**Step 3c: Falsifiability**
-
-For each codebase import, name a concrete mutation to the imported module that would cause this test to fail. Write it down:
-
-```text
-Module: src/config-parser.ts
-Mutation: parseConfig returns empty object instead of parsed result
-Impact: "parses nested sections" fails — expect(result.section.key) throws
-```
-
-**Cannot name a mutation for any import → REJECT — "unfalsifiable."**
-
-Check for mocking. If the test imports a module then replaces it with a mock, the coupling is severed:
-
-```typescript
-import { database } from "../src/database";
-vi.mock("../src/database", () => ({ query: vi.fn() }));
-// Real database.query never runs — coupling severed
-```
-
-**Import + mock = REJECT — "coupling severed."**
-
-**Exception**: Test doubles used under these seven legitimate exception cases from the `/test` methodology are not "coupling severed." Identify the matching exception and verify the double type:
-
-| Exception             | Double type           |
-| --------------------- | --------------------- |
-| Failure simulation    | Stub returning errors |
-| Interaction protocols | Spy recording calls   |
-| Time and concurrency  | Fake clock            |
-| Safety                | Stub that records     |
-| Combinatorial cost    | Configurable fake     |
-| Observability         | Spy recording details |
-| Contract probes       | Contract stub         |
-
-</step>
-
-<step name="audit_alignment">
-
-**Step 3d: Alignment**
-
-Read the spec assertion text. Read the test's expect/assert statements. Answer:
-
-1. Does the test exercise the exact behavior the assertion describes?
-2. Could the spec assertion be unfulfilled while the test passes?
-
-If yes to question 2: **REJECT — "misaligned."**
-
-Judge the test against the executable source contract without making the test
-duplicate or parse the authored spec text. When production exports a value or
-typed contract, uses it in the behavior under test, and the test imports that
-same contract while exercising the behavior, a change to the source contract is
-an intentional behavior change rather than a mutation the test must reject.
-Name a mutation to the consuming behavior that would break the test. NEVER
-require a test or test-infrastructure artifact to parse spec or decision Markdown
-or copy a literal from that prose as an independent oracle; authored prose is
-verified through spec audit and review, and duplicated literals violate source
-ownership.
-
-Check assertion-type-to-strategy alignment:
-
-| Assertion type | Required test strategy                            | REJECT if                 |
-| -------------- | ------------------------------------------------- | ------------------------- |
-| Scenario       | Example-based with Given/When/Then inputs         | Missing concrete scenario |
-| Mapping        | Parameterized over input set                      | Only one example tested   |
-| Property       | Property-based framework (fast-check, Hypothesis) | Only example-based        |
-| Conformance    | Tool or schema validation                         | Manual check              |
-| Compliance     | Rule exercised against violating cases            | Only conforming cases     |
-
-</step>
-
-<step name="audit_coverage">
-
-**Step 3e: Coverage**
-
-Establish coverage by tracing whether the test reaches the assertion-relevant behavior in source.
-
-Trace, by reading, whether the test drives execution into the assertion-relevant code path:
-
-1. Read the production code the assertion governs and identify the assertion-relevant functions, branches, and lines.
-2. Read the test and follow what it calls into that production code.
-3. Judge whether the test's execution reaches the assertion-relevant path — the lines whose behavior the assertion claims.
-
-**Interpret the trace:**
-
-- **Reaches the assertion-relevant path**: the test exercises the behavior the assertion claims. ✓
-- **Imports the module but never drives execution into the assertion-relevant path**: REJECT — "no coverage." Name the specific assertion-relevant path the test fails to reach, traced from the code.
-- **The assertion-relevant path is trivially total** (the test obviously exercises every line the assertion claims): record `judgment: "saturated"` in `metadata.coverage_traces`. The test's evidentiary value comes from the other three properties.
-
-Coverage here is execution breadth (does the test reach the assertion-relevant lines), not assertion strength. A property-based test that exercises the same lines over a broader input domain adds behavior-coupled evidence that reading captures and a line count would not.
-
-The judgment is traced from the code and named in the finding — never a measured percentage, and never an unbacked "probably covers."
+**Coverage.** Read the production code the assertion governs and identify the assertion-relevant functions, branches, and lines; follow what the test calls into it; judge whether execution reaches those lines. A test that never reaches them is `no-coverage`, naming the unreached path traced from the code. A trivially total path the test obviously reaches is covered; its value comes from the other three properties.
 
 </step>
 
 <step name="compose_language">
 
-**Step 3f: Compose language-specific test-evidence concerns**
+**Step 7: Compose the language-specific test-evidence concerns**
 
-The four evidence properties above are language-neutral. Language-specific test-evidence concerns — the per-language check IDs and extraction targets named in `<verdict_format>` — are owned by the language test audit skill, not by this one.
+Language-specific concerns are owned by the installed `audit-<lang>-tests` skills. Derive one partition per linked test path: take the installed `audit-<lang>-tests` skills from the skill listing in context, load each language's `<lang>-test-standards`, and read its filename instantiation of `<subject>.<evidence>.<level>[.<runner>]`; the text after the last closing bracket is the declared suffix, whether `.test.ts`, `.py`, or `_test.go`. Map every linked test whose filename ends in an installed plugin's declared suffix to that language, never from an extension list this skill carries. A suffix no installed plugin declares, or an ambiguous partition, is an `unsupported` language unit carrying the `unsupported-language` finding with target `language-partition`.
 
-Read detected language or language partitions from the audit inputs. When absent, derive partitions from the linked-test filenames and the installed language plugins. Take the installed `audit-<lang>-tests` skills from the skill listing already in context; no directory scan is needed. For each, load that language's `<lang>-test-standards` skill and read its filename instantiation of `<subject>.<evidence>.<level>[.<runner>]` — the concrete pattern the standard states, such as `test_<subject>.<evidence>.<level>[.<runner>].py`. The text after the last closing bracket is the declared suffix: a compound suffix such as `.test.ts` as readily as a bare `.py` or `_test.go`. Map every linked test whose filename ends in an installed plugin's declared suffix to that language. Reject a suffix no installed plugin declares, or an ambiguous partition, with property `unsupported-language` and remediation target `language-partition` instead of guessing; never map an extension from a list this skill carries.
+For each partition, Use skill `{lang}:audit-{lang}-tests` and pass the governing node path and that partition's linked test paths, adding retired paths of that language for a changeset target. When the skill is not installed, record each of that language's units as `missing-skill`, which rejects the run without a finding. Validate each returned result against the composed concern contract in `<verdict_format>` — row names, required finding fields, allowed statuses, and agreement between findings, row statuses, and the overall value — and accept no partial rows from a result that fails it: record `language-result-invalid` naming the failed check.
 
-For each language, consume an explicitly supplied completed verdict or invoke the installed `audit-<lang>-tests` skill through the runtime's supported skill mechanism. A completed verdict uses the same `<verdict_format>` contract as a fresh result; never invoke that concern again. Validate its output shape, required fields, applicable rows, and agreement between findings, row statuses, and overall status. Malformed or incomplete evidence adds a `gate-1-assertion` `REJECT` finding with property `language-composition`; continue the remaining languages.
-
-Merge each valid result's findings into the matching rows by `name` — append, never replace — and derive their statuses under `<verdict_format>`. Merge its evidence-chain entries and coverage traces with the shared inspection, preserving every inspected artifact and assertion without duplicate entries. A composed rejection remains a rejection in the merged result. When a required `audit-<lang>-tests` skill is absent or unavailable, mark `gate-1-assertion` as `FAIL` and append a `REJECT` finding there naming the missing skill, property `language-composition`, and remediation target `skill-installation`; never approve incomplete coverage.
-
-A language audit returns a third shape when its own scope step finds that every subject it was given is a retired path with no current `[test]` assertion and no current evidence-chain owner: `{"status": "NOT_APPLICABLE", "subjects": [...], "explanation": "..."}`, carrying no rows and no findings. Treat it as neither a pass nor a failure of that language's concerns. Record the reported subjects and explanation in verdict metadata, compose the remaining languages normally, and decide the overall verdict from the rows that do exist. When every language in scope returns `NOT_APPLICABLE` and no language-neutral finding was raised, emit that same shape rather than an approval, because no evidence was judged.
+From a validated result, record one language unit per linked test path of that partition, then each finding: a `REJECT` finding as `blocking`, a `WARNING` as `debt`, and no `INFO` observation. A Gate 1 or Gate 2 finding records on the unit whose test path its `file` names, or on the partition's first language unit when its `file` names a shared artifact. A `NOT_APPLICABLE` result records each reported subject as a retired unit carrying the result's explanation. Language concerns reach the run only through the installed skill; never read a language plugin's `SKILL.md` from the checkout in its place.
 
 </step>
 
-<step name="compose_architectural">
+<step name="reconcile_and_finish">
 
-**Step 3g: Roll up composed architectural duplication**
+**Step 8: Reconcile**
 
-Gate 2 is a composed-language concern. It applies when at least one language-specific verdict returns a `gate-2-architectural` row. Merge every applicable Gate 2 finding by row name, preserving each finding's language-specific rule and extraction target.
+Read `spx verification run status` with the same type, scope, and token. Require exactly one root unit, one unit per in-scope assertion, one language unit per linked test path and language, one retired unit per retired path, and an accepted unit for every finding; record any missing unit or finding and read the status again.
 
-- Return Gate 2 `FAIL` when any composed Gate 2 row contains a `REJECT` finding.
-- Return Gate 2 `PASS` when every applicable composed Gate 2 row passes.
-- Omit Gate 2 only when every composed language verdict omits it — as non-applicable, or because that language's Gate 1 rejected the evidence, so its Gate 2 never ran.
-- Treat a malformed or unevaluated applicable Gate 2 row as failed `language-composition` evidence; never infer architectural approval.
+**Step 9: Finish and render**
 
-</step>
+For a node target, re-read the live spec and compare it with the retained input; a changed or missing file returns `BLOCKED` with the run preserved. For a changeset target, require `git rev-parse HEAD` to still equal `<head>`; a moved head returns `BLOCKED` with the run preserved.
 
-<step name="verdict">
-
-**Step 4: Issue verdict**
-
-Scan all findings across all assertions, including any folded in from the composed language audit. If any assertion has a property failure: **REJECTED.**
-
-Before row rollup, inspect every finding as a complete record. Require all nine finding fields from `<verdict_format>`, including `remediation_target`, and derive that target from the semantic owner named by the evidence model. Complete a missing field before adding the finding to a row; never emit a partial finding and rely on its message to imply the omitted field.
+Derive `approved` only when every unit is `audited` or `not-applicable` and no finding exists; derive `rejected` when any finding exists or any unit is `missing-skill` or `unsupported`. Then run `spx verification run finish` with the same type, scope, and token and `--terminal-status '<approved-or-rejected>'`, then `spx verification run render` with the same type, scope, and token, and return the token and the rendered projection unchanged.
 
 </step>
+
+<persistence_contract>
+
+Units record in this order: the root, then for each assertion its assertion unit followed by its language units, with retired units after the assertion units of their governing node. `<anchor>` is `<spec-path>` for a node target and `<base>..<head>` for a changeset target. Every unit carries `auditClass: implementation`, `auditKind: tests`, `coverageRequirement: required`, and `parentUnitId` equal to its parent's `unitId` on every unit except the root, which omits it.
+
+| Unit      | `unitId`                                               | Parent    | `subject`     | `priorContext.concernPartition` | `coverageStatus`                          | `skillName`, `skillOwningPluginName` of `expectedProducer`                                                                       |
+| --------- | ------------------------------------------------------ | --------- | ------------- | ------------------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Root      | `tests:root:<anchor>`                                  | —         | `<anchor>`    | `tests`                         | `audited`                                 | `audit-tests`, `spec-tree`                                                                                                       |
+| Assertion | `tests:assertion-<NNN>:<spec-path>`                    | root      | `<spec-path>` | `assertion`                     | `audited`                                 | `audit-tests`, `spec-tree`                                                                                                       |
+| Language  | `tests:assertion-<NNN>:<spec-path>:<lang>:<test-path>` | assertion | `<test-path>` | `language`                      | `audited`, `missing-skill`, `unsupported` | `audit-<lang>-tests`, `<lang>` when a validated result is consumed or the skill is missing; `audit-tests`, `spec-tree` otherwise |
+| Retired   | `tests:retired:<path>`                                 | root      | `<path>`      | `retired`                       | `not-applicable`                          | `audit-<lang>-tests`, `<lang>` when a language result reported it; `audit-tests`, `spec-tree` otherwise                          |
+
+`priorContext.changedFilePartition` is the unit's `subject`; a language unit adds `priorContext.languagePartition: <lang>`, and an `unsupported` unit uses `unknown`. The expected producer has `producerKind: skill`, the `runDriver`'s `agentName` and `agentOwningPluginName`, the skill named in the table, and `invocationRole: leaf-skill`. `recordedByRunDriver` carries the `runDriver` object unchanged. `producerProvenance` carries the request's `agentOwningPluginVersion`, the version of the plugin owning the unit's producer skill as `skillOwningPluginVersion`, and the exact `spx --version` output as `toolVersion`; a `missing-skill` unit omits it because no skill executed. That version is the `spec-tree` version from Step 1 for an `audit-tests` unit; for a language skill, Use skill `{lang}:{lang}-plugin` with the verb `version`, and a version that cannot be read is a `language-result-invalid` finding recorded with `audit-tests` as producer.
+
+These objects are the sanctioned SPX audit payload schema for this auditor; use their fields exactly, never derive a replacement schema from command help, and never alter a refused payload by guesswork:
+
+```json
+{
+  "unitId": "<unit-key>",
+  "parentUnitId": "<parent-unit-key-for-a-non-root-unit-only>",
+  "auditClass": "implementation",
+  "auditKind": "tests",
+  "subject": "<subject>",
+  "coverageRequirement": "required",
+  "coverageStatus": "<status>",
+  "priorContext": {
+    "changedFilePartition": "<subject>",
+    "languagePartition": "<lang-for-a-language-unit-only>",
+    "concernPartition": "<tests|assertion|language|retired>"
+  },
+  "expectedProducer": {
+    "producerKind": "skill",
+    "agentName": "<supplied-agent-name>",
+    "agentOwningPluginName": "<supplied-agent-owning-plugin>",
+    "skillName": "<producing-skill>",
+    "skillOwningPluginName": "<producing-skill-plugin>",
+    "invocationRole": "leaf-skill"
+  },
+  "recordedByRunDriver": "<the runDriver object, repeated exactly>",
+  "producerProvenance": {
+    "agentOwningPluginVersion": "<agent-owning-plugin-version>",
+    "skillOwningPluginVersion": "<producing-skill-plugin-version>",
+    "toolVersion": "<exact-spx-version>"
+  }
+}
+```
+
+A finding copies its unit's `expectedProducer` as `producerIdentity` and its unit's complete `producerProvenance`. `location` names the artifact path and line, or quotes the assertion; `message` names the assertion and the failed property; `evidence.observed` states what the artifact does, and `evidence.expected` states the required state and ends with `remediation: <target>`, the target drawn from `source-contract`, `harness`, `generator`, `fixture`, `eval-case`, `test-file`, `source-file`, `test-infrastructure`, `independent-oracle`, `skill-installation`, or `language-partition`. A native finding is `blocking`; its `rule` is one named in Steps 5 through 7. A composed finding keeps the language skill's rule, its mapped severity, its file and line as `location`, and its message.
+
+```json
+{
+  "unitId": "<accepted-unit-key>",
+  "producerIdentity": "<the unit's expectedProducer object, repeated exactly>",
+  "producerProvenance": "<the unit's producerProvenance object, repeated exactly>",
+  "rule": "<violated-rule-id>",
+  "severity": "<blocking-or-debt>",
+  "location": "<artifact-path-and-line-or-quoted-assertion>",
+  "message": "<assertion and failed property>",
+  "evidence": { "observed": "<observed-state>", "expected": "<required-state>; remediation: <target>" }
+}
+```
+
+A scope unit's idempotency key is its `unitId`. A finding's key is `<unit-key>:finding-<three-digit-ordinal>-<rule>`, numbering the unit's findings from `001` in order of location, message, severity, observed evidence, and expected evidence; require the suffix to match `finding-[0-9][0-9][0-9]-[a-z0-9_-]+`, and treat a mismatch as a pre-persistence `BLOCKED` defect.
+
+Pass each rendered object through a quoted heredoc by default:
+
+```bash
+spx verification run scope add --verification-type audit --scope-type '<file-or-changeset>' --scope '<anchor>' --run '<run-token>' --idempotency-key '<unit-key>' --payload stdin <<'SCOPE_JSON'
+<rendered-scope-object>
+SCOPE_JSON
+```
+
+```bash
+spx verification run finding add --verification-type audit --scope-type '<file-or-changeset>' --scope '<anchor>' --run '<run-token>' --idempotency-key '<finding-key>' --payload stdin <<'FINDING_JSON'
+<rendered-finding-object>
+FINDING_JSON
+```
+
+When the task message or the harness fixes one physical command line per call, pipe each rendered object instead — `printf '%s\n' '<rendered-object>' | spx verification run finding add --verification-type audit --scope-type '<file-or-changeset>' --scope '<anchor>' --run '<run-token>' --idempotency-key '<finding-key>' --payload stdin`, and the same form for `scope add` and for the changeset `run start --input stdin` — with every apostrophe in the object written as the single-quote splice `'"'"'`. Idempotency keys are command arguments, never payload fields; quote every path, token, and key as one shell argument, and never execute spec or test text as shell syntax. Run every mutation serially, preserving each result before the next command.
+
+</persistence_contract>
 
 </audit_workflow>
 
 <verdict_format>
 
-The `NOT_APPLICABLE` result defined in Step 3f is the alternate output when no evidence is applicable; it contains only `status`, `subjects`, and `explanation`, and the gate-verdict schema below does not apply. Every gate verdict includes `metadata.branch`: the branch string from the successful `/sync-base` result retained by `/contextualize`, an empty string for a detached HEAD, or JSON `null` when unavailable.
+**The verdict this skill returns.** Return only the exact run token and the unmodified rendered projection. The projection is the verdict: its `terminalStatus` is `approved` or `rejected`, its `findingCount` is zero for approval, its `findings` group every accepted finding under `blocking` and `debt`, its `auditScopeUnits` carry the root, assertion, language, and retired units, and its `events` carry every accepted finding payload and the terminal event. Both severities reject the run. Keep every SPX field unchanged, and add no `APPROVED` or `REJECTED` prose envelope.
 
-Emit the verdict as a single JSON object. This JSON is the skill's entire output; never emit a prose or markdown verdict.
+A run that cannot complete — a request or prerequisite failure before the run starts, a refused SPX command or payload, or a changed subject — returns:
 
-The skill's `overall` is `APPROVED` iff every applicable gate row is `PASS`; otherwise it is `REJECTED`. A required gate that cannot be evaluated is a `FAIL` row with a `REJECT` finding naming the missing evidence. Findings within each row carry severity `REJECT` for blocking findings (these are what flip a row to `FAIL`), `WARNING` or `INFO` for non-blocking observations. Every finding MUST include every field shown in its row schema: `id`, `file`, `line`, `assertion`, `property`, `rule`, `severity`, `message`, and `remediation_target`; omission of any field is an invalid verdict.
+```text
+BLOCKED
+runToken: <exact-token-if-start-succeeded-or-not-started>
+command: <exact-failed-command, or request for a failure before the run starts>
+payloadKey: <unitId-or-finding-idempotency-key-or-none>
+exitCode: <exact-exit-code-or-none>
+stderr: <exact-stderr-or-none>
+judgmentStatus: <complete|incomplete>
+judgedFindings: <JSON array of every finding judged before the stop, in the finding-payload shape>
+```
 
-The `metadata.evidence_chain` array MUST project the complete inspected inventory. Preserve every applicable discovery artifact even when it carries no finding. The `metadata.coverage_traces` array projects Step 3e: a language-specific concern includes traces for the coverage it judges and leaves the array empty only when coverage is outside its declared scope; this audit's merged verdict MUST carry one entry per audited assertion, naming the assertion-relevant source path, the test path followed into it, and the coverage judgment. Use `saturated` only for a trivially total path reached by the test.
+**The composed concern result.** Each `audit-<lang>-tests` skill returns one JSON object in this shape, which the language skills inherit; Step 7 validates it and records its findings. `overall` is `APPROVED` iff every present row is `PASS`. A row is `FAIL` iff it carries a `REJECT` finding; `WARNING` and `INFO` are non-blocking. Every finding carries all nine fields. `gate-2-architectural` is present only when the language judged architectural duplication; there is no `gate-0-deterministic` row.
 
 ```json
 {
   "schema_version": 1,
-  "skill": "audit-tests",
+  "skill": "audit-<lang>-tests",
   "target": "<spec-node-path>",
   "overall": "APPROVED | REJECTED",
   "rows": [
     {
-      "name": "gate-1-assertion",
+      "name": "gate-1-assertion | gate-2-architectural",
       "status": "PASS | FAIL",
       "findings": [
         {
-          "id": "f-002",
-          "file": "<test-file>",
-          "line": null,
-          "assertion": "<full-assertion-text-or-stable-id>",
-          "property": "<testability | evidence-chain-completeness | declarations | predicate-ownership | source-ownership | oracle-independence | coupling | falsifiability | alignment | coverage | language-composition | unsupported-language>",
-          "rule": "<assertion-id-or-property-name>",
-          "severity": "REJECT",
-          "message": "<one-line evidentiary gap>",
-          "remediation_target": "<source-contract | harness | generator | fixture | eval-case | test-file | source-file | test-infrastructure | independent-oracle | skill-installation | language-partition>"
-        }
-      ]
-    },
-    {
-      "name": "gate-2-architectural",
-      "status": "PASS | FAIL",
-      "findings": [
-        {
-          "id": "f-003",
-          "file": "<test-file>",
+          "id": "f-001",
+          "file": "<artifact-path>",
           "line": null,
           "assertion": "<full-assertion-text-or-stable-id | cross-assertion>",
-          "property": "architectural-duplication",
-          "rule": "<duplication-pattern>",
-          "severity": "REJECT",
-          "message": "<extraction target>: <nearest common test-infrastructure location>",
+          "property": "<testability | evidence-chain-completeness | declarations | predicate-ownership | source-ownership | oracle-independence | coupling | falsifiability | alignment | coverage | architectural-duplication | language-composition | unsupported-language>",
+          "rule": "<rule-id>",
+          "severity": "REJECT | WARNING | INFO",
+          "message": "<one-line evidentiary gap, or extraction target for gate-2>",
           "remediation_target": "<source-contract | harness | generator | fixture | eval-case | test-file | source-file | test-infrastructure | independent-oracle | skill-installation | language-partition>"
         }
       ]
     }
   ],
-  "metadata": {
-    "branch": null,
-    "evidence_chain": [
-      {
-        "path": "<repository-relative-path>",
-        "role": "test | harness | generator | fixture | discovery | production",
-        "imported_from": "<repository-relative-path-or-null>",
-        "inspection_status": "inspected | unresolved"
-      }
-    ],
-    "coverage_traces": [
-      {
-        "assertion": "<full-assertion-text-or-stable-id>",
-        "source_path": "<repository-relative-assertion-relevant-path>",
-        "test_path": "<repository-relative-test-path-and-call-chain>",
-        "judgment": "reaches | saturated | missing"
-      }
-    ]
-  }
+  "metadata": { "evidence_chain": [], "coverage_traces": [] }
 }
 ```
 
-A non-applicable Gate 2 row is omitted. A required gate that cannot be evaluated uses `status: "FAIL"` with a `REJECT` finding naming the missing evidence. A `source-ownership` finding uses `property: "source-ownership"`, `rule: "source-ownership"`, and `remediation_target: "source-contract"`; other findings select the failed property, rule, and owner that must change from the enumerated values. This verdict schema contains no `gate-0-deterministic` row. Language-specific test audit skills inherit this shape — they add language-specific check IDs and extraction targets to the findings but do not change the row names or schema.
+When every subject a language skill received is a retired path with no current `[test]` assertion and no current evidence-chain owner, it returns `{"status": "NOT_APPLICABLE", "subjects": [...], "explanation": "..."}` with no rows. A current broken `[test]` link stays applicable and is reported as missing evidence.
 
 </verdict_format>
 
@@ -417,75 +354,57 @@ A non-applicable Gate 2 row is omitted. A required gate that cannot be evaluated
 
 **Failure 1: Accepted a tautological test file**
 
-Claude approved a test file that imported only vitest. It declared OKLCH color constants and verified they satisfied contrast thresholds — pure math with zero connection to any CSS file, theme, or component. The tests pass if the entire codebase is deleted. Claude was distracted by clean types, good structure, and comprehensive scenarios, and never checked the imports.
+Claude approved a test file that imported only vitest. It declared OKLCH color constants and verified they satisfied contrast thresholds — pure math with zero connection to any CSS file, theme, or component. Clean types and comprehensive scenarios distracted Claude from the imports.
 
-How to avoid: Step 3b checks imports before the other evidence properties. Zero codebase imports = instant REJECT.
+How to avoid: Step 6 classifies imports before the other properties. Zero codebase imports is `no-coupling`.
 
 **Failure 2: Accepted mocking as legitimate coupling**
 
-Claude saw `import { database } from "../src/database"` and classified it as direct coupling. The next line was `vi.mock("../src/database")`. The real module never ran.
+Claude saw `import { database } from "../src/database"` and classified it as direct coupling. The next line was `vi.mock("../src/database")`, so the real module never ran.
 
-How to avoid: Step 3c checks for mocking after confirming coupling. Import + mock = coupling severed.
+How to avoid: After coupling, check for replacement doubles; an import plus a mock outside the seven Stage 5 cases is `severed-coupling`.
 
 **Failure 3: Re-ran the project's coverage command inside the audit**
 
-Claude ran the project's coverage command three times (baseline, with-test, isolated) to measure a delta. Those runs added no audit evidence and repeated work excluded by `<constraints>`.
+Claude ran the project's coverage command three times to measure a delta. Those runs added no audit evidence and repeated work the Author's agent session had already passed.
 
-How to avoid: Step 3e traces coverage by reading whether the test drives execution into the assertion-relevant path. Name the path from the code; never run the coverage or test command, and never substitute an unbacked "probably covers" for the trace.
+How to avoid: Trace coverage by reading and name the path from the code. The skill grants no command that runs project verification.
 
-**Failure 4: Distracted by code quality signals**
+**Failure 4: Approved a prose-body substring test as direct coupling**
 
-Claude spent the entire audit checking for `as any`, verifying return types, and searching for skip patterns. The test had perfect TypeScript quality and zero evidentiary value. Quality signals are linting concerns, not audit concerns.
+Claude rated coupling and falsifiability PASS on a test that read an authored skill body and asserted policy substrings, reasoning that the text was the thing under test. No code ran; only an edit to the prose could fail it.
 
-How to avoid: Follow the complete ordered audit sequence: inventory the evidence chain, check source testability, screen test-owned declarations, then judge coupling, falsifiability, alignment, and coverage.
+How to avoid: Classify by whether the subject is executable behavior or authored text, however a harness mediates the read. A read of authored prose asserted for its content is `prose-coupling`.
 
-**Failure 5: Approved a prose-body substring test as direct coupling**
+**Failure 5: Accepted renamed test-local configuration**
 
-Claude audited a test that read an authored skill body and asserted that policy substrings were present, and rated coupling PASS — "direct coupling to the artifact; the text is the thing under test" — and falsifiability PASS — "removing the clause from the skill body breaks the test." The test exercises no code; only an edit to the authored prose falsifies it, so it carries no behavioral evidence, yet the four-property model rationalized it as conformance.
+Claude renamed a SCREAMING_CASE property-test run count to camelCase after a validator flagged it, then approved. The value was still runner configuration in the executed test file.
 
-How to avoid: Step 3b — after identifying what a test reads, classify by whether the subject is executable behavior or authored prose/documentation, not by whether the path resolves to a repository file. A read of an authored prose or documentation body asserted for its content is prose-coupling → REJECT, however the path is resolved and whatever harness mediates the read.
+How to avoid: Classify ownership by what a binding chooses. Runner counts, seeds, setup choices, boundary bags, and expected outputs belong in harnesses, generators, source contracts, fixtures, or eval cases.
 
-**Failure 6: Accepted renamed test-local configuration**
+**Failure 6: Approved a thin test without auditing its harness**
 
-Claude saw a validation warning for a SCREAMING_CASE test constant used as a property-test run count, renamed it to camelCase, and approved the audit because the validator stopped flagging it. The value was still runner configuration in the executed test file. The rename only evaded a heuristic.
+Claude inspected a linked Python test, reviewed only three repeated `file.txt` values in its harness, and approved. The harness also declared SPX payload keys, command tokens, status values, and expected projection fields, none of which the audit classified.
 
-How to avoid: Step 3a reads declarations before coupling and classifies ownership. Runner counts, seeds, replay policy, setup choices, boundary bags, expected outputs, fixture paths, and generated domains belong in harnesses, generators, source contracts, inert fixtures, or eval cases — never in the test file under a different name.
+How to avoid: Inventory and read the complete evidence chain before judging, and name the source of every protocol value.
 
-**Failure 7: Approved a thin test without auditing its harness**
+**Failure 7: Used the defect location as the remediation owner**
 
-Claude inspected a linked Python test that imported a harness, then reviewed only three repeated `file.txt` values in the harness and approved them as harness-owned synthetic vocabulary. The harness also declared SPX payload keys, command tokens, producer identities, status values, and expected projection fields. The verdict omitted the imported-artifact inventory and never classified most values.
+Claude found copied protocol fields in a harness and named the harness as the remediation target because that file held the defect. Copied domain truth belongs to a source contract wherever the copy appears.
 
-How to avoid: Step 2b inventories and reads the complete evidence chain before judgment. Step 3a names the source of every protocol value and rejects harness-declared domain truth with `source-ownership`. Approval requires the inventory in verdict metadata.
+How to avoid: Locate the finding at the artifact holding the copy and name `source-contract` as its remediation target.
 
-**Failure 8: Rejected observation and resource bindings by syntax**
+**Failure 8: Read an absent in-repository caller as proof of laundering**
 
-Claude rejected a temporary-directory fixture parameter and a local `observations` binding even though both only received values selected by their owning infrastructure. The proposed remediation moved those handles into the harness, obscuring assertion flow without changing any semantic owner.
+Claude rejected a package's `__version__` as laundering because no module in the checkout consumed it. The packaging manifest declared it as published API, a surface the audit never opened.
 
-How to avoid: Step 3a asks what each binding chooses. Accept parameters and locals that only receive resource handles, observations, source contracts, or generated inputs; reject only bindings that independently choose data, policy, expectations, configuration, or verdict rules.
+How to avoid: Read the checkout's declared surfaces before reporting a symbol as laundered, and name the surfaces inspected.
 
-**Failure 9: Used the defect location as the remediation owner**
+**Failure 9: Rebased the audited branch while loading context**
 
-Claude correctly found copied protocol fields in a harness and emitted `source-ownership`, then set `remediation_target` to `harness` because that file contained the defect. The verdict failed its structural contract: copied domain truth belongs to a source contract regardless of where the copy appears.
+A test-evidence audit loaded context through `/contextualize`, whose `/sync-base` rebased the branch and resolved two conflicts mid-audit, so a concurrent implementation audit found its sealed head superseded.
 
-How to avoid: Keep location and ownership separate. Set `file` to the artifact containing the copy and set every `source-ownership` finding's `remediation_target` to `source-contract`.
-
-**Failure 10: Omitted a language manifest from the evidence chain**
-
-Claude inspected a Rust test, harness, generator, and production module, then omitted the supplied `Cargo.toml` from `metadata.evidence_chain` because it carried no finding. The manifest established package and test discovery, so the verdict's inventory was incomplete.
-
-How to avoid: Inventory applicable discovery and module-resolution artifacts even when they produce no finding. This includes pytest and Vitest configuration, Cargo manifests, and Go module files when the evidence package uses them to establish the test boundary.
-
-**Failure 11: Emitted a semantically correct but structurally incomplete finding**
-
-Claude rejected a production-derived oracle with the correct assertion, property, rule, artifact, and evidence chain, then omitted `remediation_target` from the finding. The prose diagnosis named the need for an independent oracle, but prose cannot substitute for a required verdict field and the structured verdict was invalid.
-
-How to avoid: Construct each finding atomically from the canonical nine-field schema before row rollup, derive `remediation_target` from the evidence model, and perform the Step 4 completeness check before emitting the verdict.
-
-**Failure 12: Read an absent in-repository caller as proof of laundering**
-
-Claude rejected a package's `__version__` as source-ownership laundering because no module in the checkout consumed it. The packaging manifest declares it as published API, a surface the audit never opened, so a real contract was reported as a test-only address.
-
-How to avoid: Judge ownership by the contract outside the test tree, and read the checkout's declared surfaces — packaging entry points and export declarations, plugin and protocol implementations, registry and reflective lookups, generated use, and declared schemas — before reporting a symbol as laundered.
+How to avoid: Load context read-only in Step 3 and invoke neither `/contextualize` nor `/sync-base`; the audited head stays the dispatched head.
 
 </failure_modes>
 
@@ -493,12 +412,12 @@ How to avoid: Judge ownership by the contract outside the test tree, and read th
 
 The verdict is sound when:
 
-- Every in-scope assertion and required language concern has a gate determination, with no evidence partition left unevaluated.
-- Every imported evidence artifact appears in verdict metadata with its role, import origin, and inspection status; approval contains only inspected entries.
-- Every protocol and domain value resolves to its production or platform owner; generated variable data resolves to a generator, inert whole payloads to fixtures, setup policy to harnesses, and curated examples to eval cases.
-- The overall APPROVED/REJECTED value agrees with every applicable gate row.
-- Every REJECT finding carries the complete canonical schema and names a falsifiable evidentiary gap against the affected assertion and artifact.
-- Every coverage determination identifies the assertion-relevant source path reached or omitted, and the same evidence package yields the same verdict.
+- Every in-scope `[test]` assertion and every linked test's language concern carries a recorded unit, and every retired path carries a `not-applicable` unit, with no evidence partition left unjudged.
+- Every assertion unit was recorded only after its evidence-chain inventory was complete, or carries the finding naming the unresolved artifact.
+- Every protocol and domain value resolves to its production or platform owner; generated variable data to a generator, inert whole payloads to fixtures, setup policy to harnesses, and curated examples to eval cases.
+- The sealed run's terminal status is `approved` only with no finding and every unit `audited` or `not-applicable`.
+- Every finding is falsifiable: it names the assertion or artifact, the failed property, the evidence, and the remediation target.
+- The same target, standards, committed subject, and run-driver identity yield the same units, finding keys, and terminal status.
 
 </success_criteria>
 
