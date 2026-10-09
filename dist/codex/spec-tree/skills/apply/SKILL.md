@@ -197,7 +197,7 @@ When the scope is cross-node (see `<scope_detection>`), enumerate the ADRs gover
 
 Before invoking the audit, apply `<stabilized_diff_rule>` and `<verification_checkpoint>`; carry its verdict forward under `<result_carryover>`.
 
-**REJECTED -> fix the defect class -> re-dispatch this step.** Loop until APPROVED.
+**REJECTED -> fix the defect class -> re-dispatch this step within the gate cap `<review_gates>` states.** The step passes only on `APPROVED`; a second counted rejection stops the flow.
 
 </step>
 
@@ -221,7 +221,7 @@ When the scope is cross-node (see `<scope_detection>`), enumerate every governed
 
 Before invoking the audit, apply `<stabilized_diff_rule>` and `<verification_checkpoint>`; carry its verdict forward under `<result_carryover>`.
 
-**A rejection -> fix the defect class -> re-dispatch this step.** Loop until every dispatched auditor passes: `APPROVED` from the test-evidence auditor, and `overall: PASS` with no `FAIL` or `UNKNOWN` row from the eval-evidence auditor.
+**A rejection -> fix the defect class -> re-dispatch this step within the gate cap `<review_gates>` states.** The step passes only when every dispatched auditor passes: `APPROVED` from the test-evidence auditor, and `overall: PASS` with no `FAIL` or `UNKNOWN` row from the eval-evidence auditor. A second counted rejection on any of its gates stops the flow.
 
 </step>
 
@@ -287,7 +287,7 @@ Use skill `spec-tree:project-run-journal`, then inspect the returned token throu
 
 The per-node gates in Steps 4, 6, and 8 inspect through distinct audit lenses; they do not see every cross-node effect — a stale reference a rename left in a sibling, dead code a move orphaned, or a spec a consolidation made false. The whole-diff review catches those effects.
 
-Apply `<stabilized_diff_rule>` before invoking the review. Fix every valid finding in the rendered sealed projection, including every in-scope same-class instance found by the same-class sweep, then verify and checkpoint the changed subject before reviewing it. A missing or unusable raw token follows `<launch_contract>`. If rendering a valid token fails, preserve that token and diagnose the inspection failure through `/project-run-journal`; never launch another reviewer to replace the recorded result. The gate remains blocked until the sealed result is readable and every valid finding is resolved.
+Apply `<stabilized_diff_rule>` before invoking the review. Fix every valid finding in the rendered sealed projection, including every in-scope same-class instance found by the same-class sweep, then verify and checkpoint the changed subject before reviewing it again within the gate cap `<review_gates>` states; a second counted rejection stops the flow. A missing or unusable raw token follows `<launch_contract>`. If rendering a valid token fails, preserve that token and diagnose the inspection failure through `/project-run-journal`; never launch another reviewer to replace the recorded result. The gate remains blocked until the sealed result is readable and every valid finding is resolved.
 
 </step>
 
@@ -328,9 +328,15 @@ Steps 4, 6, 8, and applicable Step 8a are blocking audit gates. Steps 4, 6, and 
 - Before invoking `/merge` when a full deterministic bundle is required: confirm the repository-declared full deterministic gate ran after every applicable agentic gate and against the current clean committed head. If any source, test, spec, generated-output, or configuration file changed afterward, rerun the invalidated agentic gates before running the declared full gate again.
 - Before declaring the flow complete for default-branch work: confirm the change reached the default branch on origin through Step 10's `/merge`, or that the user scoped the work to a proposal, analysis, review, or local-only change, or that an explicit merge lifecycle gate blocks with no independent local action remaining. A clean working tree, a local commit, or a branch ahead of base does not satisfy this — invoke Step 10.
 
-For completed verdicts of `REJECTED`, `UNKNOWN`, or a complete `BLOCKED` diagnostic at Steps 4 and 6; projection `terminalStatus: rejected` or a complete blocked diagnostic at Step 8; or valid findings at Step 9: fix the defect class, verify and checkpoint the changed subject, then audit that subject. Use Step 8's complete blocked diagnostic to identify the failed command, payload, installation, or skill-load boundary. Launch failures, unusable results, and blocked inspection of a valid review token follow `<launch_contract>` and Step 9; they never enter this relaunch loop.
+For completed verdicts of `REJECTED`, `UNKNOWN`, or a complete `BLOCKED` diagnostic at Steps 4 and 6; projection `terminalStatus: rejected` or a complete blocked diagnostic at Step 8; or valid findings at Step 9: fix the defect class, verify and checkpoint the changed subject, then audit that subject within the gate cap below. Use Step 8's complete blocked diagnostic to identify the failed command, payload, installation, or skill-load boundary. Launch failures, unusable results, and blocked inspection of a valid review token follow `<launch_contract>` and Step 9; they never enter this relaunch loop.
 
-**3 consecutive completed rejected, unknown, or blocked verdicts on the same audit gate (Steps 4, 6, 8, 8a) -> STOP.** Surface the stuck gate to the user via `request_user_input`: report the gate, its most recent verdict and outstanding findings, the same-class sweep already performed, and what did not resolve. A convergence loop that keeps reopening valid findings is a signal Claude's approach is unstable; refactor the approach before asking the same gate again. Repeated valid Step 9 review findings never become this stop or an operator call: the loaded merging standard governs them, and `<stabilized_diff_rule>` widens the same-class repair and amends the invariant before the next review. A failed launch or unusable result stops on its first occurrence under `<launch_contract>`.
+**Gate cap: each gate launches at most twice, counting real rejections.** A gate is one Verifier definition judging one subject: one ADR path at Step 4, one governed node and evidence type at Steps 6 and 8a, the committed scope at Step 8, and the whole changeset at Step 9. The cap covers the Step 9 review as well as the audit gates.
+
+- A rejection counts when at least one blocking or debt finding of a completed verdict — `REJECTED` or `UNKNOWN`, a failing or unknown row, projection `terminalStatus: rejected`, or a valid Step 9 finding — sits on a line the changeset changed, or is caused by its edit, read from the diff against the base. A finding already filed in the owning node's `ISSUES.md`, a stale finding, and a finding on untouched text count for nothing; a complete `BLOCKED` diagnostic and a launch that seals no run count for nothing.
+- A second counted rejection on the same gate -> STOP the flow. Report through `request_user_input` the gate, both verdicts, the outstanding findings, and the same-class sweep already performed. NEVER launch a gate a third time, and NEVER repeat a gate until it approves.
+- The cap covers agentic gates only. A deterministic check that fails runs again after its repair outside the cap.
+
+A failed launch or unusable result stops on its first occurrence under `<launch_contract>`.
 
 </review_gates>
 
