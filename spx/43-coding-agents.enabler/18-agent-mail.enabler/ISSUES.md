@@ -179,3 +179,33 @@ The workflow's first step admits two input forms — one request operation with 
 **The ground for deferring is measured, not preferred.** Of the last five defects found in this body, four were introduced by rewriting prose that was already correct. The fifth was introduced this round, by a pass that verified its factual claims against the adapter and still left a false conditional in a sentence it rewrote — step 4's `commandExitCode` clause, which stated the field's presence as whether a store command ran and so was false on the timeout path, where a store command runs and returns no exit code; the repair narrows the predicate to what the command produced. Both findings are presentation findings against exactly the part of the body whose restatements keep going wrong — step 4 and the project-key paragraph — so applying them means rewriting the sentences with the worst track record on this surface. A later reader who counts differently, or who counts a longer run, can overturn this judgment on the count rather than on preference.
 
 **Evidence**: `instructions:skill-auditor` findings under rule `dense_contract_paragraph` at SKILL.md lines 67 and 38 on head `8765ad41a173bad9437970b794a9c7143165085c`. The five are re-derivable from the entries above: three from the record-mapping entry, whose paragraph split, consolidated sentence, and enumeration each dropped a different condition of a predicate the adapter owns; one from the operation-surface entry's reading 2, where the row added on reading 1 led a caller to submit a `run` request the registry rejects as `operation-unavailable`; and the `commandExitCode` clause named above. A reader who counts a different run, or reads one of these as something other than a rewrite of correct prose, should restate the count here rather than treat the deferral as settled.
+
+## DEBT: the empty-string compliance assertion claims more than the adapter and its test hold
+
+The compliance assertion `ALWAYS: the adapter rejects an empty string in every text field of every operation except a registration's display name` in `agent-mail.md` states a rule over every text field. The adapter holds it only for the operation argument fields: `agent_mail.py` checks the `send` record's `body` with the string check that accepts an empty value, and checks the subject and the correlation separately. The linked compliance test exercises the operation argument fields alone.
+
+**Impact**: the assertion reads as a guarantee that no operation accepts an empty text value, while a `send` with an empty body passes through. A reader relying on the assertion predicts a rejection the adapter does not produce, and the test cannot falsify the overclaim because its domain stops where the adapter's rule stops.
+
+**Settlement condition**: the assertion names the domain the adapter enforces — the operation argument fields other than a registration's display name — together with each record field's own rule, and the linked compliance test covers every field the assertion names.
+
+**Evidence**: `spec-tree:changes-reviewer` run `2026-10-09_21-16-21-663-cb5623784a49` on head `f2e86d4c4637f466795d15c787f442fb1b79205c`, a `debt` finding at `agent-mail.md` line 33; the record body check at `src/plugins/coding-agents/skills/operate-agent-mail/scripts/agent_mail.py` line 526.
+
+## DEBT: the decision and the probe still claim labels on the event stream
+
+The adapter exposes no events operation, and the probe's limitations state that the run does not exercise the event stream for that reason. The adapter decision still names events where it places the labels: the rationale's sentence on position labels, the invariant on the store's labels, and the mapping assertion under `### Testing` each list `sender_display_name` on events beside inbox items and send results. Probe protocol step 3 still instructs reading the event stream and recording `sender_display_name` on each event. The captured response fixture `outcomeeng_testing/fixtures/agent_mail/responses/inbox-events.json` is read by no test.
+
+**Impact**: the decision declares a pass-through on a surface no operation reaches, so its mapping assertion names a domain member the linked evidence never exercises, and the probe protocol instructs a step its own attested run states it did not perform.
+
+**Settlement condition**: the decision's rationale, invariant, and mapping assertion name only the surfaces an adapter operation reaches, probe protocol step 3 reads the inbox alone, and the unused events response fixture is removed or consumed by a test that a declared events operation requires — or an events operation is declared and evidenced, and the claims stand on it.
+
+**Evidence**: `spec-tree:changes-reviewer` run `2026-10-09_19-42-27-272-9b7af3f2fe83` on head `568924292d60b6a5d51d15075eb6e83c12d72de0`, an `evidence` finding at `probes/position-labels/probe.md` line 20; run `2026-10-09_21-16-21-663-cb5623784a49` on head `f2e86d4c4637f466795d15c787f442fb1b79205c`, an `evidence` finding at `21-agent-mail-adapter.adr.md` lines 16 and 34.
+
+## DEBT: the probe precondition pins the build by its version text
+
+The probe's precondition states that `am --version` reports the version the adapter decision pins. The decision pins the build by its Agent Mail source commit and the binary's SHA-256, and states that `am --version` reports 0.3.36 for builds with and without the label fields, so the version text identifies no build.
+
+**Impact**: a run that checks only the precondition as written accepts a build without the label fields, so the precondition admits the build the probe exists to tell apart. The attested run recorded the commit and the SHA-256 itself, so its observations stand.
+
+**Settlement condition**: the precondition names the source commit and the binary SHA-256 the decision pins and checks the installed binary against the SHA-256.
+
+**Evidence**: `spec-tree:changes-reviewer` run `2026-10-09_19-42-27-272-9b7af3f2fe83` on head `568924292d60b6a5d51d15075eb6e83c12d72de0`, a `consistency` finding at `probes/position-labels/probe.md` line 12; run `2026-10-09_21-16-21-663-cb5623784a49` on head `f2e86d4c4637f466795d15c787f442fb1b79205c`, the same finding at line 11.
