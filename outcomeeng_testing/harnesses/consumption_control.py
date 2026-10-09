@@ -444,6 +444,63 @@ def installation_observation(work: Workspace) -> InstallationObservation:
 
 
 @dataclass(frozen=True)
+class NativeInstallationObservation:
+    status: str
+    expected_status: str
+    installed_loaded: tuple[object, ...]
+    stopped_loaded: tuple[object, ...]
+    restarted_loaded: tuple[object, ...]
+    cleanup_loaded: tuple[object, ...]
+
+
+def native_installation_observation(work: Workspace) -> NativeInstallationObservation:
+    _, _, schedule, _ = modules()
+    runner = schedule.SubprocessRunner()
+    if sys.platform != "darwin":
+        status = schedule.jobs(work.config.root, "status", runner, sys.platform)
+        return NativeInstallationObservation(
+            status["status"], schedule.JobStatus.UNSUPPORTED, (), (), (), ()
+        )
+    domain = f"gui/{os.getuid()}"
+    for mode in schedule.MODES:
+        handle = domain + "/" + schedule.LABEL_PREFIX + "." + mode
+        observed = runner.run(("/bin/launchctl", "print", handle))
+        if not schedule.absent(observed):
+            raise RuntimeError(
+                f"Native installation verification requires an absent job: {handle}; "
+                f"existing service or indeterminate state is preserved: {observed.stderr}"
+            )
+    stopped: dict[str, Any] = {}
+    restarted: dict[str, Any] = {}
+    installed: dict[str, Any] = {}
+    cleanup: dict[str, Any] = {}
+    try:
+        schedule.install(
+            work.config,
+            SCRIPTS,
+            work.root / "native-launch-agents",
+            runner,
+            sys.platform,
+            True,
+        )
+        installed = schedule.jobs(work.config.root, "status", runner, sys.platform)
+        stopped = schedule.jobs(work.config.root, "stop", runner, sys.platform)
+        restarted = schedule.jobs(work.config.root, "restart", runner, sys.platform)
+    finally:
+        cleanup = schedule.jobs(work.config.root, "stop", runner, sys.platform)
+        if cleanup["status"] != schedule.JobStatus.COMPLETED:
+            raise RuntimeError(f"Native installation cleanup failed: {cleanup}")
+    return NativeInstallationObservation(
+        installed["status"],
+        schedule.JobStatus.COMPLETED,
+        tuple(job["loaded"] for job in installed["jobs"]),
+        tuple(job["loaded"] for job in stopped["jobs"]),
+        tuple(job["loaded"] for job in restarted["jobs"]),
+        tuple(job["loaded"] for job in cleanup["jobs"]),
+    )
+
+
+@dataclass(frozen=True)
 class StandaloneObservation:
     exitcode: int
     expected_exitcode: int
