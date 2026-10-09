@@ -41,7 +41,7 @@ A Fixer is a fresh session of the definition the round's Author used. The task m
 
 A round whose fronted skill is not installed returns a `blocked` result naming that skill.
 
-Each Verifier is the configured auditor or reviewer for the evidence obligation the Change's Frame states, launched with a target-only task message. A `change-verifier` session produces verification routing and evidence through `/verify` and is an Author or Fixer, never a Verifier; its result is no verdict. The Verifier of a `{{! subagent_name('spec-tree', 'change-skill-author') !}}` round is `{{! subagent_name('instructions', 'skill-auditor') !}}`, and the Verifier of a `{{! subagent_name('spec-tree', 'change-subagent-author') !}}` round is `{{! subagent_name('instructions', 'subagent-auditor') !}}`:
+Each Verifier is the configured auditor or reviewer for the evidence obligation the Change's Frame states, launched with a target-only task message. A `{{! subagent_name('spec-tree', 'change-verifier') !}}` session produces verification routing and evidence through `/verify` and is an Author or Fixer, never a Verifier; its result is no verdict. The Verifier of a `{{! subagent_name('spec-tree', 'change-skill-author') !}}` round is `{{! subagent_name('instructions', 'skill-auditor') !}}`, and the Verifier of a `{{! subagent_name('spec-tree', 'change-subagent-author') !}}` round is `{{! subagent_name('instructions', 'subagent-auditor') !}}`:
 
 | Subject the obligation names        | Verifier                                                            |
 | ----------------------------------- | ------------------------------------------------------------------- |
