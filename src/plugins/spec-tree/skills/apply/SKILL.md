@@ -17,6 +17,8 @@ A spec-tree work item implemented, verified, and delivered to the boundary the u
 The raw invocation string `$ARGUMENTS` controls what runs before the per-node flow below. Parse it exactly once before Step 0:
 
 - `$ARGUMENTS` containing a canonical full `spx/...` node path → the work queue is that single node.
+- `$ARGUMENTS` naming a node in any other form — a path relative to `spx/`, a bare node directory name, or a numeric prefix → stop and report that `/apply` takes the canonical full `spx/{path-to-node}` form.
+- Any other non-empty `$ARGUMENTS` → the work is a plan or proposal; Step 0 selects its work queue.
 - Empty `$ARGUMENTS` → determine the work from the conversation. If nothing is clear, complete Step 1 first — use skill `spec-tree:understand` when the live `SPEC_TREE_FOUNDATION` marker is absent — then read `spx/EXCLUDE`, whose entries are relative to `spx/`, and prefix each non-comment, non-blank entry with `spx/` before adding it to the work queue. Never access `spx/EXCLUDE` before the foundation is live, and never pass a bare entry to `/contextualize`. If no work is found, report "Nothing to apply" and stop.
 
 When the work is described as a plan or proposal rather than a specific node or queue, use skill `spec-tree:slice` first: it selects the next executable observable slice and produces the node set that becomes this flow's work queue. Skip the preflight when the queue is already a specific node or an `spx/EXCLUDE` list.
@@ -28,7 +30,7 @@ Complete Step 1 before the queue loop in every mode, so the foundation is live b
 3. Confirm the final gate subject is committed and the worktree is clean.
 4. Proceed to the next node without stopping or asking, subject to the gate-retry limits in `<review_gates>`.
 
-If a node's flow cannot reach its gate-specific passing state or a converged review within the retry limit, stop the queue, report the failed node and step, and leave the remaining nodes in `spx/EXCLUDE`. Step 10 (`/merge`) runs once over the whole changeset after the queue completes.
+When an audit gate reaches the consecutive-verdict stop in `<review_gates>`, stop the queue, report the failed node and step, and leave the remaining nodes in `spx/EXCLUDE`. Step 10 (`/merge`) runs once over the whole changeset after the queue completes.
 
 </invocation_modes>
 
@@ -51,7 +53,7 @@ Proceed to Step 3 only after exactly one supported language and its required ski
 
 Before starting Step 3, determine the change's scope — this determination governs every later gate:
 
-- **Node-local** — the entire diff stays within the target node's own directory (its spec, its `tests/`, and the implementation files that node governs).
+- **Node-local** — every changed path is either inside the target node's directory under `spx/` or an implementation file that only the target node's linked tests reach.
 - **Cross-node** — the work touches anything else: a refactor, a move, a consolidation, a cross-cutting rename, a shared enabler, a sibling spec, or any file outside the target node.
 
 When the scope is cross-node, each audit gate covers the **whole changeset** in the form its dispatch takes — Step 4 every ADR and PDR governing an affected surface, Step 6 every governed node whose evidence the change touches, Step 8 the committed changeset selector it always receives — and Step 9 is REQUIRED before the flow may be declared complete. A target-node-only audit cannot see a regression the change introduced in a file the node does not own. Carry the determination through Steps 4 and 6, which restate their cross-node dispatch at the point of action.
@@ -98,7 +100,7 @@ Use skill `spec-tree:merging-standards` and read its `merge-policy.md` reference
 Before dispatching any persisted audit or review gate, bind its subject to an exact local commit:
 
 1. Use skill `spec-tree:sync-base` before every deterministic verification command and before every dispatch, and record the result it returns — `already_current` or `rebased` — for the exact head, read from the command and never from memory. Only origin knows the base moved; a result established on a head behind the fetched base tip is a verdict on a tree that cannot merge, and every verifier's resolver refuses that head as a `stale-base` block. A `rebased` result reopens the deterministic results and Verifier verdicts its preservation proof does not cover.
-2. Changes may remain uncommitted until another agent session or human is expected or asked to read them. Before dispatching an audit or review, run the touched-scope deterministic verification required by the repository overlay when preparing a gate. Do not run an aggregate gate whose generated-output drift check requires committed generator sources and generated output before creating the checkpoint.
+2. Changes may remain uncommitted until another agent session or human is expected or asked to read them. Before dispatching an audit or review, run the touched-scope deterministic verification the repository's merge overlay `spx/local/merging.md` declares for the changed paths, read through `/merging-standards`; when the overlay is absent, run the product's declared validation and test commands for those paths. Do not run an aggregate gate whose generated-output drift check requires committed generator sources and generated output before creating the checkpoint.
 3. When the relevant tracked or untracked files differ from `HEAD`, use skill `spec-tree:commit-changes` before dispatch to commit the exact current version regardless of whether the latest verification state is `passing`, `failing`, or `not-run`; preserve that state in the checkpoint result. After any further change, commit the new version before another audit or review.
 4. Confirm the worktree is clean and record the checkpoint's full `HEAD` commit ID.
 5. Dispatch the gate only when the required deterministic verification is `passing`, against the committed `<base>..<head>` scope. A `failing` or `not-run` checkpoint remains valid local history for recovery and collaboration while withholding gate dispatch. Do not supply a live file list for a gating run. The repository's declared full deterministic gate, when required, runs once against the clean checkpoint head as a later lifecycle step rather than before every checkpoint.
@@ -134,7 +136,7 @@ A complete `BLOCKED` diagnostic from either auditor blocks Step 8a until the nam
 
 <skill_map>
 
-Step 0 and Steps 1–2 are language-independent. Steps 3–8 use the detected language. Steps 9 and 10 are language-independent; Step 0 runs only when the work is described as a plan or proposal rather than a specific node or queue, Step 9 runs only when the change reaches beyond the target node, and Step 10 runs unless the work is explicitly scoped to a proposal, analysis, review, or local-only change.
+Step 0 and Steps 1–2 are language-independent. Steps 3–8 use the detected language. Steps 9 and 10 are language-independent; Step 0 runs only when the work is described as a plan or proposal rather than a specific node or queue, Step 9 runs only for a cross-node change, and Step 10 runs unless the work is explicitly scoped to a proposal, analysis, review, or local-only change.
 
 | Step | Purpose                  | TypeScript                                                                                                                          | Python                                          | Rust                                        | Go                                      |
 | ---- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- | ------------------------------------------- | --------------------------------------- |
@@ -153,7 +155,7 @@ Step 0 and Steps 1–2 are language-independent. Steps 3–8 use the detected la
 | 10   | Merge ‡                  | {!% require_skill 'spec-tree:merge' %!}                                                                                             | same                                            | same                                        | same                                    |
 
 § Step 0 runs only when the work is described as a plan or proposal rather than a specific node or queue; it selects the observable slice whose node set becomes the work queue (see `<invocation_modes>`).
-† Step 9 runs only when the change touches files or specs beyond the target node (see the step for the condition).
+† Step 9 runs only for a cross-node change (see `<scope_detection>`).
 ‡ Step 10 runs for any change destined for the default branch — skip only when the user explicitly scoped the work to a proposal, analysis, review, or local-only change (see the step).
 
 Invoke the exact skill or agent surface shown. Never substitute, skip, or reorder.
@@ -282,9 +284,9 @@ Skip this step only when the diff changes no test or eval evidence surface named
 
 </step>
 
-<step number="9" name="Whole-changeset review" gate="true" condition="the change touches files or specs beyond the target node">
+<step number="9" name="Whole-changeset review" gate="true" condition="the change is cross-node">
 
-Skip this step only when the entire diff is confined to the target node's own directory — its spec, its `tests/`, and the implementation files that node governs. The moment the work touches anything else — a refactor, a move, a consolidation, a cross-cutting rename, a shared enabler, a sibling spec, or any file outside the target node — this step is REQUIRED before the flow may be declared complete.
+Skip this step only when `<scope_detection>` classified the change node-local. For a cross-node change, this step is REQUIRED before the flow may be declared complete.
 
 Before invoking the review, confirm every applicable Step 8a evidence-auditor run renders `terminalStatus: approved`, then apply `<verification_checkpoint>`. The reviewer must see the same committed diff whose touched evidence artifacts passed their artifact-type evidence audits.
 
@@ -314,7 +316,7 @@ The flow is complete only when the change reaches the default branch on origin, 
 
 <terminal_full_gate>
 
-When the repository overlay, governing node, or merge lifecycle requires a full deterministic bundle, run the repository's declared full deterministic gate exactly once at the terminal verification point: after Steps 4, 6, 8, applicable evidence-auditor gates, and Step 9 have converged on the same clean committed head. Do not run that full gate before those agentic checks, inside an auditor, or concurrently with another heavy command.
+When `spx/local/merging.md`, the governing node, or the merge lifecycle requires a full deterministic bundle, run the repository's declared full deterministic gate exactly once at the terminal verification point: after Steps 4, 6, 8, applicable evidence-auditor gates, and Step 9 have converged on the same clean committed head. Do not run that full gate before those agentic checks, inside an auditor, or concurrently with another heavy command.
 
 If the full deterministic gate fails, fix the reported defect, run the focused touched-scope checks, create a new checkpoint commit, rerun every invalidated agentic gate, and only then run the declared full gate again. A successful full gate is invalidated by any subsequent source, test, spec, generated-output, or configuration change.
 
@@ -322,14 +324,14 @@ If the full deterministic gate fails, fix the reported defect, run the focused t
 
 <review_gates>
 
-Steps 4, 6, 8, and applicable Step 8a are blocking audit gates; each reads its Auditor's sealed run or complete `BLOCKED` diagnostic under `<auditor_verdict>`. Step 9 is a blocking whole-changeset review gate that runs whenever the change reaches beyond the target node. Step 10 is the terminal lifecycle boundary for default-branch work.
+Steps 4, 6, 8, and applicable Step 8a are blocking audit gates; each reads its Auditor's sealed run or complete `BLOCKED` diagnostic under `<auditor_verdict>`. Step 9 is a blocking whole-changeset review gate for every cross-node change. Step 10 is the terminal lifecycle boundary for default-branch work.
 
 - Before starting Step 5: require a Step 4 sealed run rendering `terminalStatus: approved` for every decision path Step 4 dispatched. If a run is absent or its status differs, stop and invoke or repair Step 4.
 - Before starting Step 7: require every Step 6 sealed run to render `terminalStatus: approved`. If a run is absent or its status differs, stop and invoke or repair Step 6.
 - Before considering implementation complete: inspect the Step 8 rendered projection. If `terminalStatus` is absent or differs from `approved`, stop — invoke or repair Step 8.
 - Before Step 8 for Go, Rust, or TypeScript, require Step 7a's usable `simplified` or `unchanged` result for the implementation being verified, with every resulting edit inspected, verified, and committed.
 - Before starting Step 9, the terminal full deterministic gate, Step 10, or completion: if the diff touches a test or eval evidence surface named by `<evidence_auditor_gate>`, require every applicable Step 8a sealed run to render `terminalStatus: approved` for the exact committed head, and invoke or repair Step 8a when a run is absent or its status differs. When the diff touches no named evidence surface, skip Step 8a.
-- Before declaring the flow complete: if the change touches anything beyond the target node, require a raw Step 9 review run token from the native final result and a rendered sealed projection from `/project-run-journal`. If no invocation has occurred, invoke Step 9. A failed invocation or unusable final result follows `<launch_contract>`; a blocked inspection preserves its token; valid findings follow the repair workflow.
+- Before declaring the flow complete: if the change is cross-node, require a raw Step 9 review run token from the native final result and a rendered sealed projection from `/project-run-journal`. If no invocation has occurred, invoke Step 9. A failed invocation or unusable final result follows `<launch_contract>`; a blocked inspection preserves its token; valid findings follow the repair workflow.
 - Before invoking `/merge` when a full deterministic bundle is required: confirm the repository-declared full deterministic gate ran after every applicable agentic gate and against the current clean committed head. If any source, test, spec, generated-output, or configuration file changed afterward, rerun the invalidated agentic gates before running the declared full gate again.
 - Before declaring the flow complete for default-branch work: confirm the change reached the default branch on origin through Step 10's `/merge`, or that the user scoped the work to a proposal, analysis, review, or local-only change, or that an explicit merge lifecycle gate blocks with no independent local action remaining. A clean working tree, a local commit, or a branch ahead of base does not satisfy this — invoke Step 10.
 
