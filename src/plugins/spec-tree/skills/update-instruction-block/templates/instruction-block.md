@@ -238,6 +238,7 @@ Raise an operator question through {{! tool('ask_user', 'codex') !}}, never as p
 - The Refiner interviews the operator directly, one question at a time; each question establishes from facts that each option is feasible and quotes the passage and link it rests on.
 - **NEVER** let a supervising session relay a batch of questions to the operator.
 - A question from any other session goes to that session's supervising session; a session that receives an operator answer informs its supervising session.
+- A question that needs the operator's own authority also reaches the operator: a blocked expense ceiling, a permission or credential, and a dangerous-command-guard stop; a session with no supervising session sends its question to the operator.
 
 ## Mutation Status Updates
 
