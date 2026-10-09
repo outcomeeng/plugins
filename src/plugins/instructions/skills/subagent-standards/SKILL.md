@@ -147,8 +147,9 @@ The root harness instruction file is the repository's `CLAUDE.md`.
 <placement>
 
 - ALWAYS: write product-owned definitions inside the invocation checkout by default.
-- A user-scope create, edit, or delete outside that checkout is an external write, whose
-  confirmation `/skill-standards` `<path_boundary>` governs.
+- A skill that creates, edits, or deletes a definition at user scope outside that checkout
+  performs an external write, whose confirmation `/skill-standards` `<path_boundary>` governs
+  for that skill.
 - NEVER: widen a checkout-scoped request because the role could serve other products.
 - ALWAYS: deliver marketplace-owned definitions through their owning plugin's build
   and installation workflow, with the plugin's invoked skills in the same scope.
@@ -173,7 +174,7 @@ The root harness instruction file is the repository's `CLAUDE.md`.
 
 <rule_catalog>
 
-Every rule the sections above state carries exactly one row below, giving it one stable identifier and one severity and naming the section that states it. The stating section is authoritative for what the rule requires. Rules this skill defers to `/agent-prompt-standards` or `/skill-standards` carry their rows in those catalogs. The identifier, severity, finding-key, and closed-vocabulary rules for this catalog are the catalog contract `/skill-standards` states for every instructions rule catalog.
+Every rule the sections above state carries exactly one row below, giving it one stable identifier and one severity and naming the section that states it. The stating section is authoritative for what the rule requires. Rules this skill defers carry their rows in the owning catalog: the prompt-writing rules in the `/agent-prompt-standards` catalog, which a finding against a definition cites, and the rules on a skill that loads or writes a definition in the `/skill-standards` catalog, which a finding against that skill cites. The identifier, severity, finding-key, and closed-vocabulary rules for this catalog are the catalog contract `/skill-standards` states for every instructions rule catalog.
 
 | Identifier                        | Severity | Rule                                                                                                                                                                                                                                                       | Stated in                 |
 | --------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
