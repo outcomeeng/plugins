@@ -26,13 +26,14 @@ On the Prowl submission route, the envelope of ownership proposals, one-way fact
 ### Mappings
 
 - Every kind a sender writes maps to one message record carrying exactly the fields this node declares, and the agent-mail capability's `send` accepts that record unchanged ([test](tests/test_mail_record.mapping.l1.py))
-- A checked succeeded `send` result of the agent-mail capability maps to the delivered mail result carrying the record's store-assigned id verbatim and the doorbell line `[<Label> <<StableName>>] mail <id>` when the result carries a renderable sender label and `[<StableName>] mail <id>` otherwise, a label being renderable only when it is non-empty, `str.isprintable()` holds for it, and it holds none of `[`, `]`, `<`, `>`; a failed or unavailable capability result maps to `delivery-failed` with its status and detail preserved ([test](tests/test_mail_record.mapping.l1.py)) ([test](tests/test_doorbell.property.l1.py))
+- A checked succeeded `send` result of the agent-mail capability maps to the delivered mail result carrying the record's store-assigned id verbatim and the doorbell line `[<Label> <<StableName>>] mail <id>` when the result carries a renderable sender label and `[<StableName>] mail <id>` when it carries no label or a label from the source-owned finite set of unrenderable labels, the full label staying in the store metadata the delivery result carries; a failed or unavailable capability result maps to `delivery-failed` with its status and detail preserved ([test](tests/test_mail_record.mapping.l1.py))
 - Ownership proposals, one-way facts, acknowledgements, mutation-state reports, mutation authorizations, and delivery failures map to distinct source-owned message and result states ([test](tests/test_agent_message.mapping.l1.py))
 - Every acknowledgement, mutation-state report, and mutation authorization preserves the complete active proposal reference, while every message that initiates a coordination reference receives a new UUID ([test](tests/test_agent_message.mapping.l1.py))
 
 ### Properties
 
-- A rendered doorbell, labeled or not, parses back to its stable sender name and id, and a label renders labeled only when it is non-empty, `str.isprintable()` holds for it, and it holds none of `[`, `]`, `<`, `>` ([test](tests/test_doorbell.property.l1.py))
+- A rendered doorbell, labeled or not, is one line that parses back to its stable sender name and id ([test](tests/test_doorbell.property.l1.py))
+- A label renders labeled only when it is non-empty, `str.isprintable()` holds for it, and it holds none of `[`, `]`, `<`, `>`; every other label renders the unlabeled form ([test](tests/test_doorbell.property.l1.py))
 - Every valid source-generated structured handback block is preserved unchanged in a production request ([test](tests/test_agent_message.property.l1.py))
 
 ### Compliance
