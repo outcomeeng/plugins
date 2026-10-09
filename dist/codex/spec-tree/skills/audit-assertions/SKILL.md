@@ -6,7 +6,7 @@ description: >-
   through an SPX file-scoped verification run with one unit per assertion keyed
   by its rule slug.
 argument-hint: "<JSON object with path and runDriver>"
-allowed-tools: Read, Grep, Glob, Bash(git rev-parse:*), Bash(realpath:*), Bash(spx --version), Bash(spx verification run start:*), Bash(spx verification run input:*), Bash(spx verification run status:*), Bash(spx verification run scope add:*), Bash(spx verification run finding add:*), Bash(spx verification run finish:*), Bash(spx verification run render:*), Bash(printf '%s\n':*)
+allowed-tools: Read, Grep, Glob, Bash(git rev-parse:*), Bash(realpath:*), Bash(spx --version), Bash(spx spec context show:*), Bash(spx verification run start:*), Bash(spx verification run input:*), Bash(spx verification run status:*), Bash(spx verification run scope add:*), Bash(spx verification run finding add:*), Bash(spx verification run finish:*), Bash(spx verification run render:*), Bash(printf '%s\n':*)
 ---
 
 <objective>
@@ -15,7 +15,7 @@ A sealed `spx verification run` on one node spec's `[audit]` assertions, each ju
 
 <constraints>
 
-- NEVER modify the spec, a subject, or any product file; the only state this audit changes is its own SPX verification-run journal, apart from the base synchronization the composed context load performs, whose `rebased` result stops the audit under step 1.
+- NEVER modify the spec, a subject, or any product file; the only state this audit changes is its own SPX verification-run journal.
 - NEVER judge how an assertion is declared or selected — its wording quality, form, heading, tag fit, or slug uniqueness belong to the spec audit; judge only whether the subject holds the rule the assertion states. The one judgment of an assertion's text this audit makes is whether any observation of its subject decides the rule; a `criterion-unobservable` finding records only that no observation does, and never names wording quality, form, or a rephrasing.
 - NEVER judge an assertion that carries a `[test]`, `[eval]`, or `[probe]` tag, or no tag.
 - MUST read every subject file completely before judging the assertion that names it — a rule judged on part of its subject passes the part never read.
@@ -49,8 +49,8 @@ Each in-scope assertion keys one child unit: `assertion:slug:<rule-slug>` for a 
 The subject of an assertion is what its rule constrains:
 
 - **A named path.** Every repository path the assertion names as the thing it constrains; a directory names every file beneath it. A decision record or spec the assertion cites as its authority — `per <path>` — is context, not subject.
-- **A named identifier.** A skill, subagent, command, or other artifact named by its identifier rather than its path resolves to the files that define it, found by searching the repository. When the repository declares generated output, judge the authored source the generation reads.
-- **Neither.** An assertion that names no path and no identifier is judged against the node's spec and the decision records context loading read for the node.
+- **A named identifier.** A skill, subagent, command, or other artifact named by its identifier rather than its path resolves to every file that defines it, found by searching the repository, and every such file is part of the subject.
+- **Neither.** An assertion that names no path and no identifier is judged against the node's spec and the decision records the step 1 context entries carry.
 
 A named path that does not exist, or an identifier no file defines, is a finding on its assertion's unit — `subject-missing` or `subject-unresolved` — and no other judgment of that assertion follows.
 
@@ -58,7 +58,7 @@ A named path that does not exist, or an identifier no file defines, is a finding
 
 <execution_sequence>
 
-1. **Load context.** Use skill `spec-tree:understand` when no live `<SPEC_TREE_FOUNDATION>` marker is present, then use skill `spec-tree:contextualize` on the node directory containing the spec. A context load that aborts returns `BLOCKED` with its exact report, `runToken: not-started`. A base synchronization that reports `rebased` returns `BLOCKED` with that result and `runToken: not-started`, because the checkout no longer holds the head the audit was dispatched on; only `already_current` continues.
+1. **Load context.** Use skill `spec-tree:understand` when no live `<SPEC_TREE_FOUNDATION>` marker is present, then run `spx spec context show '<node-directory>' --json` on the node directory containing the spec and read the content of every entry it returns. The command reads the checkout as it stands and moves nothing, so the audit judges the head it was dispatched on. A nonzero exit returns `BLOCKED` with its exact stderr, `runToken: not-started`.
 2. **Inventory.** Read the spec and build the assertion inventory under `<assertion_inventory>`.
 3. **Start the run.** From the repository root, with the spec as `<spec-file>`:
 
