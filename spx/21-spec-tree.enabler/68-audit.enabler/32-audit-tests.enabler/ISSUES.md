@@ -74,10 +74,10 @@ because Change #94 treats the suite as evidence and cannot alter its oracle.
 fixture shape, supplies the matching module-resolution artifact or uses a real
 relative import, and establishes the revised case through both full suites.
 
-## The test-evidence audit carries no guard against synchronizing the audited subject
+## The composed language test audits still synchronize the audited subject
 
-The test-evidence audit skill loads `/contextualize` for its target node, and `/contextualize` runs `/sync-base`, which rebases the audited branch. `spec-tree:audit-implementation` states that an audit never synchronizes, rebases or otherwise mutates the audited subject; this node's audit path carries no such guard.
+`/audit-tests` loads its context read-only and invokes neither `/contextualize` nor `/sync-base`. The `audit-<lang>-tests` skills it composes — `python:audit-python-tests`, `typescript:audit-typescript-tests`, `rust:audit-rust-tests`, and `go:audit-go-tests` — each still invoke `/contextualize` on the node under audit, and `/contextualize` runs `/sync-base`, which can rebase the audited branch from inside the audit. Each of those skills also loads `spec-tree:audit-tests` as its base, so it reads a workflow that opens a verification run while it only needs the base evidence rules and the composed concern result `<verdict_format>` defines.
 
-**Evidence.** Rollout `agent-a4cedd803fc1a5758.jsonl` of a test-evidence audit dispatched against head `f07db1bbaf225ec031d7a777f02c166daa588871` on 2026-09-16 resolved two conflicts and finished at `15d4309e69c26804cd1b04676248a529fd0235b9`, so the concurrent implementation audit found its sealed head superseded.
+**Evidence.** Rollout `agent-a4cedd803fc1a5758.jsonl` of a test-evidence audit dispatched against head `f07db1bbaf225ec031d7a777f02c166daa588871` on 2026-09-16 resolved two conflicts and finished at `15d4309e69c26804cd1b04676248a529fd0235b9`, so the concurrent implementation audit found its sealed head superseded. The `<prerequisites>` of each language skill named above still direct `/contextualize`.
 
-**Settlement condition.** `/audit-tests` performs the read-only context load `spx/21-spec-tree.enabler/68-audit.enabler/32-audit-tests.enabler/audit-tests.md` declares, invoking neither `/contextualize` nor `/sync-base`, so the audited head stays the dispatched head.
+**Settlement condition.** Each `audit-<lang>-tests` skill loads its context read-only or relies on the context the composing audit loaded, invoking neither `/contextualize` nor `/sync-base`, and loads the base evidence rules from a reference that carries no run-recording workflow, so the audited head stays the dispatched head.
