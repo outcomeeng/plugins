@@ -16,7 +16,7 @@ This capability is an agent adapter: the configured way the agent harness lets o
 ### Mappings
 
 - Registration, send, inbox, and receipt each map one source-owned request shape to one mail command and checked result; a registration request carries an optional display name that maps to the store's display name, and every checked result preserves the store's labels verbatim beside its message, thread, and agent identities ([test](tests/test_agent_mail.mapping.l1.py))
-- An inbox item with or without a body, an event, and a send result carry the store's `sender_display_name` verbatim, null included, and a send result carries `to_display_names` as the mapping from each recipient stable name visible to the reader to its label; no label enters the message record ([test](tests/test_agent_mail.mapping.l1.py))
+- An inbox item with or without a body and a send result carry the store's `sender_display_name` verbatim, null included, and a send result carries `to_display_names` as the mapping from each recipient stable name visible to the reader to its label; no label enters the message record ([test](tests/test_agent_mail.mapping.l1.py))
 - The project key maps from the absolute canonical path of the repository's common Git directory, read for the adapter's own working directory with every variable removed that can make Git answer the location question from something other than that directory, so no value the caller inherited moves the answer — neither onto another repository nor away from its own — so every worktree of one pool, the pool's bare repository, and its main checkout resolve one mail project; a working directory that is no repository yields the unavailable result ([test](tests/test_agent_mail.mapping.l1.py))
 
 ### Properties
