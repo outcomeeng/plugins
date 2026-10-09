@@ -21,7 +21,7 @@ The raw invocation string `$ARGUMENTS` controls what runs before the per-node fl
 - Any other non-empty `$ARGUMENTS` → the work is a plan or proposal; Step 0 selects its work queue.
 - Empty `$ARGUMENTS` → determine the work from the conversation. If nothing is clear, complete Step 1 first — use skill `spec-tree:understand` when the live `SPEC_TREE_FOUNDATION` marker is absent — then read `spx/EXCLUDE`, whose entries are relative to `spx/`, and prefix each non-comment, non-blank entry with `spx/` before adding it to the work queue. Never access `spx/EXCLUDE` before the foundation is live, and never pass a bare entry to `/contextualize`. If no work is found, report "Nothing to apply" and stop.
 
-When the work is described as a plan or proposal rather than a specific node or queue, use skill `spec-tree:slice` first: it selects the next executable observable slice and produces the node set that becomes this flow's work queue. Skip the preflight when the queue is already a specific node or an `spx/EXCLUDE` list.
+When the work is described as a plan or proposal rather than a specific node or queue, use skill `spec-tree:slice` first: it selects the next executable observable slice and produces the node set that becomes this flow's work queue.
 
 Complete Step 1 before the queue loop in every mode, so the foundation is live before the loop reads or edits `spx/EXCLUDE`. When the queue holds more than one node, order by numeric index prefix (lower first) — lower-indexed nodes constrain higher-indexed ones. For each node in order:
 
@@ -278,9 +278,7 @@ The implementation-auditor composes the installed `audit-{lang}-{code|tests|arch
 
 <step number="8a" name="Evidence-auditor gates" gate="true" condition="the change creates or modifies test or eval evidence">
 
-Run `<evidence_auditor_gate>` whenever the stabilized diff creates or modifies a `[test]` assertion, linked test file, imported test-infrastructure artifact, `[eval]` assertion, eval artifact, or producer artifact for eval-backed evidence. The condition applies whether the change is node-local or cross-node.
-
-Skip this step only when the diff changes no test or eval evidence surface named by `<evidence_auditor_gate>`.
+Run `<evidence_auditor_gate>` whenever the stabilized diff creates or modifies a `[test]` assertion, linked test file, imported test-infrastructure artifact, `[eval]` assertion, eval artifact, or producer artifact for eval-backed evidence.
 
 </step>
 
@@ -302,7 +300,7 @@ Apply `<stabilized_diff_rule>` before invoking the review. Fix every valid findi
 
 <step number="10" name="Merge" condition="the change is destined for the default branch">
 
-Skip this step only when the user explicitly scoped the work to a proposal, analysis, review, or local-only change — then state that scope and stop. For every other change, the work is destined for the default branch, and the flow is NOT complete at Step 9.
+Skip this step only when the user explicitly scoped the work to a proposal, analysis, review, or local-only change — then state that scope and stop. Otherwise the flow is NOT complete at Step 9.
 
 Local readiness is not delivered value. A Step 8 projection with `terminalStatus: approved`, a converged Step 9 review, passing tests, a clean working tree, and a local commit ahead of base are progress. Delivered value is the change merged to the default branch on origin.
 
@@ -330,7 +328,7 @@ Steps 4, 6, 8, and applicable Step 8a are blocking audit gates; each reads its A
 - Before starting Step 7: require every Step 6 sealed run to render `terminalStatus: approved`. If a run is absent or its status differs, stop and invoke or repair Step 6.
 - Before considering implementation complete: inspect the Step 8 rendered projection. If `terminalStatus` is absent or differs from `approved`, stop — invoke or repair Step 8.
 - Before Step 8 for Go, Rust, or TypeScript, require Step 7a's usable `simplified` or `unchanged` result for the implementation being verified, with every resulting edit inspected, verified, and committed.
-- Before starting Step 9, the terminal full deterministic gate, Step 10, or completion: if the diff touches a test or eval evidence surface named by `<evidence_auditor_gate>`, require every applicable Step 8a sealed run to render `terminalStatus: approved` for the exact committed head, and invoke or repair Step 8a when a run is absent or its status differs. When the diff touches no named evidence surface, skip Step 8a.
+- Before starting Step 9, the terminal full deterministic gate, Step 10, or completion: if the diff touches a test or eval evidence surface named by `<evidence_auditor_gate>`, require every applicable Step 8a sealed run to render `terminalStatus: approved` for the exact committed head, and invoke or repair Step 8a when a run is absent or its status differs.
 - Before starting Step 9 for a cross-node change: require a holding Step 4 or Step 6 sealed run rendering `terminalStatus: approved` at cross-node scope for every member of the cross-node coverage set `<scope_detection>` enumerates from the committed changeset, dispatching each member that lacks one.
 - Before declaring the flow complete: if the change is cross-node, require a raw Step 9 review run token from the native final result and a rendered sealed projection from `/project-run-journal`. If no invocation has occurred, invoke Step 9. A failed invocation or unusable final result follows `<launch_contract>`; a blocked inspection preserves its token; valid findings follow the repair workflow.
 - Before invoking `/merge` when a full deterministic bundle is required: confirm the repository-declared full deterministic gate ran after every applicable agentic gate and against the current clean committed head. If any source, test, spec, generated-output, or configuration file changed afterward, rerun the invalidated agentic gates before running the declared full gate again.
