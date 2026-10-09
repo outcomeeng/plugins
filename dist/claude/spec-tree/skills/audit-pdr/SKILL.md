@@ -33,8 +33,8 @@ PDRs state atemporal product truth without historical context. No references to 
 
 The run's terminal status is `approved` or `rejected`. A property this audit cannot evaluate rejects the run through a blocking finding naming the missing evidence; it never becomes an approval through an unjudged unit.
 
-- NEVER edit the PDR or other product content, and NEVER commit, stash, or create a branch. `/contextualize`'s base synchronization is the only checkout change the audit admits, and the audit's own SPX verification-run journal is the only state it writes.
-- ALWAYS make every judgment of the PDR from the content `spx verification run input` replays from the run, never from the copy `/contextualize` loaded or a separate read of the live file. Step 9 compares the live file with the retained input before the run finishes.
+- NEVER edit the PDR or other product content, and NEVER commit, stash, create a branch, or move the checkout. The audit's own SPX verification-run journal is the only state it writes.
+- ALWAYS make every judgment of the PDR from the content `spx verification run input` replays from the run, never from a separate read of the live file. Step 9 compares the live file with the retained input before the run finishes.
 - ALWAYS read the PDR evidence model and the canonical PDR template before judging — derive the rule set and the section set from them, never from memory.
 - ALWAYS name the section, the violated rule, and the evidence in every finding.
 - NEVER record a finding the cited rule does not support — drop an unbacked finding rather than reject the PDR for it.
@@ -71,9 +71,9 @@ A failed resolution, a path escaping the root or naming no regular file, or a mi
 
 Use skill `spec-tree:understand` when the live `<SPEC_TREE_FOUNDATION>` marker is absent or lacks `Template root`. A marker still absent after that returns `BLOCKED` with `runToken: not-started`.
 
-Use skill `spec-tree:contextualize` on the directory containing the PDR — its canonical `spx/...` node path, or `spx/` for a product-root PDR. The audit authorizes no checkpoint commit: a `/contextualize` abort, or a base-synchronization result other than `already_current` or `rebased`, returns `BLOCKED` with `runToken: not-started` carrying that result's exact status and detail.
+The PDR's governing node is the directory containing it, `spx/` for a product-root PDR. Read its context read-only, never invoking `/contextualize` or `/sync-base`, so the audit changes no checkout state: the product spec, then each spec and every decision record along the path from `spx/` to the governing node, then every decision a loaded spec or decision cites by full `spx/` path. The PDR under audit is excluded from this read wherever it appears, as a decision record on the path or as a citation. A spec missing on that path, or a cited decision that does not exist, returns `BLOCKED` with `runToken: not-started` naming the missing file and, for a citation, the citing file.
 
-The product document is the product spec `/contextualize` loads. Steps 4 and 8 read its declared audience, interaction surfaces, and scope, and the ancestor PDRs and sibling ADRs it loads; they read the PDR under audit only from the replayed input.
+The product document is the product spec this step loads. Steps 4 and 8 read its declared audience, interaction surfaces, and scope; Step 8 reads the ancestor PDRs and the sibling ADRs — the ADRs in the PDR's own directory — from this context. Every step reads the PDR under audit only from the replayed input.
 
 </step>
 
