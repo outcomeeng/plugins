@@ -4,121 +4,252 @@ description: >-
   Changeset-coherence audit methodology — judges whether an exact committed
   changeset forms one coherent review unit, covering semantic clustering,
   generated-source attribution, evidence completeness, and dependency-ordered
-  review-unit sequencing.
-argument-hint: "<branch-or-base...head>"
-allowed-tools: Read, Grep, Glob, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_scope.py":*), Bash(git diff:*), Bash(git show:*)
+  review-unit sequencing, and records the judgment through an SPX
+  changeset-scoped verification run.
+argument-hint: "<JSON object with target, runDriver, agentOwningPluginVersion, and optional evidence>"
+allowed-tools: Read, Grep, Glob, {{! tool('use_skill') !}}, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_scope.py":*), Bash(git rev-parse:*), Bash(git diff:*), Bash(git show:*), Bash(git ls-tree:*), Bash(spx --version), Bash(spx verification run start:*), Bash(spx verification run input:*), Bash(spx verification run status:*), Bash(spx verification run scope add:*), Bash(spx verification run finding add:*), Bash(spx verification run finish:*), Bash(spx verification run render:*), Bash(printf '%s\n':*)
 ---
 
 <objective>
 
-A verdict on whether one exact committed changeset forms one coherent review unit — `APPROVED`, `REJECTED`, or `UNKNOWN`, with each finding naming the violated rule, its location, and the evidence — or a `BLOCKED` diagnostic naming the unresolved scope input.
+A sealed `spx verification run` on one exact committed changeset — terminal status `approved` when its authored artifacts form one review unit whose evidence is complete, or `rejected` with one `review-unit` child per semantic cluster, every unit whose evidence cannot be established recorded `incomplete`, and each finding naming the rule, its location, and the evidence — or a `BLOCKED` diagnostic naming the failed prerequisite or command.
 
 </objective>
 
 <constraints>
 
-- Read-only — produce one verdict and NEVER edit files, commits, branches, reviews, or pull requests.
-- MUST preserve full base and head commit identities exactly as resolved from the supplied scope in every coherence verdict.
-- MUST inspect every changed authored artifact; collapse deterministic generated artifacts onto their producers before judging breadth.
+- NEVER edit files, commits, branches, reviews, or pull requests, and NEVER commit, stash, synchronize, rebase, or move the checkout. The audit's own SPX verification-run journal is the only state it writes.
+- NEVER run tests, evals, validation, linters, or any other deterministic verification inside the audit — coherence is judged by reading the committed changeset.
+- ALWAYS read every subject and context file at the resolved `<head>` through `git show` or `git diff`, never from the working tree, so the judgment reads the committed changeset whatever the checkout holds.
+- MUST preserve the resolved full base and head commit identities verbatim in the run's changeset scope and the root unit's subject.
+- MUST account for every changed path exactly once; collapse each generated artifact onto its producing authored artifact before judging breadth.
 - NEVER use line count, file count, path breadth, or an uncalibrated review-load score as a verdict rule.
-- NEVER infer missing behavioral, dependency, generated-source, verification, rollback, or calibration evidence; return `UNKNOWN` when the missing evidence can change the classification.
-- NEVER return prose outside the JSON object in `<verdict_format>`.
+- NEVER infer missing behavioral, dependency, generated-source, verification, rollback, or calibration evidence — record the unit that needs it `incomplete` with its cause.
+- ALWAYS treat a `spx verification run` exit code as payload validity; NEVER hand-validate a payload SPX accepted, retry a refused command, or reshape a refused payload.
+- NEVER write a file. Payloads pass to SPX on stdin, and the final output is the run token and the rendered projection.
 
 </constraints>
 
 <audit_workflow>
 
-1. Bind the scope selector: `$ARGUMENTS` supplies it when that argument is non-empty; when it is empty, the selector is the one the request text carries, and the empty substitution binds nothing. Require it to identify a branch, `HEAD`, or a committed `<base>...<head>` scope. When the request carries no selector, or no exact committed scope can be resolved, return the `BLOCKED` JSON object in `<verdict_format>`; scope failure occurs before a coherence verdict and never fabricates commit identities.
-2. Resolve the exact committed scope by running `python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_scope.py" "<scope>"`, which routes base-ref resolution, remote-tracking-ref composition, commit identity, and three-dot diff scope through the canonical changeset-scope primitives. Preserve its `base`, `head`, and `changed_paths` verbatim. NEVER derive base-ref, commit identity, or diff scope from raw git; a bare local branch ref lags `origin/<base>` in a multi-worktree checkout and re-admits already-merged commits. The resolver fetches the base and refuses a head behind its tip with a dedicated exit code and a `stale-base` diagnostic on stderr; return the `BLOCKED` JSON object with `reason` `stale-base` and that diagnostic verbatim, before reading any subject. Any other nonzero exit returns the `BLOCKED` JSON object with `reason` `scope-unresolved`. Read changed content only within the resolved scope.
-3. Read any evidence packet the request text carries beside the selector — a JSON object of already-collected claims, artifact roles, `generated_from` provenance, dependency evidence, and review-load signals. The resolved scope from step 2 is authoritative for `base`, `head`, and the changed-path set; the packet supplies only the per-artifact evidence the later steps name for paths inside that scope, and a packet entry naming a path outside it carries no evidence for this verdict. Enumerate every changed path and classify its role: decision/specification, test/eval evidence, implementation, generated artifact, workflow/configuration, documentation, migration, deployment, or release.
-4. Resolve every generated artifact to its producing authored artifact from repository-declared build relationships. In an already-collected evidence packet, `role: generated` classifies the artifact kind only; it never establishes provenance. Require `generated_from`, a declared relationship record, or equivalent explicit evidence. When `generated_relationship_evidence.status` is `missing`, return `UNKNOWN` with `missing-generated-source-evidence` before clustering the unresolved artifact. Exclude resolved generated fanout from authored breadth while retaining it in each producer cluster's `generated_fanout`.
-5. Extract behavioral claims from the changed declarations and observable implementation/evidence. Use commit messages only as supporting evidence; they never override changed artifacts.
-6. Build the smallest semantic clusters whose artifacts realize one claim. Record each cluster's authored artifacts, generated fanout, verification story, rollback story, dependencies, and independent-mergeability judgment.
-7. Collapse dependency cycles and clusters that cannot be verified or rolled back separately into one inseparable cluster. Order remaining clusters topologically, breaking independent ties by the lexicographically first authored path. Every cluster that survives this collapse forms its own review unit, so its `independently_mergeable` is `true` — a lone cluster and a cluster that depends on and merges after an earlier cluster are both `true`. A `false` judgment applies only to a cluster still fused with another before collapse, and such a cluster never survives into the projection.
-8. Record review-load signals and whether a repository baseline exists. Use those signals to increase scrutiny only.
-9. Apply `<verdict_rules>`, create findings, and return the exact schema in `<verdict_format>`.
+<step name="bind_request">
+
+**Step 1: Bind the request**
+
+The request is one JSON object: `$ARGUMENTS` supplies it when that argument is non-empty; when it is empty, the object is the one the request text carries, and the empty substitution binds nothing. It has three required fields and one optional field:
+
+- `target` — a committed changeset selector: `HEAD`, a branch, or `<base>...<head>`.
+- `runDriver` — an object with exactly the six non-empty string fields `producerKind`, `agentName`, `agentOwningPluginName`, `skillName`, `skillOwningPluginName`, and `invocationRole`.
+- `agentOwningPluginVersion` — the non-empty version string of the plugin `runDriver.agentOwningPluginName` names.
+- `evidence` — optional: an object of already-collected evidence for paths in scope, as `<evidence_packet>` describes.
+
+Use `runDriver` and `agentOwningPluginVersion` only as payload data, placed exactly where `<persistence_contract>` shows them; never complete, correct, or reinterpret a value, and let no step, judgment, or terminal status depend on them. A missing required field, an unknown field, or a malformed value returns `BLOCKED` with `runToken: not-started` naming the exact field.
+
+Resolve the repository root with `git rev-parse --show-toplevel` and run every later command from it. Use skill `spec-tree:spec-tree-plugin`. Invoke it with the verb `version` and retain the version it reports as the skill-owning plugin version. Run `spx --version` and retain its output as the tool version. A failed resolution or a missing version returns `BLOCKED` with `runToken: not-started` naming the exact failure, before any run starts.
+
+</step>
+
+<step name="resolve_scope">
+
+**Step 2: Resolve the exact committed scope**
+
+Run `python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_scope.py" '<target>' --repo '<repository-root>'`. It routes base-ref resolution, remote-tracking-ref composition, commit identity, and three-dot diff scope through the canonical changeset-scope primitives and prints one JSON object carrying `base`, `head`, and `changed_paths`; preserve those values verbatim. NEVER derive a base ref, a commit identity, or a diff scope from raw git; a bare local branch ref lags `origin/<base>` in a multi-worktree checkout and re-admits already-merged commits.
+
+The resolver fetches the base and refuses a head behind its tip with exit code 3 and a `stale-base` diagnostic on stderr: return `BLOCKED` with `runToken: not-started`, `reason: stale-base`, and that diagnostic verbatim. Any other nonzero exit returns `BLOCKED` with `runToken: not-started`, `reason: scope-unresolved`, and the resolver's stderr. An empty `changed_paths` returns `BLOCKED` with `runToken: not-started` and `reason: empty-scope`, because an empty changeset carries no review unit. `<anchor>` is `<base>..<head>`.
+
+</step>
+
+<step name="load_context">
+
+**Step 3: Load context read-only**
+
+Use skill `spec-tree:understand` when the live `<SPEC_TREE_FOUNDATION>` marker is absent; a marker still absent after that returns `BLOCKED` with `runToken: not-started`.
+
+Read the governing context at `<head>` and never through `/contextualize` or `/sync-base`, so the audit changes no checkout state. List a directory with `git ls-tree --name-only '<head>' -- '<directory>/'` and read a file with `git show '<head>:<path>'`. Read the product spec under `spx/`; for every changed path below a node directory under `spx/`, each spec and every decision record on the path from `spx/` to that node; then every decision a loaded spec or decision cites by full `spx/` path; then the repository's declared generated-source relationships. A decision change and the first lower specs it affects realize one claim, so these sources decide which clusters are inseparable. A spec missing on a loaded path, or a cited decision that does not exist, returns `BLOCKED` with `runToken: not-started` naming the missing file and, for a citation, the citing file.
+
+</step>
+
+<step name="open_run">
+
+**Step 4: Open the run**
+
+Pass the resolver's object — `base`, `head`, and `changed_paths` exactly as resolved — as the run input on stdin, in the transport form `<persistence_contract>` selects:
+
+```bash
+spx verification run start --verification-type audit --scope-type changeset --scope '<anchor>' --input stdin <<'SCOPE_INPUT'
+<resolver-object-on-one-line>
+SCOPE_INPUT
+```
+
+Capture the exact `runToken` and use it for every later command. Steps 5 through 7 record each unit and its findings as soon as that unit is judged, so the run shows each result before the next judgment begins.
+
+</step>
+
+<step name="classify_changeset">
+
+**Step 5: Classify the changeset and record the root**
+
+1. Enumerate every changed path from the run input and classify its role: decision or specification, test or eval evidence, implementation, generated artifact, workflow or configuration, documentation, migration, deployment, or release. Read each changed artifact with `git diff '<base>...<head>' -- '<path>'` and `git show '<head>:<path>'`.
+2. Resolve every generated artifact to its producing authored artifact through a declared generated-source relationship or an evidence-packet `generated_from` field. `role: generated` classifies the artifact kind only and never establishes provenance. NEVER infer a producer from path similarity, artifact count, or the presence of only one authored artifact. An unattributed generated artifact is a `missing-generated-source-evidence` cause on its artifact unit.
+3. Extract behavioral claims from the changed declarations and the observable implementation and evidence. Commit messages are supporting evidence only and never override changed artifacts. An authored artifact whose claim cannot be established is a `missing-behavioral-claim-evidence` cause on its artifact unit and joins no cluster.
+4. Build the smallest semantic clusters whose authored artifacts realize one claim, and place each attributed generated artifact in its producer's cluster. Collapse dependency cycles, and clusters that cannot be verified or rolled back separately, into one inseparable cluster. Every cluster surviving the collapse is independently mergeable.
+5. With two or more clusters, establish the dependencies between them. An absent or `null` dependency set is a `missing-dependency-evidence` cause on the root, while an explicit empty array establishes that no dependency exists. Order the clusters topologically, breaking ties by the lexicographically first authored path, and number them `cluster-1`, `cluster-2`, and so on in that order.
+6. Record review-load signals and whether a repository baseline exists; they raise scrutiny only. Missing calibration is a `missing-calibration-evidence` cause on the root only when a repository-specific signal states that the calibration decides whether the semantic evidence suffices.
+
+Record the root unit — `incomplete` when step 5 or 6 raised a cause, `audited` otherwise — then each root cause as a finding, then one review-load unit per signal and one for the baseline.
+
+</step>
+
+<step name="record_clusters">
+
+**Step 6: Judge and record each cluster**
+
+For each cluster in order, establish its verification story — the evidence that verifies its claim — and its rollback story — the artifacts or operations that reverse it. An empty verification story is a `missing-verification-evidence` cause, and an empty rollback story a `missing-rollback-evidence` cause, each on the cluster's review unit.
+
+Record the cluster's `review-unit` unit — `incomplete` when it carries a cause, `audited` otherwise — then each of its causes as a finding, then one artifact unit per authored artifact and generated artifact in the cluster, then one story unit per verification-story entry and per rollback-story entry.
+
+</step>
+
+<step name="record_unclustered">
+
+**Step 7: Record unclustered artifacts and the split**
+
+Record one artifact unit under the root for every changed path no cluster holds — `incomplete` with its cause as a finding when step 5 raised one on it, `audited` when it is a generated artifact whose producer is itself unclustered.
+
+When two or more clusters exist and no unit is `incomplete`, record one `split-required` finding on the root whose evidence carries the cluster detail and the dependency-ordered review-unit sequence `<persistence_contract>` defines. When any unit is `incomplete`, record no `split-required` finding: the missing evidence can change cluster membership, order, or mergeability, so no sequence is defensible.
+
+</step>
+
+<step name="reconcile_and_finish">
+
+**Step 8: Reconcile**
+
+Read `spx verification run status` with the same type, scope, and token. Require exactly one root unit, one review-load unit per signal plus the baseline unit, one `review-unit` unit per cluster, one artifact unit per changed path, one story unit per story entry, and an accepted unit for every finding; record any missing unit or finding and read the status again.
+
+**Step 9: Finish and render**
+
+Derive `approved` only when exactly one `review-unit` unit exists, every unit is `audited`, and no finding exists; derive `rejected` otherwise. Run `spx verification run finish` with the same type, scope, and token and `--terminal-status '<approved-or-rejected>'`, then `spx verification run render` with the same type, scope, and token, and return the token and the rendered projection unchanged. An `approved` run is the audit's publication authorization; a `rejected` run never authorizes publication.
+
+</step>
+
+<evidence_packet>
+
+The optional `evidence` object carries already-collected evidence: `artifacts` entries with `path`, `role`, `claims`, `verifies`, and `generated_from`; `verification_evidence` and `rollback_evidence` entries pairing a `claim` with its `artifacts`; `dependencies`; and `review_load` with `repository_baseline_available` and `signals`. The resolved scope from Step 2 is authoritative for `base`, `head`, and the changed paths; a packet entry naming a path outside that scope carries no evidence for this run. Preserve packet claims, paths, evidence paths, dependencies, and review-load signals verbatim, sorting claim and path arrays lexicographically.
+
+</evidence_packet>
+
+<persistence_contract>
+
+Units record in the order Steps 5 through 7 state. Every unit carries `auditClass: changeset` and `coverageRequirement: required`, and every unit except the root carries `parentUnitId`.
+
+| Unit        | `auditKind`   | `unitId`                                | Parent           | `subject`                      | `priorContext.concernPartition`          | `coverageStatus`          |
+| ----------- | ------------- | --------------------------------------- | ---------------- | ------------------------------ | ---------------------------------------- | ------------------------- |
+| Root        | `coherence`   | `coherence:root:<anchor>`               | —                | `<anchor>`                     | `coherence`                              | `audited` or `incomplete` |
+| Review load | `coherence`   | `coherence:review-load:<signal>`        | root             | `<signal>=<value>`             | `review-load`                            | `audited`                 |
+| Review unit | `review-unit` | `coherence:cluster-<n>:<anchor>`        | root             | the cluster's outcome          | `review-unit`                            | `audited` or `incomplete` |
+| Artifact    | `coherence`   | `coherence:artifact:<path>`             | cluster, or root | `<path>`                       | `authored` or `generated`                | `audited` or `incomplete` |
+| Story       | `coherence`   | `coherence:cluster-<n>:<story>:<entry>` | cluster          | the evidence path or operation | `verification-story` or `rollback-story` | `audited`                 |
+
+The baseline unit is the review-load unit whose `<signal>` is `repository-baseline` and whose value is `true` or `false`. `<story>` is `verification` or `rollback`. `priorContext.changedFilePartition` is `<path>` for an artifact unit and `<anchor>` for every other unit. Every unit's expected producer has `producerKind: skill`, the `runDriver`'s `agentName` and `agentOwningPluginName`, `skillName: audit-changeset-coherence`, `skillOwningPluginName: spec-tree`, and `invocationRole: leaf-skill`. `recordedByRunDriver` carries the `runDriver` object unchanged. `producerProvenance` carries the request's `agentOwningPluginVersion`, the `spec-tree` version from Step 1 as `skillOwningPluginVersion`, and the exact `spx --version` output as `toolVersion`.
+
+These objects are the sanctioned SPX audit payload schema for this auditor; SPX drops any field outside them, so use their fields exactly, never derive a replacement schema from command help, and never alter a refused payload by guesswork:
+
+```json
+{
+  "unitId": "<unit-key>",
+  "parentUnitId": "<parent-unit-key-for-a-non-root-unit-only>",
+  "auditClass": "changeset",
+  "auditKind": "<coherence-or-review-unit>",
+  "subject": "<subject>",
+  "coverageRequirement": "required",
+  "coverageStatus": "<audited-or-incomplete>",
+  "priorContext": {
+    "changedFilePartition": "<path-or-anchor>",
+    "concernPartition": "<concern-partition>"
+  },
+  "expectedProducer": {
+    "producerKind": "skill",
+    "agentName": "<supplied-agent-name>",
+    "agentOwningPluginName": "<supplied-agent-owning-plugin>",
+    "skillName": "audit-changeset-coherence",
+    "skillOwningPluginName": "spec-tree",
+    "invocationRole": "leaf-skill"
+  },
+  "recordedByRunDriver": "<the runDriver object, repeated exactly>",
+  "producerProvenance": {
+    "agentOwningPluginVersion": "<agent-owning-plugin-version>",
+    "skillOwningPluginVersion": "<spec-tree-plugin-version>",
+    "toolVersion": "<exact-spx-version>"
+  }
+}
+```
+
+A finding copies its unit's `expectedProducer` as `producerIdentity` and its unit's complete `producerProvenance`. Every finding is `blocking` and rejects the run. Each rule records against one unit:
+
+| Rule                                | Unit        | `location`                        |
+| ----------------------------------- | ----------- | --------------------------------- |
+| `missing-dependency-evidence`       | root        | `<anchor>`                        |
+| `missing-calibration-evidence`      | root        | `<anchor>`                        |
+| `split-required`                    | root        | `<anchor>`                        |
+| `missing-verification-evidence`     | review unit | the cluster's first authored path |
+| `missing-rollback-evidence`         | review unit | the cluster's first authored path |
+| `missing-behavioral-claim-evidence` | artifact    | `<path>`                          |
+| `missing-generated-source-evidence` | artifact    | `<path>`                          |
+
+`message` names the rule's subject and the missing or violated property. For every rule except `split-required`, `evidence.observed` states what the changeset carries and `evidence.expected` the evidence the judgment requires. A `split-required` finding's `evidence.observed` is one JSON text, encoded as a JSON string, of the cluster array — each cluster's `id`, `outcome`, `authored_artifacts`, `generated_fanout`, `verification_story`, `rollback_story`, `dependencies` as an array, and `independently_mergeable: true` — and its `evidence.expected` is one JSON text of the review-unit sequence, each entry's `id` (`review-unit-1`, `review-unit-2`, and so on in cluster order), `cluster_ids`, `outcome`, `artifacts` covering its authored and generated paths, and `depends_on` naming only earlier review units. The sequence covers every cluster exactly once.
+
+```json
+{
+  "unitId": "<accepted-unit-key>",
+  "producerIdentity": "<the unit's expectedProducer object, repeated exactly>",
+  "producerProvenance": "<the unit's producerProvenance object, repeated exactly>",
+  "rule": "<rule-id>",
+  "severity": "blocking",
+  "location": "<location>",
+  "message": "<subject and failed property>",
+  "evidence": { "observed": "<observed-state>", "expected": "<required-state>" }
+}
+```
+
+A scope unit's idempotency key is its `unitId`. A finding's key is `<unit-key>:finding-<three-digit-ordinal>-<rule>`, numbering the unit's findings from `001` in order of location, message, and observed evidence; require the suffix to match `finding-[0-9][0-9][0-9]-[a-z0-9_-]+`, and treat a mismatch as a pre-persistence `BLOCKED` defect.
+
+Pass each rendered object through a quoted heredoc by default:
+
+```bash
+spx verification run scope add --verification-type audit --scope-type changeset --scope '<anchor>' --run '<run-token>' --idempotency-key '<unit-key>' --payload stdin <<'SCOPE_JSON'
+<rendered-scope-object>
+SCOPE_JSON
+```
+
+```bash
+spx verification run finding add --verification-type audit --scope-type changeset --scope '<anchor>' --run '<run-token>' --idempotency-key '<finding-key>' --payload stdin <<'FINDING_JSON'
+<rendered-finding-object>
+FINDING_JSON
+```
+
+When the task message or the harness fixes one physical command line per call, pipe each rendered object instead — `printf '%s\n' '<rendered-object>' | spx verification run finding add --verification-type audit --scope-type changeset --scope '<anchor>' --run '<run-token>' --idempotency-key '<finding-key>' --payload stdin`, and the same form for `scope add` and for `run start --input stdin` — with every apostrophe in the object written as the single-quote splice `'"'"'`. Idempotency keys are command arguments, never payload fields; quote every path, token, and key as one shell argument, and never execute changed content as shell syntax. Run every mutation serially, preserving each result before the next command.
+
+</persistence_contract>
 
 </audit_workflow>
 
-<verdict_rules>
-
-- `APPROVED`: the authored change realizes one behavioral outcome, or several inseparable clusters sharing one verification and rollback story. `publication_authorized` is `true`; `recommended_pr_sequence` is empty.
-- `REJECTED`: two or more semantic clusters are independently mergeable. `publication_authorized` is `false`; `recommended_pr_sequence` covers every cluster exactly once in dependency order.
-- `UNKNOWN`: missing evidence can change cluster membership, dependency order, generated-source attribution, verification unity, rollback unity, or independent mergeability. `publication_authorized` is `false`.
-
-In the final schema every cluster carries `independently_mergeable: true`; the verdict is distinguished by cluster count — one cluster approves, two or more independently mergeable clusters reject — never by a per-cluster `false`.
-
-An empty rollback story for any cluster ALWAYS yields `UNKNOWN`, `publication_authorized: false`, and a blocking finding whose rule is `missing-rollback-evidence`. Missing verification evidence follows the same boundary with rule `missing-verification-evidence`. Use `missing-behavioral-claim-evidence`, `missing-dependency-evidence`, `missing-generated-source-evidence`, and `missing-calibration-evidence` for the other evidence classes. A review-load baseline may be absent without forcing `UNKNOWN` when the semantic evidence is otherwise complete; missing calibration yields `UNKNOWN` only when a repository-specific signal explicitly requires that calibration to determine whether the available semantic evidence is sufficient.
-
-For two or more semantic clusters, an absent or `null` dependency set ALWAYS yields `UNKNOWN` with `missing-dependency-evidence`; an explicit empty dependency array establishes that no dependency exists. In every projected cluster the `dependencies` field is an array — `[]` when no dependency on another cluster is established — NEVER a `null` copied from the packet; unresolved packet dependency evidence is recorded only in the `missing-dependency-evidence` finding, NEVER echoed into a cluster. Every artifact classified as generated MUST resolve through an explicit repository-declared relationship or a `generated_from` field in an already-collected evidence packet. NEVER infer a generated artifact's producer from path similarity, artifact count, or the presence of only one authored artifact; unresolved attribution yields `UNKNOWN` with `missing-generated-source-evidence`.
-
-When an evidence packet supplies already-collected claims, artifact paths, evidence paths, dependencies, or review-load signals, preserve those values verbatim in the projection. Sort claim and path arrays lexicographically. Copy `review_load` without reinterpretation. Every normal verdict carries every field in the schema, using empty arrays or objects when a field has no entries.
-
-Use deterministic identities: `cluster-1`, `cluster-2`, and so on in dependency order; rejected review units are `review-unit-1`, `review-unit-2`, and so on in the same order.
-
-</verdict_rules>
-
 <verdict_format>
 
-When scope resolution fails before an exact changeset exists, return only this JSON object; `reason` is `stale-base` when the resolver refused a head behind the fetched base, carrying the resolver's stderr diagnostic verbatim under `diagnostic`, and `scope-unresolved` for every other failure:
+Return only the exact run token and the unmodified rendered projection. The projection is the verdict: its `terminalStatus` is `approved` or `rejected`, its `findingCount` is zero for approval, its `findings` group every accepted finding under `blocking`, its `auditScopeUnits` carry the root, review-load, review-unit, artifact, and story units with each unit's `audited` or `incomplete` status, and its `events` carry every accepted finding payload and the terminal event. SPX itself rejects a run carrying more than one `review-unit` unit. Keep every SPX field unchanged, and add no `APPROVED`, `REJECTED`, or `UNKNOWN` prose envelope.
 
-```json
-{
-  "schema_version": 1,
-  "status": "BLOCKED",
-  "reason": "scope-unresolved | stale-base",
-  "scope_input": "<supplied scope selector or empty string>",
-  "diagnostic": "<resolver stderr, verbatim, or empty string>"
-}
+A run that cannot complete — a request, scope, or context failure before the run starts, a finding key that fails its pattern before persistence, or a refused SPX command or payload — returns:
+
+```text
+BLOCKED
+runToken: <exact-token-if-start-succeeded-or-not-started>
+reason: <stale-base|scope-unresolved|empty-scope|request|context|spx-refused|finding-key>
+command: <exact-failed-command, the unsent command a malformed finding key stopped, or request for a failure before the run starts>
+payloadKey: <unitId-or-finding-idempotency-key-or-none>
+exitCode: <exact-exit-code-or-none>
+stderr: <exact-stderr-or-resolver-diagnostic-or-none>
+judgmentStatus: <complete|incomplete>
+judgedFindings: <JSON array of every finding judged before the stop, in the finding-payload shape>
 ```
-
-For an exact committed changeset, return one coherence-verdict JSON object:
-
-```json
-{
-  "schema_version": 1,
-  "overall": "APPROVED | REJECTED | UNKNOWN",
-  "scope": { "base": "<full-commit-id>", "head": "<full-commit-id>" },
-  "behavioral_claims": ["<claim>"],
-  "clusters": [
-    {
-      "id": "cluster-1",
-      "outcome": "<behavioral outcome>",
-      "authored_artifacts": ["<path>"],
-      "generated_fanout": ["<path>"],
-      "verification_story": ["<evidence>"],
-      "rollback_story": ["<artifact or operation>"],
-      "dependencies": ["<cluster-id>"],
-      "independently_mergeable": true
-    }
-  ],
-  "review_load": {
-    "repository_baseline_available": true,
-    "signals": {}
-  },
-  "findings": [
-    {
-      "rule": "<rule-id>",
-      "severity": "blocking | debt",
-      "location": "<path-or-scope>",
-      "message": "<finding>",
-      "evidence": { "observed": "<fact>", "expected": "<required evidence>" }
-    }
-  ],
-  "publication_authorized": false,
-  "recommended_pr_sequence": [
-    {
-      "id": "review-unit-1",
-      "cluster_ids": ["cluster-1"],
-      "outcome": "<review-unit outcome>",
-      "artifacts": ["<authored and generated paths>"],
-      "depends_on": []
-    }
-  ]
-}
-```
-
-Every changed authored artifact whose behavioral claim is established appears in exactly one cluster. Every generated artifact whose producer relationship is established appears under exactly one producer cluster. An `UNKNOWN` verdict names every unresolved artifact in its findings without inventing cluster membership. A rejected sequence covers every cluster exactly once and references only earlier review units in `depends_on`.
 
 </verdict_format>
 
@@ -130,23 +261,23 @@ What happened: Claude classified a migration packet as coherent even though the 
 
 Why it failed: The general missing-evidence rule did not make an empty rollback story an explicit terminal boundary, so semantic cohesion overshadowed reversibility.
 
-How to avoid: Treat every empty cluster rollback story as `UNKNOWN`, prohibit publication, and emit `missing-rollback-evidence` before considering approval.
+How to avoid: Record every cluster with an empty rollback story as an `incomplete` review unit carrying `missing-rollback-evidence`, so the run seals `rejected`.
 
-**Failure 2: Unresolved scope was forced into the verdict schema.**
+**Failure 2: Unresolved scope was forced into the verdict.**
 
-What happened: Claude was instructed to return `UNKNOWN` for an unresolved scope while the same schema required full base and head commit identities.
+What happened: Claude was instructed to judge an unresolved scope while the verdict required full base and head commit identities.
 
-Why it failed: Scope resolution failure occurs before an exact changeset exists, so a normal verdict would require fabricated identities or an internally invalid object.
+Why it failed: Scope resolution failure occurs before an exact changeset exists, so a verdict would require fabricated identities.
 
-How to avoid: Return the separate `BLOCKED` JSON object for scope resolution failure and emit a coherence verdict only after both full commit identities resolve.
+How to avoid: Return `BLOCKED` with `runToken: not-started` for a scope failure, and start the run only after both full commit identities resolve.
 
 **Failure 3: A null dependency set was treated as an empty set.**
 
-What happened: Claude rejected two independently understandable clusters and ordered them as unrelated review units even though the evidence packet supplied `dependencies: null`.
+What happened: Claude split two independently understandable clusters and ordered them as unrelated review units even though the evidence packet supplied `dependencies: null`.
 
-Why it failed: Claude collapsed “dependency evidence unavailable” into “dependency evidence establishes no relationships,” producing a split without a defensible order.
+Why it failed: Claude collapsed "dependency evidence unavailable" into "dependency evidence establishes no relationships", producing a split without a defensible order.
 
-How to avoid: Distinguish absent or `null` dependency evidence from an explicit empty array and return `UNKNOWN` whenever the unavailable evidence can change a multi-cluster classification or order.
+How to avoid: Distinguish an absent or `null` dependency set from an explicit empty array, record the root `incomplete` with `missing-dependency-evidence`, and record no `split-required` finding.
 
 **Failure 4: A generated artifact was attached by proximity.**
 
@@ -154,15 +285,18 @@ What happened: Claude attached one generated artifact to the only authored artif
 
 Why it failed: Artifact count and nearby paths were treated as provenance, inventing the relationship the audit was required to verify.
 
-How to avoid: Require an explicit repository-declared generated-source relationship and return `UNKNOWN` with `missing-generated-source-evidence` when attribution cannot be established.
+How to avoid: Require a declared generated-source relationship or `generated_from` field, and record an unattributed generated artifact as an `incomplete` artifact unit carrying `missing-generated-source-evidence`.
 
 </failure_modes>
 
 <success_criteria>
 
-- Every changed authored artifact and generated artifact is accounted for exactly once.
-- The overall result follows semantic cohesion, verification unity, rollback unity, and independent mergeability with no size threshold acting as a verdict rule.
-- Every `REJECTED` result carries a complete dependency-ordered sequence; every `UNKNOWN` result names the evidence gap that prevents classification.
-- The same committed scope and repository evidence produce the same cluster identities, ordering, and result.
+The verdict is sound when:
+
+- Every changed path carries exactly one artifact unit, and every authored and attributed generated artifact sits under exactly one cluster's review unit.
+- The terminal status follows semantic cohesion, verification unity, rollback unity, and independent mergeability, with no size threshold acting as a verdict rule; it is `approved` only with exactly one review unit, every unit `audited`, and no finding.
+- Every evidence gap is an `incomplete` unit carrying a finding that names the missing evidence, and every split carries a `split-required` finding whose sequence covers every cluster exactly once in dependency order.
+- The run's changeset scope and root subject carry the resolved base and head commit identities verbatim.
+- The same committed scope, repository evidence, evidence packet, and run-driver identity yield the same units, cluster numbering, finding keys, and terminal status.
 
 </success_criteria>
