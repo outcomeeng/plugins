@@ -56,8 +56,9 @@ this block ahead of it.
 This is a separate content-consolidation refactor across the overview and five
 references. Each skill audit binds to the exact committed head it ran against, so
 this entry records finding content only and makes no standing approval claim.
-The `/subagent-standards` entry below subsumes the duplication half of this entry;
-the unstable-figure findings below stand on their own.
+`/subagent-standards` owns the canonical subagent rules in its rule catalog, so the
+duplication half of this entry resolves by deferring the overview and references to
+that catalog; the unstable-figure findings below stand on their own.
 
 A complete-bundle skill audit added four `WARNING` findings that belong to this
 refactor, because each removes or reworks reference/overview content rather than
@@ -99,7 +100,7 @@ descriptions, and all ten `spec-tree` agent descriptions now use the directive
 form `/agent-prompt-standards` `<description_style>` prescribes. What remains is
 that the rule is stated in more than one file.
 
-**Resolution shape**: resolve inside the `/subagent-standards` extraction above.
+**Resolution shape**: resolve against the `/subagent-standards` rule catalog.
 Decide whether `<clear_triggers>` keeps a specificity rule that cites the standard
 for wording, or disappears into `/subagent-standards` entirely, then apply the same
 choice to `write-subagent-prompts.md`'s parallel block in one pass.
