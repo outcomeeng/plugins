@@ -1,0 +1,75 @@
+{
+  "parentUuid": "020d4422-2f0a-462a-b4b6-5e18db8c5ef2",
+  "isSidechain": false,
+  "message": {
+    "model": "claude-sonnet-5-5",
+    "id": "msg_011Cfmarmn3nAaWPogb7KjmM",
+    "type": "message",
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "",
+        "signature": "redacted-opaque-signature"
+      }
+    ],
+    "container": null,
+    "stop_reason": "tool_use",
+    "stop_sequence": null,
+    "stop_details": null,
+    "usage": {
+      "input_tokens": 2,
+      "cache_creation_input_tokens": 30223,
+      "cache_read_input_tokens": 26599,
+      "output_tokens": 209,
+      "output_tokens_details": {
+        "thinking_tokens": 59
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 30223,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "not_available",
+      "iterations": [
+        {
+          "input_tokens": 2,
+          "output_tokens": 209,
+          "cache_read_input_tokens": 26599,
+          "cache_creation_input_tokens": 30223,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 30223
+          },
+          "type": "message"
+        }
+      ],
+      "speed": "standard",
+      "fallback_credit": null
+    },
+    "input_transformations": [],
+    "diagnostics": null,
+    "context_management": null
+  },
+  "thinkingDurationMs": 550,
+  "serverClassifierRequest": "5bc00302-28e2-4560-bcd8-bac1ae420f31",
+  "apiBlockIndex": 0,
+  "requestId": "req_011CfmarmPyBiAiKndbzrxDn",
+  "type": "assistant",
+  "uuid": "cdd575bc-9605-429d-85dc-5991ad63d740",
+  "timestamp": "2026-10-06T20:05:35.799Z",
+  "advisorModel": "claude-opus-5-5",
+  "effort": "high",
+  "perTurnEffort": "high",
+  "session_id": "a15e60f2-df0c-462e-91dc-0f7fa80cb996",
+  "userType": "external",
+  "entrypoint": "cli",
+  "cwd": "/workspace/maintainer",
+  "sessionId": "a15e60f2-df0c-462e-91dc-0f7fa80cb996",
+  "version": "2.1.292",
+  "gitBranch": "work/change-367-decision-record-audit"
+}
