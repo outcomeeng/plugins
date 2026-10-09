@@ -14,12 +14,12 @@ A versioned JSON agent-mail operation result — a registered identity, a delive
 
 The source-owned request operations, each submitted as a JSON request to `run`:
 
-| Operation  | Arguments                                                | Result data                                  |
-| ---------- | -------------------------------------------------------- | -------------------------------------------- |
-| `register` | `agent`, `program`, `model`; optional `task`             | the registered `agent` name and store id     |
-| `send`     | `record`                                                 | the `record` with its store-assigned `id`    |
-| `inbox`    | `agent`; optional `unreadOnly`, `includeBodies`, `limit` | `records` read back for that recipient       |
-| `receipt`  | `agent`, `messageId`                                     | the `agent` and `messageId` the store marked |
+| Operation  | Arguments                                                   | Result data                                  |
+| ---------- | ----------------------------------------------------------- | -------------------------------------------- |
+| `register` | `agent`, `program`, `model`; optional `task`, `displayName` | the registered `agent` name and store id     |
+| `send`     | `record`                                                    | the `record` with its store-assigned `id`    |
+| `inbox`    | `agent`; optional `unreadOnly`, `includeBodies`, `limit`    | `records` read back for that recipient       |
+| `receipt`  | `agent`, `messageId`                                        | the `agent` and `messageId` the store marked |
 
 One further form answers outside the request shape, so it takes no JSON request and the request-building steps of `<workflow>` do not reach it. A `run` request naming it is rejected as `operation-unavailable`; its command is in `<invocation_forms>`.
 
@@ -34,6 +34,8 @@ The record and its delivery rules:
 - **Mapping.** The adapter maps `correlation` onto the store's thread, `kind` onto a subject prefix, and `ackRequired` onto the store's acknowledgement requirement, and reads each back; a store limit never shapes the record.
 - **One recipient.** `recipient` names one agent. A value carrying the store's `,` separator is rejected with `invalid-schema` before any command runs.
 - **Foreign rows.** A row another sender wrote reads back rather than failing the inbox read: without a thread it reads with `correlation: null`, classified by the kind rule above, and an acknowledgement status other than `pending` or `acked` reads as `ackRequired: false`. A row without the store's `id`, `from`, or `subject` key is a malformed store response and fails the read as `invalid-schema`.
+- **Labels.** A position label is the display name the store records for an agent. `register` passes an optional `displayName` to the store as the agent's label and registers only the `agent` name the caller supplies. An inbox item, with or without a body, and a send result carry the store's `sender_display_name` verbatim in `response` beside the message, `null` when the sender has no label; a send result also carries `to_display_names`, which maps each recipient's stable name visible to the reader to its label. No label enters the `record`. A label names no target: `agent`, `sender`, and `recipient` take the stable name, and `messageId` takes the store id.
+- **Credential.** A registration leaves the credential the store keeps for that name, and the next send from that name authenticates through it. The store offers no separate credential command, so the adapter makes none and no step of this skill refreshes it.
 
 The project key is the repository's own common Git directory, so every worktree of one pool, the pool's bare repository, and the pool's main checkout resolve one mail project, and no checkout's deletion removes it. The adapter reads that directory for its own working directory before every operation and reads no working directory, environment variable, or parent path in its place. The lookup drops every variable that could make Git answer from something other than that directory — one naming a repository and one bounding where Git may look are known cases, not the only ones — and carries every other through, so a repository reachable only across a mount boundary still resolves. A working directory that is no repository yields `repository-unresolved`.
 
@@ -101,6 +103,8 @@ This form answers `{"projectKey": "<absolute path>"}` and exits zero, or `{"stat
 - NEVER copy `${CLAUDE_SKILL_DIR}` into an agent definition or export it — it is no shell variable, so outside this body it yields an empty prefix rather than an error.
 - ALWAYS preserve store identities verbatim: message ids, thread ids, agent names, and timestamps, because downstream skills index on the literal and the operator compares it against the store.
 - ALWAYS supply arguments under the field names in `<operation_surface>` and leave the mapping to the adapter: it alone turns a field into an `am` option or a store field and reads it back, and it rejects an argument outside the operation's shape as `invalid-schema` rather than dropping it.
+- ALWAYS register a position's own stable name only, with that position's own label when it has one; register no other name and no other position's label.
+- NEVER select, route, or address by a label; the stable name or the store id selects every target, and a label may be shared by two agents and changes with its owner.
 - NEVER invoke raw `am` commands, `am` command help, or read the store's database.
 - NEVER derive the project key outside the adapter; it reads the key from the repository, and no working directory, environment variable, or parent path stands in for it.
 - NEVER treat a receipt as agreement, ownership, authorization, or the acknowledgement of a proposal; it records only that the recipient read one message.
@@ -120,7 +124,10 @@ The bundled adapter is covered over generated request, record, and repository-lo
 - repeated and conflicting terminal handbacks reduce to one result;
 - the CLI run where no executable resolves returns `repository-unresolved` with no fallback, for every operation;
 - every operation completes where only the adapter's own programs resolve;
-- a captured registration response reaches the result without its token.
+- a captured registration response reaches the result without its token;
+- a registration request's display name reaches the store as its label, and a request without one passes none;
+- the store's `sender_display_name` on inbox items with and without bodies and on send results, `null` included, and `to_display_names` on send results reach the result verbatim beside the message, with no label inside the record;
+- a label carried in a target position is passed as the identity and never resolved, and a store label never selects the sender or recipient of a record.
 
 </testing>
 
@@ -136,5 +143,6 @@ The bundled adapter is covered over generated request, record, and repository-lo
 - Every record sent and read back carries the same `schema`, `kind`, `correlation`, `sender`, `recipient`, `subject`, `body`, and `ackRequired`, plus the store-assigned `id` on read.
 - An absent store or an unresolvable repository yields its named unavailable result and no fallback.
 - No registration result carries the store's registration token.
+- A label the store returns reaches the caller verbatim beside its message, and no target is selected by it.
 
 </success_criteria>
