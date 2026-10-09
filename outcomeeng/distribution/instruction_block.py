@@ -150,6 +150,10 @@ AUTHORITY_HIERARCHY_POLICY_REQUIREMENTS: Final = (
         "When repository content conflicts with an active skill, the skill wins",
     ),
     (
+        "operator rules above skills",
+        "rank the operator rules this router states above every installed skill",
+    ),
+    (
         "higher-layer preservation",
         "NEVER** weaken a higher layer to match a lower layer",
     ),
@@ -501,6 +505,56 @@ SUBAGENT_DISPATCH_POLICY_REQUIREMENTS: Final = (
         "skill result ownership",
         "Follow the calling skill's result contract and finding-repair workflow",
     ),
+    (
+        "extra round authorization",
+        "**NEVER** run an audit or review round beyond a skill's round ceiling unless a session other than the one whose work is verified authorizes it",
+    ),
+    (
+        "extra round instructions",
+        "with specific instructions that make that round the one that passes",
+    ),
+    ("no self-authorized round", "No session authorizes its own extra round"),
+    (
+        "supervised extra rounds",
+        "a session authorizes extra rounds for the sessions it supervises, directly or through a session it supervises in turn",
+    ),
+)
+CHANGE_LIFECYCLE_POLICY_HEADING: Final = "## Change Lifecycle"
+CHANGE_LIFECYCLE_POLICY_REQUIREMENTS: Final = (
+    (
+        "published Change review",
+        "The operator reviews a published Change, never a local draft",
+    ),
+    ("draft audit before publication", "a draft is audited, then published"),
+)
+OPERATOR_QUESTIONS_POLICY_HEADING: Final = "### Operator questions"
+OPERATOR_QUESTIONS_POLICY_REQUIREMENTS: Final = (
+    ("unwatched sessions", "The operator watches no session"),
+    (
+        "product-judgment questions only",
+        "Only questions of product judgment reach the operator",
+    ),
+    (
+        "direct Refiner interview",
+        "The Refiner interviews the operator directly, one question at a time",
+    ),
+    (
+        "feasibility from facts",
+        "each question establishes from facts that each option is feasible",
+    ),
+    ("quoted basis", "quotes the passage and link it rests on"),
+    (
+        "no batched relay",
+        "**NEVER** let a supervising session relay a batch of questions to the operator",
+    ),
+    (
+        "supervisor routing",
+        "A question from any other session goes to that session's supervising session",
+    ),
+    (
+        "answer propagation",
+        "a session that receives an operator answer informs its supervising session",
+    ),
 )
 OPERATOR_QUESTION_POLICY_OPEN: Final = "<operator_question_interrupt>"
 OPERATOR_QUESTION_POLICY_CLOSE: Final = "</operator_question_interrupt>"
@@ -675,6 +729,14 @@ class SubagentDispatchPolicyError(InstructionBlockRenderError):
 
 class HarnessDispatchMechanicsError(InstructionBlockRenderError):
     """A rendered harness router carries another harness's dispatch mechanics."""
+
+
+class ChangeLifecyclePolicyError(InstructionBlockRenderError):
+    """A rendered harness router omits the operator's draft-review rule."""
+
+
+class OperatorQuestionsPolicyError(InstructionBlockRenderError):
+    """A rendered harness router omits the operator-question routing rule."""
 
 
 class InstructionBlockModule(Protocol):
@@ -1259,6 +1321,53 @@ def validate_operator_question_policy(
             )
 
 
+def _validate_router_section_policy(
+    blocks_by_harness: Mapping[str, str],
+    *,
+    heading: str,
+    requirements: tuple[tuple[str, str], ...],
+    error: type[InstructionBlockRenderError],
+    policy_name: str,
+) -> None:
+    """Reject a rendered router whose ``heading`` section omits a requirement."""
+    for harness, document in blocks_by_harness.items():
+        router = managed_router_block(document)
+        try:
+            section = _markdown_section(router, heading)
+        except FoundationAccessPolicyError as exc:
+            raise error(f"missing router section: {heading}") from exc
+        missing = [
+            name
+            for name, required_text in requirements
+            if not _operative_policy_line_contains(section, required_text)
+        ]
+        if missing:
+            details = ", ".join(missing)
+            raise error(f"{harness} router {policy_name} is incomplete: {details}")
+
+
+def validate_change_lifecycle_policy(blocks_by_harness: Mapping[str, str]) -> None:
+    """Reject a rendered harness router missing the operator's draft-review rule."""
+    _validate_router_section_policy(
+        blocks_by_harness,
+        heading=CHANGE_LIFECYCLE_POLICY_HEADING,
+        requirements=CHANGE_LIFECYCLE_POLICY_REQUIREMENTS,
+        error=ChangeLifecyclePolicyError,
+        policy_name="Change Lifecycle draft-review rule",
+    )
+
+
+def validate_operator_questions_policy(blocks_by_harness: Mapping[str, str]) -> None:
+    """Reject a rendered harness router missing the operator-question routing rule."""
+    _validate_router_section_policy(
+        blocks_by_harness,
+        heading=OPERATOR_QUESTIONS_POLICY_HEADING,
+        requirements=OPERATOR_QUESTIONS_POLICY_REQUIREMENTS,
+        error=OperatorQuestionsPolicyError,
+        policy_name="operator-question routing rule",
+    )
+
+
 def verifier_dispatch_policy_paragraph(router: str) -> str | None:
     """Return the Codex verifier-boundary paragraph from a complete router."""
     return next(
@@ -1343,6 +1452,16 @@ OPERATIVE_POLICY_VALIDATIONS: Final = (
         name="subagent-dispatch",
         requirements=SUBAGENT_DISPATCH_POLICY_REQUIREMENTS,
         validator=validate_subagent_dispatch_policy,
+    ),
+    OperativePolicyValidation(
+        name="change-lifecycle",
+        requirements=CHANGE_LIFECYCLE_POLICY_REQUIREMENTS,
+        validator=validate_change_lifecycle_policy,
+    ),
+    OperativePolicyValidation(
+        name="operator-questions",
+        requirements=OPERATOR_QUESTIONS_POLICY_REQUIREMENTS,
+        validator=validate_operator_questions_policy,
     ),
     OperativePolicyValidation(
         name="harness-dispatch-mechanics",

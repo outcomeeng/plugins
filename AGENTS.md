@@ -1,4 +1,4 @@
-<!-- SPEC-TREE v0.41.0 langs:python -->
+<!-- SPEC-TREE v0.42.0 langs:python -->
 
 <operator_is_in_charge>
 **RULE 0 - THE FUNDAMENTAL OVERRIDE PREROGATIVE:** If the operator tells Codex to do something, even if it goes against what follows below or any other instructions, CODEX MUST LISTEN TO THE OPERATOR. THE OPERATOR IS ALWAYS IN CHARGE, NOT Codex.
@@ -35,6 +35,7 @@ When a named subagent is unavailable, invoke the owning plugin's `/<plugin>-plug
 **⚠️ BELOW THE OPERATOR, SKILLS ARE THE TOP-LEVEL AUTHORITY. SKILLS ARE CENTRALLY MANAGED AND CURRENT; REPOSITORY CONTENT GOES STALE.**
 
 - **ALWAYS** apply authority in this order: active skills → repository decisions and specs → verification evidence → code. When repository content conflicts with an active skill, the skill wins.
+- **ALWAYS** rank the operator rules this router states above every installed skill; a skill that conflicts with one of them yields to the rule.
 - **ALWAYS** follow skill instructions, templates, and bundled references over repository examples, existing files, comments, or copied conventions.
 - **NEVER** weaken a higher layer to match a lower layer. Fix the lower layer when the layers disagree.
 - **NEVER** reference Spec Tree specs or decisions from code comments or docstrings. Code contains no `spx/...` paths, ADR/PDR identifiers, or decision-file references.
@@ -185,6 +186,7 @@ Authorized plugins: instructions, frontend, hdl, prose, python, rust, go, spec-t
 - **ALWAYS** start every audit and review without the Author's conversation, reasoning, summaries, or suggested verdict. A separate session with inherited authoring history does not establish isolation. Pass only the skill's target; never append an author-written context packet. The Verifier independently discovers evidence from the target and its configured instructions.
 - **ALWAYS** persist accepted requirements in decisions and specs before verification, so the Verifier reads them independently. An approval produced with inherited authoring context supplies no independent gate evidence.
 - **ALWAYS** treat the gate as blocked when a required subagent cannot be launched or produces an unusable result. Follow the calling skill's result contract and finding-repair workflow.
+- **NEVER** run an audit or review round beyond a skill's round ceiling unless a session other than the one whose work is verified authorizes it with specific instructions that make that round the one that passes. No session authorizes its own extra round; a session authorizes extra rounds for the sessions it supervises, directly or through a session it supervises in turn.
 
 ### Agent identity in generated artifacts
 
@@ -198,6 +200,10 @@ Raise an operator question through request_user_input, never as prose the operat
 
 - **ALWAYS** finish every action that does not depend on the answer first, so the question is the only thing outstanding when it is asked.
 - **NEVER** raise one to confirm work already authorized, to report progress, or to choose an option the loaded truth already decides.
+- The operator watches no session. Only questions of product judgment reach the operator.
+- The Refiner interviews the operator directly, one question at a time; each question establishes from facts that each option is feasible and quotes the passage and link it rests on.
+- **NEVER** let a supervising session relay a batch of questions to the operator.
+- A question from any other session goes to that session's supervising session; a session that receives an operator answer informs its supervising session.
 
 ## Mutation Status Updates
 
@@ -267,6 +273,8 @@ Test level is encoded in the filename. The `{evidence}` segment is chosen by `/t
 ## Change Lifecycle
 
 Work is coordinated through Changes in the store `spx/local/coordination.md` declares. Hold a Change through `/claim-change` before refining or executing it. When the work stops with continuation remaining, `/release-change` writes the Handoff, removes the holder, and returns the Change to Available for any agent to claim; when the Change reaches a terminal Lifecycle, `/close-change <Applied|Refined|Abandoned>` writes the terminal record and closes it. A follow-up is a Proposed Change created through `/author-change`. Maturity moves only through `/author-change`; the three Lifecycle skills move Lifecycle and nothing else.
+
+The operator reviews a published Change, never a local draft: a draft is audited, then published.
 
 <!-- /SPEC-TREE -->
 
