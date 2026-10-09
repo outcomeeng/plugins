@@ -22,7 +22,7 @@ A sealed `spx verification run` on one exact committed changeset — terminal st
 - NEVER run tests, evals, validation, linters, or any other deterministic verification inside the audit — coherence is judged by reading the committed changeset.
 - ALWAYS read every subject and context file at the resolved `<head>` through `git show` or `git diff`, never from the working tree, so the judgment reads the committed changeset whatever the checkout holds.
 - MUST preserve the resolved full base and head commit identities verbatim in the run's changeset scope and the root unit's subject.
-- MUST account for every changed path exactly once; collapse each generated artifact onto its producing authored artifact before judging breadth.
+- MUST account for every changed path exactly once; collapse each generated artifact onto its producer in Step 5 item 2, before Step 5 item 4 forms clusters and item 6 reads review-load signals, so generated fanout never counts as authored change.
 - NEVER use line count, file count, path breadth, or an uncalibrated review-load score as a verdict rule.
 - NEVER infer missing behavioral, dependency, generated-source, verification, rollback, or calibration evidence — record the unit that needs it `incomplete` with its cause.
 - ALWAYS treat a `spx verification run` exit code as payload validity; NEVER hand-validate a payload SPX accepted, retry a refused command, or reshape a refused payload.
