@@ -4,7 +4,7 @@ description: >-
   Audit-assertion methodology — judges every `[audit]` assertion of one node
   spec against the subject that assertion names, and records the judgment
   through an SPX file-scoped verification run with one unit per assertion keyed
-  by its rule slug.
+  by its rule slug, or by its ordinal when the assertion carries no slug.
 argument-hint: "<JSON object with path and runDriver>"
 allowed-tools: Read, Grep, Glob, Bash(git rev-parse:*), Bash(realpath:*), Bash(spx --version), Bash(spx spec context show:*), Bash(spx verification run start:*), Bash(spx verification run input:*), Bash(spx verification run status:*), Bash(spx verification run scope add:*), Bash(spx verification run finding add:*), Bash(spx verification run finish:*), Bash(spx verification run render:*), Bash(printf '%s\n':*)
 ---
