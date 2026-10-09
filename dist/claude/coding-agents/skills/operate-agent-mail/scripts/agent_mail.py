@@ -796,7 +796,11 @@ def _validated_request(request: object) -> tuple[Operation, dict[str, object]]:
         )
     for field_name in TEXT_ARGUMENT_FIELDS:
         if field_name in arguments:
-            _text(arguments[field_name], f"request.{ARGUMENTS_FIELD}.{field_name}")
+            location = f"request.{ARGUMENTS_FIELD}.{field_name}"
+            if field_name == DISPLAY_NAME_FIELD:
+                _string(arguments[field_name], location)
+            else:
+                _text(arguments[field_name], location)
     for field_name in BOOLEAN_ARGUMENT_FIELDS:
         if field_name in arguments:
             _boolean(arguments[field_name], f"request.{ARGUMENTS_FIELD}.{field_name}")

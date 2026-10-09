@@ -224,9 +224,9 @@ LINE_FIELD = "line"
 AGENTS_FIELD = "agents"
 DOORBELL_TEMPLATE = "[{sender}] mail {id}"
 DOORBELL_LABELED_TEMPLATE = "[{label} <{sender}>] mail {id}"
-# A label renders when it is non-empty and holds no line break and none of the
-# four delimiters the doorbell form is parsed by.
-DOORBELL_LABEL_UNRENDERABLE = re.compile(r"[\r\n\[\]<>]")
+# A label renders when it is non-empty, every character is printable, and none
+# of the four delimiters the doorbell form is parsed by appears in it.
+DOORBELL_LABEL_DELIMITERS = frozenset("[]<>")
 DOORBELL_PATTERN = re.compile(
     r"\[(?:(?P<label>[^\r\n\[\]<>]+) <(?P<labeled_sender>[^\[\]<>\s]+)>"
     r"|(?P<sender>[^\[\]\s]+))\] mail (?P<id>[1-9][0-9]*)"
@@ -1147,13 +1147,20 @@ def mail_request(request: object) -> dict[str, object]:
     }
 
 
+def doorbell_label_renderable(label: str | None) -> bool:
+    """A label renders only when non-empty, printable, and free of delimiters."""
+    return bool(
+        label and label.isprintable() and DOORBELL_LABEL_DELIMITERS.isdisjoint(label)
+    )
+
+
 def doorbell_text(sender: str, message_id: int, label: str | None = None) -> str:
     """The one pane line that points the recipient at a delivered record.
 
     A renderable sender label prefixes the stable name; any other label leaves the
     unlabeled form.
     """
-    if label and DOORBELL_LABEL_UNRENDERABLE.search(label) is None:
+    if doorbell_label_renderable(label):
         return DOORBELL_LABELED_TEMPLATE.format(
             label=label, sender=sender, id=message_id
         )
