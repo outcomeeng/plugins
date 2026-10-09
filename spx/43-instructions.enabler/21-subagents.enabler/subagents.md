@@ -12,7 +12,6 @@ The subagents-about-subagents cluster is three peers with distinct roles:
 
 ## Assertions
 
-- ALWAYS: `/create-subagent` applies the `/subagent-standards` catalog to the finished definition and returns it ready for independent verification.
 - ALWAYS: `/audit-subagent` records one changeset-scoped verification run with one unit for the definition the changeset changes and one unit for each governing declaration it reads, keys each finding `<unit>:<rule-id>`, and returns `BLOCKED` when the changeset leaves the definition unchanged or a governing standard is unreadable.
 - ALWAYS: every rule identifier `/audit-subagent` records names a rule in the `/subagent-standards` or `/agent-prompt-standards` rule catalog, and no finding is recorded under an identifier outside those catalogs.
 
@@ -50,6 +49,7 @@ The subagents-about-subagents cluster is three peers with distinct roles:
   require explicit governing selection, and independent model or reasoning
   overrides and product-defined profiles are forbidden ([audit]).
 - ALWAYS: `/subagent-standards` owns every rule `/audit-subagent` enforces — standards and enforcement stay in one place so drift cannot open between them ([audit])
+- ALWAYS: `/create-subagent` applies the `/subagent-standards` catalog to the finished definition and returns it ready for independent verification ([audit])
 - ALWAYS: `/create-subagent` and `/audit-subagent` load `/subagent-standards` before doing any authoring or evaluation work — prevents memory-based assessment ([audit])
 - ALWAYS: `/audit-subagent` judges exactly one subagent configuration per invocation, and auditing several configurations dispatches one invocation per configuration ([audit])
 - ALWAYS: `/create-subagent` writes a configuration to the invocation checkout by default, and reaches a user-scope destination outside it — creating, editing, or deleting — only after operator confirmation naming the absolute destination, one approval covering one write ([audit])
