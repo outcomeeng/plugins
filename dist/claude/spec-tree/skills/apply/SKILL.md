@@ -158,7 +158,7 @@ Step 0 and Steps 1–2 are language-independent. Steps 3–8 use the detected la
 † Step 9 runs only for a cross-node change (see `<scope_detection>`).
 ‡ Step 10 runs for any change destined for the default branch — skip only when the user explicitly scoped the work to a proposal, analysis, review, or local-only change (see the step).
 
-Invoke the exact skill or agent surface shown. Never substitute, skip, or reorder.
+Run every step whose run condition holds — the conditions above and the condition each step states — through the exact skill or agent surface its language cell names; a cell that names no surface, such as Python's Step 7a, has nothing to invoke. Never substitute a named surface, skip a step whose run condition holds, or reorder the steps.
 
 </skill_map>
 
@@ -364,7 +364,8 @@ This is not slower. The ad hoc script takes the same effort as a test, but the s
 <success_criteria>
 
 - Every product-declared touched-scope deterministic command exits zero on the final committed subject.
-- Every applicable decision, test-evidence, eval-evidence, and implementation audit carries a run token whose rendered projection shows `terminalStatus: approved` for the exact committed subject.
+- Every applicable Step 8 and Step 8a audit carries a run token whose rendered projection shows `terminalStatus: approved` for the final committed head.
+- Every applicable Step 4 and Step 6 audit carries a run token whose rendered projection shows `terminalStatus: approved`, dispatched at the scope of the final committed classification, for a head after which no commit changed the decision record or evidence artifact it audited (see `<terminal_full_gate>`).
 - A cross-node changeset carries a raw Step 9 review run token whose sealed projection renders successfully, with every valid finding fixed, including every in-scope same-class instance; unbacked findings are dropped.
 - `git rev-parse HEAD` matches the final gate subject and `git status --porcelain` is empty.
 - The requested delivery boundary has observable completion: default-branch work has reached the default branch on origin through `/merge`'s selected transport and every declared release action reports success or no-op; proposal, analysis, review, or local-only work reaches its explicitly selected boundary; an explicit lifecycle gate reports its blocking token only after no independent action remains.
