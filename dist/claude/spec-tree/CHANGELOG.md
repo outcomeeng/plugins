@@ -14,7 +14,7 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 ### Changed
 
-- **`/execute-change` hands a skill-surface Fixer its repair block as repair input.** The Fixer rule no longer names `instructions:create-skill` as declaring no repair-block intake; it names `instructions:create-subagent` alone. A `change-skill-author` Fixer's repair block, the verbatim rejected verdicts and failed commands of the earlier round, is now read by `instructions:create-skill` as its repair input.
+- **`/execute-change` hands a skill-surface Fixer its repair block as repair input, and stops a rejected subagent-definition round.** The Fixer rule no longer names `instructions:create-skill` as declaring no repair-block intake; it names `instructions:create-subagent` alone. A `change-skill-author` Fixer's repair block, the verbatim rejected verdicts and failed commands of the earlier round, is now read by `instructions:create-skill` as its repair input. A `change-subagent-author` round launches no Fixer, because `instructions:create-subagent` takes no repair input: its rejected verdicts, failed commands, or `/merge` findings go directly to the release step as the blocker, and the Change is released with a Handoff naming them.
 
 ## 0.104.1
 
