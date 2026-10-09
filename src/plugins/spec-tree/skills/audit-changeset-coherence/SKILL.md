@@ -18,7 +18,7 @@ A sealed `spx verification run` on one exact committed changeset — terminal st
 
 <constraints>
 
-- NEVER edit files, commits, branches, reviews, or pull requests, and NEVER commit, stash, rebase, or move the checkout. The audit writes exactly two things: its own SPX verification-run journal, and the remote-tracking base ref the Step 2 resolver's fetch updates. That fetch never touches the working tree, a local branch, or `HEAD`, and it is required: a scope resolved against an unfetched base re-admits already-merged commits and cannot detect a stale head.
+- Read-only on the subject: NEVER edit files, commits, branches, reviews, or pull requests, and NEVER commit, stash, rebase, or move the checkout. The audit's only state is its own SPX verification-run journal. The Step 2 resolver's fetch refreshes the remote-tracking base ref so the scope reads the current base and can refuse a stale head; it touches no working-tree file, local branch, or `HEAD`.
 - NEVER run tests, evals, validation, linters, or any other deterministic verification inside the audit — coherence is judged by reading the committed changeset.
 - ALWAYS read every subject and context file at the resolved `<head>` through `git show` or `git diff`, never from the working tree, so the judgment reads the committed changeset whatever the checkout holds.
 - MUST preserve the resolved full base and head commit identities verbatim in the run's changeset scope and the root unit's subject.
@@ -92,11 +92,11 @@ Capture the exact `runToken` and use it for every later command. Steps 5 through
 1. Enumerate every changed path from the run input and classify its role: decision or specification, test or eval evidence, implementation, generated artifact, workflow or configuration, documentation, migration, deployment, or release. Read each changed artifact with `git diff '<base>...<head>' -- '<path>'` and `git show '<head>:<path>'`.
 2. Resolve every generated artifact to its producing authored artifact through a relationship the Step 3 generated-source declaration states or an evidence-packet `generated_from` field. `role: generated` classifies the artifact kind only and never establishes provenance. NEVER infer a producer from path similarity, artifact count, or the presence of only one authored artifact. An unattributed generated artifact is a `missing-generated-source-evidence` cause on its artifact unit.
 3. Extract behavioral claims from the changed declarations and the observable implementation and evidence. Commit messages are supporting evidence only and never override changed artifacts. An authored artifact whose claim cannot be established is a `missing-behavioral-claim-evidence` cause on its artifact unit and joins no cluster.
-4. Build the smallest semantic clusters whose authored artifacts realize one claim, and place each attributed generated artifact in its producer's cluster. Collapse dependency cycles, and clusters that cannot be verified or rolled back separately, into one inseparable cluster. Every cluster surviving the collapse is independently mergeable. A cluster's outcome is its claim, verbatim; a collapsed cluster's outcome is its claims sorted lexicographically and joined by `;`.
+4. Build the smallest semantic clusters whose authored artifacts realize one claim, and place each attributed generated artifact in its producer's cluster. Collapse dependency cycles, and clusters that cannot be verified or rolled back separately, into one inseparable cluster. Every cluster surviving the collapse is independently mergeable. A cluster's outcome is its claim, verbatim; a collapsed cluster's outcome is its claims sorted lexicographically and joined by a semicolon and one space. When no cluster forms, that is a `no-review-unit` cause on the root: no authored artifact in scope realizes an established claim.
 5. With two or more clusters, establish the dependencies between them. An absent or `null` dependency set is a `missing-dependency-evidence` cause on the root, while an explicit empty array establishes that no dependency exists. Order the clusters topologically, breaking ties by the lexicographically first authored path, and number them `cluster-1`, `cluster-2`, and so on in that order.
 6. Take the review-load signals from the packet's `review_load.signals` object, one signal per key with its scalar value, and the baseline from `review_load.repository_baseline_available`. Without a packet `review_load`, there is no signal and the baseline is `false`. Signals raise scrutiny only. Missing calibration is a `missing-calibration-evidence` cause on the root only when a repository-specific signal states that the calibration decides whether the semantic evidence suffices.
 
-Record the root unit — `incomplete` when item 5 or item 6 of this step raised a root cause, `audited` otherwise — then each root cause as a finding, then one review-load unit per signal and one for the baseline.
+Record the root unit — `incomplete` when item 4, item 5, or item 6 of this step raised a root cause, `audited` otherwise — then each root cause as a finding, then one review-load unit per signal and one for the baseline.
 
 </step>
 
@@ -114,7 +114,7 @@ Record the cluster's `review-unit` unit — `incomplete` when it carries a cause
 
 **Step 7: Record unclustered artifacts and the split**
 
-Record one artifact unit under the root for every changed path no cluster holds — `incomplete` with its cause as a finding when Step 5 item 2 or item 3 raised one on it, `audited` when it is a generated artifact whose producer is itself unclustered.
+Record one artifact unit under the root for every changed path no cluster holds — `incomplete` with its cause as a finding when Step 5 item 2 or item 3 raised one on it, `audited` when it is an attributed generated artifact whose producer no cluster holds, because that producer is unclustered or lies outside the changeset.
 
 When two or more clusters exist and no unit is `incomplete`, record one `split-required` finding on the root whose evidence carries the cluster detail and the dependency-ordered review-unit sequence `<persistence_contract>` defines. When any unit is `incomplete`, record no `split-required` finding: the missing evidence can change cluster membership, order, or mergeability, so no sequence is defensible.
 
@@ -128,7 +128,7 @@ Read `spx verification run status` with the same type, scope, and token. Require
 
 **Step 9: Finish and render**
 
-Derive `approved` only when exactly one `review-unit` unit exists, every unit is `audited`, and no finding exists; derive `rejected` otherwise. Run `spx verification run finish` with the same type, scope, and token and `--terminal-status '<approved-or-rejected>'`, then `spx verification run render` with the same type, scope, and token, and return the token and the rendered projection unchanged. An `approved` run is the audit's publication authorization; a `rejected` run never authorizes publication.
+Derive `approved` only when exactly one `review-unit` unit exists, every unit is `audited`, and no finding exists; derive `rejected` otherwise. Run `spx verification run finish` with the same type, scope, and token and `--terminal-status '<approved-or-rejected>'`, then `spx verification run render` with the same type, scope, and token, and return the token and the rendered projection unchanged. The terminal status is the audit's publication-authorization judgment: `approved` finds the changeset publishable as one review unit, and `rejected` finds that it is not.
 
 </step>
 
@@ -190,6 +190,7 @@ A finding copies its unit's `expectedProducer` as `producerIdentity` and its uni
 | ----------------------------------- | ----------- | --------------------------------- |
 | `missing-dependency-evidence`       | root        | `<anchor>`                        |
 | `missing-calibration-evidence`      | root        | `<anchor>`                        |
+| `no-review-unit`                    | root        | `<anchor>`                        |
 | `split-required`                    | root        | `<anchor>`                        |
 | `missing-verification-evidence`     | review unit | the cluster's first authored path |
 | `missing-rollback-evidence`         | review unit | the cluster's first authored path |
@@ -293,7 +294,8 @@ How to avoid: Require a declared generated-source relationship or `generated_fro
 
 The verdict is sound when:
 
-- Every changed path carries exactly one artifact unit: under the review unit of the one cluster that holds it, or under the root when no cluster holds it, in which case the unit is `incomplete` with its cause or is a generated artifact whose producer no cluster holds.
+- Every changed path carries exactly one artifact unit: under the review unit of the one cluster that holds it, or under the root when no cluster holds it, in which case the unit is `incomplete` with its cause or is an attributed generated artifact whose producer no cluster holds.
+- Every `rejected` run carries at least one finding or `incomplete` unit naming why: a run with no cluster carries `no-review-unit` on the root.
 - The terminal status follows semantic cohesion, verification unity, rollback unity, and independent mergeability, with no size threshold acting as a verdict rule; it is `approved` only with exactly one review unit, every unit `audited`, and no finding.
 - Every evidence gap is an `incomplete` unit carrying a finding that names the missing evidence, and every split carries a `split-required` finding whose sequence covers every cluster exactly once in dependency order.
 - The run's changeset scope and root subject carry the resolved base and head commit identities verbatim.
