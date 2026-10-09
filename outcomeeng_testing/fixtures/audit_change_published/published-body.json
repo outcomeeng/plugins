@@ -1,0 +1,9 @@
+{
+  "data": {
+    "repository": {
+      "issue": {
+        "body": "## Intent\n\n- What: the example Output the published record states.\n- Why: an example reason the work is worth doing.\n- Evidence: an example observable result.\n\n## Decisions\n\n- Does the example Output need a second slice? Unanswered.\n"
+      }
+    }
+  }
+}
