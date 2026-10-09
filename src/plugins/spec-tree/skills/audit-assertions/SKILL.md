@@ -15,8 +15,8 @@ A sealed `spx verification run` on one node spec's `[audit]` assertions, each ju
 
 <constraints>
 
-- NEVER modify the spec, a subject, or any product file; the only state this audit changes is its own SPX verification-run journal.
-- NEVER judge how an assertion is declared or selected — its wording quality, form, heading, tag fit, or slug uniqueness belong to the spec audit; judge only whether the subject holds the rule the assertion states.
+- NEVER modify the spec, a subject, or any product file; the only state this audit changes is its own SPX verification-run journal, apart from the base synchronization the composed context load performs, whose `rebased` result stops the audit under step 1.
+- NEVER judge how an assertion is declared or selected — its wording quality, form, heading, tag fit, or slug uniqueness belong to the spec audit; judge only whether the subject holds the rule the assertion states. The one judgment of an assertion's text this audit makes is whether any observation of its subject decides the rule; a `criterion-unobservable` finding records only that no observation does, and never names wording quality, form, or a rephrasing.
 - NEVER judge an assertion that carries a `[test]`, `[eval]`, or `[probe]` tag, or no tag.
 - MUST read every subject file completely before judging the assertion that names it — a rule judged on part of its subject passes the part never read.
 - NEVER report a score; each unit is judged held or broken, and a broken rule is a finding.
@@ -58,7 +58,7 @@ A named path that does not exist, or an identifier no file defines, is a finding
 
 <execution_sequence>
 
-1. **Load context.** Use skill `spec-tree:understand` when no live `<SPEC_TREE_FOUNDATION>` marker is present, then use skill `spec-tree:contextualize` on the node directory containing the spec. A context load that aborts returns `BLOCKED` with its exact report, `runToken: not-started`.
+1. **Load context.** Use skill `spec-tree:understand` when no live `<SPEC_TREE_FOUNDATION>` marker is present, then use skill `spec-tree:contextualize` on the node directory containing the spec. A context load that aborts returns `BLOCKED` with its exact report, `runToken: not-started`. A base synchronization that reports `rebased` returns `BLOCKED` with that result and `runToken: not-started`, because the checkout no longer holds the head the audit was dispatched on; only `already_current` continues.
 2. **Inventory.** Read the spec and build the assertion inventory under `<assertion_inventory>`.
 3. **Start the run.** From the repository root, with the spec as `<spec-file>`:
 
@@ -131,7 +131,7 @@ spx verification run scope add --verification-type audit --scope-type file --sco
 SCOPE_JSON
 ```
 
-A finding copies its unit's `expectedProducer` object as `producerIdentity` and its unit's complete `producerProvenance` object, and carries `rule` (`assertion-violated`, `criterion-unobservable`, `subject-missing`, `subject-unresolved`, or `configuration_issue`), `severity: blocking` — a broken assertion fails its result — `location` naming the subject file and line, or the spec section for a finding with no subject location, `message` quoting the assertion, and `evidence` with `observed` and `expected` strings:
+A finding copies its unit's `expectedProducer` object as `producerIdentity` and its unit's complete `producerProvenance` object, and carries `rule` (`assertion-violated`, `criterion-unobservable`, `subject-missing`, or `subject-unresolved`), `severity: blocking` — a broken assertion fails its result — `location` naming the subject file and line, or the spec section for a finding with no subject location, `message` quoting the assertion, and `evidence` with `observed` and `expected` strings:
 
 ```json
 {
