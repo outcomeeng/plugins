@@ -50,6 +50,7 @@ Each Verifier is the configured auditor or reviewer for the evidence obligation 
 | A node spec                         | `{{! subagent_name('spec-tree', 'spec-auditor') !}}`                |
 | A node's test evidence              | `{{! subagent_name('spec-tree', 'test-evidence-auditor') !}}`       |
 | A node's eval evidence              | `{{! subagent_name('spec-tree', 'eval-evidence-auditor') !}}`       |
+| A node's `[audit]` assertions       | `{{! subagent_name('spec-tree', 'assertion-auditor') !}}`           |
 | Implementation in a changeset scope | `{{! subagent_name('spec-tree', 'implementation-auditor') !}}`      |
 | A skill surface                     | `{{! subagent_name('instructions', 'skill-auditor') !}}`            |
 | A subagent definition               | `{{! subagent_name('instructions', 'subagent-auditor') !}}`         |
@@ -57,7 +58,9 @@ Each Verifier is the configured auditor or reviewer for the evidence obligation 
 | The changeset, under `/merge`       | `{{! subagent_name('spec-tree', 'changes-reviewer') !}}`            |
 | Changeset coherence, under `/merge` | `{{! subagent_name('spec-tree', 'changeset-coherence-auditor') !}}` |
 
-The verdict of a `{{! subagent_name('instructions', 'skill-auditor') !}}` or `{{! subagent_name('instructions', 'subagent-auditor') !}}` launch is the terminal status of the sealed run whose token the launch returns: `approved` approves, and `rejected` rejects whatever the finding count. A launch that returns a blocked diagnostic for a refused payload or finish yields no verdict and goes to step 8 with that diagnostic.
+A node spec's own declarations go to `{{! subagent_name('spec-tree', 'spec-auditor') !}}`; the results of its `[audit]` assertions go to `{{! subagent_name('spec-tree', 'assertion-auditor') !}}`, whose task message is the repository path of that node's spec.
+
+The verdict of a `{{! subagent_name('instructions', 'skill-auditor') !}}`, `{{! subagent_name('instructions', 'subagent-auditor') !}}`, or `{{! subagent_name('spec-tree', 'assertion-auditor') !}}` launch is the terminal status of the sealed run whose token the launch returns: `approved` approves, and `rejected` rejects whatever the finding count. A launch that returns a blocked diagnostic — a run that never started, or a refused payload or finish — yields no verdict and goes to step 8 with that diagnostic.
 
 </definitions>
 
