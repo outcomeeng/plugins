@@ -80,6 +80,7 @@ class ControlField(StrEnum):
     ARTIFACT = "artifact"
     INVESTIGATION = "investigation"
     SIGNALS = "signals"
+    SIGNAL = "signal"
 
 
 def parser() -> argparse.ArgumentParser:
@@ -246,7 +247,11 @@ def worker(
                         continue
                     json_write(
                         Path(value["evidence"]),
-                        {"signal": value, "current": current, "weekly": weekly},
+                        {
+                            ControlField.SIGNAL: value,
+                            "current": current,
+                            "weekly": weekly,
+                        },
                     )
                     evidence.db.execute(
                         "INSERT INTO signals VALUES(?,?,?)",
