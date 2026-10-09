@@ -49,6 +49,8 @@ MAX_FILES: Final = 128
 MAX_SECONDS: Final = 30
 MAX_QUERY_ROWS: Final = 100_000
 MAX_GROUPS: Final = 2_000
+CONTEXT_SAMPLE_LIMIT: Final = 10
+CONTEXT_SAMPLE_DIVISOR: Final = 4
 MAX_GAPS: Final = 200
 MAX_REGISTERED_FILES: Final = 50_000
 MAX_REGISTERED_DIRECTORIES: Final = 10_000
@@ -1036,14 +1038,21 @@ class Evidence:
                         float(components[key]) if components else 0.0
                     )
                 group[AccountingField.API_EQUIVALENT_USD] += float(amount)
-                if len(group["early_contexts"]) < 10:
+                if len(group["early_contexts"]) < CONTEXT_SAMPLE_LIMIT:
                     group["early_contexts"].append(context)
                     group["early_costs"].append(float(amount))
-                group["late_contexts"] = (group["late_contexts"] + [context])[-10:]
-                group["late_costs"] = (group["late_costs"] + [float(amount)])[-10:]
+                group["late_contexts"] = (group["late_contexts"] + [context])[
+                    -CONTEXT_SAMPLE_LIMIT:
+                ]
+                group["late_costs"] = (group["late_costs"] + [float(amount)])[
+                    -CONTEXT_SAMPLE_LIMIT:
+                ]
         for category_groups in groups.values():
             for group in category_groups.values():
-                size = min(10, max(1, group[AccountingField.REQUESTS] // 4))
+                size = min(
+                    CONTEXT_SAMPLE_LIMIT,
+                    max(1, group[AccountingField.REQUESTS] // CONTEXT_SAMPLE_DIVISOR),
+                )
                 early = sum(group.pop("early_contexts")[:size]) / size
                 late = sum(group.pop("late_contexts")[-size:]) / size
                 early_cost = sum(group.pop("early_costs")[:size]) / size
