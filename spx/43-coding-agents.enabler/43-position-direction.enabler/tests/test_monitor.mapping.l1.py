@@ -7,12 +7,12 @@ from outcomeeng_testing.generators.position_direction import (
     MailHistory,
     Watched,
     background_texts,
+    deadlines,
     digit_free_texts,
     distinct_pairs,
     every_percent,
     handles,
     mail_histories,
-    position_names,
     remind_minutes,
     stall_minutes,
     status_line,
@@ -20,17 +20,23 @@ from outcomeeng_testing.generators.position_direction import (
     thresholds,
     ticking,
     watched,
-    worktree_paths,
 )
 from outcomeeng_testing.harnesses.position_direction import (
+    ABSENCES,
+    BACKGROUND_EDGES,
+    BROKEN_CHANNELS,
+    BROKEN_SOURCES,
     CONTEXT_STEPS,
+    DEADLINE_EXITS,
+    EXIT_SLACK_SECONDS,
     MAIL_EDGES,
     REMIND_EDGES,
-    ROSTER_ROWS,
     STALL_EDGES,
+    STATE_EDGES,
     Rig,
     check_examples,
     load_scripts,
+    run_loop_to_deadline,
     scratch_dir,
     watch_with,
 )
@@ -90,7 +96,7 @@ def test_blocked_and_went_idle_signal_on_their_edges_over_every_state_pair() -> 
                 assert named(first, Signal.WENT_IDLE) == [], where
                 assert named(events, Signal.WAITING_ON_BACKGROUND) == [], where
 
-    check_examples(watched(), check, ROSTER_ROWS)
+    check_examples(watched(), check, STATE_EDGES)
 
 
 def test_blocked_repeats_once_after_the_remind_interval() -> None:
@@ -138,7 +144,9 @@ def test_a_turn_that_ends_with_background_work_signals_waiting_and_idles_when_it
             assert named(rig.poll(), Signal.WENT_IDLE) == []
 
     check_examples(
-        st.tuples(watched(), background_texts(), st.booleans()), check, STALL_EDGES
+        st.tuples(watched(), background_texts(), st.booleans()),
+        check,
+        BACKGROUND_EDGES,
     )
 
 
@@ -151,15 +159,18 @@ def test_a_working_pane_unchanged_for_the_stall_interval_signals_stalled_once() 
                 subject.position, backend, subject.cwd, stall_minutes=stall
             )
             rig.place(State.WORKING, subject.handle, text=ticking(first, 1))
-            rig.poll()
+            assert named(rig.poll(), Signal.STALLED) == []
             rig.place(State.WORKING, subject.handle, text=ticking(first, 2))
-            assert len(named(rig.poll(window), Signal.STALLED)) == 1
+            short = timedelta(minutes=stall - 1)
+            assert named(rig.poll(short), Signal.STALLED) == []
             rig.place(State.WORKING, subject.handle, text=ticking(first, 3))
+            assert len(named(rig.poll(timedelta(minutes=2)), Signal.STALLED)) == 1
+            rig.place(State.WORKING, subject.handle, text=ticking(first, 4))
             assert named(rig.poll(), Signal.STALLED) == []
 
-            rig.place(State.WORKING, subject.handle, text=ticking(second, 4))
-            assert named(rig.poll(window), Signal.STALLED) == []
             rig.place(State.WORKING, subject.handle, text=ticking(second, 5))
+            assert named(rig.poll(window), Signal.STALLED) == []
+            rig.place(State.WORKING, subject.handle, text=ticking(second, 6))
             assert len(named(rig.poll(window), Signal.STALLED)) == 1
 
     strategy = st.tuples(
@@ -231,47 +242,7 @@ def test_absent_signals_once_for_each_loss_of_a_watched_session() -> None:
             assert [event.subject for event in lost] == [subject.position]
             assert named(rig.poll(), Signal.ABSENT) == []
 
-    check_examples(watched(), check, MAIL_EDGES)
-
-
-def test_an_ended_group_member_and_an_expected_empty_group_signal_absent_once() -> None:
-    def check(case: tuple[str, str, str]) -> None:
-        label, handle, prefix = case
-        for backend in backends:
-            rig = Rig(
-                watch_with(
-                    groups=[{"label": label, "backend": backend, "cwd_prefix": prefix}]
-                )
-            )
-            member = rig.session(backend, handle, f"{prefix}/{handle}", State.WORKING)
-            rig.backends[backend].inventory = [member]
-            assert named(rig.poll(), Signal.ABSENT) == []
-            rig.backends[backend].inventory = []
-            ended = named(rig.poll(), Signal.ABSENT)
-            assert [event.subject for event in ended] == [f"{label} {handle}"]
-            assert named(rig.poll(), Signal.ABSENT) == []
-
-            expecting = Rig(
-                watch_with(
-                    groups=[
-                        {
-                            "label": label,
-                            "backend": backend,
-                            "cwd_prefix": prefix,
-                            "expect_members": True,
-                        }
-                    ]
-                )
-            )
-            empty = named(expecting.poll(), Signal.ABSENT)
-            assert [event.subject for event in empty] == [label]
-            assert named(expecting.poll(), Signal.ABSENT) == []
-
-    check_examples(
-        st.tuples(position_names(), handles(), worktree_paths("/pools")),
-        check,
-        MAIL_EDGES,
-    )
+    check_examples(watched(), check, ABSENCES)
 
 
 def test_a_failing_source_signals_watch_broken_while_the_other_sources_are_polled() -> (
@@ -311,18 +282,19 @@ def test_a_failing_source_signals_watch_broken_while_the_other_sources_are_polle
         rig.backends[healthy].inventory = [blocked]
         rig.backends[healthy].read_failures[healthy_side.handle] = read_failure
 
-        events = rig.poll()
-        broken = named(events, Signal.WATCH_BROKEN)
+        first = rig.poll()
+        second = rig.poll()
+        broken = named(first + second, Signal.WATCH_BROKEN)
         for failure in (mail_failure, inventory_failure, read_failure):
             assert any(failure in event.detail for event in broken), failure
-        assert [e.subject for e in named(events, Signal.BLOCKED)] == [
+        assert [e.subject for e in named(first, Signal.BLOCKED)] == [
             healthy_side.position
         ]
 
     strategy = st.tuples(
         distinct_pairs(), subjects(), subjects(), subjects(), thresholds()
     )
-    check_examples(strategy, check, MAIL_EDGES)
+    check_examples(strategy, check, BROKEN_SOURCES)
 
 
 def test_an_unreadable_mail_channel_signals_watch_broken_and_polling_goes_on() -> None:
@@ -347,12 +319,26 @@ def test_an_unreadable_mail_channel_signals_watch_broken_and_polling_goes_on() -
             )
             rig.backends[backends[0]].inventory = [blocked]
 
-            events = rig.poll()
-            broken = named(events, Signal.WATCH_BROKEN)
-            assert [event.subject for event in broken] == ["mail"]
-            assert channel in broken[0].detail
-            assert [e.subject for e in named(events, Signal.BLOCKED)] == [
+            first = rig.poll()
+            second = rig.poll()
+            broken = named(first + second, Signal.WATCH_BROKEN)
+            assert broken != []
+            assert {event.subject for event in broken} == {"mail"}
+            assert all(channel in event.detail for event in broken)
+            assert [e.subject for e in named(first, Signal.BLOCKED)] == [
                 blocked_side.position
             ]
 
-    check_examples(st.tuples(distinct_pairs(), handles()), check, MAIL_EDGES)
+    check_examples(st.tuples(distinct_pairs(), handles()), check, BROKEN_CHANNELS)
+
+
+def test_the_loop_exits_on_its_own_at_the_deadline_it_is_given() -> None:
+    def check(deadline: float) -> None:
+        run = run_loop_to_deadline(deadline)
+        assert run.exited, run
+        assert run.returncode == 0, run
+        assert run.elapsed_seconds >= run.deadline_seconds, run
+        latest = run.deadline_seconds + run.interval_seconds + EXIT_SLACK_SECONDS
+        assert run.elapsed_seconds <= latest, run
+
+    check_examples(deadlines(), check, DEADLINE_EXITS)

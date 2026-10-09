@@ -67,8 +67,15 @@ def states(environment: ModuleType) -> st.SearchStrategy[object]:
     return st.sampled_from(tuple(environment.State))
 
 
-def invalid_intervals() -> st.SearchStrategy[str]:
-    """Values the `--every` option must reject: non-positive numbers and non-numbers."""
+def deadlines() -> st.SearchStrategy[float]:
+    """Deadlines in seconds a loop is given: several poll intervals, short enough to wait out."""
+    return st.floats(
+        min_value=0.5, max_value=2.0, allow_nan=False, allow_infinity=False
+    )
+
+
+def invalid_durations() -> st.SearchStrategy[str]:
+    """Values the monitor's interval and deadline options must reject: non-positive numbers and non-numbers."""
     non_positive = st.one_of(
         st.integers(max_value=0).map(str),
         st.floats(max_value=0.0, allow_nan=False, allow_infinity=False).map(repr),
