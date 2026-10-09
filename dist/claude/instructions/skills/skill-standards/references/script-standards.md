@@ -29,7 +29,7 @@ Verbose errors let Claude fix issues without user intervention.
 
 <script_testing_rule>
 
-Scripts shipped in a skill's `scripts/` directory must be tested before inclusion. The skill's documentation should record what was tested and with what inputs:
+Scripts shipped in a skill's `scripts/` directory must be tested before inclusion. The skill's documentation records what was tested and with what inputs:
 
 ```bash
 # scripts/extract_text.py
