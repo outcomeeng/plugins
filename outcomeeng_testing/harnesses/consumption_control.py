@@ -774,11 +774,11 @@ def standalone_observation(work: Workspace) -> StandaloneObservation:
     )
     query_runner = InvestigationRunner(schedule.AISE_VERSION)
     queried = schedule.investigate(query_runner, executable, database, measured)
-    version_calls = ((str(executable), schedule.AISE_VERSION_OPTION),)
+    version_calls = ((str(executable.resolve()), schedule.AISE_VERSION_OPTION),)
     query_call = (
-        str(executable),
+        str(executable.resolve()),
         schedule.AISE_DATABASE_OPTION,
-        str(database),
+        str(database.resolve()),
         *schedule.AISE_QUERY_PREFIX,
         schedule.AISE_START_OPTION,
         measured[AccountingField.START_UTC],
@@ -918,7 +918,8 @@ def context_property(check: Callable[[ContextObservation], None]) -> None:
 @dataclass(frozen=True)
 class DetectorObservation:
     durable_records: tuple[dict[str, Any], ...]
-    emitted_records: tuple[dict[str, Any], ...]
+    emitted_configuration: dict[str, Any]
+    emitted_window: tuple[str, str]
     configuration: dict[str, Any]
     expected_window: tuple[str, str]
     fields: Any
@@ -953,10 +954,11 @@ def detector_observation(work: Workspace) -> DetectorObservation:
     second = control.worker(args, work.config, end, RecordingRunner())
     return DetectorObservation(
         tuple(
-            json.loads(path.read_text())
+            json.loads(path.read_text())[ControlField.SIGNAL]
             for path in (work.config.root / modules()[1].ALERT_DIRECTORY).glob("*.json")
         ),
-        tuple(first[ControlField.SIGNALS]),
+        first[AccountingField.CONFIGURATION],
+        (first[AccountingField.START_UTC], first[AccountingField.END_EXCLUSIVE_UTC]),
         work.config.effective(),
         (accounting.iso(end - accounting.QUARTER), accounting.iso(end)),
         AccountingField,
@@ -1137,7 +1139,8 @@ def collection_bounds_observation() -> BoundObservation:
             discovery = evidence.collect(work.end)
             cursor = int(
                 evidence.db.execute(
-                    "SELECT cursor FROM directories WHERE path=?", (str(work.projects),)
+                    "SELECT cursor FROM directories WHERE path=?",
+                    (str(work.config.projects),),
                 ).fetchone()[0]
             )
         with accounting.Evidence(work.config) as evidence:
