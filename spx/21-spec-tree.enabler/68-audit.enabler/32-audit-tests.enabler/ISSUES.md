@@ -80,4 +80,4 @@ The test-evidence audit skill loads `/contextualize` for its target node, and `/
 
 **Evidence.** Rollout `agent-a4cedd803fc1a5758.jsonl` of a test-evidence audit dispatched against head `f07db1bbaf225ec031d7a777f02c166daa588871` on 2026-09-16 resolved two conflicts and finished at `15d4309e69c26804cd1b04676248a529fd0235b9`, so the concurrent implementation audit found its sealed head superseded.
 
-**Settlement condition.** The audit selects the Verifier-mode context load that the entry in `spx/21-spec-tree.enabler/18-context-loading.enabler/ISSUES.md` settles, so the audited head stays the dispatched head.
+**Settlement condition.** `/audit-tests` performs the read-only context load `spx/21-spec-tree.enabler/68-audit.enabler/32-audit-tests.enabler/audit-tests.md` declares, invoking neither `/contextualize` nor `/sync-base`, so the audited head stays the dispatched head.
