@@ -23,12 +23,12 @@ A sealed `spx verification run` on one output or variant spec, including prior e
 
 **VERIFICATION TYPE MUST FIT THE CLAIM.**
 
-The canonical template distinguishes untagged authoring declarations directly under `## Assertions` from routed assertions. Drafts may coexist with routed subsections and receive all applicable declaration-quality checks without missing-tag or missing-heading findings. For routed assertions, apply the foundation's tag and malleability rules. `/verify` selects the verification type; after test is selected, `/test` selects the test assertion type. Two checks decide selected-tag fitness:
+The canonical template distinguishes untagged authoring declarations directly under `## Assertions` from routed assertions. Drafts may coexist with routed subsections and receive all applicable declaration-quality checks without missing-tag or missing-heading findings. For routed assertions, apply the foundation's tag and malleability rules. The loaded foundation's verification-type and verification-selection rules decide whether a verification type fits its claim; the assertion-type litmus of `spec-tree:test-evidence-standards`, loaded in Step 6, decides whether a `[test]` assertion type fits. Two checks decide selected-tag fitness:
 
 - Under a `[test]` tag, the assertion type (scenario, mapping, conformance, property, compliance) fits the claim's quantifier. A universal claim (ALWAYS / NEVER / "for all" / "for every" / "no input") is never `scenario`, because a scenario proves one case and cannot establish a claim about every case; `scenario` fits only a single existential interaction.
 - The tag is reachable for the claim's subject. A claim whose subject is the content of an authored prose or documentation artifact — text the product authors and maintains in a document, not executable behavior — is never `[test]`. Behavioral evidence cannot verify it: the only evidence available reads the authored text and asserts on it, which proves the prose was authored, not that code behaves — whether the read is direct or laundered through test infrastructure. Such a claim's tag is `[eval]` or `[audit]`.
 
-A required tag missing from a routed assertion, an unsupported bare mechanism tag, a duplicate tag, an assertion type the `/test` router would not produce, or `[test]` on a prose-content claim is a finding. Declaration approval establishes no evidence completeness, implementation correctness, or Passing state for untagged claims.
+A required tag missing from a routed assertion, an unsupported bare mechanism tag, a duplicate tag, an assertion type the litmus would not produce, or `[test]` on a prose-content claim is a finding. Declaration approval establishes no evidence completeness, implementation correctness, or Passing state for untagged claims.
 
 **HEADINGS DESCRIBE CLAIM SHAPE.**
 
@@ -48,7 +48,7 @@ Decision-record form (ADR/PDR) is audited by `/audit-adr` and `/audit-pdr`; test
 
 - NEVER edit the node spec or other product content, and NEVER commit, stash, create a branch, or move the checkout. The audit's own SPX verification-run journal is the only state it writes.
 - ALWAYS make every judgment of the node spec from the content `spx verification run input` replays from the run, never from a separate read of the live file. Step 8 compares the live file with the retained input before the run finishes.
-- ALWAYS judge each assertion's verification type against `/verify` and each test assertion type against `/test` — never accept a present tag as valid by its mere presence.
+- ALWAYS judge each assertion's verification type against the loaded foundation and each test assertion type against the `spec-tree:test-evidence-standards` litmus — never accept a present tag as valid by its mere presence. NEVER invoke the `/verify` or `/test` authoring workflows or select a replacement tag during this audit.
 - ALWAYS name the section or assertion, the violated rule, and the evidence in every finding.
 - NEVER record a finding the cited rule does not support — drop an unbacked finding rather than reject the node for it.
 - ALWAYS treat a `spx verification run` exit code as payload validity; NEVER hand-validate a payload SPX accepted, retry a refused command, or reshape a refused payload.
@@ -120,7 +120,7 @@ Verify three structural properties:
 
 1. The opening and required front matter match the canonical kind template. Prior enablers retain `PROVIDES … SO THAT … CAN …`; prior outcomes retain `WE BELIEVE THAT … WILL … CONTRIBUTING TO …`. A missing required opening clause is `malformed-kind-statement`; missing required front matter is `missing-frontmatter`.
 2. An `## Assertions` section contains at least one assertion. Specific untagged declarations may appear directly under it without a heading. Tagged assertions require the template's routed grouping. An empty assertion section is `missing-assertions`.
-3. Each claim-shape heading (`### Scenarios`, `### Mappings`, `### Conformance`, `### Properties`, `### Compliance`) holds at least one assertion, and every assertion under it has the heading's claim shape independently of its verification-type tag. Classify explicit forms first: `Given … when … then …` is a scenario and belongs only under `### Scenarios`; `ALWAYS:` and `NEVER:` are universal and belong under `### Compliance` unless their content establishes a mapping, conformance rule, or property. A `### Scenarios` heading whose assertions are universal is mismatched; a `### Compliance` heading whose assertions are universal remains valid with `[test]`, `[eval]`, or `[audit]`; a `### Compliance` heading containing a `Given … when … then …` assertion is mismatched; and a verification-type heading such as `### Audit` is unsupported.
+3. Each claim-shape heading (`### Scenarios`, `### Mappings`, `### Conformance`, `### Properties`, `### Compliance`) holds at least one assertion, and every assertion under it has the heading's claim shape under the classification rule in `<constraints>` **HEADINGS DESCRIBE CLAIM SHAPE**.
 
 **No kind statement or no `## Assertions` section → finding `missing-section`. A kind statement that differs from its template → finding `malformed-kind-statement`. An empty, unsupported, or claim-mismatched heading → finding `heading-mismatch`. A draft assertion's absent heading is valid.**
 
@@ -146,13 +146,15 @@ Check EVERY section for temporal language:
 
 **Step 6: Per-assertion tag fitness**
 
+When any assertion carries `[test]`, use skill `spec-tree:test-evidence-standards` and load its assertion-type litmus; when it cannot load, record `test-standards-unavailable` naming the blocked read.
+
 For each assertion under `## Assertions`:
 
-1. An untagged assertion directly under `## Assertions` is an authoring declaration; check its specificity and falsifiability without selecting evidence. For routed assertions, apply the foundation's malleability rule and canonical tag forms: test, eval, and probe carry paths; audit carries its rule slug, or the admitted pathless form for a toolchain without slug support. Missing required tags, duplicate or unsupported tags, and path-bearing mechanisms without a path are `invalid-tag`.
-2. Under `[test]`, the assertion type fits the claim's quantifier — apply the quantifier rule from `<constraints>` (a universal is never `scenario`). Reject a type the `/test` router would not produce; do not relitigate a choice the router leaves open between equally valid types.
-3. The tag is reachable for the claim's subject. When the claim's subject is the content of an authored prose or documentation artifact rather than executable behavior, `[test]` is unreachable — its only evidence reads the authored text and asserts on it (directly or through a fixture or harness that exposes or reads the artifact), proving the prose was authored rather than that code behaves. The tag belongs in `[eval]` (a graded judgment over the producer's structured verdict) or `[audit]` (a semantic constraint).
+1. An untagged assertion directly under `## Assertions` is an authoring declaration; without selecting evidence, require that it names its subject, the observable condition it constrains, and a concrete observation that would violate it. A draft that is vague or unfalsifiable on that test is `unfalsifiable-assertion`. For routed assertions, apply the foundation's malleability rule and canonical tag forms: test, eval, and probe carry paths; audit carries its rule slug, or the admitted pathless form for a toolchain without slug support. Missing required tags, duplicate or unsupported tags, and path-bearing mechanisms without a path are `invalid-tag`.
+2. Under `[test]`, the assertion type fits the claim's quantifier — apply the quantifier rule from `<constraints>` and the loaded litmus. Record a type the litmus would not produce; do not relitigate a choice the litmus leaves open between equally valid types.
+3. The tag is reachable for the claim's subject — apply the prose-content rule from `<constraints>`.
 
-**A required tag missing from a routed assertion, a duplicate tag, or an unsupported bare mechanism tag → finding `invalid-tag`. A `[test]` assertion type that contradicts the claim's quantifier → finding `evidence-type-mismatch`. `[test]` on an authored-prose claim → finding `prose-coupling`. An unfalsifiable draft → finding `unfalsifiable-assertion`.**
+**A required tag missing from a routed assertion, a duplicate tag, or an unsupported bare mechanism tag → finding `invalid-tag`. A `[test]` assertion type that contradicts the claim's quantifier → finding `evidence-type-mismatch`. `[test]` on an authored-prose claim → finding `prose-coupling`. A vague or unfalsifiable draft → finding `unfalsifiable-assertion`.**
 
 </step>
 
@@ -232,15 +234,26 @@ A finding copies its unit's `expectedProducer` object as `producerIdentity` and 
 | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | `section-structure` | `missing-section`, `missing-frontmatter`, `missing-assertions`, `malformed-kind-statement`, `heading-mismatch`, `template-missing` |
 | `atemporal-voice`   | `temporal-voice`                                                                                                                   |
-| `tag-fitness`       | `invalid-tag`, `evidence-type-mismatch`, `prose-coupling`, `unfalsifiable-assertion`                                               |
+| `tag-fitness`       | `invalid-tag`, `evidence-type-mismatch`, `prose-coupling`, `unfalsifiable-assertion`, `test-standards-unavailable`                 |
 
 Every finding is `blocking` and rejects the run. An observation that names no defect is not a finding and is not recorded.
 
 ```json
 {
   "unitId": "<accepted-unit-key>",
-  "producerIdentity": "<the unit's expectedProducer object, repeated exactly>",
-  "producerProvenance": "<the unit's producerProvenance object, repeated exactly>",
+  "producerIdentity": {
+    "producerKind": "skill",
+    "agentName": "<the unit's expectedProducer agentName>",
+    "agentOwningPluginName": "<the unit's expectedProducer agentOwningPluginName>",
+    "skillName": "audit-specs",
+    "skillOwningPluginName": "spec-tree",
+    "invocationRole": "leaf-skill"
+  },
+  "producerProvenance": {
+    "agentOwningPluginVersion": "<the unit's agentOwningPluginVersion>",
+    "skillOwningPluginVersion": "<the unit's skillOwningPluginVersion>",
+    "toolVersion": "<the unit's toolVersion>"
+  },
   "rule": "<violated-rule-id>",
   "severity": "blocking",
   "location": "<section-or-quoted-assertion>",
@@ -302,7 +315,7 @@ How to avoid: Step 6 check 3 — when the claim's subject is the content of an a
 
 Claude saw a `### Compliance` assertion — a universal ALWAYS/NEVER claim — tagged `([test](… scenario …))` and passed it because the assertion type named one of the five. A scenario proves one case; it cannot establish a claim about every case, so the assertion ships unverified.
 
-How to avoid: Step 6 check 2 verifies the assertion type fits the quantifier. Record `evidence-type-mismatch` for a universal tagged `scenario`, and for any type the router would not produce — without relitigating a choice the router leaves open between equally valid types.
+How to avoid: Step 6 check 2 verifies the assertion type fits the quantifier. Record `evidence-type-mismatch` for a universal tagged `scenario`, and for any type the litmus would not produce — without relitigating a choice the litmus leaves open between equally valid types.
 
 **Failure 3: Rejected universal audit rules under `### Compliance`**
 
