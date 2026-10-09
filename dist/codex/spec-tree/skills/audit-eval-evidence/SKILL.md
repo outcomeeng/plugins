@@ -93,7 +93,7 @@ spx verification run start --verification-type audit --scope-type file --scope '
 
 Capture the exact `runToken` and use it for every later command. Read the retained input with `spx verification run input --verification-type audit --scope-type file --scope '<spec-path>' --run '<run-token>'`; its `content` is the one copy of the node spec this audit judges. Record the root unit under `<persistence_contract>`.
 
-Steps 5a through 5e each record their gate unit, then its findings, as soon as that gate is judged across every `[eval]` assertion, so the run shows each gate's result before the next gate is judged.
+Step 5 records each gate unit, then its findings, as soon as that gate is judged across every `[eval]` assertion, so the run shows each gate's result before the next gate is judged.
 
 </step>
 
@@ -117,78 +117,21 @@ Skip `[test]`, `[probe]`, and `[audit]` assertions; they belong to their own evi
 
 </step>
 
-<step name="audit_producer_coupling">
+<step name="audit_gates">
 
-**Step 5a: Producer coupling**
+**Step 5: Judge the five gates**
 
-Classify how the eval reaches the producer:
+The evidence model loaded in Step 2 is the one definition of each gate's categories, procedure, and finding rule; judge each gate by its section, in this order, across every `[eval]` assertion, and record the gate before judging the next:
 
-| Category         | Definition                                                                                  | Outcome                                                                |
-| ---------------- | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| Direct           | The eval runner invokes the producing skill, agent, classifier, script, or command directly | Proceed                                                                |
-| Harness-mediated | The eval invokes a harness that loads and runs the producer without replacing its behavior  | Proceed after verifying the harness chain                              |
-| Prompt-loaded    | The prompt loads the producer body as context while the case drives a verdict task          | Proceed only when the artifact under audit is the loaded producer text |
-| Simulation       | The prompt restates the desired policy or asks for a simulated verdict without the producer | `producer-coupling` finding                                            |
-| False            | Metadata names the producer but the prompt or harness never uses it                         | `producer-coupling` finding                                            |
-| Unknown          | The artifact path cannot establish how the producer is reached                              | `producer-coupling` finding                                            |
+| Step | Gate                         | Evidence-model section   | Finding rule          |
+| ---- | ---------------------------- | ------------------------ | --------------------- |
+| 5a   | `gate-1-producer-coupling`   | `<producer_coupling>`    | `producer-coupling`   |
+| 5b   | `gate-2-oracle-quality`      | `<oracle_independence>`  | `oracle-leakage`      |
+| 5c   | `gate-3-assertion-alignment` | `<alignment_model>`      | `assertion-alignment` |
+| 5d   | `gate-4-falsifiability`      | `<falsifiability_model>` | `falsifiability`      |
+| 5e   | `gate-5-run-evidence`        | `<run_evidence>`         | `run-evidence`        |
 
-When `eval.toml` declares `prompt_source.kind = "producer-section"`, treat the materialized prompt as Prompt-loaded only after verifying the producer path, selected section, and prompt template exist and `prompt.md` is current with that source. The selected producer section is the artifact under audit for that suite; a mutation to that section must change the materialized prompt. Do not require the eval runner to invoke the whole skill, agent, classifier, or script when the assertion is about the selected section's behavior: the loaded section is the producer artifact for that suite. A hand-authored prompt that copies the same policy without `prompt_source` remains Simulation.
-
-Apply the evidence model's `<producer_coupling>` counterfactual reading procedure. If the eval would still pass after the identified producer mutation, classify as Simulation or False and record a `producer-coupling` finding.
-
-</step>
-
-<step name="audit_oracle_independence">
-
-**Step 5b: Oracle independence**
-
-Read `prompt.md` and `cases.jsonl` side by side. Check whether the prompt sent to the producer leaks the expected verdict, expected finding IDs, exact answer table, or rule mapping in a way that makes the case self-answering.
-
-Expected fields belong in the grader input, not in the task prompt the producer answers. A case may include expected verdict data for deterministic scoring; the model-facing prompt must still require the producer to infer the verdict from the scenario and its own methodology.
-
-A self-answering prompt or case construction is an `oracle-leakage` finding.
-
-</step>
-
-<step name="audit_alignment">
-
-**Step 5c: Assertion alignment**
-
-Read the spec assertion, the eval cases, and the expected verdict fields. Answer:
-
-1. Does each expected verdict field correspond to behavior the assertion claims?
-2. Do the negative cases target the assertion's failure mode?
-3. Could the assertion be unfulfilled while the eval suite passes?
-
-If the assertion could be unfulfilled while the suite passes, record an `assertion-alignment` finding.
-
-</step>
-
-<step name="audit_falsifiability">
-
-**Step 5d: Falsifiability**
-
-Name a concrete mutation to the producing artifact that would make at least one case fail. For `producer-section` suites, the mutation targets the selected producer section and reaches the eval through prompt materialization. Write it down:
-
-```text
-Producer: the /manage-pr skill's post-merge guidance section
-Mutation: replace the post-merge marketplace sync rule with unrelated text
-Impact: the post-merge-sync-required case returns REJECT because the producer omits the required follow-up
-```
-
-When no mutation to the producer changes the eval result, record a `falsifiability` finding.
-
-</step>
-
-<step name="audit_run_evidence">
-
-**Step 5e: Run evidence**
-
-Read `history.jsonl` and, when available, the referenced run summary. Check that the committed history contains a successful run for the current eval definition, threshold, and case set, applying the evidence model's `<run_evidence>` history-only exception.
-
-Budget-exhausted, timeout, interrupted, or infrastructure-failed runs are operational evidence only. They do not prove behavior. A passing history row for a stale prompt, stale case set, or different producer does not prove the current assertion.
-
-Missing or stale run evidence is a `run-evidence` finding. A recorded commit that cannot be inspected leaves its provenance unavailable, which leaves this gate undecided for that assertion.
+Read the eval artifacts and the producer; never edit a section, materialize a prompt, or execute a suite to reach a judgment. Write each falsifiability mutation down in the `<falsifiability_model>` valid-mutation form — producer, mutation, and expected eval impact — before recording gate 4. A recorded commit whose provenance the evidence model's `<run_evidence>` treats as unavailable leaves gate 5 undecided for that assertion.
 
 </step>
 
@@ -360,13 +303,13 @@ judgedFindings: <JSON array of every finding judged before the stop, in the find
 
 Claude accepted an eval that asked Claude to simulate a skill verdict from inline rules while never loading or invoking the real skill. Replacing the real skill body with unrelated text did not change the eval result, so the eval proved the prompt's rubric, not the skill.
 
-How to avoid: Step 5a checks producer coupling first. Prompt-only simulation is a `producer-coupling` finding for claims about producer behavior.
+How to avoid: Step 5 judges producer coupling first. Prompt-only simulation is a `producer-coupling` finding for claims about producer behavior.
 
 **Failure 2: Treated a budget failure as behavioral evidence**
 
 Claude read a budget-exhausted eval run and treated the failed suite as evidence the rule was wrong. The run never completed enough cases to prove behavior.
 
-How to avoid: Step 5e separates operational failures from behavioral pass evidence. Budget, timeout, and interruption rows never prove assertion fulfillment.
+How to avoid: the run-evidence gate separates operational failures from behavioral pass evidence. Budget, timeout, and interruption rows never prove assertion fulfillment.
 
 </failure_modes>
 
