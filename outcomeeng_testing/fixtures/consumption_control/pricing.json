@@ -1,0 +1,12 @@
+{
+  "source": "https://platform.claude.com/docs/en/about-claude/pricing",
+  "observed_at": "2026-10-09",
+  "model": "claude-sonnet-5-5",
+  "per_million": {
+    "input_tokens": "2",
+    "cache_read_input_tokens": "0.1",
+    "ephemeral_5m_input_tokens": "2.5",
+    "ephemeral_1h_input_tokens": "4",
+    "output_tokens": "10"
+  }
+}
