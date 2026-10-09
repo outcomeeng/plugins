@@ -34,6 +34,7 @@ PROGRAM_OPTION = "--program"
 MODEL_OPTION = "--model"
 NAME_OPTION = "--name"
 TASK_OPTION = "--task"
+DISPLAY_NAME_OPTION = "--display-name"
 FROM_OPTION = "--from"
 TO_OPTION = "--to"
 THREAD_ID_OPTION = "--thread-id"
@@ -80,6 +81,10 @@ STORE_FROM_FIELD = "from"
 STORE_TO_FIELD = "to"
 STORE_THREAD_ID_FIELD = "thread_id"
 STORE_THREAD_FIELD = "thread"
+# Labels the store reports beside the stable names; they pass through verbatim.
+STORE_DISPLAY_NAME_FIELD = "display_name"
+STORE_SENDER_DISPLAY_NAME_FIELD = "sender_display_name"
+STORE_TO_DISPLAY_NAMES_FIELD = "to_display_names"
 STORE_ACK_REQUIRED_FIELD = "ack_required"
 STORE_ACK_STATUS_FIELD = "ack_status"
 # The two states of a required acknowledgement on the store's inbox surface;
@@ -112,6 +117,7 @@ AGENT_FIELD = "agent"
 PROGRAM_FIELD = "program"
 MODEL_FIELD = "model"
 TASK_FIELD = "task"
+DISPLAY_NAME_FIELD = "displayName"
 RECORD_FIELD = "record"
 RECORDS_FIELD = "records"
 MESSAGE_ID_FIELD = "messageId"
@@ -252,7 +258,7 @@ OPERATION_CONTRACTS: Final[Mapping[Operation, OperationContract]] = {
         (
             RequestShape(
                 frozenset({AGENT_FIELD, PROGRAM_FIELD, MODEL_FIELD}),
-                frozenset({TASK_FIELD}),
+                frozenset({TASK_FIELD, DISPLAY_NAME_FIELD}),
             ),
         )
     ),
@@ -282,6 +288,7 @@ PUBLIC_AM_ARGUMENT_OPTIONS: Final[Mapping[str, str]] = {
     PROGRAM_FIELD: PROGRAM_OPTION,
     MODEL_FIELD: MODEL_OPTION,
     TASK_FIELD: TASK_OPTION,
+    DISPLAY_NAME_FIELD: DISPLAY_NAME_OPTION,
     UNREAD_ONLY_FIELD: UNREAD_OPTION,
     INCLUDE_BODIES_FIELD: INCLUDE_BODIES_OPTION,
     LIMIT_FIELD: LIMIT_OPTION,
@@ -305,12 +312,15 @@ INTEGER_BOUNDS: Final[Mapping[str, tuple[int, int]]] = {
     MESSAGE_ID_FIELD: (1, 1_000_000_000),
 }
 BOOLEAN_ARGUMENT_FIELDS = frozenset({UNREAD_ONLY_FIELD, INCLUDE_BODIES_FIELD})
-TEXT_ARGUMENT_FIELDS = frozenset({AGENT_FIELD, PROGRAM_FIELD, MODEL_FIELD, TASK_FIELD})
+TEXT_ARGUMENT_FIELDS = frozenset(
+    {AGENT_FIELD, PROGRAM_FIELD, MODEL_FIELD, TASK_FIELD, DISPLAY_NAME_FIELD}
+)
 ARGUMENT_NAMES: Final[Mapping[str, str]] = {
     "agent": AGENT_FIELD,
     "program": PROGRAM_FIELD,
     "agent_model": MODEL_FIELD,
     "task": TASK_FIELD,
+    "display_name": DISPLAY_NAME_FIELD,
     "record": RECORD_FIELD,
     "message_id": MESSAGE_ID_FIELD,
     "unread_only": UNREAD_ONLY_FIELD,
@@ -851,12 +861,13 @@ def command_for(request: object, project_key: str) -> tuple[str, ...]:
                 )
             )
         command.append(attached_option(NAME_OPTION, arguments[AGENT_FIELD]))
-        if TASK_FIELD in arguments:
-            command.append(
-                attached_option(
-                    PUBLIC_AM_ARGUMENT_OPTIONS[TASK_FIELD], arguments[TASK_FIELD]
+        for field_name in (TASK_FIELD, DISPLAY_NAME_FIELD):
+            if field_name in arguments:
+                command.append(
+                    attached_option(
+                        PUBLIC_AM_ARGUMENT_OPTIONS[field_name], arguments[field_name]
+                    )
                 )
-            )
     elif operation is Operation.SEND:
         fields = store_fields_for(arguments[RECORD_FIELD])
         for record_field, store_field in (
