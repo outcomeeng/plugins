@@ -7,7 +7,7 @@ description: >-
   review-unit sequencing, and records the judgment through an SPX
   changeset-scoped verification run.
 argument-hint: "<JSON object with target, runDriver, agentOwningPluginVersion, and optional evidence>"
-allowed-tools: Read, Grep, Glob, Bash(python3 "${SKILL_DIR}/scripts/resolve_scope.py":*), Bash(git rev-parse:*), Bash(git diff:*), Bash(git show:*), Bash(git ls-tree:*), Bash(spx --version), Bash(spx verification run start:*), Bash(spx verification run input:*), Bash(spx verification run status:*), Bash(spx verification run scope add:*), Bash(spx verification run finding add:*), Bash(spx verification run finish:*), Bash(spx verification run render:*), Bash(printf '%s\n':*)
+allowed-tools: Read, Grep, Glob, Bash(python3 "${SKILL_DIR}/scripts/resolve_scope.py":*), Bash(git rev-parse:*), Bash(git diff:*), Bash(git show:*), Bash(git ls-tree:*), Bash(spx --version), Bash(spx verification run start:*), Bash(spx verification run status:*), Bash(spx verification run scope add:*), Bash(spx verification run finding add:*), Bash(spx verification run finish:*), Bash(spx verification run render:*), Bash(printf '%s\n':*)
 ---
 
 <objective>
@@ -18,7 +18,7 @@ A sealed `spx verification run` on one exact committed changeset — terminal st
 
 <constraints>
 
-- NEVER edit files, commits, branches, reviews, or pull requests, and NEVER commit, stash, synchronize, rebase, or move the checkout. The audit's own SPX verification-run journal is the only state it writes.
+- NEVER edit files, commits, branches, reviews, or pull requests, and NEVER commit, stash, rebase, or move the checkout. The audit writes exactly two things: its own SPX verification-run journal, and the remote-tracking base ref the Step 2 resolver's fetch updates. That fetch never touches the working tree, a local branch, or `HEAD`, and it is required: a scope resolved against an unfetched base re-admits already-merged commits and cannot detect a stale head.
 - NEVER run tests, evals, validation, linters, or any other deterministic verification inside the audit — coherence is judged by reading the committed changeset.
 - ALWAYS read every subject and context file at the resolved `<head>` through `git show` or `git diff`, never from the working tree, so the judgment reads the committed changeset whatever the checkout holds.
 - MUST preserve the resolved full base and head commit identities verbatim in the run's changeset scope and the root unit's subject.
@@ -26,7 +26,7 @@ A sealed `spx verification run` on one exact committed changeset — terminal st
 - NEVER use line count, file count, path breadth, or an uncalibrated review-load score as a verdict rule.
 - NEVER infer missing behavioral, dependency, generated-source, verification, rollback, or calibration evidence — record the unit that needs it `incomplete` with its cause.
 - ALWAYS treat a `spx verification run` exit code as payload validity; NEVER hand-validate a payload SPX accepted, retry a refused command, or reshape a refused payload.
-- NEVER write a file. Payloads pass to SPX on stdin, and the final output is the run token and the rendered projection.
+- NEVER write a file in the working tree or anywhere else. Payloads pass to SPX on stdin, and the final output is the run token and the rendered projection.
 
 </constraints>
 
