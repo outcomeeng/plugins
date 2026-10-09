@@ -13,4 +13,4 @@ Options:
       --all                Show all messages (no filtering)
       --limit <LIMIT>      Maximum messages to return
       --include-bodies     Include message bodies in output
-  -h, --help               Print help
+  -h, --help               Print help (see more with '--help')

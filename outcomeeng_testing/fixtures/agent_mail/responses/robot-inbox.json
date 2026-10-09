@@ -1,52 +1,102 @@
 {
   "_meta": {
     "command": "robot inbox",
-    "timestamp": "2026-09-18T08:21:11.014895+00:00",
+    "timestamp": "2026-10-09T15:05:37.054388+00:00",
     "format": "json",
     "version": "1.0",
-    "project": "/Users/shz/Code/outcomeeng/plugins",
-    "agent": "AmberGull"
+    "project": "/Users/shz/.local/state/mcp-agent-mail/automatic-labels/20261009-1f309419/demo/project/.git",
+    "agent": "SilverOtter"
   },
   "_actions": [
-    "am robot thread --project /Users/shz/Code/outcomeeng/plugins change-88-exec"
+    "am robot thread --project /Users/shz/.local/state/mcp-agent-mail/automatic-labels/20261009-1f309419/demo/project/.git capture-unlabeled"
   ],
   "_diagnostics": {
     "schema": "tail_latency_phase_ledger.v1",
     "operation": "robot_inbox",
-    "total_us": 503466,
+    "total_us": 130049,
     "phases": [
       {
         "name": "queue_wait",
-        "elapsed_us": 2
+        "elapsed_us": 1
       },
       {
         "name": "server_fetch",
-        "elapsed_us": 503456
+        "elapsed_us": 130041
       }
     ],
-    "rows_returned": 2,
+    "rows_returned": 5,
     "include_bodies": false,
     "outcome": "pre_render"
   },
-  "count": 2,
+  "count": 5,
   "inbox": [
     {
-      "id": 99,
-      "priority": "read",
-      "from": "PeachFrog",
-      "subject": "Order: execute outcomeeng/changes#88 slice 1",
-      "thread": "change-88-exec",
-      "age": "1h ago",
-      "ack_status": "acked",
+      "id": 14,
+      "priority": "ack-required",
+      "from": "IvoryCrane",
+      "sender_display_name": null,
+      "to_display_names": {
+        "SilverOtter": "Capture Reader"
+      },
+      "subject": "Capture: unlabeled sender, ack required",
+      "thread": "capture-unlabeled",
+      "age": "15s ago",
+      "ack_status": "required",
       "importance": "normal"
     },
     {
-      "id": 40,
+      "id": 13,
+      "priority": "unread",
+      "from": "IvoryCrane",
+      "sender_display_name": null,
+      "to_display_names": {
+        "SilverOtter": "Capture Reader"
+      },
+      "subject": "Contact approved: IvoryCrane -> SilverOtter",
+      "thread": "13",
+      "age": "15s ago",
+      "ack_status": "none",
+      "importance": "normal"
+    },
+    {
+      "id": 11,
+      "priority": "unread",
+      "from": "GoldenFinch",
+      "sender_display_name": "Capture Sender",
+      "to_display_names": {
+        "SilverOtter": "Capture Reader"
+      },
+      "subject": "Capture: message with a thread",
+      "thread": "capture-labels",
+      "age": "27s ago",
+      "ack_status": "none",
+      "importance": "normal"
+    },
+    {
+      "id": 10,
+      "priority": "unread",
+      "from": "GoldenFinch",
+      "sender_display_name": "Capture Sender",
+      "to_display_names": {
+        "SilverOtter": "Capture Reader"
+      },
+      "subject": "Contact approved: GoldenFinch -> SilverOtter",
+      "thread": "10",
+      "age": "27s ago",
+      "ack_status": "none",
+      "importance": "normal"
+    },
+    {
+      "id": 12,
       "priority": "read",
-      "from": "PeachFrog",
-      "subject": "Order: acknowledge and report",
-      "thread": "probe-herdr",
-      "age": "6h ago",
+      "from": "GoldenFinch",
+      "sender_display_name": "Capture Sender",
+      "to_display_names": {
+        "SilverOtter": "Capture Reader"
+      },
+      "subject": "Capture: ack-required message without a thread",
+      "thread": "12",
+      "age": "27s ago",
       "ack_status": "acked",
       "importance": "normal"
     }

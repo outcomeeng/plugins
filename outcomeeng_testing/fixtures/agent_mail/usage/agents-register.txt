@@ -11,6 +11,8 @@ Options:
           Underlying model (e.g. "opus-4.6", "gpt-5-turbo")
   -n, --name <NAME>
           Agent name (adjective+noun, e.g. "BlueLake"). Auto-generated if omitted
+      --display-name <DISPLAY_NAME>
+          Human-readable label (up to 128 Unicode characters). Blank clears it
   -t, --task <TASK>
           Short description of the agent's current task
       --attachments-policy <ATTACHMENTS_POLICY>
