@@ -1,37 +1,62 @@
 """One view of watched sessions across Prowl (local) and herdr (cloud).
 
-Each backend is reached only through its coding-agents adapter script, so
-this module owns no Prowl or herdr command grammar.
+Each backend is reached only through the typed operations of its sibling
+coding-agents adapter, imported by its file location, so this module owns no
+Prowl or herdr command grammar.
 """
 
 from __future__ import annotations
 
-import json
+import functools
+import importlib.util
 import re
-import subprocess
+import sys
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from enum import StrEnum
 from pathlib import Path
+from types import ModuleType
+from typing import Protocol, cast
 
-# The adapters ship in sibling skills of this plugin.
-ADAPTERS = Path(__file__).resolve().parents[2]
-PROWL = ADAPTERS / "operate-prowl/scripts/prowl_environment.py"
-HERDR = ADAPTERS / "operate-herdr/scripts/herdr_environment.py"
+# The plugin's skills directory, from which the sibling adapters load.
+SKILLS_DIR = Path(__file__).resolve().parents[2]
+PROWL_ADAPTER = ("operate-prowl", "prowl_environment")
+HERDR_ADAPTER = ("operate-herdr", "herdr_environment")
 
-# One state set for every backend.
-STATES = ("working", "idle", "blocked", "done", "unknown")
+# How many trailing pane lines a read returns.
+READ_LINES = 15
+
+
+class State(StrEnum):
+    """One state set for every backend."""
+
+    WORKING = "working"
+    IDLE = "idle"
+    BLOCKED = "blocked"
+    DONE = "done"
+    UNKNOWN = "unknown"
+
+
+# The states in which a session's turn has ended.
+ENDED = frozenset({State.IDLE, State.DONE})
+
+# What a Prowl session's detail carries when its idle screen sits under a working status.
+BACKGROUND_MARKER = "backgroundWork"
+
+# Fields of one agent in Prowl's agent inventory the adapter passes through.
+PROWL_AGENT_STATUS = "status"
+PROWL_SCREEN_STATE = "raw_state"
+PROWL_SCREEN_REASON = "screen_reason"
+PROWL_DETECTION_REASON = "detection_reason"
+PROWL_CHANGED_AT = "last_changed_at"
+PROWL_PANE_CWD = "cwd"
 
 _PROWL_STATES = {
-    "working": "working",
-    "idle": "idle",
-    "waiting": "blocked",
-    "blocked": "blocked",
-    "done": "done",
-}
-_HERDR_STATES = {
-    "working": "working",
-    "idle": "idle",
-    "blocked": "blocked",
-    "done": "done",
+    "working": State.WORKING,
+    "idle": State.IDLE,
+    "waiting": State.BLOCKED,
+    "blocked": State.BLOCKED,
+    "done": State.DONE,
 }
 
 # "(659k/1M tokens) 66%" and "(0/1M tokens) 0%": the unit is optional on both sides.
@@ -47,10 +72,10 @@ _BACKGROUND = re.compile(
 
 @dataclass(frozen=True)
 class Session:
-    backend: str  # "prowl" or "herdr"
+    backend: str  # a BACKENDS name
     handle: str  # pane id for prowl, agent name for herdr
     cwd: str
-    state: str  # one of STATES
+    state: State
     changed_at: str | None
     detail: str
 
@@ -59,53 +84,91 @@ class AdapterError(RuntimeError):
     pass
 
 
-def _run(adapter: Path, request: dict, timeout: float) -> dict:
+class Backend(Protocol):
+    """The two reads the roster and the monitor take from a backend."""
+
+    def sessions(self) -> list[Session]: ...
+
+    def read(self, session: Session, lines: int = READ_LINES) -> str: ...
+
+
+def sibling_adapter(skill: str, module_name: str) -> ModuleType:
+    """Load a sibling adapter skill's script by the installed tree's layout."""
+    cached = sys.modules.get(module_name)
+    if cached is not None:
+        return cached
+    path = SKILLS_DIR / skill / "scripts" / f"{module_name}.py"
+    spec = importlib.util.spec_from_file_location(module_name, path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot load {module_name} from {path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
     try:
-        completed = subprocess.run(
-            ["python3", str(adapter), "run"],
-            input=json.dumps(request),
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-            check=False,
-        )
-    except subprocess.TimeoutExpired as error:
-        raise AdapterError(f"{adapter.name}: no answer within {timeout:.0f}s") from error
-    try:
-        result = json.loads(completed.stdout)
-    except json.JSONDecodeError as error:
+        spec.loader.exec_module(module)
+    except BaseException:
+        # A module that failed to execute never stays cached as if it loaded.
+        del sys.modules[spec.name]
+        raise
+    return module
+
+
+@functools.cache
+def _prowl() -> ModuleType:
+    return sibling_adapter(*PROWL_ADAPTER)
+
+
+@functools.cache
+def _herdr() -> ModuleType:
+    return sibling_adapter(*HERDR_ADAPTER)
+
+
+def _succeeded(adapter: ModuleType, name: str, request: object) -> dict[str, object]:
+    """Run one adapter operation with its own runner; its result, or the failure raised."""
+    result = cast(
+        dict[str, object], adapter.execute(request, adapter.SubprocessRunner())
+    )
+    if result.get(adapter.STATUS_FIELD) != adapter.ExecutionStatus.SUCCEEDED:
         raise AdapterError(
-            f"{adapter.name}: unreadable result: {completed.stderr.strip()[:200]}"
-        ) from error
-    if result.get("status") != "succeeded":
-        raise AdapterError(
-            f"{adapter.name}: {result.get('status')}: {result.get('detail')}"
+            f"{name}: {result.get(adapter.STATUS_FIELD)}: {result.get(adapter.DETAIL_FIELD)}"
         )
     return result
+
+
+def _object(value: object) -> Mapping[str, object]:
+    return cast(Mapping[str, object], value) if isinstance(value, dict) else {}
+
+
+def _text(value: object) -> str:
+    return value if isinstance(value, str) else ""
 
 
 def _norm(path: str) -> str:
     return path.rstrip("/")
 
 
-def _prowl_state(agent: dict) -> str:
-    """The session's state, with a finished turn read from the screen.
-
-    Prowl's status stays `working` while a background task such as the
-    session's own monitor runs, even after the turn ends; `raw_state` still
-    reads the screen, so an idle screen under a working status is idle.
-    """
-    status = agent.get("status")
-    if status == "working" and agent.get("raw_state") == "idle":
-        return "idle"
-    return _PROWL_STATES.get(status, "unknown")
+def _prowl_screen_idle(agent: Mapping[str, object]) -> bool:
+    """Prowl's status stays `working` while a background task such as the session's
+    own monitor runs, even after the turn ends; `raw_state` still reads the screen."""
+    return (
+        agent.get(PROWL_AGENT_STATUS) == State.WORKING
+        and agent.get(PROWL_SCREEN_STATE) == State.IDLE
+    )
 
 
-def _prowl_detail(agent: dict) -> str:
+def _prowl_state(agent: Mapping[str, object]) -> State:
+    """The session's state, with a finished turn read from the screen."""
+    if _prowl_screen_idle(agent):
+        return State.IDLE
+    return _PROWL_STATES.get(_text(agent.get(PROWL_AGENT_STATUS)), State.UNKNOWN)
+
+
+def _prowl_detail(agent: Mapping[str, object]) -> str:
     """The screen reason, marked as background work when an idle screen sits under a working status."""
-    detail = agent.get("screen_reason") or agent.get("detection_reason") or ""
-    if agent.get("status") == "working" and agent.get("raw_state") == "idle":
-        detail += " backgroundWork"
+    detail = _text(agent.get(PROWL_SCREEN_REASON)) or _text(
+        agent.get(PROWL_DETECTION_REASON)
+    )
+    if _prowl_screen_idle(agent):
+        detail += f" {BACKGROUND_MARKER}"
     return detail
 
 
@@ -113,70 +176,83 @@ class Prowl:
     name = "prowl"
 
     def sessions(self) -> list[Session]:
-        result = _run(
-            PROWL, {"schemaVersion": 1, "operation": "agents", "arguments": {}}, 30
+        adapter = _prowl()
+        result = _succeeded(
+            adapter, self.name, adapter.operation_request(adapter.Operation.AGENTS)
         )
+        data = _object(
+            _object(result.get(adapter.RESPONSE_FIELD)).get(adapter.DATA_FIELD)
+        )
+        agents = data.get(adapter.AGENTS_FIELD)
         found = []
-        for agent in result["response"]["data"].get("agents", []):
-            pane = agent.get("pane") or {}
+        for item in agents if isinstance(agents, list) else []:
+            agent = _object(item)
+            pane = _object(agent.get(adapter.PANE_FIELD))
+            project = _object(agent.get(adapter.PROJECT_FIELD))
             found.append(
                 Session(
                     backend=self.name,
-                    handle=pane.get("id") or agent.get("id"),
+                    handle=_text(pane.get(adapter.ID_FIELD))
+                    or _text(agent.get(adapter.ID_FIELD)),
                     cwd=_norm(
-                        pane.get("cwd")
-                        or (agent.get("project") or {}).get("path")
-                        or ""
+                        _text(pane.get(PROWL_PANE_CWD))
+                        or _text(project.get(adapter.PATH_FIELD))
                     ),
                     state=_prowl_state(agent),
-                    changed_at=agent.get("last_changed_at"),
+                    changed_at=_text(agent.get(PROWL_CHANGED_AT)) or None,
                     detail=_prowl_detail(agent),
                 )
             )
         return found
 
-    def read(self, session: Session, lines: int = 15) -> str:
-        request = {
-            "schemaVersion": 1,
-            "operation": "read",
-            "arguments": {"pane": session.handle, "last": lines},
-        }
-        return _run(PROWL, request, 30)["response"]["data"].get("text") or ""
-
+    def read(self, session: Session, lines: int = READ_LINES) -> str:
+        adapter = _prowl()
+        request = adapter.operation_request(
+            adapter.Operation.READ, pane=session.handle, last=lines
+        )
+        result = _succeeded(adapter, self.name, request)
+        data = _object(
+            _object(result.get(adapter.RESPONSE_FIELD)).get(adapter.DATA_FIELD)
+        )
+        return _text(data.get(adapter.TEXT_FIELD))
 
 
 class Herdr:
     name = "herdr"
 
     def sessions(self) -> list[Session]:
-        result = _run(
-            HERDR, {"schemaVersion": 1, "operation": "inventory", "arguments": {}}, 30
+        adapter = _herdr()
+        result = _succeeded(
+            adapter, self.name, adapter.operation_request(adapter.Operation.INVENTORY)
         )
+        agents = result.get(adapter.AGENTS_RESULT_FIELD)
         found = []
-        for agent in result["response"].get("result", {}).get("agents", []):
+        for item in agents if isinstance(agents, list) else []:
+            agent = _object(item)
+            status = _text(agent.get(adapter.AGENT_STATUS_FIELD))
             found.append(
                 Session(
                     backend=self.name,
-                    handle=agent.get("name"),
-                    cwd=_norm(agent.get("cwd") or ""),
-                    state=_HERDR_STATES.get(agent.get("agent_status"), "unknown"),
+                    handle=_text(agent.get(adapter.NAME_FIELD)),
+                    cwd=_norm(_text(agent.get(adapter.CWD_FIELD))),
+                    state=State(status) if status in State else State.UNKNOWN,
                     changed_at=None,
-                    detail=agent.get("pane_id") or "",
+                    detail=_text(agent.get(adapter.PANE_ID_FIELD)),
                 )
             )
         return found
 
-    def read(self, session: Session, lines: int = 15) -> str:
-        request = {
-            "schemaVersion": 1,
-            "operation": "read",
-            "arguments": {"agent": session.handle, "lines": lines},
-        }
-        return _run(HERDR, request, 30)["response"].get("output") or ""
+    def read(self, session: Session, lines: int = READ_LINES) -> str:
+        adapter = _herdr()
+        request = adapter.operation_request(
+            adapter.Operation.READ, agent=session.handle, lines=lines
+        )
+        result = _succeeded(adapter, self.name, request)
+        response = _object(result.get(adapter.RESPONSE_FIELD))
+        return _text(response.get(adapter.OUTPUT_FIELD))
 
 
-
-BACKENDS = {"prowl": Prowl(), "herdr": Herdr()}
+BACKENDS: Mapping[str, Backend] = {Prowl.name: Prowl(), Herdr.name: Herdr()}
 
 
 def background_work(session: Session, text: str | None) -> bool:
@@ -184,8 +260,8 @@ def background_work(session: Session, text: str | None) -> bool:
 
     Prowl reports this natively; herdr needs the pane text.
     """
-    if session.backend == "prowl":
-        return "backgroundWork" in session.detail
+    if session.backend == Prowl.name:
+        return BACKGROUND_MARKER in session.detail
     return bool(text and _BACKGROUND.search(text))
 
 
@@ -195,7 +271,9 @@ def context_percent(text: str) -> int | None:
     return int(matches[-1]) if matches else None
 
 
-def under(sessions: list[Session], prefix: str, exclude: list[str]) -> list[Session]:
+def under(
+    sessions: Sequence[Session], prefix: str, exclude: Sequence[str]
+) -> list[Session]:
     """Every session whose working directory lies under prefix, minus the excluded paths."""
     root = _norm(prefix) + "/"
     return [
@@ -207,7 +285,7 @@ def under(sessions: list[Session], prefix: str, exclude: list[str]) -> list[Sess
 
 
 def find(
-    sessions: list[Session], *, cwd: str | None = None, handle: str | None = None
+    sessions: Sequence[Session], *, cwd: str | None = None, handle: str | None = None
 ) -> Session | None:
     for session in sessions:
         if cwd is not None and session.cwd == _norm(cwd):
