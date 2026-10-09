@@ -26,9 +26,9 @@ Complete Step 1 before the queue loop in every mode, so the foundation is live b
 1. Strip the canonical node path's leading `spx/` to derive its `spx/EXCLUDE` entry. If that relative entry is listed, remove its exact line first — the `spx` CLI then includes its tests in `spx test passing`.
 2. Run Steps 2–9 on the node, and Step 1 again first when a compaction has made the foundation marker absent.
 3. Confirm the final gate subject is committed and the worktree is clean.
-4. Proceed to the next node without stopping or asking, subject to the gate-retry limits in `<review_gates>`.
+4. Proceed to the next node without stopping or asking, subject to the gate cap of two counted rejections in `<review_gates>`.
 
-If a node's flow cannot reach its gate-specific passing state or a converged review within the retry limit, stop the queue, report the failed node and step, and leave the remaining nodes in `spx/EXCLUDE`. Step 10 (`/merge`) runs once over the whole changeset after the queue completes.
+If a node's flow cannot reach its gate-specific passing state or a passing review within the gate cap of two counted rejections, stop the queue, report the failed node and step, and leave the remaining nodes in `spx/EXCLUDE`. Step 10 (`/merge`) runs once over the whole changeset after the queue completes.
 
 </invocation_modes>
 
