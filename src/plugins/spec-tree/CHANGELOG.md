@@ -27,6 +27,7 @@ An entry is written by the changeset that ships the change. A later changeset ad
 ### Changed
 
 - **`/execute-change` hands a skill-surface Fixer its repair block as repair input.** The Fixer rule no longer names `instructions:create-skill` as declaring no repair-block intake; it names `instructions:create-subagent` alone. A `change-skill-author` Fixer's repair block, the verbatim rejected verdicts and failed commands of the earlier round, is now read by `instructions:create-skill` as its repair input.
+- **`/author-change` launches its `change-auditor` at most twice on one Change candidate.** After the second rejection the skill ends with the record unpublished and reports the outstanding defect class; it never launches a third audit on that candidate. The re-audit before publication counts toward the two. Before this change, the skill stopped only after three consecutive completed non-approvals.
 
 ## 0.104.1
 

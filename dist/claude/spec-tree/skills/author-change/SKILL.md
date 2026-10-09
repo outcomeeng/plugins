@@ -97,7 +97,7 @@ The Refiner persists the record at the Maturity it reached. This skill never wri
    - Run `spx verification run input` with the `--verification-type`, `--scope-type`, `--scope`, and `--run` values `renderCommand` carries. Require its `content` to equal the unchanged candidate byte for byte; the rendered projection carries no retained input.
 
    A failed command or any mismatch withholds publication.
-6. For a completed rejection, sweep the complete candidate for the cited defect class, batch repairs, read affected sections together, and dispatch a new audit only after the repaired candidate stabilizes. Ask the operator when repair reopens judgment. Stop after three consecutive completed non-approvals at this gate and report the outstanding class.
+6. Dispatch the auditor at most twice on one candidate, counting every dispatch this gate makes for it, the re-audit `<persistence>` requires included. After a first completed rejection, sweep the complete candidate for the cited defect class, batch repairs, read affected sections together, and dispatch the second audit only after the repaired candidate stabilizes. Ask the operator when repair reopens judgment. After the second rejection, end with publication withheld and report the outstanding defect class; NEVER dispatch a third audit on that candidate.
 
 Audit results remain in SPX and the conversation. NEVER write audit bookkeeping into the Change body, comments, or fields.
 
