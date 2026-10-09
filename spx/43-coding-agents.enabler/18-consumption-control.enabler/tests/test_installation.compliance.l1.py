@@ -9,6 +9,8 @@ from outcomeeng_testing.harnesses.consumption_control import (
 def test_versioned_assets_restart_and_unknown_job_state() -> None:
     with workspace() as work:
         observed = installation_observation(work)
+        assert not observed.inactive_assets_exist
+        assert not observed.inactive_calls
         assert observed.owned_assets == observed.expected_assets
         assert all(
             observed.stable_root in arguments for arguments in observed.stable_arguments

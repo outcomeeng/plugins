@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+
 import datetime as dt
 import hashlib
 import json
@@ -11,7 +12,7 @@ import time
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
-from enum import Enum
+from enum import Enum, StrEnum
 from pathlib import Path
 from typing import Any, Final
 
@@ -57,6 +58,68 @@ RETENTION_DAYS: Final = 14
 ANCHOR_BYTES: Final = 256
 STATE_NAME: Final = "state.sqlite3"
 LOCK_NAME: Final = "worker.lock"
+
+
+SUBAGENT_DIRECTORY = "subagents"
+
+
+class CollectionGap(StrEnum):
+    COLLECTION_BOUND = "collection bound reached"
+    DISCOVERY_BOUND = "discovery bound reached"
+    DISCOVERY_INCOMPLETE = "incomplete directory discovery"
+    DISCOVERY_CAPACITY = "directory exceeds discovery capacity"
+
+
+class AccountingField(StrEnum):
+    """Wire fields consumed by the module's public evidence contract."""
+
+    API_EQUIVALENT_USD = "api_equivalent_usd"
+    BYTES_READ = "bytes_read"
+    CACHE_CREATION = "cache_creation"
+    CEILING_USD = "ceiling_usd"
+    CHILD = "child"
+    CHILD_REQUESTS = "child_requests"
+    CONTEXT_GROWTH_RATIO = "context_growth_ratio"
+    COST_GROWTH_RATIO = "cost_growth_ratio"
+    EARLY_CONTEXT_MEAN = "early_context_mean"
+    EARLY_COST_MEAN = "early_cost_mean"
+    END_EXCLUSIVE_UTC = "end_exclusive_utc"
+    EPHEMERAL_1H_INPUT_TOKENS = "ephemeral_1h_input_tokens"
+    EPHEMERAL_5M_INPUT_TOKENS = "ephemeral_5m_input_tokens"
+    EXCERPT = "excerpt"
+    GAPS = "gaps"
+    ID = "id"
+    IDENTITY = "identity"
+    KIND = "kind"
+    LATE_CONTEXT_MEAN = "late_context_mean"
+    LATE_COST_MEAN = "late_cost_mean"
+    MESSAGE = "message"
+    PARENT = "parent"
+    REQUESTS = "requests"
+    SESSIONID = "sessionId"
+    START_UTC = "start_utc"
+    SUBSCRIPTION_USAGE_CONVERSION = "subscription_usage_conversion"
+    TIMESTAMP = "timestamp"
+    TOKENS = "tokens"
+    USAGE = "usage"
+    UUID = "uuid"
+    SESSIONS = "sessions"
+    MODELS = "models"
+    WORKSPACES = "workspaces"
+    CONFIGURATION = "configuration"
+    RESET_PERIOD_START_UTC = "reset_period_start_utc"
+    RESET_PERIOD_END_UTC = "reset_period_end_utc"
+    EXPECTED_ELAPSED_SPEND_USD = "expected_elapsed_spend_usd"
+    CACHE_READ_SHARE = "cache_read_share"
+    CONTEXT_INPUT_TOKENS = "context_input_tokens"
+    MODEL = "model"
+    FIRST_UTC = "first_utc"
+    DURATION_SECONDS = "duration_seconds"
+    VERIFIED_OUTPUTS = "verified_outputs"
+    COST_COMPONENTS = "cost_components"
+    SHARE_MEASURED_COST = "share_measured_cost"
+    HISTORY_COMPLETE = "history_complete"
+    UNPRICED_REQUESTS = "unpriced_requests"
 
 
 class SignalKind(str, Enum):
@@ -192,9 +255,11 @@ def encoded(value: object) -> str:
 
 
 def native(source: Path, row: Json) -> tuple[str, str, bool]:
-    child = source.parent.name == "subagents"
+    child = source.parent.name == SUBAGENT_DIRECTORY
     parent = (
-        source.parent.parent.name if child else str(row.get("sessionId") or source.stem)
+        source.parent.parent.name
+        if child
+        else str(row.get(AccountingField.SESSIONID) or source.stem)
     )
     return (source.stem if child else parent), parent, child
 
@@ -202,13 +267,15 @@ def native(source: Path, row: Json) -> tuple[str, str, bool]:
 def request(row: Json, source: Path) -> tuple[Json | None, list[str]]:
     if row.get("type") != "assistant":
         return None, []
-    message = row.get("message")
-    if not isinstance(message, dict) or not isinstance(message.get("usage"), dict):
+    message = row.get(AccountingField.MESSAGE)
+    if not isinstance(message, dict) or not isinstance(
+        message.get(AccountingField.USAGE), dict
+    ):
         return None, ["assistant usage absent"]
-    usage = message["usage"]
-    if not row.get("timestamp") or not message.get("id"):
+    usage = message[AccountingField.USAGE]
+    if not row.get(AccountingField.TIMESTAMP) or not message.get(AccountingField.ID):
         return None, ["assistant timestamp or message.id absent"]
-    stamp = timestamp(str(row["timestamp"]))
+    stamp = timestamp(str(row[AccountingField.TIMESTAMP]))
     session, parent, child = native(source, row)
     gaps: list[str] = []
     tokens: list[int] = []
@@ -220,14 +287,14 @@ def request(row: Json, source: Path) -> tuple[Json | None, list[str]]:
         tokens.append(value)
     if not any(tokens):
         return None, gaps
-    creation = usage.get("cache_creation")
+    creation = usage.get(AccountingField.CACHE_CREATION)
     write5 = (
-        creation.get("ephemeral_5m_input_tokens")
+        creation.get(AccountingField.EPHEMERAL_5M_INPUT_TOKENS)
         if isinstance(creation, dict)
         else None
     )
     write1 = (
-        creation.get("ephemeral_1h_input_tokens")
+        creation.get(AccountingField.EPHEMERAL_1H_INPUT_TOKENS)
         if isinstance(creation, dict)
         else None
     )
@@ -247,7 +314,7 @@ def request(row: Json, source: Path) -> tuple[Json | None, list[str]]:
         write5, write1 = tokens[2], 0
     if tokens[2] == 0:
         write5, write1 = 0, 0
-    model = str(message.get("model") or "unknown")
+    model = str(message.get(AccountingField.MODEL) or "unknown")
     speed = usage.get("speed", "standard")
     tier = usage.get("service_tier", "standard")
     priced = (
@@ -257,23 +324,23 @@ def request(row: Json, source: Path) -> tuple[Json | None, list[str]]:
         gaps.append(
             f"unsupported pricing: model={model}, speed={speed}, service_tier={tier}"
         )
-    identity = encoded([parent, session, message["id"]])
+    identity = encoded([parent, session, message[AccountingField.ID]])
     result = {
-        "identity": identity,
+        AccountingField.IDENTITY: identity,
         "stamp": iso(stamp),
         "session": session,
-        "parent": parent,
-        "child": child,
-        "model": model,
+        AccountingField.PARENT: parent,
+        AccountingField.CHILD: child,
+        AccountingField.MODEL: model,
         "workspace": str(row.get("cwd") or "unknown"),
-        "tokens": tokens,
+        AccountingField.TOKENS: tokens,
         "write5": write5,
         "write1": write1,
         "priced": priced,
         "ttl_known": ttl_known,
         "source": str(source),
-        "uuid": str(row.get("uuid") or "unknown"),
-        "gaps": gaps,
+        AccountingField.UUID: str(row.get(AccountingField.UUID) or "unknown"),
+        AccountingField.GAPS: gaps,
     }
     return result, gaps
 
@@ -282,17 +349,20 @@ def reconcile(old: Json, new: Json) -> Json:
     # Native streaming snapshots carry cumulative usage, rather than deltas.
     result = dict(new)
     result["stamp"] = min(old["stamp"], new["stamp"])
-    result["tokens"] = [
-        max(a, b) for a, b in zip(old["tokens"], new["tokens"], strict=True)
+    result[AccountingField.TOKENS] = [
+        max(a, b)
+        for a, b in zip(
+            old[AccountingField.TOKENS], new[AccountingField.TOKENS], strict=True
+        )
     ]
-    if old["tokens"][2] > new["tokens"][2]:
+    if old[AccountingField.TOKENS][2] > new[AccountingField.TOKENS][2]:
         result["write5"], result["write1"], result["ttl_known"] = (
             old["write5"],
             old["write1"],
             old["ttl_known"],
         )
     elif (
-        old["tokens"][2] == new["tokens"][2]
+        old[AccountingField.TOKENS][2] == new[AccountingField.TOKENS][2]
         and old["ttl_known"]
         and not new["ttl_known"]
     ):
@@ -301,38 +371,51 @@ def reconcile(old: Json, new: Json) -> Json:
             old["write1"],
             True,
         )
-    result["gaps"] = sorted(set(old["gaps"] + new["gaps"]))
+    result[AccountingField.GAPS] = sorted(
+        set(old[AccountingField.GAPS] + new[AccountingField.GAPS])
+    )
     for field in FIELDS:
         gap = f"invalid or absent usage.{field}"
-        if gap not in old["gaps"] or gap not in new["gaps"]:
-            result["gaps"] = [item for item in result["gaps"] if item != gap]
+        if gap not in old[AccountingField.GAPS] or gap not in new[AccountingField.GAPS]:
+            result[AccountingField.GAPS] = [
+                item for item in result[AccountingField.GAPS] if item != gap
+            ]
     if result["ttl_known"]:
-        result["gaps"] = [
+        result[AccountingField.GAPS] = [
             item
-            for item in result["gaps"]
+            for item in result[AccountingField.GAPS]
             if not item.startswith("cache-write duration absent or inconsistent")
         ]
-    if new["model"] == "unknown" and old["model"] != "unknown":
-        result["model"], result["priced"] = old["model"], old["priced"]
-    if old["model"] != new["model"] and "unknown" not in (old["model"], new["model"]):
+    if (
+        new[AccountingField.MODEL] == "unknown"
+        and old[AccountingField.MODEL] != "unknown"
+    ):
+        result[AccountingField.MODEL], result["priced"] = (
+            old[AccountingField.MODEL],
+            old["priced"],
+        )
+    if old[AccountingField.MODEL] != new[AccountingField.MODEL] and "unknown" not in (
+        old[AccountingField.MODEL],
+        new[AccountingField.MODEL],
+    ):
         result["priced"] = False
-        result["gaps"].append(
+        result[AccountingField.GAPS].append(
             "conflicting models for one native request; pricing unavailable"
         )
     if result["priced"]:
-        result["gaps"] = [
+        result[AccountingField.GAPS] = [
             item
-            for item in result["gaps"]
+            for item in result[AccountingField.GAPS]
             if not item.startswith("unsupported pricing: model=unknown,")
         ]
     return result
 
 
 def cost(value: Json) -> dict[str, Decimal] | None:
-    rate = PRICES.get(value["model"])
+    rate = PRICES.get(value[AccountingField.MODEL])
     if rate is None or not value["priced"]:
         return None
-    inputs, reads, _, outputs = value["tokens"]
+    inputs, reads, _, outputs = value[AccountingField.TOKENS]
     return dict(
         zip(
             TOKEN_KEYS,
@@ -433,7 +516,8 @@ class Evidence:
         for directory in directories:
             if self.clock() >= deadline or visited >= MAX_ENTRIES:
                 gaps.append(
-                    "discovery bound reached; unvisited directories resume next invocation"
+                    CollectionGap.DISCOVERY_BOUND
+                    + "; unvisited directories resume next invocation"
                 )
                 break
             cursor = int(directory["cursor"])
@@ -484,11 +568,11 @@ class Evidence:
                     )
                 if not complete:
                     gaps.append(
-                        f"incomplete directory discovery: {directory['path']}; directory cursor={position}"
+                        f"{CollectionGap.DISCOVERY_INCOMPLETE}: {directory['path']}; directory cursor={position}"
                     )
                     if cursor >= MAX_ENTRIES - 1:
                         gaps.append(
-                            f"directory exceeds discovery capacity: {directory['path']}; configure a narrower transcript root"
+                            f"{CollectionGap.DISCOVERY_CAPACITY}: {directory['path']}; configure a narrower transcript root"
                         )
             except OSError as error:
                 gaps.append(f"directory unavailable: {directory['path']}: {error}")
@@ -502,7 +586,7 @@ class Evidence:
     def behavior(
         self, row: Json, source: Path, stamp: str, session: str, parent: str
     ) -> None:
-        message = row.get("message")
+        message = row.get(AccountingField.MESSAGE)
         content = message.get("content", []) if isinstance(message, dict) else []
         blocks = (
             content
@@ -515,7 +599,7 @@ class Evidence:
             identity = encoded(
                 [
                     str(source),
-                    row.get("uuid")
+                    row.get(AccountingField.UUID)
                     or hashlib.sha256(encoded(row).encode()).hexdigest(),
                     "user_turn",
                 ]
@@ -532,7 +616,7 @@ class Evidence:
                     "",
                     0,
                     0,
-                    encoded({"kind": "user_turn"}),
+                    encoded({AccountingField.KIND: "user_turn"}),
                 ),
             )
         for index, block in enumerate(blocks):
@@ -549,13 +633,14 @@ class Evidence:
                 else encoded(block.get("content", ""))
             )
             row_id = (
-                row.get("uuid") or hashlib.sha256(encoded(row).encode()).hexdigest()
+                row.get(AccountingField.UUID)
+                or hashlib.sha256(encoded(row).encode()).hexdigest()
             )
             identity = encoded(
                 [
                     str(source),
                     row_id,
-                    block.get("id") or block.get("tool_use_id"),
+                    block.get(AccountingField.ID) or block.get("tool_use_id"),
                     kind,
                     index,
                 ]
@@ -567,14 +652,14 @@ class Evidence:
             )
             payload = {
                 "source": str(source),
-                "uuid": row.get("uuid"),
+                AccountingField.UUID: row.get(AccountingField.UUID),
                 "stamp": stamp,
                 "session": session,
-                "parent": parent,
-                "kind": kind,
+                AccountingField.PARENT: parent,
+                AccountingField.KIND: kind,
                 "tool": tool,
-                "tool_id": block.get("id") or block.get("tool_use_id"),
-                "excerpt": raw[:EXCERPT_CHARS],
+                "tool_id": block.get(AccountingField.ID) or block.get("tool_use_id"),
+                AccountingField.EXCERPT: raw[:EXCERPT_CHARS],
                 "characters": len(raw),
                 "truncated": len(raw) > EXCERPT_CHARS,
                 "arguments": block.get("input")
@@ -601,7 +686,7 @@ class Evidence:
     def ingest(
         self, row: Json, source: Path, lower: dt.datetime, end: dt.datetime
     ) -> list[str]:
-        if not row.get("timestamp"):
+        if not row.get(AccountingField.TIMESTAMP):
             gaps = (
                 ["transcript timestamp absent"]
                 if row.get("type") in ("assistant", "user")
@@ -610,7 +695,7 @@ class Evidence:
             for gap in gaps:
                 self.remember_gap(f"{source}: {gap}")
             return gaps
-        parsed = timestamp(str(row["timestamp"]))
+        parsed = timestamp(str(row[AccountingField.TIMESTAMP]))
         if parsed < lower:
             return []
         session, parent, _ = native(source, row)
@@ -625,18 +710,19 @@ class Evidence:
                 "future transcript timestamp retained; excluded from current measurement"
             )
         previous = self.db.execute(
-            "SELECT payload FROM requests WHERE identity=?", (value["identity"],)
+            "SELECT payload FROM requests WHERE identity=?",
+            (value[AccountingField.IDENTITY],),
         ).fetchone()
         if previous:
             value = reconcile(json.loads(previous[0]), value)
         self.db.execute(
             "INSERT OR REPLACE INTO requests VALUES(?,?,?,?,?,?,?)",
             (
-                value["identity"],
+                value[AccountingField.IDENTITY],
                 value["stamp"],
                 session,
                 parent,
-                value["model"],
+                value[AccountingField.MODEL],
                 value["workspace"],
                 encoded(value),
             ),
@@ -656,7 +742,8 @@ class Evidence:
         for target in targets:
             if self.clock() >= deadline or read_bytes >= MAX_BYTES:
                 gaps.append(
-                    "collection bound reached; remaining file offsets resume next invocation"
+                    CollectionGap.COLLECTION_BOUND
+                    + "; remaining file offsets resume next invocation"
                 )
                 break
             path = Path(target["path"])
@@ -821,11 +908,11 @@ class Evidence:
             result = {
                 "end_utc": iso(end),
                 "import_start_utc": iso(lower),
-                "bytes_read": read_bytes,
+                AccountingField.BYTES_READ: read_bytes,
                 "rows_read": rows,
                 "files_visited": files,
-                "gaps": sorted(set(gaps))[:MAX_GAPS],
-                "history_complete": not gaps,
+                AccountingField.GAPS: sorted(set(gaps))[:MAX_GAPS],
+                AccountingField.HISTORY_COMPLETE: not gaps,
                 "bounds": {
                     "bytes": MAX_BYTES,
                     "files": MAX_FILES,
@@ -853,22 +940,22 @@ class Evidence:
         }
         result: Json = {
             "schema_version": SCHEMA_VERSION,
-            "start_utc": iso(start),
-            "end_exclusive_utc": iso(end),
-            "requests": 0,
+            AccountingField.START_UTC: iso(start),
+            AccountingField.END_EXCLUSIVE_UTC: iso(end),
+            AccountingField.REQUESTS: 0,
             **dict.fromkeys(TOKEN_KEYS, 0),
-            "api_equivalent_usd": 0.0,
-            "cost_components": dict.fromkeys(TOKEN_KEYS, 0.0),
-            "unpriced_requests": 0,
+            AccountingField.API_EQUIVALENT_USD: 0.0,
+            AccountingField.COST_COMPONENTS: dict.fromkeys(TOKEN_KEYS, 0.0),
+            AccountingField.UNPRICED_REQUESTS: 0,
             "pricing_assumption_requests": 0,
-            "child_requests": 0,
-            "gaps": [],
+            AccountingField.CHILD_REQUESTS: 0,
+            AccountingField.GAPS: [],
             "pricing": {
                 "source": PRICE_SOURCE,
                 "effective_date": PRICE_DATE,
                 "basis": "standard first-party API list prices; unknown cache duration uses five-minute lower bound",
             },
-            "verified_outputs": [],
+            AccountingField.VERIFIED_OUTPUTS: [],
             "attribution": "Transcript activity is measured; delivery, usefulness and exact skill/tool token costs are unknown.",
         }
         values = self.db.execute(
@@ -883,23 +970,28 @@ class Evidence:
             value = json.loads(row[0])
             components = cost(value)
             amount = sum(components.values(), Decimal(0)) if components else Decimal(0)
-            result["requests"] += 1
-            result["unpriced_requests"] += components is None
+            result[AccountingField.REQUESTS] += 1
+            result[AccountingField.UNPRICED_REQUESTS] += components is None
             result["pricing_assumption_requests"] += not value["ttl_known"]
-            result["child_requests"] += bool(value["child"])
-            context = sum(value["tokens"][:3])
-            for key, token in zip(TOKEN_KEYS, value["tokens"], strict=True):
+            result[AccountingField.CHILD_REQUESTS] += bool(value[AccountingField.CHILD])
+            context = sum(value[AccountingField.TOKENS][:3])
+            for key, token in zip(
+                TOKEN_KEYS, value[AccountingField.TOKENS], strict=True
+            ):
                 result[key] += token
-                result["cost_components"][key] += (
+                result[AccountingField.COST_COMPONENTS][key] += (
                     float(components[key]) if components else 0.0
                 )
-            result["api_equivalent_usd"] += float(amount)
-            gaps.update(value["gaps"])
+            result[AccountingField.API_EQUIVALENT_USD] += float(amount)
+            gaps.update(value[AccountingField.GAPS])
             for category, identity in (
                 ("sessions", value["session"]),
-                ("models", value["model"]),
+                ("models", value[AccountingField.MODEL]),
                 ("workspaces", value["workspace"]),
-                ("roles", "native_child" if value["child"] else "native_parent"),
+                (
+                    "roles",
+                    "native_child" if value[AccountingField.CHILD] else "native_parent",
+                ),
             ):
                 if (
                     identity not in groups[category]
@@ -910,15 +1002,15 @@ class Evidence:
                 group = groups[category].setdefault(
                     identity,
                     {
-                        "requests": 0,
+                        AccountingField.REQUESTS: 0,
                         **dict.fromkeys(TOKEN_KEYS, 0),
-                        "api_equivalent_usd": 0.0,
-                        "cost_components": dict.fromkeys(TOKEN_KEYS, 0.0),
-                        "first_utc": value["stamp"],
+                        AccountingField.API_EQUIVALENT_USD: 0.0,
+                        AccountingField.COST_COMPONENTS: dict.fromkeys(TOKEN_KEYS, 0.0),
+                        AccountingField.FIRST_UTC: value["stamp"],
                         "last_utc": value["stamp"],
-                        "model": value["model"],
-                        "parent": value["parent"],
-                        "child": value["child"],
+                        AccountingField.MODEL: value[AccountingField.MODEL],
+                        AccountingField.PARENT: value[AccountingField.PARENT],
+                        AccountingField.CHILD: value[AccountingField.CHILD],
                         "peak_context": 0,
                         "context_sum": 0,
                         "early_contexts": [],
@@ -927,19 +1019,23 @@ class Evidence:
                         "late_costs": [],
                     },
                 )
-                group["requests"] += 1
+                group[AccountingField.REQUESTS] += 1
                 group["last_utc"] = value["stamp"]
                 group["peak_context"] = max(group["peak_context"], context)
                 group["context_sum"] += context
-                group["model"] = (
-                    value["model"] if group["model"] == value["model"] else "multiple"
+                group[AccountingField.MODEL] = (
+                    value[AccountingField.MODEL]
+                    if group[AccountingField.MODEL] == value[AccountingField.MODEL]
+                    else "multiple"
                 )
-                for key, token in zip(TOKEN_KEYS, value["tokens"], strict=True):
+                for key, token in zip(
+                    TOKEN_KEYS, value[AccountingField.TOKENS], strict=True
+                ):
                     group[key] += token
-                    group["cost_components"][key] += (
+                    group[AccountingField.COST_COMPONENTS][key] += (
                         float(components[key]) if components else 0.0
                     )
-                group["api_equivalent_usd"] += float(amount)
+                group[AccountingField.API_EQUIVALENT_USD] += float(amount)
                 if len(group["early_contexts"]) < 10:
                     group["early_contexts"].append(context)
                     group["early_costs"].append(float(amount))
@@ -947,37 +1043,41 @@ class Evidence:
                 group["late_costs"] = (group["late_costs"] + [float(amount)])[-10:]
         for category_groups in groups.values():
             for group in category_groups.values():
-                size = min(10, max(1, group["requests"] // 4))
+                size = min(10, max(1, group[AccountingField.REQUESTS] // 4))
                 early = sum(group.pop("early_contexts")[:size]) / size
                 late = sum(group.pop("late_contexts")[-size:]) / size
                 early_cost = sum(group.pop("early_costs")[:size]) / size
                 late_cost = sum(group.pop("late_costs")[-size:]) / size
                 group.update(
                     {
-                        "early_context_mean": early,
-                        "late_context_mean": late,
-                        "context_growth_ratio": late / early if early else None,
-                        "early_cost_mean": early_cost,
-                        "late_cost_mean": late_cost,
-                        "cost_growth_ratio": late_cost / early_cost
+                        AccountingField.EARLY_CONTEXT_MEAN: early,
+                        AccountingField.LATE_CONTEXT_MEAN: late,
+                        AccountingField.CONTEXT_GROWTH_RATIO: late / early
+                        if early
+                        else None,
+                        AccountingField.EARLY_COST_MEAN: early_cost,
+                        AccountingField.LATE_COST_MEAN: late_cost,
+                        AccountingField.COST_GROWTH_RATIO: late_cost / early_cost
                         if early_cost
                         else None,
                         "duration_seconds": (
-                            timestamp(group["last_utc"]) - timestamp(group["first_utc"])
+                            timestamp(group["last_utc"])
+                            - timestamp(group[AccountingField.FIRST_UTC])
                         ).total_seconds(),
-                        "mean_context": group.pop("context_sum") / group["requests"],
+                        "mean_context": group.pop("context_sum")
+                        / group[AccountingField.REQUESTS],
                         "sample_turns": size,
                         "marginal_cost_includes_unpriced_zero": bool(
-                            result["unpriced_requests"]
+                            result[AccountingField.UNPRICED_REQUESTS]
                         ),
-                        "share_measured_cost": group["api_equivalent_usd"]
-                        / result["api_equivalent_usd"]
-                        if result["api_equivalent_usd"]
+                        "share_measured_cost": group[AccountingField.API_EQUIVALENT_USD]
+                        / result[AccountingField.API_EQUIVALENT_USD]
+                        if result[AccountingField.API_EQUIVALENT_USD]
                         else None,
                     }
                 )
         collection = json.loads(self.setting("collection") or "{}")
-        gaps.update(collection.get("gaps", []))
+        gaps.update(collection.get(AccountingField.GAPS, []))
         behavior_cutoff = self.setting("behavior_retention_cutoff")
         if behavior_cutoff and iso(start) < behavior_cutoff:
             gaps.add("behavior evidence before retained-row cutoff is incomplete")
@@ -987,14 +1087,14 @@ class Evidence:
         if not lower or iso(start) < lower:
             gaps.add("measurement starts before configured import coverage")
         result.update(groups)
-        result["gaps"] = sorted(gaps)[:MAX_GAPS]
+        result[AccountingField.GAPS] = sorted(gaps)[:MAX_GAPS]
         result["coverage"] = collection
         total_input = sum(result[key] for key in TOKEN_KEYS[:3])
-        result["cache_read_share"] = (
+        result[AccountingField.CACHE_READ_SHARE] = (
             result["cache_read"] / total_input if total_input else None
         )
-        result["context_input_tokens"] = total_input
-        result["subscription_usage_conversion"] = None
+        result[AccountingField.CONTEXT_INPUT_TOKENS] = total_input
+        result[AccountingField.SUBSCRIPTION_USAGE_CONVERSION] = None
         return result
 
 
@@ -1019,7 +1119,7 @@ def signals(
     candidates = [
         (
             SignalKind.ROLLING_THRESHOLD,
-            Decimal(str(current["api_equivalent_usd"])),
+            Decimal(str(current[AccountingField.API_EQUIVALENT_USD])),
             config.alert,
             current,
         )
@@ -1028,7 +1128,7 @@ def signals(
         candidates.append(
             (
                 SignalKind.WEEKLY_BUDGET,
-                Decimal(str(weekly["api_equivalent_usd"])),
+                Decimal(str(weekly[AccountingField.API_EQUIVALENT_USD])),
                 budget,
                 weekly,
             )
@@ -1037,7 +1137,7 @@ def signals(
             candidates.append(
                 (
                     SignalKind.WEEKLY_PACE,
-                    Decimal(str(weekly["api_equivalent_usd"])),
+                    Decimal(str(weekly[AccountingField.API_EQUIVALENT_USD])),
                     expected,
                     weekly,
                 )
@@ -1057,21 +1157,23 @@ def signals(
         ).hexdigest()
         result.append(
             {
-                "identity": identity,
-                "kind": kind,
+                AccountingField.IDENTITY: identity,
+                AccountingField.KIND: kind,
                 "advisory": True,
-                "api_equivalent_usd": str(amount),
-                "ceiling_usd": str(ceiling),
-                "start_utc": measurement["start_utc"],
-                "end_exclusive_utc": measurement["end_exclusive_utc"],
-                "reset_period_start_utc": iso(start),
-                "reset_period_end_utc": iso(period_end),
-                "expected_elapsed_spend_usd": str(expected)
+                AccountingField.API_EQUIVALENT_USD: str(amount),
+                AccountingField.CEILING_USD: str(ceiling),
+                AccountingField.START_UTC: measurement[AccountingField.START_UTC],
+                AccountingField.END_EXCLUSIVE_UTC: measurement[
+                    AccountingField.END_EXCLUSIVE_UTC
+                ],
+                AccountingField.RESET_PERIOD_START_UTC: iso(start),
+                AccountingField.RESET_PERIOD_END_UTC: iso(period_end),
+                AccountingField.EXPECTED_ELAPSED_SPEND_USD: str(expected)
                 if expected is not None
                 else None,
-                "configuration": config.effective(),
-                "gaps": measurement["gaps"],
-                "subscription_usage_conversion": None,
+                AccountingField.CONFIGURATION: config.effective(),
+                AccountingField.GAPS: measurement[AccountingField.GAPS],
+                AccountingField.SUBSCRIPTION_USAGE_CONVERSION: None,
             }
         )
     return result
