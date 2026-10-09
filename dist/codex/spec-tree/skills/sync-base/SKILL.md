@@ -2,7 +2,7 @@
 name: sync-base
 description: >-
   ALWAYS invoke this skill to bring a branch behind its base current — before reading product truth, before verifying, and before every merge push. NEVER rebase a behind-base branch by hand or bring it current with git reset.
-allowed-tools: Read, Edit, request_user_input, Bash(python3 "${SKILL_DIR}/scripts/sync_base.py":*), Bash(git status:*), Bash(git rev-parse:*), Bash(git symbolic-ref:*), Bash(git switch -c:*), Bash(git merge-base:*), Bash(git rev-list:*), Bash(git diff:*), Bash(git ls-files:*), Bash(git show:*), Bash(git add:*), Bash(git rebase --continue:*), Bash(git rebase --abort)
+allowed-tools: Read, Edit, request_user_input, Bash(python3 "${SKILL_DIR}/scripts/sync_base.py":*), Bash(git status:*), Bash(git rev-parse:*), Bash(git symbolic-ref:*), Bash(git merge-base:*), Bash(git rev-list:*), Bash(git diff:*), Bash(git ls-files:*), Bash(git show:*), Bash(git add:*), Bash(git rebase --continue:*), Bash(git rebase --abort)
 ---
 
 <objective>
@@ -96,7 +96,8 @@ Never end the work, release a Change, or hand off with a rebase active and no de
 Allowed direct commands:
 
 - Read state: `git status`, `git rev-parse`, `git symbolic-ref --short HEAD`, `git merge-base`, `git rev-list`, `git diff --name-only`, `git diff`, `git ls-files -u`, `git show :1:<path>`, `git show :2:<path>`, `git show :3:<path>`.
-- Resolve: edit files, `git add <resolved-paths>`, `git rebase --continue`.
+- Resolve: edit files, `git checkout --ours -- <path>` or `git checkout --theirs -- <path>` for one classified path, `git add <resolved-paths>`, `git rebase --continue`.
+- Take the superior's decided route: `git rebase --abort`, then the cherry-pick or redo commands that route names, as `<conflict_reconciliation>` sequences them.
 - Recover a dirty tree: `git switch -c work/<objective-slug>`, `git switch -c work/<note-slug> origin/<base>`, `git switch <objective-branch>`, and `git switch --detach <objective-head-oid>`, exactly as `<dirty_tree_resolution>` sequences them; the checkpoint commit itself goes through `/commit-changes`.
 
 The synchronizer script owns base movement. It runs `git fetch origin <base>` and either `git rebase origin/<base>` for an attached branch or `git switch --detach origin/<base>` for a clean detached HEAD that is an ancestor of the fetched base. Do not substitute direct sync commands for the script.
