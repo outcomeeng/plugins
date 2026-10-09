@@ -1,0 +1,48 @@
+{
+  "step": "04a-send-mail-request",
+  "startedUtc": "2026-10-09T17:42:51.165265+00:00",
+  "command": "python3 /Users/shz/Code/outcomeeng/plugins/worktrees/contributor-2/src/plugins/coding-agents/skills/message-agents/scripts/agent_message.py mail-request",
+  "cwd": "/Users/shz/.local/state/mcp-agent-mail/automatic-labels/20261009-1f309419/demo/project",
+  "request": {
+    "messageRequest": {
+      "kind": "fact",
+      "correlation": "position-labels-probe",
+      "sender": "CopperFinch",
+      "recipient": "SilverFinch",
+      "subject": "label surfaces check",
+      "body": "Body for the labelled send.",
+      "ackRequired": false
+    }
+  },
+  "exitCode": 0,
+  "result": {
+    "capability": {
+      "arguments": {
+        "record": {
+          "ackRequired": false,
+          "body": "Body for the labelled send.",
+          "correlation": "position-labels-probe",
+          "kind": "fact",
+          "recipient": "SilverFinch",
+          "schema": 1,
+          "sender": "CopperFinch",
+          "subject": "label surfaces check"
+        }
+      },
+      "operation": "send",
+      "schemaVersion": 1
+    },
+    "record": {
+      "ackRequired": false,
+      "body": "Body for the labelled send.",
+      "correlation": "position-labels-probe",
+      "kind": "fact",
+      "recipient": "SilverFinch",
+      "schema": 1,
+      "sender": "CopperFinch",
+      "subject": "label surfaces check"
+    },
+    "schemaVersion": 4
+  },
+  "stderr": ""
+}
