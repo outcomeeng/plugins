@@ -39,14 +39,14 @@ Eval evidence proves producer behavior only when the case set drives the produce
 
 Coupling is the first gate. An eval that does not reach the real producer is a simulation, even when its cases and grader are well-formed.
 
-| Category         | Definition                                                                                         | Verdict                                                              |
+| Category         | Definition                                                                                         | Outcome                                                              |
 | ---------------- | -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
 | Direct           | Runner invokes the producer directly.                                                              | Proceed                                                              |
 | Harness-mediated | Runner invokes a harness that loads and runs the producer without replacing its behavior.          | Proceed after chain inspection                                       |
 | Prompt-loaded    | Prompt includes the producer body or governing artifact and asks for a verdict from that artifact. | Proceed only when the claim is about that loaded artifact's behavior |
-| Simulation       | Prompt restates expected rules and asks for the desired verdict without using the producer.        | REJECT                                                               |
-| False            | Metadata names the producer but prompt or harness never uses it.                                   | REJECT                                                               |
-| Unknown          | Artifact path cannot establish how the producer is reached.                                        | REJECT                                                               |
+| Simulation       | Prompt restates expected rules and asks for the desired verdict without using the producer.        | `producer-coupling` finding                                          |
+| False            | Metadata names the producer but prompt or harness never uses it.                                   | `producer-coupling` finding                                          |
+| Unknown          | Artifact path cannot establish how the producer is reached.                                        | `producer-coupling` finding                                          |
 
 `prompt_source.kind = "producer-section"` in `eval.toml` is a supported Prompt-loaded coupling mode. Verify that the producer file, named section, and prompt template exist, and that the committed `prompt.md` is current with the source-derived materialization. The selected producer section is the artifact under audit for the suite: mutating that section changes the materialized prompt. Do not require the eval runner to invoke the whole skill, agent, classifier, or script when the assertion is about the selected section's behavior; the loaded section is the producer artifact for that suite. A hand-authored prompt that copies the same rules without `prompt_source` is Simulation.
 
@@ -71,7 +71,7 @@ Rejected:
 - A prompt that restates the producing skill's policy in simplified form while the real skill is absent.
 - Case input fields named or shaped so the answer is visible without applying the producer methodology.
 
-Oracle leakage is a REJECT finding even when the run history passes.
+Oracle leakage is an `oracle-leakage` finding even when the run history passes.
 
 </oracle_independence>
 
@@ -87,7 +87,7 @@ Procedure:
 4. Confirm negative cases target the assertion's failure mode.
 5. Ask whether the assertion could be unfulfilled while every case still passes.
 
-If the assertion could be unfulfilled while the suite passes, REJECT as misaligned.
+If the assertion could be unfulfilled while the suite passes, record an `assertion-alignment` finding.
 
 </alignment_model>
 
@@ -146,15 +146,16 @@ Budget-exhausted and other operational failures are neither passes nor behaviora
 
 <rejection_categories>
 
-Use these `rule` values in findings:
+Use these `rule` values in findings. Every finding is `blocking`:
 
-| Rule                  | Meaning                                                             |
-| --------------------- | ------------------------------------------------------------------- |
-| `missing-artifact`    | Required eval artifact is absent                                    |
-| `producer-coupling`   | Suite does not reach the real producer                              |
-| `oracle-leakage`      | Prompt or case input exposes the expected answer                    |
-| `assertion-alignment` | Expected verdict fields do not prove the assertion                  |
-| `falsifiability`      | No mutation to the producer changes the result                      |
-| `run-evidence`        | Passing run evidence is missing, stale, or operationally incomplete |
+| Rule                  | Meaning                                                                                                                               |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `missing-artifact`    | Required eval artifact is absent                                                                                                      |
+| `producer-coupling`   | Suite does not reach the real producer                                                                                                |
+| `oracle-leakage`      | Prompt or case input exposes the expected answer                                                                                      |
+| `assertion-alignment` | Expected verdict fields do not prove the assertion                                                                                    |
+| `falsifiability`      | No mutation to the producer changes the result                                                                                        |
+| `run-evidence`        | Passing run evidence is missing, stale, or operationally incomplete                                                                   |
+| `undecidable-gate`    | A gate cannot be decided for an assertion; names the absent prerequisite or unavailable evidence, and the gate's unit is `incomplete` |
 
 </rejection_categories>
