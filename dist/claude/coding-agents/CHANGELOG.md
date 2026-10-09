@@ -6,6 +6,18 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.13.0
+
+### Added
+
+- **`/control-token-spend` measures Claude Code consumption from local transcripts.** Incremental collection preserves original files and reconciles streaming requests, native subagents, and all four usage fields. HTML, JSON, and CSV reports expose context growth, cache behavior, estimated costs, bounded transcript examples, and gaps in attribution.
+- **Operators can activate finite detector and hourly report jobs through macOS launchd.** Versioned assets, persistent offsets, duplicate-signal checks, and one worker lock preserve state across restart. Install, status, stop, and restart operations expose job state and failures.
+- **`SPX_USAGE_ALERT_USD` configures the rolling fifteen-minute alert threshold, with a default of $20 in estimated API-equivalent cost.** An explicit weekly budget and UTC reset anchor enable budget and pace signals. Reports establish no conversion to subscription allowance.
+
+### Requires
+
+- **A managed Python 3.13 or 3.14 interpreter.** The deterministic worker uses the standard library and runs without TraceRoost or an SPX usage-evidence service. Optional investigation uses an explicitly selected, version-checked existing index.
+
 ## 0.12.0
 
 ### Added
