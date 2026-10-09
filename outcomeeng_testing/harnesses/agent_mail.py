@@ -599,7 +599,7 @@ def run_terminal_property(
 
 
 def run_project_key_mapping(
-    assert_key: Callable[[ModuleType, str, object, str | None, str], None],
+    assert_key: Callable[[ModuleType, str, str, str | None, str], None],
 ) -> None:
     """Drive every shape the repository lookup's output takes, each built
     around a generated absolute path."""

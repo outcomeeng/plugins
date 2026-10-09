@@ -398,16 +398,19 @@ def test_git_location_variables_leave_the_project_key_on_its_own_repository() ->
         expected_key = str(pool.bare)
         redirections = {probe.variable: probe.outcome for probe in confirmed}
 
-    for case, (exit_code, payload) in inside.items():
-        assert exit_code == 0, (case, payload, redirections)
-        assert payload[module.PROJECT_KEY_FIELD] == expected_key, (case, payload)
+    for inside_case, (exit_code, payload) in inside.items():
+        assert exit_code == 0, (inside_case, payload, redirections)
+        assert payload[module.PROJECT_KEY_FIELD] == expected_key, (
+            inside_case,
+            payload,
+        )
 
-    for case, (exit_code, payload) in outside.items():
-        assert exit_code != 0, (case, payload)
-        assert module.PROJECT_KEY_FIELD not in payload, (case, payload)
+    for outside_case, (exit_code, payload) in outside.items():
+        assert exit_code != 0, (outside_case, payload)
+        assert module.PROJECT_KEY_FIELD not in payload, (outside_case, payload)
         assert (
             payload[module.STATUS_FIELD] == module.ExecutionStatus.REPOSITORY_UNRESOLVED
-        ), (case, payload)
+        ), (outside_case, payload)
 
     # Git confirmed each of these against its own answer, so a removal list that
     # dropped one would leave the shape that confirmed it resolving the wrong
