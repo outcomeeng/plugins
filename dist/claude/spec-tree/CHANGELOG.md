@@ -14,7 +14,7 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 ### Changed
 
-- **`/execute-change` hands a skill-surface Fixer its repair block as repair input.** The Fixer rule names `instructions:create-subagent` alone as declaring no repair-block intake. A `change-skill-author` Fixer round, whose task message names the `improve` intent, reaches the `/create-skill` repair route, which takes each finding and each requested change the block supplies as one inventory row and returns a disposition for every row, so a defect the round's own checks do not reproduce still reaches the repair.
+- **`/execute-change` hands a skill-surface Fixer its repair block as repair input.** The Fixer rule names `instructions:create-subagent` alone as declaring no repair-block intake. A `change-skill-author` Fixer round, whose task message names the `improve` intent, reaches the `/create-skill` repair route, which takes each finding and each requested change the block supplies as one inventory row and returns a disposition for every row, so a defect the round's own checks do not reproduce still reaches the repair. A `change-subagent-author` Fixer receives the same message, repairs what `/create-subagent`'s own catalog check finds, and a rejection or failure that recurs after it releases the Change as a repeated defect class. An evidence obligation whose subject no Verifier the skill names can judge now releases the Change with that obligation as the blocker, before any Verifier launches.
 
 ## 0.104.1
 
