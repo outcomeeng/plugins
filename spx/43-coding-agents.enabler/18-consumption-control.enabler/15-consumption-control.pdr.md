@@ -14,10 +14,16 @@ Request-level usage, context growth, cache creation, and agent/tool activity exp
 
 ## Verification
 
-- ALWAYS: original transcripts remain unchanged, every invocation has finite collection and execution bounds, and interrupted imports resume from durable offsets with incomplete history identified.
-- ALWAYS: accounting reconciles uncached input, cache reads, cache creation, output, request identities, and native parent/subagent relationships across the report's exact frozen window; unsupported schemas, missing fields, or unknown prices produce named coverage gaps.
-- ALWAYS: detector records include the effective threshold, weekly target, reset anchor, measured window, and evidence references; repeated evaluation preserves one alert identity for one signal occurrence.
-- ALWAYS: managed installation uses stable versioned assets, preserves accounting and alert state across restart, excludes overlapping workers, bounds retained state and excerpts, and reports actual job status and failures.
-- ALWAYS: verified output attribution requires Applied store state, a default-branch merge, or current passing pinned evidence; absent skill, plugin, MCP, file, output, or usefulness attribution is unknown.
-- NEVER: API-equivalent amounts predict Claude MAX usage percentages, detector signals weaken a required gate or raise a resource ceiling, or deterministic collection/reporting invokes a model or installs a runtime dependency.
-- ALWAYS: the installed skill and accounting worker operate without TraceRoost, a source checkout, or a SPX usage-evidence interface; optional investigation failure preserves accounting and reports the missing evidence.
+### Testing
+
+- ALWAYS: original transcripts remain unchanged, every invocation has finite collection and execution bounds, and interrupted imports resume from durable offsets with incomplete history identified ([compliance]).
+- ALWAYS: accounting reconciles uncached input, cache reads, cache creation, output, request identities, and native parent/subagent relationships across the report's exact frozen window; unsupported schemas, missing fields, or unknown prices produce named coverage gaps ([property]).
+- ALWAYS: detector records include the effective threshold, weekly target, reset anchor, measured window, and evidence references; repeated evaluation preserves one alert identity for one signal occurrence ([property]).
+- ALWAYS: managed installation uses stable versioned assets, preserves accounting and alert state across restart, excludes overlapping workers, bounds retained state and excerpts, and reports actual job status and failures ([compliance]).
+- NEVER: deterministic collection/reporting invokes a model or installs a runtime dependency ([compliance]).
+- ALWAYS: the installed skill and accounting worker operate without TraceRoost, a source checkout, or a SPX usage-evidence interface; optional investigation failure preserves accounting and reports the missing evidence ([compliance]).
+
+### Audit
+
+- ALWAYS: verified output attribution requires Applied store state, a default-branch merge, or current passing pinned evidence; absent skill, plugin, MCP, file, output, or usefulness attribution is unknown ([audit]).
+- NEVER: API-equivalent amounts predict Claude MAX usage percentages, or detector signals weaken a required gate or raise a resource ceiling ([audit]).
