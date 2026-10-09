@@ -2,7 +2,7 @@
 name: sync-base
 description: >-
   ALWAYS invoke this skill to bring a branch behind its base current — before reading product truth, before verifying, and before every merge push. NEVER rebase a behind-base branch by hand or bring it current with git reset.
-allowed-tools: Read, Edit, {{! tool('use_skill') !}}, {{! tool('ask_user') !}}, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/sync_base.py":*), Bash(git status:*), Bash(git rev-parse:*), Bash(git symbolic-ref:*), Bash(git merge-base:*), Bash(git rev-list:*), Bash(git diff:*), Bash(git ls-files:*), Bash(git show:*), Bash(git add:*), Bash(git rebase --continue:*)
+allowed-tools: Read, Edit, {{! tool('use_skill') !}}, {{! tool('ask_user') !}}, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/sync_base.py":*), Bash(git status:*), Bash(git rev-parse:*), Bash(git symbolic-ref:*), Bash(git merge-base:*), Bash(git rev-list:*), Bash(git diff:*), Bash(git ls-files:*), Bash(git show:*), Bash(git add:*), Bash(git rebase --continue), Bash(git rebase --abort)
 ---
 
 <objective>
@@ -42,6 +42,7 @@ A `dirty_tree` outcome means uncommitted tracked changes block base movement. In
 1. **Authorized session-owned changes.** Classify changes Claude made during the active objective, respect explicit operator limits, and clear the precondition within the same invocation. Record the checked-out branch, or the full HEAD OID when detached, as the objective checkout. When objective paths and an unrelated note are dirty together, checkpoint the objective paths first:
    - **Related to the objective** → when the worktree is detached or sitting on the default branch, run `git switch -c work/<objective-slug>` from the current commit and record that branch as the objective checkout; invoke `/commit-changes` immediately on that branch, staging only the objective paths, regardless of whether verification is passing, failing, or not run.
    - **An unrelated coordination note** — a `PLAN.md` / `ISSUES.md` recording future work that is not part of the objective → once the note is the only remaining tracked change, run `git switch -c work/<note-slug> origin/<base>`, so the uncommitted note moves onto a branch cut from the fetched base, and commit it there through `/commit-changes`. Return with `git switch <objective-branch>`, or `git switch --detach <objective-head-oid>` when the objective checkout was detached, before the re-run in step 4. When `git switch -c` refuses because the note's path differs between the objective head and `origin/<base>`, stop with that blocked branch move and the note path. Name the note branch and its full head identity in the result as a separate changeset not yet on the default branch.
+   - Every `git switch` in this step runs through the harness's per-call approval, as `<git_command_policy>` states.
 2. **Operator-owned or unknown work.** When existing authorization covers committing the exact paths, invoke `/commit-changes` on their owning branch and continue. Otherwise preserve those files and their index state, report the blocked commit and exact paths, and request authority with a recommended commit option and a pause-and-inspect option. Apply the same boundary when an explicit operator limit withholds authority over session-owned paths. Never classify absent authority as a rebase conflict.
 3. **Confirm the checkpoint.** Require `/commit-changes` to report a zero commit exit, changed full HEAD identity, committed and remaining paths, and verification state (`passing`, `failing`, or `not-run`). All three verification states permit preservation; later gates decide eligibility. A rejected hook, failed commit, unchanged HEAD, or incomplete result leaves recovery blocked. Preserve its exact diagnostics and repair through the owning workflow before retrying; never bypass hooks or infer success from a commit attempt.
 4. **Re-run the primitive.** After a successful checkpoint, run `sync_base.py` again for the recorded checkout and base within the same invocation. Resolve any remaining authorized tracked changes through this recovery protocol. Finish only with `already_current` or `rebased`, or report the specific unresolved condition. Never report an intermediate authorized `dirty_tree` as completed synchronization.
@@ -93,12 +94,19 @@ Never end the work, release a Change, or hand off with a rebase active and no de
 
 <git_command_policy>
 
-Allowed direct commands:
+Granted commands, which run without a per-call prompt:
 
 - Read state: `git status`, `git rev-parse`, `git symbolic-ref --short HEAD`, `git merge-base`, `git rev-list`, `git diff --name-only`, `git diff`, `git ls-files -u`, `git show :1:<path>`, `git show :2:<path>`, `git show :3:<path>`.
-- Resolve: edit files, `git checkout --ours -- <path>` or `git checkout --theirs -- <path>` for one classified path, `git add <resolved-paths>`, `git rebase --continue`.
-- Take the superior's decided route: `git rebase --abort`, then the cherry-pick or redo commands that route names, as `<conflict_reconciliation>` sequences them.
+- Resolve: edit files, `git add <resolved-paths>`, `git rebase --continue`.
+- Take the superior's decided route: `git rebase --abort`, run only on that decision under `<conflict_reconciliation>`.
+
+Ungranted commands, which run through the harness's per-call approval because a prefix grant for them would also admit a form this policy forbids:
+
+- Resolve one classified path: `git checkout --ours -- <path>` or `git checkout --theirs -- <path>`.
 - Recover a dirty tree: `git switch -c work/<objective-slug>`, `git switch -c work/<note-slug> origin/<base>`, `git switch <objective-branch>`, and `git switch --detach <objective-head-oid>`, exactly as `<dirty_tree_resolution>` sequences them; the checkpoint commit itself goes through `/commit-changes`.
+- Continue the superior's decided route after `git rebase --abort`: the cherry-pick or redo commands that route names, as `<conflict_reconciliation>` sequences them.
+
+A per-call approval prompt is the harness's permission check on one command, never an operator question about the route; the route stays decided by evidence or by the superior.
 
 The synchronizer script owns base movement. It runs `git fetch origin <base>` and either `git rebase origin/<base>` for an attached branch or `git switch --detach origin/<base>` for a clean detached HEAD that is an ancestor of the fetched base. Do not substitute direct sync commands for the script.
 
