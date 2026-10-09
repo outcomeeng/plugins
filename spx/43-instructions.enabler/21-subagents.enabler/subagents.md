@@ -12,9 +12,6 @@ The subagents-about-subagents cluster is three peers with distinct roles:
 
 ## Assertions
 
-- ALWAYS: `/audit-subagent` records one changeset-scoped verification run with one unit for the definition the changeset changes and one unit for each governing declaration it reads, keys each finding `<unit>:<rule-id>`, and returns `BLOCKED` when the changeset leaves the definition unchanged or a governing standard is unreadable.
-- ALWAYS: every rule identifier `/audit-subagent` records names a rule in the `/subagent-standards` or `/agent-prompt-standards` rule catalog, and no finding is recorded under an identifier outside those catalogs.
-
 ### Compliance
 
 - ALWAYS: subagent configuration guidance specifies a target path or scope as the
@@ -52,6 +49,8 @@ The subagents-about-subagents cluster is three peers with distinct roles:
 - ALWAYS: `/create-subagent` applies the `/subagent-standards` catalog to the finished definition and returns it ready for independent verification ([audit])
 - ALWAYS: `/create-subagent` and `/audit-subagent` load `/subagent-standards` before doing any authoring or evaluation work — prevents memory-based assessment ([audit])
 - ALWAYS: `/audit-subagent` judges exactly one subagent configuration per invocation, and auditing several configurations dispatches one invocation per configuration ([audit])
+- ALWAYS: `/audit-subagent` records one changeset-scoped verification run with one unit for the definition the changeset changes and one unit for each governing declaration it reads, keys each finding `<unit>:<rule-id>`, and returns `BLOCKED` when the changeset leaves the definition unchanged or a governing standard is unreadable ([audit])
+- ALWAYS: every rule identifier `/audit-subagent` records names a rule in the `/subagent-standards` or `/agent-prompt-standards` rule catalog, and no finding is recorded under an identifier outside those catalogs ([audit])
 - ALWAYS: `/create-subagent` writes a configuration to the invocation checkout by default, and reaches a user-scope destination outside it — creating, editing, or deleting — only after operator confirmation naming the absolute destination, one approval covering one write ([audit])
 - NEVER: `/create-subagent` widens an approved checkout-scope write to user scope on its own judgment that the configured agent suits other projects — that destination applies to every project on the machine and no repository reviews it ([audit])
 - NEVER: restate `/subagent-standards` or `/agent-prompt-standards` rules inside `/create-subagent` or `/audit-subagent` — a single source of truth prevents drift between standard and enforcer ([audit])
