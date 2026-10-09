@@ -23,7 +23,7 @@ your actions since last report: what you stopped, started, released or pushed
 next: the next action and its trigger
 ```
 
-Mail kind `fact`, correlation `status-<N>`, subject `STATUS #<N> <HH:MM>Z`. Every value comes from the store, git and the panes, never from memory. A position with nothing in delivery sends one line: `STATUS idle <HH:MM>Z`.
+Mail kind `fact`, correlation `status-<N>`, subject `STATUS #<N> <HH:MM>Z`. Every value comes from the store, git and the transcripts, never from memory. A position with nothing in delivery sends one line: `STATUS idle <HH:MM>Z`.
 
 </template>
 
@@ -39,6 +39,6 @@ Step in at once when a report shows any of these:
 - Executor context above 60%;
 - a missing report, 20 minutes after the last one.
 
-Stepping in means: read the pane, find what the trigger exposes, and send one order through the `instruct` workflow — stop a ruled-out round, cap rounds and name the final gate, or settle the block. A round cap names which findings are fixed (those in text the changeset edits) and which are recorded as separate concerns (the rest).
+Stepping in means: read the pane and the transcript, find what the trigger exposes, and send one order through the `instruct` workflow — stop a ruled-out round, cap rounds and name the final gate, or settle the block. A round cap names which findings are fixed (those in text the changeset edits) and which are recorded as separate concerns (the rest).
 
 </step_in_triggers>

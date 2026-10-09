@@ -1,10 +1,16 @@
+<required_reading>
+
+`${SKILL_DIR}/references/guards.md`.
+
+</required_reading>
+
 <process>
 
 **Before a planned Prowl or host restart**
 
-1. Write the roster draft: `python3 "${SKILL_DIR}/scripts/roster.py" .spx/worktree/director/watch.json | spx change draft create --input stdin`.
+1. Write the roster draft: `python3 "${SKILL_DIR}/scripts/roster.py" <pool>/.spx/director/watch.json | spx change draft create --input stdin`.
 2. Order every position through `instruct.md` to bring its state note current and reach an idle boundary; every Orchestrator releases or checkpoints its Executors as its skill directs.
-3. Use skill `coding-agents:recover-prowl-agents` to prepare the exact-session manifest. Write a new `UPDATE` block in the Director's note naming the manifest and the roster draft.
+3. Use skill `coding-agents:recover-prowl-agents` to prepare the exact-session manifest. Name the manifest and the roster draft in `state.md`.
 
 **After the restart**
 
@@ -13,13 +19,13 @@
 
 **Bringing up a new position session**
 
-1. Start the session in the position's worktree with the position's start prompt. As soon as it waits at its prompt, send `/rc <Position name>` (for example `/rc SPX Maintainer`) so the operator can remote-control it. Use skill `coding-agents:operate-prowl` (the `send` operation) or `coding-agents:operate-herdr` (the `prompt` operation), by the position's backend, to send it.
-2. Add its entry to `.spx/worktree/director/watch.json` with its mail name, and regenerate the roster.
+1. Start the session in the position's worktree with the position's start prompt. As soon as it waits at its prompt, send `/rc <Position name>` (for example `/rc SPX Maintainer`) so the operator can remote-control it.
+2. Add its entry to `<pool>/.spx/director/watch.json` with its mail name, and regenerate the roster.
 
 **Compacting a position**
 
 1. Order the position to write its state to its durable note and reach an idle boundary.
-2. At the boundary, send `/compact` through the same capability, read the pane back through it for the harness's confirmation, then send the position's resume line: re-invoke `/understand`, re-read its note, re-arm its monitor.
+2. At the boundary, send `/compact`, then wait until the pane's status line shows the context figure dropped; a read of the last lines alone can miss the compaction notice. Then send its resume line: re-invoke `/understand`, re-read its note, re-arm its monitor. Order the note first: the position writes it and mails "note written", and only then is `/compact` sent.
 3. A stopped position whose work is closed is compacted and left unresumed until its work reopens.
 
 </process>
