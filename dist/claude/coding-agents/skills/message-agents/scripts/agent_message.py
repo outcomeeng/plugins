@@ -193,6 +193,7 @@ AUTHORITY_BODY_SEPARATOR = "\n\n"
 # script's own constants; the capability owns the store.
 MAIL_CAPABILITY_SCHEMA_VERSION = 1
 MAIL_SEND_OPERATION = "send"
+STORE_SENDER_DISPLAY_NAME_FIELD = "sender_display_name"
 ARGUMENTS_FIELD = "arguments"
 RECORD_FIELD = "record"
 PROJECT_KEY_FIELD = "projectKey"
@@ -222,7 +223,14 @@ DOORBELL_TRANSPORT_FIELD = "doorbellTransport"
 LINE_FIELD = "line"
 AGENTS_FIELD = "agents"
 DOORBELL_TEMPLATE = "[{sender}] mail {id}"
-DOORBELL_PATTERN = re.compile(r"\[(?P<sender>[^\[\]\s]+)\] mail (?P<id>[1-9][0-9]*)")
+DOORBELL_LABELED_TEMPLATE = "[{label} <{sender}>] mail {id}"
+# A label renders when it is non-empty and holds no line break and none of the
+# four delimiters the doorbell form is parsed by.
+DOORBELL_LABEL_UNRENDERABLE = re.compile(r"[\r\n\[\]<>]")
+DOORBELL_PATTERN = re.compile(
+    r"\[(?:(?P<label>[^\r\n\[\]<>]+) <(?P<labeled_sender>[^\[\]<>\s]+)>"
+    r"|(?P<sender>[^\[\]\s]+))\] mail (?P<id>[1-9][0-9]*)"
+)
 
 
 class Operation(StrEnum):
@@ -1139,8 +1147,16 @@ def mail_request(request: object) -> dict[str, object]:
     }
 
 
-def doorbell_text(sender: str, message_id: int) -> str:
-    """The one pane line that points the recipient at a delivered record."""
+def doorbell_text(sender: str, message_id: int, label: str | None = None) -> str:
+    """The one pane line that points the recipient at a delivered record.
+
+    A renderable sender label prefixes the stable name; any other label leaves the
+    unlabeled form.
+    """
+    if label and DOORBELL_LABEL_UNRENDERABLE.search(label) is None:
+        return DOORBELL_LABELED_TEMPLATE.format(
+            label=label, sender=sender, id=message_id
+        )
     return DOORBELL_TEMPLATE.format(sender=sender, id=message_id)
 
 
@@ -1151,7 +1167,8 @@ def parse_doorbell(line: object, agents: object) -> dict[str, object]:
     if match is None:
         raise MessageError(
             DeliveryStatus.INVALID_SCHEMA,
-            f"A doorbell is exactly one line {DOORBELL_TEMPLATE!r}.",
+            "A doorbell is exactly one line "
+            f"{DOORBELL_TEMPLATE!r} or {DOORBELL_LABELED_TEMPLATE!r}.",
         )
     if not isinstance(agents, list) or not all(
         isinstance(name, str) for name in agents
@@ -1159,7 +1176,7 @@ def parse_doorbell(line: object, agents: object) -> dict[str, object]:
         raise MessageError(
             DeliveryStatus.INVALID_SCHEMA, "Expected an array of agent names."
         )
-    sender = match.group("sender")
+    sender = match.group("sender") or match.group("labeled_sender")
     if sender not in agents:
         raise MessageError(
             DeliveryStatus.INVALID_IDENTITY,
@@ -1279,6 +1296,11 @@ def mail_delivery_result(
     record = _delivered_record(value)
     message_id = cast(int, record[RECORD_ID_FIELD])
     sender = cast(str, record[SENDER_FIELD])
+    response = _object(
+        value.get(TRANSPORT_RESPONSE_FIELD),
+        f"{CAPABILITY_RESULT_FIELD}.{TRANSPORT_RESPONSE_FIELD}",
+    )
+    label = response.get(STORE_SENDER_DISPLAY_NAME_FIELD)
     return {
         SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
         STATUS_FIELD: DeliveryStatus.DELIVERED,
@@ -1288,7 +1310,11 @@ def mail_delivery_result(
         SENDER_FIELD: sender,
         RECIPIENT_FIELD: record[RECIPIENT_FIELD],
         DOORBELL_FIELD: {
-            TEXT_FIELD: doorbell_text(sender, message_id),
+            TEXT_FIELD: doorbell_text(
+                sender,
+                message_id,
+                label if isinstance(label, str) else None,
+            ),
             DOORBELL_SUBMITTED_FIELD: _doorbell_submitted(doorbell_transport),
         },
         COMMAND_EXIT_CODE_FIELD: exit_code,
