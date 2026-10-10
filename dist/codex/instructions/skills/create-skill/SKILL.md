@@ -80,6 +80,7 @@ All in `${SKILL_DIR}/references/`:
 | `reusability-patterns.md` | Varies-vs-constant analysis, domain-specific authoring patterns  |
 | `test-patterns.md`        | Evaluation-driven development, iterative testing, feedback loops |
 | `technical-patterns.md`   | Error handling, security, dependencies for skills-that-do-things |
+| `repair-sweep.md`         | Same-class sites and changed dependencies of one repair          |
 
 Standards live in `/skill-standards`. These references cover authoring workflow only.
 
