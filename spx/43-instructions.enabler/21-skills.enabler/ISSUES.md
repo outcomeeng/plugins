@@ -202,3 +202,18 @@ Source: `instructions:skill-auditor` finding `f-015`, rule
 **Settlement condition.** A session runs one of the surfaces the sweep names to the point where it issues its `python3` command and records whether the harness admits the command under the declared grant or prompts for it; the established behavior then fixes one spelling across the whole population. An executed invocation is the only evidence that closes this.
 
 **Related.** "A non-interactive git guard sits on the command that cannot prompt", in `spx/21-spec-tree.enabler/76-merge.enabler/32-github-pr.enabler/ISSUES.md`, asks whether the Bash grant matcher tolerates an `ENV=value` prefix. One executed invocation that reports the matcher's behavior on an unexpanded token and on an environment-variable prefix answers both.
+
+## Two authoring surfaces teach payload forms the payload rule forbids
+
+Two surfaces of the `instructions` plugin teach payload forms that [`spx/15-agent-tools.pdr.md`](spx/15-agent-tools.pdr.md) forbids. The payload rule requires every payload to reach a command through a file in the scratch directory the harness names, under a file name unique to the agent.
+
+**Evidence.**
+
+- `src/plugins/instructions/skills/skill-standards/SKILL.md` line 49 teaches choosing a quoted heredoc or a one-line `printf '%s\n' ... | <tool>` pipe by harness environment.
+- `src/plugins/instructions/skills/create-skill/templates/auditor-skill.md` lines 98, 130 and 135 teach a quoted heredoc and a `printf` pipe for `spx verification run scope add` and `finding add` payloads, with `Bash(printf '%s\n':*)` in the template's `allowed-tools`.
+
+The `audit-skill` and `audit-subagent` skills and the `skill-auditor` and `subagent-auditor` agents carry the same forms under the exemption recorded in `spx/21-spec-tree.enabler/68-audit.enabler/ISSUES.md`. This entry does not cover them.
+
+**Impact.** The skill standards and the auditor template shape every new skill. A skill authored from them teaches the forbidden forms, so the payload rule holds for existing skills and not for the skills these surfaces produce.
+
+**Settlement condition.** The skill standards and the auditor template state the file form, or the exemption's grant rule is lifted and the auditors move to the file form. The skill auditor then raises no payload-form finding on either surface.
