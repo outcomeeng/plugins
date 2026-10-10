@@ -5,12 +5,12 @@ description: >-
   node-spec form, covering section structure, atemporal voice, and per-assertion
   tag fitness.
 argument-hint: "<node-spec-file-path>"
-allowed-tools: Read, Grep, Glob, Bash(git branch --show-current:*)
+allowed-tools: Read, Grep, Glob, Bash(git branch --show-current:*), Bash(git merge-base:*), Bash(git diff:*)
 ---
 
 <objective>
 
-A verdict on one output or variant spec, including prior enabler/outcome forms — APPROVED or REJECTED, with findings naming the section or assertion, rule, and evidence for section structure, atemporal voice, or declaration form and tag fitness.
+A verdict on one output or variant spec, including prior enabler/outcome forms — APPROVED or REJECTED, with findings on touched text naming the section or assertion, rule, and evidence for section structure, atemporal voice, or declaration form and tag fitness, and every other finding returned as `FILED`.
 
 </objective>
 
@@ -45,6 +45,7 @@ Decision-record form (ADR/PDR) is audited by `/audit-adr` and `/audit-pdr`; test
 - ALWAYS judge each assertion's verification type against `/verify` and each test assertion type against `/test` — never accept a present tag as valid by its mere presence.
 - ALWAYS name the section or assertion, the violated rule, and the evidence in every REJECT finding.
 - NEVER issue a finding the cited rule does not support — drop an unbacked finding rather than reject the node for it.
+- NEVER reject on text the changeset leaves unchanged and does not invalidate — return that finding as `FILED`, and NEVER raise a recorded finding's severity or let a `FILED` finding start to reject unless the run names a changed basis. `${SKILL_DIR}/references/touched-text.md` defines touched text, the finding key, and the `FILED` form.
 
 </constraints>
 
@@ -65,6 +66,8 @@ Invoke `/understand` when the live `<SPEC_TREE_FOUNDATION>` marker is absent or 
 **Step 2: Read the node**
 
 Read the node spec. Identify its kind, opening, required front matter, `## Assertions` section, and each assertion's placement and optional tag. Current output kinds use their canonical template's opening; a variant uses its parent's kind. Prior enabler/outcome openings retain their admitted three-clause forms.
+
+Resolve the touched text of the node spec as `${SKILL_DIR}/references/touched-text.md` states, so Steps 3 to 5 can classify each finding.
 
 </step>
 
@@ -116,7 +119,7 @@ For each assertion under `## Assertions`:
 
 **Step 6: Issue verdict**
 
-Scan all findings. If any property fails: REJECTED. Otherwise: APPROVED.
+Classify every finding per `${SKILL_DIR}/references/touched-text.md`: a finding on touched text keeps severity `REJECT`; every other finding becomes `FILED`. If any property row holds a `REJECT` finding: REJECTED. Otherwise: APPROVED, whatever `FILED` findings the rows carry.
 
 </step>
 
@@ -126,7 +129,7 @@ Scan all findings. If any property fails: REJECTED. Otherwise: APPROVED.
 
 Emit the verdict as a single JSON object. This JSON is the skill's entire output; never a prose or markdown verdict.
 
-The `overall` is `APPROVED` iff every property row is `PASS`; otherwise it is `REJECTED`. A required property that cannot be evaluated is a `FAIL` row with a `REJECT` finding naming the missing evidence. Findings carry severity `REJECT` for blocking violations and `WARNING`/`INFO` otherwise.
+The `overall` is `APPROVED` iff every property row is `PASS`; otherwise it is `REJECTED`. A required property that cannot be evaluated is a `FAIL` row with a `REJECT` finding naming the missing evidence. Findings carry severity `REJECT` for blocking violations on touched text, `FILED` for a finding outside touched text, and `WARNING`/`INFO` otherwise. A `FILED` finding fails no row and additionally carries `key` and `range`.
 
 ```json
 {
@@ -144,7 +147,7 @@ The `overall` is `APPROVED` iff every property row is `PASS`; otherwise it is `R
           "rule": "<violation pattern>",
           "evidence": "<quoted artifact evidence>",
           "message": "<one-line detail>",
-          "severity": "REJECT | WARNING | INFO"
+          "severity": "REJECT | FILED | WARNING | INFO"
         }
       ]
     },
@@ -155,7 +158,7 @@ The `overall` is `APPROVED` iff every property row is `PASS`; otherwise it is `R
 }
 ```
 
-Every finding carries the section or assertion in `location`, the violation pattern in `rule` (`missing-target`, `unsupported-target`, `template-missing`, `missing-frontmatter`, `missing-section`, `missing-assertions`, `malformed-kind-statement`, `heading-mismatch`, `temporal-voice`, `invalid-tag`, `evidence-type-mismatch`, `unfalsifiable-assertion`, or `prose-coupling`), the quoted artifact basis in `evidence`, a one-line `message`, and `severity`. A passing row carries an empty `findings` array.
+Every finding carries the section or assertion in `location`, the violation pattern in `rule` (`missing-target`, `unsupported-target`, `template-missing`, `missing-frontmatter`, `missing-section`, `missing-assertions`, `malformed-kind-statement`, `heading-mismatch`, `temporal-voice`, `invalid-tag`, `evidence-type-mismatch`, `unfalsifiable-assertion`, or `prose-coupling`), the quoted artifact basis in `evidence`, a one-line `message`, and `severity`. A passing row carries an empty `findings` array or only `FILED` findings.
 
 </verdict_format>
 
@@ -193,6 +196,7 @@ The verdict is sound when:
 
 - Every spec-node rule was judged with none skipped — claim-shape heading structure independent of verification type, atemporal voice, and per-assertion tag fitness (coverage-complete).
 - The verdict states an overall APPROVED/REJECTED, every property row carrying its determination, with no assertion left unevaluated.
+- Each REJECT finding lies on touched text, and every finding outside touched text appears as `FILED` with its key and diff range.
 - Each REJECT finding is falsifiable: it names the section or assertion, the violated rule, and the evidence — the malformed kind statement, the empty or mismatched heading, the temporal phrase, the invalid tag, the quantifier-mismatched assertion type, or the prose-coupled `[test]`.
 - The same node spec yields the same verdict.
 
