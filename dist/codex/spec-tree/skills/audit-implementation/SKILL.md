@@ -12,7 +12,7 @@ allowed-tools: Read, Bash(python3 "${SKILL_DIR}/scripts/resolve_scope.py":*), Ba
 
 <objective>
 
-An authoritative SPX projection and raw run token for the requested implementation scope, judged against its governing decisions and specs and the standards of every concern skill the artifact registry selects for its changed paths, carrying `terminalStatus` (`approved` or `rejected`) and findings that name the artifact, the violated rule, and observed-versus-expected evidence. A run that cannot reach that projection yields a `BLOCKED` diagnostic naming the request failure, command failure, or absent prerequisite that stopped it.
+An authoritative SPX projection and raw run token for the requested implementation scope, judged against its governing decisions and specs and the standards of every concern skill the artifact registry selects for its changed paths, carrying `terminalStatus` (`approved` or `rejected`), the findings on touched text — each naming the artifact, the violated rule, and observed-versus-expected evidence — and every other finding returned as `filed`. A run that cannot reach that projection yields a `BLOCKED` diagnostic naming the request failure, command failure, or absent prerequisite that stopped it.
 
 </objective>
 
@@ -30,6 +30,8 @@ An authoritative SPX projection and raw run token for the requested implementati
 - NEVER select a skill from the installed skill inventory, and NEVER invoke a skill to discover whether a kind is installed — the registry selection in the run's sealed start input is the only selection source; the inventory this context carries decides only whether a selected skill runs or is recorded as `missing-skill`, and a failed invocation is not selection evidence.
 - ALWAYS record coverage as `<coverage_model>` states; a run that narrows a set or records a unit only where it found something states its findings as its coverage.
 - NEVER let a raised finding or a rejected terminal status shorten the inspection: rejection is a verdict about what was inspected, never permission to leave a concern or a resolved path unrecorded.
+- NEVER reject a changeset for a finding outside touched text, and NEVER let a finding's severity decide the verdict — classify every returned finding under `<touched_text>` before recording it, record only a finding on touched text, and return each other finding as `filed`.
+- NEVER raise a recorded finding's severity, or let a `filed` finding start to reject, unless the run names a changed basis under `<touched_text>`.
 - ALWAYS start the verification run after resolving the target's Git metadata and validating the run-driver identity, before reading changed project file bodies or loading concern standards — every substantive project inspection and concern result belongs to the open run.
 
 </constraints>
@@ -60,7 +62,8 @@ Run these stages in order. Each names what holds before the next begins, and
    `base..head` scope, re-issuing a truncated or partial read in bounded
    ranges until the body is complete, per the subject-body constraint.
 6. **Record.** Hold each unit planned until its concern returns a final result,
-   then persist per `<coverage_model>`. NEVER accept a finding raised before
+   classify each returned finding under `<touched_text>`, then persist per
+   `<coverage_model>`. NEVER accept a finding raised before
    stage 3 loaded that concern's standards and overlays — withdraw it.
 7. **Reconcile, then finish.** Run the bundled reconciler; `finish` is
    reachable only from its zero exit:
@@ -397,7 +400,7 @@ Each expected unit carries the scope payload in `<verification_run_contract>`: o
 - A concern skill returns its result to the run driver and never writes SPX state itself.
 - After a concern returns, queue one path-scoped row per inspected path, carrying a stable path-scoped unit id, the exact path in `subject`, and `coverageStatus: audited`. NEVER record fewer rows than the concern returned paths, and NEVER collapse several inspected paths into one representative row — the recorded subject set is the evidence that the inspection happened, so a reduced set is an unverifiable claim.
 - Queue that concern's complete scope rows BEFORE any of its findings. A finding is recorded against coverage already accepted, never in place of it; recording a row only where a finding landed states the findings as the coverage.
-- Queue each returned finding after those scope rows, associated with its matching path-scoped unit.
+- Queue each returned finding on touched text after those scope rows, associated with its matching path-scoped unit. A finding outside touched text is queued nowhere: it is returned as `filed` under `<verdict_format>`.
 - Persist queued units one `spx verification run scope add` command at a time, ordered by the order each kind first appears in the selection, then concern order `code`, `tests`, `architecture`, preserving each command result before the next mutation.
 - Derive the concern's finding count from the accepted finding rows; NEVER emit a custom count SPX discards.
 - A concern returning no complete result for a required unit MUST name the failed operation or absent prerequisite. When it names neither, drive the concern to a final result rather than recording a non-audited status.
@@ -415,9 +418,25 @@ The composition contract is the plugin-qualified skill name the selection carrie
 
 </skill_map>
 
+<touched_text>
+
+Touched text is a line the resolved `base..head` scope adds or changes — found by comparing each subject's head-side body with its base-side body, read as `<request_contract>` states, and for an advisory target also the live modifications — extended to its enclosing sentence, assertion, rule, or declaration, plus the text the change invalidates:
+
+- text that cites, quotes, restates, or depends on changed text and now disagrees with it;
+- a rule a changed line newly violates in another file;
+- generated output whose source changed.
+
+Classify each finding a concern returns by its `location`: a finding on touched text is recorded and rejects; a finding on any other text is standing and is returned as `filed`. A finding's severity labels its defect and never decides the verdict: the run approves when no finding on touched text exists, whatever standing findings it reports.
+
+A finding is identified by its finding key, `<stable-scope-key>:<rule>`, whose rule segment is the concern's rule identifier. The key names the unit and rule and never a line number, so the same finding carries the same key in every run and on every head, and two runs produced the same finding exactly when their keys are equal.
+
+A finding keeps the severity and disposition recorded for its key — in the governing node's `ISSUES.md` or the evidence the run loaded — across runs. Its severity rises, or a `filed` finding starts to reject, only when the run names one changed basis in that finding's `evidence`: the text now lies in the diff, the change invalidates it, or the standard's catalog changed the rule or its severity. A run that names no basis returns the finding with its recorded severity and disposition.
+
+</touched_text>
+
 <finding_model>
 
-Record each accepted concern finding through `spx verification run finding add`, using the finding payload shape in `<verification_run_contract>`; its `producerIdentity` matches the coverage unit's `expectedProducer`. Finding identity for convergence is content and stable producer identity, not plugin version, so a version change preserves provenance without making the same finding look new.
+Record each accepted concern finding on touched text through `spx verification run finding add`, using the finding payload shape in `<verification_run_contract>`; its `producerIdentity` matches the coverage unit's `expectedProducer`. Finding identity for convergence is content and stable producer identity, not plugin version, so a version change preserves provenance without making the same finding look new.
 
 </finding_model>
 
@@ -425,7 +444,7 @@ Record each accepted concern finding through `spx verification run finding add`,
 
 Finish the run only after the stage 7 reconciler exits zero. Record missing required skills, unsupported paths claimed by a selected kind, finding counts, and deterministic verification state in accepted scope and finding payload fields instead of terminal metadata.
 
-Compute the terminal status from accepted coverage and finding evidence: `approved` when every required non-gap unit is `audited` or `not-applicable` and no finding exists; `rejected` when a required unit is uncovered or any finding exists. Pass that evidence-derived value through `finish --terminal-status`. Do not pass terminal metadata for audit runs; the run's coverage and findings already carry the facts behind the terminal value.
+Compute the terminal status from accepted coverage and finding evidence: `approved` when every required non-gap unit is `audited` or `not-applicable` and no finding on touched text exists; `rejected` when a required unit is uncovered or any finding on touched text exists. A `filed` finding is never recorded through `finding add`, so it changes neither value. Pass that evidence-derived value through `finish --terminal-status`. Do not pass terminal metadata for audit runs; the run's coverage and findings already carry the facts behind the terminal value.
 
 If SPX rejects terminal status, report the rejected command and stderr as the audit result. Do not manufacture a prose fallback.
 
@@ -472,6 +491,14 @@ the failure evidence — a stale-base refusal is read from its exit code and std
 
 Each finding row names every field of the finding payload shape in `<verification_run_contract>`, so a reader sees the producer, unit, rule, severity, location, message, and observed-versus-expected evidence without opening the journal.
 
+After the projection, return each `filed` finding on its own line, or `filed: none`:
+
+```text
+filed: <finding-key> | rule: <rule> | severity: <blocking|debt> | run: <run-token> | range: <base>..<head>
+```
+
+The line carries the key, the rule identifier, the run token, and the diff range that shows the finding lies outside the change, so the Author records it once from this response.
+
 The rendered SPX projection is the inspection surface. Do not hand-format a competing verdict when `spx verification run render` succeeds.
 
 </verdict_format>
@@ -488,7 +515,8 @@ boundary; preserve the exact diagnostic and apply the no-retry rule, since these
 
 - The verdict covers every concern skill the registry selects for the supplied scope: the code, tests, and architecture concerns of every selected kind.
 - A missing required concern skill after run start appears as `missing-skill` rejected coverage in the projection, and a blocked run names the exact malformed request field or failed SPX command that prevented a valid completed projection; the projection's `terminalStatus` is the sole determination.
-- Every rejected finding is falsifiable: it names the stable producer identity, unit, violated rule or principle, severity, location, message, and observed-versus-expected evidence.
+- Every recorded finding lies on touched text, and every other finding appears as a `filed` line with its key, rule identifier, run token, and diff range; a standing finding rejects no run, and a recorded finding's severity changes only on a named changed basis.
+- Every recorded finding is falsifiable: it names the stable producer identity, unit, violated rule or principle, severity, location, message, and observed-versus-expected evidence.
 - Every missing-skill, unsupported-path, and accounting unit appears in the rendered projection rather than in prose, and each audited concern preserves its complete inspected-path set as path-scoped units whose `subject` fields are the exact paths, audited only after that concern completes, with finding counts derived from accepted finding rows rather than a custom field.
 - The same request, committed scope, normalized live file list, and installed plugin versions produce the same coverage units, finding identities, and terminal determination.
 - Every gate-eligible run addresses an exact committed head with no live-file additions and established passing deterministic evidence; an explicit `worktree:` target includes the complete discovered modified and untracked path list and supplies no reusable gate evidence.

@@ -10,6 +10,12 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.104.6
+
+### Changed
+
+- **`/audit-implementation` rejects a changeset only for a finding on touched text and returns every other finding as `filed`.** Touched text is a line the `base..head` scope adds or changes, extended to its enclosing sentence, assertion, rule, or declaration, plus the text the change invalidates: text that cites, quotes, restates, or depends on changed text and now disagrees with it, a rule a changed line newly violates in another file, and generated output whose source changed. The run records only a finding on touched text, so the sealed projection's `terminalStatus` is `approved` when no such finding exists, whatever standing findings the concerns report. After the projection, the response lists each other finding on a `filed:` line carrying its key, rule identifier, run token, and the diff range showing it lies outside the change, or `filed: none`. A finding's severity never decides the verdict, and a finding keeps the severity and disposition recorded for its key across runs: its severity rises, or a `filed` finding starts to reject, only when the run names a changed basis in the finding's evidence. Before this change, any recorded finding rejected the run, wherever it lay.
+
 ## 0.104.5
 
 ### Changed
