@@ -35,7 +35,7 @@ NEVER load another Maturity's Definition of Ready in the same invocation. Each D
 
 <authority>
 
-The governing methodology is the Change chapter selected by the consumer repository's `spx.config.yaml`. An accepted `methodology.version` is exactly `4.0`, or exactly `4.0.N` with `N` one or more decimal digits representing a non-negative integer. Both accepted forms select `versions/4.0/methodology/change/changes.md` inside the declared `methodology.source`. An absent configuration, absent `methodology` block, the sentinel `installed`, another major or minor line, a non-integer patch component, an extra version component, and a prerelease suffix are invalid selections. The invalid-selection diagnostic contains the observed value — `absent` when no value exists — and the accepted forms `4.0` and `4.0.N`, where `N` is a non-negative integer. These standards operationalize the selected chapter without replacing it. A Change is mutable coordination for one intended Output in one Product; it declares no product, architecture, or methodology truth. Its body carries content only; every state and every authority event is read from the store.
+The governing methodology is the Change chapter selected by the consumer repository's `spx.config.yaml`. An accepted `methodology.version` is exactly `4.0`, or exactly `4.0.N` with `N` one or more decimal digits representing a non-negative integer. Both accepted forms select `versions/4.0/methodology/change/changes.md` inside the declared `methodology.source`. An absent configuration, absent `methodology` block, the sentinel `installed`, another major or minor line, a non-integer patch component, an extra version component, and a prerelease suffix are invalid selections. The invalid-selection diagnostic contains the observed value — `absent` when no value exists — and the accepted forms `4.0` and `4.0.N`, where `N` is a non-negative integer. These standards operationalize the selected chapter without replacing it. A Change is mutable coordination for one intended Output in one Product, or in a root that spans Products; it declares no product, architecture, or methodology truth. Its body carries content only; every state and every authority event is read from the store.
 
 </authority>
 
@@ -45,14 +45,15 @@ The governing methodology is the Change chapter selected by the consumer reposit
 
 Every Change begins with YAML front matter containing exactly these required keys:
 
-| Key            | Contract                                                                    |
-| -------------- | --------------------------------------------------------------------------- |
-| `title`        | Non-empty string naming the intended Output.                                |
-| `product`      | Non-empty string naming exactly one owning Product.                         |
-| `maturity`     | `Proposed`, `Framed`, `Sliced`, or `Executable`.                            |
-| `lifecycle`    | `Available`, `Claimed`, `Submitted`, `Applied`, `Refined`, or `Abandoned`.  |
-| `refined_from` | Immutable list of canonical predecessor Change identities; `[]` for a root. |
-| `blocked_by`   | Mutable list of canonical blocker Change identities; `[]` when unblocked.   |
+| Key            | Contract                                                                                                                                                                              |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `title`        | Non-empty string naming the intended Output.                                                                                                                                          |
+| `product`      | Non-empty string naming the one Product that owns the Change; a root whose work spans Products carries none, and every child of a Parent that carries a Product carries that Product. |
+| `maturity`     | `Proposed`, `Framed`, `Sliced`, or `Executable`.                                                                                                                                      |
+| `lifecycle`    | `Available`, `Claimed`, `Submitted`, `Applied`, or `Abandoned`.                                                                                                                       |
+| `refined_from` | Append-only list of canonical identities of the Changes this Change absorbed by a merge; `[]` for a Change that absorbed none.                                                        |
+| `blocked_by`   | Mutable list of canonical blocker Change identities; `[]` when unblocked.                                                                                                             |
+| `parent`       | The canonical identity of the Parent Change in the same store; `null` for a Change with no Parent.                                                                                    |
 
 Each required key appears exactly once. The `compatibility-boundary` rule governs a candidate whose front matter omits, repeats, or adds a key. For a candidate inside the contract, an invalid value type or value is a defect. Store coordinates, issue identities, holder data, timestamps, and verification data stay outside front matter.
 
@@ -64,8 +65,8 @@ The body opens with `## Intent`. Each Maturity adds its sections after the Inten
 | `## Nodes`                | Framed            | `nodes`                |
 | `## Assertion operations` | Framed            | `assertion-operations` |
 | `## Decisions`            | Framed            | `decisions`            |
-| `## Slice`                | Sliced            | `slice`                |
-| `## Activities`           | Executable        | `activities`           |
+| `## Mutations`            | Sliced            | `mutations`            |
+| `## Artifacts`            | Executable        | `artifacts`            |
 
 A known section may stand before the Maturity that first requires it — `## Decisions` holding a Proposed record's open questions, or the sections a higher Maturity added before the Change's Maturity was lowered — and the declared Maturity's Definition of Ready judges such a section only where one of its criteria names it. Every section present stands in this order, appears once, and is a level-two heading; a missing required section, a reordered or duplicated section, and an unknown level-two section are defects. Subsections may refine a section. Front-matter values are never restated or maintained as body lines.
 
@@ -86,6 +87,18 @@ When the Change derives from a raw submission, the Intent restates that submissi
 
 </rule>
 
+<rule id="record-limits">
+
+The title has at most 15 words, each Intent part one to three sentences, `## Decisions` at most 12 rows, and each answer at most two sentences. A record over a limit is a defect that names the section, the limit, and the count.
+
+</rule>
+
+<rule id="change-type">
+
+A Change that names Nodes in `## Nodes` is a Leaf, a Change that another Change names in `parent` is a Parent, and a Change with neither a Parent nor Nodes is a root. A Change never names Nodes while it has a child. The type derives from what the record and the store name and is never stored. A Parent carries neither `## Nodes` nor `## Assertion operations` and never reaches Executable; every child of a Parent that carries a Product carries that Product.
+
+</rule>
+
 <rule id="received-input-boundary">
 
 Preserve the proposal in the proposer's terms while excluding provider conversations, transcripts, prompt copies, cost estimates, resource accounting, routine local commands, and received conversation input from the record. The coordination store owns native issue history. Reusable learning belongs in the owning Product's knowledge root when separately authored.
@@ -94,29 +107,29 @@ Preserve the proposal in the proposer's terms while excluding provider conversat
 
 <rule id="lineage">
 
-A root carries `refined_from: []`. A successor carries every predecessor whose remaining Output it continues. The successor's set is immutable after creation, contains canonical Change identities, and contains no duplicate or self reference.
+`refined_from` is `[]` or the complete append-only set of Changes this Change absorbed by a merge; it contains canonical Change identities and no duplicate or self reference. `parent` is `null` or the canonical identity of the one Parent Change in the same store, and is no self reference.
 
-The predecessor relation is the only authored lineage direction. Derive roots, leaves, successors, and reverse changeset views. NEVER restate lineage in the body or maintain an authoritative successor list. Create every known successor before an authorized Refiner marks a source `Refined`.
+The `refined_from` set and the `parent` value are the only authored lineage directions. Derive roots, Leaves, Parents, children, and reverse changeset views. NEVER restate lineage in the body or maintain an authoritative child list. A split creates every child naming the source in `parent`, and the source drops its `## Nodes` and `## Assertion operations`. A merge closes the absorbed Change `Abandoned` and adds it to the survivor's `refined_from`. A reframe edits the Change in place and lowers its Maturity to `Proposed`. No skill writes or accepts `Refined`.
 
 </rule>
 
 <rule id="blockers">
 
-`blocked_by` names every known Change whose current lineage leaves must reach `Applied` before this Change is unblocked. The list is mutable, contains canonical Change identities, and contains no duplicate or self reference. A blocker cycle prevents Sliced and Executable Maturity.
+`blocked_by` names every known Change that must close `Applied`, or resolve through the Change that absorbed it, before this Change is unblocked. The list is mutable, contains canonical Change identities, and contains no duplicate or self reference. A blocker cycle prevents Sliced and Executable Maturity.
 
-When a blocker becomes `Refined`, follow its successors. Applied leaves satisfy the dependency; active leaves remain blockers; an Abandoned leaf returns the dependent Change to refinement. Refinement may continue while blockers remain unresolved. Execution requires an Executable, Claimed lineage leaf with no unresolved blocker and every predecessor Refined.
+A blocker closed `Applied` satisfies the dependency; an open blocker remains a blocker; a blocker closed `Abandoned` that another Change absorbed resolves through the Change that absorbed it, which satisfies the dependency once it closes `Applied`; a blocker closed `Abandoned` that no Change absorbed returns the dependent Change to refinement. Refinement may continue while blockers remain unresolved. Execution requires a Claimed, Executable Leaf whose every predecessor is closed and whose blockers are resolved.
 
 </rule>
 
 <rule id="nodes">
 
-`## Nodes` is a table with one row per affected or intended Node, carrying its full `spx/...` path, its target malleability, and, from Executable, its required state. A Node's target malleability is the value the Node declares once the Change is applied: `spec`, `verification`, or `implementation`, an absent field meaning `implementation`. A row whose target malleability differs from the Node's declared malleability also names the declared value. The malleability order from most to least malleable is `spec`, `verification`, `implementation`; the least malleable target is the row value latest in that order. Target malleability is a per-Node fact; the record carries no Change-wide target. Existing paths resolve; an intended Node is labeled as intended.
+`## Nodes` is a table with one row per affected or intended Node, carrying its full `spx/...` path, its Malleability before, its Malleability after, and, from Executable, its Required state. Malleability before is the value the Node declares before the Change, empty for a Node the Change creates. Malleability after is the value the Node declares once the Change is applied: `spec`, `verification`, or `implementation`, an absent field meaning `implementation`. The malleability order from most to least malleable is `spec`, `verification`, `implementation`; the least malleable target is the Malleability after value latest in that order. Malleability is a per-Node fact; the record carries no Change-wide target. Existing paths resolve; an intended Node is labeled as intended.
 
 </rule>
 
 <rule id="assertion-operations">
 
-`## Assertion operations` names each addition, amendment, or removal of an assertion or decision rule by its owning Node or decision record and its exact target. A Change never overrides a Decision or Assertion; Activities author truth changes before dependent implementation.
+`## Assertion operations` names each addition, amendment, or removal of an assertion or decision rule by its owning Node or decision record and its exact target. A Change never overrides a Decision or Assertion; `## Mutations` rows author truth changes before dependent implementation.
 
 </rule>
 
@@ -126,17 +139,17 @@ When a blocker becomes `Refined`, follow its successors. Applied leaves satisfy 
 
 </rule>
 
-<rule id="slice">
+<rule id="mutations">
 
-`## Slice` names the one repository, the one vertical slice — one coherent, independently integrable unit whose dependencies and sequence are resolved — and its observable check.
+`## Mutations` is a table with one row per Node, in execution order, carrying the transition the Node undergoes — add, modify, or implement. It names the one repository and the one observable check of the slice: one coherent, independently integrable unit whose dependencies and sequence are resolved. From Executable, each row also names the results the merge composition selects for its Node with the producer of each, and the row of a Node that owns an added or changed decision record names that record's audit.
 
 </rule>
 
-<rule id="activities">
+<rule id="artifacts">
 
-`## Activities` contains the mutable ordered execution plan another holder needs to coordinate. Each Activity names one result on one Node and the round that produces it.
+`## Artifacts` links the audited content of every Node the Change adds, modifies, or implements. Each link is held where it resolves in every execution environment.
 
-Routine command logs, run tokens, verdicts, findings, verification history, and session narrative stay outside the Change. A Handoff carries transient continuation: branch or changeset, completed and next Activities, blockers, and non-obvious hazards.
+Routine command logs, run tokens, verdicts, findings, verification history, and session narrative stay outside the Change. A Handoff carries transient continuation: branch or changeset, the completed Mutation rows and the next one, blockers, and non-obvious hazards.
 
 </rule>
 
@@ -148,7 +161,7 @@ The body carries no attestation, accountable-person, priority, or overrule text.
 
 <rule id="maturity-and-authority">
 
-Maturity records refinement readiness and may move backward when its Definition of Ready becomes false. Lifecycle records holding, submission, or termination and changes independently. Applied, Refined, and Abandoned are terminal Lifecycle values.
+Maturity records refinement readiness and may move backward when its Definition of Ready becomes false. Lifecycle records holding, submission, or termination and changes independently. Applied and Abandoned are terminal Lifecycle values.
 
 Maturity advances past Proposed, Framed, and Sliced only when the target level's complete Definition of Ready holds and the store shows the Product's Maintainer's move of the Change out of `Submitted` at the Maturity it leaves. At Proposed that move is the priority decision; at Framed it attests that the Change captures the operator's intent; at Sliced it confirms the slice. The Refiner advances Sliced to Executable inside the authority of the confirmed slice, with no further move, by resolving implementation detail; a reopened product or architecture judgment blocks Executable advancement.
 
@@ -162,7 +175,7 @@ A Claimed holder writes a Handoff and releases the Change before lowering Maturi
 
 <rule id="store-independence">
 
-Each of the six fields has exactly one home in each place that holds the Change, and no place writes a field twice. The local draft carries all six as its front matter above the body. A coordination store holds each field in one native feature assigned to that field for that store, and its body holds the Intent and the sections the Maturity adds, with no front matter and no lineage line. Persistence writes each field to its home and the body to the store body, reads each back unchanged, and reports success only then; importing a published Change into a draft reads each field from its home. A coordination-store limit never shapes the record.
+Each of the seven fields has exactly one home in each place that holds the Change, and no place writes a field twice. The local draft carries all seven as its front matter above the body. A coordination store holds each field in one native feature assigned to that field for that store, and its body holds the Intent and the sections the Maturity adds, with no front matter and no lineage line. Persistence writes each field to its home and the body to the store body, reads each back unchanged, and reports success only then; importing a published Change into a draft reads each field from its home. A coordination-store limit never shapes the record.
 
 Store commands, provider identifiers, issue and field identifiers, revision selectors, concurrency observations, holder observations, field-change events, and Lifecycle comments are store state outside the record.
 
@@ -170,9 +183,9 @@ Store commands, provider identifiers, issue and field identifiers, revision sele
 
 <rule id="compatibility-boundary">
 
-Inventory the front-matter key occurrences before interpreting the body. A candidate is inside the contract only when it carries each of the six closed-set keys exactly once and no other key, and its body does not open with `# Output`. Stripped front matter, a missing or repeated required key, and any extra key — including `change_ref` — place the candidate outside the contract, and so does a body that opens with `# Output`.
+Inventory the front-matter key occurrences before interpreting the body. A candidate is inside the contract only when it carries each of the seven closed-set keys exactly once and no other key, and its body does not open with `# Output`. Stripped front matter, a missing or repeated required key, and any extra key — including `change_ref` — place the candidate outside the contract, and so does a body that opens with `# Output`.
 
-A candidate outside the contract receives no judgment, migration, alias, inferred front matter, or body-line lineage interpretation; report it as outside the contract with the expected and observed key inventories, or with the observed opening heading. A record in the `# Output` form is never converted in place: its next revision authors the record anew in the Intent form from the proposal it carries, and only that newly authored record is judged against the contract. No revision preserves the `# Output` form. A candidate inside the contract remains judgeable when a value, section, body line, or Maturity-specific requirement violates the record contract or the selected Definition of Ready.
+A candidate outside the contract receives no judgment, migration, alias, inferred front matter, or body-line lineage interpretation; report it as outside the contract with the expected and observed key inventories, or with the observed opening heading. A record in the `# Output` form is never converted in place: its next revision authors the record anew in the Intent form from the proposal it carries, and only that newly authored record is judged against the contract. No revision preserves the `# Output` form. A candidate inside the contract remains judgeable when a value, section, body line, or Maturity-specific requirement violates the record contract or the selected Definition of Ready. A record that carries `## Slice` or `## Activities` takes its Maturity's sections at its next revision through `author-change`, before its next execution.
 
 </rule>
 
@@ -183,6 +196,6 @@ A candidate outside the contract receives no judgment, migration, alias, inferre
 - Each record rule is stated once, in `<record_rules>`; a Definition of Ready criterion cites the record rule or, at Executable, the `<merge_composition>` it applies, and adds only the level's own condition.
 - Every loaded criterion has a stable identifier and can be judged from the complete record, the store state the `Lifecycle` reads return, and necessary repository references.
 - The authority for each Maturity advance is read from the store's field-change events and confirmation comments under `authority-read`, and no rule or criterion requires body authority text.
-- The four Maturity values, the six Lifecycle values, lineage, blockers, authority, product truth, and continuation remain distinct.
+- The four Maturity values, the five Lifecycle values, lineage, the Leaf, Parent, and root types, blockers, authority, product truth, and continuation remain distinct.
 
 </success_criteria>

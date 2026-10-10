@@ -10,6 +10,16 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.104.9
+
+### Breaking
+
+- **`change-standards` states a seven-key Change record, and a record with the six-key front matter is outside the contract.** The closed key set gains `parent`, the canonical identity of the Parent Change or `null`. `lifecycle` takes `Available`, `Claimed`, `Submitted`, `Applied`, or `Abandoned`: no skill writes or accepts `Refined`, and `refined_from` lists the Changes this Change absorbed by a merge rather than its predecessors. Sliced records carry `## Mutations` and Executable records add `## Artifacts` in place of `## Slice` and `## Activities`; a record that carries the old sections takes the new ones at its next revision through `/author-change`. Before this change, the standards required the six keys, admitted `Refined`, and required `## Slice` and `## Activities`.
+
+### Changed
+
+- **`change-standards` types each Change as a Leaf, a Parent, or a root and bounds the record's length.** A Change that names Nodes is a Leaf, a Change that another Change names in `parent` is a Parent that carries neither `## Nodes` nor `## Assertion operations` and never reaches Executable, and a Change with neither is a root, which may carry no Product. `## Nodes` states each Node's Malleability before and after the Change. The title has at most 15 words, each Intent part one to three sentences, `## Decisions` at most 12 rows, and each answer at most two sentences. The Lifecycle reference reads children from the `Parent` issue field, names the completed Mutation rows and the next one in the Handoff, and closes a Leaf `Applied` only once its Artifacts links are integrated, its Nodes are at their required states, and the Intent's Evidence is met, and a Parent only once its last child closed `Applied`.
+
 ## 0.104.8
 
 ### Changed
