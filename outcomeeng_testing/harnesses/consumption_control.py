@@ -75,7 +75,10 @@ ScheduleField = modules()[2].ScheduleField
 
 
 def fixture() -> dict[str, Any]:
-    return json.loads((FIXTURES / "assistant.json").read_text())
+    value = json.loads((FIXTURES / "assistant.json").read_text())
+    if not isinstance(value, dict):
+        raise TypeError("Transcript fixture must be a JSON object")
+    return value
 
 
 def published_number(value: int | float | Decimal | None, style: str) -> str:
@@ -345,7 +348,8 @@ def collection_observation(work: Workspace) -> CollectionObservation:
     child.parent.mkdir(parents=True)
     child.write_bytes(work.payload)
     with accounting.Evidence(work.config) as evidence:
-        for _ in range(4):
+        collected = evidence.collect(work.end)
+        for _ in range(1, 4):
             collected = evidence.collect(work.end)
         measured = evidence.measure(work.start, work.end)
         stamp = accounting.timestamp(fixture()[AccountingField.TIMESTAMP])
