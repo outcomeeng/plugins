@@ -1270,9 +1270,7 @@ def _read_relations(
                 "relations page carries no nodes array and pageInfo object",
             )
         for entry in nodes:
-            numbered = (
-                entry.get(StoreField.NUMBER) if isinstance(entry, dict) else None
-            )
+            numbered = entry.get(StoreField.NUMBER) if isinstance(entry, dict) else None
             if not isinstance(numbered, int):
                 raise Blocked(
                     BlockReason.UNREADABLE_OUTPUT,
