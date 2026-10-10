@@ -327,12 +327,14 @@ _PUBLISHED_QUERY: Final = (
     "query($o:String!,$r:String!,$n:Int!)"
     f"{{repository(owner:$o,name:$r){{issue(number:$n){{{StoreField.BODY}}}}}}}"
 )
+ISSUE_FIELD_VALUES_PAGE_SIZE: Final = 50
 _RELATIONS_QUERY: Final = (
     "query($o:String!,$r:String!,$after:String)"
     f"{{repository(owner:$o,name:$r){{{StoreField.ISSUES}"
     f"(first:{AUTHORITY_PAGE_SIZE},after:$after)"
-    "{pageInfo{hasNextPage endCursor} nodes{number issueFieldValues(first:20)"
-    "{nodes{... on IssueFieldNumberValue{value field{... on IssueFieldNumber{name}}}"
+    "{pageInfo{hasNextPage endCursor} nodes{number "
+    f"issueFieldValues(first:{ISSUE_FIELD_VALUES_PAGE_SIZE})"
+    "{pageInfo{hasNextPage} nodes{... on IssueFieldNumberValue{value field{... on IssueFieldNumber{name}}}"
     " ... on IssueFieldSingleSelectValue{name field{... on IssueFieldSingleSelect"
     "{name}}}}}}}}}"
 )
@@ -1225,12 +1227,24 @@ def _field_values(node: Mapping[str, object]) -> dict[str, object]:
     values: dict[str, object] = {}
     container = node.get(StoreField.ISSUE_FIELD_VALUES)
     entries = container.get(StoreField.NODES) if isinstance(container, dict) else None
+    info = container.get(StoreField.PAGE_INFO) if isinstance(container, dict) else None
+    if isinstance(info, dict) and info.get(StoreField.HAS_NEXT_PAGE) is True:
+        bound = f"{ISSUE_FIELD_VALUES_PAGE_SIZE} issue field values per issue"
+        raise Blocked(
+            BlockReason.PAGE_BOUND_REACHED,
+            f"the issue field values read is not complete at {bound}",
+            evidence={ResultField.BOUND: bound},
+        )
     for entry in entries if isinstance(entries, list) else []:
         field = entry.get("field") if isinstance(entry, dict) else None
         name = field.get(StoreField.NAME) if isinstance(field, dict) else None
         if name == PRODUCT_FIELD:
             values[PRODUCT_FIELD] = entry.get(StoreField.NAME)
-        elif name == PARENT_FIELD and isinstance(entry.get(StoreField.VALUE), float):
+        elif (
+            name == PARENT_FIELD
+            and isinstance(entry.get(StoreField.VALUE), int | float)
+            and not isinstance(entry.get(StoreField.VALUE), bool)
+        ):
             values[PARENT_FIELD] = int(entry[StoreField.VALUE])
     return values
 
