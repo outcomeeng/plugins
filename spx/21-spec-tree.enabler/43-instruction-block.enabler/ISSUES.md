@@ -198,7 +198,7 @@ Run `2026-10-06_18-35-55-521-02765947702d` raised the same finding as `script-va
 
 **Settlement condition.** One Change decides the three classes, names each one's outcome in the router template, the `<guard_block_partition>` reference, the pinned requirement tuples in `outcomeeng/distribution/instruction_block.py`, and the instruction-block and skills spec assertions together, and regenerates the shipped trees.
 
-## Four Codex-router assertions tag authored router prose as `[test]` evidence
+## Four Codex-router assertions tag authored router prose as `[test]` evidence, with two further audit findings
 
 **Evidence.** The spec audit of `spx/21-spec-tree.enabler/43-instruction-block.enabler/instruction-block.md` rejected four assertions under rule `prose-coupling`. Each claim's subject is what the authored Codex router text states, and a `[test]` tag cannot verify authored router prose: the linked test reads the rendered prose and asserts on it, which proves the prose was authored and no code behavior. The tag belongs in `[eval]` or `[audit]`.
 
@@ -209,6 +209,12 @@ The four assertions, verbatim, with their linked test files:
 - ALWAYS: the Codex router identifies plugin-owned checkout agent definitions whose invoked skills live in the selected agent home as a scope split, directs removal only for byte-identical plugin copies, and directs inspection of changed or unrecognized copies as shadowing collisions ([test](tests/test_agent_registry.compliance.l1.py)) — linked test file `tests/test_agent_registry.compliance.l1.py`.
 - ALWAYS: the Codex router applies Verifier spawning only to the Author's main conversation; an already-dispatched Verifier executes its configured methodology directly and never searches for or launches another Verifier through typed-agent discovery or an external agent CLI ([test](tests/test_instruction_block.compliance.l1.py)) — linked test file `tests/test_instruction_block.compliance.l1.py`.
 
-**Impact.** Passing couples to pinned wording while the claims receive no behavioral verdict.
+A fifth assertion belongs to the same prose-coupling class. The spec audit of this node at head `fdf3e4e5a268f8ec0fa953db792b7f86d44d36e2` rejected the operator-question assertion (spec line 108) under rule `prose-coupling`, with the message "The claim's subject is the instruction wording of both authored routers, so [test] cannot verify it. The tag belongs in [eval] or [audit]." Its evidence, quoted from the audit:
 
-**Settlement condition.** The verification form for pinned router prose is decided once, as the entry above states, and the four assertions take that form in the same changeset.
+- ALWAYS: when the operator asks a question, both harness routers revoke mutation privileges, stop destructive or state-changing non-verification processes ... ([test](tests/test_instruction_block.compliance.l1.py)) — linked test file `tests/test_instruction_block.compliance.l1.py`.
+
+**Second class: temporal voice.** The same audit rejected the drift-gate breach assertion (spec line 94) under rule `temporal-voice`, a different class from prose-coupling. Quoted text: "ALWAYS: the drift gate reports a breach the checked change did not introduce and fails a regression above the ceiling by a surface that previously fit". Message: "\"previously fit\" describes a prior state and history, so the rule is not stated as permanent product truth." Severity `REJECT`.
+
+**Impact.** Passing couples to pinned wording while the claims receive no behavioral verdict, and the drift-gate assertion records history rather than permanent truth.
+
+**Settlement condition.** The verification form for pinned router prose is decided once, as the entry above states, and the four assertions and the operator-question assertion take that form in the same changeset; the drift-gate assertion states its rule atemporally.
