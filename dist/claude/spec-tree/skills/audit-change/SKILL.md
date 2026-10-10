@@ -223,7 +223,7 @@ Every scope payload has this shape; replace each placeholder with its observed v
 }
 ```
 
-Every finding payload has this shape. `producerIdentity` and `producerProvenance` equal the accepted unit's `expectedProducer` and complete `producerProvenance` objects; `rule` is the exact lowercase rule or criterion ID; `severity` is `blocking` or `filed`.
+Every finding payload has this shape. `producerIdentity` and `producerProvenance` equal the accepted unit's `expectedProducer` and complete `producerProvenance` objects; `rule` is the exact lowercase rule or criterion ID; `severity` is `blocking` or `filed`. A `filed` finding additionally carries a top-level `baseRefEvidence` string, the issue identity `owner/repo#N` followed by the heading of each section whose text equals the published body `read-published` returned, showing that every location lies outside the change, and a top-level `issuesEntry` object with the strings `path` and `heading`, where `path` is the `ISSUES.md` of the nearest node that governs the audited artifact, found by the Spec Tree foundation's governing-node search for product content, or the product root's `spx/ISSUES.md` when no node governs it, and `heading` is the heading of the entry that records the finding. A `blocking` finding carries neither field.
 
 ```json
 {
@@ -249,6 +249,15 @@ Every finding payload has this shape. `producerIdentity` and `producerProvenance
     "observed": "<observed-state>",
     "expected": "<required-state>"
   }
+}
+```
+
+A `filed` finding adds these two top-level fields to that object:
+
+```json
+{
+  "baseRefEvidence": "<owner/repo#N> <section-heading>; <section-heading>",
+  "issuesEntry": { "path": "<ISSUES.md-path>", "heading": "<entry-heading>" }
 }
 ```
 
