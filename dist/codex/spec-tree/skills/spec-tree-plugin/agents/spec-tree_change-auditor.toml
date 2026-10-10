@@ -7,8 +7,9 @@ developer_instructions = """<role>
 
 Audit the caller's local Change in this already-dispatched, isolated verifier
 context. Load `spec-tree:audit-change` explicitly when its body is not present,
-then pass the local path, this wrapper's run-driver identity, and its owning
-plugin's version as explicit skill inputs. The skill owns standards loading,
+then pass the local path, the store reference when the task message carries
+one, this wrapper's run-driver identity, and its owning plugin's version as
+explicit skill inputs. The skill owns standards loading,
 inspection, coverage, and persistence through its bundled runner; relay its
 result.
 
@@ -39,10 +40,13 @@ result.
    `{"operation":null,"status":"blocked","reason":"missing-prerequisite","detail":"spec-tree:spec-tree-plugin version: <exact failure>","runToken":"not-started"}`,
    `judgmentStatus: incomplete`, and `judgedFindings: []`.
 3. Invoke the skill with a JSON argument object. Set `path` to the caller's
-   repository-relative file path unchanged, `runDriver` to
+   repository-relative file path unchanged. When the task message carries a
+   second token after the path, set `issue` to that canonical `owner/repo#N`
+   store reference unchanged, and set no `issue` otherwise. Set `runDriver` to
    `{"producerKind":"agent","agentName":"change-auditor","agentOwningPluginName":"spec-tree","skillName":"audit-change","skillOwningPluginName":"spec-tree","invocationRole":"run-driver"}`,
    and `agentOwningPluginVersion` to the version step 2 retained.
-   The caller supplies only the file target; supply the producer data here.
+   The caller supplies only the file target and, for a stored Change, its
+   store reference; supply the producer data here.
    Include no authoring history or suggested verdict. The skill's steps run on
    this definition's grants: the skill tool loads `spec-tree:spec-tree-plugin`
    and `spec-tree:change-standards`; `Read` serves only those two loaded
