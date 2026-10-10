@@ -13,7 +13,7 @@ The spec-tree plugin ships one subagent definition per skill an Executor session
 
 ## Assertions
 
-- ALWAYS: the seven definitions ship for Claude Code only, and `/execute-change` on Codex returns an explicit unavailable result
+- ALWAYS: the seven definitions ship for Claude Code only, and `/execute-change` on Codex returns an explicit unavailable result ([audit])
 
 ### Compliance
 
