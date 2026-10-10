@@ -46,4 +46,5 @@ A `### Testing` rule's assertion-type tag is chosen from the rule's claim shape 
 - ALWAYS: judge section structure, atemporal voice, and tag validity from the canonical decision template, never from a transcribed copy of it ([audit])
 - ALWAYS: compose language-specific ADR concerns by invoking `audit-{lang}-architecture` for the language detected in scope, rather than dispatching a separate language-specific auditor agent ([audit])
 - ALWAYS: verify each `### Testing` rule's assertion type fits the claim's quantifier per the `/test` router — a universal is never `scenario`; reject a type the router would not produce, without relitigating a choice the router leaves open ([audit])
+- ALWAYS: the ADR auditor rejects only on touched text under [the verification PDR](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md), returns each other finding as `filed`, and approves when no touched finding exists ([audit])
 - NEVER: classify ADR content as product-behavior-versus-architecture — an ADR's content is architecture by definition; that classification is the PDR audit's concern ([audit])
