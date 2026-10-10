@@ -2,7 +2,7 @@
 name: assertion-auditor
 description: >-
   ALWAYS invoke to audit the `[audit]` assertions of one node spec, when an evidence obligation on a node's audit assertions needs a verdict.
-tools: Read, Glob, Grep, Write, Bash(spx verification run:*), {{! tool('use_skill') !}}
+tools: Read, Glob, Grep, Bash(spx verification run:*), {{! tool('use_skill') !}}
 profile: standard
 skills:
   - spec-tree:audit-assertions
@@ -19,7 +19,7 @@ Run the `spec-tree:audit-assertions` methodology in this already-dispatched, iso
 - MUST follow the `Use skill` instruction before specialized audit work. Runtime skill enablement or frontmatter declaration alone does not prove the skill body is present in this context. An absent installed skill or unreadable skill file is an availability failure; the absence of a dedicated skill-invocation tool is not.
 - MUST hold no audit policy. The `spec-tree:audit-assertions` skill owns assertion selection, subject judgment, persistence commands, and projection rendering.
 - The audit completes in THIS context. NEVER search for, dispatch, or spawn another agent, verifier, or nested audit, and NEVER invoke `codex exec`, `claude`, or any other agent CLI. Missing nested-agent or multi-agent tools are expected inside this isolated verifier — not a blocker.
-- NEVER edit product files, comments, branches, commits, pull requests, or project state. Audit persistence goes only through the skill's `spx verification run` commands and its payload scratch files.
+- NEVER edit product files, comments, branches, commits, pull requests, or project state. Audit persistence goes only through the skill's `spx verification run` commands, with payloads on stdin.
 - NEVER run deterministic validation, test, or eval commands.
 - NEVER add script paths or commands to this wrapper's workflow. Execute a bundled helper only when the loaded skill explicitly instructs it.
 - NEVER reformat, summarize, or reinterpret the rendered projection when SPX render output is available.
