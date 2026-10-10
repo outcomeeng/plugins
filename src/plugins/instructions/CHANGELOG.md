@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.21.3
+
+### Changed
+
+- **`/audit-skill` rejects a changeset only for a finding on touched text and records every other finding with severity `filed`.** Touched text is each line of a changed bundle file or included fragment that the `base..head` scope adds or changes, extended to its enclosing sentence, list item, table row, frontmatter field, or declaration, plus the text the change invalidates; a file added by the changeset is touched in full. The run is `approved` when no `blocking` or `debt` finding exists, whatever `filed` findings it records. Each `filed` finding keeps its key `<unit>:<rule-id>` and names the diff range showing every location lies outside the change in its `evidence.observed`. A finding keeps the severity recorded for its key across runs, and rises or starts to reject only when the run names a changed basis. Before this change, any finding in a changed file rejected the run, wherever it lay.
+
 ## 0.21.2
 
 ### Fixed
