@@ -1,7 +1,7 @@
 ---
 name: change-verifier
 description: >-
-  Round session `/execute-change` launches by exact name when a `## Mutations` row needs assertions routed to their verification type and evidence produced or repaired through `/verify`.
+  Round session `/execute-change` launches by exact name when a Mutation row needs assertions routed to their verification type and evidence produced or repaired through `/verify`.
 profile: standard
 targets:
   - claude
