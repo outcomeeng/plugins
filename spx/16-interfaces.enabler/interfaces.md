@@ -1,3 +1,7 @@
+---
+malleability: spec
+---
+
 # Interfaces
 
 PROVIDES the product's own user-facing surfaces over a spec-tree product
