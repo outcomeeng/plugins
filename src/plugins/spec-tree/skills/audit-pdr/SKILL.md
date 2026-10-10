@@ -10,7 +10,7 @@ allowed-tools: Read, Grep, Glob, {{! tool('use_skill') !}}, Bash(git branch --sh
 
 <objective>
 
-A verdict on one PDR — APPROVED or REJECTED, with findings naming the section, rule, and evidence for content classification, property quality, declaration form and tag fitness, atemporal voice, or consistency with the product spec and ancestor PDRs.
+A verdict on one PDR — APPROVED or REJECTED, with findings on touched text naming the section, rule, and evidence for content classification, property quality, declaration form and tag fitness, atemporal voice, or consistency with the product spec and ancestor PDRs, and every other finding returned as `FILED`.
 
 </objective>
 
@@ -36,6 +36,7 @@ PDRs state atemporal product truth without historical context. No references to 
 - ALWAYS read the PDR evidence model before judging — derive the rule set from it, never from memory.
 - ALWAYS name the section, the violated rule, and the evidence in every REJECT finding.
 - NEVER issue a finding the cited rule does not support — drop an unbacked finding rather than reject the PDR for it.
+- NEVER reject on text the changeset leaves unchanged and does not invalidate — return that finding as `FILED`, and NEVER raise a recorded finding's severity or let a `FILED` finding start to reject unless the run names a changed basis. `${CLAUDE_SKILL_DIR}/references/touched-text.md` defines touched text, the finding key, and the `FILED` form.
 
 </constraints>
 
@@ -60,6 +61,8 @@ Do not proceed without live `<SPEC_TREE_FOUNDATION>` and `<SPEC_TREE_CONTEXT>` m
 **Step 2: Read the PDR**
 
 Read the PDR under audit. Identify its sections: the opening decision statement, Rationale, Product properties, and Verification.
+
+Resolve the touched text of the PDR as `${CLAUDE_SKILL_DIR}/references/touched-text.md` states, so Steps 3 to 7 can classify each finding.
 
 Record an absent `## Verification` section as a `REJECT` finding with rule `missing-section` in the `tag-validity` row, marking that row `FAIL`. Name the expected section and identify its absence as evidence. Continue the remaining checks so the verdict covers every evaluable property; an unenforceable PDR cannot receive `APPROVED`.
 
@@ -169,7 +172,7 @@ Compare the PDR against:
 
 **Step 8: Issue verdict**
 
-Scan all findings. If any property fails: REJECTED. Otherwise: APPROVED.
+Classify every finding per `${CLAUDE_SKILL_DIR}/references/touched-text.md`: a finding on touched text keeps severity `REJECT`; every other finding becomes `FILED`. If any property row holds a `REJECT` finding: REJECTED. Otherwise: APPROVED, whatever `FILED` findings the rows carry.
 
 </step>
 
@@ -179,7 +182,7 @@ Scan all findings. If any property fails: REJECTED. Otherwise: APPROVED.
 
 Emit the verdict as a single JSON object. This JSON is the skill's entire output; never a prose or markdown verdict.
 
-The skill's `overall` is `APPROVED` iff every property row is `PASS`; otherwise it is `REJECTED`. A required property that cannot be evaluated is a `FAIL` row with a `REJECT` finding naming the missing evidence. Findings within each row carry severity `REJECT` for blocking violations and `WARNING`/`INFO` for non-blocking observations.
+The skill's `overall` is `APPROVED` iff every property row is `PASS`; otherwise it is `REJECTED`. A required property that cannot be evaluated is a `FAIL` row with a `REJECT` finding naming the missing evidence. Findings within each row carry severity `REJECT` for blocking violations on touched text, `FILED` for a finding outside touched text, and `WARNING`/`INFO` for non-blocking observations. A `FILED` finding fails no row and additionally carries `key` and `range`.
 
 ```json
 {
@@ -197,7 +200,7 @@ The skill's `overall` is `APPROVED` iff every property row is `PASS`; otherwise 
           "rule": "<violation pattern>",
           "evidence": "<quoted artifact evidence>",
           "message": "<one-line detail>",
-          "severity": "REJECT | WARNING | INFO"
+          "severity": "REJECT | FILED | WARNING | INFO"
         }
       ]
     },
@@ -210,7 +213,7 @@ The skill's `overall` is `APPROVED` iff every property row is `PASS`; otherwise 
 }
 ```
 
-Each finding carries `location` (the section or property the objective requires it to name), `rule` (the violation pattern, e.g., `architecture-content`, `invalid-draft-rule`, `invalid-tag`, `test-standards-unavailable`, `assertion-type-mismatch`, `temporal-language`), `evidence` (the quoted artifact evidence), `message` (the one-line detail), and `severity`.
+Each finding carries `location` (the section or property the objective requires it to name), `rule` (the violation pattern, e.g., `architecture-content`, `invalid-draft-rule`, `invalid-tag`, `test-standards-unavailable`, `assertion-type-mismatch`, `temporal-language`), `evidence` (the quoted artifact evidence), `message` (the one-line detail), and `severity`. A passing row carries an empty `findings` array or only `FILED` findings.
 
 </verdict_format>
 
@@ -252,6 +255,7 @@ The verdict is sound when:
 
 - Every PDR rule was judged with none skipped — content classification, property quality (observability, falsifiability, and stability), per-rule tag validity and assertion-type fit, atemporal voice, and consistency (coverage-complete).
 - The verdict states an overall APPROVED/REJECTED, every property row carrying its determination, with no rule left unevaluated.
+- Each REJECT finding lies on touched text, and every finding outside touched text appears as `FILED` with its key and diff range.
 - Each REJECT finding is falsifiable: it names the section, the violated rule, and the evidence — the architecture content wrongly placed, the non-observable, unfalsifiable, or unstable property, absent verification section or rules, the unverifiable rule or mismatched tag, the temporal phrase, or the contradicted product spec or ancestor PDR.
 - An absent or empty Verification section fails `tag-validity`; an unmet property-quality criterion fails `property-quality`. Neither condition can disappear through an empty iteration or receive an overall `APPROVED` verdict.
 - The same PDR yields the same verdict.
