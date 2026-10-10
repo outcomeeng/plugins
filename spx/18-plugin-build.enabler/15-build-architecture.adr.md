@@ -7,7 +7,9 @@ Strong, Executor, and Fast profiles selected in [`spx/15-subagent-execution.pdr.
 harness has its own typed native configuration, including its model and supported
 reasoning controls. A profile resolves directly for the destination harness;
 neither another harness's model alias nor a universal effort field mediates that
-resolution. Authored agents select a profile, defaulting to Standard, and the
+resolution. The owner also holds the prices of the model identities it prices,
+for every usage token class, so the profiles stay the one model inventory.
+Authored agents select a profile, defaulting to Standard, and the
 renderer emits the complete native configuration as one unit. Template requests
 for examples and descriptions select that same unit. Native configuration fields
 are forbidden in authored agent inputs and skill frontmatter; unknown profiles,
@@ -15,7 +17,8 @@ independent overrides, and incompatible configurations fail before output writes
 A source guard covers all of `src/`, including conditional blocks and otherwise
 ignored files, rejecting literal model identifiers and authored assignments of
 native model or reasoning controls. Its vocabulary comes from the configuration
-owner. Ordinary prose words are not configuration assignments.
+owner. Ordinary prose words, a read of a field, and the text of a message are not
+configuration assignments; the guard decides by the syntactic form of the binding.
 
 ## Rationale
 
