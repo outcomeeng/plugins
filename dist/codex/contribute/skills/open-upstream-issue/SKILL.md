@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when filing an issue in a repository the operator does not control — a fork's upstream, or any base whose permission is READ, TRIAGE, or NONE.
   NEVER open an issue against such a repository without this skill.
 argument-hint: "[what was observed]"
-allowed-tools: Read, collaboration.spawn_agent, collaboration.wait_agent, request_user_input, Bash(gh issue create:*), Bash(gh search issues:*), Bash(printf:*)
+allowed-tools: Read, Write, collaboration.spawn_agent, collaboration.wait_agent, request_user_input, Bash(gh issue create:*), Bash(gh search issues:*)
 ---
 
 <objective>
@@ -44,10 +44,9 @@ A claim without a negative control cannot distinguish a defect from a broken mea
 
 **Step 6 — GATE: Review the outward text.** Draft the title and body per `<report_shape>`, then review them — the prose plugin's `prose_prose-auditor` thin agent where installed, `/contribution-standards` `<outward_text>` unassisted where not, stated as such in the report.
 
-**Step 7 — File it.** Interactive sessions pipe the body through a quoted heredoc:
+**Step 7 — File it.** The body is a payload. Write it with the file-write tool to a file in the scratch directory the harness names for this session, under a file name unique to the agent and this issue, then hand that file to `gh`. Never remove it; the harness clears its scratch directory. The file holds:
 
-```bash
-gh issue create --repo "<base>" --title "<title>" --body-file - <<'EOF'
+```text
 <what was observed>
 
 ## Reproduction
@@ -57,16 +56,13 @@ gh issue create --repo "<base>" --title "<title>" --body-file - <<'EOF'
 ## Negative control
 
 <the same method reporting the opposite result>
-EOF
 ```
-
-Programmatic runners that require one physical command line use one `printf` argument per output line piped into the same command:
 
 ```bash
-printf '%s\n' '<what was observed>' '' '## Reproduction' '' '<versions, base commit, exact command>' '' '## Negative control' '' '<the same method reporting the opposite result>' | gh issue create --repo "<base>" --title "<title>" --body-file -
+gh issue create --repo "<base>" --title "<title>" --body-file "<body-file>"
 ```
 
-Never assemble the body through a temporary file, command substitution, or post-hoc repair.
+`--body-file "<body-file>"` delivers the body with real newlines, whatever code spans, quotes, or shell text it carries; a heredoc, pipe, or inline argument is refused by the dangerous-command guard on such text.
 
 **Step 8 — Hand off.** Surface the URL of the issue this pass filed. `/manage-upstream-issue` owns every later pass on the thread, including the first one on an issue Step 3 found rather than filed.
 
@@ -147,7 +143,7 @@ The title names what the run observed rather than the precedence bug it suspects
 - The body carries tool versions, the base commit observed against, the exact command, and a negative control.
 - Every inference is marked as inference and every unreproduced condition as unverified.
 - The title and body passed a prose review, reported as unassisted where the prose plugin is absent.
-- `gh issue create` named the base with `--repo` and the body arrived on stdin.
+- `gh issue create` named the base with `--repo` and the body arrived from a scratch file through `--body-file`.
 - The issue URL is surfaced.
 
 </success_criteria>
