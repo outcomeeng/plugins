@@ -49,4 +49,4 @@ parent: null
 
 ## Artifacts
 
-<!-- Leave this section empty until a round returns audited content. Then execute-change adds, through author-change, one link per Node the Change adds, modifies, or implements, pinned to the commit that holds the content so it resolves in every execution environment. A new decision's content links the comment that holds it on the Change's issue until it merges. Remove this comment before audit. -->
+<!-- Leave this section empty until a round returns audited content. Then the revision adds one link per Node the Change adds, modifies, or implements, pinned to the commit that holds the content so it resolves in every execution environment. A new decision's content links the comment that holds it on the Change's issue until it merges. Remove this comment before audit. -->
