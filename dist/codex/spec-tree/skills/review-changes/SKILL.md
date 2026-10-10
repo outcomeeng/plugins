@@ -6,6 +6,7 @@ allowed-tools:
   - Read
   - Grep
   - Glob
+  - Write
 ---
 
 <objective>
@@ -25,7 +26,7 @@ Invoke only the bundled runner:
 ```bash
 python3 "${SKILL_DIR}/scripts/review_run.py" start
 python3 "${SKILL_DIR}/scripts/review_run.py" append-scope --state "<statePath>" "<changed-file>"
-python3 "${SKILL_DIR}/scripts/review_run.py" append-finding --state "<statePath>"
+python3 "${SKILL_DIR}/scripts/review_run.py" append-finding --state "<statePath>" < "<finding-file>"
 python3 "${SKILL_DIR}/scripts/review_run.py" finish --state "<statePath>"
 ```
 
@@ -33,7 +34,7 @@ python3 "${SKILL_DIR}/scripts/review_run.py" finish --state "<statePath>"
 
 `append-scope` appends one scope-advanced event for a changed file after Claude has examined that file.
 
-`append-finding` reads one finding JSON object from stdin, wraps it in the journal event envelope, and appends it. The runner does not perform the full review finding schema or citation validation; `spx journal append` is the authoritative event boundary.
+`append-finding` reads one finding JSON object from its standard input, which the input redirect from `<finding-file>` supplies, wraps it in the journal event envelope, and appends it. The runner does not perform the full review finding schema or citation validation; `spx journal append` is the authoritative event boundary.
 
 `finish` reads the journal prefix, appends the terminal run-completed event with review status and finding counts, seals the run, removes runner-owned scratch storage, and prints the raw run token.
 
@@ -60,17 +61,28 @@ Use `manifestPath` and `changedFiles` for navigation, but treat the diff file as
 2. Load the prompt reference and diff bundle.
 3. Examine every changed file and every emitted diff section, applying the prompt's `<adversarial_probes>` before treating a file as clean. After each changed file has been examined, call `append-scope` for that file.
 4. For each changed governing declaration, discover and read its unchanged consumers per the prompt's `<review_scope>` consumers-of-changed-truth item. A contradiction there is a finding cited at the consumer's location; consumers are not `append-scope` units — the journal's scope coverage remains the changed-file set.
-5. When a finding is raised, immediately pass that one finding JSON object to `append-finding` on stdin. Do not collect findings into a later batch.
+5. When a finding is raised, immediately write that one finding JSON object to its own scratch file and pass it to `append-finding` through the input redirect. Do not collect findings into a later batch.
 6. When review is complete, call `finish`.
 7. Report only the raw `runToken` to the caller.
 
 </workflow>
 
+<finding_payload>
+
+A finding is a payload: it carries code spans, quotes, and JSON.
+
+- ALWAYS: write each finding with the file-write tool to a file in the scratch directory the harness names for this session, under a file name unique to this agent and run, such as `finding-<runToken>-<n>.json`. Where the harness names no scratch directory, use the one the hosting environment designates, such as `$RUNNER_TEMP` on a hosted runner.
+- ALWAYS: pass the file to `append-finding` with the input redirect `< <finding-file>`, with the path written out literally.
+- NEVER: send a finding through a heredoc, a pipe, or an inline argument.
+- NEVER: remove a finding file; the harness clears its scratch directory.
+
+</finding_payload>
+
 <constraints>
 
 - NEVER run validation, tests, evals, coverage, lint, typecheck, or any deterministic verification command. Deterministic verification has already passed before this review starts; this skill provides agentic judgment by reading the diff and loaded review context.
 - NEVER invoke `spx journal`, `git`, `mktemp`, `rm`, `date`, `printf`, `compute_diff.py`, `journal_emit.py`, or `review_result.py` directly. The runner is the only command boundary.
-- NEVER write review-result files, rendered Markdown artifacts, or durable state outside `spx journal`. The runner-owned diff bundle and state file are scratch input for the active invocation only.
+- NEVER write review-result files, rendered Markdown artifacts, or durable state outside `spx journal`. The runner-owned diff bundle and state file are scratch input for the active invocation only; the only file Claude writes is a finding payload per `<finding_payload>`.
 - NEVER load a review prompt other than `${SKILL_DIR}/references/review-prompt.md` — one prompt keeps every review run comparable.
 - NEVER read `REVIEW.md`, `REVIEW.example.md`, or another repository-root review prompt.
 - NEVER append praise, acknowledgements, open questions, verdicts, or prose summaries to the review stream — it carries findings only.
