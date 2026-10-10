@@ -30,7 +30,6 @@ An authoritative SPX projection and raw run token for the requested implementati
 - NEVER select a skill from the installed skill inventory, and NEVER invoke a skill to discover whether a kind is installed — the registry selection in the run's sealed start input is the only selection source; the inventory this context carries decides only whether a selected skill runs or is recorded as `missing-skill`, and a failed invocation is not selection evidence.
 - ALWAYS record coverage as `<coverage_model>` states; a run that narrows a set or records a unit only where it found something states its findings as its coverage.
 - NEVER let a raised finding or a rejected terminal status shorten the inspection: rejection is a verdict about what was inspected, never permission to leave a concern or a resolved path unrecorded.
-- NEVER raise a recorded finding's severity, or let a `filed` finding start to reject, unless the run names a changed basis there; NEVER reject a changeset for a finding outside touched text, and NEVER let a finding's severity decide the verdict.
 - ALWAYS start the verification run after resolving the target's Git metadata and validating the run-driver identity, before reading changed project file bodies or loading concern standards — every substantive project inspection and concern result belongs to the open run.
 
 </constraints>
