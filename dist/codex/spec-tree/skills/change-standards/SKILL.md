@@ -95,7 +95,7 @@ The title has at most 15 words, each Intent part one to three sentences, `## Dec
 
 <rule id="change-type">
 
-A Change that names Nodes in `## Nodes` is a Leaf, a Change that another Change names in `parent` is a Parent, and a Change with neither a Parent nor Nodes is a root. A Change never names Nodes while it has a child. The type derives from what the record and the store name and is never stored. A Parent carries neither `## Nodes` nor `## Assertion operations` and never reaches Executable; every child of a Parent that carries a Product carries that Product.
+A Change that names Nodes in `## Nodes` is a Leaf, a Change that another Change names in `parent` is a Parent, and a Change with neither a Parent nor Nodes is a root. A Change never names Nodes while it has a child. The type derives from what the record and the store name and is never stored. A Parent carries neither `## Nodes` nor `## Assertion operations` and never reaches Executable.
 
 </rule>
 
