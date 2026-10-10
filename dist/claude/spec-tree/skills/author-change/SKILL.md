@@ -82,7 +82,7 @@ Maturity advances past `Proposed`, `Framed`, and `Sliced` only when the store sh
 
 Use skill `spec-tree:change-standards`. Invoke it with `Lifecycle`, which `<persistence>` also loads. Read the authority for the Maturity the Change currently holds under `authority-read`, and report each authority found with its actor, time, and deciding comment lines verbatim. When the store shows none, stop with `authority-required`, naming that Maturity and the move the store lacks. Leave the candidate and the store record unchanged. A body line never stands in for the move.
 
-The Refiner persists the record at the Maturity it reached. This skill never writes `Submitted` itself: its `<result>` composes `/release-change` with its `submit` result for the session that holds the Change at `Proposed`, `Framed`, or `Sliced`, and that skill writes `Submitted` after this skill persists the record. Persisting never claims a Change: a new Change is persisted `Available` and stays unsubmitted until a session claims it, and a revision keeps the Lifecycle the store holds. Only the Sliced workflow claims Changes, the sources it splits or coalesces. The Product's Maintainer's confirmation or rejection ends `Submitted` as `confirmation-record` states; an `Executable` record is never submitted.
+This skill persists the record at the Maturity it reached. This skill never writes `Submitted` itself: its `<result>` composes `/release-change` with its `submit` result for the session that holds the Change at `Proposed`, `Framed`, or `Sliced`, and that skill writes `Submitted` after this skill persists the record. Persisting never claims a Change: a new Change is persisted `Available` and stays unsubmitted until a session claims it, and a revision keeps the Lifecycle the store holds. Only the Sliced workflow claims Changes, the sources it splits or coalesces. The Product's Maintainer's confirmation or rejection ends `Submitted` as `confirmation-record` states; an `Executable` record is never submitted.
 
 </authority_gate>
 
@@ -91,15 +91,15 @@ The Refiner persists the record at the Maturity it reached. This skill never wri
 1. Stabilize and read back the complete local candidate. Inventory all six front-matter keys first, then the body's level-two sections against `record-shape`. Resolve contradictions and remove template guidance.
 2. Dispatch `spec-tree:change-auditor` once through the native subagent capability with a task message of the normalized repository-relative candidate path alone or, for a revision of a Change the store holds, that path, one space, and the canonical store reference `<owner>/<repo>#<N>` retained at intake. Start without authoring history or a suggested verdict. NEVER replace the dispatch with an in-conversation audit.
 3. Preserve the candidate unchanged while the audit runs. Collect the same invocation until it returns one result: the `finish` result object, `OUTSIDE_CONTRACT`, or `BLOCKED`.
-4. Judge a `finish` result from its own fields. Approval requires `run.terminalStatus: approved`, `run.sealed: true`, `run.findingCount: 0`, an empty `findings` array, and a `renderCommand` whose `--scope` equals the dispatched candidate path and whose `--run` equals `runToken`. `run.terminalStatus: rejected` is a completed rejection whose `findings` payloads are the repair input and needs no projection, with one exception: a sealed rejected run whose `findings` array is non-empty, holds no `blocking` finding, and carries every finding at severity `debt` is a debt-only rejection of a revision. Treat it as an approval for publication, subject to step 5, and count it toward neither step 6's two dispatches nor the rejections that end the gate; every other rejection stays a rejection. An `OUTSIDE_CONTRACT` result, `BLOCKED` diagnostic, failed launch, or result missing any of these fields withholds publication.
-5. Before accepting an approval or a debt-only rejection, establish coverage and retained-input equality from the sealed run. Run each command below once from the repository root and read its stdout directly; NEVER redirect it to a file.
+4. Judge a `finish` result from its own fields. Approval requires `run.terminalStatus: approved`, `run.sealed: true`, every entry of `findings` at severity `filed` with `run.findingCount` equal to the number of entries, and a `renderCommand` whose `--scope` equals the dispatched candidate path and whose `--run` equals `runToken`. A `filed` finding lies on text the revision neither touches nor invalidates and rejects nothing. `run.terminalStatus: rejected` is a completed rejection whose `blocking` findings are the repair input and needs no projection. An `OUTSIDE_CONTRACT` result, `BLOCKED` diagnostic, failed launch, or result missing any of these fields withholds publication.
+5. Before accepting an approval, establish coverage and retained-input equality from the sealed run. Run each command below once from the repository root and read its stdout directly; NEVER redirect it to a file.
    - Run `renderCommand` exactly as the result names it. Require every run-level field of the rendered projection to equal the result's `run`, and require `auditScopeUnits` to hold exactly one root unit with no `parentUnitId` whose `subject` is the candidate path, plus one child naming that root for each common rule and each declared-Maturity Definition of Ready criterion that `spec-tree:change-standards` loads, each `audited` or `not-applicable`.
    - Run `spx verification run input` with the `--verification-type`, `--scope-type`, `--scope`, and `--run` values `renderCommand` carries. Require its `content` to equal the unchanged candidate byte for byte; the rendered projection carries no retained input.
 
    A failed command or any mismatch withholds publication.
-6. Dispatch the auditor at most twice on one candidate, counting every dispatch this gate makes for it, the re-audit `<persistence>` requires included. After a first completed rejection, sweep the complete candidate for the cited defect class, batch repairs, read affected sections together, and dispatch the second audit only after the repaired candidate stabilizes. Ask the operator when repair reopens judgment. After the second rejection, end with publication withheld and report the outstanding defect class; NEVER dispatch a third audit on that candidate. When the `<persistence>` re-read changes the candidate after the second dispatch, withhold publication and report the intervening edit and the outstanding state.
+6. Dispatch the auditor at most twice on one candidate, counting every dispatch this gate makes for it, the re-audit `<persistence>` requires included. After a first completed rejection, complete the sweep that `${CLAUDE_SKILL_DIR}/references/repair-sweep.md` states over the complete candidate, covering every same-class site and every section the repairs change, batch the repairs, and dispatch the second audit only after the repaired candidate stabilizes and its comparison with the retained findings holds. Ask the operator when repair reopens judgment. After the second rejection, end with publication withheld and report the outstanding defect class; NEVER dispatch a third audit on that candidate. When the `<persistence>` re-read changes the candidate after the second dispatch, withhold publication and report the intervening edit and the outstanding state.
 
-Audit results remain in SPX and the conversation. NEVER write audit bookkeeping into the Change body, comments, or fields.
+Audit results remain in SPX and the conversation; each `filed` finding appears in the `<result>` and leaves the record unchanged. NEVER write audit bookkeeping into the Change body, comments, or fields.
 
 </audit_gate>
 
@@ -131,7 +131,7 @@ Any mismatch or partial write is a failed persistence result. Preserve the local
 
 <result>
 
-Return the canonical Change reference, exact persisted Maturity and Lifecycle, whether the operation created or revised the Change, the equality result for every front-matter field, and the next Activity or unresolved operator question. A stop at `<authority_gate>` returns the result `authority-required` instead, naming the Maturity the Change holds and the move the store lacks.
+Return the canonical Change reference, each `filed` finding with its key, rule, and run token, exact persisted Maturity and Lifecycle, whether the operation created or revised the Change, the equality result for every front-matter field, and the next Activity or unresolved operator question. A stop at `<authority_gate>` returns the result `authority-required` instead, naming the Maturity the Change holds and the move the store lacks.
 
 Use skill `spec-tree:release-change`. Invoke it only when this session holds the Change (Lifecycle `Claimed`, with the winning Claim naming this session's assigned worktree root) and work stops or transfers with continuation remaining; a Change this session does not hold needs no release. Invoke it with `submit` when the persisted record is at `Proposed`, `Framed`, or `Sliced` and waits for the Product's Maintainer's confirmation. Preserve any unaudited local candidate locally and leave the published Change unchanged.
 
@@ -141,6 +141,7 @@ Use skill `spec-tree:release-change`. Invoke it only when this session holds the
 
 - `spec-tree:change-standards`: common record contract plus exactly one cumulative Definition of Ready, or the Lifecycle store rules.
 - `${CLAUDE_SKILL_DIR}/templates/change.md`: store-independent six-field, Intent-form record template.
+- `${CLAUDE_SKILL_DIR}/references/repair-sweep.md`: the sweep table of one repair batch and the retained-findings comparison.
 
 </reference_index>
 
@@ -169,7 +170,7 @@ Use skill `spec-tree:release-change`. Invoke it only when this session holds the
 - An `authority-required` stop left the candidate and the store record unchanged and named the Maturity the Change holds and the move the store lacks.
 - The candidate satisfies the one cumulative Definition of Ready loaded for its declared Maturity, and its Maturity above `Proposed` rests on the store's authority for the level it left.
 - Triage asks only questions whose answers change the Output, its Decisions, Maturity, risk, or ownership.
-- The complete unchanged record receives an independent approved audit before publication.
+- The complete unchanged record receives an independent approved audit before publication, and a repaired candidate reaches its re-audit with every same-class site and changed-section dependent resolved.
 - Every front-matter field reads back equal from its one store home, and the issue body equals the approved file from its `## Intent` line.
 - The record contains no store-specific key, received conversation input, audit bookkeeping, body authority line, or authoritative body restatement of front matter.
 - A session with no conversation history resumes from the stored Change, its repository references, and its newest Handoff alone.
