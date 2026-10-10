@@ -3,7 +3,7 @@ name: recover-prowl-agents
 description: >-
   ALWAYS invoke this skill when preparing for or recovering coding-agent sessions after a Prowl restart. NEVER restart Prowl without a prepared exact-session manifest.
 argument-hint: "<prepare|recover> <absolute-manifest-path>"
-allowed-tools: Read, Write, Bash(printf:*), Bash(python3 "${SKILL_DIR}/scripts/recover_agents.py":*), request_user_input
+allowed-tools: Read, Write, Bash(python3 "${SKILL_DIR}/scripts/recover_agents.py":*), request_user_input
 ---
 
 <objective>
@@ -110,14 +110,18 @@ Stop preparation when an active session cannot safely reach its native status su
 
 <command_forms>
 
+Every operation takes its JSON input from stdin. Write the input with the file-write tool to a file in the scratch directory the harness names for this session, under a file name unique to the agent and the operation, and submit it through the input redirect `< <input-file>`. An input carries pane reads, transports, and JSON that the dangerous-command guard refuses in a heredoc, a pipe, or an inline argument. The input shapes:
+
+- `prepare`: `{"items":[],"agents":[],"candidates":[],"correlationEvidence":[]}`, with `--pane <pre-restart-pane-uuid>` repeated per selected pane
+- `activate`: `{"prepared":{},"items":[],"agents":[]}`
+- `bind`: `{"plan":{},"activationResults":[]}`
+- `recover`: `{"prepared":{},"bindings":[],"items":[],"agents":[]}`
+- `settle`: `{"plan":{},"deliveryResults":[]}`
+- `verify`: `{"prepared":{},"bindings":[],"items":[],"agents":[],"correlationEvidence":[]}`
+- `reassess`: `{"prepared":{},"bindings":[],"verification":{},"paneReadResults":[]}`
+
 ```bash
-printf '%s\n' '{"items":[],"agents":[],"candidates":[],"correlationEvidence":[]}' | python3 "${SKILL_DIR}/scripts/recover_agents.py" prepare --pane <pre-restart-pane-uuid>
-printf '%s\n' '{"prepared":{},"items":[],"agents":[]}' | python3 "${SKILL_DIR}/scripts/recover_agents.py" activate
-printf '%s\n' '{"plan":{},"activationResults":[]}' | python3 "${SKILL_DIR}/scripts/recover_agents.py" bind
-printf '%s\n' '{"prepared":{},"bindings":[],"items":[],"agents":[]}' | python3 "${SKILL_DIR}/scripts/recover_agents.py" recover
-printf '%s\n' '{"plan":{},"deliveryResults":[]}' | python3 "${SKILL_DIR}/scripts/recover_agents.py" settle
-printf '%s\n' '{"prepared":{},"bindings":[],"items":[],"agents":[],"correlationEvidence":[]}' | python3 "${SKILL_DIR}/scripts/recover_agents.py" verify
-printf '%s\n' '{"prepared":{},"bindings":[],"verification":{},"paneReadResults":[]}' | python3 "${SKILL_DIR}/scripts/recover_agents.py" reassess
+python3 "${SKILL_DIR}/scripts/recover_agents.py" <operation> < <input-file>
 ```
 
 </command_forms>
@@ -129,6 +133,7 @@ printf '%s\n' '{"prepared":{},"bindings":[],"verification":{},"paneReadResults":
 - NEVER reconstruct eligibility or identity from Prowl status, transcript content, saved-history recency, rollout recency, pane presentation, or a latest-session selector.
 - NEVER enumerate worktrees blindly; activation targets only complete worktree paths already preserved by prepared native-session candidates.
 - NEVER type into an occupied mismatched pane, close a pane, launch an unprepared identity, or execute one native session in multiple panes or worktrees.
+- NEVER pass an operation input through a heredoc, a pipe, or an inline argument, and NEVER remove an input file; the harness clears its scratch directory.
 - NEVER start a watcher, polling loop, daemon, background process, or open-ended wait.
 - NEVER plan or send reassessment before every verified pane has one checked context read; one unreadable pane blocks all continuation sends.
 - NEVER combine native launch and reassessment in one send, treat interruption metadata as cancellation, substitute repository completion for an unanswered operator request, treat distinct delivered work as satisfying an unreconciled plan, ask again for existing authority, or silently exit when a pending interaction can be restored.
