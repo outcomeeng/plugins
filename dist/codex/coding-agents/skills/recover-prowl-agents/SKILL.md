@@ -13,7 +13,7 @@ A durable pre-restart allowlist or an idempotent post-restart recovery in which 
 <dependencies>
 
 - Python 3.13+, the plugin's published shipped-script interpreter floor.
-- `/operate-prowl` for every public Prowl operation.
+- Use skill `coding-agents:operate-prowl` for every public Prowl operation.
 - A Prowl-native input-ready prompt for any session whose exact identity or launch context is unavailable from high-confidence public process or agent evidence.
 - One absolute manifest path supplied through `$ARGUMENTS`.
 
@@ -59,12 +59,12 @@ Record launch context separately from identity evidence:
 
 Use this bounded protocol only when exact process or high-confidence public-agent evidence is unavailable:
 
-1. Invoke `/operate-prowl` `read` with the exact pane UUID and stable-screen mode.
-2. When a selection dialog is visibly open, invoke `/operate-prowl` `key` with `Escape`. The `prepare` invocation authorizes this exact dialog dismissal; NEVER send `Escape` to active generation.
-3. Invoke `/operate-prowl` `send` with `/status` for Claude or Codex and `/session` for Pi, using immediate return.
-4. Invoke `/operate-prowl` `read` once with stable-screen mode. When slash-command autocomplete consumed the first `Enter`, invoke `/operate-prowl` `key` with `Enter` once and read once more.
+1. Use skill `coding-agents:operate-prowl` to run `read` with the exact pane UUID and stable-screen mode.
+2. When a selection dialog is visibly open, use skill `coding-agents:operate-prowl` to run `key` with `Escape`. The `prepare` invocation authorizes this exact dialog dismissal; NEVER send `Escape` to active generation.
+3. Use skill `coding-agents:operate-prowl` to run `send` with `/status` for Claude or Codex and `/session` for Pi, using immediate return.
+4. Use skill `coding-agents:operate-prowl` to run `read` once with stable-screen mode. When slash-command autocomplete consumed the first `Enter`, use skill `coding-agents:operate-prowl` to run `key` with `Enter` once and read once more.
 5. Record the complete displayed session identity and cwd with `source: native-status`.
-6. Invoke `/operate-prowl` `key` with `Escape` once to close the status surface.
+6. Use skill `coding-agents:operate-prowl` to run `key` with `Escape` once to close the status surface.
 
 Stop preparation when an active session cannot safely reach its native status surface. Never queue a status command into active work or infer the identity from recency instead.
 
@@ -128,7 +128,7 @@ python3 "${SKILL_DIR}/scripts/recover_agents.py" <operation> < <input-file>
 
 <constraints>
 
-- ALWAYS route public Prowl operations through `/operate-prowl` and preserve complete checked results.
+- ALWAYS: Use skill `coding-agents:operate-prowl` for public Prowl operations and preserve complete checked results.
 - ALWAYS preserve original and post-restart pane UUIDs, absolute worktree paths, agent types, native session IDs, exact resume locators, applicable native homes, evidence sources, roles, authorization values, and reassessed-session identities verbatim.
 - NEVER reconstruct eligibility or identity from Prowl status, transcript content, saved-history recency, rollout recency, pane presentation, or a latest-session selector.
 - NEVER enumerate worktrees blindly; activation targets only complete worktree paths already preserved by prepared native-session candidates.
