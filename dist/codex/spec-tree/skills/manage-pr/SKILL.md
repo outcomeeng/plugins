@@ -3,7 +3,7 @@ name: manage-pr
 description: >-
   ALWAYS invoke this skill when managing, waiting on, or continuing an open pull request lifecycle after a PR exists.
 argument-hint: "[pr-number|url|branch] [--return-closeout]"
-allowed-tools: Read, Glob, Grep, Edit, Write, collaboration.spawn_agent, collaboration.wait_agent, Bash(spx worktree status:*), Bash(spx diagnose:*), Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr view:*), Bash(gh pr edit:*), Bash(gh pr checks:*), Bash(gh pr comment:*), Bash(gh pr merge:*), Bash(gh run view:*), Bash(gh api repos/*/pulls/*/comments:*), Bash(gh api repos/*/actions/jobs/*:*), Bash(python3 "${SKILL_DIR}/scripts/resolve_review_thread.py":*), Bash(git fetch:*), Bash(git branch:*), Bash(git status:*), Bash(git log:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(git merge-base:*), Bash(git push:*), Bash(git switch:*), Bash(git ls-remote:*), Bash(git cherry:*), Bash(git worktree list:*), Bash(printf:*)
+allowed-tools: Read, Glob, Grep, Edit, Write, collaboration.spawn_agent, collaboration.wait_agent, Bash(spx worktree status:*), Bash(spx diagnose:*), Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr view:*), Bash(gh pr edit:*), Bash(gh pr checks:*), Bash(gh pr comment:*), Bash(gh pr merge:*), Bash(gh run view:*), Bash(gh api repos/*/pulls/*/comments:*), Bash(gh api repos/*/actions/jobs/*:*), Bash(python3 "${SKILL_DIR}/scripts/resolve_review_thread.py":*), Bash(git fetch:*), Bash(git branch:*), Bash(git status:*), Bash(git log:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(git merge-base:*), Bash(git push:*), Bash(git switch:*), Bash(git ls-remote:*), Bash(git cherry:*), Bash(git worktree list:*)
 ---
 
 <objective>
@@ -123,7 +123,7 @@ If the conclusion is `skipped` **because the PR modifies the reviewer's own work
 Reviewer-skipped-by-design exception steps:
 
 1. Resolve the trigger phrase per /merging-standards `<repo_local_overlay>` (the Mention-reviewer trigger phrase topic; default `@spec-tree` when the overlay is silent).
-2. Post one PR-level comment with body exactly `<trigger-phrase> review`, sending the body on stdin: in an interactive session, `gh pr comment <pr-number> --body-file -` with a quoted heredoc carrying that one line; in a programmatic or hosted runner, the one physical line `printf '%s\n' '<trigger-phrase> review' | gh pr comment <pr-number> --body-file -`.
+2. Post one PR-level comment with body exactly `<trigger-phrase> review`, writing the body to a scratch file per /merging-standards `<shared_contract>` and posting it with `gh pr comment <pr-number> --body-file <body-file>`.
 3. Emit `MENTION_REVIEW_NEEDED:<trigger-phrase>`, run Step 7, and re-inspect. The mention-triggered reviewer's posted findings become the current-head review the next management pass reads.
 
 Otherwise, evaluate `MERGE_READINESS` from observable PR state:
@@ -191,25 +191,14 @@ gh pr checks <pr-number>
 # Required PR-check wait
 gh pr checks <pr-number> --watch --fail-fast --interval 30
 
-# Post a PR-level comment (top of the conversation), interactive harness form
-gh pr comment <pr-number> --body-file - <<'EOF'
-### BLOCKING [consistency]: path/to/file:42
-Reference: ...
-Evidence: ...
-Required: ...
-EOF
+# Post a PR-level comment (top of the conversation). The body is a payload: write it with the
+# file-write tool to a file in the session scratch directory under a file name unique to this
+# agent and PR, then pass that file. Never use a heredoc, a pipe, or an inline --body.
+gh pr comment <pr-number> --body-file <body-file>
 
-# Programmatic runner form for the PR-level comment.
-# Keep each pipeline as one physical shell line; each printf argument is one body line.
-printf '%s\n' '### BLOCKING [consistency]: path/to/file:42' 'Reference: ...' 'Evidence: ...' 'Required: ...' | gh pr comment <pr-number> --body-file -
-
-# Reply within an existing review thread (line-level comment), interactive harness form
-gh api repos/<owner>/<repo>/pulls/<pr-number>/comments --method POST --field in_reply_to=<review-comment-id> --field body=@- <<'EOF'
-Acknowledged — fix in next push.
-EOF
-
-# Programmatic runner form for the review-thread reply; one physical shell line.
-printf '%s\n' 'Acknowledged — fix in next push.' | gh api repos/<owner>/<repo>/pulls/<pr-number>/comments --method POST --field in_reply_to=<review-comment-id> --field body=@-
+# Reply within an existing review thread (line-level comment). Write the reply to a scratch
+# file the same way, then pass it with the file form of --field.
+gh api repos/<owner>/<repo>/pulls/<pr-number>/comments --method POST --field in_reply_to=<review-comment-id> --field body=@<reply-file>
 
 # Mark a review thread resolved
 python3 "${SKILL_DIR}/scripts/resolve_review_thread.py" --host <host> <review-thread-node-id>
