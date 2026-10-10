@@ -18,7 +18,7 @@ CAN produce atomic, well-described commits that map cleanly to spec tree changes
 
 ### Compliance
 
-- ALWAYS: `/commit-changes` presents payload-bearing `git commit` message input by supported harness environment — quoted heredoc to `git commit -F -` for interactive Claude Code and Codex sessions, and one physical `printf '%s\n' ... | git commit -F -` line for programmatic runners that require single-line commands — per [`spx/15-agent-tools.pdr.md`](spx/15-agent-tools.pdr.md) ([audit])
+- ALWAYS: `/commit-changes` passes the commit message through a file Claude writes in the scratch directory the harness names for the session, under a file name unique to the agent, to `git commit -F <file>`, and never through a heredoc, a pipe, or an inline form, per [`spx/15-agent-tools.pdr.md`](spx/15-agent-tools.pdr.md) ([audit])
 - ALWAYS: `/commit-changes` can seal stabilized work as a local verification checkpoint when deterministic verification is `passing`, `failing`, or `not-run`, and reports that state with the checkpoint; passing verification and approval govern agentic-gate dispatch and publication readiness rather than local commit eligibility, and a repaired subject receives a new checkpoint commit before re-verification ([audit])
 - ALWAYS: this product's `spx/local/commit-changes.md` directs the commit workflow to neither initiate a plugin version bump nor ask for one; `spx/local/open-pr.md` owns the bump policy, and `spx/local/merging.md` runs the bump as the merge-time step and supplies its files for the commit workflow to commit ([audit])
 - NEVER: commit files that likely contain secrets (.env, credentials) — warn the user if they request it ([audit])
