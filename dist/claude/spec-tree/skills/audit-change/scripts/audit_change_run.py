@@ -59,6 +59,15 @@ the bound with ``page-bound-reached`` naming it.
 
 ``read-published`` starts ``gh`` once and returns the issue's published body,
 the empty string when the store holds none.
+
+``read-relations`` starts ``gh`` once per page of the store's issues and returns
+the named issue's Product and Parent, its Parent's Product, and the issues whose
+Parent is the named issue, within the same page bound as ``read-authority``.
+
+``count-limits`` reads the candidate and starts no process beyond the
+repository-root lookup; it returns the title's word count, each Intent part's
+sentence count, the Decisions row count, and each answer's sentence count with
+the limit of each, and lists those over their limit.
 """
 
 from __future__ import annotations
@@ -90,6 +99,8 @@ class Operation(StrEnum):
     FINISH = "finish"
     READ_AUTHORITY = "read-authority"
     READ_PUBLISHED = "read-published"
+    READ_RELATIONS = "read-relations"
+    COUNT_LIMITS = "count-limits"
 
 
 class RequestField(StrEnum):
@@ -144,6 +155,16 @@ class ResultField(StrEnum):
     NEW_VALUE = "newValue"
     AUTHOR = "author"
     BODY = "body"
+    PRODUCT = "product"
+    PARENT = "parent"
+    PARENT_PRODUCT = "parentProduct"
+    CHILDREN = "children"
+    NUMBER = "number"
+    LIMITS = "limits"
+    VIOLATIONS = "violations"
+    SECTION = "section"
+    LIMIT = "limit"
+    COUNT = "count"
 
 
 class ResultStatus(StrEnum):
@@ -240,6 +261,10 @@ class StoreField(StrEnum):
     ISSUE_FIELD = "issueField"
     NAME = "name"
     BODY = "body"
+    ISSUES = "issues"
+    NUMBER = "number"
+    VALUE = "value"
+    ISSUE_FIELD_VALUES = "issueFieldValues"
 
 
 NOT_STARTED: Final = "not-started"
@@ -302,6 +327,17 @@ _PUBLISHED_QUERY: Final = (
     "query($o:String!,$r:String!,$n:Int!)"
     f"{{repository(owner:$o,name:$r){{issue(number:$n){{{StoreField.BODY}}}}}}}"
 )
+_RELATIONS_QUERY: Final = (
+    "query($o:String!,$r:String!,$after:String)"
+    f"{{repository(owner:$o,name:$r){{{StoreField.ISSUES}"
+    f"(first:{AUTHORITY_PAGE_SIZE},after:$after)"
+    "{pageInfo{hasNextPage endCursor} nodes{number issueFieldValues(first:20)"
+    "{nodes{... on IssueFieldNumberValue{value field{... on IssueFieldNumber{name}}}"
+    " ... on IssueFieldSingleSelectValue{name field{... on IssueFieldSingleSelect"
+    "{name}}}}}}}}}"
+)
+PRODUCT_FIELD: Final = "Product"
+PARENT_FIELD: Final = "Parent"
 ISSUE_IDENTITY_PATTERN: Final = re.compile(
     r"([A-Za-z0-9][A-Za-z0-9-]*)/([A-Za-z0-9._-]+)#([1-9][0-9]*)"
 )
@@ -329,6 +365,8 @@ REQUIRED_FIELDS: Final[Mapping[Operation, frozenset[RequestField]]] = {
     ),
     Operation.READ_AUTHORITY: frozenset({RequestField.ISSUE}),
     Operation.READ_PUBLISHED: frozenset({RequestField.ISSUE}),
+    Operation.READ_RELATIONS: frozenset({RequestField.ISSUE}),
+    Operation.COUNT_LIMITS: frozenset({RequestField.PATH}),
 }
 
 
@@ -661,6 +699,8 @@ _REQUEST_CHECKS: Final[
     Operation.FINISH: (_candidate_path, _run_token, _terminal_status),
     Operation.READ_AUTHORITY: (_issue_identity,),
     Operation.READ_PUBLISHED: (_issue_identity,),
+    Operation.READ_RELATIONS: (_issue_identity,),
+    Operation.COUNT_LIMITS: (_candidate_path,),
 }
 
 
@@ -1180,6 +1220,233 @@ def _read_published(
     return {ResultField.ISSUE: request[RequestField.ISSUE], ResultField.BODY: body}
 
 
+def _field_values(node: Mapping[str, object]) -> dict[str, object]:
+    """Return the Product and Parent values one store issue node carries."""
+    values: dict[str, object] = {}
+    container = node.get(StoreField.ISSUE_FIELD_VALUES)
+    entries = container.get(StoreField.NODES) if isinstance(container, dict) else None
+    for entry in entries if isinstance(entries, list) else []:
+        field = entry.get("field") if isinstance(entry, dict) else None
+        name = field.get(StoreField.NAME) if isinstance(field, dict) else None
+        if name == PRODUCT_FIELD:
+            values[PRODUCT_FIELD] = entry.get(StoreField.NAME)
+        elif name == PARENT_FIELD and isinstance(entry.get(StoreField.VALUE), float):
+            values[PARENT_FIELD] = int(entry[StoreField.VALUE])
+    return values
+
+
+def _read_relations(
+    context: _Context, request: Mapping[str, object]
+) -> dict[str, object]:
+    """Return the issue's Product and Parent, its Parent's Product, and its children.
+
+    Reads every issue of the store's repository within the page bound; a child
+    is an issue whose ``Parent`` number field equals the named issue's number.
+    """
+    owner, repository, number = _issue_identity(request)
+    target = int(number)
+    by_number: dict[int, dict[str, object]] = {}
+    cursor: str | None = None
+    for _page in range(AUTHORITY_MAX_PAGES):
+        argv = [
+            *_GRAPHQL,
+            "-f",
+            f"query={_RELATIONS_QUERY}",
+            "-f",
+            f"o={owner}",
+            "-f",
+            f"r={repository}",
+        ]
+        if cursor is not None:
+            argv += ["-f", f"after={cursor}"]
+        node: object = _json_lines(_command(context, argv, cwd=context.cwd))[-1]
+        for key in (StoreField.DATA, StoreField.REPOSITORY, StoreField.ISSUES):
+            node = node.get(key) if isinstance(node, dict) else None
+        nodes = node.get(StoreField.NODES) if isinstance(node, dict) else None
+        info = node.get(StoreField.PAGE_INFO) if isinstance(node, dict) else None
+        if not isinstance(nodes, list) or not isinstance(info, dict):
+            raise Blocked(
+                BlockReason.UNREADABLE_OUTPUT,
+                "relations page carries no nodes array and pageInfo object",
+            )
+        for entry in nodes:
+            numbered = (
+                entry.get(StoreField.NUMBER) if isinstance(entry, dict) else None
+            )
+            if not isinstance(numbered, int):
+                raise Blocked(
+                    BlockReason.UNREADABLE_OUTPUT,
+                    "relations page holds an entry with no issue number",
+                )
+            by_number[numbered] = _field_values(entry)
+        if info.get(StoreField.HAS_NEXT_PAGE) is not True:
+            own = by_number.get(target, {})
+            parent = own.get(PARENT_FIELD)
+            return {
+                ResultField.ISSUE: request[RequestField.ISSUE],
+                ResultField.PRODUCT: own.get(PRODUCT_FIELD),
+                ResultField.PARENT: parent,
+                ResultField.PARENT_PRODUCT: (
+                    by_number.get(parent, {}).get(PRODUCT_FIELD)
+                    if isinstance(parent, int)
+                    else None
+                ),
+                ResultField.CHILDREN: [
+                    {
+                        ResultField.NUMBER: child,
+                        ResultField.PRODUCT: values.get(PRODUCT_FIELD),
+                    }
+                    for child, values in sorted(by_number.items())
+                    if values.get(PARENT_FIELD) == target
+                ],
+            }
+        cursor = info.get(StoreField.END_CURSOR)
+        if not isinstance(cursor, str) or not cursor:
+            raise Blocked(
+                BlockReason.UNREADABLE_OUTPUT,
+                "relations page reports a further page and no end cursor",
+            )
+    bound = f"{AUTHORITY_PAGE_SIZE} issues per page, {AUTHORITY_MAX_PAGES} pages"
+    raise Blocked(
+        BlockReason.PAGE_BOUND_REACHED,
+        f"the issues read is not complete at {bound}",
+        evidence={ResultField.BOUND: bound},
+    )
+
+
+TITLE_WORD_LIMIT: Final = 15
+INTENT_SENTENCE_LIMIT: Final = 3
+DECISION_ROW_LIMIT: Final = 12
+ANSWER_SENTENCE_LIMIT: Final = 2
+_FRONT_MATTER_PATTERN: Final = re.compile(r"\A---\n(.*?)\n---\n", re.DOTALL)
+_TITLE_PATTERN: Final = re.compile(r"^title:[ \t]*(.*)$", re.MULTILINE)
+_INTENT_PART_PATTERN: Final = re.compile(
+    r"^[ \t]*(?:[-*][ \t]+)?\*\*(What|Why|Observation|Evidence)(?::\*\*|\*\*)",
+    re.MULTILINE,
+)
+_DECISION_ITEM_PATTERN: Final = re.compile(r"^(?:[-*]|\d+\.)[ \t]+")
+_CODE_SPAN_PATTERN: Final = re.compile(r"`[^`\n]*`")
+_LINK_PATTERN: Final = re.compile(r"\[([^\]]*)\]\([^)]*\)")
+_ABBREVIATION_PATTERN: Final = re.compile(r"\b(e\.g|i\.e|etc|vs)\.", re.IGNORECASE)
+_SENTENCE_END_PATTERN: Final = re.compile(r"[.!?]+[\"')\]]*(?=\s|$)")
+_HEADING_PATTERN: Final = re.compile(r"##[ \t]+(.+?)[ \t]*$")
+_QUESTION_END_PATTERN: Final = re.compile(r"\?(?=\s|$)")
+
+
+def count_sentences(text: str) -> int:
+    """Count sentences: runs of text ended by ``.``, ``!``, or ``?`` before whitespace or the end.
+
+    A code span collapses to one word and a link target drops, so a path or an
+    identifier never ends a sentence.
+    """
+    plain = _CODE_SPAN_PATTERN.sub("code", text)
+    plain = _LINK_PATTERN.sub(r"\1", plain)
+    plain = _ABBREVIATION_PATTERN.sub(r"\1", plain)
+    plain = " ".join(plain.split())
+    return len([part for part in _SENTENCE_END_PATTERN.split(plain) if part.strip()])
+
+
+def _body_sections(body: str) -> dict[str, str]:
+    """Map each level-two heading outside a code fence to its text."""
+    sections: dict[str, list[str]] = {}
+    current: list[str] | None = None
+    fenced = False
+    for line in body.splitlines():
+        if line.lstrip().startswith("```"):
+            fenced = not fenced
+        heading = None if fenced else _HEADING_PATTERN.match(line)
+        if heading:
+            current = sections.setdefault(heading.group(1), [])
+        elif current is not None:
+            current.append(line)
+    return {name: "\n".join(lines) for name, lines in sections.items()}
+
+
+def _decision_entries(text: str) -> list[str]:
+    """Return each Decisions row's text: a table row's last cell, or a list item with its continuation lines."""
+    entries: list[str] = []
+    header_seen = False
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("|"):
+            cells = [cell.strip() for cell in stripped.strip("|").split("|")]
+            if all(set(cell) <= set("-: ") for cell in cells):
+                continue
+            if not header_seen:
+                header_seen = True
+                continue
+            entries.append(cells[-1])
+        elif _DECISION_ITEM_PATTERN.match(line):
+            entries.append(_DECISION_ITEM_PATTERN.sub("", line, count=1))
+        elif stripped and entries and line[:1] in " \t":
+            entries[-1] += " " + stripped
+    return entries
+
+
+def _answer(entry: str) -> str:
+    """Return the text after the first question mark that ends a sentence, empty when none."""
+    marked = _QUESTION_END_PATTERN.search(entry)
+    return entry[marked.end() :].strip() if marked else ""
+
+
+def _count_limits(
+    context: _Context, request: Mapping[str, object]
+) -> dict[str, object]:
+    """Count the title's words, each Intent part's sentences, the Decisions rows, and each answer's sentences."""
+    relative = _candidate_path(request)
+    content = _live_content(_repository_root(context), relative)
+    front = _FRONT_MATTER_PATTERN.match(content)
+    body = content[front.end() :] if front else content
+    title_match = _TITLE_PATTERN.search(front.group(1)) if front else None
+    title = title_match.group(1).strip().strip("\"'") if title_match else ""
+    measured: list[dict[str, object]] = [
+        {
+            ResultField.SECTION: "title",
+            ResultField.LIMIT: TITLE_WORD_LIMIT,
+            ResultField.COUNT: len(title.split()),
+        }
+    ]
+    sections = _body_sections(body)
+    intent = sections.get("Intent", "")
+    starts = list(_INTENT_PART_PATTERN.finditer(intent))
+    for index, start in enumerate(starts):
+        end = starts[index + 1].start() if index + 1 < len(starts) else len(intent)
+        measured.append(
+            {
+                ResultField.SECTION: f"Intent {start.group(1)}",
+                ResultField.LIMIT: INTENT_SENTENCE_LIMIT,
+                ResultField.COUNT: count_sentences(intent[start.end() : end]),
+            }
+        )
+    if "Decisions" in sections:
+        entries = _decision_entries(sections["Decisions"])
+        measured.append(
+            {
+                ResultField.SECTION: "Decisions rows",
+                ResultField.LIMIT: DECISION_ROW_LIMIT,
+                ResultField.COUNT: len(entries),
+            }
+        )
+        for position, entry in enumerate(entries, start=1):
+            measured.append(
+                {
+                    ResultField.SECTION: f"Decisions row {position} answer",
+                    ResultField.LIMIT: ANSWER_SENTENCE_LIMIT,
+                    ResultField.COUNT: count_sentences(_answer(entry)),
+                }
+            )
+    return {
+        ResultField.PATH: relative,
+        ResultField.SHA256: _sha256(content),
+        ResultField.LIMITS: measured,
+        ResultField.VIOLATIONS: [
+            item
+            for item in measured
+            if int(str(item[ResultField.COUNT])) > int(str(item[ResultField.LIMIT]))
+        ],
+    }
+
+
 _HANDLERS: Final[
     Mapping[Operation, Callable[[_Context, Mapping[str, object]], dict[str, object]]]
 ] = {
@@ -1193,6 +1460,8 @@ _HANDLERS: Final[
     Operation.FINISH: _finish,
     Operation.READ_AUTHORITY: _read_authority,
     Operation.READ_PUBLISHED: _read_published,
+    Operation.READ_RELATIONS: _read_relations,
+    Operation.COUNT_LIMITS: _count_limits,
 }
 
 
