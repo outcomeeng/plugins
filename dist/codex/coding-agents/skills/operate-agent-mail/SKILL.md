@@ -3,7 +3,7 @@ name: operate-agent-mail
 description: >-
   ALWAYS invoke this skill when a workflow registers a mail identity, sends a message record, reads an inbox, or records a receipt in the agent-mail store. NEVER construct an `am` command or derive the mail project key without this skill.
 argument-hint: "<operation or JSON request>"
-allowed-tools: Bash(printf:*), Bash(python3 "${SKILL_DIR}/scripts/agent_mail.py":*)
+allowed-tools: Write, Bash(python3 "${SKILL_DIR}/scripts/agent_mail.py":*)
 ---
 
 <objective>
@@ -65,25 +65,17 @@ The project key is the repository's own common Git directory, so every worktree 
    }
    ```
 
-3. Submit the request over stdin in one of the forms in `<invocation_forms>`.
+3. Write the request with the file-write tool to a file in the scratch directory the harness names for this session, under a file name unique to the agent and the request, and submit it through the input redirect in `<invocation_forms>`.
 4. For a `run` request, accept only `status: "succeeded"`, which exits zero and carries exactly seven fields, every one of them preserved: `schemaVersion`, `operation`, `status`, `commandExitCode`, `projectKey`, the store's `response`, and `data`. A delivered message is the `record` in `data` carrying its store-assigned `id`. A request the adapter read and rejected answers instead with `schemaVersion`, `operation` — the requested operation, or `unknown` where the request named none — `status` (`command-failed`, `invalid-schema`, `store-unavailable`, `repository-unresolved`, or `operation-unavailable`), `detail`, and `commandExitCode` where a store command returned an exit code, and exits 1. Stdin the adapter cannot read as a JSON object is rejected before any operation is read, so that answer carries `status: "invalid-schema"` and `detail` alone — no `schemaVersion`, no `operation`, no `commandExitCode` — and exits 2; read it by those two fields rather than as a versioned result. Stop on the exact `status` and `detail` of every failing form; none of them admits a fallback command, key, or store. The `project-key` operation answers in its own shape, stated with its form below.
 
 </workflow>
 
 <invocation_forms>
 
-When the shell accepts multiline input:
+To submit a request, with `<request-file>` the file written in step 3:
 
 ```bash
-python3 "${SKILL_DIR}/scripts/agent_mail.py" run <<'JSON'
-{"schemaVersion":1,"operation":"inbox","arguments":{"agent":"AmberGull","unreadOnly":true,"includeBodies":true}}
-JSON
-```
-
-When the runner requires one physical command line:
-
-```bash
-printf '%s\n' '{"schemaVersion":1,"operation":"inbox","arguments":{"agent":"AmberGull","unreadOnly":true,"includeBodies":true}}' | python3 "${SKILL_DIR}/scripts/agent_mail.py" run
+python3 "${SKILL_DIR}/scripts/agent_mail.py" run < <request-file>
 ```
 
 To read the project key alone:
@@ -105,6 +97,7 @@ This form answers `{"projectKey": "<absolute path>"}` and exits zero, or `{"stat
 - ALWAYS supply arguments under the field names in `<operation_surface>` and leave the mapping to the adapter: it alone turns a field into an `am` option or a store field and reads it back, and it rejects an argument outside the operation's shape as `invalid-schema` rather than dropping it.
 - ALWAYS register a position's own stable name only, with that position's own label when it has one; register no other name and no other position's label.
 - NEVER select, route, or address by a label; the stable name or the store id selects every target, and a label may be shared by two agents and changes with its owner.
+- NEVER pass a request through a heredoc, a pipe, or an inline argument, and NEVER remove the request file — a request carries code spans, quotes, and JSON that the dangerous-command guard refuses in those forms, and the harness clears its scratch directory.
 - NEVER invoke raw `am` commands, `am` command help, or read the store's database.
 - NEVER derive the project key outside the adapter; it reads the key from the repository, and no working directory, environment variable, or parent path stands in for it.
 - NEVER treat a receipt as agreement, ownership, authorization, or the acknowledgement of a proposal; it records only that the recipient read one message.
