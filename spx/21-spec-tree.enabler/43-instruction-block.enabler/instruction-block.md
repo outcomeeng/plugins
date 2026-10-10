@@ -129,4 +129,4 @@ CAN retain the Spec Tree routing instructions and reach the product's own phase 
 - NEVER: generation emits a router block containing the session-result archive instruction token or the `result` session frontmatter field token ([test](tests/test_instruction_block.compliance.l1.py))
 - NEVER: instruction-block generation writes output from a harness template that still contains unresolved build-template delimiters such as `{{! ... !}}` ([test](tests/test_instruction_block.compliance.l1.py))
 - NEVER: `spx/CLAUDE.md` or `spx/AGENTS.md` remain after generation — the root managed surface is the canonical instruction surface ([test](tests/test_instruction_block.compliance.l1.py))
-- ALWAYS: both harness routers carry a Change Lifecycle section that routes a held Change whose work stops with continuation remaining to `/release-change`, and a Change at its terminal Lifecycle to `/close-change <Applied|Abandoned>`
+- ALWAYS: both harness routers carry a Change Lifecycle section that routes a held Change whose work stops with continuation remaining to `/release-change`, and a Change at its terminal Lifecycle to `/close-change <Applied|Abandoned>` ([audit])
