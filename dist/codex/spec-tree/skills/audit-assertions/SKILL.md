@@ -5,7 +5,7 @@ description: >-
   spec against the subject that assertion names, and records the judgment as one
   scope unit per assertion in an SPX file-scoped verification run.
 argument-hint: "<JSON object with path and runDriver>"
-allowed-tools: Read, Grep, Glob, Write, Bash(spx verification run:*)
+allowed-tools: Read, Grep, Glob, Bash(spx verification run:*), Bash(printf:*)
 ---
 
 <objective>
@@ -16,12 +16,12 @@ A sealed `spx verification run` on one node spec, with one scope unit per `[audi
 
 <constraints>
 
-- NEVER modify the target spec, its subjects, or any other product file — the audit's own SPX run journal and its payload scratch files are the only state it writes.
+- NEVER modify the target spec, its subjects, or any other product file — the audit's own SPX run journal is the only state it writes.
 - NEVER judge an assertion that carries another tag (`[test]`, `[eval]`, `[probe]`) or no tag — those verification types belong to their own evidence.
 - NEVER judge how an assertion is declared or selected: declaration form, heading placement, and tag fit belong to `/audit-specs`.
 - ALWAYS judge an assertion against the subject it names — the artifact, behavior, or constraint its text identifies — read from the product, never against the spec's wording alone or the conversation.
 - ALWAYS persist audit state through `spx verification run`, started before any judgment; NEVER use markdown comments, tracked files, or a hand-formatted verdict as audit state.
-- ALWAYS pass each payload through a file, never through a heredoc, a pipe, or an inline argument: write the payload with the file-write tool to the harness's session scratch directory under a file name unique to this audit and payload, supply it through the input redirect `< <payload-file>`, and never remove it.
+- ALWAYS pass each payload on stdin as one rendered JSON object in the form `<persistence_contract>` names for the harness; NEVER assemble or repair a payload through a temporary file, helper file, command substitution, or post-hoc text substitution.
 - ALWAYS issue each `spx verification run` mutation as its own command and wait for its exit before the next one — parallel writes race sequence assignment and corrupt the sealed journal.
 - NEVER run deterministic verification, delegate the audit to another session, or finish a run whose inspection is incomplete because of elapsed time, context pressure, or unfinished reading.
 - NEVER retry a rejected command with a rewritten payload; a nonzero exit ends the audit with `BLOCKED`.
@@ -60,7 +60,7 @@ A sealed `spx verification run` on one node spec, with one scope unit per `[audi
 
 <persistence_contract>
 
-Add a scope unit with `spx verification run scope add --verification-type audit --scope-type file --scope <path> --run <token> --payload stdin --idempotency-key '<unitId>' < <payload-file>`. The `unitId` is `assertion:<slug-or-ordinal-n>:<path>`.
+Add a scope unit with `spx verification run scope add --verification-type audit --scope-type file --scope <path> --run <token> --payload stdin --idempotency-key '<unitId>'`, the payload on stdin per `<stdin_forms>`. The `unitId` is `assertion:<slug-or-ordinal-n>:<path>`.
 
 ```json
 {
@@ -93,7 +93,7 @@ Add a scope unit with `spx verification run scope add --verification-type audit 
 }
 ```
 
-Add a finding with `spx verification run finding add` and the same selectors, `--payload stdin`, and `--idempotency-key '<unitId>:finding-<three-digit ordinal>-<rule>'`, ordinal counted from one in unit order then finding order. Its payload names an accepted unit; `producerIdentity` repeats that unit's `expectedProducer`; `rule` is a lowercase hyphenated identifier naming the violated constraint.
+Add a finding with `spx verification run finding add` and the same selectors, `--payload stdin` per `<stdin_forms>`, and `--idempotency-key '<unitId>:finding-<three-digit ordinal>-<rule>'`, ordinal counted from one in unit order then finding order. Its payload names an accepted unit; `producerIdentity` repeats that unit's `expectedProducer`; `rule` is a lowercase hyphenated identifier naming the violated constraint.
 
 ```json
 {
@@ -113,6 +113,26 @@ Add a finding with `spx verification run finding add` and the same selectors, `-
 These objects are the sanctioned payload schema for this audit; never derive a replacement from command help or CLI source.
 
 </persistence_contract>
+
+<stdin_forms>
+
+Quote every idempotency key as one single-quoted argument; encode a literal apostrophe with the splice `'"'"'`. Choose the stdin form by harness. Where the harness accepts multiline shell, use a quoted heredoc carrying the rendered JSON:
+
+```bash
+spx verification run scope add \
+  --verification-type audit \
+  --scope-type file \
+  --scope <path> \
+  --run <token> \
+  --payload stdin \
+  --idempotency-key '<unitId>' <<'JSON'
+<rendered-scope-json>
+JSON
+```
+
+Where the runner requires one physical command line, use `printf '%s\n' '<rendered-json-on-one-line>' | spx verification run scope add ...` with the same selectors, encoding a literal apostrophe with the same splice. This audit grants no file-write tool, so its payloads never travel through a scratch file.
+
+</stdin_forms>
 
 </audit_workflow>
 

@@ -415,13 +415,14 @@ The audit side of the divergence between `spec-tree:implementation-auditor` run 
 
 ## The audit skills are exempt from the payload-file rule
 
-**Evidence.** [`spx/15-agent-tools.pdr.md`](spx/15-agent-tools.pdr.md) requires every payload to reach a command through a file in the harness's scratch directory. Two skills are exempt from that rule and keep their prior payload forms:
+**Evidence.** [`spx/15-agent-tools.pdr.md`](spx/15-agent-tools.pdr.md) requires every payload to reach a command through a file in the harness's scratch directory. Three skills are exempt from that rule and keep stdin payload forms:
 
 - `audit-implementation` (`src/plugins/spec-tree/skills/audit-implementation`)
 - `audit-change` (`src/plugins/spec-tree/skills/audit-change`)
+- `audit-assertions` (`src/plugins/spec-tree/skills/audit-assertions`)
 
 The skill auditor's grant rule bars `Write` on an `audit-*` skill, so an `audit-*` skill cannot write a payload file. The `--audit-input` argument of `resolve_scope.py` takes an inline JSON argument, which the payload rule would route through a file; the argument stays inline because of the same grant rule.
 
 **Impact.** The `audit-*` skills pass payloads through the forms the payload rule excludes, so the rule holds for every other skill and not for these.
 
-**Settlement condition.** The grant rule admits a file-write grant for `audit-*` skills, after which `audit-implementation` and `audit-change` move to the file form, and `--audit-input` takes its JSON through a file.
+**Settlement condition.** The grant rule admits a file-write grant for `audit-*` skills, after which `audit-implementation`, `audit-change`, and `audit-assertions` move to the file form, and `--audit-input` takes its JSON through a file.
