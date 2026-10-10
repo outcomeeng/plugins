@@ -13,11 +13,11 @@ MENTION_REVIEW_NEEDED_TOKEN_SEPARATOR = ":"
 
 FIELD_CONCLUSION = "conclusion"
 FIELD_FINDINGS = "findings"
-FIELD_IN_PR_DIFF = "in_pr_diff"
 FIELD_KIND = "kind"
 FIELD_OVERALL = "overall"
 FIELD_PRESENT = "present"
 FIELD_ROWS = "rows"
+FIELD_TOUCHES_OR_INVALIDATES_TEXT = "touches_or_invalidates_text"
 FIELD_REVIEWER_WORKFLOW_MODIFIED = "reviewer_workflow_modified"
 FIELD_STATE = "state"
 FIELD_STATE_CATEGORY = "state_category"
@@ -281,7 +281,7 @@ def decide_release_action(
 
 def decide_auditor_verdict(verdict: Mapping[str, Any]) -> AuditorVerdictDecision:
     """Decide how a merge flow handles a surfaced auditor verdict."""
-    if verdict.get(FIELD_IN_PR_DIFF) is False:
+    if verdict.get(FIELD_TOUCHES_OR_INVALIDATES_TEXT) is False:
         return AuditorVerdictDecision(
             required_action=AuditorRequiredAction.TRACK_OUT_OF_PR,
             merge_blocked=False,
