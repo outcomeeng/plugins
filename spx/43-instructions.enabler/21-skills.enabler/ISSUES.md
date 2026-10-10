@@ -203,17 +203,22 @@ Source: `instructions:skill-auditor` finding `f-015`, rule
 
 **Related.** "A non-interactive git guard sits on the command that cannot prompt", in `spx/21-spec-tree.enabler/76-merge.enabler/32-github-pr.enabler/ISSUES.md`, asks whether the Bash grant matcher tolerates an `ENV=value` prefix. One executed invocation that reports the matcher's behavior on an unexpanded token and on an environment-variable prefix answers both.
 
-## Two authoring surfaces teach payload forms the payload rule forbids
+## Authoring surfaces teach payload forms and a payload-pipe exemption the router does not hold
 
-Two surfaces of the `instructions` plugin teach payload forms that [`spx/15-agent-tools.pdr.md`](spx/15-agent-tools.pdr.md) forbids. The payload rule requires every payload to reach a command through a file in the scratch directory the harness names, under a file name unique to the agent.
+Surfaces of the `instructions` plugin teach payload forms that [`spx/15-agent-tools.pdr.md`](spx/15-agent-tools.pdr.md) forbids, and state a guard-block rule with a payload-pipe exemption that the router does not hold. The payload rule requires every payload to reach a command through a file in the scratch directory the harness names, under a file name unique to the agent. The router states the guard-block rule with no payload-pipe exemption: a pipe between two operations ends the command family, and a blocked compound command runs its parts again one at a time.
 
 **Evidence.**
 
 - `src/plugins/instructions/skills/skill-standards/SKILL.md` line 49 teaches choosing a quoted heredoc or a one-line `printf '%s\n' ... | <tool>` pipe by harness environment.
 - `src/plugins/instructions/skills/create-skill/templates/auditor-skill.md` lines 98, 130 and 135 teach a quoted heredoc and a `printf` pipe for `spx verification run scope add` and `finding add` payloads, with `Bash(printf '%s\n':*)` in the template's `allowed-tools`.
+- `src/plugins/instructions/skills/skill-standards/SKILL.md` line 452 states the guard-block rule with "a pipe between two operations other than a payload pipe".
+- `src/plugins/instructions/skills/skill-standards/references/command-capabilities.md` line 98 says "other than the payload pipe above".
+- `src/plugins/instructions/skills/skill-standards/references/rule-catalog.md` line 175, rule `unbounded_guard_rerun`, says "a payload pipe is never split".
+
+The three guard-block sites contradict the router, so the skill auditor enforces a rule the router no longer holds.
 
 The `audit-skill` and `audit-subagent` skills and the `skill-auditor` and `subagent-auditor` agents carry the same forms under the exemption recorded in `spx/21-spec-tree.enabler/68-audit.enabler/ISSUES.md`. This entry does not cover them.
 
 **Impact.** The skill standards and the auditor template shape every new skill. A skill authored from them teaches the forbidden forms, so the payload rule holds for existing skills and not for the skills these surfaces produce.
 
-**Settlement condition.** The skill standards and the auditor template state the file form, or the exemption's grant rule is lifted and the auditors move to the file form. The skill auditor then raises no payload-form finding on either surface.
+**Settlement condition.** The skill standards and the auditor template state the file form, or the exemption's grant rule is lifted and the auditors move to the file form. The guard-block wording in the three guard-block sites matches the router: a pipe between two operations ends the command family, with no payload-pipe exemption, and a blocked compound command runs its parts again one at a time. The skill auditor then raises no payload-form finding on either surface.
