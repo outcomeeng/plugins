@@ -5,7 +5,7 @@ description: >-
   Verification run-journal projection methodology loaded by audit and review
   skills when building spx journal events, computing rollups, or rendering verdict
   surfaces.
-allowed-tools: Read, Bash(spx journal:*), Bash(python3 "${SKILL_DIR}/scripts/render_review_run.py":*)
+allowed-tools: Read, Bash(spx journal:*), Bash(python3 "${SKILL_DIR}/scripts/render_review_run.py":*), Write
 ---
 
 <objective>
@@ -54,7 +54,7 @@ To record a verification run, the consuming skill **streams** it — driving the
 
 1. `spx journal open --type <type>` for the run's verification kind; capture the run token.
 2. `scope_entered_event(run, now=<utc>, attempt=<n>)`, then `spx journal append`, at the run's start. The run identity carries scope hash, branch name, branch slug, target kind, head SHA, base ref, optional base SHA, config digest, participants, path-filter scope, timestamps, and output paths so the terminal event can fold through the core journal run-state projection.
-3. As the run advances, `scope_advanced_event(unit, …)` per unit of scope examined and `finding_reported_event(finding, …)` the instant each finding is raised, each appended via `spx journal append` reading the event from stdin.
+3. As the run advances, `scope_advanced_event(unit, …)` per unit of scope examined and `finding_reported_event(finding, …)` the instant each finding is raised, each appended via `spx journal append` with the input redirect `< <event-file>`, per `<event_payload>`.
 4. `run_completed_event(run, status=<terminal_status(compute_overall(prefix))>, …)` and `spx journal append`, then `spx journal seal --type <type> --run <token>` to finalize the sequence.
 5. `spx journal read --type <type> --run <token> --from 0` to read the sealed event prefix, then `compute_overall` for the verdict and `render_surface` for the human-readable surface.
 
@@ -75,6 +75,17 @@ python3 "${SKILL_DIR}/scripts/render_review_run.py" <run-token> --branch-slug <s
 Treat the helper output as an inspection projection of the sealed journal prefix. The sealed prefix remains the only review result.
 
 </workflow>
+
+<event_payload>
+
+An append event is a payload: it carries quotes, code spans, and JSON.
+
+- ALWAYS: write each event with the file-write tool to its own file in the scratch directory the harness names for this session, under a file name unique to this agent and run, such as `event-<runToken>-<n>.json`. Where the harness names no scratch directory, use the one the hosting environment designates, such as `$RUNNER_TEMP` on a hosted runner.
+- ALWAYS: pass the file to `spx journal append --type <type> --run <token>` with the input redirect `< <event-file>`, with the path written out literally.
+- NEVER: send an event through a heredoc, a pipe, or an inline argument.
+- NEVER: remove an event file; the harness clears its scratch directory.
+
+</event_payload>
 
 <success_criteria>
 
