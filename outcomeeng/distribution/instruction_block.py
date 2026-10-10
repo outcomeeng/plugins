@@ -171,15 +171,34 @@ AUTHORITY_HIERARCHY_POLICY_REQUIREMENTS: Final = (
     ),
     ("Claude guide filename", "`CLAUDE.md` for Claude Code"),
     ("Codex guide filename", "`AGENTS.md` for Codex"),
+    (
+        "payload file rule",
+        "a payload reaches a command through a file, never through a heredoc, "
+        "a pipe, or an inline form",
+    ),
+    (
+        "payload scratch location",
+        "scratch directory the harness names for the session, under a file "
+        "name unique to the agent",
+    ),
+    (
+        "payload file argument or input redirect",
+        "through its own file argument, such as `gh pr create --body-file "
+        "<file>` or `git commit -F <file>`, or through an input redirect "
+        "`<tool> < <file>`",
+    ),
+    (
+        "payload removal prohibition",
+        "remove a payload file",
+    ),
 )
 DANGEROUS_COMMAND_GUARD_STOP_TRIGGER_REQUIREMENT: Final = (
     "a dangerous-command guard (DCG) block on a command holding one operation "
     "with every string written literally terminates that command family"
 )
 DANGEROUS_COMMAND_GUARD_UNCARRIED_COMPOSITION_REQUIREMENT: Final = (
-    "holds a process substitution, a pipe between two operations other than "
-    "the payload pipe below, a background `&`, a subshell, or a list that "
-    "mixes `&&` and `||`"
+    "holds a process substitution, a pipe between two operations, a "
+    "background `&`, a subshell, or a list that mixes `&&` and `||`"
 )
 DANGEROUS_COMMAND_GUARD_UNCARRIED_TERMINAL_REQUIREMENT: Final = (
     "a block on it terminates its command family, even when it also holds a "
@@ -193,15 +212,8 @@ DANGEROUS_COMMAND_GUARD_COMPOUND_DEFINITION_REQUIREMENT: Final = (
 )
 DANGEROUS_COMMAND_GUARD_SINGLE_OPERATION_FORMS_REQUIREMENT: Final = (
     "A heredoc that feeds one command holds one operation unless its delimiter "
-    "is unquoted and its body expands, and so does a pipe whose first stage "
-    "only supplies the payload the one reading command consumes on stdin, so "
-    "neither counts as a join or separator"
-)
-DANGEROUS_COMMAND_GUARD_PAYLOAD_PIPE_REQUIREMENT: Final = (
-    "When any word of such a pipe or of its payload stage expands, its values "
-    "are resolved first and the same pipe runs once with literal words; it is "
-    "never split, and when the guard blocks that literal pipe the command "
-    "family ends"
+    "is unquoted and its body expands, and so does an input redirect from a "
+    "payload scratch file, so neither counts as a join or separator"
 )
 DANGEROUS_COMMAND_GUARD_VALUE_RESOLUTION_REQUIREMENT: Final = (
     "Resolve each value first: a command substitution's inner "
@@ -268,10 +280,6 @@ DANGEROUS_COMMAND_GUARD_POLICY_REQUIREMENTS: Final = (
     (
         "dangerous-command guard single-operation forms",
         DANGEROUS_COMMAND_GUARD_SINGLE_OPERATION_FORMS_REQUIREMENT,
-    ),
-    (
-        "dangerous-command guard payload pipe",
-        DANGEROUS_COMMAND_GUARD_PAYLOAD_PIPE_REQUIREMENT,
     ),
     (
         "dangerous-command guard compound split",
