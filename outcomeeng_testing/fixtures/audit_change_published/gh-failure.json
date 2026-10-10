@@ -1,0 +1,4 @@
+{
+  "exitCode": 1,
+  "stderr": "GraphQL: Could not resolve to a Repository with the name 'example-org/example-changes'. (repository)\n"
+}

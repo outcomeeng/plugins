@@ -95,3 +95,11 @@
 **Impact**: the probe's `passed` verdict rests on a protocol text that has since changed, so the `[probe]` assertion of `change-execution.md` carries no attested result pinned to the current protocol.
 
 **Settlement condition**: a fresh attested run of the amended protocol, recorded in `probes/definition-invocation/probe.md` with its retained artifacts.
+
+## The SPX CLI lists no verification runs by Change identity
+
+**Evidence**: `change-execution.md` caps each agentic gate at two counted rejections per Change, counting every rejection from any session. The SPX CLI records each run in its verification run journal and reads one run by token through `spx verification run status`, and it offers no listing of runs that carries the Change a run serves. The Decisions of `outcomeeng/changes#374`, under "Where does the count live?", therefore keep the count in the Change store: each Handoff's Hazards line names every counted rejection by gate with its run token, and the claiming session counts those tokens plus its own launches.
+
+**Impact**: the count is only as complete as the Handoffs that carry it. A rejection that no Handoff names, such as one a session sealed before it stopped without a release, is absent from the next holder's count, and no command derives the count from the journal to check the Hazards line against.
+
+**Settlement condition**: the SPX CLI lists verification runs with the Change identity each run carries, and the cap counts from that listing instead of from the Handoffs' run tokens.

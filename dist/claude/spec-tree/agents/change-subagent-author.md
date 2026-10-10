@@ -4,7 +4,7 @@ effort: "medium"
 name: change-subagent-author
 description: >-
   Round session `/execute-change` launches by exact name when an Activity needs a subagent definition produced or repaired through `instructions:create-subagent`.
-disallowedTools: "AskUserQuestion"
+disallowedTools: Agent, AskUserQuestion
 skills:
   - instructions:create-subagent
 ---

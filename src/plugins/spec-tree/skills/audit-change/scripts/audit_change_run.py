@@ -56,6 +56,9 @@ other than ``git`` and ``spx``; the generated requests start none.
 process over replayed store pages: a read that ends before the bound returns
 every entry, and a connection that keeps reporting a further page blocks after
 the bound with ``page-bound-reached`` naming it.
+
+``read-published`` starts ``gh`` once and returns the issue's published body,
+the empty string when the store holds none.
 """
 
 from __future__ import annotations
@@ -86,6 +89,7 @@ class Operation(StrEnum):
     RECONCILE = "reconcile"
     FINISH = "finish"
     READ_AUTHORITY = "read-authority"
+    READ_PUBLISHED = "read-published"
 
 
 class RequestField(StrEnum):
@@ -294,6 +298,10 @@ _AUTHORITY_CONNECTIONS: Final[Mapping[AuthorityRead, StoreField]] = {
     AuthorityRead.EVENTS: StoreField.TIMELINE_ITEMS,
     AuthorityRead.COMMENTS: StoreField.COMMENTS,
 }
+_PUBLISHED_QUERY: Final = (
+    "query($o:String!,$r:String!,$n:Int!)"
+    f"{{repository(owner:$o,name:$r){{issue(number:$n){{{StoreField.BODY}}}}}}}"
+)
 ISSUE_IDENTITY_PATTERN: Final = re.compile(
     r"([A-Za-z0-9][A-Za-z0-9-]*)/([A-Za-z0-9._-]+)#([1-9][0-9]*)"
 )
@@ -320,6 +328,7 @@ REQUIRED_FIELDS: Final[Mapping[Operation, frozenset[RequestField]]] = {
         {RequestField.PATH, RequestField.RUN_TOKEN, RequestField.TERMINAL_STATUS}
     ),
     Operation.READ_AUTHORITY: frozenset({RequestField.ISSUE}),
+    Operation.READ_PUBLISHED: frozenset({RequestField.ISSUE}),
 }
 
 
@@ -651,6 +660,7 @@ _REQUEST_CHECKS: Final[
     Operation.RECONCILE: (_candidate_path, _run_token),
     Operation.FINISH: (_candidate_path, _run_token, _terminal_status),
     Operation.READ_AUTHORITY: (_issue_identity,),
+    Operation.READ_PUBLISHED: (_issue_identity,),
 }
 
 
@@ -1142,6 +1152,34 @@ def _read_authority(
     }
 
 
+def _read_published(
+    context: _Context, request: Mapping[str, object]
+) -> dict[str, object]:
+    """Return the store's published body of the named issue, or block."""
+    owner, repository, number = _issue_identity(request)
+    argv = [
+        *_GRAPHQL,
+        "-f",
+        f"query={_PUBLISHED_QUERY}",
+        "-f",
+        f"o={owner}",
+        "-f",
+        f"r={repository}",
+        "-F",
+        f"n={number}",
+    ]
+    node: object = _json_lines(_command(context, argv, cwd=context.cwd))[-1]
+    for key in (StoreField.DATA, StoreField.REPOSITORY, StoreField.ISSUE):
+        node = node.get(key) if isinstance(node, dict) else None
+    body = node.get(StoreField.BODY) if isinstance(node, dict) else None
+    if not isinstance(body, str):
+        raise Blocked(
+            BlockReason.UNREADABLE_OUTPUT,
+            f"store answer carries no issue {StoreField.BODY} string",
+        )
+    return {ResultField.ISSUE: request[RequestField.ISSUE], ResultField.BODY: body}
+
+
 _HANDLERS: Final[
     Mapping[Operation, Callable[[_Context, Mapping[str, object]], dict[str, object]]]
 ] = {
@@ -1154,6 +1192,7 @@ _HANDLERS: Final[
     Operation.RECONCILE: _reconcile,
     Operation.FINISH: _finish,
     Operation.READ_AUTHORITY: _read_authority,
+    Operation.READ_PUBLISHED: _read_published,
 }
 
 
