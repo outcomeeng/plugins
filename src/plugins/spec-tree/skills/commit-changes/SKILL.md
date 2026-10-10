@@ -3,7 +3,7 @@ name: commit-changes
 description: >-
   ALWAYS invoke this skill when committing changes or when user says "commit".
   NEVER run git commit without this skill.
-allowed-tools: Read, Glob, Grep, Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git branch:*), Bash(git rev-parse:*), Bash(git add:*), Bash(git commit:*)
+allowed-tools: Read, Write, Glob, Grep, Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git branch:*), Bash(git rev-parse:*), Bash(git add:*), Bash(git commit:*)
 ---
 
 <objective>
@@ -180,6 +180,17 @@ These signals require concern reclassification or staging correction. A failing 
 Record the full pre-commit and post-commit `HEAD` IDs. After `git commit` exits zero, confirm the IDs differ, inspect `git status --short`, and report the committed paths, remaining paths, and verification state. When a hook or `git commit` fails, preserve its output, confirm no successful commit was created, and return the failure without `--no-verify` or another bypass.
 
 </verification_protocol>
+
+<message_payload>
+
+A commit message is a payload: it spans lines and carries code spans, quotes, or shell metacharacters. It reaches `git commit` through a file, never through a heredoc, a pipe, or an inline `-m` argument.
+
+- ALWAYS: write the message with the file-write tool to a file in the scratch directory the harness names for this session, under a file name unique to this agent and concern, such as `commit-<concern-slug>-<agent-session-id>.txt`. Where the harness names no scratch directory, use the one the hosting environment designates, such as `$RUNNER_TEMP` on a hosted runner.
+- ALWAYS: pass the file with `git commit -F <message-file>`, with the path written out literally.
+- NEVER: remove the message file; the harness clears its scratch directory.
+- NEVER: place the message file in the repository, in a fixed path, or in a directory shared by other sessions.
+
+</message_payload>
 
 <message_format>
 
@@ -406,18 +417,8 @@ git diff --cached --name-only
 # Stage selectively
 git add path/to/specific/file.ts
 
-# Commit with multi-line message in an interactive harness
-git commit -F - <<'EOF'
-feat(scope): subject line here
-
-Body explaining why this change was made.
-Wrapped at 72 characters for readability.
-
-Refs: #123
-EOF
-
-# Commit with multi-line message in a programmatic runner that requires one physical line
-printf '%s\n' 'feat(scope): subject line here' '' 'Body explaining why this change was made.' 'Wrapped at 72 characters for readability.' '' 'Refs: #123' | git commit -F -
+# Commit with the message file written in the scratch directory
+git commit -F <message-file>
 
 # View recent commits for style reference
 git log --oneline -10

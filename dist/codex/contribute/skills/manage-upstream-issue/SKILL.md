@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when continuing an open issue in a repository the operator does not control — answering a maintainer, adding evidence, or reporting the thread's current state.
   NEVER comment on or close an issue in such a repository without this skill.
 argument-hint: "[issue number or URL]"
-allowed-tools: Read, collaboration.spawn_agent, collaboration.wait_agent, request_user_input, Bash(gh issue view:*), Bash(gh issue comment:*), Bash(gh issue close:*), Bash(gh api user:*), Bash(printf:*)
+allowed-tools: Read, Write, collaboration.spawn_agent, collaboration.wait_agent, request_user_input, Bash(gh issue view:*), Bash(gh issue comment:*), Bash(gh issue close:*), Bash(gh api user:*)
 ---
 
 <objective>
@@ -51,9 +51,13 @@ This gate precedes Step 6's write. A comment notifies every watcher of a reposit
 
 With a question to answer, draft per `<reply_shape>` and review — the prose plugin's `prose_prose-auditor` thin agent where installed, `/contribution-standards` `<outward_text>` unassisted where not, stated as such.
 
+The reply is a payload. Write it with the file-write tool to a file in the scratch directory the harness names for this session, under a file name unique to the agent and this issue, then hand that file to `gh`. Where the harness names no scratch directory, use the one the environment designates, such as `$RUNNER_TEMP` on a hosted runner. Never remove it; the harness clears its scratch directory.
+
 ```bash
-printf '%s\n' '<line>' '<line>' | gh issue comment "<number>" --repo "<base>" --body-file -
+gh issue comment "<number>" --repo "<base>" --body-file "<comment-file>"
 ```
+
+`--body-file "<comment-file>"` delivers the reply with real newlines, whatever code spans, quotes, or shell text it carries; a heredoc, pipe, or inline argument is refused by the dangerous-command guard on such text.
 
 **Step 7 — GATE: Close only what the operator opened, and only when authorized.** Step 5 already established the author. An issue anyone else filed is the maintainer's to close; stop there. For an issue the operator filed, closing is a new outward action rather than a revision of the authorized one, so present through the runtime's structured-question tool the resolved `base`, the issue number and title, and the choice to close it or leave it open. Close only after the operator authorizes it in this turn:
 
@@ -117,6 +121,7 @@ The first sentence answers the question asked, before anything else. The command
 - MUST read `gh api user` only for the Step 5 authorship comparison. `/contribution-standards` `<invariants>` "Establish permission from the API" rules the authenticated account out as evidence of permission on the base; it is evidence of identity and nothing else.
 - NEVER pass an `-X` method flag to `gh api user`. The `Bash(gh api user:*)` grant matches by prefix, so it admits every verb against the operator's own GitHub account — `-X PATCH` and `-X DELETE` among them; this constraint is the whole containment for all of them. Read only.
 - NEVER pass `--edit-last` or `--delete-last` to `gh issue comment`. The `Bash(gh issue comment:*)` grant matches by prefix and admits both, and either one rewrites or removes a comment a maintainer may already have read. `/contribution-standards` `<invariants>` "Iterate by appending" is the rule; this constraint is its containment here.
+- NEVER pass the reply through a heredoc, a pipe, or an inline argument, and NEVER remove the comment file.
 - NEVER close, label, or reassign an issue the operator did not open.
 - NEVER present a synthesized approximation of the condition as an observation.
 
@@ -134,7 +139,7 @@ The first sentence answers the question asked, before anything else. The command
 - The thread was read once, and `state` plus the last maintainer comment appear verbatim.
 - A `state` of `CLOSED` returned that outcome and wrote nothing; every criterion below covers a pass on an open thread.
 - The issue's `author.login` was compared against the authenticated login before the comment was posted, and a thread the operator did not open was authorized in that turn.
-- Where the thread asked a question, the reply's opening sentence answers the one Step 4 identified and every claim after it is followed by quoted evidence rather than a description of that evidence; where it asked none, no comment was posted.
+- Where the thread asked a question, the reply's opening sentence answers the one Step 4 identified and every claim after it is followed by quoted evidence rather than a description of that evidence; where it asked none, no comment was posted; a posted reply arrived from a scratch file through `--body-file`.
 - Inference is marked as inference; an unreproduced condition is marked unverified.
 - The reply passed a prose review, reported as unassisted where the prose plugin is absent.
 - Any close was authorized in the same turn and applied only to an issue whose `author.login` equals the login `gh api user` reported.

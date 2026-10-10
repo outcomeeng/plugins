@@ -1,3 +1,7 @@
+---
+malleability: spec
+---
+
 # Skills
 
 PROVIDES the meta-skills that create, standardize, and audit SKILL.md files
@@ -31,7 +35,7 @@ The skills-about-skills cluster is three peers with distinct roles:
 - ALWAYS: `/skill-standards` owns every rule `/audit-skill` enforces — standards and enforcement stay in one place so drift cannot open between them ([audit])
 - ALWAYS: `/create-skill` and `/audit-skill` load `/skill-standards` before doing any authoring or evaluation work — prevents memory-based assessment ([audit])
 - ALWAYS: a skill governs its own behavior and remains independent of the agent, skill, or context that invokes it ([audit])
-- ALWAYS: the `/skill-standards` caller-independence rule reads a payload command form a skill selects by harness environment, as [`spx/15-agent-tools.pdr.md`](spx/15-agent-tools.pdr.md) requires, as a property of the run and never as dependence on the caller ([audit])
+- ALWAYS: the `/skill-standards` caller-independence rule reads the payload scratch-directory fallback location a skill selects by harness environment, as [`spx/15-agent-tools.pdr.md`](spx/15-agent-tools.pdr.md) requires, as a property of the run and never as dependence on the caller ([audit])
 - ALWAYS: `/skill-standards` requires a workflow step writing outside the invocation checkout to obtain confirmation naming the absolute destination before that write, and `/audit-skill` flags an unconfirmed one as blocking — resolving a path establishes where it is, never permission to write there ([audit])
 - NEVER: `/skill-standards` permits skill content that frames a permission prompt, sandbox refusal, or tool-layer decline as an obstacle and documents a route around it, and `/audit-skill` flags such content as blocking — a documented bypass turns one operator's approval into a standing one for every session that loads the skill ([audit])
 - ALWAYS: before proposing or applying a skill rename, `/create-skill` classifies every skill the repository requires reviewing by current name, skill type, governing naming form, proposed name or keep disposition, and reason; it reads declared methodology vocabulary and relevant file history before calling a name defective, and never infers a batch rename from a shared token, suffix, or grammatical number ([audit])
@@ -40,4 +44,4 @@ The skills-about-skills cluster is three peers with distinct roles:
 - NEVER: restate `/skill-standards` rules inside `/create-skill` or `/audit-skill` — a single source of truth prevents drift between standard and enforcer ([audit])
 - NEVER: add standards content to `/create-skill/references/` — that directory carries workflow guidance; standards belong in `/skill-standards` ([audit])
 - ALWAYS: when a foundation skill loads the same references on every invocation, `/skill-standards` requires one consolidated canonical eager payload and governs its total loaded size instead of applying the 500-line overview rule; conditional operational detail, templates, examples, and overlays remain separate ([audit])
-- ALWAYS: `/skill-standards` states the guard-block rule the generated router states — a block on a command holding one operation with every string written literally ends its family, a block on a command whose composition the parts cannot carry — a process substitution, a pipe between two operations other than a payload pipe, a background `&`, a subshell, or a list that mixes `&&` and `||` — ends it too, and a block on a compound command runs its parts again one at a time, in their original order, with every string written literally, a payload pipe never split ([audit])
+- ALWAYS: `/skill-standards` states the guard-block rule the generated router states — a block on a command holding one operation with every string written literally ends its family, a block on a command whose composition the parts cannot carry — a process substitution, a pipe between two operations, a background `&`, a subshell, or a list that mixes `&&` and `||` — ends it too, and a block on a compound command runs its parts again one at a time, in their original order, with every string written literally ([audit])

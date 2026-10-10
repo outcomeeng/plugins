@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when opening a pull request against a repository the operator does not control — a fork's upstream, or any base whose permission is READ, TRIAGE, or NONE.
   NEVER open a pull request against such a repository without this skill.
 argument-hint: "[what the change does, or empty to describe it from the branch]"
-allowed-tools: Read, Glob, Skill, Agent, AskUserQuestion, Bash(git remote get-url origin), Bash(gh repo view:*), Bash(gh api users/*), Bash(gh pr create:*), Bash(git fetch:*), Bash(git rev-parse:*), Bash(git switch:*), Bash(git cherry-pick:*), Bash(git diff:*), Bash(git status --porcelain), Bash(git add:*), Bash(git commit:*), Bash(git branch --show-current), Bash(git log:*), Bash(git push -u origin HEAD:refs/heads/*), Bash(mktemp -d), Bash(printf:*)
+allowed-tools: Read, Write, Glob, Skill, Agent, AskUserQuestion, Bash(git remote get-url origin), Bash(gh repo view:*), Bash(gh api users/*), Bash(gh pr create:*), Bash(git fetch:*), Bash(git rev-parse:*), Bash(git switch:*), Bash(git cherry-pick:*), Bash(git diff:*), Bash(git status --porcelain), Bash(git add:*), Bash(git commit:*), Bash(git branch --show-current), Bash(git log:*), Bash(git push -u origin HEAD:refs/heads/*), Bash(mktemp -d)
 ---
 
 <objective>
@@ -119,15 +119,9 @@ gh api users/"<head-owner>" --jq '.type'
 
 `User` takes `--head <head-owner>:<branch>`. `Organization` cannot be selected that way at all: run the creation from a checkout whose `origin` is that head repository and pass `--head <branch>` alone. Stop with the resolved head named when neither form selects it — never fall back to a head `gh` picks.
 
-Interactive Claude Code and Codex sessions pipe the body through a quoted heredoc:
+The body is a payload. Write it with the file-write tool to a file in the scratch directory the harness names for this session, under a file name unique to the agent and this pull request, then hand that file to `gh`. Where the harness names no scratch directory, use the one the environment designates, such as `$RUNNER_TEMP` on a hosted runner. Never remove it; the harness clears its scratch directory. The file holds:
 
-```bash
-GIT_TERMINAL_PROMPT=0 gh pr create \
-  --repo "<base>" \
-  --base "<base-default-branch>" \
-  --head "<head-owner>:<branch>" \
-  --title "<subject under 70 chars>" \
-  --body-file - <<'EOF'
+```text
 ## Summary
 
 - <bullet>
@@ -140,13 +134,15 @@ GIT_TERMINAL_PROMPT=0 gh pr create \
 ## Refs
 
 - <issue or discussion this answers>
-EOF
 ```
 
-Programmatic runners that require one physical command line use one `printf` argument per output line:
-
 ```bash
-printf '%s\n' '## Summary' '' '- <bullet>' '' '## Verification' '' '- <check> — passed' '' '## Refs' '' '- <ref>' | GIT_TERMINAL_PROMPT=0 gh pr create --repo "<base>" --base "<base-default-branch>" --head "<head-owner>:<branch>" --title "<subject>" --body-file -
+GIT_TERMINAL_PROMPT=0 gh pr create \
+  --repo "<base>" \
+  --base "<base-default-branch>" \
+  --head "<head-owner>:<branch>" \
+  --title "<subject under 70 chars>" \
+  --body-file "<body-file>"
 ```
 
 Pass `--draft` when the contribution is unsolicited or its conformance to the base repository's conventions remains uncertain.
@@ -156,7 +152,7 @@ Flag rationale:
 - `--repo` — the resolved base. Without it `gh` opens against whatever it resolves from the checkout, which for a fork is the parent, reached by inference rather than by decision.
 - `--head <head-owner>:<branch>` — the head repository's owner and the branch, both resolved above, stated explicitly so the head never depends on inference and no fork-selection prompt appears. An organization-owned head drops the owner and passes `--head <branch>` from a checkout whose `origin` is that repository, per the account-type read above.
 - `--base` — the base repository's default branch, resolved in Step 4.
-- `--body-file -` — the body arrives on stdin with real newlines. `--body` does not expand escape sequences, and no temporary file, command substitution, or post-hoc repair assembles the body.
+- `--body-file "<body-file>"` — the body arrives from the scratch file with real newlines, whatever code spans, quotes, or shell text it carries. `--body` does not expand escape sequences, and a heredoc, pipe, or inline argument is refused by the dangerous-command guard on such text.
 
 **Step 10 — Hand off.** Surface the pull-request URL, then invoke `/manage-upstream-pr` on it.
 
@@ -195,6 +191,7 @@ The body explains why; the diff already shows what.
 - NEVER open against a base whose classification is `controlled`, `fork-absent`, or `blocked`.
 - NEVER create the fork — report the destination candidates and stop.
 - NEVER report an unrunnable check as passed, or omit it from the body.
+- NEVER pass the pull-request body through a heredoc, a pipe, or an inline argument, and NEVER remove the body file.
 
 </constraints>
 
@@ -214,7 +211,7 @@ The body explains why; the diff already shows what.
 - The branch's diff against `<base-tip>` carried the change before the push; an empty diff at either gate stopped the flow with nothing opened, and every criterion below covers a pass that opened.
 - The base repository's declared checks ran locally and reported success; any check that could not run is named in the body as unverified with its reason.
 - The title and body passed a prose review, and a review that ran unassisted is reported as such.
-- The head owner's account type was read before the head form was chosen, and `gh pr create` named the base with `--repo` and named the head explicitly — `<head-owner>:<branch>` for a user, `<branch>` alone for an organization — with the body arriving on stdin.
+- The head owner's account type was read before the head form was chosen, and `gh pr create` named the base with `--repo` and named the head explicitly — `<head-owner>:<branch>` for a user, `<branch>` alone for an organization — with the body arriving from a scratch file through `--body-file`.
 - The pull-request URL is surfaced and `/manage-upstream-pr` has taken over.
 
 </success_criteria>

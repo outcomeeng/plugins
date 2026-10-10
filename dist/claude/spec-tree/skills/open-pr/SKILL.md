@@ -3,7 +3,7 @@ name: open-pr
 user-invocable: false
 description: >-
   PR opening protocol for VERIFICATION_READINESS, branch push, ready PR creation, and the first management pass. Invoked by exact name as a composed lifecycle protocol.
-allowed-tools: Read, Glob, Grep, Agent, Bash(spx worktree status:*), Bash(spx diagnose:*), Bash(gh auth status:*), Bash(git status:*), Bash(gh repo view:*), Bash(git remote get-url origin), Bash(git fetch:*), Bash(git merge-base:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(gh pr view:*), Bash(git branch --show-current), Bash(git push -u origin HEAD:refs/heads/*), Bash(git log:*), Bash(gh pr create:*), Bash(gh pr checks:*), Bash(mktemp -d), Bash(printf:*), Skill
+allowed-tools: Read, Write, Glob, Grep, Agent, Bash(spx worktree status:*), Bash(spx diagnose:*), Bash(gh auth status:*), Bash(git status:*), Bash(gh repo view:*), Bash(git remote get-url origin), Bash(git fetch:*), Bash(git merge-base:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(gh pr view:*), Bash(git branch --show-current), Bash(git push -u origin HEAD:refs/heads/*), Bash(git log:*), Bash(gh pr create:*), Bash(gh pr checks:*), Bash(mktemp -d), Bash(printf:*), Skill
 ---
 
 <objective>
@@ -79,52 +79,30 @@ git push -u origin HEAD:refs/heads/"${branch}"
 
 If the product defines a custom branch-push command, follow CLAUDE.md instead — the explicit destination ref must remain part of any custom command.
 
-**Step 5 — GATE: Open the PR ready.** Pipe the curated body to gh on stdin via `--body-file -`. The PR opens `ready_for_review` because `VERIFICATION_READINESS` holds (Step 3); `gh pr create` defaults to ready, so no draft flag is passed. Choose the stdin form by harness.
+**Step 5 — GATE: Open the PR ready.** The PR body is a payload: it spans lines and carries code spans, quotes, or shell metacharacters. It reaches `gh` through a file, never through a heredoc, a pipe, or an inline `--body` argument.
 
-Interactive Claude Code and Codex sessions use a quoted heredoc:
+- ALWAYS: write the body with the file-write tool to a file in the scratch directory the harness names for this session, under a file name unique to this agent and branch, such as `pr-body-<branch-slug>-<agent-session-id>.md`. Where the harness names no scratch directory, use the one the hosting environment designates, such as `$RUNNER_TEMP` on a hosted runner.
+- ALWAYS: pass the file with `--body-file <body-file>`, with the path written out literally.
+- NEVER: remove the body file; the harness clears its scratch directory.
+- NEVER: place the body file in the repository, in a fixed path, or in a directory shared by other sessions.
 
-```bash
-GIT_TERMINAL_PROMPT=0 gh pr create \
-  --title "<commit-subject under 70 chars per /commit-changes>" \
-  --body-file - \
-  --head "$(git branch --show-current)" <<'EOF'
-## Summary
-
-- <bullet>
-
-## Background
-
-<prose>
-
-## Changes
-
-- <change>
-
-## Test plan
-
-- [ ] <verification step>
-
-## Refs
-
-- <ref>
-EOF
-```
-
-Programmatic runners that require one physical command line use `printf` with one argument per output line. The command below may wrap visually in a rendered view; keep it as one physical shell line, with `<branch>` resolved before composing the command:
+The PR opens `ready_for_review` because `VERIFICATION_READINESS` holds (Step 3); `gh pr create` defaults to ready, so no draft flag is passed. Write the body from `<body_template>` to the file, then run:
 
 ```bash
-printf '%s\n' '## Summary' '' '- <bullet>' '' '## Background' '' '<prose>' '' '## Changes' '' '- <change>' '' '## Test plan' '' '- [ ] <verification step>' '' '## Refs' '' '- <ref>' | GIT_TERMINAL_PROMPT=0 gh pr create --title "<commit-subject under 70 chars per /commit-changes>" --body-file - --head "<branch>"
+GIT_TERMINAL_PROMPT=0 gh pr create --title "<commit-subject under 70 chars per /commit-changes>" --body-file <body-file> --head <branch>
 ```
+
+Resolve `<branch>` with `git branch --show-current` first and write it literally.
 
 Flag rationale:
 
 - No `--draft` — the PR opens ready per /merging-standards `<authority_gates>`; `VERIFICATION_READINESS` (Step 3) is the gate that earns the open, and opening ready fires every CI review (Codex and the CI review) at once. A stacked PR is the one exception — pass `--draft` only when `<branch_topology>` holds it draft until its base merges.
-- `--title` and `--body-file -` — explicit title plus body-from-stdin; matches /commit-changes conventions without writing to disk.
+- `--title` and `--body-file` — explicit title plus body from the scratch file; matches /commit-changes conventions.
 - `--head` — the feature branch, stated explicitly so the head ref never depends on gh's inference. It suppresses gh's fork/push-target prompt, which is safe only because `<repository_target_gate>` has already resolved and checked both repositories; without that gate the suppressed prompt would hide a cross-repository target rather than settle it.
 - `--base` — omit only for peer branches targeting the repo default; specify the previous stack branch for stacked PRs.
 - `GIT_TERMINAL_PROMPT=0` — disables git credential prompts. (gh detects non-TTY stdin/stdout and skips its own prompts automatically; no `GH_*` env var is needed.)
 
-The single-quoted heredoc terminator (`<<'EOF'`) disables shell expansion inside the body — backticks, `$variables`, and `!` pass through literally. Use the unquoted form (`<<EOF`) only when the body must interpolate shell variables. In programmatic runner form, single-quoted `printf` arguments preserve those characters literally; a literal apostrophe inside one line uses `'"'"'`. Never embed multi-line content in `--body "..."` — gh does not expand `\n` escapes. Never use temporary files, helper files, command substitution, or post-hoc text substitution to assemble or repair the body.
+The file carries the body verbatim, so backticks, `$variables`, quotes, and `!` pass through literally. Never embed multi-line content in `--body "..."` — gh does not expand `\n` escapes. Never use command substitution or post-hoc text substitution to assemble or repair the body; rewrite the file.
 
 Do not use `--fill`. If both `--fill` and `--body-file` are passed, the explicit body wins; `--fill` is then dead weight.
 
@@ -154,7 +132,7 @@ fix(parser): handle nested expressions and empty operands
 
 <body_template>
 
-The PR body is markdown prose passed to gh on stdin. Default template:
+The PR body is markdown prose written to the scratch body file `<body-file>` of Step 5. Default template:
 
 ```text
 ## Summary
@@ -224,7 +202,7 @@ The opening flow has succeeded when:
 - `VERIFICATION_READINESS` held before the PR opened: local deterministic verification passed on the diff that will be pushed, every evidence-auditor predicate the merge composition selects passed, and the local review passed within the gate cap where the composition selects it — every valid finding that belongs was applied, any valid finding too large to belong was split out (recorded in the relevant node's `ISSUES.md` / `PLAN.md`), and unbacked findings were dropped. Severity did not gate; validity and the before-open phase did.
 - Push uses the explicit destination ref form from /merging-standards `<push_semantics>`.
 - Title is one commit-subject line under 70 chars per /commit-changes.
-- Body is delivered to gh via `--body-file -` on stdin (real newlines).
+- Body is written to a scratch file and delivered to gh via `--body-file <body-file>` (real newlines), with no heredoc, pipe, or inline form.
 - The PR is opened `ready_for_review` (`gh pr create` with no `--draft`) once `VERIFICATION_READINESS` holds — except a stacked PR held draft per `<branch_topology>`.
 - The first management pass starts after the PR opens; `/manage-pr` owns any pending checks, CI review waits, reinspection, merge gates, and post-merge closeout evidence, including /merging-standards `<pr_check_wait>`.
 - PR URL is surfaced to the user.

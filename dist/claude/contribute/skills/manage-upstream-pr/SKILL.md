@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when continuing an open pull request against a repository the operator does not control — answering review, publishing a revision, or reporting its current state.
   NEVER comment on or push to such a pull request without this skill.
 argument-hint: "[pull request number or URL]"
-allowed-tools: Read, Skill, Agent, AskUserQuestion, Bash(git remote get-url origin), Bash(gh repo view:*), Bash(git status --porcelain), Bash(gh pr view:*), Bash(gh pr list:*), Bash(gh pr comment:*), Bash(gh api repos/*/pulls/*/comments:*), Bash(gh api user:*), Bash(git fetch:*), Bash(git switch:*), Bash(git rev-list:*), Bash(git branch --show-current), Bash(git add:*), Bash(git commit:*), Bash(git push origin HEAD:refs/heads/*), Bash(printf:*)
+allowed-tools: Read, Write, Skill, Agent, AskUserQuestion, Bash(git remote get-url origin), Bash(gh repo view:*), Bash(git status --porcelain), Bash(gh pr view:*), Bash(gh pr list:*), Bash(gh pr comment:*), Bash(gh api repos/*/pulls/*/comments:*), Bash(gh api user:*), Bash(git fetch:*), Bash(git switch:*), Bash(git rev-list:*), Bash(git branch --show-current), Bash(git add:*), Bash(git commit:*), Bash(git push origin HEAD:refs/heads/*)
 ---
 
 <objective>
@@ -127,9 +127,13 @@ The push updates the open pull request in place and needs no fresh authorization
 
 With findings to answer, draft the comment per `<reply_shape>` and review it per `/contribution-standards` `<invariants>` "Outward-facing text is permanent" — the prose plugin's `prose:prose-auditor` thin agent where installed, `<outward_text>` unassisted where not.
 
+The comment is a payload. Write it with the file-write tool to a file in the scratch directory the harness names for this session, under a file name unique to the agent and this pull request, then hand that file to `gh`. Where the harness names no scratch directory, use the one the environment designates, such as `$RUNNER_TEMP` on a hosted runner. Never remove it; the harness clears its scratch directory.
+
 ```bash
-printf '%s\n' '<line>' '<line>' | gh pr comment "<number>" --repo "<base>" --body-file -
+gh pr comment "<number>" --repo "<base>" --body-file "<comment-file>"
 ```
+
+`--body-file "<comment-file>"` delivers the comment with real newlines, whatever code spans, quotes, or shell text it carries; a heredoc, pipe, or inline argument is refused by the dangerous-command guard on such text.
 
 That comment is the re-request. Requesting a reviewer is a maintainer-side action; `gh pr edit --add-reviewer` fails on a base the operator does not control, and the failure is the expected path.
 
@@ -211,6 +215,7 @@ The opening line states what was confirmed and what was pushed, in that order, a
 - MUST read `gh api user` only for the reply-selection and Step 4 authorship comparisons. `/contribution-standards` `<invariants>` "Establish permission from the API" rules the authenticated account out as evidence of permission on the base; it is evidence of identity and nothing else.
 - NEVER pass `-X` or `--method` with any method other than `GET` to `gh api` — the `Bash(gh api repos/*/pulls/*/comments:*)` and `Bash(gh api user:*)` grants exist to read review threads and the authenticated login, and matching by prefix they admit every verb: `-X POST` creates a review comment outside Step 7's flow, and `-X PATCH` and `-X DELETE` rewrite or remove a maintainer's comment and reach the operator's own GitHub account. The bounded review-thread read passes `--method GET` explicitly, because `gh api` sends a POST when `-F` parameters are present and no method is given. Read only.
 - NEVER pass `--edit-last` or `--delete-last` to `gh pr comment`. The `Bash(gh pr comment:*)` grant matches by prefix and admits both, and either one rewrites or removes a comment a reviewer may already have read. `/contribution-standards` `<invariants>` "Iterate by appending" is the rule; this constraint is its containment here.
+- NEVER pass the reply through a heredoc, a pipe, or an inline argument, and NEVER remove the comment file.
 - NEVER call `gh pr edit --add-reviewer`, `gh pr review`, or any maintainer-side action against a base the operator does not control.
 - NEVER treat `reviewDecision: CHANGES_REQUESTED` as a state the contributor can clear.
 
@@ -240,7 +245,7 @@ The opening line states what was confirmed and what was pushed, in that order, a
 - The base repository's declared checks ran on the revised branch and reported success.
 - `origin` was confirmed to be the resolved head and the working tree was clean before the head branch was reset to the fetched tip.
 - A revision reached the head branch by appending, never by force-push, and the pull request's `headRefOid` equals the commit that was pushed; a pass that changed nothing committed and pushed nothing.
-- A pass carrying findings posted one comment, after a prose review, stating what changed and standing as the re-request; a pass with no finding to answer posted none.
+- A pass carrying findings posted one comment, after a prose review, stating what changed and standing as the re-request, which arrived from a scratch file through `--body-file`; a pass with no finding to answer posted none.
 - The pass returned without polling, watching, or sleeping.
 
 </success_criteria>

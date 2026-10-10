@@ -3,7 +3,7 @@ name: message-agents
 description: >-
   ALWAYS invoke this skill when sending a message record to a registered agent-mail name with its one-line doorbell, discovering a Prowl coding-agent recipient, or sending facts, ownership proposals, state reports, authorizations, or acknowledgements to another agent pane.
 argument-hint: "<JSON message request>"
-allowed-tools: Bash(printf:*), {{! tool('use_skill') !}}, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/agent_message.py":*), {{! tool('ask_user') !}}
+allowed-tools: Write, {{! tool('use_skill') !}}, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/agent_message.py":*), {{! tool('ask_user') !}}
 ---
 
 <objective>
@@ -49,38 +49,16 @@ The request shape selects one of three routes. A request carrying `recipient` as
 
 <command_forms>
 
-Pass every payload over stdin. When the shell accepts multiline input:
+Every operation takes its JSON request from stdin. Write the request with the file-write tool to a file in the scratch directory the harness names for this session, under a file name unique to the agent and the request, and submit it through the input redirect `< <request-file>`. Where the harness names no scratch directory, use the one the environment designates, such as `$RUNNER_TEMP` on a hosted runner. A request carries message bodies, quotes, and JSON that the dangerous-command guard refuses in a heredoc, a pipe, or an inline argument. The request shapes:
+
+- `mail-request`: `{"messageRequest":{"kind":"fact","correlation":"<thread>","sender":"<own-name>","recipient":"<name>","subject":"<subject>","body":"<body>","ackRequired":false}}`
+- `mail-result`: `{"capabilityResult":{},"doorbellTransport":null}`
+- `doorbell`: `{"line":"[<sender>] mail <id>","agents":[]}`
+- `build`: `{"discovery":{},"messageRequest":{},"handbackPlan":null}`
+- `result`: `{"envelope":{},"delivered":false,"commandExitCode":1,"transport":{},"detail":"<exact-environment-detail>"}`
 
 ```bash
-python3 "${CLAUDE_SKILL_DIR}/scripts/agent_message.py" mail-request <<'JSON'
-{"messageRequest":{"kind":"fact","correlation":"<thread>","sender":"<own-name>","recipient":"<name>","subject":"<subject>","body":"<body>","ackRequired":false}}
-JSON
-
-python3 "${CLAUDE_SKILL_DIR}/scripts/agent_message.py" mail-result <<'JSON'
-{"capabilityResult":{},"doorbellTransport":null}
-JSON
-
-python3 "${CLAUDE_SKILL_DIR}/scripts/agent_message.py" doorbell <<'JSON'
-{"line":"[<sender>] mail <id>","agents":[]}
-JSON
-
-python3 "${CLAUDE_SKILL_DIR}/scripts/agent_message.py" build <<'JSON'
-{"discovery":{},"messageRequest":{},"handbackPlan":null}
-JSON
-
-python3 "${CLAUDE_SKILL_DIR}/scripts/agent_message.py" result <<'JSON'
-{"envelope":{},"delivered":false,"commandExitCode":1,"transport":{},"detail":"<exact-environment-detail>"}
-JSON
-```
-
-When the runner requires one physical command line:
-
-```bash
-printf '%s\n' '{"messageRequest":{"kind":"fact","correlation":"<thread>","sender":"<own-name>","recipient":"<name>","subject":"<subject>","body":"<body>","ackRequired":false}}' | python3 "${CLAUDE_SKILL_DIR}/scripts/agent_message.py" mail-request
-printf '%s\n' '{"capabilityResult":{},"doorbellTransport":null}' | python3 "${CLAUDE_SKILL_DIR}/scripts/agent_message.py" mail-result
-printf '%s\n' '{"line":"[<sender>] mail <id>","agents":[]}' | python3 "${CLAUDE_SKILL_DIR}/scripts/agent_message.py" doorbell
-printf '%s\n' '{"discovery":{},"messageRequest":{},"handbackPlan":null}' | python3 "${CLAUDE_SKILL_DIR}/scripts/agent_message.py" build
-printf '%s\n' '{"envelope":{},"delivered":false,"commandExitCode":1,"transport":{},"detail":"<exact-environment-detail>"}' | python3 "${CLAUDE_SKILL_DIR}/scripts/agent_message.py" result
+python3 "${CLAUDE_SKILL_DIR}/scripts/agent_message.py" <operation> < <request-file>
 ```
 
 Every operation exits 0 on its success shape — `record` present for `mail-request`, `status: "delivered"` for `mail-result`, `id` present for `doorbell`, `delivery.status: "ready"` for `build`, `status: "delivered"` for `result` — and 2 otherwise. On `invalid-schema` or `invalid-identity` the output is the three-field `{schemaVersion, status, detail}` object. On `delivery-failed` the output is the full delivery result: `mail-result` returns `status`, `capabilityStatus`, `detail`, `commandExitCode`, and the three coordination flags set to false; `result` returns `status`, `coordinationReference`, `commandExitCode`, `transport`, `detail`, and the same three flags.
@@ -96,7 +74,8 @@ Every operation exits 0 on its success shape — `record` present for `mail-requ
 - ALWAYS preserve a production request's complete source-generated `handback` block unchanged.
 - ALWAYS require the matching complete successful `/operate-prowl plan-handback` result before building a production request.
 - NEVER accept or construct a handback command, return-pane field, or cross-skill adapter path.
-- ALWAYS retain each complete command result in the active tool context and feed it into the next source-owned operation; no scratch file and no redirect that writes a result to a path is part of this workflow, while the heredoc and pipe stdin forms in `<command_forms>` stay part of it.
+- ALWAYS retain each complete command result in the active tool context and feed it into the next source-owned operation; the request files of `<command_forms>` are the only files this workflow writes, and no redirect that writes a result to a path is part of it.
+- NEVER pass a request through a heredoc, a pipe, or an inline argument, and NEVER remove a request file; the harness clears its scratch directory.
 - NEVER scan transcript files, use another terminal multiplexer, or ask the operator to relay a message as a fallback.
 - NEVER resolve a sender, select a recipient, or select an endpoint by a doorbell's label; the stable name and the store id are the only identities.
 - NEVER select an endpoint by title, focus, position, inferred prose, or an undeclared environment.
@@ -106,7 +85,7 @@ Every operation exits 0 on its success shape — `record` present for `mail-requ
 
 <testing>
 
-Before release, exercise `coordination_reference`, `build_envelope`, `send_request`, `delivery_request`, and `delivery_result` with complete resolver identities and controlled environment-result payloads. Run the documented `build` stdin form and require `delivery.status: "ready"`; run the documented `result` form with a complete successful `send` payload and require `status: "delivered"`, then remove or alter each required transport field and require rejection. The matrix covers authoritative `toPane` selection from ambiguous candidates, caller exclusion, optional run-identity preservation and rejection, accepted and rejected acknowledgements, all message kinds, complete HEAD/status validation, exact mutation target/state matching, a production request that preserves the source-generated handback block only with its matching complete `plan-handback` result, rejection of caller-authored executable handback fields, malformed identities and optional fields, and transport results that never establish acknowledgement, agreement, authorization, or ownership.
+Before release, exercise `coordination_reference`, `build_envelope`, `send_request`, `delivery_request`, and `delivery_result` with complete resolver identities and controlled environment-result payloads. Run the documented `build` input-redirect form and require `delivery.status: "ready"`; run the documented `result` form with a complete successful `send` payload and require `status: "delivered"`, then remove or alter each required transport field and require rejection. The matrix covers authoritative `toPane` selection from ambiguous candidates, caller exclusion, optional run-identity preservation and rejection, accepted and rejected acknowledgements, all message kinds, complete HEAD/status validation, exact mutation target/state matching, a production request that preserves the source-generated handback block only with its matching complete `plan-handback` result, rejection of caller-authored executable handback fields, malformed identities and optional fields, and transport results that never establish acknowledgement, agreement, authorization, or ownership.
 
 The mail route's exercised properties: every record kind maps to a record the agent-mail capability accepts unchanged; the capability's checked `send` result over the store's captured reply maps to `delivered` with the store id and the doorbell line, and a rejected or absent store maps to `delivery-failed` with the capability's status and detail; generated doorbells, labeled and unlabeled, parse back to their stable sender name and id; a label that is empty or carries a line break or any of `[`, `]`, `<`, `>` renders the unlabeled form; a doorbell whose label names a registered agent while its stable sender is absent from the inventory is rejected; a sender absent from the inventory and a line carrying more than the doorbell are rejected; a delivered result requires every checked capability field and a zero exit code; a delegation request carrying an `authority` other than exactly the sender as owner and `gitMutation: false` reaches no record, while an absent `authority` is the sender's obligation and the script rejects nothing for lacking it.
 
@@ -129,7 +108,7 @@ Recorded exercised payload/results:
 
 **A pane UUID was requested from the operator.** Claude asked which pane to send to, when the operator had already named the target the only way they can — by worktree or working directory. Resolve the operator's naming against the live inventory and report the target back in the same terms.
 
-**A blocked redirect was rewritten as another program.** Claude redirected public inventory and discovery JSON into `$SP/agents.json` and `$SP/discovery.json`. The dangerous-command guard blocked the redirect, a compound command because it carried a shell variable. Claude wrote a Python replacement and continued, discarding the guard result. Use `/operate-prowl`'s `resolve-target` result directly in the active tool context; the scratch redirect is no part of this workflow. Rewriting the blocked operation as another program is forbidden.
+**A blocked redirect was rewritten as another program.** Claude redirected public inventory and discovery JSON into `$SP/agents.json` and `$SP/discovery.json`. The dangerous-command guard blocked the redirect, a compound command because it carried a shell variable. Claude wrote a Python replacement and continued, discarding the guard result. Use `/operate-prowl`'s `resolve-target` result directly in the active tool context; an output redirect carrying a shell variable is no part of this workflow. Rewriting the blocked operation as another program is forbidden.
 
 </failure_modes>
 

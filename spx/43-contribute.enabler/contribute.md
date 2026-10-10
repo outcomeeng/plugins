@@ -1,3 +1,7 @@
+---
+malleability: spec
+---
+
 # Contribute
 
 PROVIDES one sanctioned path for changes and reports sent to a repository the operator does not control

@@ -6,6 +6,17 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.2.9
+
+### Changed
+
+- **`/open-upstream-pr` takes the pull-request body from a file in the harness's session scratch directory.** The skill writes the body with the file-write tool under a file name unique to the agent and the pull request, passes it to `gh pr create --body-file <body-file>`, never removes the file, and no longer teaches the quoted heredoc or the `printf` pipe; its `allowed-tools` now include `Write` and no longer grant `Bash(printf:*)`. Before this change, the skill taught those stdin forms, which the dangerous-command guard refuses when a body carries code spans, quotes, or shell text.
+- **`/open-upstream-issue` takes the issue body from a file in the harness's session scratch directory.** The skill writes the body with the file-write tool under a file name unique to the agent and the issue, passes it to `gh issue create --body-file <body-file>`, never removes the file, and no longer teaches the quoted heredoc or the `printf` pipe; its `allowed-tools` now include `Write` and no longer grant `Bash(printf:*)`. Before this change, the skill taught those stdin forms, which the dangerous-command guard refuses when a body carries code spans, quotes, or shell text.
+
+- **`/manage-upstream-pr` takes the reply comment from a file in the harness's session scratch directory.** The skill writes the comment with the file-write tool under a file name unique to the agent and the pull request, passes it to `gh pr comment --body-file <comment-file>`, never removes the file, and no longer teaches the `printf` pipe; its `allowed-tools` now include `Write` and no longer grant `Bash(printf:*)`. Before this change, the skill taught that stdin form, which the dangerous-command guard refuses when a comment carries code spans, quotes, or shell text.
+
+- **`/manage-upstream-issue` takes the reply comment from a file in the harness's session scratch directory.** The skill writes the comment with the file-write tool under a file name unique to the agent and the issue, passes it to `gh issue comment --body-file <comment-file>`, never removes the file, and no longer teaches the `printf` pipe; its `allowed-tools` now include `Write` and no longer grant `Bash(printf:*)`. Before this change, the skill taught that stdin form, which the dangerous-command guard refuses when a comment carries code spans, quotes, or shell text.
+
 ## 0.2.8
 
 ### Changed
