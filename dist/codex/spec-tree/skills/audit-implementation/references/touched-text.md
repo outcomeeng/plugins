@@ -23,7 +23,7 @@ Touched text is a line the resolved `base..head` scope adds or changes — found
 
 <classification>
 
-Classify each finding a concern returns by its `location`: a finding on touched text is recorded and rejects; a finding on any other text is standing and is returned as `filed`. A finding's severity labels its defect and never decides the verdict: the run approves when no finding on touched text exists, whatever standing findings it reports.
+Classify each finding a concern returns by its `location`: a finding on touched text is recorded and rejects; a finding on any other text is standing and is returned as `filed`. NEVER reject a changeset for a standing finding. A finding's severity labels its defect and never decides the verdict: the run approves when no finding on touched text exists, whatever standing findings it reports.
 
 </classification>
 
@@ -35,7 +35,7 @@ A finding is identified by its finding key, `<stable-scope-key>:<rule>`, whose r
 
 <severity_and_disposition>
 
-A finding keeps the severity and disposition recorded for its key — in the governing node's `ISSUES.md` or the evidence the run loaded — across runs. Its severity rises, or a `filed` finding starts to reject, only when the run names one changed basis in that finding's `evidence`: the text now lies in the diff, the change invalidates it, or the standard's catalog changed the rule or its severity. A run that names no basis returns the finding with its recorded severity and disposition.
+A finding keeps the severity and disposition recorded for its key — in the governing node's `ISSUES.md` or the evidence the run loaded — across runs. NEVER raise its severity, or let a `filed` finding start to reject, unless the run names one changed basis in that finding's `evidence`: the text now lies in the diff, the change invalidates it, or the standard's catalog changed the rule or its severity. A run that names no basis returns the finding with its recorded severity and disposition.
 
 </severity_and_disposition>
 
