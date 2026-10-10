@@ -11,6 +11,8 @@ CAN produce implementations that conform to their governing specs on the first p
 
 ## Assertions
 
+- ALWAYS: before implementation, the flow runs each new or changed test and eval and confirms that it fails only because the implementation it verifies is absent; the evidence audit dispatches after implementation, on a committed head where that evidence passes, per [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md).
+
 ### Compliance
 
 - ALWAYS: invoke `/contextualize` for the work item before any implementation — the flow loads node context before code is written ([audit])

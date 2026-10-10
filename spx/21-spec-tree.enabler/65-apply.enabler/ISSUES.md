@@ -4,7 +4,7 @@
 
 ## Add a language-neutral artifact route
 
-**Evidence.** `src/plugins/spec-tree/skills/apply/SKILL.md` lines 50-60 require exactly one supported implementation language before Steps 3-8 and stop when no language-specific skill trio applies. [`spx/21-spec-tree.enabler/65-apply.enabler/apply.md`](apply.md) defines a general apply lifecycle whose selected slice can include language-neutral methodology artifacts.
+**Evidence.** `src/plugins/spec-tree/skills/apply/SKILL.md` lines 35-48 require exactly one supported implementation language before Steps 3-8 and stop when no language-specific skill trio applies. [`spx/21-spec-tree.enabler/65-apply.enabler/apply.md`](apply.md) defines a general apply lifecycle whose selected slice can include language-neutral methodology artifacts.
 
 **Impact.** A skill-only or documentation-only slice selected through `/slice` cannot continue through `/apply` without inventing irrelevant architecture, test, and code work or stopping before the artifact-specific authoring workflow.
 
@@ -24,7 +24,7 @@
 
 ## `apply` states three conditions more than once
 
-**Evidence.** The Step 0 condition appears at `<invocation_modes>` line 22, footnote § line 144, and Step 0 line 156; the Step 9 skip condition at `<scope_detection>` line 57, footnote † line 145, Step 9 line 280, and `<review_gates>` line 327; the Step-9-as-done tendency at Step 10 line 304 and Failure 1 line 350, all in `src/plugins/spec-tree/skills/apply/SKILL.md`. `instructions:skill-auditor` finding rule `redundant_restatement`, severity `WARNING`, on head `524b9c46c7960a106d84ef856b4020a0ce904b16` during Change #76.
+**Evidence.** The Step 0 condition appears at `<invocation_modes>` line 22, footnote § line 144, and Step 0 line 156; the Step 9 skip condition at `<scope_detection>` line 57, footnote † line 145, Step 9 line 274, and `<review_gates>` line 321; the Step-9-as-done tendency at Step 10 line 298 and Failure 1 line 350, all in `src/plugins/spec-tree/skills/apply/SKILL.md`. `instructions:skill-auditor` finding rule `redundant_restatement`, severity `WARNING`, on head `524b9c46c7960a106d84ef856b4020a0ce904b16` during Change #76.
 
 **Impact.** About forty lines of eager payload carry no added rule, and one condition has several edit points.
 
@@ -40,7 +40,7 @@
 
 ## `apply` Step 8 opens with a hard-wrapped paragraph
 
-**Evidence.** `src/plugins/spec-tree/skills/apply/SKILL.md:254-258` is wrapped mid-sentence at about eighty columns while every other paragraph in the file is one line. `instructions:skill-auditor` finding rule `hard_wrapped_prose`, severity `WARNING`, on head `524b9c46c7960a106d84ef856b4020a0ce904b16` during Change #76.
+**Evidence.** `src/plugins/spec-tree/skills/apply/SKILL.md:248-252` is wrapped mid-sentence at about eighty columns while every other paragraph in the file is one line. `instructions:skill-auditor` finding rule `hard_wrapped_prose`, severity `WARNING`, on head `524b9c46c7960a106d84ef856b4020a0ce904b16` during Change #76.
 
 **Impact.** Inconsistent dprint output and spurious diff noise on the next edit.
 
