@@ -5,7 +5,7 @@ description: >-
   covering content classification, property quality, per-rule tag validity,
   atemporal voice, and consistency with ancestor decisions.
 argument-hint: "<pdr-file-path>"
-allowed-tools: Read, Grep, Glob, Bash(git branch --show-current:*)
+allowed-tools: Read, Grep, Glob, Bash(git branch --show-current:*), Bash(git merge-base:*), Bash(git diff:*)
 ---
 
 <objective>
@@ -48,7 +48,7 @@ PDRs state atemporal product truth without historical context. No references to 
 
 Bind the required PDR path, preserving spaces within it: `$ARGUMENTS` supplies it when that argument is non-empty; when it is empty, the path is the one the request text carries, and the empty substitution binds nothing. If the request carries no path, run `git branch --show-current` for metadata and emit the `<verdict_format>` JSON with `target: ""`, `overall: "REJECTED"`, and all five property rows marked `FAIL`. Each row carries a `missing-target` finding with severity `REJECT`, location `input`, evidence naming the empty input, and a message naming the required PDR path. Stop before context loading or artifact inspection.
 
-Invoke `/understand` when the live `<SPEC_TREE_FOUNDATION>` marker is absent or lacks `Template root`. Read `decisions/decision-name.pdr.md` beneath that marker's resolved absolute template directory, then invoke `/contextualize` on the directory containing the PDR. Derive declaration form and required tags from that canonical template. Run `git branch --show-current` to populate verdict metadata without granting broader shell authority.
+Use skill `spec-tree:understand` when the live `<SPEC_TREE_FOUNDATION>` marker is absent or lacks `Template root`. Read `decisions/decision-name.pdr.md` beneath that marker's resolved absolute template directory, then use skill `spec-tree:contextualize` on the directory containing the PDR. Derive declaration form and required tags from that canonical template. Run `git branch --show-current` to populate verdict metadata without granting broader shell authority.
 
 The product document used below is the product spec loaded by `/contextualize` in its product-level context step. Use that spec's declared audience and interaction surfaces for content classification.
 
@@ -116,7 +116,7 @@ For each product property:
 
 Rules live under `## Verification`. Preserve Step 2's failed `tag-validity` row when the section is absent; an empty rule loop never clears that finding. If the section contains no rules, mark `tag-validity` as `FAIL` with `missing-verification-rules`. An untagged rule directly under the section has the canonical authoring form and may coexist with routed subsections. For every such rule, identify its subject, the observable condition it constrains, and a concrete observation that would violate it. Reject a vague, ambiguous, or unfalsifiable rule with `invalid-draft-rule` in `property-quality`, mark that row `FAIL`, and quote the rule with the missing or ambiguous criterion. For example, `ALWAYS: improve quality` fails because it names no observable condition. Select no evidence type or tag during these checks; an absent draft tag alone causes no finding.
 
-A tagged rule requires its matching routed subsection. When `### Testing` contains rules, invoke `spec-tree:test-evidence-standards` and load its assertion-type litmus. Apply that reference and the loaded foundation's assertion-type definitions to the declared claim and tag. If the required reference cannot load, emit a `REJECT` finding named `test-standards-unavailable` and a failed `tag-validity` row. Judge declaration compatibility only; evidence completeness belongs to evidence auditing. Never invoke the mutating `/test` authoring workflow, select a replacement tag, or change the PDR during this audit.
+A tagged rule requires its matching routed subsection. When `### Testing` contains rules, use skill `spec-tree:test-evidence-standards` and load its assertion-type litmus. Apply that reference and the loaded foundation's assertion-type definitions to the declared claim and tag. If the required reference cannot load, emit a `REJECT` finding named `test-standards-unavailable` and a failed `tag-validity` row. Judge declaration compatibility only; evidence completeness belongs to evidence auditing. Never invoke the mutating `/test` authoring workflow, select a replacement tag, or change the PDR during this audit.
 
 For each routed rule:
 
