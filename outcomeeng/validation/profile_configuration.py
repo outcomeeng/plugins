@@ -1,4 +1,10 @@
-"""Reject independently authored native profile settings throughout source text."""
+"""Reject independently authored native profile settings throughout source text.
+
+A native field is an authored assignment by the syntactic form of its binding
+alone: a literal or a build template token binds an authored value, while an
+expression that reads a value or an interpolation placeholder inside message
+text does not.
+"""
 
 import re
 from typing import Final
@@ -14,6 +20,23 @@ _ASSIGNMENT: Final = re.compile(
     + r")[\"']?[ \t]*[:=][ \t]*(?=\S)"
 )
 
+_TEMPLATE_TOKEN: Final = re.compile(r"\{\{!")
+_READ_EXPRESSION: Final = re.compile(
+    r"[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*\s*[(\[.]"
+)
+_INTERPOLATION_PLACEHOLDER: Final = re.compile(
+    r"\{[A-Za-z0-9_.!:\[\]]*\}|%[sdrf(]|\$\{?[A-Za-z_]"
+)
+
+
+def _is_authored_binding(value: str) -> bool:
+    """Decide from the binding's syntactic form whether it binds an authored value."""
+    if _TEMPLATE_TOKEN.match(value):
+        return True
+    if _INTERPOLATION_PLACEHOLDER.match(value):
+        return False
+    return _READ_EXPRESSION.match(value) is None
+
 
 def find_profile_literals(text: str) -> list[tuple[int, str]]:
     """Report native assignments and model literals without conditional exemptions."""
@@ -24,6 +47,8 @@ def find_profile_literals(text: str) -> list[tuple[int, str]]:
             for match in MODEL_IDENTIFIER_PATTERN.finditer(line)
         )
         violations.extend(
-            (line_number, match.group("field")) for match in _ASSIGNMENT.finditer(line)
+            (line_number, match.group("field"))
+            for match in _ASSIGNMENT.finditer(line)
+            if _is_authored_binding(line[match.end() :])
         )
     return violations
