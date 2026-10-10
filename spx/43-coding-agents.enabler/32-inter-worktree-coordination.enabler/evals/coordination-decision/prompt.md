@@ -146,7 +146,7 @@ The `handback` request file holds `{"delegation":<complete-returned-delegation>,
 
 <invocation_forms>
 
-Every subcommand (`run`, `resolve-target`, `delegate`, `plan-handback`, `handback`) takes its JSON request from stdin. Write the request with the file-write tool to a file in the scratch directory the harness names for this session, under a file name unique to the agent and the request, and submit it through the input redirect `< <request-file>` shown with each command. A request carries prompt text, quotes, and JSON that the dangerous-command guard refuses in a heredoc, a pipe, or an inline argument.
+Every subcommand (`run`, `resolve-target`, `delegate`, `plan-handback`, `handback`) takes its JSON request from stdin. Write the request with the file-write tool to a file in the scratch directory the harness names for this session, under a file name unique to the agent and the request, and submit it through the input redirect `< <request-file>` shown with each command. Where the harness names no scratch directory, use the one the environment designates, such as `$RUNNER_TEMP` on a hosted runner. A request carries prompt text, quotes, and JSON that the dangerous-command guard refuses in a heredoc, a pipe, or an inline argument.
 
 </invocation_forms>
 
@@ -2012,7 +2012,7 @@ The request shape selects one of three routes. A request carrying `recipient` as
 
 <command_forms>
 
-Every operation takes its JSON request from stdin. Write the request with the file-write tool to a file in the scratch directory the harness names for this session, under a file name unique to the agent and the request, and submit it through the input redirect `< <request-file>`. A request carries message bodies, quotes, and JSON that the dangerous-command guard refuses in a heredoc, a pipe, or an inline argument. The request shapes:
+Every operation takes its JSON request from stdin. Write the request with the file-write tool to a file in the scratch directory the harness names for this session, under a file name unique to the agent and the request, and submit it through the input redirect `< <request-file>`. Where the harness names no scratch directory, use the one the environment designates, such as `$RUNNER_TEMP` on a hosted runner. A request carries message bodies, quotes, and JSON that the dangerous-command guard refuses in a heredoc, a pipe, or an inline argument. The request shapes:
 
 - `mail-request`: `{"messageRequest":{"kind":"fact","correlation":"<thread>","sender":"<own-name>","recipient":"<name>","subject":"<subject>","body":"<body>","ackRequired":false}}`
 - `mail-result`: `{"capabilityResult":{},"doorbellTransport":null}`
