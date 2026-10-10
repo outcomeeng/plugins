@@ -155,7 +155,7 @@ Defect class: `property-quality`.
 
 Finding: [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) states Sliced as "the Framed Definition of Ready holds; and ... A Parent is Sliced when every child exists naming it in `parent` and its record carries neither `## Nodes` nor `## Assertion operations`", and Framed as "`## Nodes` names every affected or intended Node". The cumulative Framed criterion and the Parent's no-Nodes condition read as in tension unless an empty Node set satisfies the Framed criterion vacuously, and the PDR does not say so. Location: Definitions of Ready / Sliced, and Record table (Framed `## Nodes`).
 
-Evidence: `spec-tree:pdr-auditor` launch 1 on `spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md` at commit `a4f46721c9e1d94beddb8295eba53ecfb496e0c1`, verdict `APPROVED`, rule `property-quality`, class `ambiguous-criterion`, severity `WARNING`. The audit judged it non-blocking because the vacuous reading is available and two reviewers could reach the same verdict.
+Evidence: `spec-tree:pdr-auditor` launch 1 on [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) at commit `a4f46721c9e1d94beddb8295eba53ecfb496e0c1`, verdict `APPROVED`, rule `property-quality`, class `ambiguous-criterion`, severity `WARNING`. The audit judged it non-blocking because the vacuous reading is available and two reviewers could reach the same verdict.
 
 Impact: a reviewer who reads the Framed criterion as requiring at least one named Node rejects a Sliced Parent the Sliced criterion admits.
 
@@ -167,7 +167,7 @@ Defect class: `property-quality`.
 
 Finding: [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) uses "Parent" for a Change that others name in `parent` and for the target of a Change's `parent` field. It states "a Change with neither a Parent nor Nodes is a root", "A Parent that has a Parent closes `Applied` when every child has closed", and "A root closes `Applied` when the operator judges its Intent met". A top-level Parent with `parent: null` and no Nodes is therefore both a Parent and a root, and the PDR does not say which close rule governs it. Location: Record (type derivation) and Lifecycle (close rule).
 
-Evidence: `spec-tree:pdr-auditor` launch 1 on `spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md` at commit `a4f46721c9e1d94beddb8295eba53ecfb496e0c1`, verdict `APPROVED`, rule `property-quality`, class `ambiguous-criterion`, severity `WARNING`.
+Evidence: `spec-tree:pdr-auditor` launch 1 on [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) at commit `a4f46721c9e1d94beddb8295eba53ecfb496e0c1`, verdict `APPROVED`, rule `property-quality`, class `ambiguous-criterion`, severity `WARNING`.
 
 Impact: two reviewers can apply different close rules to a top-level Parent, one closing it when its children have closed and one waiting for the operator's judgment of its Intent.
 
@@ -179,7 +179,7 @@ Defect class: `atemporal-voice`.
 
 Finding: the Rationale of [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) reads "converting a record in the Output form at its next revision avoids a mass rewrite of published records". The sentence justifies the Compatibility rule by reference to the prior record population. It is stated as present-tense rationale and names no past event.
 
-Evidence: `spec-tree:pdr-auditor` launch 1 on `spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md` at commit `a4f46721c9e1d94beddb8295eba53ecfb496e0c1`, verdict `APPROVED`, rule `atemporal-voice`, class `temporal-language`, severity `WARNING`, location Rationale; the audit judged it non-blocking.
+Evidence: `spec-tree:pdr-auditor` launch 1 on [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) at commit `a4f46721c9e1d94beddb8295eba53ecfb496e0c1`, verdict `APPROVED`, rule `atemporal-voice`, class `temporal-language`, severity `WARNING`, location Rationale; the audit judged it non-blocking.
 
 Impact: a later audit can read the sentence as history and raise the finding again.
 
