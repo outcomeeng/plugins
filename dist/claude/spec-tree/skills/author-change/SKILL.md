@@ -5,7 +5,7 @@ description: >-
   Engineering Change record, or when turning a request into one. NEVER use it
   to author a spec or review a code changeset.
 argument-hint: "<local Change path and intent | existing Change reference and revision>"
-allowed-tools: Read, Write, Edit, Grep, Glob, Skill, Agent, Bash(gh issue view:*), Bash(gh issue list:*), Bash(gh issue create:*), Bash(gh issue edit:*), Bash(gh api graphql:*), Bash(gh api repos/*/issues/*/dependencies/blocked_by:*), Bash(gh api repos/*/issues/*/dependencies/blocked_by/*:*), Bash(gh api repos/*/issues/* --jq .id), Bash(spx change draft create:*), Bash(spx change draft list:*), Bash(spx verification run input:*), Bash(spx verification run render:*), Bash(printf:*), AskUserQuestion
+allowed-tools: Read, Write, Edit, Grep, Glob, Skill, Agent, Bash(gh issue view:*), Bash(gh issue list:*), Bash(gh issue create:*), Bash(gh issue edit:*), Bash(gh api graphql:*), Bash(gh api repos/*/issues/*/dependencies/blocked_by:*), Bash(gh api repos/*/issues/*/dependencies/blocked_by/*:*), Bash(gh api repos/*/issues/* --jq .id), Bash(spx change draft create:*), Bash(spx change draft list:*), Bash(spx verification run input:*), Bash(spx verification run render:*), AskUserQuestion
 ---
 
 <objective>
@@ -28,11 +28,11 @@ A complete store-independent Change record in the Intent form, authored locally,
 
 <local_draft>
 
-Run from the selected Product repository. For a new file, send the complete candidate as literal stdin to `spx change draft create --input stdin`. Consume the returned `draftId`, absolute `path`, and normalized `relativePath`; never construct a storage path or identifier. Require path-component containment inside the selected repository before editing. A returned path outside it requires destination-specific operator authority naming the absolute path.
+Run from the selected Product repository. For a new file, write the complete candidate with the file-write tool to a payload file and run `spx change draft create --input stdin < <payload-file>`. Consume the returned `draftId`, absolute `path`, and normalized `relativePath`; never construct a storage path or identifier. Require path-component containment inside the selected repository before editing. A returned path outside it requires destination-specific operator authority naming the absolute path.
 
 For resumption without an exact path, use `spx change draft list` and inspect only the descriptors needed to identify the candidate. An ambiguous match requires a focused identity question. Preserve an existing candidate until its relationship to the selected store record is established. NEVER delete a draft automatically after publication.
 
-Send record content as data through a quoted heredoc delimiter absent from the record or the harness's literal stdin facility. A programmatic one-line runner uses one physical `printf '%s\n' '<safely-quoted-content>' | <command>` line. NEVER interpolate record content into executable shell syntax or create a temporary payload file; the exceptions are the single-quoted arguments `inert-stdin` admits: the `--title` that `<persistence>` writes and the search argument of the Proposed workflow's store search.
+Pass record content to a command as a payload file: write it with the file-write tool to a file in the scratch directory the harness names for this session, under a file name unique to the agent and the Change, and supply it through the command's file argument or the input redirect `< <payload-file>`. NEVER carry record content through a heredoc, a pipe, or an inline form, and NEVER remove a payload file. A title and the search argument of the Proposed workflow's store search stay the single-quoted arguments `inert-stdin` admits.
 
 </local_draft>
 
@@ -111,7 +111,7 @@ Use skill `spec-tree:change-standards`. Invoke it with `Lifecycle` for the store
 
 The issue body is the approved local file from its `## Intent` line to its end. Write in this order, recording each successful write:
 
-1. Create the issue with `gh issue create --repo <store> --title '<title>' --body-file -`, or update it with `gh issue edit <N> --repo <store> --title '<title>' --body-file -`, the body on stdin and the title as the one single-quoted argument `inert-stdin` states, a literal apostrophe written as `'"'"'`.
+1. Create the issue with `gh issue create --repo <store> --title '<title>' --body-file <body-file>`, or update it with `gh issue edit <N> --repo <store> --title '<title>' --body-file <body-file>`, the body written to a payload file that holds the approved local file from its `## Intent` line, and the title as the one single-quoted argument `inert-stdin` states, a literal apostrophe written as `'"'"'`.
 2. Write `Product`, `Maturity`, and `Lifecycle` through the single-select write under `canonical-state`. For a new successor, write `Predecessors` through the text write. A revision never writes `Predecessors`; it requires the stored value to equal `refined_from` already.
 3. Read the native blockers under `canonical-state`; a blocked read stops the persistence before any blocker write. Add each missing blocker with `gh api repos/<store>/issues/<N>/dependencies/blocked_by --method POST -F issue_id=<id>`, and remove each extra one with `gh api repos/<store>/issues/<N>/dependencies/blocked_by/<id> --method DELETE`, where `<id>` is the blocker's numeric id from `gh api repos/<owner>/<repo>/issues/<M> --jq .id`.
 
