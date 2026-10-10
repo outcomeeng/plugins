@@ -5,12 +5,12 @@ description: >-
   provides evidence its `[eval]` assertions are fulfilled, covering case
   quality, verdict schema fit, and producer coupling.
 argument-hint: "<spec-node-path>"
-allowed-tools: Read, Grep, Glob, Bash(git merge-base --is-ancestor:*), Bash(git diff:*)
+allowed-tools: Read, Grep, Glob, Bash(git merge-base:*), Bash(git diff:*)
 ---
 
 <objective>
 
-A PASS, FAIL, or UNKNOWN verdict on a spec node's `[eval]` evidence against the eval-evidence model's producer coupling, oracle independence, assertion alignment, falsifiability, and run evidence criteria, with each finding naming the assertion or eval artifact, the failed property, and the evidentiary gap.
+A PASS, FAIL, or UNKNOWN verdict on a spec node's `[eval]` evidence against the eval-evidence model's producer coupling, oracle independence, assertion alignment, falsifiability, and run evidence criteria, with each finding on touched text naming the assertion or eval artifact, the failed property, and the evidentiary gap, and every other finding returned as `FILED`.
 
 </objective>
 
@@ -21,6 +21,7 @@ A PASS, FAIL, or UNKNOWN verdict on a spec node's `[eval]` evidence against the 
 - ALWAYS name the assertion, the failed property, and the evidentiary gap in every REJECT finding.
 - NEVER approve prompt-only simulation as evidence for skill, agent, classifier, or script behavior.
 - NEVER issue a finding the evidence model does not support — drop an unbacked finding rather than reject the eval evidence for it.
+- NEVER reject on text the changeset leaves unchanged and does not invalidate — return that finding with severity `FILED`, and NEVER raise a recorded finding's severity or let a `FILED` finding start to reject unless the run names a changed basis. `${SKILL_DIR}/references/touched-text.md` defines touched text, the finding key, and the `FILED` form.
 
 </constraints>
 
@@ -159,7 +160,7 @@ Missing or stale run evidence is REJECT — "missing run evidence" or "stale run
 
 **Step 4: Issue verdict**
 
-Scan all findings across all `[eval]` assertions. If any assertion has a property failure: FAIL.
+Scan all findings across all `[eval]` assertions and classify each as `${SKILL_DIR}/references/touched-text.md` states: a finding on touched text keeps severity `REJECT`, and every other finding becomes `FILED`. If any assertion has a property failure on touched text: FAIL.
 
 </step>
 
@@ -171,7 +172,7 @@ Always include `metadata.branch`: the branch string from the successful `/sync-b
 
 Emit the verdict as a single JSON object. This JSON is the skill's entire output; never a prose or markdown verdict.
 
-Emit all five gate rows exactly once. Derive `overall` in order: `FAIL` if any gate is `FAIL`; otherwise `UNKNOWN` if any gate is `UNKNOWN`; otherwise `PASS`. Findings within each row carry severity `REJECT` for failed evidence properties, `WARNING` or `INFO` for non-blocking observations.
+Emit all five gate rows exactly once. Derive `overall` in order: `FAIL` if any gate is `FAIL`; otherwise `UNKNOWN` if any gate is `UNKNOWN`; otherwise `PASS`. Findings within each row carry severity `REJECT` for failed evidence properties on touched text, `FILED` for a finding outside touched text, which fails no row and additionally carries `key` and `range`, and `WARNING` or `INFO` for non-blocking observations.
 
 ```json
 {
@@ -189,7 +190,7 @@ Emit all five gate rows exactly once. Derive `overall` in order: `FAIL` if any g
           "file": "<eval-artifact-or-producer-file>",
           "line": null,
           "rule": "producer-coupling",
-          "severity": "REJECT",
+          "severity": "REJECT | FILED",
           "message": "<one-line evidentiary gap>"
         }
       ]
@@ -243,7 +244,7 @@ The verdict is sound when:
 
 - Every `[eval]` assertion's suite was judged on all five evidence properties with none skipped — producer coupling, oracle independence, assertion alignment, falsifiability, and run evidence.
 - The verdict states an overall PASS/FAIL/UNKNOWN through the JSON `overall` field and every applicable gate row carries its determination.
-- Each REJECT finding is falsifiable: it names the assertion or eval artifact, the failed evidence property, the evidentiary gap, and how the eval could pass while the assertion is unfulfilled.
+- Each REJECT finding lies on touched text and is falsifiable: it names the assertion or eval artifact, the failed evidence property, the evidentiary gap, and how the eval could pass while the assertion is unfulfilled; every finding outside touched text appears as `FILED` with its key and diff range.
 - No deterministic command was run inside the audit; evidence quality was established by reading the eval artifacts, producing artifact, and committed run summaries.
 - The same target, governing requirements, eval artifacts, and run evidence produce the same gate statuses and overall verdict.
 
@@ -252,5 +253,6 @@ The verdict is sound when:
 <reference_guides>
 
 - `${SKILL_DIR}/references/evidence-model.md` — eval evidence properties, artifact taxonomy, and rejection categories.
+- `${SKILL_DIR}/references/touched-text.md` — touched text, finding key, severity retention, and the `FILED` finding form.
 
 </reference_guides>
