@@ -5,7 +5,7 @@ description: >-
   Submitted Change — it posts the confirmation or rejection comment and moves
   the Change from Submitted to Available. NEVER move a Submitted Change by hand.
 argument-hint: "<#N | owner/repo#N | issue-url> <confirm | reject <reason>>"
-allowed-tools: Read, Bash(gh issue view:*), Bash(gh issue comment:*), Bash(gh api graphql:*), Bash(printf:*), Bash(printenv CODEX_THREAD_ID), request_user_input
+allowed-tools: Read, Write, Bash(gh issue view:*), Bash(gh issue comment:*), Bash(gh api graphql:*), Bash(printenv CODEX_THREAD_ID), request_user_input
 ---
 
 <objective>
@@ -25,7 +25,7 @@ Use skill `spec-tree:change-standards`. Invoke it with `Lifecycle`; it loads the
 3. **Resolve identities.** Resolve the session id from `printenv CODEX_THREAD_ID`. The harness is `Codex`. Take the delegate — the name this session acts under — and the operator it acts for from the name each has been given in this conversation, copied verbatim; when either is absent, ask for it through the structured-question tool, and never infer a name. An empty value stops before any write.
 4. **Compose the comment** under `confirmation-record`: `Confirmation: <Maturity>` with the Maturity read in step 2 for `confirm`, or `Rejection: <Maturity>` for `reject`, then the lines `Delegate`, `For`, `Harness`, and `Session` in that order, and for a rejection the `Reason` line last. Inspect the text under `write-inspection`.
 5. **Write in order**, recording each successful write under `ordered-write`:
-   1. Post the comment with `gh issue comment <N> --repo <store> --body-file -`, the text on stdin under `inert-stdin`.
+   1. Post the comment with `gh issue comment <N> --repo <store> --body-file <comment-file>`, the text written with the file-write tool to a file in the scratch directory the harness names for this session, under a file name unique to the agent and the Change, per `inert-stdin`; never remove the file.
    2. Write Lifecycle `Available` through the single-select write under `canonical-state`, with the issue id, the `Lifecycle` field id, and the `Available` option id it resolves.
 6. **Read back** under `complete-readback`: Product equals the overlay Product, Maturity is unchanged, Lifecycle is `Available`, the assignee list is empty, and the deciding comment under `authority-read` is the exact comment just posted.
 
