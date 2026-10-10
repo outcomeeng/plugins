@@ -124,3 +124,27 @@ Evidence: the Observation of outcomeeng/changes#168 records a query whose cursor
 Impact: a session cannot learn from the REST endpoint whether its next GraphQL call will succeed, so a refusal arrives with no earlier signal, and the refusal reaches every session on the account at once. The page bound written in each skill's text keeps any one call from spending the budget; it does not give a session a way to read what remains.
 
 Revisit and settlement condition: GitHub reports the GraphQL budget consistently across its REST and GraphQL interfaces, or a read that establishes GraphQL availability without spending the budget is documented and the Change skills cite it in their blocked results.
+
+## DEBT [objective-criteria-duplication]: audit-change restates one outcome in its objective and in a success criterion
+
+Defect class: `objective-criteria-duplication`.
+
+Finding: `instructions:skill-auditor` run `2026-10-10_17-01-57-466-c9901d6d0a37` on head `cada9b899fb059bcf251aa34f2a47dcfb2218de4` finished `rejected` with one `debt` finding under rule `objective_criteria_duplication`, key `instructions:skill:file:src/plugins/spec-tree/skills/audit-change/SKILL.md:objective_criteria_duplication`, at lines 15 and 350 of `src/plugins/spec-tree/skills/audit-change/SKILL.md`. The `<objective>` and a `<success_criteria>` bullet each state that a finding on touched text rejects the run and every other finding is returned `filed`. The finding's expected text: the objective names the output and its shape, and `<success_criteria>` states soundness properties without restating the objective.
+
+Evidence: the sealed run above. The approved skill-auditor runs on `audit-skill` and `audit-subagent` in the same changeset carry the same objective and success-criterion pairing and raised no finding, so the audit flags the pairing inconsistently across sibling skills.
+
+Impact: a later audit of `audit-change` can raise the finding again, and a run whose only finding is `debt` still finishes `rejected`.
+
+Revisit and settlement condition: the objective keeps the output and its shape, the success criterion states the soundness property of the `filed` listing without restating the rejection rule, and one typed skill audit of `audit-change` raises no `objective_criteria_duplication` finding.
+
+## DEBT [finding-identity]: the audit-change runner derives a finding key from its position in the finding list
+
+Defect class: `finding-identity`.
+
+Finding: `finding_key` in `src/plugins/spec-tree/skills/audit-change/scripts/audit_change_run.py` returns `<unit_id>` followed by `finding-<ordinal>-<rule>`, and line 257 of `src/plugins/spec-tree/skills/audit-change/SKILL.md` passes each finding's one-based position in the sorted finding inventory of one run as the `ordinal`. Property 12 of [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md) identifies a finding by its unit's key and its rule identifier, the same in every run and on every head. The same finding takes a different key when an earlier finding in the list appears or disappears between runs.
+
+Evidence: `finding_key` and its caller `_add_finding` in `audit_change_run.py`, and the `ordinal` sentence of the skill above.
+
+Impact: a `filed` finding recorded once can reappear under a new key after an unrelated finding changes position, so a later run cannot match it to the recorded entry and the Author records it again.
+
+Revisit and settlement condition: the runner builds the key from the unit and the rule alone, and a linked case asserts that one finding keeps its key when the list around it changes.
