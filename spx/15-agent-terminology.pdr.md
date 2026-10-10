@@ -33,7 +33,7 @@ Exact external API fields, command names, filesystem paths, and attributed quota
 
 `runtime` remains valid for execution-time behavior or an execution environment such as Python when no agent concept is meant.
 
-**Change, Output, and Activity.** The chapter `versions/4.0/methodology/change/changes.md` of `outcomeeng/methodology` is the home of what a Change, an Output, and an Activity are; the roles below use those terms as that chapter defines them and hold whether or not a repository declares a coordination overlay.
+**Change, Output, Leaf, and Parent.** The chapter `versions/4.0/methodology/change/changes.md` of `outcomeeng/methodology` is the home of what a Change, an Output, a Leaf, and a Parent are; the roles below use those terms as that chapter defines them and hold whether or not a repository declares a coordination overlay.
 
 **Role.** What an agent session does for a Change; a session holds a role for that Change and may hold another in a different one. A role name is capitalized, so it stands apart from the everyday word. One round is one Author or Fixer pass together with every Verifier pass it triggers.
 
@@ -41,7 +41,7 @@ A Role does not identify a subagent definition. A configured Verifier names a su
 
 **Refiner.** The role of the Change's holder during refinement. The agent session in conversation with the operator holds it, realized by loading into that conversation the refinement skills the Change's Maturity routes to; the role is never dispatched as a subagent and never loaded from an agent definition.
 
-**Executor.** The role of the Change's holder during execution. The Executor sequences the Change's Activities, delegates production and verification, integrates the changeset, and escalates a reopened product or architecture judgment to the operator. The Executor produces no artifact.
+**Executor.** The role of the Change's holder during execution. The Executor takes a Leaf's `## Mutations` rows in order, delegates production and verification, integrates the changeset, and escalates a reopened product or architecture judgment to the operator. The Executor produces no artifact.
 
 **Author.** The role held by the agent session that produces the artifacts of one round: decisions, specs, verification artifacts, or implementation.
 
