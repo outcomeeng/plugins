@@ -13,7 +13,7 @@ Use skill `instructions:skill-standards`.
 Use skill `instructions:agent-prompt-standards`.
 
 <objective>
-A sealed changeset-scoped `spx verification run` over the files a changeset changes in one skill bundle and the shared fragments it includes, judged against the `/skill-standards` and `/agent-prompt-standards` rule catalogs — terminal status `approved` with no finding, or `rejected` with each finding keyed `<unit>:<rule-id>` and naming every location and the evidence — or a `BLOCKED` diagnostic naming the failed prerequisite or command.
+A sealed changeset-scoped `spx verification run` over the files a changeset changes in one skill bundle and the shared fragments it includes, judged against the `/skill-standards` and `/agent-prompt-standards` rule catalogs — terminal status `approved` when no finding on touched text exists, or `rejected` with each such finding keyed `<unit>:<rule-id>` and naming every location and the evidence, every other finding recorded as `filed` — or a `BLOCKED` diagnostic naming the failed prerequisite or command.
 </objective>
 
 <constraints>
@@ -21,7 +21,8 @@ A sealed changeset-scoped `spx verification run` over the files a changeset chan
 - NEVER modify the target bundle or any product file; the only state this audit changes is its own SPX verification-run journal.
 - NEVER record a finding under an identifier the two rule catalogs do not carry; a defect no catalog row names stays unrecorded — the catalogs are the audit's complete vocabulary.
 - NEVER record a finding against a bundle file the changeset leaves unchanged; unchanged files are read as context only.
-- NEVER choose a severity; a finding carries the severity its catalog row declares.
+- NEVER choose a severity; a finding on touched text carries the severity its catalog row declares, and a finding outside touched text carries `filed`.
+- NEVER reject on text the changeset leaves unchanged and does not invalidate, and NEVER raise a recorded finding's severity or let a `filed` finding reject unless the run names a changed basis. `${CLAUDE_SKILL_DIR}/references/touched-text.md` defines touched text, the finding key, and the `filed` form.
 - NEVER report a score, generate a fix, or assume skill intent; record an ambiguity under the catalog rule it violates.
 - MUST read both standards, their rule catalogs, and the references their applicability rules require before judging — prevents memory-based assessment.
 
@@ -68,10 +69,10 @@ Use skill `instructions:instructions-plugin`. Invoke it with the verb `version` 
    python3 -c 'from pathlib import Path; import sys; print(len(Path(sys.argv[1]).read_text(encoding="utf-8")))' "<rendered-SKILL.md>"
    ```
 
-4. **Judge.** Judge each changed file against every catalog row that applies to it, using the stating section's text, never memory; a creator skill's workflow references are authoring guidance, never standards. A changed fragment is judged under the same catalog rows as a bundle file, against the bundle that includes it. A deleted file is judged by what its deletion leaves behind: a citation of it, an orphaned sibling, or a broken route. A violation that spans files — an orphaned reference, a missing route target — belongs to the changed file whose change produced it. Group the violations into findings: every violation of one rule within one file forms one finding, carrying the row's identifier and severity, every location, a message, and observed-versus-expected evidence. An observation that a rule holds is not a finding.
+4. **Judge.** Judge each changed file against every catalog row that applies to it, using the stating section's text, never memory; a creator skill's workflow references are authoring guidance, never standards. A changed fragment is judged under the same catalog rows as a bundle file, against the bundle that includes it. A deleted file is judged by what its deletion leaves behind: a citation of it, an orphaned sibling, or a broken route. A violation that spans files — an orphaned reference, a missing route target — belongs to the changed file whose change produced it. Classify each violation per `${CLAUDE_SKILL_DIR}/references/touched-text.md`. Group the violations into findings: every violation of one rule within one file forms one finding, carrying the row's identifier and its severity or `filed`, every location, a message, and observed-versus-expected evidence. An observation that a rule holds is not a finding.
 5. **Record.** Add one unit for each changed file in `git diff` order, then each finding against the unit of its file, under `<persistence_contract>`.
 6. **Reconcile.** Read `spx verification run status` with the same type, scope, and token. Require exactly one unit for each changed file and no other unit, and an accepted unit for every finding. Run `git rev-parse --verify 'HEAD^{commit}'` and the `git status` command again; a moved head or uncommitted bundle or fragment work returns `BLOCKED` with the run preserved.
-7. **Finish and render.** Derive `approved` only when every unit is audited and no finding exists; derive `rejected` when any finding exists, a debt-only set included. Run:
+7. **Finish and render.** Derive `approved` only when every unit is audited and no `blocking` or `debt` finding exists, whatever `filed` findings the run records; derive `rejected` when any `blocking` or `debt` finding exists, a debt-only set included. Run:
 
    ```bash
    spx verification run finish --verification-type audit --scope-type changeset --scope '<base-oid>..<head-oid>' --run '<run-token>' --terminal-status '<approved-or-rejected>'
@@ -131,7 +132,7 @@ Pass each rendered scope object to its command; the one-line form is:
 printf '%s\n' '<rendered-scope-object>' | spx verification run scope add --verification-type audit --scope-type changeset --scope '<base-oid>..<head-oid>' --run '<run-token>' --idempotency-key 'instructions:skill:file:<path>' --payload stdin
 ```
 
-A finding copies its unit's `expectedProducer` object as `producerIdentity` and its unit's complete `producerProvenance` object, and carries `rule`, the catalog identifier; `severity`, the row's `blocking` or `debt`; `location`, every file-and-line or section where the rule is violated within the unit, separated by `;`; `message`; and `evidence` with `observed` and `expected` strings:
+A finding copies its unit's `expectedProducer` object as `producerIdentity` and its unit's complete `producerProvenance` object, and carries `rule`, the catalog identifier; `severity`, the row's `blocking` or `debt` for a finding on touched text and `filed` for any other finding; `location`, every file-and-line or section where the rule is violated within the unit, separated by `;`; `message`; and `evidence` with `observed` and `expected` strings:
 
 ```json
 {
@@ -167,7 +168,7 @@ The heredoc delimiter stays quoted, so the shell expands nothing in the body. Id
 
 <verdict_format>
 
-Return only the exact run token and the unmodified rendered projection. The projection is the verdict: its `terminalStatus` is `approved` or `rejected`, its `findingCount` is zero for approval, its `findings` group every accepted finding under `blocking` and `debt`, its `auditScopeUnits` carry one unit per changed bundle file and changed included fragment, and its `events` carry every accepted finding payload and the terminal event. Every finding is keyed `<unit>:<rule-id>` by a catalog identifier, and both severities reject the run. Keep every SPX field unchanged.
+Return only the exact run token and the unmodified rendered projection. The projection is the verdict: its `terminalStatus` is `approved` or `rejected`, its `findings` group every accepted finding under `blocking`, `debt`, and `filed`, none under `blocking` or `debt` for approval, its `auditScopeUnits` carry one unit per changed bundle file and changed included fragment, and its `events` carry every accepted finding payload and the terminal event. Every finding is keyed `<unit>:<rule-id>` by a catalog identifier; `blocking` and `debt` reject the run and `filed` does not. Keep every SPX field unchanged.
 
 A run that cannot complete returns:
 
@@ -192,7 +193,7 @@ judgedFindings: <JSON array of every finding judged before the stop, in the find
 
 **Failure 3: Scored the skill instead of judging it.** Claude assigned a number ("8/10 structure") instead of recording findings, turning a verdict into a rating the author cannot act on. Each finding names a file, its locations, a catalog rule, and evidence; a score names none of them. Record findings, never scores.
 
-**Failure 4: Reversed its own verdict on unchanged text.** Across runs against one unchanged skill, Claude praised a passage under one rule name and faulted the same passage under another, and did both within one run's verdict, because Claude minted the rule names it judged under in each run. A finding with no fixed identifier cannot be compared across runs, so repair chased noise. Name only catalog identifiers, take each severity from its row, and judge only the files the changeset changes.
+**Failure 4: Reversed its own verdict on unchanged text.** Across runs against one unchanged skill, Claude praised a passage under one rule name and faulted the same passage under another, and did both within one run's verdict, because Claude minted the rule names it judged under in each run. A finding with no fixed identifier cannot be compared across runs, so repair chased noise. Name only catalog identifiers, take each severity from its row, judge only the files the changeset changes, and keep a recorded finding's severity unless the run names a changed basis.
 
 </failure_modes>
 
@@ -200,8 +201,8 @@ judgedFindings: <JSON array of every finding judged before the stop, in the find
 The verdict is sound when:
 
 - Every applicable catalog row was judged against every changed file, with none skipped.
-- The sealed run carries one unit per changed bundle file and changed included fragment and no other, and its terminal status is `approved` only with no finding.
-- Each finding names a catalog identifier with that row's severity, every location of the violation within its unit, and the observed-versus-expected evidence.
+- The sealed run carries one unit per changed bundle file and changed included fragment and no other, and its terminal status is `approved` only with no `blocking` or `debt` finding.
+- Each finding names a catalog identifier with that row's severity on touched text or `filed` outside it, every location of the violation within its unit, and the observed-versus-expected evidence.
 - The same changeset, standards, and run-driver identity yield the same units, findings, and finding keys.
 
 </success_criteria>
