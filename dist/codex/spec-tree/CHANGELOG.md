@@ -28,6 +28,7 @@ An entry is written by the changeset that ships the change. A later changeset ad
 - **The `change-author` description names the launch as a Mutation row that needs spec-tree artifacts.** `/execute-change` launches the round by exact name when a `## Mutations` row adds or modifies a decision, spec, node, or note that `/author` writes. Before this change, the description named the launch as an Activity that needs those artifacts.
 - **The `change-verifier` description names the launch as a Mutation row that needs routed assertions and evidence.** `/execute-change` launches the round by exact name when a Mutation row needs assertions routed to their verification type and evidence produced or repaired through `/verify`. Before this change, the description named the launch as an Activity that needs them.
 - **The `change-tester` description names the launch as a Mutation row that needs routed `[test]` evidence.** `/execute-change` launches the round by exact name when a Mutation row needs routed `[test]` evidence produced or repaired through `/test`. Before this change, the description named the launch as an Activity that needs that evidence.
+- **The `change-implementer` description names the launch as a Mutation row that needs a language implementation.** `/execute-change` launches the round by exact name when a Mutation row needs a language implementation of one node produced or repaired through `/implement-change`. Before this change, the description named the launch as an Activity that needs a language implementation.
 
 ## 0.104.8
 

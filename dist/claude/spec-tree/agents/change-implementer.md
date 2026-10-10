@@ -3,7 +3,7 @@ model: "sonnet"
 effort: "medium"
 name: change-implementer
 description: >-
-  Round session `/execute-change` launches by exact name when an Activity needs a language implementation of one node produced or repaired through `/implement-change`.
+  Round session `/execute-change` launches by exact name when a Mutation row needs a language implementation of one node produced or repaired through `/implement-change`.
 disallowedTools: Agent, AskUserQuestion
 skills:
   - spec-tree:implement-change
