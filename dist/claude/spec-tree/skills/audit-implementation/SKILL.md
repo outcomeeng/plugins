@@ -30,6 +30,7 @@ An authoritative SPX projection and raw run token for the requested implementati
 - NEVER select a skill from the installed skill inventory, and NEVER invoke a skill to discover whether a kind is installed — the registry selection in the run's sealed start input is the only selection source; the inventory this context carries decides only whether a selected skill runs or is recorded as `missing-skill`, and a failed invocation is not selection evidence.
 - ALWAYS record coverage as `<coverage_model>` states; a run that narrows a set or records a unit only where it found something states its findings as its coverage.
 - NEVER let a raised finding or a rejected terminal status shorten the inspection: rejection is a verdict about what was inspected, never permission to leave a concern or a resolved path unrecorded.
+- NEVER raise a recorded finding's severity, or let a `filed` finding start to reject, unless the run names a changed basis there; NEVER reject a changeset for a finding outside touched text, and NEVER let a finding's severity decide the verdict.
 - ALWAYS start the verification run after resolving the target's Git metadata and validating the run-driver identity, before reading changed project file bodies or loading concern standards — every substantive project inspection and concern result belongs to the open run.
 
 </constraints>
@@ -417,7 +418,7 @@ The composition contract is the plugin-qualified skill name the selection carrie
 
 <finding_model>
 
-Record each accepted concern finding on touched text through `spx verification run finding add`, using the finding payload shape in `<verification_run_contract>`; its `producerIdentity` matches the coverage unit's `expectedProducer`. Finding identity for convergence is content and stable producer identity, not plugin version, so a version change preserves provenance without making the same finding look new. Classify every returned finding as `${CLAUDE_SKILL_DIR}/references/touched-text.md` states, record only a finding on touched text, and return each other finding as `filed`; NEVER raise a recorded finding's severity, or let a `filed` finding start to reject, unless the run names a changed basis there.
+Record each accepted concern finding on touched text through `spx verification run finding add`, using the finding payload shape in `<verification_run_contract>`; its `producerIdentity` matches the coverage unit's `expectedProducer`. Finding identity for convergence is content and stable producer identity, not plugin version, so a version change preserves provenance without making the same finding look new. Classify every returned finding as `${CLAUDE_SKILL_DIR}/references/touched-text.md` states, record only a finding on touched text, and return each other finding as `filed`.
 
 </finding_model>
 
@@ -425,7 +426,7 @@ Record each accepted concern finding on touched text through `spx verification r
 
 Finish the run only after the stage 7 reconciler exits zero. Record missing required skills, unsupported paths claimed by a selected kind, finding counts, and deterministic verification state in accepted scope and finding payload fields instead of terminal metadata.
 
-Compute the terminal status from accepted coverage and finding evidence: `approved` when every required non-gap unit is `audited` or `not-applicable` and no finding on touched text exists; `rejected` when a required unit is uncovered or any finding on touched text exists. A `filed` finding is never recorded through `finding add`, so it changes neither value. NEVER reject a changeset for a finding outside touched text, and NEVER let a finding's severity decide the verdict. Pass that evidence-derived value through `finish --terminal-status`. Do not pass terminal metadata for audit runs; the run's coverage and findings already carry the facts behind the terminal value.
+Compute the terminal status from accepted coverage and finding evidence: `approved` when every required non-gap unit is `audited` or `not-applicable` and no finding on touched text exists; `rejected` when a required unit is uncovered or any finding on touched text exists. A `filed` finding is never recorded through `finding add`, so it changes neither value. Pass that evidence-derived value through `finish --terminal-status`. Do not pass terminal metadata for audit runs; the run's coverage and findings already carry the facts behind the terminal value.
 
 If SPX rejects terminal status, report the rejected command and stderr as the audit result. Do not manufacture a prose fallback.
 

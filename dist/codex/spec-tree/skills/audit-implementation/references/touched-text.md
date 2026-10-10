@@ -1,5 +1,5 @@
 <objective>
-How a run classifies each returned finding as a finding on touched text, which is recorded and rejects, or a standing finding, which is returned as `filed`.
+The classification that sorts each returned finding into a finding on touched text, which is recorded and rejects, or a standing finding, which is returned as `filed`.
 </objective>
 
 <contents>
