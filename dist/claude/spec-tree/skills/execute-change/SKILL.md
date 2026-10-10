@@ -61,7 +61,7 @@ The verdict of a `instructions:skill-auditor` or `instructions:subagent-auditor`
 
 A gate is one Verifier definition judging one subject; under `/merge`, the local review and the CI review are two gates. The Executor launches each gate at most twice per Change, counting real rejections:
 
-- A rejection counts when at least one blocking or debt finding sits on a line the changeset changed, or is caused by its edit, read from the diff against the base. A filed finding, a stale finding, and a finding on untouched text count for nothing; a rejection on the record's shape counts for the shape review alone; a launch that seals no run counts for nothing.
+- A rejection counts when at least one blocking or debt finding sits on a line the changeset changed, or is caused by its edit, read from the diff against the base. A filed finding, a stale finding, and a finding on untouched text count for nothing; a launch that seals no run counts for nothing.
 - The count holds every counted rejection from any session, a Fixer round's and those of the reviewers and auditors `/merge` launches among them. It is the run tokens the newest Handoff's `Hazards` line names plus this session's own counted rejections, and only launches after the newest published revision of the Change's body count.
 - A third launch of a gate on the Change is refused with the count, and no gate is repeated until it approves.
 - The cap covers agentic gates only. A deterministic command that fails runs again after its Fixer round outside the cap.

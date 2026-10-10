@@ -97,7 +97,7 @@ The Refiner persists the record at the Maturity it reached. This skill never wri
    - Run `spx verification run input` with the `--verification-type`, `--scope-type`, `--scope`, and `--run` values `renderCommand` carries. Require its `content` to equal the unchanged candidate byte for byte; the rendered projection carries no retained input.
 
    A failed command or any mismatch withholds publication.
-6. Dispatch the auditor at most twice on one candidate, counting every dispatch this gate makes for it, the re-audit `<persistence>` requires included. After a first completed rejection, sweep the complete candidate for the cited defect class, batch repairs, read affected sections together, and dispatch the second audit only after the repaired candidate stabilizes. Ask the operator when repair reopens judgment. After the second rejection, end with publication withheld and report the outstanding defect class; NEVER dispatch a third audit on that candidate.
+6. Dispatch the auditor at most twice on one candidate, counting every dispatch this gate makes for it, the re-audit `<persistence>` requires included. After a first completed rejection, sweep the complete candidate for the cited defect class, batch repairs, read affected sections together, and dispatch the second audit only after the repaired candidate stabilizes. Ask the operator when repair reopens judgment. After the second rejection, end with publication withheld and report the outstanding defect class; NEVER dispatch a third audit on that candidate. When the `<persistence>` re-read changes the candidate after the second dispatch, withhold publication and report the intervening edit and the outstanding state.
 
 Audit results remain in SPX and the conversation. NEVER write audit bookkeeping into the Change body, comments, or fields.
 
@@ -105,7 +105,7 @@ Audit results remain in SPX and the conversation. NEVER write audit bookkeeping 
 
 <persistence>
 
-Publication requires unchanged local content approved by `<audit_gate>`, the authority `<authority_gate>` names for the target Maturity, and revision authority for an existing store record. Re-read the remote representation immediately before mutation and reconcile any intervening edit locally; re-audit a changed candidate.
+Publication requires unchanged local content approved by `<audit_gate>`, the authority `<authority_gate>` names for the target Maturity, and revision authority for an existing store record. Re-read the remote representation immediately before mutation and reconcile any intervening edit locally; re-audit a changed candidate only while step 6 of `<audit_gate>` leaves a dispatch.
 
 Use skill `spec-tree:change-standards`. Invoke it with `Lifecycle` for the store rules: `store-binding` resolves the store and blocks an absent overlay or a store of another kind, `canonical-state` names each front-matter field's one home, the commands that read and write each field, and the bounded blocker read, and `inert-stdin` and `write-inspection` govern every text sent to the store. Use `gh` only, and resolve the issue, field, option, and blocker ids from live reads; hardcode none of them. Nothing else in the store holds a field that `canonical-state` assigns a home.
 
