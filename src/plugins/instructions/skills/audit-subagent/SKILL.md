@@ -16,14 +16,15 @@ allowed-tools: Read, Grep, Glob, {{! tool('use_skill') !}}, Bash(git rev-parse:*
 {!% require_skill 'instructions:skill-standards' %!}
 
 <objective>
-A sealed changeset-scoped `spx verification run` over the one {{! term('configured_agent') !}} definition a changeset changes, judged against the `/subagent-standards` and `/agent-prompt-standards` rule catalogs — terminal status `approved` with no finding, or `rejected` with each finding keyed `<unit>:<rule-id>` and naming every location and the evidence — or a `BLOCKED` diagnostic naming the failed prerequisite or command.
+A sealed changeset-scoped `spx verification run` over the one {{! term('configured_agent') !}} definition a changeset changes, judged against the `/subagent-standards` and `/agent-prompt-standards` rule catalogs — terminal status `approved` when no finding on touched text exists, or `rejected` with each such finding keyed `<unit>:<rule-id>` and naming every location and the evidence, every other finding recorded as `filed` — or a `BLOCKED` diagnostic naming the failed prerequisite or command.
 </objective>
 
 <constraints>
 
 - NEVER modify the target or any product file, launch the target, or run an authoring workflow; the only state this audit changes is its own SPX verification-run journal.
 - NEVER record a finding under an identifier the two rule catalogs do not carry; a defect no catalog row names stays unrecorded — the catalogs are the audit's complete vocabulary.
-- NEVER choose a severity; a finding carries the severity its catalog row declares.
+- NEVER choose a severity; a finding on touched text carries the severity its catalog row declares, and a finding outside touched text carries `filed`.
+- NEVER reject on text the changeset leaves unchanged and does not invalidate, and NEVER raise a recorded finding's severity or let a `filed` finding reject unless the run names a changed basis. `${CLAUDE_SKILL_DIR}/references/touched-text.md` defines touched text, the finding key, and the `filed` form.
 - NEVER record a finding against a governing declaration; a declaration is context the definition is judged against.
 - NEVER report a score, generate a fix, or invent a requirement because a tag, example, or optional mechanism is absent.
 - MUST read both standards and their rule catalogs before judging — prevents memory-based assessment.
@@ -65,10 +66,10 @@ Use skill `instructions:instructions-plugin`. Invoke it with the verb `version` 
 2. **Load the standards.** Read `/subagent-standards` and its `<rule_catalog>`, `/agent-prompt-standards` and its `<rule_catalog>`, and the `<catalog_contract>` in `/skill-standards`' `references/rule-catalog.md`, which governs both catalogs. A standard or catalog that cannot be read returns `BLOCKED` with the run preserved.
 3. **Read the target and its context.** Apply `/subagent-standards` `<configuration_subject>` to classify the target and discover any declared source-to-output mapping, and `<configuration>` to resolve the target's governing context. Read the whole target at the head, its governing decisions, selected profile, owning skill, and result contract. When the target is a generation input, read each exact emitted definition as evidence for that input. When the definition delegates its behavior, read the complete invoked skill and distinguish wrapper obligations from behavior that skill already owns. Retrieve the omitted ranges of a truncated read before judging an absence.
 4. **Admit invocation evidence** as `/subagent-standards` `<evidence>` requires, reading the declared acceptance artifact or the retained native-loading and invocation evidence for the target. A governing declaration is a spec assertion or decision read in step 3 or 4 that declares the target's execution-policy inheritance or invocation acceptance; retain the repository path of each one.
-5. **Judge.** Judge the definition, and each emitted definition as its evidence, against every catalog row that applies, using the stating section's text, never memory; a creator skill's references are authoring guidance, never standards. Check the whole target for equivalent functionality before declaring an omission. Group the violations into findings: every violation of one rule forms one finding, carrying the row's identifier and severity, every location, a message, and observed-versus-expected evidence. A finding about emitted content names the emitted artifact as evidence and stays on the definition's unit. An observation that a rule holds is not a finding.
+5. **Judge.** Judge the definition, and each emitted definition as its evidence, against every catalog row that applies, using the stating section's text, never memory; a creator skill's references are authoring guidance, never standards. Check the whole target for equivalent functionality before declaring an omission. Classify each violation per `${CLAUDE_SKILL_DIR}/references/touched-text.md`. Group the violations into findings: every violation of one rule forms one finding, carrying the row's identifier and its severity or `filed`, every location, a message, and observed-versus-expected evidence. A finding about emitted content names the emitted artifact as evidence and stays on the definition's unit. An observation that a rule holds is not a finding.
 6. **Record.** Add the definition unit, then one declaration unit for each governing declaration read in path order, then each finding against the definition unit, under `<persistence_contract>`.
 7. **Reconcile.** Read `spx verification run status` with the same type, scope, and token. Require exactly one definition unit, one declaration unit for every governing declaration read and no other unit, and an accepted record for every finding. Run `git rev-parse --verify 'HEAD^{commit}'` and the `git status` command again; a moved head or uncommitted work in the definition returns `BLOCKED` with the run preserved.
-8. **Finish and render.** Derive `approved` only when every unit is audited and no finding exists; derive `rejected` when any finding exists, a debt-only set included. Run:
+8. **Finish and render.** Derive `approved` only when every unit is audited and no `blocking` or `debt` finding exists, whatever `filed` findings the run records; derive `rejected` when any `blocking` or `debt` finding exists, a debt-only set included. Run:
 
    ```bash
    spx verification run finish --verification-type audit --scope-type changeset --scope '<base-oid>..<head-oid>' --run '<run-token>' --terminal-status '<approved-or-rejected>'
@@ -128,7 +129,7 @@ Pass each rendered scope object to its command; the one-line form is:
 printf '%s\n' '<rendered-scope-object>' | spx verification run scope add --verification-type audit --scope-type changeset --scope '<base-oid>..<head-oid>' --run '<run-token>' --idempotency-key '<unit-key>' --payload stdin
 ```
 
-A finding copies the definition unit's `expectedProducer` object as `producerIdentity` and its complete `producerProvenance` object, and carries `rule`, the catalog identifier; `severity`, the row's `blocking` or `debt`; `location`, every file-and-line or section where the rule is violated, separated by `;`; `message`; and `evidence` with `observed` and `expected` strings:
+A finding copies the definition unit's `expectedProducer` object as `producerIdentity` and its complete `producerProvenance` object, and carries `rule`, the catalog identifier; `severity`, the row's `blocking` or `debt` for a finding on touched text and `filed` for any other finding; `location`, every file-and-line or section where the rule is violated, separated by `;`; `message`; and `evidence` with `observed` and `expected` strings:
 
 ```json
 {
@@ -164,7 +165,7 @@ The heredoc delimiter stays quoted, so the shell expands nothing in the body. Id
 
 <verdict_format>
 
-Return only the exact run token and the unmodified rendered projection. The projection is the verdict: its `terminalStatus` is `approved` or `rejected`, its `findingCount` is zero for approval, its `findings` group every accepted finding under `blocking` and `debt`, its `auditScopeUnits` carry the definition unit and one unit for each governing declaration read, and its `events` carry every accepted finding payload and the terminal event. Every finding is keyed `<unit>:<rule-id>` by a catalog identifier, and both severities reject the run. Keep every SPX field unchanged.
+Return only the exact run token and the unmodified rendered projection. The projection is the verdict: its `terminalStatus` is `approved` or `rejected`, its `findingCount` is zero for approval, its `findings` group every accepted finding under `blocking`, `debt`, and `filed`, none under `blocking` or `debt` for approval, its `auditScopeUnits` carry the definition unit and one unit for each governing declaration read, and its `events` carry every accepted finding payload and the terminal event. Every finding is keyed `<unit>:<rule-id>` by a catalog identifier; `blocking` and `debt` reject the run and `filed` does not. Keep every SPX field unchanged.
 
 A run that cannot complete returns:
 
@@ -185,7 +186,7 @@ judgedFindings: <JSON array of every finding judged before the stop, in the find
 
 **Failure 1: Flagged a missing tag name when the content was present under a different name.** Claude penalized a {{! term('configured_agent') !}} for lacking `<workflow>` when its procedure lived under `<approach>`. The audit checks for functionality, not exact tag spelling; a missing function is a finding, a renamed-but-present section is not. Search the whole file for equivalent content before flagging.
 
-**Failure 2: Scored the {{! term('configured_agent') !}} instead of judging it.** Claude assigned "role clarity 7/10" instead of naming the specific deficiency and its consequence. A score names no location, rule, or fix and the author cannot act on it. Record findings, never scores.
+**Failure 2: Scored the {{! term('configured_agent') !}} instead of judging it.** Claude assigned "role clarity 7/10" instead of naming the specific deficiency and its consequence. A score names no location, rule, or fix. Record findings, never scores.
 
 **Failure 3: Skipped an evaluation area and missed a whole class.** Claude judged {!% if target == 'codex' %!}TOML configuration{!% else %!}YAML frontmatter{!% endif %!} and role, formed a verdict, and stopped — leaving tool-access over-permissioning unexamined, so a class of issues passed unseen. The verdict is sound only when every applicable catalog row was judged; walk both catalogs row by row before finishing the run.
 
@@ -199,8 +200,8 @@ judgedFindings: <JSON array of every finding judged before the stop, in the find
 The verdict is sound when:
 
 - Every applicable catalog row was judged against the definition, with none skipped.
-- The sealed run carries one definition unit and one unit for each governing declaration read and no other, every finding sits on the definition unit, and its terminal status is `approved` only with no finding.
-- Each finding names a catalog identifier with that row's severity, every location of the violation, and the observed-versus-expected evidence, judged on functionality rather than exact tag spelling.
+- The sealed run carries one definition unit and one unit for each governing declaration read and no other, every finding sits on the definition unit, and its terminal status is `approved` only with no `blocking` or `debt` finding.
+- Each finding names a catalog identifier with that row's severity on touched text or `filed` outside it, every location of the violation, and the observed-versus-expected evidence, judged on functionality rather than exact tag spelling.
 - The same changeset, governing requirements, retained evidence, and run-driver identity yield the same units, findings, and finding keys.
 
 </success_criteria>
