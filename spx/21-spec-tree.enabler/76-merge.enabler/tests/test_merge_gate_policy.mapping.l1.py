@@ -13,7 +13,6 @@ from outcomeeng.merging_policy import (
     DEFAULT_REVIEW_TRIGGER_PHRASE,
     FIELD_CONCLUSION,
     FIELD_FINDINGS,
-    FIELD_IN_PR_DIFF,
     FIELD_KIND,
     FIELD_OVERALL,
     FIELD_PRESENT,
@@ -22,6 +21,7 @@ from outcomeeng.merging_policy import (
     FIELD_STATE,
     FIELD_STATE_CATEGORY,
     FIELD_STATUS,
+    FIELD_TOUCHES_OR_INVALIDATES_TEXT,
     FIELD_VERDICT,
     MENTION_REVIEW_NEEDED_TOKEN_SEPARATOR,
     STATUS_CONTEXT_NON_TERMINAL_STATES,
@@ -311,7 +311,7 @@ def test_auditor_verdict_mapping() -> None:
     for overall in sorted(AUDITOR_BLOCKING_OVERALLS):
         decision = decide_auditor_verdict(
             {
-                FIELD_IN_PR_DIFF: True,
+                FIELD_TOUCHES_OR_INVALIDATES_TEXT: True,
                 FIELD_OVERALL: overall,
                 FIELD_ROWS: [{FIELD_STATUS: AuditorRowStatus.PASS}],
                 FIELD_FINDINGS: [],
@@ -323,7 +323,7 @@ def test_auditor_verdict_mapping() -> None:
     for status in sorted(AUDITOR_BLOCKING_ROW_STATUSES):
         decision = decide_auditor_verdict(
             {
-                FIELD_IN_PR_DIFF: True,
+                FIELD_TOUCHES_OR_INVALIDATES_TEXT: True,
                 FIELD_OVERALL: AuditorOverall.APPROVED,
                 FIELD_ROWS: [{FIELD_STATUS: status}],
                 FIELD_FINDINGS: [],
@@ -335,7 +335,7 @@ def test_auditor_verdict_mapping() -> None:
     for verdict in sorted(AUDITOR_BLOCKING_FINDING_VERDICTS):
         decision = decide_auditor_verdict(
             {
-                FIELD_IN_PR_DIFF: True,
+                FIELD_TOUCHES_OR_INVALIDATES_TEXT: True,
                 FIELD_OVERALL: AuditorOverall.APPROVED,
                 FIELD_ROWS: [{FIELD_STATUS: AuditorRowStatus.PASS}],
                 FIELD_FINDINGS: [{FIELD_VERDICT: verdict}],
@@ -346,7 +346,7 @@ def test_auditor_verdict_mapping() -> None:
 
     decision = decide_auditor_verdict(
         {
-            FIELD_IN_PR_DIFF: True,
+            FIELD_TOUCHES_OR_INVALIDATES_TEXT: True,
             FIELD_OVERALL: AuditorOverall.APPROVED,
             FIELD_ROWS: [{FIELD_STATUS: AuditorRowStatus.PASS}],
             FIELD_FINDINGS: [
@@ -358,13 +358,34 @@ def test_auditor_verdict_mapping() -> None:
     assert decision.required_action is AuditorRequiredAction.NO_REPAIR
     assert decision.merge_blocked is False
 
-    decision = decide_auditor_verdict(
+    untouched_blocking_verdicts = [
         {
-            FIELD_IN_PR_DIFF: False,
-            FIELD_OVERALL: AuditorOverall.REJECTED,
-            FIELD_ROWS: [{FIELD_STATUS: AuditorRowStatus.FAIL}],
-            FIELD_FINDINGS: [{FIELD_VERDICT: AuditorFindingVerdict.REJECT}],
+            FIELD_TOUCHES_OR_INVALIDATES_TEXT: False,
+            FIELD_OVERALL: overall,
+            FIELD_ROWS: [{FIELD_STATUS: AuditorRowStatus.PASS}],
+            FIELD_FINDINGS: [],
         }
-    )
-    assert decision.required_action is AuditorRequiredAction.TRACK_OUT_OF_PR
-    assert decision.merge_blocked is False
+        for overall in sorted(AUDITOR_BLOCKING_OVERALLS)
+    ]
+    untouched_blocking_verdicts += [
+        {
+            FIELD_TOUCHES_OR_INVALIDATES_TEXT: False,
+            FIELD_OVERALL: AuditorOverall.APPROVED,
+            FIELD_ROWS: [{FIELD_STATUS: status}],
+            FIELD_FINDINGS: [],
+        }
+        for status in sorted(AUDITOR_BLOCKING_ROW_STATUSES)
+    ]
+    untouched_blocking_verdicts += [
+        {
+            FIELD_TOUCHES_OR_INVALIDATES_TEXT: False,
+            FIELD_OVERALL: AuditorOverall.APPROVED,
+            FIELD_ROWS: [{FIELD_STATUS: AuditorRowStatus.PASS}],
+            FIELD_FINDINGS: [{FIELD_VERDICT: verdict}],
+        }
+        for verdict in sorted(AUDITOR_BLOCKING_FINDING_VERDICTS)
+    ]
+    for verdict_on_untouched_text in untouched_blocking_verdicts:
+        decision = decide_auditor_verdict(verdict_on_untouched_text)
+        assert decision.required_action is AuditorRequiredAction.TRACK_OUT_OF_PR
+        assert decision.merge_blocked is False

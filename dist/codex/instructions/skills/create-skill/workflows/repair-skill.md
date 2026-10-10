@@ -39,6 +39,12 @@ For each finding row, repair every location it names and every other violation o
 
 </step>
 
+<step name="sweep">
+
+Read `${SKILL_DIR}/references/repair-sweep.md`. Before the bundle is exercised, list every same-class site and every dependency that the repair edits changed, and resolve each row of the sweep table it defines. Leave no row unresolved without a stated reason.
+
+</step>
+
 <step name="exercise">
 
 Build the bundle with the target repository's canonical skill build — or, where the harness loads authored source unrendered, use the authored bundle directly. Exercise it in the execution context that `${SKILL_DIR}/references/test-patterns.md` `<fresh_context_testing>` obtains, which loads the built bundle rather than the files this session edited. Invoke it against representative input for every route, output, or failure behavior the repair touched. Confirm each selects its intended workflow, loads only its required references, and produces its declared output. Fix each observed failure before validation.
@@ -47,13 +53,13 @@ Build the bundle with the target repository's canonical skill build — or, wher
 
 <step name="validate">
 
-Run the target repository's deterministic skill checks over the exercised build. Confirm every finding row's locations and same-rule instances are repaired, every bundled citation resolves, and the bundle violates no rule in either catalog. An edit made after validation returns to `exercise`.
+Run the target repository's deterministic skill checks over the exercised build. Confirm every finding row's locations and same-rule instances are repaired, every bundled citation resolves, and the bundle violates no rule in either catalog. An edit made after validation returns to `sweep`.
 
 </step>
 
 <step name="return_bundle">
 
-Return the bundle in the exact state validation passed, with one disposition per inventory row: `repaired` with the paths changed, or `unrepaired` with the reason.
+Return the bundle in the exact state validation passed, with one disposition per inventory row: `repaired` with the paths changed, or `unrepaired` with the reason, and the resolved sweep table.
 
 </step>
 
@@ -75,6 +81,7 @@ Return the bundle in the exact state validation passed, with one disposition per
 <success_criteria>
 
 - Every inventory row carries a disposition, and every `repaired` row leaves no violation of its rule anywhere in the bundle.
+- Every same-class site and every changed dependency carries a disposition in the sweep table.
 - The returned bundle is the exact state that the exercise and the deterministic checks passed on.
 - The bundle violates no rule in the `/skill-standards` or `/agent-prompt-standards` rule catalog.
 - Every proposed rename has a complete classification row grounded in the declared naming form, vocabulary source, and relevant history.
