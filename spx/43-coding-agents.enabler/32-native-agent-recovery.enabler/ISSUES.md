@@ -40,3 +40,18 @@ was failing for every branch. The auditor confirmed the widening is annotation-o
 assertion. Inverting an eight-hundred-line harness and fifteen assertions to land that one line would
 replace a bounded repair with the first unit of a migration the other two nodes defer by the same
 reasoning.
+
+## DEBT [skill]: `recover-prowl-agents` mixes two forms of naming the composed skill
+
+In `src/plugins/coding-agents/skills/recover-prowl-agents/SKILL.md`, lines 16, 62-67, and 131 name the
+composed skill by the instruction "Use skill `coding-agents:operate-prowl`". Lines 45, 75, 90, 95, 97,
+98, 101, 103, 105, and 175 name it by the bare mention `/operate-prowl`. The file therefore carries
+both forms.
+
+The `composed_dependency_form` rule, raised by `instructions:skill-auditor` in run
+2026-10-10_18-51-24-026-b6f920c23fc3 at head ae83882a1cab0ee81bbab00b7fd538a75bf717bc, expects every
+instruction that uses the dependency to state "Use skill `coding-agents:operate-prowl`".
+
+**Settlement condition**: every mention of the composed skill in that file that instructs its use is
+the instruction "Use skill `coding-agents:operate-prowl`", and a rerun of the skill auditor raises no
+`composed_dependency_form` finding on the file.
