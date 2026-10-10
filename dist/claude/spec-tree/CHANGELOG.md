@@ -14,7 +14,7 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 ### Breaking
 
-- **`change-standards` states a seven-key Change record, and a record with the six-key front matter is outside the contract.** The closed key set gains `parent`, the canonical identity of the Parent Change or `null`. `lifecycle` takes `Available`, `Claimed`, `Submitted`, `Applied`, or `Abandoned`: no skill writes or accepts `Refined`, and `refined_from` lists the Changes this Change absorbed by a merge rather than its predecessors. Sliced records carry `## Mutations` and Executable records add `## Artifacts` in place of `## Slice` and `## Activities`; a record that carries the old sections takes the new ones at its next revision through `/author-change`. Before this change, the standards required the six keys, admitted `Refined`, and required `## Slice` and `## Activities`.
+- **`change-standards` states a seven-key Change record, and a record with the six-key front matter is outside the contract.** The closed key set gains `parent`, the canonical identity of the Parent Change or `null`. `lifecycle` takes `Available`, `Claimed`, `Submitted`, `Applied`, or `Abandoned`: no skill writes or accepts `Refined`, and `refined_from` lists the Changes this Change absorbed by a merge rather than its predecessors. Sliced records carry `## Mutations` and Executable records add `## Artifacts` in place of `## Slice` and `## Activities`; a record that carries the old sections takes the new ones at its next revision. Before this change, the standards required the six keys, admitted `Refined`, and required `## Slice` and `## Activities`.
 
 ### Changed
 

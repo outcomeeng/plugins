@@ -44,7 +44,7 @@ Use skill `spec-tree:change-standards`. Invoke it with `Lifecycle`; it loads the
 
 <result>
 
-Return the issue URL and the readback values verbatim for each Change closed, in closing order. A terminal Change receives no Handoff and never returns to `Available`; a follow-up is a Proposed Change created through `author-change`.
+Return the issue URL and the readback values verbatim for each Change closed, in closing order. A terminal Change receives no Handoff and never returns to `Available`; a follow-up is a new Proposed Change.
 
 </result>
 

@@ -50,7 +50,7 @@ Return the issue URL, the readback values verbatim, the pushed branch or PR, and
 
 **Lifecycle remained implicit after a release.** Claude posted the Handoff and removed the assignee, then treated the open issue as Available while its `Lifecycle` field still read `Claimed`. Every release writes Lifecycle `Available` and reads Product, Maturity, Lifecycle, assignees, and the newest Handoff back before it completes.
 
-**A Handoff carried the body.** Claude wrote insight, status narrative, and a restated plan into the Handoff comment while the record's Mutations and Artifacts stayed stale. The Handoff carries the five continuation lines; what was learned about the Output is refined into the body through `author-change` first.
+**A Handoff carried the body.** Claude wrote insight, status narrative, and a restated plan into the Handoff comment while the record's Mutations and Artifacts stayed stale. The Handoff carries the five continuation lines; what was learned about the Output is refined into the body first.
 
 **A branch was left occupied.** Claude pushed the work branch and released the Change while the worktree still had that branch checked out, so the next holder's `git switch` failed. Step the worktree off the branch after the push; the runtime worktree claim stays with the live process.
 

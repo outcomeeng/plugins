@@ -45,7 +45,7 @@ Use skill `spec-tree:change-standards`. Invoke it with `Lifecycle`; it loads the
 
 <result>
 
-Return the issue URL, the readback values verbatim, the Maturity, the newest `Handoff:` comment's `Branch or PR` line when one exists, and the branch now checked out in the assigned worktree. Refinement below Executable continues through `author-change`; execution at Executable continues from the Handoff's Next Mutation row or the first uncompleted `## Mutations` row.
+Return the issue URL, the readback values verbatim, the Maturity, the newest `Handoff:` comment's `Branch or PR` line when one exists, and the branch now checked out in the assigned worktree. A Change below Executable continues as refinement; execution at Executable continues from the Handoff's Next Mutation row or the first uncompleted `## Mutations` row.
 
 </result>
 
