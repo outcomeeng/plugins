@@ -3,7 +3,7 @@ name: operate-herdr
 description: >-
   ALWAYS invoke this skill when running a public herdr operation — agent inventory, read, bounded wait, prompt, start, relaunch, stop, keystroke, worktree create, or worktree open — on agent sessions herdr hosts. NEVER run herdr command help or construct the public CLI command directly.
 argument-hint: "<operation or JSON request>"
-allowed-tools: Bash(printf '%s\n' '{"schemaVersion":1,:*), Bash(python3 "${SKILL_DIR}/scripts/herdr_environment.py":*)
+allowed-tools: Write, Bash(python3 "${SKILL_DIR}/scripts/herdr_environment.py":*)
 ---
 
 <objective>
@@ -87,7 +87,7 @@ Every named status ends the operation. Report the exact `status`, `errorCode` wh
 ```
 
 3. For `key`, `start`, `relaunch`, `stop`, `create-worktree`, `open-worktree`, or a `prompt` whose `text`, stripped of surrounding whitespace, is `/exit` or `/quit`, run the request only when it names its exact target and carries `"mutationAuthorized": true` inside `arguments`, which states the operator's authorization for that target. The target is one selector for `key`; the `pane` for `start`, `relaunch`, and `stop`; the session its selector names for that `prompt`; the workspace and the existing worktree at `path` for `open-worktree`; and for `create-worktree` the workspace and the absolute path of the checkout it writes, which the request carries as `path`. A `create-worktree` authorization that states no absolute destination authorizes no checkout: obtain one that states it, and never omit `path` or choose a destination the operator did not name. One authorization covers one checkout. Set the flag only when the request arrived with it or the operator authorized that exact target; never add it while interpreting a plain-text request. A request without it is not run.
-4. Submit the request over stdin in one of the forms in `<invocation_forms>`.
+4. Write the request with the file-write tool to a file in the scratch directory the harness names for this session, under a file name unique to the agent and the request, and submit it through the input redirect in `<invocation_forms>`.
 5. Accept only `status: "succeeded"`. Preserve the complete versioned result, `commandExitCode`, and the public `response`: herdr's own JSON envelope for every operation but `read`, and for `read` herdr's terminal text verbatim under `output`. Read the projection the operation adds:
    - `inventory` carries `agents`, one item per hosted session with `name`, `agent`, `agent_status`, `pane_id`, `tab_id`, `workspace_id`, `cwd`, and `interactive_ready`. An agent whose evidence lacks any of those fields is an incomplete item: the fields its evidence carries, verbatim, and the missing names under `missingFields`. Every other agent stays complete.
    - `start`, `relaunch`, `wait`, `read`, and `prompt` carry under `session` the one hosted session they acted on, projected as an inventory item is. A `read` or `prompt` addressed to an agent whose evidence is incomplete still succeeds and carries the incomplete item.
@@ -98,21 +98,11 @@ Every named status ends the operation. Report the exact `status`, `errorCode` wh
 
 <invocation_forms>
 
-When the shell accepts multiline input:
+To submit a request, with `<request-file>` the file written in `<workflow>` step 4:
 
 ```bash
-python3 "${SKILL_DIR}/scripts/herdr_environment.py" run <<'JSON'
-{"schemaVersion":1,"operation":"inventory","arguments":{}}
-JSON
+python3 "${SKILL_DIR}/scripts/herdr_environment.py" run < <request-file>
 ```
-
-When the runner requires one physical command line:
-
-```bash
-printf '%s\n' '{"schemaVersion":1,"operation":"inventory","arguments":{}}' | python3 "${SKILL_DIR}/scripts/herdr_environment.py" run
-```
-
-The single-line request opens with `{"schemaVersion":1,`, the prefix this skill's `printf` grant admits.
 
 </invocation_forms>
 
@@ -122,6 +112,7 @@ The single-line request opens with `{"schemaVersion":1,`, the prefix this skill'
 - ALWAYS preserve herdr identities and states verbatim: agent names, pane, tab, and workspace ids, and the server's own `agent_status`.
 - ALWAYS carry an explicit `timeout` on every wait; the adapter rejects an unbounded wait before any command runs.
 - ALWAYS address a worktree's agent session through the `rootPane` and `workspace` its worktree result returns, never through a pane of the workspace the request named.
+- NEVER pass a request through a heredoc, a pipe, or an inline argument, and NEVER remove the request file — a request carries prompt text, quotes, and JSON that the dangerous-command guard refuses in those forms, and the harness clears its scratch directory.
 - NEVER invoke raw herdr commands, herdr command help, or `herdr --skill`, the skill text herdr prints for agents; the adapter owns the grammar, and that text would put a second, unversioned grammar into the conversation.
 - NEVER create a worktree for a herdr-hosted agent session with `git worktree add` — `create-worktree` creates the checkout and its grouped workspace in one authorized operation.
 - NEVER run `key`, `start`, `relaunch`, `stop`, `create-worktree`, `open-worktree`, or a `prompt` whose `text`, stripped of surrounding whitespace, is `/exit` or `/quit` without authorization for its exact target in the request — that prompt ends the session exactly as `stop` does.
