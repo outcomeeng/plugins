@@ -53,7 +53,7 @@ Bind the spec-node target: `$ARGUMENTS` supplies it when that argument is non-em
 
 Read the evidence model before auditing: `${CLAUDE_SKILL_DIR}/references/evidence-model.md`
 
-Invoke `/contextualize` on the spec node whose eval evidence is being audited. This loads the spec's assertions, ancestor ADRs/PDRs, and hierarchy context.
+Use skill `spec-tree:contextualize` on the spec node whose eval evidence is being audited. This loads the spec's assertions, ancestor ADRs/PDRs, and hierarchy context.
 
 Do not proceed without a `<SPEC_TREE_CONTEXT>` marker. Populate branch metadata from the successful `/sync-base` result retained by `/contextualize`; use JSON `null` when unavailable, and preserve an empty string for a detached HEAD.
 
