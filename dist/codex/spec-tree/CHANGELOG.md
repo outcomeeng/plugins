@@ -10,6 +10,12 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.104.6
+
+### Fixed
+
+- **`/apply` no longer stalls between writing tests and implementing them.** Step 6 is now a deterministic check, not an audit gate: it runs validation and the evidence Step 5 wrote, and requires every other test and eval to pass and each new or changed one to fail only because the implementation it verifies is absent. A new test that passes before implementation, or fails for another cause, goes back to Step 5 for repair. Step 8a, after implementation, is the flow's only evidence audit, and it covers cross-node evidence once per governed node and evidence type. Before this change, Step 6 dispatched the test- and eval-evidence auditors before implementation. The flow allows a dispatch only once deterministic verification passes, and tests written ahead of their implementation cannot pass, so that dispatch could never proceed.
+
 ## 0.104.5
 
 ### Changed
