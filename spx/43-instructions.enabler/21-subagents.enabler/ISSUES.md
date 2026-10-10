@@ -139,3 +139,11 @@ explicit instruction.
 
 **Settlement condition:** both descriptions state the role and the calling-skill condition
 in passive form, and one `subagent-auditor` run on each raises no such finding.
+
+## The subagent auditor's verdict format keeps a zero finding count for approval
+
+**Evidence.** `spec-tree:changes-reviewer` run `2026-10-10_19-49-04-623-01d567a86f84` reported, as `debt` (`consistency`), that `<verdict_format>` in `src/plugins/instructions/skills/audit-subagent/SKILL.md` states that the projection's `findingCount` is zero for approval, while the same sentence admits `filed` findings under an approved run. `src/plugins/instructions/skills/audit-skill/SKILL.md` dropped that clause, and `src/plugins/spec-tree/skills/author-change/SKILL.md` step 4 requires `run.findingCount` to equal the number of `filed` entries on an approved run.
+
+**Impact.** An approved `audit-subagent` run that records a `filed` finding carries a nonzero `findingCount`, which contradicts the sentence and the sibling skill.
+
+**Settlement condition.** The clause is removed, or restated as zero `blocking` and `debt` findings, and one typed skill audit approves the wording. Ruled a post-merge note by the Director (ruling 11816) and the Plugins Maintainer.

@@ -404,3 +404,11 @@ The audit side of the divergence between `spec-tree:implementation-auditor` run 
 **Impact.** Every run driver improvises the version values, which is how two sealed runs minutes apart carry different plugin versions.
 
 **Settlement condition.** Each required provenance value has a named executable source the skill grants, or the field is omitted where no source exists.
+
+## The touched-text assertion names language audits that carry no touched-text classification
+
+**Evidence.** `spec-tree:changes-reviewer` run `2026-10-10_19-49-04-623-01d567a86f84` reported, as `debt` (`consistency`), that the assertion in `spx/21-spec-tree.enabler/68-audit.enabler/audit.md` stating that the implementation auditor and the language audits it composes reject only on touched text holds for the implementation auditor and the artifact-type auditors, while no `audit-{lang}-{code|tests|architecture}` skill classifies a finding by location. For example, `src/plugins/python/skills/audit-python-code/SKILL.md` derives `REJECTED` from any failing concern row with severity `blocking` or `debt`.
+
+**Impact.** Read as written, the composed language skills contradict the assertion. The implementation auditor reclassifies the findings they return, so the verdict it records holds, but the assertion's subject names skills it does not describe.
+
+**Settlement condition.** The assertion narrows to the composing auditor's classification of the findings the language skills return, or each `audit-{lang}-{code|tests|architecture}` skill gains the touched-text classification. Ruled a post-merge note by the Director (ruling 11816) and the Plugins Maintainer.
