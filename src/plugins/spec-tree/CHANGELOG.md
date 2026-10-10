@@ -17,6 +17,10 @@ An entry is written by the changeset that ships the change. A later changeset ad
 - **`/audit-assertions` judges each `[audit]` assertion of one node spec against the subject the assertion names.** The skill takes the spec path and a run-driver identity, starts one file-scoped `spx verification run` before judging, records one scope unit per `[audit:{rule-slug}]` assertion keyed by its slug (a pathless `[audit]` assertion by its ordinal in the spec) with every finding on its unit, seals the run, and returns the run token with the rendered projection, or the complete `BLOCKED` diagnostic when a command fails. It judges no assertion carrying another tag and never judges how an assertion is declared or selected, which stays with `/audit-specs`. A consumer reads an `[audit]` assertion's result from the sealed run, where before this change no skill produced one.
 - **`assertion-auditor` is the isolated agent that runs `/audit-assertions`.** It takes a node spec path, supplies its own run-driver identity, and returns the run token with the rendered projection, or the complete `BLOCKED` diagnostic, unchanged. A caller dispatches it to obtain the verdict on a node's `[audit]` assertions from a separate session and reads that verdict from the sealed run.
 
+### Changed
+
+- **`/execute-change` launches `assertion-auditor` as the Verifier for an evidence obligation on a node's `[audit]` assertions and reads its verdict from the sealed run whose token the launch returns.** The Verifier table gains the row for a node's `[audit]` assertions, and the terminal-status rule that governed the skill and subagent auditors now covers this launch: `approved` approves, and `rejected` rejects whatever the finding count. A Frame that requires an `[audit]` result now names a Verifier the Executor can launch. Before this change, the table named no Verifier for `[audit]` assertions, and an Executor whose Frame required one stopped.
+
 ## 0.104.9
 
 ### Breaking
