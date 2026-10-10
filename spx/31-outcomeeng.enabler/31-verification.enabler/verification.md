@@ -1,3 +1,7 @@
+---
+malleability: spec
+---
+
 # Verification
 
 PROVIDES Outcome Engineering verification governance for verdict modes, verification types, assertion evidence, and verifier responsibilities
