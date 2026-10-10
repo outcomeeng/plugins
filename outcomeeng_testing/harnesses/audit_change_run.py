@@ -84,9 +84,9 @@ SPEC_TREE_MANIFEST: Final = SPEC_TREE_DIR / ".claude-plugin" / "plugin.json"
 #: How many finding rule identifiers one generated audit records.
 RULE_IDENTIFIER_COUNT: Final = 10
 
-#: The author-change record template, a source-owned Change record.
+#: An author-change record template, a source-owned Change record.
 CHANGE_TEMPLATE: Final = (
-    SPEC_TREE_DIR / "skills" / "author-change" / "templates" / "change.md"
+    SPEC_TREE_DIR / "skills" / "author-change" / "templates" / "proposed.md"
 )
 _FIXTURES_DIR: Final = (
     REPO_ROOT / "outcomeeng_testing" / "fixtures" / "audit_change_run"
