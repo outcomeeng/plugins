@@ -6,6 +6,7 @@ from outcomeeng.distribution.contracts import Target
 from outcomeeng.distribution.profiles import (
     AgentProfile,
     MODEL_IDENTIFIERS,
+    NATIVE_CONFIGURATION_FIELDS,
     PROFILE_FIELD,
     native_configuration_values,
     resolve_profile,
@@ -16,6 +17,11 @@ from outcomeeng.validation.runtime_tokens import (
     scan_paths,
 )
 from outcomeeng.validation.profile_configuration import find_profile_literals
+from outcomeeng_testing.generators.profile_binding import (
+    AUTHORED_BINDINGS,
+    READ_BINDINGS,
+    SURROUNDING_CONTEXTS,
+)
 from outcomeeng_testing.harnesses.profile_validation import (
     write_configuration_overrides,
 )
@@ -60,3 +66,14 @@ def test_profile_requests_and_ordinary_prose_pass() -> None:
         )
         == []
     )
+
+
+def test_decision_follows_binding_form_in_every_surrounding_context() -> None:
+    for field in NATIVE_CONFIGURATION_FIELDS:
+        for prefix, suffix in SURROUNDING_CONTEXTS:
+            for binding in AUTHORED_BINDINGS:
+                line = f"{prefix}{field} = {binding}{suffix}"
+                assert find_profile_literals(line) == [(1, field)]
+            for binding in READ_BINDINGS:
+                line = f"{prefix}{field} = {binding}{suffix}"
+                assert find_profile_literals(line) == []
