@@ -7,7 +7,7 @@ description: >-
   or before its terminal precondition holds.
 argument-hint: "<Applied|Refined|Abandoned> [#N | owner/repo#N | issue-url]"
 arguments: terminal reference
-allowed-tools: Read, Bash(git fetch:*), Bash(git merge-base --is-ancestor:*), Bash(spx spec status:*), Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh issue comment:*), Bash(gh issue close:*), Bash(gh api graphql:*), Bash(gh api user --jq .login), Bash(printf:*), Bash(git rev-parse --show-toplevel), Bash(git rev-parse --abbrev-ref origin/HEAD), AskUserQuestion, Skill
+allowed-tools: Read, Write, Bash(git fetch:*), Bash(git merge-base --is-ancestor:*), Bash(spx spec status:*), Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh issue comment:*), Bash(gh issue close:*), Bash(gh api graphql:*), Bash(gh api user --jq .login), Bash(git rev-parse --show-toplevel), Bash(git rev-parse --abbrev-ref origin/HEAD), AskUserQuestion, Skill
 ---
 
 <objective>
@@ -32,7 +32,7 @@ Use skill `spec-tree:change-standards`. Invoke it with `Lifecycle`; it loads the
    - `Refined`: at least one successor exists in the store. Read this Change's successors under `canonical-state`. A blocked read, whichever bound `canonical-state` names, refuses the close naming that bound, and derives no successor from it. Zero such records refuses the close, because a Change whose Output continues nowhere is not refined; a successor the conversation names that the store does not hold, or whose `Predecessors` does not name this Change, refuses the close and names it.
    - `Abandoned`: the operator's explicit direction and stated reason are present in the conversation. When the reason is absent, ask for it through the structured-question tool; never infer it.
 4. **Close in order**, recording each successful write under `ordered-write`:
-   1. Post the terminal record under `terminal-record` with `gh issue comment <N> --repo <store> --body-file -`, the text on stdin under `inert-stdin`, after inspecting it under `write-inspection`.
+   1. Post the terminal record under `terminal-record` with `gh issue comment <N> --repo <store> --body-file <terminal-file>`, the text written with the file-write tool to a file in the scratch directory the harness names for this session, under a file name unique to the agent and the Change, per `inert-stdin`, after inspecting it under `write-inspection`; never remove the file.
    2. Remove the holder with `gh issue edit <N> --repo <store> --remove-assignee @me`.
    3. Write Lifecycle `$terminal` through the single-select write under `canonical-state`, with the issue id, the `Lifecycle` field id, and the `$terminal` option id it resolves.
    4. Close the issue with `gh issue close <N> --repo <store> --reason 'completed'` for `Applied` or `Refined`, or `gh issue close <N> --repo <store> --reason 'not planned'` for `Abandoned`.
