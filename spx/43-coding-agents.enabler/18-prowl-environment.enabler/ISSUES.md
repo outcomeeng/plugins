@@ -12,7 +12,7 @@ Known defects, contradictions and gaps in this node. Coordination note; not spec
 
 ## The handback command passes its request through a pipe and an inline quoted argument
 
-`_handback_command` in `src/plugins/coding-agents/skills/operate-prowl/scripts/prowl_environment.py` builds the command text `printf '%s\n' <json> | python3 prowl_environment.py run`, which an agent then runs. The payload reaches the command through a pipe and an inline quoted argument, a form the payload rule in `spx/15-agent-tools.pdr.md` forbids and the dangerous-command guard refuses when the JSON carries code spans, quotes or shell text.
+`_handback_command` in `src/plugins/coding-agents/skills/operate-prowl/scripts/prowl_environment.py` builds the command text `printf '%s\n' <json> | python3 prowl_environment.py run`, which an agent then runs. The payload reaches the command through a pipe and an inline quoted argument, a form the payload rule in [`spx/15-agent-tools.pdr.md`](spx/15-agent-tools.pdr.md) forbids and the dangerous-command guard refuses when the JSON carries code spans, quotes or shell text.
 
 **Evidence.** The function builds the command text at line 1193 of `src/plugins/coding-agents/skills/operate-prowl/scripts/prowl_environment.py`.
 
