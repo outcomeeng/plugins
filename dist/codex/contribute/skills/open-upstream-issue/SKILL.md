@@ -44,7 +44,7 @@ A claim without a negative control cannot distinguish a defect from a broken mea
 
 **Step 6 — GATE: Review the outward text.** Draft the title and body per `<report_shape>`, then review them — the prose plugin's `prose_prose-auditor` thin agent where installed, `/contribution-standards` `<outward_text>` unassisted where not, stated as such in the report.
 
-**Step 7 — File it.** The body is a payload. Write it with the file-write tool to a file in the scratch directory the harness names for this session, under a file name unique to the agent and this issue, then hand that file to `gh`. Never remove it; the harness clears its scratch directory. The file holds:
+**Step 7 — File it.** The body is a payload. Write it with the file-write tool to a file in the scratch directory the harness names for this session, under a file name unique to the agent and this issue, then hand that file to `gh`. Where the harness names no scratch directory, use the one the environment designates, such as `$RUNNER_TEMP` on a hosted runner. Never remove it; the harness clears its scratch directory. The file holds:
 
 ```text
 <what was observed>

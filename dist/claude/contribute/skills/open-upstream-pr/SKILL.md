@@ -119,7 +119,7 @@ gh api users/"<head-owner>" --jq '.type'
 
 `User` takes `--head <head-owner>:<branch>`. `Organization` cannot be selected that way at all: run the creation from a checkout whose `origin` is that head repository and pass `--head <branch>` alone. Stop with the resolved head named when neither form selects it — never fall back to a head `gh` picks.
 
-The body is a payload. Write it with the file-write tool to a file in the scratch directory the harness names for this session, under a file name unique to the agent and this pull request, then hand that file to `gh`. Never remove it; the harness clears its scratch directory. The file holds:
+The body is a payload. Write it with the file-write tool to a file in the scratch directory the harness names for this session, under a file name unique to the agent and this pull request, then hand that file to `gh`. Where the harness names no scratch directory, use the one the environment designates, such as `$RUNNER_TEMP` on a hosted runner. Never remove it; the harness clears its scratch directory. The file holds:
 
 ```text
 ## Summary

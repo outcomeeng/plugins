@@ -127,7 +127,7 @@ The push updates the open pull request in place and needs no fresh authorization
 
 With findings to answer, draft the comment per `<reply_shape>` and review it per `/contribution-standards` `<invariants>` "Outward-facing text is permanent" — the prose plugin's `prose_prose-auditor` thin agent where installed, `<outward_text>` unassisted where not.
 
-The comment is a payload. Write it with the file-write tool to a file in the scratch directory the harness names for this session, under a file name unique to the agent and this pull request, then hand that file to `gh`. Never remove it; the harness clears its scratch directory.
+The comment is a payload. Write it with the file-write tool to a file in the scratch directory the harness names for this session, under a file name unique to the agent and this pull request, then hand that file to `gh`. Where the harness names no scratch directory, use the one the environment designates, such as `$RUNNER_TEMP` on a hosted runner. Never remove it; the harness clears its scratch directory.
 
 ```bash
 gh pr comment "<number>" --repo "<base>" --body-file "<comment-file>"

@@ -110,7 +110,7 @@ Stop preparation when an active session cannot safely reach its native status su
 
 <command_forms>
 
-Every operation takes its JSON input from stdin. Write the input with the file-write tool to a file in the scratch directory the harness names for this session, under a file name unique to the agent and the operation, and submit it through the input redirect `< <input-file>`. An input carries pane reads, transports, and JSON that the dangerous-command guard refuses in a heredoc, a pipe, or an inline argument. The input shapes:
+Every operation takes its JSON input from stdin. Write the input with the file-write tool to a file in the scratch directory the harness names for this session, under a file name unique to the agent and the operation, and submit it through the input redirect `< <input-file>`. Where the harness names no scratch directory, use the one the environment designates, such as `$RUNNER_TEMP` on a hosted runner. An input carries pane reads, transports, and JSON that the dangerous-command guard refuses in a heredoc, a pipe, or an inline argument. The input shapes:
 
 - `prepare`: `{"items":[],"agents":[],"candidates":[],"correlationEvidence":[]}`, with `--pane <pre-restart-pane-uuid>` repeated per selected pane
 - `activate`: `{"prepared":{},"items":[],"agents":[]}`

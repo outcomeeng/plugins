@@ -32,7 +32,7 @@ Run from the selected Product repository. For a new file, write the complete can
 
 For resumption without an exact path, use `spx change draft list` and inspect only the descriptors needed to identify the candidate. An ambiguous match requires a focused identity question. Preserve an existing candidate until its relationship to the selected store record is established. NEVER delete a draft automatically after publication.
 
-Pass record content to a command as a payload file: write it with the file-write tool to a file in the scratch directory the harness names for this session, under a file name unique to the agent and the Change, and supply it through the command's file argument or the input redirect `< <payload-file>`. NEVER carry record content through a heredoc, a pipe, or an inline form, and NEVER remove a payload file. A title and the search argument of the Proposed workflow's store search stay the single-quoted arguments `inert-stdin` admits.
+Pass record content to a command as a payload file: write it with the file-write tool to a file in the scratch directory the harness names for this session, under a file name unique to the agent and the Change, and supply it through the command's file argument or the input redirect `< <payload-file>`. NEVER carry record content through a heredoc, a pipe, or an inline form, and NEVER remove a payload file. Where the harness names no scratch directory, use the one the environment designates, such as `$RUNNER_TEMP` on a hosted runner. A title and the search argument of the Proposed workflow's store search stay the single-quoted arguments `inert-stdin` admits.
 
 </local_draft>
 

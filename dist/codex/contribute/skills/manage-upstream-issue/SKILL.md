@@ -51,7 +51,7 @@ This gate precedes Step 6's write. A comment notifies every watcher of a reposit
 
 With a question to answer, draft per `<reply_shape>` and review — the prose plugin's `prose_prose-auditor` thin agent where installed, `/contribution-standards` `<outward_text>` unassisted where not, stated as such.
 
-The reply is a payload. Write it with the file-write tool to a file in the scratch directory the harness names for this session, under a file name unique to the agent and this issue, then hand that file to `gh`. Never remove it; the harness clears its scratch directory.
+The reply is a payload. Write it with the file-write tool to a file in the scratch directory the harness names for this session, under a file name unique to the agent and this issue, then hand that file to `gh`. Where the harness names no scratch directory, use the one the environment designates, such as `$RUNNER_TEMP` on a hosted runner. Never remove it; the harness clears its scratch directory.
 
 ```bash
 gh issue comment "<number>" --repo "<base>" --body-file "<comment-file>"

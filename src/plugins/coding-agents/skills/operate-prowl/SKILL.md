@@ -134,7 +134,7 @@ The `handback` request file holds `{"delegation":<complete-returned-delegation>,
 
 <invocation_forms>
 
-Every subcommand (`run`, `resolve-target`, `delegate`, `plan-handback`, `handback`) takes its JSON request from stdin. Write the request with the file-write tool to a file in the scratch directory the harness names for this session, under a file name unique to the agent and the request, and submit it through the input redirect `< <request-file>` shown with each command. A request carries prompt text, quotes, and JSON that the dangerous-command guard refuses in a heredoc, a pipe, or an inline argument.
+Every subcommand (`run`, `resolve-target`, `delegate`, `plan-handback`, `handback`) takes its JSON request from stdin. Write the request with the file-write tool to a file in the scratch directory the harness names for this session, under a file name unique to the agent and the request, and submit it through the input redirect `< <request-file>` shown with each command. Where the harness names no scratch directory, use the one the environment designates, such as `$RUNNER_TEMP` on a hosted runner. A request carries prompt text, quotes, and JSON that the dangerous-command guard refuses in a heredoc, a pipe, or an inline argument.
 
 </invocation_forms>
 
