@@ -16,7 +16,7 @@ A compact shared contract that keeps every merge transport on the same authority
 
 - `VERIFICATION_READINESS` governs publication, `MERGE_READINESS` governs merge, and declared `DEPLOYMENT_READINESS` or `RELEASE_READINESS` gates govern their post-merge actions. No earlier success substitutes for a later authority gate.
 - Delivered value means the intended change has reached the default branch on origin through the selected transport. A local commit, pushed branch, open pull request, passing check, or approved review is intermediate state.
-- Every valid in-scope finding and its in-scope same-class instances are fixed before publication or merge. A separate larger concern is recorded in its owning node only when its fix is outside the changeset's bounded concern.
+- Every valid finding on text the changeset touches or invalidates, and its same-class instances, is fixed before publication or merge. A finding on any other text is returned `filed` and recorded in its governing node's `ISSUES.md`, and never blocks the merge. A separate larger concern is recorded in its owning node only when its fix is outside the changeset's bounded concern.
 - Before every local Auditor or Reviewer dispatch, a complete verification-dispatch readiness record binds the exact clean committed head, active objective, changed paths, governing nodes, deterministic results, same-class scans, assertion-design records when test evidence changed, run ownership, and unresolved-work set. Missing or unresolved fields stop dispatch.
 - A second rejection in the same defect class invalidates the prior repair invariant. Analyze the recurrence, widen the repair and same-class scan, and amend the governing workflow or contract before another dispatch.
 - Changes may remain uncommitted until another agent session or human is expected or asked to read them. When repository writes are authorized, commit the exact current version before that reading with verification state `passing`, `failing`, or `not-run`; after any further change, commit the new version before another agent session or human reads it. Without repository-write authorization, defer the reading. Authority gates additionally require their declared verification state on the exact committed subject.
@@ -48,7 +48,7 @@ The composing skill names the tagged section or operation it needs. Read the mat
 - Every gate decision a transport reports names the `<authority_gates>` predicates in `${CLAUDE_SKILL_DIR}/references/merge-policy.md` it read and the observable state each predicate held.
 - Repository-specific behavior comes only from the optional local overlay.
 - Publication, merge, deployment, and release actions occur only under their matching authority gates.
-- Every valid in-scope finding is fixed, and every separate larger concern has an owning-node record.
+- Every valid finding on touched or invalidated text is fixed, and every `filed` finding and separate larger concern has an owning-node record.
 - Every Auditor or Reviewer dispatch is backed by one complete head-bound readiness record, one active run writer, and no unresolved work hidden from the Auditor or Reviewer.
 
 </success_criteria>
