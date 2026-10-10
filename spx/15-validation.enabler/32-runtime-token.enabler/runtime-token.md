@@ -1,3 +1,7 @@
+---
+malleability: spec
+---
+
 # Runtime Token Validation
 
 PROVIDES a validator that flags a raw runtime-divergent name in authored source the build renders or inlines — plugin content under `src/plugins/`, shared fragments under `src/_shared/`, and per-plugin templates under `src/templates/` — a name that renders differently per coding agent and so must be a registry-backed token such as `{{! tool('…') !}}` / `{{! file('…') !}}`, or a per-runtime conditional — while passing token-expressed references and an explicit ignore-list of tracked exemptions
@@ -39,6 +43,14 @@ CAN keep each generated target's output naming only its own native tools and ins
 - NEVER: the configuration guard treats an ordinary prose word as a model or
   reasoning assignment merely because it is a native configuration value
   ([test](tests/test_profile_configuration.compliance.l1.py)).
+- NEVER: the configuration guard reports a native model or reasoning field
+  bound to an expression that reads a value — a call, a subscript, or an
+  attribute access — as an assignment; only a field bound to a literal or to a
+  build template token is an authored assignment.
+- NEVER: the configuration guard reports a native field name followed by an
+  interpolation placeholder inside message text as an assignment.
+- ALWAYS: the configuration guard decides by the syntactic form of the binding
+  alone and derives no semantic role of the surrounding code.
 - NEVER: the validator passes a raw runtime-divergent token — a name registered in a guard-enforced kind (`tool`, `field`, `file`) of the build's runtime-token registry — in a non-ignored file under `src/plugins/` — because that literal ships into a target whose runtime does not provide it ([test](tests/test_runtime_token.compliance.l1.py))
 - ALWAYS: the validator derives its forbidden-name set from the guard-enforced kinds (`tool`, `field`, `file`) of the build's runtime-token registry rather than a copied literal list — the registry is the single source of truth for which names diverge per runtime ([test](tests/test_runtime_token.mapping.l1.py))
 - NEVER: the validator's forbidden-name set includes a name registered only in the review-only `term` kind — concept terms are common words a whole-token match would flag throughout prose, so the guard excludes them and review covers them instead ([test](tests/test_runtime_token.compliance.l1.py))
