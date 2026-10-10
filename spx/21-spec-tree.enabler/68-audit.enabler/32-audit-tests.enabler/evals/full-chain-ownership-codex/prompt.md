@@ -9,12 +9,12 @@ description: >-
   behavior-coupled evidence its assertions are fulfilled, covering predicate
   ownership, source ownership, coupling, falsifiability, and full-chain coverage.
 argument-hint: "<spec-node-path-or-evidence-scope>"
-allowed-tools: Read, Grep, Glob, Bash(git diff:*)
+allowed-tools: Read, Grep, Glob, Bash(git diff:*), Bash(git merge-base:*)
 ---
 
 <objective>
 
-A verdict on whether a spec node's tests provide behavior-coupled evidence its assertions are fulfilled — APPROVED, REJECTED with each finding naming the assertion, the failed evidence property or cross-assertion architectural duplication, and the evidentiary gap, or NOT_APPLICABLE with the retired subjects and their lack of current evidence ownership explained.
+A verdict on whether a spec node's tests provide behavior-coupled evidence its assertions are fulfilled — APPROVED, REJECTED with each finding on touched text naming the assertion, the failed evidence property or cross-assertion architectural duplication, and the evidentiary gap, with every other finding returned as `FILED`, or NOT_APPLICABLE with the retired subjects and their lack of current evidence ownership explained.
 
 </objective>
 
@@ -25,8 +25,8 @@ A verdict on whether a spec node's tests provide behavior-coupled evidence its a
 - ALWAYS name the assertion, the failed property, and the evidentiary gap in every REJECT finding.
 - ALWAYS construct every finding as one complete record containing `id`, `file`, `line`, `assertion`, `property`, `rule`, `severity`, `message`, and `remediation_target` before adding it to a row — required fields are never deferred to verdict rendering.
 - ALWAYS reject an incomplete evidence-chain inventory before approval; absence of an artifact is missing evidence, never permission to infer its contents.
-- NEVER issue a finding the evidence model does not support — drop an unbacked finding rather than reject the tests for it.
-- This skill grants no `Bash` capability, unlike the language auditors it composes. The omission is deliberate: the no-deterministic-verification constraint above is enforced at the tool-permission layer rather than by prose alone, and this base audit reaches every artifact it judges through `Read`, `Grep`, and `Glob`. Do not add a `Bash` grant for parity.
+- NEVER issue a finding the evidence model does not support — drop an unbacked finding rather than reject the tests for it; NEVER reject on text the changeset leaves unchanged and does not invalidate — return that finding with severity `FILED`, and NEVER raise a recorded finding's severity or let a `FILED` finding start to reject unless the run names a changed basis. `${SKILL_DIR}/references/touched-text.md` defines touched text, the finding key, and the `FILED` form.
+- The only `Bash` capability this skill grants is the read-only `git diff` and `git merge-base`, unlike the language auditors it composes. The omission of any other grant is deliberate: the no-deterministic-verification constraint above is enforced at the tool-permission layer rather than by prose alone, and this base audit reaches every other artifact it judges through `Read`, `Grep`, and `Glob`. Do not add another `Bash` grant for parity.
 
 </constraints>
 
@@ -327,7 +327,7 @@ Gate 2 is a composed-language concern. It applies when at least one language-spe
 
 **Step 4: Issue verdict**
 
-Scan all findings across all assertions, including any folded in from the composed language audit. If any assertion has a property failure: **REJECTED.**
+Scan all findings across all assertions, including any folded in from the composed language audit, and classify each as `${SKILL_DIR}/references/touched-text.md` states: a finding on touched text keeps severity `REJECT`, and every other finding becomes `FILED`. If any assertion has a property failure on touched text: **REJECTED.**
 
 Before row rollup, inspect every finding as a complete record. Require all nine finding fields from `<verdict_format>`, including `remediation_target`, and derive that target from the semantic owner named by the evidence model. Complete a missing field before adding the finding to a row; never emit a partial finding and rely on its message to imply the omitted field.
 
@@ -341,7 +341,7 @@ The `NOT_APPLICABLE` result defined in Step 3f is the alternate output when no e
 
 Emit the verdict as a single JSON object. This JSON is the skill's entire output; never emit a prose or markdown verdict.
 
-The skill's `overall` is `APPROVED` iff every applicable gate row is `PASS`; otherwise it is `REJECTED`. A required gate that cannot be evaluated is a `FAIL` row with a `REJECT` finding naming the missing evidence. Findings within each row carry severity `REJECT` for blocking findings (these are what flip a row to `FAIL`), `WARNING` or `INFO` for non-blocking observations. Every finding MUST include every field shown in its row schema: `id`, `file`, `line`, `assertion`, `property`, `rule`, `severity`, `message`, and `remediation_target`; omission of any field is an invalid verdict.
+The skill's `overall` is `APPROVED` iff every applicable gate row is `PASS`; otherwise it is `REJECTED`. A required gate that cannot be evaluated is a `FAIL` row with a `REJECT` finding naming the missing evidence. Findings within each row carry severity `REJECT` for blocking findings (these are what flip a row to `FAIL`), `FILED` for a finding outside touched text, which fails no row and additionally carries `key` and `range`, and `WARNING` or `INFO` for non-blocking observations. Every finding MUST include every field shown in its row schema: `id`, `file`, `line`, `assertion`, `property`, `rule`, `severity`, `message`, and `remediation_target`; omission of any field is an invalid verdict.
 
 The `metadata.evidence_chain` array MUST project the complete inspected inventory. Preserve every applicable discovery artifact even when it carries no finding. The `metadata.coverage_traces` array projects Step 3e: a language-specific concern includes traces for the coverage it judges and leaves the array empty only when coverage is outside its declared scope; this audit's merged verdict MUST carry one entry per audited assertion, naming the assertion-relevant source path, the test path followed into it, and the coverage judgment. Use `saturated` only for a trivially total path reached by the test.
 
@@ -363,7 +363,7 @@ The `metadata.evidence_chain` array MUST project the complete inspected inventor
           "assertion": "<full-assertion-text-or-stable-id>",
           "property": "<testability | evidence-chain-completeness | declarations | predicate-ownership | source-ownership | oracle-independence | coupling | falsifiability | alignment | coverage | language-composition | unsupported-language>",
           "rule": "<assertion-id-or-property-name>",
-          "severity": "REJECT",
+          "severity": "REJECT | FILED",
           "message": "<one-line evidentiary gap>",
           "remediation_target": "<source-contract | harness | generator | fixture | eval-case | test-file | source-file | test-infrastructure | independent-oracle | skill-installation | language-partition>"
         }
@@ -380,7 +380,7 @@ The `metadata.evidence_chain` array MUST project the complete inspected inventor
           "assertion": "<full-assertion-text-or-stable-id | cross-assertion>",
           "property": "architectural-duplication",
           "rule": "<duplication-pattern>",
-          "severity": "REJECT",
+          "severity": "REJECT | FILED",
           "message": "<extraction target>: <nearest common test-infrastructure location>",
           "remediation_target": "<source-contract | harness | generator | fixture | eval-case | test-file | source-file | test-infrastructure | independent-oracle | skill-installation | language-partition>"
         }
@@ -497,7 +497,7 @@ The verdict is sound when:
 - Every imported evidence artifact appears in verdict metadata with its role, import origin, and inspection status; approval contains only inspected entries.
 - Every protocol and domain value resolves to its production or platform owner; generated variable data resolves to a generator, inert whole payloads to fixtures, setup policy to harnesses, and curated examples to eval cases.
 - The overall APPROVED/REJECTED value agrees with every applicable gate row.
-- Every REJECT finding carries the complete canonical schema and names a falsifiable evidentiary gap against the affected assertion and artifact.
+- Every REJECT finding lies on touched text, carries the complete canonical schema, and names a falsifiable evidentiary gap against the affected assertion and artifact; every finding outside touched text appears as `FILED` with its key and diff range.
 - Every coverage determination identifies the assertion-relevant source path reached or omitted, and the same evidence package yields the same verdict.
 
 </success_criteria>
