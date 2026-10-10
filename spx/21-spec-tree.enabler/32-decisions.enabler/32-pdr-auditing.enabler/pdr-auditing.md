@@ -67,3 +67,4 @@ The distinction: "Sessions expire after 1 hour" is product behavior (PDR). "Sess
 - ALWAYS: verify each `### Testing` rule's assertion type fits the claim's quantifier per the `/test` router — a universal is never `scenario`; reject a type the router would not produce, without relitigating a choice the router leaves open ([audit])
 - ALWAYS: compare the PDR against the product spec and ancestor PDRs; a contradiction with either is a consistency violation ([audit])
 - NEVER: approve temporal language in any section — Decision, Rationale, Product properties, Verification all state product truth ([audit])
+- ALWAYS: the PDR auditor rejects only on touched text under [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md), returns each other finding as `filed`, and approves when no touched finding exists ([audit])
