@@ -1,5 +1,5 @@
 <objective>
-The touched-text classification of each PDR-audit finding: a finding on touched text rejects, and every other finding is returned as `FILED` with its key and diff range.
+The touched-text classification of each PDR-audit finding: a finding on touched text rejects, and every other finding is returned as `FILED` with its key, `baseRefEvidence`, and `issuesEntry`.
 </objective>
 
 <contents>
@@ -52,6 +52,6 @@ A finding keeps the severity and disposition recorded for its key in the governi
 
 <filed_finding>
 
-A `FILED` finding carries the usual finding fields plus `key` and `range`, the `<base>..<head>` diff range showing the finding lies outside the change, and sits in the row of the property it concerns without failing that row.
+A `FILED` finding carries the usual finding fields plus `key`, `baseRefEvidence`, the `<base>..<head>` diff range showing every location lies outside the change, and `issuesEntry`, an object whose `path` is the `ISSUES.md` of the nearest node that governs the audited artifact, found by the Spec Tree foundation's governing-node search for product content, or the product root's `spx/ISSUES.md` when no node governs it, and whose `heading` is the heading of the entry that records the finding. The finding sits in the row of the property it concerns without failing that row.
 
 </filed_finding>

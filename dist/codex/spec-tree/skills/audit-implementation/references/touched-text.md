@@ -44,9 +44,9 @@ A finding keeps the severity and disposition recorded for its key — in the gov
 After the projection, return each `filed` finding on its own line, or `filed: none`:
 
 ```text
-filed: <finding-key> | rule: <rule> | severity: <blocking|debt> | run: <run-token> | range: <base>..<head>
+filed: <finding-key> | rule: <rule> | severity: <blocking|debt> | run: <run-token> | baseRefEvidence: <base>..<head> | issuesEntry: <path>#<heading>
 ```
 
-The line carries the key, the rule identifier, the run token, and the diff range that shows the finding lies outside the change.
+The line carries the key, the rule identifier, the run token, `baseRefEvidence` (the diff range showing every location lies outside the change), and `issuesEntry`, an object whose `path` is the `ISSUES.md` of the nearest node that governs the audited artifact, found by the Spec Tree foundation's governing-node search for product content, or the product root's `spx/ISSUES.md` when no node governs it, and whose `heading` is the heading of the entry that records the finding.
 
 </filed_line>

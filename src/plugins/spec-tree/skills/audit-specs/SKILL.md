@@ -129,7 +129,7 @@ Classify every finding per `${CLAUDE_SKILL_DIR}/references/touched-text.md`: a f
 
 Emit the verdict as a single JSON object. This JSON is the skill's entire output; never a prose or markdown verdict.
 
-The `overall` is `APPROVED` iff every property row is `PASS`; otherwise it is `REJECTED`. A required property that cannot be evaluated is a `FAIL` row with a `REJECT` finding naming the missing evidence. Findings carry severity `REJECT` for blocking violations on touched text, `FILED` for a finding outside touched text, and `WARNING`/`INFO` otherwise. A `FILED` finding fails no row and additionally carries `key` and `range`.
+The `overall` is `APPROVED` iff every property row is `PASS`; otherwise it is `REJECTED`. A required property that cannot be evaluated is a `FAIL` row with a `REJECT` finding naming the missing evidence. Findings carry severity `REJECT` for blocking violations on touched text, `FILED` for a finding outside touched text, and `WARNING`/`INFO` otherwise. A `FILED` finding fails no row and additionally carries `key`, `baseRefEvidence`, and `issuesEntry` (`path`, `heading`).
 
 ```json
 {
@@ -196,7 +196,7 @@ The verdict is sound when:
 
 - Every spec-node rule was judged with none skipped — claim-shape heading structure independent of verification type, atemporal voice, and per-assertion tag fitness (coverage-complete).
 - The verdict states an overall APPROVED/REJECTED, every property row carrying its determination, with no assertion left unevaluated.
-- Each REJECT finding lies on touched text, and every finding outside touched text appears as `FILED` with its key and diff range.
+- Each REJECT finding lies on touched text, and every finding outside touched text appears as `FILED` with its key, `baseRefEvidence`, and `issuesEntry`.
 - Each REJECT finding is falsifiable: it names the section or assertion, the violated rule, and the evidence — the malformed kind statement, the empty or mismatched heading, the temporal phrase, the invalid tag, the quantifier-mismatched assertion type, or the prose-coupled `[test]`.
 - The same node spec yields the same verdict.
 

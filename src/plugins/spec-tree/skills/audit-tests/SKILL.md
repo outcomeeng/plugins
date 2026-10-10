@@ -337,7 +337,7 @@ The `NOT_APPLICABLE` result defined in Step 3f is the alternate output when no e
 
 Emit the verdict as a single JSON object. This JSON is the skill's entire output; never emit a prose or markdown verdict.
 
-The skill's `overall` is `APPROVED` iff every applicable gate row is `PASS`; otherwise it is `REJECTED`. A required gate that cannot be evaluated is a `FAIL` row with a `REJECT` finding naming the missing evidence. Findings within each row carry severity `REJECT` for blocking findings (these are what flip a row to `FAIL`), `FILED` for a finding outside touched text, which fails no row and additionally carries `key` and `range`, and `WARNING` or `INFO` for non-blocking observations. Every finding MUST include every field shown in its row schema: `id`, `file`, `line`, `assertion`, `property`, `rule`, `severity`, `message`, and `remediation_target`; omission of any field is an invalid verdict.
+The skill's `overall` is `APPROVED` iff every applicable gate row is `PASS`; otherwise it is `REJECTED`. A required gate that cannot be evaluated is a `FAIL` row with a `REJECT` finding naming the missing evidence. Findings within each row carry severity `REJECT` for blocking findings (these are what flip a row to `FAIL`), `FILED` for a finding outside touched text, which fails no row and additionally carries `key`, `baseRefEvidence`, and `issuesEntry` (`path`, `heading`), and `WARNING` or `INFO` for non-blocking observations. Every finding MUST include every field shown in its row schema: `id`, `file`, `line`, `assertion`, `property`, `rule`, `severity`, `message`, and `remediation_target`; omission of any field is an invalid verdict.
 
 The `metadata.evidence_chain` array MUST project the complete inspected inventory. Preserve every applicable discovery artifact even when it carries no finding. The `metadata.coverage_traces` array projects Step 3e: a language-specific concern includes traces for the coverage it judges and leaves the array empty only when coverage is outside its declared scope; this audit's merged verdict MUST carry one entry per audited assertion, naming the assertion-relevant source path, the test path followed into it, and the coverage judgment. Use `saturated` only for a trivially total path reached by the test.
 
@@ -493,7 +493,7 @@ The verdict is sound when:
 - Every imported evidence artifact appears in verdict metadata with its role, import origin, and inspection status; approval contains only inspected entries.
 - Every protocol and domain value resolves to its production or platform owner; generated variable data resolves to a generator, inert whole payloads to fixtures, setup policy to harnesses, and curated examples to eval cases.
 - The overall APPROVED/REJECTED value agrees with every applicable gate row.
-- Every REJECT finding lies on touched text, carries the complete canonical schema, and names a falsifiable evidentiary gap against the affected assertion and artifact; every finding outside touched text appears as `FILED` with its key and diff range.
+- Every REJECT finding lies on touched text, carries the complete canonical schema, and names a falsifiable evidentiary gap against the affected assertion and artifact; every finding outside touched text appears as `FILED` with its key, `baseRefEvidence`, and `issuesEntry`.
 - Every coverage determination identifies the assertion-relevant source path reached or omitted, and the same evidence package yields the same verdict.
 
 </success_criteria>

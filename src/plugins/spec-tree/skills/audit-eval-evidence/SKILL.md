@@ -172,7 +172,7 @@ Always include `metadata.branch`: the branch string from the successful `/sync-b
 
 Emit the verdict as a single JSON object. This JSON is the skill's entire output; never a prose or markdown verdict.
 
-Emit all five gate rows exactly once. Derive `overall` in order: `FAIL` if any gate is `FAIL`; otherwise `UNKNOWN` if any gate is `UNKNOWN`; otherwise `PASS`. Findings within each row carry severity `REJECT` for failed evidence properties on touched text, `FILED` for a finding outside touched text, which fails no row and additionally carries `key` and `range`, and `WARNING` or `INFO` for non-blocking observations.
+Emit all five gate rows exactly once. Derive `overall` in order: `FAIL` if any gate is `FAIL`; otherwise `UNKNOWN` if any gate is `UNKNOWN`; otherwise `PASS`. Findings within each row carry severity `REJECT` for failed evidence properties on touched text, `FILED` for a finding outside touched text, which fails no row and additionally carries `key`, `baseRefEvidence`, and `issuesEntry` (`path`, `heading`), and `WARNING` or `INFO` for non-blocking observations.
 
 ```json
 {
@@ -244,7 +244,7 @@ The verdict is sound when:
 
 - Every `[eval]` assertion's suite was judged on all five evidence properties with none skipped — producer coupling, oracle independence, assertion alignment, falsifiability, and run evidence.
 - The verdict states an overall PASS/FAIL/UNKNOWN through the JSON `overall` field and every applicable gate row carries its determination.
-- Each REJECT finding lies on touched text and is falsifiable: it names the assertion or eval artifact, the failed evidence property, the evidentiary gap, and how the eval could pass while the assertion is unfulfilled; every finding outside touched text appears as `FILED` with its key and diff range.
+- Each REJECT finding lies on touched text and is falsifiable: it names the assertion or eval artifact, the failed evidence property, the evidentiary gap, and how the eval could pass while the assertion is unfulfilled; every finding outside touched text appears as `FILED` with its key, `baseRefEvidence`, and `issuesEntry`.
 - No deterministic command was run inside the audit; evidence quality was established by reading the eval artifacts, producing artifact, and committed run summaries.
 - The same target, governing requirements, eval artifacts, and run evidence produce the same gate statuses and overall verdict.
 

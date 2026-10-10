@@ -182,7 +182,7 @@ Classify every finding per `${SKILL_DIR}/references/touched-text.md`: a finding 
 
 Emit the verdict as a single JSON object. This JSON is the skill's entire output; never a prose or markdown verdict.
 
-The skill's `overall` is `APPROVED` iff every property row is `PASS`; otherwise it is `REJECTED`. A required property that cannot be evaluated is a `FAIL` row with a `REJECT` finding naming the missing evidence. Findings within each row carry severity `REJECT` for blocking violations on touched text, `FILED` for a finding outside touched text, and `WARNING`/`INFO` for non-blocking observations. A `FILED` finding fails no row and additionally carries `key` and `range`.
+The skill's `overall` is `APPROVED` iff every property row is `PASS`; otherwise it is `REJECTED`. A required property that cannot be evaluated is a `FAIL` row with a `REJECT` finding naming the missing evidence. Findings within each row carry severity `REJECT` for blocking violations on touched text, `FILED` for a finding outside touched text, and `WARNING`/`INFO` for non-blocking observations. A `FILED` finding fails no row and additionally carries `key`, `baseRefEvidence`, and `issuesEntry` (`path`, `heading`).
 
 ```json
 {
@@ -255,7 +255,7 @@ The verdict is sound when:
 
 - Every PDR rule was judged with none skipped — content classification, property quality (observability, falsifiability, and stability), per-rule tag validity and assertion-type fit, atemporal voice, and consistency (coverage-complete).
 - The verdict states an overall APPROVED/REJECTED, every property row carrying its determination, with no rule left unevaluated.
-- Each REJECT finding lies on touched text, and every finding outside touched text appears as `FILED` with its key and diff range.
+- Each REJECT finding lies on touched text, and every finding outside touched text appears as `FILED` with its key, `baseRefEvidence`, and `issuesEntry`.
 - Each REJECT finding is falsifiable: it names the section, the violated rule, and the evidence — the architecture content wrongly placed, the non-observable, unfalsifiable, or unstable property, absent verification section or rules, the unverifiable rule or mismatched tag, the temporal phrase, or the contradicted product spec or ancestor PDR.
 - An absent or empty Verification section fails `tag-validity`; an unmet property-quality criterion fails `property-quality`. Neither condition can disappear through an empty iteration or receive an overall `APPROVED` verdict.
 - The same PDR yields the same verdict.
