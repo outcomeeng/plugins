@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.12.1
+
+### Changed
+
+- **`/operate-agent-mail` takes a request from a file in the harness's session scratch directory.** The skill writes the JSON request with the file-write tool under a file name unique to the agent and the request, submits it with the input redirect `agent_mail.py run < <request-file>`, never removes the file, and no longer teaches the quoted heredoc or the `printf` pipe; its `allowed-tools` now include `Write` and no longer grant `Bash(printf:*)`. Before this change, the skill taught those stdin forms, which the dangerous-command guard refuses when a message record carries code spans, shell text, or JSON.
+
 ## 0.12.0
 
 ### Added
