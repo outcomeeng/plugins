@@ -190,10 +190,25 @@ Run `2026-10-06_18-35-55-521-02765947702d` raised the same finding as `script-va
 
 - A list whose part changes shell state that later parts depend on (`cd`, `pushd`, `export`, `set`, `umask`) matches the compound-command definition, so a block splits it into separate calls that do not carry that state.
 - A shell control structure (a loop, conditional, `case`, brace group, or function definition) matches the compound-command definition, and splitting it yields fragments that do not run.
-- A payload pipe or heredoc with an expanding word falls in two classes, the one-operation class that ends its family and the compound class that splits, while the text reruns it once unsplit.
+- A payload pipe or heredoc with an expanding word falls in two classes. The guard assertions no longer admit a payload pipe, because a payload reaches a command through an input redirect from a scratch file; the heredoc half is covered by the heredoc clause the guard assertion keeps.
 
 **Standing.** The Director accepted this rule text as it stands without the advisor's bounded check, in mail 9324.
 
 **Impact.** A guard-blocked list that carries shell state, a control structure, or an expanding payload has no single outcome the rule's text can execute.
 
 **Settlement condition.** One Change decides the three classes, names each one's outcome in the router template, the `<guard_block_partition>` reference, the pinned requirement tuples in `outcomeeng/distribution/instruction_block.py`, and the instruction-block and skills spec assertions together, and regenerates the shipped trees.
+
+## Four Codex-router assertions tag authored router prose as `[test]` evidence
+
+**Evidence.** The spec audit of `spx/21-spec-tree.enabler/43-instruction-block.enabler/instruction-block.md` rejected four assertions under rule `prose-coupling`. Each claim's subject is what the authored Codex router text states, and a `[test]` tag cannot verify authored router prose: the linked test reads the rendered prose and asserts on it, which proves the prose was authored and no code behavior. The tag belongs in `[eval]` or `[audit]`.
+
+The four assertions, verbatim, with their linked test files:
+
+- ALWAYS: the Codex router states that the selected agent home contains one current canonical subagent definition per authored marketplace agent, with each name formed as `<plugin>_<unchanged-authored-role>`; a repeated word across those two components is valid ([test](tests/test_agent_registry.compliance.l1.py)) — linked test file `tests/test_agent_registry.compliance.l1.py`.
+- ALWAYS: the Codex router directs a missing-definition repair to refresh the owning plugin's definitions in the selected `CODEX_HOME/agents/` directory and then reload the harness plugin index or start a new session; it never directs the reader to create or commit checkout agent definitions ([test](tests/test_agent_registry.compliance.l1.py)) — linked test file `tests/test_agent_registry.compliance.l1.py`.
+- ALWAYS: the Codex router identifies plugin-owned checkout agent definitions whose invoked skills live in the selected agent home as a scope split, directs removal only for byte-identical plugin copies, and directs inspection of changed or unrecognized copies as shadowing collisions ([test](tests/test_agent_registry.compliance.l1.py)) — linked test file `tests/test_agent_registry.compliance.l1.py`.
+- ALWAYS: the Codex router applies Verifier spawning only to the Author's main conversation; an already-dispatched Verifier executes its configured methodology directly and never searches for or launches another Verifier through typed-agent discovery or an external agent CLI ([test](tests/test_instruction_block.compliance.l1.py)) — linked test file `tests/test_instruction_block.compliance.l1.py`.
+
+**Impact.** Passing couples to pinned wording while the claims receive no behavioral verdict.
+
+**Settlement condition.** The verification form for pinned router prose is decided once, as the entry above states, and the four assertions take that form in the same changeset.
