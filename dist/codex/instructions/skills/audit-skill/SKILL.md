@@ -132,7 +132,7 @@ Pass each rendered scope object to its command; the one-line form is:
 printf '%s\n' '<rendered-scope-object>' | spx verification run scope add --verification-type audit --scope-type changeset --scope '<base-oid>..<head-oid>' --run '<run-token>' --idempotency-key 'instructions:skill:file:<path>' --payload stdin
 ```
 
-A finding copies its unit's `expectedProducer` object as `producerIdentity` and its unit's complete `producerProvenance` object, and carries `rule`, the catalog identifier; `severity`, the row's `blocking` or `debt` for a finding on touched text and `filed` for any other finding; `location`, every file-and-line or section where the rule is violated within the unit, separated by `;`; `message`; and `evidence` with `observed` and `expected` strings:
+A finding copies its unit's `expectedProducer` object as `producerIdentity` and its unit's complete `producerProvenance` object, and carries `rule`, the catalog identifier; `severity`, the row's `blocking` or `debt` for a finding on touched text and `filed` for any other finding; `location`, every file-and-line or section where the rule is violated within the unit, separated by `;`; `message`; and `evidence` with `observed` and `expected` strings. A `filed` finding additionally carries a top-level `baseRefEvidence` string, the diff range `<base-oid>..<head-oid>` showing that every location lies outside the change, and a top-level `issuesEntry` object with the strings `path` and `heading`, where `path` is the `ISSUES.md` of the nearest node that governs the audited artifact, found by the Spec Tree foundation's governing-node search for product content, or the product root's `spx/ISSUES.md` when no node governs it, and `heading` is the heading of the entry that records the finding. A `blocking` or `debt` finding carries neither field:
 
 ```json
 {
@@ -144,6 +144,15 @@ A finding copies its unit's `expectedProducer` object as `producerIdentity` and 
   "location": "<path>:<line-or-section>; <path>:<line-or-section>",
   "message": "<finding-message>",
   "evidence": { "observed": "<observed-state>", "expected": "<required-state>" }
+}
+```
+
+A `filed` finding adds these two top-level fields to that object:
+
+```json
+{
+  "baseRefEvidence": "<base-oid>..<head-oid>",
+  "issuesEntry": { "path": "<ISSUES.md-path>", "heading": "<entry-heading>" }
 }
 ```
 
