@@ -4,12 +4,12 @@ description: >-
   ADR audit methodology — judges one ADR against the ADR evidence model,
   covering section structure, atemporal voice, and per-rule tag validity.
 argument-hint: "<adr-file-path>"
-allowed-tools: Read, Grep, Glob, Skill, Bash(git branch --show-current:*)
+allowed-tools: Read, Grep, Glob, Skill, Bash(git branch --show-current:*), Bash(git merge-base:*), Bash(git diff:*)
 ---
 
 <objective>
 
-A verdict on one ADR against the ADR evidence model — APPROVED or REJECTED, with findings naming the section, rule, and evidence for section structure, atemporal voice, or per-rule declaration form and tag fitness.
+A verdict on one ADR against the ADR evidence model — APPROVED or REJECTED, with findings on touched text naming the section, rule, and evidence for section structure, atemporal voice, or per-rule declaration form and tag fitness, and every other finding returned as `filed`.
 
 </objective>
 
@@ -39,6 +39,7 @@ Language-specific ADR concerns — testability-in-Verification (dependency injec
 - ALWAYS derive the valid section set from the canonical ADR template before judging structure — never from memory.
 - ALWAYS name the section, the violated rule, and the evidence in every REJECT finding.
 - NEVER issue a finding the cited rule or canonical template does not support — drop an unbacked finding rather than reject the ADR for it.
+- NEVER reject on text the changeset leaves unchanged and does not invalidate — return that finding as `filed`, and NEVER raise a recorded finding's severity or let a `filed` finding start to reject unless the run names a changed basis. `${CLAUDE_SKILL_DIR}/references/touched-text.md` defines touched text, the finding key, and the `filed` form.
 
 </constraints>
 
@@ -63,6 +64,8 @@ Do not proceed without the canonical ADR template content and live `<SPEC_TREE_F
 **Step 2: Read the ADR**
 
 Read the ADR under audit. Identify its sections: the opening decision statement, Rationale (optional), Invariants (optional), and Verification.
+
+Resolve the touched text of the ADR as `${CLAUDE_SKILL_DIR}/references/touched-text.md` states, so Steps 3 to 5b can classify each finding.
 
 </step>
 
@@ -138,7 +141,7 @@ One case is not a composition failure. When the governed context establishes tha
 
 **Step 6: Issue verdict**
 
-Scan all findings and native or composed rows. If any row is `FAIL`, issue `REJECTED`; otherwise issue `APPROVED`.
+Classify every finding, native or composed, per `${CLAUDE_SKILL_DIR}/references/touched-text.md`: a finding on touched text keeps severity `blocking`; every other finding becomes `filed`. If any row is `FAIL` through a `blocking` finding, issue `REJECTED`; otherwise issue `APPROVED`, whatever `filed` findings the rows carry.
 
 </step>
 
@@ -148,7 +151,7 @@ Scan all findings and native or composed rows. If any row is `FAIL`, issue `REJE
 
 Emit the verdict as a single JSON object. This JSON is the skill's entire output; never a prose or markdown verdict.
 
-The `overall` is `APPROVED` iff every native and composed row is `PASS` or `NOT_APPLICABLE`; otherwise it is `REJECTED`. Every `NOT_APPLICABLE` row explains why its concern does not apply. A required property that cannot be evaluated is a `FAIL` row with a blocking finding naming the unavailable inspection. Findings use the audit-run severities `blocking` or `debt`; this binary ADR gate emits `blocking` for every finding that rejects the ADR.
+The `overall` is `APPROVED` iff every native and composed row is `PASS` or `NOT_APPLICABLE`; otherwise it is `REJECTED`. A row holding only `filed` findings is `PASS`. Every `NOT_APPLICABLE` row explains why its concern does not apply. A required property that cannot be evaluated is a `FAIL` row with a blocking finding naming the unavailable inspection. Findings use the audit-run severities `blocking` or `filed`; this binary ADR gate emits `blocking` for every finding on touched text, which rejects the ADR, and `filed` for every finding outside touched text, which fails no row.
 
 ```json
 {
@@ -165,7 +168,7 @@ The `overall` is `APPROVED` iff every native and composed row is `PASS` or `NOT_
 }
 ```
 
-Each finding carries `rule`, `severity: "blocking"`, `location`, `message`, `observed`, and `expected`. Native findings use `missing-target`, `missing-section`, `temporal-voice`, `invalid-draft-rule`, `invalid-tag`, `assertion-type-mismatch`, `template-missing`, `test-standards-unavailable`, `language-routing-unavailable`, `language-skill-unavailable`, or `language-result-invalid`; validated composed findings retain the invoked skill's rule identifier.
+Each finding carries `rule`, `severity: "blocking | filed"`, `location`, `message`, `observed`, and `expected`; a `filed` finding additionally carries `key` and `range`. Native findings use `missing-target`, `missing-section`, `temporal-voice`, `invalid-draft-rule`, `invalid-tag`, `assertion-type-mismatch`, `template-missing`, `test-standards-unavailable`, `language-routing-unavailable`, `language-skill-unavailable`, or `language-result-invalid`; validated composed findings retain the invoked skill's rule identifier.
 
 </verdict_format>
 
@@ -195,6 +198,7 @@ The verdict is sound when:
 
 - Every ADR rule was judged with none skipped — section structure, atemporal voice, and per-rule tag validity and assertion-type fit; when a language is in scope, the composed `/audit-<lang>-architecture` rows are judged too (coverage-complete).
 - The verdict states one `APPROVED` or `REJECTED` overall determination, every native and composed row carrying `PASS`, `FAIL`, or explained `NOT_APPLICABLE`, with no rule left unevaluated.
+- Each REJECT finding lies on touched text, and every finding outside touched text appears as `filed` with its key and diff range.
 - Each REJECT finding is falsifiable: it names the section, the violated rule, and the evidence — the missing section, the temporal phrase, or the mismatched tag.
 - The same ADR yields the same verdict.
 
