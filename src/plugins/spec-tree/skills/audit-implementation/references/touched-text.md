@@ -47,6 +47,6 @@ After the projection, return each `filed` finding on its own line, or `filed: no
 filed: <finding-key> | rule: <rule> | severity: <blocking|debt> | run: <run-token> | range: <base>..<head>
 ```
 
-The line carries the key, the rule identifier, the run token, and the diff range that shows the finding lies outside the change, so the Author records it once from this response.
+The line carries the key, the rule identifier, the run token, and the diff range that shows the finding lies outside the change.
 
 </filed_line>
