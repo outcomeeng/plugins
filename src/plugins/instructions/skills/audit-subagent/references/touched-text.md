@@ -1,5 +1,5 @@
 <objective>
-The classification that sorts each subagent-audit finding into a finding on touched text, which keeps its catalog severity and rejects the run, or a standing finding, which is recorded with severity `filed`, its key, and its diff range and rejects nothing.
+The classification that sorts each subagent-audit finding into a finding on touched text, which keeps its catalog severity and rejects the run, or a standing finding, which is recorded with severity `filed`, its key, its base-ref evidence, and its issues entry, and rejects nothing.
 </objective>
 
 <contents>
@@ -59,6 +59,6 @@ A finding keeps the severity and disposition recorded for its key in the `ISSUES
 
 <filed_finding>
 
-A `filed` finding uses the finding payload of `<persistence_contract>` with `severity` set to `filed`, and its `evidence.observed` opens with the diff range `<base-oid>..<head-oid>` showing that every location lies outside the change. Its unit is the definition unit.
+A `filed` finding uses the finding payload of `<persistence_contract>` with `severity` set to `filed`, a `baseRefEvidence` string holding the diff range `<base-oid>..<head-oid>` that shows every location lies outside the change, and an `issuesEntry` object whose `path` is the `ISSUES.md` of the nearest node that governs the audited artifact, found by the Spec Tree foundation's governing-node search for product content, or the product root's `spx/ISSUES.md` when no node governs it, and whose `heading` is the heading of the entry that records the finding. Its `evidence.observed` states the changed basis `<severity_and_disposition>` names, when the run names one. Its unit is the definition unit.
 
 </filed_finding>
