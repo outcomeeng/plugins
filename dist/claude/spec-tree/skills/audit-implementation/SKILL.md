@@ -7,7 +7,7 @@ description: >-
   test, and architecture concerns, finding falsifiability, and completeness of
   the inspection.
 argument-hint: "<HEAD | branch | base...head | worktree:selector>"
-allowed-tools: Read, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_scope.py":*), Bash(git rev-parse:*), Bash(git status:*), Bash(git show:*), Bash(spx verification run:*), Bash(printf:*), Glob, Grep, Skill
+allowed-tools: Read, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_scope.py":*), Bash(git rev-parse:*), Bash(git status:*), Bash(git show:*), Bash(spx verification run:*), Write, Glob, Grep, Skill
 ---
 
 <objective>
@@ -314,35 +314,24 @@ Never emit the retired aliases `id`, `subjectPaths`, `expectedProducerIdentity`,
 or top-level `expected`; SPX rejects or discards those shapes at the
 verification-type boundary.
 
-Choose the stdin form by harness for every `--input stdin` and
-`--payload stdin` command. Interactive sessions use a
-quoted heredoc after replacing the placeholder with one rendered JSON object
-from the contracts above:
+Every scope and finding payload is a payload: it carries quotes, code spans,
+and JSON. Write each one with the file-write tool to its own file in the scratch
+directory the harness names for this session, under a file name unique to this
+agent and run, such as `scope-<runToken>-<n>.json` or
+`finding-<runToken>-<n>.json`. Where the harness names no scratch directory, use
+the one the hosting environment designates, such as `$RUNNER_TEMP` on a hosted
+runner. Supply the file through the input redirect `< <payload-file>`, with the
+path written out literally:
 
 ```bash
-spx verification run scope add \
-  --verification-type audit \
-  --scope-type changeset \
-  --scope <base>..<head> \
-  --run <token> \
-  --payload stdin \
-  --idempotency-key '<stable-scope-key>' <<'JSON'
-<rendered-scope-json-on-one-or-more-lines>
-JSON
+spx verification run scope add --verification-type audit --scope-type changeset --scope <base>..<head> --run <token> --payload stdin --idempotency-key '<stable-scope-key>' < <scope-file>
 ```
 
-Programmatic runners, including hosted runners that
-require one physical command line, use `printf` with the rendered JSON as one
-single-quoted argument. Keep the pipeline on one physical line even when it
-wraps visually; encode a literal apostrophe with the same single-quote splice:
-
-```bash
-printf '%s\n' '<rendered-json-on-one-line>' | spx verification run scope add --verification-type audit --scope-type changeset --scope <base>..<head> --run <token> --payload stdin --idempotency-key '<stable-scope-key>'
-```
-
-Apply the same two forms to `run start --input stdin` and `finding add
---payload stdin`. Never assemble or repair a payload through a temporary file,
-helper file, command substitution, or post-hoc text substitution.
+Apply the same form to `finding add --payload stdin`. `run start --input stdin`
+takes the resolver's own output through the pipe above: that pipe carries data
+from one script to another, and Claude authors no part of it. Never send a
+payload through a heredoc, a `printf` pipe, or an inline argument, and never
+remove a payload file; the harness clears its scratch directory.
 
 ```bash
 spx verification run finish \
