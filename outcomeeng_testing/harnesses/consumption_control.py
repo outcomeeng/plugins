@@ -850,11 +850,10 @@ def context_property(check: Callable[[ContextObservation], None]) -> None:
     accounting, _, _, _ = modules()
     captured = fixture()[AccountingField.MESSAGE][AccountingField.USAGE]
     prices = json.loads((FIXTURES / "pricing.json").read_text())["per_million"]
+    input_tokens, cache_read_tokens, _, output_tokens = accounting.FIELDS
     independent_components = (
-        Decimal(captured[AccountingField.INPUT_TOKENS])
-        * Decimal(prices[AccountingField.INPUT_TOKENS]),
-        Decimal(captured[AccountingField.CACHE_READ_INPUT_TOKENS])
-        * Decimal(prices[AccountingField.CACHE_READ_INPUT_TOKENS]),
+        Decimal(captured[input_tokens]) * Decimal(prices[input_tokens]),
+        Decimal(captured[cache_read_tokens]) * Decimal(prices[cache_read_tokens]),
         sum(
             (
                 Decimal(captured[AccountingField.CACHE_CREATION][key])
@@ -866,8 +865,7 @@ def context_property(check: Callable[[ContextObservation], None]) -> None:
             ),
             Decimal(),
         ),
-        Decimal(captured[AccountingField.OUTPUT_TOKENS])
-        * Decimal(prices[AccountingField.OUTPUT_TOKENS]),
+        Decimal(captured[output_tokens]) * Decimal(prices[output_tokens]),
     )
     oracle_components = dict(
         zip(
