@@ -4,7 +4,7 @@ The skill bundles one monitor for every watched position and a roster that lists
 
 ## Watch file
 
-`<pool>/.spx/director/watch.json` in the Director's worktree:
+`.spx/director/watch.json` in the Director's own checkout, which ignores `.spx/`:
 
 ```json
 {

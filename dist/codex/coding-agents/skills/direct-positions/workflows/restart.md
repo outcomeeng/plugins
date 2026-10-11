@@ -8,7 +8,7 @@
 
 **Before a planned Prowl or host restart**
 
-1. Write the roster draft: `python3 "${SKILL_DIR}/scripts/roster.py" <pool>/.spx/director/watch.json | spx change draft create --input stdin`.
+1. Write the roster draft: `python3 "${SKILL_DIR}/scripts/roster.py" .spx/director/watch.json | spx change draft create --input stdin`.
 2. Order every position through `instruct.md` to bring its state note current and reach an idle boundary; every Orchestrator releases or checkpoints its Executors as its skill directs.
 3. Use skill `coding-agents:recover-prowl-agents` to prepare the exact-session manifest. Name the manifest and the roster draft in `state.md`.
 
@@ -20,7 +20,7 @@
 **Bringing up a new position session**
 
 1. Start the session in the position's worktree with the position's start prompt. As soon as it waits at its prompt, send `/rc <Position name>` (for example `/rc <Product> Maintainer`) so the operator can remote-control it.
-2. Add its entry to `<pool>/.spx/director/watch.json` with its mail name, and regenerate the roster.
+2. Add its entry to `.spx/director/watch.json` with its mail name, and regenerate the roster.
 
 **Compacting a position**
 
