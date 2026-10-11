@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.21.5
+
+### Changed
+
+- **`/audit-skill` records its run through payload files and grants the file-write tool.** The start input, each scope-add payload, and each finding-add payload is written with the file-write tool to its own file in the session scratch directory and passed by path as the value of `--input` or `--payload`. Each run-recording command runs as its own command, and the audit stops at the first nonzero exit. The skill teaches no heredoc and no `printf` pipe, and it no longer grants `Bash(printf '%s\n':*)`, because the dangerous-command guard blocked those forms and left a run open with no sealed verdict. The file-write tool writes payload files only; the audit still changes no bundle or product file beyond those payload files and the run journal its own commands write. The payload form no longer varies by harness environment. A wrapper agent that drives the audit must grant the file-write tool.
+
 ## 0.21.4
 
 ### Changed
