@@ -1,0 +1,52 @@
+{
+  "definition": "spec-tree_change-tester",
+  "emitted_definition": {
+    "path": "dist/codex/spec-tree/skills/spec-tree-plugin/agents/spec-tree_change-tester.toml",
+    "sha256": "6d9bdc1ee67f85992c7a5efba2e17c1874b2d6012204bf3674bd1c38f58b2b60"
+  },
+  "discovery": {
+    "artifact": "discovery.jsonl",
+    "listed": true
+  },
+  "loaded_configuration": {
+    "child_thread_id": "01a12aa2-7b2c-7143-abff-cd1c27814b0b",
+    "agent_role": "spec-tree_change-tester",
+    "model": "gpt-6.1-sol",
+    "effort": "high",
+    "definition_instructions_in_child_context": true
+  },
+  "child_invocation": {
+    "parent_thread_id": "01a12aa2-6870-7951-8c33-9b6c5be89c47",
+    "spawn_calls": [
+      {
+        "agent_type": "spec-tree_change-tester",
+        "fork_turns": "none",
+        "task_name": "tester",
+        "message": "<redacted: 140 chars>"
+      }
+    ],
+    "child_parent_thread_id": "01a12aa2-6870-7951-8c33-9b6c5be89c47",
+    "depth": 1,
+    "child_tool_calls": [
+      {
+        "name": "exec",
+        "arguments_prefix": "const r = await tools.exec_command({cmd:\"cat /private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-ff030327/e06e09b8-2979-49be-ab25-ff50bc3ea3d2/scratchpad/codexhome/plugins/cache/outcomeeng/spec-tree/0.105.2/skills/test/SKILL.md\",max_output_tokens:12000});text(r.output);\n"
+      },
+      {
+        "name": "exec",
+        "arguments_prefix": "const paths = [\n\"/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-ff030327/e06e09b8-2979-49be-ab25-ff50bc3ea3d2/scratchpad/codexhome/plugins/cache/outcomeeng/spec-tree/0.105.2/skills/test-evidence-standards/SKILL.md\",\n\"/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-wo"
+      }
+    ],
+    "child_spawn_count": 0
+  },
+  "returned_result": {
+    "parent_final_message": "blocked\n\nTarget: `not-a-target`\n\nEvidence: Invalid target path: `not-a-target`. `/test` requires a canonical full `spx/...` spec-node or ADR/PDR target.\n\nExecutor decision required: Which canonical target should receive test evidence?\n\nBlocked action: Loading target context and authoring or repairing test evidence.",
+    "usage": {
+      "input_tokens": 58054,
+      "cached_input_tokens": 38272,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 157,
+      "reasoning_output_tokens": 22
+    }
+  }
+}
