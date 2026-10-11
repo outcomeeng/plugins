@@ -46,6 +46,8 @@ A sealed `spx verification run` on one node spec, with one scope unit per `[audi
    spx verification run start --verification-type audit --scope-type file --scope <path> --input <path>
    ```
 
+   A file-scoped run takes the audited path as its input so the retained input equals the audited file, while changeset-scoped audits pipe their context JSON.
+
    The command prints a JSON locator; take its `runToken` exactly and use it for every later command. Never pass the whole locator as `--run`.
 4. **Judge.** For each selected assertion, identify the subject its text names, read that subject completely — recovering any truncated read in bounded ranges — and decide whether the assertion holds of it. A violation is a finding carrying the observed and expected states. A subject the text names that cannot be located is a finding against that assertion. An assertion whose text names no identifiable subject is a finding with rule `subject-unnamed`.
 5. **Record.** Add one scope unit per selected assertion, then each finding on its unit, per `<persistence_contract>`. Every selected assertion is `audited` whether it holds or carries findings.
