@@ -64,6 +64,14 @@ the empty string when the store holds none.
 the named issue's Product and Parent, its Parent's Product, and the issues whose
 Parent is the named issue, within the same page bound as ``read-authority``.
 
+``read-blockers`` starts ``gh`` once per issue it reads and returns the native
+dependencies that block the named issue, each with its canonical identity and
+whether it is open, in one page of 100 per issue; a page holding 100 entries
+blocks with ``page-bound-reached`` naming ``100 blockers, one page``. With
+``walk`` true it also reads the open blockers' own blockers, depth first, at
+most 10 issues including the named one, and returns each blocker cycle it finds;
+a walk that needs an eleventh issue blocks naming ``10 issues``.
+
 ``count-limits`` reads the candidate and starts no process beyond the
 repository-root lookup; it returns the title's word count, each Intent part's
 sentence count, the Decisions row count, and each answer's sentence count with
@@ -100,6 +108,7 @@ class Operation(StrEnum):
     READ_AUTHORITY = "read-authority"
     READ_PUBLISHED = "read-published"
     READ_RELATIONS = "read-relations"
+    READ_BLOCKERS = "read-blockers"
     COUNT_LIMITS = "count-limits"
 
 
@@ -114,6 +123,7 @@ class RequestField(StrEnum):
     ORDINAL = "ordinal"
     TERMINAL_STATUS = "terminalStatus"
     ISSUE = "issue"
+    WALK = "walk"
 
 
 class ResultField(StrEnum):
@@ -165,6 +175,10 @@ class ResultField(StrEnum):
     SECTION = "section"
     LIMIT = "limit"
     COUNT = "count"
+    BLOCKERS = "blockers"
+    OPEN = "open"
+    CYCLES = "cycles"
+    ISSUES_READ = "issuesRead"
 
 
 class ResultStatus(StrEnum):
@@ -338,6 +352,12 @@ _RELATIONS_QUERY: Final = (
     " ... on IssueFieldSingleSelectValue{name field{... on IssueFieldSingleSelect"
     "{name}}}}}}}}}"
 )
+BLOCKERS_PAGE_SIZE: Final = 100
+BLOCKERS_MAX_ISSUES: Final = 10
+BLOCKERS_PAGE_BOUND: Final = f"{BLOCKERS_PAGE_SIZE} blockers, one page"
+BLOCKERS_ISSUES_BOUND: Final = f"{BLOCKERS_MAX_ISSUES} issues"
+_OPEN_STATE: Final = "open"
+_REPOSITORY_URL_MARKER: Final = "/repos/"
 PRODUCT_FIELD: Final = "Product"
 PARENT_FIELD: Final = "Parent"
 ISSUE_IDENTITY_PATTERN: Final = re.compile(
@@ -368,6 +388,7 @@ REQUIRED_FIELDS: Final[Mapping[Operation, frozenset[RequestField]]] = {
     Operation.READ_AUTHORITY: frozenset({RequestField.ISSUE}),
     Operation.READ_PUBLISHED: frozenset({RequestField.ISSUE}),
     Operation.READ_RELATIONS: frozenset({RequestField.ISSUE}),
+    Operation.READ_BLOCKERS: frozenset({RequestField.ISSUE, RequestField.WALK}),
     Operation.COUNT_LIMITS: frozenset({RequestField.PATH}),
 }
 
@@ -680,6 +701,15 @@ def _issue_identity(request: Mapping[str, object]) -> tuple[str, str, str]:
     return owner, repository, number
 
 
+def _walk(request: Mapping[str, object]) -> bool:
+    walk = request.get(RequestField.WALK)
+    if not isinstance(walk, bool):
+        raise Blocked(
+            BlockReason.INVALID_REQUEST, f"{RequestField.WALK} must be a boolean"
+        )
+    return walk
+
+
 #: The field checks ``validate_request`` applies to each operation, in order.
 _REQUEST_CHECKS: Final[
     Mapping[Operation, tuple[Callable[[Mapping[str, object]], object], ...]]
@@ -702,6 +732,7 @@ _REQUEST_CHECKS: Final[
     Operation.READ_AUTHORITY: (_issue_identity,),
     Operation.READ_PUBLISHED: (_issue_identity,),
     Operation.READ_RELATIONS: (_issue_identity,),
+    Operation.READ_BLOCKERS: (_issue_identity, _walk),
     Operation.COUNT_LIMITS: (_candidate_path,),
 }
 
@@ -1326,6 +1357,134 @@ def _read_relations(
     )
 
 
+def _json_array(stdout: str) -> list[object]:
+    """Parse the whole of ``stdout`` as one JSON array."""
+    try:
+        value = json.loads(stdout)
+    except json.JSONDecodeError as exc:
+        raise Blocked(
+            BlockReason.UNREADABLE_OUTPUT, f"command output is not JSON: {exc.msg}"
+        ) from exc
+    except ValueError as exc:
+        raise Blocked(
+            BlockReason.UNREADABLE_OUTPUT, f"command output cannot be parsed: {exc}"
+        ) from exc
+    except RecursionError as exc:
+        raise Blocked(
+            BlockReason.UNREADABLE_OUTPUT, "command output nests too deeply to parse"
+        ) from exc
+    if not isinstance(value, list):
+        raise Blocked(
+            BlockReason.UNREADABLE_OUTPUT, "command output is not a JSON array"
+        )
+    return value
+
+
+def _blocker(entry: object) -> dict[str, object]:
+    """Return the canonical identity and open state of one native blocker, or block."""
+    number = entry.get(StoreField.NUMBER) if isinstance(entry, dict) else None
+    state = entry.get("state") if isinstance(entry, dict) else None
+    url = entry.get("repository_url") if isinstance(entry, dict) else None
+    repository = (
+        url.split(_REPOSITORY_URL_MARKER, 1)[1]
+        if isinstance(url, str) and _REPOSITORY_URL_MARKER in url
+        else None
+    )
+    identity = f"{repository}#{number}"
+    if (
+        not isinstance(number, int)
+        or isinstance(number, bool)
+        or not isinstance(state, str)
+        or repository is None
+        or ISSUE_IDENTITY_PATTERN.fullmatch(identity) is None
+    ):
+        raise Blocked(
+            BlockReason.UNREADABLE_OUTPUT,
+            "blockers page holds an entry with no issue identity and state",
+        )
+    return {
+        ResultField.ISSUE: identity,
+        ResultField.OPEN: state == _OPEN_STATE,
+    }
+
+
+def _read_blocker_list(context: _Context, identity: str) -> list[dict[str, object]]:
+    """Read one issue's native blockers as one page of 100, or block."""
+    found = ISSUE_IDENTITY_PATTERN.fullmatch(identity)
+    assert found is not None  # noqa: S101 - identities come from validated forms
+    owner, repository, number = found.groups()
+    argv = [
+        GH_EXECUTABLE,
+        "api",
+        f"repos/{owner}/{repository}/issues/{number}/dependencies/blocked_by",
+        "--method",
+        "GET",
+        "-F",
+        f"per_page={BLOCKERS_PAGE_SIZE}",
+    ]
+    entries = _json_array(_command(context, argv, cwd=context.cwd))
+    if len(entries) >= BLOCKERS_PAGE_SIZE:
+        raise Blocked(
+            BlockReason.PAGE_BOUND_REACHED,
+            f"the blockers read of {identity} is not complete at {BLOCKERS_PAGE_BOUND}",
+            evidence={ResultField.BOUND: BLOCKERS_PAGE_BOUND},
+        )
+    return [_blocker(entry) for entry in entries]
+
+
+def _blocker_cycles(
+    context: _Context, root: str, direct: list[dict[str, object]]
+) -> tuple[list[list[str]], int]:
+    """Walk the open blockers depth first and return each cycle and the issues read."""
+    lists: dict[str, list[dict[str, object]]] = {root: direct}
+    finished: set[str] = set()
+    cycles: list[list[str]] = []
+
+    def visit(identity: str, path: list[str]) -> None:
+        for blocker in lists[identity]:
+            named = str(blocker[ResultField.ISSUE])
+            if blocker[ResultField.OPEN] is not True:
+                continue
+            if named in path:
+                cycles.append([*path[path.index(named) :], named])
+                continue
+            if named in finished:
+                continue
+            if named not in lists:
+                if len(lists) >= BLOCKERS_MAX_ISSUES:
+                    raise Blocked(
+                        BlockReason.PAGE_BOUND_REACHED,
+                        f"the blockers walk from {root} is not complete at "
+                        f"{BLOCKERS_ISSUES_BOUND}",
+                        evidence={ResultField.BOUND: BLOCKERS_ISSUES_BOUND},
+                    )
+                lists[named] = _read_blocker_list(context, named)
+            visit(named, [*path, named])
+        finished.add(identity)
+
+    visit(root, [root])
+    return cycles, len(lists)
+
+
+def _read_blockers(
+    context: _Context, request: Mapping[str, object]
+) -> dict[str, object]:
+    """Return the named issue's native blockers and, on ``walk``, its blocker cycles."""
+    named = request[RequestField.ISSUE]
+    assert isinstance(named, str)  # noqa: S101 - validated as an issue identity
+    direct = _read_blocker_list(context, named)
+    cycles: list[list[str]] = []
+    read = 1
+    if request[RequestField.WALK] is True:
+        cycles, read = _blocker_cycles(context, named, direct)
+    return {
+        ResultField.ISSUE: named,
+        ResultField.BLOCKERS: direct,
+        ResultField.CYCLES: cycles,
+        ResultField.ISSUES_READ: read,
+    }
+
+
 TITLE_WORD_LIMIT: Final = 15
 INTENT_SENTENCE_LIMIT: Final = 3
 DECISION_ROW_LIMIT: Final = 12
@@ -1473,6 +1632,7 @@ _HANDLERS: Final[
     Operation.READ_AUTHORITY: _read_authority,
     Operation.READ_PUBLISHED: _read_published,
     Operation.READ_RELATIONS: _read_relations,
+    Operation.READ_BLOCKERS: _read_blockers,
     Operation.COUNT_LIMITS: _count_limits,
 }
 
