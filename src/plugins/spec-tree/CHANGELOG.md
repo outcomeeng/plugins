@@ -10,6 +10,12 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.105.6
+
+### Changed
+
+- **`/audit-change` judges a stored Change's `blocked_by` and its blocker graph from the native issue dependencies, never from the text of a comment.** The runner's new `read-blockers` operation takes the Change's `issue` and a boolean `walk`, reads the issue's native blockers as one page of 100, and returns each blocker's canonical identity and whether it is open. The audit records a finding that cites the native list as its evidence for each open native blocker the candidate omits, and draws none for a blocker the candidate adds, which persistence writes, or for a closed native blocker the candidate omits. At Sliced and Executable the audit sets `walk`, and the runner also reads the open blockers' own native blockers, at most 10 issues including the Change's own, and returns each blocker cycle, which the audit records as a finding; Proposed and Framed audits read the direct list only. A blockers page holding 100 entries returns a blocked result naming `100 blockers, one page`, and a walk that needs an eleventh issue returns one naming `10 issues`. A Change with no store record has its `blocked_by` judged from the candidate alone, and the request carries no `issue`. Before this change, the runner's store reads returned field-change events, comments, the body, and Product, Parent and child relations, none of which carried the native dependencies, so a comment naming a blocker the store had since removed rejected a candidate whose `blocked_by` matched the native list.
+
 ## 0.105.5
 
 ### Changed
