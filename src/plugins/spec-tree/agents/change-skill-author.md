@@ -6,7 +6,9 @@ profile: standard
 targets:
   - claude
   - codex
+{!% if target == 'claude' %!}
 disallowedTools: Agent, {{! tool('ask_user') !}}
+{!% endif %!}
 skills:
   - instructions:author-skill
 ---
