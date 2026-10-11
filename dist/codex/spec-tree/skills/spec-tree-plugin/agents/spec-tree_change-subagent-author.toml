@@ -30,8 +30,6 @@ Return the result `instructions:create-subagent` returns, unchanged, or one `blo
 
 <manual_review_guidance>
 Source `skills` entries were preserved as prompt guidance. The generated Codex `skills.config` entries enable these skills; they are not a spawn-time preload guarantee. Invoke or load these skills before relying on this agent's specialized behavior: `instructions:create-subagent`.
-
-Source `disallowedTools` deny lists do not enforce Codex permissions. Treat these tools as manual-review guidance unless runtime policy enforces them: `Agent`, `request_user_input`.
 </manual_review_guidance>
 """
 
