@@ -11,6 +11,7 @@ from outcomeeng.distribution.profiles import (
     resolve_model_price,
 )
 from outcomeeng_testing.generators.model_prices import (
+    copied_table_identifiers,
     price_table_copy_source,
     priced_identifiers,
     source_without_price_table,
@@ -53,7 +54,7 @@ def test_a_second_price_table_is_observed_in_any_source(tmp_path: Path) -> None:
     conforming = tmp_path / "conforming.py"
     conforming.write_text(source_without_price_table(), encoding="utf-8")
 
-    sites = observe_price_sites([violating, conforming], priced_identifiers())
+    sites = observe_price_sites([violating, conforming], copied_table_identifiers())
 
     assert {site.path for site in sites} == {violating}
-    assert {site.identifier for site in sites} >= priced_identifiers()
+    assert {site.identifier for site in sites} >= copied_table_identifiers()

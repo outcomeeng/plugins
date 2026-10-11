@@ -2,6 +2,7 @@
 
 import re
 from collections.abc import Iterator
+from typing import Final
 
 from outcomeeng.distribution.profiles import (
     MODEL_PRICES,
@@ -64,11 +65,22 @@ def unpriced_identifiers() -> tuple[str, ...]:
     )
 
 
+_COPIED_TABLE_IDENTIFIERS: Final = (
+    "generator-owned-model-a",
+    "generator-owned-model-b",
+)
+
+
+def copied_table_identifiers() -> frozenset[str]:
+    """Return the identifiers the generated second price table names."""
+    return frozenset(_COPIED_TABLE_IDENTIFIERS)
+
+
 def price_table_copy_source() -> str:
-    """Return Python source holding a second price table for the priced identifiers."""
+    """Return Python source holding a second price table built from generator-owned identifiers."""
     rows = "\n".join(
         f'    "{identifier}": {ModelPrice.__name__}(1, 1, 1, 1, 1),'
-        for identifier in sorted(priced_identifiers())
+        for identifier in _COPIED_TABLE_IDENTIFIERS
     )
     return f"PRICES = {{\n{rows}\n}}\n"
 

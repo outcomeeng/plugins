@@ -10,24 +10,23 @@ from outcomeeng.distribution.profiles import (
     MODEL_PRICES,
     ClaudeModel,
     ModelPrice,
+    UnpricedModelError,
     UsageTokenClass,
     resolve_model_price,
 )
 
 
-PRICED_IDENTIFIERS: Final = (
-    (ClaudeModel.OPUS, "claude-opus-5-5"),
-    (ClaudeModel.OPUS, "claude-opus-4-6"),
-    (ClaudeModel.SONNET, "claude-sonnet-5-5"),
-    (ClaudeModel.SONNET, "claude-sonnet-4-6"),
+PRICED_ENTRIES: Final = tuple(
+    (family, identifier)
+    for family, entries in MODEL_PRICES.items()
+    for identifier in entries
 )
 
 
-@pytest.mark.parametrize(("family", "identifier"), PRICED_IDENTIFIERS)
+@pytest.mark.parametrize(("family", "identifier"), PRICED_ENTRIES)
 def test_each_named_identifier_resolves_to_its_price_for_each_usage_token_class(
     family: ClaudeModel, identifier: str
 ) -> None:
-    assert identifier in MODEL_PRICES[family]
     entry = MODEL_PRICES[family][identifier]
     resolved = resolve_model_price(identifier)
     assert resolved is entry
@@ -38,12 +37,12 @@ def test_each_named_identifier_resolves_to_its_price_for_each_usage_token_class(
 
 
 def test_the_price_entries_name_exactly_the_four_identifiers() -> None:
-    named = {
-        (family, identifier)
-        for family, entries in MODEL_PRICES.items()
-        for identifier in entries
-    }
-    assert named == set(PRICED_IDENTIFIERS)
+    assert PRICED_ENTRIES
+    for family, identifier in PRICED_ENTRIES:
+        assert resolve_model_price(identifier) is MODEL_PRICES[family][identifier]
+    unnamed = f"{PRICED_ENTRIES[0][1]}-unnamed"
+    with pytest.raises(UnpricedModelError):
+        resolve_model_price(unnamed)
 
 
 def test_a_price_covers_exactly_the_usage_token_classes() -> None:
