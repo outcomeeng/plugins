@@ -1,6 +1,7 @@
 """Compliance evidence for the implementation-audit scope resolver's run-input boundary."""
 
 import json
+import pathlib
 
 from outcomeeng.validation.implementation_audit_contract import (
     AuditCoverageRequirement,
@@ -501,3 +502,32 @@ def test_a_live_path_list_that_is_not_a_list_of_strings_is_rejected() -> None:
     assert completed.returncode == EXIT_COMMAND_FAILURE
     assert ERROR_PREFIX in completed.stderr
     assert completed.stdout == ""
+
+
+def test_the_complete_run_start_input_is_written_to_the_path_the_caller_names(
+    tmp_path: pathlib.Path,
+) -> None:
+    (live,) = distinct_subject_paths(1)
+    audit_input = json.dumps({LIVE_PATHS_KEY: [live]})
+    destination = tmp_path / "run-start-input.json"
+    with stale_local_base_repo() as stale:
+        completed = run_implementation_scope(
+            stale.repo,
+            CHANGESET_SCOPE.HEAD_REF,
+            audit_input=audit_input,
+            output_path=destination,
+        )
+        base = git_commit_oid(stale.repo, ORIGIN_HEAD_REF)
+        head = git_commit_oid(stale.repo, stale.feature_branch)
+        printed = run_implementation_scope(
+            stale.repo, CHANGESET_SCOPE.HEAD_REF, audit_input=audit_input
+        )
+
+    assert completed.returncode == 0, completed.stderr
+    assert destination.is_file()
+    written = json.loads(destination.read_text())
+    assert written[CHANGESET_SCOPE.ScopeField.BASE] == base
+    assert written[CHANGESET_SCOPE.ScopeField.HEAD] == head
+    assert written[CHANGESET_SCOPE.ScopeField.CHANGED_PATHS] == [stale.feature_file]
+    assert written[LIVE_PATHS_KEY] == [live]
+    assert written == json.loads(printed.stdout)
