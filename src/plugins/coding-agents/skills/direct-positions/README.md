@@ -8,14 +8,14 @@ The skill bundles one monitor for every watched position and a roster that lists
 
 ```json
 {
-  "position": "Methodology Director",
+  "position": "<Product> Director",
   "mail": { "channel": "/abs/path/changes.git", "agent": "<Director mail name>" },
   "sessions": [
     {
-      "position": "SPX Maintainer",
+      "position": "<Product> Maintainer",
       "mail_name": "<registered mail name>",
       "backend": "prowl",
-      "cwd": "/abs/path/spx/worktrees/maintainer",
+      "cwd": "/abs/path/<product>/worktrees/maintainer",
       "stall_minutes": 45,
       "context_percent": 80,
       "report_background": false,

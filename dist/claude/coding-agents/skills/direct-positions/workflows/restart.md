@@ -19,7 +19,7 @@
 
 **Bringing up a new position session**
 
-1. Start the session in the position's worktree with the position's start prompt. As soon as it waits at its prompt, send `/rc <Position name>` (for example `/rc SPX Maintainer`) so the operator can remote-control it.
+1. Start the session in the position's worktree with the position's start prompt. As soon as it waits at its prompt, send `/rc <Position name>` (for example `/rc <Product> Maintainer`) so the operator can remote-control it.
 2. Add its entry to `<pool>/.spx/director/watch.json` with its mail name, and regenerate the roster.
 
 **Compacting a position**
