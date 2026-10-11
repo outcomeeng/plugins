@@ -17,7 +17,7 @@ Judge the catalog sound only after finding in every anti-pattern entry a name, t
 </success_criteria>
 
 <identifiers>
-Every catalog pattern, pack rule, style-layer rule, and structural rule carries one stable identifier, written in backticks: after the name in the catalog, at the start of a pack rule, at the start of a style-layer rule, and at the start of a structural rule in the matching `/prose-architecture-standards` reference. An identifier never changes when its heading or description is reworded, and no two rules share one. A finding names the violated rule by its identifier exactly as written here, with no prefix and no rewording. Routing outcomes carry the identifiers `governed-elsewhere`, `missing-kind`, and `missing-target`.
+Every voice canon rule, catalog pattern, pack rule, style-layer rule, and structural rule carries one stable identifier, written in backticks: at the start of a voice canon rule, after the name in the catalog, at the start of a pack rule, at the start of a style-layer rule, and at the start of a structural rule in the matching `/prose-architecture-standards` reference. An identifier never changes when its heading or description is reworded, and no two rules share one. A finding names the violated rule by its identifier exactly as written here, with no prefix and no rewording. Routing outcomes carry the identifiers `governed-elsewhere`, `missing-kind`, and `missing-target`.
 </identifiers>
 
 <reference_note>
@@ -25,27 +25,35 @@ Load this skill as a reference from every prose workflow skill. Treat a missing 
 </reference_note>
 
 <voice_canon>
-State one claim per sentence, as subject, verb, fact. Split a compound claim into two sentences. Use a semicolon only to join a claim with its complement (a negation, rationale, or consequence), never with a second directive.
+`voice-one-claim`: State one claim per sentence, as subject, verb, fact. Split a compound claim into two sentences.
 
-Lead with the substance. Open with the action, the answer, or the event. Never open with a warm-up, a preamble, or a restatement of the question.
+`voice-semicolon-join`: Use a semicolon only to join a claim with its complement (a negation, rationale, or consequence), never with a second directive.
 
-Name who acts, in the active voice. Never make an artifact or an abstraction the actor. Write "I pushed the commit", never "the commit landed". Write "keep this", never "this earns its place".
+`voice-lead-with-substance`: Lead with the substance. Open with the action, the answer, or the event. Never open with a warm-up, a preamble, or a restatement of the question.
 
-Lead with the point. Never stage it after a colon, em dash, semicolon, or period-fragment. Cut the mark. Open with what followed it. Leave a trailing clause of rationale or example after the mark.
+`voice-named-actor`: Name who acts, in the active voice. Never make an artifact or an abstraction the actor. Write "I pushed the commit", never "the commit landed". Write "keep this", never "this earns its place".
 
-Use short common words. Use a simple verb, never the noun made from it: "decide", not "decision". Use concrete nouns. Use the everyday word, never jargon or a stock metaphor. Cut every dispensable word, starting with adjectives and adverbs. Cut the contrast clause, keeping only "X" from "X rather than Y". Keep Y only when the reader would act differently knowing it; otherwise the reader gets two statements for one point.
+`voice-lead-with-point`: Lead with the point. Never stage it after a colon, em dash, semicolon, or period-fragment. Cut the mark. Open with what followed it. Leave a trailing clause of rationale or example after the mark.
 
-Cut "please", "sorry", "successfully", "note that", and "in order to" on sight.
+`voice-plain-words`: Use short common words. Use a simple verb, never the noun made from it: "decide", not "decision". Use concrete nouns. Use the everyday word, never jargon or a stock metaphor.
 
-Assert only demonstrated facts. Show what matters in the content. Never assert significance in place of showing it. Cut significance adverbs ("deeply", "fundamentally"), authenticity adverbs ("genuinely", "truly", "actually"), and stakes inflation.
+`voice-cut-dispensable`: Cut every dispensable word, starting with adjectives and adverbs. Cut the contrast clause, keeping only "X" from "X rather than Y". Keep Y only when the reader would act differently knowing it; otherwise the reader gets two statements for one point.
 
-Give each concept one name throughout. Never use one word for two concepts.
+`voice-cut-filler`: Cut "please", "sorry", "successfully", "note that", and "in order to" on sight.
 
-Report a failure as what happened, then what to do next, in plain language, without blame or apology.
+`voice-demonstrated-facts`: Assert only demonstrated facts. Show what matters in the content. Never assert significance in place of showing it. Cut significance adverbs ("deeply", "fundamentally"), authenticity adverbs ("genuinely", "truly", "actually"), and stakes inflation.
 
-Capitalize only the first word and proper nouns in titles, headings, and labels. Put no end punctuation on a heading: "How this layer is used", never "How This Layer Is Used:". Use no all-caps emphasis.
+`voice-one-name`: Give each concept one name throughout. Never use one word for two concepts.
 
-Use a pair of em dashes only as parentheses — like this — around an aside. Use a single em dash only before what a human would say after a pause: the tests were green — all but one. Use straight quotes, no unicode decoration, and no bold-first bullet scaffolding. Put emphasis in structure and word choice, never in typeface.
+`voice-failure-report`: Report a failure as what happened, then what to do next, in plain language, without blame or apology.
+
+`voice-title-case`: Capitalize only the first word and proper nouns in titles, headings, and labels. Use no all-caps emphasis.
+
+`voice-heading-end-punctuation`: Put no end punctuation on a heading: "How this layer is used", never "How This Layer Is Used:".
+
+`voice-em-dash`: Use a pair of em dashes only as parentheses — like this — around an aside. Use a single em dash only before what a human would say after a pause: the tests were green — all but one.
+
+`voice-plain-typography`: Use straight quotes, no unicode decoration, and no bold-first bullet scaffolding. Put emphasis in structure and word choice, never in typeface.
 
 </voice_canon>
 
