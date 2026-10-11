@@ -76,30 +76,26 @@ READ_BINDINGS: Final = (
 
 _MESSAGE_TEXT: Final = " for this run"
 
-_PLACEHOLDER_FORMS: Final = (
-    "{name}",
-    "{0}",
-    "{}",
-    "{name!r}",
-    "{name:8}",
-    "{item.key}",
-    "{item[0]}",
-    "%s",
-    "%d",
-    "%r",
-    "%f",
-    "%(name)s",
-    "$name",
-    "${name}",
-)
-
 PLACEHOLDER_BINDINGS: Final = tuple(
-    placeholder + _MESSAGE_TEXT for placeholder in _PLACEHOLDER_FORMS
+    placeholder + _MESSAGE_TEXT
+    for placeholder in (
+        "{name}",
+        "{0}",
+        "{}",
+        "{name!r}",
+        "{name:8}",
+        "{item.key}",
+        "{item[0]}",
+        "%s",
+        "%d",
+        "%r",
+        "%f",
+        "%(name)s",
+        "$name",
+        "${name}",
+    )
 )
 """Interpolation placeholders that open message text: brace, percent, and dollar forms."""
-
-NON_MESSAGE_PLACEHOLDER_BINDINGS: Final = _PLACEHOLDER_FORMS
-"""Interpolation placeholders that open no message text: each form stands alone as the whole binding."""
 
 _ASSIGNMENT_BOUNDARIES: Final = (
     ("", ""),

@@ -1,9 +1,9 @@
 """Reject independently authored native profile settings throughout source text.
 
 A native field is an authored assignment by the syntactic form of its binding
-alone: a literal or a build template token binds an authored value, while an
-expression that reads a value or an interpolation placeholder inside message
-text does not.
+alone: an expression that reads a value or an interpolation placeholder binds
+no authored value, while every other binding, a literal, a build template
+token, or an unquoted value, does.
 """
 
 import re
