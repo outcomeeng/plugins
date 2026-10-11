@@ -96,3 +96,13 @@ Evidence that the text lies outside the change: `git diff -U0 origin/main...HEAD
 Invalidation check. The cited text neither cites, restates, nor depends on anything this changeset changed. The changeset adds symbols to `outcomeeng/distribution/profiles.py` (model prices; no existing symbol changes) and adds one filter to `outcomeeng/validation/profile_configuration.py` (`_is_authored_binding`, which drops a match whose binding reads a value or is an interpolation placeholder). The harness drives the runtime-token scanner and its ignore list; the changeset changes neither.
 
 **Settlement condition.** The ignored-file oracle shares no predicate with production, the expected files come from an independent enumeration over the three named roots, and a focused run plus a test-evidence audit over the repaired chain pass.
+
+## DEBT [consistency]: a read-expression prefix exempts a binding that also carries a literal
+
+Local review run `2026-10-11_07-00-03-767-748ffd1ab022` at head `f40dc3cb3fe9b9eb646da1160692d1a6b3abe86e` reported, at `outcomeeng/validation/profile_configuration.py` (`_is_authored_binding`), that the guard decides the read-expression branch with a prefix match. A binding that begins with a call, a subscript, or an attribute access is therefore no assignment even when the rest of the binding carries an authored literal, as in `effort = settings.get("effort") or "high"` and `effort: lookup(key) if flag else "high"`. The interpolation-placeholder branch decides by the whole binding, so the two branches differ.
+
+**Impact**: a native model or reasoning field bound to a read expression joined with a literal fallback passes the guard although the binding carries an authored value.
+
+**Why it is a separate larger concern**: anchoring the read-expression decision to the whole binding needs a rule for where an expression ends: a boolean or conditional operator, an arithmetic operator, a closing delimiter of the surrounding code, or a trailing comment. Neither [`spx/15-validation.enabler/32-runtime-token.enabler/runtime-token.md`](spx/15-validation.enabler/32-runtime-token.enabler/runtime-token.md) nor [`spx/18-plugin-build.enabler/15-build-architecture.adr.md`](spx/18-plugin-build.enabler/15-build-architecture.adr.md) states that rule. The guard decides by the syntactic form of the binding alone and parses no expressions, so stating the rule is a ruling on the guard's grammar and not a pattern edit.
+
+**Settlement condition.** The spec and the decision state where a read expression ends, the guard decides the read-expression branch by that rule, and the generator and the mapping and compliance tests drive a read expression joined with a literal fallback; a focused run of the node's tests passes.
