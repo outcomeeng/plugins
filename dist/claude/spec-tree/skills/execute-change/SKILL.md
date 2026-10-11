@@ -50,6 +50,7 @@ Each Verifier is the configured auditor or reviewer for the evidence obligation 
 | A node spec                         | `spec-tree:spec-auditor`                |
 | A node's test evidence              | `spec-tree:test-evidence-auditor`       |
 | A node's eval evidence              | `spec-tree:eval-evidence-auditor`       |
+| A node's `[audit]` assertions       | `spec-tree:assertion-auditor`           |
 | Implementation in a changeset scope | `spec-tree:implementation-auditor`      |
 | A skill surface                     | `instructions:skill-auditor`            |
 | A subagent definition               | `instructions:subagent-auditor`         |
@@ -57,7 +58,7 @@ Each Verifier is the configured auditor or reviewer for the evidence obligation 
 | The changeset, under `/merge`       | `spec-tree:changes-reviewer`            |
 | Changeset coherence, under `/merge` | `spec-tree:changeset-coherence-auditor` |
 
-The verdict of a `instructions:skill-auditor` or `instructions:subagent-auditor` launch is the terminal status of the sealed run whose token the launch returns: `approved` approves, and `rejected` rejects whatever the finding count. A launch that returns a blocked diagnostic for a refused payload or finish yields no verdict and goes to step 8 with that diagnostic.
+The verdict of a `instructions:skill-auditor`, `instructions:subagent-auditor`, or `spec-tree:assertion-auditor` launch is the terminal status of the sealed run whose token the launch returns: `approved` approves, and `rejected` rejects whatever the finding count. A launch that returns a blocked diagnostic for a refused payload or finish yields no verdict and goes to step 8 with that diagnostic.
 
 A gate is one Verifier definition judging one subject; under `/merge`, the local review and the CI review are two gates. The Executor launches each gate at most twice per Change, counting real rejections:
 
