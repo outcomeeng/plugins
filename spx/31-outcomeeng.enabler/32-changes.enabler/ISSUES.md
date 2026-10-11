@@ -184,3 +184,39 @@ Evidence: `spec-tree:pdr-auditor` launch 1 on [`spx/31-outcomeeng.enabler/32-cha
 Impact: a later audit can read the sentence as history and raise the finding again.
 
 Revisit and settlement condition: the Rationale justifies the Compatibility rule by a property of the record forms alone, with no reference to a record population; one PDR audit then raises no `temporal-language` finding on the Rationale.
+
+## DEBT [consistency]: the path-rejected row of the audit-change runner contract omits count-limits
+
+Defect class: `consistency`.
+
+Finding: the `path-rejected` row of the blocked-reason table in `src/plugins/spec-tree/skills/audit-change/SKILL.md` (line 87) states that `read-candidate`, `start`, and `reconcile` reject a candidate the filesystem cannot resolve, that resolves outside the repository, that is not a regular file, or is not UTF-8 text. The `count-limits` operation reads the candidate through the same path checks, and the `candidate-missing` and `candidate-unreadable` rows below it name `count-limits`, so the row names three of the four operations that read a candidate.
+
+Evidence: the hosted review of [PR 643](https://github.com/outcomeeng/plugins/pull/643#issuecomment-6104113065) raised the omission as a `debt` finding against the row; the row at line 87 and the `candidate-missing` row at line 88 of the skill show the two lists differ.
+
+Impact: a reader of the table concludes that `count-limits` returns no `path-rejected` result for a candidate outside the repository or not UTF-8, though it does.
+
+Revisit and settlement condition: the row names `count-limits` beside `read-candidate`, `start`, and `reconcile`, and one typed skill audit of `audit-change` raises no finding on the blocked-reason table.
+
+## DEBT [consistency]: the parent-child-rejections assertion names one of the two Product cases
+
+Defect class: `consistency`.
+
+Finding: the `parent-child-rejections` assertion of [`spx/31-outcomeeng.enabler/32-changes.enabler/changes.md`](spx/31-outcomeeng.enabler/32-changes.enabler/changes.md) states that `audit-change` rejects "a child whose Product differs from its Parent's Product". `src/plugins/spec-tree/skills/audit-change/SKILL.md` (lines 143 to 145) also rejects a Parent whose Product differs from the Product of any of its children, and the PDR [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) states that every child of a Parent that carries a Product carries that Product, a rule that binds the Parent and its children in both directions.
+
+Evidence: the assertion text above against lines 143 to 145 of the skill, and the `audit-change` entry of the `0.104.9` spec-tree changelog (`src/plugins/spec-tree/CHANGELOG.md`), which lists four rejection cases where the assertion names three.
+
+Impact: the assertion under-states the behavior the skill ships, so a regression that drops the Parent-against-children check leaves the assertion true.
+
+Revisit and settlement condition: the assertion names a Parent whose Product differs from the Product of any of its children beside the child case, and a status projection of the node derives its state from the amended assertion.
+
+## DEBT [evidence]: the table-encoded Decisions row never trips the answer-length limit
+
+Defect class: `evidence`.
+
+Finding: `_answer` in `src/plugins/spec-tree/skills/audit-change/scripts/audit_change_run.py` returns the text after the first sentence-ending question mark of a Decisions row, and the empty string when the row holds none. `_decision_entries` accepts two row encodings: a list item with its continuation lines, and a table row whose entry is its last cell. A table row whose last cell is a dedicated Answer column carries no question mark, so `_answer` returns the empty string, `count_sentences` reads zero, and `count-limits` reports no violation of the two-sentence answer limit for that row whatever its length.
+
+Evidence: the hosted review of [PR 643](https://github.com/outcomeeng/plugins/pull/643#issuecomment-6105049321) raised the case as a `debt` finding against `_answer`; the function and its caller in `_count_limits` show the zero count.
+
+Impact: a Decisions answer of any length passes the limit when the record states Decisions as a table with an Answer column.
+
+Revisit and settlement condition: the runner reads the Answer cell of a table row directly, or `_decision_entries` accepts the list encoding alone and the record contract states Decisions as a list; a linked case then asserts a violation for a table row whose answer exceeds two sentences, or the table encoding's rejection.
