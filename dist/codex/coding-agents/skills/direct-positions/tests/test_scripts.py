@@ -194,8 +194,14 @@ def test_monitor_names_the_disposition_for_each_mail_subject():
     assert monitor.mail_rule("note written") == monitor.RULES["note"]
     assert monitor.mail_rule("[shape review] #305 draft") == monitor.RULES["shape"]
     assert monitor.mail_rule("STATUS #320 06:19Z") == monitor.RULES["status"]
-    assert monitor.mail_rule("Re 8620: two successors drafted; slice separate") == monitor.RULES["other"]
-    assert monitor.mail_rule("Correction to 8636: shape review is 8635") != monitor.RULES["shape"]
+    assert (
+        monitor.mail_rule("Re 8620: two successors drafted; slice separate")
+        == monitor.RULES["other"]
+    )
+    assert (
+        monitor.mail_rule("Correction to 8636: shape review is 8635")
+        != monitor.RULES["shape"]
+    )
     assert (
         monitor.mail_rule("[status] resumed; #320 Frame delta in shape review")
         == monitor.RULES["status"]
@@ -210,16 +216,27 @@ def test_monitor_leaves_executor_legs_to_their_orchestrator(monkeypatch):
     executor = session("/w/spx/worktrees/change-1", "working", "herdr", "change-1")
     poll(monkeypatch, {"herdr": [executor]}, state)
     idle = session("/w/spx/worktrees/change-1", "idle", "herdr", "change-1")
-    assert not any("Executor" in line for line in poll(monkeypatch, {"herdr": [idle]}, state))
-    assert not any("Executor" in line for line in poll(monkeypatch, {"herdr": []}, state))
+    assert not any(
+        "Executor" in line for line in poll(monkeypatch, {"herdr": [idle]}, state)
+    )
+    assert not any(
+        "Executor" in line for line in poll(monkeypatch, {"herdr": []}, state)
+    )
 
 
 def test_monitor_reports_an_executor_block_only_after_the_reminder(monkeypatch):
     state: dict = {}
     blocked = session("/w/spx/worktrees/change-1", "blocked", "herdr", "change-1")
-    assert not any("BLOCKED" in line for line in poll(monkeypatch, {"herdr": [blocked]}, state))
-    late = poll(monkeypatch, {"herdr": [blocked]}, state, now=NOW + timedelta(minutes=16))
-    assert any("BLOCKED Executor change-1" in line and monitor.RULES["executor"] in line for line in late)
+    assert not any(
+        "BLOCKED" in line for line in poll(monkeypatch, {"herdr": [blocked]}, state)
+    )
+    late = poll(
+        monkeypatch, {"herdr": [blocked]}, state, now=NOW + timedelta(minutes=16)
+    )
+    assert any(
+        "BLOCKED Executor change-1" in line and monitor.RULES["executor"] in line
+        for line in late
+    )
 
 
 def test_monitor_signals_no_compaction_below_seventy_five_percent(monkeypatch):

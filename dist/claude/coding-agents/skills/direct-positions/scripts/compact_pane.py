@@ -10,24 +10,44 @@ pane, resume = sys.argv[1], sys.argv[2]
 
 def run(req):
     try:
-        out = subprocess.run(["python3", P, "run"], input=json.dumps(req).encode(), capture_output=True, timeout=60).stdout
+        out = subprocess.run(
+            ["python3", P, "run"],
+            input=json.dumps(req).encode(),
+            capture_output=True,
+            timeout=60,
+        ).stdout
         return json.loads(out.decode("utf-8", "replace"))
     except Exception as e:
         return {"status": "error", "detail": str(e)}
 
 
 def read():
-    d = run({"schemaVersion": 1, "operation": "read", "arguments": {"pane": pane, "last": 14}})
+    d = run(
+        {
+            "schemaVersion": 1,
+            "operation": "read",
+            "arguments": {"pane": pane, "last": 14},
+        }
+    )
     return d["response"]["data"]["text"] if d.get("status") == "succeeded" else None
 
 
 def context(text):
-    m = re.findall(r"\(\s*[\d.]+\s*[kKmM]?\s*/\s*[\d.]+\s*[kKmM]?\s*tokens\s*\)\s*(\d{1,3})\s*%", text)
+    m = re.findall(
+        r"\(\s*[\d.]+\s*[kKmM]?\s*/\s*[\d.]+\s*[kKmM]?\s*tokens\s*\)\s*(\d{1,3})\s*%",
+        text,
+    )
     return int(m[-1]) if m else None
 
 
 def send(text):
-    return run({"schemaVersion": 1, "operation": "send", "arguments": {"pane": pane, "text": text, "noWait": True}}).get("status")
+    return run(
+        {
+            "schemaVersion": 1,
+            "operation": "send",
+            "arguments": {"pane": pane, "text": text, "noWait": True},
+        }
+    ).get("status")
 
 
 deadline = time.time() + 900
