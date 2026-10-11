@@ -18,8 +18,8 @@ A source guard covers all of `src/`, including conditional blocks and otherwise
 ignored files, rejecting literal model identifiers and authored assignments of
 native model or reasoning controls. Its vocabulary comes from the configuration
 owner. Ordinary prose words are not configuration assignments. A field bound to
-an expression that reads a value, and a field bound to a placeholder that opens
-message text, are no configuration assignment; every other binding, an unquoted
+an expression that reads a value, and a field bound to an interpolation
+placeholder, are no configuration assignment; every other binding, an unquoted
 value included, is an authored assignment.
 
 ## Rationale
