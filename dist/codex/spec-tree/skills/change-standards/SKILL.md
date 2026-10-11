@@ -147,7 +147,7 @@ A blocker closed `Applied` satisfies the dependency; an open blocker remains a b
 
 <rule id="artifacts">
 
-`## Artifacts` links the audited content of every Node the Change adds, modifies, or implements. Each link is held where it resolves in every execution environment.
+`## Artifacts` links the audited content each round has produced for a Node the Change adds, modifies, or implements, and is empty before the first round. Each link names a Node in `## Nodes` and pins the commit that holds its audited content, and is held where it resolves in every execution environment. A Node's link follows the round that produces its content; the section is complete when every such Node has a link, which `close-change` checks from current state.
 
 Routine command logs, run tokens, verdicts, findings, verification history, and session narrative stay outside the Change. A Handoff carries transient continuation: branch or changeset, the completed Mutation rows and the next one, blockers, and non-obvious hazards.
 
