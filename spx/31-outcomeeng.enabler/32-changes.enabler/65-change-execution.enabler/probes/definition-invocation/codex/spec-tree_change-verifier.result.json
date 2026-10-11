@@ -1,0 +1,48 @@
+{
+  "definition": "spec-tree_change-verifier",
+  "emitted_definition": {
+    "path": "dist/codex/spec-tree/skills/spec-tree-plugin/agents/spec-tree_change-verifier.toml",
+    "sha256": "55b2ee352cdd2b099422577926a86ae61d32660c5f993cd5a2c6d451ea30663a"
+  },
+  "discovery": {
+    "artifact": "discovery.jsonl",
+    "listed": true
+  },
+  "loaded_configuration": {
+    "child_thread_id": "01a12aa2-f765-7931-8f58-52b6b600de14",
+    "agent_role": "spec-tree_change-verifier",
+    "model": "gpt-6.1-sol",
+    "effort": "high",
+    "definition_instructions_in_child_context": true
+  },
+  "child_invocation": {
+    "parent_thread_id": "01a12aa2-e5eb-7112-8306-efc53ab4160c",
+    "spawn_calls": [
+      {
+        "agent_type": "spec-tree_change-verifier",
+        "fork_turns": "none",
+        "message": "<redacted: 140 chars>",
+        "task_name": "verifier"
+      }
+    ],
+    "child_parent_thread_id": "01a12aa2-e5eb-7112-8306-efc53ab4160c",
+    "depth": 1,
+    "child_tool_calls": [
+      {
+        "name": "exec",
+        "arguments_prefix": "text(await tools.exec_command({cmd:\"cat /private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-ff030327/e06e09b8-2979-49be-ab25-ff50bc3ea3d2/scratchpad/codexhome/plugins/cache/outcomeeng/spec-tree/0.105.2/skills/verify/SKILL.md\",max_output_tokens:16000}));\n"
+      }
+    ],
+    "child_spawn_count": 0
+  },
+  "returned_result": {
+    "parent_final_message": "blocked: The supplied target `not-a-target` is not canonical. Which target should verification use: `spx/`, one full `spx/...` node path, or one full `spx/.../*.adr.md` or `spx/.../*.pdr.md` decision path? Verification routing is blocked until the Executor supplies a canonical target.",
+    "usage": {
+      "input_tokens": 58084,
+      "cached_input_tokens": 57344,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 186,
+      "reasoning_output_tokens": 46
+    }
+  }
+}
