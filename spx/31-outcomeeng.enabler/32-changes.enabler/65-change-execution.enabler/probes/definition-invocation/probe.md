@@ -86,13 +86,14 @@ Steps:
 ## Attested run: the Codex definitions
 
 - Date: 2026-10-11
-- Subject commit: `92c8cc48a78e59fba752f531a475ba2e56d2effe`, whose emitted definitions are those of commit `cc1aa48eca`
+- Subject commit: `7cc2690b157119862716b4f61c6637907ffb3f21`
 - Environment: `codex-cli` 0.162.1 with a ChatGPT saved login, model `gpt-6.1-sol`
 - Observations:
   - Discovery: the fresh session listed all seven `spec-tree_change-*` names among the names its launch tool accepts, beside the plugin's own `spec-tree_change-auditor`.
   - Loaded configuration: each child session's metadata carries `agent_role` `spec-tree_<name>`, and its `turn_context` reports model `gpt-6.1-sol` and effort `high`, as the emitted definition declares. Each child's developer context holds the definition's `developer_instructions`.
+  - Emitted definitions: the seven definitions at the subject commit declare no tool denial for Codex; each carries `model` `gpt-6.1-sol`, `model_reasoning_effort` `high`, and a `manual_review_guidance` section about its fronted skill. Each result file records the definition's path and SHA-256.
   - Child invocation: each parent made exactly one `spawn_agent` call with `agent_type` `spec-tree_<name>` and `fork_turns` `none`. Each child's `parent_thread_id` is its parent's thread, at depth 1, and no child launched a further agent.
-  - Returned result: `change-executor` returned `not-held` from `spec-tree:execute-change`. `change-author` returned `blocked` with its question and blocked action. `change-implementer` returned `blocked` with reason `target-required`. `change-tester` and `change-verifier` returned `blocked` for the non-canonical target. `change-skill-author` returned `blocked` naming `instructions:create-skill` as absent.
+  - Returned result: `change-executor` returned `not-held` from `spec-tree:execute-change`. `change-author` returned `blocked` with its question and blocked action. `change-implementer` returned `blocked` with reason `target-required`. `change-tester` and `change-verifier` returned `blocked` for the non-canonical target. `change-skill-author` returned `blocked` naming `instructions:create-skill` as absent, and `change-subagent-author` returned `blocked` naming `instructions:create-subagent` as absent.
   - Each child loaded its fronted skill by reading its `SKILL.md` from the disposable home's plugin cache. The sandbox was read-only, and no child wrote a file.
 - Artifacts:
   - [discovery.jsonl](codex/discovery.jsonl)
@@ -108,7 +109,7 @@ Steps:
 
 `passed`: each exact emitted Claude Code definition loaded natively, started as a child session of one `Agent` launch, and returned a result its fronted skill or its own workflow declares.
 
-`passed`: each exact emitted Codex definition was discovered by its name in a fresh session, loaded with its declared model and effort, started as the child session of one isolated `spawn_agent` launch by that name, and returned a result its fronted skill or its own workflow declares. The `change-subagent-author` run is a pass of the same kind but did not exercise the uninstalled-skill path; see Limitations.
+`passed`: each exact emitted Codex definition was discovered by its name in a fresh session, loaded with its declared model and effort, started as the child session of one isolated `spawn_agent` launch by that name, and returned a result its fronted skill or its own workflow declares.
 
 ## Limitations
 
@@ -116,7 +117,7 @@ Steps:
 - The emitted effort is recorded from the definition file — `effort: medium` for the six Standard-profile definitions and `effort: high` for `change-executor`; each child's tool result reports the resolved model and no effort value.
 - The run of the two instruction round definitions exercises the `blocked` result for an uninstalled fronted skill. A round that runs `instructions:create-skill` or `instructions:create-subagent` whole stays unexercised because the probe installs no `instructions` plugin. Neither fronted skill launches an auditor; the Verifier of such a round is a separate launch by `/execute-change`, outside this protocol.
 - The Codex run exercises only the stop at an unaccepted target, like the Claude Code run. The emitted effort and model are recorded from the child's `turn_context`.
-- The Codex children can read paths outside the disposable home, because the read-only sandbox restricts writes only. `change-subagent-author` found and read `instructions:create-subagent` in the operator's personal Codex plugin cache and returned `blocked` with a question about its target instead of the uninstalled-skill result; `change-skill-author` searched only the scratch tree and returned the uninstalled-skill `blocked` result. The Codex run therefore does not isolate the installed-plugin set from the host.
+- The Codex children can read paths outside the disposable home, because the read-only sandbox restricts writes only. In this run `change-skill-author` and `change-subagent-author` each searched only the scratch tree and returned the uninstalled-skill `blocked` result, but an earlier run of `change-subagent-author` found and read `instructions:create-subagent` in the operator's personal Codex plugin cache. The Codex run therefore does not isolate the installed-plugin set from the host.
 - The discovery observation rests on the model reporting the names its launch tool accepts; the launch of each definition by name in step 2 is the stronger evidence.
-- Codex enforces none of the definitions' `disallowedTools`, which the emitted text carries as manual-review guidance; the run observes that no child launched an agent or wrote a file, not that it was unable to.
+- The emitted Codex definitions declare no tool denial, so the run observes only that no child launched an agent or wrote a file; each child ran under the read-only sandbox of the protocol, which restricts writes and never restricts agent launches.
 - A later change to an emitted definition invalidates its record here until the protocol runs again on the new commit.
