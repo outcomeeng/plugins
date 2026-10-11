@@ -14,7 +14,7 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 ### Fixed
 
-- **`/execute-change` starts on its worktree's branch when neither the record nor the newest Handoff names a working branch, instead of releasing before any round.** The Executor works on the branch its assigned worktree has checked out, and on a detached or default-branch checkout it creates `work/change-<N>` from the Change's number. A branch the record or the newest Handoff names stays the working branch, and the Handoff's wins over the record's. Before this change, a first start on a record that named no branch went to the release step with that gap as the blocker, so Executors for such Changes released without running a round.
+- **`/execute-change` starts on its worktree's branch when neither the record nor the newest Handoff names a working branch, instead of releasing before any round.** The Executor works on the branch its assigned worktree has checked out only when that branch is not the default branch and its name ends with the Change number, as `work/change-<N>` and `executor-<N>` do, so a stale branch an interrupted release left in the worktree is never adopted for an unrelated Change. Otherwise the worktree counts as naming no branch, and the Executor creates `work/change-<N>` from the Change's number, on a detached checkout, the default branch, or a branch whose name does not end with the number. A branch the record or the newest Handoff names stays the working branch, and the Handoff's wins over the record's. Before this change, a first start on a record that named no branch went to the release step with that gap as the blocker, so Executors for such Changes released without running a round.
 
 ## 0.105.5
 
