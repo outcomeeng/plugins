@@ -108,6 +108,16 @@ field for f-003.
 `git diff -U0 origin/main...HEAD` reports no hunk on the cited file, against
 merge base `149a55f71befdf61e88be9bda2aae725db1f2381`.
 
+**Invalidation check.** The cited text neither cites, restates, nor depends on
+anything this changeset changed. The changeset adds symbols to
+`outcomeeng/distribution/profiles.py` (model prices, `UsageTokenClass`,
+`UnpricedModelError`, `resolve_model_price`; no existing symbol changes), adds
+the model-price generator, harness, and tests, and narrows the configuration
+guard in `outcomeeng/validation/profile_configuration.py`. The three tests at
+lines 54, 125, and 163 of `test_agents.compliance.l1.py` drive agent conversion
+and the build through `outcomeeng/distribution/agents.py` and
+`outcomeeng/distribution/build.py`, which the changeset does not change.
+
 **Settlement condition**: each of the three tests is exercised against a
 generated violating case and rejects it.
 
@@ -129,6 +139,16 @@ effort-requiring models.
 **Out-of-change evidence**: the text lies outside the Change.
 `git diff -U0 origin/main...HEAD` reports no hunk on the cited file, against
 merge base `149a55f71befdf61e88be9bda2aae725db1f2381`.
+
+**Invalidation check.** The cited text neither cites, restates, nor depends on
+anything this changeset changed. The changeset adds symbols to
+`outcomeeng/distribution/profiles.py` (model prices, `UsageTokenClass`,
+`UnpricedModelError`, `resolve_model_price`; no existing symbol changes), adds
+the model-price generator, harness, and tests, and narrows the configuration
+guard in `outcomeeng/validation/profile_configuration.py`. The test at line 80
+of `test_profiles.mapping.l1.py` drives `ClaudeConfiguration` effort absence
+per Claude model; the additions to `profiles.py` leave `ClaudeModel` and
+`ClaudeConfiguration` unchanged.
 
 **Settlement condition**: the test covers every effort-requiring model, so a
 model that accepts `effort=None` fails it.

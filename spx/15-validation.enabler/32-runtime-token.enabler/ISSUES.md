@@ -65,6 +65,8 @@ Resolution shape: build the delimiters, the token, and the directory names in th
 
 Evidence that the text lies outside the change: `git diff -U0 origin/main...HEAD` (merge base `149a55f71befdf61e88be9bda2aae725db1f2381`) reports no hunk on `outcomeeng_testing/harnesses/profile_validation.py:27` and none on lines 42 or 64 of the compliance test file.
 
+Invalidation check. The cited text neither cites, restates, nor depends on anything this changeset changed. The changeset adds symbols to `outcomeeng/distribution/profiles.py` (model prices; no existing symbol changes) and adds one filter to `outcomeeng/validation/profile_configuration.py` (`_is_authored_binding`, which drops a match whose binding reads a value or is an interpolation placeholder). The cited text hand-writes token and directory spelling and literal expected lines. The inputs it drives are literal and template-token bindings, which `_is_authored_binding` accepts exactly as the guard did before, so the expected result is unchanged and the defect does not depend on the filter.
+
 **Settlement condition.** The harness and the compliance test hold no hand-written delimiter, directory name, or token and no literal expected line, the harness drives the literal frontmatter and literal identifier overrides, and a focused run of the node's tests plus a test-evidence audit over the repaired chain pass.
 
 ## DEBT [evidence]: native-field mapping tests hand-pick their inputs (f-004, f-005)
@@ -78,6 +80,8 @@ Resolution shape: drive f-004 from the source-owned generator that owns `AUTHORE
 
 Evidence that the text lies outside the change: `git diff -U0 origin/main...HEAD` (merge base `149a55f71befdf61e88be9bda2aae725db1f2381`) reports no hunk on line 15 or line 22 of the cited file.
 
+Invalidation check. The cited text neither cites, restates, nor depends on anything this changeset changed. The changeset adds symbols to `outcomeeng/distribution/profiles.py` (model prices; no existing symbol changes) and adds one filter to `outcomeeng/validation/profile_configuration.py` (`_is_authored_binding`, which drops a match whose binding reads a value or is an interpolation placeholder). The cited tests drive literal `"value"` bindings and owned model identifiers; the filter leaves both results unchanged, and no symbol the tests use was renamed or altered.
+
 **Settlement condition.** Both assertions take their inputs from source-owned generators, and a focused run plus a test-evidence audit over the repaired chain pass.
 
 ## DEBT [evidence]: runtime-token harness oracle reuses production enumeration (f-006, f-007)
@@ -90,5 +94,7 @@ The same second `spec-tree:test-evidence-auditor` verdict at head `7e15b3c437ca8
 Resolution shape: give f-006 an independent oracle that does not call `is_ignored()`, and give f-007 an independent enumeration over `src/plugins`, `src/_shared`, and `src/templates`.
 
 Evidence that the text lies outside the change: `git diff -U0 origin/main...HEAD` (merge base `149a55f71befdf61e88be9bda2aae725db1f2381`) reports no hunk on line 91 or line 104 of the cited file.
+
+Invalidation check. The cited text neither cites, restates, nor depends on anything this changeset changed. The changeset adds symbols to `outcomeeng/distribution/profiles.py` (model prices; no existing symbol changes) and adds one filter to `outcomeeng/validation/profile_configuration.py` (`_is_authored_binding`, which drops a match whose binding reads a value or is an interpolation placeholder). The harness drives the runtime-token scanner and its ignore list; the changeset changes neither.
 
 **Settlement condition.** The ignored-file oracle shares no predicate with production, the expected files come from an independent enumeration over the three named roots, and a focused run plus a test-evidence audit over the repaired chain pass.
