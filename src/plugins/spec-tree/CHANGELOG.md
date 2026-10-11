@@ -34,6 +34,12 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 - **`/audit-assertions` records each scope-add and finding-add payload through a file, so a run records its scope one unit at a time under the dangerous-command guard.** The skill has the run driver write each payload with the file-write tool to its own file in the session scratch directory and pass the file by path to `--payload`, adds each scope unit and each finding with its own literal command, one at a time, and stops the audit with the blocked diagnostic at the first command that exits nonzero. The run start takes the audited spec path as its input, so it builds no payload. The file-write tool writes only payload files. The skill's tool grant adds the file-write tool in place of the `printf` command, and the skill no longer teaches a heredoc or a `printf` pipe for these payloads or states that its payloads never travel through a scratch file. Before this change, the skill taught a quoted heredoc or a `printf` pipe for every scope-add and finding-add payload, so a consumer that followed it had the guard block a command in the middle of a scope sequence and left an open run with incomplete coverage. Change: https://github.com/outcomeeng/changes/issues/425.
 
+## 0.106.3
+
+### Changed
+
+- **`assertion-auditor` grants the file-write tool, so it can write the payload files `/audit-assertions` passes by path.** The agent that drives `/audit-assertions` now grants `Write` in place of the `printf` command, and its constraint on edits names the payload files in the session scratch directory as the one permitted write beside the skill's `spx verification run` commands. Before this change, the agent withheld the file-write tool that the skill's payload-file form requires and granted the `printf` form the skill no longer teaches, which left a run open with no sealed verdict. Change: https://github.com/outcomeeng/changes/issues/425.
+
 ## 0.106.2
 
 ### Changed
