@@ -3,7 +3,7 @@ name: audit-prose
 description: >-
   Prose audit methodology — judges the human-facing text in scope against the anti-pattern catalog, the supplied kind's style and structure layers, and every triggered rule pack.
 argument-hint: "<interface|documentation|copy> <text or paths> [base revision]"
-allowed-tools: Read, Glob, Grep, Bash(spx journal open:*), Bash(spx journal append:*), Bash(spx journal seal:*), Bash(spx journal read:*), Bash(git diff:*)
+allowed-tools: Read, Glob, Grep, Bash(spx journal open:*), Bash(spx journal append:*), Bash(spx journal seal:*), Bash(spx journal read:*), Bash(git diff:*), Write
 ---
 
 Use skill `prose:prose-standards`.
@@ -30,6 +30,8 @@ A verdict on human-facing text, revealed as the run advances — a sealed audit 
 - NEVER excuse a base-catalog match as "single use" or "it works here" — every match outside an override is a finding.
 - NEVER raise a finding on a sentence outside the changed lines when the arguments name a base revision — the unchanged text is read as context only.
 - NEVER gather a finished result and dump its events at the end — each finding is appended the instant it is raised, per the streaming rule in `/project-run-journal`.
+- NEVER build an event in the shell — no heredoc, pipe, `printf`, or interpreter stage. Write each event with the file-write tool to its own file in the session scratch directory and append it through the command form `/project-run-journal` states in `<command_forms>`. The file-write tool writes only event files there; the audit changes no other file.
+- ALWAYS run each journal command as its own command, one at a time, and stop the audit at the first nonzero exit.
 
 </constraints>
 
@@ -54,7 +56,7 @@ One text carries one kind. Register variation inside it is judged by the `/prose
 
 2. Resolve the kind through `<kind_intake>`. Without one — or when the dispatch names no text, paths, or target at all — open the run, append one `severity` `unknown` finding with `rule` `missing-kind` or `missing-target` and `file` `<no target supplied>` when no target exists, complete with the terminal status the rollup yields, seal, and return the token; no text is read.
 
-3. Open the run with `spx journal open --type audit`; capture the run token and append the scope-entered event carrying the run's identity.
+3. Open the run with the `open` form and `--type audit`; capture the run token and append the scope-entered event carrying the run's identity.
 
 4. Read the text under audit — whatever the dispatch names, pastes, or points to — and read the supplied kind's style layer from `/prose-standards` `<kind_layers>` and structural conventions from `/prose-architecture-standards` `<kind_structures>`, plus the governing prose ADR when the repository's spec tree carries one for the target.
 
@@ -70,7 +72,7 @@ One text carries one kind. Register variation inside it is judged by the `/prose
    - append a finding-reported event the instant each finding is raised, one finding per violated rule;
    - append the scope-advanced event recording the sentence as swept before starting the next sentence.
 
-6. Complete and seal. Append the run-completed event with the terminal status the rollup yields, seal the run, and end with the raw run token as the final message — no prose after it.
+6. Complete and seal. Append the run-completed event with the terminal status the rollup yields through the `append` form, run the `seal` form, and end with the raw run token as the final message — no prose after it.
 
 </audit_workflow>
 

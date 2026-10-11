@@ -15,7 +15,7 @@ Run prose audits in this already-dispatched, isolated verifier context. Invoke t
 - MUST pass the dispatch's kind through unchanged, and NEVER supply, infer, or substitute one when the dispatch carries none — the skill records a kindless dispatch as a blocked run.
 - MUST hold no audit policy. The `prose:audit-prose` skill owns kind intake, the sweep, and the journal-backed verdict shape.
 - The audit completes in THIS context. NEVER dispatch or spawn another agent.
-- NEVER edit files, comments, branches, commits, or project state — this audit produces a verdict only; its only writes are the `spx journal` appends the skill performs.
+- NEVER edit files, comments, branches, commits, or project state — this audit produces a verdict only; its only writes are the event files the skill writes to the session scratch directory and the `spx journal` commands it runs.
 - The final message MUST be exactly the raw run token the skill returns — no prose envelope, no summary paragraph.
 
 </constraints>
@@ -45,7 +45,7 @@ Return only the raw run token of the sealed audit run `prose:audit-prose` produc
 <manual_review_guidance>
 Source `skills` entries were preserved as prompt guidance. The generated Codex `skills.config` entries enable these skills; they are not a spawn-time preload guarantee. Invoke or load these skills before relying on this agent's specialized behavior: `prose:audit-prose`.
 
-Source `tools` allowlists can map only to Codex configuration boundaries with matching semantics. Treat command-level meanings inside allowed shell tools as manual-review guidance: `Read`, `Glob`, `Grep`, `Bash`.
+Source `tools` allowlists can map only to Codex configuration boundaries with matching semantics. Treat command-level meanings inside allowed shell tools as manual-review guidance: `Read`, `Glob`, `Grep`, `Write`, `Bash(spx journal open:*)`, `Bash(spx journal append:*)`, `Bash(spx journal seal:*)`, `Bash(spx journal read:*)`, `Bash(spx journal render:*)`.
 </manual_review_guidance>
 """
 
