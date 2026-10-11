@@ -18,6 +18,7 @@ from typing import Protocol
 from uuid import uuid4
 
 from outcomeeng.distribution.installation import (
+    CODEX_CONFIG_PATH,
     CODEX_EXECUTABLE,
     CODEX_HOME_ENV,
     HOME_ENV,
@@ -89,6 +90,12 @@ class AuthenticationMode(StrEnum):
 
 class DiscoveryAuthenticationError(RuntimeError):
     """The selected authentication mechanism cannot safely run discovery."""
+
+
+def provision_disposable_codex_home(home: Path) -> None:
+    """Create native home configuration without declaring any plugin selection."""
+    home.mkdir(parents=True, exist_ok=True)
+    (home / CODEX_CONFIG_PATH.name).touch(exist_ok=True)
 
 
 class ProbeRunner(Protocol):
@@ -354,7 +361,7 @@ class DiscoveryAuthentication:
             root = Path(directory).resolve()
             owner = root / "owner.json"
             consumer = root / "consumer"
-            consumer.mkdir()
+            provision_disposable_codex_home(consumer)
             owner.write_text("{}", encoding="utf-8")
             owner.chmod(0o600)
             identity = owner.stat()
@@ -395,7 +402,7 @@ class DiscoveryAuthentication:
         cwd: Path,
         env: Mapping[str, str],
     ) -> Iterator[subprocess.CompletedProcess[str]]:
-        home.mkdir(parents=True, exist_ok=True)
+        provision_disposable_codex_home(home)
         self.credential_files.add(home / AUTH_FILENAME)
         if self.selection.mode is not AuthenticationMode.SUBSCRIPTION:
             flag = (

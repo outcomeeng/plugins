@@ -168,6 +168,7 @@ from outcomeeng_testing.harnesses.discovery_auth import (
     FILE_STORE_ARGS,
     ProbeRunner,
     credential_free_environment,
+    provision_disposable_codex_home,
     run_probe_process,
     select_authentication,
 )
@@ -3019,8 +3020,8 @@ def observe_real_first_install() -> RealFirstInstallObservation:
             checkout, mirror / CLAUDE_PROJECT_SETTINGS_PATH
         )
         environment = _persistent_environment(selected_root)
-        _prepare_agent_state(environment)
         initial_state = _tree_snapshot(selected_root)
+        _prepare_agent_state(environment)
         project_settings = mirror / CLAUDE_PROJECT_SETTINGS_PATH
         initial_project_settings = (
             project_settings.read_bytes() if project_settings.exists() else None
@@ -3540,6 +3541,7 @@ def observe_codex_subagent_discovery(
             mirror, state, credential_free_environment(original_environment)
         )
         child_environment = dict(plan.commands[0].environment)
+        _prepare_agent_state(child_environment)
         install = auth.run(
             (
                 JUST_BINARY,
@@ -3557,7 +3559,7 @@ def observe_codex_subagent_discovery(
             raise DiscoveryAuthenticationError(
                 f"Discovery installation failed ({install.returncode}): {install.stderr}"
             )
-        codex_home = state / "codex"
+        codex_home = plan.roots.codex_home
         placed_subagent_names = _placed_subagent_names(codex_home)
         schema_path = temporary_root / "subagent-discovery-schema.json"
         schema_path.write_text(
@@ -3781,6 +3783,7 @@ def _persistent_environment(root: Path) -> dict[str, str]:
 def _prepare_agent_state(environment: Mapping[str, str]) -> None:
     for name in STATE_ENV_NAMES:
         Path(environment[name]).mkdir(parents=True, exist_ok=True)
+    provision_disposable_codex_home(Path(environment[CODEX_HOME_ENV]))
 
 
 def _command_scope(command: InstallationCommand) -> str:
@@ -3838,6 +3841,7 @@ def _run_recipe(
     state: Path,
     environment: Mapping[str, str],
 ) -> subprocess.CompletedProcess[str]:
+    _prepare_agent_state(environment)
     return subprocess.run(
         (
             JUST_BINARY,
