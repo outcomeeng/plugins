@@ -66,6 +66,10 @@ _RUN_DRIVER: Final = {
     "invocationRole": "run-driver",
 }
 _JSON_BLOCK: Final = re.compile(r"```json\n(.*?)\n```", re.DOTALL)
+_PERSISTENCE_SECTION: Final = re.compile(
+    r"^<persistence_contract>\n(.*?)\n^</persistence_contract>$",
+    re.DOTALL | re.MULTILINE,
+)
 _START_SELECTORS: Final = re.compile(
     r"spx verification run start (--verification-type \S+ --scope-type \S+) --scope <path>"
 )
@@ -264,9 +268,10 @@ def _run_spx(
 def _payload_templates(
     skill_text: str,
 ) -> tuple[Mapping[str, object], Mapping[str, object]]:
-    section = skill_text.split("<persistence_contract>")[1].split(
-        "</persistence_contract>"
-    )[0]
+    match = _PERSISTENCE_SECTION.search(skill_text)
+    if match is None:
+        raise RuntimeError("the skill states no persistence contract")
+    section = match.group(1)
     blocks = [
         cast(dict[str, object], json.loads(block))
         for block in _JSON_BLOCK.findall(section)
