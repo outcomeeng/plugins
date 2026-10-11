@@ -50,7 +50,7 @@ A sealed `spx verification run` on one node spec, with one scope unit per `[audi
    A file-scoped run takes the audited path as its input so the retained input equals the audited file, while changeset-scoped audits pipe their context JSON.
 
    The command prints a JSON locator; take its `runToken` exactly and use it for every later command. Never pass the whole locator as `--run`.
-4. **Judge.** For each selected assertion, identify the subject its text names, read that subject completely — recovering any truncated read in bounded ranges — and decide whether the assertion holds of it. A violation is a finding carrying the observed and expected states and a severity of `blocking` or `debt`, kept per `${SKILL_DIR}/references/touched-text.md`. Merge the violations of one rule on one assertion into one finding, because a finding's key is its unit key and rule. A subject the text names that cannot be located is a finding against that assertion. An assertion whose text names no identifiable subject is a finding with rule `subject-unnamed`.
+4. **Judge.** For each selected assertion, identify the subject its text names, read that subject completely — recovering any truncated read in bounded ranges — and decide whether the assertion holds of it. A violation is a finding carrying the observed and expected states and a severity of `blocking` or `debt`, whose message opens with the assertion's designator, kept per `${SKILL_DIR}/references/touched-text.md`. Merge the violations of one rule on one assertion into one finding, because a finding's key is its unit key and rule. A subject the text names that cannot be located is a finding against that assertion. An assertion whose text names no identifiable subject is a finding with rule `subject-unnamed`.
 5. **Classify.** Resolve the base and run the diff commands as `${SKILL_DIR}/references/touched-text.md` states, and sort each finding into touched text or standing text.
 6. **Record.** Add one scope unit per selected assertion, then each finding on touched text on its unit, per `<persistence_contract>`. Every selected assertion is `audited` whether it holds or carries findings. A standing finding is recorded nowhere in the run.
 7. **Finish.** Derive `rejected` when a finding on touched text exists and `approved` otherwise, whatever standing findings exist; a spec with no selected assertion finishes `approved` with no unit. Run the finish and render commands:
@@ -64,19 +64,19 @@ A sealed `spx verification run` on one node spec, with one scope unit per `[audi
 
 <persistence_contract>
 
-Add a scope unit with `spx verification run scope add --verification-type audit --scope-type file --scope <path> --run <token> --payload stdin --idempotency-key '<unitId>'`, the payload on stdin per `<stdin_forms>`. The `unitId` is the unit key, `assertion:<slug-or-ordinal-n>:<path>`.
+Add a scope unit with `spx verification run scope add --verification-type audit --scope-type file --scope <path> --run <token> --payload stdin --idempotency-key '<unitId>'`, the payload on stdin per `<stdin_forms>`. The `unitId` is the unit key, `assertion:<designator>:<path>`. The class `spec` and kind `spec` are the pair `spx` accepts for a node spec subject, and the unit key alone carries the assertion's identity; `spx` refuses the class `assertion`.
 
 ```json
 {
   "unitId": "<unit-key>",
-  "auditClass": "assertion",
-  "auditKind": "audit",
+  "auditClass": "spec",
+  "auditKind": "spec",
   "subject": "<path>",
   "coverageRequirement": "required",
   "coverageStatus": "audited",
   "priorContext": {
     "changedFilePartition": "<path>",
-    "concernPartition": "<slug-or-ordinal-n>"
+    "concernPartition": "<designator>"
   },
   "expectedProducer": {
     "producerKind": "skill",
@@ -106,7 +106,7 @@ Add a finding with `spx verification run finding add` and the same selectors, `-
   "rule": "<violated-rule-id>",
   "severity": "<blocking-or-debt>",
   "location": "<subject-path-and-line-or-section>",
-  "message": "<finding-message>",
+  "message": "<designator>: <finding-message>",
   "evidence": {
     "observed": "<observed-state>",
     "expected": "<state the assertion requires>"
