@@ -5,6 +5,7 @@ from __future__ import annotations
 import string
 from dataclasses import dataclass
 from types import ModuleType
+from typing import Any
 
 from hypothesis import strategies as st
 
@@ -95,8 +96,8 @@ class RosterCase:
     and each group lists its members.
     """
 
-    watch: dict
-    inventories: dict
+    watch: dict[str, Any]
+    inventories: dict[str, Any]
     live: dict[str, object]  # position -> its live session
     absent: list[str]  # positions with no session
     failed: dict[str, str]  # position or group label -> the inventory error text
@@ -137,7 +138,7 @@ def roster_cases(draw: st.DrawFn, environment: ModuleType) -> RosterCase:
             detail="",
         )
 
-    entries: list[dict] = []
+    entries: list[dict[str, Any]] = []
     live: dict[str, object] = {}
     absent: list[str] = []
     failed: dict[str, str] = {}
@@ -163,7 +164,7 @@ def roster_cases(draw: st.DrawFn, environment: ModuleType) -> RosterCase:
         else:
             absent.append(name)
 
-    groups: list[dict] = []
+    groups: list[dict[str, Any]] = []
     members: dict[str, list[object]] = {}
     labels = draw(
         st.lists(
@@ -188,7 +189,7 @@ def roster_cases(draw: st.DrawFn, environment: ModuleType) -> RosterCase:
         inventory[backend].extend(found_members)
         members[label] = found_members
 
-    inventories: dict = {}
+    inventories: dict[str, Any] = {}
     for name in backend_names:
         if name in failed_backends:
             inventories[name] = failed_backends[name]

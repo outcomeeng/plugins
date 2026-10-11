@@ -1,4 +1,4 @@
-"""Print each watched session's model, cost, context and weekly quota, costliest first.
+"""Print each watched session's name, cost, context and weekly quota, costliest first.
 
 Every backend is read through the typed operations of its sibling adapter, so
 the table covers each session the backends report.
@@ -19,21 +19,21 @@ UNKNOWN = "?"
 COST_READ_LINES = 8
 COST = re.compile(r"\$([\d,]+\.\d+)")
 CONTEXT = re.compile(r"tokens\)\s*(\d+)%")
-MODEL = re.compile(r"\[(Opus[^\]]*|Sonnet[^\]]*|Haiku[^\]]*)\]")
+NAME = re.compile(r"\[([A-Z][A-Za-z]+ \d[^\]]*)\]")
 WEEK = re.compile(r"7d:\s*(\d+)%")
 CODEX_USED = re.compile(r"(\d+(?:\.\d+)?[KM]) used")
-CODEX_MODEL = "codex"
+CODEX_NAME = "codex"
 
 
 def figures(text: str) -> tuple[str, str, str, str]:
-    """The model, cost, context percent and weekly percent a status line shows."""
+    """The name, cost, context percent and weekly percent a status line shows."""
     cost = COST.findall(text)
     context = CONTEXT.findall(text)
-    model = MODEL.findall(text)
+    name = NAME.findall(text)
     week = WEEK.findall(text)
     codex = CODEX_USED.findall(text)
     return (
-        model[-1] if model else (CODEX_MODEL if codex else UNKNOWN),
+        name[-1] if name else (CODEX_NAME if codex else UNKNOWN),
         cost[-1] if cost else (codex[-1] if codex else UNKNOWN),
         context[-1] if context else UNKNOWN,
         week[-1] if week else UNKNOWN,
@@ -67,11 +67,11 @@ def rows() -> list[tuple[str, str, str, str, str, str]]:
 
 def render(table: Sequence[tuple[str, str, str, str, str, str]]) -> str:
     lines = []
-    for backend, label, model, cost, context, week in sorted(
+    for backend, label, title, cost, context, week in sorted(
         table, key=lambda row: dollars(row[3]), reverse=True
     ):
         lines.append(
-            f"{backend:6} | {label[:34]:34} | {model[:22]:22} | ${cost:>9} "
+            f"{backend:6} | {label[:34]:34} | {title[:22]:22} | ${cost:>9} "
             f"| ctx {context:>3}% | 7d {week}%"
         )
     return "\n".join(lines) + "\n"

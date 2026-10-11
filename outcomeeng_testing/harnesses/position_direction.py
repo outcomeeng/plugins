@@ -363,13 +363,14 @@ class Rig:
         """Advance the clock, then poll once; the events that poll emitted."""
         self.now += advance
         self.state = json.loads(json.dumps(self.state))
-        return self.scripts.monitor.poll(
+        events: list[Any] = self.scripts.monitor.poll(
             self.watch,
             self.state,
             self.now,
             backends=self.backends,
             inbox=None if self.production_inbox else self.inbox,
         )
+        return events
 
 
 # --- real processes ----------------------------------------------------------

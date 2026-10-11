@@ -83,7 +83,7 @@ RULES = {
         "read the pane: a read a higher rank ordered, approve; a guard or destructive prompt, "
         "Escape; never allow"
     ),
-    "idle": "read its last lines: a finished leg its skill continues is left alone; open work gets its next step; a question to the operator it waits on is answered by its owner within 15 minutes, or asked through AskUserQuestion when none can",
+    "idle": "read its last lines: a finished leg its skill continues is left alone; open work gets its next step; a question to the operator it waits on is answered by its owner within 15 minutes, or asked through the structured-question tool when none can",
     "background": "its turn ended with work still running; the harness re-invokes it when that work ends",
     "stalled": "read the pane and the transcript; a stall over 15 min is a step-in trigger",
     "absent": "open work goes to restart.md",
