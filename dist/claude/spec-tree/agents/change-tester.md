@@ -5,6 +5,7 @@ name: change-tester
 description: >-
   Round session `/execute-change` launches by exact name when a Mutation row needs routed `[test]` evidence produced or repaired through `/test`.
 disallowedTools: Agent, AskUserQuestion
+
 skills:
   - spec-tree:test
 ---
