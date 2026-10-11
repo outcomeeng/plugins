@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.12.2
+
+### Changed
+
+- **`/orchestrate-change` ends its checks of an Executor at `Applied` or `Abandoned`.** Check reads the Change's `Lifecycle` and collects the Executor's pane when the value is `Applied` or `Abandoned`; the skill names no `Refined` value, because no Change closes `Refined` any longer.
+
 ## 0.12.1
 
 ### Changed

@@ -44,11 +44,11 @@ Revisit and settlement condition: once the runner proves its value in use, its l
 
 Defect class: `evidence`.
 
-Finding: `reconcile` and the finding readers of `audit_change_run.py` block with `unreadable-output` when the rendered projection carries no `auditScopeUnits` array of objects or a finding without an integer `seq` and a payload object. `tests/test_audit_change_run.compliance.l1.py` drives the runner against the real SPX store, which never renders such a projection, so removing either block leaves every linked test passing. The same holds for the other blocked-result branches the real store never reaches: the runner's command wrapper on an `OSError`, a `ValueError`, or undecodable output, the line reader on unparseable or empty command output, the findings reader on a findings group that is not an array, the `retained-input-mismatch` block of `start`, the `OSError` branch of the stdin read in `main`, and the serializer's `RecursionError` fallback. The test-evidence audit of the changes node on head `c9124f951d82668d846e303686b236a52f72a309` raised this as a `WARNING` coverage finding against `src/plugins/spec-tree/skills/audit-change/scripts/audit_change_run.py`.
+Finding: `reconcile` and the finding readers of `audit_change_run.py` block with `unreadable-output` when the rendered projection carries no `auditScopeUnits` array of objects or a finding without an integer `seq` and a payload object. `tests/test_audit_change_run.compliance.l1.py` drives the runner against the real SPX store, which never renders such a projection, so removing either block leaves every linked test passing. The same holds for the other blocked-result branches the real store never reaches: the runner's command wrapper on an `OSError`, a `ValueError`, or undecodable output, the line reader on unparseable or empty command output, the findings reader on a findings group that is not an array, the `retained-input-mismatch` block of `start`, the `OSError` branch of the stdin read in `main`, and the serializer's `RecursionError` fallback. The test-evidence audit of the changes node on head `c9124f951d82668d846e303686b236a52f72a309` raised this as a `WARNING` coverage finding against `src/plugins/spec-tree/skills/audit-change/scripts/audit_change_run.py`. The CI review of [PR 643](https://github.com/outcomeeng/plugins/pull/643#issuecomment-6103177670) raised the same class against the `read-relations` and `count-limits` operations: no linked case drives either, among them an integer-valued Parent field and a field-value connection that fills its bound. The node declares `malleability: spec`, which requires no test evidence, so the finding is recorded here and no case is added.
 
-Impact: the runner's refusal of a malformed projection is unobserved, so a regression there reads a run with no coverage as an empty one.
+Impact: the runner's refusal of a malformed projection is unobserved, so a regression there reads a run with no coverage as an empty one. The same holds for the Parent decoding and the field-value bound of `read-relations` and for the counts of `count-limits`.
 
-Revisit and settlement condition: the runner's SPX boundary admits a controlled implementation of its command runner that renders a malformed projection, and a linked case asserts the `unreadable-output` block for each malformed shape.
+Revisit and settlement condition: the runner's SPX boundary admits a controlled implementation of its command runner that renders a malformed projection, and a linked case asserts the `unreadable-output` block for each malformed shape; linked cases then also cover `read-relations` with an integer-valued and a float-valued Parent value and with a field-value connection that fills its bound, and `count-limits` for each limit.
 
 ## DEBT [skill-contract]: audit-change's grants deviate from the audit baseline, its reason table stays inline and its verdict returns the reduced finish result
 
@@ -148,3 +148,39 @@ Evidence: `finding_key` and its caller `_add_finding` in `audit_change_run.py`, 
 Impact: a `filed` finding recorded once can reappear under a new key after an unrelated finding changes position, so a later run cannot match it to the recorded entry and the Author records it again.
 
 Revisit and settlement condition: the runner builds the key from the unit and the rule alone, and a linked case asserts that one finding keeps its key when the list around it changes.
+
+## DEBT [property-quality]: the Sliced Parent criterion and the Framed Nodes criterion read as in tension
+
+Defect class: `property-quality`.
+
+Finding: [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) states Sliced as "the Framed Definition of Ready holds; and ... A Parent is Sliced when every child exists naming it in `parent` and its record carries neither `## Nodes` nor `## Assertion operations`", and Framed as "`## Nodes` names every affected or intended Node". The cumulative Framed criterion and the Parent's no-Nodes condition read as in tension unless an empty Node set satisfies the Framed criterion vacuously, and the PDR does not say so. Location: Definitions of Ready / Sliced, and Record table (Framed `## Nodes`).
+
+Evidence: `spec-tree:pdr-auditor` launch 1 on [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) at commit `a4f46721c9e1d94beddb8295eba53ecfb496e0c1`, verdict `APPROVED`, rule `property-quality`, class `ambiguous-criterion`, severity `WARNING`. The audit judged it non-blocking because the vacuous reading is available and two reviewers could reach the same verdict.
+
+Impact: a reviewer who reads the Framed criterion as requiring at least one named Node rejects a Sliced Parent the Sliced criterion admits.
+
+Revisit and settlement condition: the PDR states that an empty Node set satisfies the Framed `## Nodes` criterion for a Parent, or states the Parent's Framed criterion apart from the Node-bearing one; one PDR audit then raises no `ambiguous-criterion` finding on the Sliced and Framed criteria.
+
+## DEBT [property-quality]: a top-level Parent with no Nodes is both a Parent and a root
+
+Defect class: `property-quality`.
+
+Finding: [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) uses "Parent" for a Change that others name in `parent` and for the target of a Change's `parent` field. It states "a Change with neither a Parent nor Nodes is a root", "A Parent that has a Parent closes `Applied` when every child has closed", and "A root closes `Applied` when the operator judges its Intent met". A top-level Parent with `parent: null` and no Nodes is therefore both a Parent and a root, and the PDR does not say which close rule governs it. Location: Record (type derivation) and Lifecycle (close rule).
+
+Evidence: `spec-tree:pdr-auditor` launch 1 on [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) at commit `a4f46721c9e1d94beddb8295eba53ecfb496e0c1`, verdict `APPROVED`, rule `property-quality`, class `ambiguous-criterion`, severity `WARNING`.
+
+Impact: two reviewers can apply different close rules to a top-level Parent, one closing it when its children have closed and one waiting for the operator's judgment of its Intent.
+
+Revisit and settlement condition: the PDR names the close rule that governs a Change with children and `parent: null`, or separates the term for a Change with children from the term for the target of `parent`; one PDR audit then raises no `ambiguous-criterion` finding on the type derivation and the close rule.
+
+## DEBT [atemporal-voice]: the Rationale justifies the Compatibility rule by the prior record population
+
+Defect class: `atemporal-voice`.
+
+Finding: the Rationale of [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) reads "converting a record in the Output form at its next revision avoids a mass rewrite of published records". The sentence justifies the Compatibility rule by reference to the prior record population. It is stated as present-tense rationale and names no past event.
+
+Evidence: `spec-tree:pdr-auditor` launch 1 on [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) at commit `a4f46721c9e1d94beddb8295eba53ecfb496e0c1`, verdict `APPROVED`, rule `atemporal-voice`, class `temporal-language`, severity `WARNING`, location Rationale; the audit judged it non-blocking.
+
+Impact: a later audit can read the sentence as history and raise the finding again.
+
+Revisit and settlement condition: the Rationale justifies the Compatibility rule by a property of the record forms alone, with no reference to a record population; one PDR audit then raises no `temporal-language` finding on the Rationale.

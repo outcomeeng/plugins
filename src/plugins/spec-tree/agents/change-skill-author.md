@@ -1,7 +1,7 @@
 ---
 name: change-skill-author
 description: >-
-  Round session `/execute-change` launches by exact name when an Activity needs a skill surface (a `SKILL.md`, another file in a skill directory, or an authored shared fragment) produced or repaired through `instructions:create-skill`.
+  Round session `/execute-change` launches by exact name when a Mutation row needs a skill surface (a `SKILL.md`, another file in a skill directory, or an authored shared fragment) produced or repaired through `instructions:create-skill`.
 profile: standard
 targets:
   - claude

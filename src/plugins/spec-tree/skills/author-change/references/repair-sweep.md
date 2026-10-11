@@ -14,14 +14,14 @@ A same-class site is any location in the candidate, in the front matter or any `
 
 A changed-section dependent is text in another section or in the front matter that cites, quotes, restates, or relies on text the repair changes and now disagrees with it. Check each edit against these dependents:
 
-| Edit                                          | Dependents to check                                                                            |
-| --------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Changed `## Nodes` row or target malleability | Every `## Assertion operations` entry, `## Decisions` answer, and Activity that names the Node |
-| Changed assertion operation                   | Every Decision that settles it and every Activity that carries it out                          |
-| Changed Decision                              | Every section whose content the Decision determines                                            |
-| Changed Activity, count, or sequence          | Every Activity that depends on it and every sentence that states the number or order           |
-| Changed `## Slice` boundary                   | Every Node, Activity, and blocker that lies outside the new boundary                           |
-| Changed `blocked_by` or `refined_from`        | Every section that names the blocker or predecessor                                            |
+| Edit                                                                     | Dependents to check                                                                                      |
+| ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| Changed `## Nodes` row, Malleability before, or Malleability after       | Every `## Assertion operations` entry, `## Decisions` answer, and `## Mutations` row that names the Node |
+| Changed assertion operation                                              | Every Decision that settles it and every `## Mutations` row that carries it out                          |
+| Changed Decision                                                         | Every section whose content the Decision determines                                                      |
+| Changed `## Mutations` row, count, or sequence                           | Every `## Mutations` row that depends on it and every sentence that states the number or order           |
+| Changed `## Mutations` repository, observable check, or Node transitions | Every Node, `## Mutations` row, and blocker that lies outside the new slice                              |
+| Changed `blocked_by` or `refined_from`                                   | Every section that names the blocker or predecessor                                                      |
 
 </changed_dependent>
 

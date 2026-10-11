@@ -1,7 +1,7 @@
 ---
 name: change-subagent-author
 description: >-
-  Round session `/execute-change` launches by exact name when an Activity needs a subagent definition produced or repaired through `instructions:create-subagent`.
+  Round session `/execute-change` launches by exact name when a Mutation row needs a subagent definition produced or repaired through `instructions:create-subagent`.
 profile: standard
 targets:
   - claude

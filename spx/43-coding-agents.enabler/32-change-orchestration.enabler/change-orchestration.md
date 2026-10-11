@@ -22,3 +22,4 @@ The Orchestrator is a position, never one of the five Roles: it holds no Role fo
 - ALWAYS: the Orchestrator checks each Executor at regular intervals and, finding one stalled or near its context limit, prompts, compacts or restarts it; a restarted Executor relaunches into the pane its stop kept, after the Change is claimed again for that worktree, and continues from the Change and its latest Handoff ([audit])
 - ALWAYS: the Orchestrator answers no question the Executor raises; it passes each one verbatim, once per Handoff, to the principal it reports to as a message record of `spx/43-coding-agents.enabler/21-agent-communication.enabler` ([audit])
 - NEVER: the Orchestrator acts as a Verifier ([audit])
+- ALWAYS: `/orchestrate-change` reads the Change's Lifecycle from the store at each check, and ends its checks of that Executor when the Lifecycle is `Applied` or `Abandoned` ([audit])
