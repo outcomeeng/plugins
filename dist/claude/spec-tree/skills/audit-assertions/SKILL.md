@@ -5,12 +5,12 @@ description: >-
   spec against the subject that assertion names, and records the judgment as one
   scope unit per assertion in an SPX file-scoped verification run.
 argument-hint: "<JSON object with path and runDriver>"
-allowed-tools: Read, Grep, Glob, Bash(spx verification run:*), Bash(printf:*), Skill
+allowed-tools: Read, Grep, Glob, Bash(spx verification run:*), Bash(printf:*), Bash(git merge-base:*), Bash(git diff:*), Skill
 ---
 
 <objective>
 
-A sealed `spx verification run` on one node spec, with one scope unit per `[audit]` assertion keyed by its rule slug (a pathless `[audit]` assertion by its ordinal in the spec) and every finding recorded on its unit, returned as the run token with the rendered projection, whose `terminalStatus` is `approved` or `rejected`; or the complete `BLOCKED` diagnostic when the run cannot finish.
+A sealed `spx verification run` on one node spec, with one scope unit per `[audit]` assertion keyed by its rule slug (a pathless `[audit]` assertion by its ordinal in the spec) and every finding on touched text recorded on its unit, returned as the run token with the rendered projection, whose `terminalStatus` is `approved` or `rejected`, followed by each other finding as a `filed` line; or the complete `BLOCKED` diagnostic when the run cannot finish.
 
 </objective>
 
@@ -24,6 +24,7 @@ A sealed `spx verification run` on one node spec, with one scope unit per `[audi
 - ALWAYS pass each payload on stdin as one rendered JSON object in the form `<persistence_contract>` names for the harness; NEVER assemble or repair a payload through a temporary file, helper file, command substitution, or post-hoc text substitution.
 - ALWAYS issue each `spx verification run` mutation as its own command and wait for its exit before the next one — parallel writes race sequence assignment and corrupt the sealed journal.
 - NEVER run deterministic verification, delegate the audit to another session, or finish a run whose inspection is incomplete because of elapsed time, context pressure, or unfinished reading.
+- NEVER reject, or record on a unit, a finding that lies outside touched text; classify every finding as `${CLAUDE_SKILL_DIR}/references/touched-text.md` states and return each standing finding as `filed`.
 - NEVER retry a rejected command with a rewritten payload; a nonzero exit ends the audit with `BLOCKED`.
 
 </constraints>
@@ -49,9 +50,10 @@ A sealed `spx verification run` on one node spec, with one scope unit per `[audi
    A file-scoped run takes the audited path as its input so the retained input equals the audited file, while changeset-scoped audits pipe their context JSON.
 
    The command prints a JSON locator; take its `runToken` exactly and use it for every later command. Never pass the whole locator as `--run`.
-4. **Judge.** For each selected assertion, identify the subject its text names, read that subject completely — recovering any truncated read in bounded ranges — and decide whether the assertion holds of it. A violation is a finding carrying the observed and expected states. A subject the text names that cannot be located is a finding against that assertion. An assertion whose text names no identifiable subject is a finding with rule `subject-unnamed`.
-5. **Record.** Add one scope unit per selected assertion, then each finding on its unit, per `<persistence_contract>`. Every selected assertion is `audited` whether it holds or carries findings.
-6. **Finish.** Derive `rejected` when any finding exists and `approved` otherwise; a spec with no selected assertion finishes `approved` with no unit. Run the finish and render commands:
+4. **Judge.** For each selected assertion, identify the subject its text names, read that subject completely — recovering any truncated read in bounded ranges — and decide whether the assertion holds of it. A violation is a finding carrying the observed and expected states and a severity of `blocking` or `debt`. A subject the text names that cannot be located is a finding against that assertion. An assertion whose text names no identifiable subject is a finding with rule `subject-unnamed`.
+5. **Classify.** Resolve the base and run the diff commands as `${CLAUDE_SKILL_DIR}/references/touched-text.md` states, and sort each finding into touched text or standing text.
+6. **Record.** Add one scope unit per selected assertion, then each finding on touched text on its unit, per `<persistence_contract>`. Every selected assertion is `audited` whether it holds or carries findings. A standing finding is recorded nowhere in the run.
+7. **Finish.** Derive `rejected` when a finding on touched text exists and `approved` otherwise, whatever standing findings exist; a spec with no selected assertion finishes `approved` with no unit. Run the finish and render commands:
 
    ```bash
    spx verification run finish --verification-type audit --scope-type file --scope <path> --run <token> --terminal-status <approved-or-rejected>
@@ -102,7 +104,7 @@ Add a finding with `spx verification run finding add` and the same selectors, `-
   "unitId": "<accepted-unit-key>",
   "producerIdentity": "<the unit's expectedProducer object, repeated exactly>",
   "rule": "<violated-rule-id>",
-  "severity": "blocking",
+  "severity": "<blocking-or-debt>",
   "location": "<subject-path-and-line-or-section>",
   "message": "<finding-message>",
   "evidence": {
@@ -140,7 +142,7 @@ Where the runner requires one physical command line, use `printf '%s\n' '<render
 
 <verdict_format>
 
-Return the run token and the unchanged `spx verification run render` output; its `terminalStatus` is authoritative. Add no `APPROVED` or `REJECTED` envelope and no restated findings.
+Return the run token and the unchanged `spx verification run render` output; its `terminalStatus` is authoritative. Add no `APPROVED` or `REJECTED` envelope and no restated findings. After the projection, return each standing finding on its own line in the form `${CLAUDE_SKILL_DIR}/references/touched-text.md` gives, or `filed: none`.
 
 When a command exits nonzero or a prerequisite is absent, return:
 
@@ -159,9 +161,10 @@ stderr: <exact-stderr-or-none>
 <success_criteria>
 
 - Every `[audit:{rule-slug}]` and pathless `[audit]` assertion of the target spec has exactly one `audited` scope unit keyed by its slug or ordinal, and no assertion carrying another tag has a unit.
-- Every finding sits on an accepted unit, names the violated constraint, the subject location, and observed-versus-expected evidence, and rests on the subject's own content.
+- Every recorded finding lies on touched text and sits on an accepted unit, names the violated constraint, the subject location, and observed-versus-expected evidence, and rests on the subject's own content.
+- Every standing finding appears as a `filed` line carrying its key, `baseRefEvidence`, and `issuesEntry`, and rejects no run.
 - The run was started before the first judgment, finished with a terminal status derived from the recorded findings, and rendered.
-- The same spec and subjects yield the same units, finding keys, and terminal status.
-- The output is the run token with the unchanged rendered projection, or the complete `BLOCKED` diagnostic.
+- The same spec, subjects, and base yield the same units, finding keys, and terminal status.
+- The output is the run token with the unchanged rendered projection and the `filed` lines, or the complete `BLOCKED` diagnostic.
 
 </success_criteria>
