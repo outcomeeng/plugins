@@ -168,13 +168,21 @@ def test_inbox_sender_labels_render_the_label_with_the_stable_name_or_the_name_a
             label_case,
         )
 
-        # A row whose captured label is null stays unlabeled beside the varied row.
+        # Beside the varied row, each later row is paired with its own captured
+        # label by position: a null label stays unlabeled, and a captured label
+        # (a printable two-word label free of delimiters) renders with its row's
+        # stable name whatever the first row's label is.
         for display, item in zip(displays[1:], items[1:], strict=True):
-            if item[module.STORE_SENDER_DISPLAY_NAME_FIELD] is None:
-                assert (
-                    display[module.SENDER_DISPLAY_FIELD]
-                    == item[module.STORE_FROM_FIELD]
-                )
+            captured_label = item[module.STORE_SENDER_DISPLAY_NAME_FIELD]
+            row_stable_name = cast(str, item[module.STORE_FROM_FIELD])
+            if captured_label is None:
+                expected_row = row_stable_name
+            else:
+                expected_row = f"{captured_label} <{row_stable_name}>"
+            assert display[module.SENDER_DISPLAY_FIELD] == expected_row, (
+                captured.capture,
+                item[module.STORE_ID_FIELD],
+            )
 
         # The projection leaves the normalized records and their routing alone.
         records = cast(list[dict[str, object]], data[module.RECORDS_FIELD])
