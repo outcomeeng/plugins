@@ -10,6 +10,13 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.105.3
+
+### Changed
+
+- **The merge policy of `merging-standards` converges a local review once every remaining valid finding falls on a recorded class of text the governing Change forbids the Executor to change.** Such a finding is recorded once in the governing node's `ISSUES.md`, quoting the cited text and location verbatim with no derived count or paraphrase. A later finding whose cited text contains a recorded quotation at the same location is excluded from convergence by string match, a round converges when its only valid findings fall on excluded classes, and a commit that only adds such records needs no new review round. A finding on text the Executor may change is never excluded. Before this change, convergence required a round with no valid finding, so each commit that recorded a finding on unchangeable text started another full review.
+- **The same-class sweep of the merge policy requires a repair that rewrites a sentence claiming derivation from another rule to align the sentence with its source condition by condition, or to remove the claim, before the next Verifier dispatch.** Before this change, such a sentence could be rewritten repeatedly with each version's claim still unchecked against its source.
+
 ## 0.105.2
 
 ### Changed
