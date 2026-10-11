@@ -44,6 +44,7 @@ from outcomeeng_testing.harnesses.discovery_auth import (
     DiscoveryAuthenticationError,
     ProbeRunner,
     credential_free_environment,
+    provision_disposable_codex_home,
     select_authentication,
 )
 from outcomeeng_testing.harnesses.installation import mirror_installation_inputs
@@ -202,6 +203,7 @@ def _execute_row(
     plan = build_isolated_installation_plan(
         checkout, row.state_root, _isolated_environment(environment)
     )
+    provision_disposable_codex_home(plan.roots.codex_home)
     execute_installation(plan, interval.install)
     child_environment = dict(plan.commands[0].environment)
     runners = NativeExecutionRunners(
@@ -209,7 +211,7 @@ def _execute_row(
     )
     if interval.authentication is not None:
         with interval.authentication.authenticated_home(
-            row.state_root / "codex", cwd=checkout, env=child_environment
+            plan.roots.codex_home, cwd=checkout, env=child_environment
         ):
             return run_native_profile_row(
                 row, checkout=checkout, environment=child_environment, runners=runners
