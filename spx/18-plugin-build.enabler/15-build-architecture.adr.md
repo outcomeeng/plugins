@@ -17,8 +17,10 @@ independent overrides, and incompatible configurations fail before output writes
 A source guard covers all of `src/`, including conditional blocks and otherwise
 ignored files, rejecting literal model identifiers and authored assignments of
 native model or reasoning controls. Its vocabulary comes from the configuration
-owner. Ordinary prose words, a read of a field, and the text of a message are not
-configuration assignments; the guard decides by the syntactic form of the binding.
+owner. Ordinary prose words are not configuration assignments. A field bound to
+an expression that reads a value, and a field bound to a placeholder that opens
+message text, are no configuration assignment; every other binding, an unquoted
+value included, is an authored assignment.
 
 ## Rationale
 

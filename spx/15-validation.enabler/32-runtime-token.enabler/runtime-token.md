@@ -27,11 +27,14 @@ CAN keep each generated target's output naming only its own native tools and ins
 
 - NEVER: the configuration guard reports a native model or reasoning field
   bound to an expression that reads a value — a call, a subscript, or an
-  attribute access — as an assignment; only a field bound to a literal or to a
-  build template token is an authored assignment
+  attribute access — as an authored assignment
   ([test](tests/test_profile_configuration.mapping.l1.py)).
-- NEVER: the configuration guard reports a native field name followed by an
-  interpolation placeholder inside message text as an assignment
+- NEVER: the configuration guard reports a native model or reasoning field
+  bound to an interpolation placeholder that opens message text as an authored
+  assignment ([test](tests/test_profile_configuration.mapping.l1.py)).
+- ALWAYS: the configuration guard reports every other binding of a native model
+  or reasoning field as an authored assignment, an unquoted value such as a
+  YAML `effort: high` included
   ([test](tests/test_profile_configuration.mapping.l1.py)).
 
 ### Compliance
@@ -55,6 +58,10 @@ CAN keep each generated target's output naming only its own native tools and ins
 - ALWAYS: the configuration guard decides by the syntactic form of the binding
   alone and derives no semantic role of the surrounding code
   ([test](tests/test_profile_configuration.compliance.l1.py)).
+- ALWAYS: the configuration guard reports a native model or reasoning field
+  bound to a bare name, such as `effort = level`, and a field bound to an
+  interpolation placeholder that does not open message text, as an authored
+  assignment ([test](tests/test_profile_configuration.compliance.l1.py)).
 - NEVER: the validator passes a raw runtime-divergent token — a name registered in a guard-enforced kind (`tool`, `field`, `file`) of the build's runtime-token registry — in a non-ignored file under `src/plugins/` — because that literal ships into a target whose runtime does not provide it ([test](tests/test_runtime_token.compliance.l1.py))
 - ALWAYS: the validator derives its forbidden-name set from the guard-enforced kinds (`tool`, `field`, `file`) of the build's runtime-token registry rather than a copied literal list — the registry is the single source of truth for which names diverge per runtime ([test](tests/test_runtime_token.mapping.l1.py))
 - NEVER: the validator's forbidden-name set includes a name registered only in the review-only `term` kind — concept terms are common words a whole-token match would flag throughout prose, so the guard excludes them and review covers them instead ([test](tests/test_runtime_token.compliance.l1.py))
