@@ -165,7 +165,14 @@ def roster_cases(draw: st.DrawFn, environment: ModuleType) -> RosterCase:
 
     groups: list[dict] = []
     members: dict[str, list[object]] = {}
-    labels = draw(st.lists(position_names(), unique=True, min_size=0, max_size=2))
+    labels = draw(
+        st.lists(
+            position_names().filter(lambda label: label not in names),
+            unique=True,
+            min_size=0,
+            max_size=2,
+        )
+    )
     for label in labels:
         backend = draw(st.sampled_from(backend_names))
         prefix = fresh_path("/pools")
