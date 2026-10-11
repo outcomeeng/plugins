@@ -19,6 +19,12 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 - **`/skill-standards` lets an audit that passes payload files grant the file-write tool.** An `audit-*` skill that passes payload files to run-recording commands adds the harness's file-write tool beside its read tools, limited to payload files in the session scratch directory, and grants no Bash stage that builds a payload in the shell. The audit still changes no file beyond those payload files and the run journal its own recording commands write, and `Edit` stays withheld. The `audit_skill_grants` rule, the audit-capabilities guidance, and the auditor skeleton's constraints state the same boundary, and the caller-independence example no longer names a heredoc or `printf` pipe form. Before this change, the standard barred `Write` from every audit, which contradicted the payload-file form that `/audit-skill` and the `/create-skill` auditor template teach.
 
+## 0.21.5
+
+### Changed
+
+- **`skill-auditor` grants the file-write tool in place of the `printf` pipe.** The agent that drives `/audit-skill` now grants `Write` beside its read tools and no longer grants `Bash(printf '%s\n':*)`, so it can write the payload files the skill passes by path to its run-recording commands. Its constraint on edits names those payload files as the one permitted write. Before this change, the agent granted the `printf` form that the dangerous-command guard blocked and withheld the file-write tool that the skill's payload-file form requires, which left a run open with no sealed verdict. Change: https://github.com/outcomeeng/changes/issues/425.
+
 ## 0.21.4
 
 ### Changed

@@ -3,7 +3,7 @@ name: skill-auditor
 description: >-
   ALWAYS invoke when auditing, reviewing, or evaluating SKILL.md files for best
   practices compliance, or when the user asks to audit a skill.
-tools: Read, Grep, Glob, {{! tool('use_skill') !}}, Bash(python3 -c 'from pathlib import Path; import sys; print(len(Path(sys.argv[1]).read_text(encoding="utf-8")))':*), Bash(git rev-parse:*), Bash(git diff:*), Bash(git status:*), Bash(realpath:*), Bash(spx --version), Bash(spx verification run start:*), Bash(spx verification run status:*), Bash(spx verification run scope add:*), Bash(spx verification run finding add:*), Bash(spx verification run finish:*), Bash(spx verification run render:*), Bash(printf '%s\n':*)
+tools: Read, Grep, Glob, {{! tool('use_skill') !}}, Bash(python3 -c 'from pathlib import Path; import sys; print(len(Path(sys.argv[1]).read_text(encoding="utf-8")))':*), Bash(git rev-parse:*), Bash(git diff:*), Bash(git status:*), Bash(realpath:*), Bash(spx --version), Bash(spx verification run start:*), Bash(spx verification run status:*), Bash(spx verification run scope add:*), Bash(spx verification run finding add:*), Bash(spx verification run finish:*), Bash(spx verification run render:*), Write
 profile: standard
 skills:
   - instructions:audit-skill
@@ -22,7 +22,7 @@ The skill owns standards loading, judgment, coverage, persistence, and rendering
 
 <constraints>
 
-- NEVER edit files, claims, comments, branches, commits, pull requests, or project state. Audit persistence uses only the loaded skill's SPX commands.
+- NEVER edit files, claims, comments, branches, commits, pull requests, or project state. Audit persistence uses only the loaded skill's SPX commands and the payload files the loaded skill directs to be written with the file-write tool.
 - NEVER search for, dispatch, or spawn another agent, verifier, or nested audit, and NEVER invoke `codex exec`, `claude`, or any other agent CLI. Missing nested-agent or multi-agent tools are expected inside this isolated verifier — not a blocker.
 - NEVER supply audit policy, a verdict, a rewrite, or a replacement projection from this wrapper.
 - NEVER treat frontmatter skill enablement as proof that the skill body is loaded.
