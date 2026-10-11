@@ -6,7 +6,7 @@ description: >-
   and agent-prompt-standards rule catalogs, and records the judgment through an SPX
   changeset-scoped verification run.
 argument-hint: "<JSON object with path, runDriver, and optional base>"
-allowed-tools: Read, Grep, Glob, {{! tool('use_skill') !}}, Bash(git rev-parse:*), Bash(git diff:*), Bash(git status:*), Bash(realpath:*), Bash(spx --version), Bash(spx verification run start:*), Bash(spx verification run status:*), Bash(spx verification run scope add:*), Bash(spx verification run finding add:*), Bash(spx verification run finish:*), Bash(spx verification run render:*), Bash(printf '%s\n':*)
+allowed-tools: Read, Grep, Glob, {{! tool('use_skill') !}}, Bash(git rev-parse:*), Bash(git diff:*), Bash(git status:*), Bash(realpath:*), Bash(spx --version), Bash(spx verification run start:*), Bash(spx verification run status:*), Bash(spx verification run scope add:*), Bash(spx verification run finding add:*), Bash(spx verification run finish:*), Bash(spx verification run render:*), Write
 ---
 
 {!% require_skill 'instructions:agent-prompt-standards' %!}
@@ -21,7 +21,7 @@ A sealed changeset-scoped `spx verification run` over the one {{! term('configur
 
 <constraints>
 
-- NEVER modify the target or any product file, launch the target, or run an authoring workflow; the only state this audit changes is its own SPX verification-run journal.
+- NEVER modify the target or any product file, launch the target, or run an authoring workflow; the only state this audit changes is its payload files in the session scratch directory and the SPX verification-run journal its own recording commands write. The file-write tool writes payload files only.
 - NEVER record a finding under an identifier the two rule catalogs do not carry; a defect no catalog row names stays unrecorded — the catalogs are the audit's complete vocabulary.
 - NEVER choose a severity; a finding on touched text carries the severity its catalog row declares, and a finding outside touched text carries `filed`.
 - NEVER reject on text the changeset leaves unchanged and does not invalidate, and NEVER raise a recorded finding's severity or let a `filed` finding reject unless the run names a changed basis. `${CLAUDE_SKILL_DIR}/references/touched-text.md` defines touched text, the finding key, and the `filed` form.
@@ -56,10 +56,10 @@ Use skill `instructions:instructions-plugin`. Invoke it with the verb `version` 
 
 <execution_sequence>
 
-1. **Start the run.** Render the start input as one JSON object `{"definition":"<definition-file>","base":"<base-oid>","head":"<head-oid>"}` and pass it on stdin in the form `<persistence_contract>` names for the run's harness environment; the one-line form is:
+1. **Start the run.** Render the start input as one JSON object `{"definition":"<definition-file>","base":"<base-oid>","head":"<head-oid>"}` and pass it by path as `<persistence_contract>` states:
 
    ```bash
-   printf '%s\n' '<rendered-input>' | spx verification run start --verification-type audit --scope-type changeset --scope '<base-oid>..<head-oid>' --input stdin
+   spx verification run start --verification-type audit --scope-type changeset --scope '<base-oid>..<head-oid>' --input '<start-file>'
    ```
 
    Extract the `runToken` field of the returned locator and use exactly that token for every later command.
@@ -123,10 +123,10 @@ These objects are the sanctioned SPX audit payload schema for this auditor; use 
 }
 ```
 
-Pass each rendered scope object to its command; the one-line form is:
+Write each rendered scope object to its own payload file and pass the file by path:
 
 ```bash
-printf '%s\n' '<rendered-scope-object>' | spx verification run scope add --verification-type audit --scope-type changeset --scope '<base-oid>..<head-oid>' --run '<run-token>' --idempotency-key '<unit-key>' --payload stdin
+spx verification run scope add --verification-type audit --scope-type changeset --scope '<base-oid>..<head-oid>' --run '<run-token>' --idempotency-key '<unit-key>' --payload '<scope-file>'
 ```
 
 A finding copies the definition unit's `expectedProducer` object as `producerIdentity` and its complete `producerProvenance` object, and carries `rule`, the catalog identifier; `severity`, the row's `blocking` or `debt` for a finding on touched text and `filed` for any other finding; `location`, every file-and-line or section where the rule is violated, separated by `;`; `message`; and `evidence` with `observed` and `expected` strings. A `filed` finding additionally carries a top-level `baseRefEvidence` string, the diff range `<base-oid>..<head-oid>` showing that every location lies outside the change, and a top-level `issuesEntry` object with the strings `path` and `heading`, where `path` is the `ISSUES.md` of the nearest node that governs the audited artifact, found by the Spec Tree foundation's governing-node search for product content, or the product root's `spx/ISSUES.md` when no node governs it, and `heading` is the heading of the entry that records the finding. A `blocking` or `debt` finding carries neither field:
@@ -153,20 +153,21 @@ A `filed` finding adds these two top-level fields to that object:
 }
 ```
 
-Pass each rendered finding object the same way; the one-line form is:
+Write each rendered finding object to its own payload file and pass it the same way:
 
 ```bash
-printf '%s\n' '<rendered-finding-object>' | spx verification run finding add --verification-type audit --scope-type changeset --scope '<base-oid>..<head-oid>' --run '<run-token>' --idempotency-key 'instructions:subagent:definition:<definition-file>:<rule-id>' --payload stdin
+spx verification run finding add --verification-type audit --scope-type changeset --scope '<base-oid>..<head-oid>' --run '<run-token>' --idempotency-key 'instructions:subagent:definition:<definition-file>:<rule-id>' --payload '<finding-file>'
 ```
 
-A finding's idempotency key is `<unit>:<rule-id>`, its unit's `unitId` and the catalog identifier joined by `:`. Every payload-bearing command — `start`, `scope add`, and `finding add` — takes its JSON on stdin, in the form the harness environment of the run accepts:
+A finding's idempotency key is `<unit>:<rule-id>`, its unit's `unitId` and the catalog identifier joined by `:`. Every payload-bearing command — `start`, `scope add`, and `finding add` — takes its JSON from a file, never from a heredoc, a pipe, or an inline argument; the dangerous-command guard blocks those forms:
 
-| Harness environment                                                                                                                    | Payload form                                                                                                                                                                                       |
-| -------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Interactive Claude Code or Codex session, which accepts multiline shell                                                                | A quoted heredoc: the command as shown without its `printf '%s\n' '<rendered-object>' \|` stage, followed by `<<'JSON'`, then the rendered object on its own line, then a line holding only `JSON` |
-| Programmatic Claude Code or Codex run, and a hosted runner such as GitHub Actions, where the runner requires one physical command line | The one-line `printf '%s\n' '<rendered-object>' \| <command>` form shown                                                                                                                           |
+- ALWAYS write each payload with the file-write tool to its own file in the scratch directory the harness names for the session, under a name unique to this run and payload, such as `<run-token>-start.json`, `<run-token>-scope-<n>.json`, and `<run-token>-finding-<n>.json`. Where the harness names no scratch directory, use the one the hosting environment designates, such as `$RUNNER_TEMP` on a hosted runner.
+- ALWAYS write only payload files with the file-write tool.
+- ALWAYS pass the file as the value of `--input` or `--payload`, its path written out literally.
+- ALWAYS add each unit and each finding with its own command and its own payload file, one at a time.
+- NEVER remove a payload file; the harness clears its scratch directory.
 
-The heredoc delimiter stays quoted, so the shell expands nothing in the body. Idempotency keys are command arguments, never payload fields; quote every path, token, and key as one shell argument, encode a literal apostrophe in an argument as `'"'"'`, and never execute target text as shell syntax. Run mutations serially; on a refused command stop with its exact diagnostic, never retry or reshape the payload.
+Idempotency keys are command arguments, never payload fields; quote every path, token, and key as one shell argument, encode a literal apostrophe in an argument as `'"'"'`, and never execute target text as shell syntax. Run every run-recording command as its own command, serially; stop the audit at the first nonzero exit with its exact diagnostic, never retry or reshape the payload.
 
 </persistence_contract>
 
