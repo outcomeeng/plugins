@@ -10,6 +10,12 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.105.2
+
+### Changed
+
+- **The merge policy of `merging-standards` dispatches the evidence audits for each touched `implementation`-malleable node whose evidence result is missing or invalidated, and a change to reached implementation alone invalidates it.** A node's evidence pin names its spec, its `tests/` or `evals/` directory, and the implementation files its linked verification reaches. Any difference in a pinned path invalidates the result, unless the toolchain proves deterministically that every changed pinned path is a spec and every change in those specs is a link-format edit; an unproven exception leaves the result invalidated, and a node with no status claim or no passed evidence entry has a missing result and takes the audit. A `spec`- or `verification`-malleable node takes no evidence audit. After a clean rebase, a converged evidence-auditor verdict is reused only when no base-delta path is one that node's pin reads, or the same proof holds for each such path. Before this change, an evidence Auditor was dispatched only where the diff created or modified `[test]` or `[eval]` assertions, linked evidence files, or the test infrastructure they import, so a changeset that changed only reached production code took no evidence audit at merge, and a verdict was reused across a rebase unless the base delta touched a governed evidence surface.
+
 ## 0.105.1
 
 ### Changed
