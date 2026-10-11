@@ -671,3 +671,200 @@ The plugins shipped the Claude Code Standard change without this evidence. The p
 **Impact**: no artifact shows a Claude Code `sonnet` configuration, or any gpt-6 Codex configuration, loading and executing as a native subagent. A combined acceptance claim for either harness is therefore incomplete.
 
 **Settlement condition**: with exactly one native credential selected for each harness, `just verify-native-profile-execution` retains passing `claude-standard`, `claude-executor`, `codex-standard`, `codex-strong`, `codex-executor`, and `codex-fast` rows.
+
+## DEBT [evidence]: copied vocabulary with no importable owner (f-001, f-002, f-003, f-007, f-011, f-019)
+
+Six findings on source ownership, each a test or harness that spells a name its
+owning module does not publish or publishes and the evidence does not import.
+The first four are REJECT; f-007 and f-019 are WARNING.
+
+- f-001 at `tests/test_native_profile_execution.compliance.l1.py:55`: the
+  literal `parentThreadId`, owned by `ChildIdentityField.PARENT` in
+  `outcomeeng/distribution/native_thread_evidence.py`.
+- f-002 at the same file, line 168: the literals `childIds`, `pages`, and
+  `result`, which production spells inline.
+- f-003 at `outcomeeng_testing/harnesses/native_thread_evidence.py:77`:
+  `RecordingThreadReader` hand-writes `childIds`, `thread`, `turns`, `status`,
+  and `items`, and `_read_empty_native_state` spells `HOME`, `CODEX_HOME`, and
+  `CODEX_SQLITE_HOME`, which `outcomeeng/distribution/installation.py`
+  publishes.
+- f-011 at `tests/test_repository_installation.compliance.l1.py:385`: the
+  placement script's flags and the exit statuses 1 and 2 are hand-written.
+- f-007 (WARNING) at
+  `outcomeeng_testing/harnesses/native_profile_execution.py:188`: the inline
+  `CLAUDECODE`.
+- f-019 (WARNING) at `outcomeeng_testing/harnesses/installation.py:3560`: the
+  isolated Codex home is rebuilt as `state / "codex"` instead of read from
+  `plan.roots.codex_home`.
+
+The audit is a `spec-tree:test-evidence-auditor` verdict on this node at head
+`6ef55dd4d93b24b8fa701b8779116bbe7c9bbc04`. The verdict carries no sealed run
+token.
+
+Existing entries already record each defect: f-001, f-002, and f-003 sit in
+"Native-profile evidence restates protocol vocabulary the owning modules hold",
+f-007 in "The profile isolation filter strips an ambient marker no module
+declares", f-011 in "The lifecycle evidence hand-writes the placement script's
+flags and exit statuses", and f-019 in "The discovery harness rebuilds the
+isolated Codex home instead of reading the plan". Their resolution shapes
+govern; this entry repeats none.
+
+**Resolution shape**: the resolution shapes of those four entries.
+
+**Evidence that the text lies outside the change.**
+`git diff -U0 origin/main...HEAD` reports no hunk in the cited tests,
+harnesses, generators, or production modules, against merge base
+`149a55f71befdf61e88be9bda2aae725db1f2381`.
+
+**Invalidation check.** The cited text neither cites, restates, nor depends on
+anything this changeset changed. The changeset adds symbols to
+`outcomeeng/distribution/profiles.py` (model prices and usage token classes; no
+existing symbol altered), narrows the guard in
+`outcomeeng/validation/profile_configuration.py`, and adds model-price and
+profile-binding generators, harnesses, and tests. The cited tests drive
+installation, native profile execution, and native thread evidence in
+`outcomeeng/distribution` modules the changeset does not change.
+
+**Settlement condition**: each named vocabulary is published by its owning
+module and no test or harness under this node spells it.
+
+## DEBT [evidence]: native-profile and row-derivation evidence is mis-leveled or unfalsified (f-004, f-005, f-006)
+
+Three findings (all REJECT):
+
+- f-004 at `tests/test_native_profile_execution.compliance.l1.py:116` and
+  `:165`: both cases spawn the installed Codex CLI through the app-server, an
+  acquired executable whose floor is `l2`, while the file declares `l1`.
+- f-005 at the same file, line 24, and `_isolated_environment` in
+  `outcomeeng_testing/harnesses/native_profile_execution.py:182-189`: removing
+  the override filter, or the credential-free environment, breaks no test.
+- f-006 at `tests/test_native_profile_execution.mapping.l1.py:7`: collapsing
+  `identifier` in `native_profile_rows` to a constant breaks no test.
+
+The audit and head are those of the entry above; the verdict carries no sealed
+run token (stated there once). The first entry of this file,
+"Native-profile evidence restates protocol vocabulary the owning modules hold",
+already records all three defects with their resolution shape; this entry
+repeats none of it.
+
+**Resolution shape**: the resolution shape of that entry.
+
+**Evidence that the text lies outside the change.**
+`git diff -U0 origin/main...HEAD` reports no hunk in the cited tests,
+harnesses, generators, or production modules, against merge base
+`149a55f71befdf61e88be9bda2aae725db1f2381`.
+
+**Invalidation check.** The cited text neither cites, restates, nor depends on
+anything this changeset changed. The changeset adds symbols to
+`outcomeeng/distribution/profiles.py` (model prices and usage token classes; no
+existing symbol altered), narrows the guard in
+`outcomeeng/validation/profile_configuration.py`, and adds model-price and
+profile-binding generators, harnesses, and tests. The cited tests drive native
+profile execution in `outcomeeng/distribution` modules the changeset does not
+change.
+
+**Settlement condition**: the two Codex app-server cases sit in an `l2` file,
+a predicate reads the recorded native call environment and rejects an ambient
+override or a second credential, and a predicate rejects a collapsed row
+identifier.
+
+## DEBT [evidence]: case data is chosen at the call site (f-008, f-009, f-010)
+
+Three findings (all REJECT) on test-owned data:
+
+- f-008 at `tests/test_repository_installation.scenario.l1.py:172` (also 195,
+  208, 233): the case plugin is chosen with
+  `sorted(committed_catalog_plugin_names())[0]`.
+- f-009 at `tests/test_repository_installation.mapping.l1.py:172` and `:143`:
+  the publication rows and the case plugin are chosen in the test.
+- f-010 at `tests/test_repository_installation.compliance.l1.py:109` (also 144,
+  226, 296): incidental plugin and agent slugs are call-site literals.
+
+The audit and head are those of the first entry in this group; the verdict
+carries no sealed run token. Existing entries already record each:
+"The scenario tests pick their case plugin in the test file" (f-008),
+"The record-mapping test picks its publication rows in the test file" (f-009),
+and "Lifecycle evidence cases are hand-authored in the harness" (f-010). Their
+resolution shapes and settlement conditions govern.
+
+**Resolution shape**: the resolution shapes of those three entries.
+
+**Evidence that the text lies outside the change.**
+`git diff -U0 origin/main...HEAD` reports no hunk in the cited tests,
+harnesses, generators, or production modules, against merge base
+`149a55f71befdf61e88be9bda2aae725db1f2381`.
+
+**Invalidation check.** The cited text neither cites, restates, nor depends on
+anything this changeset changed. The changeset adds symbols to
+`outcomeeng/distribution/profiles.py` (model prices and usage token classes; no
+existing symbol altered), narrows the guard in
+`outcomeeng/validation/profile_configuration.py`, and adds model-price and
+profile-binding generators, harnesses, and tests. The cited tests drive
+installation in `outcomeeng/distribution` modules the changeset does not
+change.
+
+**Settlement condition**: a generator supplies the case plugin, publication
+rows, and slugs, and no test under this node picks one at the call site.
+
+## DEBT [evidence]: assertions are stronger than the evidence that links them (f-012 through f-018)
+
+Seven findings on alignment between a declared clause and its predicate. f-012,
+f-013, and f-015 are REJECT; f-014, f-016, f-017, and f-018 are WARNING.
+
+- f-012 at `tests/test_repository_installation.scenario.l1.py:783`: asserts
+  only that the diagnostic constant appears, never that the entry's source is
+  named.
+- f-013 at `tests/test_repository_installation.scenario.l1.py:249`: asserts
+  only that the Claude source operations equal `[MARKETPLACE_ADD]`.
+- f-015 at `tests/test_repository_installation.compliance.l1.py:269`: no case
+  combines a pending-publication plugin with agent-home reconciliation or drops
+  a plugin from the home selection.
+- f-014 at `tests/test_repository_installation.compliance.l1.py:830`: the
+  no-lock clause has no deterministic oracle.
+- f-016 at `tests/test_repository_installation.mapping.l1.py:177`: the
+  unrefreshable-record warning and the unresolved-target disposition are never
+  driven.
+- f-017 at `tests/test_repository_installation.scenario.l1.py:397`:
+  defective-record continuation is not observed for the native update branch.
+- f-018 at `tests/test_repository_installation.compliance.l1.py:364`:
+  `test_failed_persistent_run_restores_the_committed_selection` evidences a
+  restore that the governing decisions forbid.
+
+The audit and head are those of the first entry in this group; the verdict
+carries no sealed run token. Existing entries already record each:
+f-012 in "The unlocated-registry scenario never checks that the source is
+named", f-013 in "The fresh-home scenario never checks which source the plan
+registers", f-015 in "Pending plugins' prior owned definitions have no
+reconciliation evidence", f-014 in "The no-lock clause of the listing-read rule
+has no deterministic oracle", f-016 in "The unrefreshable record disposition,
+and the rewrite half of the unresolved one, reach no evidence", f-017 in "The
+listing-defect evidence never pairs a defect with an invocation-checkout
+record", and f-018 in "A failed persistent run restores the committed selection,
+which the decisions forbid". Their resolution shapes and settlement conditions
+govern; this entry repeats none.
+
+Two Codex level-3 tests of this node fail in this environment on CODEX_HOME
+provisioning and fail the same way on base; the entries "Codex 0.155.1 poisons a
+fresh home during the marketplace listing, then refuses it" and "Subscription
+discovery reports the Codex credential writer cannot preserve the saved-login
+link" record that condition.
+
+**Resolution shape**: the resolution shapes of those seven entries.
+
+**Evidence that the text lies outside the change.**
+`git diff -U0 origin/main...HEAD` reports no hunk in the cited tests,
+harnesses, generators, or production modules, against merge base
+`149a55f71befdf61e88be9bda2aae725db1f2381`.
+
+**Invalidation check.** The cited text neither cites, restates, nor depends on
+anything this changeset changed. The changeset adds symbols to
+`outcomeeng/distribution/profiles.py` (model prices and usage token classes; no
+existing symbol altered), narrows the guard in
+`outcomeeng/validation/profile_configuration.py`, and adds model-price and
+profile-binding generators, harnesses, and tests. The cited tests drive
+installation in `outcomeeng/distribution` modules the changeset does not
+change.
+
+**Settlement condition**: each cited clause reaches a predicate that fails when
+the clause is violated, or the governing decision is amended where the evidence
+and the decision disagree (f-018).

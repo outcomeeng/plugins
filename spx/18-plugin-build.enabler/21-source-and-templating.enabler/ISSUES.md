@@ -121,3 +121,63 @@ The root harness guides name that artifact class together with the Python cache 
 **Why separate**: the repair deletes `jinja_environment_uses_custom_delimiters`, one of the boolean-returning harness predicates the entry "Linked tests delegate their predicates to boolean-returning harnesses" records, whose settlement condition assigns this node's evidence-seam rewrite to Change #85. Removing that predicate ahead of the rewrite splits one seam repair across two changesets.
 
 **Evidence**: found by the same-class scan over both governed nodes' specs during Change #119 round 3, prompted by the implementation audit's blocking finding on the clean node's parallel assertion in run `2026-09-21_16-03-52-930-bb909cac6a0a`.
+
+## DEBT [evidence]: predicates owned by the harness in the directive, render, and compliance tests (f-001 through f-006)
+
+Six findings (REJECT, predicate ownership) share one class with the entry "Linked tests delegate their predicates to boolean-returning harnesses" above, which carries the resolution; this entry cites it and adds no second resolution. In each, the harness in `outcomeeng_testing/harnesses/source_and_templating.py` owns the predicate and returns a boolean, or asserts inside a private function and returns a constant `True`, while the linked test only runs `assert <bool>`:
+
+- f-001 `tests/test_parse_directives.scenario.l1.py:16` (`unknown_directive_raises`, `missing_directive_argument_raises`, `custom_jinja_controls_have_no_directives`).
+- f-002 `tests/test_render_text.scenario.l1.py:18` (`nested_include_expands`, `nested_require_skill_expands`, `cyclic_includes_raise`, `bound_target_variable_renders_each_target`, `raw_directive_ships_literally`).
+- f-003 `tests/test_expand_include.property.l1.py:11`.
+- f-004 `tests/test_parse_directives.property.l1.py:13` (round trip and standard-Jinja invariants).
+- f-005 `tests/test_render_text.property.l1.py:12`.
+- f-006 `tests/test_source_and_templating.compliance.l1.py:50` (tests at lines 50-75, 85-98, and 117-126).
+
+The audit is a `spec-tree:test-evidence-auditor` verdict on this node at head `6ef55dd4d93b24b8fa701b8779116bbe7c9bbc04`. The verdict carries no sealed run token; the same holds for the two entries below. The audit composed no Python concern, so Gate 2 was unevaluated.
+
+**Resolution shape**: as the cited entry states; the harness returns observations and each linked test states its own predicate.
+
+**Evidence that the text lies outside the change.** `git diff -U0 origin/main...HEAD` reports no hunk in the cited tests, the harness, or the generators, against merge base `149a55f71befdf61e88be9bda2aae725db1f2381`.
+
+**Invalidation check.** The cited text neither cites, restates, nor depends on anything this changeset changed. The changeset adds symbols to `outcomeeng/distribution/profiles.py`, narrows the guard in `outcomeeng/validation/profile_configuration.py`, and adds model-price and profile-binding generators, harnesses, and tests. The cited tests drive directive parsing, include expansion, and rendering in `outcomeeng/distribution/build.py` and `outcomeeng/distribution/contracts.py`, which the changeset does not change.
+
+**Settlement condition**: each cited test carries its own predicate over a harness observation, and a passing test-evidence audit of the six cited tests.
+
+## DEBT [evidence]: falsifiability and oracle independence of the compliance and render evidence (f-007, f-008, f-009, f-013)
+
+Four findings (REJECT, falsifiability and oracle independence) at the same audit and head as the entry above. Each overlaps a defect the entries "Seven further evidence defects beside the boolean-harness seam" and "The custom-delimiter assertion's evidence compares the source to itself" already record; this entry cites them and repeats no resolution text:
+
+- f-007 `tests/test_source_and_templating.compliance.l1.py:85`: the neutral-guidance and locality oracle tests drive harness-built strings and never `expand_require_skill` or `render_text`.
+- f-008 `outcomeeng_testing/harnesses/source_and_templating.py:478`: `_nested_require_expands` computes its expectation with `expand_require_skill`, the function under test.
+- f-009 `tests/test_source_and_templating.compliance.l1.py:46`: `test_module_is_implemented`, also present in the expand_include, parse_directives, and render_text scenario files, asserts the `IMPLEMENTED` flag, which no mutation of the governed behavior falsifies, and backs no assertion.
+- f-013 `tests/test_source_and_templating.compliance.l1.py:74`: `jinja_environment_uses_custom_delimiters` compares the environment to the same constants the source declares.
+
+**Resolution shape**: as the cited entries state.
+
+**Evidence that the text lies outside the change.** `git diff -U0 origin/main...HEAD` reports no hunk in the cited tests, the harness, or the generators, against merge base `149a55f71befdf61e88be9bda2aae725db1f2381`.
+
+**Invalidation check.** The cited text neither cites, restates, nor depends on anything this changeset changed. The changeset adds symbols to `outcomeeng/distribution/profiles.py`, narrows the guard in `outcomeeng/validation/profile_configuration.py`, and adds model-price and profile-binding generators, harnesses, and tests. The cited tests drive directive parsing, include expansion, and rendering in `outcomeeng/distribution/build.py` and `outcomeeng/distribution/contracts.py`, which the changeset does not change.
+
+**Settlement condition**: every cited test fails under a mutation of the behavior it governs, and no expectation derives from the function under test.
+
+## DEBT [evidence]: alignment, coupling, and source ownership in the template evidence (f-010, f-011, f-012, f-014, f-015, f-016)
+
+Six findings at the same audit and head as the two entries above. Class C (REJECT, alignment and coupling), partly recorded in "Seven further evidence defects beside the boolean-harness seam", which carries that resolution:
+
+- f-010 `tests/test_parse_directives.property.l1.py:20` tests the property harness's own failure notes and backs no assertion.
+- f-011 `tests/test_source_and_templating.compliance.l1.py:129`: `test_per_plugin_template_renders_once_into_every_plugin` never renders a template body, so slug substitution can break unnoticed.
+- f-012 `tests/test_source_and_templating.compliance.l1.py:163`: the "per-plugin template body names no single plugin" test scans authored prose with a test-owned regex and exercises no build behavior; the assertion belongs under `[audit]` or must be enforced against a violating template.
+
+Class D (REJECT, source ownership and declarations); f-014 and f-015 overlap the cited entries, and f-016 is not recorded above:
+
+- f-014 `outcomeeng_testing/harnesses/source_and_templating.py:271` hand-writes the directive names `include`, `if`, `else`, and `endif`; the source exports no directive-name contract.
+- f-015 `outcomeeng_testing/generators/fragments.py:56`: `_DELIMITER_TOKENS` restates the standard Jinja delimiters that `outcomeeng/distribution/contracts.py` owns.
+- f-016 `outcomeeng_testing/harnesses/source_and_templating.py:338`: case construction and expected membership for the well-formed, malformed, and ordinary-file trees are chosen in the harness.
+
+**Resolution shape**: for f-010 through f-012, f-014, and f-015, as the cited entries state. For f-016, the source tree cases and their expected membership are generated or declared by the test over a source-owned contract, and the harness builds trees from them without choosing the expectation.
+
+**Evidence that the text lies outside the change.** `git diff -U0 origin/main...HEAD` reports no hunk in the cited tests, harness, or generators, against merge base `149a55f71befdf61e88be9bda2aae725db1f2381`.
+
+**Invalidation check.** The cited text neither cites, restates, nor depends on anything this changeset changed. The changeset adds symbols to `outcomeeng/distribution/profiles.py`, narrows the guard in `outcomeeng/validation/profile_configuration.py`, and adds model-price and profile-binding generators, harnesses, and tests. The cited tests drive directive parsing, include expansion, and rendering in `outcomeeng/distribution/build.py` and `outcomeeng/distribution/contracts.py`, which the changeset does not change.
+
+**Settlement condition**: the source exports a directive-name contract that the harness imports, the generator imports the delimiters from `outcomeeng/distribution/contracts.py`, the tree cases are test-owned, and a passing test-evidence audit of this node.
