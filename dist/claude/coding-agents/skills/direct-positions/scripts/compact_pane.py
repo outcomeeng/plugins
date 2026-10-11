@@ -1,79 +1,100 @@
-import json, re, subprocess, sys, time
+"""Compact an idle Claude pane and send it the resume line once its context has dropped.
 
-# usage: compact_pane.py PANE RESUME_TEXT
-# Sends /compact to an idle Claude pane unless a compaction is already under way,
-# waits for the status line's context to drop by 30 points (or below 10%) after it sent /compact,
-# then sends the resume line. A pane under 60% is refused; a fresh pane never gets the resume line.
-P = "/Users/shz/.claude/plugins/cache/outcomeeng/coding-agents/0.11.0/skills/operate-prowl/scripts/prowl_environment.py"
-pane, resume = sys.argv[1], sys.argv[2]
+Sends /compact to the pane unless a compaction is already under way, waits for
+the status line's context to drop by 30 points (or below 10%) after it sent
+/compact, then sends the resume line. A pane under 60% is refused, so a fresh
+pane never gets the resume line.
+
+Usage: python3 compact_pane.py PANE RESUME_TEXT
+"""
+
+from __future__ import annotations
+
+import sys
+import time
+from collections.abc import Callable, Sequence
+
+import environment
+
+COMPACT_COMMAND = "/compact"
+COMPACTING = "Compacting conversation"
+COMPACT_FLOOR = 60  # percent of context below which a pane is not compacted
+DROP_POINTS = 30
+DROP_CEILING = 10  # a context below this many percent counts as dropped
+READ_LINES = 14
+POLL_SECONDS = 15
+SETTLE_SECONDS = 5
+DEADLINE_SECONDS = 900
+EXIT_OK = 0
+EXIT_TIMED_OUT = 1
+EXIT_NOT_HIGH = 2
+EXIT_USAGE = 2
 
 
-def run(req):
+def compact(
+    backend: environment.Prowl,
+    session: environment.Session,
+    resume: str,
+    now: Callable[[], float] = time.time,
+    sleep: Callable[[float], None] = time.sleep,
+) -> int:
+    deadline = now() + DEADLINE_SECONDS
+    sent = False
+    start: int | None = None
+    context: int | None = None
+    while now() < deadline:
+        try:
+            text = backend.read(session, READ_LINES)
+        except environment.AdapterError:
+            sleep(POLL_SECONDS)
+            continue
+        context = environment.context_percent(text)
+        if start is None and context is not None:
+            start = context
+        dropped = (
+            context is not None
+            and start is not None
+            and (start - context >= DROP_POINTS or context < DROP_CEILING)
+        )
+        if sent and dropped and COMPACTING not in text:
+            sleep(SETTLE_SECONDS)
+            backend.send(session, resume)
+            print(f"compacted to {context}%; resume sent")
+            return EXIT_OK
+        if COMPACTING in text or COMPACT_COMMAND in text:
+            sent = True
+        elif not sent:
+            if context is None or context < COMPACT_FLOOR:
+                print(f"context {context}% is not high; no {COMPACT_COMMAND} sent")
+                return EXIT_NOT_HIGH
+            backend.send(session, COMPACT_COMMAND)
+            print(f"{COMPACT_COMMAND} sent")
+            sent = True
+        sleep(POLL_SECONDS)
+    print(f"timed out; last context {context}%")
+    return EXIT_TIMED_OUT
+
+
+def main(argv: Sequence[str]) -> int:
+    if len(argv) != 2:
+        print("usage: compact_pane.py PANE RESUME_TEXT", file=sys.stderr)
+        return EXIT_USAGE
+    pane, resume = argv
+    backend = environment.Prowl()
+    session = environment.Session(
+        backend=environment.Prowl.name,
+        handle=pane,
+        cwd="",
+        state=environment.State.UNKNOWN,
+        changed_at=None,
+        detail="",
+    )
     try:
-        out = subprocess.run(
-            ["python3", P, "run"],
-            input=json.dumps(req).encode(),
-            capture_output=True,
-            timeout=60,
-        ).stdout
-        return json.loads(out.decode("utf-8", "replace"))
-    except Exception as e:
-        return {"status": "error", "detail": str(e)}
+        return compact(backend, session, resume)
+    except environment.AdapterError as error:
+        print(f"compact_pane.py: {error}", file=sys.stderr)
+        return EXIT_TIMED_OUT
 
 
-def read():
-    d = run(
-        {
-            "schemaVersion": 1,
-            "operation": "read",
-            "arguments": {"pane": pane, "last": 14},
-        }
-    )
-    return d["response"]["data"]["text"] if d.get("status") == "succeeded" else None
-
-
-def context(text):
-    m = re.findall(
-        r"\(\s*[\d.]+\s*[kKmM]?\s*/\s*[\d.]+\s*[kKmM]?\s*tokens\s*\)\s*(\d{1,3})\s*%",
-        text,
-    )
-    return int(m[-1]) if m else None
-
-
-def send(text):
-    return run(
-        {
-            "schemaVersion": 1,
-            "operation": "send",
-            "arguments": {"pane": pane, "text": text, "noWait": True},
-        }
-    ).get("status")
-
-
-deadline = time.time() + 900
-sent = False
-start = None
-while time.time() < deadline:
-    t = read()
-    if t is None:
-        time.sleep(15)
-        continue
-    c = context(t)
-    if start is None and c is not None:
-        start = c
-    dropped = c is not None and start is not None and (start - c >= 30 or c < 10)
-    if sent and dropped and "Compacting conversation" not in t:
-        time.sleep(5)
-        print("compacted to", c, "% ; resume:", send(resume))
-        sys.exit(0)
-    if "Compacting conversation" in t or "/compact" in t:
-        sent = True
-    elif not sent:
-        if c is None or c < 60:
-            print("context", c, "% is not high; no /compact sent")
-            sys.exit(2)
-        print("send /compact:", send("/compact"))
-        sent = True
-    time.sleep(15)
-print("timed out; last context", c if "c" in dir() else None)
-sys.exit(1)
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

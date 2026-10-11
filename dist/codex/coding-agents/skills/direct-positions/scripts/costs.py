@@ -1,80 +1,89 @@
-import json, re, subprocess
+"""Print each watched session's model, cost, context and weekly quota, costliest first.
 
-P = "/Users/shz/.claude/plugins/cache/outcomeeng/coding-agents/0.11.0/skills/operate-prowl/scripts/prowl_environment.py"
-H = "/Users/shz/.claude/plugins/cache/outcomeeng/coding-agents/0.11.0/skills/operate-herdr/scripts/herdr_environment.py"
+Every backend is read through the typed operations of its sibling adapter, so
+the table covers each session the backends report.
+
+Usage: python3 costs.py
+"""
+
+from __future__ import annotations
+
+import re
+import sys
+from collections.abc import Sequence
+from pathlib import Path
+
+import environment
+
+UNKNOWN = "?"
+COST_READ_LINES = 8
+COST = re.compile(r"\$([\d,]+\.\d+)")
+CONTEXT = re.compile(r"tokens\)\s*(\d+)%")
+MODEL = re.compile(r"\[(Opus[^\]]*|Sonnet[^\]]*|Haiku[^\]]*)\]")
+WEEK = re.compile(r"7d:\s*(\d+)%")
+CODEX_USED = re.compile(r"(\d+(?:\.\d+)?[KM]) used")
+CODEX_MODEL = "codex"
 
 
-def run(script, req):
-    try:
-        out = subprocess.run(
-            ["python3", script, "run"],
-            input=json.dumps(req).encode(),
-            capture_output=True,
-            timeout=60,
-        ).stdout
-        return json.loads(out.decode("utf-8", "replace"))
-    except Exception as e:
-        return {"status": "error", "detail": str(e)}
-
-
-def line(text):
-    m = re.findall(
-        r"\[([^\]]+)\][^\n]*?(\d+)%[^\n]*?\$([\d.,]+)[^\n]*?(\d+)m", text or ""
-    )
-    cost = re.findall(r"\$([\d,]+\.\d+)", text or "")
-    ctx = re.findall(r"tokens\)\s*(\d+)%", text or "")
-    model = re.findall(r"\[(Opus[^\]]*|Sonnet[^\]]*|Haiku[^\]]*)\]", text or "")
-    week = re.findall(r"7d:\s*(\d+)%", text or "")
-    codex = re.findall(r"(\d+(?:\.\d+)?[KM]) used", text or "")
+def figures(text: str) -> tuple[str, str, str, str]:
+    """The model, cost, context percent and weekly percent a status line shows."""
+    cost = COST.findall(text)
+    context = CONTEXT.findall(text)
+    model = MODEL.findall(text)
+    week = WEEK.findall(text)
+    codex = CODEX_USED.findall(text)
     return (
-        model[-1] if model else ("codex" if codex else "?"),
-        cost[-1] if cost else (codex[-1] if codex else "?"),
-        ctx[-1] if ctx else "?",
-        week[-1] if week else "?",
+        model[-1] if model else (CODEX_MODEL if codex else UNKNOWN),
+        cost[-1] if cost else (codex[-1] if codex else UNKNOWN),
+        context[-1] if context else UNKNOWN,
+        week[-1] if week else UNKNOWN,
     )
 
 
-rows = []
-a = run(P, {"schemaVersion": 1, "operation": "agents", "arguments": {}})
-for ag in a.get("response", {}).get("data", {}).get("agents", []):
-    t = run(
-        P,
-        {
-            "schemaVersion": 1,
-            "operation": "read",
-            "arguments": {"pane": ag["id"], "last": 6},
-        },
-    )
-    text = (
-        t.get("response", {}).get("data", {}).get("text")
-        if t.get("status") == "succeeded"
-        else None
-    )
-    rows.append(("prowl", ag["pane"]["title"].strip("◐◑✳ "), *line(text)))
-inv = run(H, {"schemaVersion": 1, "operation": "inventory", "arguments": {}})
-for ag in inv.get("agents", []):
-    t = run(
-        H,
-        {
-            "schemaVersion": 1,
-            "operation": "read",
-            "arguments": {"agent": ag["name"], "source": "recent", "lines": 8},
-        },
-    )
-    text = (
-        t.get("response", {}).get("output") if t.get("status") == "succeeded" else None
-    )
-    rows.append(("herdr", ag["name"], *line(text)))
-
-
-def dollars(r):
+def dollars(cost: str) -> float:
     try:
-        return float(r[3].replace(",", ""))
+        return float(cost.replace(",", ""))
     except ValueError:
-        return -1
+        return -1.0
 
 
-for r in sorted(rows, key=dollars, reverse=True):
-    print(
-        f"{r[0]:5} | {r[1][:34]:34} | {r[2][:22]:22} | ${r[3]:>9} | ctx {r[4]:>3}% | 7d {r[5]}%"
-    )
+def rows() -> list[tuple[str, str, str, str, str, str]]:
+    found = []
+    for name, backend in environment.BACKENDS.items():
+        try:
+            sessions = backend.sessions()
+        except environment.AdapterError as error:
+            found.append((name, f"inventory failed: {error}", *figures("")))
+            continue
+        for session in sessions:
+            try:
+                text = backend.read(session, COST_READ_LINES)
+            except environment.AdapterError:
+                text = ""
+            label = Path(session.cwd).name or session.handle
+            found.append((name, label, *figures(text)))
+    return found
+
+
+def render(table: Sequence[tuple[str, str, str, str, str, str]]) -> str:
+    lines = []
+    for backend, label, model, cost, context, week in sorted(
+        table, key=lambda row: dollars(row[3]), reverse=True
+    ):
+        lines.append(
+            f"{backend:6} | {label[:34]:34} | {model[:22]:22} | ${cost:>9} "
+            f"| ctx {context:>3}% | 7d {week}%"
+        )
+    return "\n".join(lines) + "\n"
+
+
+def main(argv: Sequence[str]) -> int:
+    if argv:
+        print("usage: costs.py", file=sys.stderr)
+        return 2
+    sys.stdout.write(render(rows()))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

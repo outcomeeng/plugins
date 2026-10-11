@@ -216,6 +216,14 @@ class Prowl:
         )
         return _text(data.get(adapter.TEXT_FIELD))
 
+    def send(self, session: Session, text: str) -> None:
+        """Submit one line to the session's pane without waiting for its turn."""
+        adapter = _prowl()
+        request = adapter.operation_request(
+            adapter.Operation.SEND, pane=session.handle, text=text, no_wait=True
+        )
+        _succeeded(adapter, self.name, request)
+
 
 class Herdr:
     name = "herdr"
