@@ -10,7 +10,8 @@ Use skill `spec-tree:change-standards`. Invoke it with `Executable`; it loads th
 2. Settle implementation detail only inside the Nodes, Assertion operations, and Decisions the Maintainer's confirmations covered. A reopened product or architecture judgment stops advancement and returns to the operator through Framed refinement.
 3. In `## Nodes`, state for every Node the changeset touches its Malleability before and after, adding each Node the changeset touches only through a dependency, and state each Node's required state. Settle every consequential Decision for the changeset in `## Decisions`.
 4. Order the `## Mutations` rows so a fresh Executor can assign and complete each Node's result without the prior conversation or reopened judgment, providers first. In each row name the results the loaded Definition of Ready's `<merge_composition>` selects for its Node, each with its producer, and the decision-record audit for each added or changed decision record the Node owns. Name every `VERIFICATION_READINESS` predicate that composition selects for the changeset, and name no Verifier outside them. Cite the obligation each result satisfies instead of a skill's default gates.
-5. Leave `## Artifacts` with no links until a round produces content. Set `maturity: Executable` only when every cumulative Executable DoR criterion holds. Return the stabilized candidate to `<audit_gate>`, then `<persistence>`.
+5. Build the trace table that `<trace_check>` of `${SKILL_DIR}/references/repair-sweep.md` states, with every column, for every result the Intent's Evidence promises. Name each result lacking an exact Assertion operation, a `## Mutations` row of its own Node, a producer, or a verification predicate, and each later row that invalidates a predicate an earlier row records. Repair each and re-sweep.
+6. Leave `## Artifacts` with no links until a round produces content. Set `maturity: Executable` only when every cumulative Executable DoR criterion holds. Return the stabilized candidate to `<audit_gate>`, then `<persistence>`.
 
 </process>
 
@@ -26,6 +27,7 @@ After a round returns audited content for a Node, add its link to `## Artifacts`
 - `## Nodes` states each Node's Malleability before and after and its required state.
 - Each `## Mutations` row's results and producers agree with what `<merge_composition>` selects for its Node.
 - Every consequential Decision is settled inside the authority of the confirmed Framed and Sliced records.
+- Every promised result traces through an exact Assertion operation and its Node's `## Mutations` row to a producer and verification predicate, and no later row invalidates a predicate an earlier row records, before the first audit dispatch.
 - Ordered Mutations rows permit execution without reopening product or architecture judgment, and `## Artifacts` links only content a round produced.
 
 </success_criteria>

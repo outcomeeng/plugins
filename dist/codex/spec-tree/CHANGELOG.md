@@ -10,6 +10,12 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.105.4
+
+### Changed
+
+- **`/author-change` traces every promised result to its target, producer, and final verification before it dispatches the change audit.** The Framed workflow builds a conversation-local trace table through the Node column for each result the Intent's Evidence promises, and the Executable workflow completes every column. The check names each result lacking an exact Assertion operation on its owning Node, a `## Mutations` row of its own, a producer, or a verification predicate, and each later row that invalidates a predicate an earlier row records, and the Author repairs and re-sweeps the candidate before the first dispatch. A result on an existing file passes with an Assertion operation naming its owning Node and exact target, and a Node touched only through a dependency passes with its own `## Mutations` row. The table never enters the record, and a candidate without a gap passes unchanged. The trace check lives in `references/repair-sweep.md` beside the repair sweep table. Before this change, the workflows asked for exact targets and producers without a way to show the check complete, so the change audit found the gaps one round at a time.
+
 ## 0.105.3
 
 ### Fixed

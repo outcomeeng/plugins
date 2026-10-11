@@ -10,7 +10,8 @@ Use skill `spec-tree:change-standards`. Invoke it with `Framed`; it loads the co
 2. Apply `<intake_and_triage>` to every Output-affecting uncertainty. Ask only questions repository truth and supplied intent cannot settle.
 3. Complete `## Nodes`: every affected or intended Node with its Malleability before, empty for a Node the Change creates, and its Malleability after. Complete `## Assertion operations`: every operation by owning Node or decision record and exact target. Complete `## Decisions`: every question that can change the Output, each with its answer. Never replace per-Node values with one Change-wide target. A Parent carries neither `## Nodes` nor `## Assertion operations`.
 4. Present the completed sections to the operator for review. An objection or correction returns to step 2 and leaves `maturity` unchanged until the sections stand. A drafting or execution request alone supplies no authority, and the record carries no attestation line; the Product's Maintainer's move out of `Submitted` at `Framed` is the authority that the record captures the operator's intent. When the sections stand, set `maturity: Framed`.
-5. Check every cumulative Framed DoR criterion. Return the stabilized local candidate to `<audit_gate>`, then `<persistence>`.
+5. Build the trace table that `<trace_check>` of `${SKILL_DIR}/references/repair-sweep.md` states, through the Node column, for every result the Intent's Evidence promises. Name each result with no exact Assertion operation on its owning Node, repair it, and re-sweep.
+6. Check every cumulative Framed DoR criterion. Return the stabilized local candidate to `<audit_gate>`, then `<persistence>`.
 
 </process>
 
@@ -20,5 +21,6 @@ Use skill `spec-tree:change-standards`. Invoke it with `Framed`; it loads the co
 - Output-affecting questions are settled in `## Decisions` and the record carries no attestation line.
 - Every affected Node retains its own Malleability before and after.
 - Every criterion of the loaded Framed Definition of Ready holds for `## Nodes`, `## Assertion operations`, and `## Decisions`.
+- Every result the Intent's Evidence promises traces to an exact Assertion operation on its owning Node before the first audit dispatch.
 
 </success_criteria>

@@ -142,7 +142,7 @@ Use skill `spec-tree:release-change`. Invoke it only when this session holds the
 
 - `spec-tree:change-standards`: common record contract plus exactly one cumulative Definition of Ready, or the Lifecycle store rules.
 - `${SKILL_DIR}/templates/`: one store-independent seven-key, Intent-form record template per Maturity — `proposed.md`, `framed.md`, `sliced.md`, `executable.md`.
-- `${SKILL_DIR}/references/repair-sweep.md`: the sweep table of one repair batch and the retained-findings comparison.
+- `${SKILL_DIR}/references/repair-sweep.md`: the pre-audit trace table of a Framed or Executable candidate, the sweep table of one repair batch, and the retained-findings comparison.
 
 </reference_index>
 
