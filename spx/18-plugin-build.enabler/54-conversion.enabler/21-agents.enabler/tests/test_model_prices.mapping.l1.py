@@ -36,7 +36,7 @@ def test_each_named_identifier_resolves_to_its_price_for_each_usage_token_class(
         assert rate == asdict(entry)[token_class.value]
 
 
-def test_the_price_entries_name_exactly_the_four_identifiers() -> None:
+def test_every_priced_identifier_resolves_and_an_unnamed_identifier_is_unpriced() -> None:
     assert PRICED_ENTRIES
     for family, identifier in PRICED_ENTRIES:
         assert resolve_model_price(identifier) is MODEL_PRICES[family][identifier]
