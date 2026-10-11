@@ -12,11 +12,11 @@ CAN read an `[audit]` result from a sealed run
 ## Assertions
 
 - ALWAYS: `/audit-assertions` judges every `[audit:{rule-slug}]` and pathless `[audit]` assertion of the target spec against the subject that assertion names, and judges no assertion that carries another tag
-- ALWAYS: `/audit-assertions` starts one `spx verification run` before judging, records one scope unit per `[audit]` assertion keyed by its rule slug — a pathless `[audit]` assertion by its ordinal in the spec — with every finding on its unit, seals the run, and returns the run token with the rendered projection
+- ALWAYS: `/audit-assertions` starts one `spx verification run` before judging, records one root scope unit for the audited node spec, keyed by the audited spec path and carrying no parent and no designator, and one child scope unit per `[audit]` assertion, keyed by its rule slug — a pathless `[audit]` assertion by its ordinal in the spec — with the root as its parent and with every finding on its child unit, seals the run, and returns the run token with the rendered projection
 - NEVER: `/audit-assertions` judges how an assertion is declared or selected; declaration form and tag fit belong to the spec audit
 - ALWAYS: `assertion-auditor` passes the raw target spec path and a fixed run-driver identity to its skill, starts without the caller's authoring history, and relays the run token and the rendered projection unchanged, or the complete blocked diagnostic
 - ALWAYS: `/audit-assertions` rejects only on touched text under [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md), returns each other finding as `filed`, and approves when no finding on touched text exists
-- ALWAYS: the assertion audit records each scope unit with audit class `spec` and audit kind `spec`, the audited node spec path as the unit subject, and the assertion's designator — its rule slug, or its ordinal when pathless — in the unit key and in the message of every finding on that unit
+- ALWAYS: the assertion audit records the root unit and every child unit with audit class `spec` and audit kind `spec` and the audited node spec path as the unit subject, and places the assertion's designator — its rule slug, or its ordinal when pathless — in the unit key and in the message of every finding on a child unit
 - Given a node spec with an `[audit]` assertion, when a launched assertion auditor audits it under the pinned published SPX floor, then the run seals with terminal status `approved` or `rejected`
 
 ### Scenarios
