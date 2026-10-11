@@ -72,7 +72,7 @@ A gate is one Verifier definition judging one subject; under `/merge`, the local
 
 Each round or Verifier step requests exactly one native launch with its exact configured name and the task message `<definitions>` gives it. Use the native tool schema and result-collection capabilities, and collect each launch in the foreground. A failed launch or an unusable final result stops execution: record the exact failure, launch no substitute, and release the Change under step 8.
 
-Start every Verifier without this conversation's history, reasoning, summaries, or a suggested verdict. While the native capability reports a launch still running, collect that same invocation; an observation timeout never authorizes a new launch.
+Start every producing round, every Fixer, and every Verifier in a fresh session without this conversation's history, reasoning, summaries, or a suggested verdict. While the native capability reports a launch still running, collect that same invocation; an observation timeout never authorizes a new launch.
 
 </launch_contract>
 
@@ -114,7 +114,7 @@ Start every Verifier without this conversation's history, reasoning, summaries, 
 
 <output_format>
 
-Return the result — `closed`, `released`, `release-refused`, `not-held`, or `unavailable` — the Change URL, the final full head SHA, each round's definition, target, and verdict run tokens, the merge commit when integration happened, and the URL of the newest Handoff comment this session posted.
+Return the result — `closed`, `released`, `release-refused`, or `not-held` — the Change URL, the final full head SHA, each round's definition, target, and verdict run tokens, the merge commit when integration happened, and the URL of the newest Handoff comment this session posted.
 
 </output_format>
 
