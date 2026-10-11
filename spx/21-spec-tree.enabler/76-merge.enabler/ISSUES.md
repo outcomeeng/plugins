@@ -208,3 +208,15 @@ The dispatch-readiness, repeated-class, finish-before-wait and bounded-projectio
 **Impact.** The standard cannot be applied by a caller that names it without also taking on the callers it names, and `action-tokens.md` is incomplete without a read of `merge-policy.md`.
 
 **Settlement condition.** Each obligation states itself against the lifecycle operation it governs without naming a consuming skill, `action-tokens.md` carries the conditions its follow-ups depend on or `SKILL.md`'s `<reference_index>` names the co-required reference, and one typed skill audit of `merging-standards` then raises none of the three findings.
+
+## The merge-gate-selection probe has no fixture for an implementation-only change
+
+The `[probe]` assertion in `spx/21-spec-tree.enabler/76-merge.enabler/merge.md` selects the evidence Auditors for each touched implementation-malleable node whose evidence result is missing or invalidated, and its pin reads the node's spec, its `tests/` or `evals/` directory, and the implementation its linked verification reaches. The protocol `spx/21-spec-tree.enabler/76-merge.enabler/probes/merge-gate-selection` has no fixture in which only the implementation that a node's linked verification reaches changes for an implementation-malleable node, with no test, eval, or spec file of that node touched. That case is the one the amended assertion adds to the selection.
+
+Its attested run is dated 2026-10-06 against head `45772763e227a276a609f76c455fb64c3286fcbd` and predates the amended assertion, so the pin no longer matches the declaration and the attested result is invalid. Decision 6 of Change https://github.com/outcomeeng/changes/issues/453 settles that the probe gains no fixture and no new attested run before this merge; the node merges in the state it derives, Specified.
+
+**Impact.** The node's status claim carries no attested result for the `[probe]` assertion, and no executed observation shows the selection choosing evidence Auditors for an implementation-only change.
+
+**Evidence.** The attested run of 2026-10-06 against head `45772763e227a276a609f76c455fb64c3286fcbd`, the fixtures under `spx/21-spec-tree.enabler/76-merge.enabler/probes/merge-gate-selection`, and the amended `[probe]` assertion in `spx/21-spec-tree.enabler/76-merge.enabler/merge.md`.
+
+**Settlement condition.** A later Change adds that fixture and records a new attested run on the then-current head, and the node's status claim then carries the attested result.
