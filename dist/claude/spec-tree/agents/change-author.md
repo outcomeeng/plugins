@@ -5,6 +5,7 @@ name: change-author
 description: >-
   Round session `/execute-change` launches by exact name when a Mutation row needs spec-tree artifacts: decisions, specs, nodes, and notes produced or repaired through `/author`.
 disallowedTools: Agent, AskUserQuestion
+
 skills:
   - spec-tree:author
 ---
