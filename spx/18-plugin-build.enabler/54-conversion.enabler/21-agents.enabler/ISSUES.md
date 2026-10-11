@@ -75,49 +75,60 @@ implementation-audit orchestration, not to skill composition.
 `approved` with zero findings over 319 `coverage-gap` units, observed on Change
 #76 subject `6c64464abf07a2e384dabea0d3d0bc19a1b12956`.
 
-## DEBT [evidence]: compliance assertion has no violating case (f-002)
+## DEBT [evidence]: compliance tests exercise only conforming inputs (f-001, f-002, f-003)
 
-Finding f-002 (REJECT) at
-`spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/tests/test_agents.compliance.l1.py:125`:
-a compliance assertion carries no violating case, so nothing shows the
-assertion rejects a violation.
+Three findings (all REJECT) on
+`spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/tests/test_agents.compliance.l1.py`,
+each a compliance test that exercises conforming output only and shows no
+violation rejected:
 
-The audit is a `spec-tree:test-evidence-auditor` verdict on this node at head
-`dd0d8cd6678c7619f1474d35f12e81f0df52e3c2`. The verdict carries no sealed run
-token.
+- f-001 at line 54: `test_environment_marker_is_namespaced_by_source_plugin`
+  exercises only conforming repository agents. The same-word case the
+  assertion names is not exercised, and no violating input shows that a marker
+  dropping or merging the plugin component is rejected.
+- f-002 at line 125: `test_flat_namespace_agents_carry_the_plugin_slug_prefix`
+  reads the built tree of conforming agents only. This repeats f-002 of the
+  earlier audit of this node.
+- f-003 at line 163: `test_converted_agents_ship_inside_a_manifest_declared_surface`
+  inspects only conforming build output. Nothing shows that an agent placed
+  outside the declared skill surface, or a manifest that declares an agents
+  field, is detected.
 
-The text lies outside the Change: `git diff -U0 origin/main...HEAD` reports no
-hunk on line 125, against merge base `149a55f71befdf61e88be9bda2aae725db1f2381`.
+The audit is a second `spec-tree:test-evidence-auditor` verdict on this node at
+head `7e15b3c437ca8326e0e63dbd0e54d45a62245ba6`. The verdict carries no sealed
+run token.
 
-**Resolution shape**: add a generated violating case that the assertion must
-reject.
+**Resolution shape**: add a generated violating case to each test, which the
+assertion must reject: a marker that drops or merges the plugin component for
+f-001, a source or build input lacking the plugin slug prefix for f-002, and an
+agent outside the declared skill surface or a manifest declaring an agents
+field for f-003.
 
-**Settlement condition**: the compliance assertion at that line is exercised
-against a generated violating case and rejects it.
+**Out-of-change evidence**: the text lies outside the Change.
+`git diff -U0 origin/main...HEAD` reports no hunk on the cited file, against
+merge base `149a55f71befdf61e88be9bda2aae725db1f2381`.
 
-## DEBT [evidence]: harness flagged at distribution.py line 272 (f-004)
+**Settlement condition**: each of the three tests is exercised against a
+generated violating case and rejects it.
 
-Finding f-004 (WARNING) at `outcomeeng_testing/harnesses/distribution.py:272`:
-the harness at that line is flagged.
+## DEBT [evidence]: native effort absence checked for one model only (f-004)
 
-Audit and scope as for f-002: the same `spec-tree:test-evidence-auditor`
-verdict at head `dd0d8cd6678c7619f1474d35f12e81f0df52e3c2`, and
-`git diff -U0 origin/main...HEAD` reports no hunk on line 272 (merge base
-`149a55f71befdf61e88be9bda2aae725db1f2381`).
+Finding f-004 (REJECT, mapping-incomplete-domain) at
+`spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/tests/test_profiles.mapping.l1.py:80`:
+`test_native_effort_absence_matches_the_model_capability` checks Claude effort
+absence only for `ClaudeModel.OPUS`. A regression that lets `SONNET` accept
+`effort=None` would pass.
 
-**Settlement condition**: the harness inversion recorded in the entry "linked
-tests delegate every predicate to harness assertion helpers" lands, or the line
-is repaired alone.
+The audit is the second `spec-tree:test-evidence-auditor` verdict named in the
+entry above, at head `7e15b3c437ca8326e0e63dbd0e54d45a62245ba6`; the verdict
+carries no sealed run token.
 
-## DEBT [evidence]: flagged warning on the compliance test file (f-005)
+**Resolution shape**: drive the check over the full enumeration of
+effort-requiring models.
 
-Finding f-005 (WARNING) at
-`spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/tests/test_agents.compliance.l1.py:189`:
-a flagged warning on the same compliance file as f-002.
+**Out-of-change evidence**: the text lies outside the Change.
+`git diff -U0 origin/main...HEAD` reports no hunk on the cited file, against
+merge base `149a55f71befdf61e88be9bda2aae725db1f2381`.
 
-Audit and scope as for f-002: the same `spec-tree:test-evidence-auditor`
-verdict at head `dd0d8cd6678c7619f1474d35f12e81f0df52e3c2`, and
-`git diff -U0 origin/main...HEAD` reports no hunk on line 189 (merge base
-`149a55f71befdf61e88be9bda2aae725db1f2381`).
-
-**Settlement condition**: settled with the repair of f-002.
+**Settlement condition**: the test covers every effort-requiring model, so a
+model that accepts `effort=None` fails it.

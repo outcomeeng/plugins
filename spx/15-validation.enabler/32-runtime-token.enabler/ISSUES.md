@@ -50,43 +50,45 @@ Required handling:
 
 **Settlement condition.** The node and its spec align to the decision's wording, as part of the tree-wide sweep `spx/18-plugin-build.enabler/ISSUES.md` records. The node name encodes the term, so the sweep includes a `/refactor` node rename.
 
-## DEBT [evidence]: existing harness and test hand-write build-token text (f-002, f-003)
+## DEBT [evidence]: profile harness and compliance test hand-write build-token text (f-001, f-008, f-002, f-003)
 
-A `spec-tree:test-evidence-auditor` verdict on this node at head `dd0d8cd6678c7619f1474d35f12e81f0df52e3c2` rejected two pieces of existing text with the same defect. The verdict carries no sealed run token. Every entry below that cites this audit shares that property.
+A second `spec-tree:test-evidence-auditor` verdict on this node at head `7e15b3c437ca8326e0e63dbd0e54d45a62245ba6`, recorded after the first audit's debt entries, rejected existing text in the profile harness and the compliance test that drives it. The verdict carries no sealed run token. Every entry below that cites this audit shares that property.
 
-- f-002: `outcomeeng_testing/harnesses/profile_validation.py:27` hand-writes build token delimiters and directory names in the harness.
-- f-003: `spx/15-validation.enabler/32-runtime-token.enabler/tests/test_profile_configuration.compliance.l1.py:64` holds an existing hand-written token.
+- f-001 (REJECT, source-ownership): `outcomeeng_testing/harnesses/profile_validation.py:27`, `write_configuration_overrides`, hand-writes the build variable delimiters, the block delimiters, the frontmatter delimiter, the token spelling, and the `src/_shared`, `src/plugins`, and `src/templates` directory names. `outcomeeng.distribution.contracts` owns `BUILD_VARIABLE_DELIMITER_START`, `BUILD_VARIABLE_DELIMITER_END`, `BUILD_BLOCK_DELIMITER_START`, `BUILD_BLOCK_DELIMITER_END`, `FRONTMATTER_DELIMITER`, `build_variable_token`, and `format_runtime_token`.
+- f-008 (WARNING): the same line writes only a template-generated frontmatter override. A literal frontmatter override, and the path and line of a literal model identifier, are never driven.
+- f-002 (REJECT, source-ownership): `spx/15-validation.enabler/32-runtime-token.enabler/tests/test_profile_configuration.compliance.l1.py:64` hand-writes the build token.
+- f-003 (REJECT, test-owned data): the same test file, line 42, holds the expected violation lines (2, 5) as literals that mirror the harness file layout.
 
-Both defects are the same class: the text spells out what the contracts owner and the shared path owner define, so a change to either owner leaves the evidence asserting the old spelling.
+The defects share one class: the text spells out what the contracts owner defines, or restates the harness file layout, so a change to either leaves the evidence asserting the old spelling.
 
-Resolution shape: build the delimiters from the contracts-owned delimiters, build the token with `format_runtime_token`, and build the directory names from the shared path owner.
+Resolution shape: build the delimiters, the token, and the directory names in the harness from the contracts owners; extend the harness to drive a literal frontmatter override and a literal model identifier and to report the path and line it wrote; build the f-002 token from the same owners; read the f-003 expected lines from the harness that writes the file.
 
-Evidence that the text lies outside the change: `git diff -U0 origin/main...HEAD` (merge base `149a55f71befdf61e88be9bda2aae725db1f2381`) reports no hunk on `outcomeeng_testing/harnesses/profile_validation.py`, and none on line 64 of the compliance test file.
+Evidence that the text lies outside the change: `git diff -U0 origin/main...HEAD` (merge base `149a55f71befdf61e88be9bda2aae725db1f2381`) reports no hunk on `outcomeeng_testing/harnesses/profile_validation.py:27` and none on lines 42 or 64 of the compliance test file.
 
-**Settlement condition.** Neither cited location holds a hand-written delimiter, directory name, or token, and a focused run of the node's tests plus a test-evidence audit over the repaired chain pass.
+**Settlement condition.** The harness and the compliance test hold no hand-written delimiter, directory name, or token and no literal expected line, the harness drives the literal frontmatter and literal identifier overrides, and a focused run of the node's tests plus a test-evidence audit over the repaired chain pass.
 
 ## DEBT [evidence]: native-field mapping tests hand-pick their inputs (f-004, f-005)
 
-The same `spec-tree:test-evidence-auditor` verdict at head `dd0d8cd6678c7619f1474d35f12e81f0df52e3c2` rejected two existing assertions in `spx/15-validation.enabler/32-runtime-token.enabler/tests/test_profile_configuration.mapping.l1.py`. The verdict carries no sealed run token.
+The same second `spec-tree:test-evidence-auditor` verdict at head `7e15b3c437ca8326e0e63dbd0e54d45a62245ba6` rejected two existing assertions in `spx/15-validation.enabler/32-runtime-token.enabler/tests/test_profile_configuration.mapping.l1.py`. The verdict carries no sealed run token.
 
-- f-004: line 22, `test_every_native_field_assignment_is_rejected`, hand-picks the assignment shapes it drives.
-- f-005: line 15, the existing assertion on identifiers absent from the profiles, is never driven past the profile members, so it cannot show that a non-member identifier passes.
+- f-004 (REJECT, test-owned data): line 22, `test_every_native_field_assignment_is_rejected`, hand-picks three assignment shapes and the payload inline.
+- f-005 (REJECT, alignment): line 15 drives only `MODEL_IDENTIFIERS` members; no generated non-member identifier matching `MODEL_IDENTIFIER_PATTERN` is driven, so the assertion cannot show that a non-member identifier passes.
 
-Resolution shape: drive f-004 from a generator that owns the shapes, and drive f-005 from a generator that produces non-member identifiers.
+Resolution shape: drive f-004 from the source-owned generator that owns `AUTHORED_BINDINGS` and `SURROUNDING_CONTEXTS`, and drive f-005 from a generator that produces non-member identifiers matching `MODEL_IDENTIFIER_PATTERN`.
 
 Evidence that the text lies outside the change: `git diff -U0 origin/main...HEAD` (merge base `149a55f71befdf61e88be9bda2aae725db1f2381`) reports no hunk on line 15 or line 22 of the cited file.
 
 **Settlement condition.** Both assertions take their inputs from source-owned generators, and a focused run plus a test-evidence audit over the repaired chain pass.
 
-## DEBT [evidence]: runtime-token compliance test reuses production enumeration and magic line numbers (f-006, f-007)
+## DEBT [evidence]: runtime-token harness oracle reuses production enumeration (f-006, f-007)
 
-The same `spec-tree:test-evidence-auditor` verdict at head `dd0d8cd6678c7619f1474d35f12e81f0df52e3c2` rejected existing text in `spx/15-validation.enabler/32-runtime-token.enabler/tests/test_runtime_token.compliance.l1.py`. The verdict carries no sealed run token.
+The same second `spec-tree:test-evidence-auditor` verdict at head `7e15b3c437ca8326e0e63dbd0e54d45a62245ba6` rejected existing text in `outcomeeng_testing/harnesses/runtime_tokens.py`. The verdict carries no sealed run token.
 
-- f-006 (REJECT): line 34, the oracle reuses the production enumeration, so a defect in the enumeration is shared by the code and its check.
-- f-007 (WARNING): line 42 holds magic line numbers.
+- f-006 (REJECT, oracle-independence): line 104, `ignored_files` is computed with production `is_ignored()` and then compared by membership in the same table, so a defect in production is shared by the code and its check.
+- f-007 (REJECT, oracle-independence): line 91, `expected_files` repeats the algorithm of `runtime_token_files()`, and `enforced_roots` is the single root `src` instead of the three roots the assertion names.
 
-Resolution shape: give f-006 an independent oracle that does not import the production enumeration, and derive the f-007 line numbers from the generated source.
+Resolution shape: give f-006 an independent oracle that does not call `is_ignored()`, and give f-007 an independent enumeration over `src/plugins`, `src/_shared`, and `src/templates`.
 
-Evidence that the text lies outside the change: `git diff -U0 origin/main...HEAD` (merge base `149a55f71befdf61e88be9bda2aae725db1f2381`) reports no hunk on this file, so lines 34 and 42 are unchanged.
+Evidence that the text lies outside the change: `git diff -U0 origin/main...HEAD` (merge base `149a55f71befdf61e88be9bda2aae725db1f2381`) reports no hunk on line 91 or line 104 of the cited file.
 
-**Settlement condition.** The oracle shares no enumeration with production, no literal line number remains, and a focused run plus a test-evidence audit over the repaired chain pass.
+**Settlement condition.** The ignored-file oracle shares no predicate with production, the expected files come from an independent enumeration over the three named roots, and a focused run plus a test-evidence audit over the repaired chain pass.
