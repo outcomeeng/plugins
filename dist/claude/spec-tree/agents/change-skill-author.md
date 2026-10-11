@@ -5,6 +5,7 @@ name: change-skill-author
 description: >-
   Round session `/execute-change` launches by exact name when a Mutation row needs a skill surface (a `SKILL.md`, another file in a skill directory, or an authored shared fragment) produced or repaired through `instructions:create-skill`.
 disallowedTools: Agent, AskUserQuestion
+
 skills:
   - instructions:create-skill
 ---
