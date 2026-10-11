@@ -26,7 +26,7 @@ An authoritative SPX projection and raw run token for the requested implementati
 - NEVER end a run because work remains, time has passed, context is tight, or reading is unfinished — a stop names the failed command with its exit code and stderr, or the absent prerequisite.
 - NEVER assign `incomplete` or `skipped` to a required coverage unit; neither describes an admissible terminal state for required coverage.
 - NEVER derive a subject body from a single commit's patch, or leave a truncated read unrecovered — a partial read is re-issued, never converted into coverage evidence.
-- NEVER hand-transcribe the resolved changed-path set into a payload — the resolver's own output reaches the run through a pipe, because a retyped inventory drops and substitutes paths without any later step noticing.
+- NEVER hand-transcribe the resolved changed-path set into a payload — the resolver writes the run-start input to a file that the run-start command takes by path, because a retyped inventory drops and substitutes paths without any later step noticing.
 - NEVER select a skill from the installed skill inventory, and NEVER invoke a skill to discover whether a kind is installed — the registry selection in the run's sealed start input is the only selection source; the inventory this context carries decides only whether a selected skill runs or is recorded as `missing-skill`, and a failed invocation is not selection evidence.
 - ALWAYS record coverage as `<coverage_model>` states; a run that narrows a set or records a unit only where it found something states its findings as its coverage.
 - NEVER let a raised finding or a rejected terminal status shorten the inspection: rejection is a verdict about what was inspected, never permission to leave a concern or a resolved path unrecorded.
@@ -120,7 +120,7 @@ Before reading project file bodies:
    Read its `base` and `head`; the full endpoint IDs form the SPX scope identity
    `{base}..{head}`. Never reinterpret that identity as a two-dot changed-file
    query or substitute a local base branch. Its three-dot `changed_paths` reach
-   the run through the pipe in `<verification_run_contract>`, never by being
+   the run through the file in `<verification_run_contract>`, never by being
    read out and retyped: a changeset carries more paths than a response
    reproduces reliably, and a dropped path there is invisible to every later
    stage. Quote each substituted argument independently, applying the
@@ -162,12 +162,19 @@ this before loading concern standards, inspecting the changeset, or
 invoking concern skills, so the returned run token identifies the in-flight
 audit from its beginning:
 
-Compose the `--input` payload by piping the resolver's own output, so the
-resolved `base`, `head`, and complete `changed_paths` enter the run exactly as
-git produced them:
+Have the resolver write the run-start input to a file, so the resolved `base`,
+`head`, and complete `changed_paths` enter the run exactly as git produced them.
+Name a path in the session scratch directory, unique to this run, such as
+`<run-id>-start-input.json`, and pass it as the resolver's output path:
 
 ```bash
-python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_scope.py" '{selector}' --repo '{repository-root}' --audit-input '<rendered-context-json-on-one-line>' | spx verification run start --verification-type audit --scope-type changeset --scope <base>..<head> --input stdin
+python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_scope.py" '{selector}' --repo '{repository-root}' --audit-input '<rendered-context-json-on-one-line>' --output '<start-input-file>'
+```
+
+Then start the run with its own command, passing that file by path:
+
+```bash
+spx verification run start --verification-type audit --scope-type changeset --scope <base>..<head> --input '<start-input-file>'
 ```
 
 The `--audit-input` object carries only the short values the invocation supplies:
