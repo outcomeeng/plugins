@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## Unreleased
+
+### Changed
+
+- **`/operate-agent-mail` registers an owner's assigned label at startup and at resume.** The register workflow runs before the owner's first mail operation, both when the owner starts and when it resumes. The owner supplies the display label from its own position assignment, retained in its own resume note, and registers only its own stable name; an owner with no assigned label registers unlabeled, as before. The change needs no operator label setup, no hook, and no label roster store, and it registers no other identity.
+
 ## 0.12.2
 
 ### Changed
