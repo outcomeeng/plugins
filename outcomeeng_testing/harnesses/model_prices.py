@@ -40,7 +40,11 @@ def observe_price_sites(
     for path in paths:
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         for node in ast.walk(tree):
-            if isinstance(node, ast.Constant) and node.value in identifiers:
+            if (
+                isinstance(node, ast.Constant)
+                and isinstance(node.value, str)
+                and node.value in identifiers
+            ):
                 sites.append(PriceSite(path, node.lineno, node.value))
             elif (
                 isinstance(node, ast.Call) and _callee_name(node) == ModelPrice.__name__
