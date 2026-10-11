@@ -19,6 +19,10 @@ The prose ADR conventions — template source, structure ownership, atemporal vo
 
 </success_criteria>
 
+<identifiers>
+Every structural rule in a kind's reference carries one stable identifier, written in backticks at the start of the rule. An identifier never changes when its heading or description is reworded, and no two rules share one. A prose ADR and a finding name a structural rule by its identifier exactly as the reference spells it.
+</identifiers>
+
 <reference_note>
 This is a reference skill. Composing prose architecture skills load these conventions explicitly before authoring or auditing prose ADRs. It is not a standalone workflow.
 </reference_note>

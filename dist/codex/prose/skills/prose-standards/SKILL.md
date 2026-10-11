@@ -17,7 +17,7 @@ Judge the catalog sound only after finding in every anti-pattern entry a name, t
 </success_criteria>
 
 <identifiers>
-Every catalog pattern, pack rule, and style-layer rule carries one stable identifier, written in backticks: after the name in the catalog, at the start of a pack rule, and at the start of a style-layer rule. An identifier never changes when its heading or description is reworded, and no two rules share one. A finding names the violated rule by its identifier exactly as written here, with no prefix and no rewording. Routing outcomes carry the identifiers `governed-elsewhere`, `missing-kind`, and `missing-target`.
+Every catalog pattern, pack rule, style-layer rule, and structural rule carries one stable identifier, written in backticks: after the name in the catalog, at the start of a pack rule, at the start of a style-layer rule, and at the start of a structural rule in the matching `/prose-architecture-standards` reference. An identifier never changes when its heading or description is reworded, and no two rules share one. A finding names the violated rule by its identifier exactly as written here, with no prefix and no rewording. Routing outcomes carry the identifiers `governed-elsewhere`, `missing-kind`, and `missing-target`.
 </identifiers>
 
 <reference_note>
