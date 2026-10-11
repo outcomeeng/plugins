@@ -18,11 +18,11 @@ CAN have every position's Change reach the default branch with every block, ques
 
 ### Compliance
 
-- ALWAYS: `/direct-positions` routes every block, question and stall a position reports to the owner its authority map names, and routes to the operator only new intent, an unsettled product question, cost, permission, credentials and safety ([audit])
-- NEVER: `/direct-positions` attests a Frame, confirms a Slice, sets a priority, or sends an order, attestation or queue decision into a Product; a position's question about its own Product is answered that the decision is its Maintainer's ([audit])
-- NEVER: `/direct-positions` states a rule for a command-guard block or classifier refusal of the Director's own command, or redirects a position to a file-deleting command; the router and `/skill-standards` own those rules ([audit])
+- ALWAYS: the Director routes every block, question and stall a position reports to the owner its authority map names, and routes to the operator only new intent, an unsettled product question, cost, permission, credentials and safety ([audit])
+- NEVER: the Director attests a Frame, confirms a Slice, sets a priority, or sends an order, attestation or queue decision into a Product; a position's question about its own Product is answered that the decision is its Maintainer's ([audit])
+- NEVER: the Director's guidance states a rule for a command-guard block or classifier refusal of the Director's own command, or redirects a position to a file-deleting command; the router and the skill standard own those rules ([audit])
 - ALWAYS: the bundled scripts reach Prowl, herdr and agent mail only by a `__file__`-relative import of the sibling adapters' typed operations, and construct no command of those tools ([audit])
 - ALWAYS: the Director's watch file, monitor state and state note live in the `.spx/director/` directory of the session's own checkout, which the checkout ignores, so no write leaves the checkout; every bundled script takes their paths as arguments, and the roster prints to standard output, never into the Change draft store ([audit])
-- NEVER: `/direct-positions` names a position, agent, Change or repository of one deployment ([audit])
+- NEVER: the Director's guidance names a position, agent, Change or repository of one deployment ([audit])
 - NEVER: the roster or the monitor accepts a missing or malformed watch file or an invalid argument; each exits nonzero naming the defect ([test](tests/test_watch_input.compliance.l1.py))
 - NEVER: two monitor loops run on one state file; the lock is taken atomically, a second loop exits with `WATCH-DUPLICATE`, and a stale lock whose process is gone is taken over ([test](tests/test_monitor_lock.compliance.l1.py))
