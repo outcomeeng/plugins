@@ -3,14 +3,15 @@ name: audit-assertions
 description: >-
   Audit-assertion methodology — judges each `[audit]` assertion of one node
   spec against the subject that assertion names, and records the judgment as one
-  scope unit per assertion in an SPX file-scoped verification run.
+  child scope unit per assertion under one root unit for the spec in an SPX
+  file-scoped verification run.
 argument-hint: "<JSON object with path and runDriver>"
 allowed-tools: Read, Grep, Glob, Bash(spx verification run:*), Bash(printf '%s\n':*), Bash(git merge-base:*), Bash(git diff:*), {{! tool('use_skill') !}}
 ---
 
 <objective>
 
-A sealed `spx verification run` on one node spec, with one scope unit per `[audit]` assertion identified by its rule slug (a pathless `[audit]` assertion by its ordinal in the spec) and every finding on touched text recorded on its unit, returned as the run token with the rendered projection, whose `terminalStatus` is `approved` or `rejected`, followed by each other finding as a `filed` line; or the complete `BLOCKED` diagnostic when the run cannot finish.
+A sealed `spx verification run` on one node spec, with one root scope unit for the spec (none when the spec has no `[audit]` assertion) and one child scope unit per `[audit]` assertion identified by its rule slug (a pathless `[audit]` assertion by its ordinal in the spec), every finding on touched text recorded on its child unit, returned as the run token with the rendered projection, whose `terminalStatus` is `approved` or `rejected`, followed by each other finding as a `filed` line; or the complete `BLOCKED` diagnostic when the run cannot finish.
 
 </objective>
 
@@ -54,7 +55,7 @@ Use skill `spec-tree:spec-tree-plugin`. Invoke it with the verb `version` and re
    The command prints a JSON locator; take its `runToken` exactly and use it for every later command. Never pass the whole locator as `--run`.
 4. **Judge.** For each selected assertion, identify the subject its text names, read that subject completely — recovering any truncated read in bounded ranges — and decide whether the assertion holds of it. A violation is a finding carrying the observed and expected states and a severity of `blocking` or `debt`, whose message opens with the assertion's designator, kept per `${CLAUDE_SKILL_DIR}/references/touched-text.md`. Merge the violations of one rule on one assertion into one finding, because a finding's key is its unit key and rule. A subject the text names that cannot be located is a finding against that assertion. An assertion whose text names no identifiable subject is a finding with rule `subject-unnamed`.
 5. **Classify.** Resolve the base and run the diff commands as `${CLAUDE_SKILL_DIR}/references/touched-text.md` states, and sort each finding into touched text or standing text.
-6. **Record.** Add one scope unit per selected assertion, then each finding on touched text on its unit, per `<persistence_contract>`. Every selected assertion is `audited` whether it holds or carries findings. A standing finding is recorded nowhere in the run.
+6. **Record.** When any assertion is selected, add the root scope unit first, because a run admits one root and every child names it, then one child scope unit per selected assertion, then each finding on touched text on its child unit, per `<persistence_contract>`. Every selected assertion is `audited` whether it holds or carries findings. A standing finding is recorded nowhere in the run.
 7. **Finish.** Derive `rejected` when a finding on touched text exists and `approved` otherwise, whatever standing findings exist; a spec with no selected assertion finishes `approved` with no unit. Run the finish and render commands:
 
    ```bash
@@ -66,11 +67,47 @@ Use skill `spec-tree:spec-tree-plugin`. Invoke it with the verb `version` and re
 
 <persistence_contract>
 
-Add a scope unit with `spx verification run scope add --verification-type audit --scope-type file --scope <path> --run <token> --payload stdin --idempotency-key '<unitId>'`, the payload on stdin per `<stdin_forms>`. The `unitId` is the unit key, `assertion:<designator>:<path>`. The class `spec` and kind `spec` are the pair `spx` accepts for a node spec subject, and the unit key alone carries the assertion's identity; `spx` refuses the class `assertion`.
+Add a scope unit with `spx verification run scope add --verification-type audit --scope-type file --scope <path> --run <token> --payload stdin --idempotency-key '<unitId>'`, the payload on stdin per `<stdin_forms>`. The root unit's `unitId` is the audited `<path>`, its concern partition is `spec`, and it omits `parentUnitId`; the run admits one root. Each child unit's `unitId` is the unit key, `assertion:<designator>:<path>`, and its `parentUnitId` is the root's `unitId`. The class `spec` and kind `spec` are the pair `spx` accepts for a node spec subject, and the child unit key alone carries the assertion's identity; `spx` refuses the class `assertion`.
+
+The root unit:
+
+```json
+{
+  "unitId": "<path>",
+  "auditClass": "spec",
+  "auditKind": "spec",
+  "subject": "<path>",
+  "coverageRequirement": "required",
+  "coverageStatus": "audited",
+  "priorContext": {
+    "changedFilePartition": "<path>",
+    "concernPartition": "spec"
+  },
+  "expectedProducer": {
+    "producerKind": "skill",
+    "agentName": "<runDriver.agentName>",
+    "agentOwningPluginName": "<runDriver.agentOwningPluginName>",
+    "skillName": "audit-assertions",
+    "skillOwningPluginName": "spec-tree",
+    "invocationRole": "leaf-skill"
+  },
+  "recordedByRunDriver": {
+    "producerKind": "<runDriver.producerKind>",
+    "agentName": "<runDriver.agentName>",
+    "agentOwningPluginName": "<runDriver.agentOwningPluginName>",
+    "skillName": "<runDriver.skillName>",
+    "skillOwningPluginName": "<runDriver.skillOwningPluginName>",
+    "invocationRole": "<runDriver.invocationRole>"
+  }
+}
+```
+
+A child unit:
 
 ```json
 {
   "unitId": "<unit-key>",
+  "parentUnitId": "<path>",
   "auditClass": "spec",
   "auditKind": "spec",
   "subject": "<path>",
@@ -99,7 +136,7 @@ Add a scope unit with `spx verification run scope add --verification-type audit 
 }
 ```
 
-Add a finding with `spx verification run finding add` and the same selectors, `--payload stdin` per `<stdin_forms>`, and `--idempotency-key '<unitId>:<rule>'`, the finding key `${CLAUDE_SKILL_DIR}/references/touched-text.md` defines. Its payload names an accepted unit; `producerIdentity` repeats that unit's `expectedProducer`; `producerProvenance` carries the plugin version `<request_contract>` retained in both version fields, and no `toolVersion`; `rule` is a lowercase hyphenated identifier naming the violated constraint.
+Add a finding with `spx verification run finding add` and the same selectors, `--payload stdin` per `<stdin_forms>`, and `--idempotency-key '<unitId>:<rule>'`, the finding key `${CLAUDE_SKILL_DIR}/references/touched-text.md` defines. Its payload names an accepted child unit; `producerIdentity` repeats that unit's `expectedProducer`; `producerProvenance` carries the plugin version `<request_contract>` retained in both version fields, and no `toolVersion`; `rule` is a lowercase hyphenated identifier naming the violated constraint.
 
 ```json
 {
@@ -166,7 +203,7 @@ stderr: <exact-stderr-or-none>
 
 <success_criteria>
 
-- Every `[audit:{rule-slug}]` and pathless `[audit]` assertion of the target spec has exactly one `audited` scope unit under its unit key, and no assertion carrying another tag has a unit.
+- When the spec has a selected assertion, the run holds one `audited` root scope unit for the target spec, and every `[audit:{rule-slug}]` and pathless `[audit]` assertion of the spec has exactly one `audited` child unit under its unit key that names the root, and no assertion carrying another tag has a unit.
 - Every recorded finding lies on touched text and sits on an accepted unit, names the violated constraint, the subject location, and observed-versus-expected evidence, and rests on the subject's own content.
 - Every standing finding appears as a `filed` line carrying its key, `baseRefEvidence`, and `issuesEntry`, and rejects no run.
 - The run was started before the first judgment, finished with a terminal status derived from the recorded findings, and rendered.
