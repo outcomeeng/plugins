@@ -16,6 +16,12 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 - **`project-run-journal` states one command form for each journal verb a streaming run uses, so an audit or review run opens, appends, seals, reads, and renders under the dangerous-command guard.** The skill gives `open`, `append`, `seal`, `read`, and `render` each as its own command with the type, run token, event path, and cursor written out literally, and stops the run at the first nonzero exit. `append` reads its event through the input redirect from a file written with the file-write tool in the session scratch directory, and the file-write tool writes only event files. The skill forbids sending an event through a heredoc, a pipe, an inline argument, or an interpreter or `printf` stage. Before this change, the skill stated the redirect form for `append` alone and described its input as read from stdin, so a consumer that built an event in the shell had the guard block its append and left an open run with no sealed verdict.
 
+## 0.106.3
+
+### Changed
+
+- **`/audit-implementation` records each scope-add and finding-add payload through a file, so a run records its scope one unit at a time under the dangerous-command guard.** The skill has the run driver write each payload with the file-write tool to its own file in the session scratch directory and pass the file by path to `--payload`, adds each scope unit and each finding with its own literal command, one at a time, and stops the audit with the blocked diagnostic at the first command that exits nonzero. The file-write tool writes only payload files. The skill's tool grant adds the file-write tool in place of the `printf` command, and the skill no longer teaches a heredoc or a `printf` pipe for these payloads. Before this change, the skill taught a quoted heredoc or a `printf` pipe for every scope-add and finding-add payload, so a consumer that followed it had the guard block a command in the middle of a scope sequence and left an open run with incomplete coverage. Change: https://github.com/outcomeeng/changes/issues/425.
+
 ## 0.106.2
 
 ### Changed
