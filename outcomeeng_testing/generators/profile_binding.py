@@ -23,8 +23,13 @@ from outcomeeng.distribution.profiles import (
 _LITERAL_BINDINGS: Final = ('"value"', "'value'")
 """Quoted literals: no template token, read expression, or placeholder opens them."""
 
+PROFILE_DESCRIPTION_TOKEN: Final = build_variable_token(
+    f"profile_description('{AgentProfile.STANDARD}')"
+)
+"""Build template token that renders the standard profile's description."""
+
 _TEMPLATE_TOKEN_BINDINGS: Final = (
-    build_variable_token(f"profile_description('{AgentProfile.STANDARD}')"),
+    PROFILE_DESCRIPTION_TOKEN,
     format_runtime_token(RUNTIME_TOKEN_FIELD_KIND, "value"),
 )
 """Build template tokens: the guard's template-token branch."""

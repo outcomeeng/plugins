@@ -54,14 +54,14 @@ Required handling:
 
 A second `spec-tree:test-evidence-auditor` verdict on this node at head `7e15b3c437ca8326e0e63dbd0e54d45a62245ba6`, recorded after the first audit's debt entries, rejected existing text in the profile harness and the compliance test that drives it. The verdict carries no sealed run token. Every entry below that cites this audit shares that property.
 
-- f-001 (REJECT, source-ownership): `outcomeeng_testing/harnesses/profile_validation.py:27`, `write_configuration_overrides`, hand-writes the build variable delimiters, the block delimiters, the frontmatter delimiter, the token spelling, and the `src/_shared`, `src/plugins`, and `src/templates` directory names. `outcomeeng.distribution.contracts` owns `BUILD_VARIABLE_DELIMITER_START`, `BUILD_VARIABLE_DELIMITER_END`, `BUILD_BLOCK_DELIMITER_START`, `BUILD_BLOCK_DELIMITER_END`, `FRONTMATTER_DELIMITER`, `build_variable_token`, and `format_runtime_token`.
+- f-001 (REJECT, source-ownership): `outcomeeng_testing/harnesses/profile_validation.py`, `write_configuration_overrides`, hand-writes the `src/_shared`, `src/plugins`, and `src/templates` directory names.
 - f-008 (WARNING): the same line writes only a template-generated frontmatter override. A literal frontmatter override, and the path and line of a literal model identifier, are never driven.
 - f-002 (REJECT, source-ownership): `spx/15-validation.enabler/32-runtime-token.enabler/tests/test_profile_configuration.compliance.l1.py:64` hand-writes the build token.
 - f-003 (REJECT, test-owned data): the same test file, line 42, holds the expected violation lines (2, 5) as literals that mirror the harness file layout.
 
 The defects share one class: the text spells out what the contracts owner defines, or restates the harness file layout, so a change to either leaves the evidence asserting the old spelling.
 
-Resolution shape: build the delimiters, the token, and the directory names in the harness from the contracts owners; extend the harness to drive a literal frontmatter override and a literal model identifier and to report the path and line it wrote; build the f-002 token from the same owners; read the f-003 expected lines from the harness that writes the file.
+Resolution shape: build the directory names in the harness from the contracts owners; extend the harness to drive a literal frontmatter override and a literal model identifier and to report the path and line it wrote; build the f-002 token from the same owners; read the f-003 expected lines from the harness that writes the file.
 
 Evidence that the text lies outside the change: `git diff -U0 origin/main...HEAD` (merge base `149a55f71befdf61e88be9bda2aae725db1f2381`) reports no hunk on `outcomeeng_testing/harnesses/profile_validation.py:27` and none on lines 42 or 64 of the compliance test file.
 

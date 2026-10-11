@@ -3,8 +3,13 @@
 from pathlib import Path
 import json
 
-from outcomeeng.distribution.contracts import BUILD_TARGET_VARIABLE, Target
-from outcomeeng.distribution.profiles import AgentProfile, NATIVE_CONFIGURATION_FIELDS
+from outcomeeng.distribution.contracts import (
+    FRONTMATTER_DELIMITER,
+    Target,
+    format_target_conditional,
+)
+from outcomeeng.distribution.profiles import NATIVE_CONFIGURATION_FIELDS
+from outcomeeng_testing.generators.profile_binding import PROFILE_DESCRIPTION_TOKEN
 from outcomeeng_testing.harnesses.src_tree import SrcTreeBuilder
 
 _AUTHORED_SOURCE_DIRECTORIES = (
@@ -23,12 +28,11 @@ def write_configuration_overrides(root: Path) -> tuple[Path, ...]:
                 path = root / directory / target.value / field / "SKILL.md"
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text(
-                    "---\n"
-                    + f"{field}: \"{{{{! profile_description('{AgentProfile.STANDARD}') !}}}}\"\n"
-                    + "---\n"
-                    + f"{{!% if {BUILD_TARGET_VARIABLE} == '{target.value}' %!}}\n"
-                    + f'{field} = "value"\n'
-                    + "{!% endif %!}\n",
+                    f"{FRONTMATTER_DELIMITER}\n"
+                    + f"{field}: {json.dumps(PROFILE_DESCRIPTION_TOKEN)}\n"
+                    + f"{FRONTMATTER_DELIMITER}\n"
+                    + format_target_conditional(target, f'{field} = "value"')
+                    + "\n",
                     encoding="utf-8",
                 )
                 paths.append(path)
