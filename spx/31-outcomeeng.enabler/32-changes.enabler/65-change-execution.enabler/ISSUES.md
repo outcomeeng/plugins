@@ -34,11 +34,11 @@
 
 ## The Executor skill's grants, verify scope and reading tag carry three open warnings
 
-**Evidence**: `instructions:skill-auditor` findings f-008, f-010 and f-011, severity `WARNING`, against `src/plugins/spec-tree/skills/execute-change/SKILL.md`, in the typed skill audit of head `8b72c99fe5a258ef2d562e7e33e1151c909c0658`, which approved with no must-fix finding. The Codex render grants `spawn_agent` and `wait_agent` although its `<codex_surface>` runs no step. Step 5.3 runs the product `verify` command over the Activity's nodes and the changeset, and a skill-surface or subagent-definition round targets paths outside any spec node. `<required_reading>`, a workflow-file tag, holds the always-on composition directives of a non-router skill.
+**Evidence**: `instructions:skill-auditor` findings f-008, f-010 and f-011, severity `WARNING`, against `src/plugins/spec-tree/skills/execute-change/SKILL.md`, in the typed skill audit of head `8b72c99fe5a258ef2d562e7e33e1151c909c0658`, which approved with no must-fix finding. Step 5.3 runs the product `verify` command over the Activity's nodes and the changeset, and a skill-surface or subagent-definition round targets paths outside any spec node. `<required_reading>`, a workflow-file tag, holds the always-on composition directives of a non-router skill.
 
-**Impact**: the Codex grant exceeds the behavior it serves, the verification scope for a round whose subject is no spec node depends on judgment, and the tag does not name its content.
+**Impact**: the verification scope for a round whose subject is no spec node depends on judgment, and the tag does not name its content.
 
-**Settlement condition**: the Codex render grants only what its `unavailable` path needs, step 5.3 states the scope for a subject that is no spec node, and the always-on directives sit in a semantically named section; one typed skill audit of `execute-change` then raises no `narrowest_allowed_tools`, `ambiguous_instruction` on scope, or `tag_semantics` finding.
+**Settlement condition**: step 5.3 states the scope for a subject that is no spec node, and the always-on directives sit in a semantically named section; one typed skill audit of `execute-change` then raises no `ambiguous_instruction` on scope or `tag_semantics` finding. The Codex render's grant is judged against the launching behavior it performs, `spawn_agent` and `wait_agent` for the rounds and Verifiers it starts, and raises no `narrowest_allowed_tools` finding.
 
 ## An instruction round's changelog entry has no declared owner in the fronted skills
 
