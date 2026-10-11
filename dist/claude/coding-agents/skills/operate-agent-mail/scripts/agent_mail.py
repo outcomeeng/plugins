@@ -692,13 +692,13 @@ def record_from_inbox_item(item: object, *, recipient: str) -> dict[str, object]
 def sender_display(stable_name: str, label: object) -> str:
     """Render a sender for display: `Label <StableName>`, or the stable name alone.
 
-    A label displays only when it is a non-empty string, printable, and free of
+    A label displays only when it is a nonblank string, printable, and free of
     square and angle brackets; any other label, including an absent or blank
     one, leaves the sender unlabeled. The rendering selects and routes nothing.
     """
     if (
         isinstance(label, str)
-        and label
+        and label.strip()
         and label.isprintable()
         and not LABEL_FORBIDDEN_CHARACTERS & set(label)
     ):
