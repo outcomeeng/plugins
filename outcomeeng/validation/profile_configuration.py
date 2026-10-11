@@ -9,6 +9,7 @@ token, or an unquoted value, does.
 import re
 from typing import Final
 
+from outcomeeng.distribution.contracts import BUILD_VARIABLE_DELIMITER_START
 from outcomeeng.distribution.profiles import (
     MODEL_IDENTIFIER_PATTERN,
     NATIVE_CONFIGURATION_FIELDS,
@@ -20,7 +21,7 @@ _ASSIGNMENT: Final = re.compile(
     + r")[\"']?[ \t]*[:=][ \t]*(?=\S)"
 )
 
-_TEMPLATE_TOKEN: Final = re.compile(r"\{\{!")
+_TEMPLATE_TOKEN: Final = re.compile(re.escape(BUILD_VARIABLE_DELIMITER_START))
 _READ_EXPRESSION: Final = re.compile(
     r"[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*(?:[(\[]|\.[A-Za-z_])"
 )
