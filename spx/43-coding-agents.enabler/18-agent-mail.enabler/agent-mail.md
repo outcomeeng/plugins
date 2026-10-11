@@ -13,7 +13,7 @@ This capability is an agent adapter: the configured way the agent harness lets o
 
 ## Assertions
 
-- ALWAYS: the register workflow of `src/plugins/coding-agents/skills/operate-agent-mail/SKILL.md` runs at owner startup and at owner resume before the owner's first mail operation; each owner supplies the assigned display label from its own position assignment, retained in its own resume note, and registers only its own stable name, with no operator label setup, no hook, no label roster store, and no registration of another identity; an owner with no assigned label keeps the unlabeled behavior
+- ALWAYS: the register workflow of `src/plugins/coding-agents/skills/operate-agent-mail/SKILL.md` runs at owner startup and at owner resume before the owner's first mail operation; each owner supplies the assigned display label from its own position assignment, retained in its own resume note, and registers only its own stable name, with no operator label setup, no hook, no label roster store, and no registration of another identity; an owner with no assigned label keeps the unlabeled behavior ([audit:owner-label-lifecycle])
 
 ### Mappings
 
