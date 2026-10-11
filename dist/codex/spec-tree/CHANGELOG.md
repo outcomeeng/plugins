@@ -16,6 +16,12 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 - **`/audit-assertions` records one root unit for the audited node spec and each `[audit]` assertion as that root's child, so a run on a spec with several `[audit]` assertions seals.** The root's `unitId` is the audited spec path, it carries no `parentUnitId`, and each child keeps its unit key `assertion:<designator>:<path>` and names the root as its parent. Class `spec`, kind `spec`, and the spec path as subject apply to the root and to every child. A spec with no `[audit]` assertion records no unit and finishes `approved`, because the root exists to contain assertion units. Before this change, the skill recorded every assertion as a root, and `spx` admits one root per file-scoped run, so the second unit was refused and no run on a spec with several `[audit]` assertions finished.
 
+## 0.105.5
+
+### Changed
+
+- **`/test` loads the test skill of each language in which it creates or changes a test file before its first write, in a repair round as in a new scaffold.** The load is its own step ahead of scaffolding, once per language: an existing file's language follows from its canonical filename rendering and a new file's from the node's implementation and existing tests. A language with no installed test skill is reported with the result, and a decision-rule invocation loads none. Before this change, `/test` loaded a language test skill only while scaffolding a new test, so a round that repaired an existing test wrote without that language's test skill or its standards. The `change-tester` definition is unchanged and every caller of `/test` receives the same load. The conditional four-part progression detail moves from the `/test` body into a bundled reference that the body cites, which keeps the body under its line ceiling.
+
 ## 0.105.3
 
 ### Fixed
