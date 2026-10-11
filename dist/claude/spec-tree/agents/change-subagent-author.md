@@ -5,6 +5,7 @@ name: change-subagent-author
 description: >-
   Round session `/execute-change` launches by exact name when a Mutation row needs a subagent definition produced or repaired through `instructions:author-subagent`.
 disallowedTools: Agent, AskUserQuestion
+
 skills:
   - instructions:author-subagent
 ---
