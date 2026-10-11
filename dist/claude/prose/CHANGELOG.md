@@ -6,6 +6,15 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.12.8
+
+### Changed
+
+- **`/audit-prose` judges only the sentences a change touches.** A dispatch that carries a base revision reads the whole text for context and raises findings only on sentences that intersect the lines changed since that revision. A dispatch without a base revision audits the whole text, as before. A caller that re-audits a changed file after each repair passes the base revision and receives findings on the repaired sentences instead of a fresh sweep of the file.
+- **`/audit-prose` sweeps one sentence at a time.** It judges every applicable rule against a sentence, appends that sentence's findings to the run journal, and records the sentence as swept before it moves to the next.
+- **Every finding names exactly one stable rule identifier.** The `rule` field of a finding carries the identifier of the violated pattern as `/prose-standards` spells it, or `governed-elsewhere`, `missing-kind` or `missing-target` for a routing outcome. A sentence that violates several patterns yields one finding per pattern, where it yielded one finding naming every pattern before. A caller matches a finding to an earlier one by its rule.
+- **`/prose-standards` gives every catalog pattern, pack rule and structural rule a stable identifier** that survives rewording of its heading and description.
+
 ## 0.12.7
 
 ### Fixed
