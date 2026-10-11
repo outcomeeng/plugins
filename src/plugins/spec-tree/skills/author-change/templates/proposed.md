@@ -1,6 +1,6 @@
 ---
 title: "[Title naming the intended Output, at most 15 words]"
-product: "[The one owning Product, or omit the value for a root spanning Products]"
+product: "[The one Product that owns the Output, or omit the value for a root spanning Products]"
 maturity: Proposed
 lifecycle: Available
 refined_from: []
@@ -12,13 +12,13 @@ parent: null
 
 ## Intent
 
-- **What:** [The decision or spec evolution, lower-layer reconciliation, or combination this Change achieves. One to three sentences.]
-- **Why:** [The established reason the work is worth doing: truth brought to a lower layer, an operator judgment, a prototype question, or an Output and the condition it moves. One to three sentences.]
-- **Observation:** [Optional: the observed state that gives rise to the Change. Remove this line when no observation exists. One to three sentences.]
-- **Evidence:** [The observable result by which anyone checks that the Output is achieved. One to three sentences.]
+<!-- At most 60 words in all, labels included. A list inside a part stands in parentheses. -->
 
-## Decisions
+- **What:** [The decision or spec evolution, lower-layer reconciliation, or combination this Change achieves.]
+- **Why:** [The established reason the work is worth doing: truth brought to a lower layer, an operator judgment, a prototype question, or an Output and the condition it moves.]
+- **Observation:** [Optional: the observed state that gives rise to the Change. Remove this line when no observation exists.]
+- **Evidence:** [The observable result by which anyone checks that the Output is achieved.]
 
-<!-- At most 12 rows; each answer at most two sentences. -->
+## Open questions
 
-- [Each known question that can change the intended Output, unanswered.]
+- [Each known question that can change the intended Output, unanswered. Remove this section when none remains.]

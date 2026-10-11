@@ -9,7 +9,7 @@ allowed-tools: Read, Write, Edit, Grep, Glob, collaboration.spawn_agent, collabo
 ---
 
 <objective>
-A complete store-independent Change record in the Intent form, authored locally, independently approved at its declared Maturity, persisted through the configured store, and read back equal, or the children of a split, the merge, or the reframe of a Change under the Sliced workflow; or the `authority-required` result, which leaves the candidate and the store record unchanged.
+A complete store-independent Change record in the final format, authored locally, independently approved at its declared Maturity, persisted through the configured store, and read back equal, or the children of a split, the merge, or the reframe of a Change under the Sliced workflow; or the `authority-required` result, which leaves the candidate and the store record unchanged.
 </objective>
 
 <essential_principles>
@@ -47,7 +47,7 @@ Resolve these facts before routing:
 3. Intended Output and the established reason it is worth refinement.
 4. Consequential choices still open after reading governing Decisions, specs, affected references, predecessor Changes, blockers, and the current record.
 
-Draft directly when the Output is clear and consequential choices are resolved. Use skill `spec-tree:interview`. Invoke it only for unresolved scope, compatibility, failure behavior, dependency, evidence, rollout, recovery, monitoring, or resource-limit choices that change the Output or its Decisions. A problem with no chosen Output returns to operator judgment in discovery. The template supplies output shape and never acts as a questionnaire.
+Draft directly when the Output is clear and consequential choices are resolved. Use skill `spec-tree:interview`. Invoke it only for unresolved scope, compatibility, failure behavior, dependency, evidence, rollout, recovery, monitoring, or resource-limit choices that change the Output or its mutations blocks. A problem with no chosen Output returns to operator judgment in discovery. The template supplies output shape and never acts as a questionnaire.
 
 Never reopen a settled choice, infer silence as agreement, or demand beneficiaries, business value, research, or alternatives for a precise maintenance Change. Re-run triage when investigation exposes a new consequential choice.
 
@@ -70,7 +70,7 @@ Read exactly one maturity workflow and the template of the same name under `${SK
 
 For an existing Change, read its complete current body, each field from its store home, holder, predecessor and blocker records needed for the revision, and latest Handoff when resuming execution. Import it into the selected draft once, composing the front matter from each field's home above the body. Preserve `refined_from` and `parent` byte-for-byte; a revision changes `refined_from` only to append a Change it absorbed by a merge, and changes `parent` only when the Sliced workflow splits the Change under a new Parent. Retain the inspected remote representation outside the record for the publication concurrency check.
 
-A claim held by another holder blocks takeover. Terminal Lifecycle blocks ordinary resumption. A split creates children as the Sliced workflow states, and a merge closes the absorbed Change `Abandoned` and appends it to the survivor's `refined_from`. A published record whose body opens with `# Output` takes the Intent form at this revision under `compatibility-boundary`: author the new record from the proposal it carries, and never convert the old body in place. Reconcile an existing local candidate with the store representation before overwriting either.
+A claim held by another holder blocks takeover. Terminal Lifecycle blocks ordinary resumption. A split creates children as the Sliced workflow states, and a merge closes the absorbed Change `Abandoned` and appends it to the survivor's `refined_from`. A published record in another form — a body that opens with `# Output`, or one that carries `## Nodes`, `## Assertion operations`, `## Decisions`, `## Mutations`, or `## Activities` — takes the final format at this revision under `compatibility-boundary`: author the new record from the proposal it carries, and never convert the old body in place. Reconcile an existing local candidate with the store representation before overwriting either.
 
 Maturity moves backward only under `maturity-and-authority`; a reframe lowers it to `Proposed`. A Claimed holder writes a Handoff and releases the Change before lowering Maturity. When the newest move out of `Submitted` carries a `Rejection:` naming `Framed` or `Sliced` and `Maturity` still holds that level, lower it one level before any further refinement: Use skill `spec-tree:change-standards`, invoke it with `Lifecycle`, and write the lower value through the single-select write under `canonical-state`; a rejection at `Proposed` leaves `Proposed` without the priority decision.
 
@@ -132,7 +132,7 @@ Any mismatch or partial write is a failed persistence result. Preserve the local
 
 <result>
 
-Return the canonical Change reference, each `filed` finding with its key, rule, and run token, exact persisted Maturity and Lifecycle, whether the operation created or revised the Change, the equality result for every front-matter field, and the next Mutation row or unresolved operator question. A stop at `<authority_gate>` returns the result `authority-required` instead, naming the Maturity the Change holds and the move the store lacks.
+Return the canonical Change reference, each `filed` finding with its key, rule, and run token, exact persisted Maturity and Lifecycle, whether the operation created or revised the Change, the equality result for every front-matter field, and the next block or unresolved operator question. A stop at `<authority_gate>` returns the result `authority-required` instead, naming the Maturity the Change holds and the move the store lacks.
 
 Use skill `spec-tree:release-change`. Invoke it only when this session holds the Change (Lifecycle `Claimed`, with the winning Claim naming this session's assigned worktree root) and work stops or transfers with continuation remaining; a Change this session does not hold needs no release. Invoke it with `submit` when the persisted record is at `Proposed`, `Framed`, or `Sliced` and waits for the Product's Maintainer's confirmation. Preserve any unaudited local candidate locally and leave the published Change unchanged.
 
@@ -141,7 +141,7 @@ Use skill `spec-tree:release-change`. Invoke it only when this session holds the
 <reference_index>
 
 - `spec-tree:change-standards`: common record contract plus exactly one cumulative Definition of Ready, or the Lifecycle store rules.
-- `${SKILL_DIR}/templates/`: one store-independent seven-key, Intent-form record template per Maturity — `proposed.md`, `framed.md`, `sliced.md`, `executable.md`.
+- `${SKILL_DIR}/templates/`: one store-independent seven-key, final-format record template per Maturity — `proposed.md`, `framed.md`, `sliced.md`, `executable.md`.
 - `${SKILL_DIR}/references/repair-sweep.md`: the sweep table of one repair batch and the retained-findings comparison.
 
 </reference_index>
@@ -170,7 +170,7 @@ Use skill `spec-tree:release-change`. Invoke it only when this session holds the
 - Exactly one local candidate and one configured-store Change represent the intended Output, except in a split or merge, whose Sliced workflow states its own success criteria.
 - An `authority-required` stop left the candidate and the store record unchanged and named the Maturity the Change holds and the move the store lacks.
 - The candidate satisfies the one cumulative Definition of Ready loaded for its declared Maturity, and its Maturity above `Proposed` rests on the store's authority for the level it left.
-- Triage asks only questions whose answers change the Output, its Decisions, Maturity, risk, or ownership.
+- Triage asks only questions whose answers change the Output, its mutations blocks, Maturity, risk, or ownership.
 - The complete unchanged record receives an independent approved audit before publication, and a repaired candidate reaches its re-audit with every same-class site and changed-section dependent resolved.
 - Every front-matter field reads back equal from its one store home, and the issue body equals the approved file from its `## Intent` line.
 - The record contains no store-specific key, received conversation input, audit bookkeeping, body authority line, or authoritative body restatement of front matter.
