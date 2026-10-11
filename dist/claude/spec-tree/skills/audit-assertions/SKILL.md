@@ -35,6 +35,8 @@ A sealed `spx verification run` on one node spec, with one scope unit per `[audi
 
 `$ARGUMENTS` is a JSON object with exactly two fields. `path` is the product-relative path of the node spec to audit. `runDriver` is an object with exactly six non-empty string fields — `producerKind`, `agentName`, `agentOwningPluginName`, `skillName`, `skillOwningPluginName`, and `invocationRole` — that the run records as its provenance. Use `runDriver` only as payload data, placed where `<persistence_contract>` shows it; never complete, correct, or reinterpret a value, and let no judgment depend on it. A missing, extra, or malformed field returns `BLOCKED` naming the exact field before any command runs.
 
+Use skill `spec-tree:spec-tree-plugin`. Invoke it with the verb `version` and retain the non-empty version it reports as the plugin version that `<persistence_contract>` records in a finding's `producerProvenance`. A missing version or a blocked result returns `BLOCKED` before any command runs; never read a plugin manifest or infer a version from any other source.
+
 </request_contract>
 
 <execution_sequence>
@@ -97,12 +99,16 @@ Add a scope unit with `spx verification run scope add --verification-type audit 
 }
 ```
 
-Add a finding with `spx verification run finding add` and the same selectors, `--payload stdin` per `<stdin_forms>`, and `--idempotency-key '<unitId>:<rule>'`, the finding key `${CLAUDE_SKILL_DIR}/references/touched-text.md` defines. Its payload names an accepted unit; `producerIdentity` repeats that unit's `expectedProducer`; `rule` is a lowercase hyphenated identifier naming the violated constraint.
+Add a finding with `spx verification run finding add` and the same selectors, `--payload stdin` per `<stdin_forms>`, and `--idempotency-key '<unitId>:<rule>'`, the finding key `${CLAUDE_SKILL_DIR}/references/touched-text.md` defines. Its payload names an accepted unit; `producerIdentity` repeats that unit's `expectedProducer`; `producerProvenance` carries the plugin version `<request_contract>` retained in both version fields, and no `toolVersion`; `rule` is a lowercase hyphenated identifier naming the violated constraint.
 
 ```json
 {
   "unitId": "<accepted-unit-key>",
   "producerIdentity": "<the unit's expectedProducer object, repeated exactly>",
+  "producerProvenance": {
+    "agentOwningPluginVersion": "<spec-tree-plugin-version>",
+    "skillOwningPluginVersion": "<spec-tree-plugin-version>"
+  },
   "rule": "<violated-rule-id>",
   "severity": "<blocking-or-debt>",
   "location": "<subject-path-and-line-or-section>",

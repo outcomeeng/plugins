@@ -14,7 +14,7 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 ### Fixed
 
-- **`/audit-assertions` records each scope unit with audit class `spec` and audit kind `spec`, so a run it starts can finish.** The unit's subject stays the audited node spec path, and the assertion's designator, its rule slug or `ordinal-<n>` when pathless, sits in the unit key and opens the message of every finding on that unit. A consumer reads an `[audit]` assertion's result from the sealed run, which the pinned `spx` accepts for this payload. Before this change, the skill recorded audit class `assertion`, which `spx` refuses, so a run could not record its first unit and no `[audit]` result came from a sealed run.
+- **`/audit-assertions` records each scope unit with audit class `spec` and audit kind `spec`, so a run it starts can finish.** The unit's subject stays the audited node spec path, and the assertion's designator, its rule slug or `ordinal-<n>` when pathless, sits in the unit key and opens the message of every finding on that unit. A finding on that unit carries `producerProvenance` with the plugin version, which the skill reads through `spec-tree:spec-tree-plugin`. A consumer reads an `[audit]` assertion's result from the sealed run, which the pinned `spx` accepts for this payload. Before this change, the skill recorded audit class `assertion`, which `spx` refuses, so a run could not record its first unit, and its finding payload lacked `producerProvenance`, which `spx` rejects, so no run with a finding could seal; no `[audit]` result came from a sealed run.
 
 ## 0.105.2
 
