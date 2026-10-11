@@ -6,7 +6,7 @@
 
 <process>
 
-1. Every monitor line ends with `→` and the disposition it calls for; apply it, and use the row below for detail. A notice can be stale: read the pane through the backend's capability (`coding-agents:operate-prowl` or `coding-agents:operate-herdr`) before acting on any session signal.
+1. Every monitor line ends with `→` and the disposition it calls for; apply it, and use the row below for detail. A notice can be stale: read the pane before acting on any session signal; use skill `coding-agents:operate-prowl` or skill `coding-agents:operate-herdr`, by the position's backend.
 
    | Signal                               | Disposition                                                                                                                                                                                                                                                         |
    | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

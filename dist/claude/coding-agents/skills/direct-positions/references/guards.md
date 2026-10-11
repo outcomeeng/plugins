@@ -6,13 +6,13 @@ What a command guard, a classifier refusal or a permission prompt ends, and what
 
 <guards>
 
-| Decline                                                                     | What follows                                                                                                                                                                                                      |
-| --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A dangerous-command-guard prompt, including a guard timeout under host load | Cancel it: Escape or No. Never answer Yes. The position continues with a sanctioned command. A file edit through the Edit or Write tool after a blocked shell edit is that sanctioned route, not a reformulation. |
-| A guard block on a command holding one operation                            | The command family ends. Never retry it by any route.                                                                                                                                                             |
-| A guard block on a compound command                                         | Run its parts again one at a time, every string written out literally, with no shell variable or substitution.                                                                                                    |
-| A permission prompt raised by a destructive command                         | Escape, then tell the agent how to do it differently: `trash` in place of `rm`, no copy-and-delete, run from the scratchpad.                                                                                      |
-| A harness classifier refusal                                                | It binds the outcome, not the command. Never pursue the same outcome through another tool, split or wording. Report it to the operator with the reason verbatim.                                                  |
+| Decline                                                                     | What follows                                                                                                                                                     |
+| --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A dangerous-command-guard prompt, including a guard timeout under host load | Cancel it: Escape or No. Never answer Yes. The position continues with a sanctioned command its skill names.                                                     |
+| A guard block on a command holding one operation                            | The command family ends. Never retry it by any route.                                                                                                            |
+| A guard block on a compound command                                         | Run its parts again one at a time, every string written out literally, with no shell variable or substitution.                                                   |
+| A permission prompt raised by a destructive command                         | Escape, then tell the position how to do it differently: `trash` in place of `rm`, no copy-and-delete, run from the scratchpad.                                  |
+| A harness classifier refusal                                                | It binds the outcome, not the command. Never pursue the same outcome through another tool, split or wording. Report it to the operator with the reason verbatim. |
 
 A position never escalates a guard block on a read-only command to the operator: it reads the exact blocked command, then runs the declared commands plainly with full output.
 

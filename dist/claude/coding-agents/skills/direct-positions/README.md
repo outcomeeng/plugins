@@ -66,4 +66,4 @@ The harness caps a monitor at 30 minutes. Arm it through the harness monitor too
 
 ## Tests
 
-`tests/test_scripts.py` exercises the roster rendering and the monitor's signal edges over controlled inventories: `python3 -m pytest tests/`.
+The product's position-direction tests exercise the roster rows, the monitor's signal edges, its single-loop lock and the watch-file validation over controlled inventories. `compact_pane.py`, `costs.py` and `position_mail.py` carry no recorded test; run each once in the foreground before relying on it.
