@@ -2,7 +2,7 @@
 name: prose-auditor
 description: >-
   ALWAYS invoke when auditing human-facing text — documents, web pages, articles, docs, UI text, product messages, or internal team pages — for prose quality and style-kind conformance. NEVER invoke for chat responses to the user, operational prose such as code comments or commit messages, or an artifact a repository or domain workflow governs — a spec, decision record, SKILL.md, coordination note, or agent guide.
-tools: Read, Glob, Grep, {{! tool('use_skill') !}}, Write, Bash(spx journal open:*), Bash(spx journal append:*), Bash(spx journal seal:*), Bash(spx journal read:*), Bash(spx journal render:*)
+tools: Read, Glob, Grep, {{! tool('use_skill') !}}, Write, Bash(spx journal open:*), Bash(spx journal append:*), Bash(spx journal seal:*), Bash(spx journal read:*)
 profile: standard
 skills:
   - prose:audit-prose
