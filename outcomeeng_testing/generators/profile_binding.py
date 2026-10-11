@@ -14,7 +14,11 @@ from outcomeeng.distribution.contracts import (
     build_variable_token,
     format_runtime_token,
 )
-from outcomeeng.distribution.profiles import AgentProfile
+from outcomeeng.distribution.profiles import (
+    AgentProfile,
+    ClaudeEffort,
+    CodexReasoningEffort,
+)
 
 _LITERAL_BINDINGS: Final = ('"value"', "'value'")
 """Quoted literals: no template token, read expression, or placeholder opens them."""
@@ -25,8 +29,28 @@ _TEMPLATE_TOKEN_BINDINGS: Final = (
 )
 """Build template tokens: the guard's template-token branch."""
 
-AUTHORED_BINDINGS: Final = _LITERAL_BINDINGS + _TEMPLATE_TOKEN_BINDINGS
-"""Bindings that carry an authored value: a literal or a build template token."""
+_UNQUOTED_IDENTIFIERS: Final = tuple(
+    sorted(
+        {
+            str(value)
+            for values in (CodexReasoningEffort, ClaudeEffort)
+            for value in values
+        }
+    )
+)
+"""Identifier-shaped native values, taken from the enumerations that own them."""
+
+_UNQUOTED_BINDINGS: Final = tuple(
+    binding
+    for identifier in _UNQUOTED_IDENTIFIERS
+    for binding in (f"{identifier} (default)", f"{identifier}.")
+)
+"""Unquoted authored values: whitespace before a parenthesized word and a bare trailing dot."""
+
+AUTHORED_BINDINGS: Final = (
+    _LITERAL_BINDINGS + _TEMPLATE_TOKEN_BINDINGS + _UNQUOTED_BINDINGS
+)
+"""Bindings that carry an authored value: a literal, a build template token, or an unquoted value."""
 
 READ_BINDINGS: Final = (
     'lookup("key")',
