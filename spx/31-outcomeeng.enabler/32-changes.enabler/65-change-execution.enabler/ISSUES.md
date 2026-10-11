@@ -48,14 +48,6 @@
 
 **Settlement condition**: `instructions:create-skill` and `instructions:create-subagent` each declare a changelog step with its scope for a surface outside any plugin, or the entry moves to its own Activity and definition; the change-execution spec assertion, the `execute-change` task-message rule and the spec-tree changelog entry then name that owner.
 
-## A subagent-definition round carries no committed-head skill audit for its calling-skill update
-
-**Evidence**: `spec-tree:changes-reviewer` run `2026-10-03_21-54-22-438-ece57dd8f255` on head `1fd878a45b689558d17066797f74d806631edd92`, finding severity `DEBT`, category evidence, against `src/plugins/spec-tree/skills/execute-change/SKILL.md` and `change-execution.md`. `instructions:create-subagent` step 5 updates the calling skill through `instructions:create-skill`, which dispatches no skill audit, while the Verifier pairing of a `change-subagent-author` round names `instructions:subagent-auditor` only.
-
-**Impact**: when a Change's subagent-definition Activity also edits a calling skill, that edit reaches `/merge` with a skill audit only if the Change's Frame names a skill-surface obligation for it.
-
-**Settlement condition**: the pairing of a subagent-definition round names `instructions:skill-auditor` as well whenever the round's committed diff changes a skill surface, in the `execute-change` definitions text, its step 5.3 and the change-execution assertion, and one typed skill audit of `execute-change` then approves.
-
 ## `instructions:create-subagent` declares no repair-block intake for a Fixer round
 
 **Evidence**: `spec-tree:changes-reviewer` run `2026-10-03_22-50-05-358-7abe73e44d07` on head `59622008c0a2f9b78310058eda2d61bce96f9f52`, finding severity `DEBT`, category consistency, against the Fixer rule of `src/plugins/spec-tree/skills/execute-change/SKILL.md`. A Fixer round of `change-skill-author` or `change-subagent-author` receives its Author's task message and a repair block of rejected verdicts and failed command output. The `improve` route of `instructions:create-skill` routes supplied findings to `workflows/repair-skill.md`, which takes each supplied finding and each requested change as one inventory row and returns a disposition for every row. `instructions:create-subagent` takes only its configuration target and declares no intake for a supplied block.
@@ -66,7 +58,7 @@
 
 ## No route produces the invocation evidence of a subagent definition an Executor delivers
 
-**Evidence**: `spec-tree:changes-reviewer` run `2026-10-03_22-56-23-685-4cdbf8555ae6` on head `72378e875578070b6574c37595f0882802f41e3d`, finding severity `DEBT`, category evidence, against `src/plugins/spec-tree/skills/execute-change/SKILL.md` and `change-execution.md`. `/subagent-standards` requires each subagent definition without declared per-harness release acceptance to retain its exact-definition minimal isolated invocation, and `instructions:create-subagent` returns that invocation as verification still outstanding. The `<definitions>` table of `/execute-change` has no row whose result is a retained invocation run, the Executor produces no artifact, and the paired Verifier of a `change-subagent-author` round is `instructions:subagent-auditor` alone.
+**Evidence**: `spec-tree:changes-reviewer` run `2026-10-03_22-56-23-685-4cdbf8555ae6` on head `72378e875578070b6574c37595f0882802f41e3d`, finding severity `DEBT`, category evidence, against `src/plugins/spec-tree/skills/execute-change/SKILL.md` and `change-execution.md`. `/subagent-standards` requires each subagent definition without declared per-harness release acceptance to retain its exact-definition minimal isolated invocation, and `instructions:create-subagent` returns that invocation as verification still outstanding. The `<definitions>` table of `/execute-change` has no row whose result is a retained invocation run, the Executor produces no artifact, and the Executor launches a Verifier only for a result the row names.
 
 **Impact**: a subagent-definition Activity completes only when its auditor finds the invocation evidence present, so a definition whose evidence is absent reaches the repeated-defect stop of `/execute-change` with no round that can produce it.
 
