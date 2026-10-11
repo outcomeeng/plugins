@@ -1,12 +1,12 @@
 # Issues: Change Execution
 
-## The seven definitions ship for Claude Code only
+## A Codex Executor session cannot be started through `/orchestrate-change`
 
-**Evidence**: `/subagent-standards` requires each subagent definition without declared per-harness release acceptance to retain its exact-definition minimal isolated invocation, per `spx/43-instructions.enabler/21-subagents.enabler/subagents.md`. The build emits no Codex rendering of `change-executor`, `change-author`, `change-verifier`, `change-tester`, `change-implementer`, `change-skill-author` and `change-subagent-author`.
+**Evidence**: `coding-agents:orchestrate-change` cannot natively select a main-session definition on Codex while withholding the structured-question tool, so its Start has no Codex path. `/execute-change` runs inside an already running Codex session that holds the Change, with the seven definitions delivered for Codex.
 
-**Impact**: a Codex session cannot execute a Change: `/orchestrate-change` Start and `/execute-change` return an explicit unavailable result on Codex.
+**Impact**: a Codex session executes a Change only when a session already holds it; Orchestrator Start launches Executor sessions on Claude Code only.
 
-**Settlement condition**: a Codex Executor start exists, the seven definitions list Codex among their targets, and each Codex rendering retains its own minimal isolated invocation.
+**Settlement condition**: `/orchestrate-change` Start selects the `change-executor` definition natively on Codex with the structured-question tool withheld, and a retained run shows that session loading the definition and returning a result `/execute-change` declares.
 
 ## The Executor's session start through `--agent` is unobserved
 
