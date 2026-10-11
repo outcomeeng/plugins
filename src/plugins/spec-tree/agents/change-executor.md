@@ -5,6 +5,7 @@ description: >-
 profile: executor
 targets:
   - claude
+  - codex
 disallowedTools: "{{! tool('ask_user') !}}"
 skills:
   - spec-tree:execute-change
