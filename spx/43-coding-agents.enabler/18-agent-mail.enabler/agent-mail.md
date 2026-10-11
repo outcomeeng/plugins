@@ -13,6 +13,9 @@ This capability is an agent adapter: the configured way the agent harness lets o
 
 ## Assertions
 
+- ALWAYS: the register workflow of `src/plugins/coding-agents/skills/operate-agent-mail/SKILL.md` runs at owner startup and at owner resume before the owner's first mail operation; each owner supplies the assigned display label from its own position assignment, retained in its own resume note, and registers only its own stable name, with no operator label setup, no hook, no label roster store, and no registration of another identity; an owner with no assigned label keeps the unlabeled behavior
+- The inbox projection reached through `_data_for` in `src/plugins/coding-agents/skills/operate-agent-mail/scripts/agent_mail.py` pairs each normalized record with the corresponding raw inbox item's `sender_display_name` by the exact immutable message id, with and without bodies; one bounded formatter owned by this adapter renders `Label <StableName>` when the label is non-empty, printable under `str.isprintable()`, and contains none of `[`, `]`, `<`, `>`, and renders the stable name alone otherwise; ordinary and Unicode labels follow the same rule, absent and blank labels remain unlabeled, a changed label displays the metadata of the current inbox read without a historical snapshot or a registration lookup, and source metadata, stable sender and recipient routing, and immutable record fields remain unchanged
+
 ### Mappings
 
 - Registration, send, inbox, and receipt each map one source-owned request shape to one mail command and checked result; a registration request carries an optional display name that maps to the store's display name, an absent display name passes no display-name argument, a blank display name passes through as an empty value that clears the label, and every checked result preserves the store's labels verbatim beside its message, thread, and agent identities ([test](tests/test_agent_mail.mapping.l1.py))
@@ -26,7 +29,7 @@ This capability is an agent adapter: the configured way the agent harness lets o
 
 ### Scenarios
 
-- Against the installed native `am` carrying position labels, a registration with a label followed by send, inbox, and doorbell shows the label on each surface, and a send right after startup and right after a label change authenticates ([probe](probes/position-labels/probe.md))
+- Against the installed native `am` carrying position labels, registration through `src/plugins/coding-agents/skills/operate-agent-mail/scripts/agent_mail.py` at normal startup and resume, followed by rename and clear of the same owner's label, preserves its stable agent id and message history, permits duplicate position labels, and leaves the immediate next send authenticated without exposing a credential; the protocol resumes a real owner session through the shipped `recover-prowl-agents` path with its assigned position context supplying the ordinary label before its first mail, without an operator label command, and retains the owner session, its sent message, the recipient's inbox read, and that message's doorbell pointer as evidence of the automatic resume trigger; the protocol states the precondition that the resumed owner starts with its stored label absent or deliberately different from its assigned position label, which the owner prepares itself in the isolated store, and the shipped resume path restores the assigned label before the first mail and registers no other identity ([probe](probes/position-labels/probe.md))
 
 ### Compliance
 
