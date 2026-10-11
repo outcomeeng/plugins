@@ -13,8 +13,6 @@ This capability is an agent adapter: the configured way the agent harness lets o
 
 ## Assertions
 
-- ALWAYS: the register workflow of `src/plugins/coding-agents/skills/operate-agent-mail/SKILL.md` runs at owner startup and at owner resume before the owner's first mail operation; each owner supplies the assigned display label from its own position assignment, retained in its own resume note, and registers only its own stable name, with no operator label setup, no hook, no label roster store, and no registration of another identity; an owner with no assigned label keeps the unlabeled behavior ([audit:owner-label-lifecycle])
-
 ### Mappings
 
 - Registration, send, inbox, and receipt each map one source-owned request shape to one mail command and checked result; a registration request carries an optional display name that maps to the store's display name, an absent display name passes no display-name argument, a blank display name passes through as an empty value that clears the label, and every checked result preserves the store's labels verbatim beside its message, thread, and agent identities ([test](tests/test_agent_mail.mapping.l1.py))
@@ -33,6 +31,7 @@ This capability is an agent adapter: the configured way the agent harness lets o
 
 ### Compliance
 
+- ALWAYS: the register workflow of `src/plugins/coding-agents/skills/operate-agent-mail/SKILL.md` runs at owner startup and at owner resume before the owner's first mail operation; each owner supplies the assigned display label from its own position assignment, retained in its own resume note, and registers only its own stable name, with no operator label setup, no hook, no label roster store, and no registration of another identity; an owner with no assigned label keeps the unlabeled behavior ([audit:owner-label-lifecycle])
 - ALWAYS: the adapter rejects an empty string in every text field of every operation except a registration's display name ([test](tests/test_agent_mail.compliance.l1.py))
 - ALWAYS: an absent store or an unresolvable repository yields the source-owned unavailable result and no fallback ([test](tests/test_agent_mail.compliance.l1.py))
 - NEVER: a mail operation invokes an SPX command ([test](tests/test_agent_mail.compliance.l1.py))
