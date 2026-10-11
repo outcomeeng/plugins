@@ -2,8 +2,8 @@
 
 Each tuple enumerates the forms of one branch of the configuration guard in
 `outcomeeng.validation.profile_configuration`: its template-token branch, its
-read-expression branch, its interpolation-placeholder branch, and its
-assignment-boundary branch. Every build token comes from the delimiters and
+read-expression branch, its interpolation-placeholder branch, its
+placeholder-joined-with-literal-text branch, and its assignment-boundary branch. Every build token comes from the delimiters and
 `format_runtime_token` that `outcomeeng.distribution.contracts` owns.
 """
 
@@ -61,13 +61,45 @@ BARE_NAME_BINDINGS: Final = tuple(
 )
 """Bare names that read nothing: an effort value or a native field name, with no call, subscript, or attribute access."""
 
+PLACEHOLDER_BINDINGS: Final = (
+    "{name}",
+    "{0}",
+    "{}",
+    "{name!r}",
+    "{name:8}",
+    "{item.key}",
+    "{item[0]}",
+    "%s",
+    "%d",
+    "%r",
+    "%f",
+    "%(name)s",
+    "$name",
+    "${name}",
+)
+"""Interpolation placeholders, each the whole bound value: brace, percent, and dollar forms."""
+
+_LITERAL_JOINS: Final = (
+    "{placeholder}-override",
+    "{placeholder} for this run",
+    "prefix-{placeholder}",
+)
+
+NEAR_PLACEHOLDER_BINDINGS: Final = tuple(
+    join.format(placeholder=placeholder)
+    for placeholder in PLACEHOLDER_BINDINGS
+    for join in _LITERAL_JOINS
+)
+"""Placeholders joined with literal text, as a prefix or as a suffix: the value is no placeholder."""
+
 AUTHORED_BINDINGS: Final = (
     _LITERAL_BINDINGS
     + _TEMPLATE_TOKEN_BINDINGS
     + _UNQUOTED_BINDINGS
     + BARE_NAME_BINDINGS
+    + NEAR_PLACEHOLDER_BINDINGS
 )
-"""Bindings that carry an authored value: a literal, a build template token, an unquoted value, or a bare name."""
+"""Bindings that carry an authored value: a literal, a build template token, an unquoted value, a bare name, or a placeholder joined with literal text."""
 
 READ_BINDINGS: Final = (
     'lookup("key")',
@@ -76,29 +108,6 @@ READ_BINDINGS: Final = (
     'settings.section.lookup("key")',
 )
 """Bindings that read a value: a call, a subscript, or an attribute access."""
-
-_MESSAGE_TEXT: Final = " for this run"
-
-PLACEHOLDER_BINDINGS: Final = tuple(
-    placeholder + _MESSAGE_TEXT
-    for placeholder in (
-        "{name}",
-        "{0}",
-        "{}",
-        "{name!r}",
-        "{name:8}",
-        "{item.key}",
-        "{item[0]}",
-        "%s",
-        "%d",
-        "%r",
-        "%f",
-        "%(name)s",
-        "$name",
-        "${name}",
-    )
-)
-"""Interpolation placeholders that open message text: brace, percent, and dollar forms."""
 
 _ASSIGNMENT_BOUNDARIES: Final = (
     ("", ""),

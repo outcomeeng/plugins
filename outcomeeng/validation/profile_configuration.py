@@ -1,9 +1,10 @@
 """Reject independently authored native profile settings throughout source text.
 
 A native field is an authored assignment by the syntactic form of its binding
-alone: an expression that reads a value or an interpolation placeholder binds
-no authored value, while every other binding, a literal, a build template
-token, or an unquoted value, does.
+alone: an expression that reads a value, or a value that is one interpolation
+placeholder, binds no authored value, while every other binding, a literal, a
+build template token, an unquoted value, or a placeholder joined with literal
+text, does.
 """
 
 import re
@@ -26,7 +27,12 @@ _READ_EXPRESSION: Final = re.compile(
     r"[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*(?:[(\[]|\.[A-Za-z_])"
 )
 _INTERPOLATION_PLACEHOLDER: Final = re.compile(
-    r"\{[A-Za-z0-9_.!:\[\]]*\}|%[sdrf(]|\$\{?[A-Za-z_]"
+    r"(?:\{[A-Za-z0-9_.!:\[\]]*\}"
+    r"|%[sdrf]"
+    r"|%\([A-Za-z_][A-Za-z0-9_]*\)[sdrf]"
+    r"|\$[A-Za-z_][A-Za-z0-9_]*"
+    r"|\$\{[A-Za-z_][A-Za-z0-9_]*\})"
+    r"[\s\"'`)\]},.;]*(?:\s#.*)?"
 )
 
 
@@ -34,7 +40,7 @@ def _is_authored_binding(value: str) -> bool:
     """Decide from the binding's syntactic form whether it binds an authored value."""
     if _TEMPLATE_TOKEN.match(value):
         return True
-    if _INTERPOLATION_PLACEHOLDER.match(value):
+    if _INTERPOLATION_PLACEHOLDER.fullmatch(value):
         return False
     return _READ_EXPRESSION.match(value) is None
 

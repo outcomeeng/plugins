@@ -20,6 +20,7 @@ from outcomeeng.validation.profile_configuration import find_profile_literals
 from outcomeeng_testing.generators.profile_binding import (
     AUTHORED_BINDINGS,
     BARE_NAME_BINDINGS,
+    PLACEHOLDER_BINDINGS,
     READ_BINDINGS,
     SURROUNDING_CONTEXTS,
 )
@@ -90,6 +91,14 @@ def test_decision_follows_binding_form_in_every_surrounding_context() -> None:
                 line = f"{prefix}{field} = {binding}{suffix}"
                 assert find_profile_literals(line) == [(1, field)]
             for binding in READ_BINDINGS:
+                line = f"{prefix}{field} = {binding}{suffix}"
+                assert find_profile_literals(line) == []
+
+
+def test_placeholder_bindings_are_no_assignment_in_every_surrounding_context() -> None:
+    for field in NATIVE_CONFIGURATION_FIELDS:
+        for prefix, suffix in SURROUNDING_CONTEXTS:
+            for binding in PLACEHOLDER_BINDINGS:
                 line = f"{prefix}{field} = {binding}{suffix}"
                 assert find_profile_literals(line) == []
 
