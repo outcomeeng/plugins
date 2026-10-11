@@ -2,13 +2,15 @@
 name: audit-prose
 description: >-
   Prose audit methodology — judges the human-facing text in scope against the anti-pattern catalog, the supplied kind's style and structure layers, and every triggered rule pack.
-argument-hint: "<interface|documentation|copy> <text or paths>"
-allowed-tools: Read, Glob, Grep, Skill, Bash(spx journal open:*), Bash(spx journal append:*), Bash(spx journal seal:*), Bash(spx journal read:*), Bash(printf:*)
+argument-hint: "<interface|documentation|copy> <text or paths> [base revision]"
+allowed-tools: Read, Glob, Grep, Skill, Bash(spx journal open:*), Bash(spx journal append:*), Bash(spx journal seal:*), Bash(spx journal read:*), Bash(git diff:*), Bash(printf:*)
 ---
 
 Use skill `prose:prose-standards`.
 
 Use skill `prose:prose-architecture-standards`.
+
+Use skill `spec-tree:scope-changeset`.
 
 <objective>
 
@@ -24,6 +26,7 @@ A verdict on human-facing text, revealed as the run advances — a sealed audit 
 - NEVER audit text another surface owns — a repository- or domain-governed artifact (spec, ADR, PDR, `SKILL.md`, `PLAN.md`, `ISSUES.md`, root agent guide), a chat response, or operational prose (a code comment, a commit message, an agent-facing instruction) is answered with the `governed-elsewhere` finding, whatever kind the dispatch supplied. Ownership outranks a supplied kind.
 - NEVER flag a pattern the supplied kind's overrides explicitly permit — an override is the catalog's decision, not an oversight. A use outside an override's bounds stays a finding.
 - NEVER excuse a base-catalog match as "single use" or "it works here" — every match outside an override is a finding.
+- NEVER raise a finding on a sentence outside the changed lines when the dispatch carries a base revision — the unchanged text is read as context only.
 - NEVER gather a finished result and dump its events at the end — each finding is appended the instant it is raised, per the streaming rule in `/project-run-journal`.
 
 </constraints>
@@ -53,12 +56,17 @@ One text carries one kind. Register variation inside it is judged by the `/prose
 
 4. Read the text under audit — whatever the dispatch names, pastes, or points to — and read the supplied kind's style layer from `/prose-standards` `<kind_layers>` and structural conventions from `/prose-architecture-standards` `<kind_structures>`, plus the governing prose ADR when the repository's spec tree carries one for the target.
 
-5. Sweep, streaming as the run advances. One scope-advanced event per unit swept, one finding-reported event the instant each finding is raised:
-   - the base catalog — word choice, sentence structure, paragraph structure, tone, formatting, composition — against the full `/prose-standards` descriptions, applying the kind's overrides;
-   - the voice canon, rule by rule;
-   - the kind's style layer — every cap that is a count is checked by count;
-   - the kind's structural conventions, and conformance to the governing prose ADR where one exists;
-   - every rule pack a feature of the text triggers, over the passages carrying that feature.
+   The dispatch may carry a base revision. Without one, every sentence of the text is in scope. With one, read the whole text for context, then derive the in-scope sentences from the target's diff against that base: resolve the base through `/scope-changeset`, run `git diff -U0 <base-oid> -- <path>` for each audited path, and take the new-side line ranges of its hunks as the changed lines. A sentence is in scope when it intersects a changed line. A target with no diff against the base — pasted text or a path new to the changeset — is in scope whole.
+
+5. Sweep one in-scope sentence at a time, in reading order, streaming as the run advances. For each sentence:
+   - judge every applicable rule against it — no rule deferred to a later pass:
+     - the base catalog — word choice, sentence structure, paragraph structure, tone, formatting, composition — against the full `/prose-standards` descriptions, applying the kind's overrides;
+     - the voice canon, rule by rule;
+     - the kind's style layer — every cap that is a count is checked by count;
+     - the kind's structural conventions, and conformance to the governing prose ADR where one exists;
+     - every rule pack a feature of the sentence triggers;
+   - append a finding-reported event the instant each finding is raised, one finding per violated rule;
+   - append the scope-advanced event recording the sentence as swept before starting the next sentence.
 
 6. Complete and seal. Append the run-completed event with the terminal status the rollup yields, seal the run, and end with the raw run token as the final message — no prose after it.
 
@@ -68,7 +76,7 @@ One text carries one kind. Register variation inside it is judged by the `/prose
 
 The verdict is the sealed audit run, produced through the `/project-run-journal` projection — never a terminal JSON object.
 
-- Each finding maps onto the `/project-run-journal` finding record. `rule` carries the pattern name — the catalog anti-pattern, pack rule, or structural rule; a sentence carrying multiple co-occurring patterns produces one finding naming every pattern present. `file` and `line` carry the offending text's location — the audited path, or the dispatch-supplied label with the line inside pasted text, `line` null for a whole-text finding. `severity` carries the classification the rollup reads: `reject` for every violation. `message` pairs the catalog category with the offending quote verbatim and a rewrite ready to accept.
+- Each finding maps onto the `/project-run-journal` finding record. `rule` carries exactly one stable identifier, that of the violated catalog anti-pattern, pack rule, or style-layer rule exactly as `/prose-standards` spells it; a sentence that violates several patterns produces one finding per pattern. `file` and `line` carry the offending text's location — the audited path, or the dispatch-supplied label with the line inside pasted text, `line` null for a whole-text finding. `severity` carries the classification the rollup reads: `reject` for every violation. `message` pairs the catalog category with the offending quote verbatim and a rewrite ready to accept.
 - The rollup follows `/project-run-journal`: any `reject` finding makes the run's terminal status rejected; no findings, approved.
 - Ownership routes the text away: one finding with `rule` `governed-elsewhere` at `severity` `reject`, its message naming the governing workflow or the reason the text stays outside the prose surface when no workflow governs it; terminal status rejected.
 - No kind or no target supplied: one finding at `severity` `unknown` whose `rule` is `missing-kind` or `missing-target`, whose `file` is the literal `<no target supplied>` when no target exists, and whose message names the missing input — a missing kind names the three-kind vocabulary — so the rollup yields the failed terminal status, the blocked run in the channel's status vocabulary; no text is read.
@@ -99,8 +107,9 @@ Claude removed dispatch language from this skill's description to satisfy the au
 <success_criteria>
 
 - Every applicable rule was judged — base categories, voice canon, kind style layer, kind structural conventions, and every triggered pack — none skipped as unlikely.
-- The sealed run states its terminal status, and every finding is falsifiable in the journal finding record per `<verdict_format>`: the pattern as its rule, a location, a severity the rollup reads, and a message pairing category, verbatim quote, and a rewrite showing fixed text.
-- Scope progress and each finding were appended as the run advanced; the same text and kind yield the same findings.
+- The sealed run states its terminal status, and every finding is falsifiable in the journal finding record per `<verdict_format>`: exactly one stable identifier as its rule, a location, a severity the rollup reads, and a message pairing category, verbatim quote, and a rewrite showing fixed text.
+- Scope progress and each finding were appended as the run advanced, each sentence recorded as swept before the next; the same text and kind yield the same findings.
+- A dispatch carrying a base revision raised findings only on sentences intersecting the lines changed since that base; a dispatch without one audited the whole text.
 - A dispatch naming a governed artifact produced the `governed-elsewhere` finding without reading the text; a dispatch carrying no kind or no target produced the failed terminal status naming the missing input without reading the text.
 - The kind judged is the supplied kind, never one this skill concluded, and the kind's overrides produced no false-positive findings.
 - The final message is exactly the raw run token of a sealed run.
