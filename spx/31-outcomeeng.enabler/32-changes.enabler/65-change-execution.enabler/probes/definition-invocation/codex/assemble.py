@@ -1,4 +1,8 @@
-import json, glob, hashlib, sys, os
+import glob
+import hashlib
+import json
+import os
+import sys
 
 H = os.environ["CODEX_HOME"]
 OUT = os.path.realpath(sys.argv[1])
@@ -15,7 +19,7 @@ def confined(base, name):
 def rollouts():
     out = {}
     for f in glob.glob(H + "/sessions/*/*/*/rollout-*.jsonl"):
-        lines = [json.loads(l) for l in open(f)]
+        lines = [json.loads(line) for line in open(f)]
         meta = next(d["payload"] for d in lines if d["type"] == "session_meta")
         out[meta["id"]] = (f, meta, lines)
     return out
@@ -32,7 +36,7 @@ for n in [
     "subagent-author",
 ]:
     role = "spec-tree_change-" + n
-    stream = [json.loads(l) for l in open(f"run-{n}.jsonl")]
+    stream = [json.loads(line) for line in open(f"run-{n}.jsonl")]
     parent_id = stream[0]["thread_id"]
     final = [
         e
@@ -54,9 +58,9 @@ for n in [
     ctx = next(d["payload"] for d in cl if d["type"] == "turn_context")
     path = confined(DEF, f"spec-tree_change-{n}.toml")
     first_line = [
-        l
-        for l in open(path).read().split("\n")
-        if l.startswith("developer_instructions")
+        line
+        for line in open(path).read().split("\n")
+        if line.startswith("developer_instructions")
     ][0].split('"""')[1]
     dev = json.dumps(
         [
