@@ -10,6 +10,12 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.106.3
+
+### Changed
+
+- **`project-run-journal` states one command form for each journal verb a streaming run uses, so an audit or review run opens, appends, seals, reads, and renders under the dangerous-command guard.** The skill gives `open`, `append`, `seal`, `read`, and `render` each as its own command with the type, run token, event path, and cursor written out literally, and stops the run at the first nonzero exit. `append` reads its event through the input redirect from a file written with the file-write tool in the session scratch directory, and the file-write tool writes only event files. The skill forbids sending an event through a heredoc, a pipe, an inline argument, or an interpreter or `printf` stage. Before this change, the skill stated the redirect form for `append` alone and described its input as read from stdin, so a consumer that built an event in the shell had the guard block its append and left an open run with no sealed verdict.
+
 ## 0.106.2
 
 ### Changed
