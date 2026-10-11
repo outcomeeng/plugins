@@ -2,7 +2,7 @@
 name: assertion-auditor
 description: >-
   ALWAYS invoke to audit the `[audit]` assertions of one node spec, when an evidence obligation on a node's audit assertions needs a verdict.
-tools: Read, Glob, Grep, Bash(spx verification run:*), Bash(printf '%s\n':*), {{! tool('use_skill') !}}
+tools: Read, Glob, Grep, Bash(spx verification run:*), Bash(printf '%s\n':*), Bash(git merge-base:*), Bash(git diff:*), {{! tool('use_skill') !}}
 profile: standard
 skills:
   - spec-tree:audit-assertions
