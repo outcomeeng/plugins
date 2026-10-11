@@ -120,6 +120,9 @@ TASK_FIELD = "task"
 DISPLAY_NAME_FIELD = "displayName"
 RECORD_FIELD = "record"
 RECORDS_FIELD = "records"
+SENDER_DISPLAYS_FIELD = "senderDisplays"
+SENDER_DISPLAY_FIELD = "display"
+LABEL_FORBIDDEN_CHARACTERS = frozenset("[]<>")
 MESSAGE_ID_FIELD = "messageId"
 UNREAD_ONLY_FIELD = "unreadOnly"
 INCLUDE_BODIES_FIELD = "includeBodies"
@@ -686,6 +689,43 @@ def record_from_inbox_item(item: object, *, recipient: str) -> dict[str, object]
     )
 
 
+def sender_display(stable_name: str, label: object) -> str:
+    """Render a sender for display: `Label <StableName>`, or the stable name alone.
+
+    A label displays only when it is a non-empty string, printable, and free of
+    square and angle brackets; any other label, including an absent or blank
+    one, leaves the sender unlabeled. The rendering selects and routes nothing.
+    """
+    if (
+        isinstance(label, str)
+        and label
+        and label.isprintable()
+        and not LABEL_FORBIDDEN_CHARACTERS & set(label)
+    ):
+        return f"{label} <{stable_name}>"
+    return stable_name
+
+
+def sender_displays(
+    records: list[dict[str, object]], items: list[object]
+) -> list[dict[str, object]]:
+    """Pair each record with its inbox item's sender label by the immutable id."""
+    labels = {
+        item.get(STORE_ID_FIELD): item.get(STORE_SENDER_DISPLAY_NAME_FIELD)
+        for item in items
+        if isinstance(item, dict)
+    }
+    return [
+        {
+            RECORD_ID_FIELD: record[RECORD_ID_FIELD],
+            SENDER_DISPLAY_FIELD: sender_display(
+                str(record[SENDER_FIELD]), labels.get(record[RECORD_ID_FIELD])
+            ),
+        }
+        for record in records
+    ]
+
+
 def project_key_from_common_dir(text: str) -> str:
     """Return the project key the repository's common Git directory names.
 
@@ -1032,10 +1072,10 @@ def _data_for(
     if operation is Operation.INBOX:
         recipient = str(arguments[AGENT_FIELD])
         items = _array(response.get(STORE_INBOX_FIELD), STORE_INBOX_FIELD)
+        records = [record_from_inbox_item(item, recipient=recipient) for item in items]
         return {
-            RECORDS_FIELD: [
-                record_from_inbox_item(item, recipient=recipient) for item in items
-            ]
+            RECORDS_FIELD: records,
+            SENDER_DISPLAYS_FIELD: sender_displays(records, items),
         }
     return {
         AGENT_FIELD: arguments[AGENT_FIELD],

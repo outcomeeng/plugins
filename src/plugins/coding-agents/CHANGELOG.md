@@ -11,6 +11,7 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 ### Changed
 
 - **`/operate-agent-mail` registers an owner's assigned label at startup and at resume.** The register workflow runs before the owner's first mail operation, both when the owner starts and when it resumes. The owner supplies the display label from its own position assignment, retained in its own resume note, and registers only its own stable name; an owner with no assigned label registers unlabeled, as before. The change needs no operator label setup, no hook, and no label roster store, and it registers no other identity.
+- **`/operate-agent-mail` inbox results render each sender with its label.** An `inbox` result carries `senderDisplays`, pairing each record `id` with a `display` of `Label <StableName>` when the store's label is non-empty, printable, and free of `[`, `]`, `<`, `>`, and the stable name alone otherwise. The records, their routing, and the store's labels in `response` are unchanged.
 
 ## 0.12.2
 
