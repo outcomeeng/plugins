@@ -1,10 +1,14 @@
 from types import ModuleType
 from typing import cast
 
+from outcomeeng_testing.generators.agent_mail import SenderLabelCase, SenderLabelKind
 from outcomeeng_testing.harnesses.agent_mail import (
+    CapturedInboxResponse,
     RecordingRunner,
+    common_dir_seeded_runner,
     run_delegation_chain_property,
     run_record_roundtrip_property,
+    run_sender_label_display_property,
     run_terminal_property,
     store_inbox_echo,
 )
@@ -125,3 +129,57 @@ def test_terminal_handbacks_reduce_to_exactly_one_result() -> None:
             )
 
     run_terminal_property(assert_terminal)
+
+
+def test_inbox_sender_labels_render_the_label_with_the_stable_name_or_the_name_alone() -> (
+    None
+):
+    def assert_display(
+        module: ModuleType,
+        request: dict[str, object],
+        project_key: str,
+        case: SenderLabelCase,
+        captured: CapturedInboxResponse,
+    ) -> None:
+        label_case = case
+        result = module.execute(
+            request, common_dir_seeded_runner(module, project_key, captured.result)
+        )
+
+        assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED, (
+            captured.capture
+        )
+        items = cast(
+            list[dict[str, object]], captured.payload[module.STORE_INBOX_FIELD]
+        )
+        data = cast(dict[str, object], result[module.DATA_FIELD])
+        displays = cast(list[dict[str, object]], data[module.SENDER_DISPLAYS_FIELD])
+        assert [display[module.RECORD_ID_FIELD] for display in displays] == [
+            item[module.STORE_ID_FIELD] for item in items
+        ]
+
+        stable_name = cast(str, items[0][module.STORE_FROM_FIELD])
+        if label_case.kind is SenderLabelKind.ELIGIBLE:
+            expected = f"{label_case.label} <{stable_name}>"
+        else:
+            expected = stable_name
+        assert displays[0][module.SENDER_DISPLAY_FIELD] == expected, (
+            captured.capture,
+            label_case,
+        )
+
+        # A row whose captured label is null stays unlabeled beside the varied row.
+        for display, item in zip(displays[1:], items[1:], strict=True):
+            if item[module.STORE_SENDER_DISPLAY_NAME_FIELD] is None:
+                assert (
+                    display[module.SENDER_DISPLAY_FIELD]
+                    == item[module.STORE_FROM_FIELD]
+                )
+
+        # The projection leaves the normalized records and their routing alone.
+        records = cast(list[dict[str, object]], data[module.RECORDS_FIELD])
+        for record, item in zip(records, items, strict=True):
+            assert record[module.SENDER_FIELD] == item[module.STORE_FROM_FIELD]
+            assert record[module.RECORD_ID_FIELD] == item[module.STORE_ID_FIELD]
+
+    run_sender_label_display_property(assert_display)

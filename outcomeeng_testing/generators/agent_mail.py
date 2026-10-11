@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+from enum import StrEnum
 from itertools import combinations
 from types import ModuleType
 from typing import Literal
@@ -81,6 +83,103 @@ def position_labels() -> st.SearchStrategy[str]:
     separator, so a label renders and stays one recipient."""
     word = printable_label_words()
     return st.builds(lambda first, second: f"{first} {second}", word, word)
+
+
+class SenderLabelKind(StrEnum):
+    """How a sender label stands against the display rule: an eligible label
+    is non-blank, printable, and free of the four delimiters; every other kind
+    is ineligible by one named reason."""
+
+    ELIGIBLE = "eligible"
+    ABSENT = "absent"
+    EMPTY = "empty"
+    BLANK_ASCII_SPACES = "blank-ascii-spaces"
+    DELIMITER = "delimiter"
+    NON_PRINTABLE = "non-printable"
+
+
+@dataclass(frozen=True)
+class SenderLabelCase:
+    """One sender label the store reports for an inbox row, with the kind the
+    construction law assigns it."""
+
+    kind: SenderLabelKind
+    label: str | None
+
+
+# Labels made only of ASCII spaces print, so only the blank rule keeps them
+# from displaying; these are the boundary members of that kind.
+BLANK_ASCII_SPACE_LABELS = (" ", "  ", "     ")
+
+
+def _eligible_sender_labels() -> st.SearchStrategy[SenderLabelCase]:
+    """Printable, delimiter-free, non-blank labels, ordinary or Unicode, bare
+    or padded with ASCII spaces that keep the label's full text."""
+    padding = st.text(alphabet=" ", max_size=3)
+    return st.builds(
+        lambda lead, word, tail: SenderLabelCase(
+            SenderLabelKind.ELIGIBLE, f"{lead}{word}{tail}"
+        ),
+        padding,
+        printable_label_words(),
+        padding,
+    )
+
+
+def _delimited_sender_labels() -> st.SearchStrategy[SenderLabelCase]:
+    return st.builds(
+        lambda lead, delimiter, tail: SenderLabelCase(
+            SenderLabelKind.DELIMITER, f"{lead}{delimiter}{tail}"
+        ),
+        printable_label_words(),
+        st.sampled_from(tuple(DOORBELL_DELIMITER_CHARACTERS)),
+        printable_label_words(),
+    )
+
+
+def _non_printable_sender_labels() -> st.SearchStrategy[SenderLabelCase]:
+    unprintable = st.characters(
+        categories=("Cc", "Cf", "Zl", "Zp"),
+        exclude_characters=DOORBELL_DELIMITER_CHARACTERS,
+    )
+    return st.builds(
+        lambda lead, mark, tail: SenderLabelCase(
+            SenderLabelKind.NON_PRINTABLE, f"{lead}{mark}{tail}"
+        ),
+        printable_label_words(),
+        unprintable,
+        printable_label_words(),
+    )
+
+
+def sender_label_boundary_cases() -> tuple[SenderLabelCase, ...]:
+    """The boundary members every run covers: absent, empty, and each
+    ASCII-space-only label."""
+    return (
+        SenderLabelCase(SenderLabelKind.ABSENT, None),
+        SenderLabelCase(SenderLabelKind.EMPTY, ""),
+        *(
+            SenderLabelCase(SenderLabelKind.BLANK_ASCII_SPACES, label)
+            for label in BLANK_ASCII_SPACE_LABELS
+        ),
+    )
+
+
+def sender_label_cases() -> st.SearchStrategy[SenderLabelCase]:
+    """Sender labels across the display rule's open domain, each tagged with
+    the kind its construction fixes."""
+    return st.one_of(
+        _eligible_sender_labels(),
+        st.just(SenderLabelCase(SenderLabelKind.ABSENT, None)),
+        st.just(SenderLabelCase(SenderLabelKind.EMPTY, "")),
+        st.integers(min_value=1, max_value=40).map(
+            lambda count: SenderLabelCase(
+                SenderLabelKind.BLANK_ASCII_SPACES, " " * count
+            )
+        ),
+        _delimited_sender_labels(),
+        _non_printable_sender_labels(),
+    )
 
 
 def distinct_stable_names(

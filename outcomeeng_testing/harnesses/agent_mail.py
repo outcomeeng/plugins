@@ -17,7 +17,7 @@ from tempfile import TemporaryDirectory
 from types import ModuleType
 from typing import Protocol, cast
 
-from hypothesis import given, seed, settings
+from hypothesis import example, given, seed, settings
 
 from outcomeeng_testing.generators.agent_mail import (
     COMMON_DIR_EXACT,
@@ -32,8 +32,11 @@ from outcomeeng_testing.generators.agent_mail import (
     message_records,
     message_texts,
     operation_requests,
+    SenderLabelCase,
     program_names,
     project_key_paths,
+    sender_label_boundary_cases,
+    sender_label_cases,
     sent_record_kinds,
     store_exit_codes,
     store_message_ids,
@@ -94,6 +97,9 @@ STORE_RESPONSE_REPLAY_PATH = PROJECT_KEY_MAPPING_REPLAY_PATH
 INBOX_ROW_SEED = 2026091807
 INBOX_ROW_EXAMPLES = 10
 INBOX_ROW_REPLAY_PATH = PROJECT_KEY_MAPPING_REPLAY_PATH
+SENDER_LABEL_SEED = 2026101101
+SENDER_LABEL_EXAMPLES = 40
+SENDER_LABEL_REPLAY_PATH = RECORD_ROUNDTRIP_REPLAY_PATH
 RECIPIENT_BOUNDARY_SEED = 2026091808
 RECIPIENT_BOUNDARY_EXAMPLES = 20
 RECIPIENT_BOUNDARY_REPLAY_PATH = PROJECT_KEY_MAPPING_REPLAY_PATH
@@ -686,6 +692,100 @@ def run_inbox_row_mapping(
         generated_rows,
         seed_value=INBOX_ROW_SEED,
         replay_path=INBOX_ROW_REPLAY_PATH,
+    )
+
+
+def captured_inbox_responses_for_label_display(
+    module: ModuleType,
+) -> list[tuple[dict[str, object], CapturedInboxResponse]]:
+    """Each captured inbox response, without bodies and with bodies, beside the
+    registry request that selects it."""
+    paths = [
+        (
+            _first_request(module, module.Operation.INBOX, include_bodies=False),
+            _response_fixture_path(module, module.Operation.INBOX, None),
+        ),
+        *(
+            (
+                _first_request(module, module.Operation.INBOX, include_bodies=True),
+                path,
+            )
+            for path in _inbox_captures_with_bodies(module)
+        ),
+    ]
+    return [
+        (
+            request,
+            CapturedInboxResponse(
+                str(path.relative_to(ROOT)),
+                _result_from_path(module, path),
+                json.loads(path.read_text(encoding="utf-8")),
+            ),
+        )
+        for request, path in paths
+    ]
+
+
+def inbox_response_with_first_sender_label(
+    module: ModuleType, response: CapturedInboxResponse, label: str | None
+) -> CapturedInboxResponse:
+    """The captured inbox response with the first row's sender label replaced:
+    the variant ranges over that label alone, and names the capture it varies."""
+    items = cast(list[dict[str, object]], response.payload[module.STORE_INBOX_FIELD])
+    if not items:
+        raise CaptureError(f"{response.capture} lists no inbox row to vary")
+    first = CapturedInboxRow(response.capture, items[0])
+    varied = _row_variant(first, {module.STORE_SENDER_DISPLAY_NAME_FIELD: label})
+    payload = {**response.payload, module.STORE_INBOX_FIELD: [varied, *items[1:]]}
+    return CapturedInboxResponse(
+        f"{response.capture} (first row sender label varied)",
+        cast(CommandResultContract, module.CommandResult(0, json.dumps(payload), "")),
+        payload,
+    )
+
+
+def run_sender_label_display_property(
+    assert_display: Callable[
+        [ModuleType, dict[str, object], str, SenderLabelCase, CapturedInboxResponse],
+        None,
+    ],
+) -> None:
+    """Drive generated sender labels, and the boundary labels every run covers,
+    through each captured inbox response under generated project keys."""
+    module = _load()
+    captures = captured_inbox_responses_for_label_display(module)
+    if not captures:
+        raise CaptureError("no captured inbox response exists to vary")
+
+    def run_case(project_key: str, case: SenderLabelCase) -> None:
+        for request, response in captures:
+            assert_display(
+                module,
+                request,
+                project_key,
+                case,
+                inbox_response_with_first_sender_label(module, response, case.label),
+            )
+
+    def generated_case(project_key: str, case: SenderLabelCase) -> None:
+        run_case(project_key, case)
+
+    property_run = given(project_key=project_key_paths(), case=sender_label_cases())(
+        generated_case
+    )
+    for boundary in sender_label_boundary_cases():
+        property_run = example(project_key=SHARED_PROJECT_KEY, case=boundary)(
+            property_run
+        )
+    property_run = settings(
+        max_examples=SENDER_LABEL_EXAMPLES, deadline=None, print_blob=True
+    )(property_run)
+    property_run = seed(SENDER_LABEL_SEED)(property_run)
+
+    run_replayable_property(
+        property_run,
+        seed_value=SENDER_LABEL_SEED,
+        replay_path=SENDER_LABEL_REPLAY_PATH,
     )
 
 

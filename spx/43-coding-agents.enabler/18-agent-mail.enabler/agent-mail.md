@@ -14,7 +14,6 @@ This capability is an agent adapter: the configured way the agent harness lets o
 ## Assertions
 
 - ALWAYS: the register workflow of `src/plugins/coding-agents/skills/operate-agent-mail/SKILL.md` runs at owner startup and at owner resume before the owner's first mail operation; each owner supplies the assigned display label from its own position assignment, retained in its own resume note, and registers only its own stable name, with no operator label setup, no hook, no label roster store, and no registration of another identity; an owner with no assigned label keeps the unlabeled behavior
-- The inbox projection reached through `_data_for` in `src/plugins/coding-agents/skills/operate-agent-mail/scripts/agent_mail.py` pairs each normalized record with the corresponding raw inbox item's `sender_display_name` by the exact immutable message id, with and without bodies; one bounded formatter owned by this adapter renders `Label <StableName>` when the label is non-empty, printable under `str.isprintable()`, and contains none of `[`, `]`, `<`, `>`, and renders the stable name alone otherwise; ordinary and Unicode labels follow the same rule, absent and blank labels remain unlabeled, a changed label displays the metadata of the current inbox read without a historical snapshot or a registration lookup, and source metadata, stable sender and recipient routing, and immutable record fields remain unchanged
 
 ### Mappings
 
@@ -24,6 +23,7 @@ This capability is an agent adapter: the configured way the agent harness lets o
 
 ### Properties
 
+- The inbox projection reached through `_data_for` in `src/plugins/coding-agents/skills/operate-agent-mail/scripts/agent_mail.py` pairs each normalized record with the corresponding raw inbox item's `sender_display_name` by the exact immutable message id, with and without bodies; one bounded formatter owned by this adapter renders `Label <StableName>` when the label is non-empty, printable under `str.isprintable()`, and contains none of `[`, `]`, `<`, `>`, and renders the stable name alone otherwise; ordinary and Unicode labels follow the same rule, absent and blank labels remain unlabeled, a changed label displays the metadata of the current inbox read without a historical snapshot or a registration lookup, and source metadata, stable sender and recipient routing, and immutable record fields remain unchanged ([test](tests/test_agent_mail.property.l1.py))
 - The fields of the message record `spx/43-coding-agents.enabler/21-agent-communication.enabler` declares map onto the store's fields and back without loss; a store limit never shapes the record ([test](tests/test_agent_mail.property.l1.py))
 - An order to an agent session in an environment whose surface produces no pane-borne handback block, its delegation request, and its one correlated terminal handback are message records the communication node declares, delivered through this capability; every terminal handback maps to exactly one completed, failed, rejected, or unavailable result carrying the complete initiating coordination reference ([test](tests/test_agent_mail.property.l1.py))
 
