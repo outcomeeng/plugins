@@ -19,3 +19,4 @@ CAN construct and judge `[test]` evidence from one methodology without duplicati
 - ALWAYS: test authoring stops before evidence implementation until the shared standard's assertion-design record names the assertion quantifier, observable seam, case provenance, oracle owner, rejected production mutation, and resulting failure observation; moving a value preserves its provenance ([audit])
 - NEVER: a language-specific test specialist owns or repeats a generic test decision ([audit])
 - ALWAYS: a load-gated command `/test` runs executes in the foreground, and `/test` reports its result only after every such command has exited ([audit])
+- ALWAYS: before its first write, a test-authoring round loads the language test skill of each language in which it creates or changes a test file, in a repair round as in a new scaffold, so that the language's standards bind every edit; a language with no installed test skill is reported with the result ([audit])

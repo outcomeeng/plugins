@@ -254,14 +254,7 @@ If no exception applies, move outward to the lowest real level that proves the b
 
 <four_part_progression>
 
-| Phase                   | Evidence                                | Confidence gain  |
-| ----------------------- | --------------------------------------- | ---------------- |
-| 1. Typical cases        | Happy paths and common scenarios        | Baseline         |
-| 2. Edge and boundary    | Limits, special values, and error cases | Robustness       |
-| 3. Systematic coverage  | Loops, states, and combinations         | Completeness     |
-| 4. Property-based tests | Invariants across generated inputs      | Deep correctness |
-
-Small pure functions often need phases 1 and 2. Complex algorithms often need all four. Glue code often needs phase 1 plus the correct outer-level evidence. Treat property-based tests as mandatory candidates for parsers, serializers, mathematical transformations, seed-driven generators, normalization rules, and algorithms with difficult edge cases.
+When choosing how much evidence an assertion needs beyond its first case, read `${SKILL_DIR}/references/four-part-progression.md`.
 
 </four_part_progression>
 
@@ -408,9 +401,28 @@ In decision-rule mode, stop after assertion-type selection. Execution level, lan
 
 </step>
 
+<step name="load_language_test_skill">
+
+**Step 5: Load the language test skill**
+
+Before the first write of any test file, load the test skill of each language in which this invocation creates or changes a test file, in a repair round as in a new scaffold, so that the language's structure, execution-level, reusable-pattern, and standards rules bind every edit. Load each skill once. An existing file's language follows from its canonical filename rendering; a new file's from the node's implementation and existing tests. Load exactly the matching skill per language:
+
+| Language   | Skill                                   |
+| ---------- | --------------------------------------- |
+| Go         | Use skill `go:test-go`.                 |
+| Python     | Use skill `python:test-python`.         |
+| Rust       | Use skill `rust:test-rust`.             |
+| TypeScript | Use skill `typescript:test-typescript`. |
+
+When a changed language has no installed test skill, work from `<naming_and_co_location>` and the shared standards, and report the missing language skill with the result.
+
+In decision-rule mode, no test file changes and no language skill loads.
+
+</step>
+
 <step name="generate_scaffolds">
 
-**Step 5: Generate test scaffolds**
+**Step 6: Generate test scaffolds**
 
 For each assertion needing a new test:
 
@@ -418,18 +430,7 @@ For each assertion needing a new test:
 2. Determine execution level from methodology routing (Step 4).
 3. Create the test file in the spec node's `tests/` directory.
 4. Name the file using `<naming_and_co_location>`.
-5. Scaffold the test structure based on assertion type and language-specific patterns.
-
-Load the test skill for the node's language before scaffolding and apply its structure, execution-level, and reusable-pattern rules. Determine the language from the node's implementation and existing tests, then load exactly the matching skill:
-
-| Node language | Skill                                   |
-| ------------- | --------------------------------------- |
-| Go            | Use skill `go:test-go`.                 |
-| Python        | Use skill `python:test-python`.         |
-| Rust          | Use skill `rust:test-rust`.             |
-| TypeScript    | Use skill `typescript:test-typescript`. |
-
-When the node's language has no installed test skill, scaffold from `<naming_and_co_location>` and report the missing language skill with the scaffolds.
+5. Scaffold the test structure based on assertion type and the language skill loaded in Step 5.
 
 In decision-rule mode, update each `### Testing` rule with exactly one selected assertion-type tag and create no test scaffold. Continue directly to the report step.
 
@@ -439,7 +440,7 @@ In decision-rule mode, update each `### Testing` rule with exactly one selected 
 
 <step name="update_links">
 
-**Step 6: Update spec assertion links**
+**Step 7: Update spec assertion links**
 
 After creating test files, move each newly typed assertion under its canonical assertion-type heading and update the spec to add `([test](tests/{filename}))` links for each new assertion-test pair. This skill never selects or writes eval or audit evidence.
 
@@ -449,7 +450,7 @@ In decision-rule mode, add no evidence link to the ADR/PDR. The implementing spe
 
 <step name="report">
 
-**Step 7: Report evidence summary**
+**Step 8: Report evidence summary**
 
 Report which assertions have tests, which do not, and which are stale:
 
