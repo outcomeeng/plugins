@@ -20,6 +20,8 @@ from typing import Final, cast
 from outcomeeng.validation.assertion_audit_contract import (
     ASSERTION_AUDIT_SKILL_NAME,
     ASSERTION_AUDITOR_AGENT_NAME,
+    PARENT_UNIT_FIELD,
+    assertion_audit_root_unit_key,
     assertion_audit_unit_key,
 )
 from outcomeeng.validation.implementation_audit_contract import (
@@ -50,7 +52,7 @@ NODE_SPEC_PATH: Final = (
     "32-audit-assertions.enabler/audit-assertions.md"
 )
 
-DESIGNATOR: Final = "ordinal-1"
+DESIGNATORS: Final = ("ordinal-1", "ordinal-2")
 FINDING_RULE: Final = "subject-unnamed"
 FINDING_SEVERITY: Final = "blocking"
 FINDING_MESSAGE: Final = "the assertion names no identifiable subject"
@@ -89,42 +91,50 @@ class SpxResult:
 
 @dataclass(frozen=True)
 class ScopeUnitRecording:
-    """One scope unit rendered from the skill and recorded on a started run."""
+    """The root unit and the child units rendered from the skill and recorded."""
 
-    unit_key: str
-    scope_add: SpxResult
+    root_unit_key: str
+    child_unit_keys: tuple[str, ...]
+    root_scope_add: SpxResult
+    child_scope_adds: tuple[SpxResult, ...]
     rendered_scope_units: tuple[Mapping[str, object], ...]
 
 
 @dataclass(frozen=True)
 class SealedRunObservation:
-    """One unit and one finding recorded, the run finished, and the projection read."""
+    """The unit tree and one finding recorded, the run finished, and read back."""
 
-    unit_key: str
-    scope_add: SpxResult
+    root_unit_key: str
+    child_unit_keys: tuple[str, ...]
+    root_scope_add: SpxResult
+    child_scope_adds: tuple[SpxResult, ...]
     finding_add: SpxResult
     finish: SpxResult
     rendered_scope_units: tuple[Mapping[str, object], ...]
 
 
 def observe_scope_unit_recording() -> ScopeUnitRecording:
-    """Record one scope unit rendered from the skill's payload on a started run."""
+    """Record the root unit and one child per designator, rendered from the skill."""
     with TemporaryDirectory() as temporary_directory:
         context = _start_run(Path(temporary_directory))
-        scope_add = _add_scope_unit(context)
+        root_scope_add = _add_root_unit(context)
+        child_scope_adds = _add_child_units(context)
         rendered = _render_scope_units(context)
     return ScopeUnitRecording(
-        unit_key=context.unit_key,
-        scope_add=scope_add,
+        root_unit_key=context.root_unit_key,
+        child_unit_keys=context.child_unit_keys,
+        root_scope_add=root_scope_add,
+        child_scope_adds=child_scope_adds,
         rendered_scope_units=rendered,
     )
 
 
 def observe_sealed_run_with_finding() -> SealedRunObservation:
-    """Record one unit and one finding rendered from the skill, then finish the run."""
+    """Record the unit tree and a finding on its first child, then finish the run."""
     with TemporaryDirectory() as temporary_directory:
         context = _start_run(Path(temporary_directory))
-        scope_add = _add_scope_unit(context)
+        root_scope_add = _add_root_unit(context)
+        child_scope_adds = _add_child_units(context)
         finding_add = _add_finding(context)
         finish = _spx(
             context,
@@ -133,8 +143,10 @@ def observe_sealed_run_with_finding() -> SealedRunObservation:
         )
         rendered = _render_scope_units(context)
     return SealedRunObservation(
-        unit_key=context.unit_key,
-        scope_add=scope_add,
+        root_unit_key=context.root_unit_key,
+        child_unit_keys=context.child_unit_keys,
+        root_scope_add=root_scope_add,
+        child_scope_adds=child_scope_adds,
         finding_add=finding_add,
         finish=finish,
         rendered_scope_units=rendered,
@@ -147,25 +159,22 @@ class _RunContext:
     spx_command: tuple[str, ...]
     selectors: tuple[str, ...]
     run_token: str
-    unit_key: str
-    bindings: Mapping[str, str]
-    scope_template: Mapping[str, object]
+    root_unit_key: str
+    child_unit_keys: tuple[str, ...]
+    root_template: Mapping[str, object]
+    child_template: Mapping[str, object]
     finding_template: Mapping[str, object]
-    scope_payload: Mapping[str, object]
 
 
 def _start_run(repository: Path) -> _RunContext:
     skill_text = SKILL_PATH.read_text(encoding="utf-8")
-    scope_template, finding_template = _payload_templates(skill_text)
+    root_template, child_template, finding_template = _payload_templates(skill_text)
     selectors = _selectors(skill_text)
     spec_file = repository / NODE_SPEC_PATH
     spec_file.parent.mkdir(parents=True)
     spec_file.write_text(
         (REPO_ROOT / NODE_SPEC_PATH).read_text(encoding="utf-8"), encoding="utf-8"
     )
-    unit_key = assertion_audit_unit_key(DESIGNATOR, NODE_SPEC_PATH)
-    bindings = _bindings(unit_key)
-    scope_payload = cast(Mapping[str, object], _render(scope_template, bindings))
     spx_command = _floor_release_command()
     started = _run_spx(
         repository,
@@ -182,30 +191,63 @@ def _start_run(repository: Path) -> _RunContext:
         spx_command=spx_command,
         selectors=selectors,
         run_token=run_token,
-        unit_key=unit_key,
-        bindings=bindings,
-        scope_template=scope_template,
+        root_unit_key=assertion_audit_root_unit_key(NODE_SPEC_PATH),
+        child_unit_keys=tuple(
+            assertion_audit_unit_key(designator, NODE_SPEC_PATH)
+            for designator in DESIGNATORS
+        ),
+        root_template=root_template,
+        child_template=child_template,
         finding_template=finding_template,
-        scope_payload=scope_payload,
     )
 
 
-def _add_scope_unit(context: _RunContext) -> SpxResult:
+def _add_root_unit(context: _RunContext) -> SpxResult:
     return _spx(
         context,
         ("scope", "add"),
-        ("--payload", "stdin", "--idempotency-key", context.unit_key),
-        payload=context.scope_payload,
+        ("--payload", "stdin", "--idempotency-key", context.root_unit_key),
+        payload=cast(
+            Mapping[str, object],
+            _render(context.root_template, _bindings(context.root_unit_key, "")),
+        ),
+    )
+
+
+def _add_child_units(context: _RunContext) -> tuple[SpxResult, ...]:
+    return tuple(
+        _spx(
+            context,
+            ("scope", "add"),
+            ("--payload", "stdin", "--idempotency-key", unit_key),
+            payload=_child_payload(context, designator, unit_key),
+        )
+        for designator, unit_key in zip(
+            DESIGNATORS, context.child_unit_keys, strict=True
+        )
+    )
+
+
+def _child_payload(
+    context: _RunContext, designator: str, unit_key: str
+) -> Mapping[str, object]:
+    return cast(
+        Mapping[str, object],
+        _render(context.child_template, _bindings(unit_key, designator)),
     )
 
 
 def _add_finding(context: _RunContext) -> SpxResult:
+    designator = DESIGNATORS[0]
+    unit_key = context.child_unit_keys[0]
     bindings = {
-        **context.bindings,
+        **_bindings(unit_key, designator),
         _EXPECTED_PRODUCER_PLACEHOLDER: "",
     }
     finding = cast(dict[str, object], _render(context.finding_template, bindings))
-    finding["producerIdentity"] = context.scope_payload["expectedProducer"]
+    finding["producerIdentity"] = _child_payload(context, designator, unit_key)[
+        "expectedProducer"
+    ]
     return _spx(
         context,
         ("finding", "add"),
@@ -213,7 +255,7 @@ def _add_finding(context: _RunContext) -> SpxResult:
             "--payload",
             "stdin",
             "--idempotency-key",
-            f"{context.unit_key}:{FINDING_RULE}",
+            f"{unit_key}:{FINDING_RULE}",
         ),
         payload=finding,
     )
@@ -267,7 +309,7 @@ def _run_spx(
 
 def _payload_templates(
     skill_text: str,
-) -> tuple[Mapping[str, object], Mapping[str, object]]:
+) -> tuple[Mapping[str, object], Mapping[str, object], Mapping[str, object]]:
     match = _PERSISTENCE_SECTION.search(skill_text)
     if match is None:
         raise RuntimeError("the skill states no persistence contract")
@@ -276,9 +318,18 @@ def _payload_templates(
         cast(dict[str, object], json.loads(block))
         for block in _JSON_BLOCK.findall(section)
     ]
-    scope = next(block for block in blocks if "auditClass" in block)
+    root = next(
+        block
+        for block in blocks
+        if "auditClass" in block and PARENT_UNIT_FIELD not in block
+    )
+    child = next(
+        block
+        for block in blocks
+        if "auditClass" in block and PARENT_UNIT_FIELD in block
+    )
     finding = next(block for block in blocks if "producerIdentity" in block)
-    return scope, finding
+    return root, child, finding
 
 
 def _selectors(skill_text: str) -> tuple[str, ...]:
@@ -288,12 +339,12 @@ def _selectors(skill_text: str) -> tuple[str, ...]:
     return (*match.group(1).split(), "--scope", NODE_SPEC_PATH)
 
 
-def _bindings(unit_key: str) -> Mapping[str, str]:
+def _bindings(unit_key: str, designator: str) -> Mapping[str, str]:
     return {
         "unit-key": unit_key,
         "accepted-unit-key": unit_key,
         "path": NODE_SPEC_PATH,
-        "designator": DESIGNATOR,
+        "designator": designator,
         "subject-path-and-line-or-section": f"{NODE_SPEC_PATH}:1",
         "violated-rule-id": FINDING_RULE,
         "blocking-or-debt": FINDING_SEVERITY,
