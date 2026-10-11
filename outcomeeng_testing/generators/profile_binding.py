@@ -92,14 +92,22 @@ NEAR_PLACEHOLDER_BINDINGS: Final = tuple(
 )
 """Placeholders joined with literal text, as a prefix or as a suffix: the value is no placeholder."""
 
+QUOTED_PLACEHOLDER_BINDINGS: Final = tuple(
+    f"{quote}{placeholder}{quote}"
+    for placeholder in PLACEHOLDER_BINDINGS
+    for quote in ('"', "'")
+)
+"""Placeholders inside a quoted literal: the quotes make the value a literal."""
+
 AUTHORED_BINDINGS: Final = (
     _LITERAL_BINDINGS
     + _TEMPLATE_TOKEN_BINDINGS
     + _UNQUOTED_BINDINGS
     + BARE_NAME_BINDINGS
     + NEAR_PLACEHOLDER_BINDINGS
+    + QUOTED_PLACEHOLDER_BINDINGS
 )
-"""Bindings that carry an authored value: a literal, a build template token, an unquoted value, a bare name, or a placeholder joined with literal text."""
+"""Bindings that carry an authored value: a literal, a build template token, an unquoted value, a bare name, a placeholder joined with literal text, or a quoted placeholder."""
 
 READ_BINDINGS: Final = (
     'lookup("key")',
@@ -120,10 +128,12 @@ _ASSIGNMENT_BOUNDARIES: Final = (
 SURROUNDING_CONTEXTS: Final = _ASSIGNMENT_BOUNDARIES + (
     ("# ", ""),
     ("The configuration reads: ", "."),
+    ('"The configuration reads: ', '"'),
 )
 """Prefix and suffix pairs placing one binding in differing surrounding code.
 
 The guard opens an assignment at line start, after whitespace, after a comma, or
 after an opening brace; commentary and prose prefixes end in whitespace, so they
-reach the same boundary.
+reach the same boundary. The last pair places the binding at the end of a quoted
+message, where the closing quote follows the bound value.
 """
