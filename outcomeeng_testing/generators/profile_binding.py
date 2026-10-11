@@ -18,6 +18,7 @@ from outcomeeng.distribution.profiles import (
     AgentProfile,
     ClaudeEffort,
     CodexReasoningEffort,
+    NATIVE_CONFIGURATION_FIELDS,
 )
 
 _LITERAL_BINDINGS: Final = ('"value"', "'value'")
@@ -52,10 +53,18 @@ _UNQUOTED_BINDINGS: Final = tuple(
 )
 """Unquoted authored values: whitespace before a parenthesized word and a bare trailing dot."""
 
-AUTHORED_BINDINGS: Final = (
-    _LITERAL_BINDINGS + _TEMPLATE_TOKEN_BINDINGS + _UNQUOTED_BINDINGS
+BARE_NAME_BINDINGS: Final = tuple(
+    sorted(set(_UNQUOTED_IDENTIFIERS) | set(NATIVE_CONFIGURATION_FIELDS))
 )
-"""Bindings that carry an authored value: a literal, a build template token, or an unquoted value."""
+"""Bare names that read nothing: an effort value or a native field name, with no call, subscript, or attribute access."""
+
+AUTHORED_BINDINGS: Final = (
+    _LITERAL_BINDINGS
+    + _TEMPLATE_TOKEN_BINDINGS
+    + _UNQUOTED_BINDINGS
+    + BARE_NAME_BINDINGS
+)
+"""Bindings that carry an authored value: a literal, a build template token, an unquoted value, or a bare name."""
 
 READ_BINDINGS: Final = (
     'lookup("key")',
@@ -67,26 +76,30 @@ READ_BINDINGS: Final = (
 
 _MESSAGE_TEXT: Final = " for this run"
 
+_PLACEHOLDER_FORMS: Final = (
+    "{name}",
+    "{0}",
+    "{}",
+    "{name!r}",
+    "{name:8}",
+    "{item.key}",
+    "{item[0]}",
+    "%s",
+    "%d",
+    "%r",
+    "%f",
+    "%(name)s",
+    "$name",
+    "${name}",
+)
+
 PLACEHOLDER_BINDINGS: Final = tuple(
-    placeholder + _MESSAGE_TEXT
-    for placeholder in (
-        "{name}",
-        "{0}",
-        "{}",
-        "{name!r}",
-        "{name:8}",
-        "{item.key}",
-        "{item[0]}",
-        "%s",
-        "%d",
-        "%r",
-        "%f",
-        "%(name)s",
-        "$name",
-        "${name}",
-    )
+    placeholder + _MESSAGE_TEXT for placeholder in _PLACEHOLDER_FORMS
 )
 """Interpolation placeholders that open message text: brace, percent, and dollar forms."""
+
+NON_MESSAGE_PLACEHOLDER_BINDINGS: Final = _PLACEHOLDER_FORMS
+"""Interpolation placeholders that open no message text: each form stands alone as the whole binding."""
 
 _ASSIGNMENT_BOUNDARIES: Final = (
     ("", ""),

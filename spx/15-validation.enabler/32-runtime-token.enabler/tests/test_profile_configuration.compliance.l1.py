@@ -19,6 +19,8 @@ from outcomeeng.validation.runtime_tokens import (
 from outcomeeng.validation.profile_configuration import find_profile_literals
 from outcomeeng_testing.generators.profile_binding import (
     AUTHORED_BINDINGS,
+    BARE_NAME_BINDINGS,
+    NON_MESSAGE_PLACEHOLDER_BINDINGS,
     READ_BINDINGS,
     SURROUNDING_CONTEXTS,
 )
@@ -77,3 +79,21 @@ def test_decision_follows_binding_form_in_every_surrounding_context() -> None:
             for binding in READ_BINDINGS:
                 line = f"{prefix}{field} = {binding}{suffix}"
                 assert find_profile_literals(line) == []
+
+
+def test_bare_name_bindings_are_assignments_in_every_surrounding_context() -> None:
+    for field in NATIVE_CONFIGURATION_FIELDS:
+        for prefix, suffix in SURROUNDING_CONTEXTS:
+            for binding in BARE_NAME_BINDINGS:
+                line = f"{prefix}{field} = {binding}{suffix}"
+                assert find_profile_literals(line) == [(1, field)]
+
+
+def test_non_message_placeholder_bindings_are_assignments_in_every_surrounding_context() -> (
+    None
+):
+    for field in NATIVE_CONFIGURATION_FIELDS:
+        for prefix, suffix in SURROUNDING_CONTEXTS:
+            for binding in NON_MESSAGE_PLACEHOLDER_BINDINGS:
+                line = f"{prefix}{field} = {binding}{suffix}"
+                assert find_profile_literals(line) == [(1, field)]
