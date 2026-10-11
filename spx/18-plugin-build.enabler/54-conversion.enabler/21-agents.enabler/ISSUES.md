@@ -74,3 +74,50 @@ implementation-audit orchestration, not to skill composition.
 **Evidence**: SPX run `2026-09-17_15-12-34-814-1080e7adf6da`, sealed
 `approved` with zero findings over 319 `coverage-gap` units, observed on Change
 #76 subject `6c64464abf07a2e384dabea0d3d0bc19a1b12956`.
+
+## DEBT [evidence]: compliance assertion has no violating case (f-002)
+
+Finding f-002 (REJECT) at
+`spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/tests/test_agents.compliance.l1.py:125`:
+a compliance assertion carries no violating case, so nothing shows the
+assertion rejects a violation.
+
+The audit is a `spec-tree:test-evidence-auditor` verdict on this node at head
+`dd0d8cd6678c7619f1474d35f12e81f0df52e3c2`. The verdict carries no sealed run
+token.
+
+The text lies outside the Change: `git diff -U0 origin/main...HEAD` reports no
+hunk on line 125, against merge base `149a55f71befdf61e88be9bda2aae725db1f2381`.
+
+**Resolution shape**: add a generated violating case that the assertion must
+reject.
+
+**Settlement condition**: the compliance assertion at that line is exercised
+against a generated violating case and rejects it.
+
+## DEBT [evidence]: harness flagged at distribution.py line 272 (f-004)
+
+Finding f-004 (WARNING) at `outcomeeng_testing/harnesses/distribution.py:272`:
+the harness at that line is flagged.
+
+Audit and scope as for f-002: the same `spec-tree:test-evidence-auditor`
+verdict at head `dd0d8cd6678c7619f1474d35f12e81f0df52e3c2`, and
+`git diff -U0 origin/main...HEAD` reports no hunk on line 272 (merge base
+`149a55f71befdf61e88be9bda2aae725db1f2381`).
+
+**Settlement condition**: the harness inversion recorded in the entry "linked
+tests delegate every predicate to harness assertion helpers" lands, or the line
+is repaired alone.
+
+## DEBT [evidence]: flagged warning on the compliance test file (f-005)
+
+Finding f-005 (WARNING) at
+`spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/tests/test_agents.compliance.l1.py:189`:
+a flagged warning on the same compliance file as f-002.
+
+Audit and scope as for f-002: the same `spec-tree:test-evidence-auditor`
+verdict at head `dd0d8cd6678c7619f1474d35f12e81f0df52e3c2`, and
+`git diff -U0 origin/main...HEAD` reports no hunk on line 189 (merge base
+`149a55f71befdf61e88be9bda2aae725db1f2381`).
+
+**Settlement condition**: settled with the repair of f-002.
