@@ -22,7 +22,7 @@ _ASSIGNMENT: Final = re.compile(
 
 _TEMPLATE_TOKEN: Final = re.compile(r"\{\{!")
 _READ_EXPRESSION: Final = re.compile(
-    r"[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*\s*[(\[.]"
+    r"[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*(?:[(\[]|\.[A-Za-z_])"
 )
 _INTERPOLATION_PLACEHOLDER: Final = re.compile(
     r"\{[A-Za-z0-9_.!:\[\]]*\}|%[sdrf(]|\$\{?[A-Za-z_]"
