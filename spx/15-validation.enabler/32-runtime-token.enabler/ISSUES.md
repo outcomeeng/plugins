@@ -50,24 +50,22 @@ Required handling:
 
 **Settlement condition.** The node and its spec align to the decision's wording, as part of the tree-wide sweep `spx/18-plugin-build.enabler/ISSUES.md` records. The node name encodes the term, so the sweep includes a `/refactor` node rename.
 
-## DEBT [evidence]: profile harness and compliance test hand-write build-token text (f-001, f-008, f-002, f-003)
+## DEBT [evidence]: profile harness and compliance test hand-write build-token text (f-002, f-003)
 
-A second `spec-tree:test-evidence-auditor` verdict on this node at head `7e15b3c437ca8326e0e63dbd0e54d45a62245ba6`, recorded after the first audit's debt entries, rejected existing text in the profile harness and the compliance test that drives it. The verdict carries no sealed run token. Every entry below that cites this audit shares that property.
+A second `spec-tree:test-evidence-auditor` verdict on this node at head `7e15b3c437ca8326e0e63dbd0e54d45a62245ba6`, recorded after the first audit's debt entries, rejected existing text in the compliance test that drives the profile harness. The verdict carries no sealed run token. Every entry below that cites this audit shares that property.
 
-- f-001 (REJECT, source-ownership): `outcomeeng_testing/harnesses/profile_validation.py`, `write_configuration_overrides`, hand-writes the `src/_shared`, `src/plugins`, and `src/templates` directory names.
-- f-008 (WARNING): the same line writes only a template-generated frontmatter override. A literal frontmatter override, and the path and line of a literal model identifier, are never driven.
 - f-002 (REJECT, source-ownership): `spx/15-validation.enabler/32-runtime-token.enabler/tests/test_profile_configuration.compliance.l1.py:64` hand-writes the build token.
 - f-003 (REJECT, test-owned data): the same test file, line 42, holds the expected violation lines (2, 5) as literals that mirror the harness file layout.
 
 The defects share one class: the text spells out what the contracts owner defines, or restates the harness file layout, so a change to either leaves the evidence asserting the old spelling.
 
-Resolution shape: build the directory names in the harness from the contracts owners; extend the harness to drive a literal frontmatter override and a literal model identifier and to report the path and line it wrote; build the f-002 token from the same owners; read the f-003 expected lines from the harness that writes the file.
+Resolution shape: build the f-002 token from the contracts owners; read the f-003 expected lines from the harness that writes the file.
 
-Evidence that the text lies outside the change: `git diff -U0 origin/main...HEAD` (merge base `149a55f71befdf61e88be9bda2aae725db1f2381`) reports no hunk on `outcomeeng_testing/harnesses/profile_validation.py:27` and none on lines 42 or 64 of the compliance test file.
+Evidence that the text lies outside the change: `git diff -U0 origin/main...HEAD` (merge base `149a55f71befdf61e88be9bda2aae725db1f2381`) reports no hunk on lines 42 or 64 of the compliance test file.
 
 Invalidation check. The cited text neither cites, restates, nor depends on anything this changeset changed. The changeset adds symbols to `outcomeeng/distribution/profiles.py` (model prices; no existing symbol changes) and adds one filter to `outcomeeng/validation/profile_configuration.py` (`_is_authored_binding`, which drops a match whose binding reads a value or is an interpolation placeholder). The cited text hand-writes token and directory spelling and literal expected lines. The inputs it drives are literal and template-token bindings, which `_is_authored_binding` accepts exactly as the guard did before, so the expected result is unchanged and the defect does not depend on the filter.
 
-**Settlement condition.** The harness and the compliance test hold no hand-written delimiter, directory name, or token and no literal expected line, the harness drives the literal frontmatter and literal identifier overrides, and a focused run of the node's tests plus a test-evidence audit over the repaired chain pass.
+**Settlement condition.** The compliance test holds no hand-written delimiter or token and no literal expected line, and a focused run of the node's tests plus a test-evidence audit over the repaired chain pass.
 
 ## DEBT [evidence]: native-field mapping tests hand-pick their inputs (f-004, f-005)
 

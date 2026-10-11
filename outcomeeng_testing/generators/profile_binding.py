@@ -24,6 +24,9 @@ from outcomeeng.distribution.profiles import (
 _LITERAL_BINDINGS: Final = ('"value"', "'value'")
 """Quoted literals: no template token, read expression, or placeholder opens them."""
 
+LITERAL_BINDING: Final = _LITERAL_BINDINGS[0]
+"""One quoted authored literal, the payload of a literal native assignment."""
+
 PROFILE_DESCRIPTION_TOKEN: Final = build_variable_token(
     f"profile_description('{AgentProfile.STANDARD}')"
 )

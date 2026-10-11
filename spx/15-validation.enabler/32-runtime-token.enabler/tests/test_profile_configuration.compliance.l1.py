@@ -25,6 +25,7 @@ from outcomeeng_testing.generators.profile_binding import (
 )
 from outcomeeng_testing.harnesses.profile_validation import (
     write_configuration_overrides,
+    write_literal_overrides,
 )
 from outcomeeng_testing.harnesses.runtime_tokens import observe_source
 
@@ -41,6 +42,19 @@ def test_overrides_are_rejected_in_frontmatter_and_ignored_conditionals(
     assert [
         (violation.path, violation.line, violation.token) for violation in violations
     ] == [(path, line, path.parent.name) for path in paths for line in (2, 5)]
+
+
+def test_literal_frontmatter_and_model_identifiers_are_reported_with_path_and_line(
+    tmp_path: Path,
+) -> None:
+    written = write_literal_overrides(tmp_path)
+    selected = tuple(Path(path) for path in runtime_token_files(tmp_path / "src"))
+    violations = scan_paths(selected, ignore=frozenset(), repo_root=tmp_path)
+
+    assert {item.path for item in written} == set(selected)
+    assert sorted((str(item.path), item.line) for item in written) == sorted(
+        (str(violation.path), violation.line) for violation in violations
+    )
 
 
 def test_profile_literals_report_profile_remediation() -> None:
