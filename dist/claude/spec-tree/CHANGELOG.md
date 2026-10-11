@@ -10,6 +10,12 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.105.4
+
+### Fixed
+
+- **`/audit-assertions` records one root unit for the audited node spec and each `[audit]` assertion as that root's child, so a run on a spec with several `[audit]` assertions seals.** The root's `unitId` is the audited spec path, it carries no `parentUnitId`, and each child keeps its unit key `assertion:<designator>:<path>` and names the root as its parent. Class `spec`, kind `spec`, and the spec path as subject apply to the root and to every child. Before this change, the skill recorded every assertion as a root, and `spx` admits one root per file-scoped run, so the second unit was refused and no run on a spec with several `[audit]` assertions finished.
+
 ## 0.105.3
 
 ### Fixed
