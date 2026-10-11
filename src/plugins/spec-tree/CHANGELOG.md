@@ -10,6 +10,13 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.105.1
+
+### Changed
+
+- **`change-standards` states that `## Artifacts` links the audited content each round has produced and is empty before the first round, so an Executable record passes its change audit before its first round.** The `artifacts` rule and the `executable-artifacts` criterion judge each link present: a link must name a Node in `## Nodes` and pin the commit that holds its audited content, and an empty section satisfies the criterion. The completeness check moves to the close, where the `terminal-record` rule of the Lifecycle reference requires `Applied` for a Leaf to carry a link for every Node the Change adds, modifies, or implements. Before this change, the rule and the criterion required a link for every such Node, which no Executable record revised before execution could hold, and the audit rejected an empty section.
+- **`/close-change` refuses `Applied` for a Leaf while a Node the Change adds, modifies, or implements has no `## Artifacts` link.** The Leaf precondition gains the check beside the integration, Required-state, and Intent checks, and the refusal names the Node without a link. Before this change, the close checked only that each link present was integrated, so a Leaf with a Node lacking a link could close `Applied`.
+
 ## 0.105.0
 
 ### Added
