@@ -42,7 +42,7 @@ Classify each finding by its `location`: a finding on touched text is recorded o
 
 <finding_key>
 
-A finding is identified by its key, `<unitId>:<rule>`, whose `unitId` is the unit's key and whose rule is the finding's rule identifier. The key names the unit and rule and never a line number, so the same finding carries the same key in every run and on every head.
+A finding is identified by its key, `<unitId>:<rule>`, whose `unitId` is the unit key `assertion:<designator>:<path>` (the designator is the rule slug, or `ordinal-<n>` when pathless) and whose rule is the finding's rule identifier. The key names the unit and rule and never a line number, so the same finding carries the same key in every run and on every head.
 
 </finding_key>
 
