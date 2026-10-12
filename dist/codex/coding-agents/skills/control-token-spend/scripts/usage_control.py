@@ -138,7 +138,10 @@ def configuration(args: argparse.Namespace, end: dt.datetime) -> Config:
             )
         value = json.loads(saved.read_text())
         if not isinstance(value, dict):
-            raise ValueError(f"Saved configuration must be a JSON object: {saved}")
+            raise ValueError(
+                f"Saved configuration must be a JSON object: {saved}; "
+                "correct the file or reinstall through install"
+            )
         environment.update(
             {
                 key: str(item)

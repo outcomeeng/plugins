@@ -288,7 +288,8 @@ class Config:
     def period(self, now: dt.datetime) -> tuple[dt.datetime, dt.datetime]:
         if now < self.reset:
             raise ValueError(
-                f"{RESET_ENV}: reset anchor {iso(self.reset)} is later than measurement end {iso(now)}"
+                f"{RESET_ENV}: reset anchor {iso(self.reset)} is later than measurement end {iso(now)}; "
+                "choose an anchor at or before the measurement end"
             )
         start = self.reset + ((now - self.reset) // WEEK) * WEEK
         return start, start + WEEK
