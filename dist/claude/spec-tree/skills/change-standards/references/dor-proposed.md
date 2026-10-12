@@ -6,7 +6,7 @@ Judge every criterion; this table is the complete criterion set for Proposed Mat
 | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `proposed-record`         | The front matter and the body's section set and order satisfy `record-shape`, the title and Intent satisfy `record-limits`, and the body opens with `## Intent`.           |
 | `proposed-identity`       | `title`, `product`, `maturity: Proposed`, and `lifecycle` identify one intended Output, its owning Product or none for a root, and a valid Lifecycle under `record-shape`. |
-| `proposed-relationships`  | `refined_from`, `parent`, and `blocked_by` satisfy `lineage` and `blockers`, and `blocked_by` names every known blocker.                                                   |
+| `proposed-relationships`  | `predecessors`, `parent`, and `blocked_by` satisfy `lineage` and `blockers`, and `blocked_by` names every known blocker.                                                   |
 | `proposed-intent`         | `## Intent` states What, Why, and Evidence under `intent`, with Observation present only where an observation gives rise to the Change.                                    |
 | `proposed-questions`      | Every known question that can change the intended Output stands under `## Open questions` under `open-questions`; no answer is invented.                                   |
 | `proposed-input-boundary` | The record satisfies `received-input-boundary`.                                                                                                                            |

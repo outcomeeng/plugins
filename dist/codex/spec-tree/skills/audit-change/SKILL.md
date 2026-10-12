@@ -97,7 +97,7 @@ A blocked result names exactly one of these reasons:
 
 <execution_sequence>
 
-1. **Read front matter and apply the compatibility boundary.** Request `read-candidate`; its `content` is the one copy of the candidate the audit judges. The runner re-reads the stored file only inside `start` and `reconcile`, to compare it with that content and with the retained input. Before interpreting body content, inventory every front-matter key occurrence in source order and compare the inventory with the closed set `title`, `product`, `maturity`, `lifecycle`, `refined_from`, `blocked_by`, and `parent`, each present exactly once. A stripped front matter block, missing or repeated required key, or any extra key — including `change_ref` — returns `OUTSIDE_CONTRACT` before a run starts. Never inspect body signals to decide compatibility, infer fields, interpret body-line lineage, or migrate the candidate. When the exact key set is present, unsupported values and body violations remain audit subjects.
+1. **Read front matter and apply the compatibility boundary.** Request `read-candidate`; its `content` is the one copy of the candidate the audit judges. The runner re-reads the stored file only inside `start` and `reconcile`, to compare it with that content and with the retained input. Before interpreting body content, inventory every front-matter key occurrence in source order and compare the inventory with the closed set `title`, `product`, `maturity`, `lifecycle`, `predecessors`, `blocked_by`, and `parent`, each present exactly once. A stripped front matter block, missing or repeated required key, or any extra key — including `change_ref` — returns `OUTSIDE_CONTRACT` before a run starts. Never inspect body signals to decide compatibility, infer fields, interpret body-line lineage, or migrate the candidate. When the exact key set is present, unsupported values and body violations remain audit subjects.
 2. **Retain the candidate.** Request `start` with the `sha256` from step 1 and retain the returned `runToken` for every later request. A blocked `start` returns `BLOCKED`; with `retained-input-mismatch` the run exists and stays preserved under its token.
 3. **Load the rules.** Use skill `spec-tree:change-standards`.
    Invoke it with the exact declared Maturity; it loads its common contract
@@ -133,7 +133,7 @@ A blocked result names exactly one of these reasons:
    the common reference and every criterion ID in the selected Definition of
    Ready: one root unit for the complete file and one child per common rule
    and criterion. Never shorten the inventory because a record is concise.
-6. **Judge.** Judge front-matter types, values, `refined_from`, `parent`, and
+6. **Judge.** Judge front-matter types, values, `predecessors`, `parent`, and
    mutable blockers. Request `count-limits` and record one `record-limits`
    finding per entry of `violations`, naming the entry's `section`, `limit`,
    and `count`. Judge `change-type` from the candidate's `## Governance
@@ -294,7 +294,7 @@ For a front-matter key-set mismatch, return only:
 ```text
 OUTSIDE_CONTRACT
 path: <normalized-relative-path>
-expectedKeys: ["title","product","maturity","lifecycle","refined_from","blocked_by","parent"]
+expectedKeys: ["title","product","maturity","lifecycle","predecessors","blocked_by","parent"]
 observedKeys: <JSON-array-of-key-occurrences-in-source-order>
 ```
 

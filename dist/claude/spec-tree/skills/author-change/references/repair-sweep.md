@@ -22,7 +22,7 @@ A changed-section dependent is text in another section or in the front matter th
 | Changed Spec mutations assertion                                         | Every Governance mutations decision that governs it and every `## Slice` check that observes it          |
 | Changed block order or count                                             | Every block that depends on it and every sentence that states the number or order                        |
 | Changed `## Slice` repository or check                                   | Every block, Node, and blocker that lies outside the new slice                                           |
-| Changed `blocked_by` or `refined_from`                                   | Every section that names the blocker or predecessor                                                      |
+| Changed `blocked_by` or `predecessors`                                   | Every section that names the blocker or predecessor                                                      |
 
 </changed_dependent>
 

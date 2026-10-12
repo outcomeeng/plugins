@@ -3,7 +3,7 @@ title: "Concurrent change audits never read or write each other's scratch files"
 product: plugins
 maturity: Executable
 lifecycle: Claimed
-refined_from: []
+predecessors: []
 blocked_by: []
 ---
 

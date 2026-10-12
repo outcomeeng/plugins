@@ -6,7 +6,7 @@ Judge every criterion; this table includes the complete Proposed requirements an
 | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `framed-record`               | The front matter and the body's section set and order satisfy `record-shape`, the title and Intent satisfy `record-limits`, and the body opens with `## Intent`.         |
 | `framed-identity`             | `title`, `product`, `maturity: Framed`, and `lifecycle` identify one intended Output, its owning Product or none for a root, and a valid Lifecycle under `record-shape`. |
-| `framed-relationships`        | `refined_from`, `parent`, and `blocked_by` satisfy `lineage` and `blockers`, and `blocked_by` names every known blocker.                                                 |
+| `framed-relationships`        | `predecessors`, `parent`, and `blocked_by` satisfy `lineage` and `blockers`, and `blocked_by` names every known blocker.                                                 |
 | `framed-intent`               | `## Intent` states What, Why, and Evidence under `intent`, with Observation present only where an observation gives rise to the Change.                                  |
 | `framed-input-boundary`       | The record satisfies `received-input-boundary`.                                                                                                                          |
 | `framed-body-authority`       | The body satisfies `body-authority`.                                                                                                                                     |

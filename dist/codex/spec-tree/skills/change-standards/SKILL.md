@@ -51,7 +51,7 @@ Every Change begins with YAML front matter containing exactly these required key
 | `product`      | Non-empty string naming the one Product that owns the Change's Output; a root whose work spans Products carries none, and a Parent and its children may carry different Products. |
 | `maturity`     | `Proposed`, `Framed`, `Sliced`, or `Executable`.                                                                                                                                  |
 | `lifecycle`    | `Available`, `Claimed`, `Submitted`, `Applied`, or `Abandoned`.                                                                                                                   |
-| `refined_from` | Append-only list of canonical identities of the Changes this Change absorbed by a merge; `[]` for a Change that absorbed none.                                                    |
+| `predecessors` | Append-only list of canonical identities of the Changes this Change absorbed by a merge; `[]` for a Change that absorbed none.                                                    |
 | `blocked_by`   | Mutable list of canonical blocker Change identities; `[]` when unblocked.                                                                                                         |
 | `parent`       | The canonical identity of the Parent Change in the same store; `null` for a Change with no Parent.                                                                                |
 
@@ -108,9 +108,9 @@ Preserve the proposal in the proposer's terms while excluding provider conversat
 
 <rule id="lineage">
 
-`refined_from` is `[]` or the complete append-only set of Changes this Change absorbed by a merge; it contains canonical Change identities and no duplicate or self reference. `parent` is `null` or the canonical identity of the one Parent Change in the same store, and is no self reference.
+`predecessors` is `[]` or the complete append-only set of Changes this Change absorbed by a merge; it contains canonical Change identities and no duplicate or self reference. `parent` is `null` or the canonical identity of the one Parent Change in the same store, and is no self reference.
 
-The `refined_from` set and the `parent` value are the only authored lineage directions. Derive roots, Leaves, Parents, children, and reverse changeset views. NEVER restate lineage in the body or maintain an authoritative child list. A split creates every child naming the source in `parent`, and the source drops its Governance mutations and Spec mutations blocks. A merge closes the absorbed Change `Abandoned` and adds it to the survivor's `refined_from`. A reframe edits the Change in place and lowers its Maturity to `Proposed`. No skill writes or accepts `Refined`.
+The `predecessors` set and the `parent` value are the only authored lineage directions. Derive roots, Leaves, Parents, children, and reverse changeset views. NEVER restate lineage in the body or maintain an authoritative child list. A split creates every child naming the source in `parent`, and the source drops its Governance mutations and Spec mutations blocks. A merge closes the absorbed Change `Abandoned` and adds it to the survivor's `predecessors`. A reframe edits the Change in place and lowers its Maturity to `Proposed`. No skill writes or accepts `Refined`.
 
 </rule>
 

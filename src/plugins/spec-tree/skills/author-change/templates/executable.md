@@ -3,12 +3,12 @@ title: "[Title naming the intended Output, at most 15 words]"
 product: "[The one Product that owns the Output, or omit the value for a root spanning Products]"
 maturity: Executable
 lifecycle: Available
-refined_from: []
+predecessors: []
 blocked_by: []
 parent: null
 ---
 
-<!-- Use skill `spec-tree:change-standards`. Apply it for this Maturity. The closed schema permits exactly the seven keys above. refined_from lists the Changes this Change absorbed by a merge and stays [] for a Change that absorbed none. parent names the Parent Change in the same store, or null. blocked_by carries current blockers. Replace placeholders and remove every comment before audit. Keep the sections in the order below. Never paste received conversation input into the record. Never write attestation, accountable-person, priority, or overrule text. Never write a result, producer, or Verifier. -->
+<!-- Use skill `spec-tree:change-standards`. Apply it for this Maturity. The closed schema permits exactly the seven keys above. predecessors lists the Changes this Change absorbed by a merge and stays [] for a Change that absorbed none. parent names the Parent Change in the same store, or null. blocked_by carries current blockers. Replace placeholders and remove every comment before audit. Keep the sections in the order below. Never paste received conversation input into the record. Never write attestation, accountable-person, priority, or overrule text. Never write a result, producer, or Verifier. -->
 
 ## Intent
 
