@@ -251,6 +251,7 @@ def test_plugin_lifecycle_reports_scope_splits_before_home_mutation(
         skill_enabling_definition(lifecycle.plugin_name),
     )
     before = lifecycle.snapshot(lifecycle.home)
+    checkout_before = lifecycle.snapshot(lifecycle.checkout)
 
     result = lifecycle.run()
     assert result.exit_code == module.EXIT_REFUSED
@@ -264,6 +265,7 @@ def test_plugin_lifecycle_reports_scope_splits_before_home_mutation(
     )
     assert f"{module.SCOPE_SPLIT_COLLISION_PREFIX}{renamed}" in result.stdout
     assert result.home_snapshot == before
+    assert result.checkout_snapshot == checkout_before
 
 
 def test_persistent_installation_places_agents_in_the_selected_home() -> None:
@@ -309,9 +311,16 @@ def test_reconciliation_preserves_a_pending_plugins_prior_owned_definitions() ->
 
     assert observation.second_report.pending_for(Agent.CODEX) == observation.changed
     assert pending_names
+    owned_first = {
+        entry.destination.name: entry for entry in observation.ownership_first
+    }
+    owned_second = {
+        entry.destination.name: entry for entry in observation.ownership_second
+    }
     for name in pending_names:
         assert second[name] == first[name], name
         assert second[name] != desired[name], name
+        assert owned_second[name] == owned_first[name], name
     for name in set(desired) - pending_names:
         assert second[name] == desired[name], name
     assert observation.foreign_second == observation.foreign_first
@@ -328,9 +337,14 @@ def test_reconciliation_prunes_owned_definitions_of_plugins_leaving_the_home_sel
     }
     second = dict(observation.home_second)
 
+    owned_first = {entry.destination.name for entry in observation.ownership_first}
+    owned_second = {entry.destination.name for entry in observation.ownership_second}
+
     assert deselected_names
     assert deselected_names <= set(dict(observation.home_first))
     assert not deselected_names & set(second)
+    assert deselected_names <= owned_first
+    assert not deselected_names & owned_second
     assert {
         name: content
         for name, content in observation.desired_second
@@ -734,6 +748,7 @@ def test_a_malformed_ownership_record_still_reports_every_scope_split(
         )
     )
     before = lifecycle.snapshot(lifecycle.home)
+    checkout_before = lifecycle.snapshot(lifecycle.checkout)
 
     result = lifecycle.run()
 
@@ -744,6 +759,7 @@ def test_a_malformed_ownership_record_still_reports_every_scope_split(
     )
     assert module.NON_HEX_DIGEST in result.stdout
     assert result.home_snapshot == before
+    assert result.checkout_snapshot == checkout_before
 
 
 def test_a_recorded_destination_that_is_a_directory_names_its_cause(
@@ -782,6 +798,7 @@ def test_a_symlinked_agent_directory_still_reports_every_scope_split(
     real_agents = lifecycle.outside
     lifecycle.home.mkdir(parents=True, exist_ok=True)
     lifecycle.home_agents.symlink_to(real_agents)
+    checkout_before = lifecycle.snapshot(lifecycle.checkout)
 
     result = lifecycle.run()
 
@@ -796,6 +813,7 @@ def test_a_symlinked_agent_directory_still_reports_every_scope_split(
         in result.stdout
     )
     assert not (real_agents / exact.name).exists()
+    assert result.checkout_snapshot == checkout_before
 
 
 def test_a_recorded_plugin_is_refreshed_by_the_native_update_never_a_reinstall() -> (

@@ -130,6 +130,7 @@ from outcomeeng.distribution.installation import (
     MarketplaceTarget,
     RecordRewrite,
     AgentDefinition,
+    AgentOwnership,
     cached_plugin_versions,
     catalog_plugin_names,
     confined_path,
@@ -137,6 +138,7 @@ from outcomeeng.distribution.installation import (
     generated_codex_agents_root,
     marketplace_target,
     plan_install_record_rewrite,
+    read_agent_ownership,
     read_install_record_document,
     rewrite_install_records,
     CLAUDE_PLUGIN_CACHE_RELATIVE,
@@ -2669,8 +2671,9 @@ class HomeSelectionChangeObservation:
     home_first: tuple[tuple[str, bytes], ...]
     home_second: tuple[tuple[str, bytes], ...]
     desired_second: tuple[tuple[str, bytes], ...]
-    ownership_first: bytes
-    ownership_second: bytes
+    ownership_first: tuple[AgentOwnership, ...]
+    ownership_second: tuple[AgentOwnership, ...]
+    """The home's ownership claims after each run, read through the production reader."""
     foreign_first: bytes
     foreign_second: bytes
     second_report: InstallationReport
@@ -2729,7 +2732,7 @@ def observe_home_selection_change(
             mirror, environment, RecordingRunner(installed=installed)
         )
         home_first = _agent_snapshot(codex_home)
-        ownership_first = (agents_root / AGENT_OWNERSHIP_FILENAME).read_bytes()
+        ownership_first = read_agent_ownership(codex_home)
         foreign_first = foreign.read_bytes()
         if change is HomeSelectionChange.PENDING:
             for definition in build_persistent_preflight(
@@ -2750,7 +2753,7 @@ def observe_home_selection_change(
         desired_second = _shipped_agent_snapshot(mirror)
         second_report = execute_persistent_installation(mirror, environment, runner)
         home_second = _agent_snapshot(codex_home)
-        ownership_second = (agents_root / AGENT_OWNERSHIP_FILENAME).read_bytes()
+        ownership_second = read_agent_ownership(codex_home)
         foreign_second = foreign.read_bytes()
     return HomeSelectionChangeObservation(
         changed=changed,
