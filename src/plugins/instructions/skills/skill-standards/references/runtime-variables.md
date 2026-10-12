@@ -19,7 +19,7 @@ Read `${CLAUDE_SKILL_DIR}/references/<bundled-reference>.md`
 Run `python3 "${CLAUDE_SKILL_DIR}/scripts/<bundled-script>.py" <args>`
 ```
 
-NEVER reference a skill-bundled file through repository-local source or generated plugin paths, or through legacy plugin-root paths. If the file is not bundled with the current skill, name the capability or owning workflow instead of inventing a filesystem path.
+NEVER reference a skill-bundled file through repository-local source or generated plugin paths, or through legacy plugin-root paths. If the file is not bundled with the current skill, name the capability or owning workflow instead of inventing a filesystem path. One exception admits a path: a bundled script reaches a sibling skill's script of the same plugin by a `__file__`-relative import, as a typed operation, because files of one plugin ship and version together. NEVER name or import a path into another plugin's files or the plugin cache from a script or skill body.
 
 Do NOT define aliases, add troubleshooting sections, or explain compatibility tokens.
 

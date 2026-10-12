@@ -87,6 +87,8 @@ Run `python3 "${SKILL_DIR}/scripts/<bundled-script>.py" <args>`
 
 NEVER write Codex's skill-directory token in source. NEVER reference bundled plugin files with repository-local authored or generated plugin paths, or with legacy plugin-root paths. If a skill needs a file owned by another skill or another plugin, name the owning workflow or capability rather than manufacturing a cross-plugin filesystem path.
 
+One exception admits a path: a bundled script reaches a sibling skill's script of the same plugin by a `__file__`-relative import, as a typed operation, because files of one plugin ship and version together. NEVER name or import a path into another plugin's files or the plugin cache from a script or skill body.
+
 </file_references>
 
 <guard_block_partition>

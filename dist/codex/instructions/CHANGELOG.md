@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.21.4
+
+### Changed
+
+- **`/skill-standards` admits a bundled script's `__file__`-relative import of a sibling skill's script inside the same plugin.** The `cross_skill_file_path` rule no longer flags that import, because files of one plugin ship and version together; any path into another plugin's files or the plugin cache still draws the finding. Before this change, the rule flagged every path to a file another skill owned, including a same-plugin sibling's adapter.
+
 ## 0.21.3
 
 ### Changed
