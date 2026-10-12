@@ -155,7 +155,7 @@ Execution takes the Governance mutations blocks, then the Spec mutations blocks,
 
 <rule id="no-execution-status">
 
-The record carries no execution status: no Node state, no required state, no `## Artifacts` section or link to produced content, and no progress. Execution records its progress only in its Handoff, which the Executor posts after every completed block and after integration, and which carries transient continuation: branch or changeset with its head commit, the completed Governance mutations and Spec mutations blocks, each completed Governance mutations block with the run token of its approving decision-record audit, and the next block, blockers, and non-obvious hazards. Routine command logs, every other run token, verdicts, findings, verification history, and session narrative stay outside the Change.
+The record carries no execution status: no Node state, no required state, no `## Artifacts` section or link to produced content, and no progress. Execution records its progress only in its Handoff, which the Executor posts after every completed block and after integration, and which carries transient continuation: branch or changeset with its head commit, the completed Governance mutations and Spec mutations blocks, and the next block, blockers, and non-obvious hazards. Routine command logs, run tokens, verdicts, findings, verification history, and session narrative stay outside the Change.
 
 </rule>
 
