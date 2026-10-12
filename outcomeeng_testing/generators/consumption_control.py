@@ -50,6 +50,30 @@ def invalid_amounts() -> st.SearchStrategy[str]:
     )
 
 
+def override_rates() -> st.SearchStrategy[tuple[str, ...]]:
+    """Vary every rate of one price-override entry over non-negative finite decimals."""
+    rate = st.decimals(
+        min_value=Decimal(0),
+        max_value=Decimal(1_000),
+        places=4,
+        allow_nan=False,
+        allow_infinity=False,
+    ).map(str)
+    return st.tuples(rate, rate, rate, rate, rate)
+
+
+def invalid_rates() -> st.SearchStrategy[object]:
+    """Vary rejected price-override rates: negative, non-finite, non-numeric, non-string."""
+    return st.one_of(
+        st.decimals(max_value=Decimal("-0.0001"), places=4, allow_nan=False).map(str),
+        st.decimals(allow_nan=True, allow_infinity=True)
+        .filter(lambda value: not value.is_finite())
+        .map(str),
+        st.text(alphabet="abcdefghijklmnopqrstuvwxyz", min_size=1, max_size=12),
+        st.integers(min_value=0, max_value=1_000),
+    )
+
+
 def growing_contexts() -> st.SearchStrategy[list[int]]:
     return st.lists(
         st.integers(min_value=1, max_value=10_000), min_size=2, max_size=32

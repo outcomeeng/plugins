@@ -14,7 +14,7 @@ import subprocess
 import sys
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import astuple, dataclass
 from decimal import Decimal
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -22,10 +22,13 @@ from types import ModuleType
 from typing import Any
 
 from hypothesis import given, seed, settings
+from hypothesis import strategies as st
 
 from outcomeeng_testing.generators.consumption_control import (
     spending_cases,
     invalid_amounts,
+    invalid_rates,
+    override_rates,
     growing_contexts,
     usage_snapshots,
     unsupported_models,
@@ -34,7 +37,7 @@ from outcomeeng_testing.generators.consumption_control import (
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
 
 ROOT = Path(__file__).parents[2]
-SCRIPTS = ROOT / "src/plugins/coding-agents/skills/control-token-spend/scripts"
+SCRIPTS = ROOT / "dist/claude/coding-agents/skills/control-token-spend/scripts"
 FIXTURES = ROOT / "outcomeeng_testing/fixtures/consumption_control"
 SEED = 2026100915
 EXAMPLES = 80
@@ -125,14 +128,18 @@ def accounting_observation(
             AccountingField.EPHEMERAL_5M_INPUT_TOKENS: counters[2],
             AccountingField.EPHEMERAL_1H_INPUT_TOKENS: counters[3],
         }
-        value, _ = accounting.request(row, source)
+        value, _ = accounting.request(row, source, accounting.bundled_prices())
         normalized.append(value)
     result = (
         accounting.reconcile(*normalized)
         if all(value is not None for value in normalized)
         else None
     )
-    components = accounting.cost(result) if result is not None else None
+    components = (
+        accounting.cost(result, accounting.bundled_prices())
+        if result is not None
+        else None
+    )
     external = json.loads((FIXTURES / "pricing.json").read_text())["per_million"]
     rates = tuple(
         Decimal(external[key])
@@ -274,6 +281,107 @@ def configuration_property(check: Callable[[list[tuple[str, str]]], None]) -> No
             except ValueError as error:
                 diagnostics.append((field, str(error)))
         check(diagnostics)
+
+    run_replayable_property(
+        run, seed_value=SEED, replay_path=REPLAY.replace("accounting", "configuration")
+    )
+
+
+@dataclass(frozen=True)
+class PriceOverrideObservation:
+    written: tuple[str, ...]
+    resolved: tuple[Decimal, ...]
+    bundled_others: dict[str, Any]
+    resolved_others: dict[str, Any]
+    written_file: str
+    effective_file: object
+
+
+def _write_override(directory: Path, model: str, rates: dict[str, object]) -> Path:
+    accounting, _, _, _ = modules()
+    path = directory / "price-override.json"
+    path.write_text(
+        json.dumps({accounting.PRICE_DOCUMENT_KEY: {model: rates}}), encoding="utf-8"
+    )
+    return path
+
+
+def _override_config(path: Path) -> Any:
+    accounting, _, _, _ = modules()
+    environment = {
+        accounting.RESET_ENV: fixture()[AccountingField.TIMESTAMP],
+        accounting.PRICE_OVERRIDE_ENV: str(path),
+    }
+    return accounting.Config.from_environment(
+        environment, Path("/state"), Path("/transcripts")
+    )
+
+
+def price_override_property(check: Callable[[PriceOverrideObservation], None]) -> None:
+    accounting, _, _, _ = modules()
+    bundled = accounting.bundled_prices()
+
+    @seed(SEED)
+    @settings(max_examples=EXAMPLES, deadline=None)
+    @given(st.sampled_from(sorted(bundled)), override_rates())
+    def run(model: str, rates: tuple[str, ...]) -> None:
+        with TemporaryDirectory(prefix="price-override-") as temporary:
+            path = _write_override(
+                Path(temporary),
+                model,
+                dict(zip(accounting.PRICE_CLASSES, rates, strict=True)),
+            )
+            config = _override_config(path)
+            check(
+                PriceOverrideObservation(
+                    rates,
+                    astuple(config.prices[model]),
+                    {name: price for name, price in bundled.items() if name != model},
+                    {
+                        name: price
+                        for name, price in config.prices.items()
+                        if name != model
+                    },
+                    str(path.resolve()),
+                    config.effective()[accounting.PRICE_OVERRIDE_ENV],
+                )
+            )
+
+    run_replayable_property(
+        run, seed_value=SEED, replay_path=REPLAY.replace("accounting", "configuration")
+    )
+
+
+def invalid_price_override_property(
+    check: Callable[[tuple[str, str]], None],
+) -> None:
+    accounting, _, _, _ = modules()
+    bundled = accounting.bundled_prices()
+
+    @seed(SEED)
+    @settings(max_examples=EXAMPLES, deadline=None)
+    @given(
+        st.sampled_from(sorted(bundled)),
+        override_rates(),
+        st.sampled_from(accounting.PRICE_CLASSES),
+        invalid_rates(),
+    )
+    def run(model: str, rates: tuple[str, ...], rejected: str, value: object) -> None:
+        entry: dict[str, object] = dict(
+            zip(accounting.PRICE_CLASSES, rates, strict=True)
+        )
+        entry[rejected] = value
+        location = (
+            f"{accounting.PRICE_OVERRIDE_ENV}: "
+            f"{accounting.PRICE_DOCUMENT_KEY}.{model}.{rejected}"
+        )
+        with TemporaryDirectory(prefix="price-override-") as temporary:
+            path = _write_override(Path(temporary), model, entry)
+            try:
+                _override_config(path)
+                check((location, ""))
+            except ValueError as error:
+                check((location, str(error)))
 
     run_replayable_property(
         run, seed_value=SEED, replay_path=REPLAY.replace("accounting", "configuration")
@@ -555,7 +663,7 @@ def installation_observation(work: Workspace) -> InstallationObservation:
     )
     return InstallationObservation(
         {path.name for path in Path(plan[ScheduleField.ASSETS]).iterdir()},
-        set(schedule.SCRIPT_NAMES),
+        set(schedule.ASSET_NAMES),
         [
             job[ScheduleField.PLIST][ScheduleField.PROGRAMARGUMENTS]
             for job in plan[ScheduleField.JOBS]
@@ -698,7 +806,7 @@ def standalone_observation(work: Workspace) -> StandaloneObservation:
     accounting, _, schedule, _ = modules()
     assets = work.root / "copied-assets"
     assets.mkdir()
-    for name in schedule.SCRIPT_NAMES:
+    for name in schedule.ASSET_NAMES:
         shutil.copyfile(SCRIPTS / name, assets / name)
     before = hashlib.sha256(work.source.read_bytes()).hexdigest()
     empty_path = work.root / "empty-path"
@@ -954,8 +1062,8 @@ class DetectorObservation:
 def detector_observation(work: Workspace) -> DetectorObservation:
     accounting, _, _, control = modules()
     row = fixture()
-    native, _ = accounting.request(row, work.source)
-    components = accounting.cost(native)
+    native, _ = accounting.request(row, work.source, work.config.prices)
+    components = accounting.cost(native, work.config.prices)
     amount = sum(components.values(), Decimal())
     factor = int(work.config.alert / amount) + 1
     usage = row[AccountingField.MESSAGE][AccountingField.USAGE]
@@ -1074,7 +1182,7 @@ def unknown_pricing_property(
                 AccountingField.EPHEMERAL_5M_INPUT_TOKENS: 0,
                 AccountingField.EPHEMERAL_1H_INPUT_TOKENS: snapshots[0][2],
             }
-            value, gaps = accounting.request(row, work.source)
+            value, gaps = accounting.request(row, work.source, work.config.prices)
             with evidence.db:
                 evidence.ingest(row, work.source, work.start, work.end)
             measured = evidence.measure(stamp, stamp + dt.timedelta(seconds=1))
@@ -1082,7 +1190,7 @@ def unknown_pricing_property(
                 UnknownPricingObservation(
                     model,
                     gaps,
-                    accounting.cost(value),
+                    accounting.cost(value, work.config.prices),
                     measured[AccountingField.GAPS],
                     measured[AccountingField.UNPRICED_REQUESTS],
                     1,

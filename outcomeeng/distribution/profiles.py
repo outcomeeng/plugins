@@ -221,6 +221,31 @@ def resolve_model_price(
     raise UnpricedModelError(f"unpriced model identifier: {identifier!r}")
 
 
+MODEL_PRICES_VARIABLE: Final = "model_prices_json"
+MODEL_PRICES_DOCUMENT_KEY: Final = "prices"
+
+
+def model_price_document(
+    prices: Mapping[ClaudeModel, Mapping[str, ModelPrice]] = MODEL_PRICES,
+) -> dict[str, dict[str, dict[str, str]]]:
+    """Return every price entry as the document the build renders for shipped skills."""
+    return {
+        MODEL_PRICES_DOCUMENT_KEY: {
+            identifier: {
+                token_class.value: str(price.rate(token_class))
+                for token_class in UsageTokenClass
+            }
+            for entries in prices.values()
+            for identifier, price in entries.items()
+        }
+    }
+
+
+def model_price_render_variables() -> dict[str, object]:
+    """Return the build variable carrying the rendered price document."""
+    return {MODEL_PRICES_VARIABLE: json.dumps(model_price_document(), indent=2)}
+
+
 def resolve_profile(
     target: Target,
     profile: str | None = None,

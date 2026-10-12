@@ -49,6 +49,7 @@ as shell syntax. Use `--help` for the bundled command's exact option grammar.
 | `SPX_USAGE_RESET_AT`          | Required explicit UTC timestamp anchoring seven-day periods; reuse saved installation configuration when available. Ask for an absent anchor. |
 | `SPX_USAGE_ALERT_USD`         | Positive estimated API-equivalent threshold for the rolling fifteen-minute detector; default 20.                                              |
 | `SPX_USAGE_WEEKLY_BUDGET_USD` | Optional positive weekly API-equivalent target; no default. Its absence disables weekly budget and pace signals.                              |
+| `SPX_USAGE_PRICE_FILE`        | Optional path to a JSON price-override file whose `prices` object keys a model identifier to its five rates in USD per million tokens.        |
 | `--root`                      | Stable operator-owned state root; default `~/Library/Application Support/Outcome Engineering/usage-control`.                                  |
 | `--projects`                  | Read-only transcript root, disjoint from the state root.                                                                                      |
 | `--start`, `--end`            | Inclusive start and exclusive end, timezone-aware ISO timestamps. Freeze these when comparing reports.                                        |
@@ -115,7 +116,9 @@ cache creation before drawing conclusions. Large tool results and repeated
 arguments establish inspection candidates; they establish no waste or exact
 tool-cost attribution on their own.
 
-Treat API-equivalent cost as a priced estimate. Keep subscription-allowance
+Treat API-equivalent cost as a priced estimate. The bundled `model-prices.json`
+prices each model; a listed model in the price-override file replaces its price.
+Keep subscription-allowance
 observations separate. Compare equally covered windows and qualify late imports,
 unknown pricing and missing evidence. Attribute verified delivered output only
 from Applied store state, default-branch merge evidence, or current passing pinned

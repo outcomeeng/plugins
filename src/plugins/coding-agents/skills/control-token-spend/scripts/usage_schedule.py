@@ -25,11 +25,12 @@ COMMAND_SECONDS = 30
 COMMAND_BYTES = 64 * 1024
 AISE_VERSION = "aise 1.0.0-rc.4"
 AISE_SOURCE = "https://github.com/ahundt/ai-session-search"
-SCRIPT_NAMES = (
+ASSET_NAMES = (
     "usage_control.py",
     "usage_accounting.py",
     "usage_reports.py",
     "usage_schedule.py",
+    "model-prices.json",
 )
 INSTALL_NAME = "installation.json"
 CONFIG_NAME = "configuration.json"
@@ -325,9 +326,9 @@ def install_plan(
             "platform": platform,
             "gap": "Managed scheduling requires macOS launchd.",
         }
-    payloads = {name: (source / name).read_bytes() for name in SCRIPT_NAMES}
+    payloads = {name: (source / name).read_bytes() for name in ASSET_NAMES}
     version = hashlib.sha256(
-        b"".join(name.encode() + payloads[name] for name in SCRIPT_NAMES)
+        b"".join(name.encode() + payloads[name] for name in ASSET_NAMES)
     ).hexdigest()
     assets = config.root / "assets" / version
     jobs = []
@@ -373,7 +374,7 @@ def install_plan(
         AccountingField.CONFIGURATION: config.effective(),
         ScheduleField.JOBS: jobs,
         "python": str(python),
-        "source_dependencies": list(SCRIPT_NAMES),
+        "source_dependencies": list(ASSET_NAMES),
     }
 
 
@@ -418,7 +419,7 @@ def install(
     domain = f"gui/{os.getuid()}"
     assets = Path(plan[ScheduleField.ASSETS])
     assets.mkdir(parents=True, exist_ok=True)
-    for name in SCRIPT_NAMES:
+    for name in ASSET_NAMES:
         destination = assets / name
         data = (source / name).read_bytes()
         if destination.exists() and destination.read_bytes() != data:
@@ -486,22 +487,22 @@ def retain_assets(root: Path, active: Path) -> list[str]:
             with os.scandir(path) as children:
                 for entry in children:
                     names.add(entry.name)
-                    if len(names) > len(SCRIPT_NAMES):
+                    if len(names) > len(ASSET_NAMES):
                         break
-            if names != set(SCRIPT_NAMES) or any(
+            if names != set(ASSET_NAMES) or any(
                 (path / name).is_symlink()
                 or (path / name).stat().st_size > 2 * 1024 * 1024
-                for name in SCRIPT_NAMES
+                for name in ASSET_NAMES
             ):
                 gaps.append(f"asset retention preserved unrecognized contents: {path}")
                 continue
             payload = b"".join(
-                name.encode() + (path / name).read_bytes() for name in SCRIPT_NAMES
+                name.encode() + (path / name).read_bytes() for name in ASSET_NAMES
             )
             if hashlib.sha256(payload).hexdigest() != path.name:
                 gaps.append(f"asset retention preserved changed version: {path}")
                 continue
-            for name in SCRIPT_NAMES:
+            for name in ASSET_NAMES:
                 (path / name).unlink()
             path.rmdir()
         except OSError as error:

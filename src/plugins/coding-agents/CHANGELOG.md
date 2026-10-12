@@ -13,6 +13,7 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 - **`/control-token-spend` measures Claude Code consumption from local transcripts.** Incremental collection preserves original files and reconciles streaming requests, native subagents, and all four usage fields. HTML, JSON, and CSV reports expose context growth, cache behavior, estimated costs, bounded transcript examples, and gaps in attribution.
 - **Operators can activate finite detector and hourly report jobs through macOS launchd.** Versioned assets, persistent offsets, duplicate-signal checks, and one worker lock preserve state across restart. Install, status, stop, and restart operations expose job state and failures.
 - **`SPX_USAGE_ALERT_USD` configures the rolling fifteen-minute alert threshold, with a default of $20 in estimated API-equivalent cost.** An explicit weekly budget and UTC reset anchor enable budget and pace signals. Reports establish no conversion to subscription allowance.
+- **Estimated costs use the model prices the plugin ships in `model-prices.json`, and `SPX_USAGE_PRICE_FILE` overrides the price of each model it lists.** An invalid override file fails naming its rejected field.
 
 ### Requires
 

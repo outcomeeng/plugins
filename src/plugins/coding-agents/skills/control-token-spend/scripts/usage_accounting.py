@@ -10,7 +10,7 @@ import os
 import sqlite3
 import time
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from decimal import Decimal, InvalidOperation
 from enum import Enum, StrEnum
 from pathlib import Path
@@ -40,6 +40,16 @@ FIELDS: Final = (
 TOKEN_KEYS: Final = ("uncached_input", "cache_read", "cache_write", "output")
 PRICE_SOURCE: Final = "https://platform.claude.com/docs/en/about-claude/pricing"
 PRICE_DATE: Final = "2026-10-09"
+PRICE_FILE: Final = "model-prices.json"
+PRICE_OVERRIDE_ENV: Final = "SPX_USAGE_PRICE_FILE"
+PRICE_DOCUMENT_KEY: Final = "prices"
+PRICE_CLASSES: Final = (
+    "input",
+    "cache_read",
+    "cache_write_5m",
+    "cache_write_1h",
+    "output",
+)
 MILLION: Final = Decimal(1_000_000)
 MAX_CHUNK: Final = 8 * 1024 * 1024
 MAX_BYTES: Final = 32 * 1024 * 1024
@@ -161,12 +171,62 @@ def money(raw: str, field: str) -> Decimal:
 
 
 @dataclass(frozen=True)
+class Price:
+    input: Decimal
+    read: Decimal
+    write5: Decimal
+    write1: Decimal
+    output: Decimal
+
+
+def rate(raw: object, field: str) -> Decimal:
+    try:
+        value = Decimal(raw) if isinstance(raw, str) else None
+    except InvalidOperation:
+        value = None
+    if value is None or not value.is_finite() or value < 0:
+        raise ValueError(
+            f"{field}: use a non-negative finite decimal string; received {raw!r}"
+        )
+    return value
+
+
+def price_table(path: Path, field: str) -> dict[str, Price]:
+    try:
+        document = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as error:
+        raise ValueError(f"{field}: unreadable price file {path}: {error}") from error
+    entries = document.get(PRICE_DOCUMENT_KEY) if isinstance(document, dict) else None
+    if not isinstance(entries, dict):
+        raise ValueError(
+            f"{field}: {PRICE_DOCUMENT_KEY}: supply an object keyed by model identifier"
+        )
+    table = {}
+    for model, rates in entries.items():
+        location = f"{field}: {PRICE_DOCUMENT_KEY}.{model}"
+        if not isinstance(rates, dict) or set(rates) != set(PRICE_CLASSES):
+            raise ValueError(
+                f"{location}: supply exactly the rates {', '.join(PRICE_CLASSES)}"
+            )
+        table[str(model)] = Price(
+            *(rate(rates[name], f"{location}.{name}") for name in PRICE_CLASSES)
+        )
+    return table
+
+
+def bundled_prices() -> dict[str, Price]:
+    return price_table(Path(__file__).with_name(PRICE_FILE), PRICE_FILE)
+
+
+@dataclass(frozen=True)
 class Config:
     root: Path
     projects: Path
     reset: dt.datetime
     alert: Decimal = DEFAULT_ALERT
     weekly_budget: Decimal | None = None
+    price_file: Path | None = None
+    prices: Mapping[str, Price] = field(default_factory=bundled_prices)
 
     def __post_init__(self) -> None:
         if not self.root.is_absolute() or not self.projects.is_absolute():
@@ -209,12 +269,19 @@ class Config:
             raise ValueError(
                 "root and projects: use disjoint state and transcript directories"
             )
+        prices = bundled_prices()
+        raw_prices = environment.get(PRICE_OVERRIDE_ENV)
+        price_file = Path(raw_prices).expanduser().resolve() if raw_prices else None
+        if price_file is not None:
+            prices.update(price_table(price_file, PRICE_OVERRIDE_ENV))
         return cls(
             root,
             projects,
             reset,
             money(environment.get(ALERT_ENV, str(DEFAULT_ALERT)), ALERT_ENV),
             budget,
+            price_file,
+            prices,
         )
 
     def period(self, now: dt.datetime) -> tuple[dt.datetime, dt.datetime]:
@@ -230,26 +297,10 @@ class Config:
             ALERT_ENV: str(self.alert),
             BUDGET_ENV: str(self.weekly_budget) if self.weekly_budget else None,
             RESET_ENV: iso(self.reset),
+            PRICE_OVERRIDE_ENV: str(self.price_file) if self.price_file else None,
             "root": str(self.root),
             "projects": str(self.projects),
         }
-
-
-@dataclass(frozen=True)
-class Price:
-    input: Decimal
-    read: Decimal
-    write5: Decimal
-    write1: Decimal
-    output: Decimal
-
-
-PRICES: Final = {
-    "claude-opus-5-5": Price(*(Decimal(v) for v in ("4", ".2", "5", "8", "20"))),
-    "claude-sonnet-5-5": Price(*(Decimal(v) for v in ("2", ".1", "2.5", "4", "10"))),
-    "claude-opus-4-6": Price(*(Decimal(v) for v in ("5", ".5", "6.25", "10", "25"))),
-    "claude-sonnet-4-6": Price(*(Decimal(v) for v in ("3", ".3", "3.75", "6", "15"))),
-}
 
 
 def encoded(value: object) -> str:
@@ -266,7 +317,9 @@ def native(source: Path, row: Json) -> tuple[str, str, bool]:
     return (source.stem if child else parent), parent, child
 
 
-def request(row: Json, source: Path) -> tuple[Json | None, list[str]]:
+def request(
+    row: Json, source: Path, prices: Mapping[str, Price]
+) -> tuple[Json | None, list[str]]:
     if row.get("type") != "assistant":
         return None, []
     message = row.get(AccountingField.MESSAGE)
@@ -320,7 +373,7 @@ def request(row: Json, source: Path) -> tuple[Json | None, list[str]]:
     speed = usage.get("speed", "standard")
     tier = usage.get("service_tier", "standard")
     priced = (
-        model in PRICES and speed in (None, "standard") and tier in (None, "standard")
+        model in prices and speed in (None, "standard") and tier in (None, "standard")
     )
     if not priced:
         gaps.append(
@@ -413,23 +466,23 @@ def reconcile(old: Json, new: Json) -> Json:
     return result
 
 
-def cost(value: Json) -> dict[str, Decimal] | None:
-    rate = PRICES.get(value[AccountingField.MODEL])
-    if rate is None or not value["priced"]:
+def cost(value: Json, prices: Mapping[str, Price]) -> dict[str, Decimal] | None:
+    price = prices.get(value[AccountingField.MODEL])
+    if price is None or not value["priced"]:
         return None
     inputs, reads, _, outputs = value[AccountingField.TOKENS]
     return dict(
         zip(
             TOKEN_KEYS,
             (
-                Decimal(inputs) * rate.input / MILLION,
-                Decimal(reads) * rate.read / MILLION,
+                Decimal(inputs) * price.input / MILLION,
+                Decimal(reads) * price.read / MILLION,
                 (
-                    Decimal(value["write5"]) * rate.write5
-                    + Decimal(value["write1"]) * rate.write1
+                    Decimal(value["write5"]) * price.write5
+                    + Decimal(value["write1"]) * price.write1
                 )
                 / MILLION,
-                Decimal(outputs) * rate.output / MILLION,
+                Decimal(outputs) * price.output / MILLION,
             ),
             strict=True,
         )
@@ -702,7 +755,7 @@ class Evidence:
             return []
         session, parent, _ = native(source, row)
         self.behavior(row, source, iso(parsed), session, parent)
-        value, gaps = request(row, source)
+        value, gaps = request(row, source, self.config.prices)
         if value is None:
             for gap in gaps:
                 self.remember_gap(f"{source}: {gap}")
@@ -970,7 +1023,7 @@ class Evidence:
                 gaps.add("measurement row bound reached; totals are partial")
                 break
             value = json.loads(row[0])
-            components = cost(value)
+            components = cost(value, self.config.prices)
             amount = sum(components.values(), Decimal(0)) if components else Decimal(0)
             result[AccountingField.REQUESTS] += 1
             result[AccountingField.UNPRICED_REQUESTS] += components is None
