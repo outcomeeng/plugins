@@ -894,6 +894,25 @@ def generated_agent_file() -> tuple[str, bytes]:
     return f"{generated_agent_slug()}.toml", generated_agent_definition()
 
 
+def generated_escaping_plugin_names() -> tuple[str, ...]:
+    """Catalog plugin names that are not one path segment, one per kind the rule names.
+
+    The rule names the empty name, the current and parent directory names, and
+    a name carrying a path separator. The separator kind appears twice: once
+    climbing to the parent through the platform's own spellings, which leaves
+    the directory a reader joins it to, and once descending into a fresh
+    subdirectory, which stays inside it yet is still two segments.
+    """
+    plugin = generated_plugin_name()
+    return (
+        "",
+        os.curdir,
+        os.pardir,
+        f"{os.pardir}{os.sep}{plugin}",
+        f"{plugin}{os.sep}{generated_plugin_name()}",
+    )
+
+
 def generated_non_hex_digest() -> str:
     """A SHA-256-length digest drawn from letters outside the hexadecimal alphabet.
 
@@ -914,6 +933,7 @@ __all__ = [
     "generated_agent_file",
     "generated_agent_slug",
     "generated_definition_edit",
+    "generated_escaping_plugin_names",
     "generated_identifier",
     "generated_non_hex_digest",
     "generated_plugin_name",

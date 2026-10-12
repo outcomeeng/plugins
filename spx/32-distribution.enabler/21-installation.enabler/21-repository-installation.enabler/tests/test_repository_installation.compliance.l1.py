@@ -33,6 +33,7 @@ from outcomeeng.distribution.installation import (
     Operation,
     UNREADABLE_HEAD_RECORD_WARNING,
     CLAUDE_PROJECT_SCOPE,
+    CODEX_DEFINITION_OUTSIDE_TREE_DIAGNOSTIC,
 )
 from outcomeeng.validation.ci_gate import CODEX_API_KEY_ENVIRONMENT, JUST_BINARY
 from outcomeeng_testing.harnesses.discovery_auth import (
@@ -71,7 +72,9 @@ from outcomeeng_testing.generators.installation import (
     generated_agent_file,
     generated_boolean_states,
     generated_definition_edit,
+    generated_escaping_plugin_names,
     generated_non_hex_digest,
+    generated_plugin_name,
 )
 from outcomeeng_testing.harnesses.real_agent_homes import (
     REAL_AGENT_CODEX_HOME_PROVISIONERS,
@@ -79,7 +82,11 @@ from outcomeeng_testing.harnesses.real_agent_homes import (
 from outcomeeng_testing.harnesses.installation import (
     captured_non_pending_failure_wordings,
     MARKETPLACE,
+    DefinitionPlacement,
     captured_codex_home_refusal,
+    observe_catalog_name_read,
+    observe_clone_manifest_confinement,
+    observe_definition_confinement,
     observe_isolated_codex_home_contract,
     RegistryState,
     committed_catalog_plugin_names,
@@ -1274,3 +1281,44 @@ def test_a_refused_installation_command_reports_the_refusal_the_cli_printed() ->
     assert observed.failure is not None
     assert observed.failure.command.agent is Agent.CODEX
     assert observed.failure.result.stderr == captured_codex_home_refusal()
+
+
+@pytest.mark.parametrize("name", generated_escaping_plugin_names())
+def test_a_catalog_plugin_name_that_is_not_one_path_segment_is_rejected_when_read(
+    name: str,
+) -> None:
+    observed = observe_catalog_name_read(name)
+    assert observed.names is None
+    assert observed.error is not None
+
+
+def test_a_catalog_plugin_name_of_one_path_segment_is_read() -> None:
+    observed = observe_catalog_name_read(generated_plugin_name())
+    assert observed.error is None
+    assert observed.names is not None
+    assert observed.names[0] == observed.conforming_plugin
+
+
+def test_a_generated_agent_definition_linked_outside_the_checkout_is_rejected() -> None:
+    observed = observe_definition_confinement(DefinitionPlacement.ESCAPING)
+    assert observed.definitions is None
+    assert observed.error is not None
+    assert CODEX_DEFINITION_OUTSIDE_TREE_DIAGNOSTIC in observed.error
+
+
+def test_a_generated_agent_definition_inside_the_checkout_is_read_from_there() -> None:
+    observed = observe_definition_confinement(DefinitionPlacement.CONTAINED)
+    assert observed.error is None
+    assert observed.definitions
+    assert all(
+        definition.source.is_relative_to(observed.codex_tree)
+        for definition in observed.definitions
+    )
+
+
+def test_a_clone_catalog_source_that_climbs_out_of_the_clone_resolves_no_version() -> (
+    None
+):
+    observed = observe_clone_manifest_confinement()
+    assert observed.contained_plugin in observed.versions
+    assert observed.escaping_plugin not in observed.versions

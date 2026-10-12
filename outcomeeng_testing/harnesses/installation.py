@@ -129,7 +129,13 @@ from outcomeeng.distribution.installation import (
     declared_codex_source,
     MarketplaceTarget,
     RecordRewrite,
+    AgentDefinition,
     cached_plugin_versions,
+    catalog_plugin_names,
+    confined_path,
+    generated_codex_agent_definitions,
+    generated_codex_agents_root,
+    marketplace_target,
     plan_install_record_rewrite,
     read_install_record_document,
     rewrite_install_records,
@@ -169,6 +175,7 @@ from outcomeeng_testing.generators.installation import (
     generated_agent_file,
     generated_agent_slug,
     generated_definition_edit,
+    generated_identifier,
     generated_plugin_name,
     generated_unparseable_json,
 )
@@ -2001,6 +2008,146 @@ def _unversion_clone_manifest(clone: Path, plugin: str) -> None:
 
 
 @dataclass(frozen=True)
+class CatalogNameReadObservation:
+    """What reading a committed catalog that carries one plugin name returned or raised.
+
+    The catalog lists a fresh conforming plugin first and the observed name
+    second, so a read that accepted the observed name returns both.
+    """
+
+    conforming_plugin: str
+    names: tuple[str, ...] | None
+    error: str | None
+
+
+def observe_catalog_name_read(name: str) -> CatalogNameReadObservation:
+    """Read a disposable Codex catalog whose second plugin carries `name`."""
+    conforming_plugin = generated_plugin_name()
+    with TemporaryDirectory() as temporary_directory:
+        catalog = Path(temporary_directory) / CODEX_CATALOG_PATH
+        catalog.parent.mkdir(parents=True)
+        catalog.write_text(
+            json.dumps(
+                {
+                    CATALOG_PLUGINS_FIELD: [
+                        {CATALOG_PLUGIN_NAME_FIELD: conforming_plugin},
+                        {CATALOG_PLUGIN_NAME_FIELD: name},
+                    ]
+                }
+            ),
+            encoding="utf-8",
+        )
+        try:
+            names = catalog_plugin_names(catalog)
+        except ValueError as error:
+            return CatalogNameReadObservation(conforming_plugin, None, str(error))
+    return CatalogNameReadObservation(conforming_plugin, names, None)
+
+
+class DefinitionPlacement(StrEnum):
+    """How a generated Codex agent definition stands in the checkout's agents directory."""
+
+    CONTAINED = "contained"
+    """A regular file inside the checkout's generated Codex tree."""
+    ESCAPING = "escaping"
+    """A symbolic link to a file outside the checkout."""
+
+
+@dataclass(frozen=True)
+class DefinitionConfinementObservation:
+    """What reading one plugin's generated Codex agent definitions returned or raised."""
+
+    codex_tree: Path
+    """The checkout's generated Codex tree, symbolic links resolved."""
+    definitions: tuple[AgentDefinition, ...] | None
+    error: str | None
+
+
+def observe_definition_confinement(
+    placement: DefinitionPlacement,
+) -> DefinitionConfinementObservation:
+    """Read a disposable checkout whose one agent definition stands as `placement` says."""
+    plugin = generated_plugin_name()
+    name, content = generated_agent_file()
+    with TemporaryDirectory() as temporary_directory:
+        root = Path(temporary_directory).resolve()
+        checkout = root / "checkout"
+        outside = root / name
+        outside.write_bytes(content)
+        agents = generated_codex_agents_root(checkout, plugin)
+        agents.mkdir(parents=True)
+        definition = agents / name
+        if placement is DefinitionPlacement.ESCAPING:
+            definition.symlink_to(outside)
+        else:
+            definition.write_bytes(content)
+        codex_tree = (checkout / DIST_CODEX_PLUGINS_DIR).resolve()
+        try:
+            definitions = generated_codex_agent_definitions(
+                checkout, root / "codex-home", (plugin,)
+            )
+        except ValueError as error:
+            return DefinitionConfinementObservation(codex_tree, None, str(error))
+    return DefinitionConfinementObservation(codex_tree, definitions, None)
+
+
+@dataclass(frozen=True)
+class CloneManifestConfinementObservation:
+    """The target versions a clone yields when one catalog source climbs out of it."""
+
+    contained_plugin: str
+    escaping_plugin: str
+    versions: Mapping[str, str]
+
+
+def observe_clone_manifest_confinement() -> CloneManifestConfinementObservation:
+    """Read the target from a clone whose catalog sends one plugin's source outside it.
+
+    Both plugins carry a versioned manifest; the escaping plugin's sits beside
+    the clone, where its catalog source points through the parent directory.
+    """
+    contained_plugin = generated_plugin_name()
+    escaping_plugin = generated_plugin_name()
+    version = generated_identifier("version")
+    with TemporaryDirectory() as temporary_directory:
+        root = Path(temporary_directory).resolve()
+        clone = root / "clone"
+        for manifest_root in (clone / contained_plugin, root / escaping_plugin):
+            manifest = manifest_root / PLUGIN_MANIFEST_RELATIVE
+            manifest.parent.mkdir(parents=True)
+            manifest.write_text(
+                json.dumps({PLUGIN_MANIFEST_VERSION_FIELD: version}), encoding="utf-8"
+            )
+        catalog = clone / CLAUDE_CATALOG_PATH
+        catalog.parent.mkdir(parents=True)
+        catalog.write_text(
+            json.dumps(
+                {
+                    CATALOG_PLUGINS_FIELD: [
+                        {
+                            CATALOG_PLUGIN_NAME_FIELD: contained_plugin,
+                            CATALOG_PLUGIN_SOURCE_FIELD: contained_plugin,
+                        },
+                        {
+                            CATALOG_PLUGIN_NAME_FIELD: escaping_plugin,
+                            CATALOG_PLUGIN_SOURCE_FIELD: (
+                                f"{os.pardir}{os.sep}{escaping_plugin}"
+                            ),
+                        },
+                    ]
+                }
+            ),
+            encoding="utf-8",
+        )
+        target = marketplace_target(
+            clone, generated_identifier("commit"), (contained_plugin, escaping_plugin)
+        )
+    return CloneManifestConfinementObservation(
+        contained_plugin, escaping_plugin, target.versions
+    )
+
+
+@dataclass(frozen=True)
 class UnresolvedTargetObservation:
     """A persistent run whose clone resolves no target version for one plugin.
 
@@ -2589,9 +2736,12 @@ def observe_home_selection_change(
                 mirror, environment
             ).codex_agents:
                 if definition.plugin in changed:
-                    definition.source.write_bytes(
-                        generated_definition_edit(definition.source.read_bytes())
-                    )
+                    source = confined_path(mirror, definition.source)
+                    if source is None:
+                        raise RuntimeError(
+                            f"{definition.source} lies outside the disposable mirror"
+                        )
+                    source.write_bytes(generated_definition_edit(source.read_bytes()))
             runner = RecordingRunner(installed=installed, unpublished=changed)
         else:
             runner = RecordingRunner(

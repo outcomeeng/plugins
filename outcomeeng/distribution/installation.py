@@ -269,6 +269,12 @@ holds, so the message claims no refresh. Each record the run leaves where it
 found it carries its own warning.
 """
 UNLOCATED_REGISTRY_DIAGNOSTIC = "the marketplace registry entry names no clone"
+CATALOG_NAME_SEPARATORS = ("/", "\\")
+"""Characters no catalog plugin name carries, because each name is one path segment."""
+CATALOG_NAME_SEGMENT_DIAGNOSTIC = "is not one path segment"
+CODEX_DEFINITION_OUTSIDE_TREE_DIAGNOSTIC = (
+    "resolves outside the checkout's generated Codex tree"
+)
 OFF_TARGET_DIAGNOSTIC = "install records off the target after refresh"
 CHECKOUT_OPTION = "--checkout"
 """The installer option naming the invocation checkout."""
@@ -2064,10 +2070,39 @@ def catalog_plugin_names(catalog_path: Path) -> tuple[str, ...]:
             raise ValueError(
                 f"marketplace catalog {catalog_path} plugin {index} has no name"
             )
+        if name in (os.curdir, os.pardir) or any(
+            separator in name for separator in CATALOG_NAME_SEPARATORS
+        ):
+            raise ValueError(
+                f"marketplace catalog {catalog_path} plugin {index} name {name!r} "
+                f"{CATALOG_NAME_SEGMENT_DIAGNOSTIC}"
+            )
         names.append(name)
     if len(set(names)) != len(names):
         raise ValueError(f"marketplace catalog {catalog_path} contains duplicate names")
     return tuple(names)
+
+
+def confined_path(root: Path, candidate: Path) -> Path | None:
+    """Return `candidate` with symbolic links resolved, or None when it leaves `root`."""
+    resolved_root = os.path.realpath(root)
+    resolved = os.path.realpath(candidate)
+    if os.path.commonpath((resolved_root, resolved)) != resolved_root:
+        return None
+    return Path(resolved)
+
+
+def generated_codex_agents_root(checkout: Path, plugin: str) -> Path:
+    """The directory of the checkout's generated tree holding one plugin's Codex agents."""
+    return (
+        checkout
+        / DIST_DIR_NAME
+        / Agent.CODEX.value
+        / plugin
+        / SKILLS_SUBDIR_NAME
+        / f"{plugin}-plugin"
+        / AGENTS_SUBDIR_NAME
+    )
 
 
 def generated_codex_agent_definitions(
@@ -2077,20 +2112,19 @@ def generated_codex_agent_definitions(
 ) -> tuple[AgentDefinition, ...]:
     """Read every catalog plugin's generated Codex agent definitions."""
     agents_root = codex_home / CODEX_HOME_AGENTS_PATH
+    codex_tree = checkout / DIST_DIR_NAME / Agent.CODEX.value
     definitions: list[AgentDefinition] = []
     destinations: dict[Path, Path] = {}
     for plugin in plugins:
-        source_root = (
-            checkout
-            / DIST_DIR_NAME
-            / Agent.CODEX.value
-            / plugin
-            / SKILLS_SUBDIR_NAME
-            / f"{plugin}-plugin"
-            / AGENTS_SUBDIR_NAME
-        )
-        for source in sorted(source_root.glob("*.toml")):
-            destination = agents_root / source.name
+        source_root = generated_codex_agents_root(checkout, plugin)
+        for candidate in sorted(source_root.glob("*.toml")):
+            source = confined_path(codex_tree, candidate)
+            if source is None:
+                raise ValueError(
+                    f"generated Codex agent definition {candidate} "
+                    f"{CODEX_DEFINITION_OUTSIDE_TREE_DIAGNOSTIC}"
+                )
+            destination = agents_root / candidate.name
             prior = destinations.get(destination)
             if prior is not None:
                 raise ValueError(
@@ -3297,7 +3331,8 @@ def marketplace_target(
     Each cataloged plugin's version is the one its manifest carries in the
     clone, found through the clone's own catalog entry for that plugin. A
     plugin the clone's catalog names no source for, or whose manifest the
-    clone cannot supply or does not version, resolves to no target version
+    clone cannot supply — a manifest path that resolves outside the clone
+    among them — or does not version, resolves to no target version
     and is left out; every project- or local-scope record of it — the
     invocation checkout's own included — is reported as unresolved and the
     run continues, because one plugin's supply defect settles nothing about
@@ -3330,7 +3365,9 @@ def marketplace_target(
         source = sources.get(plugin)
         if source is None:
             continue
-        manifest_path = clone / source / PLUGIN_MANIFEST_RELATIVE
+        manifest_path = confined_path(clone, clone / source / PLUGIN_MANIFEST_RELATIVE)
+        if manifest_path is None:
+            continue
         try:
             manifest = cast(
                 object, json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -3932,8 +3969,11 @@ __all__ = [
     "PLUGIN_OPERATIONS",
     "REPORTED_FAILURE_OPERATIONS",
     "UNPUBLISHED_PLUGIN_FRAGMENT",
+    "CATALOG_NAME_SEGMENT_DIAGNOSTIC",
+    "CATALOG_NAME_SEPARATORS",
     "CATALOG_PLUGIN_NAME_FIELD",
     "CATALOG_PLUGINS_FIELD",
+    "CODEX_DEFINITION_OUTSIDE_TREE_DIAGNOSTIC",
     "CLAUDE_CATALOG_PATH",
     "CLAUDE_CONFIG_ENV",
     "CLAUDE_DIRECTORY_FIELD",
@@ -4034,6 +4074,8 @@ __all__ = [
     "build_persistent_preflight",
     "catalog_plugin_names",
     "checkout_scope_split_entries",
+    "confined_path",
+    "generated_codex_agents_root",
     "claude_marketplace_listing_payload",
     "CLAUDE_LOCAL_SETTINGS_PATH",
     "CLAUDE_MANAGED_SCOPE",
