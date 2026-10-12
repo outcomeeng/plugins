@@ -36,7 +36,7 @@ The body carries no attestation, accountable-person, priority, or overrule text;
 - record-intent: The Intent runs at most 60 words including its labels. It holds What, Why, an optional Observation, and Evidence, and a list inside a part stands in parentheses.
 - record-governance: `## Governance` lists every record that governs the Change by its path from `spx/`, each with the verdict `in line`, `amended`, or `new`.
 - record-governance-mutations: `## Governance mutations` holds one block for each amended or new record. The block opens with `<path> states:`, lists its decisions in exact text, each opening with a slug and a colon.
-- record-spec-mutations: `## Spec mutations` holds one block for each Node in execution order. The block opens with `<path>: <malleability before> -> <malleability after>` and continues with `<file> states:` and the Node's assertions as bare bullets.
+- record-spec-mutations: `## Spec mutations` holds one block for each Node in execution order. The block opens with `<path>: <malleability before> -> <malleability after>`, followed from Executable on by `, <required state>`: the state the Change leaves the Node in, or for a removed or folded Node the words of its malleability after. The block continues with `<file> states:` and the Node's assertions as bare bullets.
 - record-slice: `## Slice` holds `- Repository:` and `- Check:`, one repository and one observable check, which is one trigger and its result.
 - record-artifacts: `## Artifacts` links the audited content of each record and Node the Change adds or modifies, each link pinned to the commit that holds the content, and is empty before the first round.
 - change-type: A Change whose record carries a Governance mutations or Spec mutations block is a Leaf, a Change that another Change names in `parent` is a Parent, and a Change with neither is a root.
@@ -83,7 +83,7 @@ A Sliced Change is ready when:
 An Executable Change is ready when:
 
 - the Sliced Definition of Ready holds;
-- the Governance mutations and Spec mutations blocks state every consequential decision for the changeset; and
+- the Governance mutations and Spec mutations blocks state every consequential decision for the changeset, and every Spec mutations block opening carries its Node's required state; and
 - every link in `## Artifacts` names a record or Node of the mutations blocks and pins the commit that holds its audited content, and an empty section satisfies the criterion.
 
 The merge composition is the one the `Merge` section of the 4.0 Projection chapter states — `versions/4.0/methodology/product-tree/verification/projection.md` inside the declared `methodology.source` — which defines when a changeset touches a node, the predicates a changeset selects by its least malleable touched node and by a product spec or outcome-record change, when a result is produced again before merge, the dependency protection that fails a changeset raising a malleability or ending `Passing` in the closure of an effectively `Passing` consumer, and the decision-record audit as an authoring check that produces no node-local result.
