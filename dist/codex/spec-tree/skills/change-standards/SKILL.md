@@ -156,7 +156,7 @@ Execution takes the Governance mutations blocks, then the Spec mutations blocks,
 
 <rule id="artifacts">
 
-`## Artifacts` links the audited content of each record and Node the Change adds, modifies, or implements, and is empty before the first round. Each link names a record or Node of the mutations blocks and pins the commit that holds its audited content, and is held where it resolves in every execution environment. A link follows the round that produces its content; the section is complete when every such record and Node has a link, which `close-change` checks from current state.
+`## Artifacts` links the audited content of each record and Node the Change adds, modifies, or implements, and is empty before the first round. Each link names a record or Node of the mutations blocks and pins the commit that holds its audited content, and is held where it resolves in every execution environment. A link follows the round that produces its content; the section is complete when every such record and Node has a link, a condition judged from the Change's current state.
 
 Routine command logs, run tokens, verdicts, findings, verification history, and session narrative stay outside the Change. A Handoff carries transient continuation: branch or changeset, the completed Governance mutations and Spec mutations blocks and the next one, blockers, and non-obvious hazards.
 
