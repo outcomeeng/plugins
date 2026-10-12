@@ -10,7 +10,8 @@ import os
 import sqlite3
 import time
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass, field
+import dataclasses
+from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from enum import Enum, StrEnum
 from pathlib import Path
@@ -226,7 +227,7 @@ class Config:
     alert: Decimal = DEFAULT_ALERT
     weekly_budget: Decimal | None = None
     price_file: Path | None = None
-    prices: Mapping[str, Price] = field(default_factory=bundled_prices)
+    prices: Mapping[str, Price] = dataclasses.field(default_factory=bundled_prices)
 
     def __post_init__(self) -> None:
         if not self.root.is_absolute() or not self.projects.is_absolute():
