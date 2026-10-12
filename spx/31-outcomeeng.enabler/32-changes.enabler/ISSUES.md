@@ -208,3 +208,27 @@ Evidence: the CI review of [PR 658](https://github.com/outcomeeng/plugins/pull/6
 Impact: the runner computes and the skill advertises a value no step reads, and a reader of the operation table can expect a Product comparison the skill no longer makes.
 
 Revisit and settlement condition: the `read-relations` row and result prose name no `parentProduct`, the runner computes none, the linked runner tests pass, and one typed skill audit of `audit-change` raises no finding on the operation table.
+
+## DEBT [consistency]: the changes spec declares the Intent word limit and not the title word limit
+
+Defect class: `consistency`.
+
+Finding: the `intent-word-limit` assertion of [`spx/31-outcomeeng.enabler/32-changes.enabler/changes.md`](spx/31-outcomeeng.enabler/32-changes.enabler/changes.md) declares that the change audit counts the Intent's words and rejects an Intent over 60 words. No assertion of the spec declares the 15-word title limit, which [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) states, the `record-limits` rule of `src/plugins/spec-tree/skills/change-standards/SKILL.md` states, and `_count_limits` in `src/plugins/spec-tree/skills/audit-change/scripts/audit_change_run.py` enforces under `TITLE_WORD_LIMIT`.
+
+Evidence: the CI review of [PR 658](https://github.com/outcomeeng/plugins/pull/658) on head `d863e67349d1247b128dc919a67a87e732212215` raised this as a `DEBT` finding. The disposition comment on the same PR records the merge under the operator's ruling that cosmetic findings do not block it.
+
+Impact: the node's assertion inventory leaves the title limit undeclared, so an assertion audit of the node never judges the title check the runner performs.
+
+Revisit and settlement condition: an assertion of the changes spec declares the title word limit beside the Intent limit, and one assertion audit of the changes node approves it.
+
+## DEBT [consistency]: the audit-change runner counts title words and Intent words by two definitions
+
+Defect class: `consistency`.
+
+Finding: `_count_limits` in `src/plugins/spec-tree/skills/audit-change/scripts/audit_change_run.py` counts the title's words with a whitespace split and the Intent's words with `count_words`, which strips link brackets, list markers, and emphasis markup and drops a token with no alphanumeric character. The `record-limits` rule of `src/plugins/spec-tree/skills/change-standards/SKILL.md` states both limits as the same kind of count, so a title token that is pure markup counts toward the title limit and would not count toward the Intent limit.
+
+Evidence: the CI review of [PR 658](https://github.com/outcomeeng/plugins/pull/658) on head `d863e67349d1247b128dc919a67a87e732212215` raised this as a `DEBT` finding. The disposition comment on the same PR records the merge under the operator's ruling that cosmetic findings do not block it.
+
+Impact: a title carrying a markup-only token reaches the 15-word limit one token sooner than the same words would under the Intent's count.
+
+Revisit and settlement condition: `_count_limits` counts the title with `count_words`, a linked runner case covers a title with a markup-only token, and one typed skill audit of `audit-change` raises no finding on the count.
