@@ -66,7 +66,6 @@ The body opens with `## Intent`. Each Maturity adds its sections after the Inten
 | `## Governance mutations` | Framed            | `governance-mutations` |
 | `## Spec mutations`       | Framed            | `spec-mutations`       |
 | `## Slice`                | Sliced            | `slice`                |
-| `## Artifacts`            | Executable        | `artifacts`            |
 | `## Open questions`       | optional          | `open-questions`       |
 
 A known section may stand before the Maturity that first requires it — the sections a higher Maturity added before the Change's Maturity was lowered — and the declared Maturity's Definition of Ready judges such a section only where one of its criteria names it. Every section present stands in this order, with `## Open questions` last, appears once, and is a level-two heading; a missing required section, a reordered or duplicated section, and an unknown level-two section are defects. Subsections may refine a section. Front-matter values are never restated or maintained as body lines.
@@ -136,7 +135,7 @@ A blocker closed `Applied` satisfies the dependency; an open blocker remains a b
 
 <rule id="spec-mutations">
 
-`## Spec mutations` holds one block for each affected or intended Node, in execution order, providers first. The block opens with `<path>: <malleability before> -> <malleability after>`, followed from Executable on by `, <required state>`, and continues with `<file> states:` and the Node's assertions as bare bullets. Malleability before is the value the Node declares before the Change, `none` for a Node the Change creates. Malleability after is the value the Node declares once the Change is applied: `spec`, `verification`, or `implementation`, an absent field meaning `implementation`. The malleability order from most to least malleable is `spec`, `verification`, `implementation`; the least malleable target is the Malleability after value latest in that order. The required state is the state the Change leaves the Node in, or for a removed or folded Node the words of its Malleability after value. Malleability is a per-Node fact; the record carries no Change-wide target. Existing paths resolve; an intended Node is labeled as intended.
+`## Spec mutations` holds one block for each affected or intended Node, in execution order, providers first. The block opens with `<path>: <malleability before> -> <malleability after>`, and continues with `<file> states:` and the Node's assertions as bare bullets. Malleability before is the value the Node declares before the Change, `none` for a Node the Change creates. Malleability after is the value the Node declares once the Change is applied: `spec`, `verification`, or `implementation`, an absent field meaning `implementation`. The malleability order from most to least malleable is `spec`, `verification`, `implementation`; the least malleable target is the Malleability after value latest in that order. Malleability is a per-Node fact; the record carries no Change-wide target. Existing paths resolve; an intended Node is labeled as intended.
 
 Execution takes the Governance mutations blocks, then the Spec mutations blocks, each in record order. The record names no result, producer, or Verifier: execution selects each block's results and Verifiers from the merge composition for the Node's malleability after and from the decision-record audit of a record.
 
@@ -154,11 +153,9 @@ Execution takes the Governance mutations blocks, then the Spec mutations blocks,
 
 </rule>
 
-<rule id="artifacts">
+<rule id="no-execution-status">
 
-`## Artifacts` links the audited content of each record and Node the Change adds, modifies, or implements, and is empty before the first round. Each link names a record or Node of the mutations blocks and pins the commit that holds its audited content, and is held where it resolves in every execution environment. A link follows the round that produces its content; the section is complete when every such record and Node has a link, a condition judged from the Change's current state.
-
-Routine command logs, run tokens, verdicts, findings, verification history, and session narrative stay outside the Change. A Handoff carries transient continuation: branch or changeset, the completed Governance mutations and Spec mutations blocks and the next one, blockers, and non-obvious hazards.
+The record carries no execution status: no Node state, no required state, no `## Artifacts` section or link to produced content, and no progress. Execution records its progress only in its Handoff, which carries transient continuation: branch or changeset, the completed Governance mutations and Spec mutations blocks and the next one, blockers, and non-obvious hazards. Routine command logs, run tokens, verdicts, findings, verification history, and session narrative stay outside the Change.
 
 </rule>
 
@@ -194,7 +191,7 @@ Store commands, provider identifiers, issue and field identifiers, revision sele
 
 Inventory the front-matter key occurrences before interpreting the body. A candidate is inside the contract only when it carries each of the seven closed-set keys exactly once and no other key, and its body does not open with `# Output`. Stripped front matter, a missing or repeated required key, and any extra key — including `change_ref` — place the candidate outside the contract, and so does a body that opens with `# Output`.
 
-A candidate outside the contract receives no judgment, migration, alias, inferred front matter, or body-line lineage interpretation; report it as outside the contract with the expected and observed key inventories, or with the observed opening heading. A record in the `# Output` form is never converted in place: its next revision authors the record anew in the final format from the proposal it carries, and only that newly authored record is judged against the contract. No revision preserves the `# Output` form. A candidate inside the contract remains judgeable when a value, section, body line, or Maturity-specific requirement violates the record contract or the selected Definition of Ready. Only the final format is written, judged, and executed: a record that carries `## Nodes`, `## Assertion operations`, `## Decisions`, `## Mutations`, or `## Activities` receives no migration, alias, or inferred field, and its next revision authors the record anew from the proposal it carries, before its next execution.
+A candidate outside the contract receives no judgment, migration, alias, inferred front matter, or body-line lineage interpretation; report it as outside the contract with the expected and observed key inventories, or with the observed opening heading. A record in the `# Output` form is never converted in place: its next revision authors the record anew in the final format from the proposal it carries, and only that newly authored record is judged against the contract. No revision preserves the `# Output` form. A candidate inside the contract remains judgeable when a value, section, body line, or Maturity-specific requirement violates the record contract or the selected Definition of Ready. Only the final format is written, judged, and executed: a record that carries `## Nodes`, `## Assertion operations`, `## Decisions`, `## Mutations`, `## Activities`, or `## Artifacts` receives no migration, alias, or inferred field, and its next revision authors the record anew from the proposal it carries, before its next execution.
 
 </rule>
 
