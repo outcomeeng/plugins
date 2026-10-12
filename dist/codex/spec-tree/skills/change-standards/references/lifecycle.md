@@ -71,19 +71,19 @@ Every field a `gh` command receives from a Change body, conversation state, or i
 
 <rule id="claim-record">
 
-A Claim is one comment, `Claim: <agent session id> <claim root>`, posted after the assignee is added; the claim root is the worktree root the Change is claimed for — the claiming session's own assigned root, or a root it names. The Change's holder is the session whose assigned worktree root equals the claim root of the winning Claim. Holder exclusivity comes from the Claim, never from the assignee alone, because one account may run several sessions: the earliest `Claim:` posted after the newest `Handoff:` — or since issue creation when none exists — wins. Only an `Available` Change whose Product is the configured Product, or a root that carries no Product, is claimed; a `Submitted` Change waits for its confirmation.
+A Claim is one comment, `Claim: <agent session id> <claim root>`, posted after the assignee is added; the claim root is the worktree root the Change is claimed for — the claiming session's own assigned root, or a root it names. The Change's holder is the session whose assigned worktree root equals the claim root of the winning Claim. Holder exclusivity comes from the Claim, never from the assignee alone, because one account may run several sessions: the earliest `Claim:` posted after the newest `Handoff:` that a Lifecycle move to `Available` follows — or since issue creation when none exists — wins. Only an `Available` Change whose Product is the configured Product, or a root that carries no Product, is claimed; a `Submitted` Change waits for its confirmation.
 
 </rule>
 
 <rule id="handoff-record">
 
-A Handoff is one comment carrying exactly these lines in this order: the opening line `Handoff:`, one blank line, the five required lines, and optionally the two context lines. It carries nothing else, and nothing that belongs in the body:
+A Handoff is one comment, posted by the holder when it releases the Change, and by the Executor after every completed block and after integration while it keeps the Change Claimed. It carries exactly these lines in this order: the opening line `Handoff:`, one blank line, the five required lines, and optionally the two context lines. It carries nothing else, and nothing that belongs in the body:
 
 ```markdown
 Handoff:
 
-- Branch or PR: <pushed work branch, or the PR URL, followed by `@` and the full head commit SHA of that branch or pull request; or `none`>
-- Completed blocks: <the completed Governance mutations and Spec mutations blocks, by their path, or `none`>
+- Branch or PR: <pushed work branch, or the PR URL, followed by `@` and the full head commit SHA of that branch or pull request; after integration, the merged pull request followed by `@` and its merge commit; or `none`>
+- Completed blocks: <the completed Governance mutations and Spec mutations blocks, by their path, each completed Governance mutations block followed by the run token of its approving decision-record audit; or `none`>
 - Next block: <the first uncompleted block, by its path, or `refinement: <Maturity> → <next level>` below Executable>
 - Blockers: <blocking Change URLs still active, and each question the stopped work leaves for the operator, verbatim; or `none`>
 - Hazards: <why the work stopped, and what the next holder cannot derive quickly — an unsealed run, a held checkout, a flaky check — each with the read-only command that re-confirms it>
@@ -91,7 +91,7 @@ Handoff:
 - Worktree: <the assigned worktree root>
 ```
 
-The head commit on the `Branch or PR` line is the tip the work stopped at; a reader takes the changeset from the branch or the pull request and reads that commit as the state the Handoff describes, never as the commit a later close checks for integration. The `Session:` and `Worktree:` lines are the only optional lines, and each appears at most once, after the five. The Handoff records what was true when it was posted; refinement of the Output belongs in the body, before the release. A release that moves the Change to `Submitted` runs only at `Proposed`, `Framed`, or `Sliced`, posts its Handoff before it writes `Submitted`, and its Next block line names the confirmation the Change waits for: `confirmation: <Maturity>`.
+The head commit on the `Branch or PR` line is the tip the work stopped at; a reader takes the changeset from the branch or the pull request and reads that commit as the state the Handoff describes, never as the commit a later close checks for integration, except after integration, when the line names the merged pull request with its merge commit. A close reads the merge commit from the newest Handoff, and the run token of each Governance mutations block's approving decision-record audit from that Handoff's `Completed blocks` line. A Handoff posted without a release leaves the Change Claimed and its Claim in force: the winning Claim under `claim-record` is the earliest `Claim:` posted after the newest Handoff that a Lifecycle move to `Available` follows. The `Session:` and `Worktree:` lines are the only optional lines, and each appears at most once, after the five. The Handoff records what was true when it was posted; refinement of the Output belongs in the body, before the release. A release that moves the Change to `Submitted` runs only at `Proposed`, `Framed`, or `Sliced`, posts its Handoff before it writes `Submitted`, and its Next block line names the confirmation the Change waits for: `confirmation: <Maturity>`.
 
 </rule>
 
