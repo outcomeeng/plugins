@@ -94,6 +94,7 @@ changeset leaves unchanged; the changeset changes line 20 only
 - `composed-dependency-form`: step `load_context` names `/understand` and `/contextualize` as slash invocations instead of `Use skill` instructions.
 - `conciseness` and `constraint-strong-modals`: the last `<constraints>` bullet is an author-maintenance note about the skill's own `Bash` grant, stated without MUST, NEVER, or ALWAYS.
 - `constraint-rationale`: the constraint requiring every REJECT finding to name the assertion, the failed property, and the evidentiary gap carries no rationale after a dash.
+- `conciseness` (run `2026-10-12_18-55-10-807-92bff43a2c02`): the `JUDGE COVERAGE BY READING` principle and the first sentence of step `audit_coverage` restate the coverage-by-reading rule that `<constraints>` and Step 3e already state.
 - `semantic-tag-names`: `<step name="full_chain_ownership">` wraps Steps 2b, 3, and 3a, three distinct steps under one name.
 
 **Settlement condition**: the skill states the metadata field for NOT_APPLICABLE language results in `<verdict_format>`, composes `spec-tree:understand` and `spec-tree:contextualize` with `Use skill`, moves the grant note out of the runtime prompt, gives the REJECT-finding constraint its rationale, splits the combined step tag, and a skill audit approves.
