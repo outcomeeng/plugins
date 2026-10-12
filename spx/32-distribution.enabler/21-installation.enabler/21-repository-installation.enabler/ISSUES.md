@@ -782,3 +782,33 @@ change.
 **Settlement condition**: each cited clause reaches a predicate that fails when
 the clause is violated, or the governing decision is amended where the evidence
 and the decision disagree (f-018).
+
+## DEBT [evidence]: the disabled-activation config edit has no direct predicate
+
+`_declare_codex_activation_disabled` and `_with_disabled_entry` in
+`outcomeeng/distribution/installation.py` edit the selected home's `config.toml`
+as raw lines: an exact-match header lookup, a table scan that ends at the first
+line starting with `[`, removal of every line starting with `enabled`, and an
+unconditional rewrite. No linked test calls either function or asserts the
+resulting text; only the real-agent level-three bootstrap test exercises them,
+on the table form the Codex CLI writes, and the gate excludes that test unless an
+agent definition changes. Undecided cases: a present header with
+`enabled = true`, a header with a trailing comment or other quoting (the exact
+match fails and a second table of the same name is appended), a multi-line value
+whose continuation starts with `[`, a key such as `enabled_tools` dropped by the
+prefix filter, idempotence on rerun, and preservation of unrelated lines. A
+malformed result lands in the operator's home with no post-write parse check.
+
+**Evidence**: local review run `2026-10-12_18-31-36-098-22fdb52fc67f`, finding
+F-004 (evidence), at head `a816d56369632b92bdcf08584330cf79d8537659`.
+
+**Why it is a separate larger concern**: the repair needs a generator over config
+documents, level-one evidence linked to the empty-home activation assertion, and
+a parse check before the replace. This node's test-evidence gate already holds
+its two counted rejections for the changeset that introduced the edit, so
+evidence added there would merge unaudited; the next change on this node carries
+the repair under its own test-evidence audit.
+
+**Settlement condition**: generated config documents covering every case above
+drive the edit at level one, the linked test asserts the parsed result and
+idempotence, and the edit parses its output before it replaces the file.

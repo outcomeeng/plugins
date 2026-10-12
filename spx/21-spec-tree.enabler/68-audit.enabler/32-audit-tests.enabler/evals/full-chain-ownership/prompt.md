@@ -21,7 +21,7 @@ A verdict on whether a spec node's tests provide behavior-coupled evidence its a
 <constraints>
 
 - NEVER modify the tests under audit or any other file — this audit produces a verdict, never a fix or a commit.
-- NEVER run the project's coverage command, test command, linter, type-checker, or any other deterministic verification inside the audit — deterministic verification on the changeset is a precondition, and CI re-runs it over the whole repository; establish coverage by reading whether the test drives execution into the assertion-relevant path.
+- NEVER run the project's coverage command, test command, linter, type-checker, or any other deterministic verification inside the audit — deterministic verification on the changeset is a precondition, and CI re-runs it over the repository's CI scope; establish coverage by reading whether the test drives execution into the assertion-relevant path.
 - ALWAYS name the assertion, the failed property, and the evidentiary gap in every REJECT finding.
 - ALWAYS construct every finding as one complete record containing `id`, `file`, `line`, `assertion`, `property`, `rule`, `severity`, `message`, and `remediation_target` before adding it to a row — required fields are never deferred to verdict rendering.
 - ALWAYS reject an incomplete evidence-chain inventory before approval; absence of an artifact is missing evidence, never permission to infer its contents.
