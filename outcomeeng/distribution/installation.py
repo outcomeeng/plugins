@@ -2230,9 +2230,7 @@ def build_agent_home_plan(
     ownership_expected_digest = (
         _digest(ownership_path.read_bytes()) if ownership_path.is_file() else None
     )
-    ownership = {
-        entry.destination: entry for entry in _read_agent_ownership(codex_home)
-    }
+    ownership = {entry.destination: entry for entry in read_agent_ownership(codex_home)}
     desired = {definition.destination: definition for definition in definitions}
     mutations: list[AgentHomeMutation] = []
     collisions: list[AgentHomeCollision] = []
@@ -2449,7 +2447,8 @@ def apply_agent_home_plan(plan: AgentHomePlan) -> AgentHomeResult:
     )
 
 
-def _read_agent_ownership(codex_home: Path) -> tuple[AgentOwnership, ...]:
+def read_agent_ownership(codex_home: Path) -> tuple[AgentOwnership, ...]:
+    """The marketplace ownership claims recorded in the selected home, sorted."""
     ownership_path = codex_home / CODEX_HOME_AGENTS_PATH / AGENT_OWNERSHIP_FILENAME
     if not ownership_path.exists() and not ownership_path.is_symlink():
         return ()
@@ -3949,6 +3948,7 @@ __all__ = [
     "marketplace_target",
     "apply_install_record_writes",
     "plan_install_record_rewrite",
+    "read_agent_ownership",
     "read_install_record_document",
     "unreadable_head_warnings",
     "unresolved_target_warnings",
