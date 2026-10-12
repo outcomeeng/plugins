@@ -43,6 +43,12 @@ CAUSE_DIGEST_MISMATCH = "digest mismatch"
 CAUSE_CHANGED_AFTER_PREFLIGHT = "changed after preflight"
 NON_HEX_DIGEST = "is not a lowercase sha256 hex string"
 SYMLINKED_AGENT_DIRECTORY = "selected agent directory {path} must not be a symlink"
+HOME_FLAG = "--home"
+CHECKOUT_FLAG = "--checkout"
+CHECK_FLAG = "--check"
+EXIT_CURRENT = 0
+EXIT_CHANGES_PENDING = 1
+EXIT_REFUSED = 2
 
 
 def _digest(content: bytes) -> str:
@@ -217,9 +223,9 @@ def main(
     parser = argparse.ArgumentParser(
         description=next(iter((__doc__ or "").strip().splitlines()), None)
     )
-    parser.add_argument("--home", type=Path, default=os.environ.get("CODEX_HOME"))
-    parser.add_argument("--checkout", type=Path, default=Path.cwd())
-    parser.add_argument("--check", action="store_true")
+    parser.add_argument(HOME_FLAG, type=Path, default=os.environ.get("CODEX_HOME"))
+    parser.add_argument(CHECKOUT_FLAG, type=Path, default=Path.cwd())
+    parser.add_argument(CHECK_FLAG, action="store_true")
     args = parser.parse_args(argv)
     if args.home is None:
         parser.error("set CODEX_HOME or pass --home <absolute selected CODEX_HOME>")
@@ -232,7 +238,7 @@ def main(
     if agents.is_symlink():
         _print_each(splits)
         print(f"{COLLISION_PREFIX}{SYMLINKED_AGENT_DIRECTORY.format(path=agents)}")
-        return 2
+        return EXIT_REFUSED
     ownership_path = agents / OWNERSHIP
     ownership_before = (
         ownership_path.read_bytes()
@@ -244,7 +250,7 @@ def main(
     except ValueError as error:
         _print_each(splits)
         print(f"{COLLISION_PREFIX}{error}")
-        return 2
+        return EXIT_REFUSED
     by_destination = {entry[ENTRY_DESTINATION_FIELD]: entry for entry in entries}
     desired = {
         f"{AGENTS_DIRECTORY}/{name}": content for name, content in shipped.items()
@@ -293,9 +299,9 @@ def main(
     for path, _ in prunes:
         print(f"{PRUNE_PREFIX}{path}")
     if splits or collisions:
-        return 2
+        return EXIT_REFUSED
     if args.check:
-        return 1 if writes or prunes else 0
+        return EXIT_CHANGES_PENDING if writes or prunes else EXIT_CURRENT
     current_ownership = (
         ownership_path.read_bytes()
         if ownership_path.is_file() and not ownership_path.is_symlink()
@@ -303,14 +309,14 @@ def main(
     )
     if current_ownership != ownership_before:
         print(f"{COLLISION_PREFIX}{ownership_path} ({CAUSE_CHANGED_AFTER_PREFLIGHT})")
-        return 2
+        return EXIT_REFUSED
     drifted = [
         path for path, _, expected in writes if current_digest(path) != expected
     ] + [path for path, expected in prunes if current_digest(path) != expected]
     if drifted:
         for path in drifted:
             print(f"{COLLISION_PREFIX}{path} ({CAUSE_CHANGED_AFTER_PREFLIGHT})")
-        return 2
+        return EXIT_REFUSED
     for path, content, _ in writes:
         _atomic_write(path, content)
     for path, _ in prunes:
@@ -326,7 +332,7 @@ def main(
     ).encode()
     if current_ownership != ownership_content:
         _atomic_write(ownership_path, ownership_content)
-    return 0
+    return EXIT_CURRENT
 
 
 if __name__ == "__main__":

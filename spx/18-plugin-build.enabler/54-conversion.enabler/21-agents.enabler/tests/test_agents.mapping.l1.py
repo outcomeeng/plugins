@@ -8,15 +8,15 @@ from pathlib import Path
 from outcomeeng.distribution.agents import AGENT_NAME_FIELD
 from outcomeeng_testing.harnesses.agent_conversion import agent_document_oracle
 from outcomeeng.distribution.build import (
-    FLAT_AGENT_PLUGIN_SEPARATOR,
     LIFECYCLE_TEMPLATE_NAME,
-    NATIVE_AGENT_PLUGIN_SEPARATOR,
     agent_capability,
     agent_dispatch_name,
     agent_slug,
 )
 from outcomeeng.distribution.contracts import (
     AGENTS_SUBDIR_NAME,
+    FLAT_AGENT_PLUGIN_SEPARATOR,
+    NATIVE_AGENT_PLUGIN_SEPARATOR,
     SKILLS_SUBDIR_NAME,
     Target,
 )

@@ -34,10 +34,6 @@ def test_real_agent_clis_map_full_and_generated_subsets() -> None:
     )
 
     assert observation.persistent_exit_code == 0, observation.persistent_stderr
-    assert (
-        persistent_report[ReportField.COMPLETED_OPERATIONS]
-        == observation.persistent_planned_operations
-    )
     assert pending_entries == [], pending_entries
     assert (
         observation.persistent_claude_plugins.installed

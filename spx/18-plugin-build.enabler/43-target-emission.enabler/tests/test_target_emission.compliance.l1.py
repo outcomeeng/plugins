@@ -13,7 +13,6 @@ from outcomeeng.distribution.build import (
     CODEX_SKILL_DIR_TOKEN,
     CLAUDE_ONLY_FRONTMATTER_FIELDS,
     DISABLE_MODEL_INVOCATION_FIELD,
-    FLAT_AGENT_PLUGIN_SEPARATOR,
     LIFECYCLE_TEMPLATE_NAME,
     SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE,
     EmissionAction,
@@ -26,6 +25,7 @@ from outcomeeng.distribution.build import (
 )
 from outcomeeng.distribution.contracts import (
     AGENTS_SUBDIR_NAME,
+    FLAT_AGENT_PLUGIN_SEPARATOR,
     MARKDOWN_FILE_SUFFIX,
     SKILLS_SUBDIR_NAME,
     Target,

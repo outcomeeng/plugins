@@ -45,6 +45,9 @@ PHASE_RECIPE: Final = "recipe"
 PHASE_COMPLETE: Final = "complete"
 FULL_LOG_LABEL: Final = "Full log:"
 SUMMARY_PATH_LABEL: Final = "Summary:"
+HEADER_RULE: Final = "━━━"
+RECIPE_HEADER_LABEL: Final = "Recipe"
+RECIPE_HEADER_PREFIX: Final = f"{HEADER_RULE} {RECIPE_HEADER_LABEL} "
 FAILURE_EXCERPT_LINE_LIMIT: Final = 80
 FAILURE_EXCERPT_CHAR_LIMIT: Final = 12_000
 SUMMARY_KEY_RECIPE: Final = "recipe"
@@ -304,6 +307,12 @@ def _write_spawn_failure_log(log_path: Path, exc: Exception) -> None:
     log_path.write_text(f"<failed to spawn process: {exc}>\n", encoding="utf-8")
 
 
+def recipe_header(name: str) -> str:
+    """Return the live-output header line that opens recipe ``name``."""
+
+    return f"{RECIPE_HEADER_PREFIX}{name} {HEADER_RULE}"
+
+
 def _execute_recipe(
     spawner: ProcessSpawner,
     sink: TextIO,
@@ -318,7 +327,7 @@ def _execute_recipe(
     failed_status = 0
     total_start = time.monotonic()
     step_index = 0
-    sink.write(f"━━━ Recipe {recipe.name} ━━━\n")
+    sink.write(f"{recipe_header(recipe.name)}\n")
     sink.flush()
     try:
         for phase, steps in (

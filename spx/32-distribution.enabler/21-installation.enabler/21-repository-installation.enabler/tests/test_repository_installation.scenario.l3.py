@@ -8,6 +8,9 @@ from outcomeeng.distribution.installation import (
     Agent,
     CLAUDE_LOCAL_SCOPE,
     CLAUDE_PROJECT_SCOPE,
+    CODEX_HOME_CONFIG_PATH,
+    CODEX_HOME_EMPTY_CONFIG,
+    CODEX_HOME_ENV,
     ClaudeInstallRecord,
     FIRST_INSTALL_WARNING,
     ReportField,
@@ -33,7 +36,9 @@ def _first_install_warning(agent: Agent) -> str:
 def test_real_agent_clis_bootstrap_empty_persistent_state() -> None:
     observation = observe_real_first_install()
 
-    assert observation.initial_state == ()
+    assert observation.initial_state == (
+        (CODEX_HOME_ENV, str(CODEX_HOME_CONFIG_PATH), CODEX_HOME_EMPTY_CONFIG.encode()),
+    )
     assert observation.initial_project_settings is not None
     assert observation.exit_code == 0, observation.stderr
     document = json.loads(observation.stdout)

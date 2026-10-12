@@ -1,13 +1,15 @@
 """Property evidence for unconditional plugin namespaces."""
 
 from outcomeeng.distribution.build import (
-    FLAT_AGENT_PLUGIN_SEPARATOR,
-    NATIVE_AGENT_PLUGIN_SEPARATOR,
     agent_capability,
     agent_dispatch_name,
     agent_slug,
 )
-from outcomeeng.distribution.contracts import Target
+from outcomeeng.distribution.contracts import (
+    FLAT_AGENT_PLUGIN_SEPARATOR,
+    NATIVE_AGENT_PLUGIN_SEPARATOR,
+    Target,
+)
 from outcomeeng_testing.harnesses.agent_names import exercise_agent_names
 
 

@@ -34,6 +34,66 @@ class ChildIdentityField(StrEnum):
     EFFORT = "reasoningEffort"
 
 
+class NativeLookupField(StrEnum):
+    """Top-level fields of the retained child-lookup artifact.
+
+    The artifact carries every parent-filtered listing page, the identities
+    those pages name, and, when exactly one child is listed, the native read
+    of that child and the thread it returned.
+    """
+
+    PAGES = "pages"
+    CHILD_IDS = "childIds"
+    READ = "read"
+    THREAD = "thread"
+    ERROR = "error"
+
+
+class NativeEvidenceCondition(StrEnum):
+    """Terminal conditions a native child-evidence collection records.
+
+    Each names the first unavailable or inconsistent observation; a mismatched
+    identity field is reported with the field it names instead.
+    """
+
+    READ_FAILED = "native child thread read failed"
+    READ_NOT_JSON = "native child thread read is not JSON"
+    THREAD_ABSENT = "native child thread is absent"
+    NO_SINGLE_CHILD = "native listing has no single child identity"
+    TURN_COUNT = "native child does not contain exactly one turn"
+    TURN_INCOMPLETE = "native child turn did not complete"
+    COMPLETION_ABSENT = "native child completion message is absent"
+
+
+class NativeThreadField(StrEnum):
+    """Non-identity fields of a native thread record."""
+
+    TURNS = "turns"
+
+
+class NativeTurnField(StrEnum):
+    """Fields of one native turn record."""
+
+    STATUS = "status"
+    ITEMS = "items"
+    ERROR = "error"
+
+
+class NativeMessageField(StrEnum):
+    """Fields of one item inside a native turn."""
+
+    TYPE = "type"
+    TEXT = "text"
+
+
+class NativeResponseField(StrEnum):
+    """JSON-RPC envelope fields the native app-server responds with."""
+
+    ID = "id"
+    RESULT = "result"
+    ERROR = "error"
+
+
 class NativeTurnStatus(StrEnum):
     """Turn states in the native app-server protocol."""
 
@@ -123,20 +183,22 @@ def collect_native_child_evidence(
     result = reader(parent_id, cwd, environment)
     if result.exit_code != 0:
         return NativeChildEvidence(
-            parent_id, result, None, "native child thread read failed"
+            parent_id, result, None, NativeEvidenceCondition.READ_FAILED
         )
     try:
         document = json.loads(result.stdout)
     except json.JSONDecodeError:
         return NativeChildEvidence(
-            parent_id, result, None, "native child thread read is not JSON"
+            parent_id, result, None, NativeEvidenceCondition.READ_NOT_JSON
         )
-    thread = document.get("thread") if isinstance(document, dict) else None
+    thread = (
+        document.get(NativeLookupField.THREAD) if isinstance(document, dict) else None
+    )
     if not isinstance(thread, dict):
         return NativeChildEvidence(
-            parent_id, result, None, "native child thread is absent"
+            parent_id, result, None, NativeEvidenceCondition.THREAD_ABSENT
         )
-    child_ids = document.get("childIds")
+    child_ids = document.get(NativeLookupField.CHILD_IDS)
     if (
         not isinstance(child_ids, list)
         or len(child_ids) != 1
@@ -145,7 +207,7 @@ def collect_native_child_evidence(
         or child_ids[0] == parent_id
     ):
         return NativeChildEvidence(
-            parent_id, result, thread, "native listing has no single child identity"
+            parent_id, result, thread, NativeEvidenceCondition.NO_SINGLE_CHILD
         )
     receiver_id = child_ids[0]
     expected = {
@@ -184,26 +246,26 @@ def _single_parent(stream: str) -> str:
 
 
 def _completion_condition(thread: Mapping[str, object]) -> str | None:
-    turns = thread.get("turns")
+    turns = thread.get(NativeThreadField.TURNS)
     if not isinstance(turns, list) or len(turns) != 1:
-        return "native child does not contain exactly one turn"
+        return NativeEvidenceCondition.TURN_COUNT
     turn = turns[0]
     if (
         not isinstance(turn, dict)
-        or turn.get("status") != NativeTurnStatus.COMPLETED
-        or turn.get("error") is not None
+        or turn.get(NativeTurnField.STATUS) != NativeTurnStatus.COMPLETED
+        or turn.get(NativeTurnField.ERROR) is not None
     ):
-        return "native child turn did not complete"
-    items = turn.get("items")
+        return NativeEvidenceCondition.TURN_INCOMPLETE
+    items = turn.get(NativeTurnField.ITEMS)
     if isinstance(items, list) and any(
         isinstance(item, dict)
-        and item.get("type") == NATIVE_MESSAGE_TYPE
-        and isinstance(item.get("text"), str)
-        and item["text"].strip()
+        and item.get(NativeMessageField.TYPE) == NATIVE_MESSAGE_TYPE
+        and isinstance(item.get(NativeMessageField.TEXT), str)
+        and item[NativeMessageField.TEXT].strip()
         for item in items
     ):
         return None
-    return "native child completion message is absent"
+    return NativeEvidenceCondition.COMPLETION_ABSENT
 
 
 def _read_native_record(
@@ -245,20 +307,24 @@ def _read_native_record(
                             "capabilities": {"experimentalApi": True},
                         },
                     )
-                    if "error" in initialized:
+                    if NativeResponseField.ERROR in initialized:
                         response = initialized
                         condition = "native app-server initialization failed"
                     else:
                         exchange.send({"method": "initialized"})
                         if children:
-                            response = {"result": _read_child(exchange, thread_id)}
+                            response = {
+                                NativeResponseField.RESULT: _read_child(
+                                    exchange, thread_id
+                                )
+                            }
                         else:
                             response = exchange.request(
                                 1,
                                 "thread/read",
                                 {"threadId": thread_id, "includeTurns": True},
                             )
-                            if "error" in response:
+                            if NativeResponseField.ERROR in response:
                                 condition = THREAD_READ_FAILED
                     process.stdin.close()
                     process.wait(timeout=max(0.0, deadline - time.monotonic()))
@@ -283,7 +349,7 @@ def _read_native_record(
     return CommandResult(
         tuple(command),
         int(condition is not None),
-        json.dumps(response.get("result", response)),
+        json.dumps(response.get(NativeResponseField.RESULT, response)),
         diagnostic + (f"\n{condition}" if condition is not None else ""),
     )
 
@@ -323,17 +389,20 @@ def _read_child(exchange: _Exchange, parent_id: str) -> Mapping[str, object]:
         failure = _list_children(exchange, parent_id, archived, pages, child_ids)
         if failure is not None:
             return failure
-    document: dict[str, object] = {"pages": pages, "childIds": child_ids}
+    document: dict[str, object] = {
+        NativeLookupField.PAGES: pages,
+        NativeLookupField.CHILD_IDS: child_ids,
+    }
     if len(child_ids) == 1:
         response = exchange.request(
             len(pages) + 1,
             "thread/read",
             {"threadId": child_ids[0], "includeTurns": True},
         )
-        document["read"] = response
-        result = response.get("result")
+        document[NativeLookupField.READ] = response
+        result = response.get(NativeResponseField.RESULT)
         if isinstance(result, dict):
-            document["thread"] = result.get("thread")
+            document[NativeLookupField.THREAD] = result.get(NativeLookupField.THREAD)
     return document
 
 
@@ -358,29 +427,29 @@ def _list_children(
             },
         )
         pages.append(response)
-        page = response.get("result")
+        page = response.get(NativeResponseField.RESULT)
         if (
             not isinstance(page, dict)
             or not isinstance(page.get("data"), list)
             or "nextCursor" not in page
         ):
             return {
-                "pages": pages,
-                "childIds": child_ids,
-                "error": "native child listing failed",
+                NativeLookupField.PAGES: pages,
+                NativeLookupField.CHILD_IDS: child_ids,
+                NativeLookupField.ERROR: "native child listing failed",
             }
         if not _append_child_ids(page["data"], parent_id, child_ids):
             return {
-                "pages": pages,
-                "error": "native child listing identity is invalid",
+                NativeLookupField.PAGES: pages,
+                NativeLookupField.ERROR: "native child listing identity is invalid",
             }
         cursor = page.get("nextCursor")
         if cursor is None:
             return None
         if not isinstance(cursor, str) or not cursor or cursor in seen:
             return {
-                "pages": pages,
-                "error": "native child listing cursor is invalid",
+                NativeLookupField.PAGES: pages,
+                NativeLookupField.ERROR: "native child listing cursor is invalid",
             }
         seen.add(cursor)
 
@@ -391,12 +460,12 @@ def _append_child_ids(
     for child in children:
         if (
             not isinstance(child, dict)
-            or child.get("parentThreadId") != parent_id
-            or not isinstance(child.get("id"), str)
-            or not child["id"]
+            or child.get(ChildIdentityField.PARENT) != parent_id
+            or not isinstance(child.get(ChildIdentityField.ID), str)
+            or not child[ChildIdentityField.ID]
         ):
             return False
-        child_ids.append(child["id"])
+        child_ids.append(child[ChildIdentityField.ID])
     return True
 
 
@@ -433,8 +502,14 @@ class _Exchange:
         while b"\n" in self.pending:
             line, self.pending = self.pending.split(b"\n", 1)
             document = json.loads(line)
-            if isinstance(document, dict) and document.get("id") == identifier:
-                if "result" not in document and "error" not in document:
+            if (
+                isinstance(document, dict)
+                and document.get(NativeResponseField.ID) == identifier
+            ):
+                if (
+                    NativeResponseField.RESULT not in document
+                    and NativeResponseField.ERROR not in document
+                ):
                     raise ValueError(
                         "native app-server response has no result or error"
                     )

@@ -16,9 +16,16 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Protocol, cast
 
+from outcomeeng.distribution.agents import (
+    AGENT_NAME_FIELD,
+    AGENT_SKILLS_CONFIG_FIELD,
+    AGENT_SKILLS_FIELD,
+)
 from outcomeeng.distribution.contracts import (
     AGENTS_SUBDIR_NAME,
     DIST_DIR_NAME,
+    FLAT_AGENT_PLUGIN_SEPARATOR,
+    NATIVE_AGENT_PLUGIN_SEPARATOR,
     SKILLS_SUBDIR_NAME,
 )
 
@@ -40,6 +47,18 @@ CLAUDE_LOCAL_SETTINGS_PATH = Path(".claude/settings.local.json")
 CODEX_CONFIG_PATH = Path(".codex/config.toml")
 CODEX_AGENTS_PATH = Path(".codex/agents")
 CODEX_HOME_AGENTS_PATH = Path("agents")
+CODEX_HOME_CONFIG_PATH = Path("config.toml")
+"""The configuration file the installed Codex CLI requires in an existing `CODEX_HOME`."""
+ISOLATED_HOME_DIRECTORY = "home"
+"""The directory beneath isolated state that becomes `HOME`."""
+ISOLATED_CLAUDE_CONFIG_DIRECTORY = "claude"
+"""The directory beneath isolated state that becomes `CLAUDE_CONFIG_DIR`."""
+ISOLATED_CODEX_HOME_DIRECTORY = "codex"
+"""The directory beneath isolated state that becomes `CODEX_HOME`."""
+ISOLATED_CODEX_SQLITE_DIRECTORY = "codex-sqlite"
+"""The directory beneath isolated state that becomes `CODEX_SQLITE_HOME`."""
+CODEX_HOME_EMPTY_CONFIG = ""
+"""The plugin-free configuration a provisioned disposable `CODEX_HOME` holds."""
 AGENT_OWNERSHIP_FILENAME = ".outcomeeng-marketplace-ownership.json"
 AGENT_OWNERSHIP_SCHEMA_VERSION = 1
 AGENT_OWNERSHIP_SCHEMA_FIELD = "schema_version"
@@ -47,9 +66,6 @@ AGENT_OWNERSHIP_ENTRIES_FIELD = "entries"
 AGENT_OWNERSHIP_DESTINATION_FIELD = "destination"
 AGENT_OWNERSHIP_PLUGIN_FIELD = "plugin"
 AGENT_OWNERSHIP_DIGEST_FIELD = "digest"
-AGENT_SKILLS_FIELD = "skills"
-AGENT_SKILLS_CONFIG_FIELD = "config"
-AGENT_SKILL_NAME_FIELD = "name"
 CATALOG_PLUGINS_FIELD = "plugins"
 CATALOG_PLUGIN_NAME_FIELD = "name"
 HOME_ENV = "HOME"
@@ -639,6 +655,8 @@ class AgentHomePlan:
     mutations: tuple[AgentHomeMutation, ...]
     collisions: tuple[AgentHomeCollision, ...]
     ownership_after: tuple[AgentOwnership, ...]
+    ownership_before: tuple[AgentOwnership, ...] = ()
+    """The ownership record as preflight read it, before any planned change."""
 
 
 @dataclass(frozen=True)
@@ -1158,10 +1176,10 @@ def build_isolated_installation_plan(
         checkout=resolved_checkout,
         marketplace=catalog_marketplace_name(resolved_checkout / CLAUDE_CATALOG_PATH),
         state=resolved_state,
-        home=resolved_state / "home",
-        claude_config=resolved_state / "claude",
-        codex_home=resolved_state / "codex",
-        codex_sqlite_home=resolved_state / "codex-sqlite",
+        home=resolved_state / ISOLATED_HOME_DIRECTORY,
+        claude_config=resolved_state / ISOLATED_CLAUDE_CONFIG_DIRECTORY,
+        codex_home=resolved_state / ISOLATED_CODEX_HOME_DIRECTORY,
+        codex_sqlite_home=resolved_state / ISOLATED_CODEX_SQLITE_DIRECTORY,
     )
     environment = isolated_environment(roots, base_environment)
     claude_catalog = catalog_plugin_names(roots.checkout / CLAUDE_CATALOG_PATH)
@@ -2122,7 +2140,8 @@ def _checkout_agent_mentions_plugin(
     plugins: frozenset[str],
 ) -> bool:
     if any(
-        path.stem.startswith(f"{plugin}_") or path.stem.startswith(f"{plugin}-")
+        path.stem.startswith(f"{plugin}{FLAT_AGENT_PLUGIN_SEPARATOR}")
+        or path.stem.startswith(f"{plugin}-")
         for plugin in plugins
     ):
         return True
@@ -2138,8 +2157,8 @@ def _checkout_agent_mentions_plugin(
         return False
     return any(
         isinstance(entry, dict)
-        and isinstance(name := entry.get(AGENT_SKILL_NAME_FIELD), str)
-        and name.partition(":")[0] in plugins
+        and isinstance(name := entry.get(AGENT_NAME_FIELD), str)
+        and name.partition(NATIVE_AGENT_PLUGIN_SEPARATOR)[0] in plugins
         for entry in config
     )
 
@@ -2286,6 +2305,41 @@ def build_agent_home_plan(
         mutations=tuple(sorted(mutations)),
         collisions=tuple(sorted(collisions)),
         ownership_after=tuple(sorted(ownership_after.values())),
+        ownership_before=tuple(sorted(ownership.values())),
+    )
+
+
+def without_pending_plugins(
+    plan: AgentHomePlan, pending: frozenset[str]
+) -> AgentHomePlan:
+    """Narrow a reconciliation to the plugins whose skill content the run delivered.
+
+    A plugin pending publication delivered no skill content, so the run neither
+    copies definitions for it nor prunes the ones it already owns: every
+    mutation naming it is dropped, and every destination it owned before the
+    run, or would own after it, keeps the ownership claim preflight read.
+    """
+    if not pending:
+        return plan
+    before = {entry.destination: entry for entry in plan.ownership_before}
+    after = {entry.destination: entry for entry in plan.ownership_after}
+    for destination in set(before) | set(after):
+        prior = before.get(destination)
+        planned = after.get(destination)
+        if (prior is None or prior.plugin not in pending) and (
+            planned is None or planned.plugin not in pending
+        ):
+            continue
+        if prior is None:
+            after.pop(destination, None)
+        else:
+            after[destination] = prior
+    return replace(
+        plan,
+        mutations=tuple(
+            mutation for mutation in plan.mutations if mutation.plugin not in pending
+        ),
+        ownership_after=tuple(sorted(after.values())),
     )
 
 
@@ -2604,7 +2658,12 @@ def execute_installation(
     closing_results: list[CommandResult] = []
     for command in plan.closing:
         closing_results.append(_run_command(plan, command, runner, results, pending))
-    agent_home = apply_agent_home_plan(plan.agent_home)
+    agent_home = apply_agent_home_plan(
+        without_pending_plugins(
+            plan.agent_home,
+            frozenset(entry.plugin for entry in pending if entry.agent is Agent.CODEX),
+        )
+    )
     return InstallationReport(
         plan=plan,
         results=tuple(results),
@@ -3550,6 +3609,19 @@ def _required_environment_path(
     return Path(value).expanduser()
 
 
+def provision_codex_home(home: Path) -> None:
+    """Create a disposable `CODEX_HOME` holding a plugin-free `config.toml`.
+
+    The installed Codex CLI refuses an existing home that holds no
+    `config.toml`, so a provisioned home carries one before its first Codex
+    command; a configuration already present is left unchanged.
+    """
+    home.mkdir(parents=True, exist_ok=True)
+    config = home / CODEX_HOME_CONFIG_PATH
+    if not config.exists():
+        config.write_text(CODEX_HOME_EMPTY_CONFIG, encoding="utf-8")
+
+
 def _create_isolated_roots(roots: InstallationRoots) -> None:
     if roots.state is None or roots.codex_sqlite_home is None:
         raise ValueError("isolated installation requires disposable state roots")
@@ -3557,10 +3629,10 @@ def _create_isolated_roots(roots: InstallationRoots) -> None:
         roots.state,
         roots.home,
         roots.claude_config,
-        roots.codex_home,
         roots.codex_sqlite_home,
     ):
         root.mkdir(parents=True, exist_ok=True)
+    provision_codex_home(roots.codex_home)
 
 
 def _agent_adapter(agent: Agent) -> AgentAdapter:
@@ -3746,6 +3818,7 @@ def _version_after(
 
 
 __all__ = [
+    "provision_codex_home",
     "STDERR_WARNING_PREFIX",
     "AGENT_ADAPTERS",
     "CATALOG_MARKETPLACE_NAME_FIELD",
@@ -3789,9 +3862,6 @@ __all__ = [
     "render_claude_source",
     "rewrite_install_records",
     "AGENT_OWNERSHIP_FILENAME",
-    "AGENT_SKILL_NAME_FIELD",
-    "AGENT_SKILLS_CONFIG_FIELD",
-    "AGENT_SKILLS_FIELD",
     "AGENT_OWNERSHIP_SCHEMA_VERSION",
     "Agent",
     "AgentAdapter",
@@ -3837,9 +3907,15 @@ __all__ = [
     "CODEX_AGENTS_PATH",
     "CODEX_CATALOG_PATH",
     "CODEX_CONFIG_PATH",
+    "ISOLATED_CLAUDE_CONFIG_DIRECTORY",
+    "ISOLATED_CODEX_HOME_DIRECTORY",
+    "ISOLATED_CODEX_SQLITE_DIRECTORY",
+    "ISOLATED_HOME_DIRECTORY",
     "CODEX_GIT_SOURCE_TYPE",
     "CODEX_HOME_ENV",
     "CODEX_HOME_AGENTS_PATH",
+    "CODEX_HOME_CONFIG_PATH",
+    "CODEX_HOME_EMPTY_CONFIG",
     "CODEX_LOCAL_SOURCE_TYPE",
     "CODEX_MARKETPLACES_FIELD",
     "CLAUDE_MARKETPLACE_LIST_COMMAND",
@@ -3895,6 +3971,7 @@ __all__ = [
     "STATE_ENV_NAMES",
     "SPEC_TREE_PLUGIN",
     "apply_agent_home_plan",
+    "without_pending_plugins",
     "build_agent_home_plan",
     "build_isolated_installation_plan",
     "build_persistent_installation_plan",

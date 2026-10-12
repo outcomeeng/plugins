@@ -20,6 +20,7 @@ from outcomeeng.validation._engine import (
     PHASE_PREFLIGHT,
     PHASE_RECIPE,
     POST_KILL_REAP_ATTEMPTS,
+    RECIPE_HEADER_PREFIX,
     RUN_FAIL_STATUS,
     RUN_PASS_STATUS,
     SIGNAL_GRACE_SECONDS,
@@ -44,6 +45,7 @@ from outcomeeng.validation._engine import (
     STEP_PASS_STATUS,
     run,
     run_check,
+    recipe_header,
     run_recipe,
     terminate_process_group,
 )
@@ -97,8 +99,10 @@ from outcomeeng.validation.selected_gate import (
     RECIPE_CHECK_FULL,
     SelectedGatePlan,
     SelectedGateStep,
+    build_full_gate_plan,
     build_selected_gate_plan,
     collect_changed_paths,
+    run_full_check,
     run_selected_check,
 )
 
@@ -131,6 +135,7 @@ __all__ = [
     "RUFF_CHECK_ARGV",
     "RUFF_FORMAT_ARGV",
     "RECIPE_CHECK",
+    "RECIPE_HEADER_PREFIX",
     "RECIPE_CHECK_FULL",
     "RECIPE_AD_HOC",
     "RECIPE_TEST",
@@ -176,10 +181,13 @@ __all__ = [
     "SelectedGatePlan",
     "SelectedGateStep",
     "assert_json_schema",
+    "build_full_gate_plan",
     "build_selected_gate_plan",
     "collect_changed_paths",
     "run",
     "run_check",
+    "run_full_check",
+    "recipe_header",
     "run_recipe",
     "run_selected_check",
 ]

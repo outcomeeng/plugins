@@ -45,7 +45,24 @@ class _PopenHandle:
         return self._proc.pid
 
     def poll(self) -> int | None:
-        return self._proc.poll()
+        """Report the child's exit status without blocking.
+
+        ``Popen.poll`` returns ``None`` whenever another call holds the
+        handle's waitpid lock. The orchestrator's signal handler runs inside
+        the interrupted ``Popen.wait`` that holds that lock, so the handle
+        reaps the child directly when ``Popen.poll`` cannot observe it.
+        """
+        returncode = self._proc.poll()
+        if returncode is not None:
+            return returncode
+        try:
+            reaped_pid, wait_status = os.waitpid(self._proc.pid, os.WNOHANG)
+        except ChildProcessError:
+            return self._proc.returncode
+        if reaped_pid == 0:
+            return None
+        self._proc.returncode = os.waitstatus_to_exitcode(wait_status)
+        return self._proc.returncode
 
     def wait(self) -> int:
         return self._proc.wait()
