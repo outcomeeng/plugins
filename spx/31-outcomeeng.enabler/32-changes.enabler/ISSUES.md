@@ -196,3 +196,15 @@ Evidence: `spec-tree:assertion-auditor` run `2026-10-12_10-41-21-450-61049bb4b5e
 Impact: a reader of the spec expects an all-debt revision audit to finish `rejected` and `author-change` to publish on that rejection, while both skills finish and publish on `approved` with every finding `filed`.
 
 Revisit and settlement condition: both assertions state `filed` severity and an `approved` terminal status, and one assertion audit of the changes node raises no `severity-terminal-status-vocabulary` finding.
+
+## DEBT [consistency]: the read-relations operation returns parentProduct with no remaining reader
+
+Defect class: `consistency`.
+
+Finding: the `change-type` judgment of `src/plugins/spec-tree/skills/audit-change/SKILL.md` no longer compares a Parent's Product with its children's, and that comparison was the only reader of the `parentProduct` field. The `read-relations` row of the runner operation table and the result prose of the same skill still list `parentProduct`, and `_read_relations` in `src/plugins/spec-tree/skills/audit-change/scripts/audit_change_run.py` still computes it under `ResultField.PARENT_PRODUCT`.
+
+Evidence: the CI review of [PR 658](https://github.com/outcomeeng/plugins/pull/658) on head `82bf3bef3f779940748ff9013ece56e3fdd6b14d` raised this as a `DEBT` finding against line 69 of the skill. The operator ruled that a PR with only cosmetic findings merges and the rest is handled after the merge, and the field changes no verdict, so the merge of Change outcomeeng/changes#470 carries it.
+
+Impact: the runner computes and the skill advertises a value no step reads, and a reader of the operation table can expect a Product comparison the skill no longer makes.
+
+Revisit and settlement condition: the `read-relations` row and result prose name no `parentProduct`, the runner computes none, the linked runner tests pass, and one typed skill audit of `audit-change` raises no finding on the operation table.
