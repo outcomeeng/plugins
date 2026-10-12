@@ -19,11 +19,15 @@ from usage_accounting import AccountingField
 from usage_reports import ReportField, ALERT_DIRECTORY
 from usage_schedule import ScheduleField
 from usage_accounting import (
+    ALERT_ENV,
+    BUDGET_ENV,
     DEFAULT_PROJECTS,
     DEFAULT_ROOT,
     HOUR,
     LOCK_NAME,
+    PRICE_OVERRIDE_ENV,
     QUARTER,
+    RESET_ENV,
     RETENTION_DAYS,
     TOKEN_KEYS,
     UTC,
@@ -72,6 +76,10 @@ class Option(StrEnum):
     LAUNCH_AGENTS_DIR = "--launch-agents-dir"
     AISE = "--aise"
     AISE_DATABASE = "--aise-database"
+    RESET_AT = "--reset-at"
+    ALERT_USD = "--alert-usd"
+    WEEKLY_BUDGET_USD = "--weekly-budget-usd"
+    PRICE_FILE = "--price-file"
 
 
 class ControlField(StrEnum):
@@ -81,6 +89,14 @@ class ControlField(StrEnum):
     INVESTIGATION = "investigation"
     SIGNALS = "signals"
     SIGNAL = "signal"
+
+
+CONFIGURATION_OPTIONS = {
+    Option.RESET_AT: RESET_ENV,
+    Option.ALERT_USD: ALERT_ENV,
+    Option.WEEKLY_BUDGET_USD: BUDGET_ENV,
+    Option.PRICE_FILE: PRICE_OVERRIDE_ENV,
+}
 
 
 def parser() -> argparse.ArgumentParser:
@@ -123,6 +139,8 @@ def parser() -> argparse.ArgumentParser:
         type=Path,
         help="Explicit existing investigation index; never built or refreshed here",
     )
+    for option, variable in CONFIGURATION_OPTIONS.items():
+        value.add_argument(option, help=f"Value of {variable} for this invocation")
     return value
 
 
@@ -136,7 +154,13 @@ def configuration(args: argparse.Namespace, end: dt.datetime) -> Config:
             raise ValueError(
                 f"Invalid saved configuration file: {saved}; inspect its path and size"
             )
-        value = json.loads(saved.read_text())
+        try:
+            value = json.loads(saved.read_text())
+        except json.JSONDecodeError as error:
+            raise ValueError(
+                f"Saved configuration is not valid JSON: {saved}: {error}; "
+                "correct the file or reinstall through install"
+            ) from error
         if not isinstance(value, dict):
             raise ValueError(
                 f"Saved configuration must be a JSON object: {saved}; "
@@ -149,8 +173,18 @@ def configuration(args: argparse.Namespace, end: dt.datetime) -> Config:
                 if key.startswith("SPX_USAGE_") and item is not None
             }
         )
-        saved_projects = Path(value.get("projects", str(DEFAULT_PROJECTS)))
+        projects = value.get("projects", str(DEFAULT_PROJECTS))
+        if not isinstance(projects, str):
+            raise ValueError(
+                f"Saved configuration field projects must be a path string: {saved}; "
+                "correct the file or reinstall through install"
+            )
+        saved_projects = Path(projects)
     environment.update(os.environ)
+    for option, variable in CONFIGURATION_OPTIONS.items():
+        supplied = getattr(args, option.removeprefix("--").replace("-", "_"))
+        if supplied is not None:
+            environment[variable] = supplied
     config = Config.from_environment(environment, root, args.projects or saved_projects)
     config.period(end)
     return config
@@ -358,7 +392,13 @@ def execute(
             and not status.is_symlink()
             and status.stat().st_size <= MAX_LOG_BYTES
         ):
-            result["last_worker"] = json.loads(status.read_text())
+            try:
+                result["last_worker"] = json.loads(status.read_text())
+            except json.JSONDecodeError as error:
+                result["last_worker_gap"] = (
+                    f"Worker status is not valid JSON: {status}: {error}; "
+                    "the next worker run rewrites it"
+                )
         else:
             result["last_worker_gap"] = (
                 "Worker status is absent, symlinked or exceeds the inspection bound."

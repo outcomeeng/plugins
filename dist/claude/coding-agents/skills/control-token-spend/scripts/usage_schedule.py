@@ -198,7 +198,13 @@ def manifest(root: Path) -> Json | None:
             f"Invalid installation manifest: {path} must be a regular file of at most "
             f"{COMMAND_BYTES} bytes; inspect the file and reinstall through install"
         )
-    value = json.loads(path.read_text())
+    try:
+        value = json.loads(path.read_text())
+    except json.JSONDecodeError as error:
+        raise ValueError(
+            f"Invalid installation manifest: {path} is not valid JSON: {error}; "
+            "inspect the file and reinstall through install"
+        ) from error
     if (
         not isinstance(value, dict)
         or value.get("schema_version") != 1

@@ -44,16 +44,22 @@ select `report`, covering the preceding hour. Translate natural-language intent
 into individual CLI arguments; quote each value and never evaluate supplied text
 as shell syntax. Use `--help` for the bundled command's exact option grammar.
 
-| Input                         | Contract                                                                                                                                      |
-| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SPX_USAGE_RESET_AT`          | Required explicit UTC timestamp anchoring seven-day periods; reuse saved installation configuration when available. Ask for an absent anchor. |
-| `SPX_USAGE_ALERT_USD`         | Positive estimated API-equivalent threshold for the rolling fifteen-minute detector; default 20.                                              |
-| `SPX_USAGE_WEEKLY_BUDGET_USD` | Optional positive weekly API-equivalent target; no default. Its absence disables weekly budget and pace signals.                              |
-| `SPX_USAGE_PRICE_FILE`        | Optional path to a JSON price-override file whose `prices` object keys a model identifier to its five rates in USD per million tokens.        |
-| `--root`                      | Stable operator-owned state root; default `~/Library/Application Support/Outcome Engineering/usage-control`.                                  |
-| `--projects`                  | Read-only transcript root, disjoint from the state root.                                                                                      |
-| `--start`, `--end`            | Inclusive start and exclusive end, timezone-aware ISO timestamps. Freeze these when comparing reports.                                        |
-| `--aise`, `--aise-database`   | Both required when optional investigation is selected; an absent or incompatible tool records a gap.                                          |
+Pass each configuration value as its option on the granted command, for example
+`python3 -B "${SKILL_DIR}/scripts/usage_control.py" report --reset-at 2026-10-09T00:00:00Z`.
+An option overrides the matching `SPX_USAGE_*` environment variable — `SPX_USAGE_RESET_AT`,
+`SPX_USAGE_ALERT_USD`, `SPX_USAGE_WEEKLY_BUDGET_USD`, `SPX_USAGE_PRICE_FILE` — and the
+saved installation configuration.
+
+| Input                       | Contract                                                                                                                                      |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--reset-at`                | Required explicit UTC timestamp anchoring seven-day periods; reuse saved installation configuration when available. Ask for an absent anchor. |
+| `--alert-usd`               | Positive estimated API-equivalent threshold for the rolling fifteen-minute detector; default 20.                                              |
+| `--weekly-budget-usd`       | Optional positive weekly API-equivalent target; no default. Its absence disables weekly budget and pace signals.                              |
+| `--price-file`              | Optional path to a JSON price-override file whose `prices` object keys a model identifier to its five rates in USD per million tokens.        |
+| `--root`                    | Stable operator-owned state root; default `~/Library/Application Support/Outcome Engineering/usage-control`.                                  |
+| `--projects`                | Read-only transcript root, disjoint from the state root.                                                                                      |
+| `--start`, `--end`          | Inclusive start and exclusive end, timezone-aware ISO timestamps. Freeze these when comparing reports.                                        |
+| `--aise`, `--aise-database` | Both required when optional investigation is selected; an absent or incompatible tool records a gap.                                          |
 
 The runtime persists incremental offsets, reconciled requests and bounded evidence
 in SQLite. A report directory contains `report.html`, `measurements.json`,
