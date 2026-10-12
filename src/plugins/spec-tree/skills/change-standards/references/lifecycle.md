@@ -82,7 +82,7 @@ A Handoff is one comment carrying exactly these lines in this order: the opening
 ```markdown
 Handoff:
 
-- Branch or PR: <pushed work branch, or the PR URL, or `none`>
+- Branch or PR: <pushed work branch, or the PR URL, followed by `@` and the full head commit SHA of that branch or pull request; or `none`>
 - Completed blocks: <the completed Governance mutations and Spec mutations blocks, by their path, or `none`>
 - Next block: <the first uncompleted block, by its path, or `refinement: <Maturity> → <next level>` below Executable>
 - Blockers: <blocking Change URLs still active, and each question the stopped work leaves for the operator, verbatim; or `none`>
@@ -91,7 +91,7 @@ Handoff:
 - Worktree: <the assigned worktree root>
 ```
 
-The `Session:` and `Worktree:` lines are the only optional lines, and each appears at most once, after the five. The Handoff records what was true when it was posted; refinement of the Output belongs in the body, before the release. A release that moves the Change to `Submitted` runs only at `Proposed`, `Framed`, or `Sliced`, posts its Handoff before it writes `Submitted`, and its Next block line names the confirmation the Change waits for: `confirmation: <Maturity>`.
+The head commit on the `Branch or PR` line is the tip the work stopped at; a reader takes the changeset from the branch or the pull request and reads that commit as the state the Handoff describes, never as the commit a later close checks for integration. The `Session:` and `Worktree:` lines are the only optional lines, and each appears at most once, after the five. The Handoff records what was true when it was posted; refinement of the Output belongs in the body, before the release. A release that moves the Change to `Submitted` runs only at `Proposed`, `Framed`, or `Sliced`, posts its Handoff before it writes `Submitted`, and its Next block line names the confirmation the Change waits for: `confirmation: <Maturity>`.
 
 </rule>
 
