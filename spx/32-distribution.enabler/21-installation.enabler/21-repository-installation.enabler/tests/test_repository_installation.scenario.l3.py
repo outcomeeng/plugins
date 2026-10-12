@@ -61,7 +61,7 @@ def test_real_agent_clis_bootstrap_empty_persistent_state() -> None:
     assert observation.claude_plugins.installed == {SPEC_TREE_PLUGIN}
     assert observation.claude_plugins.enabled == {SPEC_TREE_PLUGIN}
     assert observation.codex_plugins.installed == {SPEC_TREE_PLUGIN}
-    assert observation.codex_plugins.enabled == {SPEC_TREE_PLUGIN}
+    assert observation.codex_plugins.enabled == frozenset()
 
 
 def test_real_agent_clis_place_home_agents_and_repeat_full_installation() -> None:

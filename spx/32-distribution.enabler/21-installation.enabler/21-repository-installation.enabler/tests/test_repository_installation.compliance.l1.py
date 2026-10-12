@@ -73,10 +73,12 @@ from outcomeeng_testing.generators.installation import (
     generated_definition_edit,
     generated_non_hex_digest,
 )
+from outcomeeng_testing.harnesses.real_agent_homes import (
+    REAL_AGENT_CODEX_HOME_PROVISIONERS,
+)
 from outcomeeng_testing.harnesses.installation import (
     captured_non_pending_failure_wordings,
     MARKETPLACE,
-    REAL_AGENT_CODEX_HOME_PROVISIONERS,
     captured_codex_home_refusal,
     observe_isolated_codex_home_contract,
     RegistryState,
@@ -1241,7 +1243,7 @@ def test_every_real_agent_codex_home_holds_a_plugin_free_config_before_any_codex
     provisioner: str,
 ) -> None:
     home_config = REAL_AGENT_CODEX_HOME_PROVISIONERS[provisioner]()
-    assert home_config is not None
+    assert home_config is not None, provisioner
     assert tomllib.loads(home_config.decode("utf-8")) == {}
 
 

@@ -4,6 +4,8 @@ import json
 from typing import cast
 
 from outcomeeng.distribution.installation import (
+    Agent,
+    PLUGIN_OPERATIONS,
     ReportField,
 )
 from outcomeeng_testing.generators.installation import (
@@ -33,7 +35,23 @@ def test_real_agent_clis_map_full_and_generated_subsets() -> None:
         catalog_plugin_names_from_bytes(observation.subset_codex_catalog)
     )
 
+    commands = cast(list[dict[str, str]], persistent_report[ReportField.COMMANDS])
+    selected_by_agent = {
+        Agent.CLAUDE: observation.persistent_claude_selected,
+        Agent.CODEX: observation.persistent_codex_selected,
+    }
+
     assert observation.persistent_exit_code == 0, observation.persistent_stderr
+    for agent, selected in selected_by_agent.items():
+        refreshed = frozenset(
+            command[ReportField.PLUGIN]
+            for command in commands
+            if command[ReportField.AGENT] == agent.value
+            and command[ReportField.OPERATION]
+            in {operation.value for operation in PLUGIN_OPERATIONS}
+        )
+        assert refreshed == selected, agent
+    assert persistent_report[ReportField.COMPLETED_OPERATIONS] >= len(commands)
     assert pending_entries == [], pending_entries
     assert (
         observation.persistent_claude_plugins.installed

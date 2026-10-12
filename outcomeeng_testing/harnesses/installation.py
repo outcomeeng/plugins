@@ -13,6 +13,7 @@ import sys
 import tomllib
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import contextmanager, redirect_stderr, redirect_stdout
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from enum import StrEnum
 from functools import cache
@@ -20,7 +21,7 @@ from io import StringIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import ModuleType
-from typing import cast
+from typing import Protocol, cast
 
 from outcomeeng.distribution.agents import (
     AGENT_NAME_FIELD,
@@ -1458,12 +1459,13 @@ INSTALLATION_FIXTURES = (
 
 
 CODEX_HOME_REFUSAL_FIXTURE = (
-    INSTALLATION_FIXTURES / "codex-cli-0.160.0-home-without-config.stderr.txt"
+    INSTALLATION_FIXTURES / "codex-cli-0.162.1-home-without-config.stderr.txt"
 )
-"""The stderr codex-cli 0.160.0 printed refusing an existing `CODEX_HOME` with no `config.toml`.
+"""The stderr codex-cli 0.162.1 printed refusing an existing `CODEX_HOME` with no `config.toml`.
 
-Captured from a disposable home holding only a linked `auth.json`, during the
-write-through login. Recapture when the host's codex-cli changes that refusal.
+Captured from a disposable home holding one unrelated entry and no
+`config.toml`, during `codex plugin list`. The governing architecture decision
+states the recapture condition.
 """
 
 
@@ -3436,7 +3438,7 @@ def _install_claude_plugin(
     checkout: Path, environment: Mapping[str, str], scope: str
 ) -> None:
     """Install `spec-tree` at one scope from one checkout through the real CLI."""
-    result = subprocess.run(
+    result = _run_agent_process(
         (
             CLAUDE_EXECUTABLE,
             "plugin",
@@ -3446,10 +3448,7 @@ def _install_claude_plugin(
             scope,
         ),
         cwd=checkout,
-        env=dict(environment),
-        capture_output=True,
-        text=True,
-        check=False,
+        environment=environment,
     )
     if result.returncode != 0:
         raise RuntimeError(
@@ -4015,6 +4014,99 @@ def _required_binary(name: str) -> str:
     return executable
 
 
+class AgentProcess(Protocol):
+    """The process boundary every real-agent observation spawns its commands through."""
+
+    def __call__(
+        self,
+        argv: Sequence[str],
+        *,
+        cwd: Path,
+        environment: Mapping[str, str],
+    ) -> subprocess.CompletedProcess[str]: ...
+
+
+def _spawn_agent_process(
+    argv: Sequence[str],
+    *,
+    cwd: Path,
+    environment: Mapping[str, str],
+) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        tuple(argv),
+        cwd=cwd,
+        env=dict(environment),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+_AGENT_PROCESS: ContextVar[AgentProcess] = ContextVar(
+    "agent_process", default=_spawn_agent_process
+)
+
+
+def _run_agent_process(
+    argv: Sequence[str],
+    *,
+    cwd: Path,
+    environment: Mapping[str, str],
+) -> subprocess.CompletedProcess[str]:
+    return _AGENT_PROCESS.get()(argv, cwd=cwd, environment=environment)
+
+
+@dataclass(frozen=True)
+class FirstAgentProcess:
+    """The first agent command an observation spawned and the home it ran against."""
+
+    argv: tuple[str, ...]
+    home: Path
+    home_config: bytes | None
+
+
+class FirstAgentProcessReached(Exception):
+    """Raised by the recording process boundary in place of running the first command."""
+
+    def __init__(self, process: FirstAgentProcess) -> None:
+        super().__init__(process)
+        self.process = process
+
+
+def _stop_at_first_agent_process(
+    argv: Sequence[str],
+    *,
+    cwd: Path,
+    environment: Mapping[str, str],
+) -> subprocess.CompletedProcess[str]:
+    del cwd
+    home = Path(environment[CODEX_HOME_ENV])
+    raise FirstAgentProcessReached(
+        FirstAgentProcess(tuple(argv), home, codex_home_config(home))
+    )
+
+
+def home_config_at_first_agent_process(observe: Callable[[], object]) -> bytes | None:
+    """The `config.toml` the selected `CODEX_HOME` held when an observation first spawned an agent command.
+
+    Controlled under `/test` Stage 5 Observability: the recording boundary
+    replaces the real spawn, which would need credentials and network, with a
+    stop that carries the home's configuration at the moment the real command
+    would have started. Every observation spawns its commands through
+    `_run_agent_process`, so none can run a command against a home the
+    observation has not provisioned without the recorded configuration
+    showing it.
+    """
+    token = _AGENT_PROCESS.set(_stop_at_first_agent_process)
+    try:
+        observe()
+    except FirstAgentProcessReached as reached:
+        return reached.process.home_config
+    finally:
+        _AGENT_PROCESS.reset(token)
+    raise RuntimeError("the observation spawned no agent command")
+
+
 def _run_recipe(
     source_checkout: Path,
     mirror: Path,
@@ -4022,7 +4114,7 @@ def _run_recipe(
     environment: Mapping[str, str],
 ) -> subprocess.CompletedProcess[str]:
     _prepare_agent_state(environment)
-    return subprocess.run(
+    return _run_agent_process(
         (
             JUST_BINARY,
             "install-marketplace",
@@ -4033,10 +4125,7 @@ def _run_recipe(
             JSON_OUTPUT_OPTION,
         ),
         cwd=source_checkout,
-        env=dict(environment),
-        capture_output=True,
-        text=True,
-        check=False,
+        environment=environment,
     )
 
 
@@ -4045,7 +4134,7 @@ def _run_persistent_recipe(
     mirror: Path,
     environment: Mapping[str, str],
 ) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
+    return _run_agent_process(
         (
             JUST_BINARY,
             "install-marketplace",
@@ -4054,10 +4143,7 @@ def _run_persistent_recipe(
             JSON_OUTPUT_OPTION,
         ),
         cwd=source_checkout,
-        env=dict(environment),
-        capture_output=True,
-        text=True,
-        check=False,
+        environment=environment,
     )
 
 
@@ -4065,7 +4151,7 @@ def _register_persistent_claude_marketplace(
     checkout: Path,
     environment: Mapping[str, str],
 ) -> None:
-    result = subprocess.run(
+    result = _run_agent_process(
         (
             CLAUDE_EXECUTABLE,
             "plugin",
@@ -4076,10 +4162,7 @@ def _register_persistent_claude_marketplace(
             CLAUDE_PROJECT_SCOPE,
         ),
         cwd=checkout,
-        env=dict(environment),
-        capture_output=True,
-        text=True,
-        check=False,
+        environment=environment,
     )
     if result.returncode != 0:
         raise RuntimeError(
@@ -4092,7 +4175,7 @@ def _register_persistent_codex_marketplace(
     checkout: Path,
     environment: Mapping[str, str],
 ) -> None:
-    result = subprocess.run(
+    result = _run_agent_process(
         (
             CODEX_EXECUTABLE,
             "plugin",
@@ -4102,10 +4185,7 @@ def _register_persistent_codex_marketplace(
             "--json",
         ),
         cwd=checkout,
-        env=dict(environment),
-        capture_output=True,
-        text=True,
-        check=False,
+        environment=environment,
     )
     if result.returncode != 0:
         raise RuntimeError(
@@ -4146,13 +4226,10 @@ def _seed_persistent_plugins(
         for plugin in sorted(selections[Agent.CODEX])
     )
     for agent, argv in commands:
-        result = subprocess.run(
+        result = _run_agent_process(
             argv,
             cwd=checkout,
-            env=dict(environment),
-            capture_output=True,
-            text=True,
-            check=False,
+            environment=environment,
         )
         if result.returncode != 0:
             raise RuntimeError(
@@ -4171,13 +4248,10 @@ def _run_listing_unchecked(
         if agent is Agent.CLAUDE
         else codex_list_command(MARKETPLACE)
     )
-    result = subprocess.run(
+    result = _run_agent_process(
         argv,
         cwd=checkout,
-        env=dict(environment),
-        capture_output=True,
-        text=True,
-        check=False,
+        environment=environment,
     )
     return result
 
@@ -4200,13 +4274,10 @@ def _run_claude_marketplace_listing(
     checkout: Path,
     environment: Mapping[str, str],
 ) -> subprocess.CompletedProcess[str]:
-    result = subprocess.run(
+    result = _run_agent_process(
         CLAUDE_MARKETPLACE_LIST_COMMAND,
         cwd=checkout,
-        env=dict(environment),
-        capture_output=True,
-        text=True,
-        check=False,
+        environment=environment,
     )
     if result.returncode != 0:
         raise RuntimeError(
@@ -4219,13 +4290,10 @@ def _run_codex_marketplace_listing(
     checkout: Path,
     environment: Mapping[str, str],
 ) -> subprocess.CompletedProcess[str]:
-    result = subprocess.run(
+    result = _run_agent_process(
         CODEX_MARKETPLACE_LIST_COMMAND,
         cwd=checkout,
-        env=dict(environment),
-        capture_output=True,
-        text=True,
-        check=False,
+        environment=environment,
     )
     if result.returncode != 0:
         raise RuntimeError(
@@ -4261,34 +4329,36 @@ def _shipped_agent_snapshot(checkout: Path) -> tuple[tuple[str, bytes], ...]:
 
 _UNPUBLISHED_PLUGIN_STDERR_FIXTURES: Mapping[Agent, CapturedCliWording] = {
     Agent.CLAUDE: CapturedCliWording(
-        INSTALLATION_FIXTURES / "claude-code-plugin-install-unpublished.stderr.txt",
+        INSTALLATION_FIXTURES
+        / "claude-code-2.1.296-plugin-install-unpublished.stderr.txt",
         plugin="contribute",
         marketplace="outcomeeng",
     ),
     Agent.CODEX: CapturedCliWording(
-        INSTALLATION_FIXTURES / "codex-cli-plugin-add-unpublished.stderr.txt",
+        INSTALLATION_FIXTURES / "codex-cli-0.162.1-plugin-add-unpublished.stderr.txt",
         plugin="contribute",
         marketplace="outcomeeng",
     ),
 }
 """Each agent CLI's install failure against a registered source that had not published the plugin.
 
-Captured while adding the `contribute` plugin against a canonical marketplace
-that did not yet publish it; the CLI versions of that run were not recorded.
-The captures stay independent of the production fragment constant, so a
-drifted constant fails the linked tests. Recapture when either CLI rewords the
-failure.
+Captured by installing the unpublished `contribute` plugin from a registered
+marketplace that lists no plugin, with Claude Code 2.1.296 and codex-cli
+0.162.1, the releases each file name carries. The captures stay independent of
+the production fragment constant, so a drifted constant fails the linked
+tests. The governing architecture decision states the recapture condition.
 """
 
 _UNRECORDED_UPDATE_STDERR_FIXTURE = CapturedCliWording(
-    INSTALLATION_FIXTURES / "claude-code-2.1.285-plugin-update-unrecorded.stderr.txt",
+    INSTALLATION_FIXTURES / "claude-code-2.1.296-plugin-update-unrecorded.stderr.txt",
     plugin="spec-tree",
     marketplace="outcomeeng",
 )
-"""Claude Code 2.1.285 updating `spec-tree` in agent state holding no install record of it.
+"""Claude Code 2.1.296 updating `spec-tree` in agent state holding no install record of it.
 
 A real native update failure that names no unpublished plugin, independent of
-the pending classifier. Recapture when the host's Claude Code rewords it.
+the pending classifier. The governing architecture decision states the
+recapture condition.
 """
 
 
@@ -4435,14 +4505,15 @@ __all__ = [
     "CodexHomeCall",
     "CodexHomeContractObservation",
     "CodexHomeContractRunner",
-    "REAL_AGENT_CODEX_HOME_PROVISIONERS",
+    "FirstAgentProcess",
+    "FirstAgentProcessReached",
+    "home_config_at_first_agent_process",
     "CapturedCliWording",
     "captured_codex_home_refusal",
     "captured_non_pending_failure_wordings",
     "captured_unpublished_plugin_stderr",
     "codex_home_config",
     "observe_isolated_codex_home_contract",
-    "observe_real_agent_state_codex_home_config",
     "observe_verification_recipe",
 ]
 
@@ -4670,26 +4741,6 @@ def observe_isolated_codex_home_contract(
     return CodexHomeContractObservation(
         report=report, failure=None, codex_calls=tuple(runner.codex_calls)
     )
-
-
-def observe_real_agent_state_codex_home_config() -> bytes | None:
-    """The `config.toml` the real-agent agent state holds before its first Codex command.
-
-    Provisions the selected agent state the real-agent observations point
-    `CODEX_HOME` at and reads it without starting any Codex process.
-    """
-    with TemporaryDirectory() as temporary_directory:
-        environment = _persistent_environment(
-            Path(temporary_directory) / "selected-agent-state"
-        )
-        _prepare_agent_state(environment)
-        return codex_home_config(Path(environment[CODEX_HOME_ENV]))
-
-
-REAL_AGENT_CODEX_HOME_PROVISIONERS: Mapping[str, Callable[[], bytes | None]] = {
-    "real-agent-state": observe_real_agent_state_codex_home_config,
-}
-"""Every real-agent observation's Codex home provisioning, observed before its first command."""
 
 
 def absent_from_every_agent(names: frozenset[str]) -> Mapping[Agent, frozenset[str]]:
