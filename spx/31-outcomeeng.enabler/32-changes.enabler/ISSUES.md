@@ -149,29 +149,29 @@ Impact: a `filed` finding recorded once can reappear under a new key after an un
 
 Revisit and settlement condition: the runner builds the key from the unit and the rule alone, and a linked case asserts that one finding keeps its key when the list around it changes.
 
-## DEBT [property-quality]: the Sliced Parent criterion and the Framed Nodes criterion read as in tension
+## DEBT [property-quality]: the Sliced Parent criterion and the Framed Spec mutations criterion read as in tension
 
 Defect class: `property-quality`.
 
-Finding: [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) states Sliced as "the Framed Definition of Ready holds; and ... A Parent is Sliced when every child exists naming it in `parent` and its record carries neither `## Nodes` nor `## Assertion operations`", and Framed as "`## Nodes` names every affected or intended Node". The cumulative Framed criterion and the Parent's no-Nodes condition read as in tension unless an empty Node set satisfies the Framed criterion vacuously, and the PDR does not say so. Location: Definitions of Ready / Sliced, and Record table (Framed `## Nodes`).
+Finding: [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) states the Framed Definition of Ready as "`## Spec mutations` holds a block for each affected or intended Node" and "`## Governance mutations` holds a block for each amended or new record", and Sliced as "the Framed Definition of Ready holds" plus "a Parent is Sliced when every child exists naming it in `parent` and its record carries neither a Governance mutations nor a Spec mutations block". The Definitions of Ready are cumulative, so the Framed criterion and the Parent's no-block condition read as in tension unless a Parent has no affected or intended Node of its own, and the PDR does not say so. The `## Slice` criterion names a Leaf only, so a Parent's `## Slice` is likewise unstated. Location: `## Definitions of Ready` (Framed, Sliced) and `## Final format` (record-sections, change-type).
 
-Evidence: `spec-tree:pdr-auditor` launch 1 on [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) at commit `a4f46721c9e1d94beddb8295eba53ecfb496e0c1`, verdict `APPROVED`, rule `property-quality`, class `ambiguous-criterion`, severity `WARNING`. The audit judged it non-blocking because the vacuous reading is available and two reviewers could reach the same verdict.
+Evidence: the Framed and Sliced criteria and the `change-type` decision of the PDR above show the unstated reading. The original finding came from `spec-tree:pdr-auditor` launch 1 at commit `a4f46721c9e1d94beddb8295eba53ecfb496e0c1`, verdict `APPROVED`, rule `property-quality`, class `ambiguous-criterion`, severity `WARNING`, against an earlier form of the same criteria.
 
-Impact: a reviewer who reads the Framed criterion as requiring at least one named Node rejects a Sliced Parent the Sliced criterion admits.
+Impact: a reviewer who reads the Framed criterion as requiring at least one Spec mutations block rejects a Sliced Parent the Sliced criterion admits.
 
-Revisit and settlement condition: the PDR states that an empty Node set satisfies the Framed `## Nodes` criterion for a Parent, or states the Parent's Framed criterion apart from the Node-bearing one; one PDR audit then raises no `ambiguous-criterion` finding on the Sliced and Framed criteria.
+Revisit and settlement condition: the PDR states that a Parent has no Node of its own and satisfies the Framed `## Governance mutations` and `## Spec mutations` criteria with no block, or states the Parent's Framed criterion apart from the block-bearing one; one PDR audit then raises no `ambiguous-criterion` finding on the Framed and Sliced criteria.
 
-## DEBT [property-quality]: a top-level Parent with no Nodes is both a Parent and a root
+## DEBT [property-quality]: a top-level Parent has no stated close rule
 
 Defect class: `property-quality`.
 
-Finding: [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) uses "Parent" for a Change that others name in `parent` and for the target of a Change's `parent` field. It states "a Change with neither a Parent nor Nodes is a root", "A Parent that has a Parent closes `Applied` when every child has closed", and "A root closes `Applied` when the operator judges its Intent met". A top-level Parent with `parent: null` and no Nodes is therefore both a Parent and a root, and the PDR does not say which close rule governs it. Location: Record (type derivation) and Lifecycle (close rule).
+Finding: [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) derives a Change's type in `change-type` as Leaf (a Governance mutations or Spec mutations block), Parent (another Change names it in `parent`), or root (neither), so a Change with children is a Parent and never a root. `## Lifecycle` states the Parent close only for "a Parent that has a Parent", which closes `Applied` when every child has closed and its last child closed `Applied`, and states the root close as the operator's judgment of its Intent. A Parent with `parent: null` is covered by neither sentence. Location: `## Lifecycle` (close rule), with the `close-contract` and `parent-cascade-close` assertions of [`spx/31-outcomeeng.enabler/32-changes.enabler/changes.md`](spx/31-outcomeeng.enabler/32-changes.enabler/changes.md), which refuse `Applied` for a Parent while a child is open and cascade only to a Parent that has a Parent.
 
-Evidence: `spec-tree:pdr-auditor` launch 1 on [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) at commit `a4f46721c9e1d94beddb8295eba53ecfb496e0c1`, verdict `APPROVED`, rule `property-quality`, class `ambiguous-criterion`, severity `WARNING`.
+Evidence: the `change-type` decision and the close paragraph of `## Lifecycle` in the PDR above. The original finding came from `spec-tree:pdr-auditor` launch 1 at commit `a4f46721c9e1d94beddb8295eba53ecfb496e0c1`, verdict `APPROVED`, rule `property-quality`, class `ambiguous-criterion`, severity `WARNING`, against an earlier form of the same terms.
 
 Impact: two reviewers can apply different close rules to a top-level Parent, one closing it when its children have closed and one waiting for the operator's judgment of its Intent.
 
-Revisit and settlement condition: the PDR names the close rule that governs a Change with children and `parent: null`, or separates the term for a Change with children from the term for the target of `parent`; one PDR audit then raises no `ambiguous-criterion` finding on the type derivation and the close rule.
+Revisit and settlement condition: `## Lifecycle` names the close rule that governs a Parent with `parent: null`; one PDR audit then raises no `ambiguous-criterion` finding on the type derivation and the close rule.
 
 ## DEBT [consistency]: the path-rejected row of the audit-change runner contract omits count-limits
 
