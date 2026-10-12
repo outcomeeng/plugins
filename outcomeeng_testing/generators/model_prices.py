@@ -76,13 +76,57 @@ def copied_table_identifiers() -> frozenset[str]:
     return frozenset(_COPIED_TABLE_IDENTIFIERS)
 
 
-def price_table_copy_source() -> str:
-    """Return Python source holding a second price table built from generator-owned identifiers."""
+def _price_class_module() -> str:
+    return ModelPrice.__module__
+
+
+def _price_class_name() -> str:
+    return ModelPrice.__name__
+
+
+def _table_source(imports: str, constructor: str) -> str:
     rows = "\n".join(
-        f'    "{identifier}": {ModelPrice.__name__}(1, 1, 1, 1, 1),'
+        f'    "{identifier}": {constructor}(1, 1, 1, 1, 1),'
         for identifier in _COPIED_TABLE_IDENTIFIERS
     )
-    return f"PRICES = {{\n{rows}\n}}\n"
+    return f"{imports}\nPRICES = {{\n{rows}\n}}\n"
+
+
+_ALIAS: Final = "AliasedPriceConstructor"
+_MODULE_ALIAS: Final = "aliased_price_owner"
+
+
+def price_table_copy_sources() -> tuple[str, ...]:
+    """Return Python sources each holding a second price table built from generator-owned identifiers.
+
+    The sources reach the price class through each import binding that names
+    it: a direct import, an aliased import, an imported module's attribute, an
+    aliased module's attribute, a fully dotted module attribute, and an alias
+    assignment of a bound name.
+    """
+    module, name = _price_class_module(), _price_class_name()
+    package, _, leaf = module.rpartition(".")
+    return (
+        _table_source(f"from {module} import {name}", name),
+        _table_source(f"from {module} import {name} as {_ALIAS}", _ALIAS),
+        _table_source(f"from {package} import {leaf}", f"{leaf}.{name}"),
+        _table_source(
+            f"from {package} import {leaf} as {_MODULE_ALIAS}",
+            f"{_MODULE_ALIAS}.{name}",
+        ),
+        _table_source(f"import {module} as {_MODULE_ALIAS}", f"{_MODULE_ALIAS}.{name}"),
+        _table_source(f"import {module}", f"{module}.{name}"),
+        _table_source(
+            f"from {module} import {name} as Inner\n{_ALIAS} = Inner", _ALIAS
+        ),
+    )
+
+
+def unrelated_price_class_source() -> str:
+    """Return Python source constructing a same-named class that is not the price class."""
+    return _table_source(
+        f"from unrelated_owner import {_price_class_name()}", _price_class_name()
+    )
 
 
 def source_without_price_table() -> str:

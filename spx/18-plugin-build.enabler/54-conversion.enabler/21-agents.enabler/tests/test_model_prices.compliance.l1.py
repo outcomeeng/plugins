@@ -12,9 +12,10 @@ from outcomeeng.distribution.profiles import (
 )
 from outcomeeng_testing.generators.model_prices import (
     copied_table_identifiers,
-    price_table_copy_source,
+    price_table_copy_sources,
     priced_identifiers,
     source_without_price_table,
+    unrelated_price_class_source,
     unpriced_identifiers,
 )
 from outcomeeng_testing.harnesses.model_prices import (
@@ -49,12 +50,30 @@ def test_every_priced_identifier_is_named_once_in_the_configuration_owner() -> N
 
 
 def test_a_second_price_table_is_observed_in_any_source(tmp_path: Path) -> None:
-    violating = tmp_path / "violating.py"
-    violating.write_text(price_table_copy_source(), encoding="utf-8")
+    violating = []
+    for index, source in enumerate(price_table_copy_sources()):
+        path = tmp_path / f"violating_{index}.py"
+        path.write_text(source, encoding="utf-8")
+        violating.append(path)
     conforming = tmp_path / "conforming.py"
     conforming.write_text(source_without_price_table(), encoding="utf-8")
 
-    sites = observe_price_sites([violating, conforming], copied_table_identifiers())
+    for path in violating:
+        sites = observe_price_sites([path, conforming], copied_table_identifiers())
 
-    assert {site.path for site in sites} == {violating}
-    assert {site.identifier for site in sites} >= copied_table_identifiers()
+        assert {site.path for site in sites} == {path}
+        assert {site.identifier for site in sites} >= copied_table_identifiers()
+        assert [site for site in sites if site.identifier is None], path.read_text(
+            encoding="utf-8"
+        )
+
+
+def test_a_same_named_class_from_another_module_is_not_a_price_table(
+    tmp_path: Path,
+) -> None:
+    unrelated = tmp_path / "unrelated.py"
+    unrelated.write_text(unrelated_price_class_source(), encoding="utf-8")
+
+    sites = observe_price_sites([unrelated], frozenset())
+
+    assert sites == []
