@@ -1,0 +1,1246 @@
+"""Bounded local transcript accounting and advisory spending signals."""
+
+from __future__ import annotations
+
+
+import datetime as dt
+import hashlib
+import json
+import os
+import sqlite3
+import time
+from collections.abc import Callable, Mapping
+import dataclasses
+from dataclasses import dataclass
+from decimal import Decimal, InvalidOperation
+from enum import Enum, StrEnum
+from pathlib import Path
+from typing import Any, Final
+
+# Native transcript content and exported evidence are heterogeneous JSON boundaries.
+Json = dict[str, Any]
+UTC: Final = dt.timezone.utc
+SCHEMA_VERSION: Final = 1
+ALERT_ENV: Final = "SPX_USAGE_ALERT_USD"
+BUDGET_ENV: Final = "SPX_USAGE_WEEKLY_BUDGET_USD"
+RESET_ENV: Final = "SPX_USAGE_RESET_AT"
+DEFAULT_ALERT: Final = Decimal("20")
+DEFAULT_ROOT: Final = (
+    Path.home() / "Library/Application Support/Outcome Engineering/usage-control"
+)
+DEFAULT_PROJECTS: Final = Path.home() / ".claude/projects"
+WEEK: Final = dt.timedelta(days=7)
+QUARTER: Final = dt.timedelta(minutes=15)
+HOUR: Final = dt.timedelta(hours=1)
+FIELDS: Final = (
+    "input_tokens",
+    "cache_read_input_tokens",
+    "cache_creation_input_tokens",
+    "output_tokens",
+)
+TOKEN_KEYS: Final = ("uncached_input", "cache_read", "cache_write", "output")
+PRICE_SOURCE: Final = "https://platform.claude.com/docs/en/about-claude/pricing"
+PRICE_DATE: Final = "2026-10-09"
+PRICE_FILE: Final = "model-prices.json"
+PRICE_OVERRIDE_ENV: Final = "SPX_USAGE_PRICE_FILE"
+PRICE_DOCUMENT_KEY: Final = "prices"
+PRICE_CLASSES: Final = (
+    "input",
+    "cache_read",
+    "cache_write_5m",
+    "cache_write_1h",
+    "output",
+)
+MILLION: Final = Decimal(1_000_000)
+MAX_CHUNK: Final = 8 * 1024 * 1024
+MAX_BYTES: Final = 32 * 1024 * 1024
+MAX_LINE: Final = 2 * 1024 * 1024
+MAX_ENTRIES: Final = 20_000
+MAX_FILES: Final = 128
+MAX_SECONDS: Final = 30
+MAX_QUERY_ROWS: Final = 100_000
+MAX_GROUPS: Final = 2_000
+CONTEXT_SAMPLE_LIMIT: Final = 10
+CONTEXT_SAMPLE_DIVISOR: Final = 4
+MAX_GAPS: Final = 200
+MAX_REGISTERED_FILES: Final = 50_000
+MAX_REGISTERED_DIRECTORIES: Final = 10_000
+EXCERPT_CHARS: Final = 2_000
+MAX_BEHAVIOR: Final = 20_000
+RETENTION_DAYS: Final = 14
+ANCHOR_BYTES: Final = 256
+STATE_NAME: Final = "state.sqlite3"
+LOCK_NAME: Final = "worker.lock"
+
+
+SUBAGENT_DIRECTORY = "subagents"
+
+
+class CollectionGap(StrEnum):
+    COLLECTION_BOUND = "collection bound reached"
+    DISCOVERY_BOUND = "discovery bound reached"
+    DISCOVERY_INCOMPLETE = "incomplete directory discovery"
+    DISCOVERY_CAPACITY = "directory exceeds discovery capacity"
+
+
+class AccountingField(StrEnum):
+    """Wire fields consumed by the module's public evidence contract."""
+
+    API_EQUIVALENT_USD = "api_equivalent_usd"
+    BYTES_READ = "bytes_read"
+    CACHE_CREATION = "cache_creation"
+    CEILING_USD = "ceiling_usd"
+    CHILD = "child"
+    CHILD_REQUESTS = "child_requests"
+    CONTEXT_GROWTH_RATIO = "context_growth_ratio"
+    COST_GROWTH_RATIO = "cost_growth_ratio"
+    EARLY_CONTEXT_MEAN = "early_context_mean"
+    EARLY_COST_MEAN = "early_cost_mean"
+    END_EXCLUSIVE_UTC = "end_exclusive_utc"
+    EPHEMERAL_1H_INPUT_TOKENS = "ephemeral_1h_input_tokens"
+    EPHEMERAL_5M_INPUT_TOKENS = "ephemeral_5m_input_tokens"
+    EXCERPT = "excerpt"
+    GAPS = "gaps"
+    ID = "id"
+    IDENTITY = "identity"
+    KIND = "kind"
+    LATE_CONTEXT_MEAN = "late_context_mean"
+    LATE_COST_MEAN = "late_cost_mean"
+    MESSAGE = "message"
+    PARENT = "parent"
+    REQUESTS = "requests"
+    SESSIONID = "sessionId"
+    START_UTC = "start_utc"
+    SUBSCRIPTION_USAGE_CONVERSION = "subscription_usage_conversion"
+    TIMESTAMP = "timestamp"
+    TOKENS = "tokens"
+    USAGE = "usage"
+    UUID = "uuid"
+    SESSIONS = "sessions"
+    MODELS = "models"
+    WORKSPACES = "workspaces"
+    CONFIGURATION = "configuration"
+    RESET_PERIOD_START_UTC = "reset_period_start_utc"
+    RESET_PERIOD_END_UTC = "reset_period_end_utc"
+    EXPECTED_ELAPSED_SPEND_USD = "expected_elapsed_spend_usd"
+    CACHE_READ_SHARE = "cache_read_share"
+    CONTEXT_INPUT_TOKENS = "context_input_tokens"
+    MODEL = "model"
+    FIRST_UTC = "first_utc"
+    DURATION_SECONDS = "duration_seconds"
+    VERIFIED_OUTPUTS = "verified_outputs"
+    COST_COMPONENTS = "cost_components"
+    SHARE_MEASURED_COST = "share_measured_cost"
+    HISTORY_COMPLETE = "history_complete"
+    UNPRICED_REQUESTS = "unpriced_requests"
+
+
+class SignalKind(str, Enum):
+    ROLLING_THRESHOLD = "rolling_threshold"
+    WEEKLY_BUDGET = "weekly_budget"
+    WEEKLY_PACE = "weekly_pace"
+
+
+def iso(value: dt.datetime) -> str:
+    return (
+        value.astimezone(UTC).isoformat(timespec="microseconds").replace("+00:00", "Z")
+    )
+
+
+def timestamp(raw: str, field: str = "timestamp") -> dt.datetime:
+    try:
+        value = dt.datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError as error:
+        raise ValueError(
+            f"{field}: use an ISO 8601 timestamp with an explicit UTC offset; received {raw!r}"
+        ) from error
+    if value.tzinfo is None:
+        raise ValueError(f"{field}: timezone is required; use a timestamp ending in Z")
+    return value.astimezone(UTC)
+
+
+def money(raw: str, field: str) -> Decimal:
+    try:
+        value = Decimal(raw)
+    except InvalidOperation as error:
+        raise ValueError(
+            f"{field}: use a positive finite decimal; received {raw!r}"
+        ) from error
+    if not value.is_finite() or value <= 0:
+        raise ValueError(f"{field}: use a positive finite decimal; received {raw!r}")
+    return value
+
+
+@dataclass(frozen=True)
+class Price:
+    input: Decimal
+    read: Decimal
+    write5: Decimal
+    write1: Decimal
+    output: Decimal
+
+
+def rate(raw: object, field: str) -> Decimal:
+    try:
+        value = Decimal(raw) if isinstance(raw, str) else None
+    except InvalidOperation:
+        value = None
+    if value is None or not value.is_finite() or value < 0:
+        raise ValueError(
+            f"{field}: use a non-negative finite decimal string; received {raw!r}"
+        )
+    return value
+
+
+def price_table(path: Path, field: str) -> dict[str, Price]:
+    try:
+        document = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as error:
+        raise ValueError(f"{field}: unreadable price file {path}: {error}") from error
+    entries = document.get(PRICE_DOCUMENT_KEY) if isinstance(document, dict) else None
+    if not isinstance(entries, dict):
+        raise ValueError(
+            f"{field}: {PRICE_DOCUMENT_KEY}: supply an object keyed by model identifier"
+        )
+    table = {}
+    for model, rates in entries.items():
+        location = f"{field}: {PRICE_DOCUMENT_KEY}.{model}"
+        if not isinstance(rates, dict) or set(rates) != set(PRICE_CLASSES):
+            raise ValueError(
+                f"{location}: supply exactly the rates {', '.join(PRICE_CLASSES)}"
+            )
+        table[str(model)] = Price(
+            *(rate(rates[name], f"{location}.{name}") for name in PRICE_CLASSES)
+        )
+    return table
+
+
+def bundled_prices() -> dict[str, Price]:
+    return price_table(Path(__file__).with_name(PRICE_FILE), PRICE_FILE)
+
+
+@dataclass(frozen=True)
+class Config:
+    root: Path
+    projects: Path
+    reset: dt.datetime
+    alert: Decimal = DEFAULT_ALERT
+    weekly_budget: Decimal | None = None
+    price_file: Path | None = None
+    prices: Mapping[str, Price] = dataclasses.field(default_factory=bundled_prices)
+
+    def __post_init__(self) -> None:
+        if not self.root.is_absolute() or not self.projects.is_absolute():
+            raise ValueError("root and projects: use absolute resolved paths")
+        object.__setattr__(self, "root", self.root.resolve())
+        object.__setattr__(self, "projects", self.projects.resolve())
+        if self.root.is_relative_to(self.projects) or self.projects.is_relative_to(
+            self.root
+        ):
+            raise ValueError(
+                "root and projects: use disjoint state and transcript directories"
+            )
+        if self.reset.tzinfo is None or self.reset.utcoffset() != dt.timedelta(0):
+            raise ValueError(f"{RESET_ENV}: use an aware UTC reset timestamp")
+        money(str(self.alert), ALERT_ENV)
+        if self.weekly_budget is not None:
+            money(str(self.weekly_budget), BUDGET_ENV)
+
+    @classmethod
+    def from_environment(
+        cls, environment: Mapping[str, str], root: Path, projects: Path
+    ) -> Config:
+        raw = environment.get(RESET_ENV)
+        if not raw:
+            raise ValueError(
+                f"{RESET_ENV}: supply the UTC weekly reset timestamp, for example 2026-10-09T00:00:00Z"
+            )
+        reset = timestamp(raw, RESET_ENV)
+        if not raw.endswith("Z") and not raw.endswith("+00:00"):
+            raise ValueError(
+                f"{RESET_ENV}: use an explicit UTC timestamp ending in Z or +00:00"
+            )
+        budget = (
+            money(environment[BUDGET_ENV], BUDGET_ENV)
+            if BUDGET_ENV in environment
+            else None
+        )
+        root, projects = root.expanduser().resolve(), projects.expanduser().resolve()
+        if root.is_relative_to(projects) or projects.is_relative_to(root):
+            raise ValueError(
+                "root and projects: use disjoint state and transcript directories"
+            )
+        prices = bundled_prices()
+        raw_prices = environment.get(PRICE_OVERRIDE_ENV)
+        price_file = Path(raw_prices).expanduser().resolve() if raw_prices else None
+        if price_file is not None:
+            prices.update(price_table(price_file, PRICE_OVERRIDE_ENV))
+        return cls(
+            root,
+            projects,
+            reset,
+            money(environment.get(ALERT_ENV, str(DEFAULT_ALERT)), ALERT_ENV),
+            budget,
+            price_file,
+            prices,
+        )
+
+    def period(self, now: dt.datetime) -> tuple[dt.datetime, dt.datetime]:
+        if now < self.reset:
+            raise ValueError(
+                f"{RESET_ENV}: reset anchor {iso(self.reset)} is later than measurement end {iso(now)}; "
+                "choose an anchor at or before the measurement end"
+            )
+        start = self.reset + ((now - self.reset) // WEEK) * WEEK
+        return start, start + WEEK
+
+    def effective(self) -> Json:
+        return {
+            ALERT_ENV: str(self.alert),
+            BUDGET_ENV: str(self.weekly_budget) if self.weekly_budget else None,
+            RESET_ENV: iso(self.reset),
+            PRICE_OVERRIDE_ENV: str(self.price_file) if self.price_file else None,
+            "root": str(self.root),
+            "projects": str(self.projects),
+        }
+
+
+def encoded(value: object) -> str:
+    return json.dumps(value, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+
+
+def native(source: Path, row: Json) -> tuple[str, str, bool]:
+    child = source.parent.name == SUBAGENT_DIRECTORY
+    parent = (
+        source.parent.parent.name
+        if child
+        else str(row.get(AccountingField.SESSIONID) or source.stem)
+    )
+    return (source.stem if child else parent), parent, child
+
+
+def request(
+    row: Json, source: Path, prices: Mapping[str, Price]
+) -> tuple[Json | None, list[str]]:
+    if row.get("type") != "assistant":
+        return None, []
+    message = row.get(AccountingField.MESSAGE)
+    if not isinstance(message, dict) or not isinstance(
+        message.get(AccountingField.USAGE), dict
+    ):
+        return None, ["assistant usage absent"]
+    usage = message[AccountingField.USAGE]
+    if not row.get(AccountingField.TIMESTAMP) or not message.get(AccountingField.ID):
+        return None, ["assistant timestamp or message.id absent"]
+    stamp = timestamp(str(row[AccountingField.TIMESTAMP]))
+    session, parent, child = native(source, row)
+    gaps: list[str] = []
+    tokens: list[int] = []
+    for field in FIELDS:
+        value = usage.get(field)
+        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+            gaps.append(f"invalid or absent usage.{field}")
+            value = 0
+        tokens.append(value)
+    if not any(tokens):
+        return None, gaps
+    creation = usage.get(AccountingField.CACHE_CREATION)
+    write5 = (
+        creation.get(AccountingField.EPHEMERAL_5M_INPUT_TOKENS)
+        if isinstance(creation, dict)
+        else None
+    )
+    write1 = (
+        creation.get(AccountingField.EPHEMERAL_1H_INPUT_TOKENS)
+        if isinstance(creation, dict)
+        else None
+    )
+    ttl_known = (
+        isinstance(write5, int)
+        and not isinstance(write5, bool)
+        and write5 >= 0
+        and isinstance(write1, int)
+        and not isinstance(write1, bool)
+        and write1 >= 0
+        and write5 + write1 == tokens[2]
+    ) or tokens[2] == 0
+    if not ttl_known:
+        gaps.append(
+            "cache-write duration absent or inconsistent; estimate uses five-minute lower bound"
+        )
+        write5, write1 = tokens[2], 0
+    if tokens[2] == 0:
+        write5, write1 = 0, 0
+    model = str(message.get(AccountingField.MODEL) or "unknown")
+    speed = usage.get("speed", "standard")
+    tier = usage.get("service_tier", "standard")
+    priced = (
+        model in prices and speed in (None, "standard") and tier in (None, "standard")
+    )
+    if not priced:
+        gaps.append(
+            f"unsupported pricing for model {model} (speed {speed}, service tier {tier})"
+        )
+    identity = encoded([parent, session, message[AccountingField.ID]])
+    result = {
+        AccountingField.IDENTITY: identity,
+        "stamp": iso(stamp),
+        "session": session,
+        AccountingField.PARENT: parent,
+        AccountingField.CHILD: child,
+        AccountingField.MODEL: model,
+        "workspace": str(row.get("cwd") or "unknown"),
+        AccountingField.TOKENS: tokens,
+        "write5": write5,
+        "write1": write1,
+        "priced": priced,
+        "ttl_known": ttl_known,
+        "source": str(source),
+        AccountingField.UUID: str(row.get(AccountingField.UUID) or "unknown"),
+        AccountingField.GAPS: gaps,
+    }
+    return result, gaps
+
+
+def reconcile(old: Json, new: Json) -> Json:
+    # Native streaming snapshots carry cumulative usage, rather than deltas.
+    result = dict(new)
+    result["stamp"] = min(old["stamp"], new["stamp"])
+    result[AccountingField.TOKENS] = [
+        max(a, b)
+        for a, b in zip(
+            old[AccountingField.TOKENS], new[AccountingField.TOKENS], strict=True
+        )
+    ]
+    if old[AccountingField.TOKENS][2] > new[AccountingField.TOKENS][2]:
+        result["write5"], result["write1"], result["ttl_known"] = (
+            old["write5"],
+            old["write1"],
+            old["ttl_known"],
+        )
+    elif (
+        old[AccountingField.TOKENS][2] == new[AccountingField.TOKENS][2]
+        and old["ttl_known"]
+        and not new["ttl_known"]
+    ):
+        result["write5"], result["write1"], result["ttl_known"] = (
+            old["write5"],
+            old["write1"],
+            True,
+        )
+    result[AccountingField.GAPS] = sorted(
+        set(old[AccountingField.GAPS] + new[AccountingField.GAPS])
+    )
+    for field in FIELDS:
+        gap = f"invalid or absent usage.{field}"
+        if gap not in old[AccountingField.GAPS] or gap not in new[AccountingField.GAPS]:
+            result[AccountingField.GAPS] = [
+                item for item in result[AccountingField.GAPS] if item != gap
+            ]
+    if result["ttl_known"]:
+        result[AccountingField.GAPS] = [
+            item
+            for item in result[AccountingField.GAPS]
+            if not item.startswith("cache-write duration absent or inconsistent")
+        ]
+    if (
+        new[AccountingField.MODEL] == "unknown"
+        and old[AccountingField.MODEL] != "unknown"
+    ):
+        result[AccountingField.MODEL], result["priced"] = (
+            old[AccountingField.MODEL],
+            old["priced"],
+        )
+    if old[AccountingField.MODEL] != new[AccountingField.MODEL] and "unknown" not in (
+        old[AccountingField.MODEL],
+        new[AccountingField.MODEL],
+    ):
+        result["priced"] = False
+        result[AccountingField.GAPS].append(
+            "conflicting models for one native request; pricing unavailable"
+        )
+    if result["priced"]:
+        result[AccountingField.GAPS] = [
+            item
+            for item in result[AccountingField.GAPS]
+            if not item.startswith("unsupported pricing for model unknown (")
+        ]
+    return result
+
+
+def cost(value: Json, prices: Mapping[str, Price]) -> dict[str, Decimal] | None:
+    price = prices.get(value[AccountingField.MODEL])
+    if price is None or not value["priced"]:
+        return None
+    inputs, reads, _, outputs = value[AccountingField.TOKENS]
+    return dict(
+        zip(
+            TOKEN_KEYS,
+            (
+                Decimal(inputs) * price.input / MILLION,
+                Decimal(reads) * price.read / MILLION,
+                (
+                    Decimal(value["write5"]) * price.write5
+                    + Decimal(value["write1"]) * price.write1
+                )
+                / MILLION,
+                Decimal(outputs) * price.output / MILLION,
+            ),
+            strict=True,
+        )
+    )
+
+
+class Evidence:
+    def __init__(
+        self, config: Config, clock: Callable[[], float] = time.monotonic
+    ) -> None:
+        self.config = config
+        self.clock = clock
+        config.root.mkdir(parents=True, exist_ok=True)
+        if (config.root / STATE_NAME).is_symlink():
+            raise ValueError(
+                f"Managed state is symlinked: {config.root / STATE_NAME}; "
+                "inspect the link target or choose a separate --root"
+            )
+        self.db = sqlite3.connect(config.root / STATE_NAME, timeout=1)
+        self.db.row_factory = sqlite3.Row
+        self.db.execute("PRAGMA journal_mode=WAL")
+        self.db.execute("PRAGMA cache_size=-4096")
+        self.db.executescript("""
+        CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY,value TEXT);
+        CREATE TABLE IF NOT EXISTS directories(path TEXT PRIMARY KEY,cursor INTEGER,next_scan REAL);
+        CREATE TABLE IF NOT EXISTS files(path TEXT PRIMARY KEY,device INTEGER,inode INTEGER,offset INTEGER,
+          tail BLOB,anchor TEXT,discard INTEGER,last_visit REAL);
+        CREATE TABLE IF NOT EXISTS requests(identity TEXT PRIMARY KEY,stamp TEXT,session TEXT,parent TEXT,
+          model TEXT,workspace TEXT,payload TEXT);
+        CREATE INDEX IF NOT EXISTS requests_stamp ON requests(stamp);
+        CREATE TABLE IF NOT EXISTS behavior(identity TEXT PRIMARY KEY,stamp TEXT,session TEXT,parent TEXT,
+          kind TEXT,tool TEXT,signature TEXT,characters INTEGER,error INTEGER,payload TEXT);
+        CREATE INDEX IF NOT EXISTS behavior_stamp ON behavior(stamp);
+        CREATE TABLE IF NOT EXISTS signals(identity TEXT PRIMARY KEY,payload TEXT,stamp TEXT);
+        """)
+        with self.db:
+            self.db.execute(
+                "INSERT OR IGNORE INTO directories VALUES(?,0,0)",
+                (str(config.projects),),
+            )
+            schema = self.setting("schema_version")
+            if schema and schema != str(SCHEMA_VERSION):
+                raise ValueError(
+                    f"Unsupported state schema {schema}; choose a separate state root"
+                )
+            self.set_setting("schema_version", str(SCHEMA_VERSION))
+
+    def close(self) -> None:
+        self.db.close()
+
+    def __enter__(self) -> Evidence:
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        self.close()
+
+    def setting(self, key: str) -> str | None:
+        row = self.db.execute(
+            "SELECT value FROM settings WHERE key=?", (key,)
+        ).fetchone()
+        return str(row[0]) if row else None
+
+    def set_setting(self, key: str, value: str) -> None:
+        self.db.execute("INSERT OR REPLACE INTO settings VALUES(?,?)", (key, value))
+
+    def visit(self) -> int:
+        value = int(self.setting("visit_sequence") or "0") + 1
+        self.set_setting("visit_sequence", str(value))
+        return value
+
+    def remember_gap(self, gap: str) -> None:
+        remembered = json.loads(self.setting("ingestion_gaps") or "[]")
+        self.set_setting(
+            "ingestion_gaps", encoded(sorted(set(remembered + [gap]))[:MAX_GAPS])
+        )
+
+    def discover(self, deadline: float) -> list[str]:
+        gaps: list[str] = []
+        visited = 0
+        registered_files = int(
+            self.db.execute("SELECT COUNT(*) FROM files").fetchone()[0]
+        )
+        registered_directories = int(
+            self.db.execute("SELECT COUNT(*) FROM directories").fetchone()[0]
+        )
+        directories = self.db.execute(
+            "SELECT * FROM directories ORDER BY next_scan,path LIMIT ?", (MAX_FILES,)
+        ).fetchall()
+        for directory in directories:
+            if self.clock() >= deadline or visited >= MAX_ENTRIES:
+                gaps.append(
+                    CollectionGap.DISCOVERY_BOUND
+                    + "; unvisited directories resume next invocation"
+                )
+                break
+            cursor = int(directory["cursor"])
+            position = 0
+            complete = True
+            try:
+                with os.scandir(directory["path"]) as entries, self.db:
+                    for entry in entries:
+                        visited += 1
+                        position += 1
+                        if self.clock() >= deadline or visited >= MAX_ENTRIES:
+                            complete = False
+                            break
+                        if position <= cursor or entry.is_symlink():
+                            continue
+                        if entry.is_dir(follow_symlinks=False):
+                            if registered_directories >= MAX_REGISTERED_DIRECTORIES:
+                                gaps.append(
+                                    "directory registration bound reached; configure a narrower transcript root"
+                                )
+                            else:
+                                changed = self.db.execute(
+                                    "INSERT OR IGNORE INTO directories VALUES(?,0,0)",
+                                    (entry.path,),
+                                ).rowcount
+                                registered_directories += changed
+                        elif entry.is_file(
+                            follow_symlinks=False
+                        ) and entry.name.endswith(".jsonl"):
+                            if registered_files >= MAX_REGISTERED_FILES:
+                                gaps.append(
+                                    "file registration bound reached; configure a narrower transcript root"
+                                )
+                            else:
+                                st = entry.stat(follow_symlinks=False)
+                                changed = self.db.execute(
+                                    "INSERT OR IGNORE INTO files VALUES(?,?,?,?,?,?,0,0)",
+                                    (entry.path, st.st_dev, st.st_ino, 0, b"", ""),
+                                ).rowcount
+                                registered_files += changed
+                    self.db.execute(
+                        "UPDATE directories SET cursor=?,next_scan=? WHERE path=?",
+                        (
+                            0 if complete else max(cursor, position - 1),
+                            self.visit(),
+                            directory["path"],
+                        ),
+                    )
+                if not complete:
+                    gaps.append(
+                        f"{CollectionGap.DISCOVERY_INCOMPLETE}: {directory['path']}; directory cursor={position}"
+                    )
+                    if cursor >= MAX_ENTRIES - 1:
+                        gaps.append(
+                            f"{CollectionGap.DISCOVERY_CAPACITY}: {directory['path']}; configure a narrower transcript root"
+                        )
+            except OSError as error:
+                gaps.append(f"directory unavailable: {directory['path']}: {error}")
+                with self.db:
+                    self.db.execute(
+                        "UPDATE directories SET next_scan=? WHERE path=?",
+                        (self.visit(), directory["path"]),
+                    )
+        return gaps
+
+    def behavior(
+        self, row: Json, source: Path, stamp: str, session: str, parent: str
+    ) -> None:
+        message = row.get(AccountingField.MESSAGE)
+        content = message.get("content", []) if isinstance(message, dict) else []
+        blocks = (
+            content
+            if isinstance(content, list)
+            else [{"type": "text", "text": str(content)}]
+        )
+        if row.get("type") == "user" and any(
+            isinstance(block, dict) and block.get("type") == "text" for block in blocks
+        ):
+            identity = encoded(
+                [
+                    str(source),
+                    row.get(AccountingField.UUID)
+                    or hashlib.sha256(encoded(row).encode()).hexdigest(),
+                    "user_turn",
+                ]
+            )
+            self.db.execute(
+                "INSERT OR REPLACE INTO behavior VALUES(?,?,?,?,?,?,?,?,?,?)",
+                (
+                    identity,
+                    stamp,
+                    session,
+                    parent,
+                    "user_turn",
+                    "",
+                    "",
+                    0,
+                    0,
+                    encoded({AccountingField.KIND: "user_turn"}),
+                ),
+            )
+        for index, block in enumerate(blocks):
+            if not isinstance(block, dict) or block.get("type") not in (
+                "tool_use",
+                "tool_result",
+            ):
+                continue
+            kind = str(block["type"])
+            tool = str(block.get("name") or "unknown") if kind == "tool_use" else ""
+            raw = (
+                encoded(block.get("input", {}))
+                if kind == "tool_use"
+                else encoded(block.get("content", ""))
+            )
+            row_id = (
+                row.get(AccountingField.UUID)
+                or hashlib.sha256(encoded(row).encode()).hexdigest()
+            )
+            identity = encoded(
+                [
+                    str(source),
+                    row_id,
+                    block.get(AccountingField.ID) or block.get("tool_use_id"),
+                    kind,
+                    index,
+                ]
+            )
+            signature = (
+                hashlib.sha256(encoded([tool, block.get("input")]).encode()).hexdigest()
+                if kind == "tool_use"
+                else ""
+            )
+            payload = {
+                "source": str(source),
+                AccountingField.UUID: row.get(AccountingField.UUID),
+                "stamp": stamp,
+                "session": session,
+                AccountingField.PARENT: parent,
+                AccountingField.KIND: kind,
+                "tool": tool,
+                "tool_id": block.get(AccountingField.ID) or block.get("tool_use_id"),
+                AccountingField.EXCERPT: raw[:EXCERPT_CHARS],
+                "characters": len(raw),
+                "truncated": len(raw) > EXCERPT_CHARS,
+                "arguments": block.get("input")
+                if kind == "tool_use" and len(raw) <= EXCERPT_CHARS
+                else None,
+                "explicit_error": bool(block.get("is_error")),
+            }
+            self.db.execute(
+                "INSERT OR REPLACE INTO behavior VALUES(?,?,?,?,?,?,?,?,?,?)",
+                (
+                    identity,
+                    stamp,
+                    session,
+                    parent,
+                    kind,
+                    tool,
+                    signature,
+                    len(raw),
+                    int(bool(block.get("is_error"))),
+                    encoded(payload),
+                ),
+            )
+
+    def ingest(
+        self, row: Json, source: Path, lower: dt.datetime, end: dt.datetime
+    ) -> list[str]:
+        if not row.get(AccountingField.TIMESTAMP):
+            gaps = (
+                ["transcript timestamp absent"]
+                if row.get("type") in ("assistant", "user")
+                else []
+            )
+            for gap in gaps:
+                self.remember_gap(f"{source}: {gap}")
+            return gaps
+        parsed = timestamp(str(row[AccountingField.TIMESTAMP]))
+        if parsed < lower:
+            return []
+        session, parent, _ = native(source, row)
+        self.behavior(row, source, iso(parsed), session, parent)
+        value, gaps = request(row, source, self.config.prices)
+        if value is None:
+            for gap in gaps:
+                self.remember_gap(f"{source}: {gap}")
+            return gaps
+        if parsed > end:
+            gaps.append(
+                "future transcript timestamp retained; excluded from current measurement"
+            )
+        previous = self.db.execute(
+            "SELECT payload FROM requests WHERE identity=?",
+            (value[AccountingField.IDENTITY],),
+        ).fetchone()
+        if previous:
+            value = reconcile(json.loads(previous[0]), value)
+        self.db.execute(
+            "INSERT OR REPLACE INTO requests VALUES(?,?,?,?,?,?,?)",
+            (
+                value[AccountingField.IDENTITY],
+                value["stamp"],
+                session,
+                parent,
+                value[AccountingField.MODEL],
+                value["workspace"],
+                encoded(value),
+            ),
+        )
+        return gaps
+
+    def collect(self, end: dt.datetime) -> Json:
+        lower, _ = self.config.period(end)
+        deadline = self.clock() + MAX_SECONDS
+        gaps = self.discover(deadline)
+        read_bytes = rows = files = 0
+        if not self.config.projects.is_dir():
+            gaps.append(f"transcript root absent: {self.config.projects}")
+        targets = self.db.execute(
+            "SELECT * FROM files ORDER BY last_visit,path LIMIT ?", (MAX_FILES,)
+        ).fetchall()
+        for target in targets:
+            if self.clock() >= deadline or read_bytes >= MAX_BYTES:
+                gaps.append(
+                    CollectionGap.COLLECTION_BOUND
+                    + "; remaining file offsets resume next invocation"
+                )
+                break
+            path = Path(target["path"])
+            try:
+                if path.is_symlink() or not path.resolve().is_relative_to(
+                    self.config.projects
+                ):
+                    gaps.append(
+                        f"transcript outside configured root or symlinked: {path}"
+                    )
+                    continue
+                with path.open("rb") as stream:
+                    st = os.fstat(stream.fileno())
+                    offset, tail, discard = (
+                        int(target["offset"]),
+                        bytes(target["tail"]),
+                        bool(target["discard"]),
+                    )
+                    stream.seek(max(0, offset - ANCHOR_BYTES))
+                    anchor = (
+                        hashlib.sha256(
+                            stream.read(min(offset, ANCHOR_BYTES))
+                        ).hexdigest()
+                        if offset
+                        else ""
+                    )
+                    if (
+                        (st.st_dev, st.st_ino) != (target["device"], target["inode"])
+                        or st.st_size < offset
+                        or (offset and target["anchor"] != anchor)
+                    ):
+                        offset, tail, discard = 0, b"", False
+                        gaps.append(
+                            f"transcript rotated, truncated or changed before cursor: {path}; replay reconciles request identities"
+                        )
+                    stream.seek(offset)
+                    chunk = stream.read(min(MAX_CHUNK, MAX_BYTES - read_bytes))
+                    read_bytes += len(chunk)
+                    pieces = (tail + chunk).split(b"\n")
+                    pending = pieces.pop()
+                    consumed = 0
+                    with self.db:
+                        for line in pieces:
+                            if self.clock() >= deadline:
+                                gaps.append(
+                                    f"collection time bound reached: {path}; unprocessed bytes replay next invocation"
+                                )
+                                break
+                            consumed += len(line) + 1
+                            if discard:
+                                discard = False
+                                continue
+                            if not line.strip():
+                                continue
+                            if len(line) > MAX_LINE:
+                                gap = f"oversized transcript row skipped: {path}"
+                                gaps.append(gap)
+                                self.remember_gap(gap)
+                                continue
+                            try:
+                                row = json.loads(line)
+                                if not isinstance(row, dict):
+                                    raise ValueError("JSON row is not an object")
+                                gaps.extend(
+                                    f"{path}: {gap}"
+                                    for gap in self.ingest(row, path, lower, end)
+                                )
+                                rows += 1
+                            except (ValueError, TypeError, UnicodeError) as error:
+                                gap = f"invalid transcript row: {path}: {error}"
+                                gaps.append(gap)
+                                self.remember_gap(gap)
+                            if len(gaps) > MAX_GAPS:
+                                gaps = sorted(set(gaps))[:MAX_GAPS]
+                        if consumed < sum(len(piece) + 1 for piece in pieces):
+                            # Rewind to the first unprocessed row, preserving its initial fragment.
+                            offset += max(0, consumed - len(tail))
+                            pending = tail if consumed == 0 else b""
+                        else:
+                            offset += len(chunk)
+                        if len(pending) > MAX_LINE:
+                            pending, discard = b"", True
+                            gaps.append(
+                                f"oversized pending row discarded until its next newline: {path}"
+                            )
+                        stream.seek(max(0, offset - ANCHOR_BYTES))
+                        next_anchor = (
+                            hashlib.sha256(
+                                stream.read(min(offset, ANCHOR_BYTES))
+                            ).hexdigest()
+                            if offset
+                            else ""
+                        )
+                        self.db.execute(
+                            "UPDATE files SET device=?,inode=?,offset=?,tail=?,anchor=?,discard=?,last_visit=? WHERE path=?",
+                            (
+                                st.st_dev,
+                                st.st_ino,
+                                offset,
+                                pending,
+                                next_anchor,
+                                int(discard),
+                                self.visit(),
+                                str(path),
+                            ),
+                        )
+                        files += 1
+                    if st.st_size > offset:
+                        gaps.append(
+                            f"file import incomplete: {path}; offset {offset} of {st.st_size}"
+                        )
+            except OSError as error:
+                gaps.append(f"transcript unavailable: {path}: {error}")
+                with self.db:
+                    self.db.execute(
+                        "UPDATE files SET last_visit=? WHERE path=?",
+                        (self.visit(), str(path)),
+                    )
+        with self.db:
+            pending_directories = int(
+                self.db.execute(
+                    "SELECT COUNT(*) FROM directories WHERE next_scan=0 OR cursor>0"
+                ).fetchone()[0]
+            )
+            pending_files = int(
+                self.db.execute(
+                    "SELECT COUNT(*) FROM files WHERE last_visit=0 OR length(tail)>0 OR discard=1"
+                ).fetchone()[0]
+            )
+            if pending_directories or pending_files:
+                gaps.append(
+                    f"import pending: {pending_directories} directories and {pending_files} files or partial rows"
+                )
+            if (
+                len(targets) == MAX_FILES
+                and registered_total(self.db, "files") > MAX_FILES
+            ):
+                gaps.append(
+                    "file visit page bounded; changes in unvisited files remain unknown until a later invocation"
+                )
+            if registered_total(self.db, "directories") > MAX_FILES:
+                gaps.append(
+                    "directory visit page bounded; changes in unvisited directories remain unknown until a later invocation"
+                )
+            cutoff = iso(end - dt.timedelta(days=RETENTION_DAYS))
+            self.db.execute("DELETE FROM requests WHERE stamp<?", (cutoff,))
+            self.db.execute("DELETE FROM behavior WHERE stamp<?", (cutoff,))
+            self.db.execute("DELETE FROM signals WHERE stamp<?", (cutoff,))
+            self.db.execute(
+                "DELETE FROM behavior WHERE identity IN (SELECT identity FROM behavior ORDER BY stamp DESC LIMIT -1 OFFSET ?)",
+                (MAX_BEHAVIOR,),
+            )
+            removed_behavior = self.db.execute("SELECT changes()").fetchone()[0]
+            if removed_behavior:
+                self.set_setting(
+                    "behavior_retention_cutoff",
+                    str(
+                        self.db.execute("SELECT MIN(stamp) FROM behavior").fetchone()[0]
+                    ),
+                )
+            gaps.extend(json.loads(self.setting("ingestion_gaps") or "[]"))
+            result = {
+                "end_utc": iso(end),
+                "import_start_utc": iso(lower),
+                AccountingField.BYTES_READ: read_bytes,
+                "rows_read": rows,
+                "files_visited": files,
+                AccountingField.GAPS: sorted(set(gaps))[:MAX_GAPS],
+                AccountingField.HISTORY_COMPLETE: not gaps,
+                "bounds": {
+                    "bytes": MAX_BYTES,
+                    "files": MAX_FILES,
+                    "directory_entries": MAX_ENTRIES,
+                    "seconds": MAX_SECONDS,
+                    "row_bytes": MAX_LINE,
+                },
+            }
+            self.set_setting("collection", encoded(result))
+        return result
+
+    def measure(self, start: dt.datetime, end: dt.datetime) -> Json:
+        if start >= end:
+            raise ValueError("measurement window: start must precede end")
+        deadline = self.clock() + MAX_SECONDS
+        self.db.set_progress_handler(lambda: int(self.clock() >= deadline), 1_000)
+        try:
+            return self._measure(start, end)
+        finally:
+            self.db.set_progress_handler(None, 0)
+
+    def _measure(self, start: dt.datetime, end: dt.datetime) -> Json:
+        groups: dict[str, dict[str, Json]] = {
+            key: {} for key in ("sessions", "models", "workspaces", "roles")
+        }
+        result: Json = {
+            "schema_version": SCHEMA_VERSION,
+            AccountingField.START_UTC: iso(start),
+            AccountingField.END_EXCLUSIVE_UTC: iso(end),
+            AccountingField.REQUESTS: 0,
+            **dict.fromkeys(TOKEN_KEYS, 0),
+            AccountingField.API_EQUIVALENT_USD: 0.0,
+            AccountingField.COST_COMPONENTS: dict.fromkeys(TOKEN_KEYS, 0.0),
+            AccountingField.UNPRICED_REQUESTS: 0,
+            "pricing_assumption_requests": 0,
+            AccountingField.CHILD_REQUESTS: 0,
+            AccountingField.GAPS: [],
+            "pricing": {
+                "source": PRICE_SOURCE,
+                "effective_date": PRICE_DATE,
+                "basis": "standard first-party API list prices; unknown cache duration uses five-minute lower bound",
+            },
+            AccountingField.VERIFIED_OUTPUTS: [],
+            "attribution": "Transcript activity is measured; delivery, usefulness and exact skill/tool token costs are unknown.",
+        }
+        values = self.db.execute(
+            "SELECT payload FROM requests WHERE stamp>=? AND stamp<? ORDER BY stamp,identity LIMIT ?",
+            (iso(start), iso(end), MAX_QUERY_ROWS + 1),
+        )
+        gaps: set[str] = set()
+        for index, row in enumerate(values):
+            if index >= MAX_QUERY_ROWS:
+                gaps.add("measurement row bound reached; totals are partial")
+                break
+            value = json.loads(row[0])
+            components = cost(value, self.config.prices)
+            amount = sum(components.values(), Decimal(0)) if components else Decimal(0)
+            result[AccountingField.REQUESTS] += 1
+            result[AccountingField.UNPRICED_REQUESTS] += components is None
+            result["pricing_assumption_requests"] += not value["ttl_known"]
+            result[AccountingField.CHILD_REQUESTS] += bool(value[AccountingField.CHILD])
+            context = sum(value[AccountingField.TOKENS][:3])
+            for key, token in zip(
+                TOKEN_KEYS, value[AccountingField.TOKENS], strict=True
+            ):
+                result[key] += token
+                result[AccountingField.COST_COMPONENTS][key] += (
+                    float(components[key]) if components else 0.0
+                )
+            result[AccountingField.API_EQUIVALENT_USD] += float(amount)
+            gaps.update(value[AccountingField.GAPS])
+            for category, identity in (
+                ("sessions", value["session"]),
+                ("models", value[AccountingField.MODEL]),
+                ("workspaces", value["workspace"]),
+                (
+                    "roles",
+                    "native_child" if value[AccountingField.CHILD] else "native_parent",
+                ),
+            ):
+                if (
+                    identity not in groups[category]
+                    and len(groups[category]) >= MAX_GROUPS
+                ):
+                    identity = "other_groups_at_bound"
+                    gaps.add(f"{category} group bound reached")
+                group = groups[category].setdefault(
+                    identity,
+                    {
+                        AccountingField.REQUESTS: 0,
+                        **dict.fromkeys(TOKEN_KEYS, 0),
+                        AccountingField.API_EQUIVALENT_USD: 0.0,
+                        AccountingField.COST_COMPONENTS: dict.fromkeys(TOKEN_KEYS, 0.0),
+                        AccountingField.FIRST_UTC: value["stamp"],
+                        "last_utc": value["stamp"],
+                        AccountingField.MODEL: value[AccountingField.MODEL],
+                        AccountingField.PARENT: value[AccountingField.PARENT],
+                        AccountingField.CHILD: value[AccountingField.CHILD],
+                        "peak_context": 0,
+                        "context_sum": 0,
+                        "early_contexts": [],
+                        "late_contexts": [],
+                        "early_costs": [],
+                        "late_costs": [],
+                    },
+                )
+                group[AccountingField.REQUESTS] += 1
+                group["last_utc"] = value["stamp"]
+                group["peak_context"] = max(group["peak_context"], context)
+                group["context_sum"] += context
+                group[AccountingField.MODEL] = (
+                    value[AccountingField.MODEL]
+                    if group[AccountingField.MODEL] == value[AccountingField.MODEL]
+                    else "multiple"
+                )
+                for key, token in zip(
+                    TOKEN_KEYS, value[AccountingField.TOKENS], strict=True
+                ):
+                    group[key] += token
+                    group[AccountingField.COST_COMPONENTS][key] += (
+                        float(components[key]) if components else 0.0
+                    )
+                group[AccountingField.API_EQUIVALENT_USD] += float(amount)
+                if len(group["early_contexts"]) < CONTEXT_SAMPLE_LIMIT:
+                    group["early_contexts"].append(context)
+                    group["early_costs"].append(float(amount))
+                group["late_contexts"] = (group["late_contexts"] + [context])[
+                    -CONTEXT_SAMPLE_LIMIT:
+                ]
+                group["late_costs"] = (group["late_costs"] + [float(amount)])[
+                    -CONTEXT_SAMPLE_LIMIT:
+                ]
+        for category_groups in groups.values():
+            for group in category_groups.values():
+                size = min(
+                    CONTEXT_SAMPLE_LIMIT,
+                    max(1, group[AccountingField.REQUESTS] // CONTEXT_SAMPLE_DIVISOR),
+                )
+                early = sum(group.pop("early_contexts")[:size]) / size
+                late = sum(group.pop("late_contexts")[-size:]) / size
+                early_cost = sum(group.pop("early_costs")[:size]) / size
+                late_cost = sum(group.pop("late_costs")[-size:]) / size
+                group.update(
+                    {
+                        AccountingField.EARLY_CONTEXT_MEAN: early,
+                        AccountingField.LATE_CONTEXT_MEAN: late,
+                        AccountingField.CONTEXT_GROWTH_RATIO: late / early
+                        if early
+                        else None,
+                        AccountingField.EARLY_COST_MEAN: early_cost,
+                        AccountingField.LATE_COST_MEAN: late_cost,
+                        AccountingField.COST_GROWTH_RATIO: late_cost / early_cost
+                        if early_cost
+                        else None,
+                        "duration_seconds": (
+                            timestamp(group["last_utc"])
+                            - timestamp(group[AccountingField.FIRST_UTC])
+                        ).total_seconds(),
+                        "mean_context": group.pop("context_sum")
+                        / group[AccountingField.REQUESTS],
+                        "sample_turns": size,
+                        "marginal_cost_includes_unpriced_zero": bool(
+                            result[AccountingField.UNPRICED_REQUESTS]
+                        ),
+                        "share_measured_cost": group[AccountingField.API_EQUIVALENT_USD]
+                        / result[AccountingField.API_EQUIVALENT_USD]
+                        if result[AccountingField.API_EQUIVALENT_USD]
+                        else None,
+                    }
+                )
+        collection = json.loads(self.setting("collection") or "{}")
+        gaps.update(collection.get(AccountingField.GAPS, []))
+        behavior_cutoff = self.setting("behavior_retention_cutoff")
+        if behavior_cutoff and iso(start) < behavior_cutoff:
+            gaps.add("behavior evidence before retained-row cutoff is incomplete")
+        if not collection:
+            gaps.add("collection has not run")
+        lower = collection.get("import_start_utc")
+        if not lower or iso(start) < lower:
+            gaps.add("measurement starts before configured import coverage")
+        result.update(groups)
+        result[AccountingField.GAPS] = sorted(gaps)[:MAX_GAPS]
+        result["coverage"] = collection
+        total_input = sum(result[key] for key in TOKEN_KEYS[:3])
+        result[AccountingField.CACHE_READ_SHARE] = (
+            result["cache_read"] / total_input if total_input else None
+        )
+        result[AccountingField.CONTEXT_INPUT_TOKENS] = total_input
+        result[AccountingField.SUBSCRIPTION_USAGE_CONVERSION] = None
+        return result
+
+
+def registered_total(db: sqlite3.Connection, table: str) -> int:
+    if table not in ("files", "directories"):
+        raise ValueError("registered_total: supported tables are files and directories")
+    return int(db.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0])
+
+
+def signals(
+    config: Config, current: Json, weekly: Json, end: dt.datetime
+) -> list[Json]:
+    start, period_end = config.period(end)
+    budget = config.weekly_budget
+    expected = (
+        budget
+        * Decimal(str((end - start).total_seconds()))
+        / Decimal(str(WEEK.total_seconds()))
+        if budget
+        else None
+    )
+    candidates = [
+        (
+            SignalKind.ROLLING_THRESHOLD,
+            Decimal(str(current[AccountingField.API_EQUIVALENT_USD])),
+            config.alert,
+            current,
+        )
+    ]
+    if budget:
+        candidates.append(
+            (
+                SignalKind.WEEKLY_BUDGET,
+                Decimal(str(weekly[AccountingField.API_EQUIVALENT_USD])),
+                budget,
+                weekly,
+            )
+        )
+        if expected is not None and expected > 0:
+            candidates.append(
+                (
+                    SignalKind.WEEKLY_PACE,
+                    Decimal(str(weekly[AccountingField.API_EQUIVALENT_USD])),
+                    expected,
+                    weekly,
+                )
+            )
+    result = []
+    for kind, amount, ceiling, measurement in candidates:
+        if amount < ceiling:
+            continue
+        # Calendar bucket identifies one rolling occurrence; weekly signals identify one reset period.
+        occurrence = (
+            iso(end.replace(minute=end.minute // 15 * 15, second=0, microsecond=0))
+            if kind == SignalKind.ROLLING_THRESHOLD
+            else iso(start)
+        )
+        identity = hashlib.sha256(
+            encoded([kind, occurrence, config.effective()]).encode()
+        ).hexdigest()
+        result.append(
+            {
+                AccountingField.IDENTITY: identity,
+                AccountingField.KIND: kind,
+                "advisory": True,
+                AccountingField.API_EQUIVALENT_USD: str(amount),
+                AccountingField.CEILING_USD: str(ceiling),
+                AccountingField.START_UTC: measurement[AccountingField.START_UTC],
+                AccountingField.END_EXCLUSIVE_UTC: measurement[
+                    AccountingField.END_EXCLUSIVE_UTC
+                ],
+                AccountingField.RESET_PERIOD_START_UTC: iso(start),
+                AccountingField.RESET_PERIOD_END_UTC: iso(period_end),
+                AccountingField.EXPECTED_ELAPSED_SPEND_USD: str(expected)
+                if expected is not None
+                else None,
+                AccountingField.CONFIGURATION: config.effective(),
+                AccountingField.GAPS: measurement[AccountingField.GAPS],
+                AccountingField.SUBSCRIPTION_USAGE_CONVERSION: None,
+            }
+        )
+    return result

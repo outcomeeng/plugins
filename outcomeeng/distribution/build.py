@@ -44,6 +44,7 @@ from outcomeeng.distribution.profiles import (
     ProfileRegistry,
     ProfileSyntax,
     describe_profile,
+    model_price_render_variables,
     reject_configuration_overrides,
     render_profile_configuration,
     resolve_profile,
@@ -635,7 +636,8 @@ def _render_variables(
     """Return the Jinja render variables for a build target.
 
     Carries the build target name, the spx version floor, the diagnose
-    manifest values, and the artifact registry document. Each is sourced from
+    manifest values, the artifact registry document, and the model price
+    document. Each is sourced from
     its single source of truth so the value the build renders into shipped
     content cannot drift from the value the product enforces.
     """
@@ -644,6 +646,7 @@ def _render_variables(
         SPX_FLOOR_VARIABLE: REQUIRED_SPX_VERSION,
         **diagnose_manifest_render_variables(),
         **artifact_registry_render_variables(),
+        **model_price_render_variables(),
     }
     if plugin_name is not None:
         variables[PLUGIN_NAME_VARIABLE] = plugin_name

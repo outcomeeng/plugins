@@ -1,0 +1,32 @@
+{
+  "prices": {
+    "claude-opus-5-5": {
+      "input": "4",
+      "cache_read": "0.2",
+      "cache_write_5m": "5",
+      "cache_write_1h": "8",
+      "output": "20"
+    },
+    "claude-opus-4-6": {
+      "input": "5",
+      "cache_read": "0.5",
+      "cache_write_5m": "6.25",
+      "cache_write_1h": "10",
+      "output": "25"
+    },
+    "claude-sonnet-5-5": {
+      "input": "2",
+      "cache_read": "0.1",
+      "cache_write_5m": "2.5",
+      "cache_write_1h": "4",
+      "output": "10"
+    },
+    "claude-sonnet-4-6": {
+      "input": "3",
+      "cache_read": "0.3",
+      "cache_write_5m": "3.75",
+      "cache_write_1h": "6",
+      "output": "15"
+    }
+  }
+}

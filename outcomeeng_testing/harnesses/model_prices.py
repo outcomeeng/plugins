@@ -1,14 +1,20 @@
 """Observations of where Python sources hold model price entries."""
 
 import ast
+import json
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
 
+from outcomeeng.distribution.contracts import Target
 from outcomeeng.distribution.profiles import ModelPrice
+from outcomeeng_testing.harnesses.dist_tree import DistTreeReader
 
 REPOSITORY_ROOT: Final = Path(__file__).resolve().parents[2]
+PRICE_DATA_FILE: Final = Path(
+    "coding-agents/skills/control-token-spend/scripts/model-prices.json"
+)
 SOURCE_ROOTS: Final = (
     "outcomeeng",
     "outcomeeng_evals",
@@ -24,6 +30,12 @@ class PriceSite:
     path: Path
     line: int
     identifier: str | None
+
+
+def shipped_price_document(target: Target) -> object:
+    """Read the price data file the build renders beside the shipped skill scripts."""
+    path = DistTreeReader(REPOSITORY_ROOT).target_root(target) / PRICE_DATA_FILE
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def production_python_sources() -> Iterator[Path]:
