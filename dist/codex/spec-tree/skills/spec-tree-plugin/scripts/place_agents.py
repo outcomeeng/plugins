@@ -43,6 +43,7 @@ CAUSE_DIGEST_MISMATCH = "digest mismatch"
 CAUSE_CHANGED_AFTER_PREFLIGHT = "changed after preflight"
 NON_HEX_DIGEST = "is not a lowercase sha256 hex string"
 SYMLINKED_AGENT_DIRECTORY = "selected agent directory {path} must not be a symlink"
+HOME_ENV = "CODEX_HOME"
 HOME_FLAG = "--home"
 CHECKOUT_FLAG = "--checkout"
 CHECK_FLAG = "--check"
@@ -223,14 +224,16 @@ def main(
     parser = argparse.ArgumentParser(
         description=next(iter((__doc__ or "").strip().splitlines()), None)
     )
-    parser.add_argument(HOME_FLAG, type=Path, default=os.environ.get("CODEX_HOME"))
+    parser.add_argument(HOME_FLAG, type=Path, default=os.environ.get(HOME_ENV))
     parser.add_argument(CHECKOUT_FLAG, type=Path, default=Path.cwd())
     parser.add_argument(CHECK_FLAG, action="store_true")
     args = parser.parse_args(argv)
     if args.home is None:
-        parser.error("set CODEX_HOME or pass --home <absolute selected CODEX_HOME>")
+        parser.error(
+            f"set {HOME_ENV} or pass {HOME_FLAG} <absolute selected {HOME_ENV}>"
+        )
     if not args.home.is_absolute():
-        parser.error(f"CODEX_HOME/--home resolved to a relative path: {args.home}")
+        parser.error(f"{HOME_ENV}/{HOME_FLAG} resolved to a relative path: {args.home}")
     home = args.home.resolve()
     agents = home / AGENTS_DIRECTORY
     shipped = {path.name: path.read_bytes() for path in sorted(SHIPPED.glob("*.toml"))}
