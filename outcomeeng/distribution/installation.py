@@ -766,6 +766,8 @@ class InstallationPlan:
     """The Claude marketplace source the run refreshes from or registers, as reported."""
     claude_catalog: tuple[str, ...] = ()
     """Every plugin the committed Claude catalog carries; the rewrite's target ranges over it."""
+    codex_disabled: tuple[str, ...] = ()
+    """Codex plugins whose home activation the run declares disabled once installed."""
 
 
 @dataclass(frozen=True, order=True)
@@ -1439,6 +1441,7 @@ def build_persistent_installation_plan(
             None if declared_source is None else declared_source.source
         ),
         codex_bootstrap_source=codex_bootstrap_source,
+        codex_bootstrapping=codex_bootstrapping,
     )
     first_install = _first_install_warnings(
         plan,
@@ -1572,6 +1575,7 @@ def _build_plan(
     claude_catalog: tuple[str, ...] = (),
     claude_bootstrap_source: str | None = None,
     codex_bootstrap_source: str | None = None,
+    codex_bootstrapping: bool = False,
 ) -> InstallationPlan:
     selected_codex_agents = (
         generated_codex_agent_definitions(
@@ -1639,6 +1643,14 @@ def _build_plan(
         claude_clone=claude_clone,
         claude_source=claude_source,
         claude_catalog=claude_catalog,
+        codex_disabled=tuple(
+            command.plugin
+            for command in commands
+            if codex_bootstrapping
+            and command.agent is Agent.CODEX
+            and command.operation is Operation.PLUGIN_INSTALL
+            and command.plugin is not None
+        ),
     )
 
 
@@ -2650,6 +2662,7 @@ def execute_installation(
         result = _run_command(plan, command, runner, results, pending)
         if command.operation is Operation.MARKETPLACE_HEAD:
             head = result.stdout.strip() if result.exit_code == 0 else None
+    _declare_codex_activation_disabled(plan)
     target: MarketplaceTarget | None = None
     rewrites: tuple[RecordRewrite, ...] = ()
     rewrite_warnings: tuple[InstallationWarning, ...] = ()
@@ -2674,6 +2687,41 @@ def execute_installation(
         rewrite_warnings=rewrite_warnings,
         target=target,
     )
+
+
+def _declare_codex_activation_disabled(plan: InstallationPlan) -> None:
+    """Declare the bootstrapped Codex plugins disabled in the selected home.
+
+    The native install enables the plugin it installs and offers no command
+    that disables it, so the home's raw configuration is edited in place: the
+    plugin's `enabled` entry becomes false, every other line is untouched, and
+    the document is replaced atomically.
+    """
+    if not plan.codex_disabled:
+        return
+    config = plan.roots.codex_home / CODEX_HOME_CONFIG_PATH
+    lines = config.read_text(encoding="utf-8").splitlines() if config.exists() else []
+    for plugin in plan.codex_disabled:
+        header = f'[plugins."{marketplace_plugin_identifier(plugin, plan.roots.marketplace)}"]'
+        lines = _with_disabled_entry(lines, header)
+    _atomic_write(config, ("\n".join(lines) + "\n").encode("utf-8"))
+
+
+def _with_disabled_entry(lines: list[str], header: str) -> list[str]:
+    """The configuration lines with the table under `header` declaring `enabled = false`."""
+    if header not in lines:
+        return [
+            *lines,
+            *([""] if lines and lines[-1] else []),
+            header,
+            "enabled = false",
+        ]
+    start = lines.index(header) + 1
+    end = start
+    while end < len(lines) and not lines[end].lstrip().startswith("["):
+        end += 1
+    body = [line for line in lines[start:end] if not line.strip().startswith("enabled")]
+    return [*lines[:start], "enabled = false", *body, *lines[end:]]
 
 
 def _run_command(
