@@ -788,15 +788,15 @@ and the decision disagree (f-018).
 `_declare_codex_activation_disabled` and `_with_disabled_entry` in
 `outcomeeng/distribution/installation.py` edit the selected home's `config.toml`
 as raw lines: an exact-match header lookup, a table scan that ends at the first
-line starting with `[`, removal of every line starting with `enabled`, and an
+line starting with `[`, removal of every line whose key is `enabled`, and an
 unconditional rewrite. No linked test calls either function or asserts the
 resulting text; only the real-agent level-three bootstrap test exercises them,
 on the table form the Codex CLI writes, and the gate excludes that test unless an
 agent definition changes. Undecided cases: a present header with
 `enabled = true`, a header with a trailing comment or other quoting (the exact
 match fails and a second table of the same name is appended), a multi-line value
-whose continuation starts with `[`, a key such as `enabled_tools` dropped by the
-prefix filter, idempotence on rerun, and preservation of unrelated lines. A
+whose continuation starts with `[`, a key such as `enabled_tools` that shares the
+`enabled` prefix, idempotence on rerun, and preservation of unrelated lines. A
 malformed result lands in the operator's home with no post-write parse check.
 
 **Evidence**: local review run `2026-10-12_18-31-36-098-22fdb52fc67f`, finding
