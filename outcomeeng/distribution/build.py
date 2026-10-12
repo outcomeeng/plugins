@@ -35,6 +35,8 @@ from jinja2.runtime import Context
 from outcomeeng.distribution.agents import (
     AGENT_TARGETS_FIELD,
     AGENT_TOOLS_FIELD,
+    FLAT_AGENT_PLUGIN_SEPARATOR,
+    NATIVE_AGENT_PLUGIN_SEPARATOR,
     convert_agent_markdown,
     parse_agent_text,
 )
@@ -59,8 +61,6 @@ from outcomeeng.distribution.contracts import (
     BUILD_TARGET_VARIABLE,
     BUILD_VARIABLE_DELIMITER_END,
     BUILD_VARIABLE_DELIMITER_START,
-    FLAT_AGENT_PLUGIN_SEPARATOR,
-    NATIVE_AGENT_PLUGIN_SEPARATOR,
     PLUGIN_NAME_VARIABLE,
     PLUGINS_DIR_NAME,
     PLUGIN_SUBDIRS,

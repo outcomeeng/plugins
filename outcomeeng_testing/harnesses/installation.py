@@ -28,13 +28,13 @@ from outcomeeng.distribution.agents import (
     AGENT_SKILL_ENABLED_FIELD,
     AGENT_SKILLS_CONFIG_FIELD,
     AGENT_SKILLS_FIELD,
+    NATIVE_AGENT_PLUGIN_SEPARATOR,
 )
 from outcomeeng.distribution.build import agent_capability, agent_slug, render_text
 from outcomeeng.distribution.contracts import (
     BUILD_TARGET_VARIABLE,
     CLAUDE_DIST_RELATIVE,
     DIST_CODEX_PLUGINS_DIR,
-    NATIVE_AGENT_PLUGIN_SEPARATOR,
     PLUGIN_NAME_VARIABLE,
     Target,
 )

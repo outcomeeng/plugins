@@ -6,7 +6,10 @@ import tomllib
 from collections import Counter
 
 from outcomeeng_testing.harnesses.agent_conversion import authored_agent_targets
-from outcomeeng.distribution.agents import AGENT_TARGETS_FIELD
+from outcomeeng.distribution.agents import (
+    AGENT_TARGETS_FIELD,
+    FLAT_AGENT_PLUGIN_SEPARATOR,
+)
 from outcomeeng.distribution.build import (
     AGENT_CAPABILITY_REGISTRY,
     CLAUDE_SKILL_DIR_TOKEN,
@@ -25,7 +28,6 @@ from outcomeeng.distribution.build import (
 )
 from outcomeeng.distribution.contracts import (
     AGENTS_SUBDIR_NAME,
-    FLAT_AGENT_PLUGIN_SEPARATOR,
     MARKDOWN_FILE_SUFFIX,
     SKILLS_SUBDIR_NAME,
     Target,

@@ -5,7 +5,11 @@ from __future__ import annotations
 import tomllib
 from pathlib import Path
 
-from outcomeeng.distribution.agents import AGENT_NAME_FIELD
+from outcomeeng.distribution.agents import (
+    AGENT_NAME_FIELD,
+    FLAT_AGENT_PLUGIN_SEPARATOR,
+    NATIVE_AGENT_PLUGIN_SEPARATOR,
+)
 from outcomeeng_testing.harnesses.agent_conversion import agent_document_oracle
 from outcomeeng.distribution.build import (
     LIFECYCLE_TEMPLATE_NAME,
@@ -15,8 +19,6 @@ from outcomeeng.distribution.build import (
 )
 from outcomeeng.distribution.contracts import (
     AGENTS_SUBDIR_NAME,
-    FLAT_AGENT_PLUGIN_SEPARATOR,
-    NATIVE_AGENT_PLUGIN_SEPARATOR,
     SKILLS_SUBDIR_NAME,
     Target,
 )

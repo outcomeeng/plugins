@@ -20,12 +20,12 @@ from outcomeeng.distribution.agents import (
     AGENT_NAME_FIELD,
     AGENT_SKILLS_CONFIG_FIELD,
     AGENT_SKILLS_FIELD,
+    FLAT_AGENT_PLUGIN_SEPARATOR,
+    NATIVE_AGENT_PLUGIN_SEPARATOR,
 )
 from outcomeeng.distribution.contracts import (
     AGENTS_SUBDIR_NAME,
     DIST_DIR_NAME,
-    FLAT_AGENT_PLUGIN_SEPARATOR,
-    NATIVE_AGENT_PLUGIN_SEPARATOR,
     SKILLS_SUBDIR_NAME,
 )
 

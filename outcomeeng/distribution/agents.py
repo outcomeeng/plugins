@@ -26,6 +26,10 @@ from outcomeeng.distribution.profiles import (
     resolve_profile,
 )
 
+FLAT_AGENT_PLUGIN_SEPARATOR: Final = "_"
+"""Joins a plugin slug to an agent name where the target namespaces agents flatly."""
+NATIVE_AGENT_PLUGIN_SEPARATOR: Final = ":"
+"""Joins a plugin slug to a name inside the plugin's native namespace."""
 AGENT_NAME_FIELD: Final = "name"
 AGENT_DESCRIPTION_FIELD: Final = "description"
 AGENT_SKILL_ENABLED_FIELD: Final = "enabled"
