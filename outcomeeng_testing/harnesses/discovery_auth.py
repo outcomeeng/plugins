@@ -18,10 +18,10 @@ from typing import Protocol
 from uuid import uuid4
 
 from outcomeeng.distribution.installation import (
-    CODEX_CONFIG_PATH,
     CODEX_EXECUTABLE,
     CODEX_HOME_ENV,
     HOME_ENV,
+    provision_codex_home,
 )
 from outcomeeng.validation.ci_gate import (
     CODEX_API_KEY_ENVIRONMENT,
@@ -67,6 +67,10 @@ SAVED_LOGIN_TOKEN_FIELDS: tuple[str, ...] = (
     SAVED_LOGIN_ACCOUNT_FIELD,
 )
 """Every token-set field a usable ChatGPT saved login carries."""
+WRITE_THROUGH_UNSUPPORTED_DIAGNOSTIC = "The CLI credential writer cannot preserve the saved-login link; subscription discovery is unsupported by this CLI."
+"""The preflight's diagnostic for a CLI whose credential writer replaces a linked saved login."""
+WRITE_THROUGH_REFUSED_DIAGNOSTIC = "The CLI refused the write-through preflight login"
+"""The preflight's diagnostic prefix for a login the CLI refused; the CLI's own stderr follows."""
 FILE_STORE_ARGS = ("-c", 'cli_auth_credentials_store="file"')
 DISCOVERY_TIMEOUT_SECONDS = 600
 LOCK_RETRY_SECONDS = 0.05
@@ -90,12 +94,6 @@ class AuthenticationMode(StrEnum):
 
 class DiscoveryAuthenticationError(RuntimeError):
     """The selected authentication mechanism cannot safely run discovery."""
-
-
-def provision_disposable_codex_home(home: Path) -> None:
-    """Create native home configuration without declaring any plugin selection."""
-    home.mkdir(parents=True, exist_ok=True)
-    (home / CODEX_CONFIG_PATH.name).touch(exist_ok=True)
 
 
 class ProbeRunner(Protocol):
@@ -361,7 +359,7 @@ class DiscoveryAuthentication:
             root = Path(directory).resolve()
             owner = root / "owner.json"
             consumer = root / "consumer"
-            provision_disposable_codex_home(consumer)
+            provision_codex_home(consumer)
             owner.write_text("{}", encoding="utf-8")
             owner.chmod(0o600)
             identity = owner.stat()
@@ -380,19 +378,20 @@ class DiscoveryAuthentication:
                 env={**env, CODEX_HOME_ENV: str(consumer)},
                 input_text=fabricated,
             )
+            if result.returncode != 0:
+                raise DiscoveryAuthenticationError(
+                    f"{WRITE_THROUGH_REFUSED_DIAGNOSTIC} ({result.returncode}): {result.stderr}"
+                )
             document = self.redactor.read_document(owner)
             after = owner.stat()
             if (
-                result.returncode != 0
-                or not link.is_symlink()
+                not link.is_symlink()
                 or link.resolve() != owner
                 or (identity.st_dev, identity.st_ino) != (after.st_dev, after.st_ino)
                 or not isinstance(document, dict)
                 or document.get(SAVED_LOGIN_API_KEY_FIELD) != fabricated
             ):
-                raise DiscoveryAuthenticationError(
-                    "The CLI credential writer cannot preserve the saved-login link; subscription discovery is unsupported by this CLI."
-                )
+                raise DiscoveryAuthenticationError(WRITE_THROUGH_UNSUPPORTED_DIAGNOSTIC)
 
     @contextmanager
     def authenticated_home(
@@ -402,7 +401,7 @@ class DiscoveryAuthentication:
         cwd: Path,
         env: Mapping[str, str],
     ) -> Iterator[subprocess.CompletedProcess[str]]:
-        provision_disposable_codex_home(home)
+        provision_codex_home(home)
         self.credential_files.add(home / AUTH_FILENAME)
         if self.selection.mode is not AuthenticationMode.SUBSCRIPTION:
             flag = (
