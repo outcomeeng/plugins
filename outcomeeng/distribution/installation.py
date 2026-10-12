@@ -160,6 +160,9 @@ CLAUDE_ENABLED_PLUGINS_FIELD = "enabledPlugins"
 CODEX_PLUGIN_ENTRIES_FIELD = "installed"
 CODEX_PLUGIN_ID_FIELD = "pluginId"
 CODEX_PLUGIN_ENABLED_FIELD = "enabled"
+TOML_KEY_VALUE_SEPARATOR = "="
+CODEX_DISABLED_ENTRY = f"{CODEX_PLUGIN_ENABLED_FIELD} {TOML_KEY_VALUE_SEPARATOR} false"
+"""The raw configuration line declaring a Codex plugin's home activation disabled."""
 CODEX_PLUGIN_MARKETPLACE_FIELD = "marketplaceName"
 SPEC_TREE_PLUGIN = "spec-tree"
 STDERR_WARNING_PREFIX = "warning: "
@@ -2714,14 +2717,19 @@ def _with_disabled_entry(lines: list[str], header: str) -> list[str]:
             *lines,
             *([""] if lines and lines[-1] else []),
             header,
-            "enabled = false",
+            CODEX_DISABLED_ENTRY,
         ]
     start = lines.index(header) + 1
     end = start
     while end < len(lines) and not lines[end].lstrip().startswith("["):
         end += 1
-    body = [line for line in lines[start:end] if not line.strip().startswith("enabled")]
-    return [*lines[:start], "enabled = false", *body, *lines[end:]]
+    body = [
+        line
+        for line in lines[start:end]
+        if line.partition(TOML_KEY_VALUE_SEPARATOR)[0].strip()
+        != CODEX_PLUGIN_ENABLED_FIELD
+    ]
+    return [*lines[:start], CODEX_DISABLED_ENTRY, *body, *lines[end:]]
 
 
 def _run_command(
