@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.12.3
+
+### Changed
+
+- **`/orchestrate-change` Check sends no input into a question or approval screen and stops a released Executor's idle session.** A pane whose Executor session waits at a question or approval screen receives no prompt and no keystroke, whether the screen shows on Check's read or arrives as an `agent-blocked` end of its wait; Check sends the principal one message record that quotes the screen verbatim, once per screen under the correlation `change-<N>-screen`, and returns `checked`. When a released Change's Handoff attributes the release to anything other than the session itself ending, stalling or running out of context, Check stops the idle session through `/operate-herdr` once the worktree status shows no running Executor work; a released session found at a question or approval screen is reported, not stopped; the pane stays at its shell and the worktree and its ignored drafts stay in place; Check also reads the pane before it stops a stalled session for relaunch or collects a terminal Change's pane, and reports a screen it finds instead of stopping; a released session an earlier Check already stopped is left alone, with nothing stopped, relaunched or sent, and Check returns `checked`. Before this change, Check reprompted a pane at an approval screen and left a released session idling.
+
 ## 0.12.2
 
 ### Changed
