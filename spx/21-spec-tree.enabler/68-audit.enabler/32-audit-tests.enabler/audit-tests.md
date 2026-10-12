@@ -52,7 +52,7 @@ Mocking severs coupling. A test that imports a module then replaces it with a mo
 
 ## Coverage Verification
 
-The Auditor establishes coverage by reading, never by running coverage tooling. A dispatched agentic audit runs no deterministic verification — the caller brings the project's tests and coverage gate to passing on the changeset before dispatch, and CI re-runs them over the whole repository, per [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md) and [`spx/21-spec-tree.enabler/17-audit.adr.md`](spx/21-spec-tree.enabler/17-audit.adr.md). Re-running the project's coverage command inside the audit re-pays a cost already paid and is the duplication that rule prohibits.
+The Auditor establishes coverage by reading, never by running coverage tooling. A dispatched agentic audit runs no deterministic verification — the caller brings the project's tests and coverage gate to passing on the changeset before dispatch, and CI re-runs them over the CI scope, per [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md) and [`spx/21-spec-tree.enabler/17-audit.adr.md`](spx/21-spec-tree.enabler/17-audit.adr.md). Re-running the project's coverage command inside the audit re-pays a cost already paid and is the duplication that rule prohibits.
 
 The Auditor traces, by reading, whether the test drives execution into the assertion-relevant code path:
 
