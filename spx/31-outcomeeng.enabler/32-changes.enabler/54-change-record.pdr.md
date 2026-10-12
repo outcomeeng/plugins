@@ -12,7 +12,7 @@ Every Change begins with YAML front matter containing exactly these required key
 | `product`      | The one Product that owns the Change; a root whose work spans Products carries none.                                                                                                                                                                                              |
 | `maturity`     | Exactly one of `Proposed`, `Framed`, `Sliced`, or `Executable`.                                                                                                                                                                                                                   |
 | `lifecycle`    | Exactly one of `Available`, `Claimed`, `Submitted`, `Applied`, or `Abandoned`; Lifecycle changes independently of Maturity.                                                                                                                                                       |
-| `refined_from` | The append-only list of Change identities this Change absorbed by a merge; a Change that absorbed none carries `[]`.                                                                                                                                                              |
+| `predecessors` | The append-only list of Change identities this Change absorbed by a merge; a Change that absorbed none carries `[]`.                                                                                                                                                              |
 | `blocked_by`   | The mutable list of Change identities that must close `Applied`, or resolve through the Change that absorbed them, before this Change is unblocked; a blocker closed `Abandoned` that no Change absorbed returns this Change to refinement, and an unblocked Change carries `[]`. |
 | `parent`       | The canonical identity of the Parent Change in the same store; a Change with no Parent carries `null`.                                                                                                                                                                            |
 
@@ -39,6 +39,7 @@ The body carries no attestation, accountable-person, priority, or overrule text;
 - record-spec-mutations: `## Spec mutations` holds one block for each Node in execution order. The block opens with `<path>: <malleability before> -> <malleability after>`, followed from Executable on by `, <required state>`: the state the Change leaves the Node in, or for a removed or folded Node the words of its malleability after. The block continues with `<file> states:` and the Node's assertions as bare bullets.
 - record-slice: `## Slice` holds `- Repository:` and `- Check:`, one repository and one observable check, which is one trigger and its result.
 - record-artifacts: `## Artifacts` links the audited content of each record and Node the Change adds or modifies, each link pinned to the commit that holds the content, and is empty before the first round.
+- draft-predecessors: The local draft names the Changes this Change absorbed by a merge in the key `predecessors`, and the store field `Predecessors` holds the same value.
 - change-type: A Change whose record carries a Governance mutations or Spec mutations block is a Leaf, a Change that another Change names in `parent` is a Parent, and a Change with neither is a root.
 - parent-product: A Change carries the Product that owns its Output, and a Parent and its children may carry different Products.
 - execution-order: Execution takes the Governance mutations blocks, then the Spec mutations blocks, each in record order. The merge composition for the Node's malleability after, and the decision-record audit of a record, select each block's results and Verifiers.
@@ -55,7 +56,7 @@ The Proposed Definition of Ready is:
 
 - all seven front-matter fields satisfy the record contract, and the body opens with `## Intent`;
 - `title`, `product`, `maturity`, and `lifecycle` identify one intended Output, one owning Product, `Proposed` Maturity, and a valid Lifecycle;
-- `refined_from` is `[]` or the complete append-only set of Changes this Change absorbed, `parent` is `null` or the Parent's identity, and `blocked_by` names every known blocker;
+- `predecessors` is `[]` or the complete append-only set of Changes this Change absorbed, `parent` is `null` or the Parent's identity, and `blocked_by` names every known blocker;
 - the Intent states What, Why, and Evidence, with Observation present only where an observation gives rise to the Change; and
 - every known question that can change the intended Output stands under `Open questions`.
 
@@ -106,7 +107,7 @@ A confirmation acts for the Product's Maintainer on a `Submitted` Change only, a
 
 A close requires its terminal precondition from current state, not from the holder's account. A Leaf's `Applied` follows the decision applied-leaf of `## Final format`; a merged pull request alone is not `Applied`. A Parent that has a Parent closes `Applied` when every child has closed and its last child closed `Applied`. A root closes `Applied` when the operator judges its Intent met, and `Abandoned` when the operator drops it. `Abandoned` requires the operator's explicit direction and records the operator's stated reason. The close writes the terminal record, removes the holder, writes the terminal Lifecycle, and closes the record with the matching reason. A terminal Change receives no Handoff and never returns to `Available`.
 
-A split creates children that name the source in `parent`, and the source drops its Governance mutations and Spec mutations blocks. A merge closes the absorbed Change `Abandoned` and adds it to the survivor's `refined_from`. A reframe edits the Change in place and lowers its Maturity to `Proposed`. Execution begins only on a Claimed, Executable Leaf whose every predecessor is closed and whose blockers are resolved.
+A split creates children that name the source in `parent`, and the source drops its Governance mutations and Spec mutations blocks. A merge closes the absorbed Change `Abandoned` and adds it to the survivor's `predecessors`. A reframe edits the Change in place and lowers its Maturity to `Proposed`. Execution begins only on a Claimed, Executable Leaf whose every predecessor is closed and whose blockers are resolved.
 
 Every transition is an ordered write with a complete readback: each write lands in its declared order, the transition reads Product, Maturity, Lifecycle, the holder, and the newest Claim, Handoff, confirmation or rejection comment, or terminal record back from the store, and it completes only when every value equals the intended state. When a write fails or a readback differs, the transition stops before every later mutation and reports the completed writes in order, the failed operation, and the observed state; no later write is guessed to make a partial transition look complete.
 
@@ -122,7 +123,7 @@ In the GitHub store the homes are:
 | `product`      | The organization issue field `Product`                                                                                                                                                   |
 | `maturity`     | The organization issue field `Maturity`                                                                                                                                                  |
 | `lifecycle`    | The organization issue field `Lifecycle`                                                                                                                                                 |
-| `refined_from` | The organization text issue field `Predecessors`: the canonical identities, such as `outcomeeng/changes#17`, separated by a comma and one space, and empty when the Change absorbed none |
+| `predecessors` | The organization text issue field `Predecessors`: the canonical identities, such as `outcomeeng/changes#17`, separated by a comma and one space, and empty when the Change absorbed none |
 | `parent`       | The organization number issue field `Parent`: the Parent's issue number, empty for none                                                                                                  |
 | `blocked_by`   | GitHub's native issue dependencies                                                                                                                                                       |
 
