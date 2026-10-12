@@ -174,7 +174,6 @@ from outcomeeng_testing.generators.installation import (
     generated_agent_definition,
     generated_agent_file,
     generated_agent_slug,
-    generated_definition_edit,
     generated_identifier,
     generated_plugin_name,
     generated_unparseable_json,
@@ -2742,7 +2741,7 @@ def observe_home_selection_change(
                         raise RuntimeError(
                             f"{definition.source} lies outside the disposable mirror"
                         )
-                    source.write_bytes(generated_definition_edit(source.read_bytes()))
+                    source.write_bytes(generated_agent_definition())
             runner = RecordingRunner(installed=installed, unpublished=changed)
         else:
             runner = RecordingRunner(
