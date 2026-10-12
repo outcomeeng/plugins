@@ -328,7 +328,9 @@ def execute(
     if args.operation in ("status", "stop", "restart"):
         if args.operation != "status" and root.exists():
             if (root / LOCK_NAME).is_symlink():
-                raise ValueError(f"Worker lock is symlinked: {root / LOCK_NAME}")
+                raise ValueError(
+                    f"Worker lock is symlinked: {root / LOCK_NAME}; inspect its ownership"
+                )
             with (root / LOCK_NAME).open("a+") as lock:
                 try:
                     fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)

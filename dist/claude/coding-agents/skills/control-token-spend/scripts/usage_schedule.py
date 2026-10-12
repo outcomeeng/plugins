@@ -194,34 +194,52 @@ def manifest(root: Path) -> Json | None:
     if not path.exists():
         return None
     if path.is_symlink() or path.stat().st_size > COMMAND_BYTES:
-        raise ValueError(f"Invalid installation manifest path or size: {path}")
+        raise ValueError(
+            f"Invalid installation manifest: {path} must be a regular file of at most "
+            f"{COMMAND_BYTES} bytes; inspect the file and reinstall through install"
+        )
     value = json.loads(path.read_text())
     if (
         not isinstance(value, dict)
         or value.get("schema_version") != 1
         or value.get("root") != str(root)
     ):
-        raise ValueError(f"Invalid managed installation identity: {path}")
+        raise ValueError(
+            f"Invalid managed installation identity: {path} must carry schema_version 1 "
+            f"and root {root}; inspect the file and reinstall through install"
+        )
     recorded_jobs = value.get(ScheduleField.JOBS)
     if not isinstance(recorded_jobs, list) or len(recorded_jobs) != len(MODES):
-        raise ValueError(f"Invalid managed jobs: {path}")
+        raise ValueError(
+            f"Invalid managed jobs: {path} must list {len(MODES)} jobs, one per mode "
+            f"{', '.join(MODES)}; inspect the file and reinstall through install"
+        )
     assets = root / "assets" / str(value.get("asset_version"))
     if (
         value.get(ScheduleField.ASSETS) != str(assets)
         or len(assets.name) != 64
         or any(c not in "0123456789abcdef" for c in assets.name)
     ):
-        raise ValueError(f"Invalid managed asset version: {path}")
+        raise ValueError(
+            f"Invalid managed asset version: {path} must name a 64-character lowercase "
+            f"hexadecimal asset_version under {root / 'assets'}; inspect the file and reinstall through install"
+        )
     labels = set()
     for job in recorded_jobs:
         if not isinstance(job, dict):
-            raise ValueError(f"Invalid managed job record: {path}")
+            raise ValueError(
+                f"Invalid managed job record: {path} jobs entries must be objects; "
+                "inspect the file and reinstall through install"
+            )
         label = job.get("label")
         if (
             label not in tuple(LABEL_PREFIX + "." + mode for mode in MODES)
             or label in labels
         ):
-            raise ValueError(f"Invalid managed job label: {path}")
+            raise ValueError(
+                f"Invalid managed job label {label!r}: {path} must use one distinct "
+                f"label per mode under {LABEL_PREFIX}; inspect the file and reinstall through install"
+            )
         labels.add(label)
         location = Path(str(job.get("path")))
         settings = job.get(ScheduleField.PLIST)
@@ -232,7 +250,8 @@ def manifest(root: Path) -> Json | None:
             or not isinstance(settings, dict)
         ):
             raise ValueError(
-                f"Invalid managed launch-agent path or configuration: {path}"
+                f"Invalid managed launch-agent record for {label}: {path} must name an "
+                f"absolute non-symlink {label}.plist path and a plist object; inspect the file and reinstall through install"
             )
         expected = [
             value.get("python"),
@@ -247,7 +266,10 @@ def manifest(root: Path) -> Json | None:
             or settings.get(ScheduleField.PROGRAMARGUMENTS) != expected
             or settings.get("WorkingDirectory") != str(root)
         ):
-            raise ValueError(f"Managed job does not match installed assets: {path}")
+            raise ValueError(
+                f"Managed job {label} does not match installed assets: {path} must run "
+                f"{assets / 'usage_control.py'} with --root {root}; inspect the file and reinstall through install"
+            )
     return value
 
 
@@ -540,7 +562,10 @@ def jobs(root: Path, operation: str, runner: Runner, platform: str) -> Json:
                 f"Unrecognized managed label: {label}; inspect {installation}"
             )
         if path.name != label + ".plist" or path.is_symlink():
-            raise ValueError(f"Invalid managed launch-agent path: {path}")
+            raise ValueError(
+                f"Invalid managed launch-agent path: {path} must be a non-symlink "
+                f"{label}.plist; inspect {installation} and reinstall through install"
+            )
         handle = domain + "/" + label
         observed = runner.run((LAUNCHCTL, LaunchctlOperation.PRINT, handle))
         if observed.returncode and not absent(observed):

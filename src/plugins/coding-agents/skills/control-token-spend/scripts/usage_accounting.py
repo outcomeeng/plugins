@@ -498,7 +498,10 @@ class Evidence:
         self.clock = clock
         config.root.mkdir(parents=True, exist_ok=True)
         if (config.root / STATE_NAME).is_symlink():
-            raise ValueError(f"Managed state is symlinked: {config.root / STATE_NAME}")
+            raise ValueError(
+                f"Managed state is symlinked: {config.root / STATE_NAME}; "
+                "inspect the link target or choose a separate --root"
+            )
         self.db = sqlite3.connect(config.root / STATE_NAME, timeout=1)
         self.db.row_factory = sqlite3.Row
         self.db.execute("PRAGMA journal_mode=WAL")

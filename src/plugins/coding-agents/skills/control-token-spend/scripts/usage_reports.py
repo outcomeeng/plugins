@@ -677,7 +677,10 @@ def retain_alerts(root: Path, cutoff: str) -> list[str]:
     if not directory.exists():
         return []
     if directory.is_symlink():
-        raise ValueError(f"Managed alert directory is symlinked: {directory}")
+        raise ValueError(
+            f"Managed alert directory is symlinked: {directory}; "
+            "inspect the link target before running a worker"
+        )
     gaps: list[str] = []
     with os.scandir(directory) as entries:
         for index, entry in enumerate(entries):

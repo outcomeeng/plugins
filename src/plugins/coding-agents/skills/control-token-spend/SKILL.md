@@ -88,6 +88,9 @@ scheduling; invoke the entrypoint rather than the sibling modules.
 
 Resolve the operation, state root, source root, reset anchor and any supplied budget
 from the request or saved configuration. Ask only for choices that remain missing.
+Before an invocation writes to a state root the request does not name, present that
+absolute state root through {{! tool('ask_user') !}} and run only after the operator
+confirms it; an empty-argument report follows the same rule.
 Reject unsupported interpreter versions before execution. Keep invalid amounts,
 timestamp order and incomplete investigation options outside the mutation path.
 
