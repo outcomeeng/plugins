@@ -1295,8 +1295,7 @@ def test_a_catalog_plugin_name_that_is_not_one_path_segment_is_rejected_when_rea
 def test_a_catalog_plugin_name_of_one_path_segment_is_read() -> None:
     observed = observe_catalog_name_read(generated_plugin_name())
     assert observed.error is None
-    assert observed.names is not None
-    assert observed.names[0] == observed.conforming_plugin
+    assert observed.names == (observed.conforming_plugin, observed.name)
 
 
 def test_a_generated_agent_definition_linked_outside_the_checkout_is_rejected() -> None:

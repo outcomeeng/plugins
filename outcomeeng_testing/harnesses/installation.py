@@ -2016,6 +2016,7 @@ class CatalogNameReadObservation:
     """
 
     conforming_plugin: str
+    name: str
     names: tuple[str, ...] | None
     error: str | None
 
@@ -2040,8 +2041,8 @@ def observe_catalog_name_read(name: str) -> CatalogNameReadObservation:
         try:
             names = catalog_plugin_names(catalog)
         except ValueError as error:
-            return CatalogNameReadObservation(conforming_plugin, None, str(error))
-    return CatalogNameReadObservation(conforming_plugin, names, None)
+            return CatalogNameReadObservation(conforming_plugin, name, None, str(error))
+    return CatalogNameReadObservation(conforming_plugin, name, names, None)
 
 
 class DefinitionPlacement(StrEnum):
