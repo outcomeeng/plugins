@@ -91,7 +91,7 @@ changeset leaves unchanged; the changeset changes line 20 only
 (`git diff -U0 2cf9cd80eebb49dc8a682f45dd08922551d54d76...ab5b519f0333258fc6e277b09a458b8b65920941 -- src/plugins/spec-tree/skills/audit-tests/SKILL.md`).
 
 - `auditor-verdict-format`: step `compose_language` records each composed language's NOT_APPLICABLE subjects "in verdict metadata", while the `<verdict_format>` metadata object declares only `branch`, `evidence_chain`, and `coverage_traces`.
-- `composed-dependency-form`: step `load_context` names `/understand` and `/contextualize` as slash invocations instead of `Use skill` instructions.
+- `composed-dependency-form`: step `load_context` names `/understand` and `/contextualize` as slash invocations instead of `Use skill` instructions, and step `compose_language` loads `<lang>-test-standards` and invokes `audit-<lang>-tests` in prose the same way (run `2026-10-12_18-59-15-708-60d26c4e0044`).
 - `conciseness` and `constraint-strong-modals`: the last `<constraints>` bullet is an author-maintenance note about the skill's own `Bash` grant, stated without MUST, NEVER, or ALWAYS.
 - `constraint-rationale`: the constraint requiring every REJECT finding to name the assertion, the failed property, and the evidentiary gap carries no rationale after a dash.
 - `conciseness` (run `2026-10-12_18-55-10-807-92bff43a2c02`): the `JUDGE COVERAGE BY READING` principle and the first sentence of step `audit_coverage` restate the coverage-by-reading rule that `<constraints>` and Step 3e already state.
