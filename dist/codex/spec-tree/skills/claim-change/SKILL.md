@@ -45,7 +45,7 @@ Use skill `spec-tree:change-standards`. Invoke it with `Lifecycle`; it loads the
 
 <result>
 
-Return the issue URL, the readback values verbatim, the Maturity, the newest `Handoff:` comment's `Branch or PR` line when one exists, and the branch now checked out in the assigned worktree. A Change below Executable continues as refinement; execution at Executable continues from the Handoff's Next block line, or from the first block with no `## Artifacts` link when no Handoff exists.
+Return the issue URL, the readback values verbatim, the Maturity, the newest `Handoff:` comment's `Branch or PR` line when one exists, and the branch now checked out in the assigned worktree. A Change below Executable continues as refinement; execution at Executable continues from the Handoff's `Next block` line, or from the first block of the record when no Handoff exists.
 
 </result>
 
@@ -68,7 +68,7 @@ Return the issue URL, the readback values verbatim, the Maturity, the newest `Ha
 - A candidate listing of 50 entries produced a blocked result naming `50 issues`, with no offer and no claim.
 - A Handoff branch absent on origin, a failed fetch, and a failed switch each left the claim standing and the checkout unchanged, with the `Branch or PR` line and the git output reported verbatim.
 - The winning Claim names the claim root: the worktree root the argument supplied, or this session's assigned root.
-- The result names the Handoff's Next block line, or the first block with no `## Artifacts` link when no Handoff exists, as the point execution continues from.
+- The result names the Handoff's `Next block` line, or the first block of the record when no Handoff exists, as the point execution continues from.
 - When the claim root is this session's assigned root and the newest Handoff names a branch or pull request, that work is checked out in the assigned worktree after a read-only occupancy check, and the checkout is current with its base.
 
 </success_criteria>
