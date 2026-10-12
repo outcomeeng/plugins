@@ -76,6 +76,18 @@ report carries the replay hint.
 **Revisit condition**: resolve with the next behavioral change to this node's
 test evidence, alongside the signal-harness seam entry above.
 
+## DEBT [evidence]: no test reaches the production handle's direct-reap poll fallback
+
+`_PopenHandle.poll` in `outcomeeng/validation/_spawner.py` reaps the child through `os.waitpid(pid, os.WNOHANG)` when `Popen.poll` returns `None`, because the orchestrator's signal handler runs inside the interrupted `Popen.wait` that holds the handle's waitpid lock. The fallback carries two observable effects: the grace wait ends as soon as a child that honours SIGTERM exits, and after the SIGKILL escalation the orchestrator reaps its direct child itself.
+
+No linked test observes either effect. With the fallback replaced by an early return of `Popen.poll`'s result, every test in `tests/test_gate.scenario.l2.py` still passes: the controlled direct child ignores SIGTERM, so the escalation path always runs, and `assert_signals_terminate_process_groups_within_grace` checks the child's liveness only after the orchestrator has exited, when the operating system has already reaped the orphan.
+
+**Evidence**: CI changeset review on pull request 661 at head `c863671b1dbf73880cab66bedd81bf28540e5793`, DEBT finding at `outcomeeng/validation/_spawner.py:48`; the mutation run above, against head `6009d0e1daf5735ba169e1fb4728b48b365a35b9`.
+
+**Why it is a separate larger concern**: the observation needs the orchestrator process kept alive after `run` returns, so the test can read the direct child's state while its parent still exists, and a direct child that exits on SIGTERM beside the one that ignores it. Both change `outcomeeng_testing/harnesses/gate_signal.py`, whose entry "The signal harness owns the predicates its linked tests should own" requires that harness's seam to be repaired before its next behavioural change. The repair rewrites four harness entry points and the linked test file in code that drives real signal delivery, and the gate node's evidence then needs its own test-evidence audit.
+
+**Settlement condition**: a linked level-2 test observes, while the orchestrator process is still alive, that its direct child has been reaped after a forwarded signal, and observes the grace wait ending before `SIGNAL_GRACE_SECONDS` for a direct child that exits on SIGTERM; replacing the fallback with `Popen.poll` alone fails that test.
+
 ## The gate harnesses raise AssertionError for lifecycle failures
 
 `outcomeeng_testing/harnesses/gate_signal.py` and `outcomeeng_testing/harnesses/gate.py` raise `AssertionError` when a resource fails to start, a process fails to announce itself or a generated value has the wrong shape. The predicate-seam rule in `/test-evidence-standards` reserves assertion failures for the linked test; infrastructure raises only setup, dependency, lifecycle or execution errors, so raising `AssertionError` from infrastructure reports a failure away from every `assert` site and can read as a verdict the harness owns.
