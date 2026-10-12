@@ -6,7 +6,6 @@ import datetime as dt
 import fcntl
 import hashlib
 from html.parser import HTMLParser
-import importlib.util
 import json
 import os
 import shutil
@@ -24,6 +23,7 @@ from typing import Any
 from hypothesis import given, seed, settings
 from hypothesis import strategies as st
 
+from outcomeeng.distribution.shipped_scripts import load_shipped_module
 from outcomeeng_testing.generators.consumption_control import (
     spending_cases,
     invalid_amounts,
@@ -61,13 +61,7 @@ def modules() -> tuple[ModuleType, ModuleType, ModuleType, ModuleType]:
                 )
             result.append(existing)
             continue
-        spec = importlib.util.spec_from_file_location(name, location)
-        if spec is None or spec.loader is None:
-            raise RuntimeError(f"Cannot load shipped module: {location}")
-        module = importlib.util.module_from_spec(spec)
-        sys.modules[name] = module
-        spec.loader.exec_module(module)
-        result.append(module)
+        result.append(load_shipped_module(name, location))
     return result[0], result[1], result[2], result[3]
 
 
