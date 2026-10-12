@@ -5,7 +5,7 @@ description: >-
   explaining context and cache costs, detecting spending bursts, or managing
   local usage-report schedules.
 argument-hint: "[report|collect|detect|hourly|install|status|stop|restart] [options]"
-allowed-tools: Read, Bash(python3 --version), Bash(python3 -B "${CLAUDE_SKILL_DIR}/scripts/usage_control.py":*), request_user_input
+allowed-tools: Read, Bash(python3 --version), Bash(python3 -B "${CLAUDE_SKILL_DIR}/scripts/usage_control.py":*), {{! tool('ask_user') !}}
 ---
 
 <objective>

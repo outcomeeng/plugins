@@ -378,7 +378,7 @@ def request(
     )
     if not priced:
         gaps.append(
-            f"unsupported pricing: model={model}, speed={speed}, service_tier={tier}"
+            f"unsupported pricing for model {model} (speed {speed}, service tier {tier})"
         )
     identity = encoded([parent, session, message[AccountingField.ID]])
     result = {
@@ -462,7 +462,7 @@ def reconcile(old: Json, new: Json) -> Json:
         result[AccountingField.GAPS] = [
             item
             for item in result[AccountingField.GAPS]
-            if not item.startswith("unsupported pricing: model=unknown,")
+            if not item.startswith("unsupported pricing for model unknown (")
         ]
     return result
 
