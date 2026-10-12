@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -99,6 +100,16 @@ class MissingFragmentCase:
     src_root: Path
 
 
+@dataclass(frozen=True)
+class RenderedInclude:
+    """Observation of one include directive rendered between generated lines."""
+
+    prefix: str
+    body: str
+    suffix: str
+    rendered: str
+
+
 def implementation_is_ready() -> bool:
     return IMPLEMENTED
 
@@ -130,13 +141,48 @@ def include_body_property_holds() -> bool:
     return True
 
 
-def rendered_include_property_holds() -> bool:
+def run_rendered_include_property(
+    assert_rendered: Callable[[RenderedInclude], None],
+) -> None:
+    """Drive generated include renders while the linked test owns the predicate."""
+
+    @seed(SOURCE_PROPERTY_SEED)
+    @settings(
+        max_examples=SOURCE_PROPERTY_EXAMPLES,
+        deadline=None,
+        print_blob=True,
+    )
+    @given(
+        case=st.sampled_from(source_scenarios()),
+        prefix=inert_fragment_bodies(),
+        body=inert_fragment_bodies(),
+        suffix=inert_fragment_bodies(),
+    )
+    def generated_rendered_include(
+        case: SourceScenario,
+        prefix: str,
+        body: str,
+        suffix: str,
+    ) -> None:
+        with TemporaryDirectory() as temporary_directory:
+            builder = SrcTreeBuilder(Path(temporary_directory))
+            builder.add_shared_topic(case.scope, case.inner_topic, body)
+            directive = _include_text(case, case.inner_topic)
+            rendered = render_text(
+                "\n".join((prefix, directive, suffix)),
+                shared_root=builder.shared_root,
+            )
+            assert_rendered(
+                RenderedInclude(
+                    prefix=prefix, body=body, suffix=suffix, rendered=rendered
+                )
+            )
+
     run_replayable_property(
-        _rendered_include_property,
+        generated_rendered_include,
         seed_value=SOURCE_PROPERTY_SEED,
         replay_path=RENDER_PROPERTY_REPLAY_PATH,
     )
-    return True
 
 
 def recursive_include_property_holds() -> bool:
@@ -205,33 +251,6 @@ def _include_body_property(case: SourceScenario, body: str) -> None:
         builder.add_shared_topic(case.scope, case.inner_topic, body)
         directive = IncludeDirective(_fragment_path(case, case.inner_topic))
         assert expand_include(directive, shared_root=builder.shared_root) == body
-
-
-@seed(SOURCE_PROPERTY_SEED)
-@settings(
-    max_examples=SOURCE_PROPERTY_EXAMPLES,
-    deadline=None,
-    print_blob=True,
-)
-@given(
-    case=st.sampled_from(source_scenarios()),
-    prefix=inert_fragment_bodies(),
-    body=inert_fragment_bodies(),
-    suffix=inert_fragment_bodies(),
-)
-def _rendered_include_property(
-    case: SourceScenario,
-    prefix: str,
-    body: str,
-    suffix: str,
-) -> None:
-    with TemporaryDirectory() as temporary_directory:
-        builder = SrcTreeBuilder(Path(temporary_directory))
-        builder.add_shared_topic(case.scope, case.inner_topic, body)
-        directive = _include_text(case, case.inner_topic)
-        template = "\n".join((prefix, directive, suffix))
-        expected = "\n".join((prefix, body, suffix))
-        assert render_text(template, shared_root=builder.shared_root) == expected
 
 
 @seed(SOURCE_PROPERTY_SEED)
