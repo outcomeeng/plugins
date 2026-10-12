@@ -1,3 +1,7 @@
+---
+malleability: spec
+---
+
 # Runtime Token Validation
 
 PROVIDES a validator that flags a raw runtime-divergent name in authored source the build renders or inlines — plugin content under `src/plugins/`, shared fragments under `src/_shared/`, and per-plugin templates under `src/templates/` — a name that renders differently per coding agent and so must be a registry-backed token such as `{{! tool('…') !}}` / `{{! file('…') !}}`, or a per-runtime conditional — while passing token-expressed references and an explicit ignore-list of tracked exemptions
@@ -21,6 +25,19 @@ CAN keep each generated target's output naming only its own native tools and ins
   citation targets for any repo under review
   ([test](tests/test_runtime_token.mapping.l1.py)).
 
+- NEVER: the configuration guard reports a native model or reasoning field
+  bound to an expression that reads a value — a call, a subscript, or an
+  attribute access — as an authored assignment
+  ([test](tests/test_profile_configuration.mapping.l1.py)).
+- NEVER: the configuration guard reports a native model or reasoning field
+  bound to an interpolation placeholder as an authored assignment
+  ([test](tests/test_profile_configuration.mapping.l1.py)).
+- ALWAYS: the configuration guard reports every binding of a native model or
+  reasoning field other than a read expression or an interpolation placeholder
+  as an authored assignment, an unquoted value such as a YAML `effort: high`
+  included
+  ([test](tests/test_profile_configuration.mapping.l1.py)).
+
 ### Compliance
 
 - ALWAYS: the configuration guard scans every file under `src/`, including
@@ -38,6 +55,12 @@ CAN keep each generated target's output naming only its own native tools and ins
   ([test](tests/test_profile_configuration.compliance.l1.py)).
 - NEVER: the configuration guard treats an ordinary prose word as a model or
   reasoning assignment merely because it is a native configuration value
+  ([test](tests/test_profile_configuration.compliance.l1.py)).
+- ALWAYS: the configuration guard decides by the syntactic form of the binding
+  alone and derives no semantic role of the surrounding code
+  ([test](tests/test_profile_configuration.compliance.l1.py)).
+- ALWAYS: the configuration guard reports a native model or reasoning field
+  bound to a bare name, such as `effort = level`, as an authored assignment
   ([test](tests/test_profile_configuration.compliance.l1.py)).
 - NEVER: the validator passes a raw runtime-divergent token — a name registered in a guard-enforced kind (`tool`, `field`, `file`) of the build's runtime-token registry — in a non-ignored file under `src/plugins/` — because that literal ships into a target whose runtime does not provide it ([test](tests/test_runtime_token.compliance.l1.py))
 - ALWAYS: the validator derives its forbidden-name set from the guard-enforced kinds (`tool`, `field`, `file`) of the build's runtime-token registry rather than a copied literal list — the registry is the single source of truth for which names diverge per runtime ([test](tests/test_runtime_token.mapping.l1.py))

@@ -79,3 +79,161 @@ Impact: a supported positive conversion path remains uncovered, so deterministic
 Successor: [outcomeeng/changes#85](https://github.com/outcomeeng/changes/issues/85).
 
 Revisit and settlement condition: Change #85 adds a positive scenario or mapping for `approval_policy`, records passing deterministic evidence for that path, and passes the applicable evidence audit.
+
+## DEBT [evidence]: scenario test hand-writes conversion vocabulary (f-001)
+
+Finding f-001 (REJECT, source ownership) at
+`spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/54-native-artifact.enabler/tests/test_native_artifact.scenario.l1.py:45`:
+the test hand-writes conversion vocabulary as string literals (`"name"`,
+`"description"`, `"profile"`, `"skills"`, `"tools"`, `"web_search"`,
+`"sandbox_mode"`, `"shell_environment_policy"`, `"set"`,
+`"developer_instructions"`) while `outcomeeng/distribution/agents.py` exports
+`AGENT_NAME_FIELD`, `AGENT_DESCRIPTION_FIELD`, `AGENT_TOOLS_FIELD`, and
+`SANDBOX_MODE_FIELD`, and `outcomeeng/distribution/profiles.py` exports
+`PROFILE_FIELD`. The remaining keys have no exported contract.
+
+The audit is a `spec-tree:test-evidence-auditor` verdict on this node at head
+`6ef55dd4d93b24b8fa701b8779116bbe7c9bbc04`. The verdict carries no sealed run
+token; the same holds for f-002 through f-005 below.
+
+**Resolution shape**: export the missing field constants from
+`outcomeeng/distribution/agents.py` and import them, with the existing exports,
+in the test.
+
+**Evidence that the text lies outside the change.** `git diff -U0
+origin/main...HEAD` reports no hunk in the cited tests,
+`outcomeeng_testing/harnesses/agent_conversion.py`, or
+`outcomeeng/distribution/agents.py`, against merge base
+`149a55f71befdf61e88be9bda2aae725db1f2381`.
+
+**Invalidation check.** The cited text neither cites, restates, nor depends on
+anything this changeset changed. The changeset only adds symbols to
+`outcomeeng/distribution/profiles.py` (model prices and usage token classes);
+no symbol the cited tests import (`PROFILE_FIELD`, the `agents.py` field
+constants, the profile resolution) is renamed or altered. It also narrows the
+configuration guard in `outcomeeng/validation/profile_configuration.py`, which
+agent conversion does not call.
+
+**Settlement condition**: every conversion key the test uses is imported from
+the production owner, and no string literal for a conversion-owned key remains
+in the test.
+
+## DEBT [evidence]: operational-setting predicates copy conversion-owned keys (f-002)
+
+Finding f-002 (REJECT, source ownership) at
+`spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/54-native-artifact.enabler/tests/test_native_artifact.scenario.l1.py:91`:
+the predicates copy conversion-owned keys as literals (`"sandbox_mode"`,
+`"nickname_candidates"`, `"mcp_servers"`, `"docs"`, `"command"`, `"args"`,
+`"developer_instructions"`, `"profile"`).
+
+The audit is the verdict named under f-001, at head
+`6ef55dd4d93b24b8fa701b8779116bbe7c9bbc04`.
+
+**Resolution shape**: as f-001; export the missing field constants from
+`outcomeeng/distribution/agents.py` and import them.
+
+**Evidence that the text lies outside the change.** `git diff -U0
+origin/main...HEAD` reports no hunk in the cited tests,
+`outcomeeng_testing/harnesses/agent_conversion.py`, or
+`outcomeeng/distribution/agents.py`, against merge base
+`149a55f71befdf61e88be9bda2aae725db1f2381`.
+
+**Invalidation check.** The cited text neither cites, restates, nor depends on
+anything this changeset changed. The changeset only adds symbols to
+`outcomeeng/distribution/profiles.py` (model prices and usage token classes);
+no symbol the cited tests import is renamed or altered. It also narrows the
+configuration guard in `outcomeeng/validation/profile_configuration.py`, which
+agent conversion does not call.
+
+**Settlement condition**: the predicates at line 91 reference imported
+constants only.
+
+## DEBT [evidence]: mapping test indexes a test-local skills key (f-003)
+
+Finding f-003 (REJECT, source ownership) at
+`spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/54-native-artifact.enabler/tests/test_native_artifact.mapping.l1.py:44`:
+the test indexes `converted.values["skills"]` with a test-local key.
+
+The audit is the verdict named under f-001, at head
+`6ef55dd4d93b24b8fa701b8779116bbe7c9bbc04`.
+
+**Resolution shape**: add an exported constant for the key next to
+`AGENT_SKILL_INCLUDE_INSTRUCTIONS_FIELD` in `outcomeeng/distribution/agents.py`
+and import it in the test.
+
+**Evidence that the text lies outside the change.** `git diff -U0
+origin/main...HEAD` reports no hunk in the cited tests,
+`outcomeeng_testing/harnesses/agent_conversion.py`, or
+`outcomeeng/distribution/agents.py`, against merge base
+`149a55f71befdf61e88be9bda2aae725db1f2381`.
+
+**Invalidation check.** The cited text neither cites, restates, nor depends on
+anything this changeset changed. The changeset only adds symbols to
+`outcomeeng/distribution/profiles.py` (model prices and usage token classes);
+no symbol the cited tests import is renamed or altered. It also narrows the
+configuration guard in `outcomeeng/validation/profile_configuration.py`, which
+agent conversion does not call.
+
+**Settlement condition**: the test reads the `skills` values through an
+exported constant.
+
+## DEBT [evidence]: harness supplies hand-authored source-agent defaults (f-004)
+
+Finding f-004 (REJECT) at
+`outcomeeng_testing/harnesses/agent_conversion.py:177`: `source_agent()`
+supplies hand-authored defaults for source path, name, description, and body;
+no whole-payload fixture or source contract gives them provenance.
+
+The audit is the verdict named under f-001, at head
+`6ef55dd4d93b24b8fa701b8779116bbe7c9bbc04`.
+
+**Resolution shape**: replace the defaults with a whole-payload fixture or a
+production source contract that carries their provenance.
+
+**Evidence that the text lies outside the change.** `git diff -U0
+origin/main...HEAD` reports no hunk in the cited tests,
+`outcomeeng_testing/harnesses/agent_conversion.py`, or
+`outcomeeng/distribution/agents.py`, against merge base
+`149a55f71befdf61e88be9bda2aae725db1f2381`.
+
+**Invalidation check.** The cited text neither cites, restates, nor depends on
+anything this changeset changed. The changeset only adds symbols to
+`outcomeeng/distribution/profiles.py` (model prices and usage token classes);
+no symbol the cited harness or tests import is renamed or altered. It also
+narrows the configuration guard in
+`outcomeeng/validation/profile_configuration.py`, which agent conversion does
+not call.
+
+**Settlement condition**: every default `source_agent()` supplies traces to a
+fixture or contract that owns it.
+
+## DEBT [evidence]: harness declares expected outputs (f-005, WARNING)
+
+Finding f-005 (WARNING) in
+`outcomeeng_testing/harnesses/agent_conversion.py`: the harness declares
+`EXPECTED_PERMISSION_MODE_CORRESPONDENCE` and `EXPECTED_TOOL_CLASSIFICATION`,
+expected outputs a harness must not own. No test in this node runs them; the
+sibling execution-policy node is judged on them.
+
+The audit is the verdict named under f-001, at head
+`6ef55dd4d93b24b8fa701b8779116bbe7c9bbc04`.
+
+**Resolution shape**: move the expected outputs into the tests that assert
+them, or derive them from an independent oracle the tests own.
+
+**Evidence that the text lies outside the change.** `git diff -U0
+origin/main...HEAD` reports no hunk in the cited tests,
+`outcomeeng_testing/harnesses/agent_conversion.py`, or
+`outcomeeng/distribution/agents.py`, against merge base
+`149a55f71befdf61e88be9bda2aae725db1f2381`.
+
+**Invalidation check.** The cited text neither cites, restates, nor depends on
+anything this changeset changed. The changeset only adds symbols to
+`outcomeeng/distribution/profiles.py` (model prices and usage token classes);
+no symbol the cited harness or tests import is renamed or altered. It also
+narrows the configuration guard in
+`outcomeeng/validation/profile_configuration.py`, which agent conversion does
+not call.
+
+**Settlement condition**: the harness declares no expected output, and the
+tests that judge those correspondences own them.

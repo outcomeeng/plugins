@@ -11,10 +11,11 @@ example. Two strategies, one per contract boundary in
   holds for every body, including one that contains the custom directive or
   variable delimiters.
 - ``inert_fragment_bodies()`` — text free of the custom directive delimiter
-  (``BLOCK_DELIMITER_START``) and variable delimiter (``VARIABLE_DELIMITER_START``).
-  ``render_text`` recursively expands directives found in an included body and
-  runs a Jinja pass when the variable delimiter appears, so its verbatim
-  inlining holds only for a body that carries neither token.
+  (``BLOCK_DELIMITER_START``), variable delimiter (``VARIABLE_DELIMITER_START``),
+  and build-comment delimiter (``COMMENT_DELIMITER_START``). ``render_text``
+  recursively expands directives found in an included body and runs a Jinja pass
+  when the variable delimiter or the comment delimiter appears, so its verbatim
+  inlining holds only for a body that carries none of the three tokens.
 """
 
 from __future__ import annotations
@@ -25,6 +26,7 @@ from hypothesis.strategies import SearchStrategy
 from outcomeeng.distribution.build import (
     BLOCK_DELIMITER_END,
     BLOCK_DELIMITER_START,
+    COMMENT_DELIMITER_START,
     VARIABLE_DELIMITER_END,
     VARIABLE_DELIMITER_START,
 )
@@ -84,7 +86,7 @@ def fragment_bodies() -> SearchStrategy[str]:
 
 
 def inert_fragment_bodies() -> SearchStrategy[str]:
-    """Document bodies free of the custom directive and variable delimiters.
+    """Document bodies free of the custom directive, variable, and comment delimiters.
 
     ``render_text`` inlines such a body verbatim because no token triggers a
     further directive expansion or Jinja pass.
@@ -96,6 +98,7 @@ def inert_fragment_bodies() -> SearchStrategy[str]:
             lambda body: (
                 BLOCK_DELIMITER_START not in body
                 and VARIABLE_DELIMITER_START not in body
+                and COMMENT_DELIMITER_START not in body
             )
         )
     )

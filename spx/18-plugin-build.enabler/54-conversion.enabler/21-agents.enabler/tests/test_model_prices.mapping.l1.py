@@ -1,0 +1,63 @@
+"""Every priced model identifier resolves to its price for each usage token class."""
+
+from dataclasses import asdict, fields
+from decimal import Decimal
+from typing import Final
+
+import pytest
+
+from outcomeeng.distribution.profiles import (
+    MODEL_PRICES,
+    ClaudeModel,
+    ModelPrice,
+    UnpricedModelError,
+    UsageTokenClass,
+    resolve_model_price,
+)
+
+
+PRICED_ENTRIES: Final = tuple(
+    (family, identifier)
+    for family, entries in MODEL_PRICES.items()
+    for identifier in entries
+)
+
+
+@pytest.mark.parametrize(("family", "identifier"), PRICED_ENTRIES)
+def test_each_named_identifier_resolves_to_its_price_for_each_usage_token_class(
+    family: ClaudeModel, identifier: str
+) -> None:
+    entry = MODEL_PRICES[family][identifier]
+    resolved = resolve_model_price(identifier)
+    assert resolved is entry
+    for token_class in UsageTokenClass:
+        rate = resolved.rate(token_class)
+        assert isinstance(rate, Decimal)
+        assert rate == asdict(entry)[token_class.value]
+
+
+def test_every_priced_identifier_resolves_and_an_unnamed_identifier_is_unpriced() -> (
+    None
+):
+    assert PRICED_ENTRIES
+    for family, identifier in PRICED_ENTRIES:
+        assert resolve_model_price(identifier) is MODEL_PRICES[family][identifier]
+    unnamed = f"{PRICED_ENTRIES[0][1]}-unnamed"
+    with pytest.raises(UnpricedModelError):
+        resolve_model_price(unnamed)
+
+
+def test_a_price_covers_exactly_the_usage_token_classes() -> None:
+    assert {field.name for field in fields(ModelPrice)} == {
+        token_class.value for token_class in UsageTokenClass
+    }
+
+
+def test_price_entries_group_under_profile_named_families() -> None:
+    claimed: list[str] = []
+    for family, entries in MODEL_PRICES.items():
+        assert family in frozenset(ClaudeModel) - {ClaudeModel.HAIKU}
+        for identifier in entries:
+            assert identifier.startswith(f"claude-{family.value}-")
+            claimed.append(identifier)
+    assert len(claimed) == len(set(claimed))

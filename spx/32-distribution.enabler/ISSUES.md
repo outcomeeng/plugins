@@ -33,3 +33,27 @@ Settlement condition: each helper returns the observation its comparison consume
 Most plugin changelogs open with "# Changelog — {plugin} plugin", and a minority open with the dash-free "# {Plugin} plugin changelog", the form the prose canon's em dash rule requires. `head -1` over every `src/plugins/*/CHANGELOG.md` derives which titles stand in which form, so this entry names that relation and no count: a count falsified twice, once when a plugin was added and once when a changeset renamed a single title, and neither edit was in view of the sentence holding the figure.
 
 **Settlement condition.** One sweep renames every title still carrying the dash, and the entry closes when that derivation yields the dash-free form for every plugin. The sweep touches every plugin whose title still carries the dash, so it stands outside any one plugin's changeset.
+
+## DEBT [evidence]: linked tests assert a bare boolean the harness decides (f-001 to f-009)
+
+Nine findings (all REJECT, assertion-seam, predicate ownership) on the tests under `spx/32-distribution.enabler/tests`, each against `outcomeeng_testing/harnesses/distribution.py`. Each linked test only runs `assert <bool>`; the harness builds the expected value, compares, and returns a bare boolean, so a failure reports `False` with no observation. The entry "the distribution harness decides verdicts its linked tests should own" above records the same defect class; this entry adds the per-test findings of the later audit and repeats no resolution text from it.
+
+- f-001 `test_distribute_skills.scenario.l1.py:12` `skill_collection_returns_complete_metadata`.
+- f-002 `test_distribute_skills.scenario.l1.py:16` `plugin_without_skills_is_skipped`.
+- f-003 `test_distribute_skills.scenario.l1.py:20` `skill_without_manifest_is_skipped`.
+- f-004 `test_distribute_skills.scenario.l1.py:24` `directive_description_is_cleaned`.
+- f-005 `test_distribute_skills.scenario.l1.py:28` `target_cleanup_preserves_only_git_metadata`.
+- f-006 `test_distribute_skills.scenario.l1.py:32` `skill_copy_skips_broken_symlinks`.
+- f-007 `test_distribute_skills.property.l1.py:5`: the invariant `actual == expected` is asserted inside `_generated_skill_collection_union_holds`, and `skill_collection_union_holds` returns a constant True.
+- f-008 `test_distribution_workflow.compliance.l1.py:8` `distribution_workflow_uses_runtime_and_source_paths` builds the violating variants and evaluates the predicates in the harness.
+- f-009 `test_distribution_workflow.compliance.l1.py:12` `distribution_workflow_uses_project_python` likewise.
+
+The audit is a `spec-tree:test-evidence-auditor` verdict on this node at head `6ef55dd4d93b24b8fa701b8779116bbe7c9bbc04`. The verdict carries no sealed run token.
+
+**Resolution shape**: the harness returns observations and handles, and each linked test owns its predicate and expected value.
+
+**Evidence that the text lies outside the change.** `git diff -U0 origin/main...HEAD` reports no hunk in the cited tests or harness, against merge base `149a55f71befdf61e88be9bda2aae725db1f2381`.
+
+**Invalidation check.** The cited text neither cites, restates, nor depends on anything this changeset changed. The changeset adds symbols to `outcomeeng/distribution/profiles.py`, narrows the guard in `outcomeeng/validation/profile_configuration.py`, and adds model-price and profile-binding generators, harnesses, and tests. The cited harness `outcomeeng_testing/harnesses/distribution.py` drives `outcomeeng/distribution/distribute.py` and `outcomeeng/distribution/orchestration.py`, which the changeset does not change.
+
+**Settlement condition**: every cited test owns its predicate and expected value over an observation the harness returns, and a test-evidence audit of this node raises none of f-001 to f-009.

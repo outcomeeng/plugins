@@ -125,3 +125,117 @@ and `2026-09-18_13-02-51-809-99cdf563caa5` (debt, evidence) during Change #76; `
 [`spx/15-agent-terminology.pdr.md`](spx/15-agent-terminology.pdr.md) defines agent harness, agent, agent adapter, agent session, subagent and subagent definition, and its prohibited-terminology table maps `runtime`, `per-runtime` and `runtime-specific` to `agent`, `per-agent` and `agent-specific` where the subject is a selectable coding agent. The router template, generated dispatch guidance, registry enforcement and installed-name discovery use the decision. [`spx/18-plugin-build.enabler/15-build-architecture.adr.md`](spx/18-plugin-build.enabler/15-build-architecture.adr.md) and `21-source-and-templating.enabler/21-runtime-parameterization.enabler/runtime-parameterization.md` still say "runtime-divergent", "per-runtime registry" and "No runtime is the source language", which mean per-agent target rendering. Methodology Role names and execution-time uses of "runtime" keep their defined meanings.
 
 **Settlement condition.** One whole-tree sweep aligns the agent-concept uses to "agent" or "agent harness", separating them from generic execution-time "runtime". Node names carry the term (`spx/15-validation.enabler/32-runtime-token.enabler` and `spx/18-plugin-build.enabler/21-source-and-templating.enabler/21-runtime-parameterization.enabler`), so the sweep includes `/refactor` node renames and is a structural change, not a text pass. Each node in the sweep records its share in its own `ISSUES.md`.
+
+## DEBT [evidence]: build tests delegate their predicates to the harness (f-001, f-002, f-004, f-005, f-006)
+
+Five findings (all REJECT) on the linked tests of this node, each a test that
+asserts a boolean its harness computes, so the test file does not expose its
+oracle:
+
+- f-001 at `tests/test_plugin_build.compliance.l1.py:12`: the linked test
+  asserts only the boolean from `canonical_dist_files_trace_to_source_ancestors()`;
+  the harness owns the build, the snapshot comparison, and the ancestor
+  predicate.
+- f-002 at `tests/test_plugin_build.compliance.l1.py:16`:
+  `orphaned_dist_artifact_is_rejected()` catches `AssertionError` itself and
+  returns a boolean.
+- f-004 at `tests/test_plugin_build.property.l1.py:13`: the test asserts a
+  constant `True`; the determinism invariant and the Hypothesis wiring sit in
+  the harness.
+- f-005 at `tests/test_plugin_build.property.l1.py:17`: the same defect for
+  idempotence.
+- f-006 at `tests/test_plugin_build.property.l1.py:21`: the
+  formatter-version-drift test asserts a harness-returned boolean. The entry
+  "Property predicates are hidden in boolean-returning harnesses" above records
+  this defect and its settlement; this entry extends it to the compliance file
+  and to the other two property tests and adds no second resolution for f-006.
+
+The audit is a `spec-tree:test-evidence-auditor` verdict on this node at head
+`6ef55dd4d93b24b8fa701b8779116bbe7c9bbc04`. The verdict carries no sealed run
+token. One WARNING, f-007 at `tests/test_plugin_build.property.l1.py:20`,
+notes that `test_formatter_version_drift_cannot_change_existing_output` has no
+governing assertion in `plugin-build.md`.
+
+**Resolution shape**: the harness returns the observation (the build output,
+the snapshot, the dist file set with its source ancestors, or the raised
+rejection) and each test owns the predicate: the ancestor-trace check for
+f-001, the rejection check for f-002, and the determinism and idempotence
+invariants with their Hypothesis wiring for f-004 and f-005. f-006 resolves as
+the earlier entry names.
+
+**Out-of-change evidence**: the text lies outside the Change.
+`git diff -U0 origin/main...HEAD` reports no hunk in the cited test files or
+the harness, against merge base `149a55f71befdf61e88be9bda2aae725db1f2381`.
+
+**Invalidation check.** The cited text neither cites, restates, nor depends on
+anything this changeset changed. The changeset adds symbols to
+`outcomeeng/distribution/profiles.py`, narrows the guard in
+`outcomeeng/validation/profile_configuration.py`, adds model-price and
+profile-binding generators, harnesses, and tests, and amends the price
+ownership of
+[`spx/18-plugin-build.enabler/15-build-architecture.adr.md`](spx/18-plugin-build.enabler/15-build-architecture.adr.md).
+The cited tests and harness drive build determinism, idempotence, and dist
+tracing in `outcomeeng/distribution/build.py`, which the changeset does not
+change.
+
+**Settlement condition**: each cited test holds its own predicate over an
+observation the harness returns, and the node passes its test-evidence audit.
+
+## DEBT [evidence]: the orphan violating case cannot reach the enforcement (f-003)
+
+Finding f-003 (REJECT, falsifiability) at
+`outcomeeng_testing/harnesses/plugin_build.py:77`: the orphan violating case
+appends a synthetic entry to the expected snapshot and checks that the
+harness's own comparator rejects it. No mutation of production build behavior
+or dist-tracing enforcement can fail the test.
+
+The audit is the verdict named in the entry above, at head
+`6ef55dd4d93b24b8fa701b8779116bbe7c9bbc04`; the verdict carries no sealed run
+token.
+
+**Resolution shape**: a violating case that reaches the enforcement under
+audit, such as a dist artifact with no source ancestor produced through the
+build, which the dist-tracing check must reject.
+
+**Out-of-change evidence**: the text lies outside the Change.
+`git diff -U0 origin/main...HEAD` reports no hunk in the harness, against merge
+base `149a55f71befdf61e88be9bda2aae725db1f2381`.
+
+**Invalidation check.** The cited text neither cites, restates, nor depends on
+anything this changeset changed. The changeset adds symbols to
+`outcomeeng/distribution/profiles.py`, narrows the guard in
+`outcomeeng/validation/profile_configuration.py`, adds model-price and
+profile-binding generators, harnesses, and tests, and amends the price
+ownership of the build ADR. The harness case drives dist tracing in
+`outcomeeng/distribution/build.py`, which the changeset does not change.
+
+**Settlement condition**: the orphan case fails when dist-tracing enforcement
+is mutated.
+
+## DEBT [evidence]: the harness raises AssertionError at lines 254, 262, 400, 408, and 409 (f-008)
+
+Finding f-008 (REJECT) at `outcomeeng_testing/harnesses/plugin_build.py:409`,
+and at lines 254, 262, 400, and 408: the harness raises `AssertionError` for
+lifecycle and setup failures where a non-assertion error type belongs. The
+entry "The plugin-build harness raises AssertionError for lifecycle failures"
+above records this defect with its evidence and settlement condition; this
+entry adds the audit and the line locations and no second resolution.
+
+The audit is the verdict named in the entry above, at head
+`6ef55dd4d93b24b8fa701b8779116bbe7c9bbc04`; the verdict carries no sealed run
+token.
+
+**Out-of-change evidence**: the text lies outside the Change.
+`git diff -U0 origin/main...HEAD` reports no hunk in the harness, against merge
+base `149a55f71befdf61e88be9bda2aae725db1f2381`.
+
+**Invalidation check.** The cited text neither cites, restates, nor depends on
+anything this changeset changed. The changeset adds symbols to
+`outcomeeng/distribution/profiles.py`, narrows the guard in
+`outcomeeng/validation/profile_configuration.py`, adds model-price and
+profile-binding generators, harnesses, and tests, and amends the price
+ownership of the build ADR. The raising sites belong to build lifecycle and
+setup in the plugin-build harness, which drives `outcomeeng/distribution/build.py`
+unchanged.
+
+**Settlement condition**: as the earlier entry names it.

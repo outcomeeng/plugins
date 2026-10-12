@@ -6,6 +6,7 @@ import json
 import re
 from collections.abc import Mapping
 from dataclasses import asdict, dataclass, fields
+from decimal import Decimal
 from enum import StrEnum
 from types import MappingProxyType
 from typing import Final
@@ -155,6 +156,69 @@ AGENT_PROFILES: Final[ProfileRegistry] = MappingProxyType(
         ),
     }
 )
+
+
+class UsageTokenClass(StrEnum):
+    """Usage token classes a model price covers."""
+
+    INPUT = "input"
+    CACHE_READ = "cache_read"
+    CACHE_WRITE_5M = "cache_write_5m"
+    CACHE_WRITE_1H = "cache_write_1h"
+    OUTPUT = "output"
+
+
+class UnpricedModelError(LookupError):
+    """A model identifier that no price entry names."""
+
+
+@dataclass(frozen=True)
+class ModelPrice:
+    """Prices in USD per million tokens, one for every usage token class."""
+
+    input: Decimal
+    cache_read: Decimal
+    cache_write_5m: Decimal
+    cache_write_1h: Decimal
+    output: Decimal
+
+    def rate(self, token_class: UsageTokenClass) -> Decimal:
+        """Return the price of one usage token class."""
+        return Decimal(getattr(self, UsageTokenClass(token_class).value))
+
+
+def _price(*rates: str) -> ModelPrice:
+    return ModelPrice(*(Decimal(rate) for rate in rates))
+
+
+MODEL_PRICES: Final[Mapping[ClaudeModel, Mapping[str, ModelPrice]]] = MappingProxyType(
+    {
+        ClaudeModel.OPUS: MappingProxyType(
+            {
+                "claude-opus-5-5": _price("4", ".2", "5", "8", "20"),
+                "claude-opus-4-6": _price("5", ".5", "6.25", "10", "25"),
+            }
+        ),
+        ClaudeModel.SONNET: MappingProxyType(
+            {
+                "claude-sonnet-5-5": _price("2", ".1", "2.5", "4", "10"),
+                "claude-sonnet-4-6": _price("3", ".3", "3.75", "6", "15"),
+            }
+        ),
+    }
+)
+
+
+def resolve_model_price(
+    identifier: str,
+    *,
+    prices: Mapping[ClaudeModel, Mapping[str, ModelPrice]] = MODEL_PRICES,
+) -> ModelPrice:
+    """Resolve a price by exact model identifier, with no fallback."""
+    for entries in prices.values():
+        if identifier in entries:
+            return entries[identifier]
+    raise UnpricedModelError(f"unpriced model identifier: {identifier!r}")
 
 
 def resolve_profile(

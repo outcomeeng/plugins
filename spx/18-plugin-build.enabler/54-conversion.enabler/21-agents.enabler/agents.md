@@ -1,3 +1,7 @@
+---
+malleability: spec
+---
+
 # Agents
 
 PROVIDES conversion of rendered plugin agent definitions into the Codex-native custom-agent artifacts the build publishes with each plugin
@@ -16,6 +20,7 @@ CAN run one canonical marketplace role per authored agent, which a Codex plugin 
   unsupported control presence or absence is rejected
   ([test](tests/test_profiles.mapping.l1.py)).
 - For every agent in the authored marketplace catalog, a flat target's generated filename stem and `name` agree with its dispatch name; namespaced targets retain the bare definition name and native plugin-qualified dispatch name ([test](tests/test_agents.mapping.l1.py))
+- Each model identifier a price entry names resolves to its price for each usage token class; the price entries name `claude-opus-5-5`, `claude-opus-4-6`, `claude-sonnet-5-5`, and `claude-sonnet-4-6`, grouped under the profile-named families `opus` and `sonnet` ([test](tests/test_model_prices.mapping.l1.py))
 
 ### Conformance
 
@@ -41,3 +46,6 @@ CAN run one canonical marketplace role per authored agent, which a Codex plugin 
 - ALWAYS: two sources whose outputs claim the same path in a target's generated tree fail the build before it writes any generated file ([test](tests/test_agents.compliance.l1.py))
 - NEVER: conversion returns two agents claiming one filename - source names differing only outside the slug alphabet converge on a single converted filename, so conversion fails rather than letting the later definition displace the earlier one ([test](tests/test_agents.compliance.l1.py))
 - ALWAYS: the build publishes each converted agent as plugin tree content in its target's generated tree, and the plugin manifest declares the surfaces that target resolves through the manifest without declaring agents ([test](tests/test_agents.compliance.l1.py))
+- NEVER: a model identifier that no price entry names — an unlisted version of a profile-named family, a `haiku` identifier, or a Codex identifier — resolves to a default, fallback, or neighboring price; resolution reports the identifier as unpriced ([test](tests/test_model_prices.compliance.l1.py))
+- ALWAYS: prices attach to the model identity once in the configuration owner, so no other source holds a price table ([test](tests/test_model_prices.compliance.l1.py))
+- ALWAYS: the price entries in the configuration owner name exactly the model identifiers this spec's price mapping declares — the agreement between that declaration and the owner is audit evidence ([audit])
