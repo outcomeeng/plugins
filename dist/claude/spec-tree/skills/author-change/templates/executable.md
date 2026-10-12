@@ -8,7 +8,7 @@ blocked_by: []
 parent: null
 ---
 
-<!-- Use skill `spec-tree:change-standards`. Apply it for this Maturity. The closed schema permits exactly the seven keys above. predecessors lists the Changes this Change absorbed by a merge and stays [] for a Change that absorbed none. parent names the Parent Change in the same store, or null. blocked_by carries current blockers. Replace placeholders and remove every comment before audit. Keep the sections in the order below. Never paste received conversation input into the record. Never write attestation, accountable-person, priority, or overrule text. Never write a result, producer, or Verifier. -->
+<!-- Use skill `spec-tree:change-standards`. Apply it for this Maturity. The closed schema permits exactly the seven keys above. predecessors lists the Changes this Change absorbed by a merge and stays [] for a Change that absorbed none. parent names the Parent Change in the same store, or null. blocked_by carries current blockers. Replace placeholders and remove every comment before audit. Keep the sections in the order below. Never paste received conversation input into the record. Never write attestation, accountable-person, priority, or overrule text. Never write a result, producer, Verifier, Node state, link to produced content, or progress. -->
 
 ## Intent
 
@@ -35,9 +35,9 @@ parent: null
 
 ## Spec mutations
 
-<!-- One block for each affected or intended Node, in execution order, providers first. Use none for the malleability before of a Node the Change creates. End each opening with the required state: the state the Change leaves the Node in, or for a removed or folded Node the words of its malleability after. -->
+<!-- One block for each affected or intended Node, in execution order, providers first. Use none for the malleability before of a Node the Change creates. -->
 
-`spx/[full node path]`: [spec, verification, implementation, or none] -> [spec, verification, or implementation], [required state]
+`spx/[full node path]`: [spec, verification, implementation, or none] -> [spec, verification, or implementation]
 
 `[spec file name]` states:
 
@@ -47,7 +47,3 @@ parent: null
 
 - Repository: [The one repository.]
 - Check: [The one observable check: one trigger and its result.]
-
-## Artifacts
-
-<!-- Leave this section empty until a round returns audited content. Then the revision adds one link per record and Node the Change adds or modifies, pinned to the commit that holds the content so it resolves in every execution environment. A new decision's content links the comment that holds it on the Change's issue until it merges. Remove this comment before audit. -->
