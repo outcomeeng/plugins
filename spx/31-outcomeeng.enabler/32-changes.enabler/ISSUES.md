@@ -184,3 +184,15 @@ Evidence: the hosted review of [PR 643](https://github.com/outcomeeng/plugins/pu
 Impact: a reader of the table concludes that `count-limits` returns no `path-rejected` result for a candidate outside the repository or not UTF-8, though it does.
 
 Revisit and settlement condition: the row names `count-limits` beside `read-candidate`, `start`, and `reconcile`, and one typed skill audit of `audit-change` raises no finding on the blocked-reason table.
+
+## DEBT [consistency]: the changes spec states debt severity and a rejected terminal status where audit-change and author-change use filed and approved
+
+Defect class: `consistency`.
+
+Finding: two `[audit]` assertions of [`spx/31-outcomeeng.enabler/32-changes.enabler/changes.md`](spx/31-outcomeeng.enabler/32-changes.enabler/changes.md) describe a severity vocabulary the skills no longer use. The `audit-change` revision assertion reads "a finding on any other section is recorded as debt, a run whose findings are all debt finishes rejected", while `<execution_sequence>` steps 6 and 10 of `src/plugins/spec-tree/skills/audit-change/SKILL.md` give such a finding severity `filed` and finish the run `approved`. The `author-change` publication assertion reads "publishes a revision whose sealed change-audit run is rejected with no blocking finding and every finding at debt", while `<audit_gate>` step 4 of `src/plugins/spec-tree/skills/author-change/SKILL.md` defines approval as `approved` with every finding `filed`, so the case the assertion describes does not occur.
+
+Evidence: `spec-tree:assertion-auditor` run `2026-10-12_10-41-21-450-61049bb4b5e8` on head `236e6c5b8555d2bacf144ecaa4c4b1e0fd0ed73d` approved and reported both as standing findings, rule `severity-terminal-status-vocabulary`, severity `debt`. The base `f9b6b7d6050497709e352532271fe9919cad8f72` already carries the spec text and the skills' `filed` mechanism, and `git diff --unified=0 f9b6b7d6050497709e352532271fe9919cad8f72` leaves both locations untouched.
+
+Impact: a reader of the spec expects an all-debt revision audit to finish `rejected` and `author-change` to publish on that rejection, while both skills finish and publish on `approved` with every finding `filed`.
+
+Revisit and settlement condition: both assertions state `filed` severity and an `approved` terminal status, and one assertion audit of the changes node raises no `severity-terminal-status-vocabulary` finding.
