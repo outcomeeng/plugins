@@ -145,7 +145,9 @@ A blocked result names exactly one of these reasons:
    yields a finding. Judge every Governance entry for its verdict `in line`,
    `amended`, or `new`, every amended or new record for its Governance
    mutations block, and every Spec mutations block for an opening with its
-   Node's malleability before and after and, from Executable on, its required state. Then judge each body section against
+   Node's malleability before and after. Judge an Executable record against
+   `executable-no-status`: a `## Artifacts` section, a link to produced
+   content, a Node's state, or a record of progress is a defect. Then judge each body section against
    the loaded rule and criterion inventory, together with every other section
    the declared Maturity requires, and every body line against
    `body-authority`. Judge a record that carries `## Nodes`,
