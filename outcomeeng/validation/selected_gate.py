@@ -225,6 +225,7 @@ AGENT_DEFINITION_PATTERNS: Final = (
     "dist/claude/*/agents/**",
     "dist/codex/*/skills/*/agents/**",
     "outcomeeng/distribution/agents.py",
+    "outcomeeng/distribution/profiles.py",
     "outcomeeng/distribution/build.py",
     "outcomeeng/distribution/installation.py",
     "src/templates/plugin/scripts/place_agents.py",

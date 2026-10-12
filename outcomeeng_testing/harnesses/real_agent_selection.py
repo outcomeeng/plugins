@@ -33,6 +33,7 @@ from outcomeeng.distribution.installation import (
     apply_agent_home_plan,
     generated_codex_agent_definitions,
 )
+from outcomeeng.distribution.profiles import resolve_profile
 from outcomeeng.validation import (
     PREFLIGHT_STEPS,
     TEST_STEPS,
@@ -104,15 +105,17 @@ class AgentDefinitionInventory:
     Each kind comes from the owner that produces or places the artifact: the
     build's emission projection names every authored agent source, the
     rendering it emits, and every rendering of the shipped placement script;
-    the conversion module, the module defining that projection, and the module
-    defining repository installation's agent-home placement are the code that
-    converts, emits, and places definitions; and the plugin-lifecycle harness
+    the conversion module, the module defining the profiles each definition
+    selects, the module defining that projection, and the module defining
+    repository installation's agent-home placement are the code that converts,
+    profiles, emits, and places definitions; and the plugin-lifecycle harness
     that executes the shipped placement script names its authored template.
     """
 
     authored_sources: tuple[str, ...]
     renderings: tuple[str, ...]
     conversion_code: tuple[str, ...]
+    profile_code: tuple[str, ...]
     emission_code: tuple[str, ...]
     placement_code: tuple[str, ...]
     placement_scripts: tuple[str, ...]
@@ -155,6 +158,7 @@ def checkout_agent_definition_inventory() -> AgentDefinitionInventory:
         authored_sources=tuple(sorted(authored)),
         renderings=tuple(sorted(renderings)),
         conversion_code=(repository_relative_path(agent_conversion.__file__),),
+        profile_code=(_module_path(resolve_profile),),
         emission_code=(_module_path(project_emissions),),
         placement_code=tuple(
             sorted(
