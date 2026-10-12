@@ -12,7 +12,7 @@ parent: null
 
 ## Intent
 
-<!-- At most 60 words in all, labels included. A list inside a part stands in parentheses. -->
+<!-- Within the Intent limit of `record-limits`, labels included. A list inside a part stands in parentheses. -->
 
 - **What:** [The decision or spec evolution, lower-layer reconciliation, or combination this Change achieves.]
 - **Why:** [The established reason the work is worth doing: truth brought to a lower layer, an operator judgment, a prototype question, or an Output and the condition it moves.]
@@ -35,9 +35,9 @@ parent: null
 
 ## Spec mutations
 
-<!-- One block for each affected or intended Node, in execution order, providers first. Use none for the malleability before of a Node the Change creates. -->
+<!-- One block for each affected or intended Node, in execution order, providers first. Use none for the malleability before of a Node the Change creates. End each opening with the required state: the state the Change leaves the Node in, or for a removed or folded Node the words of its malleability after. -->
 
-`spx/[full node path]`: [spec, verification, implementation, or none] -> [spec, verification, or implementation]
+`spx/[full node path]`: [spec, verification, implementation, or none] -> [spec, verification, or implementation], [required state]
 
 `[spec file name]` states:
 

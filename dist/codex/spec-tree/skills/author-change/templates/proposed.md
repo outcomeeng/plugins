@@ -12,7 +12,7 @@ parent: null
 
 ## Intent
 
-<!-- At most 60 words in all, labels included. A list inside a part stands in parentheses. -->
+<!-- Within the Intent limit of `record-limits`, labels included. A list inside a part stands in parentheses. -->
 
 - **What:** [The decision or spec evolution, lower-layer reconciliation, or combination this Change achieves.]
 - **Why:** [The established reason the work is worth doing: truth brought to a lower layer, an operator judgment, a prototype question, or an Output and the condition it moves.]
