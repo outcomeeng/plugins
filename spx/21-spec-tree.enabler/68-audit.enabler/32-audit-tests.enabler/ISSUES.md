@@ -81,3 +81,19 @@ The test-evidence audit skill loads `/contextualize` for its target node, and `/
 **Evidence.** Rollout `agent-a4cedd803fc1a5758.jsonl` of a test-evidence audit dispatched against head `f07db1bbaf225ec031d7a777f02c166daa588871` on 2026-09-16 resolved two conflicts and finished at `15d4309e69c26804cd1b04676248a529fd0235b9`, so the concurrent implementation audit found its sealed head superseded.
 
 **Settlement condition.** The audit selects the Verifier-mode context load that the entry in `spx/21-spec-tree.enabler/18-context-loading.enabler/ISSUES.md` settles, so the audited head stays the dispatched head.
+
+## Six skill-standard findings stand on the audit-tests skill body
+
+The skill audit run `2026-10-12_18-41-36-254-8cb4eac53023` of
+`src/plugins/spec-tree/skills/audit-tests/SKILL.md` at head
+`ab5b519f0333258fc6e277b09a458b8b65920941` reported six findings on text the
+changeset leaves unchanged; the changeset changes line 20 only
+(`git diff -U0 2cf9cd80eebb49dc8a682f45dd08922551d54d76...ab5b519f0333258fc6e277b09a458b8b65920941 -- src/plugins/spec-tree/skills/audit-tests/SKILL.md`).
+
+- `auditor-verdict-format`: step `compose_language` records each composed language's NOT_APPLICABLE subjects "in verdict metadata", while the `<verdict_format>` metadata object declares only `branch`, `evidence_chain`, and `coverage_traces`.
+- `composed-dependency-form`: step `load_context` names `/understand` and `/contextualize` as slash invocations instead of `Use skill` instructions.
+- `conciseness` and `constraint-strong-modals`: the last `<constraints>` bullet is an author-maintenance note about the skill's own `Bash` grant, stated without MUST, NEVER, or ALWAYS.
+- `constraint-rationale`: the constraint requiring every REJECT finding to name the assertion, the failed property, and the evidentiary gap carries no rationale after a dash.
+- `semantic-tag-names`: `<step name="full_chain_ownership">` wraps Steps 2b, 3, and 3a, three distinct steps under one name.
+
+**Settlement condition**: the skill states the metadata field for NOT_APPLICABLE language results in `<verdict_format>`, composes `spec-tree:understand` and `spec-tree:contextualize` with `Use skill`, moves the grant note out of the runtime prompt, gives the REJECT-finding constraint its rationale, splits the combined step tag, and a skill audit approves.
