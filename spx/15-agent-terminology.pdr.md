@@ -41,7 +41,7 @@ A Role does not identify a subagent definition. A configured Verifier names a su
 
 **Refiner.** The role of the Change's holder during refinement. The agent session in conversation with the operator holds it, realized by loading into that conversation the refinement skills the Change's Maturity routes to; the role is never dispatched as a subagent and never loaded from an agent definition.
 
-**Executor.** The role of the Change's holder during execution. The Executor takes a Leaf's `## Mutations` rows in order, delegates production and verification, integrates the changeset, and escalates a reopened product or architecture judgment to the operator. The Executor produces no artifact.
+**Executor.** The role of the Change's holder during execution. The Executor takes a Leaf's `## Governance mutations` blocks and then its `## Spec mutations` blocks, each in record order, delegates production and verification, integrates the changeset, and escalates a reopened product or architecture judgment to the operator. The Executor produces no artifact.
 
 **Author.** The role held by the agent session that produces the artifacts of one round: decisions, specs, verification artifacts, or implementation.
 

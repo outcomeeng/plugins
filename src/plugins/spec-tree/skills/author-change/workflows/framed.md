@@ -6,9 +6,9 @@ Use skill `spec-tree:change-standards`. Invoke it with `Framed`; it loads the co
 
 <process>
 
-1. Resolve the selected Change and apply `<revision_safety>`. Preserve append-only `refined_from` and `parent`; refresh mutable `blocked_by` from necessary relationship reads. Apply `<authority_gate>` for leaving `Proposed`.
+1. Resolve the selected Change and apply `<revision_safety>`. Preserve append-only `predecessors` and `parent`; refresh mutable `blocked_by` from necessary relationship reads. Apply `<authority_gate>` for leaving `Proposed`.
 2. Apply `<intake_and_triage>` to every Output-affecting uncertainty. Ask only questions repository truth and supplied intent cannot settle.
-3. Complete `## Nodes`: every affected or intended Node with its Malleability before, empty for a Node the Change creates, and its Malleability after. Complete `## Assertion operations`: every operation by owning Node or decision record and exact target. Complete `## Decisions`: every question that can change the Output, each with its answer. Never replace per-Node values with one Change-wide target. A Parent carries neither `## Nodes` nor `## Assertion operations`.
+3. Complete `## Governance`: every record that governs the Change by its path from `spx/`, each with the verdict `in line`, `amended`, or `new`. Complete `## Governance mutations`: one block for each amended or new record, opening with `<path> states:` and listing its decisions in exact text, each opening with a slug and a colon. Complete `## Spec mutations`: one block for each affected or intended Node in execution order, opening with `<path>: <malleability before> -> <malleability after>` and continuing with `<file> states:` and the Node's assertions as bare bullets. Settle every question that can change the Output in the block that states its answer, and leave `## Open questions` empty or remove it. Never replace per-Node values with one Change-wide target. A Parent carries neither mutations section.
 4. Present the completed sections to the operator for review. An objection or correction returns to step 2 and leaves `maturity` unchanged until the sections stand. A drafting or execution request alone supplies no authority, and the record carries no attestation line; the Product's Maintainer's move out of `Submitted` at `Framed` is the authority that the record captures the operator's intent. When the sections stand, set `maturity: Framed`.
 5. Check every cumulative Framed DoR criterion. Return the stabilized local candidate to `<audit_gate>`, then `<persistence>`.
 
@@ -17,8 +17,8 @@ Use skill `spec-tree:change-standards`. Invoke it with `Framed`; it loads the co
 <success_criteria>
 
 - The store showed the Product's Maintainer's move out of `Submitted` at `Proposed` before Maturity advanced to `Framed`.
-- Output-affecting questions are settled in `## Decisions` and the record carries no attestation line.
-- Every affected Node retains its own Malleability before and after.
-- Every criterion of the loaded Framed Definition of Ready holds for `## Nodes`, `## Assertion operations`, and `## Decisions`.
+- Output-affecting questions are settled in the mutations blocks, `## Open questions` is empty, and the record carries no attestation line.
+- Every affected Node retains its own malleability before and after.
+- Every criterion of the loaded Framed Definition of Ready holds for `## Governance`, `## Governance mutations`, and `## Spec mutations`.
 
 </success_criteria>

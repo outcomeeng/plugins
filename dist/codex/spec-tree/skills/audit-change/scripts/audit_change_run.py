@@ -65,9 +65,9 @@ the named issue's Product and Parent, its Parent's Product, and the issues whose
 Parent is the named issue, within the same page bound as ``read-authority``.
 
 ``count-limits`` reads the candidate and starts no process beyond the
-repository-root lookup; it returns the title's word count, each Intent part's
-sentence count, the Decisions row count, and each answer's sentence count with
-the limit of each, and lists those over their limit.
+repository-root lookup; it returns the title's word count and the Intent
+section's word count, labels included, with the limit of each, and lists those
+over their limit.
 """
 
 from __future__ import annotations
@@ -1327,35 +1327,25 @@ def _read_relations(
 
 
 TITLE_WORD_LIMIT: Final = 15
-INTENT_SENTENCE_LIMIT: Final = 3
-DECISION_ROW_LIMIT: Final = 12
-ANSWER_SENTENCE_LIMIT: Final = 2
+INTENT_WORD_LIMIT: Final = 60
 _FRONT_MATTER_PATTERN: Final = re.compile(r"\A---\n(.*?)\n---\n", re.DOTALL)
 _TITLE_PATTERN: Final = re.compile(r"^title:[ \t]*(.*)$", re.MULTILINE)
-_INTENT_PART_PATTERN: Final = re.compile(
-    r"^[ \t]*(?:[-*][ \t]+)?\*\*(What|Why|Observation|Evidence)(?::\*\*|\*\*)",
-    re.MULTILINE,
-)
-_DECISION_ITEM_PATTERN: Final = re.compile(r"^(?:[-*]|\d+\.)[ \t]+")
-_CODE_SPAN_PATTERN: Final = re.compile(r"`[^`\n]*`")
 _LINK_PATTERN: Final = re.compile(r"\[([^\]]*)\]\([^)]*\)")
-_ABBREVIATION_PATTERN: Final = re.compile(r"\b(e\.g|i\.e|etc|vs)\.", re.IGNORECASE)
-_SENTENCE_END_PATTERN: Final = re.compile(r"[.!?]+[\"')\]]*(?=\s|$)")
+_LIST_MARKER_PATTERN: Final = re.compile(r"^[ \t]*(?:[-*]|\d+\.)[ \t]+", re.MULTILINE)
+_EMPHASIS_PATTERN: Final = re.compile(r"\*+|_{2,}")
 _HEADING_PATTERN: Final = re.compile(r"##[ \t]+(.+?)[ \t]*$")
-_QUESTION_END_PATTERN: Final = re.compile(r"\?(?=\s|$)")
 
 
-def count_sentences(text: str) -> int:
-    """Count sentences: runs of text ended by ``.``, ``!``, or ``?`` before whitespace or the end.
+def count_words(text: str) -> int:
+    """Count words: whitespace-separated tokens that hold a letter or a digit.
 
-    A code span collapses to one word and a link target drops, so a path or an
-    identifier never ends a sentence.
+    A list marker and emphasis markup carry no word, a link counts its text, and
+    a label such as ``What:`` counts as one word.
     """
-    plain = _CODE_SPAN_PATTERN.sub("code", text)
-    plain = _LINK_PATTERN.sub(r"\1", plain)
-    plain = _ABBREVIATION_PATTERN.sub(r"\1", plain)
-    plain = " ".join(plain.split())
-    return len([part for part in _SENTENCE_END_PATTERN.split(plain) if part.strip()])
+    plain = _LINK_PATTERN.sub(r"\1", text)
+    plain = _LIST_MARKER_PATTERN.sub("", plain)
+    plain = _EMPHASIS_PATTERN.sub("", plain)
+    return len([token for token in plain.split() if any(c.isalnum() for c in token)])
 
 
 def _body_sections(body: str) -> dict[str, str]:
@@ -1374,37 +1364,10 @@ def _body_sections(body: str) -> dict[str, str]:
     return {name: "\n".join(lines) for name, lines in sections.items()}
 
 
-def _decision_entries(text: str) -> list[str]:
-    """Return each Decisions row's text: a table row's last cell, or a list item with its continuation lines."""
-    entries: list[str] = []
-    header_seen = False
-    for line in text.splitlines():
-        stripped = line.strip()
-        if stripped.startswith("|"):
-            cells = [cell.strip() for cell in stripped.strip("|").split("|")]
-            if all(set(cell) <= set("-: ") for cell in cells):
-                continue
-            if not header_seen:
-                header_seen = True
-                continue
-            entries.append(cells[-1])
-        elif _DECISION_ITEM_PATTERN.match(line):
-            entries.append(_DECISION_ITEM_PATTERN.sub("", line, count=1))
-        elif stripped and entries and line[:1] in " \t":
-            entries[-1] += " " + stripped
-    return entries
-
-
-def _answer(entry: str) -> str:
-    """Return the text after the first question mark that ends a sentence, empty when none."""
-    marked = _QUESTION_END_PATTERN.search(entry)
-    return entry[marked.end() :].strip() if marked else ""
-
-
 def _count_limits(
     context: _Context, request: Mapping[str, object]
 ) -> dict[str, object]:
-    """Count the title's words, each Intent part's sentences, the Decisions rows, and each answer's sentences."""
+    """Count the title's words and the Intent section's words, labels included."""
     relative = _candidate_path(request)
     content = _live_content(_repository_root(context), relative)
     front = _FRONT_MATTER_PATTERN.match(content)
@@ -1419,34 +1382,14 @@ def _count_limits(
         }
     ]
     sections = _body_sections(body)
-    intent = sections.get("Intent", "")
-    starts = list(_INTENT_PART_PATTERN.finditer(intent))
-    for index, start in enumerate(starts):
-        end = starts[index + 1].start() if index + 1 < len(starts) else len(intent)
+    if "Intent" in sections:
         measured.append(
             {
-                ResultField.SECTION: f"Intent {start.group(1)}",
-                ResultField.LIMIT: INTENT_SENTENCE_LIMIT,
-                ResultField.COUNT: count_sentences(intent[start.end() : end]),
+                ResultField.SECTION: "Intent",
+                ResultField.LIMIT: INTENT_WORD_LIMIT,
+                ResultField.COUNT: count_words(sections["Intent"]),
             }
         )
-    if "Decisions" in sections:
-        entries = _decision_entries(sections["Decisions"])
-        measured.append(
-            {
-                ResultField.SECTION: "Decisions rows",
-                ResultField.LIMIT: DECISION_ROW_LIMIT,
-                ResultField.COUNT: len(entries),
-            }
-        )
-        for position, entry in enumerate(entries, start=1):
-            measured.append(
-                {
-                    ResultField.SECTION: f"Decisions row {position} answer",
-                    ResultField.LIMIT: ANSWER_SENTENCE_LIMIT,
-                    ResultField.COUNT: count_sentences(_answer(entry)),
-                }
-            )
     return {
         ResultField.PATH: relative,
         ResultField.SHA256: _sha256(content),

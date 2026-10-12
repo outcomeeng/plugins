@@ -1,52 +1,49 @@
 ---
 title: "[Title naming the intended Output, at most 15 words]"
-product: "[The one owning Product, or omit the value for a root spanning Products]"
+product: "[The one Product that owns the Output, or omit the value for a root spanning Products]"
 maturity: Executable
 lifecycle: Available
-refined_from: []
+predecessors: []
 blocked_by: []
 parent: null
 ---
 
-<!-- Use skill `spec-tree:change-standards`. Apply it for this Maturity. The closed schema permits exactly the seven keys above. refined_from lists the Changes this Change absorbed by a merge and stays [] for a Change that absorbed none. parent names the Parent Change in the same store, or null. blocked_by carries current blockers. Replace placeholders and remove every comment before audit. Keep the sections in the order below. Never paste received conversation input into the record. Never write attestation, accountable-person, priority, or overrule text. -->
+<!-- Use skill `spec-tree:change-standards`. Apply it for this Maturity. The closed schema permits exactly the seven keys above. predecessors lists the Changes this Change absorbed by a merge and stays [] for a Change that absorbed none. parent names the Parent Change in the same store, or null. blocked_by carries current blockers. Replace placeholders and remove every comment before audit. Keep the sections in the order below. Never paste received conversation input into the record. Never write attestation, accountable-person, priority, or overrule text. Never write a result, producer, Verifier, Node state, link to produced content, or progress. -->
 
 ## Intent
 
-- **What:** [The decision or spec evolution, lower-layer reconciliation, or combination this Change achieves. One to three sentences.]
-- **Why:** [The established reason the work is worth doing: truth brought to a lower layer, an operator judgment, a prototype question, or an Output and the condition it moves. One to three sentences.]
-- **Observation:** [Optional: the observed state that gives rise to the Change. Remove this line when no observation exists. One to three sentences.]
-- **Evidence:** [The observable result by which anyone checks that the Output is achieved. One to three sentences.]
+<!-- Within the Intent limit of `record-limits`, labels included. A list inside a part stands in parentheses. -->
 
-## Nodes
+- **What:** [The decision or spec evolution, lower-layer reconciliation, or combination this Change achieves.]
+- **Why:** [The established reason the work is worth doing: truth brought to a lower layer, an operator judgment, a prototype question, or an Output and the condition it moves.]
+- **Observation:** [Optional: the observed state that gives rise to the Change. Remove this line when no observation exists.]
+- **Evidence:** [The observable result by which anyone checks that the Output is achieved.]
 
-<!-- A Leaf carries Nodes; a Parent carries neither this section nor Assertion operations. -->
+## Governance
 
-| Node                   | Malleability before                                                 | Malleability after                        | Required state                  |
-| ---------------------- | ------------------------------------------------------------------- | ----------------------------------------- | ------------------------------- |
-| `spx/[full node path]` | `[spec, verification, or implementation; empty for a created Node]` | `[spec, verification, or implementation]` | [The state the Change requires] |
+<!-- A Leaf lists every record that governs the Change. -->
 
-## Assertion operations
+- `spx/[path of the governing record]`: [in line, amended, or new]
 
-[Each addition, amendment, or removal of an assertion or decision rule, by owning Node or decision record and exact target.]
+## Governance mutations
 
-## Decisions
+<!-- One block for each amended or new record, in record order. -->
 
-<!-- At most 12 rows; each answer at most two sentences. -->
+`spx/[path of the amended or new record]` states:
 
-- [Each question that can change the intended Output? Its answer.]
+- [slug]: [The decision in exact text.]
 
-## Mutations
+## Spec mutations
 
-<!-- Rows stand in execution order, providers first. -->
+<!-- One block for each affected or intended Node, in execution order, providers first. Use none for the malleability before of a Node the Change creates. -->
 
-**Repository:** [The one repository.]
+`spx/[full node path]`: [spec, verification, implementation, or none] -> [spec, verification, or implementation]
 
-**Observable check:** [The one observable check of the slice.]
+`[spec file name]` states:
 
-| Node                   | Transition                  | Results and producers                                                                                                         |
-| ---------------------- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `spx/[full node path]` | [add, modify, or implement] | [Each result the merge composition selects for the Node, with its producer; the audit of each decision record the Node owns.] |
+- [The Node's assertion as it reads after the Change.]
 
-## Artifacts
+## Slice
 
-<!-- Leave this section empty until a round returns audited content. Then the revision adds one link per Node the Change adds, modifies, or implements, pinned to the commit that holds the content so it resolves in every execution environment. A new decision's content links the comment that holds it on the Change's issue until it merges. Remove this comment before audit. -->
+- Repository: [The one repository.]
+- Check: [The one observable check: one trigger and its result.]

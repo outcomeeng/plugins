@@ -149,41 +149,29 @@ Impact: a `filed` finding recorded once can reappear under a new key after an un
 
 Revisit and settlement condition: the runner builds the key from the unit and the rule alone, and a linked case asserts that one finding keeps its key when the list around it changes.
 
-## DEBT [property-quality]: the Sliced Parent criterion and the Framed Nodes criterion read as in tension
+## DEBT [property-quality]: the Sliced Parent criterion and the Framed Spec mutations criterion read as in tension
 
 Defect class: `property-quality`.
 
-Finding: [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) states Sliced as "the Framed Definition of Ready holds; and ... A Parent is Sliced when every child exists naming it in `parent` and its record carries neither `## Nodes` nor `## Assertion operations`", and Framed as "`## Nodes` names every affected or intended Node". The cumulative Framed criterion and the Parent's no-Nodes condition read as in tension unless an empty Node set satisfies the Framed criterion vacuously, and the PDR does not say so. Location: Definitions of Ready / Sliced, and Record table (Framed `## Nodes`).
+Finding: [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) states the Framed Definition of Ready as "`## Spec mutations` holds a block for each affected or intended Node" and "`## Governance mutations` holds a block for each amended or new record", and Sliced as "the Framed Definition of Ready holds" plus "a Parent is Sliced when every child exists naming it in `parent` and its record carries neither a Governance mutations nor a Spec mutations block". The Definitions of Ready are cumulative, so the Framed criterion and the Parent's no-block condition read as in tension unless a Parent has no affected or intended Node of its own, and the PDR does not say so. The `## Slice` criterion names a Leaf only, so a Parent's `## Slice` is likewise unstated. Location: `## Definitions of Ready` (Framed, Sliced) and `## Final format` (record-sections, change-type).
 
-Evidence: `spec-tree:pdr-auditor` launch 1 on [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) at commit `a4f46721c9e1d94beddb8295eba53ecfb496e0c1`, verdict `APPROVED`, rule `property-quality`, class `ambiguous-criterion`, severity `WARNING`. The audit judged it non-blocking because the vacuous reading is available and two reviewers could reach the same verdict.
+Evidence: the Framed and Sliced criteria and the `change-type` decision of the PDR above show the unstated reading. The original finding came from `spec-tree:pdr-auditor` launch 1 at commit `a4f46721c9e1d94beddb8295eba53ecfb496e0c1`, verdict `APPROVED`, rule `property-quality`, class `ambiguous-criterion`, severity `WARNING`, against an earlier form of the same criteria.
 
-Impact: a reviewer who reads the Framed criterion as requiring at least one named Node rejects a Sliced Parent the Sliced criterion admits.
+Impact: a reviewer who reads the Framed criterion as requiring at least one Spec mutations block rejects a Sliced Parent the Sliced criterion admits.
 
-Revisit and settlement condition: the PDR states that an empty Node set satisfies the Framed `## Nodes` criterion for a Parent, or states the Parent's Framed criterion apart from the Node-bearing one; one PDR audit then raises no `ambiguous-criterion` finding on the Sliced and Framed criteria.
+Revisit and settlement condition: the PDR states that a Parent has no Node of its own and satisfies the Framed `## Governance mutations` and `## Spec mutations` criteria with no block, or states the Parent's Framed criterion apart from the block-bearing one; one PDR audit then raises no `ambiguous-criterion` finding on the Framed and Sliced criteria.
 
-## DEBT [property-quality]: a top-level Parent with no Nodes is both a Parent and a root
+## DEBT [property-quality]: a top-level Parent has no stated close rule
 
 Defect class: `property-quality`.
 
-Finding: [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) uses "Parent" for a Change that others name in `parent` and for the target of a Change's `parent` field. It states "a Change with neither a Parent nor Nodes is a root", "A Parent that has a Parent closes `Applied` when every child has closed", and "A root closes `Applied` when the operator judges its Intent met". A top-level Parent with `parent: null` and no Nodes is therefore both a Parent and a root, and the PDR does not say which close rule governs it. Location: Record (type derivation) and Lifecycle (close rule).
+Finding: [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) derives a Change's type in `change-type` as Leaf (a Governance mutations or Spec mutations block), Parent (another Change names it in `parent`), or root (neither), so a Change with children is a Parent and never a root. `## Lifecycle` states the Parent close only for "a Parent that has a Parent", which closes `Applied` when every child has closed and its last child closed `Applied`, and states the root close as the operator's judgment of its Intent. A Parent with `parent: null` is covered by neither sentence. Location: `## Lifecycle` (close rule), with the `close-contract` and `parent-cascade-close` assertions of [`spx/31-outcomeeng.enabler/32-changes.enabler/changes.md`](spx/31-outcomeeng.enabler/32-changes.enabler/changes.md), which refuse `Applied` for a Parent while a child is open and cascade only to a Parent that has a Parent.
 
-Evidence: `spec-tree:pdr-auditor` launch 1 on [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) at commit `a4f46721c9e1d94beddb8295eba53ecfb496e0c1`, verdict `APPROVED`, rule `property-quality`, class `ambiguous-criterion`, severity `WARNING`.
+Evidence: the `change-type` decision and the close paragraph of `## Lifecycle` in the PDR above. The original finding came from `spec-tree:pdr-auditor` launch 1 at commit `a4f46721c9e1d94beddb8295eba53ecfb496e0c1`, verdict `APPROVED`, rule `property-quality`, class `ambiguous-criterion`, severity `WARNING`, against an earlier form of the same terms.
 
 Impact: two reviewers can apply different close rules to a top-level Parent, one closing it when its children have closed and one waiting for the operator's judgment of its Intent.
 
-Revisit and settlement condition: the PDR names the close rule that governs a Change with children and `parent: null`, or separates the term for a Change with children from the term for the target of `parent`; one PDR audit then raises no `ambiguous-criterion` finding on the type derivation and the close rule.
-
-## DEBT [atemporal-voice]: the Rationale justifies the Compatibility rule by the prior record population
-
-Defect class: `atemporal-voice`.
-
-Finding: the Rationale of [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) reads "converting a record in the Output form at its next revision avoids a mass rewrite of published records". The sentence justifies the Compatibility rule by reference to the prior record population. It is stated as present-tense rationale and names no past event.
-
-Evidence: `spec-tree:pdr-auditor` launch 1 on [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) at commit `a4f46721c9e1d94beddb8295eba53ecfb496e0c1`, verdict `APPROVED`, rule `atemporal-voice`, class `temporal-language`, severity `WARNING`, location Rationale; the audit judged it non-blocking.
-
-Impact: a later audit can read the sentence as history and raise the finding again.
-
-Revisit and settlement condition: the Rationale justifies the Compatibility rule by a property of the record forms alone, with no reference to a record population; one PDR audit then raises no `temporal-language` finding on the Rationale.
+Revisit and settlement condition: `## Lifecycle` names the close rule that governs a Parent with `parent: null`; one PDR audit then raises no `ambiguous-criterion` finding on the type derivation and the close rule.
 
 ## DEBT [consistency]: the path-rejected row of the audit-change runner contract omits count-limits
 
@@ -197,26 +185,26 @@ Impact: a reader of the table concludes that `count-limits` returns no `path-rej
 
 Revisit and settlement condition: the row names `count-limits` beside `read-candidate`, `start`, and `reconcile`, and one typed skill audit of `audit-change` raises no finding on the blocked-reason table.
 
-## DEBT [consistency]: the parent-child-rejections assertion names one of the two Product cases
+## DEBT [consistency]: the changes spec states debt severity and a rejected terminal status where audit-change and author-change use filed and approved
 
 Defect class: `consistency`.
 
-Finding: the `parent-child-rejections` assertion of [`spx/31-outcomeeng.enabler/32-changes.enabler/changes.md`](spx/31-outcomeeng.enabler/32-changes.enabler/changes.md) states that `audit-change` rejects "a child whose Product differs from its Parent's Product". `src/plugins/spec-tree/skills/audit-change/SKILL.md` (lines 143 to 145) also rejects a Parent whose Product differs from the Product of any of its children, and the PDR [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) states that every child of a Parent that carries a Product carries that Product, a rule that binds the Parent and its children in both directions.
+Finding: two `[audit]` assertions of [`spx/31-outcomeeng.enabler/32-changes.enabler/changes.md`](spx/31-outcomeeng.enabler/32-changes.enabler/changes.md) describe a severity vocabulary the skills no longer use. The `audit-change` revision assertion reads "a finding on any other section is recorded as debt, a run whose findings are all debt finishes rejected", while `<execution_sequence>` steps 6 and 10 of `src/plugins/spec-tree/skills/audit-change/SKILL.md` give such a finding severity `filed` and finish the run `approved`. The `author-change` publication assertion reads "publishes a revision whose sealed change-audit run is rejected with no blocking finding and every finding at debt", while `<audit_gate>` step 4 of `src/plugins/spec-tree/skills/author-change/SKILL.md` defines approval as `approved` with every finding `filed`, so the case the assertion describes does not occur.
 
-Evidence: the assertion text above against lines 143 to 145 of the skill, and the `audit-change` entry of the `0.104.9` spec-tree changelog (`src/plugins/spec-tree/CHANGELOG.md`), which lists four rejection cases where the assertion names three.
+Evidence: `spec-tree:assertion-auditor` run `2026-10-12_10-41-21-450-61049bb4b5e8` on head `236e6c5b8555d2bacf144ecaa4c4b1e0fd0ed73d` approved and reported both as standing findings, rule `severity-terminal-status-vocabulary`, severity `debt`. The base `f9b6b7d6050497709e352532271fe9919cad8f72` already carries the spec text and the skills' `filed` mechanism, and `git diff --unified=0 f9b6b7d6050497709e352532271fe9919cad8f72` leaves both locations untouched.
 
-Impact: the assertion under-states the behavior the skill ships, so a regression that drops the Parent-against-children check leaves the assertion true.
+Impact: a reader of the spec expects an all-debt revision audit to finish `rejected` and `author-change` to publish on that rejection, while both skills finish and publish on `approved` with every finding `filed`.
 
-Revisit and settlement condition: the assertion names a Parent whose Product differs from the Product of any of its children beside the child case, and a status projection of the node derives its state from the amended assertion.
+Revisit and settlement condition: both assertions state `filed` severity and an `approved` terminal status, and one assertion audit of the changes node raises no `severity-terminal-status-vocabulary` finding.
 
-## DEBT [evidence]: the table-encoded Decisions row never trips the answer-length limit
+## DEBT [consistency]: the read-relations operation returns parentProduct with no remaining reader
 
-Defect class: `evidence`.
+Defect class: `consistency`.
 
-Finding: `_answer` in `src/plugins/spec-tree/skills/audit-change/scripts/audit_change_run.py` returns the text after the first sentence-ending question mark of a Decisions row, and the empty string when the row holds none. `_decision_entries` accepts two row encodings: a list item with its continuation lines, and a table row whose entry is its last cell. A table row whose last cell is a dedicated Answer column carries no question mark, so `_answer` returns the empty string, `count_sentences` reads zero, and `count-limits` reports no violation of the two-sentence answer limit for that row whatever its length.
+Finding: the `change-type` judgment of `src/plugins/spec-tree/skills/audit-change/SKILL.md` no longer compares a Parent's Product with its children's, and that comparison was the only reader of the `parentProduct` field. The `read-relations` row of the runner operation table and the result prose of the same skill still list `parentProduct`, and `_read_relations` in `src/plugins/spec-tree/skills/audit-change/scripts/audit_change_run.py` still computes it under `ResultField.PARENT_PRODUCT`.
 
-Evidence: the hosted review of [PR 643](https://github.com/outcomeeng/plugins/pull/643#issuecomment-6105049321) raised the case as a `debt` finding against `_answer`; the function and its caller in `_count_limits` show the zero count.
+Evidence: the CI review of [PR 658](https://github.com/outcomeeng/plugins/pull/658) on head `82bf3bef3f779940748ff9013ece56e3fdd6b14d` raised this as a `DEBT` finding against line 69 of the skill. The operator ruled that a PR with only cosmetic findings merges and the rest is handled after the merge, and the field changes no verdict, so the merge of Change outcomeeng/changes#470 carries it.
 
-Impact: a Decisions answer of any length passes the limit when the record states Decisions as a table with an Answer column.
+Impact: the runner computes and the skill advertises a value no step reads, and a reader of the operation table can expect a Product comparison the skill no longer makes.
 
-Revisit and settlement condition: the runner reads the Answer cell of a table row directly, or `_decision_entries` accepts the list encoding alone and the record contract states Decisions as a list; a linked case then asserts a violation for a table row whose answer exceeds two sentences, or the table encoding's rejection.
+Revisit and settlement condition: the `read-relations` row and result prose name no `parentProduct`, the runner computes none, the linked runner tests pass, and one typed skill audit of `audit-change` raises no finding on the operation table.

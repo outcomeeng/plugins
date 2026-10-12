@@ -16,12 +16,13 @@ A changed-section dependent is text in another section or in the front matter th
 
 | Edit                                                                     | Dependents to check                                                                                      |
 | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
-| Changed `## Nodes` row, Malleability before, or Malleability after       | Every `## Assertion operations` entry, `## Decisions` answer, and `## Mutations` row that names the Node |
-| Changed assertion operation                                              | Every Decision that settles it and every `## Mutations` row that carries it out                          |
-| Changed Decision                                                         | Every section whose content the Decision determines                                                      |
-| Changed `## Mutations` row, count, or sequence                           | Every `## Mutations` row that depends on it and every sentence that states the number or order           |
-| Changed `## Mutations` repository, observable check, or Node transitions | Every Node, `## Mutations` row, and blocker that lies outside the new slice                              |
-| Changed `blocked_by` or `refined_from`                                   | Every section that names the blocker or predecessor                                                      |
+| Changed `## Governance` entry or verdict                                 | The Governance mutations block of the record, and every Spec mutations assertion that cites its decision |
+| Changed Governance mutations decision                                    | Every Spec mutations assertion and every `## Governance` verdict the decision determines                 |
+| Changed Spec mutations block, malleability before, or malleability after | Every other block that names the Node                                                                    |
+| Changed Spec mutations assertion                                         | Every Governance mutations decision that governs it and every `## Slice` check that observes it          |
+| Changed block order or count                                             | Every block that depends on it and every sentence that states the number or order                        |
+| Changed `## Slice` repository or check                                   | Every block, Node, and blocker that lies outside the new slice                                           |
+| Changed `blocked_by` or `predecessors`                                   | Every section that names the blocker or predecessor                                                      |
 
 </changed_dependent>
 

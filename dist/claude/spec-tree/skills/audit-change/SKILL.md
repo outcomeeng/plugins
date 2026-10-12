@@ -2,7 +2,7 @@
 name: audit-change
 user-invocable: false
 description: >-
-  Change record audit methodology — judges one local Change in the Intent form
+  Change record audit methodology — judges one local Change in the final format
   against shared record standards at its declared maturity, reads its authority
   from the store, and records the complete judgment through SPX file-scoped
   verification.
@@ -22,7 +22,7 @@ A sealed `spx verification run` on one local Change record, whose terminal statu
 - NEVER write a file. Every request and payload passes to the runner on stdin and every result returns on stdout; the SPX run journal holds the run.
 - ALWAYS reach the candidate, every repository path, and the SPX store only through the bundled runner, `python3 "${CLAUDE_SKILL_DIR}/scripts/audit_change_run.py"`; the runner's SPX journal appends are the audit's only write path. NEVER invoke `rm`, `mktemp`, `spx`, `git`, `realpath`, or `printf`, redirect shell output to a file, or run a bundled script any other way.
 - ALWAYS issue each runner invocation as its own command, never chained to another command with `&&` or `;` and never piped into another command — a chained command loses the payload of the one behind it and leaves the run unsealed. A nonzero runner exit ends the audit with `BLOCKED` naming the request's `operation` and the exit status.
-- ALWAYS take the candidate's content from `read-candidate`, every reference answer from `resolve-reference`, every authority fact from `read-authority`, the published body from `read-published`, the store's Parent and child relations from `read-relations`, and every length count from `count-limits`. NEVER count words, sentences, or rows by hand, and NEVER judge authority from a body line, a front-matter value, or the conversation. The composed `spec-tree:change-standards` and `spec-tree:spec-tree-plugin` skills read their own skill-directory files. `allowed-tools` grants only the runner invocation and, where the harness has one, the skill-composition tool, and grants no Read, Grep, or Glob: the runner is the audit's only read path, and its SPX journal appends make its grant a write grant rather than a read-only one.
+- ALWAYS take the candidate's content from `read-candidate`, every reference answer from `resolve-reference`, every authority fact from `read-authority`, the published body from `read-published`, the store's Parent and child relations from `read-relations`, and every length count from `count-limits`. NEVER count words by hand, and NEVER judge authority from a body line, a front-matter value, or the conversation. The composed `spec-tree:change-standards` and `spec-tree:spec-tree-plugin` skills read their own skill-directory files. `allowed-tools` grants only the runner invocation and, where the harness has one, the skill-composition tool, and grants no Read, Grep, or Glob: the runner is the audit's only read path, and its SPX journal appends make its grant a write grant rather than a read-only one.
 - NEVER run deterministic verification, publish a Change, or delegate this audit to another session.
 - ALWAYS judge contract-form content only against `spec-tree:change-standards`, loaded with the candidate's declared Maturity as step 3 of `<execution_sequence>` loads it, and with `Lifecycle` as step 7 loads it for authority. The standards own the record rules, the cumulative Definitions of Ready, and the authority rules; this skill owns the audit procedure.
 - NEVER reject on text the candidate leaves unchanged and does not invalidate: a finding there takes severity `filed` and fails no run. NEVER raise a `filed` finding to `blocking` unless its evidence names a changed basis: the section now differs from the published body, a changed section or front-matter value makes it false, or the standards changed the rule. A new record, or a request with no published body, is touched text in full.
@@ -77,7 +77,7 @@ python3 "${CLAUDE_SKILL_DIR}/scripts/audit_change_run.py" <<< '{"operation":"rea
 | `read-relations`    | `issue`                                                       | `issue`, `product`, `parent`, `parentProduct`, `children` |
 | `count-limits`      | `path`                                                        | `path`, `sha256`, `limits`, `violations`                  |
 
-Every invocation prints exactly one result, and every result carries `operation` — the listed operation the request names, or `null` — and `status`. `status: ok` carries the fields above and exits 0. `status: blocked` carries `reason`, `detail`, and `runToken`: the token of the run `start` created when `start` blocks after SPX reports it, otherwise the `runToken` string the request carries, otherwise `not-started`. The runner resolves the repository root itself and checks the complete request form before it starts any process. `resolve-reference` reports `resolved`, `absolute`, `outside-repository`, or `missing`. `read-authority` reads the store's field-change events and comments of the named issue within a page bound; each `events` entry carries `createdAt`, `actor`, `field`, `previousValue`, and `newValue`, and each `comments` entry carries `createdAt`, `author`, and `body`. `read-published` reads the named issue's published body from the store, the empty string when the store holds none. `read-relations` reads every issue of the store's repository within the page bound and returns the named issue's `Product` and `Parent` values, its Parent's `Product`, and `children`, one `{number, product}` entry per issue whose `Parent` value is the named issue; an absent value is `null`. `count-limits` reads the candidate and returns `limits`, one `{section, limit, count}` entry per measured item — the title's words, each Intent part's sentences, the `## Decisions` rows, and each answer's sentences — and `violations`, the entries whose `count` exceeds their `limit`; an answer is the text after the first question mark of a Decisions row. The runner derives each idempotency key: a scope unit's key is its `unitId`, and a finding's key is `<unitId>:finding-<three-digit ordinal>-<rule>`, so neither key is a payload field.
+Every invocation prints exactly one result, and every result carries `operation` — the listed operation the request names, or `null` — and `status`. `status: ok` carries the fields above and exits 0. `status: blocked` carries `reason`, `detail`, and `runToken`: the token of the run `start` created when `start` blocks after SPX reports it, otherwise the `runToken` string the request carries, otherwise `not-started`. The runner resolves the repository root itself and checks the complete request form before it starts any process. `resolve-reference` reports `resolved`, `absolute`, `outside-repository`, or `missing`. `read-authority` reads the store's field-change events and comments of the named issue within a page bound; each `events` entry carries `createdAt`, `actor`, `field`, `previousValue`, and `newValue`, and each `comments` entry carries `createdAt`, `author`, and `body`. `read-published` reads the named issue's published body from the store, the empty string when the store holds none. `read-relations` reads every issue of the store's repository within the page bound and returns the named issue's `Product` and `Parent` values, its Parent's `Product`, and `children`, one `{number, product}` entry per issue whose `Parent` value is the named issue; an absent value is `null`. `count-limits` reads the candidate and returns `limits`, one `{section, limit, count}` entry per measured item — the title's words and the `## Intent` section's words, labels included — and `violations`, the entries whose `count` exceeds their `limit`. The runner derives each idempotency key: a scope unit's key is its `unitId`, and a finding's key is `<unitId>:finding-<three-digit ordinal>-<rule>`, so neither key is a payload field.
 
 A blocked result names exactly one of these reasons:
 
@@ -97,7 +97,7 @@ A blocked result names exactly one of these reasons:
 
 <execution_sequence>
 
-1. **Read front matter and apply the compatibility boundary.** Request `read-candidate`; its `content` is the one copy of the candidate the audit judges. The runner re-reads the stored file only inside `start` and `reconcile`, to compare it with that content and with the retained input. Before interpreting body content, inventory every front-matter key occurrence in source order and compare the inventory with the closed set `title`, `product`, `maturity`, `lifecycle`, `refined_from`, `blocked_by`, and `parent`, each present exactly once. A stripped front matter block, missing or repeated required key, or any extra key — including `change_ref` — returns `OUTSIDE_CONTRACT` before a run starts. Never inspect body signals to decide compatibility, infer fields, interpret body-line lineage, or migrate the candidate. When the exact key set is present, unsupported values and body violations remain audit subjects.
+1. **Read front matter and apply the compatibility boundary.** Request `read-candidate`; its `content` is the one copy of the candidate the audit judges. The runner re-reads the stored file only inside `start` and `reconcile`, to compare it with that content and with the retained input. Before interpreting body content, inventory every front-matter key occurrence in source order and compare the inventory with the closed set `title`, `product`, `maturity`, `lifecycle`, `predecessors`, `blocked_by`, and `parent`, each present exactly once. A stripped front matter block, missing or repeated required key, or any extra key — including `change_ref` — returns `OUTSIDE_CONTRACT` before a run starts. Never inspect body signals to decide compatibility, infer fields, interpret body-line lineage, or migrate the candidate. When the exact key set is present, unsupported values and body violations remain audit subjects.
 2. **Retain the candidate.** Request `start` with the `sha256` from step 1 and retain the returned `runToken` for every later request. A blocked `start` returns `BLOCKED`; with `retained-input-mismatch` the run exists and stays preserved under its token.
 3. **Load the rules.** Use skill `spec-tree:change-standards`.
    Invoke it with the exact declared Maturity; it loads its common contract
@@ -133,23 +133,27 @@ A blocked result names exactly one of these reasons:
    the common reference and every criterion ID in the selected Definition of
    Ready: one root unit for the complete file and one child per common rule
    and criterion. Never shorten the inventory because a record is concise.
-6. **Judge.** Judge front-matter types, values, `refined_from`, `parent`, and
+6. **Judge.** Judge front-matter types, values, `predecessors`, `parent`, and
    mutable blockers. Request `count-limits` and record one `record-limits`
    finding per entry of `violations`, naming the entry's `section`, `limit`,
-   and `count`. Judge `change-type` from the candidate's `## Nodes`, its
-   Maturity, and the `read-relations` result: record a finding when the
-   candidate carries `## Nodes` or `## Assertion operations` while `children`
-   is not empty, when it is Executable while `children` is not empty, and
-   when it carries a Product that differs from the `product` of any child, or
-   the `parent` front-matter value names a Parent whose `parentProduct` is
-   set and differs from the candidate's `product`. Then judge each body section against the
-   loaded rule and criterion inventory, together with every other section the
-   declared Maturity requires, and every body line against `body-authority`.
-   At Executable, judge the Frame's stated `VERIFICATION_READINESS`
-   predicates, results with their producers, and decision-record audits against
-   the composition the loaded Definition of Ready's `<merge_composition>`
-   selects for the changeset; record a finding when they disagree, or when an
-   evidence obligation names a Verifier outside them. Assess every common rule
+   and `count`. Judge `change-type` from the candidate's `## Governance
+   mutations` and `## Spec mutations` blocks, its Maturity, and the
+   `read-relations` result: record a finding when the candidate carries a
+   Governance mutations or Spec mutations block while `children` is not
+   empty, and when it is Executable while `children` is not empty. A Parent
+   and its children may carry different Products, so no Product comparison
+   yields a finding. Judge every Governance entry for its verdict `in line`,
+   `amended`, or `new`, every amended or new record for its Governance
+   mutations block, and every Spec mutations block for an opening with its
+   Node's malleability before and after. Judge an Executable record against
+   `executable-no-status`: a `## Artifacts` section, a link to produced
+   content, a Node's state, or a record of progress is a defect. Then judge each body section against
+   the loaded rule and criterion inventory, together with every other section
+   the declared Maturity requires, and every body line against
+   `body-authority`. Judge a record that carries `## Nodes`,
+   `## Assertion operations`, `## Decisions`, `## Mutations`, or
+   `## Activities` against `record-shape` as an unknown section, and judge no
+   migration of it. Assess every common rule
    and selected criterion, and record each defect with its violated rule and
    concrete observed-versus-expected evidence. A concise maintenance record can
    satisfy every applicable requirement; never manufacture missing benefits,
@@ -292,7 +296,7 @@ For a front-matter key-set mismatch, return only:
 ```text
 OUTSIDE_CONTRACT
 path: <normalized-relative-path>
-expectedKeys: ["title","product","maturity","lifecycle","refined_from","blocked_by","parent"]
+expectedKeys: ["title","product","maturity","lifecycle","predecessors","blocked_by","parent"]
 observedKeys: <JSON-array-of-key-occurrences-in-source-order>
 ```
 
