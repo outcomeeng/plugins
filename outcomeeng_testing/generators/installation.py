@@ -12,6 +12,8 @@ from enum import StrEnum
 from pathlib import Path
 from typing import cast
 
+from outcomeeng.distribution.build import agent_capability
+from outcomeeng.distribution.contracts import Target
 from outcomeeng.distribution.installation import (
     Agent,
     CATALOG_PLUGIN_NAME_FIELD,
@@ -891,7 +893,8 @@ def generated_definition_edit(content: bytes) -> bytes:
 
 def generated_agent_file() -> tuple[str, bytes]:
     """A fresh agent filename and definition outside every plugin's namespace."""
-    return f"{generated_agent_slug()}.toml", generated_agent_definition()
+    suffix = agent_capability(Target.CODEX).suffix
+    return f"{generated_agent_slug()}{suffix}", generated_agent_definition()
 
 
 def generated_escaping_plugin_names() -> tuple[str, ...]:

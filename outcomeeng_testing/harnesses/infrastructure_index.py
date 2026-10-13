@@ -23,6 +23,7 @@ from hypothesis import given, seed, settings
 from outcomeeng import validation as validation_pkg
 from outcomeeng.validation.infrastructure_index import (
     CONFTEST_FILENAME,
+    EXECUTED_TEST_PREFIX,
     PACKAGE_INIT_FILENAME,
     PYTHON_SUFFIX,
     SPEC_TREE_ROOT,
@@ -98,7 +99,9 @@ def executed_test_path(node: str, name: str) -> str:
     """Return the repository-relative path of executed test ``name`` under ``node``."""
 
     return (
-        Path(node) / TESTS_DIRECTORY_NAME / f"test_{name}.scenario.l1.py"
+        Path(node)
+        / TESTS_DIRECTORY_NAME
+        / f"{EXECUTED_TEST_PREFIX}{name}.scenario.l1{PYTHON_SUFFIX}"
     ).as_posix()
 
 

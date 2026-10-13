@@ -210,6 +210,8 @@ EMPTY_CODEX_MARKETPLACE_LISTING = json.dumps({CODEX_MARKETPLACES_FIELD: []})
 SUBAGENT_DISCOVERY_NAMES_FIELD = "subagent_names"
 RENAMED_CHECKOUT_AGENT_NAME = f"local_helper{agent_capability(Target.CODEX).suffix}"
 """A checkout definition filename carrying no plugin namespace prefix."""
+CODEX_DEFINITION_GLOB = f"*{agent_capability(Target.CODEX).suffix}"
+"""Every Codex agent definition filename, by the suffix the build's capability publishes."""
 RENAMED_CHECKOUT_SKILL_NAME = "renamed-skill"
 SUBAGENT_DISCOVERY_OUTPUT_SCHEMA: dict[str, object] = {
     "type": "object",
@@ -2688,12 +2690,27 @@ class HomeSelectionChange(StrEnum):
     """The selected home no longer lists them."""
 
 
+def _shipped_codex_definitions(checkout: Path) -> Iterator[tuple[str, Path]]:
+    """Every shipped Codex definition with its plugin, read from the generated tree.
+
+    The walk takes its layout from the generated-tree root and agent directory
+    production publishes, and reads every plugin directory present rather than
+    the catalog, so the result stays independent of the production preflight.
+    """
+    codex_tree = checkout / DIST_CODEX_PLUGINS_DIR
+    for plugin_directory in sorted(codex_tree.iterdir()):
+        if not plugin_directory.is_dir():
+            continue
+        plugin = plugin_directory.name
+        agents_root = generated_codex_agents_root(checkout, plugin)
+        for definition in sorted(agents_root.glob(CODEX_DEFINITION_GLOB)):
+            yield plugin, definition
+
+
 def _shipped_definitions_by_plugin(checkout: Path) -> dict[str, frozenset[str]]:
     """Each plugin's shipped Codex definition names, independent of the preflight."""
     by_plugin: dict[str, set[str]] = {}
-    root = checkout / DIST_CODEX_PLUGINS_DIR
-    for definition in root.glob("*/skills/*/agents/*.toml"):
-        plugin = definition.relative_to(root).parts[0]
+    for plugin, definition in _shipped_codex_definitions(checkout):
         by_plugin.setdefault(plugin, set()).add(definition.name)
     return {plugin: frozenset(names) for plugin, names in by_plugin.items()}
 
@@ -4459,7 +4476,8 @@ def _run_codex_marketplace_listing(
 def _agent_snapshot(codex_home: Path) -> tuple[tuple[str, bytes], ...]:
     directory = codex_home / CODEX_HOME_AGENTS_PATH
     return tuple(
-        (path.name, path.read_bytes()) for path in sorted(directory.glob("*.toml"))
+        (path.name, path.read_bytes())
+        for path in sorted(directory.glob(CODEX_DEFINITION_GLOB))
     )
 
 
@@ -4470,8 +4488,7 @@ def _shipped_agent_snapshot(checkout: Path) -> tuple[tuple[str, bytes], ...]:
     definition collection there cannot narrow the expectation with it.
     """
     shipped: dict[str, bytes] = {}
-    definitions = (checkout / DIST_CODEX_PLUGINS_DIR).glob("*/skills/*/agents/*.toml")
-    for definition in sorted(definitions):
+    for _plugin, definition in _shipped_codex_definitions(checkout):
         if definition.name in shipped:
             raise RuntimeError(
                 f"duplicate shipped Codex agent definition: {definition.name}"

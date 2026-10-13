@@ -27,7 +27,7 @@ from typing import Final
 from outcomeeng.distribution import agents as agent_conversion
 from outcomeeng.distribution.agents import AGENT_SOURCE_DIRECTORY_NAME
 from outcomeeng.distribution.build import project_emissions
-from outcomeeng.distribution.contracts import DIST_DIR_NAME
+from outcomeeng.distribution.contracts import DIST_DIR_NAME, SOURCE_ROOT_NAME
 from outcomeeng.distribution.installation import (
     CODEX_HOME_ENV,
     apply_agent_home_plan,
@@ -65,7 +65,7 @@ from outcomeeng_testing.harnesses.gate import (
 from outcomeeng_testing.harnesses.installation import PluginLifecycleHarness
 
 REPOSITORY_ROOT: Final = Path(__file__).resolve().parents[2]
-SOURCE_ROOT: Final = REPOSITORY_ROOT / "src"
+SOURCE_ROOT: Final = REPOSITORY_ROOT / SOURCE_ROOT_NAME
 PYTEST_COLLECTION_TIMEOUT_SECONDS: Final = 120
 PYTEST_COLLECTION_ARGV: Final = (
     sys.executable,
