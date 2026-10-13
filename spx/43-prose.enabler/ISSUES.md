@@ -30,3 +30,43 @@ The style-adherence and structure-conformance evals for the prose surface remain
 ## The documentation layer's Overrides section lists entries with no base rule behind them
 
 Two Overrides entries trace to no base rule they relax: the bold row-key cell restates the base table pack's own permission, and the parentheses allowance names no base parenthesis ban. Reworking the section so every declared override cites the relaxed base rule, or reclassifies as additive kind guidance, is a layer-taxonomy change beyond the chat-voice changeset. Surfaced by the skill audit on the chat-voice branch.
+
+## The audit-prose body frames its inputs as what a dispatch or caller supplies
+
+Rule `caller-independence`, found by the `skill-auditor` run `2026-10-13_23-22-04-233-88fc0c8e61f3` (instructions 0.20.0) on head `3142f91a24cd730db5c8dae65112eb91a89b8d5c`, unit `src/plugins/prose/skills/audit-prose/SKILL.md`.
+
+**Evidence**: `src/plugins/prose/skills/audit-prose/SKILL.md` names its caller or a dispatch in these passages, none of which the base-revision changeset changes: the `<constraints>` bullets "a dispatch with no kind" and "whatever kind the dispatch supplied"; the `<kind_intake>` sentences "a dispatch naming any of these" and "A kind named in the arguments or the caller's request"; `<audit_workflow>` step 2 "when the dispatch names no text, paths, or target at all" and step 4 "whatever the dispatch names, pastes, or points to"; and the `<success_criteria>` bullet "A dispatch naming a governed artifact … a dispatch carrying no kind or no target". The lines that changeset changes state the base revision as an argument.
+
+**Impact**: the skill describes its invocation context in place of its own inputs, so a reader learns who calls it before learning what it takes, and the body disagrees with its own argument hint.
+
+**Settlement condition**: every passage states its input as the skill's own argument (kind, text or paths, optional base revision) and names no caller or dispatch.
+
+## The audit-prose verdict is the bare run token, with no rendered projection or blocked diagnostic
+
+Rule `auditor-verdict-format`, found by the `skill-auditor` run `2026-10-13_23-22-04-233-88fc0c8e61f3` (instructions 0.20.0) on head `3142f91a24cd730db5c8dae65112eb91a89b8d5c`.
+
+**Evidence**: the `<verdict_format>` bullet "The final message is exactly the raw run token", `<audit_workflow>` step 6 "end with the raw run token as the final message — no prose after it", and the last `<success_criteria>` bullet return only the token. The `<constraints>` bullet on an unavailable journal or `spx` CLI says "report the exact availability failure" and states no diagnostic fields. The instructions 0.20.0 standard asks a run-recording auditor to return the run token with the unmodified rendered projection of the sealed run, or a blocked diagnostic whose full schema the verdict format states.
+
+**Impact**: a caller reads no verdict from the final message and has no defined shape for a run that cannot open its journal.
+
+**Settlement condition**: the prose node's assertion on the audit run's final message and the `<verdict_format>` both return the run token with the unmodified rendered projection, and the verdict format states the blocked-diagnostic schema. The node's spec assertion requires the bare token, so the fix starts with that assertion, which the skill standard outranks.
+
+## The audit-prose run keys findings per sentence, not per unit and rule
+
+Rule `auditor-run-keys`, found by the `skill-auditor` run `2026-10-13_23-22-04-233-88fc0c8e61f3` (instructions 0.20.0) on head `3142f91a24cd730db5c8dae65112eb91a89b8d5c`.
+
+**Evidence**: `<audit_workflow>` step 5 sweeps one sentence at a time, appends "one finding per violated rule" for each sentence, and records a scope-advanced event per sentence; the `<verdict_format>` first bullet lets one rule recur once per offending sentence in one file and keys no unit or finding. The instructions 0.20.0 standard asks a run-recording auditor to key each scope unit by audit class, kind, concern, and subject path, key each finding as `<unit-key>:<rule-id>`, and record at most one finding per rule per file listing every violating location.
+
+**Impact**: two runs over the same text cannot match their findings by key, and one file can carry several findings under one rule.
+
+**Settlement condition**: the prose node's spec assertions on the sweep and the finding record, and `/audit-prose` with them, key each unit and finding as the standard states and fold every violating location of one rule in one file into one finding. This is a separate, larger concern: the fix amends the node's audit-run assertion and the run-journal record shape every journal-recording auditor shares, beyond the base-revision scoping change that surfaced it.
+
+## The audit-prose objective and last success criterion state the same output
+
+Rule `objective-criteria-distinct`, severity debt, found by the `skill-auditor` run `2026-10-13_23-22-04-233-88fc0c8e61f3` (instructions 0.20.0) on head `3142f91a24cd730db5c8dae65112eb91a89b8d5c`.
+
+**Evidence**: `<objective>` ends "whose raw run token is the final message", and the last `<success_criteria>` bullet reads "The final message is exactly the raw run token of a sealed run." Neither line is changed by the base-revision changeset.
+
+**Impact**: the criterion restates the output instead of naming a property that shows the output sound.
+
+**Settlement condition**: the last success criterion states a soundness property of the sealed run, and the objective alone names the output's shape. The settlement of the verdict-format entry above rewrites both lines, so the two settle together.
