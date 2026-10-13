@@ -10,6 +10,12 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.106.2
+
+### Changed
+
+- **`/execute-change` launches no skill, subagent, or spec auditor for a round and launches only the Verifiers the merge composition selects for the block.** A round that produces a skill surface or a subagent definition ends at the product's `verify` command, and the Executor then launches the Verifiers the composition selects for the block's Node, none of them an auditor of the skill or subagent surface. The Verifier table no longer pairs `skill-auditor` with a skill surface or `subagent-auditor` with a subagent definition, and the sealed-run verdict rule names `assertion-auditor` alone. Before this change, the Executor launched `skill-auditor` after every skill-surface round and `subagent-auditor` after every subagent-definition round, so one Change's `spec` Nodes drew twenty-four skill-auditor runs.
+
 ## 0.106.0
 
 ### Breaking
