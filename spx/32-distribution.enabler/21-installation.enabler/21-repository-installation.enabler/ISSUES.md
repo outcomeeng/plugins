@@ -419,7 +419,7 @@ The node declares no malleability, so it is `implementation`-malleable and every
 
 [`spx/15-subagent-execution.pdr.md`](spx/15-subagent-execution.pdr.md) requires release acceptance for every profile of each harness, and the release-acceptance assertion in `repository-installation.md` requires configuration, native loading, and one minimal isolated execution result for each. `outcomeeng.distribution.profiles.AGENT_PROFILES` gives Claude Code Standard `sonnet` at medium effort and Executor `sonnet` at high effort, and names a gpt-6 model in every Codex profile: Standard and Executor `gpt-6.1-sol`, Strong `gpt-6-astra`, Fast `gpt-6-luna`. `native_profile_rows` therefore derives `claude-standard`, `claude-executor`, `codex-standard`, `codex-strong`, `codex-executor`, and `codex-fast` rows whose configurations no retained run covers.
 
-The plugins shipped the Claude Code Standard change without this evidence. The probe run against `190350ca31939e723c238ef8cd5dba97c179734e` materialized every row's definition from the registry — `claude-standard` reads `model: "sonnet"` and `effort: "medium"`, `codex-standard` reads `gpt-6.1-sol` at high — and then stopped every row before its native invocation on a credential condition. Each Claude Code row recorded "Claude profile execution requires exactly one selected native credential." Each Codex row recorded "The CLI credential writer cannot preserve the saved-login link; subscription discovery is unsupported by this CLI.", the refusal the subscription-discovery entry above traces to the unprovisioned `config.toml`.
+The plugins shipped the Claude Code Standard change without this evidence. The probe run against `190350ca31939e723c238ef8cd5dba97c179734e` materialized every row's definition from the registry — `claude-standard` reads `model: "sonnet"` and `effort: "medium"`, `codex-standard` reads `gpt-6.1-sol` at high — and then stopped every row before its native invocation on a credential condition. Each Claude Code row recorded "Claude profile execution requires exactly one selected native credential." Each Codex row recorded "The CLI credential writer cannot preserve the saved-login link; subscription discovery is unsupported by this CLI." That message is the misreport the installation architecture decision rules out: the Codex CLI refused a disposable home that held no `config.toml`, and the write-through preflight reported the refusal as a credential writer failure.
 
 **Impact**: no artifact shows a Claude Code `sonnet` configuration, or any gpt-6 Codex configuration, loading and executing as a native subagent. A combined acceptance claim for either harness is therefore incomplete.
 
@@ -484,12 +484,6 @@ evidence", and f-018 in "A failed persistent run restores the committed
 selection, which the decisions forbid".
 Their resolution shapes and settlement conditions govern; this entry repeats
 none.
-
-Two Codex level-3 tests of this node fail in this environment on CODEX_HOME
-provisioning and fail the same way on base; the entries "Codex 0.155.1 poisons a
-fresh home during the marketplace listing, then refuses it" and "Subscription
-discovery reports the Codex credential writer cannot preserve the saved-login
-link" record that condition.
 
 **Resolution shape**: the resolution shapes of those three entries.
 
