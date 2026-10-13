@@ -56,6 +56,14 @@
 
 **Settlement condition**: `instructions:create-subagent` declares an intake that joins a supplied repair block of verdicts and failed command output to the findings the round repairs, and the Fixer rule of `/execute-change` then drops its exception for that skill.
 
+## No route produces the invocation evidence of a subagent definition an Executor delivers
+
+**Evidence**: `spec-tree:changes-reviewer` run `2026-10-03_22-56-23-685-4cdbf8555ae6` on head `72378e875578070b6574c37595f0882802f41e3d`, finding severity `DEBT`, category evidence, against `src/plugins/spec-tree/skills/execute-change/SKILL.md` and `change-execution.md`. `/subagent-standards` requires each subagent definition without declared per-harness release acceptance to retain its exact-definition minimal isolated invocation, and `instructions:create-subagent` returns that invocation as verification still outstanding. The `<definitions>` table of `/execute-change` has no row whose result is a retained invocation run, the Executor produces no artifact, and a `change-subagent-author` round receives only the Verifiers the merge composition selects for its Node.
+
+**Impact**: a subagent definition an Executor delivers reaches `/merge` without its retained invocation run, and no round of `/execute-change` can produce it.
+
+**Settlement condition**: a `<definitions>` row or named Activity result produces and retains the invocation run for the committed emitted definition, steps 5.3 and 5.4 of `/execute-change` require it before the round completes, and the change-execution assertion on the subagent-definition round names it.
+
 ## `/execute-change` resolves a held Change from a marker a compaction may drop
 
 **Evidence**: `instructions:skill-auditor` finding f-010, severity `WARNING`, rule `compaction_marker_survival`, against `src/plugins/spec-tree/skills/execute-change/SKILL.md` step 1, in the typed skill audit of head `add3e3e862f7512a55e8b9655d07f78412abe87c`. Step 1 falls back to the newest `<CLAIMED_CHANGE>` marker in the conversation without the compaction caveat `/release-change` and `/close-change` state.
