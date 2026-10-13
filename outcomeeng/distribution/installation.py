@@ -16,6 +16,13 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Protocol, cast
 
+from outcomeeng.distribution.agents import (
+    AGENT_NAME_FIELD,
+    AGENT_SKILLS_CONFIG_FIELD,
+    AGENT_SKILLS_FIELD,
+    FLAT_AGENT_PLUGIN_SEPARATOR,
+    NATIVE_AGENT_PLUGIN_SEPARATOR,
+)
 from outcomeeng.distribution.contracts import (
     AGENTS_SUBDIR_NAME,
     DIST_DIR_NAME,
@@ -40,6 +47,18 @@ CLAUDE_LOCAL_SETTINGS_PATH = Path(".claude/settings.local.json")
 CODEX_CONFIG_PATH = Path(".codex/config.toml")
 CODEX_AGENTS_PATH = Path(".codex/agents")
 CODEX_HOME_AGENTS_PATH = Path("agents")
+CODEX_HOME_CONFIG_PATH = Path("config.toml")
+"""The configuration file the installed Codex CLI requires in an existing `CODEX_HOME`."""
+ISOLATED_HOME_DIRECTORY = "home"
+"""The directory beneath isolated state that becomes `HOME`."""
+ISOLATED_CLAUDE_CONFIG_DIRECTORY = "claude"
+"""The directory beneath isolated state that becomes `CLAUDE_CONFIG_DIR`."""
+ISOLATED_CODEX_HOME_DIRECTORY = "codex"
+"""The directory beneath isolated state that becomes `CODEX_HOME`."""
+ISOLATED_CODEX_SQLITE_DIRECTORY = "codex-sqlite"
+"""The directory beneath isolated state that becomes `CODEX_SQLITE_HOME`."""
+CODEX_HOME_EMPTY_CONFIG = ""
+"""The plugin-free configuration a provisioned disposable `CODEX_HOME` holds."""
 AGENT_OWNERSHIP_FILENAME = ".outcomeeng-marketplace-ownership.json"
 AGENT_OWNERSHIP_SCHEMA_VERSION = 1
 AGENT_OWNERSHIP_SCHEMA_FIELD = "schema_version"
@@ -47,9 +66,6 @@ AGENT_OWNERSHIP_ENTRIES_FIELD = "entries"
 AGENT_OWNERSHIP_DESTINATION_FIELD = "destination"
 AGENT_OWNERSHIP_PLUGIN_FIELD = "plugin"
 AGENT_OWNERSHIP_DIGEST_FIELD = "digest"
-AGENT_SKILLS_FIELD = "skills"
-AGENT_SKILLS_CONFIG_FIELD = "config"
-AGENT_SKILL_NAME_FIELD = "name"
 CATALOG_PLUGINS_FIELD = "plugins"
 CATALOG_PLUGIN_NAME_FIELD = "name"
 HOME_ENV = "HOME"
@@ -144,6 +160,9 @@ CLAUDE_ENABLED_PLUGINS_FIELD = "enabledPlugins"
 CODEX_PLUGIN_ENTRIES_FIELD = "installed"
 CODEX_PLUGIN_ID_FIELD = "pluginId"
 CODEX_PLUGIN_ENABLED_FIELD = "enabled"
+TOML_KEY_VALUE_SEPARATOR = "="
+CODEX_DISABLED_ENTRY = f"{CODEX_PLUGIN_ENABLED_FIELD} {TOML_KEY_VALUE_SEPARATOR} false"
+"""The raw configuration line declaring a Codex plugin's home activation disabled."""
 CODEX_PLUGIN_MARKETPLACE_FIELD = "marketplaceName"
 SPEC_TREE_PLUGIN = "spec-tree"
 STDERR_WARNING_PREFIX = "warning: "
@@ -250,6 +269,12 @@ holds, so the message claims no refresh. Each record the run leaves where it
 found it carries its own warning.
 """
 UNLOCATED_REGISTRY_DIAGNOSTIC = "the marketplace registry entry names no clone"
+CATALOG_NAME_SEPARATORS = ("/", "\\")
+"""Characters no catalog plugin name carries, because each name is one path segment."""
+CATALOG_NAME_SEGMENT_DIAGNOSTIC = "is not one path segment"
+CODEX_DEFINITION_OUTSIDE_TREE_DIAGNOSTIC = (
+    "resolves outside the checkout's generated Codex tree"
+)
 OFF_TARGET_DIAGNOSTIC = "install records off the target after refresh"
 CHECKOUT_OPTION = "--checkout"
 """The installer option naming the invocation checkout."""
@@ -639,6 +664,8 @@ class AgentHomePlan:
     mutations: tuple[AgentHomeMutation, ...]
     collisions: tuple[AgentHomeCollision, ...]
     ownership_after: tuple[AgentOwnership, ...]
+    ownership_before: tuple[AgentOwnership, ...] = ()
+    """The ownership record as preflight read it, before any planned change."""
 
 
 @dataclass(frozen=True)
@@ -748,6 +775,8 @@ class InstallationPlan:
     """The Claude marketplace source the run refreshes from or registers, as reported."""
     claude_catalog: tuple[str, ...] = ()
     """Every plugin the committed Claude catalog carries; the rewrite's target ranges over it."""
+    codex_disabled: tuple[str, ...] = ()
+    """Codex plugins whose home activation the run declares disabled once installed."""
 
 
 @dataclass(frozen=True, order=True)
@@ -1158,10 +1187,10 @@ def build_isolated_installation_plan(
         checkout=resolved_checkout,
         marketplace=catalog_marketplace_name(resolved_checkout / CLAUDE_CATALOG_PATH),
         state=resolved_state,
-        home=resolved_state / "home",
-        claude_config=resolved_state / "claude",
-        codex_home=resolved_state / "codex",
-        codex_sqlite_home=resolved_state / "codex-sqlite",
+        home=resolved_state / ISOLATED_HOME_DIRECTORY,
+        claude_config=resolved_state / ISOLATED_CLAUDE_CONFIG_DIRECTORY,
+        codex_home=resolved_state / ISOLATED_CODEX_HOME_DIRECTORY,
+        codex_sqlite_home=resolved_state / ISOLATED_CODEX_SQLITE_DIRECTORY,
     )
     environment = isolated_environment(roots, base_environment)
     claude_catalog = catalog_plugin_names(roots.checkout / CLAUDE_CATALOG_PATH)
@@ -1421,6 +1450,7 @@ def build_persistent_installation_plan(
             None if declared_source is None else declared_source.source
         ),
         codex_bootstrap_source=codex_bootstrap_source,
+        codex_bootstrapping=codex_bootstrapping,
     )
     first_install = _first_install_warnings(
         plan,
@@ -1554,6 +1584,7 @@ def _build_plan(
     claude_catalog: tuple[str, ...] = (),
     claude_bootstrap_source: str | None = None,
     codex_bootstrap_source: str | None = None,
+    codex_bootstrapping: bool = False,
 ) -> InstallationPlan:
     selected_codex_agents = (
         generated_codex_agent_definitions(
@@ -1621,6 +1652,14 @@ def _build_plan(
         claude_clone=claude_clone,
         claude_source=claude_source,
         claude_catalog=claude_catalog,
+        codex_disabled=tuple(
+            command.plugin
+            for command in commands
+            if codex_bootstrapping
+            and command.agent is Agent.CODEX
+            and command.operation is Operation.PLUGIN_INSTALL
+            and command.plugin is not None
+        ),
     )
 
 
@@ -2031,10 +2070,39 @@ def catalog_plugin_names(catalog_path: Path) -> tuple[str, ...]:
             raise ValueError(
                 f"marketplace catalog {catalog_path} plugin {index} has no name"
             )
+        if name in (os.curdir, os.pardir) or any(
+            separator in name for separator in CATALOG_NAME_SEPARATORS
+        ):
+            raise ValueError(
+                f"marketplace catalog {catalog_path} plugin {index} name {name!r} "
+                f"{CATALOG_NAME_SEGMENT_DIAGNOSTIC}"
+            )
         names.append(name)
     if len(set(names)) != len(names):
         raise ValueError(f"marketplace catalog {catalog_path} contains duplicate names")
     return tuple(names)
+
+
+def confined_path(root: Path, candidate: Path) -> Path | None:
+    """Return `candidate` with symbolic links resolved, or None when it leaves `root`."""
+    resolved_root = os.path.realpath(root)
+    resolved = os.path.realpath(candidate)
+    if os.path.commonpath((resolved_root, resolved)) != resolved_root:
+        return None
+    return Path(resolved)
+
+
+def generated_codex_agents_root(checkout: Path, plugin: str) -> Path:
+    """The directory of the checkout's generated tree holding one plugin's Codex agents."""
+    return (
+        checkout
+        / DIST_DIR_NAME
+        / Agent.CODEX.value
+        / plugin
+        / SKILLS_SUBDIR_NAME
+        / f"{plugin}-plugin"
+        / AGENTS_SUBDIR_NAME
+    )
 
 
 def generated_codex_agent_definitions(
@@ -2044,20 +2112,19 @@ def generated_codex_agent_definitions(
 ) -> tuple[AgentDefinition, ...]:
     """Read every catalog plugin's generated Codex agent definitions."""
     agents_root = codex_home / CODEX_HOME_AGENTS_PATH
+    codex_tree = checkout / DIST_DIR_NAME / Agent.CODEX.value
     definitions: list[AgentDefinition] = []
     destinations: dict[Path, Path] = {}
     for plugin in plugins:
-        source_root = (
-            checkout
-            / DIST_DIR_NAME
-            / Agent.CODEX.value
-            / plugin
-            / SKILLS_SUBDIR_NAME
-            / f"{plugin}-plugin"
-            / AGENTS_SUBDIR_NAME
-        )
-        for source in sorted(source_root.glob("*.toml")):
-            destination = agents_root / source.name
+        source_root = generated_codex_agents_root(checkout, plugin)
+        for candidate in sorted(source_root.glob("*.toml")):
+            source = confined_path(codex_tree, candidate)
+            if source is None:
+                raise ValueError(
+                    f"generated Codex agent definition {candidate} "
+                    f"{CODEX_DEFINITION_OUTSIDE_TREE_DIAGNOSTIC}"
+                )
+            destination = agents_root / candidate.name
             prior = destinations.get(destination)
             if prior is not None:
                 raise ValueError(
@@ -2122,7 +2189,8 @@ def _checkout_agent_mentions_plugin(
     plugins: frozenset[str],
 ) -> bool:
     if any(
-        path.stem.startswith(f"{plugin}_") or path.stem.startswith(f"{plugin}-")
+        path.stem.startswith(f"{plugin}{FLAT_AGENT_PLUGIN_SEPARATOR}")
+        or path.stem.startswith(f"{plugin}-")
         for plugin in plugins
     ):
         return True
@@ -2138,8 +2206,8 @@ def _checkout_agent_mentions_plugin(
         return False
     return any(
         isinstance(entry, dict)
-        and isinstance(name := entry.get(AGENT_SKILL_NAME_FIELD), str)
-        and name.partition(":")[0] in plugins
+        and isinstance(name := entry.get(AGENT_NAME_FIELD), str)
+        and name.partition(NATIVE_AGENT_PLUGIN_SEPARATOR)[0] in plugins
         for entry in config
     )
 
@@ -2162,9 +2230,7 @@ def build_agent_home_plan(
     ownership_expected_digest = (
         _digest(ownership_path.read_bytes()) if ownership_path.is_file() else None
     )
-    ownership = {
-        entry.destination: entry for entry in _read_agent_ownership(codex_home)
-    }
+    ownership = {entry.destination: entry for entry in read_agent_ownership(codex_home)}
     desired = {definition.destination: definition for definition in definitions}
     mutations: list[AgentHomeMutation] = []
     collisions: list[AgentHomeCollision] = []
@@ -2286,6 +2352,41 @@ def build_agent_home_plan(
         mutations=tuple(sorted(mutations)),
         collisions=tuple(sorted(collisions)),
         ownership_after=tuple(sorted(ownership_after.values())),
+        ownership_before=tuple(sorted(ownership.values())),
+    )
+
+
+def without_pending_plugins(
+    plan: AgentHomePlan, pending: frozenset[str]
+) -> AgentHomePlan:
+    """Narrow a reconciliation to the plugins whose skill content the run delivered.
+
+    A plugin pending publication delivered no skill content, so the run neither
+    copies definitions for it nor prunes the ones it already owns: every
+    mutation naming it is dropped, and every destination it owned before the
+    run, or would own after it, keeps the ownership claim preflight read.
+    """
+    if not pending:
+        return plan
+    before = {entry.destination: entry for entry in plan.ownership_before}
+    after = {entry.destination: entry for entry in plan.ownership_after}
+    for destination in set(before) | set(after):
+        prior = before.get(destination)
+        planned = after.get(destination)
+        if (prior is None or prior.plugin not in pending) and (
+            planned is None or planned.plugin not in pending
+        ):
+            continue
+        if prior is None:
+            after.pop(destination, None)
+        else:
+            after[destination] = prior
+    return replace(
+        plan,
+        mutations=tuple(
+            mutation for mutation in plan.mutations if mutation.plugin not in pending
+        ),
+        ownership_after=tuple(sorted(after.values())),
     )
 
 
@@ -2346,7 +2447,8 @@ def apply_agent_home_plan(plan: AgentHomePlan) -> AgentHomeResult:
     )
 
 
-def _read_agent_ownership(codex_home: Path) -> tuple[AgentOwnership, ...]:
+def read_agent_ownership(codex_home: Path) -> tuple[AgentOwnership, ...]:
+    """The marketplace ownership claims recorded in the selected home, sorted."""
     ownership_path = codex_home / CODEX_HOME_AGENTS_PATH / AGENT_OWNERSHIP_FILENAME
     if not ownership_path.exists() and not ownership_path.is_symlink():
         return ()
@@ -2596,6 +2698,7 @@ def execute_installation(
         result = _run_command(plan, command, runner, results, pending)
         if command.operation is Operation.MARKETPLACE_HEAD:
             head = result.stdout.strip() if result.exit_code == 0 else None
+    _declare_codex_activation_disabled(plan)
     target: MarketplaceTarget | None = None
     rewrites: tuple[RecordRewrite, ...] = ()
     rewrite_warnings: tuple[InstallationWarning, ...] = ()
@@ -2604,7 +2707,12 @@ def execute_installation(
     closing_results: list[CommandResult] = []
     for command in plan.closing:
         closing_results.append(_run_command(plan, command, runner, results, pending))
-    agent_home = apply_agent_home_plan(plan.agent_home)
+    agent_home = apply_agent_home_plan(
+        without_pending_plugins(
+            plan.agent_home,
+            frozenset(entry.plugin for entry in pending if entry.agent is Agent.CODEX),
+        )
+    )
     return InstallationReport(
         plan=plan,
         results=tuple(results),
@@ -2615,6 +2723,46 @@ def execute_installation(
         rewrite_warnings=rewrite_warnings,
         target=target,
     )
+
+
+def _declare_codex_activation_disabled(plan: InstallationPlan) -> None:
+    """Declare the bootstrapped Codex plugins disabled in the selected home.
+
+    The native install enables the plugin it installs and offers no command
+    that disables it, so the home's raw configuration is edited in place: the
+    plugin's `enabled` entry becomes false, every other line is untouched, and
+    the document is replaced atomically.
+    """
+    if not plan.codex_disabled:
+        return
+    config = plan.roots.codex_home / CODEX_HOME_CONFIG_PATH
+    lines = config.read_text(encoding="utf-8").splitlines() if config.exists() else []
+    for plugin in plan.codex_disabled:
+        header = f'[plugins."{marketplace_plugin_identifier(plugin, plan.roots.marketplace)}"]'
+        lines = _with_disabled_entry(lines, header)
+    _atomic_write(config, ("\n".join(lines) + "\n").encode("utf-8"))
+
+
+def _with_disabled_entry(lines: list[str], header: str) -> list[str]:
+    """The configuration lines with the table under `header` declaring `enabled = false`."""
+    if header not in lines:
+        return [
+            *lines,
+            *([""] if lines and lines[-1] else []),
+            header,
+            CODEX_DISABLED_ENTRY,
+        ]
+    start = lines.index(header) + 1
+    end = start
+    while end < len(lines) and not lines[end].lstrip().startswith("["):
+        end += 1
+    body = [
+        line
+        for line in lines[start:end]
+        if line.partition(TOML_KEY_VALUE_SEPARATOR)[0].strip()
+        != CODEX_PLUGIN_ENABLED_FIELD
+    ]
+    return [*lines[:start], CODEX_DISABLED_ENTRY, *body, *lines[end:]]
 
 
 def _run_command(
@@ -3182,7 +3330,8 @@ def marketplace_target(
     Each cataloged plugin's version is the one its manifest carries in the
     clone, found through the clone's own catalog entry for that plugin. A
     plugin the clone's catalog names no source for, or whose manifest the
-    clone cannot supply or does not version, resolves to no target version
+    clone cannot supply — a manifest path that resolves outside the clone
+    among them — or does not version, resolves to no target version
     and is left out; every project- or local-scope record of it — the
     invocation checkout's own included — is reported as unresolved and the
     run continues, because one plugin's supply defect settles nothing about
@@ -3215,7 +3364,9 @@ def marketplace_target(
         source = sources.get(plugin)
         if source is None:
             continue
-        manifest_path = clone / source / PLUGIN_MANIFEST_RELATIVE
+        manifest_path = confined_path(clone, clone / source / PLUGIN_MANIFEST_RELATIVE)
+        if manifest_path is None:
+            continue
         try:
             manifest = cast(
                 object, json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -3550,6 +3701,19 @@ def _required_environment_path(
     return Path(value).expanduser()
 
 
+def provision_codex_home(home: Path) -> None:
+    """Create a disposable `CODEX_HOME` holding a plugin-free `config.toml`.
+
+    The installed Codex CLI refuses an existing home that holds no
+    `config.toml`, so a provisioned home carries one before its first Codex
+    command; a configuration already present is left unchanged.
+    """
+    home.mkdir(parents=True, exist_ok=True)
+    config = home / CODEX_HOME_CONFIG_PATH
+    if not config.exists():
+        config.write_text(CODEX_HOME_EMPTY_CONFIG, encoding="utf-8")
+
+
 def _create_isolated_roots(roots: InstallationRoots) -> None:
     if roots.state is None or roots.codex_sqlite_home is None:
         raise ValueError("isolated installation requires disposable state roots")
@@ -3557,10 +3721,10 @@ def _create_isolated_roots(roots: InstallationRoots) -> None:
         roots.state,
         roots.home,
         roots.claude_config,
-        roots.codex_home,
         roots.codex_sqlite_home,
     ):
         root.mkdir(parents=True, exist_ok=True)
+    provision_codex_home(roots.codex_home)
 
 
 def _agent_adapter(agent: Agent) -> AgentAdapter:
@@ -3746,6 +3910,7 @@ def _version_after(
 
 
 __all__ = [
+    "provision_codex_home",
     "STDERR_WARNING_PREFIX",
     "AGENT_ADAPTERS",
     "CATALOG_MARKETPLACE_NAME_FIELD",
@@ -3783,15 +3948,13 @@ __all__ = [
     "marketplace_target",
     "apply_install_record_writes",
     "plan_install_record_rewrite",
+    "read_agent_ownership",
     "read_install_record_document",
     "unreadable_head_warnings",
     "unresolved_target_warnings",
     "render_claude_source",
     "rewrite_install_records",
     "AGENT_OWNERSHIP_FILENAME",
-    "AGENT_SKILL_NAME_FIELD",
-    "AGENT_SKILLS_CONFIG_FIELD",
-    "AGENT_SKILLS_FIELD",
     "AGENT_OWNERSHIP_SCHEMA_VERSION",
     "Agent",
     "AgentAdapter",
@@ -3806,8 +3969,11 @@ __all__ = [
     "PLUGIN_OPERATIONS",
     "REPORTED_FAILURE_OPERATIONS",
     "UNPUBLISHED_PLUGIN_FRAGMENT",
+    "CATALOG_NAME_SEGMENT_DIAGNOSTIC",
+    "CATALOG_NAME_SEPARATORS",
     "CATALOG_PLUGIN_NAME_FIELD",
     "CATALOG_PLUGINS_FIELD",
+    "CODEX_DEFINITION_OUTSIDE_TREE_DIAGNOSTIC",
     "CLAUDE_CATALOG_PATH",
     "CLAUDE_CONFIG_ENV",
     "CLAUDE_DIRECTORY_FIELD",
@@ -3837,9 +4003,15 @@ __all__ = [
     "CODEX_AGENTS_PATH",
     "CODEX_CATALOG_PATH",
     "CODEX_CONFIG_PATH",
+    "ISOLATED_CLAUDE_CONFIG_DIRECTORY",
+    "ISOLATED_CODEX_HOME_DIRECTORY",
+    "ISOLATED_CODEX_SQLITE_DIRECTORY",
+    "ISOLATED_HOME_DIRECTORY",
     "CODEX_GIT_SOURCE_TYPE",
     "CODEX_HOME_ENV",
     "CODEX_HOME_AGENTS_PATH",
+    "CODEX_HOME_CONFIG_PATH",
+    "CODEX_HOME_EMPTY_CONFIG",
     "CODEX_LOCAL_SOURCE_TYPE",
     "CODEX_MARKETPLACES_FIELD",
     "CLAUDE_MARKETPLACE_LIST_COMMAND",
@@ -3895,12 +4067,15 @@ __all__ = [
     "STATE_ENV_NAMES",
     "SPEC_TREE_PLUGIN",
     "apply_agent_home_plan",
+    "without_pending_plugins",
     "build_agent_home_plan",
     "build_isolated_installation_plan",
     "build_persistent_installation_plan",
     "build_persistent_preflight",
     "catalog_plugin_names",
     "checkout_scope_split_entries",
+    "confined_path",
+    "generated_codex_agents_root",
     "claude_marketplace_listing_payload",
     "CLAUDE_LOCAL_SETTINGS_PATH",
     "CLAUDE_MANAGED_SCOPE",

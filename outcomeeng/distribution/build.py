@@ -35,6 +35,8 @@ from jinja2.runtime import Context
 from outcomeeng.distribution.agents import (
     AGENT_TARGETS_FIELD,
     AGENT_TOOLS_FIELD,
+    FLAT_AGENT_PLUGIN_SEPARATOR,
+    NATIVE_AGENT_PLUGIN_SEPARATOR,
     convert_agent_markdown,
     parse_agent_text,
 )
@@ -1778,10 +1780,6 @@ def agent_source_admits_target(
             f"{sorted(registered)}; found {list(agent.targets)}"
         )
     return target.value in agent.targets
-
-
-FLAT_AGENT_PLUGIN_SEPARATOR: Final = "_"
-NATIVE_AGENT_PLUGIN_SEPARATOR: Final = ":"
 
 
 def agent_slug(plugin: str, stem: str, *, capability: AgentCapability) -> str:

@@ -26,9 +26,15 @@ from outcomeeng.distribution.profiles import (
     resolve_profile,
 )
 
+FLAT_AGENT_PLUGIN_SEPARATOR: Final = "_"
+"""Joins a plugin slug to an agent name where the target namespaces agents flatly."""
+NATIVE_AGENT_PLUGIN_SEPARATOR: Final = ":"
+"""Joins a plugin slug to a name inside the plugin's native namespace."""
 AGENT_NAME_FIELD: Final = "name"
 AGENT_DESCRIPTION_FIELD: Final = "description"
 AGENT_SKILL_ENABLED_FIELD: Final = "enabled"
+AGENT_SKILLS_FIELD: Final = "skills"
+AGENT_SKILLS_CONFIG_FIELD: Final = "config"
 AGENT_TOOLS_FIELD: Final = "tools"
 # Lists the generated targets an agent source is emitted for; absent means every target.
 AGENT_TARGETS_FIELD: Final = "targets"
@@ -275,9 +281,9 @@ def convert_agent(
     if agent.mcp_servers:
         values["mcp_servers"] = agent.mcp_servers
     if agent.skills:
-        values["skills"] = {
+        values[AGENT_SKILLS_FIELD] = {
             AGENT_SKILL_INCLUDE_INSTRUCTIONS_FIELD: True,
-            "config": TomlArrayTable(
+            AGENT_SKILLS_CONFIG_FIELD: TomlArrayTable(
                 tuple(
                     {AGENT_NAME_FIELD: skill, AGENT_SKILL_ENABLED_FIELD: True}
                     for skill in agent.skills

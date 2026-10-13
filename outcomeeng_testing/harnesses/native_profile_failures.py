@@ -20,8 +20,10 @@ from outcomeeng_testing.harnesses.discovery_auth_cases import (
 )
 from outcomeeng.distribution.installation import CODEX_HOME_ENV
 from outcomeeng_testing.harnesses.native_profile_execution import (
+    CLAUDE_CREDENTIAL_VARIABLES,
     run_native_profile_execution,
 )
+from outcomeeng_testing.harnesses.native_profile_launch import ambient_environment
 from outcomeeng_testing.harnesses.installation import repository_root
 
 
@@ -55,6 +57,8 @@ class NativeFailureRunner:
 class NativeFailureObservation:
     rows: tuple[NativeProfileExecutionObservation, ...]
     calls: tuple[NativeCall, ...]
+    environment: Mapping[str, str]
+    """The ambient environment the run received, every strippable name planted."""
 
 
 @contextmanager
@@ -65,10 +69,14 @@ def native_profile_failure(fault: NativeFault) -> Iterator[NativeFailureObservat
         authentication_case() as credentials,
     ):
         runner = NativeFailureRunner(fault)
+        environment = ambient_environment(
+            credentials.original_environment,
+            claude_credentials=CLAUDE_CREDENTIAL_VARIABLES,
+        )
         rows = run_native_profile_execution(
             Path(temporary_directory) / "artifacts",
             checkout=repository_root(),
-            environment=credentials.original_environment,
+            environment=environment,
             runner=runner,
         )
-        yield NativeFailureObservation(rows, tuple(runner.calls))
+        yield NativeFailureObservation(rows, tuple(runner.calls), environment)

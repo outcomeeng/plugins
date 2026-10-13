@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -13,17 +12,20 @@ from uuid import uuid4
 
 from hypothesis import given, seed, settings
 
-from outcomeeng.distribution.installation import CommandResult
+from outcomeeng.distribution.installation import (
+    CommandResult,
+)
 from outcomeeng.distribution.native_thread_evidence import (
     THREAD_READ_COMMAND,
     ChildIdentityField,
     NativeChildEvidence,
     NativeChildThread,
     NativeChildLookupPayload,
+    NativeLookupField,
+    NativeThreadField,
+    NativeTurnField,
     NativeTurnStatus,
     collect_native_child_evidence,
-    read_native_thread,
-    read_native_child,
 )
 from outcomeeng_testing.generators.native_thread_evidence import (
     NativeEvidenceCase,
@@ -74,7 +76,12 @@ class RecordingThreadReader:
             CommandResult(
                 THREAD_READ_COMMAND,
                 0,
-                json.dumps({"childIds": [thread["id"]], "thread": document}),
+                json.dumps(
+                    {
+                        NativeLookupField.CHILD_IDS: [thread["id"]],
+                        NativeLookupField.THREAD: document,
+                    }
+                ),
                 "",
             )
         )
@@ -89,7 +96,12 @@ class RecordingThreadReader:
             CommandResult(
                 THREAD_READ_COMMAND,
                 0,
-                json.dumps({"childIds": [thread["id"]], "thread": document}),
+                json.dumps(
+                    {
+                        NativeLookupField.CHILD_IDS: [thread["id"]],
+                        NativeLookupField.THREAD: document,
+                    }
+                ),
                 "",
             )
         )
@@ -105,7 +117,9 @@ class RecordingThreadReader:
         document = json.loads(
             json.dumps(NativeChildLookupPayload(childIds=[thread["id"]], thread=thread))
         )
-        document["thread"]["turns"][0]["status"] = status
+        document[NativeLookupField.THREAD][NativeThreadField.TURNS][0][
+            NativeTurnField.STATUS
+        ] = status
         return cls(CommandResult(THREAD_READ_COMMAND, 0, json.dumps(document), ""))
 
     @classmethod
@@ -113,7 +127,7 @@ class RecordingThreadReader:
         document = json.loads(
             json.dumps(NativeChildLookupPayload(childIds=[thread["id"]], thread=thread))
         )
-        document["thread"]["turns"] = []
+        document[NativeLookupField.THREAD][NativeThreadField.TURNS] = []
         return cls(CommandResult(THREAD_READ_COMMAND, 0, json.dumps(document), ""))
 
     @classmethod
@@ -123,7 +137,9 @@ class RecordingThreadReader:
         document = json.loads(
             json.dumps(NativeChildLookupPayload(childIds=[thread["id"]], thread=thread))
         )
-        document["thread"]["turns"][0]["items"] = []
+        document[NativeLookupField.THREAD][NativeThreadField.TURNS][0][
+            NativeTurnField.ITEMS
+        ] = []
         return cls(CommandResult(THREAD_READ_COMMAND, 0, json.dumps(document), ""))
 
     @classmethod
@@ -177,29 +193,3 @@ def exercise_native_evidence(
         run_replayable_property(
             run_cases, seed_value=_EVIDENCE_SEED, replay_path=_EVIDENCE_REPLAY
         )
-
-
-def _read_empty_native_state(*, children: bool) -> CommandResult:
-    """Exercise the real app-server read in empty state without a model turn."""
-    with TemporaryDirectory(prefix="native-thread-read-") as temporary:
-        root = Path(temporary)
-        (root / "codex").mkdir()
-        (root / "sqlite").mkdir()
-        environment = {
-            "PATH": os.environ["PATH"],
-            "HOME": temporary,
-            "CODEX_HOME": str(root / "codex"),
-            "CODEX_SQLITE_HOME": str(root / "sqlite"),
-        }
-        reader = read_native_child if children else read_native_thread
-        return reader(str(uuid4()), root, environment)
-
-
-def read_absent_native_thread() -> CommandResult:
-    """Read an unknown thread through the real app-server without a model turn."""
-    return _read_empty_native_state(children=False)
-
-
-def read_absent_native_child() -> CommandResult:
-    """Exercise real parent-filtered active and archived child listing."""
-    return _read_empty_native_state(children=True)

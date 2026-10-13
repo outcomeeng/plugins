@@ -22,3 +22,16 @@ def test_native_profile_artifacts_are_separate_from_disposable_state() -> None:
         assert not row.definition_path.is_relative_to(row.state_root)
         assert row.native_definition_path.is_relative_to(row.state_root)
         assert len(row.launch_commands) == 1
+
+
+def test_each_registry_entry_owns_a_distinct_identifier_and_state_root() -> None:
+    rows = native_profile_rows()
+    assert len({row.identifier for row in rows}) == len(rows)
+    assert len({row.state_root for row in rows}) == len(rows)
+    assert len({row.definition_path.parent for row in rows}) == len(rows)
+    assert len({row.state_root.parent for row in rows}) == 1
+    for row in rows:
+        assert row.target.value in row.identifier
+        assert row.profile.value in row.identifier
+        assert row.identifier in row.state_root.parts
+        assert row.identifier in row.definition_path.parent.parts

@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
+from outcomeeng.validation.infrastructure_index import build_infrastructure_index
 from outcomeeng_testing.harnesses.infrastructure_index import (
-    chain_layout,
+    chain_sources,
     index_property,
-    synthetic_repository,
 )
 
 
@@ -13,8 +13,13 @@ from outcomeeng_testing.harnesses.infrastructure_index import (
 def test_every_module_in_an_import_chain_reaches_the_test(
     chain: tuple[str, ...],
 ) -> None:
-    with synthetic_repository() as repo:
-        layout = chain_layout(repo, chain)
+    sources = chain_sources(chain)
 
-    for module in layout.modules:
-        assert layout.index.reaching_tests(module) == (layout.test,)
+    index = build_infrastructure_index(
+        package=sources.package,
+        module_sources=sources.module_sources,
+        test_sources=sources.test_sources,
+    )
+
+    for module in sources.modules:
+        assert index.reaching_tests(module) == (sources.test,)

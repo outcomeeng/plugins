@@ -8,16 +8,22 @@ orchestration behavior without launching real subprocesses.
 Exception case: Stage 5, Interaction protocols — the orchestrator's
 correctness depends on the sequence and shape of spawn/wait/signal calls.
 Recording doubles let `l1` tests assert on those interactions.
+
+The module also runs git's pathspec matcher over throwaway indexes, an
+implementation independent of the selector's own glob matching, and reports
+which category patterns select each path.
 """
 
 from __future__ import annotations
 
 import ast
+import functools
 import inspect
 import io
 import json
 import math
 import os
+import subprocess
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -28,7 +34,6 @@ from hypothesis import given, seed, settings
 
 from outcomeeng import validation as validation_pkg
 from outcomeeng.validation import (
-    CHECK_RECIPES,
     MYPY_ARGV,
     POST_KILL_REAP_ATTEMPTS,
     PURPOSE_CONFORMANCE,
@@ -51,6 +56,11 @@ from outcomeeng.validation import (
     terminate_process_group,
 )
 from outcomeeng.validation._git import GitCommandResult
+from outcomeeng.validation.infrastructure_index import (
+    TEST_INFRASTRUCTURE_PACKAGE,
+    InfrastructureIndex,
+    build_infrastructure_index,
+)
 from outcomeeng.validation.selected_gate import (
     DEFAULT_BASE_REF,
     GIT_DISCOVERY_FAILURE_EXIT_CODE,
@@ -58,7 +68,6 @@ from outcomeeng.validation.selected_gate import (
     GIT_DIFF_STAGED_ARGV,
     GIT_DIFF_UNSTAGED_ARGV,
     GIT_LS_UNTRACKED_ARGV,
-    SELECTED_CHECK_PLAN_HEADER,
     collect_changed_paths,
     run_selected_check as production_run_selected_check,
 )
@@ -67,9 +76,14 @@ from outcomeeng_testing.generators.gate import (
     SELECTED_GATE_PYTHON_TEST_PATH,
     SELECTED_GATE_SKILL_PATH,
     SELECTED_GATE_WORKFLOW_PATH,
+    category_patterns,
+    path_from_pattern,
     selected_gate_changed_paths,
 )
-from outcomeeng_testing.harnesses.changeset_scope import build_repo_without_origin
+from outcomeeng_testing.harnesses.changeset_scope import (
+    CHANGESET_SCOPE,
+    build_repo_without_origin,
+)
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
 
 SELECTED_GATE_PROPERTY_SEED = 20260705
@@ -80,6 +94,7 @@ SELECTED_GATE_PROPERTY_REPLAY_PATH = (
     "test_selection_is_deterministic_for_path_order_and_duplicates"
 )
 SELECTED_GATE_PROPERTY_EXAMPLES = 40
+PATHSPEC_GIT_TIMEOUT_SECONDS = 30
 STATIC_ANALYSIS_ARGVS = (RUFF_CHECK_ARGV, MYPY_ARGV, PYRIGHT_ARGV)
 PASS_EXIT_CODE = 0
 FAIL_EXIT_CODE = 2
@@ -92,13 +107,6 @@ PYTEST_TARGET_ARG = (
 )
 SELECTED_GATE_RENAMED_TARGET_ARG = "docs/renamed-selected-gate.py"
 SELECTED_GATE_WHITESPACE_PATH = " docs/selected gate edge spaces.py "
-
-
-def selected_check_plan_block(*, labels: Sequence[str], reason: str) -> str:
-    """Expected selected-check plan block for tests that inspect CLI output."""
-
-    lines = [SELECTED_CHECK_PLAN_HEADER, *(f"  {label}: {reason}" for label in labels)]
-    return "\n".join(lines) + "\n"
 
 
 def three_no_op_steps() -> tuple[Step, ...]:
@@ -123,32 +131,39 @@ def single_step_recipe(name: str) -> Recipe:
     )
 
 
+class GateSummaryShapeError(RuntimeError):
+    """A run summary the harness reads is not the JSON shape it can project."""
+
+
+def _object_records(value: object, *, field_name: str) -> list[dict[str, object]]:
+    if not isinstance(value, list) or not all(
+        isinstance(record, dict) for record in value
+    ):
+        msg = f"summary field {field_name!r} is not a list of JSON objects"
+        raise GateSummaryShapeError(msg)
+    return cast("list[dict[str, object]]", value)
+
+
 def read_summary(path: Path) -> dict[str, object]:
     """Read a validation summary JSON object."""
 
     data = json.loads(path.read_text(encoding="utf-8"))
-    assert isinstance(data, dict)
+    if not isinstance(data, dict):
+        msg = f"summary at {path} is not a JSON object"
+        raise GateSummaryShapeError(msg)
     return cast("dict[str, object]", data)
 
 
 def summary_steps(summary: dict[str, object]) -> list[dict[str, object]]:
     """Return typed step summaries."""
 
-    steps = summary["steps"]
-    assert isinstance(steps, list)
-    for step in steps:
-        assert isinstance(step, dict)
-    return cast("list[dict[str, object]]", steps)
+    return _object_records(summary["steps"], field_name="steps")
 
 
 def summary_recipes(summary: dict[str, object]) -> list[dict[str, object]]:
     """Return typed recipe summaries."""
 
-    recipes = summary["recipes"]
-    assert isinstance(recipes, list)
-    for recipe in recipes:
-        assert isinstance(recipe, dict)
-    return cast("list[dict[str, object]]", recipes)
+    return _object_records(summary["recipes"], field_name="recipes")
 
 
 def selected_gate_runner_for_paths(
@@ -264,6 +279,117 @@ def selected_gate_changed_path_domain() -> tuple[str, str, str, str]:
     )
 
 
+def selected_gate_reach_index() -> InfrastructureIndex:
+    """An index over a test-infrastructure package no executed test imports.
+
+    Generated changed paths carry no test sources, so every generated
+    test-infrastructure path is unreached or untraceable against it.
+    """
+
+    return build_infrastructure_index(
+        package=TEST_INFRASTRUCTURE_PACKAGE, module_sources={}, test_sources={}
+    )
+
+
+class PathspecOracleError(RuntimeError):
+    """The git pathspec matcher could not be set up or queried."""
+
+
+# Pathspec semantics git reads from the environment; each one would change how
+# a pattern matches, so the oracle runs git without them.
+_PATHSPEC_ENVIRONMENT = (
+    "GIT_LITERAL_PATHSPECS",
+    "GIT_GLOB_PATHSPECS",
+    "GIT_NOGLOB_PATHSPECS",
+    "GIT_ICASE_PATHSPECS",
+    "GIT_DIR",
+    "GIT_INDEX_FILE",
+    "GIT_WORK_TREE",
+)
+_EMPTY_BLOB_MODE = "100644"
+
+
+def _pathspec_git(repo: Path, *args: str, stdin: str = "") -> str:
+    environment = {
+        name: value
+        for name, value in os.environ.items()
+        if name not in _PATHSPEC_ENVIRONMENT
+    }
+    completed = subprocess.run(
+        ("git", "-c", "core.ignorecase=false", *args),
+        cwd=repo,
+        input=stdin,
+        capture_output=True,
+        text=True,
+        env=environment,
+        timeout=PATHSPEC_GIT_TIMEOUT_SECONDS,
+        check=False,
+    )
+    if completed.returncode != 0:
+        raise PathspecOracleError(
+            f"git {' '.join(args)} exited {completed.returncode}: {completed.stderr}"
+        )
+    return completed.stdout
+
+
+def _index_compatible_groups(paths: Sequence[str]) -> tuple[tuple[str, ...], ...]:
+    # One git index cannot hold a path that is also another path's directory,
+    # so such paths go to separate indexes.
+    groups: list[list[str]] = []
+    for path in sorted(set(paths)):
+        for group in groups:
+            if not any(
+                member.startswith(f"{path}/") or path.startswith(f"{member}/")
+                for member in group
+            ):
+                group.append(path)
+                break
+        else:
+            groups.append([path])
+    return tuple(tuple(group) for group in groups)
+
+
+def git_pathspec_matches(
+    paths: Sequence[str], patterns: Sequence[str]
+) -> Mapping[str, frozenset[str]]:
+    """Map each path to the patterns git's pathspec matcher selects it under.
+
+    Git matches a pathspec as POSIX ``fnmatch`` without ``FNM_PATHNAME``, so a
+    wildcard crosses path separators. The paths are index entries of
+    throwaway repositories; no working-tree file is written.
+    """
+
+    matches: dict[str, set[str]] = {path: set() for path in paths}
+    for group in _index_compatible_groups(paths):
+        with TemporaryDirectory() as directory:
+            repo = Path(directory)
+            _pathspec_git(repo, "init", "--quiet")
+            blob = _pathspec_git(repo, "hash-object", "-w", "--stdin").strip()
+            _pathspec_git(
+                repo,
+                "update-index",
+                "--add",
+                "--index-info",
+                stdin="".join(f"{_EMPTY_BLOB_MODE} {blob}\t{path}\n" for path in group),
+            )
+            for pattern in patterns:
+                listed = _pathspec_git(repo, "ls-files", "-z", "--", pattern)
+                for path in listed.split("\0"):
+                    if path:
+                        matches[path].add(pattern)
+    return {path: frozenset(found) for path, found in matches.items()}
+
+
+@functools.cache
+def category_pattern_path_matches() -> Mapping[str, frozenset[str]]:
+    """Git pathspec matches for the path built from every category pattern."""
+
+    patterns = category_patterns()
+    return git_pathspec_matches(
+        tuple(path_from_pattern(pattern) for pattern in patterns), patterns
+    )
+
+
 def selected_gate_property(
     test_func: Callable[[list[str]], None],
 ) -> Callable[[], None]:
@@ -283,16 +409,6 @@ def selected_gate_property(
         )
 
     return wrapper
-
-
-def expected_full_check_spawn_calls() -> tuple[tuple[str, ...], ...]:
-    """Expected argv calls when selected-check escalates to the full wrapper."""
-
-    return tuple(
-        step.argv
-        for recipe in CHECK_RECIPES
-        for step in (*PREFLIGHT_STEPS, *recipe.steps)
-    )
 
 
 def validation_package_modules() -> list[Path]:
@@ -659,6 +775,14 @@ class RunObservation:
     runner_calls: tuple[tuple[str, ...], ...]
 
 
+@dataclass(frozen=True)
+class MissingOriginObservation:
+    """A selected-check run in a repository with no origin, beside the helper's own failure."""
+
+    run: RunObservation
+    helper_failure: str
+
+
 _CHILD_OUTPUT_BUDGET = (
     2 * len(PREFLIGHT_STEPS) + len(VALIDATION_STEPS) + len(TEST_STEPS)
 )
@@ -720,8 +844,13 @@ def unrelated_validation_source_path() -> str:
     )
 
 
-def missing_origin_observation() -> RunObservation:
-    """Run the production selected check in a repository with no origin."""
+def missing_origin_observation() -> MissingOriginObservation:
+    """Run the production selected check in a repository with no origin.
+
+    The canonical changeset-scope helper is also asked for the base ref in the
+    same repository, so the observation carries the failure text the helper
+    itself raises there.
+    """
 
     spawner = RecordingSpawner(exit_codes=[os.EX_OK])
     sink = io.StringIO()
@@ -733,11 +862,20 @@ def missing_origin_observation() -> RunObservation:
             sink=sink,
             repo=repo,
         )
-    return RunObservation(
-        exit_code=exit_code,
-        output=sink.getvalue(),
-        spawn_calls=tuple(spawner.spawn_calls),
-        runner_calls=(),
+        try:
+            CHANGESET_SCOPE.detect_base_ref(repo)
+        except CHANGESET_SCOPE.BaseRefNotConfiguredError as error:
+            helper_failure = str(error)
+        else:
+            raise RuntimeError("the helper resolved a base ref without an origin")
+    return MissingOriginObservation(
+        run=RunObservation(
+            exit_code=exit_code,
+            output=sink.getvalue(),
+            spawn_calls=tuple(spawner.spawn_calls),
+            runner_calls=(),
+        ),
+        helper_failure=helper_failure,
     )
 
 
@@ -909,6 +1047,10 @@ class HangingHandle:
             self._killed = True
 
 
+class UnboundedWaitError(RuntimeError):
+    """The controlled clock observed more sleeps than its declared budget."""
+
+
 @dataclass
 class BoundedAdvancingClock:
     """A clock that advances on sleep and rejects an unbounded wait."""
@@ -924,7 +1066,8 @@ class BoundedAdvancingClock:
 
     def sleep(self, seconds: float) -> None:
         if len(self.sleep_calls) >= self.max_sleep_calls:
-            raise AssertionError("signal shutdown exceeded its bounded sleep budget")
+            msg = "signal shutdown exceeded its bounded sleep budget"
+            raise UnboundedWaitError(msg)
         self.sleep_calls.append(seconds)
         self.current += seconds
 

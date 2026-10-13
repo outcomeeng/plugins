@@ -6,14 +6,16 @@ import tomllib
 from collections import Counter
 
 from outcomeeng_testing.harnesses.agent_conversion import authored_agent_targets
-from outcomeeng.distribution.agents import AGENT_TARGETS_FIELD
+from outcomeeng.distribution.agents import (
+    AGENT_TARGETS_FIELD,
+    FLAT_AGENT_PLUGIN_SEPARATOR,
+)
 from outcomeeng.distribution.build import (
     AGENT_CAPABILITY_REGISTRY,
     CLAUDE_SKILL_DIR_TOKEN,
     CODEX_SKILL_DIR_TOKEN,
     CLAUDE_ONLY_FRONTMATTER_FIELDS,
     DISABLE_MODEL_INVOCATION_FIELD,
-    FLAT_AGENT_PLUGIN_SEPARATOR,
     LIFECYCLE_TEMPLATE_NAME,
     SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE,
     EmissionAction,

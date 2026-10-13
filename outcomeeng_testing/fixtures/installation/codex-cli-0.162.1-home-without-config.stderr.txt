@@ -1,0 +1,1 @@
+codex: CODEX_HOME is not a Codex home: it exists, holds no config.toml, and holds more than provisioned agent definitions; got <CODEX_HOME>. Set CODEX_HOME to an existing Codex home, an empty or freshly provisioned directory, or a path Codex may create, then retry.

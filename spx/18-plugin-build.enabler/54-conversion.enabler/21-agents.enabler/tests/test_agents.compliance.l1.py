@@ -11,6 +11,7 @@ from pathlib import Path
 import pytest
 
 from outcomeeng.distribution.agents import (
+    FLAT_AGENT_PLUGIN_SEPARATOR,
     AGENT_NAME_FIELD,
     CODEX_AGENT_ENV_SEPARATOR,
     CODEX_AGENT_ENV_VAR,
@@ -21,7 +22,6 @@ from outcomeeng.distribution.agents import (
     parse_agent_markdown,
 )
 from outcomeeng.distribution.build import (
-    FLAT_AGENT_PLUGIN_SEPARATOR,
     LIFECYCLE_TEMPLATE_NAME,
     SourceFormatError,
     agent_capability,

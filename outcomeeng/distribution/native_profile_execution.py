@@ -29,12 +29,6 @@ from outcomeeng.distribution.profiles import (
 )
 
 NATIVE_PROFILE_ARTIFACTS_DIRECTORY: Final = Path("native-profile-execution")
-NATIVE_PROFILE_OVERRIDE_ENVIRONMENT_VARIABLES: Final = frozenset(
-    {
-        "CLAUDE_CODE_EFFORT_LEVEL",
-        "CLAUDE_CODE_SUBAGENT_MODEL",
-    }
-)
 
 
 @dataclass(frozen=True)
