@@ -2,22 +2,6 @@
 
 Known defects in the repository-installation evidence. Each entry names the artifact, the observed failure, and the smallest unit of work that resolves it.
 
-## Native-profile evidence restates protocol vocabulary the owning modules hold
-
-`tests/test_native_profile_execution.compliance.l1.py` indexes the child-thread document with the literal `parentThreadId` while `outcomeeng/distribution/native_thread_evidence.py` owns that key as `ChildIdentityField.PARENT`, and asserts the retained child-listing artifact through the literals `childIds`, `pages`, and `result`, for which that module publishes no field constants. Both are source-ownership defects: a rename in the owning module leaves the evidence asserting a contract production no longer emits.
-
-`outcomeeng_testing/harnesses/native_thread_evidence.py` repeats the class in `RecordingThreadReader`: its failure-shaping methods hand-write `childIds`, `thread`, `turns`, `status`, and `items` while the same harness builds the payloads through `NativeChildLookupPayload`, `NativeChildThread`, and `NativeTurn` elsewhere. Its `_read_empty_native_state` builds the child environment from the literals `HOME`, `CODEX_HOME`, and `CODEX_SQLITE_HOME` while `outcomeeng/distribution/installation.py` publishes those names and the `STATE_ENV_NAMES` tuple.
-
-Two clauses of the same assertion are also unfalsified: removing the ambient model and effort override filter from `_isolated_environment` in `outcomeeng_testing/harnesses/native_profile_execution.py`, or passing the unfiltered environment instead of `credential_free_environment`, breaks no linked test, because the tests inspect the recorded native calls only for their count and never read `NativeCall.environment`.
-
-Two tests in the same compliance file, `test_real_native_read_reports_absent_thread_without_launching_a_turn` and `test_real_native_child_listing_retains_empty_pages_without_launching`, spawn the installed Codex CLI through the app-server read and listing commands while the file declares the `l1` cell; an installed agent CLI is an acquired executable whose level floor is `l2`, so those cases belong in an `l2` file.
-
-The mapping assertion's identifier and disposable-state-root derivation is unfalsified in the same way: collapsing `identifier` in `native_profile_rows` to a constant makes every row share one `state_root` and one artifact directory, while `test_native_profile_rows_cover_the_central_configuration_matrix` still keys on target and profile and `test_native_profile_artifacts_are_separate_from_disposable_state` checks only parent-directory relations, so no predicate observes that the identifier and state root derive from the registry entry or are distinct per row.
-
-**Resolution shape**: publish the listing-artifact field names from `outcomeeng/distribution/native_thread_evidence.py` beside `NativeChildLookupPayload`, import every key the test and the recording reader index from that module, add predicates over the recorded child environment that reject an ambient override or a second credential, and assert that every row's identifier and state root derive from its registry entry and differ from every other row's.
-
-**Evidence**: test-evidence audit findings `f-001` and `f-002` against `06b86db6b31704c58203929603bb2f2ceea237cb`, `f-001` through `f-004` against `3e1ba91c9ec059d96dcd2007a2fe371681599df2`, `f-001` through `f-003` against `548f8cc7b598a30969b0e68c243acb17d387f1ef`, `f-001` through `f-003` against `d84b4d2cb433059d995e6271d33551e30deb306d`, `f-001` through `f-005` with `f-008` against `f689b9b25cdd37f5e57545d313f30d29ad9cbd35`, `f-001` through `f-007` against `be286e7e32cdfbb0cc782f6175ed0f274e428e8d`, `f-001` through `f-005` against `b9ee9c2ca56d3341f03ea81abb1ec2f4cd8df57b`, `f-005` through `f-009` against `ef8b057ab649bc3da5c642cc4a18fc6745023718`, `f-003` through `f-008` against `841e864a9759eae04c8988c2931aa44b1ca21c74`, `f-001` through `f-006` against `f011edcdd33c0fdec41d8ccfbcdfe1393fc6b35a`, `f-001` through `f-006` with `f-008` against `c3b42a5514452b1b71e01c77467e7e45abfad048`, and `f-001` through `f-006` against each of `9ab0fc92c2f5c673edbfb2c73eea42502cef68e5` and `c2f6d8e1c3bc87f24d775fcbc62451b9c2ff6322`, the last nine rounds naming the execution-level mismatch and the last five naming the environment literals; the unfalsified row identifier and state root reached a finding of its own in the last round; the cited test and harness files lie outside every changeset's diff. The round against `05a7165277750d69c88bc8abbece2c4f6a96bb7c` raised the same six as `f-001` through `f-006`: `f-001` the literal `parentThreadId` where `ChildIdentityField.PARENT` owns the key; `f-002` the literals `childIds`, `pages` and `result`, for which production publishes no field constant; `f-003` the hand-written keys in `RecordingThreadReader` and the environment names in `_read_empty_native_state`; `f-004` the two `l1` cases that start the installed Codex CLI, whose floor is `l2`; `f-005` the unfalsified override and credential clauses; `f-006` the unfalsified row identifier and state root. The round against `cc5f3e86be4dbcc2c727c46f5c96593bab02b680` raised the same six again as `f-001` through `f-006`.
-
 ## The profile isolation filter strips an ambient marker no module declares
 
 `_isolated_environment` in `outcomeeng_testing/harnesses/native_profile_execution.py`
@@ -29,10 +13,7 @@ no source contract, so a change to that marker in production reaches no importer
 and the filter keeps stripping a name the product no longer uses, or stops
 stripping one it does.
 
-This is not the class the native-profile entry above records. That entry covers
-evidence restating vocabulary the owning modules hold, whose remedy is to import
-from the owner; here there is no owner to import from and the remedy is to
-publish the name first.
+No owner exists to import from, so the remedy is to publish the name first.
 
 **Resolution shape**: publish the ambient marker from the module that owns the
 isolation policy, beside the constant sets the filter already imports, and have
@@ -43,7 +24,7 @@ filter imports it rather than spelling it.
 
 **Evidence**: test-evidence audit finding `f-010` (INFO) against `c2f6d8e1c3bc87f24d775fcbc62451b9c2ff6322`. The cited
 harness lies outside that changeset's diff, and the remedy publishes a constant
-from a production module the changeset's Frame does not name. The round against `05a7165277750d69c88bc8abbece2c4f6a96bb7c` raised it again as `f-018` (INFO): "The isolation filter strips the inline literal \"CLAUDECODE\", which no module under outcomeeng/ declares." The round against `cc5f3e86be4dbcc2c727c46f5c96593bab02b680` raised it again as `f-016` (INFO).
+from a production module the changeset's Frame does not name. The round against `05a7165277750d69c88bc8abbece2c4f6a96bb7c` raised it again as `f-018` (INFO): "The isolation filter strips the inline literal \"CLAUDECODE\", which no module under outcomeeng/ declares." The round against `cc5f3e86be4dbcc2c727c46f5c96593bab02b680` raised it again as `f-016` (INFO), and the round against `6ef55dd4d93b24b8fa701b8779116bbe7c9bbc04` as `f-007` (WARNING) at `outcomeeng_testing/harnesses/native_profile_execution.py:188`. The harness now names the marker `NATIVE_PROFILE_SESSION_MARKER_ENVIRONMENT_VARIABLE`, still declared in the harness rather than in a production module.
 
 ## A dead-parameter sweep matched a spelling rather than the class
 
@@ -295,45 +276,6 @@ unresolvable plugin belonged to the invocation checkout exited zero — and is
 repaired in this changeset against the architecture decision's exit-code and
 coverage assertions.
 
-## The listing-defect evidence never pairs a defect with an invocation-checkout record
-
-`observe_defective_record_listing` in `outcomeeng_testing/harnesses/installation.py`
-builds its listing from `generated_listing_defect_records`, which emits a
-pathless entry, a versionless entry, and one well-formed record in another
-checkout. The invocation checkout records nothing there, so the run's
-continuation past either defect is observed for the rewrite disposition and for
-the bootstrap install and enable, never for the native update of a record the
-invocation checkout holds. [`spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/21-installation-architecture.adr.md`](spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/21-installation-architecture.adr.md) states that
-neither defect settles anything about the rest of the machine's records, and the
-native update is one of the dispositions that rest carries, so a regression that
-abandoned that branch on a defect would leave every linked test passing.
-
-**Resolution shape**: give `generated_listing_defect_records` an
-invocation-checkout record beside the two defects and the other checkout's
-record, and retain the present listing as a second case, so the defect state is
-paired with the native-update disposition as well as the bootstrap one.
-
-**Why separate**: the present case's assertion that the bootstrap install and
-enable still run past each defect is itself the evidence for the bootstrap
-disposition, and an invocation-checkout record suppresses bootstrap, so the
-pairing adds an observation rather than widening this one — a second observer
-and a generator parameter, not an assertion.
-
-**Settlement condition**: a defect case whose listing carries a record of the
-invocation checkout, asserting that its native update still runs.
-
-**Evidence**: found by this changeset's sweep for states the spec declares whose
-linked evidence carries no invocation-checkout record — the same class that
-produced the withheld-registration case now covered in
-`tests/test_repository_installation.scenario.l1.py`.
-
-The round against `114c56d96942138058a10caae796bd59d83e20ec` raised it as
-`f-013` (WARNING): "generated_listing_defect_records, consumed by
-observe_defective_record_listing, carries no record of the invocation checkout.
-Continuation past a defect is therefore observed only for the rewrite and
-bootstrap dispositions, never for the native update of a record the invocation
-checkout holds."
-
 ## Two review surfaces report success for something that did not happen
 
 The changeset review has two surfaces that read as success while the thing they
@@ -420,55 +362,16 @@ production re-applies the declared plugin selection after a failed run
 linked [test] assertion declares that behavior, and the untagged spec assertion
 plus the ADR say failed runs retain changed state without restoring a snapshot." The round against `cc5f3e86be4dbcc2c727c46f5c96593bab02b680` raised it again as `f-018` (INFO).
 
-## The discovery harness rebuilds the isolated Codex home instead of reading the plan
-
-`outcomeeng_testing/harnesses/installation.py` rebuilds the isolated Codex home
-as `state / "codex"` in the subagent-discovery observation rather than reading
-`plan.roots.codex_home`, and `outcomeeng/distribution/installation.py` spells
-the same directory inline and publishes no constant for it.
-
-**Impact**: a change to where isolated installation places the Codex home
-leaves the discovery probe pointed at a directory the installation never
-populated.
-
-**Settlement condition**: the harness reads the Codex home from the plan it
-executed, and production names the directory once.
-
-**Evidence**: test-evidence audit finding `f-015` (WARNING) against `05a7165277750d69c88bc8abbece2c4f6a96bb7c`; the
-harness lies outside the diff of the discovery-login security fix. The round against `cc5f3e86be4dbcc2c727c46f5c96593bab02b680` raised it again as `f-012` (WARNING).
-
-## The record-mapping test picks its publication rows in the test file
-
-`test_every_claude_install_record_maps_to_one_update_one_rewrite_or_one_warning`
-in `tests/test_repository_installation.mapping.l1.py` parametrizes over two rows
-the test file chooses — no plugin pending, and the first committed catalog plugin
-pending — and picks its case plugin with `sorted(...)[0]`. The mapping assertion
-states no publication dimension, and no source-owned domain or generator selects
-the rows.
-
-**Impact**: the publication cases are the test author's choice, so the mapping
-claims no coverage of pending publication beyond the two rows picked.
-
-**Settlement condition**: a generator supplies the publication rows over a
-declared domain, or the mapping assertion states the publication dimension and
-its domain supplies the rows.
-
-**Evidence**: test-evidence audit finding `f-010` (REJECT) against `01fa8e8acc904fb102bffa8dc66f5c4a14374748`: "The test
-file chooses parametrize rows [frozenset(), frozenset({sorted(committed_catalog_plugin_names())[0]})]
-with ids all-published/one-pending (172-176). Line 143 picks a case plugin with
-sorted(...)[0]. These rows introduce a publication dimension the mapping
-assertion does not state, and neither a source-owned domain nor a generator
-selects them." The rows predate the discovery-login security fix, which touches
-this file only to add the git-source mapping; they are recorded here under the
-convergence-stall rule by the Director's ruling.
-
-## The scenario tests pick their case plugin in the test file
+## The scenario tests draw their case plugins from no generator
 
 The isolated-absence and pending-publication scenarios in
-`tests/test_repository_installation.scenario.l1.py` choose their case plugin
-with `sorted(committed_catalog_plugin_names())[0]`. The assertions name no
-particular plugin, so the choice is a call-site value no assertion states. This
-is the class the record-mapping entry above records for the mapping test.
+`tests/test_repository_installation.scenario.l1.py` loop over
+`committed_catalog_plugin_names()` and run once per catalog plugin, so no call
+site picks a plugin. No generator supplies those cases, which the settlement
+condition requires. The record-mapping test in
+`tests/test_repository_installation.mapping.l1.py` takes its publication rows
+from `generated_publication_states`, which shows the generator shape this entry
+asks for.
 
 **Settlement condition**: a generator supplies the case plugin, and no scenario
 under this node picks one at the call site.
@@ -522,119 +425,24 @@ The plugins shipped the Claude Code Standard change without this evidence. The p
 
 **Settlement condition**: with exactly one native credential selected for each harness, `just verify-native-profile-execution` retains passing `claude-standard`, `claude-executor`, `codex-standard`, `codex-strong`, `codex-executor`, and `codex-fast` rows.
 
-## DEBT [evidence]: copied vocabulary with no importable owner (f-001, f-002, f-003, f-007, f-019)
+## DEBT [evidence]: case data is chosen at the call site (f-008, f-010)
 
-Five findings on source ownership, each a test or harness that spells a name its
-owning module does not publish or publishes and the evidence does not import.
-The first three are REJECT; f-007 and f-019 are WARNING.
-
-- f-001 at `tests/test_native_profile_execution.compliance.l1.py:55`: the
-  literal `parentThreadId`, owned by `ChildIdentityField.PARENT` in
-  `outcomeeng/distribution/native_thread_evidence.py`.
-- f-002 at the same file, line 168: the literals `childIds`, `pages`, and
-  `result`, which production spells inline.
-- f-003 at `outcomeeng_testing/harnesses/native_thread_evidence.py:77`:
-  `RecordingThreadReader` hand-writes `childIds`, `thread`, `turns`, `status`,
-  and `items`, and `_read_empty_native_state` spells `HOME`, `CODEX_HOME`, and
-  `CODEX_SQLITE_HOME`, which `outcomeeng/distribution/installation.py`
-  publishes.
-- f-007 (WARNING) at
-  `outcomeeng_testing/harnesses/native_profile_execution.py:188`: the inline
-  `CLAUDECODE`.
-- f-019 (WARNING) at `outcomeeng_testing/harnesses/installation.py:3560`: the
-  isolated Codex home is rebuilt as `state / "codex"` instead of read from
-  `plan.roots.codex_home`.
-
-The audit is a `spec-tree:test-evidence-auditor` verdict on this node at head
-`6ef55dd4d93b24b8fa701b8779116bbe7c9bbc04`. The verdict carries no sealed run
-token.
-
-Existing entries already record each defect: f-001, f-002, and f-003 sit in
-"Native-profile evidence restates protocol vocabulary the owning modules hold",
-f-007 in "The profile isolation filter strips an ambient marker no module
-declares", and f-019 in "The discovery harness rebuilds the isolated Codex home
-instead of reading the plan". Their resolution shapes govern; this entry repeats
-none.
-
-**Resolution shape**: the resolution shapes of those three entries.
-
-**Evidence that the text lies outside the change.**
-`git diff -U0 origin/main...HEAD` reports no hunk in the cited tests,
-harnesses, generators, or production modules, against merge base
-`149a55f71befdf61e88be9bda2aae725db1f2381`.
-
-**Invalidation check.** The cited text neither cites, restates, nor depends on
-anything this changeset changed. The changeset adds symbols to
-`outcomeeng/distribution/profiles.py` (model prices and usage token classes; no
-existing symbol altered), narrows the guard in
-`outcomeeng/validation/profile_configuration.py`, and adds model-price and
-profile-binding generators, harnesses, and tests. The cited tests drive
-installation, native profile execution, and native thread evidence in
-`outcomeeng/distribution` modules the changeset does not change.
-
-**Settlement condition**: each named vocabulary is published by its owning
-module and no test or harness under this node spells it.
-
-## DEBT [evidence]: native-profile and row-derivation evidence is mis-leveled or unfalsified (f-004, f-005, f-006)
-
-Three findings (all REJECT):
-
-- f-004 at `tests/test_native_profile_execution.compliance.l1.py:116` and
-  `:165`: both cases spawn the installed Codex CLI through the app-server, an
-  acquired executable whose floor is `l2`, while the file declares `l1`.
-- f-005 at the same file, line 24, and `_isolated_environment` in
-  `outcomeeng_testing/harnesses/native_profile_execution.py:182-189`: removing
-  the override filter, or the credential-free environment, breaks no test.
-- f-006 at `tests/test_native_profile_execution.mapping.l1.py:7`: collapsing
-  `identifier` in `native_profile_rows` to a constant breaks no test.
-
-The audit and head are those of the entry above; the verdict carries no sealed
-run token (stated there once). The first entry of this file,
-"Native-profile evidence restates protocol vocabulary the owning modules hold",
-already records all three defects with their resolution shape; this entry
-repeats none of it.
-
-**Resolution shape**: the resolution shape of that entry.
-
-**Evidence that the text lies outside the change.**
-`git diff -U0 origin/main...HEAD` reports no hunk in the cited tests,
-harnesses, generators, or production modules, against merge base
-`149a55f71befdf61e88be9bda2aae725db1f2381`.
-
-**Invalidation check.** The cited text neither cites, restates, nor depends on
-anything this changeset changed. The changeset adds symbols to
-`outcomeeng/distribution/profiles.py` (model prices and usage token classes; no
-existing symbol altered), narrows the guard in
-`outcomeeng/validation/profile_configuration.py`, and adds model-price and
-profile-binding generators, harnesses, and tests. The cited tests drive native
-profile execution in `outcomeeng/distribution` modules the changeset does not
-change.
-
-**Settlement condition**: the two Codex app-server cases sit in an `l2` file,
-a predicate reads the recorded native call environment and rejects an ambient
-override or a second credential, and a predicate rejects a collapsed row
-identifier.
-
-## DEBT [evidence]: case data is chosen at the call site (f-008, f-009, f-010)
-
-Three findings (all REJECT) on test-owned data:
+Two findings (both REJECT) on test-owned data:
 
 - f-008 at `tests/test_repository_installation.scenario.l1.py:172` (also 195,
   208, 233): the case plugin is chosen with
   `sorted(committed_catalog_plugin_names())[0]`.
-- f-009 at `tests/test_repository_installation.mapping.l1.py:172` and `:143`:
-  the publication rows and the case plugin are chosen in the test.
 - f-010 at `tests/test_repository_installation.compliance.l1.py:109` (also 144,
   226, 296): incidental plugin and agent slugs are call-site literals.
 
-The audit and head are those of the first entry in this group; the verdict
-carries no sealed run token. Existing entries already record each:
-"The scenario tests pick their case plugin in the test file" (f-008),
-"The record-mapping test picks its publication rows in the test file" (f-009),
-and "Lifecycle evidence cases are hand-authored in the harness" (f-010). Their
-resolution shapes and settlement conditions govern.
+The audit is a `spec-tree:test-evidence-auditor` verdict on this node at head
+`6ef55dd4d93b24b8fa701b8779116bbe7c9bbc04`. The verdict carries no sealed run
+token. Existing entries already record each: "The scenario tests draw their
+case plugins from no generator" (f-008) and "Lifecycle evidence cases are
+hand-authored in the harness" (f-010). Their resolution shapes and settlement
+conditions govern.
 
-**Resolution shape**: the resolution shapes of those three entries.
+**Resolution shape**: the resolution shapes of those two entries.
 
 **Evidence that the text lies outside the change.**
 `git diff -U0 origin/main...HEAD` reports no hunk in the cited tests,
@@ -650,12 +458,12 @@ profile-binding generators, harnesses, and tests. The cited tests drive
 installation in `outcomeeng/distribution` modules the changeset does not
 change.
 
-**Settlement condition**: a generator supplies the case plugin, publication
-rows, and slugs, and no test under this node picks one at the call site.
+**Settlement condition**: a generator supplies the case plugin and the slugs,
+and no test under this node picks one at the call site.
 
-## DEBT [evidence]: assertions are stronger than the evidence that links them (f-014, f-016, f-017, f-018)
+## DEBT [evidence]: assertions are stronger than the evidence that links them (f-014, f-016, f-018)
 
-Four findings on alignment between a declared clause and its predicate, all
+Three findings on alignment between a declared clause and its predicate, all
 WARNING.
 
 - f-014 at `tests/test_repository_installation.compliance.l1.py:830`: the
@@ -663,19 +471,17 @@ WARNING.
 - f-016 at `tests/test_repository_installation.mapping.l1.py:177`: the
   unrefreshable-record warning and the unresolved-target disposition are never
   driven.
-- f-017 at `tests/test_repository_installation.scenario.l1.py:397`:
-  defective-record continuation is not observed for the native update branch.
 - f-018 at `tests/test_repository_installation.compliance.l1.py:364`:
   `test_failed_persistent_run_restores_the_committed_selection` evidences a
   restore that the governing decisions forbid.
 
-The audit and head are those of the first entry in this group; the verdict
-carries no sealed run token. Existing entries already record each:
-f-014 in "The no-lock clause of the listing-read rule has no deterministic
-oracle", f-016 in "The unrefreshable record disposition, and the rewrite half of
-the unresolved one, reach no evidence", f-017 in "The listing-defect evidence
-never pairs a defect with an invocation-checkout record", and f-018 in "A failed
-persistent run restores the committed selection, which the decisions forbid".
+The audit is a `spec-tree:test-evidence-auditor` verdict on this node at head
+`6ef55dd4d93b24b8fa701b8779116bbe7c9bbc04`. The verdict carries no sealed run
+token. Existing entries already record each: f-014 in "The no-lock clause of the
+listing-read rule has no deterministic oracle", f-016 in "The unrefreshable
+record disposition, and the rewrite half of the unresolved one, reach no
+evidence", and f-018 in "A failed persistent run restores the committed
+selection, which the decisions forbid".
 Their resolution shapes and settlement conditions govern; this entry repeats
 none.
 
@@ -685,7 +491,7 @@ fresh home during the marketplace listing, then refuses it" and "Subscription
 discovery reports the Codex credential writer cannot preserve the saved-login
 link" record that condition.
 
-**Resolution shape**: the resolution shapes of those seven entries.
+**Resolution shape**: the resolution shapes of those three entries.
 
 **Evidence that the text lies outside the change.**
 `git diff -U0 origin/main...HEAD` reports no hunk in the cited tests,
