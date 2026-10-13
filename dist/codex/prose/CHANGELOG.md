@@ -6,6 +6,17 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.12.9
+
+### Changed
+
+- **`/audit-prose` judges only the sentences a change touches.** A dispatch that carries a base revision reads the whole text for context and raises findings only on sentences that intersect the lines changed since that revision, derived from the target's diff against the base the `spec-tree` plugin's changeset-scope capability resolves. A path that exists at the base and is unchanged since it yields no finding. A dispatch without a base revision audits the whole text, as before; pasted text and a path new to the changeset are audited whole either way. A caller that re-audits a changed file after each repair passes the base revision and receives findings on the repaired sentences instead of a fresh sweep of the file.
+- **`/audit-prose` sweeps one sentence at a time.** It judges every applicable rule against a sentence, appends that sentence's findings to the run journal, and records the sentence as swept before it moves to the next.
+- **Every finding names exactly one stable rule identifier.** The `rule` field of a finding carries the identifier of the violated pattern as `/prose-standards` spells it, or `governed-elsewhere`, `missing-kind` or `missing-target` for a routing outcome. A sentence that violates several patterns yields one finding per pattern, where it yielded one finding naming every pattern before. A caller matches a finding to an earlier one by its rule.
+- **`/prose-standards` gives every catalog pattern, pack rule, style-layer rule and structural rule a stable identifier** that survives rewording of its heading and description. The structural conventions of the `copy`, `interface` and `documentation` kinds in `/prose-architecture-standards` carry identifiers, and `/audit-prose` names a structural rule by it.
+- **Every voice canon rule carries a stable identifier too.** Each rule of the shared voice canon, which renders into `/prose-standards` and the `prose` output style, opens with its identifier in backticks, and a finding on a voice canon rule names that identifier as its rule, and the `rule` field of a voice canon finding carries that identifier. A caller that matched voice canon findings by the rule's wording matches them by identifier.
+- **`/audit-prose` grants `git diff` and no longer grants `printf`.** It runs `git diff` to find the changed lines under a base revision, and it appends each journal event through an input redirect from a file, so a `printf` command now asks for approval. It loads the `spec-tree` plugin's run-journal skill as a declared dependency.
+
 ## 0.12.7
 
 ### Fixed
