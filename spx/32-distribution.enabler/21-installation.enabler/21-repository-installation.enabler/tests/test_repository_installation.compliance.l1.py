@@ -1388,12 +1388,32 @@ def test_the_install_record_replace_drops_the_fetch_project_before_the_closing_l
         if command.agent is Agent.CLAUDE and command.operation is Operation.PLUGIN_LIST
     )
 
-    assert len(observation.listings) == 2
     closing = cast("list[dict[str, str]]", json.loads(observation.listings[-1]))
     assert str(project) not in {
         entry.get(CLAUDE_PLUGIN_PROJECT_PATH_FIELD) for entry in closing
     }
     assert max(install_positions) < closing_position
+
+
+@pytest.mark.parametrize("outcome", generated_fetch_outcomes())
+def test_a_run_with_an_uncached_target_fetch_still_reads_the_listing_exactly_twice(
+    outcome: FetchOutcome,
+) -> None:
+    observation = observe_uncached_fetch(UNCACHED_OTHER_CHECKOUT_STATE, outcome)
+    listing_reads = [
+        command
+        for command in observation.attempted
+        if command.agent is Agent.CLAUDE
+        and command.operation in {Operation.PLUGIN_INSPECT, Operation.PLUGIN_LIST}
+    ]
+
+    assert observation.fetches
+    # The opening listing is the plan's supplied payload; the runner serves
+    # only the closing read, so the run's total is the opening plus this one.
+    expected = [] if observation.failure is not None else [Operation.PLUGIN_LIST]
+    assert [command.operation for command in listing_reads] == expected
+    assert len(observation.listings) == len(listing_reads)
+    assert observation.plan.claude_records or observation.plan.rewrite_records
 
 
 def test_a_failed_fetch_install_stops_the_run() -> None:
