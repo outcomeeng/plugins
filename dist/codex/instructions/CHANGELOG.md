@@ -24,6 +24,8 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 - **`/skill-standards` reads a payload scratch-directory fallback location as a property of the run.** The caller-independence rule and the `caller_coupling` catalog row now state that the fallback location a skill selects for its payload scratch directory where the harness names none, such as the directory a hosted runner designates, is fixed by the hosting environment and is not caller dependence, as the payload command form already was. Choosing either by who invoked the skill remains caller dependence. Before this change, the standard covered only the command form, so `/audit-skill` and the `/create-skill` auditor template, which name that fallback, left the standard silent on a location they state. Change: https://github.com/outcomeeng/changes/issues/425.
 
+- **`/subagent-standards` admits a verifier's file-write grant limited by instruction to payload files.** A verifier whose skill passes payload files to its run-recording commands may grant the file-write tool when both the definition and that skill limit the tool by instruction to payload files in the session scratch directory, and the standard judges that grant as conforming under the `prompt_only_restriction` and `verifier_mutation_grant` rules. Every other write grant to a verifier stays under both rules. Before this change, both rules flagged that grant as blocking, so no subagent audit could approve `skill-auditor`, `subagent-auditor`, or any other auditor that writes payload files. Change: https://github.com/outcomeeng/changes/issues/425.
+
 ## 0.21.4
 
 ### Changed
