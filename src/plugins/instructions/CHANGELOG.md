@@ -22,6 +22,8 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 - **`subagent-auditor` grants the file-write tool in place of the `printf` pipe.** The agent that drives `/audit-subagent` now grants `Write` beside its read tools and no longer grants `Bash(printf '%s\n':*)`, so it can write the payload files the skill passes by path to its run-recording commands. Its constraint on edits names those payload files as the one permitted write. Before this change, the agent granted the `printf` form that the dangerous-command guard blocked and withheld the file-write tool that the skill's payload-file form requires, which left a run open with no sealed verdict. Change: https://github.com/outcomeeng/changes/issues/425.
 
+- **`/skill-standards` reads a payload scratch-directory fallback location as a property of the run.** The caller-independence rule and the `caller_coupling` catalog row now state that the fallback location a skill selects for its payload scratch directory where the harness names none, such as the directory a hosted runner designates, is fixed by the hosting environment and is not caller dependence, as the payload command form already was. Choosing either by who invoked the skill remains caller dependence. Before this change, the standard covered only the command form, so `/audit-skill` and the `/create-skill` auditor template, which name that fallback, left the standard silent on a location they state. Change: https://github.com/outcomeeng/changes/issues/425.
+
 ## 0.21.4
 
 ### Changed
