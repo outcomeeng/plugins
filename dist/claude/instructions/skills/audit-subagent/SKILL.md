@@ -163,6 +163,7 @@ A finding's idempotency key is `<unit>:<rule-id>`, its unit's `unitId` and the c
 
 - ALWAYS write each payload with the file-write tool to its own file in the scratch directory the harness names for the session, under a name unique to this run and payload, such as `<run-token>-start.json`, `<run-token>-scope-<n>.json`, and `<run-token>-finding-<n>.json`. Where the harness names no scratch directory, use the one the hosting environment designates, such as `$RUNNER_TEMP` on a hosted runner.
 - ALWAYS write only payload files with the file-write tool.
+- ALWAYS pass `--payload` the path exactly as the file-write tool's result reports it, copied from that result, never retyped.
 - ALWAYS pass the file as the value of `--input` or `--payload`, its path written out literally.
 - ALWAYS add each unit and each finding with its own command and its own payload file, one at a time.
 - NEVER remove a payload file; the harness clears its scratch directory.

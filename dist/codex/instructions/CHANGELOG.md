@@ -26,6 +26,8 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 - **`/subagent-standards` admits a verifier's file-write grant limited by instruction to payload files.** A verifier whose skill passes payload files to its run-recording commands may grant the file-write tool when both the definition and that skill limit the tool by instruction to payload files in the session scratch directory, and the standard judges that grant as conforming under the `prompt_only_restriction` and `verifier_mutation_grant` rules. Every other write grant to a verifier stays under both rules. Before this change, both rules flagged that grant as blocking, so no subagent audit could approve `skill-auditor`, `subagent-auditor`, or any other auditor that writes payload files.
 
+- **`/audit-skill`, `/audit-subagent`, and the `/create-skill` auditor template pass `--payload` the path exactly as the file-write tool reports it.** Each payload-file rule set states that the path given to `--payload` is copied from the file-write tool's result and never retyped, so a skill authored from the template carries the rule. Before this change, these texts said only to write the path out literally, so a run driver that retyped the path could pass a path that differs from the file it wrote, and the recording command failed on a missing file.
+
 ## 0.21.4
 
 ### Changed

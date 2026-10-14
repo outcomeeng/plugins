@@ -26,6 +26,8 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 - **`assertion-auditor` grants the file-write tool, so it can write the payload files `/audit-assertions` passes by path.** The agent that drives `/audit-assertions` now grants `Write` in place of the `printf` command, and its constraint on edits names the payload files in the session scratch directory as the one permitted write beside the skill's `spx verification run` commands. Before this change, the agent withheld the file-write tool that the skill's payload-file form requires and granted the `printf` form the skill no longer teaches, which left a run open with no sealed verdict.
 
+- **`/audit-assertions` and `/audit-implementation` pass `--payload` the path exactly as the file-write tool reports it.** Each skill's payload-file rules state that the path given to `--payload` is copied from the file-write tool's result and never retyped. Before this change, the skills said only to write the path out literally, so a run driver that retyped the path could pass a path that differs from the file it wrote, and the recording command failed on a missing file.
+
 ## 0.106.2
 
 ### Changed
