@@ -10,6 +10,12 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.106.2
+
+### Changed
+
+- **`/close-change` judges a Node without a status claim from the newest Handoff and the checks of the pull request it names.** For each Node the Spec mutations blocks list, the skill runs `git cat-file -e origin/<default>:<node-path>/spx.status.json`. A Node whose directory on the default branch holds the claim is judged from `spx spec status --format json` as before. A Node whose directory holds none holds every result its merge composition selects only when the newest Handoff's `Completed blocks` line lists its block and that Handoff's `Branch or PR` line names a pull request whose every check `gh pr checks` reports for the merged head has `state` `SUCCESS`. A Handoff that names a pushed branch, an unlisted block, a failed or empty check read, and a check in any other state each refuse `Applied`. The skill grants `gh pr checks` and `git cat-file -e`. Before this change, the skill judged every Node from `spx spec status` alone, so a Leaf whose Nodes carry no status claim could not close `Applied`.
+
 ## 0.106.0
 
 ### Breaking
