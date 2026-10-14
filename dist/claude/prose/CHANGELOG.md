@@ -11,6 +11,7 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 ### Fixed
 
 - **`/audit-prose` appends each journal event from a file, so the dangerous-command guard accepts the append.** The audit writes each event with the file-write tool to its own file in the session scratch directory and appends it through the input redirect, one command at a time, stopping at the first failed command. Its shell grant no longer includes `printf`, and `/audit-prose` and `prose-auditor` now grant the file-write tool, limited by instruction to event files. `prose-auditor` replaces its unrestricted shell grant with the `spx journal` verbs `open`, `append`, `seal`, and `read`. Before, an event built in the shell could be refused, leaving an open run with no sealed verdict.
+- **`/audit-prose` names its event-file fallback and its failure.** Where the harness names no scratch directory, the audit writes event files to the directory the hosting environment designates, such as `$RUNNER_TEMP` on a hosted runner. The skill now lists a shell-built event as a failure mode and checks in its success criteria that every event travelled through a file and an input redirect.
 
 ## 0.12.10
 

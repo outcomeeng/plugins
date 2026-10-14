@@ -30,7 +30,7 @@ A verdict on human-facing text, revealed as the run advances — a sealed audit 
 - NEVER excuse a base-catalog match as "single use" or "it works here" — every match outside an override is a finding.
 - NEVER raise a finding on a sentence outside the changed lines when the arguments name a base revision — the unchanged text is read as context only.
 - NEVER gather a finished result and dump its events at the end — each finding is appended the instant it is raised, per the streaming rule in `/project-run-journal`.
-- NEVER build an event in the shell — no heredoc, pipe, `printf`, or interpreter stage. Write each event with the file-write tool to its own file in the session scratch directory and append it through the command form `/project-run-journal` states in `<command_forms>`. The file-write tool writes only event files there; the audit changes no other file.
+- NEVER build an event in the shell — no heredoc, pipe, `printf`, or interpreter stage. Write each event with the file-write tool to its own file, named uniquely to this run and event, in the session scratch directory (the one the hosting environment designates, such as `$RUNNER_TEMP` on a hosted runner, where the harness names none) and append it through the command form `/project-run-journal` states in `<command_forms>`. The file-write tool writes only event files there; the audit changes no other file.
 - ALWAYS run each journal command as its own command, one at a time, and stop the audit at the first nonzero exit.
 
 </constraints>
@@ -108,6 +108,10 @@ Claude removed dispatch language from this skill's description to satisfy the au
 
 </failure_modes>
 
+**A journal event was built in the shell.**
+
+Claude appended a finding by feeding a heredoc to `spx journal append`, and the dangerous-command guard refused the command. The run stayed open with no sealed verdict, and the findings already appended could not be read as a result. Each event is written to its own file with the file-write tool and appended through the input redirect, so the guard sees one literal command.
+
 <success_criteria>
 
 - Every applicable rule was judged — base categories, voice canon, kind style layer, kind structural conventions, and every triggered pack — none skipped as unlikely.
@@ -116,6 +120,7 @@ Claude removed dispatch language from this skill's description to satisfy the au
 - With a base revision in the arguments, the run raised findings only on sentences intersecting the lines changed since that base, and a path unchanged since that base yielded no finding; without one, the run audited the whole text.
 - A dispatch naming a governed artifact produced the `governed-elsewhere` finding without reading the text; a dispatch carrying no kind or no target produced the failed terminal status naming the missing input without reading the text.
 - The kind judged is the supplied kind, never one this skill concluded, and the kind's overrides produced no false-positive findings.
+- Every journal event travelled through its own event file and an input redirect, each journal command ran alone, and the run stopped at the first nonzero exit.
 - The final message is exactly the raw run token of a sealed run.
 
 </success_criteria>
