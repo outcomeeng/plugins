@@ -37,6 +37,7 @@ from pathlib import Path
 from outcomeeng_testing.generators.installation import (
     ClosingDisposition,
     MOVED_DISPOSITIONS,
+    UNCACHED_OTHER_CHECKOUT_STATE,
     RecordDisposition,
     generated_boolean_states,
 )
@@ -60,6 +61,7 @@ from outcomeeng_testing.harnesses.installation import (
     observe_defective_record_listing,
     observe_unreadable_source,
     observe_record_refresh_plan,
+    observe_uncached_fetch,
     observe_unpublished_plugin,
     observe_verification_recipe,
     repository_root,
@@ -877,3 +879,59 @@ def test_a_registry_entry_naming_no_install_location_stops_planning() -> None:
     assert [
         (command.agent, command.operation) for command in observation.attempted
     ] == [(command.agent, command.operation) for command in observation.inspections]
+
+
+def test_a_target_the_cache_lacks_is_fetched_in_a_run_owned_project_and_every_other_record_moves() -> (
+    None
+):
+    observation = observe_uncached_fetch(UNCACHED_OTHER_CHECKOUT_STATE)
+    uncached = {
+        plugin
+        for plugin, state in observation.states.items()
+        if state == UNCACHED_OTHER_CHECKOUT_STATE
+    }
+    installs = observation.fetches
+    assert uncached
+    assert sorted(command.plugin or "" for command in installs) == sorted(uncached)
+    assert all(
+        command.argv[-2:] == (CLAUDE_SCOPE_FLAG, CLAUDE_PROJECT_SCOPE)
+        for command in installs
+    )
+    (project,) = {command.cwd for command in installs}
+    assert not project.is_relative_to(observation.checkout)
+    assert not project.is_relative_to(observation.other_checkout)
+    assert observation.install_project_present == (True,) * len(installs)
+    assert observation.fetch_projects_present_after == (False,) * len(installs)
+
+    entries = cast(
+        "dict[str, list[dict[str, str]]]",
+        observation.record_file_after[CLAUDE_INSTALLED_PLUGINS_FIELD],
+    )
+    for plugin in uncached:
+        (moved,) = [
+            entry
+            for entry in entries[
+                marketplace_plugin_identifier(plugin, observation.marketplace)
+            ]
+            if entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD]
+            == str(observation.other_checkout)
+        ]
+        assert (
+            moved[CLAUDE_INSTALLED_RECORD_VERSION_FIELD] == observation.target_version
+        )
+        assert moved[CLAUDE_INSTALLED_RECORD_PATH_FIELD] == str(
+            observation.cache_root / plugin / observation.target_version
+        )
+    assert not [
+        entry
+        for items in entries.values()
+        for entry in items
+        if entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD] == str(project)
+    ]
+    closing = cast("list[dict[str, str]]", json.loads(observation.listings[-1]))
+    assert str(project) not in {
+        entry.get(CLAUDE_PLUGIN_PROJECT_PATH_FIELD) for entry in closing
+    }
+    assert observation.settings_after == observation.settings_before
+    assert observation.document[ReportField.OFF_TARGET_RECORDS] == []
+    assert observation.exit_code == 0

@@ -6,7 +6,7 @@ import random
 import secrets
 import string
 from collections.abc import Mapping, Sequence
-from dataclasses import fields
+from dataclasses import dataclass, fields
 from itertools import product
 from enum import StrEnum
 from pathlib import Path
@@ -780,6 +780,94 @@ def generated_publication_states(plugins: Sequence[str]) -> tuple[frozenset[str]
     unmoved by an unpublished update.
     """
     return (frozenset(), *(frozenset({plugin}) for plugin in plugins))
+
+
+@dataclass(frozen=True)
+class FetchState:
+    """The three independent facts that decide whether a plugin's target needs a fetch.
+
+    Each field is one dimension of the uncached-target fetch domain: whether
+    the invocation checkout records the plugin, whether another checkout
+    records it, and whether the plugin cache already holds the target version.
+    """
+
+    invocation_records: bool
+    other_records: bool
+    cached: bool
+
+
+def generated_fetch_states() -> tuple[FetchState, ...]:
+    """Every combination of the fetch domain's three facts."""
+    return generated_boolean_states(FetchState)
+
+
+@dataclass(frozen=True)
+class FetchOutcome:
+    """The two independent ways a native install of the uncached target can end.
+
+    The fetch install either fails, or succeeds; a successful install either
+    fills the plugin cache with the version it records, or lands nothing in it.
+    """
+
+    fails: bool
+    fills_cache: bool
+
+
+def generated_fetch_outcomes() -> tuple[FetchOutcome, ...]:
+    """Every combination of the fetch install's two outcome facts."""
+    return generated_boolean_states(FetchOutcome)
+
+
+SUCCESSFUL_FETCH = FetchOutcome(fails=False, fills_cache=True)
+"""The fetch every run meets when the agent installs the version into the cache."""
+UNFILLED_FETCH = FetchOutcome(fails=False, fills_cache=False)
+"""A fetch install that succeeds yet leaves the target version out of the cache."""
+FAILED_FETCH = FetchOutcome(fails=True, fills_cache=True)
+"""A fetch install that exits nonzero."""
+
+
+UNCACHED_OTHER_CHECKOUT_STATE = FetchState(
+    invocation_records=False, other_records=True, cached=False
+)
+"""The one state the fetch exists for: only other checkouts record it and the cache lacks it."""
+
+
+def recorded_fetch_cases(
+    plugin: str,
+    state: FetchState,
+    marketplace: str,
+    invocation_checkout: Path,
+    other_checkout: Path,
+    first_ordinal: int,
+) -> tuple[tuple[dict[str, str], RecordDisposition], ...]:
+    """The project-scope install records one plugin carries in `state`.
+
+    Records of the invocation checkout move natively and records of another
+    checkout move through the file rewrite; every record receives its own
+    recorded version, derived from `first_ordinal`.
+    """
+    identifier = marketplace_plugin_identifier(plugin, marketplace)
+    placements = (
+        (
+            state.invocation_records,
+            invocation_checkout,
+            RecordDisposition.INVOCATION_NATIVE,
+        ),
+        (state.other_records, other_checkout, RecordDisposition.FILE_REWRITE),
+    )
+    return tuple(
+        (
+            {
+                CLAUDE_PLUGIN_ID_FIELD: identifier,
+                CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
+                CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(checkout),
+                CLAUDE_PLUGIN_VERSION_FIELD: recorded_version(first_ordinal + offset),
+            },
+            disposition,
+        )
+        for offset, (present, checkout, disposition) in enumerate(placements)
+        if present
+    )
 
 
 CONCURRENT_SESSION_CHECKOUT = "concurrent-session-checkout"

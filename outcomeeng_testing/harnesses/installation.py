@@ -155,8 +155,12 @@ from outcomeeng.distribution.installation import (
 )
 from outcomeeng_testing.generators.installation import (
     ClosingDisposition,
+    FetchOutcome,
+    FetchState,
+    SUCCESSFUL_FETCH,
     RecordDisposition,
     RegistryShape,
+    recorded_fetch_cases,
     generated_marketplace_registry_entries,
     generated_unlocated_registry_entry,
     served_version,
@@ -752,7 +756,24 @@ class RecordingRunner:
     native path beside the rewrite, and the real CLI proves the native path
     itself at `l3`.
     """
+    cache_root: Path | None = None
+    """The plugin cache directory the native update and install fill, as the real CLI does.
+
+    Stage 5 Combinatorial cost: with a record document and a served version, a
+    native update or install also creates the cache directory its version
+    names, the one other effect of those operations the run observes.
+    """
+    install_fills_cache: bool = True
+    """Whether a native install creates the cache directory for the version it records.
+
+    Stage 5 Failure simulation: an install that records a version without
+    filling the cache is the state a run meets when the fetch lands nothing.
+    """
     calls: list[InstallationCommand] = field(default_factory=list)
+    install_project_present: list[bool] = field(default_factory=list)
+    """For each native install, whether its working directory existed when it ran."""
+    listings: list[str] = field(default_factory=list)
+    """Every Claude listing the record document rendered, in the order it was read."""
 
     def __call__(self, command: InstallationCommand) -> CommandResult:
         self.calls.append(command)
@@ -790,6 +811,32 @@ class RecordingRunner:
                 self.served_version,
                 self.head_commit,
             )
+            if self.cache_root is not None:
+                (self.cache_root / command.plugin / self.served_version).mkdir(
+                    parents=True, exist_ok=True
+                )
+        if (
+            self.record_file is not None
+            and self.served_version is not None
+            and self.cache_root is not None
+            and command.agent is Agent.CLAUDE
+            and command.operation is Operation.PLUGIN_INSTALL
+            and command.plugin is not None
+            and exit_code == 0
+        ):
+            self.install_project_present.append(command.cwd.is_dir())
+            _apply_native_install(
+                self.record_file,
+                command.plugin,
+                command.cwd,
+                self.served_version,
+                self.head_commit,
+                self.cache_root,
+            )
+            if self.install_fills_cache:
+                (self.cache_root / command.plugin / self.served_version).mkdir(
+                    parents=True, exist_ok=True
+                )
         if (
             self.closing_listing is not None
             and command.agent is Agent.CLAUDE
@@ -802,6 +849,7 @@ class RecordingRunner:
             and command.operation in {Operation.PLUGIN_INSPECT, Operation.PLUGIN_LIST}
         ):
             stdout = _listing_from_record_file(self.record_file)
+            self.listings.append(stdout)
         elif command.operation is Operation.MARKETPLACE_HEAD:
             stdout = self.head_commit + "\n"
         elif (
@@ -964,6 +1012,36 @@ def _apply_native_update(
                     version
                 )
             )
+    record_file.write_text(json.dumps(document, indent=2) + "\n")
+
+
+def _apply_native_install(
+    record_file: Path,
+    plugin: str,
+    project_path: Path,
+    version: str,
+    commit: str,
+    cache_root: Path,
+) -> None:
+    """Write the effect of one project-scope native install into a disposable record document.
+
+    The entry copies the fields the agent writes from an entry the document
+    already carries and sets the scope, project path, version, commit and the
+    install path the version names, as the real install does.
+    """
+    document = cast("dict[str, object]", json.loads(record_file.read_text()))
+    records = cast(
+        "dict[str, list[dict[str, object]]]", document[CLAUDE_INSTALLED_PLUGINS_FIELD]
+    )
+    entry = dict(next(item for items in records.values() for item in items))
+    entry[CLAUDE_PLUGIN_SCOPE_FIELD] = CLAUDE_PROJECT_SCOPE
+    entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD] = str(project_path)
+    entry[CLAUDE_INSTALLED_RECORD_VERSION_FIELD] = version
+    entry[CLAUDE_INSTALLED_RECORD_COMMIT_FIELD] = commit
+    entry[CLAUDE_INSTALLED_RECORD_PATH_FIELD] = str(cache_root / plugin / version)
+    records.setdefault(marketplace_plugin_identifier(plugin, MARKETPLACE), []).append(
+        entry
+    )
     record_file.write_text(json.dumps(document, indent=2) + "\n")
 
 
@@ -1349,6 +1427,191 @@ def observe_record_refresh_plan(
             record_file_before=record_file_before,
             record_file_after=record_file_after,
             exit_code=installation_exit_code(report),
+        )
+
+
+@dataclass(frozen=True)
+class UncachedFetchObservation:
+    """One persistent run over records whose plugin cache may lack the target version.
+
+    Each cataloged plugin carries the install records its `FetchState` names
+    and a plugin cache that holds the target version or lacks it. The
+    invocation checkout always records `spec-tree`, because a nonempty
+    persistent selection must contain it, so that plugin's effective state
+    names the invocation checkout regardless of the generated one. The run's
+    attempted commands, the install-record document before and after, every
+    listing the document rendered, the working directories the native installs
+    ran in and whether each existed or survived, and the invocation checkout's
+    settings before and after are the observations the linked tests judge.
+    """
+
+    checkout: Path
+    other_checkout: Path
+    catalog: tuple[str, ...]
+    marketplace: str
+    target_version: str
+    states: Mapping[str, FetchState]
+    """The state each cataloged plugin met, `spec-tree` forced to record the invocation checkout."""
+    cases: tuple[tuple[dict[str, str], RecordDisposition], ...]
+    cache_root: Path
+    plan: InstallationPlan
+    report: InstallationReport | None
+    failure: InstallationFailure | None
+    document: dict[str, object]
+    attempted: tuple[InstallationCommand, ...]
+    record_file_before: dict[str, object]
+    record_file_after: dict[str, object]
+    listings: tuple[str, ...]
+    install_project_present: tuple[bool, ...]
+    fetches: tuple[InstallationCommand, ...]
+    """Every native Claude Code install the run attempted, in order."""
+    fetch_projects: tuple[Path, ...]
+    """The working directory of every native Claude Code install the run attempted."""
+    fetch_projects_present_after: tuple[bool, ...]
+    settings_before: bytes | None
+    settings_after: bytes | None
+    cached_versions_after: Mapping[str, frozenset[str]]
+    exit_code: int | None
+
+
+def observe_uncached_fetch(
+    state: FetchState,
+    outcome: FetchOutcome = SUCCESSFUL_FETCH,
+) -> UncachedFetchObservation:
+    """Run a persistent refresh over plugins that all meet one fetch state.
+
+    The disposable Claude Code state carries an install-record document built
+    from the state, a plugin cache holding the target version for the plugins
+    the state caches, and a mirrored clone whose manifests serve that version.
+    An outcome that fails makes every native install exit nonzero, and one
+    that fills no cache makes a native install record its version without
+    creating the cache directory; both are Stage 5 Failure simulation of a
+    fetch that lands nothing.
+    """
+    checkout = repository_root()
+    with TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory).resolve()
+        mirror = temporary_root / "checkout"
+        other = temporary_root / "other-checkout"
+        other.mkdir()
+        mirror_installation_inputs(checkout, mirror)
+        _write_project_marketplace(mirror, DECLARED_CLAUDE_SOURCE)
+        clone = temporary_root / "clone"
+        mirror_installation_inputs(checkout, clone)
+        environment = _persistent_environment(temporary_root)
+        _prepare_agent_state(environment)
+        preflight = build_persistent_preflight(mirror, environment)
+        marketplace = preflight.roots.marketplace
+        catalog = _catalogs_from_documents(mirror)[Agent.CLAUDE]
+        states = {
+            plugin: (
+                FetchState(True, state.other_records, state.cached)
+                if plugin == SPEC_TREE_PLUGIN
+                else state
+            )
+            for plugin in catalog
+        }
+        cases = tuple(
+            case
+            for index, plugin in enumerate(catalog)
+            for case in recorded_fetch_cases(
+                plugin,
+                states[plugin],
+                marketplace,
+                preflight.roots.checkout,
+                other.resolve(),
+                2 * index,
+            )
+        )
+        target_version = served_version(len(cases))
+        _serve_clone_versions(clone, catalog, target_version)
+        cache_root = (
+            preflight.roots.claude_config / CLAUDE_PLUGIN_CACHE_RELATIVE / marketplace
+        )
+        for plugin in catalog:
+            if states[plugin].cached:
+                (cache_root / plugin / target_version).mkdir(parents=True)
+        record_file = preflight.roots.claude_config / CLAUDE_INSTALLED_PLUGINS_RELATIVE
+        record_file.parent.mkdir(parents=True, exist_ok=True)
+        record_file_before = _record_file_from_cases(cases, cache_root)
+        record_file.write_text(json.dumps(record_file_before, indent=2) + "\n")
+        settings_path = mirror / CLAUDE_PROJECT_SETTINGS_PATH
+        settings_before = settings_path.read_bytes() if settings_path.exists() else None
+        runner = RecordingRunner(
+            failed_operation=Operation.PLUGIN_INSTALL if outcome.fails else None,
+            failed_agent=Agent.CLAUDE,
+            record_file=record_file,
+            clone=clone,
+            served_version=target_version,
+            cache_root=cache_root,
+            install_fills_cache=outcome.fills_cache,
+        )
+        plan = build_persistent_installation_plan(
+            preflight,
+            claude_marketplace_payload=claude_marketplace_listing_payload(
+                DECLARED_CLAUDE_SOURCE, marketplace, clone
+            ),
+            claude_plugins_payload=json.dumps([entry for entry, _ in cases]),
+            codex_marketplace_payload=codex_marketplace_listing_payload(
+                DECLARED_CODEX_SOURCE, marketplace
+            ),
+            codex_plugins_payload=_plugin_listing_payload(
+                Agent.CODEX,
+                mirror,
+                frozenset(catalog),
+            ),
+        )
+        report: InstallationReport | None = None
+        failure: InstallationFailure | None = None
+        try:
+            report = execute_installation(plan, runner)
+        except InstallationFailure as raised:
+            failure = raised
+        fetches = tuple(
+            command
+            for command in runner.calls
+            if command.agent is Agent.CLAUDE
+            and command.operation is Operation.PLUGIN_INSTALL
+        )
+        fetch_projects = tuple(command.cwd for command in fetches)
+        return UncachedFetchObservation(
+            checkout=preflight.roots.checkout,
+            other_checkout=other.resolve(),
+            catalog=catalog,
+            marketplace=marketplace,
+            target_version=target_version,
+            states=states,
+            cases=cases,
+            cache_root=cache_root,
+            plan=plan,
+            report=report,
+            failure=failure,
+            document={} if report is None else report_document(report),
+            attempted=tuple(runner.calls),
+            record_file_before=record_file_before,
+            record_file_after=cast(
+                "dict[str, object]", json.loads(record_file.read_text())
+            ),
+            listings=tuple(runner.listings),
+            install_project_present=tuple(runner.install_project_present),
+            fetches=fetches,
+            fetch_projects=fetch_projects,
+            fetch_projects_present_after=tuple(
+                project.exists() for project in fetch_projects
+            ),
+            settings_before=settings_before,
+            settings_after=settings_path.read_bytes()
+            if settings_path.exists()
+            else None,
+            cached_versions_after={
+                plugin: frozenset(
+                    version.name for version in (cache_root / plugin).iterdir()
+                )
+                if (cache_root / plugin).is_dir()
+                else frozenset()
+                for plugin in catalog
+            },
+            exit_code=None if report is None else installation_exit_code(report),
         )
 
 
@@ -3547,6 +3810,118 @@ def observe_real_record_refresh() -> RealRecordRefreshObservation:
     )
 
 
+@dataclass(frozen=True)
+class RealUncachedFetchObservation:
+    """A real persistent run whose only record of one plugin belongs to another checkout.
+
+    The plugin's cache directory for the version its record held is removed
+    before the run, so the cache lacks the version the marketplace head
+    names, and the run must fetch it through the native install.
+    """
+
+    exit_code: int
+    stdout: str
+    stderr: str
+    invocation_checkout: Path
+    other_checkout: Path
+    plugin: str
+    """The cataloged plugin only the other checkout records."""
+    records_before: tuple[ListedInstallRecord, ...]
+    records_after: tuple[ListedInstallRecord, ...]
+    invocation_activation_before: object
+    invocation_activation_after: object
+    target_cache_absent_before_run: bool
+    """Read inside the temporary root's lifetime, before the recipe ran."""
+    report: dict[str, object]
+
+
+def _recorded_install_path(
+    environment: Mapping[str, str], plugin: str, checkout: Path
+) -> Path:
+    """The cache directory one project-scope record of `plugin` in `checkout` names."""
+    document = cast(
+        "dict[str, object]",
+        json.loads(
+            (
+                Path(environment[CLAUDE_CONFIG_ENV]) / CLAUDE_INSTALLED_PLUGINS_RELATIVE
+            ).read_text()
+        ),
+    )
+    records = cast(
+        "dict[str, list[dict[str, object]]]", document[CLAUDE_INSTALLED_PLUGINS_FIELD]
+    )
+    resolved = checkout.resolve()
+    return next(
+        Path(cast("str", entry[CLAUDE_INSTALLED_RECORD_PATH_FIELD]))
+        for entry in records[marketplace_plugin_identifier(plugin, MARKETPLACE)]
+        if entry.get(CLAUDE_PLUGIN_SCOPE_FIELD) == CLAUDE_PROJECT_SCOPE
+        and Path(cast("str", entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD])).resolve()
+        == resolved
+    )
+
+
+@cache
+def observe_real_uncached_fetch() -> RealUncachedFetchObservation:
+    """Seed a second checkout's record of a plugin the cache then loses, and run the recipe.
+
+    The invocation checkout records `spec-tree`, which a nonempty persistent
+    selection requires. A second checkout records the first other cataloged
+    plugin and is aged to an older version; the cache directory the install
+    wrote for the current version is then removed, so no record names the
+    plugin in the invocation checkout and the cache lacks the target.
+    """
+    checkout = repository_root()
+    _require_binaries(REQUIRED_BINARIES)
+    plugin = next(
+        name
+        for name in _catalogs_from_documents(checkout)[Agent.CLAUDE]
+        if name != SPEC_TREE_PLUGIN
+    )
+    with TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory).resolve()
+        invocation = temporary_root / "invocation-checkout"
+        other = temporary_root / "other-checkout"
+        mirror_installation_inputs(checkout, invocation)
+        mirror_installation_inputs(checkout, other)
+        environment = _persistent_environment(temporary_root / "agent-state")
+        _prepare_agent_state(environment)
+        _register_persistent_claude_marketplace(invocation, environment)
+        _register_persistent_codex_marketplace(invocation, environment)
+        _write_project_marketplace(other, DECLARED_CLAUDE_SOURCE)
+        _install_claude_plugin(invocation, environment, CLAUDE_PROJECT_SCOPE)
+        _install_claude_plugin(other, environment, CLAUDE_PROJECT_SCOPE, plugin)
+        current_cache = _recorded_install_path(environment, plugin, other)
+        _seed_older_record_version(environment, plugin, other)
+        shutil.rmtree(current_cache)
+        invocation_settings = invocation / CLAUDE_PROJECT_SETTINGS_PATH
+        invocation_activation_before = _declared_activation(invocation_settings)
+        records_before = claude_install_records(
+            _run_listing(Agent.CLAUDE, invocation, environment).stdout, MARKETPLACE
+        )
+        target_cache_absent_before_run = not current_cache.exists()
+        result = _run_persistent_recipe(checkout, invocation, environment)
+        records_after = claude_install_records(
+            _run_listing(Agent.CLAUDE, invocation, environment).stdout, MARKETPLACE
+        )
+        invocation_activation_after = _declared_activation(invocation_settings)
+    return RealUncachedFetchObservation(
+        exit_code=result.returncode,
+        stdout=result.stdout,
+        stderr=result.stderr,
+        invocation_checkout=invocation,
+        other_checkout=other,
+        plugin=plugin,
+        records_before=records_before,
+        records_after=records_after,
+        invocation_activation_before=invocation_activation_before,
+        invocation_activation_after=invocation_activation_after,
+        target_cache_absent_before_run=target_cache_absent_before_run,
+        report=cast("dict[str, object]", json.loads(result.stdout))
+        if result.returncode == 0
+        else {},
+    )
+
+
 def _seed_older_record_version(
     environment: Mapping[str, str],
     plugin: str,
@@ -3605,15 +3980,18 @@ def _seed_older_record_version(
 
 
 def _install_claude_plugin(
-    checkout: Path, environment: Mapping[str, str], scope: str
+    checkout: Path,
+    environment: Mapping[str, str],
+    scope: str,
+    plugin: str = SPEC_TREE_PLUGIN,
 ) -> None:
-    """Install `spec-tree` at one scope from one checkout through the real CLI."""
+    """Install one plugin, `spec-tree` by default, at one scope from one checkout through the real CLI."""
     result = _run_agent_process(
         (
             CLAUDE_EXECUTABLE,
             "plugin",
             "install",
-            marketplace_plugin_identifier(SPEC_TREE_PLUGIN, MARKETPLACE),
+            marketplace_plugin_identifier(plugin, MARKETPLACE),
             CLAUDE_SCOPE_FLAG,
             scope,
         ),

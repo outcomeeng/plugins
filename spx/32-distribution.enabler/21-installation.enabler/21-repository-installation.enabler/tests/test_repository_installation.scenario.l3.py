@@ -23,6 +23,7 @@ from outcomeeng_testing.harnesses.installation import (
     observe_real_first_install,
     observe_real_installation,
     observe_real_record_refresh,
+    observe_real_uncached_fetch,
 )
 
 
@@ -224,3 +225,43 @@ def test_real_second_run_reports_records_refreshed_at_unchanged_versions() -> No
         for record in observation.records_after
         if isinstance(record, ClaudeInstallRecord)
     }
+
+
+def test_real_run_fetches_a_target_the_cache_lacks_and_leaves_no_temporary_project_record() -> (
+    None
+):
+    observation = observe_real_uncached_fetch()
+    other_records = {
+        record
+        for record in observation.records_before
+        if isinstance(record, ClaudeInstallRecord)
+        and record.plugin == observation.plugin
+    }
+
+    assert observation.target_cache_absent_before_run
+    assert {record.project_path for record in other_records} == {
+        observation.other_checkout
+    }
+    assert observation.exit_code == 0, observation.stderr
+    document = json.loads(observation.stdout)
+    target = document[ReportField.TARGET][ReportField.VERSIONS][observation.plugin]
+    after = {
+        record.project_path: record.version
+        for record in observation.records_after
+        if isinstance(record, ClaudeInstallRecord)
+        and record.plugin == observation.plugin
+    }
+    assert after == {observation.other_checkout: target}
+    assert {
+        record.project_path
+        for record in observation.records_after
+        if isinstance(record, ClaudeInstallRecord)
+    } == {
+        record.project_path
+        for record in observation.records_before
+        if isinstance(record, ClaudeInstallRecord)
+    }
+    assert (
+        observation.invocation_activation_after
+        == observation.invocation_activation_before
+    )
