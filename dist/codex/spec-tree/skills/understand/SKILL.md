@@ -353,7 +353,7 @@ A **Change** is the mutable coordination object for one intended Output: a decis
 
 **Roles**, capitalized: the **Refiner** holds the Change during refinement and is the operator's conversation; the **Executor** holds it during execution, takes the mutation blocks in order, delegates, integrates, and produces no artifact; the **Author** produces one round's artifacts; the **Fixer** is a later round's Author; the **Verifier** produces an Agentic verdict — an Auditor for audit, a Reviewer for review. Author, Fixer, and Verifier hold no claim.
 
-When Claude calls both the Author and the Fixer, they must use separate agent sessions. When the operator calls the Author, the same session must also act as the Fixer whenever the operator requests, for as many rounds as necessary.
+The Author and the Fixer use separate agent sessions.
 
 `ISSUES.md` is the only node-local note: known defects, contradictions, and gaps with evidence, impact, and a settlement condition, and no work order, owner, priority, or next action. Notes inform judgment and never supply authority; reconcile every loaded note against current decisions, specs, evidence, and intent before acting. `spx/local/` holds product-specific overlays read by the skill that declares each; `spx/local/merging.md` is the lifecycle overlay `/merge` and `/contextualize` read; the coordination overlay names where the repository's Changes live.
 
