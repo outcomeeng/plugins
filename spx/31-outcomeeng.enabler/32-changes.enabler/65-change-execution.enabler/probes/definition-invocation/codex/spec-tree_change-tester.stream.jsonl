@@ -1,0 +1,6 @@
+{"type":"thread.started","thread_id":"01a12c91-4b39-71d2-9362-9c54f137deab"}
+{"type":"turn.started"}
+{"type":"item.started","item":{"id":"item_0","type":"collab_tool_call","tool":"wait","sender_thread_id":"01a12c91-4b39-71d2-9362-9c54f137deab","receiver_thread_ids":[],"prompt":null,"agents_states":{},"status":"in_progress"}}
+{"type":"item.completed","item":{"id":"item_0","type":"collab_tool_call","tool":"wait","sender_thread_id":"01a12c91-4b39-71d2-9362-9c54f137deab","receiver_thread_ids":[],"prompt":null,"agents_states":{},"status":"completed"}}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"blocked\n\nInvalid target path: `not-a-target`. `/spec-tree:test` requires a canonical spec node or ADR/PDR target.\n\nQuestion for Executor: Which canonical `spx/...` target should this round test?\nEvidence: Supplied task was exactly `not-a-target`.\nBlocked action: Loading target context and authoring test evidence."}}
+{"type":"turn.completed","usage":{"input_tokens":58086,"cached_input_tokens":38272,"cache_write_input_tokens":0,"output_tokens":153,"reasoning_output_tokens":16}}

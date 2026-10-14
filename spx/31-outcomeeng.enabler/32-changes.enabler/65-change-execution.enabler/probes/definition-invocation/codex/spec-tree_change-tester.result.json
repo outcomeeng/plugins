@@ -1,0 +1,56 @@
+{
+  "definition": "spec-tree_change-tester",
+  "emitted_definition": {
+    "path": "dist/codex/spec-tree/skills/spec-tree-plugin/agents/spec-tree_change-tester.toml",
+    "sha256": "2fd481165fd8d0a0a62d62fc6cb37e0b3c3f222973c68637a04005b3e8d112b9"
+  },
+  "discovery": {
+    "artifact": "discovery.jsonl",
+    "listed": true
+  },
+  "loaded_configuration": {
+    "child_thread_id": "01a12c91-5b1d-7642-83ea-016da14d5d60",
+    "agent_role": "spec-tree_change-tester",
+    "model": "gpt-6.1-sol",
+    "effort": "high",
+    "definition_instructions_in_child_context": true
+  },
+  "child_invocation": {
+    "parent_thread_id": "01a12c91-4b39-71d2-9362-9c54f137deab",
+    "spawn_calls": [
+      {
+        "agent_type": "spec-tree_change-tester",
+        "fork_turns": "none",
+        "message": "<redacted: 140 chars>",
+        "task_name": "tester"
+      }
+    ],
+    "child_parent_thread_id": "01a12c91-4b39-71d2-9362-9c54f137deab",
+    "depth": 1,
+    "child_tool_calls": [
+      {
+        "name": "exec",
+        "arguments_prefix": "const r = await tools.exec_command({cmd:\"cat /private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-executor-433/999fd1f0-aecd-41ee-bdd9-9f8d44f35d3d/scratchpad/chome/plugins/cache/outcomeeng/spec-tree/0.105.5/skills/test/SKILL.md\",max_output_tokens:20000}); text(r.output)\n"
+      },
+      {
+        "name": "exec",
+        "arguments_prefix": "const base=\"/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-executor-433/999fd1f0-aecd-41ee-bdd9-9f8d44f35d3d/scratchpad/chome/plugins/cache/outcomeeng/spec-tree/0.105.5/skills\";\nconst results=await Promise.allSettled([\"test-evidence-standards\",\"understand\",\"contextualize\"].map("
+      },
+      {
+        "name": "exec",
+        "arguments_prefix": "const base=\"/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-executor-433/999fd1f0-aecd-41ee-bdd9-9f8d44f35d3d/scratchpad/chome/plugins/cache/outcomeeng/spec-tree/0.105.5/skills\";\nconst r=await tools.exec_command({cmd:`sed -n '1,130p' ${base}/contextualize/SKILL.md`,max_output_to"
+      }
+    ],
+    "child_spawn_count": 0
+  },
+  "returned_result": {
+    "parent_final_message": "blocked\n\nInvalid target path: `not-a-target`. `/spec-tree:test` requires a canonical spec node or ADR/PDR target.\n\nQuestion for Executor: Which canonical `spx/...` target should this round test?\nEvidence: Supplied task was exactly `not-a-target`.\nBlocked action: Loading target context and authoring test evidence.",
+    "usage": {
+      "input_tokens": 58086,
+      "cached_input_tokens": 38272,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 153,
+      "reasoning_output_tokens": 16
+    }
+  }
+}

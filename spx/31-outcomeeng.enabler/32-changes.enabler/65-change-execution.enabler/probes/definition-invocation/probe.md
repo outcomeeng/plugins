@@ -67,14 +67,58 @@ This run records `change-skill-author` and `change-subagent-author`, the two def
   - [change-skill-author.result.json](change-skill-author.result.json)
   - [change-subagent-author.result.json](change-subagent-author.result.json)
 
+## Codex protocol
+
+The Codex steps distinguish four observations per definition: discovery by name, loaded configuration, child invocation, and returned result.
+
+Preconditions:
+
+- `dist/codex/spec-tree` is built from the subject commit, and the working tree is clean.
+- `CODEX_HOME` is a disposable directory holding an empty `config.toml` and a copy of the saved login. The marketplace catalog of the checkout is registered with `codex plugin marketplace add <checkout>`, `spec-tree@outcomeeng` is installed with `codex plugin add`, and the seven emitted `spec-tree_change-*.toml` definitions are placed byte-identical in `$CODEX_HOME/agents/`, as persistent installation places them.
+- `codex exec` runs from an empty scratch directory outside every repository, with `--skip-git-repo-check -s read-only --json`. The task message is the literal `not-a-target`.
+
+Steps:
+
+1. Discovery. In a fresh `codex exec` session, with no tool call, ask for every `agent_type` name beginning `spec-tree_change-` that the subagent-launch tool accepts. Keep the stream as `codex/discovery.jsonl`.
+2. For each definition `<name>`, run a fresh `codex exec` session with the prompt: "Call the subagent-launch tool exactly once with agent_type spec-tree_<name>, fork_turns none, and the message: not-a-target. Do nothing else. Then reply with that subagent's final result verbatim." Keep the stream as `codex/spec-tree_<name>.stream.jsonl`.
+3. From the session rollouts under `$CODEX_HOME/sessions`, keep the parent's one `spawn_agent` call with its `agent_type` and `fork_turns`, and the child's session metadata (`parent_thread_id`, `agent_role`, depth), `turn_context` (model and effort), the presence of the definition's instruction text in the child's developer context, and the child's tool calls. Keep these with the emitted definition's path and SHA-256 and the parent's final message as `codex/spec-tree_<name>.result.json`, produced by [assemble.py](codex/assemble.py).
+
+## Attested run: the Codex definitions
+
+- Date: 2026-10-11
+- Subject commit: `7cc2690b157119862716b4f61c6637907ffb3f21`
+- Environment: `codex-cli` 0.162.1 with a ChatGPT saved login, model `gpt-6.1-sol`
+- Observations:
+  - Discovery: the fresh session listed all seven `spec-tree_change-*` names among the names its launch tool accepts, beside the plugin's own `spec-tree_change-auditor`.
+  - Loaded configuration: each child session's metadata carries `agent_role` `spec-tree_<name>`, and its `turn_context` reports model `gpt-6.1-sol` and effort `high`, as the emitted definition declares. Each child's developer context holds the definition's `developer_instructions`.
+  - Emitted definitions: the seven definitions at the subject commit declare no tool denial for Codex; each carries `model` `gpt-6.1-sol`, `model_reasoning_effort` `high`, and a `manual_review_guidance` section about its fronted skill. Each result file records the definition's path and SHA-256.
+  - Child invocation: each parent made exactly one `spawn_agent` call with `agent_type` `spec-tree_<name>` and `fork_turns` `none`. Each child's `parent_thread_id` is its parent's thread, at depth 1, and no child launched a further agent.
+  - Returned result: `change-executor` returned `not-held` from `spec-tree:execute-change`. `change-author` returned `blocked` with its question and blocked action. `change-implementer` returned `blocked` with reason `target-required`. `change-tester` and `change-verifier` returned `blocked` for the non-canonical target. `change-skill-author` returned `blocked` naming `instructions:create-skill` as absent, and `change-subagent-author` returned `blocked` naming `instructions:create-subagent` as absent.
+  - Each child loaded its fronted skill by reading its `SKILL.md` from the disposable home's plugin cache. The sandbox was read-only, and no child wrote a file.
+- Artifacts:
+  - [discovery.jsonl](codex/discovery.jsonl)
+  - [spec-tree_change-executor.result.json](codex/spec-tree_change-executor.result.json) and [stream](codex/spec-tree_change-executor.stream.jsonl)
+  - [spec-tree_change-author.result.json](codex/spec-tree_change-author.result.json) and [stream](codex/spec-tree_change-author.stream.jsonl)
+  - [spec-tree_change-implementer.result.json](codex/spec-tree_change-implementer.result.json) and [stream](codex/spec-tree_change-implementer.stream.jsonl)
+  - [spec-tree_change-tester.result.json](codex/spec-tree_change-tester.result.json) and [stream](codex/spec-tree_change-tester.stream.jsonl)
+  - [spec-tree_change-verifier.result.json](codex/spec-tree_change-verifier.result.json) and [stream](codex/spec-tree_change-verifier.stream.jsonl)
+  - [spec-tree_change-skill-author.result.json](codex/spec-tree_change-skill-author.result.json) and [stream](codex/spec-tree_change-skill-author.stream.jsonl)
+  - [spec-tree_change-subagent-author.result.json](codex/spec-tree_change-subagent-author.result.json) and [stream](codex/spec-tree_change-subagent-author.stream.jsonl)
+
 ## Verdict
 
-`passed`: each exact emitted definition loaded natively, started as a child session of one `Agent` launch, and returned a result its fronted skill or its own workflow declares.
+`passed`: each exact emitted Claude Code definition loaded natively, started as a child session of one `Agent` launch, and returned a result its fronted skill or its own workflow declares.
+
+`passed`: each exact emitted Codex definition was discovered by its name in a fresh session, loaded with its declared model and effort, started as the child session of one isolated `spawn_agent` launch by that name, and returned a result its fronted skill or its own workflow declares.
 
 ## Limitations
 
 - The run exercises only the stop at an unaccepted target; a round that produces an artifact, and a Fixer's repair block, stay unexercised.
 - The emitted effort is recorded from the definition file — `effort: medium` for the six Standard-profile definitions and `effort: high` for `change-executor`; each child's tool result reports the resolved model and no effort value.
 - The run of the two instruction round definitions exercises the `blocked` result for an uninstalled fronted skill. A round that runs `instructions:create-skill` or `instructions:create-subagent` whole stays unexercised because the probe installs no `instructions` plugin. Neither fronted skill launches an auditor; the Verifier of such a round is a separate launch by `/execute-change`, outside this protocol.
-- The Codex renderings are not invoked; the node's `ISSUES.md` records that gap.
+- The Codex run exercises only the stop at an unaccepted target, like the Claude Code run. The emitted effort and model are recorded from the child's `turn_context`.
+- The Codex children can read paths outside the disposable home, because the read-only sandbox restricts writes only. In this run `change-skill-author` and `change-subagent-author` each searched only the scratch tree and returned the uninstalled-skill `blocked` result, but an earlier run of `change-subagent-author` found and read `instructions:create-subagent` in the operator's personal Codex plugin cache. The Codex run therefore does not isolate the installed-plugin set from the host.
+- The discovery observation rests on the model reporting the names its launch tool accepts; the launch of each definition by name in step 2 is the stronger evidence.
+- The emitted Codex definitions declare no tool denial, so the run observes only that no child launched an agent or wrote a file; each child ran under the read-only sandbox of the protocol, which restricts writes and never restricts agent launches.
+- [assemble.py](codex/assemble.py) confines its definition reads and result writes to the two directories its arguments name; the fields it records are unchanged from the attested run, whose retained result files it produced.
 - A later change to an emitted definition invalidates its record here until the protocol runs again on the new commit.

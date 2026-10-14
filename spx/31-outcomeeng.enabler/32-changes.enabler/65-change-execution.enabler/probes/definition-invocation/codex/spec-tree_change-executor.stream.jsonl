@@ -1,0 +1,6 @@
+{"type":"thread.started","thread_id":"01a12c8f-cdd7-7a13-8131-e083e56bfdd2"}
+{"type":"turn.started"}
+{"type":"item.started","item":{"id":"item_0","type":"collab_tool_call","tool":"wait","sender_thread_id":"01a12c8f-cdd7-7a13-8131-e083e56bfdd2","receiver_thread_ids":[],"prompt":null,"agents_states":{},"status":"in_progress"}}
+{"type":"item.completed","item":{"id":"item_0","type":"collab_tool_call","tool":"wait","sender_thread_id":"01a12c8f-cdd7-7a13-8131-e083e56bfdd2","receiver_thread_ids":[],"prompt":null,"agents_states":{},"status":"completed"}}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"result: not-held\nreason: `not-a-target` is not an issue reference. Required: `#N`, `owner/repo#N`, or an issue URL.\nChange URL: unresolved\nFinal head SHA: unavailable (`git rev-parse HEAD`: not a git repository)\nRounds: none\nMerge commit: none\nHandoff comment URL: none"}}
+{"type":"turn.completed","usage":{"input_tokens":58104,"cached_input_tokens":45440,"cache_write_input_tokens":0,"output_tokens":171,"reasoning_output_tokens":29}}

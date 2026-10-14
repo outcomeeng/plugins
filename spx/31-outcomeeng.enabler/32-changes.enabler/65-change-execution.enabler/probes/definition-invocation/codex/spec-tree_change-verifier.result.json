@@ -1,0 +1,52 @@
+{
+  "definition": "spec-tree_change-verifier",
+  "emitted_definition": {
+    "path": "dist/codex/spec-tree/skills/spec-tree-plugin/agents/spec-tree_change-verifier.toml",
+    "sha256": "cabcf707b56a6d0fad74b87e64645f8343608cb2436e84f3c57ce2d8880c5da8"
+  },
+  "discovery": {
+    "artifact": "discovery.jsonl",
+    "listed": true
+  },
+  "loaded_configuration": {
+    "child_thread_id": "01a12c91-dfce-7b61-ac92-9011b7a2aec3",
+    "agent_role": "spec-tree_change-verifier",
+    "model": "gpt-6.1-sol",
+    "effort": "high",
+    "definition_instructions_in_child_context": true
+  },
+  "child_invocation": {
+    "parent_thread_id": "01a12c91-ceb2-7373-83b9-d8cf85e974b7",
+    "spawn_calls": [
+      {
+        "agent_type": "spec-tree_change-verifier",
+        "fork_turns": "none",
+        "message": "<redacted: 140 chars>",
+        "task_name": "verifier"
+      }
+    ],
+    "child_parent_thread_id": "01a12c91-ceb2-7373-83b9-d8cf85e974b7",
+    "depth": 1,
+    "child_tool_calls": [
+      {
+        "name": "exec",
+        "arguments_prefix": "text(await tools.exec_command({cmd:\"cat /private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-executor-433/999fd1f0-aecd-41ee-bdd9-9f8d44f35d3d/scratchpad/chome/plugins/cache/outcomeeng/spec-tree/0.105.5/skills/verify/SKILL.md\",max_output_tokens:15000}));\n"
+      },
+      {
+        "name": "exec",
+        "arguments_prefix": "text(await tools.exec_command({cmd:\"cat /private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-executor-433/999fd1f0-aecd-41ee-bdd9-9f8d44f35d3d/scratchpad/chome/plugins/cache/outcomeeng/spec-tree/0.105.5/skills/understand/SKILL.md\",max_output_tokens:15000}));\n"
+      }
+    ],
+    "child_spawn_count": 0
+  },
+  "returned_result": {
+    "parent_final_message": "blocked: `not-a-target` is not a canonical spec-tree target. Supply `spx/`, one full `spx/...` node path, or one full `spx/.../*.adr.md` or `spx/.../*.pdr.md` decision path. Verification routing is blocked until a canonical target is supplied.",
+    "usage": {
+      "input_tokens": 58084,
+      "cached_input_tokens": 45440,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 150,
+      "reasoning_output_tokens": 14
+    }
+  }
+}

@@ -1,12 +1,12 @@
 # Issues: Change Execution
 
-## The seven definitions ship for Claude Code only
+## A Codex Executor session cannot be started through `/orchestrate-change`
 
-**Evidence**: `/subagent-standards` requires each subagent definition without declared per-harness release acceptance to retain its exact-definition minimal isolated invocation, per `spx/43-instructions.enabler/21-subagents.enabler/subagents.md`. The build emits no Codex rendering of `change-executor`, `change-author`, `change-verifier`, `change-tester`, `change-implementer`, `change-skill-author` and `change-subagent-author`.
+**Evidence**: `coding-agents:orchestrate-change` cannot natively select a main-session definition on Codex while withholding the structured-question tool, so its Start has no Codex path. `/execute-change` runs inside an already running Codex session that holds the Change, with the seven definitions delivered for Codex.
 
-**Impact**: a Codex session cannot execute a Change: `/orchestrate-change` Start and `/execute-change` return an explicit unavailable result on Codex.
+**Impact**: a Codex session executes a Change only when a session already holds it; Orchestrator Start launches Executor sessions on Claude Code only.
 
-**Settlement condition**: a Codex Executor start exists, the seven definitions list Codex among their targets, and each Codex rendering retains its own minimal isolated invocation.
+**Settlement condition**: `/orchestrate-change` Start selects the `change-executor` definition natively on Codex with the structured-question tool withheld, and a retained run shows that session loading the definition and returning a result `/execute-change` declares.
 
 ## The Executor's session start through `--agent` is unobserved
 
@@ -34,11 +34,11 @@
 
 ## The Executor skill's grants, verify scope and reading tag carry three open warnings
 
-**Evidence**: `instructions:skill-auditor` findings f-008, f-010 and f-011, severity `WARNING`, against `src/plugins/spec-tree/skills/execute-change/SKILL.md`, in the typed skill audit of head `8b72c99fe5a258ef2d562e7e33e1151c909c0658`, which approved with no must-fix finding. The Codex render grants `spawn_agent` and `wait_agent` although its `<codex_surface>` runs no step. Step 5.3 runs the product `verify` command over the Activity's nodes and the changeset, and a skill-surface or subagent-definition round targets paths outside any spec node. `<required_reading>`, a workflow-file tag, holds the always-on composition directives of a non-router skill.
+**Evidence**: `instructions:skill-auditor` findings f-008, f-010 and f-011, severity `WARNING`, against `src/plugins/spec-tree/skills/execute-change/SKILL.md`, in the typed skill audit of head `8b72c99fe5a258ef2d562e7e33e1151c909c0658`, which approved with no must-fix finding. Step 5.3 runs the product `verify` command over the Activity's nodes and the changeset, and a skill-surface or subagent-definition round targets paths outside any spec node. `<required_reading>`, a workflow-file tag, holds the always-on composition directives of a non-router skill.
 
-**Impact**: the Codex grant exceeds the behavior it serves, the verification scope for a round whose subject is no spec node depends on judgment, and the tag does not name its content.
+**Impact**: the verification scope for a round whose subject is no spec node depends on judgment, and the tag does not name its content.
 
-**Settlement condition**: the Codex render grants only what its `unavailable` path needs, step 5.3 states the scope for a subject that is no spec node, and the always-on directives sit in a semantically named section; one typed skill audit of `execute-change` then raises no `narrowest_allowed_tools`, `ambiguous_instruction` on scope, or `tag_semantics` finding.
+**Settlement condition**: step 5.3 states the scope for a subject that is no spec node, and the always-on directives sit in a semantically named section; one typed skill audit of `execute-change` then raises no `ambiguous_instruction` on scope or `tag_semantics` finding. The Codex render's grant is judged against the launching behavior it performs, `spawn_agent` and `wait_agent` for the rounds and Verifiers it starts, and raises no `narrowest_allowed_tools` finding.
 
 ## An instruction round's changelog entry has no declared owner in the fronted skills
 

@@ -10,6 +10,13 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.107.0
+
+### Added
+
+- **The seven execution definitions ship for Codex beside Claude Code.** `change-executor`, `change-author`, `change-implementer`, `change-tester`, `change-verifier`, `change-skill-author`, and `change-subagent-author` list both targets, so marketplace installation places each in the selected Codex home under its `spec-tree_<role>` name, with the profile it already declares: Executor for `change-executor` and Standard for the six producing rounds. Each wrapper loads its fronted skill explicitly and relays its result unchanged. The `change-executor`, `change-author`, `change-implementer`, `change-tester`, `change-verifier`, `change-skill-author`, and `change-subagent-author` definitions declare their withheld tools for the Claude Code target only, so their Codex definitions state no restriction that Codex cannot enforce natively. A Codex session that holds a claimed Executable Change launches each round by exact name, with the native `fork_turns` control set to `"none"` so the round starts without the launching session's history. Before this change, each definition selected only the Claude Code target, so the selected Codex home held none of them and an Executable Change waited for a Claude Code session.
+- **`/execute-change` runs on Codex instead of returning `unavailable`.** The skill carries out its steps in a Codex session that holds a claimed Executable Change, launching each producing round, Fixer, and Verifier by exact name with `fork_turns` set to `"none"`. Before this change, the skill returned result `unavailable` on Codex and wrote nothing.
+
 ## 0.106.2
 
 ### Changed

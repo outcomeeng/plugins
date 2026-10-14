@@ -5,7 +5,10 @@ description: >-
 profile: executor
 targets:
   - claude
+  - codex
+{!% if target == 'claude' %!}
 disallowedTools: "{{! tool('ask_user') !}}"
+{!% endif %!}
 skills:
   - spec-tree:execute-change
 ---

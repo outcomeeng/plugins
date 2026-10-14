@@ -1,0 +1,6 @@
+{"type":"thread.started","thread_id":"01a12c91-0d08-7e51-bdee-b5c784e247fd"}
+{"type":"turn.started"}
+{"type":"item.started","item":{"id":"item_0","type":"collab_tool_call","tool":"wait","sender_thread_id":"01a12c91-0d08-7e51-bdee-b5c784e247fd","receiver_thread_ids":[],"prompt":null,"agents_states":{},"status":"in_progress"}}
+{"type":"item.completed","item":{"id":"item_0","type":"collab_tool_call","tool":"wait","sender_thread_id":"01a12c91-0d08-7e51-bdee-b5c784e247fd","receiver_thread_ids":[],"prompt":null,"agents_states":{},"status":"completed"}}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"{\n  \"status\": \"blocked\",\n  \"reason\": \"target-required\",\n  \"node_path\": null,\n  \"selected_language\": null,\n  \"skills_run\": [],\n  \"changed_paths\": [],\n  \"final_checkpoint\": null,\n  \"deterministic_commands\": []\n}"}}
+{"type":"turn.completed","usage":{"input_tokens":58098,"cached_input_tokens":45440,"cache_write_input_tokens":0,"output_tokens":156,"reasoning_output_tokens":28}}

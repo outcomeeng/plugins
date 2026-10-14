@@ -1,0 +1,6 @@
+{"type":"thread.started","thread_id":"01a12c91-ceb2-7373-83b9-d8cf85e974b7"}
+{"type":"turn.started"}
+{"type":"item.started","item":{"id":"item_0","type":"collab_tool_call","tool":"wait","sender_thread_id":"01a12c91-ceb2-7373-83b9-d8cf85e974b7","receiver_thread_ids":[],"prompt":null,"agents_states":{},"status":"in_progress"}}
+{"type":"item.completed","item":{"id":"item_0","type":"collab_tool_call","tool":"wait","sender_thread_id":"01a12c91-ceb2-7373-83b9-d8cf85e974b7","receiver_thread_ids":[],"prompt":null,"agents_states":{},"status":"completed"}}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"blocked: `not-a-target` is not a canonical spec-tree target. Supply `spx/`, one full `spx/...` node path, or one full `spx/.../*.adr.md` or `spx/.../*.pdr.md` decision path. Verification routing is blocked until a canonical target is supplied."}}
+{"type":"turn.completed","usage":{"input_tokens":58084,"cached_input_tokens":45440,"cache_write_input_tokens":0,"output_tokens":150,"reasoning_output_tokens":14}}

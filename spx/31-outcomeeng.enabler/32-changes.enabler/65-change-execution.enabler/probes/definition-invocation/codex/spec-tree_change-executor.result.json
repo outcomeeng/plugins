@@ -1,0 +1,60 @@
+{
+  "definition": "spec-tree_change-executor",
+  "emitted_definition": {
+    "path": "dist/codex/spec-tree/skills/spec-tree-plugin/agents/spec-tree_change-executor.toml",
+    "sha256": "85a8988467b14544f7d2b8de75a1f3bc3c28b8e2884bceafa0371c37d7255849"
+  },
+  "discovery": {
+    "artifact": "discovery.jsonl",
+    "listed": true
+  },
+  "loaded_configuration": {
+    "child_thread_id": "01a12c8f-dcbe-7953-8955-3f5cc62a621e",
+    "agent_role": "spec-tree_change-executor",
+    "model": "gpt-6.1-sol",
+    "effort": "high",
+    "definition_instructions_in_child_context": true
+  },
+  "child_invocation": {
+    "parent_thread_id": "01a12c8f-cdd7-7a13-8131-e083e56bfdd2",
+    "spawn_calls": [
+      {
+        "agent_type": "spec-tree_change-executor",
+        "fork_turns": "none",
+        "message": "<redacted: 140 chars>",
+        "task_name": "executor"
+      }
+    ],
+    "child_parent_thread_id": "01a12c8f-cdd7-7a13-8131-e083e56bfdd2",
+    "depth": 1,
+    "child_tool_calls": [
+      {
+        "name": "exec",
+        "arguments_prefix": "const r = await tools.exec_command({cmd:\"cat /private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-executor-433/999fd1f0-aecd-41ee-bdd9-9f8d44f35d3d/scratchpad/chome/plugins/cache/outcomeeng/spec-tree/0.105.5/skills/execute-change/SKILL.md\",max_output_tokens:18000});text(r.output);\n"
+      },
+      {
+        "name": "exec",
+        "arguments_prefix": "const r = await tools.exec_command({cmd:\"cat /private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-executor-433/999fd1f0-aecd-41ee-bdd9-9f8d44f35d3d/scratchpad/chome/plugins/cache/outcomeeng/spec-tree/0.105.5/skills/change-standards/SKILL.md\",max_output_tokens:25000});text(r.output);\n"
+      },
+      {
+        "name": "exec",
+        "arguments_prefix": "const r = await tools.exec_command({cmd:\"cat /private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-executor-433/999fd1f0-aecd-41ee-bdd9-9f8d44f35d3d/scratchpad/chome/plugins/cache/outcomeeng/spec-tree/0.105.5/skills/change-standards/references/lifecycle.md\",max_output_tokens:22000});t"
+      },
+      {
+        "name": "exec",
+        "arguments_prefix": "text(await tools.exec_command({cmd:\"git rev-parse HEAD\",max_output_tokens:1000}));\n"
+      }
+    ],
+    "child_spawn_count": 0
+  },
+  "returned_result": {
+    "parent_final_message": "result: not-held\nreason: `not-a-target` is not an issue reference. Required: `#N`, `owner/repo#N`, or an issue URL.\nChange URL: unresolved\nFinal head SHA: unavailable (`git rev-parse HEAD`: not a git repository)\nRounds: none\nMerge commit: none\nHandoff comment URL: none",
+    "usage": {
+      "input_tokens": 58104,
+      "cached_input_tokens": 45440,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 171,
+      "reasoning_output_tokens": 29
+    }
+  }
+}
