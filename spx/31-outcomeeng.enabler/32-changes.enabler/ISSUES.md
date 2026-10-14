@@ -243,4 +243,6 @@ Evidence: line 51 of the skill above; the dangerous-command guard blocks heredoc
 
 Impact: a run of the change auditor can have its runner request blocked by the guard, and the journal projection assertion that a consumer whose bundled runner issues the journal commands instructs no payload built in the shell does not hold for this skill.
 
-Revisit and settlement condition: `audit-change` passes its runner request by a file written with the file-write tool, with its agent grant and constraints adjusted, or the assertion states why a stdin-fed runner request is outside it.
+Revisit and settlement condition: `outcomeeng/changes#515` is the home of the fix, which moves the change auditor to file-written requests. `audit-change` passes its runner request by a file written with the file-write tool, with its agent grant and constraints adjusted, or the assertion states why a stdin-fed runner request is outside it.
+
+Reason the fix is a separate larger concern: the fix adds a Write grant to the change-auditor agent, which reverses that agent's no-file-write rule. A separate Change set that rule, and no block of `outcomeeng/changes#425` amends it, so the fix lies outside this changeset.

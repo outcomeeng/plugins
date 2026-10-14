@@ -426,3 +426,11 @@ The skill auditor's grant rule bars `Write` on an `audit-*` skill, so an `audit-
 **Impact.** The `audit-*` skills pass payloads through the forms the payload rule excludes, so the rule holds for every other skill and not for these.
 
 **Settlement condition.** The grant rule admits a file-write grant for `audit-*` skills, after which `audit-implementation`, `audit-change`, and `audit-assertions` move to the file form, and `--audit-input` takes its JSON through a file.
+
+## The finding-bearing leg of the implementation-auditor is unproven through the payload-file route
+
+**Evidence.** Run `2026-10-14_22-58-44-451-c48ad7cbafbd` approved the unreached module `outcomeeng/acceptance_fixture.py` on the local scratch branch `work/change-425-acceptance` with zero findings, so the `implementation-auditor` and its `/audit-implementation` skill recorded no finding for a file that no verification reaches.
+
+**Impact.** The path on which the implementation-auditor flags an unreached file and records a finding is unproven through the payload-file route.
+
+**Settlement condition.** A finding-bearing guarded `implementation-auditor` run flags an unreached file.
