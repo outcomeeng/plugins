@@ -423,7 +423,7 @@ Record each accepted concern finding on touched text through `spx verification r
 
 Finish the run only after the stage 7 reconciler exits zero. Record missing required skills, unsupported paths claimed by a selected kind, finding counts, and deterministic verification state in accepted scope and finding payload fields instead of terminal metadata.
 
-Compute the terminal status from accepted coverage and finding evidence: `approved` when every required non-gap unit is `audited` or `not-applicable` and no finding on touched text exists; `rejected` when a required unit is uncovered or any finding on touched text exists. A `filed` finding is never recorded through `finding add`, so it changes neither value. Pass that evidence-derived value through `finish --terminal-status`. Do not pass terminal metadata for audit runs; the run's coverage and findings already carry the facts behind the terminal value.
+Compute the terminal status from accepted coverage and finding evidence: `approved` when every required non-gap unit is `audited` or `not-applicable` and no finding on touched text exists; `rejected` when a required unit is uncovered or any finding on touched text exists. A `filed` finding is never recorded through `finding add`, so it changes neither value. Pass that evidence-derived value through `finish --terminal-status`. Pass no terminal metadata for audit runs; the run's coverage and findings already carry the facts behind the terminal value. Terminal metadata a caller does require is written with the file-write tool to its own payload file in the session scratch directory and passed by path to `finish --terminal-metadata '<terminal-metadata-file>'`.
 
 If SPX rejects terminal status, report the rejected command and stderr as the audit result. Do not manufacture a prose fallback.
 
@@ -458,7 +458,7 @@ Preserve each value verbatim from the invocation and command result:
 BLOCKED
 runToken: <exact-token-if-start-succeeded-or-not-started>
 command: <exact-command-with-selectors-and-no-invented-redaction>
-payloadSource: <stdin|none>
+payloadSource: <payload-file-path-or-none>
 payloadKey: <unitId-or-finding-idempotency-key-or-none>
 exitCode: <exact-exit-code>
 stderr: <exact-stderr>
