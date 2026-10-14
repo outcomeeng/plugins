@@ -2925,10 +2925,11 @@ def _fetch_uncached_targets(
     Runs once the registered clone has been refreshed and before any native
     update: each cataloged plugin that `uncached_fetch_plugins` selects
     receives one project-scope native install with `project_root` as working
-    directory. A listing read through the same runner then reports which
-    entries the agent recorded for that project; the project is returned when
-    it holds any, so the install-record replace drops them, and `None` when
-    the agent recorded none or no plugin needed a fetch.
+    directory. The project is returned when any plugin needed a fetch, so the
+    install-record replace drops every entry of that project whether or not
+    the agent recorded one; no listing is read here, because the run reads
+    the install-record listing exactly twice, once to plan and once after
+    execution. `None` when no plugin needed a fetch.
     """
     if plan.claude_clone is None:
         return None
@@ -2972,25 +2973,7 @@ def _fetch_uncached_targets(
             results,
             pending,
         )
-    listing = _run_command(
-        plan,
-        replace(
-            refresh,
-            operation=Operation.PLUGIN_INSPECT,
-            plugin=None,
-            argv=CLAUDE_LIST_COMMAND,
-            scope=None,
-            source=None,
-        ),
-        runner,
-        results,
-        pending,
-    )
-    recorded = any(
-        isinstance(record, ClaudeInstallRecord) and record.project_path == project_root
-        for record in claude_install_records(listing.stdout, plan.roots.marketplace)
-    )
-    return project_root if recorded else None
+    return project_root
 
 
 def _record_drift(
