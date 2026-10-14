@@ -6,11 +6,19 @@ CAN rename, add, and remove skills without leaving a reference to an absent skil
 
 ## Assertions
 
-- Given authored content whose every skill reference names a shipped skill, when the validator scans it, then it reports nothing and exits zero
-- Given a file that names a skill no marketplace plugin ships, when the validator scans it, then it reports the file, line, and reference and exits non-zero
-- Given a file whose placeholder reference no shipped skill name matches, or whose brace alternation names a member no plugin ships, when the validator scans it, then it reports the file, line, reference, and unmatched expansion and exits non-zero
-- NEVER: the validator passes a reference to an unshipped skill in any form it recognizes: a plugin-qualified `<plugin>:<skill>` name, a slash invocation `/<skill>` standing as its own token rather than a path segment, or a placeholder template
-- ALWAYS: the validator expands a brace alternation such as `{code|tests|architecture}` over each member, and passes any other brace placeholder, such as `{type}` or `{role}`, only when at least one shipped skill name matches the template with the placeholder standing for one or more name characters
-- ALWAYS: the validator derives the shipped skill set from the skill directories under `src/plugins/` and the plugin names from the committed marketplace catalog, never from a copied list
-- ALWAYS: the validator scans every file under `src/plugins/`, `src/_shared/`, `src/templates/`, `outcomeeng/`, and `outcomeeng_testing/`, except plugin changelogs, inert test fixtures, and a slash invocation of a harness command on its tracked exemption list
-- ALWAYS: every file of this repository the validator scans passes it
+### Scenarios
+
+- Given authored content whose every skill reference names a shipped skill, when the validator scans it, then it reports nothing and exits zero ([test](tests/test_skill_reference.scenario.l1.py))
+- Given a file that names a skill no marketplace plugin ships, when the validator scans it, then it reports the file, line, and reference and exits non-zero ([test](tests/test_skill_reference.scenario.l1.py))
+- Given a file whose placeholder reference no shipped skill name matches, or whose brace alternation names a member no plugin ships, when the validator scans it, then it reports the file, line, reference, and unmatched expansion and exits non-zero ([test](tests/test_skill_reference.scenario.l1.py))
+
+### Compliance
+
+- NEVER: the validator passes a reference to an unshipped skill in any form it recognizes: a plugin-qualified `<plugin>:<skill>` name, a slash invocation `/<skill>` standing as its own token rather than a path segment, or a placeholder template ([test](tests/test_skill_reference.compliance.l1.py))
+- ALWAYS: the validator expands a brace alternation such as `{code|tests|architecture}` over each member, and passes any other brace placeholder, such as `{type}` or `{role}`, only when at least one shipped skill name matches the template with the placeholder standing for one or more name characters ([test](tests/test_skill_reference.compliance.l1.py))
+- ALWAYS: the validator derives the shipped skill set from the skill directories under `src/plugins/` and the plugin names from the committed marketplace catalog, never from a copied list ([test](tests/test_skill_reference.compliance.l1.py))
+- ALWAYS: the validator scans every file under `src/plugins/`, `src/_shared/`, `src/templates/`, `outcomeeng/`, and `outcomeeng_testing/`, except plugin changelogs, inert test fixtures, and a slash invocation of a harness command on its tracked exemption list ([test](tests/test_skill_reference.compliance.l1.py))
+
+### Mappings
+
+- ALWAYS: every file of this repository the validator scans passes it ([test](tests/test_skill_reference.mapping.l1.py))
