@@ -1,6 +1,7 @@
 """State-boundary and failure evidence for repository installation."""
 
 import json
+import tempfile
 from pathlib import Path
 
 from outcomeeng.distribution.installation import (
@@ -14,6 +15,7 @@ from outcomeeng.distribution.installation import (
     CLAUDE_SCOPELESS_OPERATIONS,
     CLAUDE_SCOPE_FLAG,
     CODEX_HOME_ENV,
+    FETCH_PROJECT_PREFIX,
     InstallationMode,
     Operation,
     ReportField,
@@ -197,18 +199,34 @@ def test_the_uncached_target_fetch_install_runs_at_project_scope_in_a_run_owned_
     fetches = observation.fetches
     others = [command for command in observation.attempted if command not in fetches]
 
+    roots = observation.plan.roots
+    persistent_directories = (
+        observation.checkout,
+        observation.other_checkout,
+        roots.home,
+        roots.claude_config,
+        roots.codex_home,
+    )
+
     assert fetches
-    assert all(command.operation is Operation.PLUGIN_INSTALL for command in fetches)
     assert all(
         command.argv[-2:] == (CLAUDE_SCOPE_FLAG, CLAUDE_PROJECT_SCOPE)
         for command in fetches
     )
     assert all(
-        not command.cwd.is_relative_to(checkout)
+        not command.cwd.is_relative_to(directory) and command.cwd != directory
         for command in fetches
-        for checkout in (observation.checkout, observation.other_checkout)
+        for directory in persistent_directories
     )
     assert len({command.cwd for command in fetches}) == 1
+    assert all(
+        command.cwd.parent == Path(tempfile.gettempdir()).resolve()
+        and command.cwd.name.startswith(FETCH_PROJECT_PREFIX)
+        for command in fetches
+    )
+    assert len(observation.install_project_present) == len(fetches)
+    assert all(observation.install_project_present)
+    assert not any(observation.fetch_projects_present_after)
     assert others
     assert all(command.cwd == observation.checkout for command in others)
 
