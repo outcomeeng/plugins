@@ -106,21 +106,20 @@ Claude described each finding as carrying `pattern`, `category`, `quote`, and `r
 
 Claude removed dispatch language from this skill's description to satisfy the audit-description standard, but left a dispatch gate in the body and a dispatch-tool grant in the frontmatter — the same caller-coupling defect in two other places. A skill never detects, constrains, or branches on the context that invokes it; context placement and dispatch policy belong to the caller. When removing caller coupling, check the description, the frontmatter grants, and the body together — the pattern recurs across all three surfaces.
 
-</failure_modes>
-
 **A journal event was built in the shell.**
 
 Claude appended a finding by feeding a heredoc to `spx journal append`, and the dangerous-command guard refused the command. The run stayed open with no sealed verdict, and the findings already appended could not be read as a result. Each event is written to its own file with the file-write tool and appended through the input redirect, so the guard sees one literal command.
+
+</failure_modes>
 
 <success_criteria>
 
 - Every applicable rule was judged — base categories, voice canon, kind style layer, kind structural conventions, and every triggered pack — none skipped as unlikely.
 - The sealed run states its terminal status, and every finding is falsifiable in the journal finding record per `<verdict_format>`: exactly one stable identifier as its rule, a voice canon violation naming the voice canon rule's identifier, a location, a severity the rollup reads, and a message pairing category, verbatim quote, and a rewrite showing fixed text.
-- Scope progress and each finding were appended as the run advanced, each sentence recorded as swept before the next; the same text and kind yield the same findings.
+- The sealed journal alone reproduces the verdict: every sentence recorded as swept carries each finding raised against it, and the same text and kind yield the same findings.
 - With a base revision in the arguments, the run raised findings only on sentences intersecting the lines changed since that base, and a path unchanged since that base yielded no finding; without one, the run audited the whole text.
 - A dispatch naming a governed artifact produced the `governed-elsewhere` finding without reading the text; a dispatch carrying no kind or no target produced the failed terminal status naming the missing input without reading the text.
 - The kind judged is the supplied kind, never one this skill concluded, and the kind's overrides produced no false-positive findings.
-- Every journal event travelled through its own event file and an input redirect, each journal command ran alone, and the run stopped at the first nonzero exit.
 - The final message is exactly the raw run token of a sealed run.
 
 </success_criteria>
