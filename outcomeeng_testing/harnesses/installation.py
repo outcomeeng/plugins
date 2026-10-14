@@ -1477,6 +1477,8 @@ class UncachedFetchObservation:
 def observe_uncached_fetch(
     state: FetchState,
     outcome: FetchOutcome = SUCCESSFUL_FETCH,
+    *,
+    failing_operation: Operation | None = None,
 ) -> UncachedFetchObservation:
     """Run a persistent refresh over plugins that all meet one fetch state.
 
@@ -1486,7 +1488,10 @@ def observe_uncached_fetch(
     An outcome that fails makes every native install exit nonzero, and one
     that fills no cache makes a native install record its version without
     creating the cache directory; both are Stage 5 Failure simulation of a
-    fetch that lands nothing.
+    fetch that lands nothing. A `failing_operation` makes that one Claude Code
+    operation exit nonzero after the fetch ran, the Stage 5 Failure simulation
+    of a run whose head read resolves no target or whose later operation
+    stops it.
     """
     checkout = repository_root()
     with TemporaryDirectory() as temporary_directory:
@@ -1538,7 +1543,9 @@ def observe_uncached_fetch(
         settings_path = mirror / CLAUDE_PROJECT_SETTINGS_PATH
         settings_before = settings_path.read_bytes() if settings_path.exists() else None
         runner = RecordingRunner(
-            failed_operation=Operation.PLUGIN_INSTALL if outcome.fails else None,
+            failed_operation=Operation.PLUGIN_INSTALL
+            if outcome.fails
+            else failing_operation,
             failed_agent=Agent.CLAUDE,
             record_file=record_file,
             clone=clone,

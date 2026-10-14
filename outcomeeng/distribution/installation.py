@@ -2698,36 +2698,37 @@ def execute_installation(
     head: str | None = None
     fetch_project: Path | None = None
     with tempfile.TemporaryDirectory(prefix=FETCH_PROJECT_PREFIX) as project_directory:
-        for command in plan.commands:
-            result = _run_command(plan, command, runner, results, pending)
-            if command.operation is Operation.MARKETPLACE_HEAD:
-                head = result.stdout.strip() if result.exit_code == 0 else None
-            if (
-                plan.mode is InstallationMode.PERSISTENT
-                and command.agent is Agent.CLAUDE
-                and command.operation is Operation.MARKETPLACE_REFRESH
-            ):
-                fetch_project = _fetch_uncached_targets(
-                    plan,
-                    command,
-                    runner,
-                    results,
-                    pending,
-                    Path(project_directory).resolve(),
+        project_root = Path(project_directory).resolve()
+        try:
+            for command in plan.commands:
+                result = _run_command(plan, command, runner, results, pending)
+                if command.operation is Operation.MARKETPLACE_HEAD:
+                    head = result.stdout.strip() if result.exit_code == 0 else None
+                if (
+                    plan.mode is InstallationMode.PERSISTENT
+                    and command.agent is Agent.CLAUDE
+                    and command.operation is Operation.MARKETPLACE_REFRESH
+                ):
+                    fetch_project = _fetch_uncached_targets(
+                        plan, command, runner, results, pending, project_root
+                    )
+            _declare_codex_activation_disabled(plan)
+            target: MarketplaceTarget | None = None
+            rewrites: tuple[RecordRewrite, ...] = ()
+            rewrite_warnings: tuple[InstallationWarning, ...] = ()
+            if plan.mode is InstallationMode.PERSISTENT:
+                target, rewrites, rewrite_warnings = _rewrite_records(
+                    plan, head, pending, fetch_project
                 )
-        _declare_codex_activation_disabled(plan)
-        target: MarketplaceTarget | None = None
-        rewrites: tuple[RecordRewrite, ...] = ()
-        rewrite_warnings: tuple[InstallationWarning, ...] = ()
-        if plan.mode is InstallationMode.PERSISTENT:
-            target, rewrites, rewrite_warnings = _rewrite_records(
-                plan, head, pending, fetch_project
-            )
-        closing_results: list[CommandResult] = []
-        for command in plan.closing:
-            closing_results.append(
-                _run_command(plan, command, runner, results, pending)
-            )
+            closing_results: list[CommandResult] = []
+            for command in plan.closing:
+                closing_results.append(
+                    _run_command(plan, command, runner, results, pending)
+                )
+        except InstallationFailure:
+            if fetch_project is not None:
+                _drop_fetch_project_records(plan, fetch_project)
+            raise
     agent_home = apply_agent_home_plan(
         without_pending_plugins(
             plan.agent_home,
@@ -2839,7 +2840,8 @@ def _rewrite_records(
 
     `fetch_project` names the run-owned temporary project that holds an
     install record of the uncached-target fetch; the single replace of the
-    install-record document drops every entry of that project.
+    install-record document drops every entry of that project, in the run
+    that reaches no target as in the run that does.
     """
     if plan.claude_clone is None:
         return None, (), ()
@@ -2847,15 +2849,24 @@ def _rewrite_records(
         entry.plugin for entry in pending if entry.agent is Agent.CLAUDE
     )
     if head is None:
+        _, drop_warnings = rewrite_install_records(
+            plan.roots.claude_config / CLAUDE_INSTALLED_PLUGINS_RELATIVE,
+            (),
+            plan.roots.marketplace,
+            dropped_project=fetch_project,
+        )
         return (
             None,
             (),
-            unreadable_head_warnings(
-                tuple(
-                    record
-                    for record in (*plan.claude_records, *plan.rewrite_records)
-                    if record.plugin not in unpublished
-                )
+            (
+                *unreadable_head_warnings(
+                    tuple(
+                        record
+                        for record in (*plan.claude_records, *plan.rewrite_records)
+                        if record.plugin not in unpublished
+                    )
+                ),
+                *drop_warnings,
             ),
         )
     target = marketplace_target(plan.claude_clone, head, plan.claude_catalog)
@@ -2951,29 +2962,54 @@ def _fetch_uncached_targets(
     )
     if not fetched:
         return None
-    for plugin in fetched:
-        _run_command(
-            plan,
-            replace(
-                refresh,
-                operation=Operation.PLUGIN_INSTALL,
-                plugin=plugin,
-                argv=_claude_argv(
-                    Operation.PLUGIN_INSTALL,
-                    "plugin",
-                    "install",
-                    marketplace_plugin_identifier(plugin, plan.roots.marketplace),
+    try:
+        for plugin in fetched:
+            _run_command(
+                plan,
+                replace(
+                    refresh,
+                    operation=Operation.PLUGIN_INSTALL,
+                    plugin=plugin,
+                    argv=_claude_argv(
+                        Operation.PLUGIN_INSTALL,
+                        "plugin",
+                        "install",
+                        marketplace_plugin_identifier(plugin, plan.roots.marketplace),
+                        scope=CLAUDE_PROJECT_SCOPE,
+                    ),
+                    cwd=project_root,
                     scope=CLAUDE_PROJECT_SCOPE,
+                    source=None,
                 ),
-                cwd=project_root,
-                scope=CLAUDE_PROJECT_SCOPE,
-                source=None,
-            ),
-            runner,
-            results,
-            pending,
-        )
+                runner,
+                results,
+                pending,
+            )
+    except InstallationFailure:
+        # A fetch install that failed after an earlier one succeeded leaves
+        # that earlier install's record in the document.
+        _drop_fetch_project_records(plan, project_root)
+        raise
     return project_root
+
+
+def _drop_fetch_project_records(plan: InstallationPlan, project_root: Path) -> None:
+    """Drop every install-record entry of the run-owned fetch project.
+
+    The replace the failed run never reached: a run a failed operation stops
+    holds the record a successful fetch install wrote, and nothing later
+    removes it. The drop is best effort, so the failure that stopped the run
+    stays the one it reports.
+    """
+    try:
+        rewrite_install_records(
+            plan.roots.claude_config / CLAUDE_INSTALLED_PLUGINS_RELATIVE,
+            (),
+            plan.roots.marketplace,
+            dropped_project=project_root,
+        )
+    except (OSError, ValueError):
+        return
 
 
 def _record_drift(

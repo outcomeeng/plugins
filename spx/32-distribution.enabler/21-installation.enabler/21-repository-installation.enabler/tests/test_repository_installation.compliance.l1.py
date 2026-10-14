@@ -1395,6 +1395,35 @@ def test_the_install_record_replace_drops_the_fetch_project_before_the_closing_l
     assert max(install_positions) < closing_position
 
 
+@pytest.mark.parametrize(
+    "failing_operation", (Operation.MARKETPLACE_HEAD, Operation.PLUGIN_UPDATE)
+)
+def test_the_install_record_replace_drops_the_fetch_project_in_a_run_without_a_target_or_a_run_a_later_failure_stops(
+    failing_operation: Operation,
+) -> None:
+    observation = observe_uncached_fetch(
+        UNCACHED_OTHER_CHECKOUT_STATE,
+        SUCCESSFUL_FETCH,
+        failing_operation=failing_operation,
+    )
+    (project,) = set(observation.fetch_projects)
+    entries = cast(
+        "dict[str, list[dict[str, str]]]",
+        observation.record_file_after[CLAUDE_INSTALLED_PLUGINS_FIELD],
+    )
+
+    assert observation.fetches
+    assert (observation.failure is None) == (
+        failing_operation is Operation.MARKETPLACE_HEAD
+    )
+    assert str(project) not in {
+        entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD]
+        for items in entries.values()
+        for entry in items
+    }
+    assert not project.exists()
+
+
 @pytest.mark.parametrize("outcome", generated_fetch_outcomes())
 def test_a_run_with_an_uncached_target_fetch_still_reads_the_listing_exactly_twice(
     outcome: FetchOutcome,
