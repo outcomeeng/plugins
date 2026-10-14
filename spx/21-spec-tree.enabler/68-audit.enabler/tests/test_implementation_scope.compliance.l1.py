@@ -531,3 +531,17 @@ def test_the_complete_run_start_input_is_written_to_the_path_the_caller_names(
     assert written[CHANGESET_SCOPE.ScopeField.CHANGED_PATHS] == [stale.feature_file]
     assert written[LIVE_PATHS_KEY] == [live]
     assert written == json.loads(printed.stdout)
+
+
+def test_an_unwritable_output_path_is_rejected_with_a_diagnostic(
+    tmp_path: pathlib.Path,
+) -> None:
+    with stale_local_base_repo() as stale:
+        completed = run_implementation_scope(
+            stale.repo, CHANGESET_SCOPE.HEAD_REF, output_path=tmp_path
+        )
+
+    assert completed.returncode == EXIT_COMMAND_FAILURE
+    assert ERROR_PREFIX in completed.stderr
+    assert str(tmp_path) in completed.stderr
+    assert completed.stdout == ""

@@ -12,7 +12,9 @@ naming its absent skill, an advisory live path beside the committed inventory, a
 scope identity, a run token the CLI cannot read, a CLI that cannot be launched,
 a run document shaped so the comparison cannot run, a head behind the
 fetched base relayed as the stale-base refusal, and the registry selection
-emitted per resolved path), and by the artifact-registry node's
+emitted per resolved path, the complete run-start document written to the
+``--output`` file equal to the printed document, and an unwritable ``--output``
+path refused with a diagnostic), and by the artifact-registry node's
 ``test_artifact_registry.mapping.l1.py`` (one path per registered artifact
 selecting it and its kind's detection-less artifacts, the most specific of two
 matches, and an unregistered path selecting nothing).
