@@ -430,6 +430,8 @@ With `CLAUDE_SCOPE_BEARING_OPERATIONS` this partitions every Claude operation a
 plan carries; the preflight inspections run outside any plan.
 """
 CLAUDE_SCOPE_FLAG = "--scope"
+FETCH_PROJECT_PREFIX = "outcomeeng-fetch-"
+"""The name prefix of the run-owned temporary project an uncached-target fetch runs in."""
 
 
 class SourceAction(StrEnum):
@@ -2694,19 +2696,38 @@ def execute_installation(
     results = list(completed)
     pending: list[PendingPublication] = []
     head: str | None = None
-    for command in plan.commands:
-        result = _run_command(plan, command, runner, results, pending)
-        if command.operation is Operation.MARKETPLACE_HEAD:
-            head = result.stdout.strip() if result.exit_code == 0 else None
-    _declare_codex_activation_disabled(plan)
-    target: MarketplaceTarget | None = None
-    rewrites: tuple[RecordRewrite, ...] = ()
-    rewrite_warnings: tuple[InstallationWarning, ...] = ()
-    if plan.mode is InstallationMode.PERSISTENT:
-        target, rewrites, rewrite_warnings = _rewrite_records(plan, head, pending)
-    closing_results: list[CommandResult] = []
-    for command in plan.closing:
-        closing_results.append(_run_command(plan, command, runner, results, pending))
+    fetch_project: Path | None = None
+    with tempfile.TemporaryDirectory(prefix=FETCH_PROJECT_PREFIX) as project_directory:
+        for command in plan.commands:
+            result = _run_command(plan, command, runner, results, pending)
+            if command.operation is Operation.MARKETPLACE_HEAD:
+                head = result.stdout.strip() if result.exit_code == 0 else None
+            if (
+                plan.mode is InstallationMode.PERSISTENT
+                and command.agent is Agent.CLAUDE
+                and command.operation is Operation.MARKETPLACE_REFRESH
+            ):
+                fetch_project = _fetch_uncached_targets(
+                    plan,
+                    command,
+                    runner,
+                    results,
+                    pending,
+                    Path(project_directory).resolve(),
+                )
+        _declare_codex_activation_disabled(plan)
+        target: MarketplaceTarget | None = None
+        rewrites: tuple[RecordRewrite, ...] = ()
+        rewrite_warnings: tuple[InstallationWarning, ...] = ()
+        if plan.mode is InstallationMode.PERSISTENT:
+            target, rewrites, rewrite_warnings = _rewrite_records(
+                plan, head, pending, fetch_project
+            )
+        closing_results: list[CommandResult] = []
+        for command in plan.closing:
+            closing_results.append(
+                _run_command(plan, command, runner, results, pending)
+            )
     agent_home = apply_agent_home_plan(
         without_pending_plugins(
             plan.agent_home,
@@ -2789,6 +2810,7 @@ def _rewrite_records(
     plan: InstallationPlan,
     head: str | None,
     pending: Sequence[PendingPublication],
+    fetch_project: Path | None,
 ) -> tuple[
     MarketplaceTarget | None,
     tuple[RecordRewrite, ...],
@@ -2814,6 +2836,10 @@ def _rewrite_records(
     location is no git working tree, or the read failed. That leaves the
     whole run without a target rather than one plugin without a version, so
     every carried record is reported against no target and none is rewritten.
+
+    `fetch_project` names the run-owned temporary project that holds an
+    install record of the uncached-target fetch; the single replace of the
+    install-record document drops every entry of that project.
     """
     if plan.claude_clone is None:
         return None, (), ()
@@ -2855,8 +2881,116 @@ def _rewrite_records(
         plan.roots.claude_config / CLAUDE_INSTALLED_PLUGINS_RELATIVE,
         rewrites,
         plan.roots.marketplace,
+        dropped_project=fetch_project,
     )
     return target, written, (*unresolved, *warnings, *write_warnings)
+
+
+def uncached_fetch_plugins(
+    native_records: Sequence[ClaudeInstallRecord],
+    rewrite_records: Sequence[ClaudeInstallRecord],
+    versions: Mapping[str, str],
+    cached_versions: Mapping[str, frozenset[str]],
+    catalog: Sequence[str],
+) -> tuple[str, ...]:
+    """The cataloged plugins whose target version needs one native fetch install.
+
+    A plugin needs the fetch when no invocation-checkout record names it, so
+    no native update fills the cache, another record names it, the clone
+    resolves a version for it, and the plugin cache lacks that version. Every
+    other plugin maps to no fetch. The result follows catalog order.
+    """
+    updated = frozenset(record.plugin for record in native_records)
+    recorded = frozenset(record.plugin for record in rewrite_records)
+    return tuple(
+        plugin
+        for plugin in catalog
+        if plugin in recorded
+        and plugin not in updated
+        and (version := versions.get(plugin)) is not None
+        and version not in cached_versions.get(plugin, frozenset())
+    )
+
+
+def _fetch_uncached_targets(
+    plan: InstallationPlan,
+    refresh: InstallationCommand,
+    runner: CommandRunner,
+    results: list[CommandResult],
+    pending: list[PendingPublication],
+    project_root: Path,
+) -> Path | None:
+    """Fetch every uncached target version through native installs in `project_root`.
+
+    Runs once the registered clone has been refreshed and before any native
+    update: each cataloged plugin that `uncached_fetch_plugins` selects
+    receives one project-scope native install with `project_root` as working
+    directory. A listing read through the same runner then reports which
+    entries the agent recorded for that project; the project is returned when
+    it holds any, so the install-record replace drops them, and `None` when
+    the agent recorded none or no plugin needed a fetch.
+    """
+    if plan.claude_clone is None:
+        return None
+    try:
+        versions = marketplace_plugin_versions(plan.claude_clone, plan.claude_catalog)
+    except ValueError:
+        # An unreadable clone catalog stops the run at the target read, with
+        # the diagnostic that read raises.
+        return None
+    cache_root = (
+        plan.roots.claude_config / CLAUDE_PLUGIN_CACHE_RELATIVE / plan.roots.marketplace
+    )
+    fetched = uncached_fetch_plugins(
+        plan.claude_records,
+        plan.rewrite_records,
+        versions,
+        cached_plugin_versions(cache_root, plan.claude_catalog),
+        plan.claude_catalog,
+    )
+    if not fetched:
+        return None
+    for plugin in fetched:
+        _run_command(
+            plan,
+            replace(
+                refresh,
+                operation=Operation.PLUGIN_INSTALL,
+                plugin=plugin,
+                argv=_claude_argv(
+                    Operation.PLUGIN_INSTALL,
+                    "plugin",
+                    "install",
+                    marketplace_plugin_identifier(plugin, plan.roots.marketplace),
+                    scope=CLAUDE_PROJECT_SCOPE,
+                ),
+                cwd=project_root,
+                scope=CLAUDE_PROJECT_SCOPE,
+                source=None,
+            ),
+            runner,
+            results,
+            pending,
+        )
+    listing = _run_command(
+        plan,
+        replace(
+            refresh,
+            operation=Operation.PLUGIN_INSPECT,
+            plugin=None,
+            argv=CLAUDE_LIST_COMMAND,
+            scope=None,
+            source=None,
+        ),
+        runner,
+        results,
+        pending,
+    )
+    recorded = any(
+        isinstance(record, ClaudeInstallRecord) and record.project_path == project_root
+        for record in claude_install_records(listing.stdout, plan.roots.marketplace)
+    )
+    return project_root if recorded else None
 
 
 def _record_drift(
@@ -3338,6 +3472,17 @@ def marketplace_target(
     the rest of the machine's records. A clone catalog the run cannot read at
     all resolves no plugin, so it stops the run.
     """
+    return MarketplaceTarget(
+        commit=commit, versions=marketplace_plugin_versions(clone, catalog)
+    )
+
+
+def marketplace_plugin_versions(clone: Path, catalog: Sequence[str]) -> dict[str, str]:
+    """Each cataloged plugin's manifest version in the registered clone.
+
+    A plugin the clone supplies no readable, confined, versioned manifest for
+    is left out; a clone catalog the run cannot read at all raises.
+    """
     catalog_path = clone / CLAUDE_CATALOG_PATH
     try:
         catalog_document = cast(
@@ -3381,7 +3526,7 @@ def marketplace_target(
         if not isinstance(version, str):
             continue
         versions[plugin] = version
-    return MarketplaceTarget(commit=commit, versions=versions)
+    return versions
 
 
 def unreadable_head_warnings(
@@ -3499,6 +3644,7 @@ def apply_install_record_writes(
     rewrites: Sequence[RecordRewrite],
     marketplace: str,
     document_path: Path,
+    dropped_project: Path | None = None,
 ) -> tuple[str, tuple[RecordRewrite, ...], tuple[InstallationWarning, ...]]:
     """Apply the planned write set to one install-record document text.
 
@@ -3512,6 +3658,9 @@ def apply_install_record_writes(
     record's scope and project path. Both return the record as unwritten with
     one blocking warning, so the run reports what it moved and what it could
     not rather than claiming the whole plan.
+
+    `dropped_project` names the run-owned temporary project whose entries the
+    replacement removes, whatever plugin or scope they carry.
 
     `document_path` names the document in the diagnostics a malformed text
     raises; nothing here reads or writes it.
@@ -3559,11 +3708,39 @@ def apply_install_record_writes(
                 blocking=True,
             )
         )
+    if dropped_project is not None:
+        _drop_project_entries(plugins, dropped_project)
     indent = 2 if "\n  " in text else None
     rendered = json.dumps(document, indent=indent)
     if text.endswith("\n"):
         rendered += "\n"
     return rendered, tuple(written), tuple(warnings)
+
+
+def _drop_project_entries(plugins: dict[str, object], project: Path) -> None:
+    """Remove every entry that names `project`, and any plugin key it leaves empty."""
+    for identifier in list(plugins):
+        entries = plugins[identifier]
+        if not isinstance(entries, list):
+            continue
+        kept = [
+            entry
+            for entry in entries
+            if not (
+                isinstance(entry, dict)
+                and isinstance(entry.get(CLAUDE_PLUGIN_PROJECT_PATH_FIELD), str)
+                and Path(cast(str, entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD]))
+                .expanduser()
+                .resolve()
+                == project
+            )
+        ]
+        if len(kept) == len(entries):
+            continue
+        if kept:
+            plugins[identifier] = kept
+        else:
+            del plugins[identifier]
 
 
 def read_install_record_document(document_path: Path) -> str:
@@ -3577,6 +3754,7 @@ def rewrite_install_records(
     marketplace: str,
     *,
     read_document: Callable[[Path], str] = read_install_record_document,
+    dropped_project: Path | None = None,
 ) -> tuple[tuple[RecordRewrite, ...], tuple[InstallationWarning, ...]]:
     """Rewrite the planned entries in Claude Code's install-record document.
 
@@ -3598,16 +3776,16 @@ def rewrite_install_records(
     evidence binds a reader that schedules another session's write into the
     interval the two reads span.
     """
-    if not rewrites:
+    if not rewrites and dropped_project is None:
         return (), ()
     text = read_document(document_path)
     rendered, written, warnings = apply_install_record_writes(
-        text, rewrites, marketplace, document_path
+        text, rewrites, marketplace, document_path, dropped_project
     )
     current = read_document(document_path)
     if current != text:
         rendered, written, warnings = apply_install_record_writes(
-            current, rewrites, marketplace, document_path
+            current, rewrites, marketplace, document_path, dropped_project
         )
     _atomic_write(document_path, rendered.encode("utf-8"))
     return written, warnings
