@@ -66,7 +66,7 @@ Read `${SKILL_DIR}/references/command-capabilities.md` before authoring argument
 
 <naming_conventions>
 
-The `name` field is the user invocation path (`/skill-name`). Match user speech patterns.
+The `name` field is the user invocation path (`/{skill-name}`). Match user speech patterns.
 
 **Rules:**
 
@@ -230,7 +230,7 @@ Six skill types. Each has a distinct purpose and primary output.
 
 <reference_skills>
 
-Reference skills hold shared domain knowledge that multiple skills need. Consuming workflows state each one as the instruction ``Use skill `{plugin}:{skill}`.`` per the composed-dependency rule in `<skill_organization>`. A `/skill-name` mention in prose records the dependency but never loads the reference.
+Reference skills hold shared domain knowledge that multiple skills need. Consuming workflows state each one as the instruction ``Use skill `{plugin}:{skill}`.`` per the composed-dependency rule in `<skill_organization>`. A `/{skill-name}` mention in prose records the dependency but never loads the reference.
 
 **When to create a reference skill.** Two or more skills in the same plugin need the same domain knowledge (standards, patterns, anti-patterns, conventions). Alternatives fail: duplicating the content creates maintenance drift, and putting it in one skill's `references/` directory makes it unreachable from the other skill's `${SKILL_DIR}`.
 
@@ -250,7 +250,7 @@ allowed-tools: Read
 - Passive description (no `ALWAYS`/`NEVER`) — directive descriptions trigger false activations for a reference.
 - `allowed-tools: Read` — reference skills only read. Add the harness's skill-composition tool only when explicitly composing another read-only reference skill.
 
-**How consuming skills reference it.** Name the reference skill in running text for traceability, then state the dependency as ``Use skill `{plugin}:{skill}`.`` before applying its rules. A bare `See /skill-name` instruction is insufficient.
+**How consuming skills reference it.** Name the reference skill in running text for traceability, then state the dependency as ``Use skill `{plugin}:{skill}`.`` before applying its rules. A bare `See /{skill-name}` instruction is insufficient.
 
 ```markdown
 # In test-typescript/SKILL.md:
