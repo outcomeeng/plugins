@@ -19,7 +19,7 @@ Selecting a type's skills by the name `{role}-{type}` alone leaves no registry, 
 ## Verification
 
 - ALWAYS: a skill's name states the artifact one invocation acts on, across every plugin in the marketplace
-- ALWAYS: every artifact type the marketplace's skills act on has one type token, a singular kebab-case phrase naming that type, such as `skill`, `subagent`, `change`, `python-code`, or `pulumi-typescript`; a token may contain hyphens, and no word of it is a classification of its own
+- ALWAYS: every artifact type the marketplace's skills act on has one type token, a singular kebab-case phrase naming that type, such as `skill`, `subagent`, `change`, `python-code`, or `pulumi-typescript`; a token is one string of lowercase words joined by hyphens, and a skill name carries the whole token after its role, never a part of it
 - ALWAYS: a skill that performs one step on the artifacts of one type is named `{role}-{type}`, where the role names the step, such as `architect`, `author`, or `audit`, and the type is the type's complete token; the type's standards skill is `{type}-standards`
 - ALWAYS: the installed skill name is the only selector of a type's skills: a workflow finds the skill for a step on a type by the name `{role}-{type}`
 - NEVER: a registry, applicability field, product-to-plugin assignment, or plugin category selects a type's skills
