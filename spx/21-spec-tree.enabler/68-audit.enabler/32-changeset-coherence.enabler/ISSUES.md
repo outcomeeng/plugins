@@ -65,11 +65,11 @@ result.
 head `843ddd709b058970d414ec755cc10121ff6bb5ff`. The same audit approved the
 corrected least-privilege tool and profile configuration.
 
-## The auditor's verdict persists as direct structured JSON
+## The shipped coherence audit, its wrapper and its eval still produce the structured JSON verdict
 
-The direct structured JSON verdict is the auditor's output, and no SPX verification run records it, because SPX exposes no changeset-coherence audit payload or projection contract.
+The assertions state the sealed-run verdict model: the audit run's terminal status is `approved` or `rejected`, an undecidable unit is `incomplete`, and the wrapper relays the run token, the run file and the rendered projection. The shipped `audit-changeset-coherence` skill, the `changeset-coherence-auditor` wrapper and the `evals/coherence-verdict` suite still produce and score the `APPROVED`, `REJECTED` and `UNKNOWN` JSON verdict, so the `[eval]` expectations and the `[audit]` wrapper assertion describe behavior the shipped producer does not yet have.
 
-**Settlement condition.** SPX publishes a changeset-coherence contract in an `@outcomeeng/spx` release, this repository's required SPX floor and CI pin advance to that release, and the verdict persists through one SPX verification run over the exact committed scope. The rendered projection preserves `APPROVED`, `REJECTED` and `UNKNOWN`, the semantic clusters, the findings, the publication authorization and the dependency-ordered review-unit sequence, with deterministic contract coverage and migrated producer-coupled eval expectations, under an unchanged semantic verdict model.
+**Settlement condition.** outcomeeng/changes#513 rewrites the skill and wrapper onto one `spx verification run` over the exact committed scope and migrates the producer-coupled eval expectations, under an unchanged semantic verdict model.
 
 ## The compliance section holds eleven assertions
 
