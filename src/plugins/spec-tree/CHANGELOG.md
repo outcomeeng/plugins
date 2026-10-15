@@ -10,6 +10,12 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.106.4
+
+### Changed
+
+- **`/author-change` traces each result a Leaf candidate's Intent promises to the assertion or decision that carries it, before the first change audit.** For a Leaf candidate at `Framed`, `Sliced`, or `Executable`, the skill checks each result the Intent's Evidence line promises against the `## Spec mutations` assertions and the `## Governance mutations` decisions, where either satisfies the trace. It names each result that reaches neither, repairs the candidate, and sweeps it again before it dispatches the first audit, and the trace text never enters the record. Before this change, the skill dispatched the audit without that check, so a record whose promised result no assertion or decision carried was rejected by the audit and the gap surfaced one round at a time.
+
 ## 0.106.3
 
 ### Changed
