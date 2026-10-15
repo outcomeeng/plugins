@@ -40,11 +40,19 @@ COMPACT_TEXT = "/compact"
 RELOAD_TEXT = "/reload-plugins"
 RESTART_TIMEOUT_MS = 60_000
 MAIL_LIMIT = 100
-ABSENT_AUTHORITY = (
-    "No methodology chapter defines this action and no operator grant names it; "
-    "pass --authority naming the defining source."
-)
+
 ACT_OPERATIONS = ("prompt", "compact", "restart", "reload")
+
+
+def absent_authority(subcommand: str) -> str:
+    """The stop for an acting subcommand run without --authority."""
+    return (
+        f"{subcommand} was run without --authority, so no methodology chapter "
+        "defines this action and no operator grant in the composed configuration "
+        f"names it; run {subcommand} again with --authority <source> naming the "
+        "methodology chapter or the operator grant with its bounds, or leave the "
+        "action undone."
+    )
 
 
 def _runtime() -> tuple[ModuleType, Environments]:
@@ -210,7 +218,11 @@ def monitor_pass(config, envs, now) -> dict[str, Any]:
 
 def doorbell_pass(config, envs, mail, now, authority: str | None) -> dict[str, Any]:
     if not authority:
-        return {"pass": "doorbell", "status": "stopped", "detail": ABSENT_AUTHORITY}
+        return {
+            "pass": "doorbell",
+            "status": "stopped",
+            "detail": absent_authority("doorbell"),
+        }
     if config["mail"]["agent"] is None:
         return {
             "pass": "doorbell",
@@ -264,29 +276,50 @@ def doorbell_pass(config, envs, mail, now, authority: str | None) -> dict[str, A
 
 def controller_pass(config, envs, mail, now, authority: str | None) -> dict[str, Any]:
     if not authority:
-        return {"pass": "controller", "status": "stopped", "detail": ABSENT_AUTHORITY}
+        return {
+            "pass": "controller",
+            "status": "stopped",
+            "detail": absent_authority("controller"),
+        }
     observations = _observe(config, envs, now)
     actions: list[dict[str, Any]] = []
     for observation in observations:
-        if observation.get("guards") or observation.get("pane") is None:
+        if observation.get("state") == "pane-unresolved":
+            actions.append(
+                {
+                    "label": observation["label"],
+                    "action": "skipped",
+                    "detail": observation["detail"],
+                }
+            )
             continue
+        guards = observation["guards"]
         if observation["stalled"] and config["advisor"]:
-            body = observation["screen"] or f"{observation['label']} has been quiet."
+            body = (
+                observation["screen"]
+                if guards and observation["screen"]
+                else f"{observation['label']} has been quiet."
+            )
+            sent = _send_mail(
+                mail,
+                config,
+                config["advisor"],
+                "question",
+                f"stall-{observation['label']}",
+                f"{observation['label']} is stalled",
+                body,
+            )
             actions.append(
                 {
                     "label": observation["label"],
                     "action": "forward",
-                    "result": _send_mail(
-                        mail,
-                        config,
-                        config["advisor"],
-                        "question",
-                        f"stall-{observation['label']}",
-                        f"{observation['label']} is stalled",
-                        body,
-                    ).get("status"),
+                    "guards": guards,
+                    "result": sent.get("status"),
+                    **({"detail": sent["detail"]} if sent.get("detail") else {}),
                 }
             )
+        if guards:
+            continue
         percent = observation["contextPercent"]
         if isinstance(percent, (int, float)) and percent > config["compact_at_percent"]:
             actions.append(
@@ -315,7 +348,7 @@ def act(
     config, envs, target: str, operation: str, text: str | None, authority: str | None
 ) -> dict[str, Any]:
     if not authority:
-        return {"status": "stopped", "detail": ABSENT_AUTHORITY}
+        return {"status": "stopped", "detail": absent_authority("act")}
     if not target:
         labels = [p["name"] for p in config["positions"]] + [
             g["label"] for g in config["executor_groups"]
@@ -359,10 +392,19 @@ def act(
     screen = envs.read(pane)
     reasons = guard_reasons(pane, screen, config["untouchable_panes"])
     if reasons:
-        return {"status": "stopped", "guards": reasons, "screen": screen}
+        return {
+            "status": "stopped",
+            "guards": reasons,
+            "screen": screen,
+            "detail": f"act --target {target!r} --operation {operation} sent nothing: "
+            f"pane {pane.pane} is guarded by {reasons}. Its screen is quoted in "
+            "this result. A question-or-approval-screen pane waits for its own "
+            "answer; an operator-prompt pane waits for the operator; an "
+            "untouchable pane stays untouched until the operator removes it from "
+            f"untouchable_panes in {config['overrideFile']['path']}.",
+        }
     if operation == "restart":
-        arguments = matches[0]["settings"].get("agent_arguments")
-        result = envs.restart(pane, RESTART_TIMEOUT_MS, arguments)
+        result = envs.restart(pane, RESTART_TIMEOUT_MS)
     else:
         wording = {"prompt": text, "compact": COMPACT_TEXT, "reload": RELOAD_TEXT}[
             operation
@@ -400,7 +442,10 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--target", help="act: a position name or pane id")
     parser.add_argument("--operation", choices=ACT_OPERATIONS)
     parser.add_argument("--text")
-    parser.add_argument("--authority", help="the methodology chapter or operator grant")
+    parser.add_argument(
+        "--authority",
+        help="doorbell, controller, send, act: the methodology chapter or operator grant",
+    )
     parser.add_argument("--recipient")
     parser.add_argument("--kind", default="fact")
     parser.add_argument("--correlation")
@@ -441,7 +486,17 @@ def main(
         elif args.subcommand == "controller":
             result = controller_pass(config, envs, mail, clock(), args.authority)
         elif args.subcommand == "inbox":
-            result = {"records": _unread(mail, args.recipient or args.position)}
+            recipient = args.recipient or config["mail"]["agent"]
+            if recipient is None:
+                result = {
+                    "status": "unavailable",
+                    "detail": "inbox received no --recipient, and "
+                    + _mail_agent_unset(config),
+                }
+            else:
+                result = {"records": _unread(mail, recipient)}
+        elif args.subcommand == "send" and not args.authority:
+            result = {"status": "stopped", "detail": absent_authority("send")}
         elif args.subcommand == "send":
             missing = [
                 f"--{name}"
@@ -464,15 +519,18 @@ def main(
                     f"send cannot read --body-file {args.body_file}: {error}; "
                     "write the body to a readable file first."
                 ) from error
-            result = _send_mail(
-                mail,
-                config,
-                args.recipient,
-                args.kind,
-                args.correlation,
-                args.subject,
-                body,
-            )
+            result = {
+                **_send_mail(
+                    mail,
+                    config,
+                    args.recipient,
+                    args.kind,
+                    args.correlation,
+                    args.subject,
+                    body,
+                ),
+                "authority": args.authority,
+            }
         else:
             result = act(
                 config, envs, args.target, args.operation, args.text, args.authority

@@ -38,14 +38,14 @@ POSITION_FIELDS = frozenset(
         "mail_name",
         "stall_minutes",
         "context_percent",
-        "agent_arguments",
     }
 )
-POSITION_OPTIONAL = frozenset({"agent_arguments"})
-GROUP_FIELDS = frozenset(
-    {"label", "environment", "cwd_prefix", "exclusions", "agent_arguments"}
-)
-GROUP_OPTIONAL = frozenset({"exclusions", "agent_arguments"})
+POSITION_OPTIONAL: frozenset[str] = frozenset()
+POSITION_NUMBERS = frozenset({"stall_minutes", "context_percent"})
+POSITION_TEXTS = frozenset({"name", "cwd", "mail_name"})
+GROUP_FIELDS = frozenset({"label", "environment", "cwd_prefix", "exclusions"})
+GROUP_OPTIONAL = frozenset({"exclusions"})
+GROUP_TEXTS = frozenset({"label", "cwd_prefix"})
 DEFAULT_RESUME_LINE = (
     "Run /spec-tree:understand, read the resume note at {resume_note}, "
     "read the expectations at {expectations}, and read the mail on {channel}."
@@ -159,17 +159,59 @@ def _require_environment(entry: Mapping[str, Any], label: str, source: Path) -> 
         )
 
 
-def _require_agent_arguments(
-    entry: Mapping[str, Any], label: str, source: Path
+def _type_stop(
+    source: Path, label: str, value: object, accepted: str
+) -> DirectionError:
+    return DirectionError(
+        f"{source}: {label} is {value!r} ({type(value).__name__}); write it as "
+        f"{accepted}."
+    )
+
+
+def _require_entry_types(
+    entry: Mapping[str, Any],
+    texts: frozenset[str],
+    numbers: frozenset[str],
+    label: str,
+    source: Path,
 ) -> None:
-    value = entry.get("agent_arguments")
-    if value is None:
-        return
-    if not isinstance(value, list) or not all(isinstance(v, str) for v in value):
-        raise DirectionError(
-            f"{source}: {label}.agent_arguments is {value!r}; set it to a list of "
-            'strings such as ["--agent", "executor"], or [] for none.'
+    for field in sorted(texts):
+        value = entry[field]
+        if not isinstance(value, str) or not value:
+            raise _type_stop(source, f"{label}.{field}", value, "a non-empty string")
+    for field in sorted(numbers):
+        value = entry[field]
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or value < 0:
+            raise _type_stop(
+                source, f"{label}.{field}", value, "a non-negative number such as 30"
+            )
+    exclusions = entry.get("exclusions", [])
+    if not isinstance(exclusions, list) or not all(
+        isinstance(x, str) for x in exclusions
+    ):
+        raise _type_stop(
+            source,
+            f"{label}.exclusions",
+            exclusions,
+            'a list of directory-prefix strings such as ["/work/scratch"]',
         )
+
+
+def _require_list(settings: Mapping[str, Any], key: str, source: Path) -> list[Any]:
+    value = settings.get(key, [])
+    if not isinstance(value, list):
+        raise _type_stop(
+            source,
+            f"key {key}",
+            value,
+            f"an array of tables, each written as [[{key}]]",
+        )
+    return value
+
+
+def _require_text_or_none(value: object, label: str, source: Path) -> None:
+    if value is not None and not isinstance(value, str):
+        raise _type_stop(source, label, value, "a string")
 
 
 def _validated(settings: dict[str, Any], source: Path) -> dict[str, Any]:
@@ -191,18 +233,42 @@ def _validated(settings: dict[str, Any], source: Path) -> dict[str, Any]:
             f"{source}: unknown mail keys {unknown_mail}; the valid mail keys are "
             f"{sorted(MAIL_KEYS)}. Remove or rename each unknown key."
         )
-    for index, entry in enumerate(settings.get("positions", [])):
+    for key in ("channel", "agent"):
+        _require_text_or_none(mail.get(key), f"mail.{key}", source)
+    for index, entry in enumerate(_require_list(settings, "positions", source)):
         label = f"positions[{index}]"
         position = _require_fields(
             entry, POSITION_FIELDS, POSITION_OPTIONAL, label, source
         )
         _require_environment(position, label, source)
-        _require_agent_arguments(position, label, source)
-    for index, entry in enumerate(settings.get("executor_groups", [])):
+        _require_entry_types(position, POSITION_TEXTS, POSITION_NUMBERS, label, source)
+    for index, entry in enumerate(_require_list(settings, "executor_groups", source)):
         label = f"executor_groups[{index}]"
         group = _require_fields(entry, GROUP_FIELDS, GROUP_OPTIONAL, label, source)
         _require_environment(group, label, source)
-        _require_agent_arguments(group, label, source)
+        _require_entry_types(group, GROUP_TEXTS, frozenset(), label, source)
+    launchers = settings.get("launchers", {})
+    if not isinstance(launchers, dict) or not all(
+        isinstance(k, str) and isinstance(v, str) for k, v in launchers.items()
+    ):
+        raise _type_stop(
+            source,
+            "key launchers",
+            launchers,
+            'a table mapping a checkout path to a position name, such as [launchers] "/work/product" = "Lead Director"',
+        )
+    untouchable = settings.get("untouchable_panes", [])
+    if not isinstance(untouchable, list) or not all(
+        isinstance(x, str) for x in untouchable
+    ):
+        raise _type_stop(
+            source,
+            "key untouchable_panes",
+            untouchable,
+            'a list of pane ids or names such as ["w1:p1"]',
+        )
+    for key in ("advisor", "resume_line"):
+        _require_text_or_none(settings.get(key), f"key {key}", source)
     for key in (
         "interval_seconds",
         "compact_at_percent",
@@ -376,15 +442,8 @@ class Environments:
         operation = "prompt" if pane.environment == ENVIRONMENT_HERDR else "send"
         return self._execute(pane.environment, operation, pane=pane.pane, text=text)
 
-    def restart(
-        self, pane: Pane, timeout_ms: int, agent_arguments: list[str] | None
-    ) -> dict[str, Any]:
-        """Stop and relaunch a herdr session with the agent arguments it started with.
-
-        The relaunch carries the arguments the position or executor group
-        configures; a pane whose arguments are unknown is not restarted, because
-        a relaunch without them loses the agent selection.
-        """
+    def restart(self, pane: Pane, timeout_ms: int) -> dict[str, Any]:
+        """Stop and relaunch a herdr session as the same agent kind, with no launch arguments."""
         if pane.environment != ENVIRONMENT_HERDR or pane.kind is None:
             return {
                 "status": "unavailable",
@@ -392,14 +451,6 @@ class Environments:
                 f"inventory item names its agent kind; pane {pane.pane} is hosted by "
                 f"{pane.environment} with agent kind {pane.kind!r}. Restart it by "
                 "hand through its environment skill.",
-            }
-        if agent_arguments is None:
-            return {
-                "status": "unavailable",
-                "detail": f"restart of pane {pane.pane} is unavailable because its "
-                "agent arguments are unknown and a relaunch without them loses the "
-                "agent selection; set agent_arguments on its positions or "
-                "executor_groups entry in the override file, using [] for none.",
             }
         stopped = self._execute(
             pane.environment, "stop", pane=pane.pane, mutationAuthorized=True
@@ -413,7 +464,6 @@ class Environments:
             kind=pane.kind,
             pane=pane.pane,
             timeout=timeout_ms,
-            agent_arguments=agent_arguments,
             mutationAuthorized=True,
         )
 

@@ -195,7 +195,7 @@ def test_send_names_every_missing_argument(tmp_path: Path) -> None:
     out = StringIO()
 
     status = direction.main(
-        ["send", "--position", "Lead Director"],
+        ["send", "--position", "Lead Director", "--authority", "grant"],
         stdout=out,
         runtime=(_Mail(tmp_path), None),  # type: ignore[arg-type]
     )
@@ -264,29 +264,18 @@ class _Herdr:
         return {"status": "succeeded"}
 
 
-def test_restart_relaunches_with_configured_agent_arguments() -> None:
+def test_restart_relaunches_the_same_agent_kind_with_no_launch_arguments() -> None:
     herdr = _Herdr()
     envs = core.Environments(herdr, None, {"herdr": None})  # type: ignore[arg-type]
     pane = core.Pane("herdr", "w1:p1", "/work/a", "idle", "exec", "claude")
 
-    result = envs.restart(pane, 1000, ["--agent", "executor"])
+    result = envs.restart(pane, 1000)
 
     assert result["status"] == "succeeded"
+    assert [r["operation"] for r in herdr.requests] == ["stop", "relaunch"]
     relaunch = herdr.requests[-1]
-    assert relaunch["operation"] == "relaunch"
-    assert relaunch["arguments"]["agent_arguments"] == ["--agent", "executor"]
-
-
-def test_restart_without_known_agent_arguments_is_unavailable() -> None:
-    herdr = _Herdr()
-    envs = core.Environments(herdr, None, {"herdr": None})  # type: ignore[arg-type]
-    pane = core.Pane("herdr", "w1:p1", "/work/a", "idle", "exec", "claude")
-
-    result = envs.restart(pane, 1000, None)
-
-    assert result["status"] == "unavailable"
-    assert "agent_arguments" in result["detail"]
-    assert herdr.requests == []
+    assert relaunch["arguments"]["kind"] == "claude"
+    assert "agent_arguments" not in relaunch["arguments"]
 
 
 def test_prompt_without_text_stops_naming_the_argument_and_fix(
@@ -313,3 +302,187 @@ def test_prompt_without_text_stops_naming_the_argument_and_fix(
     result = json.loads(out.getvalue())
     assert status == 1
     assert "--text" in result["detail"] and "'x'" in result["detail"]
+
+
+@pytest.mark.parametrize("subcommand", ["act", "send", "doorbell", "controller"])
+def test_every_acting_subcommand_stops_without_authority_naming_the_fix(
+    tmp_path: Path, subcommand: str
+) -> None:
+    out = StringIO()
+
+    status = direction.main(
+        [subcommand, "--position", "Lead Director"],
+        stdout=out,
+        runtime=(_Mail(tmp_path), None),  # type: ignore[arg-type]
+    )
+
+    detail = json.loads(out.getvalue())["detail"]
+    assert status == 1
+    assert subcommand in detail and "--authority" in detail
+    assert "methodology chapter" in detail and "operator grant" in detail
+
+
+@pytest.mark.parametrize(
+    ("front_matter", "named"),
+    [
+        ("positions = 5\n", "key positions"),
+        ('executor_groups = "x"\n', "key executor_groups"),
+        ("launchers = 3\n", "key launchers"),
+        ("untouchable_panes = 3\n", "key untouchable_panes"),
+        (
+            '[[positions]]\nname = "A"\nenvironment = "herdr"\ncwd = "/w"\n'
+            'mail_name = "a"\nstall_minutes = "x"\ncontext_percent = 30\n',
+            "positions[0].stall_minutes",
+        ),
+    ],
+)
+def test_wrong_typed_value_stops_naming_file_key_value_and_accepted_form(
+    tmp_path: Path, front_matter: str, named: str
+) -> None:
+    path = _override(tmp_path, "Lead Director", f"+++\n{front_matter}+++\n")
+
+    with pytest.raises(core.DirectionError) as stop:
+        core.compose_configuration(tmp_path, "Lead Director")
+
+    message = str(stop.value)
+    assert str(path) in message and named in message
+    assert " as " in message
+
+
+def test_position_entry_with_agent_arguments_is_an_unknown_field(
+    tmp_path: Path,
+) -> None:
+    _override(
+        tmp_path,
+        "Lead Director",
+        '+++\n[[positions]]\nname = "A"\nenvironment = "herdr"\ncwd = "/w"\n'
+        'mail_name = "a"\nstall_minutes = 1\ncontext_percent = 30\n'
+        "agent_arguments = []\n+++\n",
+    )
+
+    with pytest.raises(core.DirectionError) as stop:
+        core.compose_configuration(tmp_path, "Lead Director")
+
+    assert "agent_arguments" in str(stop.value)
+
+
+class _SentMail(_Mail):
+    SCHEMA_VERSION = 1
+
+    def __init__(self, common: Path) -> None:
+        super().__init__(common)
+        self.sent: list[dict] = []
+
+    def message_record(self, **fields: object) -> dict:
+        return dict(fields)
+
+    def execute(self, request: dict, _runner: object) -> dict:
+        self.sent.append(request["arguments"]["record"])
+        return {"status": "succeeded"}
+
+
+class _Panes:
+    def __init__(self, panes: list, screen: str) -> None:
+        self._panes = panes
+        self._screen = screen
+
+    def panes(self, _environment: str) -> list:
+        return self._panes
+
+    def read(self, _pane: object) -> str:
+        return self._screen
+
+
+def _director_file(tmp_path: Path) -> None:
+    _override(
+        tmp_path,
+        "Lead Director",
+        '+++\nadvisor = "advisor"\n[mail]\nagent = "director"\n'
+        '[[positions]]\nname = "Worker"\nenvironment = "herdr"\ncwd = "/w"\n'
+        'mail_name = "worker"\nstall_minutes = 0\ncontext_percent = 30\n+++\n',
+    )
+
+
+def test_controller_forwards_a_stalled_guarded_panes_screen_verbatim(
+    tmp_path: Path,
+) -> None:
+    _director_file(tmp_path)
+    mail = _SentMail(tmp_path)
+    screen = "Do you want to proceed? (y/n)"
+    pane = core.Pane("herdr", "w1:p1", "/w", "blocked", "worker", "claude")
+    out = StringIO()
+
+    status = direction.main(
+        ["controller", "--position", "Lead Director", "--authority", "grant"],
+        stdout=out,
+        runtime=(mail, _Panes([pane], screen)),  # type: ignore[arg-type]
+    )
+
+    result = json.loads(out.getvalue())
+    assert status == 0
+    assert [r["body"] for r in mail.sent] == [screen]
+    assert mail.sent[0]["recipient"] == "advisor"
+    assert result["actions"][0]["action"] == "forward"
+    assert result["actions"][0]["guards"] == ["question-or-approval-screen"]
+
+
+def test_send_with_authority_sends_and_reports_the_authority(tmp_path: Path) -> None:
+    _director_file(tmp_path)
+    mail = _SentMail(tmp_path)
+    body = tmp_path / "body.txt"
+    body.write_text("hello", encoding="utf-8")
+    out = StringIO()
+
+    status = direction.main(
+        [
+            "send",
+            "--position",
+            "Lead Director",
+            "--authority",
+            "grant",
+            "--recipient",
+            "worker",
+            "--subject",
+            "s",
+            "--correlation",
+            "c",
+            "--body-file",
+            str(body),
+        ],
+        stdout=out,
+        runtime=(mail, None),  # type: ignore[arg-type]
+    )
+
+    assert status == 0
+    assert json.loads(out.getvalue())["authority"] == "grant"
+    assert mail.sent[0]["body"] == "hello"
+
+
+def test_act_on_a_guarded_pane_stops_naming_the_guard_screen_and_fix(
+    tmp_path: Path,
+) -> None:
+    _director_file(tmp_path)
+    pane = core.Pane("herdr", "w1:p1", "/w", "idle", "worker", "claude")
+    out = StringIO()
+
+    status = direction.main(
+        [
+            "act",
+            "--position",
+            "Lead Director",
+            "--authority",
+            "grant",
+            "--target",
+            "Worker",
+            "--operation",
+            "compact",
+        ],
+        stdout=out,
+        runtime=(_SentMail(tmp_path), _Panes([pane], "Allow this edit? (y/n)")),  # type: ignore[arg-type]
+    )
+
+    result = json.loads(out.getvalue())
+    assert status == 1
+    assert result["screen"] == "Allow this edit? (y/n)"
+    assert "question-or-approval-screen" in result["detail"]
+    assert "w1:p1" in result["detail"]
