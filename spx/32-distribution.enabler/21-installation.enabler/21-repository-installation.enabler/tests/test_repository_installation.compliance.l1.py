@@ -1485,6 +1485,128 @@ def test_a_failed_fetch_install_stops_the_run() -> None:
     )
 
 
+def test_a_fetch_install_that_fails_after_an_earlier_one_succeeded_drops_the_fetch_project_alone() -> (
+    None
+):
+    observation = observe_uncached_fetch(
+        UNCACHED_OTHER_CHECKOUT_STATE,
+        SUCCESSFUL_FETCH,
+        failing_fetch_ordinal=1,
+    )
+    (project,) = set(observation.fetch_projects)
+    entries_after = cast(
+        "dict[str, list[dict[str, str]]]",
+        observation.record_file_after[CLAUDE_INSTALLED_PLUGINS_FIELD],
+    )
+    entries_before = cast(
+        "dict[str, list[dict[str, str]]]",
+        observation.record_file_before[CLAUDE_INSTALLED_PLUGINS_FIELD],
+    )
+
+    assert observation.report is None
+    assert observation.failure is not None
+    assert len(observation.fetches) == 2
+    assert observation.failure.command == observation.fetches[1]
+    assert observation.install_project_present == (True,)
+    assert str(project) not in {
+        entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD]
+        for items in entries_after.values()
+        for entry in items
+    }
+    assert not project.exists()
+    assert _other_checkout_entries(
+        entries_after, str(observation.other_checkout)
+    ) == _other_checkout_entries(entries_before, str(observation.other_checkout))
+
+
+def test_a_failed_fetch_install_stops_the_run() -> None:
+    observation = observe_uncached_fetch(UNCACHED_OTHER_CHECKOUT_STATE, FAILED_FETCH)
+
+    assert observation.report is None
+    assert observation.failure is not None
+    assert observation.failure.command in observation.fetches
+    assert observation.attempted[-1] == observation.failure.command
+    assert not any(
+        command.operation is Operation.PLUGIN_LIST for command in observation.attempted
+    )
+    assert _other_checkout_entries(
+        cast(
+            "dict[str, list[dict[str, str]]]",
+            observation.record_file_after[CLAUDE_INSTALLED_PLUGINS_FIELD],
+        ),
+        str(observation.other_checkout),
+    ) == _other_checkout_entries(
+        cast(
+            "dict[str, list[dict[str, str]]]",
+            observation.record_file_before[CLAUDE_INSTALLED_PLUGINS_FIELD],
+        ),
+        str(observation.other_checkout),
+    )
+
+
+def test_a_fetch_install_that_fails_after_an_earlier_one_succeeded_drops_the_fetch_project_alone() -> (
+    None
+):
+    observation = observe_uncached_fetch(
+        UNCACHED_OTHER_CHECKOUT_STATE,
+        SUCCESSFUL_FETCH,
+        failing_fetch_ordinal=1,
+    )
+    (project,) = set(observation.fetch_projects)
+    entries_after = cast(
+        "dict[str, list[dict[str, str]]]",
+        observation.record_file_after[CLAUDE_INSTALLED_PLUGINS_FIELD],
+    )
+    entries_before = cast(
+        "dict[str, list[dict[str, str]]]",
+        observation.record_file_before[CLAUDE_INSTALLED_PLUGINS_FIELD],
+    )
+
+    assert observation.report is None
+    assert observation.failure is not None
+    assert len(observation.fetches) == 2
+    assert observation.failure.command == observation.fetches[1]
+    assert observation.install_project_present == (True,)
+    assert str(project) not in {
+        entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD]
+        for items in entries_after.values()
+        for entry in items
+    }
+    assert not project.exists()
+    assert _other_checkout_entries(
+        entries_after, str(observation.other_checkout)
+    ) == _other_checkout_entries(entries_before, str(observation.other_checkout))
+
+
+def test_an_operation_that_fails_after_the_fetch_stops_the_run_with_no_fetch_project_record() -> (
+    None
+):
+    observation = observe_uncached_fetch(
+        UNCACHED_OTHER_CHECKOUT_STATE,
+        SUCCESSFUL_FETCH,
+        failing_operation=Operation.PLUGIN_LIST,
+    )
+    (project,) = set(observation.fetch_projects)
+    entries_after = cast(
+        "dict[str, list[dict[str, str]]]",
+        observation.record_file_after[CLAUDE_INSTALLED_PLUGINS_FIELD],
+    )
+
+    assert observation.report is None
+    assert observation.fetches
+    assert observation.failure is not None
+    assert observation.failure.command.operation is Operation.PLUGIN_LIST
+    assert observation.attempted.index(
+        observation.failure.command
+    ) > observation.attempted.index(observation.fetches[-1])
+    assert str(project) not in {
+        entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD]
+        for items in entries_after.values()
+        for entry in items
+    }
+    assert not project.exists()
+
+
 def test_a_target_still_uncached_after_the_fetch_leaves_its_record_unrefreshed_and_fails_the_run() -> (
     None
 ):

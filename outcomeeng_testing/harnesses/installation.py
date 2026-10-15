@@ -769,6 +769,13 @@ class RecordingRunner:
     Stage 5 Failure simulation: an install that records a version without
     filling the cache is the state a run meets when the fetch lands nothing.
     """
+    failed_install_ordinal: int | None = None
+    """The zero-based position of the one Claude Code native install that exits nonzero.
+
+    Stage 5 Failure simulation: a fetch install that fails only after an
+    earlier one succeeded leaves that earlier install's record in the document,
+    a state a real CLI does not fail into on demand.
+    """
     calls: list[InstallationCommand] = field(default_factory=list)
     install_project_present: list[bool] = field(default_factory=list)
     """For each native install, whether its working directory existed when it ran."""
@@ -783,6 +790,19 @@ class RecordingRunner:
         exit_code = (
             1 if command.operation is self.failed_operation and designated_agent else 0
         )
+        if (
+            self.failed_install_ordinal is not None
+            and command.agent is Agent.CLAUDE
+            and command.operation is Operation.PLUGIN_INSTALL
+            and sum(
+                1
+                for call in self.calls
+                if call.agent is Agent.CLAUDE
+                and call.operation is Operation.PLUGIN_INSTALL
+            )
+            == self.failed_install_ordinal + 1
+        ):
+            exit_code = 1
         if (
             command.operation in PLUGIN_OPERATIONS
             and command.plugin in self.unpublished
@@ -1479,6 +1499,7 @@ def observe_uncached_fetch(
     outcome: FetchOutcome = SUCCESSFUL_FETCH,
     *,
     failing_operation: Operation | None = None,
+    failing_fetch_ordinal: int | None = None,
 ) -> UncachedFetchObservation:
     """Run a persistent refresh over plugins that all meet one fetch state.
 
@@ -1491,7 +1512,9 @@ def observe_uncached_fetch(
     fetch that lands nothing. A `failing_operation` makes that one Claude Code
     operation exit nonzero after the fetch ran, the Stage 5 Failure simulation
     of a run whose head read resolves no target or whose later operation
-    stops it.
+    stops it. A `failing_fetch_ordinal` makes only the native install at that
+    zero-based position exit nonzero, so the fetches before it succeed and
+    record the run-owned project before the run stops.
     """
     checkout = repository_root()
     with TemporaryDirectory() as temporary_directory:
@@ -1552,6 +1575,7 @@ def observe_uncached_fetch(
             served_version=target_version,
             cache_root=cache_root,
             install_fills_cache=outcome.fills_cache,
+            failed_install_ordinal=failing_fetch_ordinal,
         )
         plan = build_persistent_installation_plan(
             preflight,
@@ -3840,6 +3864,14 @@ class RealUncachedFetchObservation:
     target_cache_absent_before_run: bool
     """Read inside the temporary root's lifetime, before the recipe ran."""
     report: dict[str, object]
+    cache_directory_version_after: str | None
+    """The name of the cache directory the other checkout's record names after the run.
+
+    The agent's own install wrote that directory, so its name is an oracle for
+    the version the record moved to that no part of the run's report supplies.
+    """
+    cache_manifest_version_after: str | None
+    """The version the plugin manifest inside that cache directory declares."""
 
 
 def _recorded_install_path(
@@ -3911,6 +3943,21 @@ def observe_real_uncached_fetch() -> RealUncachedFetchObservation:
             _run_listing(Agent.CLAUDE, invocation, environment).stdout, MARKETPLACE
         )
         invocation_activation_after = _declared_activation(invocation_settings)
+        cache_directory_version_after: str | None = None
+        cache_manifest_version_after: str | None = None
+        if result.returncode == 0:
+            fetched_cache = _recorded_install_path(environment, plugin, other)
+            cache_directory_version_after = (
+                fetched_cache.name if fetched_cache.is_dir() else None
+            )
+            manifest_path = fetched_cache / PLUGIN_MANIFEST_RELATIVE
+            if manifest_path.is_file():
+                cache_manifest_version_after = cast(
+                    "str",
+                    json.loads(manifest_path.read_text())[
+                        PLUGIN_MANIFEST_VERSION_FIELD
+                    ],
+                )
     return RealUncachedFetchObservation(
         exit_code=result.returncode,
         stdout=result.stdout,
@@ -3926,6 +3973,8 @@ def observe_real_uncached_fetch() -> RealUncachedFetchObservation:
         report=cast("dict[str, object]", json.loads(result.stdout))
         if result.returncode == 0
         else {},
+        cache_directory_version_after=cache_directory_version_after,
+        cache_manifest_version_after=cache_manifest_version_after,
     )
 
 

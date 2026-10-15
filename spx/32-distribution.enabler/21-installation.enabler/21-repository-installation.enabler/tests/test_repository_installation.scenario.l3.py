@@ -252,6 +252,8 @@ def test_real_run_fetches_a_target_the_cache_lacks_and_leaves_no_temporary_proje
         and record.plugin == observation.plugin
     }
     assert after == {observation.other_checkout: target}
+    assert observation.cache_directory_version_after == target
+    assert observation.cache_manifest_version_after == target
     assert {
         record.project_path
         for record in observation.records_after
