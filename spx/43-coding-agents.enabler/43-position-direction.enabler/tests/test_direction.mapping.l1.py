@@ -486,3 +486,69 @@ def test_act_on_a_guarded_pane_stops_naming_the_guard_screen_and_fix(
     assert result["screen"] == "Allow this edit? (y/n)"
     assert "question-or-approval-screen" in result["detail"]
     assert "w1:p1" in result["detail"]
+
+
+def test_controller_with_advisor_unset_reports_forwarding_unavailable(
+    tmp_path: Path,
+) -> None:
+    override = _override(
+        tmp_path,
+        "Lead Director",
+        '+++\n[mail]\nagent = "director"\n'
+        '[[positions]]\nname = "Worker"\nenvironment = "herdr"\ncwd = "/w"\n'
+        'mail_name = "worker"\nstall_minutes = 0\ncontext_percent = 30\n+++\n',
+    )
+    mail = _SentMail(tmp_path)
+    pane = core.Pane("herdr", "w1:p1", "/w", "idle", "worker", "claude")
+    out = StringIO()
+
+    direction.main(
+        ["controller", "--position", "Lead Director", "--authority", "grant"],
+        stdout=out,
+        runtime=(mail, _Panes([pane], "quiet")),  # type: ignore[arg-type]
+    )
+
+    result = json.loads(out.getvalue())
+    forward = result["actions"][0]
+    assert mail.sent == []
+    assert forward["label"] == "Worker"
+    assert forward["action"] == "forward"
+    assert forward["result"] == "unavailable"
+    assert "advisor" in forward["detail"] and str(override) in forward["detail"]
+    assert result["pace"] is None
+
+
+@pytest.mark.parametrize(
+    "arguments",
+    [
+        ["doorbell", "--authority", "grant"],
+        ["inbox"],
+        [
+            "send",
+            "--authority",
+            "grant",
+            "--recipient",
+            "worker",
+            "--subject",
+            "s",
+            "--correlation",
+            "c",
+        ],
+    ],
+)
+def test_mail_operations_with_mail_agent_unset_report_unavailable(
+    tmp_path: Path, arguments: list[str]
+) -> None:
+    override = tmp_path / ".spx/orchestration/lead-director.md"
+    out = StringIO()
+
+    status = direction.main(
+        [arguments[0], "--position", "Lead Director", *arguments[1:]],
+        stdout=out,
+        runtime=(_SentMail(tmp_path), None),  # type: ignore[arg-type]
+    )
+
+    result = json.loads(out.getvalue())
+    assert status == 1
+    assert result["status"] == "unavailable"
+    assert "mail.agent" in result["detail"] and str(override) in result["detail"]
