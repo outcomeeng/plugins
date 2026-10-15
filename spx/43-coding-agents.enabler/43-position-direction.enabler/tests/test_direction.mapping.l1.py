@@ -217,3 +217,99 @@ def test_configuration_stop_names_every_unknown_key_and_the_valid_keys(
     message = str(stop.value)
     assert "bogus" in message and "other" in message
     assert "interval_seconds" in message
+
+
+def test_provider_load_stop_names_the_path_and_the_sibling_skill(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(core, "SKILLS_ROOT", tmp_path)
+
+    with pytest.raises(core.DirectionError) as stop:
+        core.load_sibling("operate-herdr", "herdr_environment")
+
+    message = str(stop.value)
+    assert str(tmp_path / "operate-herdr/scripts/herdr_environment.py") in message
+    assert "coding-agents:operate-herdr" in message
+
+
+def test_integer_key_stop_shows_the_value_found_and_an_accepted_form(
+    tmp_path: Path,
+) -> None:
+    _override(tmp_path, "Lead Director", "+++\ninterval_seconds = 0\n+++\n")
+
+    with pytest.raises(core.DirectionError) as stop:
+        core.compose_configuration(tmp_path, "Lead Director")
+
+    message = str(stop.value)
+    assert "interval_seconds" in message and "0" in message and "1800" in message
+
+
+def test_unresolved_pane_detail_names_cwd_match_count_and_available_cwds() -> None:
+    panes = [core.Pane("herdr", "w1:p1", "/work/a", None, None, None)]
+
+    detail = core.unresolved_pane_detail(panes, "/work/missing", "Lead", "herdr")
+
+    assert "/work/missing" in detail and "no herdr pane matched" in detail
+    assert "/work/a" in detail
+
+
+class _Herdr:
+    SCHEMA_VERSION = 1
+
+    def __init__(self) -> None:
+        self.requests: list[dict] = []
+
+    def execute(self, request: dict, runner: object) -> dict:
+        self.requests.append(request)
+        return {"status": "succeeded"}
+
+
+def test_restart_relaunches_with_configured_agent_arguments() -> None:
+    herdr = _Herdr()
+    envs = core.Environments(herdr, None, {"herdr": None})  # type: ignore[arg-type]
+    pane = core.Pane("herdr", "w1:p1", "/work/a", "idle", "exec", "claude")
+
+    result = envs.restart(pane, 1000, ["--agent", "executor"])
+
+    assert result["status"] == "succeeded"
+    relaunch = herdr.requests[-1]
+    assert relaunch["operation"] == "relaunch"
+    assert relaunch["arguments"]["agent_arguments"] == ["--agent", "executor"]
+
+
+def test_restart_without_known_agent_arguments_is_unavailable() -> None:
+    herdr = _Herdr()
+    envs = core.Environments(herdr, None, {"herdr": None})  # type: ignore[arg-type]
+    pane = core.Pane("herdr", "w1:p1", "/work/a", "idle", "exec", "claude")
+
+    result = envs.restart(pane, 1000, None)
+
+    assert result["status"] == "unavailable"
+    assert "agent_arguments" in result["detail"]
+    assert herdr.requests == []
+
+
+def test_prompt_without_text_stops_naming_the_argument_and_fix(
+    tmp_path: Path,
+) -> None:
+    out = StringIO()
+
+    status = direction.main(
+        [
+            "act",
+            "--position",
+            "Lead Director",
+            "--authority",
+            "grant",
+            "--target",
+            "x",
+            "--operation",
+            "prompt",
+        ],
+        stdout=out,
+        runtime=(_Mail(tmp_path), None),  # type: ignore[arg-type]
+    )
+
+    result = json.loads(out.getvalue())
+    assert status == 1
+    assert "--text" in result["detail"] and "'x'" in result["detail"]

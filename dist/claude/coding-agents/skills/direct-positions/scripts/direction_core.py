@@ -31,9 +31,21 @@ ENVIRONMENTS = (ENVIRONMENT_HERDR, ENVIRONMENT_PROWL)
 
 MAIL_KEYS = frozenset({"channel", "agent"})
 POSITION_FIELDS = frozenset(
-    {"name", "environment", "cwd", "mail_name", "stall_minutes", "context_percent"}
+    {
+        "name",
+        "environment",
+        "cwd",
+        "mail_name",
+        "stall_minutes",
+        "context_percent",
+        "agent_arguments",
+    }
 )
-GROUP_FIELDS = frozenset({"label", "environment", "cwd_prefix", "exclusions"})
+POSITION_OPTIONAL = frozenset({"agent_arguments"})
+GROUP_FIELDS = frozenset(
+    {"label", "environment", "cwd_prefix", "exclusions", "agent_arguments"}
+)
+GROUP_OPTIONAL = frozenset({"exclusions", "agent_arguments"})
 DEFAULT_RESUME_LINE = (
     "Run /spec-tree:understand, read the resume note at {resume_note}, "
     "read the expectations at {expectations}, and read the mail on {channel}."
@@ -69,9 +81,19 @@ class DirectionError(RuntimeError):
 def load_sibling(skill: str, module: str) -> ModuleType:
     """Import a same-plugin provider script by a path relative to this file."""
     path = SKILLS_ROOT / skill / "scripts" / f"{module}.py"
+    if not path.is_file():
+        raise DirectionError(
+            f"The provider script {path} does not exist; install the sibling skill "
+            f"coding-agents:{skill} in the same plugin so that {module}.py sits "
+            "under its scripts directory."
+        )
     spec = importlib.util.spec_from_file_location(f"_direction_{module}", path)
     if spec is None or spec.loader is None:
-        raise DirectionError(f"The provider script {module} cannot be loaded.")
+        raise DirectionError(
+            f"The provider script {path} cannot be loaded as a Python module; "
+            f"reinstall the sibling skill coding-agents:{skill} so that {module}.py "
+            "is a readable Python 3.13 or 3.14 file."
+        )
     loaded = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(loaded)
     return loaded
@@ -86,7 +108,10 @@ def common_directory(mail: ModuleType) -> Path:
     try:
         return Path(mail.resolve_project_key(mail.SubprocessRunner()))
     except mail.AgentMailError as error:
-        raise DirectionError(str(error)) from error
+        raise DirectionError(
+            f"the common Git directory cannot be resolved: {error}; run the skill "
+            "from inside a Git checkout of the repository."
+        ) from error
 
 
 def split_front_matter(text: str) -> tuple[str, str]:
@@ -96,25 +121,55 @@ def split_front_matter(text: str) -> tuple[str, str]:
     for index in range(1, len(lines)):
         if lines[index].strip() == FRONT_MATTER_FENCE:
             return "".join(lines[1:index]), "".join(lines[index + 1 :])
-    raise ValueError("the front matter opens with +++ and never closes")
+    raise ValueError(
+        "the front matter opens with +++ and never closes; add a closing +++ line "
+        "after the TOML keys"
+    )
 
 
 def _require_fields(
-    entry: object, fields: frozenset[str], label: str, source: Path
+    entry: object,
+    fields: frozenset[str],
+    optional: frozenset[str],
+    label: str,
+    source: Path,
 ) -> dict[str, Any]:
     if not isinstance(entry, dict):
         raise DirectionError(
-            f"{source}: {label} must be a table with the fields {sorted(fields)}."
+            f"{source}: {label} is a {type(entry).__name__}, not a table; write it "
+            f"as a table with the fields {sorted(fields)}."
         )
     unknown = sorted(set(entry) - fields)
-    missing = sorted(fields - set(entry) - {"exclusions"})
+    missing = sorted(fields - set(entry) - optional)
     if unknown or missing:
         raise DirectionError(
             f"{source}: {label} has unknown fields {unknown} and missing fields "
-            f"{missing}; the valid fields are {sorted(fields)}. "
+            f"{missing}; the valid fields are {sorted(fields)} and only "
+            f"{sorted(optional)} may be omitted. "
             "Remove the unknown fields and add the missing ones."
         )
     return entry
+
+
+def _require_environment(entry: Mapping[str, Any], label: str, source: Path) -> None:
+    if entry["environment"] not in ENVIRONMENTS:
+        raise DirectionError(
+            f"{source}: {label}.environment is {entry['environment']!r}; set it to "
+            f"one of {list(ENVIRONMENTS)}."
+        )
+
+
+def _require_agent_arguments(
+    entry: Mapping[str, Any], label: str, source: Path
+) -> None:
+    value = entry.get("agent_arguments")
+    if value is None:
+        return
+    if not isinstance(value, list) or not all(isinstance(v, str) for v in value):
+        raise DirectionError(
+            f"{source}: {label}.agent_arguments is {value!r}; set it to a list of "
+            'strings such as ["--agent", "executor"], or [] for none.'
+        )
 
 
 def _validated(settings: dict[str, Any], source: Path) -> dict[str, Any]:
@@ -127,7 +182,8 @@ def _validated(settings: dict[str, Any], source: Path) -> dict[str, Any]:
     mail = settings.get("mail", {})
     if not isinstance(mail, dict):
         raise DirectionError(
-            f"{source}: key mail must be a table with the keys {sorted(MAIL_KEYS)}."
+            f"{source}: key mail is a {type(mail).__name__}, not a table; write "
+            f"[mail] with the keys {sorted(MAIL_KEYS)}."
         )
     unknown_mail = sorted(set(mail) - MAIL_KEYS)
     if unknown_mail:
@@ -136,21 +192,17 @@ def _validated(settings: dict[str, Any], source: Path) -> dict[str, Any]:
             f"{sorted(MAIL_KEYS)}. Remove or rename each unknown key."
         )
     for index, entry in enumerate(settings.get("positions", [])):
+        label = f"positions[{index}]"
         position = _require_fields(
-            entry, POSITION_FIELDS, f"positions[{index}]", source
+            entry, POSITION_FIELDS, POSITION_OPTIONAL, label, source
         )
-        if position["environment"] not in ENVIRONMENTS:
-            raise DirectionError(
-                f"{source}: positions[{index}].environment must be one of {ENVIRONMENTS}."
-            )
+        _require_environment(position, label, source)
+        _require_agent_arguments(position, label, source)
     for index, entry in enumerate(settings.get("executor_groups", [])):
-        group = _require_fields(
-            entry, GROUP_FIELDS, f"executor_groups[{index}]", source
-        )
-        if group["environment"] not in ENVIRONMENTS:
-            raise DirectionError(
-                f"{source}: executor_groups[{index}].environment must be one of {ENVIRONMENTS}."
-            )
+        label = f"executor_groups[{index}]"
+        group = _require_fields(entry, GROUP_FIELDS, GROUP_OPTIONAL, label, source)
+        _require_environment(group, label, source)
+        _require_agent_arguments(group, label, source)
     for key in (
         "interval_seconds",
         "compact_at_percent",
@@ -158,7 +210,10 @@ def _validated(settings: dict[str, Any], source: Path) -> dict[str, Any]:
     ):
         value = settings.get(key, DEFAULTS[key])
         if isinstance(value, bool) or not isinstance(value, int) or value < 1:
-            raise DirectionError(f"{source}: key {key} must be a positive integer.")
+            raise DirectionError(
+                f"{source}: key {key} is {value!r}; set it to a positive integer "
+                f"such as {DEFAULTS[key]}."
+            )
     return settings
 
 
@@ -174,7 +229,11 @@ def compose_configuration(common_dir: Path, display_name: str) -> dict[str, Any]
             front, expectations = split_front_matter(source.read_text(encoding="utf-8"))
             settings = tomllib.loads(front)
         except (ValueError, tomllib.TOMLDecodeError, OSError) as error:
-            raise DirectionError(f"{source}: malformed file: {error}.") from error
+            raise DirectionError(
+                f"{source}: malformed file: {error}. Fix the front matter between "
+                "the +++ lines so that it parses as TOML, or move the file aside "
+                "to compose the defaults alone."
+            ) from error
         _validated(settings, source)
     composed: dict[str, Any] = {
         key: settings.get(key, default) for key, default in DEFAULTS.items()
@@ -203,7 +262,11 @@ def read_state(state_dir: Path, name: str) -> dict[str, Any]:
     try:
         value = json.loads(path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError) as error:
-        raise DirectionError(f"{path}: unreadable state: {error}.") from error
+        raise DirectionError(
+            f"{path}: unreadable state: {error}. Repair the JSON in the file or "
+            "move it to the trash so that the next pass writes it afresh; state "
+            "is never configuration."
+        ) from error
     return value if isinstance(value, dict) else {}
 
 
@@ -256,7 +319,11 @@ class Environments:
         if environment == ENVIRONMENT_HERDR:
             result = self._execute(environment, "inventory")
             if result.get("status") != "succeeded":
-                raise DirectionError(f"herdr inventory: {result.get('detail')}")
+                raise DirectionError(
+                    f"herdr inventory failed with status {result.get('status')!r}: "
+                    f"{result.get('detail')}; confirm herdr is running through "
+                    "coding-agents:operate-herdr and run the roster again."
+                )
             return [
                 Pane(
                     environment,
@@ -270,13 +337,21 @@ class Environments:
             ]
         result = self._execute(environment, "agents")
         if result.get("status") != "succeeded":
-            raise DirectionError(f"prowl agents: {result.get('detail')}")
+            raise DirectionError(
+                f"prowl agents failed with status {result.get('status')!r}: "
+                f"{result.get('detail')}; confirm Prowl is running through "
+                "coding-agents:operate-prowl and run the roster again."
+            )
         try:
             participants = self._modules[environment].participants_from_agents(
                 result["response"]
             )
         except self._modules[environment].ProwlEnvironmentError as error:
-            raise DirectionError(f"prowl agents: {error}") from error
+            raise DirectionError(
+                f"prowl agents returned a response the adapter cannot read: {error}; "
+                "run the Prowl agents operation through coding-agents:operate-prowl "
+                "and compare its response."
+            ) from error
         return [
             Pane(environment, p["pane"], p["worktree"], None, p["agent"], None)
             for p in participants
@@ -290,19 +365,41 @@ class Environments:
             result = self._execute(pane.environment, "read", pane=pane.pane)
             body = _screen_text(result.get("response", {}))
         if result.get("status") != "succeeded":
-            raise DirectionError(f"{pane.environment} read: {result.get('detail')}")
+            raise DirectionError(
+                f"{pane.environment} read of pane {pane.pane} failed with status "
+                f"{result.get('status')!r}: {result.get('detail')}; confirm the pane "
+                "still exists in the roster subcommand's output."
+            )
         return body
 
     def prompt(self, pane: Pane, text: str) -> dict[str, Any]:
         operation = "prompt" if pane.environment == ENVIRONMENT_HERDR else "send"
         return self._execute(pane.environment, operation, pane=pane.pane, text=text)
 
-    def restart(self, pane: Pane, timeout_ms: int) -> dict[str, Any]:
-        """Stop and relaunch a herdr session; only herdr hosts a restart."""
+    def restart(
+        self, pane: Pane, timeout_ms: int, agent_arguments: list[str] | None
+    ) -> dict[str, Any]:
+        """Stop and relaunch a herdr session with the agent arguments it started with.
+
+        The relaunch carries the arguments the position or executor group
+        configures; a pane whose arguments are unknown is not restarted, because
+        a relaunch without them loses the agent selection.
+        """
         if pane.environment != ENVIRONMENT_HERDR or pane.kind is None:
             return {
-                "status": "operation-unavailable",
-                "detail": "restart needs a herdr session",
+                "status": "unavailable",
+                "detail": f"restart of pane {pane.pane} needs a herdr session whose "
+                f"inventory item names its agent kind; pane {pane.pane} is hosted by "
+                f"{pane.environment} with agent kind {pane.kind!r}. Restart it by "
+                "hand through its environment skill.",
+            }
+        if agent_arguments is None:
+            return {
+                "status": "unavailable",
+                "detail": f"restart of pane {pane.pane} is unavailable because its "
+                "agent arguments are unknown and a relaunch without them loses the "
+                "agent selection; set agent_arguments on its positions or "
+                "executor_groups entry in the override file, using [] for none.",
             }
         stopped = self._execute(
             pane.environment, "stop", pane=pane.pane, mutationAuthorized=True
@@ -316,6 +413,7 @@ class Environments:
             kind=pane.kind,
             pane=pane.pane,
             timeout=timeout_ms,
+            agent_arguments=agent_arguments,
             mutationAuthorized=True,
         )
 
@@ -358,6 +456,24 @@ def guard_reasons(
 def resolve_pane(panes: list[Pane], cwd: str) -> Pane | None:
     matches = [pane for pane in panes if pane.cwd == cwd]
     return matches[0] if len(matches) == 1 else None
+
+
+def unresolved_pane_detail(
+    panes: list[Pane], cwd: str, label: str, environment: str
+) -> str:
+    """Why a configured working directory resolved to no single pane, and the fix."""
+    matched = [pane.pane for pane in panes if pane.cwd == cwd]
+    available = sorted({pane.cwd for pane in panes})
+    found = (
+        f"{len(matched)} {environment} panes matched ({matched})"
+        if matched
+        else f"no {environment} pane matched"
+    )
+    return (
+        f"{label}: configured cwd {cwd!r}: {found}; the cwds available are "
+        f"{available}. Set the cwd of the position to exactly one of them, or "
+        "start the position's session in that directory."
+    )
 
 
 def quiet_minutes(state: dict[str, Any], key: str, screen: str, now: float) -> float:
