@@ -2728,7 +2728,11 @@ def execute_installation(
                 closing_results.append(
                     _run_command(plan, command, runner, results, pending)
                 )
-        except InstallationFailure:
+        except BaseException:
+            # Any exit after a fetch, a failed operation or a failed read or
+            # write of the record document among them, leaves the fetch
+            # project's record in the document once the temporary project
+            # directory is deleted.
             if fetch_project is not None:
                 _drop_fetch_project_records(plan, fetch_project)
             raise
@@ -2988,7 +2992,7 @@ def _fetch_uncached_targets(
                 results,
                 pending,
             )
-    except InstallationFailure:
+    except BaseException:
         # A fetch install that failed after an earlier one succeeded leaves
         # that earlier install's record in the document.
         _drop_fetch_project_records(plan, project_root)

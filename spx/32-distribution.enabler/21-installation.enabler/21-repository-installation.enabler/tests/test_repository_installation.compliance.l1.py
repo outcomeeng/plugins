@@ -1558,6 +1558,39 @@ def test_the_closing_listing_read_that_fails_after_the_record_replace_leaves_no_
     assert not project.exists()
 
 
+def test_an_unreadable_clone_catalog_after_the_fetch_leaves_no_fetch_project_record() -> (
+    None
+):
+    observation = observe_uncached_fetch(
+        UNCACHED_OTHER_CHECKOUT_STATE,
+        SUCCESSFUL_FETCH,
+        unreadable_clone_catalog=True,
+    )
+    (project,) = set(observation.fetch_projects)
+    entries_after = cast(
+        "dict[str, list[dict[str, str]]]",
+        observation.record_file_after[CLAUDE_INSTALLED_PLUGINS_FIELD],
+    )
+    entries_before = cast(
+        "dict[str, list[dict[str, str]]]",
+        observation.record_file_before[CLAUDE_INSTALLED_PLUGINS_FIELD],
+    )
+
+    assert observation.report is None
+    assert observation.failure is None
+    assert observation.unreadable_catalog is not None
+    assert observation.fetches
+    assert str(project) not in {
+        entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD]
+        for items in entries_after.values()
+        for entry in items
+    }
+    assert not project.exists()
+    assert _other_checkout_entries(
+        entries_after, str(observation.other_checkout)
+    ) == _other_checkout_entries(entries_before, str(observation.other_checkout))
+
+
 def test_a_target_still_uncached_after_the_fetch_leaves_its_record_unrefreshed_and_fails_the_run() -> (
     None
 ):

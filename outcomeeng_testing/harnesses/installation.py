@@ -776,6 +776,13 @@ class RecordingRunner:
     earlier one succeeded leaves that earlier install's record in the document,
     a state a real CLI does not fail into on demand.
     """
+    unreadable_clone_catalog_after_install: bool = False
+    """Whether a successful native install leaves the clone's catalog unreadable.
+
+    Stage 5 Failure simulation: a clone catalog that stops parsing after the
+    fetch is the state a run meets when the target read fails with an error
+    that is no failed operation, a condition a real CLI does not produce on demand.
+    """
     calls: list[InstallationCommand] = field(default_factory=list)
     install_project_present: list[bool] = field(default_factory=list)
     """For each native install, whether its working directory existed when it ran."""
@@ -857,6 +864,8 @@ class RecordingRunner:
                 (self.cache_root / command.plugin / self.served_version).mkdir(
                     parents=True, exist_ok=True
                 )
+            if self.unreadable_clone_catalog_after_install and self.clone is not None:
+                (self.clone / CLAUDE_CATALOG_PATH).write_text("{", encoding="utf-8")
         if (
             self.closing_listing is not None
             and command.agent is Agent.CLAUDE
@@ -1477,6 +1486,8 @@ class UncachedFetchObservation:
     plan: InstallationPlan
     report: InstallationReport | None
     failure: InstallationFailure | None
+    unreadable_catalog: ValueError | None
+    """The error a run raised that is no failed operation, when it raised one."""
     document: dict[str, object]
     attempted: tuple[InstallationCommand, ...]
     record_file_before: dict[str, object]
@@ -1500,6 +1511,7 @@ def observe_uncached_fetch(
     *,
     failing_operation: Operation | None = None,
     failing_fetch_ordinal: int | None = None,
+    unreadable_clone_catalog: bool = False,
 ) -> UncachedFetchObservation:
     """Run a persistent refresh over plugins that all meet one fetch state.
 
@@ -1514,7 +1526,10 @@ def observe_uncached_fetch(
     of a run whose head read resolves no target or whose later operation
     stops it. A `failing_fetch_ordinal` makes only the native install at that
     zero-based position exit nonzero, so the fetches before it succeed and
-    record the run-owned project before the run stops.
+    record the run-owned project before the run stops. An
+    `unreadable_clone_catalog` leaves the clone catalog unparseable once the
+    first fetch ran, so the target read raises an error that is no failed
+    operation.
     """
     checkout = repository_root()
     with TemporaryDirectory() as temporary_directory:
@@ -1576,6 +1591,7 @@ def observe_uncached_fetch(
             cache_root=cache_root,
             install_fills_cache=outcome.fills_cache,
             failed_install_ordinal=failing_fetch_ordinal,
+            unreadable_clone_catalog_after_install=unreadable_clone_catalog,
         )
         plan = build_persistent_installation_plan(
             preflight,
@@ -1594,10 +1610,13 @@ def observe_uncached_fetch(
         )
         report: InstallationReport | None = None
         failure: InstallationFailure | None = None
+        unreadable_catalog: ValueError | None = None
         try:
             report = execute_installation(plan, runner)
         except InstallationFailure as raised:
             failure = raised
+        except ValueError as raised:
+            unreadable_catalog = raised
         fetches = tuple(
             command
             for command in runner.calls
@@ -1617,6 +1636,7 @@ def observe_uncached_fetch(
             plan=plan,
             report=report,
             failure=failure,
+            unreadable_catalog=unreadable_catalog,
             document={} if report is None else report_document(report),
             attempted=tuple(runner.calls),
             record_file_before=record_file_before,
