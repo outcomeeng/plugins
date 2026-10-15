@@ -166,7 +166,9 @@ def monitor_pass(config, envs, now) -> dict[str, Any]:
     }
 
 
-def doorbell_pass(config, envs, mail, now) -> dict[str, Any]:
+def doorbell_pass(config, envs, mail, now, authority: str | None) -> dict[str, Any]:
+    if not authority:
+        return {"pass": "doorbell", "status": "stopped", "detail": ABSENT_AUTHORITY}
     if config["mail"]["agent"] is None:
         return {
             "pass": "doorbell",
@@ -207,6 +209,7 @@ def doorbell_pass(config, envs, mail, now) -> dict[str, Any]:
     write_state(state_dir, QUIET_FILE, quiet_state)
     return {
         "pass": "doorbell",
+        "authority": authority,
         "sent": sent,
         "skipped": skipped,
         "startDelaySeconds": config["doorbell_start_delay_seconds"],
@@ -215,6 +218,8 @@ def doorbell_pass(config, envs, mail, now) -> dict[str, Any]:
 
 
 def controller_pass(config, envs, mail, now, authority: str | None) -> dict[str, Any]:
+    if not authority:
+        return {"pass": "controller", "status": "stopped", "detail": ABSENT_AUTHORITY}
     observations = _observe(config, envs, now)
     actions: list[dict[str, Any]] = []
     for observation in observations:
@@ -243,11 +248,12 @@ def controller_pass(config, envs, mail, now, authority: str | None) -> dict[str,
                 {
                     "label": observation["label"],
                     "action": "compact",
-                    "stopped": None if authority else ABSENT_AUTHORITY,
+                    "authority": authority,
                 }
             )
     return {
         "pass": "controller",
+        "authority": authority,
         "actions": actions,
         "pace": config["pace"],
         "rearmAfterSeconds": config["interval_seconds"],
@@ -259,13 +265,35 @@ def act(
 ) -> dict[str, Any]:
     if not authority:
         return {"status": "stopped", "detail": ABSENT_AUTHORITY}
+    if not target:
+        labels = [p["name"] for p in config["positions"]] + [
+            g["label"] for g in config["executor_groups"]
+        ]
+        return {
+            "status": "stopped",
+            "detail": f"act needs --target; pass one of the labels {labels} "
+            "or a pane id from the roster subcommand.",
+        }
+    if operation not in ACT_OPERATIONS:
+        return {
+            "status": "stopped",
+            "detail": f"act needs --operation; pass one of {list(ACT_OPERATIONS)}.",
+        }
+    targets = _targets(config, envs)
     matches = [
         t
-        for t in _targets(config, envs)
+        for t in targets
         if t["pane"] is not None and target in (t["label"], t["pane"].pane)
     ]
     if len(matches) != 1:
-        return {"status": "stopped", "detail": f"{target} names {len(matches)} panes."}
+        available = [t["label"] for t in targets if t["pane"] is not None] + [
+            t["pane"].pane for t in targets if t["pane"] is not None
+        ]
+        return {
+            "status": "stopped",
+            "detail": f"{target} names {len(matches)} panes; pass exactly one of "
+            f"{available}.",
+        }
     pane: Pane = matches[0]["pane"]
     screen = envs.read(pane)
     reasons = guard_reasons(pane, screen, config["untouchable_panes"])
@@ -346,17 +374,33 @@ def main(
         elif args.subcommand == "monitor":
             result = monitor_pass(config, envs, clock())
         elif args.subcommand == "doorbell":
-            result = doorbell_pass(config, envs, mail, clock())
+            result = doorbell_pass(config, envs, mail, clock(), args.authority)
         elif args.subcommand == "controller":
             result = controller_pass(config, envs, mail, clock(), args.authority)
         elif args.subcommand == "inbox":
             result = {"records": _unread(mail, args.recipient or args.position)}
         elif args.subcommand == "send":
-            body = (
-                Path(args.body_file).read_text(encoding="utf-8")
-                if args.body_file
-                else ""
-            )
+            missing = [
+                f"--{name}"
+                for name in ("recipient", "subject", "correlation")
+                if not getattr(args, name)
+            ]
+            if missing:
+                raise DirectionError(
+                    f"send needs {missing}; pass each with a value, and "
+                    "--body-file for the record body."
+                )
+            try:
+                body = (
+                    Path(args.body_file).read_text(encoding="utf-8")
+                    if args.body_file
+                    else ""
+                )
+            except OSError as error:
+                raise DirectionError(
+                    f"send cannot read --body-file {args.body_file}: {error}; "
+                    "write the body to a readable file first."
+                ) from error
             result = _send_mail(
                 mail,
                 config,

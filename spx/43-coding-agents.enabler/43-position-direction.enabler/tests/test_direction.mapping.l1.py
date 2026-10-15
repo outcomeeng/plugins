@@ -144,3 +144,76 @@ def test_act_without_authority_stops_naming_both_absent_sources(tmp_path: Path) 
         "methodology chapter" in result["detail"]
         and "operator grant" in result["detail"]
     )
+
+
+@pytest.mark.parametrize("subcommand", ["doorbell", "controller"])
+def test_pass_without_authority_stops_before_any_action(
+    tmp_path: Path, subcommand: str
+) -> None:
+    out = StringIO()
+
+    status = direction.main(
+        [subcommand, "--position", "Lead Director"],
+        stdout=out,
+        runtime=(_Mail(tmp_path), None),  # type: ignore[arg-type]
+    )
+
+    result = json.loads(out.getvalue())
+    assert status == 1
+    assert result["status"] == "stopped"
+    assert (
+        "methodology chapter" in result["detail"]
+        and "operator grant" in result["detail"]
+    )
+
+
+@pytest.mark.parametrize(
+    ("arguments", "named"),
+    [
+        (["--operation", "compact"], "--target"),
+        (["--target", "x"], "--operation"),
+    ],
+)
+def test_act_names_the_missing_argument_and_its_valid_options(
+    tmp_path: Path, arguments: list[str], named: str
+) -> None:
+    out = StringIO()
+
+    status = direction.main(
+        ["act", "--position", "Lead Director", "--authority", "grant", *arguments],
+        stdout=out,
+        runtime=(_Mail(tmp_path), None),  # type: ignore[arg-type]
+    )
+
+    result = json.loads(out.getvalue())
+    assert status == 1
+    assert result["status"] == "stopped"
+    assert named in result["detail"]
+
+
+def test_send_names_every_missing_argument(tmp_path: Path) -> None:
+    out = StringIO()
+
+    status = direction.main(
+        ["send", "--position", "Lead Director"],
+        stdout=out,
+        runtime=(_Mail(tmp_path), None),  # type: ignore[arg-type]
+    )
+
+    result = json.loads(out.getvalue())
+    assert status == 1
+    for name in ("--recipient", "--subject", "--correlation"):
+        assert name in result["detail"]
+
+
+def test_configuration_stop_names_every_unknown_key_and_the_valid_keys(
+    tmp_path: Path,
+) -> None:
+    _override(tmp_path, "Lead Director", "+++\nbogus = 1\nother = 2\n+++\n")
+
+    with pytest.raises(core.DirectionError) as stop:
+        core.compose_configuration(tmp_path, "Lead Director")
+
+    message = str(stop.value)
+    assert "bogus" in message and "other" in message
+    assert "interval_seconds" in message
