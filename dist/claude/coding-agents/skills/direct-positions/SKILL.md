@@ -1,0 +1,120 @@
+---
+name: direct-positions
+description: >-
+  ALWAYS invoke this skill when directing positions across Products: resuming the directing session after a compaction, observing, waking, or steering a position's pane, or reading a position's mail. NEVER instruct, compact, restart, or reload a position's pane without this skill.
+argument-hint: "[resume | observe | wake | steer <position> | compact <position> | restart <position> | reload <position>]"
+allowed-tools: Read, Write, Skill, Bash(git rev-parse --git-common-dir:*), Bash(spx worktree status:*)
+---
+
+<objective>
+One directing pass over the configured positions, ending in a report of each position's observed state, each action taken on its pane or mail with the authority that permitted it, and each action stopped for an absent definition or grant.
+</objective>
+
+<essential_principles>
+
+- Every value this skill acts on comes from the composed configuration in `<configuration>`. Name no person, mail name, Product, pane, worktree path, date, or incident that the configuration does not supply.
+- Reach every pane through the environment skill of the position's `environment` and every mail operation through `/operate-agent-mail`. Construct no raw environment or mail command, and name no path into the plugin cache.
+- Read a pane's last prompt and context fill from the environment skill's result. When the result omits either, report it unavailable and act on neither. Read no harness transcript file.
+- Never believe a report unchecked: confirm a position's claim against its pane or its mail before relaying it or acting on it.
+
+</essential_principles>
+
+<configuration>
+
+A position's override file is `.spx/orchestration/<position>.md` in the repository's common Git directory, which `git rev-parse --git-common-dir` returns. `<position>` is the position's display name in lowercase with each space replaced by a hyphen. The file is optional.
+
+The file's TOML front matter between `+++` lines sets keys, parsed as TOML. Its Markdown body holds the position's expectations, including any operator grant with its bounds. Each key the file sets replaces that key's default; each key it omits keeps the default; an absent file composes the defaults alone.
+
+| Key                            | Default                                                                                                               |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| `mail.channel`                 | the mail project of the repository's own common Git directory                                                         |
+| `mail.agent`                   | unset; every mail operation reports unavailable                                                                       |
+| `positions`                    | empty; each entry names a display name, environment, working directory, mail name, stall minutes, and context percent |
+| `executor_groups`              | empty; each entry names a label, environment, working-directory prefix, and exclusions                                |
+| `launchers`                    | empty; maps a Product checkout path to the position that launches its Executors                                       |
+| `untouchable_panes`            | empty                                                                                                                 |
+| `advisor`                      | unset; forwarding reports unavailable                                                                                 |
+| `interval_seconds`             | 1800                                                                                                                  |
+| `compact_at_percent`           | 30                                                                                                                    |
+| `doorbell_start_delay_seconds` | 300                                                                                                                   |
+| `pace`                         | unset; no pacing applies                                                                                              |
+| `resume_line`                  | a line naming `/spec-tree:understand`, the resume note, the expectations, and the mail channel                        |
+
+A malformed file or an unknown key stops the skill with a message naming the file, the key, and the reason, and changes nothing.
+
+Runtime state lives under `.spx/orchestration/state/` in the same common Git directory: the highest mail id rung per position, each pane's quiet time, the monitor's last observations, and the resume note. Never read it as configuration. Copy no expectations or other file into another worktree; each position reads its own override file, which the `resume_line` names.
+
+</configuration>
+
+<authority>
+
+A position acts only when the declared methodology chapter defines the action for that position, or when an operator grant in the composed configuration names the action with its bounds. Read the methodology declaration in `spx.config.yaml` and the chapter it names before the first action of a pass. Act only within the authority the defining source establishes. When neither source establishes an action, stop that action and report the absent definition and the absent grant.
+
+</authority>
+
+<pane_guards>
+
+Send no prompt, key, compaction, restart, or reload to:
+
+- a pane in `untouchable_panes`;
+- a pane whose last prompt the environment skill shows came from the operator;
+- a pane that waits at a question or approval screen.
+
+Report such a pane with its screen quoted verbatim and take no other action on it.
+
+</pane_guards>
+
+<passes>
+
+The monitor, the doorbell, and the controller are passes. Each pass runs once, writes its observations to the state directory, and ends. No pass loops, waits for its next pass, or outlives this session. After a pass ends, re-arm the next one through a session-scoped harness capability: the harness monitor for the monitor pass, and a bounded background run whose exit the harness reports for the doorbell and controller passes. A harness without such a capability runs each pass at the next step boundary.
+
+- **Monitor pass.** For each position in `positions` and each group in `executor_groups`, read the pane through its environment skill. Record quiet time and context fill. Report a pane quiet for its stall minutes or filled past its context percent.
+- **Doorbell pass.** After `doorbell_start_delay_seconds`, list each position's unread mail through `/operate-agent-mail` for the `mail.agent` identity. For a position whose highest unread id exceeds its recorded rung and whose pane is idle, send one prompt through the environment skill that tells it to read its mail, then record the new rung. Skip every pane `<pane_guards>` excludes.
+- **Controller pass.** For each position over `compact_at_percent`, compact its pane, apply `pace`, and forward a stalled position's question to `advisor` when set. Skip every pane `<pane_guards>` excludes.
+
+</passes>
+
+<workflow>
+
+<step name="compose_configuration">
+Use skill `coding-agents:operate-agent-mail` only when `mail.agent` is set. Resolve the common Git directory, read the override file of the directing position, and compose it with the defaults per `<configuration>`. Stop on a malformed file.
+</step>
+
+<step name="resume">
+Run this step first in a fresh session and after every compaction. Read the resume note under the state directory, the composed expectations, and the unread mail of `mail.agent` on `mail.channel`. Run the composed `resume_line`. Re-arm the monitor, doorbell, and controller passes. Dispose of each unread mail through the matching step below.
+</step>
+
+<step name="observe">
+Run a monitor pass. For each pane the pass flags, read the pane again before acting and check the claim against its mail.
+</step>
+
+<step name="act">
+For `wake`, `steer`, `compact`, `restart`, and `reload`, check `<authority>` and `<pane_guards>` first. Then run the operation through the environment skill of the position's `environment`: Use skill `coding-agents:operate-herdr` for `herdr` and Use skill `coding-agents:operate-prowl` for `prowl`. For a message to a position, Use skill `coding-agents:message-agents`. After a restart or reload, read the pane and confirm the position is up before reporting it.
+</step>
+
+<step name="record">
+Write the resume note: the time, the last mail handled, each position's observed state, each action in flight with its next trigger, and each operator rule given since the last note. Report the pass outcome to the operator by position display name.
+</step>
+
+</workflow>
+
+<failure_modes>
+
+**Claude acted on an unconfirmed report.** A position's mail claimed a Change had merged, and Claude relayed it before checking. Confirm the claim against the position's pane or the store before relaying it.
+
+**Claude typed into a pane that waited at an approval screen.** A prompt sent to wake an idle pane answered a pending approval. Read the pane first and send nothing when it shows a question or approval.
+
+**Claude kept directing after a compaction without its notes.** The session lost its roster and mail rungs. Run `resume` first and read the resume note before any other step.
+
+</failure_modes>
+
+<success_criteria>
+
+- The composed configuration names every value the pass acted on, and the pass names no person, mail name, Product, pane, path, date, or incident from outside it.
+- Every pane operation and mail operation went through an environment skill or `/operate-agent-mail`.
+- No input went into an untouchable pane, an operator-prompted pane, or a pane at a question or approval screen.
+- Every action carries the methodology chapter or operator grant that permitted it; every other action stopped naming the absent definition and the absent grant.
+- Each pass ended after one run and was re-armed through a harness capability or deferred to the next step boundary.
+- The resume note records the state a post-compaction session needs.
+
+</success_criteria>

@@ -6,6 +6,13 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.14.0
+
+### Added
+
+- **`/direct-positions` directs positions across Products and resumes the directing session after every compaction.** The skill observes, wakes, and steers position panes through `/operate-herdr` and `/operate-prowl`, and reads and sends mail through `/operate-agent-mail` and `/message-agents`. It reads no harness transcript, sends no input into an untouchable pane, a pane whose last prompt came from the operator, or a pane at a question or approval screen, and acts only on an action the declared methodology chapter defines or an operator grant names with its bounds.
+- **`.spx/orchestration/<position>.md` in the repository's common Git directory overrides the skill's defaults per position.** Its TOML front matter sets the mail channel and agent, positions, executor groups, launchers, untouchable panes, advisor, interval, compaction threshold, doorbell delay, pace, and resume line; each key it sets replaces that key's default and its Markdown body holds the position's expectations. A malformed file or an unknown key stops the skill naming the file, the key, and the reason. Runtime state lives under `.spx/orchestration/state/` and is never read as configuration.
+
 ## 0.13.0
 
 ### Added
