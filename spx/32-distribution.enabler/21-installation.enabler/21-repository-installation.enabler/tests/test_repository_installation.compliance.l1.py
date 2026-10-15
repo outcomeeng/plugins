@@ -24,6 +24,7 @@ from outcomeeng.distribution.installation import (
     CLAUDE_INSTALLED_RECORD_PATH_FIELD,
     CLAUDE_INSTALLED_RECORD_VERSION_FIELD,
     ReportField,
+    UNREFRESHABLE_RECORD_WARNING,
     marketplace_plugin_identifier,
     marketplace_plugin_name,
     CODEX_CONFIG_PATH,
@@ -68,6 +69,12 @@ from outcomeeng_testing.harnesses.discovery_auth_cases import (
 )
 from outcomeeng_testing.generators.installation import (
     ClosingDisposition,
+    FetchOutcome,
+    SUCCESSFUL_FETCH,
+    UNCACHED_OTHER_CHECKOUT_STATE,
+    UNFILLED_FETCH,
+    FAILED_FETCH,
+    generated_fetch_outcomes,
     generated_agent_definition,
     generated_agent_file,
     generated_boolean_states,
@@ -98,6 +105,7 @@ from outcomeeng_testing.harnesses.installation import (
     observe_unreadable_head_record,
     observe_persistent_plan,
     observe_record_refresh_plan,
+    observe_uncached_fetch,
     ScopeSplitClassification,
     racing_digest_reader,
     RENAMED_CHECKOUT_AGENT_NAME,
@@ -1339,3 +1347,293 @@ def test_a_clone_catalog_source_that_climbs_out_of_the_clone_resolves_no_version
     observed = observe_clone_manifest_confinement()
     assert observed.contained_plugin in observed.versions
     assert observed.escaping_plugin not in observed.versions
+
+
+@pytest.mark.parametrize("outcome", generated_fetch_outcomes())
+def test_the_uncached_target_fetch_runs_in_a_project_outside_every_checkout_that_no_exit_path_leaves(
+    outcome: FetchOutcome,
+) -> None:
+    observation = observe_uncached_fetch(UNCACHED_OTHER_CHECKOUT_STATE, outcome)
+    installs = observation.fetches
+
+    assert installs
+    for command in installs:
+        assert not command.cwd.is_relative_to(observation.checkout)
+        assert not command.cwd.is_relative_to(observation.other_checkout)
+    assert observation.fetch_projects_present_after == (False,) * len(installs)
+    entries = cast(
+        "dict[str, list[dict[str, str]]]",
+        observation.record_file_after[CLAUDE_INSTALLED_PLUGINS_FIELD],
+    )
+    assert not {
+        entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD]
+        for items in entries.values()
+        for entry in items
+    } & {str(command.cwd) for command in installs}
+
+
+def test_the_install_record_replace_drops_the_fetch_project_before_the_closing_listing() -> (
+    None
+):
+    observation = observe_uncached_fetch(
+        UNCACHED_OTHER_CHECKOUT_STATE, SUCCESSFUL_FETCH
+    )
+    (project,) = set(observation.fetch_projects)
+    install_positions = [
+        observation.attempted.index(command) for command in observation.fetches
+    ]
+    closing_position = next(
+        index
+        for index, command in enumerate(observation.attempted)
+        if command.agent is Agent.CLAUDE and command.operation is Operation.PLUGIN_LIST
+    )
+
+    closing = cast("list[dict[str, str]]", json.loads(observation.listings[-1]))
+    assert str(project) not in {
+        entry.get(CLAUDE_PLUGIN_PROJECT_PATH_FIELD) for entry in closing
+    }
+    assert max(install_positions) < closing_position
+
+
+def _other_checkout_entries(
+    entries: dict[str, list[dict[str, str]]], other_checkout: str
+) -> dict[str, list[dict[str, str]]]:
+    return {
+        identifier: [
+            entry
+            for entry in items
+            if entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD] == other_checkout
+        ]
+        for identifier, items in entries.items()
+    }
+
+
+def test_the_install_record_replace_drops_the_fetch_project_in_a_run_without_a_target() -> (
+    None
+):
+    observation = observe_uncached_fetch(
+        UNCACHED_OTHER_CHECKOUT_STATE,
+        SUCCESSFUL_FETCH,
+        failing_operation=Operation.MARKETPLACE_HEAD,
+    )
+    (project,) = set(observation.fetch_projects)
+    entries = cast(
+        "dict[str, list[dict[str, str]]]",
+        observation.record_file_after[CLAUDE_INSTALLED_PLUGINS_FIELD],
+    )
+
+    assert observation.fetches
+    assert observation.failure is None
+    assert str(project) not in {
+        entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD]
+        for items in entries.values()
+        for entry in items
+    }
+    assert not project.exists()
+    entries_before = cast(
+        "dict[str, list[dict[str, str]]]",
+        observation.record_file_before[CLAUDE_INSTALLED_PLUGINS_FIELD],
+    )
+    assert _other_checkout_entries(
+        entries, str(observation.other_checkout)
+    ) == _other_checkout_entries(entries_before, str(observation.other_checkout))
+
+
+@pytest.mark.parametrize("outcome", generated_fetch_outcomes())
+def test_a_run_with_an_uncached_target_fetch_adds_no_listing_read_beyond_the_closing_one(
+    outcome: FetchOutcome,
+) -> None:
+    observation = observe_uncached_fetch(UNCACHED_OTHER_CHECKOUT_STATE, outcome)
+    listing_reads = [
+        command
+        for command in observation.attempted
+        if command.agent is Agent.CLAUDE
+        and command.operation in {Operation.PLUGIN_INSPECT, Operation.PLUGIN_LIST}
+    ]
+
+    assert observation.fetches
+    # The opening listing is the plan's supplied payload; the runner serves
+    # only the closing read, so the run's total is the opening plus this one.
+    expected = [] if observation.failure is not None else [Operation.PLUGIN_LIST]
+    assert [command.operation for command in listing_reads] == expected
+    assert len(observation.listings) == len(listing_reads)
+
+
+def test_a_failed_fetch_install_stops_the_run() -> None:
+    observation = observe_uncached_fetch(UNCACHED_OTHER_CHECKOUT_STATE, FAILED_FETCH)
+
+    assert observation.report is None
+    assert observation.failure is not None
+    assert observation.failure.command in observation.fetches
+    assert observation.attempted[-1] == observation.failure.command
+    assert not any(
+        command.operation is Operation.PLUGIN_LIST for command in observation.attempted
+    )
+    assert _other_checkout_entries(
+        cast(
+            "dict[str, list[dict[str, str]]]",
+            observation.record_file_after[CLAUDE_INSTALLED_PLUGINS_FIELD],
+        ),
+        str(observation.other_checkout),
+    ) == _other_checkout_entries(
+        cast(
+            "dict[str, list[dict[str, str]]]",
+            observation.record_file_before[CLAUDE_INSTALLED_PLUGINS_FIELD],
+        ),
+        str(observation.other_checkout),
+    )
+
+
+def test_a_fetch_install_that_fails_after_an_earlier_one_succeeded_drops_the_fetch_project_alone() -> (
+    None
+):
+    observation = observe_uncached_fetch(
+        UNCACHED_OTHER_CHECKOUT_STATE,
+        SUCCESSFUL_FETCH,
+        failing_fetch_ordinal=1,
+    )
+    (project,) = set(observation.fetch_projects)
+    entries_after = cast(
+        "dict[str, list[dict[str, str]]]",
+        observation.record_file_after[CLAUDE_INSTALLED_PLUGINS_FIELD],
+    )
+    entries_before = cast(
+        "dict[str, list[dict[str, str]]]",
+        observation.record_file_before[CLAUDE_INSTALLED_PLUGINS_FIELD],
+    )
+
+    assert observation.report is None
+    assert observation.failure is not None
+    assert len(observation.fetches) == 2
+    assert observation.failure.command == observation.fetches[1]
+    assert observation.install_project_present == (True,)
+    assert str(project) not in {
+        entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD]
+        for items in entries_after.values()
+        for entry in items
+    }
+    assert not project.exists()
+    assert _other_checkout_entries(
+        entries_after, str(observation.other_checkout)
+    ) == _other_checkout_entries(entries_before, str(observation.other_checkout))
+
+
+def test_the_closing_listing_read_that_fails_after_the_record_replace_leaves_no_fetch_project_record() -> (
+    None
+):
+    observation = observe_uncached_fetch(
+        UNCACHED_OTHER_CHECKOUT_STATE,
+        SUCCESSFUL_FETCH,
+        failing_operation=Operation.PLUGIN_LIST,
+    )
+    (project,) = set(observation.fetch_projects)
+    entries_after = cast(
+        "dict[str, list[dict[str, str]]]",
+        observation.record_file_after[CLAUDE_INSTALLED_PLUGINS_FIELD],
+    )
+
+    assert observation.report is None
+    assert observation.fetches
+    assert observation.failure is not None
+    assert observation.failure.command.operation is Operation.PLUGIN_LIST
+    assert observation.attempted.index(
+        observation.failure.command
+    ) > observation.attempted.index(observation.fetches[-1])
+    assert str(project) not in {
+        entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD]
+        for items in entries_after.values()
+        for entry in items
+    }
+    assert not project.exists()
+
+
+def test_an_unreadable_clone_catalog_after_the_fetch_leaves_no_fetch_project_record() -> (
+    None
+):
+    observation = observe_uncached_fetch(
+        UNCACHED_OTHER_CHECKOUT_STATE,
+        SUCCESSFUL_FETCH,
+        unreadable_clone_catalog=True,
+    )
+    (project,) = set(observation.fetch_projects)
+    entries_after = cast(
+        "dict[str, list[dict[str, str]]]",
+        observation.record_file_after[CLAUDE_INSTALLED_PLUGINS_FIELD],
+    )
+    entries_before = cast(
+        "dict[str, list[dict[str, str]]]",
+        observation.record_file_before[CLAUDE_INSTALLED_PLUGINS_FIELD],
+    )
+
+    assert observation.report is None
+    assert observation.failure is None
+    assert observation.unreadable_catalog is not None
+    assert observation.fetches
+    assert str(project) not in {
+        entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD]
+        for items in entries_after.values()
+        for entry in items
+    }
+    assert not project.exists()
+    assert _other_checkout_entries(
+        entries_after, str(observation.other_checkout)
+    ) == _other_checkout_entries(entries_before, str(observation.other_checkout))
+
+
+def test_a_target_still_uncached_after_the_fetch_leaves_its_record_unrefreshed_and_fails_the_run() -> (
+    None
+):
+    observation = observe_uncached_fetch(UNCACHED_OTHER_CHECKOUT_STATE, UNFILLED_FETCH)
+    fetched = {command.plugin for command in observation.fetches}
+    unrefreshed = {
+        UNREFRESHABLE_RECORD_WARNING.format(
+            plugin=plugin,
+            scope=CLAUDE_PROJECT_SCOPE,
+            project_path=observation.other_checkout,
+            version=observation.target_version,
+        )
+        for plugin in fetched
+    }
+    entries_before = cast(
+        "dict[str, list[dict[str, str]]]",
+        observation.record_file_before[CLAUDE_INSTALLED_PLUGINS_FIELD],
+    )
+    entries_after = cast(
+        "dict[str, list[dict[str, str]]]",
+        observation.record_file_after[CLAUDE_INSTALLED_PLUGINS_FIELD],
+    )
+
+    assert observation.report is not None
+    assert fetched
+    assert unrefreshed <= {
+        warning[ReportField.MESSAGE]
+        for warning in cast(
+            "list[dict[str, str]]", observation.document[ReportField.WARNINGS]
+        )
+    }
+    for plugin in fetched:
+        identifier = marketplace_plugin_identifier(plugin, observation.marketplace)
+        assert entries_after[identifier] == entries_before[identifier]
+    assert observation.exit_code != 0
+
+
+def test_the_fetch_project_is_the_only_working_directory_the_run_adds_to_the_invocation_checkout() -> (
+    None
+):
+    observation = observe_uncached_fetch(
+        UNCACHED_OTHER_CHECKOUT_STATE, SUCCESSFUL_FETCH
+    )
+    fetches = list(observation.fetches)
+    elsewhere = [
+        command
+        for command in observation.attempted
+        if command.cwd != observation.checkout
+    ]
+
+    assert fetches
+    assert elsewhere == fetches
+    assert not any(
+        str(observation.other_checkout) in argument
+        for command in observation.attempted
+        for argument in (*command.argv, str(command.cwd))
+    )

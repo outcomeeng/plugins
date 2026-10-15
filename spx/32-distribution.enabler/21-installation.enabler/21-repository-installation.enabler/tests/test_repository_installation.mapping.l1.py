@@ -13,7 +13,9 @@ from outcomeeng.distribution.installation import (
     CLAUDE_PLUGIN_PROJECT_PATH_FIELD,
     CLAUDE_PLUGIN_SCOPE_FIELD,
     CLAUDE_PLUGIN_VERSION_FIELD,
+    CLAUDE_PROJECT_SCOPE,
     CLAUDE_REFRESH_SCOPES,
+    CLAUDE_SCOPE_FLAG,
     CODEX_CATALOG_PATH,
     CODEX_PLUGIN_ENTRIES_FIELD,
     InstallationMode,
@@ -37,8 +39,10 @@ from outcomeeng_testing.generators.installation import (
     RegistryShape,
     catalog_plugin_names_from_document,
     generated_claude_listing_entries,
+    FetchState,
     generated_codex_listing_entries,
     generated_failure_classification_cases,
+    generated_fetch_states,
     generated_git_source_urls,
     generated_publication_states,
 )
@@ -53,6 +57,7 @@ from outcomeeng_testing.harnesses.installation import (
     observe_planned_operations,
     observe_record_refresh_plan,
     observe_registry_shape_plan,
+    observe_uncached_fetch,
     repository_root,
 )
 
@@ -372,3 +377,31 @@ def test_each_registry_entry_shape_maps_to_the_source_the_run_refreshes_from() -
 def test_every_git_source_form_maps_to_the_git_source_type() -> None:
     for url in generated_git_source_urls(MARKETPLACE):
         assert claude_source_type(url) == CLAUDE_GIT_SOURCE_TYPE, url
+
+
+@pytest.mark.parametrize("state", generated_fetch_states())
+def test_each_uncached_plugin_maps_to_one_project_scope_install_in_the_run_owned_project(
+    state: FetchState,
+) -> None:
+    observation = observe_uncached_fetch(state)
+    fetched = {
+        plugin
+        for plugin, plugin_state in observation.states.items()
+        if not plugin_state.invocation_records
+        and plugin_state.other_records
+        and not plugin_state.cached
+    }
+    installs = observation.fetches
+
+    assert observation.report is not None
+    assert sorted(command.plugin or "" for command in installs) == sorted(fetched)
+    assert all(
+        command.argv[-2:] == (CLAUDE_SCOPE_FLAG, CLAUDE_PROJECT_SCOPE)
+        for command in installs
+    )
+    assert all(
+        not command.cwd.is_relative_to(checkout)
+        for command in installs
+        for checkout in (observation.checkout, observation.other_checkout)
+    )
+    assert len({command.cwd for command in installs}) == (1 if fetched else 0)
