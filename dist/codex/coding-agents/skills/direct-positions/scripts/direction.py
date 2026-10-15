@@ -176,6 +176,13 @@ def _mail_agent_unset(config: Mapping[str, Any]) -> str:
     )
 
 
+def _advisor_unset(config: Mapping[str, Any]) -> str:
+    return (
+        "advisor is unset, so forwarding is unavailable; set the advisor key to "
+        f"the advisor's mail name in the front matter of {config['overrideFile']['path']}."
+    )
+
+
 def _send_mail(
     mail: ModuleType,
     config: Mapping[str, Any],
@@ -294,7 +301,17 @@ def controller_pass(config, envs, mail, now, authority: str | None) -> dict[str,
             )
             continue
         guards = observation["guards"]
-        if observation["stalled"] and config["advisor"]:
+        if observation["stalled"] and not config["advisor"]:
+            actions.append(
+                {
+                    "label": observation["label"],
+                    "action": "forward",
+                    "guards": guards,
+                    "result": "unavailable",
+                    "detail": _advisor_unset(config),
+                }
+            )
+        elif observation["stalled"]:
             body = (
                 observation["screen"]
                 if guards and observation["screen"]
