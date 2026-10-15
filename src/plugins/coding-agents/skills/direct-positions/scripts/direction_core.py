@@ -193,7 +193,7 @@ def _require_entry_types(
             source,
             f"{label}.exclusions",
             exclusions,
-            'a list of directory-prefix strings such as ["/work/scratch"]',
+            'a list of directory-prefix strings such as ["<directory prefix>"]',
         )
 
 
@@ -255,7 +255,7 @@ def _validated(settings: dict[str, Any], source: Path) -> dict[str, Any]:
             source,
             "key launchers",
             launchers,
-            'a table mapping a checkout path to a position name, such as [launchers] "/work/product" = "Lead Director"',
+            'a table mapping a checkout path to a position name, such as [launchers] "<checkout path>" = "<position display name>"',
         )
     untouchable = settings.get("untouchable_panes", [])
     if not isinstance(untouchable, list) or not all(
