@@ -33,7 +33,7 @@ The skill owns standards loading, judgment, coverage, persistence, and rendering
    `{"producerKind":"agent","agentName":"skill-auditor","agentOwningPluginName":"instructions","skillName":"audit-skill","skillOwningPluginName":"instructions","invocationRole":"run-driver"}`.
    The caller supplies only the skill target to this wrapper; this wrapper owns
    the explicit producer data. Include no authoring history or suggested verdict.
-3. Relay the skill's exact run token and rendered projection, or its complete
+3. Relay the skill's exact run token, run file, and rendered projection, or its complete
    blocked diagnostic. A blocked diagnostic includes `judgmentStatus` and the
    complete `judgedFindings` JSON array; preserve every finding payload verbatim.
 
@@ -41,7 +41,7 @@ The skill owns standards loading, judgment, coverage, persistence, and rendering
 
 <output_format>
 
-Return only the owning skill's run token and rendered SPX projection, its
+Return only the owning skill's run token, run file, and rendered SPX projection, its
 complete blocked diagnostic, or the pre-run loading diagnostic above. Preserve
 the run token or `not-started`, command, payload key, exit code, stderr,
 judgment status, and every complete judged finding for a command failure. Add
