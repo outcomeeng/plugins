@@ -26,6 +26,7 @@ from outcomeeng.distribution.installation import (
     CLAUDE_LOCAL_SCOPE,
     CLAUDE_MANAGED_SCOPE,
     CLAUDE_PROJECT_SCOPE,
+    CLAUDE_REFRESH_SCOPES,
     CLAUDE_USER_SCOPE,
     CODEX_CATALOG_PATH,
     CODEX_PLUGIN_ID_FIELD,
@@ -794,11 +795,33 @@ class FetchState:
     invocation_records: bool
     other_records: bool
     cached: bool
+    invocation_scope: str = CLAUDE_PROJECT_SCOPE
+    """The scope the invocation checkout's record carries; meaningful only when it records the plugin."""
+    other_scope: str = CLAUDE_PROJECT_SCOPE
+    """The scope another checkout's record carries; meaningful only when it records the plugin."""
 
 
 def generated_fetch_states() -> tuple[FetchState, ...]:
-    """Every combination of the fetch domain's three facts."""
-    return generated_boolean_states(FetchState)
+    """Every combination of the fetch domain's facts.
+
+    The three presence facts combine as independent booleans, and each record
+    that is present takes every scope the refresh covers, so the project- and
+    local-scope halves of the fetch rule each meet every presence combination.
+    An absent record carries one scope only, because its scope is not a fact.
+    """
+    scopes = tuple(sorted(CLAUDE_REFRESH_SCOPES))
+    return tuple(
+        FetchState(
+            invocation_records=invocation,
+            other_records=other,
+            cached=cached,
+            invocation_scope=invocation_scope,
+            other_scope=other_scope,
+        )
+        for invocation, other, cached in product((False, True), repeat=3)
+        for invocation_scope in (scopes if invocation else (CLAUDE_PROJECT_SCOPE,))
+        for other_scope in (scopes if other else (CLAUDE_PROJECT_SCOPE,))
+    )
 
 
 @dataclass(frozen=True)
@@ -840,7 +863,7 @@ def recorded_fetch_cases(
     other_checkout: Path,
     first_ordinal: int,
 ) -> tuple[tuple[dict[str, str], RecordDisposition], ...]:
-    """The project-scope install records one plugin carries in `state`.
+    """The install records one plugin carries in `state`, each at the scope the state names.
 
     Records of the invocation checkout move natively and records of another
     checkout move through the file rewrite; every record receives its own
@@ -852,20 +875,26 @@ def recorded_fetch_cases(
             state.invocation_records,
             invocation_checkout,
             RecordDisposition.INVOCATION_NATIVE,
+            state.invocation_scope,
         ),
-        (state.other_records, other_checkout, RecordDisposition.FILE_REWRITE),
+        (
+            state.other_records,
+            other_checkout,
+            RecordDisposition.FILE_REWRITE,
+            state.other_scope,
+        ),
     )
     return tuple(
         (
             {
                 CLAUDE_PLUGIN_ID_FIELD: identifier,
-                CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
+                CLAUDE_PLUGIN_SCOPE_FIELD: scope,
                 CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(checkout),
                 CLAUDE_PLUGIN_VERSION_FIELD: recorded_version(first_ordinal + offset),
             },
             disposition,
         )
-        for offset, (present, checkout, disposition) in enumerate(placements)
+        for offset, (present, checkout, disposition, scope) in enumerate(placements)
         if present
     )
 

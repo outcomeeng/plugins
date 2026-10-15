@@ -1519,7 +1519,7 @@ def test_a_fetch_install_that_fails_after_an_earlier_one_succeeded_drops_the_fet
     ) == _other_checkout_entries(entries_before, str(observation.other_checkout))
 
 
-def test_an_operation_that_fails_after_the_fetch_stops_the_run_with_no_fetch_project_record() -> (
+def test_the_closing_listing_read_that_fails_after_the_record_replace_leaves_no_fetch_project_record() -> (
     None
 ):
     observation = observe_uncached_fetch(
@@ -1532,11 +1532,21 @@ def test_an_operation_that_fails_after_the_fetch_stops_the_run_with_no_fetch_pro
         "dict[str, list[dict[str, str]]]",
         observation.record_file_after[CLAUDE_INSTALLED_PLUGINS_FIELD],
     )
+    entries_before = cast(
+        "dict[str, list[dict[str, str]]]",
+        observation.record_file_before[CLAUDE_INSTALLED_PLUGINS_FIELD],
+    )
 
     assert observation.report is None
     assert observation.fetches
     assert observation.failure is not None
     assert observation.failure.command.operation is Operation.PLUGIN_LIST
+    # The closing read runs after the single replace, so the other checkout's
+    # records have already moved: the drop of the fetch project's entries is
+    # the replace's, and the failed read adds none back.
+    assert _other_checkout_entries(
+        entries_after, str(observation.other_checkout)
+    ) != _other_checkout_entries(entries_before, str(observation.other_checkout))
     assert observation.attempted.index(
         observation.failure.command
     ) > observation.attempted.index(observation.fetches[-1])

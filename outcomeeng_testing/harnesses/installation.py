@@ -14,7 +14,7 @@ import tomllib
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from contextvars import ContextVar
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import StrEnum
 from functools import cache
 from io import StringIO
@@ -1533,7 +1533,7 @@ def observe_uncached_fetch(
         catalog = _catalogs_from_documents(mirror)[Agent.CLAUDE]
         states = {
             plugin: (
-                FetchState(True, state.other_records, state.cached)
+                replace(state, invocation_records=True)
                 if plugin == SPEC_TREE_PLUGIN
                 else state
             )
