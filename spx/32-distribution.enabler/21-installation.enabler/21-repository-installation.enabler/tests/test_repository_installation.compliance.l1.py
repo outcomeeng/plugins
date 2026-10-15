@@ -1395,16 +1395,26 @@ def test_the_install_record_replace_drops_the_fetch_project_before_the_closing_l
     assert max(install_positions) < closing_position
 
 
-@pytest.mark.parametrize(
-    "failing_operation", (Operation.MARKETPLACE_HEAD, Operation.PLUGIN_UPDATE)
-)
-def test_the_install_record_replace_drops_the_fetch_project_in_a_run_without_a_target_or_a_run_a_later_failure_stops(
-    failing_operation: Operation,
-) -> None:
+def _other_checkout_entries(
+    entries: dict[str, list[dict[str, str]]], other_checkout: str
+) -> dict[str, list[dict[str, str]]]:
+    return {
+        identifier: [
+            entry
+            for entry in items
+            if entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD] == other_checkout
+        ]
+        for identifier, items in entries.items()
+    }
+
+
+def test_the_install_record_replace_drops_the_fetch_project_in_a_run_without_a_target() -> (
+    None
+):
     observation = observe_uncached_fetch(
         UNCACHED_OTHER_CHECKOUT_STATE,
         SUCCESSFUL_FETCH,
-        failing_operation=failing_operation,
+        failing_operation=Operation.MARKETPLACE_HEAD,
     )
     (project,) = set(observation.fetch_projects)
     entries = cast(
@@ -1413,9 +1423,7 @@ def test_the_install_record_replace_drops_the_fetch_project_in_a_run_without_a_t
     )
 
     assert observation.fetches
-    assert (observation.failure is None) == (
-        failing_operation is Operation.MARKETPLACE_HEAD
-    )
+    assert observation.failure is None
     assert str(project) not in {
         entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD]
         for items in entries.values()
@@ -1426,18 +1434,9 @@ def test_the_install_record_replace_drops_the_fetch_project_in_a_run_without_a_t
         "dict[str, list[dict[str, str]]]",
         observation.record_file_before[CLAUDE_INSTALLED_PLUGINS_FIELD],
     )
-    other = str(observation.other_checkout)
-    assert {
-        identifier: [
-            entry for entry in items if entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD] == other
-        ]
-        for identifier, items in entries.items()
-    } == {
-        identifier: [
-            entry for entry in items if entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD] == other
-        ]
-        for identifier, items in entries_before.items()
-    }
+    assert _other_checkout_entries(
+        entries, str(observation.other_checkout)
+    ) == _other_checkout_entries(entries_before, str(observation.other_checkout))
 
 
 @pytest.mark.parametrize("outcome", generated_fetch_outcomes())
@@ -1471,7 +1470,19 @@ def test_a_failed_fetch_install_stops_the_run() -> None:
     assert not any(
         command.operation is Operation.PLUGIN_LIST for command in observation.attempted
     )
-    assert observation.record_file_after == observation.record_file_before
+    assert _other_checkout_entries(
+        cast(
+            "dict[str, list[dict[str, str]]]",
+            observation.record_file_after[CLAUDE_INSTALLED_PLUGINS_FIELD],
+        ),
+        str(observation.other_checkout),
+    ) == _other_checkout_entries(
+        cast(
+            "dict[str, list[dict[str, str]]]",
+            observation.record_file_before[CLAUDE_INSTALLED_PLUGINS_FIELD],
+        ),
+        str(observation.other_checkout),
+    )
 
 
 def test_a_target_still_uncached_after_the_fetch_leaves_its_record_unrefreshed_and_fails_the_run() -> (

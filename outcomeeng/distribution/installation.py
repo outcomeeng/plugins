@@ -2697,6 +2697,7 @@ def execute_installation(
     pending: list[PendingPublication] = []
     head: str | None = None
     fetch_project: Path | None = None
+    claude_refresh: InstallationCommand | None = None
     with tempfile.TemporaryDirectory(prefix=FETCH_PROJECT_PREFIX) as project_directory:
         project_root = Path(project_directory).resolve()
         try:
@@ -2709,9 +2710,11 @@ def execute_installation(
                     and command.agent is Agent.CLAUDE
                     and command.operation is Operation.MARKETPLACE_REFRESH
                 ):
-                    fetch_project = _fetch_uncached_targets(
-                        plan, command, runner, results, pending, project_root
-                    )
+                    claude_refresh = command
+            if claude_refresh is not None:
+                fetch_project = _fetch_uncached_targets(
+                    plan, claude_refresh, runner, results, pending, project_root
+                )
             _declare_codex_activation_disabled(plan)
             target: MarketplaceTarget | None = None
             rewrites: tuple[RecordRewrite, ...] = ()
@@ -2933,8 +2936,8 @@ def _fetch_uncached_targets(
 ) -> Path | None:
     """Fetch every uncached target version through native installs in `project_root`.
 
-    Runs once the registered clone has been refreshed and before any native
-    update: each cataloged plugin that `uncached_fetch_plugins` selects
+    Runs once the registered clone has been refreshed and the invocation
+    checkout's native updates have run, before rewrite planning: each cataloged plugin that `uncached_fetch_plugins` selects
     receives one project-scope native install with `project_root` as working
     directory. The project is returned when any plugin needed a fetch, so the
     install-record replace drops every entry of that project whether or not
