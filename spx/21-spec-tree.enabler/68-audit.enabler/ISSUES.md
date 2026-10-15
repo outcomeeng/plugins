@@ -413,19 +413,18 @@ The audit side of the divergence between `spec-tree:implementation-auditor` run 
 
 **Settlement condition.** The assertion narrows to the composing auditor's classification of the findings the language skills return, or each `audit-{lang}-{code|tests|architecture}` skill gains the touched-text classification. Ruled a post-merge note by the Director (ruling 11816) and the Plugins Maintainer.
 
-## The audit skills are exempt from the payload-file rule
+## Two audit payload forms are exempt from the payload-file rule
 
-**Evidence.** [`spx/15-agent-tools.pdr.md`](spx/15-agent-tools.pdr.md) requires every payload to reach a command through a file in the harness's scratch directory. Three skills are exempt from that rule and keep stdin payload forms:
+**Evidence.** [`spx/15-agent-tools.pdr.md`](spx/15-agent-tools.pdr.md) requires every payload to reach a command through a file in the harness's scratch directory. Two payload forms in the audit skills keep a form that rule excludes:
 
-- `audit-implementation` (`src/plugins/spec-tree/skills/audit-implementation`)
-- `audit-change` (`src/plugins/spec-tree/skills/audit-change`)
-- `audit-assertions` (`src/plugins/spec-tree/skills/audit-assertions`)
+- `src/plugins/spec-tree/skills/audit-change/SKILL.md` builds each request to its bundled runner `audit_change_run.py` as a quoted shell heredoc (`<<'AUDIT_REQUEST'`) or a here-string, states that the skill writes no file, and grants no `Write`. The record of this form is in `spx/31-outcomeeng.enabler/32-changes.enabler/ISSUES.md`, with the fix in `outcomeeng/changes#515`.
+- The `--audit-input` argument of `resolve_scope.py` in `src/plugins/spec-tree/skills/audit-implementation` takes its JSON object inline as one single-quoted argument.
 
-The skill auditor's grant rule bars `Write` on an `audit-*` skill, so an `audit-*` skill cannot write a payload file. The `--audit-input` argument of `resolve_scope.py` takes an inline JSON argument, which the payload rule would route through a file; the argument stays inline because of the same grant rule.
+`audit-implementation` and `audit-assertions` pass their run payloads through files written with the file-write tool, and the skill auditor's grant row admits that file-write grant.
 
-**Impact.** The `audit-*` skills pass payloads through the forms the payload rule excludes, so the rule holds for every other skill and not for these.
+**Impact.** `audit-change` and the `--audit-input` argument pass payloads through forms the payload rule excludes, so the rule holds for every other payload and not for these.
 
-**Settlement condition.** The grant rule admits a file-write grant for `audit-*` skills, after which `audit-implementation`, `audit-change`, and `audit-assertions` move to the file form, and `--audit-input` takes its JSON through a file.
+**Settlement condition.** `audit-change` passes its runner request through a file written with the file-write tool, and `--audit-input` takes its JSON through a file.
 
 ## The finding-bearing leg of the implementation-auditor is unproven through the payload-file route
 
