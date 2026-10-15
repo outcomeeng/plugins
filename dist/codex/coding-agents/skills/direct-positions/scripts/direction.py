@@ -32,6 +32,7 @@ from direction_core import (
     quiet_minutes,
     read_state,
     resolve_pane,
+    unresolved_pane_detail,
     write_state,
 )
 
@@ -68,13 +69,37 @@ def _targets(config: Mapping[str, Any], envs: Environments) -> list[dict[str, An
 
     found: list[dict[str, Any]] = []
     for position in config["positions"]:
-        pane = resolve_pane(panes_of(position["environment"]), position["cwd"])
-        found.append({"label": position["name"], "position": position, "pane": pane})
+        panes = panes_of(position["environment"])
+        pane = resolve_pane(panes, position["cwd"])
+        detail = (
+            None
+            if pane
+            else unresolved_pane_detail(
+                panes, position["cwd"], position["name"], position["environment"]
+            )
+        )
+        found.append(
+            {
+                "label": position["name"],
+                "position": position,
+                "pane": pane,
+                "settings": position,
+                "detail": detail,
+            }
+        )
     for group in config["executor_groups"]:
         for pane in panes_of(group["environment"]):
             excluded = any(pane.cwd.startswith(x) for x in group.get("exclusions", []))
             if pane.cwd.startswith(group["cwd_prefix"]) and not excluded:
-                found.append({"label": group["label"], "position": None, "pane": pane})
+                found.append(
+                    {
+                        "label": group["label"],
+                        "position": None,
+                        "pane": pane,
+                        "settings": group,
+                        "detail": None,
+                    }
+                )
     return found
 
 
@@ -87,7 +112,13 @@ def _observe(
     for target in _targets(config, envs):
         pane: Pane | None = target["pane"]
         if pane is None:
-            observations.append({"label": target["label"], "state": "pane-unresolved"})
+            observations.append(
+                {
+                    "label": target["label"],
+                    "state": "pane-unresolved",
+                    "detail": target["detail"],
+                }
+            )
             continue
         screen = envs.read(pane)
         quiet = quiet_minutes(
@@ -122,8 +153,19 @@ def _unread(mail: ModuleType, mail_name: str) -> list[dict[str, Any]]:
     }
     result = mail.execute(request, mail.SubprocessRunner())
     if result["status"] != "succeeded":
-        raise DirectionError(f"mail inbox for {mail_name}: {result.get('detail')}")
+        raise DirectionError(
+            f"mail inbox for {mail_name} failed with status {result.get('status')!r}: "
+            f"{result.get('detail')}; confirm the mail name is registered through "
+            "coding-agents:operate-agent-mail."
+        )
     return result["data"]["records"]
+
+
+def _mail_agent_unset(config: Mapping[str, Any]) -> str:
+    return (
+        "mail.agent is unset, so no mail operation is available; set mail.agent "
+        f"in the [mail] table of {config['overrideFile']['path']}."
+    )
 
 
 def _send_mail(
@@ -137,7 +179,7 @@ def _send_mail(
 ) -> dict[str, Any]:
     sender = config["mail"]["agent"]
     if sender is None:
-        return {"status": "unavailable", "detail": "mail.agent is unset"}
+        return {"status": "unavailable", "detail": _mail_agent_unset(config)}
     record = mail.message_record(
         kind=kind,
         correlation=correlation,
@@ -173,7 +215,7 @@ def doorbell_pass(config, envs, mail, now, authority: str | None) -> dict[str, A
         return {
             "pass": "doorbell",
             "status": "unavailable",
-            "detail": "mail.agent is unset",
+            "detail": _mail_agent_unset(config),
         }
     state_dir = Path(config["stateDirectory"])
     rungs = read_state(state_dir, RUNGS_FILE)
@@ -183,7 +225,10 @@ def doorbell_pass(config, envs, mail, now, authority: str | None) -> dict[str, A
     for target in _targets(config, envs):
         position = target["position"]
         pane: Pane | None = target["pane"]
-        if position is None or pane is None:
+        if position is None:
+            continue
+        if pane is None:
+            skipped.append({"label": position["name"], "detail": target["detail"]})
             continue
         unread = _unread(mail, position["mail_name"])
         newest = max((int(r["id"]) for r in unread), default=0)
@@ -247,13 +292,19 @@ def controller_pass(config, envs, mail, now, authority: str | None) -> dict[str,
             actions.append(
                 {
                     "label": observation["label"],
-                    "action": "compact",
+                    "action": "compact-recommended",
                     "authority": authority,
                 }
             )
     return {
         "pass": "controller",
         "authority": authority,
+        "reportOnly": (
+            "The controller forwards a stalled position's question to the advisor "
+            "and reports compact-recommended positions and the configured pace; it "
+            "compacts and paces nothing. Run act --operation compact for each "
+            "recommended position."
+        ),
         "actions": actions,
         "pace": config["pace"],
         "rearmAfterSeconds": config["interval_seconds"],
@@ -271,13 +322,21 @@ def act(
         ]
         return {
             "status": "stopped",
-            "detail": f"act needs --target; pass one of the labels {labels} "
+            "detail": f"act received no --target; pass --target with one of the labels {labels} "
             "or a pane id from the roster subcommand.",
         }
     if operation not in ACT_OPERATIONS:
         return {
             "status": "stopped",
-            "detail": f"act needs --operation; pass one of {list(ACT_OPERATIONS)}.",
+            "detail": f"act received --operation {operation!r}; pass --operation "
+            f"with one of {list(ACT_OPERATIONS)}.",
+        }
+    if operation == "prompt" and not text:
+        return {
+            "status": "stopped",
+            "detail": f"act --operation prompt for {target!r} needs --text; pass "
+            '--text "<the prompt to type>" or choose --operation compact, '
+            "restart, or reload.",
         }
     targets = _targets(config, envs)
     matches = [
@@ -289,10 +348,12 @@ def act(
         available = [t["label"] for t in targets if t["pane"] is not None] + [
             t["pane"].pane for t in targets if t["pane"] is not None
         ]
+        unresolved = [t["detail"] for t in targets if t["detail"]]
         return {
             "status": "stopped",
-            "detail": f"{target} names {len(matches)} panes; pass exactly one of "
-            f"{available}.",
+            "detail": f"act --target {target!r} names {len(matches)} panes; pass "
+            f"exactly one of {available} (a position label or a pane id)."
+            + (f" Unresolved positions: {unresolved}." if unresolved else ""),
         }
     pane: Pane = matches[0]["pane"]
     screen = envs.read(pane)
@@ -300,20 +361,22 @@ def act(
     if reasons:
         return {"status": "stopped", "guards": reasons, "screen": screen}
     if operation == "restart":
-        result = envs.restart(pane, RESTART_TIMEOUT_MS)
+        arguments = matches[0]["settings"].get("agent_arguments")
+        result = envs.restart(pane, RESTART_TIMEOUT_MS, arguments)
     else:
         wording = {"prompt": text, "compact": COMPACT_TEXT, "reload": RELOAD_TEXT}[
             operation
         ]
-        if not wording:
-            return {"status": "stopped", "detail": "prompt needs --text."}
         result = envs.prompt(pane, wording)
-    return {
+    outcome: dict[str, Any] = {
         "status": result.get("status"),
         "operation": operation,
         "authority": authority,
         "result": result,
     }
+    if result.get("status") != "succeeded" and result.get("detail"):
+        outcome["detail"] = result["detail"]
+    return outcome
 
 
 def _parser() -> argparse.ArgumentParser:
