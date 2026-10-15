@@ -3,7 +3,7 @@ name: direct-positions
 description: >-
   ALWAYS invoke this skill when directing positions across Products: resuming the directing session after a compaction, observing, waking, or steering a position's pane, or reading a position's mail. NEVER instruct, compact, restart, or reload a position's pane without this skill.
 argument-hint: "[resume | observe | wake | steer <position> | compact <position> | restart <position> | reload <position>]"
-allowed-tools: Read, Write, Skill, Bash(git rev-parse --git-common-dir:*), Bash(spx worktree status:*)
+allowed-tools: Read, Write, Skill, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/direction.py":*), Bash(spx worktree status:*)
 ---
 
 <objective>
@@ -12,6 +12,7 @@ One directing pass over the configured positions, ending in a report of each pos
 
 <essential_principles>
 
+- Run every operation through `python3 "${CLAUDE_SKILL_DIR}/scripts/direction.py" <subcommand> --position "<directing position display name>"`; it resolves the common Git directory through the agent-mail adapter and prints one JSON result.
 - Every value this skill acts on comes from the composed configuration in `<configuration>`. Name no person, mail name, Product, pane, worktree path, date, or incident that the configuration does not supply.
 - Reach every pane through the environment skill of the position's `environment` and every mail operation through `/operate-agent-mail`. Construct no raw environment or mail command, and name no path into the plugin cache.
 - Read a pane's last prompt and context fill from the environment skill's result. When the result omits either, report it unavailable and act on neither. Read no harness transcript file.
@@ -64,6 +65,23 @@ Report such a pane with its screen quoted verbatim and take no other action on i
 
 </pane_guards>
 
+<scripts>
+
+| Subcommand   | Effect                                                                               | Extra arguments                                                                                              |
+| ------------ | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| `compose`    | prints the composed configuration                                                    | none                                                                                                         |
+| `roster`     | resolves each position and executor-group pane through its environment adapter       | none                                                                                                         |
+| `monitor`    | one monitor pass                                                                     | none                                                                                                         |
+| `doorbell`   | one doorbell pass                                                                    | none                                                                                                         |
+| `controller` | one controller pass                                                                  | `--authority <source>`                                                                                       |
+| `inbox`      | prints the unread records of one mail name                                           | `--recipient <mail name>`                                                                                    |
+| `send`       | sends one record from `mail.agent`                                                   | `--recipient`, `--kind`, `--correlation`, `--subject`, `--body-file <file written in the scratch directory>` |
+| `act`        | sends a prompt, `/compact`, a restart, or a reload to one pane after the guards pass | `--target <position or pane>`, `--operation`, `--text`, `--authority <source>`                               |
+
+Every subcommand exits 0 with its JSON result, or exits 1 with `status` `stopped` or `unavailable` and a `detail`; a malformed override file or unknown key stops it naming the file and key before any change. Each pass result carries `rearmAfterSeconds`, which `<passes>` uses to re-arm. A pane's last prompt and context fill print `unavailable` while the environment adapters report neither, and the scripts act on neither. `--authority` names the methodology chapter or operator grant that permits the action; without it `act` and the controller stop naming the absent definition and the absent grant. Restart is available for herdr sessions only.
+
+</scripts>
+
 <passes>
 
 The monitor, the doorbell, and the controller are passes. Each pass runs once, writes its observations to the state directory, and ends. No pass loops, waits for its next pass, or outlives this session. After a pass ends, re-arm the next one through a session-scoped harness capability: the harness monitor for the monitor pass, and a bounded background run whose exit the harness reports for the doorbell and controller passes. A harness without such a capability runs each pass at the next step boundary.
@@ -77,7 +95,7 @@ The monitor, the doorbell, and the controller are passes. Each pass runs once, w
 <workflow>
 
 <step name="compose_configuration">
-Use skill `coding-agents:operate-agent-mail` only when `mail.agent` is set. Resolve the common Git directory, read the override file of the directing position, and compose it with the defaults per `<configuration>`. Stop on a malformed file.
+Use skill `coding-agents:operate-agent-mail` only when `mail.agent` is set. Run `compose` per `<scripts>`; it resolves the common Git directory, reads the override file of the directing position, and composes it with the defaults per `<configuration>`. Stop on a malformed file.
 </step>
 
 <step name="resume">
@@ -85,11 +103,11 @@ Run this step first in a fresh session and after every compaction. Read the resu
 </step>
 
 <step name="observe">
-Run a monitor pass. For each pane the pass flags, read the pane again before acting and check the claim against its mail.
+Run `monitor` per `<scripts>`. For each pane the pass flags, read the pane again before acting and check the claim against its mail.
 </step>
 
 <step name="act">
-For `wake`, `steer`, `compact`, `restart`, and `reload`, check `<authority>` and `<pane_guards>` first. Then run the operation through the environment skill of the position's `environment`: Use skill `coding-agents:operate-herdr` for `herdr` and Use skill `coding-agents:operate-prowl` for `prowl`. For a message to a position, Use skill `coding-agents:message-agents`. After a restart or reload, read the pane and confirm the position is up before reporting it.
+For `wake`, `steer`, `compact`, `restart`, and `reload`, check `<authority>` and `<pane_guards>` first. Then run `act` per `<scripts>` with the authority that permits it; it reaches the pane through the position's environment adapter. For a message to a position, Use skill `coding-agents:message-agents`. After a restart or reload, read the pane and confirm the position is up before reporting it.
 </step>
 
 <step name="record">
