@@ -13,7 +13,7 @@ allowed-tools: Read, Grep, Glob, {{! tool('use_skill') !}}, Bash(python3 -c 'fro
 {!% require_skill 'instructions:agent-prompt-standards' %!}
 
 <objective>
-A sealed changeset-scoped `spx verification run` over the files a changeset changes in one skill bundle and the shared fragments it includes, judged against the `/skill-standards` and `/agent-prompt-standards` rule catalogs — terminal status `approved` when no finding on touched text exists, or `rejected` with each such finding keyed `<unit>:<rule-id>` and naming every location and the evidence, every other finding recorded as `filed` — or a `BLOCKED` diagnostic naming the failed prerequisite or command.
+A sealed changeset-scoped `spx verification run`, named by its run token and run file, over the files a changeset changes in one skill bundle and the shared fragments it includes, judged against the `/skill-standards` and `/agent-prompt-standards` rule catalogs — terminal status `approved` when no finding on touched text exists, or `rejected` with each such finding keyed `<unit>:<rule-id>` and naming every location and the evidence, every other finding recorded as `filed` — or a `BLOCKED` diagnostic naming the failed prerequisite or command.
 </objective>
 
 <constraints>
@@ -61,7 +61,7 @@ Use skill `instructions:instructions-plugin`. Invoke it with the verb `version` 
    spx verification run start --verification-type audit --scope-type changeset --scope '<base-oid>..<head-oid>' --input '<start-file>'
    ```
 
-   Extract the `runToken` field of the returned locator and use exactly that token for every later command.
+   Extract the `runToken` field of the returned locator and use exactly that token for every later command. Retain the run target the locator reports as the run file; only the start report names it.
 2. **Load the standards.** Read `/skill-standards` and `/skill-standards`' `references/rule-catalog.md`, then `/agent-prompt-standards` and its `<rule_catalog>`, then `spx/local/skills.md` at the repository root when it exists — the overlay specializes catalog rules for the repository, and a finding under it cites the catalog rule it specializes. When the bundle carries scripts, read `/skill-standards`' `references/script-standards.md`. When the bundle carries command-capability fields — `argument-hint` or `arguments`, `allowed-tools`, `!`-dynamic context, or `@` file references — read `/skill-standards`' `references/command-capabilities.md`. When the target is an `audit-*` skill, read `/skill-standards`' `references/auditor-skeleton.md`. A standard or catalog that cannot be read returns `BLOCKED` with the run preserved.
 3. **Read the bundle.** Read every file in the bundle at the head — `SKILL.md` and every file under `references/`, `workflows/`, `templates/`, `assets/`, and `scripts/`, unchanged and uncited files included, because a changed file is judged against the bundle it sits in. Read every included fragment at the head as well. Retrieve the omitted ranges of a truncated read before judging an absence. When the bundle uses `/skill-standards`' eager-foundation exception, run this counter against every rendered target `SKILL.md` and judge `eager_payload_ceiling` from its integer output, never from an estimate:
 
@@ -78,7 +78,7 @@ Use skill `instructions:instructions-plugin`. Invoke it with the verb `version` 
    spx verification run finish --verification-type audit --scope-type changeset --scope '<base-oid>..<head-oid>' --run '<run-token>' --terminal-status '<approved-or-rejected>'
    ```
 
-   Then run `spx verification run render` with the same type, scope, and token, and return the token and the rendered projection unchanged. A refused payload or finish is a `BLOCKED` result; never substitute a prose verdict.
+   Then run `spx verification run render` with the same type, scope, and token, and return the token, the run file, and the rendered projection unchanged. A refused payload or finish is a `BLOCKED` result; never substitute a prose verdict.
 
 </execution_sequence>
 
@@ -179,7 +179,7 @@ Idempotency keys are command arguments, never payload fields; quote every path, 
 
 <verdict_format>
 
-Return only the exact run token and the unmodified rendered projection. The projection is the verdict: its `terminalStatus` is `approved` or `rejected`, its `findings` group every accepted finding under `blocking`, `debt`, and `filed`, none under `blocking` or `debt` for approval, its `auditScopeUnits` carry one unit per changed bundle file and changed included fragment, and its `events` carry every accepted finding payload and the terminal event. Every finding is keyed `<unit>:<rule-id>` by a catalog identifier; `blocking` and `debt` reject the run and `filed` does not. Keep every SPX field unchanged.
+Return only the exact run token, the exact run file, and the unmodified rendered projection. The projection is the verdict: its `terminalStatus` is `approved` or `rejected`, its `findings` group every accepted finding under `blocking`, `debt`, and `filed`, none under `blocking` or `debt` for approval, its `auditScopeUnits` carry one unit per changed bundle file and changed included fragment, and its `events` carry every accepted finding payload and the terminal event. Every finding is keyed `<unit>:<rule-id>` by a catalog identifier; `blocking` and `debt` reject the run and `filed` does not. Keep every SPX field unchanged.
 
 A run that cannot complete returns:
 
