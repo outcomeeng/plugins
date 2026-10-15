@@ -6,6 +6,12 @@ argument-hint: "[resume | observe | wake | steer <position> | compact <position>
 allowed-tools: Read, Write, Bash(python3 "${SKILL_DIR}/scripts/direction.py":*), Bash(spx worktree status:*)
 ---
 
+Use skill `coding-agents:operate-herdr` for every pane operation on a position whose `environment` is `herdr`.
+
+Use skill `coding-agents:operate-prowl` for every pane operation on a position whose `environment` is `prowl`.
+
+Use skill `coding-agents:operate-agent-mail` for every mail operation.
+
 <objective>
 One directing pass over the configured positions, ending in a report of each position's observed state, each action taken on its pane or mail with the authority that permitted it, and each action stopped for an absent definition or grant.
 </objective>
@@ -14,7 +20,7 @@ One directing pass over the configured positions, ending in a report of each pos
 
 - Run every operation through `python3 "${SKILL_DIR}/scripts/direction.py" <subcommand> --position "<directing position display name>"`; it resolves the common Git directory through the agent-mail adapter and prints one JSON result.
 - Every value this skill acts on comes from the composed configuration in `<configuration>`. Name no person, mail name, Product, pane, worktree path, date, or incident that the configuration does not supply.
-- Reach every pane through the environment skill of the position's `environment` and every mail operation through `/operate-agent-mail`. Construct no raw environment or mail command, and name no path into the plugin cache.
+- Reach every pane through `coding-agents:operate-herdr` or `coding-agents:operate-prowl`, by the position's `environment`, and every mail operation through `coding-agents:operate-agent-mail`. Construct no raw environment or mail command, and name no path into the plugin cache.
 - Read a pane's last prompt and context fill from the environment skill's result. When the result omits either, report it unavailable and act on neither. Read no harness transcript file.
 - Never believe a report unchecked: confirm a position's claim against its pane or its mail before relaying it or acting on it.
 
@@ -72,13 +78,15 @@ Report such a pane with its screen quoted verbatim and take no other action on i
 | `compose`    | prints the composed configuration                                                    | none                                                                                                         |
 | `roster`     | resolves each position and executor-group pane through its environment adapter       | none                                                                                                         |
 | `monitor`    | one monitor pass                                                                     | none                                                                                                         |
-| `doorbell`   | one doorbell pass                                                                    | none                                                                                                         |
+| `doorbell`   | one doorbell pass                                                                    | `--authority <source>`                                                                                       |
 | `controller` | one controller pass                                                                  | `--authority <source>`                                                                                       |
 | `inbox`      | prints the unread records of one mail name                                           | `--recipient <mail name>`                                                                                    |
 | `send`       | sends one record from `mail.agent`                                                   | `--recipient`, `--kind`, `--correlation`, `--subject`, `--body-file <file written in the scratch directory>` |
 | `act`        | sends a prompt, `/compact`, a restart, or a reload to one pane after the guards pass | `--target <position or pane>`, `--operation`, `--text`, `--authority <source>`                               |
 
-Every subcommand exits 0 with its JSON result, or exits 1 with `status` `stopped` or `unavailable` and a `detail`; a malformed override file or unknown key stops it naming the file and key before any change. Each pass result carries `rearmAfterSeconds`, which `<passes>` uses to re-arm. A pane's last prompt and context fill print `unavailable` while the environment adapters report neither, and the scripts act on neither. `--authority` names the methodology chapter or operator grant that permits the action; without it `act` and the controller stop naming the absent definition and the absent grant. Restart is available for herdr sessions only.
+Every subcommand exits 0 with its JSON result, or exits 1 with `status` `stopped` or `unavailable` and a `detail`; a malformed override file or unknown key stops it naming the file and key before any change. Each pass result carries `rearmAfterSeconds`, which `<passes>` uses to re-arm. A pane's last prompt and context fill print `unavailable` while the environment adapters report neither, and the scripts act on neither. `--authority` names the methodology chapter or operator grant that permits the action; without it `act`, the doorbell, and the controller stop before any prompt, forward, or compaction, naming the absent definition and the absent grant. Restart is available for herdr sessions only. A missing `--target`, `--operation`, `--recipient`, `--subject`, or `--correlation`, an unreadable `--body-file`, or a target that names no single pane stops the subcommand with a `detail` naming the argument and listing the valid positions, panes, or operations.
+
+Test record: `direction_core.py` and `direction.py` are exercised by the position-direction mapping tests with a stubbed mail adapter and no live pane. The tests cover default and override composition, malformed and unknown-key files with every unknown key reported, pane guards, quiet time, atomic state writes, an absent authority on `act`, the doorbell, and the controller, an absent `act` target or operation, and absent `send` arguments. They leave no state beyond the pytest temporary directory.
 
 </scripts>
 
@@ -87,15 +95,33 @@ Every subcommand exits 0 with its JSON result, or exits 1 with `status` `stopped
 The monitor, the doorbell, and the controller are passes. Each pass runs once, writes its observations to the state directory, and ends. No pass loops, waits for its next pass, or outlives this session. After a pass ends, re-arm the next one through a session-scoped harness capability: the harness monitor for the monitor pass, and a bounded background run whose exit the harness reports for the doorbell and controller passes. A harness without such a capability runs each pass at the next step boundary.
 
 - **Monitor pass.** For each position in `positions` and each group in `executor_groups`, read the pane through its environment skill. Record quiet time and context fill. Report a pane quiet for its stall minutes or filled past its context percent.
-- **Doorbell pass.** After `doorbell_start_delay_seconds`, list each position's unread mail through `/operate-agent-mail` for the `mail.agent` identity. For a position whose highest unread id exceeds its recorded rung and whose pane is idle, send one prompt through the environment skill that tells it to read its mail, then record the new rung. Skip every pane `<pane_guards>` excludes.
-- **Controller pass.** For each position over `compact_at_percent`, compact its pane, apply `pace`, and forward a stalled position's question to `advisor` when set. Skip every pane `<pane_guards>` excludes.
+- **Doorbell pass.** After `doorbell_start_delay_seconds`, list each position's unread mail through `coding-agents:operate-agent-mail` for the `mail.agent` identity. For a position whose highest unread id exceeds its recorded rung and whose pane is idle, send one prompt through the position's environment skill that tells it to read its mail, then record the new rung. Skip every pane `<pane_guards>` excludes.
+- **Controller pass.** Run with `--authority`. For each position over `compact_at_percent`, compact its pane, apply `pace`, and forward a stalled position's question to `advisor` when set. Skip every pane `<pane_guards>` excludes.
 
 </passes>
+
+<arguments>
+
+The first word of the argument selects the mode:
+
+| Argument             | Steps that run                     |
+| -------------------- | ---------------------------------- |
+| none, or `resume`    | `compose_configuration`, `resume`  |
+| `observe`            | `compose_configuration`, `observe` |
+| `wake <position>`    | `compose_configuration`, `act`     |
+| `steer <position>`   | `compose_configuration`, `act`     |
+| `compact <position>` | `compose_configuration`, `act`     |
+| `restart <position>` | `compose_configuration`, `act`     |
+| `reload <position>`  | `compose_configuration`, `act`     |
+
+Every mode ends at `record`. A mode that needs `<position>` and receives none, or a name the roster lacks, stops and lists the roster's labels.
+
+</arguments>
 
 <workflow>
 
 <step name="compose_configuration">
-Use skill `coding-agents:operate-agent-mail` only when `mail.agent` is set. Run `compose` per `<scripts>`; it resolves the common Git directory, reads the override file of the directing position, and composes it with the defaults per `<configuration>`. Stop on a malformed file.
+Run `compose` per `<scripts>`; it resolves the common Git directory, reads the override file of the directing position, and composes it with the defaults per `<configuration>`. Stop on a malformed file.
 </step>
 
 <step name="resume">
@@ -129,7 +155,7 @@ Write the resume note: the time, the last mail handled, each position's observed
 <success_criteria>
 
 - The composed configuration names every value the pass acted on, and the pass names no person, mail name, Product, pane, path, date, or incident from outside it.
-- Every pane operation and mail operation went through an environment skill or `/operate-agent-mail`.
+- Every pane operation and mail operation went through `coding-agents:operate-herdr`, `coding-agents:operate-prowl`, or `coding-agents:operate-agent-mail`.
 - No input went into an untouchable pane, an operator-prompted pane, or a pane at a question or approval screen.
 - Every action carries the methodology chapter or operator grant that permitted it; every other action stopped naming the absent definition and the absent grant.
 - Each pass ended after one run and was re-armed through a harness capability or deferred to the next step boundary.

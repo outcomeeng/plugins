@@ -103,12 +103,16 @@ def _require_fields(
     entry: object, fields: frozenset[str], label: str, source: Path
 ) -> dict[str, Any]:
     if not isinstance(entry, dict):
-        raise DirectionError(f"{source}: {label} must be a table.")
+        raise DirectionError(
+            f"{source}: {label} must be a table with the fields {sorted(fields)}."
+        )
     unknown = sorted(set(entry) - fields)
     missing = sorted(fields - set(entry) - {"exclusions"})
     if unknown or missing:
         raise DirectionError(
-            f"{source}: {label} has unknown {unknown} and missing {missing}."
+            f"{source}: {label} has unknown fields {unknown} and missing fields "
+            f"{missing}; the valid fields are {sorted(fields)}. "
+            "Remove the unknown fields and add the missing ones."
         )
     return entry
 
@@ -116,11 +120,20 @@ def _require_fields(
 def _validated(settings: dict[str, Any], source: Path) -> dict[str, Any]:
     unknown = sorted(set(settings) - set(DEFAULTS))
     if unknown:
-        raise DirectionError(f"{source}: unknown key {unknown[0]}.")
-    mail = settings.get("mail", {})
-    if not isinstance(mail, dict) or set(mail) - MAIL_KEYS:
         raise DirectionError(
-            f"{source}: key mail must be a table of channel and agent."
+            f"{source}: unknown keys {unknown}; the valid keys are "
+            f"{sorted(DEFAULTS)}. Remove or rename each unknown key."
+        )
+    mail = settings.get("mail", {})
+    if not isinstance(mail, dict):
+        raise DirectionError(
+            f"{source}: key mail must be a table with the keys {sorted(MAIL_KEYS)}."
+        )
+    unknown_mail = sorted(set(mail) - MAIL_KEYS)
+    if unknown_mail:
+        raise DirectionError(
+            f"{source}: unknown mail keys {unknown_mail}; the valid mail keys are "
+            f"{sorted(MAIL_KEYS)}. Remove or rename each unknown key."
         )
     for index, entry in enumerate(settings.get("positions", [])):
         position = _require_fields(
