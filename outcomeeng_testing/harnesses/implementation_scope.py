@@ -276,8 +276,10 @@ def run_implementation_scope(
     audit_input: str | None = None,
     reconcile_run: str | None = None,
     scope_identity: str | None = None,
+    output_path: pathlib.Path | None = None,
 ) -> subprocess.CompletedProcess[str]:
     """Capture the real CLI result while keeping cwd separate from --repo."""
+    output_argv = () if output_path is None else (output_option(), str(output_path))
     audit_input_argv = () if audit_input is None else ("--audit-input", audit_input)
     reconcile_argv = () if reconcile_run is None else ("--reconcile-run", reconcile_run)
     if scope_identity is not None:
@@ -291,12 +293,18 @@ def run_implementation_scope(
             str(repo if repo_override is None else repo_override),
             *audit_input_argv,
             *reconcile_argv,
+            *output_argv,
         ),
         cwd=repo,
         text=True,
         capture_output=True,
         check=False,
     )
+
+
+def output_option() -> str:
+    """Return the resolver's output-path option, read when a run names one."""
+    return cast(str, vars(load_resolve_scope_module())["OUTPUT_OPTION"])
 
 
 @contextlib.contextmanager

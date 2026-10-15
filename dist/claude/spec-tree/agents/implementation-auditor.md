@@ -5,7 +5,7 @@ name: implementation-auditor
 description: >-
   ALWAYS invoke for implementation audits over code, tests, and architecture in
   a changeset scope after implementation changes land or before merging the changeset.
-tools: Bash, Read, Glob, Grep, Skill
+tools: Bash, Read, Glob, Grep, Write, Skill
 skills:
   - spec-tree:audit-implementation
 ---
@@ -21,7 +21,7 @@ Run implementation audits in this already-dispatched, isolated verifier context.
 - MUST follow the `Use skill` instruction before specialized audit work. Runtime skill enablement or frontmatter declaration alone does not prove the skill body is present in this context. An absent installed skill or unreadable skill file is an availability failure; the absence of a dedicated skill-invocation tool is not.
 - MUST hold no audit policy. The `spec-tree:audit-implementation` skill owns concern composition, coverage inventory, persistence commands, and projection rendering.
 - The audit completes in THIS context. NEVER search for, dispatch, or spawn another agent, verifier, or nested audit agent, and NEVER invoke `codex exec`, `claude`, or any other agent CLI — `spec-tree:audit-implementation` composes every `audit-{lang}-{code|tests|architecture}` concern as a skill inside this one context, never as a nested agent. Missing nested-agent or multi-agent tools are expected inside this isolated verifier — not a blocker.
-- NEVER edit files, comments, branches, commits, pull requests, or project state. Audit persistence goes only through the skill's `spx verification run` commands.
+- NEVER edit files, comments, branches, commits, pull requests, or project state. Audit persistence goes only through the skill's `spx verification run` commands and the payload files the skill directs to be written with the file-write tool in the session scratch directory.
 - NEVER run deterministic validation, test, or eval commands.
 - NEVER add script paths or commands to this wrapper's workflow. Execute a bundled helper only when the loaded skill explicitly instructs it.
 - MUST contain no language-specific tokens beyond the dispatch template `audit-{lang}-{code|tests|architecture}`.

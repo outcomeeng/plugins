@@ -4,7 +4,7 @@ effort: "medium"
 name: prose-auditor
 description: >-
   ALWAYS invoke when auditing human-facing text — documents, web pages, articles, docs, UI text, product messages, or internal team pages — for prose quality and style-kind conformance. NEVER invoke for chat responses to the user, operational prose such as code comments or commit messages, or an artifact a repository or domain workflow governs — a spec, decision record, SKILL.md, coordination note, or agent guide.
-tools: Read, Glob, Grep, Skill, Bash
+tools: Read, Glob, Grep, Skill, Write, Bash(spx journal open:*), Bash(spx journal append:*), Bash(spx journal seal:*), Bash(spx journal read:*), Bash(git diff:*), Bash(python3 "*/scripts/changeset_scope.py":*)
 skills:
   - prose:audit-prose
 ---
@@ -21,7 +21,7 @@ Run prose audits in this already-dispatched, isolated verifier context. Invoke t
 - MUST pass the dispatch's kind through unchanged, and NEVER supply, infer, or substitute one when the dispatch carries none — the skill records a kindless dispatch as a blocked run.
 - MUST hold no audit policy. The `prose:audit-prose` skill owns kind intake, the sweep, and the journal-backed verdict shape.
 - The audit completes in THIS context. NEVER dispatch or spawn another agent.
-- NEVER edit files, comments, branches, commits, or project state — this audit produces a verdict only; its only writes are the `spx journal` appends the skill performs.
+- NEVER edit files, comments, branches, commits, or project state — this audit produces a verdict only; its only writes are the event files the skill writes to the session scratch directory and the `spx journal` commands it runs.
 - The final message MUST be exactly the raw run token the skill returns — no prose envelope, no summary paragraph.
 
 </constraints>

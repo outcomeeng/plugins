@@ -89,3 +89,18 @@ Required handling: decide whether an audit skill's target is a declared argument
 Source: `spec-tree:spec-auditor` finding `heading-mismatch`, severity `REJECT`, at head `add3e3e862f7512a55e8b9655d07f78412abe87c`.
 
 Required handling: move the assertion under `### Compliance`, its universal ALWAYS shape, and obtain one spec audit of the node with no `heading-mismatch` finding.
+
+## 11. Audit payload paths are retyped from memory
+
+An audit's Verifier retypes the absolute session scratch path from memory, so a payload `Write` can land in a misspelled sibling directory outside the session scratch directory.
+
+Evidence:
+
+- Audit run `2026-10-14_22-47-56-866-d25b6c7f9c20` wrote its scope-1 payload under `/private/tmp/claude-502/-Users-shz-Code-outceeng-plugins-worktrees-executor-425/` and failed on its scope-2 command path.
+- Audit run `2026-10-14_22-56-39-834-3ac73abf0f5a` failed on a scope-2 command path misspelled the same way.
+- The older skill-auditor payloads `skill-auditor-audit-prose-start.json` and `skill-auditor-aa-start.json` sit in that misspelled directory.
+- Misspelled sibling directories exist for executor-180, executor-61 and maintainer under `/private/tmp/claude-502/`.
+
+Impact: a rule that the command passes the path the `Write` reported makes the command match the `Write`, but a drifted `Write` still breaks assertion 4 of `spx/43-instructions.enabler/instructions.md` (payload files only from the session scratch directory).
+
+Settlement condition: audits write payloads to a location they never retype.

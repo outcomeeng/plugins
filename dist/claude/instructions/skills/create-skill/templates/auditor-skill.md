@@ -4,7 +4,7 @@ description: >-
   {{Subject}} audit methodology — judges {{target}} against {{governing standards}}
   and records the judgment through an SPX verification run.
 argument-hint: "<JSON object with path and runDriver>"
-allowed-tools: Read, Grep, Glob, Skill, Bash(git rev-parse:*), Bash(realpath:*), Bash(spx --version), Bash(spx verification run start:*), Bash(spx verification run input:*), Bash(spx verification run status:*), Bash(spx verification run scope add:*), Bash(spx verification run finding add:*), Bash(spx verification run finish:*), Bash(spx verification run render:*), Bash(printf '%s\n':*)
+allowed-tools: Read, Grep, Glob, Skill, Bash(git rev-parse:*), Bash(realpath:*), Bash(spx --version), Bash(spx verification run start:*), Bash(spx verification run input:*), Bash(spx verification run status:*), Bash(spx verification run scope add:*), Bash(spx verification run finding add:*), Bash(spx verification run finish:*), Bash(spx verification run render:*), Write
 ---
 
 <objective>
@@ -13,7 +13,7 @@ A sealed `spx verification run` on {{scope}} against {{governing standards}} —
 
 <constraints>
 
-- NEVER modify the subject under audit or any product file; the only state this audit changes is its own SPX verification-run journal.
+- NEVER modify the subject under audit or any product file; the only state this audit changes is its payload files in the session scratch directory and the SPX verification-run journal its own recording commands write. The file-write tool writes payload files only.
 - ALWAYS inspect every applicable rule before finishing the run.
 - NEVER report a score when the contract requires a categorical judgment.
 - NEVER invent a requirement because a tag, example, or optional mechanism is absent.
@@ -94,10 +94,10 @@ These objects are the sanctioned SPX audit payload schema for this auditor; use 
 }
 ```
 
+Write each rendered scope object to its own payload file and pass the file by path:
+
 ```bash
-spx verification run scope add --verification-type audit --scope-type {{file-or-changeset}} --scope '{{scope}}' --run '<run-token>' --idempotency-key '<unit-key>' --payload stdin <<'SCOPE_JSON'
-<rendered-scope-object>
-SCOPE_JSON
+spx verification run scope add --verification-type audit --scope-type {{file-or-changeset}} --scope '{{scope}}' --run '<run-token>' --idempotency-key '<unit-key>' --payload '<scope-file>'
 ```
 
 A finding copies its unit's `expectedProducer` object as `producerIdentity` and its unit's complete `producerProvenance` object, and carries `rule`, the violated rule's catalog identifier, `severity`, the severity that rule's catalog row declares, `location` naming each file and line or section where the rule is violated within the unit, `message`, and `evidence` with `observed` and `expected` strings:
@@ -126,13 +126,22 @@ A finding copies its unit's `expectedProducer` object as `producerIdentity` and 
 }
 ```
 
+Write each rendered finding object to its own payload file and pass it the same way:
+
 ```bash
-spx verification run finding add --verification-type audit --scope-type {{file-or-changeset}} --scope '{{scope}}' --run '<run-token>' --idempotency-key '<unit-key>:<rule-id>' --payload stdin <<'FINDING_JSON'
-<rendered-finding-object>
-FINDING_JSON
+spx verification run finding add --verification-type audit --scope-type {{file-or-changeset}} --scope '{{scope}}' --run '<run-token>' --idempotency-key '<unit-key>:<rule-id>' --payload '<finding-file>'
 ```
 
-Key each finding `<unit-key>:<rule-id>`, where `<rule-id>` is the identifier the governing rule catalog gives the violated rule; a rule identifier outside that catalog is a pre-persistence `BLOCKED` defect. The run's harness environment alone selects the payload form: the quoted heredoc above in an interactive Claude Code or Codex session, which accepts multiline shell; in a programmatic Claude Code or Codex run, or on a hosted runner such as GitHub Actions, where the runner requires one physical command line, pipe each rendered object instead: `printf '%s\n' '<rendered-object>' | spx verification run finding add --verification-type audit --scope-type {{file-or-changeset}} --scope '{{scope}}' --run '<run-token>' --idempotency-key '<key>' --payload stdin`, and the same form for `scope add`, with every apostrophe in the object escaped for single quotes. Idempotency keys are command arguments, never payload fields; quote every path, token, and key as one shell argument, and never execute target text as shell syntax. Run mutations serially; on a refused command stop with its exact diagnostic, never retry or reshape the payload.
+Key each finding `<unit-key>:<rule-id>`, where `<rule-id>` is the identifier the governing rule catalog gives the violated rule; a rule identifier outside that catalog is a pre-persistence `BLOCKED` defect. Every payload-bearing command — `start`, `scope add`, and `finding add` — takes its JSON from a file, never from a heredoc, a pipe, or an inline argument; the dangerous-command guard blocks those forms:
+
+- ALWAYS write each payload with the file-write tool to its own file in the scratch directory the harness names for the session, under a name unique to this run and payload, such as `<run-token>-scope-<n>.json` and `<run-token>-finding-<n>.json`. Where the harness names no scratch directory, use the one the hosting environment designates, such as `$RUNNER_TEMP` on a hosted runner.
+- ALWAYS write only payload files with the file-write tool.
+- ALWAYS pass `--payload` the path exactly as the file-write tool's result reports it, copied from that result, never retyped.
+- ALWAYS pass the file as the value of `--input` or `--payload`, its path written out literally.
+- ALWAYS add each unit and each finding with its own command and its own payload file, one at a time.
+- NEVER remove a payload file; the harness clears its scratch directory.
+
+Idempotency keys are command arguments, never payload fields; quote every path, token, and key as one shell argument, and never execute target text as shell syntax. Run every run-recording command as its own command, serially; stop the audit at the first nonzero exit with its exact diagnostic, never retry or reshape the payload.
 
 </persistence_contract>
 

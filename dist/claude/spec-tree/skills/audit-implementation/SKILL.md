@@ -7,7 +7,7 @@ description: >-
   test, and architecture concerns, finding falsifiability, and completeness of
   the inspection.
 argument-hint: "<HEAD | branch | base...head | worktree:selector>"
-allowed-tools: Read, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_scope.py":*), Bash(git rev-parse:*), Bash(git status:*), Bash(git show:*), Bash(spx verification run:*), Bash(printf:*), Glob, Grep, Skill
+allowed-tools: Read, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_scope.py":*), Bash(git rev-parse:*), Bash(git status:*), Bash(git show:*), Bash(spx verification run:*), Write, Glob, Grep, Skill
 ---
 
 <objective>
@@ -18,7 +18,7 @@ An authoritative SPX projection and raw run token for the requested implementati
 
 <constraints>
 
-- NEVER edit source, tests, specs, commits, branches, or pull requests — the audit is read-only over the audited project tree.
+- NEVER edit source, tests, specs, commits, branches, or pull requests — the audit is read-only over the audited project tree; the only state it changes is its payload files in the session scratch directory and the SPX verification-run journal its own recording commands write, and the file-write tool writes payload files only.
 - ALWAYS persist audit state through `spx verification run`; NEVER use legacy journal commands, plugin-side verdict scripts, markdown comments, `.spx/audits/`, or tracked files as audit state.
 - NEVER run deterministic verification — the audit composes agentic concern audits only.
 - NEVER derive a kind, a partition, or a skill name from a file extension, a filename, or a language name — the artifact registry the scope resolver reads carries every kind and the skills it selects, the run reads each skill name from that selection, and each concern skill owns its policy.
@@ -26,7 +26,7 @@ An authoritative SPX projection and raw run token for the requested implementati
 - NEVER end a run because work remains, time has passed, context is tight, or reading is unfinished — a stop names the failed command with its exit code and stderr, or the absent prerequisite.
 - NEVER assign `incomplete` or `skipped` to a required coverage unit; neither describes an admissible terminal state for required coverage.
 - NEVER derive a subject body from a single commit's patch, or leave a truncated read unrecovered — a partial read is re-issued, never converted into coverage evidence.
-- NEVER hand-transcribe the resolved changed-path set into a payload — the resolver's own output reaches the run through a pipe, because a retyped inventory drops and substitutes paths without any later step noticing.
+- NEVER hand-transcribe the resolved changed-path set into a payload — the resolver writes the run-start input to a file that the run-start command takes by path, because a retyped inventory drops and substitutes paths without any later step noticing.
 - NEVER select a skill from the installed skill inventory, and NEVER invoke a skill to discover whether a kind is installed — the registry selection in the run's sealed start input is the only selection source; the inventory this context carries decides only whether a selected skill runs or is recorded as `missing-skill`, and a failed invocation is not selection evidence.
 - ALWAYS record coverage as `<coverage_model>` states; a run that narrows a set or records a unit only where it found something states its findings as its coverage.
 - NEVER let a raised finding or a rejected terminal status shorten the inspection: rejection is a verdict about what was inspected, never permission to leave a concern or a resolved path unrecorded.
@@ -120,7 +120,7 @@ Before reading project file bodies:
    Read its `base` and `head`; the full endpoint IDs form the SPX scope identity
    `{base}..{head}`. Never reinterpret that identity as a two-dot changed-file
    query or substitute a local base branch. Its three-dot `changed_paths` reach
-   the run through the pipe in `<verification_run_contract>`, never by being
+   the run through the file in `<verification_run_contract>`, never by being
    read out and retyped: a changeset carries more paths than a response
    reproduces reliably, and a dropped path there is invisible to every later
    stage. Quote each substituted argument independently, applying the
@@ -162,12 +162,19 @@ this before loading concern standards, inspecting the changeset, or
 invoking concern skills, so the returned run token identifies the in-flight
 audit from its beginning:
 
-Compose the `--input` payload by piping the resolver's own output, so the
-resolved `base`, `head`, and complete `changed_paths` enter the run exactly as
-git produced them:
+Have the resolver write the run-start input to a file, so the resolved `base`,
+`head`, and complete `changed_paths` enter the run exactly as git produced them.
+Name a path in the session scratch directory, unique to this run, such as
+`<run-id>-start-input.json`, and pass it as the resolver's output path:
 
 ```bash
-python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_scope.py" '{selector}' --repo '{repository-root}' --audit-input '<rendered-context-json-on-one-line>' | spx verification run start --verification-type audit --scope-type changeset --scope <base>..<head> --input stdin
+python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_scope.py" '{selector}' --repo '{repository-root}' --audit-input '<rendered-context-json-on-one-line>' --output '<start-input-file>'
+```
+
+Then start the run with its own command, passing that file by path:
+
+```bash
+spx verification run start --verification-type audit --scope-type changeset --scope <base>..<head> --input '<start-input-file>'
 ```
 
 The `--audit-input` object carries only the short values the invocation supplies:
@@ -314,35 +321,27 @@ Never emit the retired aliases `id`, `subjectPaths`, `expectedProducerIdentity`,
 or top-level `expected`; SPX rejects or discards those shapes at the
 verification-type boundary.
 
-Choose the stdin form by harness for every `--input stdin` and
-`--payload stdin` command. Interactive sessions use a
-quoted heredoc after replacing the placeholder with one rendered JSON object
-from the contracts above:
+Write each rendered scope object to its own payload file and pass the file by
+path:
 
 ```bash
-spx verification run scope add \
-  --verification-type audit \
-  --scope-type changeset \
-  --scope <base>..<head> \
-  --run <token> \
-  --payload stdin \
-  --idempotency-key '<stable-scope-key>' <<'JSON'
-<rendered-scope-json-on-one-or-more-lines>
-JSON
+spx verification run scope add --verification-type audit --scope-type changeset --scope '<base>..<head>' --run '<token>' --idempotency-key '<stable-scope-key>' --payload '<scope-file>'
 ```
 
-Programmatic runners, including hosted runners that
-require one physical command line, use `printf` with the rendered JSON as one
-single-quoted argument. Keep the pipeline on one physical line even when it
-wraps visually; encode a literal apostrophe with the same single-quote splice:
+Write each rendered finding object to its own payload file and pass it the same
+way:
 
 ```bash
-printf '%s\n' '<rendered-json-on-one-line>' | spx verification run scope add --verification-type audit --scope-type changeset --scope <base>..<head> --run <token> --payload stdin --idempotency-key '<stable-scope-key>'
+spx verification run finding add --verification-type audit --scope-type changeset --scope '<base>..<head>' --run '<token>' --idempotency-key '<stable-scope-key>:<rule>' --payload '<finding-file>'
 ```
 
-Apply the same two forms to `run start --input stdin` and `finding add
---payload stdin`. Never assemble or repair a payload through a temporary file,
-helper file, command substitution, or post-hoc text substitution.
+- ALWAYS write each scope and finding payload with the file-write tool to its own file in the scratch directory the harness names for the session, under a name unique to this run and payload, such as `<run-token>-scope-<n>.json` and `<run-token>-finding-<n>.json`. Where the harness names no scratch directory, use the one the hosting environment designates, such as `$RUNNER_TEMP` on a hosted runner.
+- ALWAYS write only payload files with the file-write tool.
+- ALWAYS pass `--payload` the path exactly as the file-write tool's result reports it, copied from that result, never retyped.
+- ALWAYS pass the file as the value of `--payload`, its path written out literally.
+- ALWAYS add each scope unit and each finding with its own literal command and its own payload file, one at a time, and stop the audit at the first command that exits nonzero, returning the `<verdict_format>` blocked diagnostic.
+- NEVER send a payload through a heredoc, a pipe, or an inline argument, and never build one with an interpreter or `printf` stage — the dangerous-command guard blocks those forms.
+- NEVER remove a payload file; the harness clears its scratch directory.
 
 ```bash
 spx verification run finish \
@@ -398,7 +397,7 @@ Each expected unit carries the scope payload in `<verification_run_contract>`: o
 - After a concern returns, queue one path-scoped row per inspected path, carrying a stable path-scoped unit id, the exact path in `subject`, and `coverageStatus: audited`. NEVER record fewer rows than the concern returned paths, and NEVER collapse several inspected paths into one representative row — the recorded subject set is the evidence that the inspection happened, so a reduced set is an unverifiable claim.
 - Queue that concern's complete scope rows BEFORE any of its findings. A finding is recorded against coverage already accepted, never in place of it; recording a row only where a finding landed states the findings as the coverage.
 - Queue each returned finding on touched text after those scope rows, associated with its matching path-scoped unit. A finding outside touched text is queued nowhere: it is returned as `filed` under `<verdict_format>`.
-- Persist queued units one `spx verification run scope add` command at a time, ordered by the order each kind first appears in the selection, then concern order `code`, `tests`, `architecture`, preserving each command result before the next mutation.
+- Persist queued units one `spx verification run scope add` command at a time, ordered by the order each kind first appears in the selection, then concern order `code`, `tests`, `architecture`, preserving each command result before the next mutation and stopping at the first nonzero exit.
 - Derive the concern's finding count from the accepted finding rows; NEVER emit a custom count SPX discards.
 - A concern returning no complete result for a required unit MUST name the failed operation or absent prerequisite. When it names neither, drive the concern to a final result rather than recording a non-audited status.
 - NEVER manufacture a completed result from Claude's own inspection in place of a concern result.
@@ -425,7 +424,7 @@ Record each accepted concern finding on touched text through `spx verification r
 
 Finish the run only after the stage 7 reconciler exits zero. Record missing required skills, unsupported paths claimed by a selected kind, finding counts, and deterministic verification state in accepted scope and finding payload fields instead of terminal metadata.
 
-Compute the terminal status from accepted coverage and finding evidence: `approved` when every required non-gap unit is `audited` or `not-applicable` and no finding on touched text exists; `rejected` when a required unit is uncovered or any finding on touched text exists. A `filed` finding is never recorded through `finding add`, so it changes neither value. Pass that evidence-derived value through `finish --terminal-status`. Do not pass terminal metadata for audit runs; the run's coverage and findings already carry the facts behind the terminal value.
+Compute the terminal status from accepted coverage and finding evidence: `approved` when every required non-gap unit is `audited` or `not-applicable` and no finding on touched text exists; `rejected` when a required unit is uncovered or any finding on touched text exists. A `filed` finding is never recorded through `finding add`, so it changes neither value. Pass that evidence-derived value through `finish --terminal-status`. Pass no terminal metadata for audit runs; the run's coverage and findings already carry the facts behind the terminal value.
 
 If SPX rejects terminal status, report the rejected command and stderr as the audit result. Do not manufacture a prose fallback.
 
@@ -460,7 +459,7 @@ Preserve each value verbatim from the invocation and command result:
 BLOCKED
 runToken: <exact-token-if-start-succeeded-or-not-started>
 command: <exact-command-with-selectors-and-no-invented-redaction>
-payloadSource: <stdin|none>
+payloadSource: <payload-file-path-or-none>
 payloadKey: <unitId-or-finding-idempotency-key-or-none>
 exitCode: <exact-exit-code>
 stderr: <exact-stderr>

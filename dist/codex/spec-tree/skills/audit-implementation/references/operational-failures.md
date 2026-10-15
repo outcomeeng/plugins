@@ -251,9 +251,9 @@ reliably, and the paths in one repository differ by a single directory segment.
 Retyping such a list is a transcription task, and the contract gave the
 transcription no later referent that could contradict it.
 
-How to avoid: Pipe the resolver's output into `run start --input stdin` with
-`--audit-input` carrying only the short invocation-supplied values, per
-`<verification_run_contract>`. Never read `changed_paths` out of the resolver's
+How to avoid: Have the resolver write its output to a file and pass that file by
+path to `run start --input`, with `--audit-input` carrying only the short
+invocation-supplied values, per `<verification_run_contract>`. Never read `changed_paths` out of the resolver's
 output and re-emit them into a payload.
 
 </transcribed_inventory>
@@ -290,7 +290,7 @@ exit reaches `finish`.
 **A run recorded a unit only where it found something, then let the rejection end it**
 
 What happened: Claude started the run with the complete 48-path inventory
-piped in, loaded the concern skills the selection named, and read
+from the resolver's file, loaded the concern skills the selection named, and read
 fourteen subject bodies. It then recorded two scope units — both `code`, both
 for paths carrying its one finding — added that finding, and finished
 `rejected`. Twelve inspected paths, every `tests` unit, and every

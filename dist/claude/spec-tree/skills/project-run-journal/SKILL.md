@@ -19,7 +19,7 @@ The `spx` CLI owns the run journal. The verification kind is the opaque `--type 
 | Verb                                                                  | Role                                                                                                                                |
 | --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | `spx journal open --type <t>`                                         | open a run; reports `{runToken, runFile}`                                                                                           |
-| `spx journal append --type <t> --run <tok>`                           | append one event read from stdin and stream it back                                                                                 |
+| `spx journal append --type <t> --run <tok>`                           | append one event read through the input redirect from an event file and stream it back                                              |
 | `spx journal read --type <t> --run <tok> --from <cursor>`             | return events at or after the sequence cursor                                                                                       |
 | `spx journal seal --type <t> --run <tok>`                             | make the sequence final; further appends are rejected                                                                               |
 | `spx journal render --type <t> --run <tok>`                           | return the event-prefix as a JSON array (identity projection)                                                                       |
@@ -52,11 +52,11 @@ The projection lives in `${CLAUDE_SKILL_DIR}/scripts/journal_projection.py`, imp
 
 To record a verification run, the consuming skill **streams** it — driving the channel (Bash) and building each event through the pure projection the moment the run reaches it, never gathering a finished result and dumping its events at the end:
 
-1. `spx journal open --type <type>` for the run's verification kind; capture the run token.
-2. `scope_entered_event(run, now=<utc>, attempt=<n>)`, then `spx journal append`, at the run's start. The run identity carries scope hash, branch name, branch slug, target kind, head SHA, base ref, optional base SHA, config digest, participants, path-filter scope, timestamps, and output paths so the terminal event can fold through the core journal run-state projection.
-3. As the run advances, `scope_advanced_event(unit, …)` per unit of scope examined and `finding_reported_event(finding, …)` the instant each finding is raised, each appended via `spx journal append` with the input redirect `< <event-file>`, per `<event_payload>`.
-4. `run_completed_event(run, status=<terminal_status(compute_overall(prefix))>, …)` and `spx journal append`, then `spx journal seal --type <type> --run <token>` to finalize the sequence.
-5. `spx journal read --type <type> --run <token> --from 0` to read the sealed event prefix, then `compute_overall` for the verdict and `render_surface` for the human-readable surface.
+1. Open the run with the `open` form in `<command_forms>`; capture the run token from its output.
+2. `scope_entered_event(run, now=<utc>, attempt=<n>)`, then the `append` form, at the run's start. The run identity carries scope hash, branch name, branch slug, target kind, head SHA, base ref, optional base SHA, config digest, participants, path-filter scope, timestamps, and output paths so the terminal event can fold through the core journal run-state projection.
+3. As the run advances, `scope_advanced_event(unit, …)` per unit of scope examined and `finding_reported_event(finding, …)` the instant each finding is raised, each appended through the `append` form.
+4. `run_completed_event(run, status=<terminal_status(compute_overall(prefix))>, …)` through the `append` form, then the `seal` form to finalize the sequence.
+5. The `read` form returns the sealed event prefix; `compute_overall` gives the verdict and `render_surface` the human-readable surface. The `render` form returns the same prefix as the identity projection.
 
 The consuming skill elaborates the generic core (scope-entered, scope-advanced, finding-reported, run-completed) with its own units — audit names per-partition units; review names changed files — but never re-implements event construction, the rollup, or the render, and never builds a finished run's events as one batch.
 
@@ -76,19 +76,31 @@ Treat the helper output as an inspection projection of the sealed journal prefix
 
 </workflow>
 
-<event_payload>
+<command_forms>
+
+Run each journal command as its own command, one at a time, with the type, run token, event path, and cursor written out literally. Stop the run at the first nonzero exit: a continued run appends onto a sequence whose earlier event is missing.
+
+| Verb   | Command form                                                    |
+| ------ | --------------------------------------------------------------- |
+| open   | `spx journal open --type <type>`                                |
+| append | `spx journal append --type <type> --run <token> < <event-file>` |
+| seal   | `spx journal seal --type <type> --run <token>`                  |
+| read   | `spx journal read --type <type> --run <token> --from 0`         |
+| render | `spx journal render --type <type> --run <token>`                |
 
 An append event is a payload: it carries quotes, code spans, and JSON.
 
 - ALWAYS: write each event with the file-write tool to its own file in the scratch directory the harness names for this session, under a file name unique to this agent and run, such as `event-<runToken>-<n>.json`. Where the harness names no scratch directory, use the one the hosting environment designates, such as `$RUNNER_TEMP` on a hosted runner.
-- ALWAYS: pass the file to `spx journal append --type <type> --run <token>` with the input redirect `< <event-file>`, with the path written out literally.
-- NEVER: send an event through a heredoc, a pipe, or an inline argument.
+- ALWAYS: write only event files with the file-write tool; the run changes no other file.
+- ALWAYS: pass the event file to `append` with the input redirect `< <event-file>`, the path written out literally.
+- NEVER: send an event through a heredoc, a pipe, or an inline argument, and never build one with an interpreter or `printf` stage — the dangerous-command guard blocks those forms.
 - NEVER: remove an event file; the harness clears its scratch directory.
 
-</event_payload>
+</command_forms>
 
 <success_criteria>
 
+- Every journal verb a streaming run uses runs in the one form `<command_forms>` states, each as its own command, and every event travels through an event file and an input redirect.
 - A run is streamed as journal events appended as it advances and its verdict derived from the sealed event prefix, never from a separate store and never as one batch built from a finished result.
 - Each per-event builder's output conforms to the channel append-input contract; `compute_overall` follows the rollup rule; `render_surface` renders any prefix including a partial in-flight one; all are pure and `l1`-verifiable without a real journal.
 - A sealed review run token is locally inspectable through `render_review_run.py`, which reads the prefix through `spx journal render --type review --run <run-token>`, resolves current-scope misses through `spx journal list --type review --sealed sealed --limit 200`, and renders summary output from that prefix.
@@ -102,5 +114,7 @@ An append event is a payload: it carries quotes, code spans, and JSON.
 **Incomplete terminal identity.** Claude emitted a reduced completion event with only an overall verdict. The `spx journal` fold requires the core `com.outcomeeng.spx.journal.run.completed` event, including branch slug, head/base identity, config digest, timestamps, scope, outputs, and terminal status. Avoid this by building the terminal event through `journal_projection.py` and asserting every run-state field in `l1` tests.
 
 **Scope/config collapse.** Claude reused the scope hash as the config digest. The two fields answer different questions: `scopeHash` identifies the audited file set, while `configDigest` identifies the run configuration. Avoid this by requiring both fields in the run result and testing that audit metadata supplies them separately.
+
+**Shell-built event payload.** Claude built journal events through an interpreter-fed heredoc, and the dangerous-command guard blocked the append, leaving an open run with no sealed verdict. Avoid this by writing each event to its own file and appending it through the input redirect of `<command_forms>`.
 
 </failure_modes>

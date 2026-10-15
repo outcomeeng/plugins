@@ -12,7 +12,9 @@ naming its absent skill, an advisory live path beside the committed inventory, a
 scope identity, a run token the CLI cannot read, a CLI that cannot be launched,
 a run document shaped so the comparison cannot run, a head behind the
 fetched base relayed as the stale-base refusal, and the registry selection
-emitted per resolved path), and by the artifact-registry node's
+emitted per resolved path, the complete run-start document written to the
+``--output`` file equal to the printed document, and an unwritable ``--output``
+path refused with a diagnostic), and by the artifact-registry node's
 ``test_artifact_registry.mapping.l1.py`` (one path per registered artifact
 selecting it and its kind's detection-less artifacts, the most specific of two
 matches, and an unregistered path selecting nothing).
@@ -48,6 +50,9 @@ RUN_COMMAND_PREFIX = ("verification", "run")
 INPUT_COMMAND = "input"
 RENDER_COMMAND = "render"
 SCOPE_OPTION = "--scope"
+# The option naming the file that receives the complete run-start input in
+# place of standard output.
+OUTPUT_OPTION = "--output"
 # Audit-input key under which an advisory (`worktree:`) audit carries its live
 # modified and untracked paths; a committed audit omits it.
 LIVE_PATHS_KEY = "live_paths"
@@ -259,6 +264,11 @@ def main(argv: list[str] | None = None, runner: Runner = subprocess.run) -> int:
         SCOPE_IDENTITY_OPTION,
         help="the run's sealed <base>..<head> identity, required with --reconcile-run",
     )
+    parser.add_argument(
+        OUTPUT_OPTION,
+        type=pathlib.Path,
+        help="file that receives the complete run-start input instead of standard output",
+    )
     args = parser.parse_args(argv)
     if args.reconcile_run is not None and args.scope_identity is None:
         print(
@@ -313,7 +323,15 @@ def main(argv: list[str] | None = None, runner: Runner = subprocess.run) -> int:
     resolved[SELECTION_KEY] = selection.selection_for_paths(
         [*changed, *(path for path in live if path not in changed)], registry
     )
-    print(json.dumps(resolved, sort_keys=True))
+    document = json.dumps(resolved, sort_keys=True)
+    if args.output is None:
+        print(document)
+        return 0
+    try:
+        args.output.write_text(document + "\n", encoding="utf-8")
+    except OSError as exc:
+        print(f"{ERROR_PREFIX}: cannot write {args.output}: {exc}", file=sys.stderr)
+        return EXIT_COMMAND_FAILURE
     return 0
 
 

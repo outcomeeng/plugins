@@ -232,3 +232,17 @@ Evidence: the CI review of [PR 658](https://github.com/outcomeeng/plugins/pull/6
 Impact: a title carrying a markup-only token reaches the 15-word limit one token sooner than the same words would under the Intent's count.
 
 Revisit and settlement condition: `_count_limits` counts the title with `count_words`, a linked runner case covers a title with a markup-only token, and one typed skill audit of `audit-change` raises no finding on the count.
+
+## DEBT [consistency]: audit-change builds its runner request as a shell heredoc and forbids the file-write payload form
+
+Defect class: `consistency`.
+
+Finding: `src/plugins/spec-tree/skills/audit-change/SKILL.md` line 51 instructs that every runner request be built in the shell as a quoted heredoc, with the `<<'AUDIT_REQUEST'` example, and states "NEVER write a file", which also forbids the file-write payload form. The skill is a journal consumer through its bundled runner `audit_change_run.py`, and the audit skills for assertions, implementation, skills, subagents, and prose record their payloads through files written with the file-write tool.
+
+Evidence: line 51 of the skill above; the dangerous-command guard blocks heredoc forms; the five audit skills named above pass their payloads through files written with the file-write tool. The local review run `2026-10-14_23-21-02-887-63b369b239c3` raised the finding with severity `debt`, category `consistency`.
+
+Impact: a run of the change auditor can have its runner request blocked by the guard, and the journal projection assertion that a consumer whose bundled runner issues the journal commands instructs no payload built in the shell does not hold for this skill.
+
+Revisit and settlement condition: `outcomeeng/changes#515` is the home of the fix, which moves the change auditor to file-written requests. `audit-change` passes its runner request by a file written with the file-write tool, with its agent grant and constraints adjusted, or the assertion states why a stdin-fed runner request is outside it.
+
+Reason the fix is a separate larger concern: the fix adds a Write grant to the change-auditor agent, which reverses that agent's no-file-write rule. A separate Change set that rule, and no block of `outcomeeng/changes#425` amends it, so the fix lies outside this changeset.

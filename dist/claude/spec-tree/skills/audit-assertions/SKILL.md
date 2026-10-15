@@ -6,7 +6,7 @@ description: >-
   child scope unit per assertion under one root unit for the spec in an SPX
   file-scoped verification run.
 argument-hint: "<JSON object with path and runDriver>"
-allowed-tools: Read, Grep, Glob, Bash(spx verification run:*), Bash(printf '%s\n':*), Bash(git merge-base:*), Bash(git diff:*), Skill
+allowed-tools: Read, Grep, Glob, Bash(spx verification run:*), Write, Bash(git merge-base:*), Bash(git diff:*), Skill
 ---
 
 <objective>
@@ -17,16 +17,16 @@ A sealed `spx verification run` on one node spec, with one root scope unit for t
 
 <constraints>
 
-- NEVER modify the target spec, its subjects, or any other product file — the audit's own SPX run journal is the only state it writes.
+- NEVER modify the target spec, its subjects, or any other product file — the only state the audit changes is its payload files in the session scratch directory and the SPX run journal its own recording commands write, and the file-write tool writes payload files only.
 - NEVER judge an assertion that carries another tag (`[test]`, `[eval]`, `[probe]`) or no tag — those verification types belong to their own evidence.
 - NEVER judge how an assertion is declared or selected: declaration form, heading placement, and tag fit belong to `/audit-specs`.
 - ALWAYS judge an assertion against the subject it names — the artifact, behavior, or constraint its text identifies — read from the product, never against the spec's wording alone or the conversation.
 - ALWAYS persist audit state through `spx verification run`, started before any judgment; NEVER use markdown comments, tracked files, or a hand-formatted verdict as audit state.
-- ALWAYS pass each payload on stdin as one rendered JSON object in the form `<persistence_contract>` names for the harness; NEVER assemble or repair a payload through a temporary file, helper file, command substitution, or post-hoc text substitution.
+- ALWAYS write each payload as one rendered JSON object to its own file and pass the file by path as `<persistence_contract>` states; NEVER send a payload through a heredoc, a pipe, or an inline argument, build one with an interpreter or `printf` stage, or repair one through command substitution or post-hoc text substitution.
 - ALWAYS issue each `spx verification run` mutation as its own command and wait for its exit before the next one — parallel writes race sequence assignment and corrupt the sealed journal.
 - NEVER run deterministic verification, delegate the audit to another session, or finish a run whose inspection is incomplete because of elapsed time, context pressure, or unfinished reading.
 - NEVER reject, or record on a unit, a finding that lies outside touched text; classify every finding as `${CLAUDE_SKILL_DIR}/references/touched-text.md` states and return each standing finding as `filed`.
-- NEVER retry a rejected command with a rewritten payload; a nonzero exit ends the audit with `BLOCKED`.
+- NEVER retry a rejected command with a rewritten payload; the first command that exits nonzero ends the audit with `BLOCKED`.
 
 </constraints>
 
@@ -50,7 +50,7 @@ Use skill `spec-tree:spec-tree-plugin`. Invoke it with the verb `version` and re
    spx verification run start --verification-type audit --scope-type file --scope <path> --input <path>
    ```
 
-   A file-scoped run takes the audited path as its input so the retained input equals the audited file, while changeset-scoped audits pipe their context JSON.
+   A file-scoped run takes the audited path as its input, passed by path, so the retained input equals the audited file and no start payload is built.
 
    The command prints a JSON locator; take its `runToken` exactly and use it for every later command. Never pass the whole locator as `--run`.
 4. **Judge.** For each selected assertion, identify the subject its text names, read that subject completely — recovering any truncated read in bounded ranges — and decide whether the assertion holds of it. A violation is a finding carrying the observed and expected states and a severity of `blocking` or `debt`, whose message opens with the assertion's designator, kept per `${CLAUDE_SKILL_DIR}/references/touched-text.md`. Merge the violations of one rule on one assertion into one finding, because a finding's key is its unit key and rule. A subject the text names that cannot be located is a finding against that assertion. An assertion whose text names no identifiable subject is a finding with rule `subject-unnamed`.
@@ -67,7 +67,7 @@ Use skill `spec-tree:spec-tree-plugin`. Invoke it with the verb `version` and re
 
 <persistence_contract>
 
-Add a scope unit with `spx verification run scope add --verification-type audit --scope-type file --scope <path> --run <token> --payload stdin --idempotency-key '<unitId>'`, the payload on stdin per `<stdin_forms>`. The root unit's `unitId` is the audited `<path>`, its concern partition is `spec`, and it omits `parentUnitId`; the run admits one root. Each child unit's `unitId` is the unit key, `assertion:<designator>:<path>`, and its `parentUnitId` is the root's `unitId`. The class `spec` and kind `spec` are the pair `spx` accepts for a node spec subject, and the child unit key alone carries the assertion's identity; `spx` refuses the class `assertion`.
+Add a scope unit with `spx verification run scope add --verification-type audit --scope-type file --scope <path> --run <token> --payload <payload-file> --idempotency-key '<unitId>'`, the payload file written per `<payload_files>`. The root unit's `unitId` is the audited `<path>`, its concern partition is `spec`, and it omits `parentUnitId`; the run admits one root. Each child unit's `unitId` is the unit key, `assertion:<designator>:<path>`, and its `parentUnitId` is the root's `unitId`. The class `spec` and kind `spec` are the pair `spx` accepts for a node spec subject, and the child unit key alone carries the assertion's identity; `spx` refuses the class `assertion`.
 
 The root unit:
 
@@ -136,7 +136,7 @@ A child unit:
 }
 ```
 
-Add a finding with `spx verification run finding add` and the same selectors, `--payload stdin` per `<stdin_forms>`, and `--idempotency-key '<unitId>:<rule>'`, the finding key `${CLAUDE_SKILL_DIR}/references/touched-text.md` defines. Its payload names an accepted child unit; `producerIdentity` repeats that unit's `expectedProducer`; `producerProvenance` carries the plugin version `<request_contract>` retained in both version fields, and no `toolVersion`; `rule` is a lowercase hyphenated identifier naming the violated constraint.
+Add a finding with `spx verification run finding add` and the same selectors, `--payload <payload-file>` per `<payload_files>`, and `--idempotency-key '<unitId>:<rule>'`, the finding key `${CLAUDE_SKILL_DIR}/references/touched-text.md` defines. Its payload names an accepted child unit; `producerIdentity` repeats that unit's `expectedProducer`; `producerProvenance` carries the plugin version `<request_contract>` retained in both version fields, and no `toolVersion`; `rule` is a lowercase hyphenated identifier naming the violated constraint.
 
 ```json
 {
@@ -161,25 +161,23 @@ These objects are the sanctioned payload schema for this audit; never derive a r
 
 </persistence_contract>
 
-<stdin_forms>
+<payload_files>
 
-Quote every idempotency key as one single-quoted argument; encode a literal apostrophe with the splice `'"'"'`. Choose the stdin form by harness. Where the harness accepts multiline shell, use a quoted heredoc carrying the rendered JSON:
+Quote every idempotency key as one single-quoted argument; encode a literal apostrophe with the splice `'"'"'`.
 
-```bash
-spx verification run scope add \
-  --verification-type audit \
-  --scope-type file \
-  --scope <path> \
-  --run <token> \
-  --payload stdin \
-  --idempotency-key '<unitId>' <<'JSON'
-<rendered-scope-json>
-JSON
-```
+- ALWAYS write each scope and finding payload with the file-write tool to its own file in the scratch directory the harness names for the session, under a name unique to this run and payload, such as `<run-token>-scope-<n>.json` and `<run-token>-finding-<n>.json`. Where the harness names no scratch directory, use the one the hosting environment designates, such as `$RUNNER_TEMP` on a hosted runner.
+- ALWAYS write only payload files with the file-write tool.
+- ALWAYS pass `--payload` the path exactly as the file-write tool's result reports it, copied from that result, never retyped.
+- ALWAYS pass the file as the value of `--payload`, its path written out literally:
 
-Where the runner requires one physical command line, use `printf '%s\n' '<rendered-json-on-one-line>' | spx verification run scope add ...` with the same selectors, encoding a literal apostrophe with the same splice. This audit grants no file-write tool, so its payloads never travel through a scratch file.
+  ```bash
+  spx verification run scope add --verification-type audit --scope-type file --scope <path> --run <token> --payload <scope-file> --idempotency-key '<unitId>'
+  ```
 
-</stdin_forms>
+- ALWAYS add each scope unit and each finding with its own literal command and its own payload file, one at a time, and stop the audit at the first command that exits nonzero, returning the `<verdict_format>` diagnostic.
+- NEVER remove a payload file; the harness clears its scratch directory.
+
+</payload_files>
 
 </audit_workflow>
 
@@ -193,7 +191,7 @@ When a command exits nonzero or a prerequisite is absent, return:
 BLOCKED
 runToken: <exact-token-if-start-succeeded-or-not-started>
 command: <exact-command-attempted>
-payloadSource: <stdin|none>
+payloadSource: <payload-file-path|none>
 payloadKey: <unitId-or-finding-idempotency-key-or-none>
 exitCode: <exact-exit-code-or-none>
 stderr: <exact-stderr-or-none>
