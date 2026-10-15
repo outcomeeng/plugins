@@ -526,3 +526,24 @@ the repair under its own test-evidence audit.
 **Settlement condition**: generated config documents covering every case above
 drive the edit at level one, the linked test asserts the parsed result and
 idempotence, and the edit parses its output before it replaces the file.
+
+## The failed-operation branch after the uncached-target fetch is unreachable
+
+`execute_installation` in `outcomeeng/distribution/installation.py` carries an
+`except InstallationFailure` branch that drops the fetch project's records
+before it re-raises. The governing record clause drops the fetch project's
+records after any later failed operation. `_fetch_uncached_targets` handles
+every install failure its fetch raises, and no operation that can fail runs
+after the fetch, so no execution reaches the branch. The branch and the clause
+are kept together: the clause is reviewed decision text, and the branch keeps it
+true if an operation is added after the fetch.
+
+**Evidence**: no test reaches the branch, because `_fetch_uncached_targets`
+handles every fetch install failure.
+
+**Impact**: the branch is code no test executes, and the clause it realizes has
+no case that fails when the branch is removed. An operation added after the
+fetch inherits the branch with no evidence that it fires.
+
+**Settlement condition**: an operation after the fetch that can fail gets a test
+that reaches the branch, or a Change removes the clause and the branch together.
