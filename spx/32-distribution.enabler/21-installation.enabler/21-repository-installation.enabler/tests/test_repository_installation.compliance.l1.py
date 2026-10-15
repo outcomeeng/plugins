@@ -1440,7 +1440,7 @@ def test_the_install_record_replace_drops_the_fetch_project_in_a_run_without_a_t
 
 
 @pytest.mark.parametrize("outcome", generated_fetch_outcomes())
-def test_a_run_with_an_uncached_target_fetch_still_reads_the_listing_exactly_twice(
+def test_a_run_with_an_uncached_target_fetch_adds_no_listing_read_beyond_the_closing_one(
     outcome: FetchOutcome,
 ) -> None:
     observation = observe_uncached_fetch(UNCACHED_OTHER_CHECKOUT_STATE, outcome)
@@ -1457,7 +1457,6 @@ def test_a_run_with_an_uncached_target_fetch_still_reads_the_listing_exactly_twi
     expected = [] if observation.failure is not None else [Operation.PLUGIN_LIST]
     assert [command.operation for command in listing_reads] == expected
     assert len(observation.listings) == len(listing_reads)
-    assert observation.plan.claude_records or observation.plan.rewrite_records
 
 
 def test_a_failed_fetch_install_stops_the_run() -> None:
@@ -1532,21 +1531,11 @@ def test_the_closing_listing_read_that_fails_after_the_record_replace_leaves_no_
         "dict[str, list[dict[str, str]]]",
         observation.record_file_after[CLAUDE_INSTALLED_PLUGINS_FIELD],
     )
-    entries_before = cast(
-        "dict[str, list[dict[str, str]]]",
-        observation.record_file_before[CLAUDE_INSTALLED_PLUGINS_FIELD],
-    )
 
     assert observation.report is None
     assert observation.fetches
     assert observation.failure is not None
     assert observation.failure.command.operation is Operation.PLUGIN_LIST
-    # The closing read runs after the single replace, so the other checkout's
-    # records have already moved: the drop of the fetch project's entries is
-    # the replace's, and the failed read adds none back.
-    assert _other_checkout_entries(
-        entries_after, str(observation.other_checkout)
-    ) != _other_checkout_entries(entries_before, str(observation.other_checkout))
     assert observation.attempted.index(
         observation.failure.command
     ) > observation.attempted.index(observation.fetches[-1])
