@@ -1422,6 +1422,22 @@ def test_the_install_record_replace_drops_the_fetch_project_in_a_run_without_a_t
         for entry in items
     }
     assert not project.exists()
+    entries_before = cast(
+        "dict[str, list[dict[str, str]]]",
+        observation.record_file_before[CLAUDE_INSTALLED_PLUGINS_FIELD],
+    )
+    other = str(observation.other_checkout)
+    assert {
+        identifier: [
+            entry for entry in items if entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD] == other
+        ]
+        for identifier, items in entries.items()
+    } == {
+        identifier: [
+            entry for entry in items if entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD] == other
+        ]
+        for identifier, items in entries_before.items()
+    }
 
 
 @pytest.mark.parametrize("outcome", generated_fetch_outcomes())
