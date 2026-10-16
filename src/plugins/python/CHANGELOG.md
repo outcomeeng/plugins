@@ -26,6 +26,8 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 - **`/author-python-architecture` references keep only product conventions.** The reference files drop general Python typing, security, testing, and domain-design teaching and keep the dependency-injection, Protocol, subprocess-boundary, test-infrastructure, and strict-typing rules an ADR states. The skill loads `spec-tree:verify`, `python:author-python-test`, and `spec-tree:author` by name when it needs them.
 
+- **`/python-code-standards` states only the rules.** The skill drops its caller-conditioned overlay check and its pointer to `/audit-python-code`, and removes the general explanations of builtin shadowing and bare `except`. The `spx/local/python.md` overlay check applies in any repository, and the ruff and mypy rule codes carry the remaining rules unchanged.
+
 ## 0.24.0
 
 ### Removed

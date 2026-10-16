@@ -15,13 +15,13 @@ Code follows these standards when ruff and mypy pass, every manual rejection cri
 </success_criteria>
 
 <reference_note>
-This is a reference skill. Composing Python skills load these standards explicitly before writing, testing, or auditing. It is not a standalone workflow.
+This is a reference skill: a set of standards, not a standalone workflow.
 
 These standards apply to ALL Python code: production and test code alike.
 </reference_note>
 
 <repo_local_overlay>
-When another skill loads this reference inside a repository, it must also check for `spx/local/python.md` at the repository root. Read that file after this reference if it exists and apply it as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth.
+Inside a repository, check for `spx/local/python.md` at the repository root. Read that file after this reference if it exists and apply it as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth.
 </repo_local_overlay>
 
 <type_annotations>
@@ -225,13 +225,6 @@ def test_processing(self, input_val: str, expected: int) -> None:
     pass
 ```
 
-**Why avoid `input` as a parameter name:**
-
-- Shadows Python's builtin `input()` function
-- Causes A002 (argument shadows builtin) lint errors
-- Makes code confusing when the actual `input()` function is needed
-- The tuple form `("input_val", "expected")` is also preferred by pytest for clarity
-
 </naming_conventions>
 
 <s101_policy>
@@ -298,16 +291,7 @@ Use modern syntax: `X | None` (not `Optional[X]`), `X | Y` (not `Union[X, Y]`), 
 
 <error_handling>
 
-Catch specific exceptions and handle or re-raise them; never a bare `except:` or a broad `except Exception: pass` that swallows errors.
-
-```python
-# ✅ REQUIRED: catch specific exceptions, then handle or re-raise
-try:
-    process()
-except ValueError as e:
-    log.error("Invalid input: %s", e)
-    raise
-```
+Catch specific exceptions (E722, S110).
 
 **Ruff rules enforced:**
 
@@ -339,7 +323,7 @@ data = pickle.loads(untrusted_bytes)
 requests.get(url, verify=False)
 ```
 
-Context matters for security rules — a CLI tool invoked by the user has different trust boundaries than a web service. See `/audit-python-code` for false positive handling.
+A security rule applies according to the code's trust boundary: a CLI tool invoked by the user trusts its arguments, and a web service does not trust its requests.
 
 **Ruff rules enforced:**
 
