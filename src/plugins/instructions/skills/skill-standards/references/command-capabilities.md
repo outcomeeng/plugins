@@ -27,7 +27,7 @@ Prefer the intersection of Claude Code and Codex syntax only when it improves re
 
 A skill that operates on user-supplied input handles it explicitly:
 
-- **`argument-hint`** — free-text autocomplete hint shown after `/skill-name`. Present whenever the skill takes arguments; omit for self-contained skills.
+- **`argument-hint`** — free-text autocomplete hint shown after `/{skill-name}`. Present whenever the skill takes arguments; omit for self-contained skills.
 - **`$ARGUMENTS`** — consumes the full raw instruction string. Use it when preserving whitespace and multi-word intent matters, including forwarding instructions between lifecycle skills.
 - **`$ARGUMENTS[N]` or `$N`** — consumes a numbered positional value when the position is stable and a name would add no clarity.
 - **`arguments` with `$name`** — names positional arguments the body substitutes as `$name` (space-separated string or YAML list; names map to positions in order). Use it when a stable token has a domain name, such as `$configuration_target`.

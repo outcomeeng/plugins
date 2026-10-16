@@ -58,36 +58,36 @@ Context placement, agent selection, and dispatch policy belong to the caller. A 
 
 Every SKILL.md starts with YAML frontmatter. The canonical catalog of supported fields lives in the Claude Code docs at <https://code.claude.com/docs/en/skills#frontmatter-reference>. Read the docs page when a question is about execution behavior; read this section when it is about how this marketplace authors skills.
 
-| Field                      | Required    | Constraint                                                                                                                                                                                                                        |
-| -------------------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `name`                     | No          | Lowercase letters, numbers, hyphens. ≤64 chars. Must match the directory name when set. If omitted, the directory name is used.                                                                                                   |
-| `description`              | Recommended | Style follows the invocation path in `<descriptions>`. Combined with `when_to_use` the listing is capped at 1,536 chars; put the key trigger first.                                                                               |
-| `when_to_use`              | No          | Extra trigger phrases or example requests appended to `description` in the skill listing. Shares the 1,536-char cap.                                                                                                              |
-| `argument-hint`            | No          | Free-text hint shown during `/` autocomplete (e.g. `[issue-number]`).                                                                                                                                                             |
-| `arguments`                | No          | Named positional arguments for `$name` substitution in the body. Space-separated string or YAML list; names map to argument positions in order.                                                                                   |
-| `allowed-tools`            | No          | Tools Claude may use without per-call approval while the skill is active. Space-separated string or YAML list. Restrict for audit and reference skills.                                                                           |
-| `disable-model-invocation` | No          | `true` to **block programmatic invocation entirely** — Claude cannot load the skill, including via the Skill tool, and the skill cannot be preloaded into subagents. Use for `/deploy`-style user-only commands. Default `false`. |
-| `user-invocable`           | No          | `false` to hide from the `/` autocomplete menu while keeping Claude able to invoke via the Skill tool. Description stays in context. Use for reference skills that other skills load programmatically. Default `true`.            |
-| `model`                    | Forbidden   | Skills retain the invoking session's configuration, including when a configured subagent invokes the skill.                                                                                                                       |
-| `effort`                   | Forbidden   | Skills retain the invoking session's reasoning configuration.                                                                                                                                                                     |
-| `context`                  | No          | `fork` to run the skill in a forked subagent context. Combine with `agent`.                                                                                                                                                       |
-| `agent`                    | No          | Subagent type to use when `context: fork` is set (`Explore`, `Plan`, `general-purpose`, or a custom agent). Defaults to `general-purpose`.                                                                                        |
-| `hooks`                    | No          | Hooks scoped to this skill's lifecycle. See the Claude Code hooks reference for shape.                                                                                                                                            |
-| `paths`                    | No          | Glob patterns that limit auto-activation to matching files. Comma-separated string or YAML list.                                                                                                                                  |
-| `shell`                    | No          | `bash` (default) or `powershell` for the skill's inline and fenced command-injection blocks. The `powershell` value requires `CLAUDE_CODE_USE_POWERSHELL_TOOL=1`.                                                                 |
+| Field                      | Required    | Constraint                                                                                                                                                                                                                     |
+| -------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `name`                     | No          | Lowercase letters, numbers, hyphens. ≤64 chars. Must match the directory name when set. If omitted, the directory name is used.                                                                                                |
+| `description`              | Recommended | Style follows the invocation path in `<descriptions>`. Combined with `when_to_use` the listing is capped at 1,536 chars; put the key trigger first.                                                                            |
+| `when_to_use`              | No          | Extra trigger phrases or example requests appended to `description` in the skill listing. Shares the 1,536-char cap.                                                                                                           |
+| `argument-hint`            | No          | Free-text hint shown during `/` autocomplete (e.g. `[issue-number]`).                                                                                                                                                          |
+| `arguments`                | No          | Named positional arguments for `$name` substitution in the body. Space-separated string or YAML list; names map to argument positions in order.                                                                                |
+| `allowed-tools`            | No          | Tools Claude may use without per-call approval while the skill is active. Space-separated string or YAML list. Restrict for audit and reference skills.                                                                        |
+| `disable-model-invocation` | No          | `true` to **block programmatic invocation entirely** — Claude cannot load the skill, including via the Skill tool, and the skill cannot be preloaded into subagents. Use for deploy-style user-only commands. Default `false`. |
+| `user-invocable`           | No          | `false` to hide from the `/` autocomplete menu while keeping Claude able to invoke via the Skill tool. Description stays in context. Use for reference skills that other skills load programmatically. Default `true`.         |
+| `model`                    | Forbidden   | Skills retain the invoking session's configuration, including when a configured subagent invokes the skill.                                                                                                                    |
+| `effort`                   | Forbidden   | Skills retain the invoking session's reasoning configuration.                                                                                                                                                                  |
+| `context`                  | No          | `fork` to run the skill in a forked subagent context. Combine with `agent`.                                                                                                                                                    |
+| `agent`                    | No          | Subagent type to use when `context: fork` is set (`Explore`, `Plan`, `general-purpose`, or a custom agent). Defaults to `general-purpose`.                                                                                     |
+| `hooks`                    | No          | Hooks scoped to this skill's lifecycle. See the Claude Code hooks reference for shape.                                                                                                                                         |
+| `paths`                    | No          | Glob patterns that limit auto-activation to matching files. Comma-separated string or YAML list.                                                                                                                               |
+| `shell`                    | No          | `bash` (default) or `powershell` for the skill's inline and fenced command-injection blocks. The `powershell` value requires `CLAUDE_CODE_USE_POWERSHELL_TOOL=1`.                                                              |
 
-**Visibility vs invocability.** Two fields gate how a skill is reached. They are not aliases — pick deliberately. Automation re-entry — a scheduled wakeup, heartbeat, or `/loop` — arrives as a user-style prompt because the harness offers no Claude-private heartbeat, so it follows the `User /skill` column exactly:
+**Visibility vs invocability.** Two fields gate how a skill is reached. They are not aliases — pick deliberately. Automation re-entry — a scheduled wakeup, heartbeat, or `/loop` — arrives as a user-style prompt because the harness offers no Claude-private heartbeat, so it follows the `User /{skill}` column exactly:
 
-| Frontmatter                      | User `/skill` | Claude (Skill tool) | Subagent preload | Automation re-entry | Description in context |
-| -------------------------------- | ------------- | ------------------- | ---------------- | ------------------- | ---------------------- |
-| *(default)*                      | Yes           | Yes                 | Yes              | Yes                 | Always                 |
-| `disable-model-invocation: true` | Yes           | **No**              | **No**           | Yes                 | Not in context         |
-| `user-invocable: false`          | **No**        | Yes                 | Yes              | **No**              | Always                 |
+| Frontmatter                      | User `/{skill}` | Claude (Skill tool) | Subagent preload | Automation re-entry | Description in context |
+| -------------------------------- | --------------- | ------------------- | ---------------- | ------------------- | ---------------------- |
+| *(default)*                      | Yes             | Yes                 | Yes              | Yes                 | Always                 |
+| `disable-model-invocation: true` | Yes             | **No**              | **No**           | Yes                 | Not in context         |
+| `user-invocable: false`          | **No**          | Yes                 | Yes              | **No**              | Always                 |
 
 Pick the gate by role:
 
 - A reference skill another SKILL.md loads via the Skill tool, or a background-knowledge skill, uses `user-invocable: false` — hidden from the `/` menu, still loadable by Claude and preloadable into subagents.
-- A user-only side-effecting command (`/deploy`) uses `disable-model-invocation: true`. NEVER set it on a skill other skills or subagents must load: it blocks the Skill-tool call (surfacing `Skill <name> cannot be used with Skill tool due to disable-model-invocation`) AND blocks subagent preloading.
+- A user-only side-effecting command (a deploy command) uses `disable-model-invocation: true`. NEVER set it on a skill other skills or subagents must load: it blocks the Skill-tool call (surfacing `Skill <name> cannot be used with Skill tool due to disable-model-invocation`) AND blocks subagent preloading.
 - A skill any automation loop re-enters — a scheduled wakeup, heartbeat, or `/loop` target — MUST be user-invocable (leave the default; never `user-invocable: false`). Automation fires as a user-style prompt, so `user-invocable: false` rejects it and no Claude-private heartbeat exists to bypass that. When a loop body is otherwise reference-like, expose a user-invocable entry the loop targets rather than gating the body. Such a loop body keeps a **passive** description — it is invoked by exact name (the timer or a parent skill), not by description-match, so a directive description would only cause false auto-activations. A user-invocable skill with a passive description is the correct shape here, not a defect.
 
 Audit skills (`audit-*`) must add `allowed-tools: Read, Grep, Glob` and only the specific Bash verb patterns their workflow runs — read-only verbs, and the `spx verification run` verbs that write the audit's own run journal — never bare `Bash`, plus `Skill` when the audit composes another skill. An audit that passes payload files to run-recording commands adds the harness's file-write tool beside its read tools; the tool writes only payload files in the session scratch directory, and the audit changes no file beyond those payload files and the run journal its own recording commands write. Such an audit grants no Bash stage that builds a payload in the shell, and never grants `Edit`.
@@ -102,7 +102,7 @@ Audit skills (`audit-*`) must add `allowed-tools: Read, Grep, Glob` and only the
 
 <naming_conventions>
 
-The `name` field is the user invocation path (`/skill-name`). Match user speech patterns.
+The `name` field is the user invocation path (`/{skill-name}`). Match user speech patterns.
 
 **Rules:**
 
@@ -307,7 +307,7 @@ Six skill types. Each has a distinct purpose and primary output.
 
 <reference_skills>
 
-Reference skills hold shared domain knowledge that multiple skills need. Consuming workflows state each one as the instruction ``Use skill `{plugin}:{skill}`.`` per the composed-dependency rule in `<skill_organization>`. A `/skill-name` mention in prose records the dependency but never loads the reference.
+Reference skills hold shared domain knowledge that multiple skills need. Consuming workflows state each one as the instruction ``Use skill `{plugin}:{skill}`.`` per the composed-dependency rule in `<skill_organization>`. A `/{skill-name}` mention in prose records the dependency but never loads the reference.
 
 **When to create a reference skill.** Two or more skills in the same plugin need the same domain knowledge (standards, patterns, anti-patterns, conventions). Alternatives fail: duplicating the content creates maintenance drift, and putting it in one skill's `references/` directory makes it unreachable from the other skill's `${CLAUDE_SKILL_DIR}`.
 
@@ -327,7 +327,7 @@ allowed-tools: Read
 - Passive description (no `ALWAYS`/`NEVER`) — directive descriptions trigger false activations for a reference.
 - `allowed-tools: Read` — reference skills only read. Add the harness's skill-composition tool only when explicitly composing another read-only reference skill.
 
-**How consuming skills reference it.** Name the reference skill in running text for traceability, then state the dependency as ``Use skill `{plugin}:{skill}`.`` before applying its rules. A bare `See /skill-name` instruction is insufficient.
+**How consuming skills reference it.** Name the reference skill in running text for traceability, then state the dependency as ``Use skill `{plugin}:{skill}`.`` before applying its rules. A bare `See /{skill-name}` instruction is insufficient.
 
 ```markdown
 # In test-typescript/SKILL.md:
