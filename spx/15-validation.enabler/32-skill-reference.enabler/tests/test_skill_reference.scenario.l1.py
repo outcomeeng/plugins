@@ -20,7 +20,6 @@ def test_shipped_references_report_nothing_and_exit_zero(tmp_path: Path) -> None
     content = write_plugin_file(
         tmp_path,
         "alpha",
-        "notes.md",
         "Run alpha:audit-widget first.\nThen invoke /author-widget on the result.\n",
     )
 
@@ -35,7 +34,6 @@ def test_unshipped_reference_reports_file_line_and_reference(tmp_path: Path) -> 
     content = write_plugin_file(
         tmp_path,
         "alpha",
-        "notes.md",
         "Run alpha:audit-widget first.\n\nThen run alpha:audit-gadget.\n",
     )
 
@@ -55,7 +53,6 @@ def test_unmatched_placeholder_and_alternation_member_report_expansion(
     content = write_plugin_file(
         tmp_path,
         "alpha",
-        "notes.md",
         "Use /review-{type} when asked.\nThen use /audit-{widget|gadget} as well.\n",
     )
 

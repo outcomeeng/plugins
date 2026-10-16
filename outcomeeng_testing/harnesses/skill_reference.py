@@ -19,6 +19,7 @@ from outcomeeng.validation.skill_reference import (
     CATALOG_PATH,
     CATALOG_PLUGIN_NAME_FIELD,
     CATALOG_PLUGINS_FIELD,
+    MARKDOWN_SUFFIX,
     PLUGIN_SOURCE_ROOT,
     ROOT_FLAG,
     find_violations,
@@ -29,6 +30,10 @@ from outcomeeng.validation.skill_reference import (
 )
 
 FIXTURE_ROOT = Path(__file__).resolve().parents[1] / "fixtures" / "skill_reference"
+UNSHIPPED_REFERENCES_FIXTURE = "unshipped_references" + MARKDOWN_SUFFIX
+INCIDENTAL_FILE_STEM = "incidental"
+OUTSIDE_SCAN_ROOTS_DIRECTORY = Path("unscanned")
+PAYLOAD_PATH = Path("payload" + MARKDOWN_SUFFIX)
 
 
 @dataclass(frozen=True)
@@ -68,7 +73,6 @@ def build_marketplace(
     catalog.write_text(
         json.dumps(
             {
-                "name": "marketplace",
                 CATALOG_PLUGINS_FIELD: [
                     {CATALOG_PLUGIN_NAME_FIELD: name} for name in listed
                 ],
@@ -79,21 +83,44 @@ def build_marketplace(
     return root
 
 
-def write_file(root: Path, relative_path: str, text: str) -> Path:
-    """Write ``text`` at ``relative_path`` under ``root`` and return the path."""
-    path = root / relative_path
+def write_file(root: Path, directory: Path, text: str) -> Path:
+    """Write ``text`` as a newly named markdown file in ``directory`` under ``root``.
+
+    The harness chooses the file name; the name is unique within ``directory``.
+    """
+    target = root / directory
+    target.mkdir(parents=True, exist_ok=True)
+    return _write_named(
+        target
+        / f"{INCIDENTAL_FILE_STEM}-{len(list(target.iterdir()))}{MARKDOWN_SUFFIX}",
+        text,
+    )
+
+
+def write_outside_scan_roots(root: Path, text: str) -> Path:
+    """Write ``text`` as a markdown file in a directory no scan root contains."""
+    return write_file(root, OUTSIDE_SCAN_ROOTS_DIRECTORY, text)
+
+
+def write_plugin_file(
+    root: Path, plugin: str, text: str, filename: str | None = None
+) -> Path:
+    """Write ``text`` in plugin ``plugin``'s source directory and return the path.
+
+    The directory is the one ``build_marketplace`` lays plugin skills under, so
+    the file lies beneath the validator's plugin source root.  With no
+    ``filename`` the harness names the file.
+    """
+    directory = PLUGIN_SOURCE_ROOT / plugin
+    if filename is None:
+        return write_file(root, directory, text)
+    return _write_named(root / directory / filename, text)
+
+
+def _write_named(path: Path, text: str) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8")
     return path
-
-
-def write_plugin_file(root: Path, plugin: str, filename: str, text: str) -> Path:
-    """Write ``text`` as ``filename`` in plugin ``plugin``'s source directory.
-
-    The directory is the one ``build_marketplace`` lays plugin skills under, so
-    the file lies beneath the validator's plugin source root.
-    """
-    return write_file(root, str(PLUGIN_SOURCE_ROOT / plugin / filename), text)
 
 
 def run_validator(root: Path, paths: Sequence[Path] = ()) -> ValidatorRun:
@@ -110,9 +137,9 @@ def run_validator(root: Path, paths: Sequence[Path] = ()) -> ValidatorRun:
     )
 
 
-def fixture_path(name: str) -> Path:
-    """Return the path of the inert skill-reference fixture ``name``."""
-    return FIXTURE_ROOT / name
+def unshipped_references_fixture() -> Path:
+    """Return the path of the inert fixture that names unshipped references."""
+    return FIXTURE_ROOT / UNSHIPPED_REFERENCES_FIXTURE
 
 
 def scan_references(
@@ -148,7 +175,7 @@ def scan_text_references(
     skills = load_shipped_skills(root)
     return tuple(
         violation.reference
-        for violation in find_violations(text, Path("payload.md"), skills, exemptions)
+        for violation in find_violations(text, PAYLOAD_PATH, skills, exemptions)
     )
 
 

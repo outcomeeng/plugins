@@ -17,24 +17,21 @@ from outcomeeng.validation.skill_reference import (
 )
 from outcomeeng_testing.harnesses.skill_reference import (
     build_marketplace,
-    fixture_path,
     run_validator,
     scan_references,
     scan_text_references,
+    unshipped_references_fixture,
     write_file,
+    write_outside_scan_roots,
     write_plugin_file,
 )
 
 
 def test_unshipped_reference_fails_in_every_recognized_form(tmp_path: Path) -> None:
     build_marketplace(tmp_path, {"alpha": ["audit-widget"]})
-    qualified = write_plugin_file(
-        tmp_path, "alpha", "qualified.md", "Run alpha:audit-gadget.\n"
-    )
-    slash = write_plugin_file(tmp_path, "alpha", "slash.md", "Run /audit-gadget now.\n")
-    placeholder = write_plugin_file(
-        tmp_path, "alpha", "placeholder.md", "Run /review-{type} now.\n"
-    )
+    qualified = write_plugin_file(tmp_path, "alpha", "Run alpha:audit-gadget.\n")
+    slash = write_plugin_file(tmp_path, "alpha", "Run /audit-gadget now.\n")
+    placeholder = write_plugin_file(tmp_path, "alpha", "Run /review-{type} now.\n")
 
     for path, reference in (
         (qualified, "alpha:audit-gadget"),
@@ -52,7 +49,7 @@ def test_exemption_mapping_passes_only_the_references_it_names(
     tmp_path: Path,
 ) -> None:
     build_marketplace(tmp_path, {"alpha": ["audit-widget"]})
-    payload = fixture_path("unshipped_references.md")
+    payload = unshipped_references_fixture()
     change = next(iter(EXEMPTED_REFERENCES.values()))
 
     omitting = scan_references(tmp_path, [payload], {})
@@ -94,7 +91,6 @@ def test_unshipped_name_as_path_segment_is_not_a_slash_invocation(
     content = write_plugin_file(
         tmp_path,
         "alpha",
-        "path.md",
         "See docs/audit-gadget/notes.md for details.\n",
     )
 
@@ -111,21 +107,12 @@ def test_alternation_expands_each_member_and_placeholders_need_a_matching_name(
     alternation = write_plugin_file(
         tmp_path,
         "alpha",
-        "alternation.md",
         "Run /audit-{code|tests|architecture}.\n",
     )
-    complete = write_plugin_file(
-        tmp_path, "alpha", "complete.md", "Run /audit-{code|tests}.\n"
-    )
-    matching = write_plugin_file(
-        tmp_path, "alpha", "matching.md", "Run /audit-{type}.\n"
-    )
-    unmatched = write_plugin_file(
-        tmp_path, "alpha", "unmatched.md", "Run /review-{type}.\n"
-    )
-    empty_stand_in = write_plugin_file(
-        tmp_path, "alpha", "empty.md", "Run /audit-code{type}.\n"
-    )
+    complete = write_plugin_file(tmp_path, "alpha", "Run /audit-{code|tests}.\n")
+    matching = write_plugin_file(tmp_path, "alpha", "Run /audit-{type}.\n")
+    unmatched = write_plugin_file(tmp_path, "alpha", "Run /review-{type}.\n")
+    empty_stand_in = write_plugin_file(tmp_path, "alpha", "Run /audit-code{type}.\n")
 
     missing_member = run_validator(tmp_path, [alternation])
     assert missing_member.exit_code != 0
@@ -157,13 +144,13 @@ def test_shipped_set_follows_skill_directories_and_catalog(tmp_path: Path) -> No
 
     uncataloged_run = run_validator(
         uncataloged,
-        [write_plugin_file(uncataloged, "alpha", "notes.md", content_text)],
+        [write_plugin_file(uncataloged, "alpha", content_text)],
     )
     cataloged_run = run_validator(
-        cataloged, [write_plugin_file(cataloged, "alpha", "notes.md", content_text)]
+        cataloged, [write_plugin_file(cataloged, "alpha", content_text)]
     )
     renamed_run = run_validator(
-        renamed, [write_plugin_file(renamed, "alpha", "notes.md", content_text)]
+        renamed, [write_plugin_file(renamed, "alpha", content_text)]
     )
 
     assert uncataloged_run.exit_code != 0
@@ -179,16 +166,15 @@ def test_scan_covers_every_declared_root_and_excludes_changelogs(
 ) -> None:
     build_marketplace(tmp_path, {"alpha": ["audit-widget"]})
     violating = [
-        write_file(tmp_path, f"{root}/violation.md", "Run /audit-gadget now.\n")
-        for root in SCAN_ROOTS
+        write_file(tmp_path, root, "Run /audit-gadget now.\n") for root in SCAN_ROOTS
     ]
     write_plugin_file(
         tmp_path,
         "alpha",
-        CHANGELOG_FILENAME,
         "Renamed /audit-gadget to /audit-widget.\n",
+        CHANGELOG_FILENAME,
     )
-    write_file(tmp_path, "docs/outside.md", "Run /audit-gadget now.\n")
+    write_outside_scan_roots(tmp_path, "Run /audit-gadget now.\n")
 
     run = run_validator(tmp_path)
 
@@ -200,12 +186,8 @@ def test_scan_covers_every_declared_root_and_excludes_changelogs(
 
 def test_inert_fixtures_are_excluded_from_the_scan(tmp_path: Path) -> None:
     build_marketplace(tmp_path, {"alpha": ["audit-widget"]})
-    fixture = write_file(
-        tmp_path, f"{INERT_FIXTURE_ROOT}/violation.md", "Run /audit-gadget now.\n"
-    )
-    scanned = write_file(
-        tmp_path, f"{SCAN_ROOTS[0]}/violation.md", "Run /audit-gadget now.\n"
-    )
+    fixture = write_file(tmp_path, INERT_FIXTURE_ROOT, "Run /audit-gadget now.\n")
+    scanned = write_file(tmp_path, SCAN_ROOTS[0], "Run /audit-gadget now.\n")
 
     run = run_validator(tmp_path)
     explicit_run = run_validator(tmp_path, [fixture])
@@ -225,12 +207,9 @@ def test_harness_command_invocations_are_not_skill_references(
     commands = write_plugin_file(
         tmp_path,
         "alpha",
-        "commands.md",
         "".join(f"Run /{command} now.\n" for command in sorted(HARNESS_COMMANDS)),
     )
-    unlisted = write_plugin_file(
-        tmp_path, "alpha", "unlisted.md", "Run /audit-gadget now.\n"
-    )
+    unlisted = write_plugin_file(tmp_path, "alpha", "Run /audit-gadget now.\n")
 
     commands_run = run_validator(tmp_path, [commands])
     unlisted_run = run_validator(tmp_path, [unlisted])
