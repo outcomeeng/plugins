@@ -104,7 +104,7 @@ ALWAYS invoke this skill when auditing Python ADRs.
 **Match actual user speech:**
 
 - Abbreviations: "ADRs" not "Architecture Decision Records"
-- Natural terms: "test-python" not "python-unit-test-framework"
+- Natural terms: "author-python-test" not "python-unit-test-framework"
 - Plain language: "read all specs" not "hierarchical context ingestion protocol"
 
 </description_style>

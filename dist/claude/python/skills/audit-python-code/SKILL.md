@@ -6,7 +6,7 @@ description: >-
 allowed-tools: Read, Grep, Glob, Skill
 ---
 
-Use skill `python:python-standards`.
+Use skill `python:python-code-standards`.
 
 <objective>
 
@@ -18,7 +18,7 @@ A verdict on Python implementation code — `APPROVED`, or `REJECTED` with each 
 
 - NEVER modify files, generate fixes, write replacement code, commit changes, or change project state — this audit produces a verdict only.
 - NEVER run deterministic validation, lint, type-check, test, or eval commands — this audit reads and judges; it never runs deterministic verification.
-- NEVER evaluate test evidence quality — `/audit-python-tests` is the separate concern that judges it.
+- NEVER evaluate test evidence quality — `/audit-python-test` is the separate concern that judges it.
 - ALWAYS keep findings to artifact, violated rule, evidence, and why the cited code violates the rule.
 - NEVER include corrective code samples, implementation patches, prescribed refactors, or required-change summaries in the verdict.
 - `APPROVED` means every concern row passes or is explicitly not applicable. `REJECTED` means at least one concern row fails. `APPROVED` output contains no notes, warnings, or suggestions sections.
@@ -41,7 +41,7 @@ Automated tools catch syntax errors, type mismatches, and lint violations. Claud
 
 **Test evidence is out of scope.**
 
-`/audit-python-tests` evaluates whether tests provide behavior-coupled evidence using the 4-property model (coupling, falsifiability, alignment, coverage). This skill judges implementation design, not test evidence, and never runs the test suite. Do not duplicate that work.
+`/audit-python-test` evaluates whether tests provide behavior-coupled evidence using the 4-property model (coupling, falsifiability, alignment, coverage). This skill judges implementation design, not test evidence, and never runs the test suite. Do not duplicate that work.
 
 **Binary verdict, no caveats.**
 
@@ -94,7 +94,7 @@ For the codebase as a whole:
 
 **1.3 Import Evaluation**
 
-Evaluate import structure using the same vocabulary as `/audit-python-tests`:
+Evaluate import structure using the same vocabulary as `/audit-python-test`:
 
 | Import pattern                                            | Classification                  |
 | --------------------------------------------------------- | ------------------------------- |
@@ -140,7 +140,7 @@ These are real failures from past audits. Study them to avoid repeating them.
 
 **Rejected code for a false positive.** Claude flagged a parameter as "dead code" because it wasn't used in the function body. The parameter was required by a `CommandHandler` Protocol contract -- other implementations used it. Before flagging dead parameters, check if the function implements a Protocol.
 
-**Tried to evaluate test evidence instead of delegating.** Claude found `lambda cmd: (0, "", "")` in tests and spent time analyzing whether it severed coupling. That's `/audit-python-tests`' job, and this audit never runs the test suite. Claude should have moved straight to comprehending the implementation code.
+**Tried to evaluate test evidence instead of delegating.** Claude found `lambda cmd: (0, "", "")` in tests and spent time analyzing whether it severed coupling. That's `/audit-python-test`' job, and this audit never runs the test suite. Claude should have moved straight to comprehending the implementation code.
 
 **Distracted by style while missing a logic bug.** Claude spent review time on naming conventions, import ordering, and docstring completeness. Meanwhile, a branch condition was inverted -- `if is_valid` should have been `if not is_valid`. Comprehension (understanding what the code does) must come before style. Style is the linter's job.
 
@@ -177,7 +177,7 @@ Each finding carries `file`, `line`, `rule` (the concern name from the verdict t
 <what_to_avoid>
 
 - Do NOT run or re-check the project's linters, type-checker, or tests — this audit runs no deterministic verification
-- Do NOT evaluate test evidence quality; `/audit-python-tests` is the separate concern that judges it
+- Do NOT evaluate test evidence quality; `/audit-python-test` is the separate concern that judges it
 - Do NOT commit or modify code (this skill is read-only)
 - Do NOT generate fixes, replacement code, refactors, or required-change summaries
 - Do NOT approve with caveats (binary verdict only)

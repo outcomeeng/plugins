@@ -31,7 +31,7 @@ Inside a repository, check for `spx/local/skills.md` at the repository root. Rea
 Skills follow a **reference pattern** to avoid duplication:
 
 1. **Foundational skill** (e.g., `/test`) — core principles and domain-agnostic patterns.
-2. **Language-specific skills** (e.g., `/test-python`, `/test-typescript`) — reference the foundational skill, provide only language-specific implementations.
+2. **Language-specific skills** (e.g., `/author-python-test`, `/test-typescript`) — reference the foundational skill, provide only language-specific implementations.
 3. **Reference skills** (e.g., `/typescript-standards`, `/skill-standards`) — standards explicitly invoked by composing skills, never selected as standalone user workflows.
 
 For language-specific skill prose that references a foundation, use the unqualified invocation name (`/test`) so it resolves to whichever foundational skill is installed.
@@ -107,7 +107,7 @@ The `name` field is the user invocation path (`/{skill-name}`). Match user speec
 **Rules:**
 
 - Use domain acronyms: `author` not `author-spec-tree-artifacts`
-- Use terms users actually say: `test-python` not `python-unit-test-framework`
+- Use terms users actually say: `author-python-test` not `python-unit-test-framework`
 - Think "CD-ROM" not "Compact Disc Read Only Memory"
 - Directory name MUST match: `skills/author/` → `name: author`
 

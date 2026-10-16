@@ -410,7 +410,7 @@ Before the first write of any test file, load the test skill of each language in
 | Language   | Skill                                   |
 | ---------- | --------------------------------------- |
 | Go         | Use skill `go:test-go`.                 |
-| Python     | Use skill `python:test-python`.         |
+| Python     | Use skill `python:author-python-test`.  |
 | Rust       | Use skill `rust:test-rust`.             |
 | TypeScript | Use skill `typescript:test-typescript`. |
 
