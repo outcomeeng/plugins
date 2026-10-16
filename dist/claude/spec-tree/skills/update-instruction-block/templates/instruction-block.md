@@ -294,7 +294,7 @@ The table routes tasks to skills. Only an active skill's explicit invocation ins
 
 <!-- langs:present -->
 
-Per-language code, architecture, and test audits ship as `audit-{lang}-{code|tests|architecture}` skills. The active verification workflow composes the skills for the languages recorded in this instruction block's opening marker.
+Per-language code, architecture, and test audits ship as `audit-{lang}-{code|test|architecture}` skills. The active verification workflow composes the skills for the languages recorded in this instruction block's opening marker.
 
 <!-- /langs:present -->
 <!-- lang:python -->

@@ -10,6 +10,12 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.106.7
+
+### Changed
+
+- **Language skills are selected by the `{role}-{type}` name templates.** `/implement-change` finds the installed `author-{lang}-code` skill and uses it with `author-{lang}-architecture` and `simplify-{lang}-code`; `/audit-tests` composes the installed `audit-<lang>-test` skill; `/audit-implementation`, `/apply`, the implementation auditor, the merge policy and the instruction-block template compose the `audit-{lang}-{code|test|architecture}` concern skills; and the decision templates and `/author` name `/author-{language}-test` as the skill that supplies language expression. A language plugin whose skills still carry the earlier `code-{lang}`, `architect-{lang}`, `test-{lang}`, `simplify-{lang}` or `audit-{lang}-tests` names is not found by these selections until it adopts the new names. No skill directory is renamed and behavior is otherwise unchanged.
+
 ## 0.106.6
 
 ### Changed

@@ -512,7 +512,7 @@ Never paste, inject, or summarize the same complete Verifier payload more than o
 
 <auditor_verdicts>
 
-Local Auditor agents — `{{! subagent_name('spec-tree', 'test-evidence-auditor') !}}`, `{{! subagent_name('spec-tree', 'eval-evidence-auditor') !}}`, `{{! subagent_name('spec-tree', 'adr-auditor') !}}`, `{{! subagent_name('spec-tree', 'pdr-auditor') !}}`, `{{! subagent_name('spec-tree', 'spec-auditor') !}}`, and `{{! subagent_name('spec-tree', 'implementation-auditor') !}}` — emit structured findings for the slice they inspect. Language-specific audit concerns are composed through the installed `audit-{lang}-{code|tests|architecture}` skills, not through language-specific Auditor agents.
+Local Auditor agents — `{{! subagent_name('spec-tree', 'test-evidence-auditor') !}}`, `{{! subagent_name('spec-tree', 'eval-evidence-auditor') !}}`, `{{! subagent_name('spec-tree', 'adr-auditor') !}}`, `{{! subagent_name('spec-tree', 'pdr-auditor') !}}`, `{{! subagent_name('spec-tree', 'spec-auditor') !}}`, and `{{! subagent_name('spec-tree', 'implementation-auditor') !}}` — emit structured findings for the slice they inspect. Language-specific audit concerns are composed through the installed `audit-{lang}-{code|test|architecture}` skills, not through language-specific Auditor agents.
 
 Make exactly one native launch for each required audit, with only its target as the prompt. A failed launch or unusable result blocks the gate immediately: analyze and report the observed failure without retry, substitution, model override, another launch mechanism, or an audit in the Author's conversation. The verdict and repair rules below apply to completed usable results. Verify and checkpoint a repaired subject before a new audit of that subject.
 
