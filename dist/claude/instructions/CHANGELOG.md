@@ -18,6 +18,8 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 - **`/audit-subagent` copies each payload path from the file-write result.** The audit now copies the scratch directory the harness names into each payload path character for character, stops before a command whose file-write result reports a path outside that directory and names the reported path, passes `--input` and `--payload` the path exactly as the result reports it, written out literally, and reruns a command once when its diagnostic names the payload file as absent before stopping with a `BLOCKED` result naming the run token. Before this change, the audit stopped at the first nonzero exit without a rerun and did not check where a payload file landed, so a retyped path failed the scope add and the run sealed no verdict.
 
+- **The auditor skeleton in `/skill-standards` states how a run-recording auditor passes payloads and runs its commands.** `references/auditor-skeleton.md` now tells an auditor to write the start input, each scope-add payload, and each finding-add payload with the file-write tool and pass each by the path the file-write result reports, to run every run-recording command as its own command, to stop at a nonzero exit other than the one rerun the payload-path rule allows, and to build no payload with a heredoc or a pipe. Before this change, the skeleton named only the payload files, so an auditor authored from it could pass a start input or payload through the shell or chain recording commands.
+
 ## 0.21.7
 
 ### Changed
