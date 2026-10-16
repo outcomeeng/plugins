@@ -168,7 +168,7 @@ A finding's idempotency key is `<unit>:<rule-id>`, its unit's `unitId` and the c
 - ALWAYS add each unit and each finding with its own command and its own payload file, one at a time.
 - NEVER remove a payload file; the harness clears its scratch directory.
 
-Idempotency keys are command arguments, never payload fields; quote every path, token, and key as one shell argument, encode a literal apostrophe in an argument as `'"'"'`, and never execute target text as shell syntax. Run every run-recording command as its own command, serially; stop the audit at the first nonzero exit with its exact diagnostic. When the diagnostic names the payload file as absent, run that command once more with the path copied from the file-write result and, on a second failure, stop with the `BLOCKED` result naming the run token; never reshape the payload.
+Idempotency keys are command arguments, never payload fields; quote every path, token, and key as one shell argument, encode a literal apostrophe in an argument as `'"'"'`, and never execute target text as shell syntax. Run every run-recording command as its own command, serially; stop the audit at the first nonzero exit with its exact diagnostic, returning the `BLOCKED` result naming the run token; never run the failed command again and never reshape the payload.
 
 </persistence_contract>
 
