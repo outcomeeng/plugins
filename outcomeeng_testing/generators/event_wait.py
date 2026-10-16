@@ -129,7 +129,7 @@ def world_cases(
             spend_reading,
             tuple(records),
             cutoff,
-            clock_offset,
+            None if clock_offset is None else min(clock_offset, timeout_seconds - 1),
         )
 
     def carries_a_source(case: WorldCase) -> bool:

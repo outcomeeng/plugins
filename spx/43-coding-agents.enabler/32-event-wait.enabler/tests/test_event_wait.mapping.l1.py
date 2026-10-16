@@ -167,13 +167,11 @@ def test_clock_source_maps_its_arrival_before_the_timeout_to_a_clock_event() -> 
         assert offset is not None
         [source] = observed.request[we.SOURCES_FIELD]
         assert observed.exit_code == 0
-        if offset < observed.case.timeout_seconds:
-            assert line[we.KIND_FIELD] == we.LINE_EVENT
-            assert line[we.SOURCE_FIELD] == we.SOURCE_CLOCK
-            assert line[we.CLOCK_AT_FIELD] == source[we.CLOCK_AT_FIELD]
-            assert observed.clock.current == offset
-        else:
-            assert line[we.KIND_FIELD] == we.LINE_TIMEOUT
+        assert offset < observed.case.timeout_seconds
+        assert line[we.KIND_FIELD] == we.LINE_EVENT
+        assert line[we.SOURCE_FIELD] == we.SOURCE_CLOCK
+        assert line[we.CLOCK_AT_FIELD] == source[we.CLOCK_AT_FIELD]
+        assert observed.clock.current == offset
 
     run_single_source_worlds("clock", check)
 
