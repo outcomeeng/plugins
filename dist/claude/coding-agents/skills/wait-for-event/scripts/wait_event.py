@@ -34,6 +34,32 @@ MAIL_WAIT_MAXIMUM_SECONDS = 3_600
 KIND_FIELD = "kind"
 SOURCES_FIELD = "sources"
 TIMEOUT_FIELD = "timeoutSeconds"
+SCHEMA_VERSION_FIELD = "schemaVersion"
+DETAIL_FIELD = "detail"
+
+# Fields of a source in the request.
+MAIL_AGENT_FIELD = "agent"
+MAIL_ID_FIELD = "id"
+PANE_ENVIRONMENT_FIELD = "environment"
+PANE_SESSIONS_FIELD = "sessions"
+PANE_SESSION_FIELD = "session"
+PANE_STATE_FIELD = "state"
+SPEND_AFTER_FIELD = "after"
+SPEND_ROOT_FIELD = "root"
+CLOCK_AT_FIELD = "at"
+
+# Fields of an event line and of an unreadable-source entry.
+SOURCE_FIELD = "source"
+RECORD_FIELD = "record"
+RECORD_ID_FIELD = "id"
+RECORD_SENDER_FIELD = "sender"
+RECORD_KIND_FIELD = "kind"
+RECORD_SUBJECT_FIELD = "subject"
+PREVIOUS_STATE_FIELD = "previousState"
+IDENTITY_FIELD = "identity"
+RECORDED_UTC_FIELD = "recordedUtc"
+SIGNAL_FIELD = "signal"
+STATUS_FIELD = "status"
 
 SOURCE_MAIL = "mail"
 SOURCE_PANE = "pane"
@@ -138,38 +164,51 @@ def _source(raw: object, location: str) -> Source:
             f"received {kind!r}"
         )
     if kind == SOURCE_MAIL:
-        after_id = raw.get("id")
+        after_id = raw.get(MAIL_ID_FIELD)
         if isinstance(after_id, bool) or not isinstance(after_id, int) or after_id < 0:
             raise InvalidRequest(
-                f"{location}.id must be the whole-number id of the last record handled, "
+                f"{location}.{MAIL_ID_FIELD} must be the whole-number id of the last record handled, "
                 "0 for none"
             )
-        return MailSource(_text(raw.get("agent"), f"{location}.agent"), after_id)
+        return MailSource(
+            _text(raw.get(MAIL_AGENT_FIELD), f"{location}.{MAIL_AGENT_FIELD}"), after_id
+        )
     if kind == SOURCE_PANE:
-        environment = raw.get("environment", ENVIRONMENT_HERDR)
-        sessions = raw.get("sessions")
+        environment = raw.get(PANE_ENVIRONMENT_FIELD, ENVIRONMENT_HERDR)
+        sessions = raw.get(PANE_SESSIONS_FIELD)
         if not isinstance(sessions, list) or not sessions:
-            raise InvalidRequest(f"{location}.sessions must be a non-empty array")
+            raise InvalidRequest(
+                f"{location}.{PANE_SESSIONS_FIELD} must be a non-empty array"
+            )
         pairs = []
         for index, item in enumerate(sessions):
-            where = f"{location}.sessions[{index}]"
+            where = f"{location}.{PANE_SESSIONS_FIELD}[{index}]"
             if not isinstance(item, dict):
                 raise InvalidRequest(f"{where} must be a JSON object")
             pairs.append(
                 (
-                    _text(item.get("session"), f"{where}.session"),
-                    _text(item.get("state"), f"{where}.state"),
+                    _text(
+                        item.get(PANE_SESSION_FIELD), f"{where}.{PANE_SESSION_FIELD}"
+                    ),
+                    _text(item.get(PANE_STATE_FIELD), f"{where}.{PANE_STATE_FIELD}"),
                 )
             )
-        return PaneSource(_text(environment, f"{location}.environment"), tuple(pairs))
-    if kind == SOURCE_SPEND:
-        root = raw.get("root")
-        if root is not None:
-            root = _text(root, f"{location}.root")
-        return SpendSource(
-            _instant(raw.get("after"), f"{location}.after"), str(raw["after"]), root
+        return PaneSource(
+            _text(environment, f"{location}.{PANE_ENVIRONMENT_FIELD}"), tuple(pairs)
         )
-    return ClockSource(_instant(raw.get("at"), f"{location}.at"), str(raw["at"]))
+    if kind == SOURCE_SPEND:
+        root = raw.get(SPEND_ROOT_FIELD)
+        if root is not None:
+            root = _text(root, f"{location}.{SPEND_ROOT_FIELD}")
+        return SpendSource(
+            _instant(raw.get(SPEND_AFTER_FIELD), f"{location}.{SPEND_AFTER_FIELD}"),
+            str(raw[SPEND_AFTER_FIELD]),
+            root,
+        )
+    return ClockSource(
+        _instant(raw.get(CLOCK_AT_FIELD), f"{location}.{CLOCK_AT_FIELD}"),
+        str(raw[CLOCK_AT_FIELD]),
+    )
 
 
 def parse_request(document: object) -> Request:
@@ -211,7 +250,9 @@ def _adapter(adapter: tuple[str, str]) -> ModuleType:
     try:
         return importlib.import_module(module)
     except ImportError as error:
-        raise WaitEventError(f"the adapter {path} cannot be imported: {error}") from error
+        raise WaitEventError(
+            f"the adapter {path} cannot be imported: {error}"
+        ) from error
     finally:
         sys.path.remove(str(directory))
 
@@ -223,7 +264,7 @@ class Unreadable:
     extra: Mapping[str, Any]
 
     def line_entry(self) -> dict[str, Any]:
-        return {"source": self.source, **self.extra, "detail": self.detail}
+        return {SOURCE_FIELD: self.source, **self.extra, DETAIL_FIELD: self.detail}
 
 
 @dataclass(frozen=True)
@@ -239,7 +280,11 @@ class _BoundedRunner:
         self._remaining = remaining
 
     def run(
-        self, argv: tuple[str, ...], stdin: str | None = None, *, timeout_seconds: int = 30
+        self,
+        argv: tuple[str, ...],
+        stdin: str | None = None,
+        *,
+        timeout_seconds: int = 30,
     ) -> Any:
         bound = max(1, min(int(timeout_seconds), math.ceil(self._remaining())))
         return self._inner.run(argv, stdin, timeout_seconds=bound)
@@ -251,7 +296,7 @@ def _poll_mail(
     runner: Any,
     clock: Any,
 ) -> Event | Unreadable | None:
-    identity = {"agent": source.agent}
+    identity = {MAIL_AGENT_FIELD: source.agent}
     try:
         adapter = _adapter(ADAPTER_MAIL)
         result = adapter.execute(
@@ -273,7 +318,7 @@ def _poll_mail(
         return Unreadable(
             SOURCE_MAIL,
             f"mail is {result.get('status')}: {result.get('detail')}",
-            {**identity, "status": str(result.get("status"))},
+            {**identity, STATUS_FIELD: str(result.get(STATUS_FIELD))},
         )
     data = result["data"]
     outcome = data["outcome"]
@@ -283,17 +328,17 @@ def _poll_mail(
         return Unreadable(
             SOURCE_MAIL,
             f"the inbox listing does not reach back to id {source.after_id}",
-            {**identity, "status": "unreachable"},
+            {**identity, STATUS_FIELD: "unreachable"},
         )
     record = data["record"]
     return Event(
         {
-            "source": SOURCE_MAIL,
-            "record": {
-                "id": record["id"],
-                "sender": record["sender"],
-                "kind": str(record["kind"]),
-                "subject": record["subject"],
+            SOURCE_FIELD: SOURCE_MAIL,
+            RECORD_FIELD: {
+                RECORD_ID_FIELD: record["id"],
+                RECORD_SENDER_FIELD: record["sender"],
+                RECORD_KIND_FIELD: str(record["kind"]),
+                RECORD_SUBJECT_FIELD: record["subject"],
             },
         }
     )
@@ -302,7 +347,7 @@ def _poll_mail(
 def _poll_pane(
     source: PaneSource, runner: Any, remaining: Callable[[], float]
 ) -> Event | Unreadable | None:
-    identity = {"environment": source.environment}
+    identity = {PANE_ENVIRONMENT_FIELD: source.environment}
     if source.environment != ENVIRONMENT_HERDR:
         return Unreadable(
             SOURCE_PANE,
@@ -328,11 +373,13 @@ def _poll_pane(
         return Unreadable(
             SOURCE_PANE,
             f"herdr is {result.get('status')}: {result.get('detail')}",
-            {**identity, "status": str(result.get("status"))},
+            {**identity, STATUS_FIELD: str(result.get(STATUS_FIELD))},
         )
     agents = result.get("agents")
     if not isinstance(agents, list):
-        return Unreadable(SOURCE_PANE, "the herdr inventory carries no agents", identity)
+        return Unreadable(
+            SOURCE_PANE, "the herdr inventory carries no agents", identity
+        )
     for selector, handled in source.sessions:
         matches = [
             agent
@@ -343,13 +390,13 @@ def _poll_pane(
             return Unreadable(
                 SOURCE_PANE,
                 f"no hosted agent session matches {selector!r}",
-                {**identity, "session": selector},
+                {**identity, PANE_SESSION_FIELD: selector},
             )
         if len(matches) > 1:
             return Unreadable(
                 SOURCE_PANE,
                 f"{len(matches)} hosted agent sessions match {selector!r}",
-                {**identity, "session": selector},
+                {**identity, PANE_SESSION_FIELD: selector},
             )
         agent = matches[0]
         if agent.get("missingFields") or "agent_status" not in agent:
@@ -357,17 +404,17 @@ def _poll_pane(
                 SOURCE_PANE,
                 f"the evidence for {selector!r} lacks "
                 f"{', '.join(agent.get('missingFields', ['agent_status']))}",
-                {**identity, "session": selector},
+                {**identity, PANE_SESSION_FIELD: selector},
             )
         state = str(agent["agent_status"])
         if state != handled:
             return Event(
                 {
-                    "source": SOURCE_PANE,
-                    "environment": source.environment,
-                    "session": selector,
-                    "state": state,
-                    "previousState": handled,
+                    SOURCE_FIELD: SOURCE_PANE,
+                    PANE_ENVIRONMENT_FIELD: source.environment,
+                    PANE_SESSION_FIELD: selector,
+                    PANE_STATE_FIELD: state,
+                    PREVIOUS_STATE_FIELD: handled,
                 }
             )
     return None
@@ -384,7 +431,7 @@ def _poll_spend(source: SpendSource) -> Event | Unreadable | None:
         return Unreadable(
             SOURCE_SPEND,
             str(result.get("reason", "the detector state cannot be read")),
-            {"root": str(result.get("root", ""))},
+            {SPEND_ROOT_FIELD: str(result.get("root", ""))},
         )
     records = result["records"]
     if not records:
@@ -392,18 +439,20 @@ def _poll_spend(source: SpendSource) -> Event | Unreadable | None:
     first = records[0]
     return Event(
         {
-            "source": SOURCE_SPEND,
-            "identity": first["identity"],
-            "recordedUtc": first["recorded_utc"],
-            "signal": first["signal"],
+            SOURCE_FIELD: SOURCE_SPEND,
+            IDENTITY_FIELD: first["identity"],
+            RECORDED_UTC_FIELD: first["recorded_utc"],
+            SIGNAL_FIELD: first["signal"],
         }
     )
 
 
-def _poll_clock(source: ClockSource, now: dt.datetime, horizon: dt.datetime) -> Event | None:
+def _poll_clock(
+    source: ClockSource, now: dt.datetime, horizon: dt.datetime
+) -> Event | None:
     if source.at >= horizon or now < source.at:
         return None
-    return Event({"source": SOURCE_CLOCK, "at": source.at_text})
+    return Event({SOURCE_FIELD: SOURCE_CLOCK, CLOCK_AT_FIELD: source.at_text})
 
 
 def wait_event(
@@ -426,7 +475,9 @@ def wait_event(
         unreadable: list[Unreadable] = []
         for source in others:
             if isinstance(source, PaneSource):
-                outcome: Event | Unreadable | None = _poll_pane(source, runner, remaining)
+                outcome: Event | Unreadable | None = _poll_pane(
+                    source, runner, remaining
+                )
             elif isinstance(source, SpendSource):
                 outcome = _poll_spend(source)
             else:
@@ -455,7 +506,7 @@ def wait_event(
             return (
                 {
                     KIND_FIELD: LINE_UNREADABLE,
-                    "schemaVersion": SCHEMA_VERSION,
+                    SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
                     SOURCES_FIELD: [item.line_entry() for item in unreadable],
                 },
                 EXIT_UNREADABLE,
@@ -465,7 +516,7 @@ def wait_event(
             return (
                 {
                     KIND_FIELD: LINE_TIMEOUT,
-                    "schemaVersion": SCHEMA_VERSION,
+                    SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
                     TIMEOUT_FIELD: _number(request.timeout_seconds),
                 },
                 EXIT_OK,
@@ -479,7 +530,11 @@ def _number(value: float) -> int | float:
 
 
 def _event_line(event: Event) -> dict[str, Any]:
-    return {KIND_FIELD: LINE_EVENT, "schemaVersion": SCHEMA_VERSION, **event.fields}
+    return {
+        KIND_FIELD: LINE_EVENT,
+        SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
+        **event.fields,
+    }
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -503,13 +558,15 @@ def main(
         try:
             document = json.load(stdin)
         except json.JSONDecodeError as error:
-            raise InvalidRequest(f"the request is not valid JSON: {error.msg}") from error
+            raise InvalidRequest(
+                f"the request is not valid JSON: {error.msg}"
+            ) from error
         request = parse_request(document)
     except InvalidRequest as error:
         line: dict[str, Any] = {
             KIND_FIELD: LINE_INVALID,
-            "schemaVersion": SCHEMA_VERSION,
-            "detail": str(error),
+            SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
+            DETAIL_FIELD: str(error),
         }
         code = EXIT_INVALID
     else:
