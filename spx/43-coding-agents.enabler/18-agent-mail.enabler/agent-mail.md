@@ -5,7 +5,7 @@ malleability: spec
 
 # Agent Mail
 
-PROVIDES a source-owned capability over the agent-mail store — registration, send, inbox, and receipt — keyed by the repository itself
+PROVIDES a source-owned capability over the agent-mail store — registration, send, inbox, receipt, and wait — keyed by the repository itself
 SO THAT coding-agent communication and orchestration workflows
 CAN deliver and read message records between positively identified agent sessions without constructing raw mail commands or resolving the project key themselves
 
@@ -15,7 +15,8 @@ This capability is an agent adapter: the configured way the agent harness lets o
 
 ### Mappings
 
-- Registration, send, inbox, and receipt each map one source-owned request shape to one mail command and checked result; a registration request carries an optional display name that maps to the store's display name, an absent display name passes no display-name argument, a blank display name passes through as an empty value that clears the label, and every checked result preserves the store's labels verbatim beside its message, thread, and agent identities ([test](tests/test_agent_mail.mapping.l1.py))
+- Registration, send, inbox, and receipt each map one source-owned request shape to one mail command and checked result, and wait maps one source-owned request shape to inbox commands bounded by its timeout and one checked result; a registration request carries an optional display name that maps to the store's display name, an absent display name passes no display-name argument, a blank display name passes through as an empty value that clears the label, and every checked result preserves the store's labels verbatim beside its message, thread, and agent identities ([test](tests/test_agent_mail.mapping.l1.py))
+- A wait request carrying an id and a timeout maps to the first record addressed to the requester whose store id exceeds that id, read or unread, carried as an inbox item; to the named timeout result when no such record is present before the timeout; and to the named unreachable result when the listing cannot reach back to the id ([test](tests/test_agent_mail.mapping.l1.py))
 - An inbox item with or without a body and a send result carry the store's `sender_display_name` verbatim, null included, and a send result carries `to_display_names` as the mapping from each recipient stable name visible to the reader to its label; no label enters the message record ([test](tests/test_agent_mail.mapping.l1.py))
 - The project key maps from the absolute canonical path of the repository's common Git directory, read for the adapter's own working directory with every variable removed that can make Git answer the location question from something other than that directory, so no value the caller inherited moves the answer — neither onto another repository nor away from its own — so every worktree of one pool, the pool's bare repository, and its main checkout resolve one mail project; a working directory that is no repository yields the unavailable result ([test](tests/test_agent_mail.mapping.l1.py))
 
@@ -38,4 +39,6 @@ This capability is an agent adapter: the configured way the agent harness lets o
 - ALWAYS: `/operate-agent-mail` instructs a position to register only its own identity, with its own label ([audit])
 - NEVER: another shipped coding-agents script constructs a raw mail command or derives the project key from Git state ([test](tests/test_agent_mail.compliance.l1.py))
 - NEVER: another shipped coding-agents skill instructs a workflow to construct a raw mail command, invoke mail command help, or derive the project key from Git state ([audit])
+- NEVER: a wait request without a timeout runs a store command, and no store command inside a wait outlives the timeout ([test](tests/test_agent_mail.compliance.l1.py))
+- NEVER: a wait keeps a cursor, state file, or lock, marks a message read, or records a receipt ([test](tests/test_agent_mail.compliance.l1.py))
 - A receipt is the recipient's record in the store that it has read one message; it establishes nothing about the message's content, and no message state — agreement, ownership, authorization, or the acknowledgement of a proposal — derives from it ([audit])
