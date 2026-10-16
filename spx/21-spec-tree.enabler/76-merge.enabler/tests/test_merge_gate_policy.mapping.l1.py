@@ -26,12 +26,14 @@ from outcomeeng.merging_policy import (
     AuditorRequiredAction,
     AuditorTerminalStatus,
     CheckRunConclusion,
+    CheckRunStatus,
     DeliveryAction,
     DeliveryReadiness,
     RequiredCheckClassification,
     RequiredCheckKind,
     ReviewCheckAction,
     ReviewCheckStateCategory,
+    StatusContextState,
     classify_required_check,
     decide_auditor_verdict,
     decide_deploy_action,
@@ -324,6 +326,28 @@ def test_auditor_verdict_mapping() -> None:
     assert decision.required_action is AuditorRequiredAction.NO_REPAIR
     assert decision.merge_blocked is False
 
+    # A verdict outside the sealed-run vocabulary is not an approved run: its
+    # terminal status is absent, null, or a token from another source-owned domain.
+    non_run_verdicts: list[dict[str, object]] = [
+        {},
+        {FIELD_TERMINAL_STATUS: None},
+        *(
+            {FIELD_TERMINAL_STATUS: action.value}
+            for action in sorted(AuditorRequiredAction)
+        ),
+    ]
+    for non_run_verdict in non_run_verdicts:
+        for findings in ([], [{FIELD_TERMINAL_STATUS: None}]):
+            decision = decide_auditor_verdict(
+                {
+                    FIELD_TOUCHES_OR_INVALIDATES_TEXT: True,
+                    FIELD_FINDINGS: findings,
+                    **non_run_verdict,
+                }
+            )
+            assert decision.required_action is AuditorRequiredAction.FIX_BEFORE_MERGE
+            assert decision.merge_blocked is True
+
     for status in sorted(AUDITOR_BLOCKING_TERMINAL_STATUSES):
         for findings in ([], [{FIELD_TERMINAL_STATUS: status}]):
             decision = decide_auditor_verdict(
@@ -335,3 +359,60 @@ def test_auditor_verdict_mapping() -> None:
             )
             assert decision.required_action is AuditorRequiredAction.TRACK_OUT_OF_PR
             assert decision.merge_blocked is False
+
+    for non_run_verdict in non_run_verdicts:
+        decision = decide_auditor_verdict(
+            {
+                FIELD_TOUCHES_OR_INVALIDATES_TEXT: False,
+                FIELD_FINDINGS: [],
+                **non_run_verdict,
+            }
+        )
+        assert decision.required_action is AuditorRequiredAction.TRACK_OUT_OF_PR
+        assert decision.merge_blocked is False
+
+
+def test_unrecognized_check_vocabulary_is_never_terminal_green() -> None:
+    """Assert check states outside the check-run and status-context vocabularies fail closed."""
+
+    foreign_check_run_statuses = sorted(StatusContextState)
+    for status in foreign_check_run_statuses:
+        decision = classify_required_check(
+            {
+                FIELD_KIND: RequiredCheckKind.CHECK_RUN,
+                FIELD_PRESENT: True,
+                FIELD_STATUS: status,
+                FIELD_CONCLUSION: CheckRunConclusion.SUCCESS,
+            }
+        )
+        assert decision.terminal_green is False
+        assert (
+            decision.classification is RequiredCheckClassification.TERMINAL_NOT_SUCCESS
+        )
+
+    for state in [None, *sorted(CheckRunStatus)]:
+        decision = classify_required_check(
+            {
+                FIELD_KIND: RequiredCheckKind.STATUS_CONTEXT,
+                FIELD_PRESENT: True,
+                FIELD_STATE: state,
+            }
+        )
+        assert decision.terminal_green is False
+        assert (
+            decision.classification is RequiredCheckClassification.TERMINAL_NOT_SUCCESS
+        )
+
+    for status in foreign_check_run_statuses:
+        assert (
+            decide_review_check(
+                {
+                    FIELD_KIND: RequiredCheckKind.CHECK_RUN,
+                    FIELD_PRESENT: True,
+                    FIELD_STATUS: status,
+                    FIELD_CONCLUSION: CheckRunConclusion.SUCCESS,
+                },
+                current_head_review_present=False,
+            ).required_action
+            is ReviewCheckAction.MERGE_BLOCKED_REVIEW_CHECK_FAILED
+        )

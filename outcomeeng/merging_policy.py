@@ -190,6 +190,7 @@ STATUS_CONTEXT_TERMINAL_NOT_SUCCESS_STATES = frozenset(
     {StatusContextState.ERROR, StatusContextState.FAILURE}
 )
 AUDITOR_BLOCKING_TERMINAL_STATUSES = frozenset({AuditorTerminalStatus.REJECTED})
+AUDITOR_APPROVING_TERMINAL_STATUSES = frozenset({AuditorTerminalStatus.APPROVED})
 
 
 def classify_required_check(
@@ -388,4 +389,4 @@ def _required_check_decision(
 
 
 def _auditor_verdict_blocks_merge(verdict: Mapping[str, Any]) -> bool:
-    return verdict.get(FIELD_TERMINAL_STATUS) in AUDITOR_BLOCKING_TERMINAL_STATUSES
+    return verdict.get(FIELD_TERMINAL_STATUS) not in AUDITOR_APPROVING_TERMINAL_STATUSES
