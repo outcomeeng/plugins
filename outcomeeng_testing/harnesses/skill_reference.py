@@ -87,6 +87,15 @@ def write_file(root: Path, relative_path: str, text: str) -> Path:
     return path
 
 
+def write_plugin_file(root: Path, plugin: str, filename: str, text: str) -> Path:
+    """Write ``text`` as ``filename`` in plugin ``plugin``'s source directory.
+
+    The directory is the one ``build_marketplace`` lays plugin skills under, so
+    the file lies beneath the validator's plugin source root.
+    """
+    return write_file(root, str(PLUGIN_SOURCE_ROOT / plugin / filename), text)
+
+
 def run_validator(root: Path, paths: Sequence[Path] = ()) -> ValidatorRun:
     """Run the validator for the checkout at ``root``.
 
