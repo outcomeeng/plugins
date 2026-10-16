@@ -10,6 +10,12 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.106.7
+
+### Changed
+
+- **`/audit-adr` records its audit in a sealed `spx verification run` and loads the ADR's context read-only.** The skill takes a JSON request with the ADR `path` and the caller's `runDriver`, opens a file-scoped run on the ADR, and records one root unit with a child unit for `section-structure`, `atemporal-voice`, `tag-validity`, and each composed language concern. Findings on touched text sit on their unit, and the skill returns the run token, the run file, and the rendered projection, whose `terminalStatus` is `approved` or `rejected`, followed by each standing finding as a `filed` line and each inapplicable concern as a `not-applicable` line; a failed command returns the `BLOCKED` diagnostic. The skill loads the product spec, each spec and decision record on the path to the ADR, and each decision those cite by full `spx/` path, and invokes neither `/contextualize` nor `/sync-base`, so the audit leaves the checkout unmoved. A composed language verdict that is malformed, names another target, omits a required concern row, or disagrees with its own overall result records `language-result-invalid` and contributes no partial coverage. Before this change, the skill returned an `APPROVED` or `REJECTED` JSON verdict that sealed no run, and it invoked `/contextualize` to load context, whose base synchronization could move the checkout.
+
 ## 0.106.6
 
 ### Changed
