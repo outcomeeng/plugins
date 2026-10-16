@@ -53,8 +53,8 @@ None of these writes a file outside the SPX store, and none starts a process
 other than ``git`` and ``spx``; the generated requests start none.
 
 ``read-authority`` starts ``gh`` and is tested apart from those runs, in this
-process over replayed store pages: a read that ends before the bound returns
-every entry, and a connection that keeps reporting a further page blocks after
+process over replayed store pages: it reads the issue's field-change events and
+no comment, a read that ends before the bound returns every event, and a connection that keeps reporting a further page blocks after
 the bound with ``page-bound-reached`` naming it.
 
 ``read-published`` starts ``gh`` once and returns the issue's published body,
@@ -146,14 +146,12 @@ class ResultField(StrEnum):
     LIVE_SHA256 = "liveSha256"
     ISSUE = "issue"
     EVENTS = "events"
-    COMMENTS = "comments"
     BOUND = "bound"
     CREATED_AT = "createdAt"
     ACTOR = "actor"
     FIELD = "field"
     PREVIOUS_VALUE = "previousValue"
     NEW_VALUE = "newValue"
-    AUTHOR = "author"
     BODY = "body"
     PRODUCT = "product"
     PARENT = "parent"
@@ -205,10 +203,9 @@ class TerminalStatus(StrEnum):
 
 
 class AuthorityRead(StrEnum):
-    """The two store connections ``read-authority`` reads, in the order it reads them."""
+    """The store connection ``read-authority`` reads."""
 
     EVENTS = "events"
-    COMMENTS = "comments"
 
 
 class ExitCode(IntEnum):
@@ -247,14 +244,12 @@ class StoreField(StrEnum):
     REPOSITORY = "repository"
     ISSUE = "issue"
     TIMELINE_ITEMS = "timelineItems"
-    COMMENTS = "comments"
     PAGE_INFO = "pageInfo"
     HAS_NEXT_PAGE = "hasNextPage"
     END_CURSOR = "endCursor"
     NODES = "nodes"
     CREATED_AT = "createdAt"
     ACTOR = "actor"
-    AUTHOR = "author"
     LOGIN = "login"
     PREVIOUS_VALUE = "previousValue"
     NEW_VALUE = "newValue"
@@ -314,14 +309,9 @@ _AUTHORITY_QUERIES: Final[Mapping[AuthorityRead, str]] = {
         "{createdAt actor{login} previousValue newValue issueField"
         "{... on IssueFieldSingleSelect{name} ... on IssueFieldText{name}}}}}}}}"
     ),
-    AuthorityRead.COMMENTS: (
-        f"{_QUERY_HEAD}{StoreField.COMMENTS}(first:{AUTHORITY_PAGE_SIZE},after:$after)"
-        "{pageInfo{hasNextPage endCursor} nodes{createdAt author{login} body}}}}}"
-    ),
 }
 _AUTHORITY_CONNECTIONS: Final[Mapping[AuthorityRead, StoreField]] = {
     AuthorityRead.EVENTS: StoreField.TIMELINE_ITEMS,
-    AuthorityRead.COMMENTS: StoreField.COMMENTS,
 }
 _PUBLISHED_QUERY: Final = (
     "query($o:String!,$r:String!,$n:Int!)"
@@ -1115,19 +1105,6 @@ def _event(node: Mapping[str, object]) -> dict[str, object]:
     }
 
 
-def _comment(node: Mapping[str, object]) -> dict[str, object]:
-    return {
-        ResultField.CREATED_AT: node.get(StoreField.CREATED_AT),
-        ResultField.AUTHOR: _login(node.get(StoreField.AUTHOR)),
-        ResultField.BODY: node.get(StoreField.BODY),
-    }
-
-
-_AUTHORITY_ENTRIES: Final[
-    Mapping[AuthorityRead, Callable[[Mapping[str, object]], dict[str, object]]]
-] = {AuthorityRead.EVENTS: _event, AuthorityRead.COMMENTS: _comment}
-
-
 def _read_connection(
     context: _Context, kind: AuthorityRead, identity: tuple[str, str, str]
 ) -> list[dict[str, object]]:
@@ -1164,7 +1141,7 @@ def _read_connection(
                 BlockReason.UNREADABLE_OUTPUT,
                 f"{kind} page holds an entry that is not an object",
             )
-        entries.extend(_AUTHORITY_ENTRIES[kind](node) for node in nodes)
+        entries.extend(_event(node) for node in nodes)
         if info.get(StoreField.HAS_NEXT_PAGE) is not True:
             return entries
         cursor = info.get(StoreField.END_CURSOR)
@@ -1188,9 +1165,6 @@ def _read_authority(
     return {
         ResultField.ISSUE: request[RequestField.ISSUE],
         ResultField.EVENTS: _read_connection(context, AuthorityRead.EVENTS, identity),
-        ResultField.COMMENTS: _read_connection(
-            context, AuthorityRead.COMMENTS, identity
-        ),
     }
 
 
