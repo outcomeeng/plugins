@@ -8,7 +8,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from outcomeeng.validation.skill_reference import EXEMPTED_REFERENCES
+from outcomeeng.validation.skill_reference import (
+    EXEMPTED_REFERENCES,
+    HARNESS_COMMANDS,
+    INERT_FIXTURE_ROOT,
+    SCAN_ROOTS,
+)
 from outcomeeng_testing.harnesses.skill_reference import (
     build_marketplace,
     fixture_path,
@@ -16,14 +21,6 @@ from outcomeeng_testing.harnesses.skill_reference import (
     scan_references,
     scan_text_references,
     write_file,
-)
-
-SCAN_ROOTS = (
-    "src/plugins/alpha",
-    "src/_shared/prose",
-    "src/templates/plugin",
-    "outcomeeng/validation",
-    "outcomeeng_testing/harnesses",
 )
 
 
@@ -196,3 +193,44 @@ def test_scan_covers_every_declared_root_and_excludes_changelogs(
     assert len(run.lines) == len(violating)
     for path in violating:
         assert sum(str(path) in line for line in run.lines) == 1
+
+
+def test_inert_fixtures_are_excluded_from_the_scan(tmp_path: Path) -> None:
+    build_marketplace(tmp_path, {"alpha": ["audit-widget"]})
+    fixture = write_file(
+        tmp_path, f"{INERT_FIXTURE_ROOT}/violation.md", "Run /audit-gadget now.\n"
+    )
+    scanned = write_file(
+        tmp_path, f"{SCAN_ROOTS[0]}/violation.md", "Run /audit-gadget now.\n"
+    )
+
+    run = run_validator(tmp_path)
+    explicit_run = run_validator(tmp_path, [fixture])
+
+    assert run.exit_code != 0
+    assert len(run.lines) == 1
+    assert str(scanned) in run.lines[0]
+    assert str(fixture) not in "".join(run.lines)
+    assert explicit_run.lines == ()
+    assert explicit_run.exit_code == 0
+
+
+def test_harness_command_invocations_are_not_skill_references(
+    tmp_path: Path,
+) -> None:
+    build_marketplace(tmp_path, {"alpha": ["audit-widget"]})
+    commands = write_file(
+        tmp_path,
+        "src/plugins/alpha/commands.md",
+        "".join(f"Run /{command} now.\n" for command in sorted(HARNESS_COMMANDS)),
+    )
+    unlisted = write_file(
+        tmp_path, "src/plugins/alpha/unlisted.md", "Run /audit-gadget now.\n"
+    )
+
+    commands_run = run_validator(tmp_path, [commands])
+    unlisted_run = run_validator(tmp_path, [unlisted])
+
+    assert commands_run.lines == ()
+    assert commands_run.exit_code == 0
+    assert unlisted_run.exit_code != 0

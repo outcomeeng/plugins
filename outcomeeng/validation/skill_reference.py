@@ -81,6 +81,8 @@ HARNESS_COMMANDS: Final = frozenset(
         "status",
     }
 )
+# The form of the Change identity an exemption names.
+CHANGE_IDENTITY: Final = re.compile(r"outcomeeng/changes#[0-9]+")
 # Each exempted reference to a skill no marketplace plugin ships yet, mapped to
 # the Change that ships the skill and removes the exemption.
 EXEMPTED_REFERENCES: Final[Mapping[str, str]] = {

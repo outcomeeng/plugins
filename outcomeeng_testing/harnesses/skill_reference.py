@@ -14,8 +14,13 @@ from dataclasses import dataclass
 from io import StringIO
 from pathlib import Path
 
-from outcomeeng.distribution.contracts import SKILL_FILENAME
+from outcomeeng.distribution.contracts import SKILL_FILENAME, SKILLS_SUBDIR_NAME
 from outcomeeng.validation.skill_reference import (
+    CATALOG_PATH,
+    CATALOG_PLUGIN_NAME_FIELD,
+    CATALOG_PLUGINS_FIELD,
+    PLUGIN_SOURCE_ROOT,
+    ROOT_FLAG,
     find_violations,
     load_shipped_skills,
     main,
@@ -24,10 +29,6 @@ from outcomeeng.validation.skill_reference import (
 )
 
 FIXTURE_ROOT = Path(__file__).resolve().parents[1] / "fixtures" / "skill_reference"
-CATALOG_PATH = Path(".claude-plugin") / "marketplace.json"
-PLUGIN_SOURCE_ROOT = Path("src") / "plugins"
-SKILLS_DIRECTORY = "skills"
-ROOT_FLAG = "--root"
 
 
 @dataclass(frozen=True)
@@ -55,7 +56,7 @@ def build_marketplace(
                 root
                 / PLUGIN_SOURCE_ROOT
                 / plugin
-                / SKILLS_DIRECTORY
+                / SKILLS_SUBDIR_NAME
                 / skill
                 / SKILL_FILENAME
             )
@@ -66,7 +67,12 @@ def build_marketplace(
     catalog.parent.mkdir(parents=True, exist_ok=True)
     catalog.write_text(
         json.dumps(
-            {"name": "marketplace", "plugins": [{"name": name} for name in listed]}
+            {
+                "name": "marketplace",
+                CATALOG_PLUGINS_FIELD: [
+                    {CATALOG_PLUGIN_NAME_FIELD: name} for name in listed
+                ],
+            }
         ),
         encoding="utf-8",
     )

@@ -7,17 +7,16 @@ exempted reference to the Change that removes it.
 
 from __future__ import annotations
 
-import re
-
-from outcomeeng.validation.skill_reference import EXEMPTED_REFERENCES
+from outcomeeng.validation.skill_reference import (
+    CHANGE_IDENTITY,
+    EXEMPTED_REFERENCES,
+)
 from outcomeeng_testing.harnesses.skill_reference import (
     repository_root,
     run_validator,
     scan_repository_references,
     scan_text_references,
 )
-
-CHANGE_IDENTITY = re.compile(r"outcomeeng/changes#[0-9]+")
 
 
 def test_every_scanned_repository_file_passes_the_validator() -> None:
