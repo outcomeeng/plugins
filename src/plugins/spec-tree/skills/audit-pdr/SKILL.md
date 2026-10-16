@@ -61,7 +61,7 @@ Use skill `spec-tree:spec-tree-plugin`. Invoke it with the verb `version` and re
 
 **Step 1: Load context read-only**
 
-Invoke `/understand` when the live `<SPEC_TREE_FOUNDATION>` marker is absent or lacks `Template root`. Read `decisions/decision-name.pdr.md` beneath that marker's resolved absolute template directory, and derive declaration form and required tags from that canonical template. The template remains owned by `/understand`.
+When the live `<SPEC_TREE_FOUNDATION>` marker is absent or lacks `Template root`: Use skill `spec-tree:understand`. Read `decisions/decision-name.pdr.md` beneath that marker's resolved absolute template directory, and derive declaration form and required tags from that canonical template. The template remains owned by that skill.
 
 Load the PDR's context with `Read`, `Glob`, and `Grep` alone, in this order:
 
@@ -149,7 +149,7 @@ For each product property:
 
 Preserve Step 3's `missing-section` finding when the `## Verification` section is absent; an empty rule loop never clears it. If the section contains no rules, record `missing-verification-rules` on this unit. An untagged rule directly under the section has the canonical authoring form and may coexist with routed subsections. For every such rule, identify its subject, the observable condition it constrains, and a concrete observation that would violate it. A vague, ambiguous, or unfalsifiable rule is a finding with rule `invalid-draft-rule`: quote the rule with the missing or ambiguous criterion. For example, `ALWAYS: improve quality` fails because it names no observable condition. Select no evidence type or tag during these checks; an absent draft tag alone causes no finding.
 
-A tagged rule requires its matching routed subsection. When `### Testing` contains rules, invoke `spec-tree:test-evidence-standards` and load its assertion-type litmus. Apply that reference and the loaded foundation's assertion-type definitions to the declared claim and tag. If the required reference cannot load, record a blocking `test-standards-unavailable` finding on this unit. Judge declaration compatibility only; evidence completeness belongs to evidence auditing. Never invoke the mutating `/test` authoring workflow, select a replacement tag, or change the PDR during this audit.
+A tagged rule requires its matching routed subsection. When `### Testing` contains rules: Use skill `spec-tree:test-evidence-standards` and load its assertion-type litmus. Apply that reference and the loaded foundation's assertion-type definitions to the declared claim and tag. If the required reference cannot load, record a blocking `test-standards-unavailable` finding on this unit. Judge declaration compatibility only; evidence completeness belongs to evidence auditing. Never invoke the mutating `/test` authoring workflow, select a replacement tag, or change the PDR during this audit.
 
 For each routed rule:
 
@@ -200,7 +200,7 @@ Compare the PDR against the context Step 1 loaded:
 
 **Step 5: Classify and record**
 
-Classify every finding per `${CLAUDE_SKILL_DIR}/references/touched-text.md`: a finding on touched text is recorded on its unit with severity `blocking` (`debt` for `content-misplacement`); every other finding is standing, returned as a `filed` line, and recorded nowhere in the run.
+Classify every finding per `${CLAUDE_SKILL_DIR}/references/touched-text.md`: a finding on touched text is recorded on its unit with the severity its catalog row declares; every other finding is standing, returned as a `filed` line, and recorded nowhere in the run.
 
 Once judgment is complete, add the root unit first, because a run admits one root and every child names it, then one child unit per property, then each finding on touched text on the unit of the concern it names; a finding that names no child unit, such as `context-unavailable`, sits on the root. Every unit is `audited`, whether it holds or carries findings. Record per `<persistence_contract>`.
 
@@ -259,7 +259,7 @@ A scope unit:
 
 Add a unit with `spx verification run scope add --verification-type audit --scope-type file --scope <path> --run <token> --payload <payload-file> --idempotency-key '<unitId>'`. The root unit omits the `parentUnitId` field.
 
-Add a finding with `spx verification run finding add` and the same selectors, `--payload <payload-file>`, and `--idempotency-key '<finding-key>'`, the finding key `${CLAUDE_SKILL_DIR}/references/touched-text.md` defines as `<unitId>:<rule>`. Its payload names an accepted unit; `producerIdentity` repeats that unit's `expectedProducer`; `producerProvenance` carries the plugin version `<request_contract>` retained in both version fields, and no `toolVersion`; `rule` is the finding identifier. The identifiers are `architecture-content`, `non-observable-property`, `unstable-property`, `missing-section`, `missing-verification-rules`, `invalid-draft-rule`, `invalid-tag`, `assertion-type-mismatch`, `temporal-language`, `consistency-violation`, `content-misplacement`, `test-standards-unavailable`, and `context-unavailable`.
+Add a finding with `spx verification run finding add` and the same selectors, `--payload <payload-file>`, and `--idempotency-key '<finding-key>'`, the finding key `${CLAUDE_SKILL_DIR}/references/touched-text.md` defines as `<unitId>:<rule>`. Its payload names an accepted unit; `producerIdentity` repeats that unit's `expectedProducer`; `producerProvenance` carries the plugin version `<request_contract>` retained in both version fields, and no `toolVersion`; `rule` is one identifier from `<rule_catalog>` in `${CLAUDE_SKILL_DIR}/references/pdr-evidence-model.md`, and `severity` is the severity that row declares; name no identifier outside that catalog.
 
 ```json
 {
@@ -270,7 +270,7 @@ Add a finding with `spx verification run finding add` and the same selectors, `-
     "skillOwningPluginVersion": "<spec-tree-plugin-version>"
   },
   "rule": "<finding-identifier>",
-  "severity": "blocking",
+  "severity": "<catalog-row-severity>",
   "location": "<section-or-property-text>",
   "message": "<finding-message-naming-section-rule-and-evidence>",
   "evidence": {

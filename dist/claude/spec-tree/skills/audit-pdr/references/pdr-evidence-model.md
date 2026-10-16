@@ -11,6 +11,7 @@ The audit skill owns the complete five-property workflow, including atemporal vo
 - `<content_classification>` — observable product behavior versus architecture, grounded in the product document's declared audience and interaction surfaces, with tooling-product examples
 - `<property_quality>` — observable, falsifiable, stable product properties
 - `<tag_validity>` — per-rule verification tag and assertion-type fit
+- `<rule_catalog>` — the identifier and severity of every PDR audit rule
 
 </contents>
 
@@ -154,3 +155,25 @@ A rule earns a sound tag only when it is verifiable (a test, eval, or audit skil
 - "Be fast" → "API responses return within 200ms at p95 under normal load ([property])"
 
 </tag_validity>
+
+<rule_catalog>
+
+Every rule the PDR audit enforces has one row: one stable identifier, one severity, and the property unit that records it. A finding names exactly one identifier from this table, carries the severity its row declares, and names no identifier outside it. A defect no row covers is a gap in this standard: the rule enters this table before any finding cites it.
+
+| Identifier                   | Severity | Rule                                                                                                                  | Unit                                     |
+| ---------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| `architecture-content`       | blocking | A PDR states observable product behavior of the declared audience, never architecture or implementation.              | `content-classification`                 |
+| `non-observable-property`    | blocking | Every product property is observable and falsifiable from the declared audience's perspective.                        | `property-quality`                       |
+| `unstable-property`          | blocking | Every product property holds across all applicable contexts, including failure and boundary conditions.               | `property-quality`                       |
+| `missing-section`            | blocking | The PDR carries the `## Verification` section its template requires.                                                  | `tag-validity`                           |
+| `missing-verification-rules` | blocking | The `## Verification` section holds at least one rule.                                                                | `tag-validity`                           |
+| `invalid-draft-rule`         | blocking | An untagged rule directly under `## Verification` names an observable condition and a concrete violating observation. | `tag-validity`                           |
+| `invalid-tag`                | blocking | A routed rule carries exactly one tag, valid for its subsection, and is verifiable and specific.                      | `tag-validity`                           |
+| `assertion-type-mismatch`    | blocking | A `### Testing` rule's assertion type fits the quantifier and evidence shape of its claim.                            | `tag-validity`                           |
+| `test-standards-unavailable` | blocking | The test-evidence standards load for the assertion-type check when `### Testing` holds rules.                         | `tag-validity`                           |
+| `temporal-language`          | blocking | Every section states atemporal truth, with no reference to past behavior, events, or current state.                   | `atemporal-voice`                        |
+| `consistency-violation`      | blocking | The PDR contradicts neither the product spec nor an ancestor PDR.                                                     | `consistency`                            |
+| `content-misplacement`       | debt     | The PDR does not overlap the architecture concerns of a sibling ADR.                                                  | `consistency`                            |
+| `context-unavailable`        | blocking | Every decision a loaded record cites by full `spx/` path can be read.                                                 | the concern that names it, else the root |
+
+</rule_catalog>
