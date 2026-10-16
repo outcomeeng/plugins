@@ -10,6 +10,12 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.106.10
+
+### Changed
+
+- **`change-standards` holds a Change record only to what its review needs, and reads authority from the Maintainer's move out of `Submitted` alone.** A failed Definition of Ready criterion is the only blocking finding, and a finding against any other record rule, the word limits and section order among them, is non-blocking; each revision receives one audit whose findings never withhold publication, and a record publishes at the highest Maturity whose blocking criteria it meets. The Proposed Definition of Ready now requires the Intent's What, Why, and Evidence, the exact text of every decision the Output adds or amends, and every record and Node the Output touches, and the body gains `## Governance`, `## Governance mutations`, and `## Spec mutations` at Proposed. The Framed Definition of Ready adds each Node's assertions and an `## Assumptions` section, between `## Spec mutations` and `## Slice`, holding each settled question as its answer and one sentence of reason, and an open question blocks Framed; a question no assumption can defend goes with its best answer to the superior that assigned the refinement. `Submitted` means the record waits for the Product's Maintainer and no session claims it. The `confirmation-record` rule is gone: no confirmation comment is posted or read, a rejection is an instruction rather than a record, and a rejection at Framed or Sliced lowers Maturity after the holder's release and before the Maintainer's move out of `Submitted`. Before this change, the standards blocked a record on format findings, required a confirmation comment as authority, and reached Framed content only at Framed.
+
 ## 0.106.9
 
 ### Changed
