@@ -7,6 +7,10 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
 
+from outcomeeng.validation.implementation_audit_contract import (
+    RUN_TERMINAL_STATUS_FIELD,
+)
+
 DEFAULT_REVIEW_TRIGGER_PHRASE = "@spec-tree"
 MENTION_REVIEW_NEEDED_TOKEN_SEPARATOR = ":"
 
@@ -20,7 +24,6 @@ FIELD_REVIEWER_WORKFLOW_MODIFIED = "reviewer_workflow_modified"
 FIELD_STATE = "state"
 FIELD_STATE_CATEGORY = "state_category"
 FIELD_STATUS = "status"
-FIELD_TERMINAL_STATUS = "terminal_status"
 
 
 class RequiredCheckKind(StrEnum):
@@ -389,4 +392,7 @@ def _required_check_decision(
 
 
 def _auditor_verdict_blocks_merge(verdict: Mapping[str, Any]) -> bool:
-    return verdict.get(FIELD_TERMINAL_STATUS) not in AUDITOR_APPROVING_TERMINAL_STATUSES
+    return (
+        verdict.get(RUN_TERMINAL_STATUS_FIELD)
+        not in AUDITOR_APPROVING_TERMINAL_STATUSES
+    )

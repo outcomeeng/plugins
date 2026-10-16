@@ -17,9 +17,9 @@ from outcomeeng.merging_policy import (
     FIELD_STATE,
     FIELD_STATE_CATEGORY,
     FIELD_STATUS,
-    FIELD_TERMINAL_STATUS,
     FIELD_TOUCHES_OR_INVALIDATES_TEXT,
     MENTION_REVIEW_NEEDED_TOKEN_SEPARATOR,
+    RUN_TERMINAL_STATUS_FIELD,
     STATUS_CONTEXT_NON_TERMINAL_STATES,
     STATUS_CONTEXT_SUCCESS_STATES,
     STATUS_CONTEXT_TERMINAL_NOT_SUCCESS_STATES,
@@ -305,11 +305,11 @@ def test_auditor_verdict_mapping() -> None:
     """Assert auditor verdict mapping behavior."""
 
     for status in sorted(AUDITOR_BLOCKING_TERMINAL_STATUSES):
-        for findings in ([], [{FIELD_TERMINAL_STATUS: status}]):
+        for findings in ([], [{RUN_TERMINAL_STATUS_FIELD: status}]):
             decision = decide_auditor_verdict(
                 {
                     FIELD_TOUCHES_OR_INVALIDATES_TEXT: True,
-                    FIELD_TERMINAL_STATUS: status,
+                    RUN_TERMINAL_STATUS_FIELD: status,
                     FIELD_FINDINGS: findings,
                 }
             )
@@ -319,7 +319,7 @@ def test_auditor_verdict_mapping() -> None:
     decision = decide_auditor_verdict(
         {
             FIELD_TOUCHES_OR_INVALIDATES_TEXT: True,
-            FIELD_TERMINAL_STATUS: AuditorTerminalStatus.APPROVED,
+            RUN_TERMINAL_STATUS_FIELD: AuditorTerminalStatus.APPROVED,
             FIELD_FINDINGS: [],
         }
     )
@@ -330,14 +330,14 @@ def test_auditor_verdict_mapping() -> None:
     # terminal status is absent, null, or a token from another source-owned domain.
     non_run_verdicts: list[dict[str, object]] = [
         {},
-        {FIELD_TERMINAL_STATUS: None},
+        {RUN_TERMINAL_STATUS_FIELD: None},
         *(
-            {FIELD_TERMINAL_STATUS: action.value}
+            {RUN_TERMINAL_STATUS_FIELD: action.value}
             for action in sorted(AuditorRequiredAction)
         ),
     ]
     for non_run_verdict in non_run_verdicts:
-        for findings in ([], [{FIELD_TERMINAL_STATUS: None}]):
+        for findings in ([], [{RUN_TERMINAL_STATUS_FIELD: None}]):
             decision = decide_auditor_verdict(
                 {
                     FIELD_TOUCHES_OR_INVALIDATES_TEXT: True,
@@ -349,11 +349,11 @@ def test_auditor_verdict_mapping() -> None:
             assert decision.merge_blocked is True
 
     for status in sorted(AUDITOR_BLOCKING_TERMINAL_STATUSES):
-        for findings in ([], [{FIELD_TERMINAL_STATUS: status}]):
+        for findings in ([], [{RUN_TERMINAL_STATUS_FIELD: status}]):
             decision = decide_auditor_verdict(
                 {
                     FIELD_TOUCHES_OR_INVALIDATES_TEXT: False,
-                    FIELD_TERMINAL_STATUS: status,
+                    RUN_TERMINAL_STATUS_FIELD: status,
                     FIELD_FINDINGS: findings,
                 }
             )
