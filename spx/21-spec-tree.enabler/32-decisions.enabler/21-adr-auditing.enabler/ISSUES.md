@@ -84,3 +84,23 @@ The assertions state the sealed-run verdict model: the audit run's terminal stat
 **Settlement condition.** outcomeeng/changes#513 rewrites the skill and wrapper onto one `spx verification run` over the ADR file scope and migrates the producer-coupled eval expectations, under an unchanged semantic verdict model.
 
 **Evidence**: current-head CI review of pull request 671.
+
+## `audit-adr` composes two skills without the `Use skill` form
+
+`src/plugins/spec-tree/skills/audit-adr/SKILL.md` states two composed skill dependencies as "Invoke ..." rather than the `Use skill` instruction: Step 1 opens "Invoke `/understand` when the live `<SPEC_TREE_FOUNDATION>` marker is absent", naming the skill without its plugin qualifier, and the `tag-validity` property says "invoke `spec-tree:test-evidence-standards` and load its assertion-type litmus".
+
+**Impact**: a composed dependency stated outside the `Use skill` form names no exact installed skill for the first of the two, and reads as prose rather than as a composition instruction.
+
+**Settlement condition**: both sentences read `Use skill spec-tree:understand.` and `Use skill spec-tree:test-evidence-standards.` in the canonical form, and one typed skill audit raises no `composed_dependency_form` finding on the skill.
+
+**Evidence**: `instructions:skill-auditor` run `2026-10-16_16-04-45-033-98c4746db384`, filed finding `instructions:skill:file:src/plugins/spec-tree/skills/audit-adr/SKILL.md:composed_dependency_form`, base `1ae026e6cdc530112782684a8b9d59e27e7a1c5c`; both sentences are unchanged from that base.
+
+## `adr-auditor` carries no retained release-acceptance evidence
+
+[`spx/15-subagent-execution.pdr.md`](spx/15-subagent-execution.pdr.md) declares release acceptance per harness and per profile: native loading and one minimal isolated execution for each profile. The tree retains no acceptance artifact for the Claude or the Codex Standard row that `src/plugins/spec-tree/agents/adr-auditor.md` selects, and no exact-definition minimal isolated invocation of the definition. The gap is the one the `spx/43-instructions.enabler/21-subagents.enabler/ISSUES.md` entry records for the two instructions auditors, and it holds for every marketplace definition: the decision binds acceptance to profiles, and no definition's change of tool grant or sandbox changes the Standard profile it selects.
+
+**Impact**: nothing in the tree shows the emitted `adr-auditor` definitions loading natively and returning a run token and projection on either harness.
+
+**Settlement condition**: the release retains passing Standard-profile acceptance rows for both harnesses at a location `/audit-subagent` reads, or the subagent standards accept the harness's profile acceptance as a definition's invocation evidence, which <https://github.com/outcomeeng/changes/issues/118> carries; then one `subagent-auditor` run on the definition raises no `release_acceptance_evidence` finding.
+
+**Evidence**: `instructions:subagent-auditor` run `2026-10-16_16-05-00-543-63a92e01058a`, finding `instructions:subagent:definition:src/plugins/spec-tree/agents/adr-auditor.md:release_acceptance_evidence`, on head `511b14e3c182a9bebd4a5db3962de30962b6ff7b`.
