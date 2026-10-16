@@ -3,7 +3,7 @@ name: direct-positions
 description: >-
   ALWAYS invoke this skill when directing positions across Products: resuming the directing session after a compaction, observing, waking, or steering a position's pane, or reading a position's mail. NEVER instruct, compact, restart, or reload a position's pane without this skill.
 argument-hint: "[resume | observe | wake | steer <position> | compact <position> | restart <position> | reload <position>]"
-allowed-tools: Read, Write, Skill, AskUserQuestion, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/direction.py":*)
+allowed-tools: Read, Write, Skill, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/direction.py":*)
 ---
 
 Use skill `coding-agents:operate-herdr` for every pane operation on a position whose `environment` is `herdr`.
@@ -18,12 +18,11 @@ A report of each configured position's observed state, each action taken on its 
 
 <essential_principles>
 
-- Run every operation through `python3 "${CLAUDE_SKILL_DIR}/scripts/direction.py" <subcommand> --position "<directing position display name>"`; it resolves the common Git directory through the agent-mail adapter and prints one JSON result.
+- Run every operation through `python3 "${CLAUDE_SKILL_DIR}/scripts/direction.py" <subcommand> --position "<directing position display name>"`; it resolves the common Git directory through the agent-mail adapter and the invocation checkout through Git, and prints one JSON result.
 - Every value this skill acts on comes from the composed configuration in `<configuration>`. Name no person, mail name, Product, pane, worktree path, date, or incident that the configuration does not supply.
 - Reach every pane through `coding-agents:operate-herdr` or `coding-agents:operate-prowl`, by the position's `environment`, and every mail operation through `coding-agents:operate-agent-mail`. Construct no raw environment or mail command, and name no path into the plugin cache.
 - Read a pane's last prompt and context fill from the environment skill's result. When the result omits either, report it unavailable and act on neither. Read no harness transcript file.
 - Never believe a report unchecked: confirm a position's claim against its pane or its mail before relaying it or acting on it.
-- Confirm each write outside the invocation checkout through the structured-question tool before it happens, naming the absolute destination path of that write. One confirmation covers one write; the next write asks again. A destination inside the invocation checkout needs no confirmation.
 
 </essential_principles>
 
@@ -50,7 +49,7 @@ The file's TOML front matter between `+++` lines sets keys, parsed as TOML. Its 
 
 A malformed file or an unknown key stops the skill with a message naming the file, the key, the value found, and the accepted form, and changes nothing.
 
-Runtime state lives under `.spx/orchestration/state/` in the same common Git directory, which for a linked worktree lies outside the invocation checkout: the highest mail id rung per position in `rungs.json`, each pane's quiet time in `quiet.json`, the monitor's last observations in `observations.json`, and the resume note in `resume-note.md`. The `compose` result prints the absolute `stateDirectory` and `resumeNote`. Every write to this directory follows the confirmation rule in `<essential_principles>`. Never read it as configuration. Copy no expectations or other file into another worktree; each position reads its own override file, which the `resume_line` names.
+The skill only reads the override file; it writes nothing into the common Git directory. Runtime state lives under `.spx/orchestration/state/` in the invocation checkout, the top-level directory of the checkout the skill runs from: the highest mail id rung per position in `rungs.json`, each pane's quiet time in `quiet.json`, the monitor's last observations in `observations.json`, and the resume note in `resume-note.md`. The `compose` result prints the absolute `stateDirectory` and `resumeNote`. Never read it as configuration. Copy no expectations or other file into another worktree; each position reads its own override file, which the `resume_line` names.
 
 </configuration>
 
@@ -87,13 +86,13 @@ Report such a pane with its screen quoted verbatim and take no other action on i
 
 Every subcommand exits 0 with its JSON result, or exits 1 with `status` `stopped` or `unavailable` and a `detail`; a malformed override file or unknown key stops it naming the file and key before any change. Each pass result carries `rearmAfterSeconds`, which `<passes>` uses to re-arm. A pane's last prompt and context fill print `unavailable` while the environment adapters report neither, and the scripts act on neither. `--authority` names the methodology chapter or operator grant that permits the action; without it `act`, `send`, the doorbell, and the controller stop before any prompt, mail, forward, or compaction, naming the subcommand, the absent definition, the absent grant, and the argument to pass. Restart is available for herdr sessions only, and relaunches the same agent kind with no launch arguments. A missing `--target`, `--operation`, `--recipient`, `--subject`, or `--correlation`, an unreadable `--body-file`, or a target that names no single pane stops the subcommand with a `detail` naming the argument and listing the valid positions, panes, or operations.
 
-Test record: `direction_core.py` and `direction.py` are exercised by the position-direction mapping tests with a stubbed mail adapter and no live pane. The tests cover default and override composition, malformed and unknown-key files with every unknown key reported, pane guards, quiet time, atomic state writes, an absent authority on `act`, `send`, the doorbell, and the controller, a guarded `act` target, an absent `act` target or operation, and absent `send` arguments, the located reason for an unresolved pane, wrong-typed override values, restart without launch arguments, the report-only controller forwarding a stalled guarded pane's screen, and each stated default that reports unavailable: an unset `advisor` on the controller, an unset `mail.agent` on the doorbell, `inbox`, and `send`, and an unset `pace`. They leave no state beyond the pytest temporary directory.
+Test record: `direction_core.py` and `direction.py` are exercised by the position-direction mapping tests with a stubbed mail adapter and no live pane. The tests cover default and override composition, malformed and unknown-key files with every unknown key reported, pane guards, quiet time, atomic state writes, runtime state and the resume note placed in the invocation checkout apart from the override file in the common Git directory, an absent authority on `act`, `send`, the doorbell, and the controller, a guarded `act` target, an absent `act` target or operation, and absent `send` arguments, the located reason for an unresolved pane, wrong-typed override values, restart without launch arguments, the report-only controller forwarding a stalled guarded pane's screen, and each stated default that reports unavailable: an unset `advisor` on the controller, an unset `mail.agent` on the doorbell, `inbox`, and `send`, and an unset `pace`. They leave no state beyond the pytest temporary directory.
 
 </scripts>
 
 <passes>
 
-The monitor, the doorbell, and the controller are passes. Each pass runs once, writes its observations to the state directory, and ends. The monitor pass writes `quiet.json` and `observations.json`, and the doorbell pass writes `rungs.json` and `quiet.json`; before each pass runs, including a re-armed one, confirm each file it writes outside the invocation checkout by its absolute path. No pass loops, waits for its next pass, or outlives this session. After a pass ends, re-arm the next one through a session-scoped harness capability: the harness monitor for the monitor pass, and a bounded background run whose exit the harness reports for the doorbell and controller passes. A harness without such a capability runs each pass at the next step boundary.
+The monitor, the doorbell, and the controller are passes. Each pass runs once, writes its observations to the state directory, and ends. The monitor pass writes `quiet.json` and `observations.json`, and the doorbell pass writes `rungs.json` and `quiet.json`. No pass loops, waits for its next pass, or outlives this session. After a pass ends, re-arm the next one through a session-scoped harness capability: the harness monitor for the monitor pass, and a bounded background run whose exit the harness reports for the doorbell and controller passes. A harness without such a capability runs each pass at the next step boundary.
 
 - **Monitor pass.** For each position in `positions` and each group in `executor_groups`, read the pane through its environment skill. Record quiet time and context fill. Report a pane quiet for its stall minutes or filled past its context percent.
 - **Doorbell pass.** After `doorbell_start_delay_seconds`, list each position's unread mail through `coding-agents:operate-agent-mail` for the `mail.agent` identity. For a position whose highest unread id exceeds its recorded rung and whose pane is idle, send one prompt through the position's environment skill that tells it to read its mail, then record the new rung. Skip every pane `<pane_guards>` excludes.
@@ -138,7 +137,7 @@ For `wake`, `steer`, `compact`, `restart`, and `reload`, check `<authority>` and
 </step>
 
 <step name="record">
-Confirm the write of the resume note by the absolute `resumeNote` path the `compose` result printed, then write it there: the time, the last mail handled, each position's observed state, each action in flight with its next trigger, and each operator rule given since the last note. Report the pass outcome to the operator by position display name.
+Write the resume note at the absolute `resumeNote` path the `compose` result printed: the time, the last mail handled, each position's observed state, each action in flight with its next trigger, and each operator rule given since the last note. Report the pass outcome to the operator by position display name.
 </step>
 
 </workflow>
@@ -160,7 +159,7 @@ Confirm the write of the resume note by the absolute `resumeNote` path the `comp
 - No input went into an untouchable pane, an operator-prompted pane, or a pane at a question or approval screen.
 - Every action carries the methodology chapter or operator grant that permitted it; every other action stopped naming the absent definition and the absent grant.
 - Each pass ended after one run and was re-armed through a harness capability or deferred to the next step boundary.
-- Every write outside the invocation checkout was confirmed by its absolute path immediately before it happened, and no confirmation covered a second write.
+- Every state file and the resume note were written under the invocation checkout, and nothing was written into the common Git directory.
 - The resume note records the state a post-compaction session needs.
 
 </success_criteria>

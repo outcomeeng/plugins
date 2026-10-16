@@ -8,6 +8,7 @@ import importlib.util
 import json
 import os
 import re
+import subprocess
 import tempfile
 import time
 import tomllib
@@ -112,6 +113,30 @@ def common_directory(mail: ModuleType) -> Path:
             f"the common Git directory cannot be resolved: {error}; run the skill "
             "from inside a Git checkout of the repository."
         ) from error
+
+
+def invocation_checkout() -> Path:
+    """The top-level directory of the checkout the skill runs from."""
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired) as error:
+        raise DirectionError(
+            f"the invocation checkout cannot be resolved: {error}; run the skill "
+            "from inside a Git checkout of the repository."
+        ) from error
+    if result.returncode != 0 or not result.stdout.strip():
+        detail = result.stderr.strip() or "no command detail"
+        raise DirectionError(
+            f"the invocation checkout cannot be resolved: {detail}; run the skill "
+            "from inside a Git checkout of the repository."
+        )
+    return Path(result.stdout.strip())
 
 
 def split_front_matter(text: str) -> tuple[str, str]:
@@ -283,10 +308,16 @@ def _validated(settings: dict[str, Any], source: Path) -> dict[str, Any]:
     return settings
 
 
-def compose_configuration(common_dir: Path, display_name: str) -> dict[str, Any]:
-    """Compose a position's override file over the shipped defaults."""
-    orchestration = common_dir / ORCHESTRATION_DIRECTORY
-    source = orchestration / override_file_name(display_name)
+def compose_configuration(
+    common_dir: Path, checkout: Path, display_name: str
+) -> dict[str, Any]:
+    """Compose a position's override file over the shipped defaults.
+
+    The override file is read from the common Git directory; the runtime state
+    and the resume note belong to the invocation checkout.
+    """
+    source = common_dir / ORCHESTRATION_DIRECTORY / override_file_name(display_name)
+    state_directory = checkout / ORCHESTRATION_DIRECTORY / STATE_DIRECTORY
     settings: dict[str, Any] = {}
     expectations = ""
     present = source.is_file()
@@ -307,7 +338,7 @@ def compose_configuration(common_dir: Path, display_name: str) -> dict[str, Any]
     composed["mail"] = {**DEFAULTS["mail"], **settings.get("mail", {})}
     if composed["mail"]["channel"] is None:
         composed["mail"]["channel"] = str(common_dir)
-    resume_note = orchestration / STATE_DIRECTORY / RESUME_NOTE_FILE
+    resume_note = state_directory / RESUME_NOTE_FILE
     if composed["resume_line"] is None:
         composed["resume_line"] = DEFAULT_RESUME_LINE.format(
             resume_note=resume_note,
@@ -316,7 +347,7 @@ def compose_configuration(common_dir: Path, display_name: str) -> dict[str, Any]
         )
     composed["expectations"] = expectations
     composed["overrideFile"] = {"path": str(source), "present": present}
-    composed["stateDirectory"] = str(orchestration / STATE_DIRECTORY)
+    composed["stateDirectory"] = str(state_directory)
     composed["resumeNote"] = str(resume_note)
     return composed
 
