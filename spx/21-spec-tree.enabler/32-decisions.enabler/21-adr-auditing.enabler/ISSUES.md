@@ -77,10 +77,12 @@ opens with the classification instruction at line 125.
 `duplicated_boundary_statement`, severity `WARNING`, on head
 `524b9c46c7960a106d84ef856b4020a0ce904b16` during Change #76.
 
-## The shipped ADR audit still produces the structured JSON verdict
+## `adr-auditor` carries no retained release-acceptance evidence
 
-The assertions state the sealed-run verdict model: the audit run's terminal status is `approved` or `rejected`, and the `adr-auditor` wrapper relays the run token, the run file and the rendered projection. `src/plugins/spec-tree/skills/audit-adr/SKILL.md` still emits the `<verdict_format>` JSON object with an `overall` field and no run token or run file, so the `[eval]` expectations describe behavior the shipped producer does not yet have.
+[`spx/15-subagent-execution.pdr.md`](spx/15-subagent-execution.pdr.md) declares release acceptance per harness and per profile: native loading and one minimal isolated execution for each profile. The tree retains no acceptance artifact for the Claude or the Codex Standard row that `src/plugins/spec-tree/agents/adr-auditor.md` selects, and no exact-definition minimal isolated invocation of the definition. The gap is the one the `spx/43-instructions.enabler/21-subagents.enabler/ISSUES.md` entry records for the two instructions auditors, and it holds for every marketplace definition: the decision binds acceptance to profiles, and no definition's change of tool grant or sandbox changes the Standard profile it selects.
 
-**Settlement condition.** outcomeeng/changes#513 rewrites the skill and wrapper onto one `spx verification run` over the ADR file scope and migrates the producer-coupled eval expectations, under an unchanged semantic verdict model.
+**Impact**: nothing in the tree shows the emitted `adr-auditor` definitions loading natively and returning a run token and projection on either harness.
 
-**Evidence**: current-head CI review of pull request 671.
+**Settlement condition**: the release retains passing Standard-profile acceptance rows for both harnesses at a location `/audit-subagent` reads, or the subagent standards accept the harness's profile acceptance as a definition's invocation evidence, which <https://github.com/outcomeeng/changes/issues/118> carries; then one `subagent-auditor` run on the definition raises no `release_acceptance_evidence` finding.
+
+**Evidence**: `instructions:subagent-auditor` run `2026-10-16_16-05-00-543-63a92e01058a`, finding `instructions:subagent:definition:src/plugins/spec-tree/agents/adr-auditor.md:release_acceptance_evidence`, on head `511b14e3c182a9bebd4a5db3962de30962b6ff7b`.

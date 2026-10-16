@@ -25,22 +25,6 @@ shipped skill to its instruction with no script. Preserve the caller-independent
 scope resolution across the move: the audit names no caller and stays invocable
 on its own. Revisit when the capability publishes.
 
-## The coherence eval's committed run history predates its producer
-
-`evals/coherence-verdict/history.jsonl` carries no run against the current
-`src/plugins/spec-tree/skills/audit-changeset-coherence/SKILL.md`, whose
-resolver relay and stale-base refusal changed the producer the eval scores. The
-`[eval]` assertions the suite backs therefore rest on a history recorded for an
-earlier producer.
-
-**Evidence.** Pull request outcomeeng/plugins#580 merged as
-`a24d145869614193a55ffae2c92f781a605802eb` with the eval run recorded as not
-established in its test plan.
-
-**Settlement condition**: one `just eval spx/21-spec-tree.enabler/68-audit.enabler/32-changeset-coherence.enabler/evals/coherence-verdict/eval.toml`
-run against the released producer, its `history.jsonl` committed beside the
-suite.
-
 ## The configured coherence auditor has no authorized caller or execution record
 
 The configured-agent audit of
@@ -65,11 +49,60 @@ result.
 head `843ddd709b058970d414ec755cc10121ff6bb5ff`. The same audit approved the
 corrected least-privilege tool and profile configuration.
 
-## The shipped coherence audit, its wrapper and its eval still produce the structured JSON verdict
+**Release acceptance and invocation evidence.** The tree retains no native-loading
+record and no minimal isolated execution of the emitted definition for either
+harness's Standard profile, as property 3 of
+[`spx/15-subagent-execution.pdr.md`](spx/15-subagent-execution.pdr.md) requires.
+The gap is the one the `adr-auditor` entry in
+`spx/21-spec-tree.enabler/32-decisions.enabler/21-adr-auditing.enabler/ISSUES.md`
+records, and it holds for every marketplace definition: the decision binds
+acceptance to profiles, and no definition's tool grant or sandbox changes the
+Standard profile it selects.
 
-The assertions state the sealed-run verdict model: the audit run's terminal status is `approved` or `rejected`, an undecidable unit is `incomplete`, and the wrapper relays the run token, the run file and the rendered projection. The shipped `audit-changeset-coherence` skill, the `changeset-coherence-auditor` wrapper and the `evals/coherence-verdict` suite still produce and score the `APPROVED`, `REJECTED` and `UNKNOWN` JSON verdict, so the `[eval]` expectations and the `[audit]` wrapper assertion describe behavior the shipped producer does not yet have.
+**Impact**: nothing in the tree shows the emitted `changeset-coherence-auditor`
+definitions loading natively and returning a run token and projection on either
+harness, so each `subagent-auditor` run on the definition files the finding again.
 
-**Settlement condition.** outcomeeng/changes#513 rewrites the skill and wrapper onto one `spx verification run` over the exact committed scope and migrates the producer-coupled eval expectations, under an unchanged semantic verdict model.
+**Settlement condition**: the release retains passing Standard-profile acceptance
+rows for both harnesses at a location `/audit-subagent` reads, or the subagent
+standards accept the harness's profile acceptance as a definition's invocation
+evidence, which <https://github.com/outcomeeng/changes/issues/118> carries; then
+one `subagent-auditor` run on the definition raises no `release_acceptance_evidence`
+finding.
+
+**Evidence**: two `instructions:subagent-auditor` runs on
+`src/plugins/spec-tree/agents/changeset-coherence-auditor.md` under outcomeeng/changes#513.
+Run `2026-10-16_19-39-21-548-906835a64c26` at head
+`06d6e1e18e8a4485cb29c6e171ec73bed7d9669c` sealed `rejected`; it raised the
+blocking rule `release_acceptance_evidence` and the blocking rule
+`execution_boundary_mismatch`, which the amended wrapper assertion in commit
+`d92f6f73b0a17127c8840078370fef38d072e02b` resolved. Run
+`2026-10-16_19-59-29-460-b8a7ac7b6830` at that head sealed `approved` and filed
+`instructions:subagent:definition:src/plugins/spec-tree/agents/changeset-coherence-auditor.md:release_acceptance_evidence`
+against this entry, with `baseRefEvidence`
+`184cc92eae6e896050a7cc991f63ce953b236ccd..d92f6f73b0a17127c8840078370fef38d072e02b`. The Plugins Maintainer's
+disposition of this class for the Change's rewritten wrapper definitions
+(outcomeeng/changes#513, comment 6221945881, item 4) leaves no repair in the
+changeset.
+
+## An approved run records no cluster facts
+
+The assertion of
+[`spx/21-spec-tree.enabler/68-audit.enabler/32-changeset-coherence.enabler/changeset-coherence.md`](spx/21-spec-tree.enabler/68-audit.enabler/32-changeset-coherence.enabler/changeset-coherence.md)
+that the audit records its semantic clusters and the facts about them in its sealed
+run's units stands as declared. The `spx verification run` unit payload has no field that
+carries cluster facts, so an approved run records none.
+
+**Impact**: the declaration leads the toolchain; the sealed record of an approved
+run omits the cluster facts the assertion states.
+
+**Settlement condition**: an `@outcomeeng/spx` release whose unit payload carries
+the cluster facts is published, the repository floor advances to it, and the audit
+records them on an approved run.
+
+**Evidence**: ruling of the Plugins Maintainer on outcomeeng/changes#513 (comment
+6223578521, item 2). The node is `spec`-malleable, so its declaration may lead its
+implementation.
 
 ## The compliance section holds eleven assertions
 

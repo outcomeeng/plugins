@@ -45,6 +45,7 @@ The **prose-coupling** check is the verification-type analog: when a claim's sub
 ### Compliance
 
 - ALWAYS: check section structure, atemporal voice, and per-assertion tag fitness in that order ([audit])
+- ALWAYS: `/audit-specs` loads the target spec node's context read-only before any audit phase — the product spec, then each spec and every decision record on the path from `spx/` to the target spec node, then every decision a loaded spec or decision cites by full `spx/` path — never invoking `/contextualize` or `/sync-base`, so the audit changes no checkout state ([audit])
 - ALWAYS: interpret assertion headings as claim-shape groupings independently of verification type, so universal `[audit]` rules remain under `### Compliance` without acquiring the test-only compliance assertion type ([audit])
 - ALWAYS: verify each `[test]` assertion's assertion type fits the claim's quantifier per the `/test` router — a universal is never `scenario` — without relitigating a choice the router leaves open ([audit])
 - ALWAYS: flag a `[test]` tag on a claim whose subject is authored prose or documentation content — the verification belongs in `[eval]` or `[audit]`, and the check holds whether the would-be evidence reads the authored artifact directly or through test infrastructure ([audit])

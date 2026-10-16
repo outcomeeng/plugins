@@ -2,7 +2,7 @@
 
 Detailed evidence model for eval auditing. Read this before auditing any `[eval]` assertion or eval suite.
 
-Five properties define eval evidence: producer coupling, oracle independence, assertion alignment, falsifiability, and run evidence. This reference provides the taxonomy and procedures for each.
+Five properties define eval evidence: producer coupling, oracle independence, assertion alignment, falsifiability, and run evidence. Each property is one gate of the audit. This reference provides the taxonomy and procedure for each gate and the rule catalog that every finding draws from.
 
 </overview>
 
@@ -13,7 +13,7 @@ Five properties define eval evidence: producer coupling, oracle independence, as
 - `alignment_model`
 - `falsifiability_model`
 - `run_evidence`
-- `rejection_categories`
+- `rule_catalog`
 
 </contents>
 
@@ -39,14 +39,14 @@ Eval evidence proves producer behavior only when the case set drives the produce
 
 Coupling is the first gate. An eval that does not reach the real producer is a simulation, even when its cases and grader are well-formed.
 
-| Category         | Definition                                                                                         | Verdict                                                              |
+| Category         | Definition                                                                                         | Outcome                                                              |
 | ---------------- | -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
 | Direct           | Runner invokes the producer directly.                                                              | Proceed                                                              |
 | Harness-mediated | Runner invokes a harness that loads and runs the producer without replacing its behavior.          | Proceed after chain inspection                                       |
 | Prompt-loaded    | Prompt includes the producer body or governing artifact and asks for a verdict from that artifact. | Proceed only when the claim is about that loaded artifact's behavior |
-| Simulation       | Prompt restates expected rules and asks for the desired verdict without using the producer.        | REJECT                                                               |
-| False            | Metadata names the producer but prompt or harness never uses it.                                   | REJECT                                                               |
-| Unknown          | Artifact path cannot establish how the producer is reached.                                        | REJECT                                                               |
+| Simulation       | Prompt restates expected rules and asks for the desired verdict without using the producer.        | `producer-coupling` finding                                          |
+| False            | Metadata names the producer but prompt or harness never uses it.                                   | `producer-coupling` finding                                          |
+| Unknown          | Artifact path cannot establish how the producer is reached.                                        | `producer-coupling` finding                                          |
 
 `prompt_source.kind = "producer-section"` in `eval.toml` is a supported Prompt-loaded coupling mode. Verify that the producer file, named section, and prompt template exist, and that the committed `prompt.md` is current with the source-derived materialization. The selected producer section is the artifact under audit for the suite: mutating that section changes the materialized prompt. Do not require the eval runner to invoke the whole skill, agent, classifier, or script when the assertion is about the selected section's behavior; the loaded section is the producer artifact for that suite. A hand-authored prompt that copies the same rules without `prompt_source` is Simulation.
 
@@ -71,7 +71,7 @@ Rejected:
 - A prompt that restates the producing skill's policy in simplified form while the real skill is absent.
 - Case input fields named or shaped so the answer is visible without applying the producer methodology.
 
-Oracle leakage is a REJECT finding even when the run history passes.
+Oracle leakage is an `oracle-leakage` finding even when the run history passes.
 
 </oracle_independence>
 
@@ -87,7 +87,7 @@ Procedure:
 4. Confirm negative cases target the assertion's failure mode.
 5. Ask whether the assertion could be unfulfilled while every case still passes.
 
-If the assertion could be unfulfilled while the suite passes, REJECT as misaligned.
+If the assertion could be unfulfilled while the suite passes, record an `assertion-alignment` finding.
 
 </alignment_model>
 
@@ -111,7 +111,7 @@ Mutation: edit the prompt answer key
 Problem: falsifies the eval prompt, not the real producer
 ```
 
-If no producer mutation changes the result, the suite is unfalsifiable for the assertion.
+If no producer mutation changes the result, the suite is unfalsifiable for the assertion and the finding is `falsifiability`.
 
 </falsifiability_model>
 
@@ -127,7 +127,7 @@ Read `history.jsonl` and the referenced run summary when available. Confirm:
 - The row is not budget-exhausted, timed out, interrupted, or infrastructure-failed.
 
 When the newest passing row's `git_sha` names a direct ancestor of HEAD, inspect
-the diff from that SHA to HEAD before rejecting it as stale. Accept the row only
+the diff from that SHA to HEAD before treating it as stale. Accept the row only
 when every changed path is the audited suite's own `history.jsonl` append and no
 `eval.toml`, `prompt.md`, `cases.jsonl`, producer artifact, grader, harness, or
 threshold-affecting code changed. This history-only exception is required
@@ -137,24 +137,26 @@ the run records `git rev-parse HEAD`.
 Use `git merge-base --is-ancestor <recorded-git-sha> HEAD` to establish ancestry
 and `git diff --no-ext-diff --no-textconv <recorded-git-sha> HEAD --` to inspect
 the complete change, including whether the history modification is append-only.
-Treat an unavailable commit or failed inspection as unavailable provenance,
-never as proof that the exception applies.
+An unavailable commit or failed inspection is unavailable provenance, never proof
+that the exception applies: the gate cannot be decided and is recorded `incomplete`.
 
-Budget-exhausted and other operational failures are neither passes nor behavioral rejections. They only show the suite did not produce complete evidence.
+Budget-exhausted and other operational failures are neither passes nor behavioral failures. They only show the suite did not produce complete evidence, so the finding is `run-evidence`.
 
 </run_evidence>
 
-<rejection_categories>
+<rule_catalog>
 
-Use these `rule` values in findings:
+Every rule the audit enforces has one row: one stable identifier, one severity, and the unit that records it. A finding names exactly one identifier from this table, carries the severity its row declares, and names no identifier outside it. A defect no row covers is a gap in this standard: the rule enters this table before any finding cites it.
 
-| Rule                  | Meaning                                                             |
-| --------------------- | ------------------------------------------------------------------- |
-| `missing-artifact`    | Required eval artifact is absent                                    |
-| `producer-coupling`   | Suite does not reach the real producer                              |
-| `oracle-leakage`      | Prompt or case input exposes the expected answer                    |
-| `assertion-alignment` | Expected verdict fields do not prove the assertion                  |
-| `falsifiability`      | No mutation to the producer changes the result                      |
-| `run-evidence`        | Passing run evidence is missing, stale, or operationally incomplete |
+| Identifier            | Severity | Rule                                                                                                                                                                          | Unit                               |
+| --------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| `missing-artifact`    | blocking | Every eval artifact an `[eval]` assertion links exists: the eval definition and prompt feed `producer-coupling`, the cases `oracle-independence`, the history `run-evidence`. | the gate the absent artifact feeds |
+| `producer-coupling`   | blocking | The suite reaches the real producing skill, agent, classifier, script, or command, so replacing the producer with unrelated text changes the eval result.                     | `producer-coupling`                |
+| `oracle-leakage`      | blocking | The model-facing prompt and the case inputs expose neither the expected verdict nor an answer table.                                                                          | `oracle-independence`              |
+| `assertion-alignment` | blocking | Every expected verdict field maps to a claim of the assertion, and the assertion cannot be unfulfilled while the suite passes.                                                | `assertion-alignment`              |
+| `falsifiability`      | blocking | A named mutation to the real producer changes the result of at least one case.                                                                                                | `falsifiability`                   |
+| `run-evidence`        | blocking | The committed history holds a complete passing run for the current eval definition, prompt, cases, threshold, and producer.                                                   | `run-evidence`                     |
+| `gate-undecidable`    | blocking | A gate whose required inspection can be completed is decided; a gate whose inspection cannot be completed is recorded `incomplete` with this finding naming the cause.        | the `incomplete` gate              |
+| `context-unavailable` | blocking | Every decision a loaded record cites by full `spx/` path can be read.                                                                                                         | the root                           |
 
-</rejection_categories>
+</rule_catalog>
