@@ -78,7 +78,7 @@ Treat the helper output as an inspection projection of the sealed journal prefix
 
 <command_forms>
 
-Run each journal command as its own command, one at a time, with the type, run token, event path, and cursor written out literally. Stop the run at the first nonzero exit: a continued run appends onto a sequence whose earlier event is missing.
+Run each journal command as its own command, one at a time, with the type, run token, event path, and cursor written out literally. Stop the run at the first nonzero exit: a continued run appends onto a sequence whose earlier event is missing. One exception holds: an `append` whose diagnostic names its event file as absent runs once more with the same command, after the file-write result confirms the file; a second nonzero exit stops the run.
 
 | Verb   | Command form                                                    |
 | ------ | --------------------------------------------------------------- |
