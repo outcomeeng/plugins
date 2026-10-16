@@ -16,6 +16,8 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 - **`/audit-implementation` copies each payload path from the file-write result.** The audit now copies the scratch directory the harness names into each payload path character for character, stops before a command whose file-write result reports a path outside that directory and names the reported path, passes `--payload` the path exactly as the result reports it, and reruns a command once when its diagnostic names the payload file as absent before stopping with a `BLOCKED` result naming the run token. Before this change, the audit stopped at the first nonzero exit without a rerun and did not check where a payload file landed, so a retyped path failed the scope add and the run sealed no verdict.
 
+- **`/audit-assertions` copies each payload path from the file-write result.** The audit now copies the scratch directory the harness names into each payload path character for character, stops before a command whose file-write result reports a path outside that directory and names the reported path, passes `--payload` the path exactly as the result reports it, and reruns a command once when its diagnostic names the payload file as absent before stopping with a `BLOCKED` result naming the run token. Before this change, the audit stopped at the first nonzero exit without a rerun and did not check where a payload file landed, so a retyped path failed the scope add and the run sealed no verdict.
+
 ## 0.106.5
 
 ### Changed
