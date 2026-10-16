@@ -15,36 +15,18 @@ Rust work follows this standard when compiler, lint, test, and review evidence s
 </success_criteria>
 
 <reference_note>
-This is a reference skill. Composing Rust skills load these standards explicitly before writing, testing, or auditing. It is not a standalone workflow.
+This is a reference skill, not a standalone workflow.
 </reference_note>
 
 <repo_local_overlay>
-When another skill loads this reference inside a repository, it must also check for `spx/local/rust.md` at the repository root. Read that file after this reference if it exists and apply it as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth.
+Inside a repository, check for `spx/local/rust.md` at the repository root. Read that file after this reference if it exists and apply it as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth.
 </repo_local_overlay>
 
 <standard_family>
-Load `/rust-code-standards` as the container before any specialized Rust standard.
 
-| Work area                  | Specialized standard           | Purpose                                                                                      |
-| -------------------------- | ------------------------------ | -------------------------------------------------------------------------------------------- |
-| test code                  | `/rust-test-standards`         | Rust test filenames, levels, evidence rules, doubles, harnesses, fixtures, and examples      |
-| ADRs and architecture docs | `/rust-architecture-standards` | Rust architecture decision structure, testability constraints, and architecture review rules |
+When the work involves test code, Use skill `rust:rust-test-standards`. When the work involves ADRs or architecture documents, Use skill `rust:rust-architecture-standards`.
 
-Keep examples in standardizing skills. Task skills such as `/author-rust-code`, `/author-rust-test`, and `/audit-rust-test` describe workflow and load order; the standardizing family owns reusable policy and concrete examples.
 </standard_family>
-
-<tooling_baseline>
-
-Rust code follows the repository's actual toolchain. Unless a repo-local overlay states otherwise:
-
-- formatting uses `rustfmt`
-- linting uses `clippy`
-- compilation and tests run through `cargo`
-- public APIs and boundaries use explicit types
-
-These standards are enforced by compiler checks, linting, and code review together. Passing one tool is not enough if the code still violates the architectural intent below.
-
-</tooling_baseline>
 
 <type_system>
 
@@ -262,31 +244,3 @@ let slice = unsafe { std::slice::from_raw_parts(ptr, len) };
 ```
 
 </unsafe_and_ffi>
-
-<tool_preferences>
-
-Prefer Rust-native tools and idioms unless a repo-local overlay says otherwise:
-
-- `clap` for CLI parsing
-- `serde` for serialization
-- `tracing` for structured observability
-- `tempfile` for tempdir-backed tests
-- `assert_cmd` for CLI L2 binary tests
-- `proptest` or `quickcheck` for property testing
-- `trybuild` for compile-time contracts
-
-</tool_preferences>
-
-<anti_patterns>
-
-| Anti-pattern                            | Why it is rejected                                |
-| --------------------------------------- | ------------------------------------------------- |
-| stringly-typed domain states            | loses invariants and discoverability              |
-| clone-heavy data flow                   | hides unclear ownership design                    |
-| `unwrap()` in ordinary production paths | turns expected failures into crashes              |
-| public mutable fields by default        | breaks encapsulation and invariant control        |
-| locks held across `.await`              | deadlock and contention risk                      |
-| generated mocks as the default seam     | weakens evidence and severs reality-based testing |
-| unsafe used to bypass ownership design  | replaces clear design with soundness risk         |
-
-</anti_patterns>
