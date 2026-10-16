@@ -1,6 +1,6 @@
 # Common ADR Patterns for Rust
 
-These patterns show how testability constraints appear under the `## Verification` section's `### Audit` subsection. See `/rust-architecture-standards` for the canonical ADR section structure.
+These patterns show how testability constraints appear under the `## Verification` section's `### Audit` subsection. The canonical ADR section structure comes from the loaded `rust:rust-architecture-standards` skill.
 
 ## Contents
 

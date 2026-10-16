@@ -30,6 +30,8 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 - **`simplify-rust-code` loads each composed skill by its exact installed name.** The workflow uses `spec-tree:understand`, `spec-tree:scope-changeset`, `spec-tree:contextualize`, and `rust:author-rust-code` through an explicit skill-load instruction instead of a slash mention, so each dependency loads rather than being only recorded.
 - **`author-rust-code` loads each composed skill by its exact installed name.** The testing methodology, the remediation workflow, and the context-loading step use `spec-tree:verify`, `rust:author-rust-test`, and `spec-tree:contextualize` through an explicit skill-load instruction instead of a slash mention or a bare invoke, and the verification checklist states the harness-call rule inline instead of routing to the test-patterns reference.
 
+- **`author-rust-architecture` loads each composed skill by its exact installed name and routes to the skills that own the ADR template and BSP numbering.** The context-loading, evidence-routing, and template steps use `spec-tree:contextualize`, `spec-tree:verify`, `rust:rust-test-standards`, `rust:author-rust-test`, `spec-tree:author`, and `spec-tree:understand` through an explicit skill-load instruction instead of a slash mention or a bare invoke. The skill no longer restates the ADR sections or the BSP numbering formulas, and `rust-principles.md` lists the decisions an ADR records per Rust concern instead of teaching general Rust idioms.
+
 ## 0.10.0
 
 ### Breaking
