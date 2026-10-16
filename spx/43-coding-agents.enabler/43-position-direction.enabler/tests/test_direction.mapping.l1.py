@@ -583,3 +583,44 @@ def test_state_and_resume_note_live_in_the_invocation_checkout(tmp_path: Path) -
     assert str(state / "resume-note.md") in config["resume_line"]
     assert str(override) in config["resume_line"]
     assert not (common / ".spx/orchestration/state").exists()
+
+
+def test_send_rejects_a_body_file_outside_the_scratch_directory(tmp_path: Path) -> None:
+    _director_file(tmp_path)
+    mail = _SentMail(tmp_path)
+    scratch = tmp_path / "scratch"
+    scratch.mkdir()
+    outside = tmp_path / "outside.txt"
+    outside.write_text("secret", encoding="utf-8")
+    out = StringIO()
+
+    status = direction.main(
+        [
+            "send",
+            "--position",
+            "Lead Director",
+            "--authority",
+            "grant",
+            "--recipient",
+            "worker",
+            "--subject",
+            "s",
+            "--correlation",
+            "c",
+            "--body-file",
+            "../outside.txt",
+            "--scratch-directory",
+            str(scratch),
+        ],
+        stdout=out,
+        runtime=(mail, None),  # type: ignore[arg-type]
+        checkout=tmp_path / "checkout",
+    )
+
+    result = json.loads(out.getvalue())
+    assert status == 1
+    assert result["status"] == "stopped"
+    assert result["rejectedPath"] == "../outside.txt"
+    assert result["resolvedPath"] == str(outside.resolve())
+    assert result["scratchDirectory"] == str(scratch.resolve())
+    assert mail.sent == []

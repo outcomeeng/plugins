@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import tempfile
 from pathlib import Path
 from types import ModuleType
 from typing import Any, Callable, Mapping, Sequence, TextIO
@@ -67,6 +68,40 @@ def _runtime() -> tuple[ModuleType, Environments]:
     return mail, Environments(herdr, prowl, runners)
 
 
+def _position_target(position: Mapping[str, Any], panes: list[Pane]) -> dict[str, Any]:
+    pane = resolve_pane(panes, position["cwd"])
+    detail = (
+        None
+        if pane
+        else unresolved_pane_detail(
+            panes, position["cwd"], position["name"], position["environment"]
+        )
+    )
+    return {
+        "label": position["name"],
+        "position": position,
+        "pane": pane,
+        "settings": position,
+        "detail": detail,
+    }
+
+
+def _group_targets(group: Mapping[str, Any], panes: list[Pane]) -> list[dict[str, Any]]:
+    exclusions = group.get("exclusions", [])
+    return [
+        {
+            "label": group["label"],
+            "position": None,
+            "pane": pane,
+            "settings": group,
+            "detail": None,
+        }
+        for pane in panes
+        if pane.cwd.startswith(group["cwd_prefix"])
+        and not any(pane.cwd.startswith(x) for x in exclusions)
+    ]
+
+
 def _targets(config: Mapping[str, Any], envs: Environments) -> list[dict[str, Any]]:
     """Every pane the configuration directs: positions first, then executor groups."""
     inventories: dict[str, list[Pane]] = {}
@@ -76,39 +111,12 @@ def _targets(config: Mapping[str, Any], envs: Environments) -> list[dict[str, An
             inventories[environment] = envs.panes(environment)
         return inventories[environment]
 
-    found: list[dict[str, Any]] = []
-    for position in config["positions"]:
-        panes = panes_of(position["environment"])
-        pane = resolve_pane(panes, position["cwd"])
-        detail = (
-            None
-            if pane
-            else unresolved_pane_detail(
-                panes, position["cwd"], position["name"], position["environment"]
-            )
-        )
-        found.append(
-            {
-                "label": position["name"],
-                "position": position,
-                "pane": pane,
-                "settings": position,
-                "detail": detail,
-            }
-        )
+    found = [
+        _position_target(position, panes_of(position["environment"]))
+        for position in config["positions"]
+    ]
     for group in config["executor_groups"]:
-        for pane in panes_of(group["environment"]):
-            excluded = any(pane.cwd.startswith(x) for x in group.get("exclusions", []))
-            if pane.cwd.startswith(group["cwd_prefix"]) and not excluded:
-                found.append(
-                    {
-                        "label": group["label"],
-                        "position": None,
-                        "pane": pane,
-                        "settings": group,
-                        "detail": None,
-                    }
-                )
+        found.extend(_group_targets(group, panes_of(group["environment"])))
     return found
 
 
@@ -131,7 +139,7 @@ def _observe(
             continue
         screen = envs.read(pane)
         quiet = quiet_minutes(
-            quiet_state, f"{pane.environment}:{pane.pane}", screen, now
+            quiet_state, f"{pane.environment}:{pane.pane_id}", screen, now
         )
         position = target["position"] or {}
         reasons = guard_reasons(pane, screen, config["untouchable_panes"])
@@ -139,7 +147,7 @@ def _observe(
             {
                 "label": target["label"],
                 "environment": pane.environment,
-                "pane": pane.pane,
+                "pane": pane.pane_id,
                 "agentStatus": pane.status,
                 "quietMinutes": quiet,
                 "stalled": quiet >= position.get("stall_minutes", float("inf")),
@@ -224,6 +232,43 @@ def monitor_pass(config, envs, now) -> dict[str, Any]:
     }
 
 
+def _ring(
+    target: Mapping[str, Any],
+    config: Mapping[str, Any],
+    envs: Environments,
+    mail: ModuleType,
+    rungs: dict[str, Any],
+    quiet_state: dict[str, Any],
+    now: float,
+) -> tuple[str, dict[str, Any]] | None:
+    """One doorbell decision for one position: ("sent" | "skipped", entry), or None."""
+    position = target["position"]
+    pane: Pane | None = target["pane"]
+    if pane is None:
+        return "skipped", {"label": position["name"], "detail": target["detail"]}
+    unread = _unread(mail, position["mail_name"])
+    newest = max((int(r["id"]) for r in unread), default=0)
+    if newest <= int(rungs.get(position["name"], 0)):
+        return None
+    screen = envs.read(pane)
+    reasons = guard_reasons(pane, screen, config["untouchable_panes"])
+    quiet = quiet_minutes(
+        quiet_state, f"{pane.environment}:{pane.pane_id}", screen, now
+    )
+    idle = pane.status in ("idle", "done") or (pane.status is None and quiet >= 1)
+    if reasons or not idle:
+        return "skipped", {"label": position["name"], "guards": reasons, "idle": idle}
+    line = f"[{config['mail']['agent']}] mail {newest}"
+    result = envs.prompt(pane, line)
+    if result.get("status") == "succeeded":
+        rungs[position["name"]] = newest
+    return "sent", {
+        "label": position["name"],
+        "line": line,
+        "status": result.get("status"),
+    }
+
+
 def doorbell_pass(config, envs, mail, now, authority: str | None) -> dict[str, Any]:
     if not authority:
         return {
@@ -240,46 +285,86 @@ def doorbell_pass(config, envs, mail, now, authority: str | None) -> dict[str, A
     state_dir = Path(config["stateDirectory"])
     rungs = read_state(state_dir, RUNGS_FILE)
     quiet_state = read_state(state_dir, QUIET_FILE)
-    sent: list[dict[str, Any]] = []
-    skipped: list[dict[str, Any]] = []
+    entries: dict[str, list[dict[str, Any]]] = {"sent": [], "skipped": []}
     for target in _targets(config, envs):
-        position = target["position"]
-        pane: Pane | None = target["pane"]
-        if position is None:
+        if target["position"] is None:
             continue
-        if pane is None:
-            skipped.append({"label": position["name"], "detail": target["detail"]})
-            continue
-        unread = _unread(mail, position["mail_name"])
-        newest = max((int(r["id"]) for r in unread), default=0)
-        if newest <= int(rungs.get(position["name"], 0)):
-            continue
-        screen = envs.read(pane)
-        reasons = guard_reasons(pane, screen, config["untouchable_panes"])
-        quiet = quiet_minutes(
-            quiet_state, f"{pane.environment}:{pane.pane}", screen, now
-        )
-        idle = pane.status in ("idle", "done") or (pane.status is None and quiet >= 1)
-        if reasons or not idle:
-            skipped.append({"label": position["name"], "guards": reasons, "idle": idle})
-            continue
-        line = f"[{config['mail']['agent']}] mail {newest}"
-        result = envs.prompt(pane, line)
-        if result.get("status") == "succeeded":
-            rungs[position["name"]] = newest
-        sent.append(
-            {"label": position["name"], "line": line, "status": result.get("status")}
-        )
+        decision = _ring(target, config, envs, mail, rungs, quiet_state, now)
+        if decision:
+            entries[decision[0]].append(decision[1])
     write_state(state_dir, RUNGS_FILE, rungs)
     write_state(state_dir, QUIET_FILE, quiet_state)
     return {
         "pass": "doorbell",
         "authority": authority,
-        "sent": sent,
-        "skipped": skipped,
+        "sent": entries["sent"],
+        "skipped": entries["skipped"],
         "startDelaySeconds": config["doorbell_start_delay_seconds"],
         "rearmAfterSeconds": config["interval_seconds"],
     }
+
+
+def _forward_stalled(
+    observation: Mapping[str, Any], config: Mapping[str, Any], mail: ModuleType
+) -> dict[str, Any]:
+    """The forwarding action for one stalled position."""
+    guards = observation["guards"]
+    action: dict[str, Any] = {
+        "label": observation["label"],
+        "action": "forward",
+        "guards": guards,
+    }
+    if not config["advisor"]:
+        return {**action, "result": "unavailable", "detail": _advisor_unset(config)}
+    body = (
+        observation["screen"]
+        if guards and observation["screen"]
+        else f"{observation['label']} has been quiet."
+    )
+    sent = _send_mail(
+        mail,
+        config,
+        config["advisor"],
+        "question",
+        f"stall-{observation['label']}",
+        f"{observation['label']} is stalled",
+        body,
+    )
+    action["result"] = sent.get("status")
+    if sent.get("detail"):
+        action["detail"] = sent["detail"]
+    return action
+
+
+def _controller_actions(
+    observation: Mapping[str, Any],
+    config: Mapping[str, Any],
+    mail: ModuleType,
+    authority: str,
+) -> list[dict[str, Any]]:
+    """Every action the controller reports for one observed position."""
+    if observation.get("state") == "pane-unresolved":
+        return [
+            {
+                "label": observation["label"],
+                "action": "skipped",
+                "detail": observation["detail"],
+            }
+        ]
+    actions: list[dict[str, Any]] = []
+    if observation["stalled"]:
+        actions.append(_forward_stalled(observation, config, mail))
+    percent = observation["contextPercent"]
+    over = isinstance(percent, (int, float)) and percent > config["compact_at_percent"]
+    if over and not observation["guards"]:
+        actions.append(
+            {
+                "label": observation["label"],
+                "action": "compact-recommended",
+                "authority": authority,
+            }
+        )
+    return actions
 
 
 def controller_pass(config, envs, mail, now, authority: str | None) -> dict[str, Any]:
@@ -289,64 +374,9 @@ def controller_pass(config, envs, mail, now, authority: str | None) -> dict[str,
             "status": "stopped",
             "detail": absent_authority("controller"),
         }
-    observations = _observe(config, envs, now)
     actions: list[dict[str, Any]] = []
-    for observation in observations:
-        if observation.get("state") == "pane-unresolved":
-            actions.append(
-                {
-                    "label": observation["label"],
-                    "action": "skipped",
-                    "detail": observation["detail"],
-                }
-            )
-            continue
-        guards = observation["guards"]
-        if observation["stalled"] and not config["advisor"]:
-            actions.append(
-                {
-                    "label": observation["label"],
-                    "action": "forward",
-                    "guards": guards,
-                    "result": "unavailable",
-                    "detail": _advisor_unset(config),
-                }
-            )
-        elif observation["stalled"]:
-            body = (
-                observation["screen"]
-                if guards and observation["screen"]
-                else f"{observation['label']} has been quiet."
-            )
-            sent = _send_mail(
-                mail,
-                config,
-                config["advisor"],
-                "question",
-                f"stall-{observation['label']}",
-                f"{observation['label']} is stalled",
-                body,
-            )
-            actions.append(
-                {
-                    "label": observation["label"],
-                    "action": "forward",
-                    "guards": guards,
-                    "result": sent.get("status"),
-                    **({"detail": sent["detail"]} if sent.get("detail") else {}),
-                }
-            )
-        if guards:
-            continue
-        percent = observation["contextPercent"]
-        if isinstance(percent, (int, float)) and percent > config["compact_at_percent"]:
-            actions.append(
-                {
-                    "label": observation["label"],
-                    "action": "compact-recommended",
-                    "authority": authority,
-                }
-            )
+    for observation in _observe(config, envs, now):
+        actions.extend(_controller_actions(observation, config, mail, authority))
     return {
         "pass": "controller",
         "authority": authority,
@@ -362,42 +392,47 @@ def controller_pass(config, envs, mail, now, authority: str | None) -> dict[str,
     }
 
 
+def _act_stop(config, target: str, operation: str, text: str | None) -> str | None:
+    """The detail of the stop an act request's arguments raise, or None."""
+    if not target:
+        labels = [p["name"] for p in config["positions"]] + [
+            g["label"] for g in config["executor_groups"]
+        ]
+        return (
+            f"act received no --target; pass --target with one of the labels {labels} "
+            "or a pane id from the roster subcommand."
+        )
+    if operation not in ACT_OPERATIONS:
+        return (
+            f"act received --operation {operation!r}; pass --operation "
+            f"with one of {list(ACT_OPERATIONS)}."
+        )
+    if operation == "prompt" and not text:
+        return (
+            f"act --operation prompt for {target!r} needs --text; pass "
+            '--text "<the prompt to type>" or choose --operation compact, '
+            "restart, or reload."
+        )
+    return None
+
+
 def act(
     config, envs, target: str, operation: str, text: str | None, authority: str | None
 ) -> dict[str, Any]:
     if not authority:
         return {"status": "stopped", "detail": absent_authority("act")}
-    if not target:
-        labels = [p["name"] for p in config["positions"]] + [
-            g["label"] for g in config["executor_groups"]
-        ]
-        return {
-            "status": "stopped",
-            "detail": f"act received no --target; pass --target with one of the labels {labels} "
-            "or a pane id from the roster subcommand.",
-        }
-    if operation not in ACT_OPERATIONS:
-        return {
-            "status": "stopped",
-            "detail": f"act received --operation {operation!r}; pass --operation "
-            f"with one of {list(ACT_OPERATIONS)}.",
-        }
-    if operation == "prompt" and not text:
-        return {
-            "status": "stopped",
-            "detail": f"act --operation prompt for {target!r} needs --text; pass "
-            '--text "<the prompt to type>" or choose --operation compact, '
-            "restart, or reload.",
-        }
+    stop = _act_stop(config, target, operation, text)
+    if stop:
+        return {"status": "stopped", "detail": stop}
     targets = _targets(config, envs)
     matches = [
         t
         for t in targets
-        if t["pane"] is not None and target in (t["label"], t["pane"].pane)
+        if t["pane"] is not None and target in (t["label"], t["pane"].pane_id)
     ]
     if len(matches) != 1:
         available = [t["label"] for t in targets if t["pane"] is not None] + [
-            t["pane"].pane for t in targets if t["pane"] is not None
+            t["pane"].pane_id for t in targets if t["pane"] is not None
         ]
         unresolved = [t["detail"] for t in targets if t["detail"]]
         return {
@@ -415,7 +450,7 @@ def act(
             "guards": reasons,
             "screen": screen,
             "detail": f"act --target {target!r} --operation {operation} sent nothing: "
-            f"pane {pane.pane} is guarded by {reasons}. Its screen is quoted in "
+            f"pane {pane.pane_id} is guarded by {reasons}. Its screen is quoted in "
             "this result. A question-or-approval-screen pane waits for its own "
             "answer; an operator-prompt pane waits for the operator; an "
             "untouchable pane stays untouched until the operator removes it from "
@@ -468,8 +503,114 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--kind", default="fact")
     parser.add_argument("--correlation")
     parser.add_argument("--subject")
-    parser.add_argument("--body-file", help="send: a file holding the record body")
+    parser.add_argument(
+        "--body-file",
+        help="send: a file holding the record body, inside --scratch-directory",
+    )
+    parser.add_argument(
+        "--scratch-directory",
+        help="send: the directory --body-file must resolve inside; "
+        "defaults to the process temporary directory",
+    )
     return parser
+
+
+def read_body_file(
+    body_file: str | None, scratch_directory: str | None
+) -> tuple[str, dict[str, Any] | None]:
+    """The body text, or an explicit rejection result when the path leaves the scratch directory."""
+    if not body_file:
+        return "", None
+    root = Path(scratch_directory or tempfile.gettempdir()).resolve()
+    resolved = (root / body_file).resolve()
+    if not resolved.is_relative_to(root):
+        return "", {
+            "status": "stopped",
+            "rejectedPath": body_file,
+            "resolvedPath": str(resolved),
+            "scratchDirectory": str(root),
+            "detail": f"send --body-file {body_file} resolves to {resolved}, "
+            f"outside the scratch directory {root}; write the body to a file "
+            "inside that directory and pass its path.",
+        }
+    try:
+        return resolved.read_text(encoding="utf-8"), None
+    except OSError as error:
+        raise DirectionError(
+            f"send cannot read --body-file {body_file}: {error}; "
+            "write the body to a readable file first."
+        ) from error
+
+
+def _send(args, config, mail) -> dict[str, Any]:
+    if not args.authority:
+        return {"status": "stopped", "detail": absent_authority("send")}
+    missing = [
+        f"--{name}"
+        for name in ("recipient", "subject", "correlation")
+        if not getattr(args, name)
+    ]
+    if missing:
+        raise DirectionError(
+            f"send needs {missing}; pass each with a value, and "
+            "--body-file for the record body."
+        )
+    body, rejection = read_body_file(args.body_file, args.scratch_directory)
+    if rejection:
+        return rejection
+    return {
+        **_send_mail(
+            mail,
+            config,
+            args.recipient,
+            args.kind,
+            args.correlation,
+            args.subject,
+            body,
+        ),
+        "authority": args.authority,
+    }
+
+
+def _inbox(args, config, mail) -> dict[str, Any]:
+    recipient = args.recipient or config["mail"]["agent"]
+    if recipient is None:
+        return {
+            "status": "unavailable",
+            "detail": "inbox received no --recipient, and " + _mail_agent_unset(config),
+        }
+    return {"records": _unread(mail, recipient)}
+
+
+def _roster(config, envs) -> dict[str, Any]:
+    return {
+        "roster": [
+            {
+                "label": t["label"],
+                "pane": t["pane"].pane_id if t["pane"] else None,
+                "environment": t["pane"].environment if t["pane"] else None,
+            }
+            for t in _targets(config, envs)
+        ]
+    }
+
+
+def _dispatch(args, config, envs, mail, clock) -> dict[str, Any]:
+    handlers: dict[str, Callable[[], dict[str, Any]]] = {
+        "compose": lambda: dict(config),
+        "roster": lambda: _roster(config, envs),
+        "monitor": lambda: monitor_pass(config, envs, clock()),
+        "doorbell": lambda: doorbell_pass(config, envs, mail, clock(), args.authority),
+        "controller": lambda: controller_pass(
+            config, envs, mail, clock(), args.authority
+        ),
+        "inbox": lambda: _inbox(args, config, mail),
+        "send": lambda: _send(args, config, mail),
+        "act": lambda: act(
+            config, envs, args.target, args.operation, args.text, args.authority
+        ),
+    }
+    return handlers[args.subcommand]()
 
 
 def main(
@@ -489,75 +630,7 @@ def main(
             invocation_checkout() if checkout is None else checkout,
             args.position,
         )
-        if args.subcommand == "compose":
-            result: dict[str, Any] = config
-        elif args.subcommand == "roster":
-            result = {
-                "roster": [
-                    {
-                        "label": t["label"],
-                        "pane": t["pane"].pane if t["pane"] else None,
-                        "environment": t["pane"].environment if t["pane"] else None,
-                    }
-                    for t in _targets(config, envs)
-                ]
-            }
-        elif args.subcommand == "monitor":
-            result = monitor_pass(config, envs, clock())
-        elif args.subcommand == "doorbell":
-            result = doorbell_pass(config, envs, mail, clock(), args.authority)
-        elif args.subcommand == "controller":
-            result = controller_pass(config, envs, mail, clock(), args.authority)
-        elif args.subcommand == "inbox":
-            recipient = args.recipient or config["mail"]["agent"]
-            if recipient is None:
-                result = {
-                    "status": "unavailable",
-                    "detail": "inbox received no --recipient, and "
-                    + _mail_agent_unset(config),
-                }
-            else:
-                result = {"records": _unread(mail, recipient)}
-        elif args.subcommand == "send" and not args.authority:
-            result = {"status": "stopped", "detail": absent_authority("send")}
-        elif args.subcommand == "send":
-            missing = [
-                f"--{name}"
-                for name in ("recipient", "subject", "correlation")
-                if not getattr(args, name)
-            ]
-            if missing:
-                raise DirectionError(
-                    f"send needs {missing}; pass each with a value, and "
-                    "--body-file for the record body."
-                )
-            try:
-                body = (
-                    Path(args.body_file).read_text(encoding="utf-8")
-                    if args.body_file
-                    else ""
-                )
-            except OSError as error:
-                raise DirectionError(
-                    f"send cannot read --body-file {args.body_file}: {error}; "
-                    "write the body to a readable file first."
-                ) from error
-            result = {
-                **_send_mail(
-                    mail,
-                    config,
-                    args.recipient,
-                    args.kind,
-                    args.correlation,
-                    args.subject,
-                    body,
-                ),
-                "authority": args.authority,
-            }
-        else:
-            result = act(
-                config, envs, args.target, args.operation, args.text, args.authority
-            )
+        result = _dispatch(args, config, envs, mail, clock)
     except DirectionError as error:
         json.dump({"status": "stopped", "detail": str(error)}, out)
         out.write("\n")
