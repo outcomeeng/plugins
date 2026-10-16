@@ -11,7 +11,6 @@ from pathlib import Path
 from outcomeeng.validation.skill_reference import (
     CHANGELOG_FILENAME,
     EXCLUDED_DIRECTORY_NAMES,
-    EXEMPTED_REFERENCES,
     FILESYSTEM_ROOTS,
     HARNESS_COMMANDS,
     INERT_FIXTURE_ROOT,
@@ -19,6 +18,7 @@ from outcomeeng.validation.skill_reference import (
 )
 from outcomeeng_testing.harnesses.skill_reference import (
     build_marketplace,
+    exemption_change,
     run_validator,
     scan_references,
     scan_text_references,
@@ -52,7 +52,7 @@ def test_exemption_mapping_passes_only_the_references_it_names(
 ) -> None:
     build_marketplace(tmp_path, {"alpha": ["audit-widget"]})
     payload = unshipped_references_fixture()
-    change = next(iter(EXEMPTED_REFERENCES.values()))
+    change = exemption_change()
 
     omitting = scan_references(tmp_path, [payload], {})
     naming_qualified = scan_references(
@@ -75,7 +75,7 @@ def test_exemption_mapping_passes_only_the_references_it_names(
 
 def test_exemption_names_the_exact_reference_only(tmp_path: Path) -> None:
     build_marketplace(tmp_path, {"alpha": ["audit-widget"]})
-    change = next(iter(EXEMPTED_REFERENCES.values()))
+    change = exemption_change()
 
     references = scan_text_references(
         tmp_path,
@@ -256,3 +256,29 @@ def test_tool_generated_directories_are_excluded_from_the_scan(
     assert str(scanned) in run.lines[0]
     assert explicit_run.lines == ()
     assert explicit_run.exit_code == 0
+
+
+def test_subagent_definition_passes_only_when_qualified_under_its_shipping_plugin(
+    tmp_path: Path,
+) -> None:
+    build_marketplace(
+        tmp_path,
+        {"alpha": ["audit-widget"], "beta": ["audit-gizmo"]},
+        agents={"alpha": ["change-warden"]},
+    )
+    conforming = write_plugin_file(tmp_path, "beta", "Launch alpha:change-warden.\n")
+    other_plugin = write_plugin_file(tmp_path, "alpha", "Launch beta:change-warden.\n")
+    slash = write_plugin_file(tmp_path, "alpha", "Launch /change-warden now.\n")
+
+    conforming_run = run_validator(tmp_path, [conforming])
+    other_plugin_run = run_validator(tmp_path, [other_plugin])
+    slash_run = run_validator(tmp_path, [slash])
+
+    assert conforming_run.lines == ()
+    assert conforming_run.exit_code == 0
+    assert other_plugin_run.exit_code != 0
+    (other_plugin_report,) = other_plugin_run.lines
+    assert "beta:change-warden" in other_plugin_report
+    assert slash_run.exit_code != 0
+    (slash_report,) = slash_run.lines
+    assert "/change-warden" in slash_report

@@ -14,7 +14,11 @@ from dataclasses import dataclass
 from io import StringIO
 from pathlib import Path
 
-from outcomeeng.distribution.contracts import SKILL_FILENAME, SKILLS_SUBDIR_NAME
+from outcomeeng.distribution.contracts import (
+    AGENTS_SUBDIR_NAME,
+    SKILL_FILENAME,
+    SKILLS_SUBDIR_NAME,
+)
 from outcomeeng.validation.skill_reference import (
     CATALOG_PATH,
     CATALOG_PLUGIN_NAME_FIELD,
@@ -37,6 +41,7 @@ UNSHIPPED_REFERENCES_FIXTURE = "unshipped_references" + MARKDOWN_SUFFIX
 INCIDENTAL_FILE_STEM = "incidental"
 OUTSIDE_SCAN_ROOTS_DIRECTORY = Path("unscanned")
 PAYLOAD_PATH = Path("payload" + MARKDOWN_SUFFIX)
+EXEMPTION_CHANGE = "outcomeeng/changes#1"
 
 
 @dataclass(frozen=True)
@@ -51,13 +56,25 @@ def build_marketplace(
     root: Path,
     shipped: Mapping[str, Sequence[str]],
     catalog_plugins: Iterable[str] | None = None,
+    agents: Mapping[str, Sequence[str]] | None = None,
 ) -> Path:
     """Lay out plugin skill directories and a marketplace catalog under ``root``.
 
     ``shipped`` maps each plugin name to the skill directory names it ships.
     ``catalog_plugins`` names the plugins the catalog lists; it defaults to
-    every key of ``shipped``.
+    every key of ``shipped``.  ``agents`` maps each plugin name to the subagent
+    definition names it ships under its agents directory; it defaults to none.
     """
+    for plugin, names in (agents or {}).items():
+        for name in names:
+            _write_named(
+                root
+                / PLUGIN_SOURCE_ROOT
+                / plugin
+                / AGENTS_SUBDIR_NAME
+                / f"{name}{MARKDOWN_SUFFIX}",
+                f"---\nname: {name}\n---\n",
+            )
     for plugin, skills in shipped.items():
         for skill in skills:
             skill_file = (
@@ -138,6 +155,11 @@ def run_validator(root: Path, paths: Sequence[Path] = ()) -> ValidatorRun:
     return ValidatorRun(
         exit_code=exit_code, lines=tuple(output.getvalue().splitlines())
     )
+
+
+def exemption_change() -> str:
+    """Return a Change identity for an exemption mapping a test passes to a scan."""
+    return EXEMPTION_CHANGE
 
 
 def unshipped_references_fixture() -> Path:
