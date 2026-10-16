@@ -106,3 +106,23 @@ changeset leaves unchanged; the changeset changes line 20 only
 - `semantic-tag-names`: `<step name="full_chain_ownership">` wraps Steps 2b, 3, and 3a, three distinct steps under one name.
 
 **Settlement condition**: the skill states the metadata field for NOT_APPLICABLE language results in `<verdict_format>`, composes `spec-tree:understand` and `spec-tree:contextualize` with `Use skill`, moves the grant note out of the runtime prompt, gives the REJECT-finding constraint its rationale, splits the combined step tag, and a skill audit approves.
+
+## `test-evidence-auditor` carries no retained release-acceptance or invocation evidence
+
+[`spx/15-subagent-execution.pdr.md`](spx/15-subagent-execution.pdr.md) declares release acceptance per harness and per profile: native loading and one minimal isolated execution for each profile. The tree retains no acceptance artifact for the Claude or the Codex Standard row that `src/plugins/spec-tree/agents/test-evidence-auditor.md` selects, and no exact-definition minimal isolated invocation of the definition. The gap is the one the `adr-auditor` entry in `spx/21-spec-tree.enabler/32-decisions.enabler/21-adr-auditing.enabler/ISSUES.md` records, and it holds for every marketplace definition: the decision binds acceptance to profiles, and no definition's tool grant or sandbox changes the Standard profile it selects.
+
+**Impact**: nothing in the tree shows the emitted `test-evidence-auditor` definitions loading natively and returning a run token and projection on either harness.
+
+**Settlement condition**: the release retains passing Standard-profile acceptance rows for both harnesses at a location `/audit-subagent` reads, or the subagent standards accept the harness's profile acceptance as a definition's invocation evidence, which <https://github.com/outcomeeng/changes/issues/118> carries; then one `subagent-auditor` run on the definition raises neither a `release_acceptance_evidence` nor an `invocation_evidence_missing` finding.
+
+**Evidence**: two `instructions:subagent-auditor` runs on `src/plugins/spec-tree/agents/test-evidence-auditor.md` at head `400f55c8cbd57291b4a9c70c99a45c4ac0e57ab9`: run `2026-10-16_18-06-32-474-ca1f2d0d044c` raised the blocking rule `release_acceptance_evidence`, and run `2026-10-16_18-10-25-266-c777519799aa` raised the blocking rule `invocation_evidence_missing`. Both ask for retained native loading and one minimal isolated execution of the emitted definition, per profile and harness, as property 3 of [`spx/15-subagent-execution.pdr.md`](spx/15-subagent-execution.pdr.md) states.
+
+## An evidence-scope `/audit-tests` start input retypes the changed paths
+
+For an evidence-scope target, `/audit-tests` writes its start-input file from the `spec-tree:scope-changeset` marker, which retypes `changed_paths`, because that resolver has no output-file option. The retyped list is a transcription of the resolver's output, and the start input carries it in place of the resolver's own file.
+
+**Impact**: the changed-path list the audit run seals is the Verifier's transcription of the resolver's marker, not the resolver's output, so a transcription slip changes the scope the run judges without any resolver evidence of it.
+
+**Settlement condition**: the resolver writes the start input to a caller-named path, or SPX resolves the scope at start.
+
+**Evidence**: the Handoff of outcomeeng/changes#513, hazard (c). This is a known gap with no repair in that Change.
