@@ -176,7 +176,7 @@ One case is not a composition failure. When the governed context establishes tha
 
 **Step 6: Classify and record**
 
-Classify every finding, native or composed, per `${SKILL_DIR}/references/touched-text.md`: a finding on touched text is recorded on its unit with severity `blocking`; every other finding is standing, returned as a `filed` line, and recorded nowhere in the run.
+Classify every finding, native or composed, per `${SKILL_DIR}/references/touched-text.md`: a finding on touched text is recorded on its unit with the severity its catalog row declares; every other finding is standing, returned as a `filed` line, and recorded nowhere in the run.
 
 Once judgment is complete, add the root unit first, because a run admits one root and every child names it, then one child unit per property and per composed language partition, then each finding on touched text on the unit of the concern it names; a finding that names no child unit sits on the root. Every unit is `audited`, whether it holds or carries findings, and a concern judged `NOT_APPLICABLE` is returned as a `not-applicable` line. Record per `<persistence_contract>`.
 
@@ -235,7 +235,7 @@ A scope unit:
 
 Add a unit with `spx verification run scope add --verification-type audit --scope-type file --scope <path> --run <token> --payload <payload-file> --idempotency-key '<unitId>'`. The root unit omits the `parentUnitId` field.
 
-Add a finding with `spx verification run finding add` and the same selectors, `--payload <payload-file>`, and `--idempotency-key '<finding-key>'`, the finding key `${SKILL_DIR}/references/touched-text.md` defines as `<unitId>:<rule>`. Its payload names an accepted unit; `producerIdentity` repeats that unit's `expectedProducer`; `producerProvenance` carries the plugin version `<request_contract>` retained in both version fields, and no `toolVersion`; `rule` is the finding identifier. The native identifiers are `missing-section`, `temporal-voice`, `invalid-draft-rule`, `invalid-tag`, `assertion-type-mismatch`, `template-missing`, `test-standards-unavailable`, `context-unavailable`, `language-routing-unavailable`, `language-skill-unavailable`, and `language-result-invalid`; a validated composed finding retains the invoked skill's identifier.
+Add a finding with `spx verification run finding add` and the same selectors, `--payload <payload-file>`, and `--idempotency-key '<finding-key>'`, the finding key `${SKILL_DIR}/references/touched-text.md` defines as `<unitId>:<rule>`. Its payload names an accepted unit; `producerIdentity` repeats that unit's `expectedProducer`; `producerProvenance` carries the plugin version `<request_contract>` retained in both version fields, and no `toolVersion`; `rule` is one identifier from `<rule_catalog>` in `${SKILL_DIR}/references/adr-evidence-model.md`, and `severity` is the severity that row declares; name no identifier outside that catalog. A validated composed finding retains the identifier that the invoked skill's own rule catalog gives.
 
 ```json
 {
@@ -246,7 +246,7 @@ Add a finding with `spx verification run finding add` and the same selectors, `-
     "skillOwningPluginVersion": "<spec-tree-plugin-version>"
   },
   "rule": "<finding-identifier>",
-  "severity": "blocking",
+  "severity": "<catalog-row-severity>",
   "location": "<section-or-rule-text>",
   "message": "<finding-message-naming-section-rule-and-evidence>",
   "evidence": {

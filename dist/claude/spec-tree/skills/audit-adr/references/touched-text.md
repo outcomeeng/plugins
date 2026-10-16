@@ -36,7 +36,7 @@ A touched sentence that only cites an already-defective passage leaves the findi
 
 <classification>
 
-Classify each finding, native or composed, by its `location`: a finding on touched text is recorded on its unit with severity `blocking` and rejects the run; a finding on any other text is standing and is returned as a `filed` line, recorded nowhere in the run. A finding's severity labels its defect and never decides the terminal status: the run approves when no finding on touched text exists, whatever standing findings it reports. A composed language finding takes the same classification.
+Classify each finding, native or composed, by its `location`: a finding on touched text is recorded on its unit with the severity its catalog row declares, and a `blocking` finding rejects the run; a finding on any other text is standing and is returned as a `filed` line, recorded nowhere in the run. A finding's severity labels its defect and never decides the terminal status: the run approves when no finding on touched text exists, whatever standing findings it reports. A composed language finding takes the same classification.
 
 </classification>
 
