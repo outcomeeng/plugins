@@ -318,7 +318,7 @@ Claude invoked `/contextualize` to load the ADR's context, and its `/sync-base` 
 
 <success_criteria>
 
-- The run holds one `audited` root unit for the ADR and one `audited` child unit for each of `section-structure`, `atemporal-voice`, and `tag-validity`, plus one per composed language partition, with every ADR rule judged and none skipped.
+- Every ADR rule was judged with none skipped, and every unit the run holds is `audited`.
 - Every recorded finding lies on touched text and sits on an accepted unit, names the section, the violated rule, and the evidence — the missing section, the temporal phrase, or the mismatched tag.
 - Every standing finding appears as a `filed` line carrying its key, `baseRefEvidence`, and `issuesEntry`, and rejects no run.
 - The terminal status is `rejected` exactly when a finding on touched text is recorded, so no standing finding and no unevaluated unit decides it.

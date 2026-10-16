@@ -354,7 +354,7 @@ Claude invoked `/contextualize` to load the PDR's context, and its `/sync-base` 
 
 <success_criteria>
 
-- The run holds one `audited` root unit for the PDR and one `audited` child unit for each of `content-classification`, `property-quality`, `tag-validity`, `atemporal-voice`, and `consistency`, with every PDR rule judged and none skipped.
+- Every PDR rule was judged with none skipped, and every unit the run holds is `audited`.
 - Every recorded finding lies on touched text and sits on an accepted unit, and names the section, the violated rule, and the evidence — the architecture content wrongly placed, the non-observable, unfalsifiable, or unstable property, the absent verification section or rules, the unverifiable rule or mismatched tag, the temporal phrase, or the contradicted product spec or ancestor PDR.
 - Every standing finding appears as a `filed` line carrying its key, `baseRefEvidence`, and `issuesEntry`, and rejects no run.
 - An absent or empty Verification section yields a finding on `tag-validity` and an unmet property-quality criterion a finding on `property-quality`; neither condition can disappear through an empty iteration or finish `approved`.
