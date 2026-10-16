@@ -1,25 +1,26 @@
 ---
 name: operate-agent-mail
 description: >-
-  ALWAYS invoke this skill when a workflow registers a mail identity, sends a message record, reads an inbox, or records a receipt in the agent-mail store. NEVER construct an `am` command or derive the mail project key without this skill.
+  ALWAYS invoke this skill when a workflow registers a mail identity, sends a message record, reads an inbox, waits for a later record, or records a receipt in the agent-mail store. NEVER construct an `am` command or derive the mail project key without this skill.
 argument-hint: "<operation or JSON request>"
 allowed-tools: Write, Bash(python3 "${SKILL_DIR}/scripts/agent_mail.py":*)
 ---
 
 <objective>
-A versioned JSON agent-mail operation result — a registered identity, a delivered record with its store-assigned id, the recipient's records, or a receipt — under the project key the repository names, or that key alone as an unversioned `projectKey` answer, with every store identity preserved verbatim.
+A versioned JSON agent-mail operation result — a registered identity, a delivered record with its store-assigned id, the recipient's records, the first later record or a named timeout or unreachable outcome of a bounded wait, or a receipt — under the project key the repository names, or that key alone as an unversioned `projectKey` answer, with every store identity preserved verbatim.
 </objective>
 
 <operation_surface>
 
 The source-owned request operations, each submitted as a JSON request to `run`:
 
-| Operation  | Arguments                                                   | Result data                                  |
-| ---------- | ----------------------------------------------------------- | -------------------------------------------- |
-| `register` | `agent`, `program`, `model`; optional `task`, `displayName` | the registered `agent` name and store id     |
-| `send`     | `record`                                                    | the `record` with its store-assigned `id`    |
-| `inbox`    | `agent`; optional `unreadOnly`, `includeBodies`, `limit`    | `records` read back for that recipient       |
-| `receipt`  | `agent`, `messageId`                                        | the `agent` and `messageId` the store marked |
+| Operation  | Arguments                                                   | Result data                                                               |
+| ---------- | ----------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `register` | `agent`, `program`, `model`; optional `task`, `displayName` | the registered `agent` name and store id                                  |
+| `send`     | `record`                                                    | the `record` with its store-assigned `id`                                 |
+| `inbox`    | `agent`; optional `unreadOnly`, `includeBodies`, `limit`    | `records` read back for that recipient                                    |
+| `receipt`  | `agent`, `messageId`                                        | the `agent` and `messageId` the store marked                              |
+| `wait`     | `agent`, `afterId`, `timeoutSeconds`                        | an `outcome` of `received` with the `record`, `timeout`, or `unreachable` |
 
 One further form answers outside the request shape, so it takes no JSON request and the request-building steps of `<workflow>` do not reach it. A `run` request naming it is rejected as `operation-unavailable`; its command is in `<invocation_forms>`.
 
@@ -35,6 +36,7 @@ The record and its delivery rules:
 - **One recipient.** `recipient` names one agent. A value carrying the store's `,` separator is rejected with `invalid-schema` before any command runs.
 - **Foreign rows.** A row another sender wrote reads back rather than failing the inbox read: without a thread it reads with `correlation: null`, classified by the kind rule above, and an acknowledgement status other than `pending` or `acked` reads as `ackRequired: false`. A row without the store's `id`, `from`, or `subject` key is a malformed store response and fails the read as `invalid-schema`.
 - **Labels.** A position label is the display name the store records for an agent. `register` passes an optional `displayName` to the store as the agent's label and registers only the `agent` name the caller supplies. An inbox item, with or without a body, and a send result carry the store's `sender_display_name` verbatim in `response` beside the message, `null` when the sender has no label; a send result also carries `to_display_names`, which maps each recipient's stable name visible to the reader to its label. No label enters the `record`. A label names no target: `agent`, `sender`, and `recipient` take the stable name, and `messageId` takes the store id.
+- **Wait.** `wait` lists the inbox of `agent`, read and unread records alike, until a record whose store id exceeds `afterId` is present or `timeoutSeconds` passes. The caller passes the id of the last record it handled, or `0` for none, so a run that ends at any point loses no record. `data.outcome` is `received` with the first such `record`, `timeout` when none arrived in time, or `unreachable` when the listing cannot reach back to `afterId`; the store's labels reach the result in `response` as for `inbox`. A request without `timeoutSeconds` is `invalid-schema` before any store command runs, `timeoutSeconds` is a whole number from 1 to 3600, and no store command outlives it. A wait keeps no cursor, state file, or lock, marks no message read, and records no receipt; acknowledge a record with `receipt`. An `unreachable` outcome means the record after `afterId` cannot be told from the listing, so a later record is never returned in its place; re-read the inbox with `inbox` to reconcile.
 - **Credential.** A registration leaves the credential the store keeps for that name, and the next send from that name authenticates through it. The store offers no separate credential command, so the adapter makes none and no step of this skill refreshes it.
 
 The project key is the repository's own common Git directory, so every worktree of one pool, the pool's bare repository, and the pool's main checkout resolve one mail project, and no checkout's deletion removes it. The adapter reads that directory for its own working directory before every operation and reads no working directory, environment variable, or parent path in its place. The lookup drops every variable that could make Git answer from something other than that directory — one naming a repository and one bounding where Git may look are known cases, not the only ones — and carries every other through, so a repository reachable only across a mount boundary still resolves. A working directory that is no repository yields `repository-unresolved`.
@@ -94,6 +96,7 @@ This form answers `{"projectKey": "<absolute path>"}` and exits zero, or `{"stat
 - NEVER import the script from another filesystem location or manufacture a path outside this skill directory — the substituted expression is the only route that resolves.
 - NEVER copy `${SKILL_DIR}` into an agent definition or export it — it is no shell variable, so outside this body it yields an empty prefix rather than an error.
 - ALWAYS preserve store identities verbatim: message ids, thread ids, agent names, and timestamps, because downstream skills index on the literal and the operator compares it against the store.
+- ALWAYS hold a bounded wait to one invocation and re-arm it with the id of the last record handled; the adapter loops only inside its timeout.
 - ALWAYS supply arguments under the field names in `<operation_surface>` and leave the mapping to the adapter: it alone turns a field into an `am` option or a store field and reads it back, and it rejects an argument outside the operation's shape as `invalid-schema` rather than dropping it.
 - ALWAYS register a position's own stable name only, with that position's own label when it has one; register no other name and no other position's label.
 - NEVER select, route, or address by a label; the stable name or the store id selects every target, and a label may be shared by two agents and changes with its owner.
@@ -112,6 +115,8 @@ The bundled adapter is covered over generated request, record, and repository-lo
 - every registry operation's argument vector is read against the store CLI's captured usage text under the resolved project key;
 - a real pool's linked worktree, bare repository, main checkout, and a symlinked route to one of them each resolve one key, while the pool's parent directory resolves none;
 - every environment variable Git's own behaviour confirms moves the answer off the working directory — by answering with another repository, or with none — leaves the key unchanged, each alone and all together, read from the pool shape whose lookup Git confirmed it moves, while the parent directory still resolves none;
+- a wait returns the first record past its id, read or unread, as a `received` outcome, a `timeout` outcome when none arrives, and an `unreachable` outcome for a full listing that does not reach back to the id, under a controlled clock;
+- a wait without a timeout runs no store command, no store command inside a wait is given more time than remains, and a wait leaves no cursor, state file, or lock and runs no receipt command;
 - generated records round-trip through the store field mapping;
 - an `order`, its `delegation-request`, and its one correlated terminal handback are delivered through this capability's own send path;
 - repeated and conflicting terminal handbacks reduce to one result;
@@ -136,6 +141,7 @@ The bundled adapter is covered over generated request, record, and repository-lo
 - Every record sent and read back carries the same `schema`, `kind`, `correlation`, `sender`, `recipient`, `subject`, `body`, and `ackRequired`, plus the store-assigned `id` on read.
 - An absent store or an unresolvable repository yields its named unavailable result and no fallback.
 - No registration result carries the store's registration token.
+- A wait ends with exactly one of the named outcomes `received`, `timeout`, or `unreachable`, never with a record at or below its `afterId`.
 - A label the store returns reaches the caller verbatim beside its message, and no target is selected by it.
 
 </success_criteria>

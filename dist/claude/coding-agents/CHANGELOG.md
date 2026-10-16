@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.14.1
+
+### Added
+
+- **`/operate-agent-mail` waits, within a timeout, for the next record addressed to an agent.** The `wait` operation takes `agent`, `afterId`, and `timeoutSeconds`, lists the agent's inbox read and unread alike, and returns the first record whose store id exceeds `afterId` as `outcome: received` with the record, `outcome: timeout` when none arrives in time, or `outcome: unreachable` when the listing cannot reach back to `afterId`, and a later record is never returned in place of the one that cannot be told. A request without `timeoutSeconds`, a whole number from 1 to 3600, is rejected as `invalid-schema` before any store command runs, and no store command outlives the timeout. A wait keeps no cursor, state file, or lock, marks no message read, and records no receipt; the caller passes the id of the last record it handled, so a run that ends at any point loses no record.
+
 ## 0.14.0
 
 ### Added

@@ -9,6 +9,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Final, Mapping, Protocol, TextIO, cast
@@ -16,6 +17,11 @@ from typing import Final, Mapping, Protocol, TextIO, cast
 SCHEMA_VERSION = 1
 RECORD_SCHEMA_VERSION = 1
 COMMAND_TIMEOUT_SECONDS = 30
+# A wait lists the requester's inbox at this interval until a record arrives or
+# its timeout passes, and each listing reads at most this many records.
+WAIT_POLL_INTERVAL_SECONDS = 2
+WAIT_LISTING_LIMIT = 1_000
+WAIT_TIMEOUT_MAXIMUM_SECONDS = 3_600
 
 # Public command grammar of the store and of the repository lookup that names
 # its project.
@@ -121,6 +127,9 @@ DISPLAY_NAME_FIELD = "displayName"
 RECORD_FIELD = "record"
 RECORDS_FIELD = "records"
 MESSAGE_ID_FIELD = "messageId"
+AFTER_ID_FIELD = "afterId"
+TIMEOUT_SECONDS_FIELD = "timeoutSeconds"
+OUTCOME_FIELD = "outcome"
 UNREAD_ONLY_FIELD = "unreadOnly"
 INCLUDE_BODIES_FIELD = "includeBodies"
 LIMIT_FIELD = "limit"
@@ -185,6 +194,13 @@ class Operation(StrEnum):
     SEND = "send"
     INBOX = "inbox"
     RECEIPT = "receipt"
+    WAIT = "wait"
+
+
+class WaitOutcome(StrEnum):
+    RECEIVED = "received"
+    TIMEOUT = "timeout"
+    UNREACHABLE = "unreachable"
 
 
 class RecordKind(StrEnum):
@@ -274,15 +290,21 @@ OPERATION_CONTRACTS: Final[Mapping[Operation, OperationContract]] = {
     Operation.RECEIPT: OperationContract(
         (RequestShape(frozenset({AGENT_FIELD, MESSAGE_ID_FIELD})),)
     ),
+    Operation.WAIT: OperationContract(
+        (RequestShape(frozenset({AGENT_FIELD, AFTER_ID_FIELD, TIMEOUT_SECONDS_FIELD})),)
+    ),
 }
 PUBLIC_AM_COMMAND_PREFIXES: Final[Mapping[Operation, tuple[str, ...]]] = {
     Operation.REGISTER: (AM_COMMAND, AGENTS_COMMAND, REGISTER_COMMAND),
     Operation.SEND: (AM_COMMAND, MAIL_COMMAND, SEND_COMMAND),
     Operation.INBOX: (AM_COMMAND, ROBOT_COMMAND, INBOX_COMMAND),
     Operation.RECEIPT: (AM_COMMAND, MAIL_COMMAND, ACK_COMMAND),
+    Operation.WAIT: (AM_COMMAND, ROBOT_COMMAND, INBOX_COMMAND),
 }
 # Operations whose public command emits JSON on `--json`; receipt prints text.
-JSON_OPERATIONS = frozenset({Operation.REGISTER, Operation.SEND, Operation.INBOX})
+JSON_OPERATIONS = frozenset(
+    {Operation.REGISTER, Operation.SEND, Operation.INBOX, Operation.WAIT}
+)
 PUBLIC_AM_ARGUMENT_OPTIONS: Final[Mapping[str, str]] = {
     AGENT_FIELD: AGENT_OPTION,
     PROGRAM_FIELD: PROGRAM_OPTION,
@@ -310,6 +332,8 @@ PUBLIC_GIT_COMMON_DIR_COMMAND: Final[tuple[str, ...]] = (
 INTEGER_BOUNDS: Final[Mapping[str, tuple[int, int]]] = {
     LIMIT_FIELD: (1, 1_000),
     MESSAGE_ID_FIELD: (1, 1_000_000_000),
+    AFTER_ID_FIELD: (0, 1_000_000_000),
+    TIMEOUT_SECONDS_FIELD: (1, WAIT_TIMEOUT_MAXIMUM_SECONDS),
 }
 BOOLEAN_ARGUMENT_FIELDS = frozenset({UNREAD_ONLY_FIELD, INCLUDE_BODIES_FIELD})
 TEXT_ARGUMENT_FIELDS = frozenset(
@@ -323,6 +347,8 @@ ARGUMENT_NAMES: Final[Mapping[str, str]] = {
     "display_name": DISPLAY_NAME_FIELD,
     "record": RECORD_FIELD,
     "message_id": MESSAGE_ID_FIELD,
+    "after_id": AFTER_ID_FIELD,
+    "timeout_seconds": TIMEOUT_SECONDS_FIELD,
     "unread_only": UNREAD_ONLY_FIELD,
     "include_bodies": INCLUDE_BODIES_FIELD,
     "limit": LIMIT_FIELD,
@@ -350,7 +376,25 @@ class CommandRunner(Protocol):
         argv: tuple[str, ...],
         stdin: str | None = None,
         env: Mapping[str, str] | None = None,
+        timeout_seconds: float | None = None,
     ) -> CommandResult: ...
+
+
+class Clock(Protocol):
+    def now(self) -> float: ...
+
+    def sleep(self, seconds: float) -> None: ...
+
+
+@dataclass(frozen=True)
+class MonotonicClock:
+    """The wall-clock implementation of the wait's time source."""
+
+    def now(self) -> float:
+        return time.monotonic()
+
+    def sleep(self, seconds: float) -> None:
+        time.sleep(seconds)
 
 
 class AgentMailError(RuntimeError):
@@ -370,6 +414,7 @@ class SubprocessRunner:
         argv: tuple[str, ...],
         stdin: str | None = None,
         env: Mapping[str, str] | None = None,
+        timeout_seconds: float | None = None,
     ) -> CommandResult:
         completed = subprocess.run(
             argv,
@@ -377,7 +422,11 @@ class SubprocessRunner:
             stdin=subprocess.DEVNULL if stdin is None else None,
             capture_output=True,
             text=True,
-            timeout=self.timeout_seconds,
+            timeout=(
+                self.timeout_seconds
+                if timeout_seconds is None
+                else min(self.timeout_seconds, timeout_seconds)
+            ),
             check=False,
             env=None if env is None else dict(env),
         )
@@ -894,7 +943,15 @@ def command_for(request: object, project_key: str) -> tuple[str, ...]:
                 PUBLIC_AM_ARGUMENT_OPTIONS[AGENT_FIELD], arguments[AGENT_FIELD]
             )
         )
-        if operation is Operation.INBOX:
+        if operation is Operation.WAIT:
+            command.extend(
+                (
+                    PUBLIC_AM_ARGUMENT_OPTIONS[INCLUDE_BODIES_FIELD],
+                    PUBLIC_AM_ARGUMENT_OPTIONS[LIMIT_FIELD],
+                    str(WAIT_LISTING_LIMIT),
+                )
+            )
+        elif operation is Operation.INBOX:
             for field_name in (UNREAD_ONLY_FIELD, INCLUDE_BODIES_FIELD):
                 if arguments.get(field_name) is True:
                     command.append(PUBLIC_AM_ARGUMENT_OPTIONS[field_name])
@@ -1043,7 +1100,131 @@ def _data_for(
     }
 
 
-def execute(request: object, runner: CommandRunner) -> dict[str, object]:
+def _wait_selection(
+    items: list[object], after_id: int, recipient: str
+) -> tuple[dict[str, object] | None, bool]:
+    """Pick the first record past `after_id` from one inbox listing.
+
+    Returns that record, or None, with whether the listing reaches back to
+    `after_id`. A listing reaches back when it holds a record at or below the
+    id, or when it is shorter than the limit and so holds every record the
+    requester has. A full listing whose records all lie past the id may have
+    cut off older records between the id and its oldest record, so the first
+    record past the id is unknown.
+    """
+    records = [record_from_inbox_item(item, recipient=recipient) for item in items]
+    ids = [cast(int, record[RECORD_ID_FIELD]) for record in records]
+    reaches = len(items) < WAIT_LISTING_LIMIT or any(
+        record_id <= after_id for record_id in ids
+    )
+    later = [
+        record for record in records if cast(int, record[RECORD_ID_FIELD]) > after_id
+    ]
+    if not reaches:
+        return None, False
+    if not later:
+        return None, True
+    return min(later, key=lambda record: cast(int, record[RECORD_ID_FIELD])), True
+
+
+def _execute_wait(
+    arguments: dict[str, object],
+    project_key: str,
+    runner: CommandRunner,
+    clock: Clock,
+) -> dict[str, object]:
+    """Poll the requester's inbox until a later record arrives or the timeout passes.
+
+    The wait holds no cursor, state file, or lock, marks nothing read, and
+    records no receipt: it only lists. Every listing is bounded by the time
+    that remains.
+    """
+    operation = Operation.WAIT.value
+    recipient = str(arguments[AGENT_FIELD])
+    after_id = cast(int, arguments[AFTER_ID_FIELD])
+    started = clock.now()
+    deadline = started + cast(int, arguments[TIMEOUT_SECONDS_FIELD])
+    command = command_for(
+        {
+            SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
+            OPERATION_FIELD: operation,
+            ARGUMENTS_FIELD: arguments,
+        },
+        project_key,
+    )
+    response: dict[str, object] = {}
+    while True:
+        remaining = deadline - clock.now()
+        if remaining <= 0:
+            return _wait_result(WaitOutcome.TIMEOUT, project_key, response, {})
+        try:
+            result = runner.run(command, timeout_seconds=remaining)
+        except FileNotFoundError:
+            return _failure_result(
+                operation,
+                ExecutionStatus.STORE_UNAVAILABLE,
+                f"{AM_COMMAND} is unavailable on this machine.",
+            )
+        except subprocess.TimeoutExpired:
+            if deadline - clock.now() <= 0:
+                return _wait_result(WaitOutcome.TIMEOUT, project_key, response, {})
+            return _failure_result(
+                operation,
+                ExecutionStatus.COMMAND_FAILED,
+                f"{AM_COMMAND} exceeded its bound: {' '.join(command)}",
+            )
+        if result.returncode != 0:
+            detail = (
+                result.stderr.strip() or result.stdout.strip() or "no command detail"
+            )
+            return _failure_result(
+                operation, ExecutionStatus.COMMAND_FAILED, detail, result.returncode
+            )
+        try:
+            response = _object(json.loads(result.stdout), RESPONSE_FIELD)
+            items = _array(response.get(STORE_INBOX_FIELD), STORE_INBOX_FIELD)
+            record, reaches = _wait_selection(items, after_id, recipient)
+        except (json.JSONDecodeError, AgentMailError) as error:
+            return _failure_result(
+                operation,
+                ExecutionStatus.INVALID_SCHEMA,
+                f"{AM_COMMAND} returned an unexpected response: {error}",
+                result.returncode,
+            )
+        if not reaches:
+            return _wait_result(WaitOutcome.UNREACHABLE, project_key, response, {})
+        if record is not None:
+            return _wait_result(
+                WaitOutcome.RECEIVED, project_key, response, {RECORD_FIELD: record}
+            )
+        remaining = deadline - clock.now()
+        if remaining <= 0:
+            return _wait_result(WaitOutcome.TIMEOUT, project_key, response, {})
+        clock.sleep(min(WAIT_POLL_INTERVAL_SECONDS, remaining))
+
+
+def _wait_result(
+    outcome: WaitOutcome,
+    project_key: str,
+    response: dict[str, object],
+    data: dict[str, object],
+) -> dict[str, object]:
+    return validate_operation_result(
+        {
+            SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
+            OPERATION_FIELD: Operation.WAIT,
+            STATUS_FIELD: ExecutionStatus.SUCCEEDED,
+            COMMAND_EXIT_CODE_FIELD: 0,
+            PROJECT_KEY_FIELD: project_key,
+            RESPONSE_FIELD: _scrubbed(response),
+            DATA_FIELD: {OUTCOME_FIELD: outcome.value, **data},
+        }
+    )
+
+
+def execute(
+    request: object, runner: CommandRunner, clock: Clock | None = None
+) -> dict[str, object]:
     """Resolve the project key, run one store command, and return the checked result."""
     operation_value = "unknown"
     try:
@@ -1055,6 +1236,10 @@ def execute(request: object, runner: CommandRunner) -> dict[str, object]:
         project_key = resolve_project_key(runner)
     except AgentMailError as error:
         return _failure_result(operation_value, error.status, str(error))
+    if operation is Operation.WAIT:
+        return _execute_wait(
+            arguments, project_key, runner, MonotonicClock() if clock is None else clock
+        )
     command = command_for(request, project_key)
     try:
         result = runner.run(command)
@@ -1130,6 +1315,7 @@ def main(
     stdin: TextIO | None = None,
     stdout: TextIO | None = None,
     runner: CommandRunner | None = None,
+    clock: Clock | None = None,
 ) -> int:
     arguments = _parser().parse_args(argv)
     stdin = sys.stdin if stdin is None else stdin
@@ -1152,7 +1338,7 @@ def main(
         json.dump({STATUS_FIELD: error.status, DETAIL_FIELD: str(error)}, stdout)
         stdout.write("\n")
         return 2
-    result = execute(request, runner)
+    result = execute(request, runner, clock)
     json.dump(result, stdout)
     stdout.write("\n")
     return 0 if result[STATUS_FIELD] is ExecutionStatus.SUCCEEDED else 1
