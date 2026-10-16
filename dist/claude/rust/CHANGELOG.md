@@ -6,6 +6,23 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.11.0
+
+### Breaking
+
+- **Six skills are renamed.** Invoke each by its new name; the old names no longer resolve, including in `require_skill` directives and overlay references.
+
+  | Old name           | New name                   |
+  | ------------------ | -------------------------- |
+  | `code-rust`        | `author-rust-code`         |
+  | `test-rust`        | `author-rust-test`         |
+  | `architect-rust`   | `author-rust-architecture` |
+  | `audit-rust-tests` | `audit-rust-test`          |
+  | `rust-standards`   | `rust-code-standards`      |
+  | `simplify-rust`    | `simplify-rust-code`       |
+
+  `rust-test-standards`, `rust-architecture-standards`, `audit-rust-code`, and `audit-rust-architecture` keep their names.
+
 ## 0.10.0
 
 ### Breaking

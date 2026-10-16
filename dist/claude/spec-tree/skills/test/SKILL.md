@@ -411,7 +411,7 @@ Before the first write of any test file, load the test skill of each language in
 | ---------- | --------------------------------------- |
 | Go         | Use skill `go:test-go`.                 |
 | Python     | Use skill `python:author-python-test`.  |
-| Rust       | Use skill `rust:test-rust`.             |
+| Rust       | Use skill `rust:author-rust-test`.      |
 | TypeScript | Use skill `typescript:test-typescript`. |
 
 When a changed language has no installed test skill, work from `<naming_and_co_location>` and the shared standards, and report the missing language skill with the result.

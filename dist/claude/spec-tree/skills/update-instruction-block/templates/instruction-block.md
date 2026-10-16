@@ -322,7 +322,7 @@ Per-language code, architecture, and test audits ship as `audit-{lang}-{code|tes
 | "Audit this code"     | `/audit-rust-code`         |
 | "Audit unsafe Rust"   | `/audit-rust-code`         |
 | "Audit ADRs for Rust" | `/audit-rust-architecture` |
-| "Audit these tests"   | `/audit-rust-tests`        |
+| "Audit these tests"   | `/audit-rust-test`         |
 
 <!-- /lang:rust -->
 <!-- lang:go -->

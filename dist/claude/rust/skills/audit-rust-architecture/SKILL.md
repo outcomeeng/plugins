@@ -7,7 +7,7 @@ description: >-
 allowed-tools: Read, Grep, Glob, Skill
 ---
 
-Use skill `rust:rust-standards`.
+Use skill `rust:rust-code-standards`.
 
 Use skill `rust:rust-architecture-standards`.
 
