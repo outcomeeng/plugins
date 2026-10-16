@@ -24,6 +24,8 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 - **`/release-change`, `/claim-change`, and `/close-change` report a `Submitted` Change as waiting for the Maintainer's move out of `Submitted`, and `/release-change` states the order for a rejection.** A rejection at Framed or Sliced follows one order: the holder's release first, the `author-change` write that lowers Maturity one level second, and further refinement only after a session claims the Change again; a rejection at Proposed leaves the Change `Submitted`. Before this change, the three skills named the Maintainer's confirmation or rejection as what a `Submitted` Change waits for, and `/release-change` stated no order for a rejection.
 
+- **The `change-auditor` agent states its command boundary once.** The agent relays the `audit-change` result unchanged, reads no authority from a comment, and writes no file; its tool grants and result forms are unchanged. Before this change, the definition named the runner as the skill's only command twice.
+
 ## 0.106.9
 
 ### Changed
