@@ -78,7 +78,7 @@ Treat the helper output as an inspection projection of the sealed journal prefix
 
 <command_forms>
 
-Run each journal command as its own command, one at a time, with the type, run token, event path, and cursor written out literally. Stop the run at the first nonzero exit: a continued run appends onto a sequence whose earlier event is missing. One exception holds: an `append` whose diagnostic names its event file as absent runs once more with the same command, after the file-write result confirms the file; a second nonzero exit stops the run.
+Run each journal command as its own command, one at a time, with the type, run token, event path, and cursor written out literally. Stop the run at the first nonzero exit: a continued run appends onto a sequence whose earlier event is missing. One exception holds: an `append` whose diagnostic names its event file as absent runs once more with the event path copied from the file-write result; a second nonzero exit stops the run.
 
 | Verb   | Command form                                                    |
 | ------ | --------------------------------------------------------------- |
@@ -90,9 +90,10 @@ Run each journal command as its own command, one at a time, with the type, run t
 
 An append event is a payload: it carries quotes, code spans, and JSON.
 
-- ALWAYS: write each event with the file-write tool to its own file in the scratch directory the harness names for this session, under a file name unique to this agent and run, such as `event-<runToken>-<n>.json`. Where the harness names no scratch directory, use the one the hosting environment designates, such as `$RUNNER_TEMP` on a hosted runner.
+- ALWAYS: copy the scratch directory the harness names for this session into each event path character for character, and write each event with the file-write tool to its own file there, under a file name unique to this agent and run, such as `event-<runToken>-<n>.json`. Where the harness names no scratch directory, use the one the hosting environment designates, such as `$RUNNER_TEMP` on a hosted runner.
 - ALWAYS: write only event files with the file-write tool; the run changes no other file.
-- ALWAYS: pass the event file to `append` with the input redirect `< <event-file>`, the path written out literally.
+- ALWAYS: stop before the `append` that reads an event file when the file-write result reports a path that the scratch directory does not contain by whole path components, naming the reported path.
+- ALWAYS: pass the event file to `append` with the input redirect `< <event-file>`, the path exactly as the file-write result reports it, copied from that result and written out literally, never retyped from memory.
 - NEVER: send an event through a heredoc, a pipe, or an inline argument, and never build one with an interpreter or `printf` stage — the dangerous-command guard blocks those forms.
 - NEVER: remove an event file; the harness clears its scratch directory.
 
