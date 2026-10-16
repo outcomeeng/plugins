@@ -69,11 +69,3 @@ on a head that carries the current producer, with its row committed to
 
 **Evidence**: `spec-tree:eval-evidence-auditor` finding `f-005` on
 head `a65659114b99767b90b4d920550fff5dc0824794` during Change #76, whose prototype boundary runs no eval.
-
-## The shipped spec audit still produces the structured JSON verdict
-
-The assertions state the sealed-run verdict model: the audit run's terminal status is `approved` or `rejected`, and the `spec-auditor` wrapper relays the run token, the run file and the rendered projection. `src/plugins/spec-tree/skills/audit-specs/SKILL.md` and the wrapper still emit a plain verdict object with no run token or run file, so the `[eval]` expectations describe behavior the shipped producer does not yet have.
-
-**Settlement condition.** outcomeeng/changes#513 rewrites the skill and wrapper onto one `spx verification run` over the spec file scope and migrates the producer-coupled eval expectations, under an unchanged semantic verdict model.
-
-**Evidence**: current-head CI review of pull request 671.
