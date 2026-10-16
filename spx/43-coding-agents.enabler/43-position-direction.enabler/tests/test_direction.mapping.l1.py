@@ -84,7 +84,10 @@ def test_guards_name_untouchable_operator_and_question_panes() -> None:
 
     assert core.guard_reasons(pane, "ready", []) == []
     assert core.guard_reasons(pane, "ready", ["w1:p1"]) == ["untouchable"]
-    assert core.guard_reasons(pane, "ready", [], "operator") == ["operator-prompt"]
+    operator_pane = core.Pane(
+        "herdr", "w1:p3", "/work", "idle", "worker", "claude", "operator"
+    )
+    assert core.guard_reasons(operator_pane, "ready", []) == ["operator-prompt"]
     assert core.guard_reasons(pane, "Proceed? (y/n)", []) == [
         "question-or-approval-screen"
     ]
@@ -111,16 +114,10 @@ def test_state_write_replaces_atomically_and_leaves_no_temporary(
 
 
 class _Mail:
-    class AgentMailError(RuntimeError):
-        pass
-
-    class SubprocessRunner:
-        pass
-
     def __init__(self, common: Path) -> None:
         self._common = common
 
-    def resolve_project_key(self, _runner: object) -> str:
+    def project_key(self) -> str:
         return str(self._common)
 
 
@@ -227,13 +224,13 @@ def test_configuration_stop_names_every_unknown_key_and_the_valid_keys(
     assert "interval_seconds" in message
 
 
-def test_provider_load_stop_names_the_path_and_the_sibling_skill(
+def test_adapter_stop_names_the_path_and_the_sibling_skill(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     monkeypatch.setattr(core, "SKILLS_ROOT", tmp_path)
 
     with pytest.raises(core.DirectionError) as stop:
-        core.load_sibling("operate-herdr", "herdr_environment")
+        core.AdapterClient(core.ADAPTER_HERDR).execute({})
 
     message = str(stop.value)
     assert str(tmp_path / "operate-herdr/scripts/herdr_environment.py") in message
@@ -262,19 +259,17 @@ def test_unresolved_pane_detail_names_cwd_match_count_and_available_cwds() -> No
 
 
 class _Herdr:
-    SCHEMA_VERSION = 1
-
     def __init__(self) -> None:
         self.requests: list[dict] = []
 
-    def execute(self, request: dict, runner: object) -> dict:
+    def execute(self, request: dict) -> dict:
         self.requests.append(request)
         return {"status": "succeeded"}
 
 
 def test_restart_relaunches_the_same_agent_kind_with_no_launch_arguments() -> None:
     herdr = _Herdr()
-    envs = core.Environments(herdr, None, {"herdr": None})  # type: ignore[arg-type]
+    envs = core.Environments(herdr, None)  # type: ignore[arg-type]
     pane = core.Pane("herdr", "w1:p1", "/work/a", "idle", "exec", "claude")
 
     result = envs.restart(pane, 1000)
@@ -377,8 +372,6 @@ def test_position_entry_with_agent_arguments_is_an_unknown_field(
 
 
 class _SentMail(_Mail):
-    SCHEMA_VERSION = 1
-
     def __init__(self, common: Path) -> None:
         super().__init__(common)
         self.sent: list[dict] = []
@@ -386,7 +379,7 @@ class _SentMail(_Mail):
     def message_record(self, **fields: object) -> dict:
         return dict(fields)
 
-    def execute(self, request: dict, _runner: object) -> dict:
+    def execute(self, request: dict) -> dict:
         self.sent.append(request["arguments"]["record"])
         return {"status": "succeeded"}
 
@@ -458,7 +451,9 @@ def test_send_with_authority_sends_and_reports_the_authority(tmp_path: Path) -> 
             "--correlation",
             "c",
             "--body-file",
-            str(body),
+            body.name,
+            "--scratch-directory",
+            str(tmp_path),
         ],
         stdout=out,
         runtime=(mail, None),  # type: ignore[arg-type]
@@ -624,3 +619,288 @@ def test_send_rejects_a_body_file_outside_the_scratch_directory(tmp_path: Path) 
     assert result["resolvedPath"] == str(outside.resolve())
     assert result["scratchDirectory"] == str(scratch.resolve())
     assert mail.sent == []
+
+
+def _run(
+    tmp_path: Path, arguments: list[str], mail: object, panes: object
+) -> tuple[int, dict]:
+    out = StringIO()
+    status = direction.main(
+        arguments,
+        stdout=out,
+        runtime=(mail, panes),  # type: ignore[arg-type]
+        checkout=tmp_path / "checkout",
+    )
+    return status, json.loads(out.getvalue())
+
+
+def _two_workers(tmp_path: Path, second_name: str) -> None:
+    _override(
+        tmp_path,
+        "Lead Director",
+        '+++\n[mail]\nagent = "director"\n'
+        '[[positions]]\nname = "Worker"\nenvironment = "herdr"\ncwd = "/w"\n'
+        'mail_name = "worker"\nstall_minutes = 5\ncontext_percent = 50\n'
+        f'[[positions]]\nname = "{second_name}"\nenvironment = "herdr"\n'
+        'cwd = "/v"\nmail_name = "other"\nstall_minutes = 5\n'
+        "context_percent = 50\n+++\n",
+    )
+
+
+def test_act_on_a_target_matching_no_pane_lists_the_available_labels(
+    tmp_path: Path,
+) -> None:
+    _director_file(tmp_path)
+    pane = core.Pane("herdr", "w1:p1", "/w", "idle", "worker", "claude")
+
+    status, result = _run(
+        tmp_path,
+        [
+            "act",
+            "--position",
+            "Lead Director",
+            "--authority",
+            "grant",
+            "--target",
+            "Missing",
+            "--operation",
+            "compact",
+        ],
+        _SentMail(tmp_path),
+        _Panes([pane], "ready"),
+    )
+
+    assert status == 1
+    assert result["status"] == "stopped"
+    assert "names 0 panes" in result["detail"]
+    assert "'Worker'" in result["detail"] and "w1:p1" in result["detail"]
+
+
+def test_act_on_a_target_matching_several_panes_lists_the_available_labels(
+    tmp_path: Path,
+) -> None:
+    _two_workers(tmp_path, "Worker")
+    panes = [
+        core.Pane("herdr", "w1:p1", "/w", "idle", "a", "claude"),
+        core.Pane("herdr", "w1:p2", "/v", "idle", "b", "claude"),
+    ]
+
+    status, result = _run(
+        tmp_path,
+        [
+            "act",
+            "--position",
+            "Lead Director",
+            "--authority",
+            "grant",
+            "--target",
+            "Worker",
+            "--operation",
+            "compact",
+        ],
+        _SentMail(tmp_path),
+        _Panes(panes, "ready"),
+    )
+
+    assert status == 1
+    assert "names 2 panes" in result["detail"]
+    assert "w1:p1" in result["detail"] and "w1:p2" in result["detail"]
+
+
+def test_act_on_a_target_naming_an_unresolved_position_reports_its_cwd_detail(
+    tmp_path: Path,
+) -> None:
+    _two_workers(tmp_path, "Elsewhere")
+    pane = core.Pane("herdr", "w1:p1", "/w", "idle", "a", "claude")
+
+    status, result = _run(
+        tmp_path,
+        [
+            "act",
+            "--position",
+            "Lead Director",
+            "--authority",
+            "grant",
+            "--target",
+            "Elsewhere",
+            "--operation",
+            "compact",
+        ],
+        _SentMail(tmp_path),
+        _Panes([pane], "ready"),
+    )
+
+    assert status == 1
+    assert "names 0 panes" in result["detail"]
+    assert "Unresolved positions" in result["detail"]
+    assert "'/v'" in result["detail"]
+
+
+def test_act_on_an_operator_prompted_pane_stops_naming_the_guard(
+    tmp_path: Path,
+) -> None:
+    _director_file(tmp_path)
+    pane = core.Pane("herdr", "w1:p1", "/w", "idle", "worker", "claude", "operator")
+
+    status, result = _run(
+        tmp_path,
+        [
+            "act",
+            "--position",
+            "Lead Director",
+            "--authority",
+            "grant",
+            "--target",
+            "Worker",
+            "--operation",
+            "compact",
+        ],
+        _SentMail(tmp_path),
+        _Panes([pane], "ready"),
+    )
+
+    assert status == 1
+    assert result["guards"] == ["operator-prompt"]
+    assert "w1:p1" in result["detail"]
+
+
+def test_doorbell_skips_an_operator_prompted_pane(tmp_path: Path) -> None:
+    _director_file(tmp_path)
+
+    class _Unread(_SentMail):
+        def execute(self, request: dict) -> dict:
+            return {"status": "succeeded", "data": {"records": [{"id": 4}]}}
+
+    pane = core.Pane("herdr", "w1:p1", "/w", "idle", "worker", "claude", "operator")
+
+    status, result = _run(
+        tmp_path,
+        ["doorbell", "--position", "Lead Director", "--authority", "grant"],
+        _Unread(tmp_path),
+        _Panes([pane], "ready"),
+    )
+
+    assert status == 0
+    assert result["sent"] == []
+    assert result["skipped"][0]["guards"] == ["operator-prompt"]
+
+
+def test_monitor_reports_the_last_prompt_origin_and_a_pane_filled_past_its_percent(
+    tmp_path: Path,
+) -> None:
+    _director_file(tmp_path)
+    pane = core.Pane(
+        "herdr", "w1:p1", "/w", "idle", "worker", "claude", "operator", 40.0
+    )
+
+    status, result = _run(
+        tmp_path,
+        ["monitor", "--position", "Lead Director"],
+        _SentMail(tmp_path),
+        _Panes([pane], "ready"),
+    )
+
+    observation = result["observations"][0]
+    assert status == 0
+    assert observation["lastPrompt"] == "operator"
+    assert observation["contextPercent"] == 40.0
+    assert observation["filled"] is True
+    assert result["flagged"] == ["Worker"]
+
+
+def test_monitor_leaves_a_pane_under_its_percent_and_without_fill_unflagged(
+    tmp_path: Path,
+) -> None:
+    _override(
+        tmp_path,
+        "Lead Director",
+        '+++\n[[positions]]\nname = "Worker"\nenvironment = "herdr"\ncwd = "/w"\n'
+        'mail_name = "worker"\nstall_minutes = 99\ncontext_percent = 50\n+++\n',
+    )
+    under = core.Pane("herdr", "w1:p1", "/w", "idle", "worker", "claude", None, 10.0)
+    unknown = core.Pane("herdr", "w1:p1", "/w", "idle", "worker", "claude")
+
+    for pane, shown in ((under, 10.0), (unknown, "unavailable")):
+        _, result = _run(
+            tmp_path,
+            ["monitor", "--position", "Lead Director"],
+            _SentMail(tmp_path),
+            _Panes([pane], "ready"),
+        )
+        assert result["observations"][0]["contextPercent"] == shown
+        assert result["observations"][0]["filled"] is False
+        assert result["flagged"] == []
+
+
+def test_controller_recommends_compaction_for_a_pane_over_compact_at_percent(
+    tmp_path: Path,
+) -> None:
+    _director_file(tmp_path)
+    pane = core.Pane("herdr", "w1:p1", "/w", "idle", "worker", "claude", None, 45.0)
+
+    status, result = _run(
+        tmp_path,
+        ["controller", "--position", "Lead Director", "--authority", "grant"],
+        _SentMail(tmp_path),
+        _Panes([pane], "ready"),
+    )
+
+    assert status == 0
+    assert "compact-recommended" in [a["action"] for a in result["actions"]]
+
+
+def test_send_without_a_scratch_directory_stops_naming_the_argument(
+    tmp_path: Path,
+) -> None:
+    _director_file(tmp_path)
+    mail = _SentMail(tmp_path)
+    body = tmp_path / "body.txt"
+    body.write_text("hello", encoding="utf-8")
+
+    status, result = _run(
+        tmp_path,
+        [
+            "send",
+            "--position",
+            "Lead Director",
+            "--authority",
+            "grant",
+            "--recipient",
+            "worker",
+            "--subject",
+            "s",
+            "--correlation",
+            "c",
+            "--body-file",
+            str(body),
+        ],
+        mail,
+        None,
+    )
+
+    assert status == 1
+    assert "--scratch-directory" in result["detail"]
+    assert mail.sent == []
+
+
+def test_prowl_agents_response_maps_to_panes_with_adapter_supplied_fill() -> None:
+    response = {
+        "data": {
+            "agents": [
+                {
+                    "id": "agent-a",
+                    "pane": {"id": "pane-a"},
+                    "worktree": {"path": "/w"},
+                    "context_percent": 35,
+                    "last_prompt_origin": "operator",
+                }
+            ]
+        }
+    }
+
+    [pane] = core._prowl_panes(response)
+
+    assert (pane.pane_id, pane.cwd, pane.name) == ("pane-a", "/w", "agent-a")
+    assert (pane.context_percent, pane.last_prompt_origin) == (35.0, "operator")
+    with pytest.raises(core.DirectionError):
+        core._prowl_panes({"data": {}})

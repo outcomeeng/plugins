@@ -11,25 +11,25 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-import tempfile
 from pathlib import Path
-from types import ModuleType
 from typing import Any, Callable, Mapping, Sequence, TextIO
 
 from direction_core import (
-    ENVIRONMENT_HERDR,
-    ENVIRONMENT_PROWL,
+    ADAPTER_HERDR,
+    ADAPTER_PROWL,
+    ADAPTER_SCHEMA_VERSION,
     OBSERVATIONS_FILE,
     QUIET_FILE,
     RUNGS_FILE,
     DirectionError,
+    AdapterClient,
     Environments,
+    MailClient,
     Pane,
     common_directory,
     compose_configuration,
     guard_reasons,
     invocation_checkout,
-    load_sibling,
     now_seconds,
     quiet_minutes,
     read_state,
@@ -57,15 +57,10 @@ def absent_authority(subcommand: str) -> str:
     )
 
 
-def _runtime() -> tuple[ModuleType, Environments]:
-    mail = load_sibling("operate-agent-mail", "agent_mail")
-    herdr = load_sibling("operate-herdr", "herdr_environment")
-    prowl = load_sibling("operate-prowl", "prowl_environment")
-    runners = {
-        ENVIRONMENT_HERDR: herdr.SubprocessRunner(),
-        ENVIRONMENT_PROWL: prowl.SubprocessRunner(),
-    }
-    return mail, Environments(herdr, prowl, runners)
+def _runtime() -> tuple[MailClient, Environments]:
+    return MailClient(), Environments(
+        AdapterClient(ADAPTER_HERDR), AdapterClient(ADAPTER_PROWL)
+    )
 
 
 def _position_target(position: Mapping[str, Any], panes: list[Pane]) -> dict[str, Any]:
@@ -143,6 +138,10 @@ def _observe(
         )
         position = target["position"] or {}
         reasons = guard_reasons(pane, screen, config["untouchable_panes"])
+        fill = pane.context_percent
+        filled = fill is not None and fill > position.get(
+            "context_percent", float("inf")
+        )
         observations.append(
             {
                 "label": target["label"],
@@ -153,8 +152,9 @@ def _observe(
                 "stalled": quiet >= position.get("stall_minutes", float("inf")),
                 "guards": reasons,
                 "screen": screen if reasons else None,
-                "lastPrompt": "unavailable",
-                "contextPercent": "unavailable",
+                "lastPrompt": pane.last_prompt_origin or "unavailable",
+                "contextPercent": fill if fill is not None else "unavailable",
+                "filled": filled,
             }
         )
     write_state(state_dir, QUIET_FILE, quiet_state)
@@ -162,13 +162,13 @@ def _observe(
     return observations
 
 
-def _unread(mail: ModuleType, mail_name: str) -> list[dict[str, Any]]:
+def _unread(mail: Any, mail_name: str) -> list[dict[str, Any]]:
     request = {
-        "schemaVersion": mail.SCHEMA_VERSION,
+        "schemaVersion": ADAPTER_SCHEMA_VERSION,
         "operation": "inbox",
         "arguments": {"agent": mail_name, "unreadOnly": True, "limit": MAIL_LIMIT},
     }
-    result = mail.execute(request, mail.SubprocessRunner())
+    result = mail.execute(request)
     if result["status"] != "succeeded":
         raise DirectionError(
             f"mail inbox for {mail_name} failed with status {result.get('status')!r}: "
@@ -193,7 +193,7 @@ def _advisor_unset(config: Mapping[str, Any]) -> str:
 
 
 def _send_mail(
-    mail: ModuleType,
+    mail: Any,
     config: Mapping[str, Any],
     recipient: str,
     kind: str,
@@ -214,16 +214,20 @@ def _send_mail(
         ack_required=False,
     )
     request = {
-        "schemaVersion": mail.SCHEMA_VERSION,
+        "schemaVersion": ADAPTER_SCHEMA_VERSION,
         "operation": "send",
         "arguments": {"record": record},
     }
-    return mail.execute(request, mail.SubprocessRunner())
+    return mail.execute(request)
 
 
 def monitor_pass(config, envs, now) -> dict[str, Any]:
     observations = _observe(config, envs, now)
-    flagged = [o for o in observations if o.get("stalled") or o.get("guards")]
+    flagged = [
+        o
+        for o in observations
+        if o.get("stalled") or o.get("filled") or o.get("guards")
+    ]
     return {
         "pass": "monitor",
         "observations": observations,
@@ -236,7 +240,7 @@ def _ring(
     target: Mapping[str, Any],
     config: Mapping[str, Any],
     envs: Environments,
-    mail: ModuleType,
+    mail: Any,
     rungs: dict[str, Any],
     quiet_state: dict[str, Any],
     now: float,
@@ -305,7 +309,7 @@ def doorbell_pass(config, envs, mail, now, authority: str | None) -> dict[str, A
 
 
 def _forward_stalled(
-    observation: Mapping[str, Any], config: Mapping[str, Any], mail: ModuleType
+    observation: Mapping[str, Any], config: Mapping[str, Any], mail: Any
 ) -> dict[str, Any]:
     """The forwarding action for one stalled position."""
     guards = observation["guards"]
@@ -339,7 +343,7 @@ def _forward_stalled(
 def _controller_actions(
     observation: Mapping[str, Any],
     config: Mapping[str, Any],
-    mail: ModuleType,
+    mail: Any,
     authority: str,
 ) -> list[dict[str, Any]]:
     """Every action the controller reports for one observed position."""
@@ -509,8 +513,7 @@ def _parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--scratch-directory",
-        help="send: the directory --body-file must resolve inside; "
-        "defaults to the process temporary directory",
+        help="send: the harness scratch directory --body-file must resolve inside",
     )
     return parser
 
@@ -521,7 +524,13 @@ def read_body_file(
     """The body text, or an explicit rejection result when the path leaves the scratch directory."""
     if not body_file:
         return "", None
-    root = Path(scratch_directory or tempfile.gettempdir()).resolve()
+    if not scratch_directory:
+        raise DirectionError(
+            "send --body-file needs --scratch-directory; pass the scratch "
+            "directory the harness names for the session, and write the body file "
+            "inside it."
+        )
+    root = Path(scratch_directory).resolve()
     resolved = (root / body_file).resolve()
     if not resolved.is_relative_to(root):
         return "", {
@@ -617,7 +626,7 @@ def main(
     argv: Sequence[str] | None = None,
     *,
     stdout: TextIO | None = None,
-    runtime: tuple[ModuleType, Environments] | None = None,
+    runtime: tuple[MailClient, Environments] | None = None,
     clock: Callable[[], float] = now_seconds,
     checkout: Path | None = None,
 ) -> int:
