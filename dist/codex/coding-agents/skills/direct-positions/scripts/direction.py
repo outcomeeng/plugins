@@ -133,7 +133,17 @@ def _observe(
                 }
             )
             continue
-        screen = envs.read(pane)
+        try:
+            screen = envs.read(pane)
+        except DirectionError as error:
+            observations.append(
+                {
+                    "label": target["label"],
+                    "state": "pane-read-failed",
+                    "detail": str(error),
+                }
+            )
+            continue
         quiet = quiet_minutes(
             quiet_state, f"{pane.environment}:{pane.pane_id}", screen, now
         )
@@ -254,7 +264,7 @@ def monitor_pass(config, envs, now) -> dict[str, Any]:
     flagged = [
         o
         for o in observations
-        if o.get("stalled") or o.get("filled") or o.get("guards")
+        if o.get("state") or o.get("stalled") or o.get("filled") or o.get("guards")
     ]
     return {
         "pass": "monitor",
@@ -278,11 +288,14 @@ def _ring(
     pane: Pane | None = target["pane"]
     if pane is None:
         return "skipped", {"label": position["name"], "detail": target["detail"]}
-    unread = _unread(mail, config, position["mail_name"])
-    newest = max((int(r["id"]) for r in unread), default=0)
-    if newest <= int(rungs.get(position["name"], 0)):
-        return None
-    screen = envs.read(pane)
+    try:
+        unread = _unread(mail, config, position["mail_name"])
+        newest = max((int(r["id"]) for r in unread), default=0)
+        if newest <= int(rungs.get(position["name"], 0)):
+            return None
+        screen = envs.read(pane)
+    except DirectionError as error:
+        return "skipped", {"label": position["name"], "detail": str(error)}
     reasons = guard_reasons(pane, screen, config["untouchable_panes"])
     quiet = quiet_minutes(
         quiet_state, f"{pane.environment}:{pane.pane_id}", screen, now
@@ -375,7 +388,7 @@ def _controller_actions(
     authority: str,
 ) -> list[dict[str, Any]]:
     """Every action the controller reports for one observed position."""
-    if observation.get("state") == "pane-unresolved":
+    if observation.get("state"):
         return [
             {
                 "label": observation["label"],
@@ -674,7 +687,8 @@ def main(
         return 1
     json.dump(result, out, sort_keys=True, default=str)
     out.write("\n")
-    return 1 if result.get("status") in ("stopped", "unavailable") else 0
+    status = result.get("status")
+    return 0 if status is None or status == "succeeded" else 1
 
 
 if __name__ == "__main__":

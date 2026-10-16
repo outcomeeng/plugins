@@ -960,3 +960,129 @@ def test_configured_mail_channel_selects_that_repositorys_mail_project(
     assert keys["configured"] == [channel_key]
     assert keys["unset"] == [invocation_key]
     assert Path.cwd() == invocation
+
+
+class _FailingPrompt(_Panes):
+    def prompt(self, _pane: object, _text: str) -> dict:
+        return {"status": "agent-blocked", "detail": "agent waits at a question"}
+
+
+def test_act_exits_nonzero_on_an_adapter_status_other_than_succeeded(
+    tmp_path: Path,
+) -> None:
+    _director_file(tmp_path)
+    pane = core.Pane("herdr", "w1:p1", "/w", "idle", "worker", "claude")
+
+    status, result = _run(
+        tmp_path,
+        [
+            "act",
+            "--position",
+            "Lead Director",
+            "--authority",
+            "grant",
+            "--target",
+            "Worker",
+            "--operation",
+            "compact",
+        ],
+        _SentMail(tmp_path),
+        _FailingPrompt([pane], "ready"),
+    )
+
+    assert status == 1
+    assert result["status"] == "agent-blocked"
+    assert "question" in result["detail"]
+
+
+class _OnePaneFails(_Panes):
+    def read(self, pane: object) -> str:
+        if getattr(pane, "pane_id") == "w1:p1":
+            raise core.DirectionError("read of pane w1:p1 failed")
+        return "ready"
+
+
+def _two_panes() -> list:
+    return [
+        core.Pane("herdr", "w1:p1", "/w", "idle", "a", "claude"),
+        core.Pane("herdr", "w1:p2", "/v", "idle", "b", "claude"),
+    ]
+
+
+def test_monitor_and_controller_report_a_failing_pane_beside_the_healthy_ones(
+    tmp_path: Path,
+) -> None:
+    _two_workers(tmp_path, "Other")
+    for arguments in (
+        ["monitor", "--position", "Lead Director"],
+        ["controller", "--position", "Lead Director", "--authority", "grant"],
+    ):
+        status, result = _run(
+            tmp_path, arguments, _SentMail(tmp_path), _OnePaneFails(_two_panes(), "")
+        )
+
+        assert status == 0
+        if "observations" in result:
+            states = {o["label"]: o.get("state") for o in result["observations"]}
+            assert states == {"Worker": "pane-read-failed", "Other": None}
+        else:
+            assert [a["label"] for a in result["actions"]] == ["Worker"]
+            assert result["actions"][0]["action"] == "skipped"
+
+
+def test_doorbell_skips_a_failing_position_and_rings_the_healthy_one(
+    tmp_path: Path,
+) -> None:
+    _two_workers(tmp_path, "Other")
+
+    class _Unread(_SentMail):
+        def execute(self, request: dict) -> dict:
+            return {"status": "succeeded", "data": {"records": [{"id": 4}]}}
+
+    class _Rings(_OnePaneFails):
+        def prompt(self, _pane: object, _text: str) -> dict:
+            return {"status": "succeeded"}
+
+    status, result = _run(
+        tmp_path,
+        ["doorbell", "--position", "Lead Director", "--authority", "grant"],
+        _Unread(tmp_path),
+        _Rings(_two_panes(), ""),
+    )
+
+    assert status == 0
+    assert [e["label"] for e in result["sent"]] == ["Other"]
+    assert [e["label"] for e in result["skipped"]] == ["Worker"]
+    assert "w1:p1" in result["skipped"][0]["detail"]
+
+
+def test_executor_group_matches_its_prefix_and_omits_exclusions(
+    tmp_path: Path,
+) -> None:
+    _override(
+        tmp_path,
+        "Lead Director",
+        '+++\n[[executor_groups]]\nlabel = "Executors"\nenvironment = "herdr"\n'
+        'cwd_prefix = "/work/exec"\nexclusions = ["/work/exec-main"]\n+++\n',
+    )
+    panes = [
+        core.Pane("herdr", "w1:p1", "/work/exec-1", "idle", "a", "claude"),
+        core.Pane("herdr", "w1:p2", "/work/exec-main", "idle", "b", "claude"),
+        core.Pane("herdr", "w1:p3", "/other", "idle", "c", "claude"),
+    ]
+
+    _, roster = _run(
+        tmp_path,
+        ["roster", "--position", "Lead Director"],
+        _SentMail(tmp_path),
+        _Panes(panes, "ready"),
+    )
+    _, monitor = _run(
+        tmp_path,
+        ["monitor", "--position", "Lead Director"],
+        _SentMail(tmp_path),
+        _Panes(panes, "ready"),
+    )
+
+    assert [r["pane"] for r in roster["roster"]] == ["w1:p1"]
+    assert [o["pane"] for o in monitor["observations"]] == ["w1:p1"]
