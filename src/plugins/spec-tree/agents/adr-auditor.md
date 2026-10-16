@@ -4,6 +4,9 @@ description: >-
   ALWAYS invoke when auditing ADR evidence quality after writing an ADR or before implementing from it.
 tools: Read, Glob, Grep, Write, Bash(spx verification run:*), Bash(git merge-base:*), Bash(git diff:*), {{! tool('use_skill') !}}
 profile: standard
+{!% if target == 'codex' %!}
+sandbox_mode: workspace-write
+{!% endif %!}
 skills:
   - spec-tree:audit-adr
 ---
