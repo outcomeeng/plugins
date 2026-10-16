@@ -255,7 +255,7 @@ Per-language code, architecture, and test audits ship as `audit-{lang}-{code|tes
 | ----------------------- | ---------------------------- |
 | "Audit this code"       | `/audit-python-code`         |
 | "Audit ADRs for Python" | `/audit-python-architecture` |
-| "Audit these tests"     | `/audit-python-tests`        |
+| "Audit these tests"     | `/audit-python-test`         |
 
 ---
 
