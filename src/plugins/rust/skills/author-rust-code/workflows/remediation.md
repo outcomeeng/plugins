@@ -22,7 +22,7 @@ Before fixing anything:
 
 1. Read the affected code in context.
 2. Read the governing spec, ADR, or PDR when the issue is about compliance.
-3. Decide whether the real problem is in logic, seam design, ownership flow, error handling, or the test, eval, or audit evidence selected by `/verify`.
+3. Decide whether the real problem is in logic, seam design, ownership flow, error handling, or the test, eval, or audit evidence selected by the verification routing.
 
 </phase>
 
@@ -61,7 +61,7 @@ Fix the underlying issue. Do not add `#[allow(...)]` to hide it.
 </phase>
 
 <phase name="add_regression_evidence">
-If the rejection exposed a behavior not covered by established evidence, return to `/verify` and its selected specialist. Add or extend a regression test only when test is selected; extend eval evidence only through the eval specialist; preserve a pathless audit requirement for its isolated verifier.
+If the rejection exposed a behavior not covered by established evidence, Use skill `spec-tree:verify` and its selected specialist. Add or extend a regression test only when test is selected; extend eval evidence only through the eval specialist; preserve a pathless audit requirement for its isolated verifier.
 
 ```rust
 #[test]
@@ -88,7 +88,7 @@ cargo clippy --all-targets --all-features -- -D warnings
 cargo test --all-targets
 ```
 
-Run every eval command selected by `/verify` and require its declared threshold. Preserve every pathless audit requirement for re-review.
+Run every eval command selected by the verification routing and require its declared threshold. Preserve every pathless audit requirement for re-review.
 
 </phase>
 
@@ -107,7 +107,7 @@ Summarize:
 
 - every rejection point was mapped to a root cause before edits
 - fixes addressed the underlying design or logic issue rather than the symptom
-- missing regression evidence was established through `/verify` and the selected specialist
+- missing regression evidence was established through the verification routing and the selected specialist
 - the repository validation sequence passed after remediation
 - the re-review summary names the resolved issues and evidence
 

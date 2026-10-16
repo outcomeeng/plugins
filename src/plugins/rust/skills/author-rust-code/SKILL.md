@@ -19,7 +19,7 @@ Rust implementation code with spec-driven behavior, explicit seams, and full val
 1. Read the repo-local Rust overlays when present; the standards above are already loaded.
 2. Follow `<context_loading>` when this is a spec-tree work item.
 3. Read `${CLAUDE_SKILL_DIR}/workflows/implementation.md` for new work or `${CLAUDE_SKILL_DIR}/workflows/remediation.md` for review feedback.
-4. Invoke `/verify` when behavior changes require new or revised evidence; use `/author-rust-test` for Rust expression after test is selected.
+4. When behavior changes require new or revised evidence, follow `<testing_methodology>`.
 5. Finish with the repository validation sequence or, if none is published, `cargo fmt --check`, `cargo clippy --all-targets --all-features -- -D warnings`, and `cargo test --all-targets`.
 
 `allowed-tools` preapproves only the listed raw-tool fallbacks. A repository-canonical wrapper outside those patterns uses the runtime's normal per-call approval path; NEVER select a fallback merely to avoid that approval.
@@ -39,7 +39,7 @@ NEVER declare work complete until the full validation sequence passes.
 </essential_principles>
 
 <repo_local_overlay>
-After loading `/rust-code-standards` and `/rust-test-standards`, check for `spx/local/rust.md` and `spx/local/rust-tests.md` at the repository root. Read each file that exists before discovery and implementation. Treat each as repo-local routing to the product's governing specs and decisions; a local overlay supplements skill behavior and does not declare product truth.
+After loading the two Rust standards above, check for `spx/local/rust.md` and `spx/local/rust-tests.md` at the repository root. Read each file that exists before discovery and implementation. Treat each as repo-local routing to the product's governing specs and decisions; a local overlay supplements skill behavior and does not declare product truth.
 </repo_local_overlay>
 
 <hierarchy_of_authority>
@@ -79,21 +79,21 @@ Before implementation, confirm:
 </codebase_discovery>
 
 <testing_methodology>
-Invoke `/verify` before adding or revising evidence. When it selects test, use `/author-rust-test` for Rust expression and follow RED/GREEN. When it selects evaluate, read the eval definition, cases, materialized prompt, real producer contract, selected product command, and threshold; run that command before and after implementation. When it selects audit, preserve the pathless requirement for the isolated verifier without inventing a test. If the change alters behavior and no evidence already proves that behavior, establish the selected evidence first.
+Use skill `spec-tree:verify` before adding or revising evidence. When it selects test, Use skill `rust:author-rust-test` for Rust expression and follow RED/GREEN. When it selects evaluate, read the eval definition, cases, materialized prompt, real producer contract, selected product command, and threshold; run that command before and after implementation. When it selects audit, preserve the pathless requirement for the isolated verifier without inventing a test. If the change alters behavior and no evidence already proves that behavior, establish the selected evidence first.
 
-Use `/rust-test-standards` as the canonical source for filenames, evidence levels, controlled implementations, property tests, compile-fail evidence, fixture placement, and coverage expectations. Keep production code aligned with those constraints instead of re-declaring test policy here.
+Treat the loaded Rust test standards as the canonical source for filenames, evidence levels, controlled implementations, property tests, compile-fail evidence, fixture placement, and coverage expectations. Keep production code aligned with those constraints instead of re-declaring test policy here.
 </testing_methodology>
 
 <audit_requirement_handoff>
 
-For each `/verify` routing row whose verification type is audit, re-read the routed spec or decision artifact and confirm the exact subject still carries `([audit])`. The completion report includes one `Audit requirements` row per audit routing row with the full `spx/...` source path, exact subject text, and status `preserved`. The row count must equal the routing result's audit-row count; when that count is zero, report `Audit requirements: none selected`.
+For each verification routing row whose verification type is audit, re-read the routed spec or decision artifact and confirm the exact subject still carries `([audit])`. The completion report includes one `Audit requirements` row per audit routing row with the full `spx/...` source path, exact subject text, and status `preserved`. The row count must equal the routing result's audit-row count; when that count is zero, report `Audit requirements: none selected`.
 
 </audit_requirement_handoff>
 
 <context_loading>
 If this work belongs to a spec-tree node:
 
-1. invoke `spec-tree:contextualize` with the full path
+1. Use skill `spec-tree:contextualize` with the full path
 2. abort if required context is missing
 3. implement only after the context is loaded
 
@@ -119,8 +119,8 @@ If the work is outside the spec tree, proceed with the provided requirements and
 <success_criteria>
 
 - The Rust implementation satisfies its governed evidence with no unresolved implementation-audit finding.
-- The repository's canonical format and lint commands pass; its regression test command passes; every test or eval command selected by `/verify` passes its declared criterion.
-- Behavior-changing work has selected test or eval evidence, or an `Audit requirements` report whose `preserved` rows match `/verify`'s audit routing rows.
+- The repository's canonical format and lint commands pass; its regression test command passes; every test or eval command selected by the verification routing passes its declared criterion.
+- Behavior-changing work has selected test or eval evidence, or an `Audit requirements` report whose `preserved` rows match the verification routing's audit rows.
 - No temporary debug code, commented-out implementation, or TODO/FIXME escape hatch remains.
 
 </success_criteria>
