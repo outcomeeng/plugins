@@ -23,14 +23,14 @@ When another skill loads this reference inside a repository, it must also check 
 </repo_local_overlay>
 
 <standard_family>
-Load `/rust-code-standards` as the container before any specialized Rust standard.
+This standard is the container; read it before any specialized Rust standard.
 
 | Work area                  | Specialized standard           | Purpose                                                                                      |
 | -------------------------- | ------------------------------ | -------------------------------------------------------------------------------------------- |
 | test code                  | `/rust-test-standards`         | Rust test filenames, levels, evidence rules, doubles, harnesses, fixtures, and examples      |
 | ADRs and architecture docs | `/rust-architecture-standards` | Rust architecture decision structure, testability constraints, and architecture review rules |
 
-Keep examples in standardizing skills. Task skills such as `/author-rust-code`, `/author-rust-test`, and `/audit-rust-test` describe workflow and load order; the standardizing family owns reusable policy and concrete examples.
+Keep examples in standardizing skills; the standardizing family owns reusable policy and concrete examples.
 </standard_family>
 
 <tooling_baseline>

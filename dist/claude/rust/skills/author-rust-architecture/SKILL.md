@@ -69,7 +69,7 @@ Read these files to understand product structure and workflow:
 
 - `CLAUDE.md` - Product navigation, work item status, BSP dependencies
 
-For evidence routing, invoke `/verify`. After test is selected, read `/rust-test-standards` and invoke `/author-rust-test` for Rust expression.
+For evidence routing, use skill `spec-tree:verify`. After test is selected, use skill `rust:rust-test-standards` and use skill `rust:author-rust-test` for Rust expression.
 
 **3. Existing Decisions**
 
@@ -114,10 +114,10 @@ Execute these phases IN ORDER.
 1. Read the node spec completely (requirements, assertions)
 2. Read product context:
    - `CLAUDE.md` - Product structure, navigation, work item management
-3. Read `/rust-code-standards`, then `/rust-architecture-standards`
+3. Use skill `rust:rust-code-standards`, then use skill `rust:rust-architecture-standards`
 4. Read `spx/local/rust.md` and `spx/local/rust-architecture.md` if they exist
 5. Read `/rust-test-standards`, then `spx/local/rust-tests.md` if it exists
-6. Invoke `/verify` for evidence routing; after test is selected, invoke `/author-rust-test` for Rust expression
+6. Use skill `spec-tree:verify` for evidence routing; after test is selected, use skill `rust:author-rust-test` for Rust expression
 7. Read existing ADRs for consistency:
    - `spx/{NN}-{slug}.adr.md` - Product-level ADRs
    - ADRs interleaved within enabler/outcome nodes
@@ -208,8 +208,8 @@ Key Constraints
 <success_criteria>
 ADR is complete when:
 
-- [ ] Verification (`### Audit`) includes testability constraints (DI, no mocking) per `/rust-architecture-standards`
-- [ ] `/rust-code-standards` was loaded before `/rust-architecture-standards`
+- [ ] Verification (`### Audit`) includes testability constraints (DI, no mocking) per skill `rust:rust-architecture-standards`
+- [ ] Skill `rust:rust-code-standards` was loaded before skill `rust:rust-architecture-standards`
 - [ ] `/rust-test-standards` was loaded before testing methodology was applied
 - [ ] All architectural choices documented
 - [ ] Verification rules defined as ALWAYS/NEVER guarantees and boundaries

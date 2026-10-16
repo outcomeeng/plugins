@@ -19,7 +19,7 @@ Rust implementation code with spec-driven behavior, explicit seams, and full val
 1. Read the repo-local Rust overlays when present; the standards above are already loaded.
 2. Follow `<context_loading>` when this is a spec-tree work item.
 3. Read `${SKILL_DIR}/workflows/implementation.md` for new work or `${SKILL_DIR}/workflows/remediation.md` for review feedback.
-4. Invoke `/verify` when behavior changes require new or revised evidence; use `/author-rust-test` for Rust expression after test is selected.
+4. When behavior changes require new or revised evidence, use skill `spec-tree:verify`; after it selects test, use skill `rust:author-rust-test` for Rust expression.
 5. Finish with the repository validation sequence or, if none is published, `cargo fmt --check`, `cargo clippy --all-targets --all-features -- -D warnings`, and `cargo test --all-targets`.
 
 `allowed-tools` preapproves only the listed raw-tool fallbacks. A repository-canonical wrapper outside those patterns uses the runtime's normal per-call approval path; NEVER select a fallback merely to avoid that approval.
@@ -39,7 +39,7 @@ NEVER declare work complete until the full validation sequence passes.
 </essential_principles>
 
 <repo_local_overlay>
-After loading `/rust-code-standards` and `/rust-test-standards`, check for `spx/local/rust.md` and `spx/local/rust-tests.md` at the repository root. Read each file that exists before discovery and implementation. Treat each as repo-local routing to the product's governing specs and decisions; a local overlay supplements skill behavior and does not declare product truth.
+After loading `rust:rust-code-standards` and `rust:rust-test-standards`, check for `spx/local/rust.md` and `spx/local/rust-tests.md` at the repository root. Read each file that exists before discovery and implementation. Treat each as repo-local routing to the product's governing specs and decisions; a local overlay supplements skill behavior and does not declare product truth.
 </repo_local_overlay>
 
 <hierarchy_of_authority>
@@ -79,7 +79,7 @@ Before implementation, confirm:
 </codebase_discovery>
 
 <testing_methodology>
-Invoke `/verify` before adding or revising evidence. When it selects test, use `/author-rust-test` for Rust expression and follow RED/GREEN. When it selects evaluate, read the eval definition, cases, materialized prompt, real producer contract, selected product command, and threshold; run that command before and after implementation. When it selects audit, preserve the pathless requirement for the isolated verifier without inventing a test. If the change alters behavior and no evidence already proves that behavior, establish the selected evidence first.
+Use skill `spec-tree:verify` before adding or revising evidence. When it selects test, use skill `rust:author-rust-test` for Rust expression and follow RED/GREEN. When it selects evaluate, read the eval definition, cases, materialized prompt, real producer contract, selected product command, and threshold; run that command before and after implementation. When it selects audit, preserve the pathless requirement for the isolated verifier without inventing a test. If the change alters behavior and no evidence already proves that behavior, establish the selected evidence first.
 
 Use `/rust-test-standards` as the canonical source for filenames, evidence levels, controlled implementations, property tests, compile-fail evidence, fixture placement, and coverage expectations. Keep production code aligned with those constraints instead of re-declaring test policy here.
 </testing_methodology>

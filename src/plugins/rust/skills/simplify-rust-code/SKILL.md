@@ -31,14 +31,14 @@ Simpler Rust implementation with unchanged behavior and ownership semantics, acc
 4. Inspect the selected implementation and the evidence covering its behavior. Apply `/rust-test-standards` to coverage and test quality. Missing or inadequate behavioral coverage returns `blocked` with the affected file or function and evidence gap; do not create tests to bypass this condition.
 5. Resolve the baseline test command from the product guide and the inspected evidence. Use existing evidence; if correct work requires changed behavior or changed evidence, return `blocked` before editing.
 6. Run the product's required baseline tests and record actual exit codes. A failed or unavailable baseline returns `blocked` without edits. Identify only changes whose behavioral equivalence can be explained from the code and evidence; when none improves clarity safely, return `unchanged` with the reason.
-7. Invoke `rust:author-rust-code` with the governing node, selected files, and the behavior-preserving simplification requirement. Follow its complete discovery, standards, and validation contract while preserving the evidence. Retain the exact patch owned by this invocation. Require the same tests afterward and every format, lint, and validation check required by `/author-rust-code`, using product commands and preserving process exit codes. Collect those results once; never mask a failing process through output truncation or a pipeline.
+7. Use skill `rust:author-rust-code` with the governing node, selected files, and the behavior-preserving simplification requirement. Follow its complete discovery, standards, and validation contract while preserving the evidence. Retain the exact patch owned by this invocation. Require the same tests afterward and every format, lint, and validation check required by `rust:author-rust-code`, using product commands and preserving process exit codes. Collect those results once; never mask a failing process through output truncation or a pipeline.
 8. Compare the resulting diff with the recorded scope and baseline. Confirm tests, evidence, seams, and ownership contracts remain unchanged. Follow `<recovery>` on any failed check or uncertain equivalence, then return `<result>`.
 
 </workflow>
 
 <coding_result>
 
-When invoking `rust:author-rust-code`, request its completion report with changed paths, the behavior preserved by each edit, the evidence used, executed commands and exit codes, and unresolved constraints. Execute that composed workflow in this session.
+Use skill `rust:author-rust-code` and request its completion report with changed paths, the behavior preserved by each edit, the evidence used, executed commands and exit codes, and unresolved constraints. Execute that composed workflow in this session.
 
 Before Step 8, require every report component and compare it against the retained diff and captured command results. Every changed path must belong to the selected scope, every reported successful check must have a zero exit code, and every omitted required check or unresolved constraint must be identified. A missing report component or contradiction returns `failed` through the recovery procedure; never infer completion from a generic success statement.
 
@@ -80,7 +80,7 @@ Return one JSON object with these fields:
 <success_criteria>
 
 - Every retained edit belongs to the resolved Rust implementation scope and improves clarity without changing behavior, error contracts, seams, or ownership semantics.
-- Unchanged behavioral tests pass before and after edits, and the complete `/author-rust-code` validation requirements pass.
+- Unchanged behavioral tests pass before and after edits, and the complete `rust:author-rust-code` validation requirements pass.
 - The report accounts for every retained edit, executed check, unexecuted required check, and recovery action.
 - A blocked prerequisite causes no retained edit unless a reported concurrent-write collision prevents safe recovery.
 
