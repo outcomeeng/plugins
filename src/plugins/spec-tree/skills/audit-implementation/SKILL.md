@@ -60,8 +60,7 @@ Run these stages in order. Each names what holds before the next begins, and
    `base..head` scope, re-issuing a truncated or partial read in bounded
    ranges until the body is complete, per the subject-body constraint.
 6. **Record.** Hold each unit planned until its concern returns a final result,
-   classify each returned finding per the touched-text reference, then persist per `<coverage_model>`.
-   NEVER accept a finding raised before stage 3 loaded that concern's standards and overlays — withdraw it.
+   classify each returned finding per the touched-text reference, then persist per `<coverage_model>`. NEVER accept a finding raised before stage 3 loaded that concern's standards and overlays — withdraw it.
 7. **Reconcile, then finish.** Run the bundled reconciler; `finish` is
    reachable only from its zero exit:
 
@@ -336,10 +335,9 @@ spx verification run finding add --verification-type audit --scope-type changese
 ```
 
 - ALWAYS copy the scratch directory the harness names for the session into each payload path character for character, and write each scope and finding payload with the file-write tool to its own file there, under a name unique to this run and payload, such as `<run-token>-scope-<n>.json` and `<run-token>-finding-<n>.json`. Where the harness names no scratch directory, use the one the hosting environment designates, such as `$RUNNER_TEMP` on a hosted runner.
-- ALWAYS write only payload files with the file-write tool.
 - ALWAYS stop before the command that reads a payload file when the file-write result reports a path that the scratch directory does not contain by whole path components, returning the `<verdict_format>` blocked diagnostic naming the reported path.
 - ALWAYS pass `--payload` the path exactly as the file-write tool's result reports it, copied from that result, never retyped from memory; pass the start input file at the path the run named for it, copied the same way.
-- ALWAYS pass the file as the value of `--payload`, its path written out literally.
+- ALWAYS write only payload files with the file-write tool, and pass each file as the value of `--payload`, its path written out literally.
 - ALWAYS add each scope unit and each finding with its own literal command and its own payload file, one at a time, and stop the audit at the first command that exits nonzero, other than the one rerun on an absent-payload diagnostic that the next bullet allows, returning the `<verdict_format>` blocked diagnostic.
 - ALWAYS, when a command exits nonzero with a diagnostic that names its payload file as absent, run that command once more with the path copied from the file-write result; on a second failure, stop with the `<verdict_format>` blocked diagnostic naming the run token.
 - NEVER send a payload through a heredoc, a pipe, or an inline argument, and never build one with an interpreter or `printf` stage — the dangerous-command guard blocks those forms.
