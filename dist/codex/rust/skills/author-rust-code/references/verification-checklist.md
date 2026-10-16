@@ -9,9 +9,9 @@ Before declaring implementation complete, confirm that mechanical checks and cod
 - [ ] `cargo test --all-targets` passes
 - [ ] no temporary debug code remains
 - [ ] no TODO or FIXME comments were added as escape hatches
-- [ ] new behavior carries the test, eval, or pathless audit evidence selected by the verification routing
+- [ ] new behavior carries the test, eval, or pathless audit evidence selected by `/verify`
 - [ ] every selected eval meets its declared completion threshold
-- [ ] the completion report has one `Audit requirements` row with status `preserved` per audit row of the verification routing, or reports `none selected` when no audit row exists
+- [ ] the completion report has one `Audit requirements` row with status `preserved` per audit row from `/verify`, or reports `none selected` when no audit row exists
 
 </required_checks>
 
@@ -53,7 +53,8 @@ If the repository publishes stricter wrapper commands in `AGENTS.md` or `README.
 <testing>
 
 - tests prove behavior rather than implementation details
-- each `#[test]` body carries its own assertion macro, never a bare harness call that both acts and judges- edge cases and regressions are named clearly
+- each `#[test]` body carries its own assertion macro, never a bare harness call that both acts and judges — the shape `${SKILL_DIR}/references/test-patterns.md` `<anti_patterns>` names first
+- edge cases and regressions are named clearly
 - property claims use property-based tests
 - compile-time claims use compile-fail evidence where appropriate
 

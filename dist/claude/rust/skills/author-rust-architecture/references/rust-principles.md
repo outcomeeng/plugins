@@ -1,57 +1,119 @@
-# Rust Architectural Decision Prompts
-
-Each section names the decisions an ADR records when its subject touches that concern. Record a decision only when the governed code depends on it; omit a section the ADR does not touch.
+# Rust Architectural Principles
 
 ## Contents
 
-- Ownership and Borrowing
+- Ownership and Borrowing Are Architecture
 - Type-Driven Invariants
-- Seams and Dependency Injection
-- Error Boundaries
-- Concurrency and Async
-- Resource Lifecycle
+- Clean Architecture in Rust
+- Error Boundaries Are a Design Decision
+- Concurrency and Async Need Architectural Justification
+- Resource Lifecycle and RAII
 - Security and Unsafe Boundaries
-- Crate Selection
+- Crate Selection Is Architectural
 
-## Ownership and Borrowing
+## Ownership and Borrowing Are Architecture
 
-- Which component owns each piece of shared state, cache, handle, and aggregate
-- Where shared ownership or interior mutability is justified by a use case rather than by compiler friction
-- Which borrowing boundaries are part of a public API
+- Model ownership explicitly in ADRs for state, caches, handles, and domain aggregates
+- Prefer single ownership by default; introduce `Arc`, `Rc`, interior mutability, or pools only when the use case requires them
+- Treat borrowing boundaries as API design, not a compiler inconvenience
+- Avoid architecture that relies on pervasive cloning to make flows compile
+
+```rust
+pub struct AppState {
+    config: Arc<Config>,
+    pool: PgPool,
+}
+```
 
 ## Type-Driven Invariants
 
-- Which invariants live in newtypes, type-state transitions, or validated constructors
-- Which validation stays at the boundary, with validated types trusted internally
+- Prefer newtypes for domain identifiers and validated values
+- Use type state or marker types when valid transitions matter
+- Make invalid states unrepresentable where the domain rules are stable
+- Keep runtime validation at boundaries, then trust validated types internally
 
-## Seams and Dependency Injection
+```rust
+pub struct Email(String);
 
-- Which traits mark architectural seams
-- How dependencies reach the code: constructors or function parameters
-- Which controlled implementations tests inject in place of mocks
+impl Email {
+    pub fn new(raw: &str) -> Result<Self, ValidationError> {
+        validate_email(raw)?;
+        Ok(Self(raw.to_owned()))
+    }
+}
+```
 
-## Error Boundaries
+## Clean Architecture in Rust
 
-- Which layers define typed errors and which orchestration layers collect them
-- Which failures are retryable, degradable, user-facing, or fatal
-- Where infrastructure errors convert so crate-specific types stop at the boundary
+- Prefer traits at architectural seams and concrete types inside modules
+- Inject dependencies through constructors or function parameters
+- Keep command handlers, HTTP handlers, and adapters thin
+- Use modules and visibility to enforce boundaries
 
-## Concurrency and Async
+```rust
+pub trait Clock {
+    fn now(&self) -> DateTime<Utc>;
+}
 
-- Which workloads are I/O-bound and which are CPU-bound, with the runtime or threading model each implies
-- The `Send` and `Sync` assumptions of shared state and background work
+pub struct Service<C: Clock> {
+    clock: C,
+}
+```
 
-## Resource Lifecycle
+## Error Boundaries Are a Design Decision
 
-- Which pools, handles, transactions, and guards have lifecycle rules, and who creates and releases each
-- Which initialization is application-wide
+- Use typed errors at library and domain boundaries
+- Use `thiserror` for structured public errors and `anyhow` for application orchestration when appropriate
+- Decide explicitly which failures are retryable, degradable, user-facing, or fatal
+- Convert infrastructure errors at boundaries instead of leaking crate-specific types upward
+
+```rust
+#[derive(thiserror::Error, Debug)]
+pub enum CreateUserError {
+    #[error("email already exists")]
+    DuplicateEmail,
+    #[error("storage failure")]
+    Storage(#[source] sqlx::Error),
+}
+```
+
+## Concurrency and Async Need Architectural Justification
+
+- Choose async for I/O concurrency, not as a default style
+- Choose threads or rayon for CPU-bound parallelism
+- Document `Send`/`Sync` assumptions in shared state and background work
+- Do not hold locks across `.await`
+
+```rust
+pub async fn handler(
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<ResponseDto>, AppError> {
+    Ok(Json(state.service.fetch().await?))
+}
+```
+
+## Resource Lifecycle and RAII
+
+- Treat connection pools, file handles, transactions, and guards as lifecycle decisions
+- Use RAII and `Drop` for cleanup that must happen on scope exit
+- Prefer lazy initialization only for truly application-wide state
+- Document pooling, caching, and cleanup strategy in the ADR when resource cost matters
 
 ## Security and Unsafe Boundaries
 
-- Which inputs cross a trust boundary and where validation happens
-- Which modules confine unsafe code, FFI, or layout coupling, with the soundness reasoning each requires
+- Validate external input at boundaries
+- Keep secrets out of source and config defaults
+- Isolate unsafe code behind small, documented safe wrappers
+- Require explicit soundness reasoning for FFI, layout coupling, and raw pointer use
 
-## Crate Selection
+```rust
+// SAFETY: ptr is valid for reads of len bytes and comes from the caller contract
+unsafe { std::slice::from_raw_parts(ptr, len) }
+```
 
-- Which runtime, web, serialization, persistence, and tracing crates the ADR commits the product to
-- Which of those crates leak through public APIs, and the switching cost each creates
+## Crate Selection Is Architectural
+
+- Treat runtime, web framework, serialization, persistence, and tracing crates as ADR-level choices
+- Prefer mature crates with clear maintenance, compatibility, and feature-flag story
+- Minimize architectural commitment to crates that leak through public APIs
+- Record why a crate is chosen and what switching cost it creates

@@ -11,14 +11,16 @@ Use skill `rust:rust-code-standards`.
 Use skill `rust:rust-architecture-standards`.
 
 <objective>
-A Rust ADR that follows the standard Rust architecture template, preserves spec-tree hierarchy constraints, and encodes testability as the architecture standard places it.
+A Rust ADR that follows the standard Rust architecture template, preserves spec-tree hierarchy constraints, and encodes testability as `## Verification` `### Audit` rules.
 </objective>
 
 <essential_principles>
-**Standards are pre-loaded above.** The architecture standard owns the ADR sections and the placement of testability rules.
+**Standards are pre-loaded above.** The first skill defines shared Rust standards; the architecture standard defines canonical ADR sections, how testability appears in `## Verification` `### Audit` rules, and what does not belong in an ADR.
 
 After reading those standards, check for `spx/local/rust.md` and `spx/local/rust-architecture.md` at the repository root. Read each file that exists and apply each as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth.
 
+- ADRs follow the authoritative template: title + decision stated directly, Rationale, Invariants (optional), Verification
+- Testability constraints go under `## Verification`'s `### Audit` subsection as ALWAYS/NEVER rules -- not in a separate Testing Strategy section
 - Prefer type-level invariants over runtime-only validation when the domain allows it
 - Design around ownership, borrowing, and resource lifetimes explicitly
 - Design for dependency injection (NO MOCKING)
@@ -31,7 +33,7 @@ After reading those standards, check for `spx/local/rust.md` and `spx/local/rust
 
 When creating ADRs for a spec-tree work item (enabler/outcome), ensure complete hierarchical context is loaded:
 
-1. Use skill `spec-tree:contextualize` with the node path
+1. **Invoke `spec-tree:contextualize`** with the node path
 2. **Verify all ancestor ADRs/PDRs are loaded** - Must understand and honor all decision records in hierarchy
 3. **Read the node spec** - Requirements, Test Strategy, and Outcomes sections
 
@@ -45,7 +47,7 @@ When creating ADRs for a spec-tree work item (enabler/outcome), ensure complete 
 
 - Must not contradict ancestor ADRs/PDRs (product → ancestor hierarchy)
 - Must reference relevant ancestor decisions
-- Must include testability constraints (DI, no mocking) where `rust:rust-architecture-standards` places them
+- Must include testability constraints in `## Verification` (`### Audit` ALWAYS/NEVER rules for DI, no mocking)
 - Must document trade-offs and consequences
 
 **If NOT working on spec-tree work item**: Proceed directly with ADR creation using provided requirements.
@@ -67,7 +69,7 @@ Read these files to understand product structure and workflow:
 
 - `AGENTS.md` - Product navigation, work item status, BSP dependencies
 
-For evidence routing, use skill `spec-tree:verify`. After test is selected, use skill `rust:rust-test-standards` and skill `rust:author-rust-test` for Rust expression.
+For evidence routing, invoke `/verify`. After test is selected, read `/rust-test-standards` and invoke `/author-rust-test` for Rust expression.
 
 **3. Existing Decisions**
 
@@ -88,7 +90,17 @@ Produce ADRs. The scope depends on the decision:
 | Node-specific  | `spx/{NN}-{slug}.enabler/{NN}-{slug}.adr.md`     | "CLI command structure"                     |
 | Nested node    | `spx/.../{NN}-{slug}.outcome/{NN}-{slug}.adr.md` | "Use tokio task orchestration for workers"  |
 
-**ADR numbering and ordering:** Use skill `spec-tree:author` for BSP numbering and ordering rules. A lower BSP is a dependency of a higher one, so decide it first.
+**ADR Numbering:**
+
+- BSP range: [10, 99]
+- Lower BSP = dependency (higher-BSP ADRs may rely on it)
+- Insert using midpoint calculation: `new = floor((left + right) / 2)`
+- Append using: `new = floor((last + 99) / 2)`
+- First ADR in scope: use 21
+
+See `/author` skill for complete ordering rules.
+
+**Within-scope dependency order**: adr-21 must be decided before adr-37 (lower BSP = dependency).
 
 **Cross-scope dependencies**: Must be documented explicitly in the ADR decision statement or Rationale using markdown links.
 
@@ -102,13 +114,14 @@ Execute these phases IN ORDER.
 1. Read the node spec completely (requirements, assertions)
 2. Read product context:
    - `AGENTS.md` - Product structure, navigation, work item management
-3. Read `spx/local/rust.md` and `spx/local/rust-architecture.md` if they exist
-4. Use skill `rust:rust-test-standards`, then read `spx/local/rust-tests.md` if it exists
-5. Use skill `spec-tree:verify` for evidence routing; after test is selected, use skill `rust:author-rust-test` for Rust expression
-6. Read existing ADRs for consistency:
+3. Read `/rust-code-standards`, then `/rust-architecture-standards`
+4. Read `spx/local/rust.md` and `spx/local/rust-architecture.md` if they exist
+5. Read `/rust-test-standards`, then `spx/local/rust-tests.md` if it exists
+6. Invoke `/verify` for evidence routing; after test is selected, invoke `/author-rust-test` for Rust expression
+7. Read existing ADRs for consistency:
    - `spx/{NN}-{slug}.adr.md` - Product-level ADRs
    - ADRs interleaved within enabler/outcome nodes
-7. Use skill `spec-tree:author` for the ADR template
+8. Read `/author` skill for ADR template
 
 **Phase 1: Identify Decisions Needed**
 
@@ -137,7 +150,12 @@ For each decision, consider:
 
 **Phase 3: Write ADRs**
 
-Use skill `spec-tree:understand` for the authoritative ADR template, and apply `rust:rust-architecture-standards` for the sections and the testability rules. Fill each section with the Rust-specific decisions identified in Phase 2.
+Use the authoritative template (from `/understand`). The ADR is decision-first:
+
+1. **Title + decision**: `# {Decision Name}`, then the decision stated directly as permanent truth in 1-3 sentences -- what it governs and what it decides. No `Purpose` heading, no `Context` section; business impact and constraints fold into the decision statement and Rationale
+2. **Rationale**: Why this is right given the constraints; name a rejected alternative only when it sharpens the decision
+3. **Invariants** (optional): Algebraic properties for all governed code
+4. **Verification**: ALWAYS/NEVER rules grouped under `### Testing` (`[{assertion type}]`), `### Eval` (`[eval]`), `### Audit` (`[audit]`), ordered by decreasing enforcement strength; the DI/mocking testability constraints are `### Audit` rules carrying `([audit])`
 
 **Phase 4: Verify Consistency**
 
@@ -159,10 +177,10 @@ Use skill `spec-tree:understand` for the authoritative ADR template, and apply `
 <reference_index>
 Detailed patterns and principles:
 
-| File                                         | Purpose                                   |
-| -------------------------------------------- | ----------------------------------------- |
-| `${SKILL_DIR}/references/adr-patterns.md`    | Common ADR patterns for Rust              |
-| `${SKILL_DIR}/references/rust-principles.md` | Decisions an ADR records per Rust concern |
+| File                                         | Purpose                                                      |
+| -------------------------------------------- | ------------------------------------------------------------ |
+| `${SKILL_DIR}/references/adr-patterns.md`    | Common ADR patterns for Rust                                 |
+| `${SKILL_DIR}/references/rust-principles.md` | Ownership, type-driven design, safety, lifecycle, and crates |
 
 </reference_index>
 
@@ -190,9 +208,9 @@ Key Constraints
 <success_criteria>
 ADR is complete when:
 
-- [ ] Testability constraints (DI, no mocking) are recorded per `rust:rust-architecture-standards`
-- [ ] `rust:rust-code-standards` was loaded before `rust:rust-architecture-standards`
-- [ ] `rust:rust-test-standards` was loaded before testing methodology was applied
+- [ ] Verification (`### Audit`) includes testability constraints (DI, no mocking) per `/rust-architecture-standards`
+- [ ] `/rust-code-standards` was loaded before `/rust-architecture-standards`
+- [ ] `/rust-test-standards` was loaded before testing methodology was applied
 - [ ] All architectural choices documented
 - [ ] Verification rules defined as ALWAYS/NEVER guarantees and boundaries
 - [ ] No contradictions with existing ADRs

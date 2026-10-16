@@ -25,20 +25,20 @@ Simpler Rust implementation with unchanged behavior and ownership semantics, acc
 
 <workflow>
 
-1. Require `$ARGUMENTS` to be `HEAD` or an explicit committed three-dot range. For absent or invalid input, return `blocked` before mutation. Read the product's CLAUDE.md. When its foundation marker is absent, Use skill `spec-tree:understand`.
-2. Use skill `spec-tree:scope-changeset` with the supplied target and consume its `COMMITTED_CHANGESET_SCOPE` marker. The provider executes its own committed-scope command; do not import its Python API or invent a resolver command. Require the resolved head to equal the checkout's full `HEAD` and the worktree to be clean. Record both endpoint identities and the complete changed-path set. A scope-resolution failure returns `blocked` with its diagnostic.
-3. Select changed, present Rust implementation files, excluding generated extents and test/evidence files using the product's declarations and `rust:rust-test-standards`. Derive their governing nodes through spec-linked evidence and Use skill `spec-tree:contextualize` on their lowest common ancestor before reading implementation. After context loading, require the same full `HEAD` and a clean worktree again; otherwise return `blocked` with the changed subject. If no implementation qualifies, return `unchanged` with the empty scope. Missing governance returns `blocked`.
-4. Inspect the selected implementation and the evidence covering its behavior. Apply `rust:rust-test-standards` to coverage and test quality. Missing or inadequate behavioral coverage returns `blocked` with the affected file or function and evidence gap; do not create tests to bypass this condition.
+1. Require `$ARGUMENTS` to be `HEAD` or an explicit committed three-dot range. For absent or invalid input, return `blocked` before mutation. Read the product's CLAUDE.md and invoke `/understand` when its foundation marker is absent.
+2. Invoke `/scope-changeset` with the supplied target and consume its `COMMITTED_CHANGESET_SCOPE` marker. The provider executes its own committed-scope command; do not import its Python API or invent a resolver command. Require the resolved head to equal the checkout's full `HEAD` and the worktree to be clean. Record both endpoint identities and the complete changed-path set. A scope-resolution failure returns `blocked` with its diagnostic.
+3. Select changed, present Rust implementation files, excluding generated extents and test/evidence files using the product's declarations and `/rust-test-standards`. Derive their governing nodes through spec-linked evidence and invoke `/contextualize` on their lowest common ancestor before reading implementation. After context loading, require the same full `HEAD` and a clean worktree again; otherwise return `blocked` with the changed subject. If no implementation qualifies, return `unchanged` with the empty scope. Missing governance returns `blocked`.
+4. Inspect the selected implementation and the evidence covering its behavior. Apply `/rust-test-standards` to coverage and test quality. Missing or inadequate behavioral coverage returns `blocked` with the affected file or function and evidence gap; do not create tests to bypass this condition.
 5. Resolve the baseline test command from the product guide and the inspected evidence. Use existing evidence; if correct work requires changed behavior or changed evidence, return `blocked` before editing.
 6. Run the product's required baseline tests and record actual exit codes. A failed or unavailable baseline returns `blocked` without edits. Identify only changes whose behavioral equivalence can be explained from the code and evidence; when none improves clarity safely, return `unchanged` with the reason.
-7. Use skill `rust:author-rust-code` with the governing node, selected files, and the behavior-preserving simplification requirement. Follow its complete discovery, standards, and validation contract while preserving the evidence. Retain the exact patch owned by this invocation. Require the same tests afterward and every format, lint, and validation check required by `rust:author-rust-code`, using product commands and preserving process exit codes. Collect those results once; never mask a failing process through output truncation or a pipeline.
+7. Invoke `rust:author-rust-code` with the governing node, selected files, and the behavior-preserving simplification requirement. Follow its complete discovery, standards, and validation contract while preserving the evidence. Retain the exact patch owned by this invocation. Require the same tests afterward and every format, lint, and validation check required by `/author-rust-code`, using product commands and preserving process exit codes. Collect those results once; never mask a failing process through output truncation or a pipeline.
 8. Compare the resulting diff with the recorded scope and baseline. Confirm tests, evidence, seams, and ownership contracts remain unchanged. Follow `<recovery>` on any failed check or uncertain equivalence, then return `<result>`.
 
 </workflow>
 
 <coding_result>
 
-When using skill `rust:author-rust-code`, request its completion report with changed paths, the behavior preserved by each edit, the evidence used, executed commands and exit codes, and unresolved constraints. Execute that composed workflow in this session.
+When invoking `rust:author-rust-code`, request its completion report with changed paths, the behavior preserved by each edit, the evidence used, executed commands and exit codes, and unresolved constraints. Execute that composed workflow in this session.
 
 Before Step 8, require every report component and compare it against the retained diff and captured command results. Every changed path must belong to the selected scope, every reported successful check must have a zero exit code, and every omitted required check or unresolved constraint must be identified. A missing report component or contradiction returns `failed` through the recovery procedure; never infer completion from a generic success statement.
 
@@ -73,14 +73,14 @@ Return one JSON object with these fields:
 
 <failure_modes>
 
-**A library reference was treated as an executable capability.** Claude instructed the simplifier to use `resolve_committed_scope` even though the provider exposed only an importable API. The workflow had no shipped command to execute. Use skill `spec-tree:scope-changeset` with the target and consume the marker its own command establishes; never invent an import script during simplification.
+**A library reference was treated as an executable capability.** Claude instructed the simplifier to use `resolve_committed_scope` even though the provider exposed only an importable API. The workflow had no shipped command to execute. Invoke `/scope-changeset` with the target and consume the marker its own command establishes; never invent an import script during simplification.
 
 </failure_modes>
 
 <success_criteria>
 
 - Every retained edit belongs to the resolved Rust implementation scope and improves clarity without changing behavior, error contracts, seams, or ownership semantics.
-- Unchanged behavioral tests pass before and after edits, and the complete `rust:author-rust-code` validation requirements pass.
+- Unchanged behavioral tests pass before and after edits, and the complete `/author-rust-code` validation requirements pass.
 - The report accounts for every retained edit, executed check, unexecuted required check, and recovery action.
 - A blocked prerequisite causes no retained edit unless a reported concurrent-write collision prevents safe recovery.
 
