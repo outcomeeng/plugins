@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 from outcomeeng.merging_policy import (
-    AUDITOR_BLOCKING_FINDING_VERDICTS,
-    AUDITOR_BLOCKING_OVERALLS,
-    AUDITOR_BLOCKING_ROW_STATUSES,
+    AUDITOR_BLOCKING_TERMINAL_STATUSES,
     CHECK_RUN_NON_TERMINAL_STATUSES,
     CHECK_RUN_SUCCESS_CONCLUSIONS,
     CHECK_RUN_TERMINAL_NOT_SUCCESS_CONCLUSIONS,
@@ -14,23 +12,19 @@ from outcomeeng.merging_policy import (
     FIELD_CONCLUSION,
     FIELD_FINDINGS,
     FIELD_KIND,
-    FIELD_OVERALL,
     FIELD_PRESENT,
     FIELD_REVIEWER_WORKFLOW_MODIFIED,
-    FIELD_ROWS,
     FIELD_STATE,
     FIELD_STATE_CATEGORY,
     FIELD_STATUS,
+    FIELD_TERMINAL_STATUS,
     FIELD_TOUCHES_OR_INVALIDATES_TEXT,
-    FIELD_VERDICT,
     MENTION_REVIEW_NEEDED_TOKEN_SEPARATOR,
     STATUS_CONTEXT_NON_TERMINAL_STATES,
     STATUS_CONTEXT_SUCCESS_STATES,
     STATUS_CONTEXT_TERMINAL_NOT_SUCCESS_STATES,
-    AuditorFindingVerdict,
-    AuditorOverall,
     AuditorRequiredAction,
-    AuditorRowStatus,
+    AuditorTerminalStatus,
     CheckRunConclusion,
     DeliveryAction,
     DeliveryReadiness,
@@ -308,84 +302,36 @@ def test_delivery_phase_mapping() -> None:
 def test_auditor_verdict_mapping() -> None:
     """Assert auditor verdict mapping behavior."""
 
-    for overall in sorted(AUDITOR_BLOCKING_OVERALLS):
-        decision = decide_auditor_verdict(
-            {
-                FIELD_TOUCHES_OR_INVALIDATES_TEXT: True,
-                FIELD_OVERALL: overall,
-                FIELD_ROWS: [{FIELD_STATUS: AuditorRowStatus.PASS}],
-                FIELD_FINDINGS: [],
-            }
-        )
-        assert decision.required_action is AuditorRequiredAction.FIX_BEFORE_MERGE
-        assert decision.merge_blocked is True
-
-    for status in sorted(AUDITOR_BLOCKING_ROW_STATUSES):
-        decision = decide_auditor_verdict(
-            {
-                FIELD_TOUCHES_OR_INVALIDATES_TEXT: True,
-                FIELD_OVERALL: AuditorOverall.APPROVED,
-                FIELD_ROWS: [{FIELD_STATUS: status}],
-                FIELD_FINDINGS: [],
-            }
-        )
-        assert decision.required_action is AuditorRequiredAction.FIX_BEFORE_MERGE
-        assert decision.merge_blocked is True
-
-    for verdict in sorted(AUDITOR_BLOCKING_FINDING_VERDICTS):
-        decision = decide_auditor_verdict(
-            {
-                FIELD_TOUCHES_OR_INVALIDATES_TEXT: True,
-                FIELD_OVERALL: AuditorOverall.APPROVED,
-                FIELD_ROWS: [{FIELD_STATUS: AuditorRowStatus.PASS}],
-                FIELD_FINDINGS: [{FIELD_VERDICT: verdict}],
-            }
-        )
-        assert decision.required_action is AuditorRequiredAction.FIX_BEFORE_MERGE
-        assert decision.merge_blocked is True
+    for status in sorted(AUDITOR_BLOCKING_TERMINAL_STATUSES):
+        for findings in ([], [{FIELD_TERMINAL_STATUS: status}]):
+            decision = decide_auditor_verdict(
+                {
+                    FIELD_TOUCHES_OR_INVALIDATES_TEXT: True,
+                    FIELD_TERMINAL_STATUS: status,
+                    FIELD_FINDINGS: findings,
+                }
+            )
+            assert decision.required_action is AuditorRequiredAction.FIX_BEFORE_MERGE
+            assert decision.merge_blocked is True
 
     decision = decide_auditor_verdict(
         {
             FIELD_TOUCHES_OR_INVALIDATES_TEXT: True,
-            FIELD_OVERALL: AuditorOverall.APPROVED,
-            FIELD_ROWS: [{FIELD_STATUS: AuditorRowStatus.PASS}],
-            FIELD_FINDINGS: [
-                {FIELD_VERDICT: AuditorFindingVerdict.INFO},
-                {FIELD_VERDICT: AuditorFindingVerdict.WARNING},
-            ],
+            FIELD_TERMINAL_STATUS: AuditorTerminalStatus.APPROVED,
+            FIELD_FINDINGS: [],
         }
     )
     assert decision.required_action is AuditorRequiredAction.NO_REPAIR
     assert decision.merge_blocked is False
 
-    untouched_blocking_verdicts = [
-        {
-            FIELD_TOUCHES_OR_INVALIDATES_TEXT: False,
-            FIELD_OVERALL: overall,
-            FIELD_ROWS: [{FIELD_STATUS: AuditorRowStatus.PASS}],
-            FIELD_FINDINGS: [],
-        }
-        for overall in sorted(AUDITOR_BLOCKING_OVERALLS)
-    ]
-    untouched_blocking_verdicts += [
-        {
-            FIELD_TOUCHES_OR_INVALIDATES_TEXT: False,
-            FIELD_OVERALL: AuditorOverall.APPROVED,
-            FIELD_ROWS: [{FIELD_STATUS: status}],
-            FIELD_FINDINGS: [],
-        }
-        for status in sorted(AUDITOR_BLOCKING_ROW_STATUSES)
-    ]
-    untouched_blocking_verdicts += [
-        {
-            FIELD_TOUCHES_OR_INVALIDATES_TEXT: False,
-            FIELD_OVERALL: AuditorOverall.APPROVED,
-            FIELD_ROWS: [{FIELD_STATUS: AuditorRowStatus.PASS}],
-            FIELD_FINDINGS: [{FIELD_VERDICT: verdict}],
-        }
-        for verdict in sorted(AUDITOR_BLOCKING_FINDING_VERDICTS)
-    ]
-    for verdict_on_untouched_text in untouched_blocking_verdicts:
-        decision = decide_auditor_verdict(verdict_on_untouched_text)
-        assert decision.required_action is AuditorRequiredAction.TRACK_OUT_OF_PR
-        assert decision.merge_blocked is False
+    for status in sorted(AUDITOR_BLOCKING_TERMINAL_STATUSES):
+        for findings in ([], [{FIELD_TERMINAL_STATUS: status}]):
+            decision = decide_auditor_verdict(
+                {
+                    FIELD_TOUCHES_OR_INVALIDATES_TEXT: False,
+                    FIELD_TERMINAL_STATUS: status,
+                    FIELD_FINDINGS: findings,
+                }
+            )
+            assert decision.required_action is AuditorRequiredAction.TRACK_OUT_OF_PR
+            assert decision.merge_blocked is False
