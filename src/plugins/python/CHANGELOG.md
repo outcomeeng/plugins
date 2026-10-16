@@ -22,6 +22,10 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
   `/audit-python-code`, `/audit-python-architecture`, `/python-test-standards`, and `/python-architecture-standards` keep their names. A plugin or instruction that selects a language skill through the `audit-{lang}-{code|test|architecture}` or `author-{lang}-{code|test|architecture}` template matches the new names.
 
+### Changed
+
+- **`/author-python-architecture` references keep only product conventions.** The reference files drop general Python typing, security, testing, and domain-design teaching and keep the dependency-injection, Protocol, subprocess-boundary, test-infrastructure, and strict-typing rules an ADR states. The skill loads `spec-tree:verify`, `python:author-python-test`, and `spec-tree:author` by name when it needs them.
+
 ## 0.24.0
 
 ### Removed
