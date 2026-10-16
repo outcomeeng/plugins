@@ -22,6 +22,8 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 - **`/audit-change` rejects a run only for a failed Definition of Ready criterion of the declared Maturity, and reads authority from field-change events alone.** Every other finding, the title and Intent word limits among them, is `filed` and the record still finishes `approved`, so a format-only finding no longer rejects a run; a `filed` finding on touched text names the touched sections in its `baseRefEvidence`. The runner's `read-authority` operation reads the issue's field-change events, 100 per page and at most 10 pages, and no comment, so its result carries `issue` and `events` and no `comments` entry. Before this change, a finding on touched text of any rule rejected the run, the word-limit findings among them, and the runner returned the issue's comments beside its events.
 
+- **`/release-change`, `/claim-change`, and `/close-change` report a `Submitted` Change as waiting for the Maintainer's move out of `Submitted`, and `/release-change` states the order for a rejection.** A rejection at Framed or Sliced follows one order: the holder's release first, the `author-change` write that lowers Maturity one level second, and further refinement only after a session claims the Change again; a rejection at Proposed leaves the Change `Submitted`. Before this change, the three skills named the Maintainer's confirmation or rejection as what a `Submitted` Change waits for, and `/release-change` stated no order for a rejection.
+
 ## 0.106.9
 
 ### Changed
