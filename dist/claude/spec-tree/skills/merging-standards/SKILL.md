@@ -5,7 +5,7 @@ description: >-
   Shared merge-lifecycle invariants and routing for detailed preflight, branch,
   review, authority-gate, transport, and closeout policy. Loaded by composing
   delivery workflows.
-allowed-tools: Read, Skill
+allowed-tools: Read
 ---
 
 <objective>
