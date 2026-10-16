@@ -111,3 +111,11 @@
 **Impact**: an Executor launching one of the six auditors receives a verdict object and no run, which the assertion classifies as an unusable result. The Executor skill names no sealed-run route for the six and carves out the decision-record audits.
 
 **Settlement condition**: outcomeeng/changes#513 rewrites the six audit skills and wrappers onto one `spx verification run` each, after which the `/execute-change` verdict rule names all ten auditors, drops the decision-record carve-out, and one typed skill audit of `execute-change` raises no consistency finding against the assertion.
+
+## `/execute-change` builds the Fixer's input from findings and its Author's task message
+
+**Evidence**: `spec-tree:changes-reviewer` run `2026-10-16_10-53-24-065-92fe6cead926`, finding severity `warning`, category consistency, against `src/plugins/spec-tree/skills/execute-change/SKILL.md` line 42 and step 5.5. The Fixer entry of `<definitions>` builds the repair block from the verbatim finding that names the round's file, or the verbatim result of every rejected verdict plus failed command output, and hands the Fixer its Author's task message. The assertions of `change-execution.md` give the Fixer exactly the rejected run's sealed run file, unchanged, and the instruction "attend to every rule the run names and sweep each named class across the whole target", and forbid the Executor any summary, remedy, class name or interpretation.
+
+**Impact**: a Fixer launched by the shipped skill receives input the assertions do not allow, so the Executor's launch contradicts the governing assertions.
+
+**Settlement condition**: outcomeeng/changes#513 converts the shipped skills, after which the Fixer entry and step 5.5 of `execute-change` hand a Fixer the sealed run file and the fixed instruction, and one typed skill audit of `execute-change` raises no consistency finding against the Fixer assertions.
