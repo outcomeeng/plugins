@@ -12,7 +12,7 @@ allowed-tools: Read, Bash(python3 "${SKILL_DIR}/scripts/resolve_scope.py":*), Ba
 
 <objective>
 
-An authoritative SPX projection and raw run token for the requested implementation scope, judged against its governing decisions and specs and the standards of every concern skill the artifact registry selects for its changed paths, carrying `terminalStatus` (`approved` or `rejected`), the findings on touched text — each naming the artifact, the violated rule, and observed-versus-expected evidence — and every other finding returned as `filed`. A run that cannot reach that projection yields a `BLOCKED` diagnostic naming the request failure, command failure, or absent prerequisite that stopped it.
+An authoritative SPX projection, raw run token, and run file for the requested implementation scope, judged against its governing decisions and specs and the standards of every concern skill the artifact registry selects for its changed paths, carrying `terminalStatus` (`approved` or `rejected`), the findings on touched text — each naming the artifact, the violated rule, and observed-versus-expected evidence — and every other finding returned as `filed`. A run that cannot reach that projection yields a `BLOCKED` diagnostic naming the request failure, command failure, or absent prerequisite that stopped it.
 
 </objective>
 
@@ -188,7 +188,7 @@ this boundary.
 
 Governing nodes are discovered after start and accompany the concern inputs and
 coverage evidence. The command returns a JSON locator; extract its `runToken`
-field exactly and use that token for every later command, and read its
+field exactly and use that token for every later command, retain the run target it reports as the run file (only the start report names it), and read its
 `resolvedScope` array as the run's sealed inventory — the path set stage 4
 enumerates and stage 7 reconciles against. The resolver also recorded, under
 `artifact_selection` in that input, the registered artifacts and audit skills
@@ -358,7 +358,7 @@ spx verification run render \
   --run <token>
 ```
 
-The final response relays the rendered SPX projection and run token. Do not summarize findings from memory when the render is available.
+The final response relays the rendered SPX projection, the run token, and the run file. Do not summarize findings from memory when the render is available.
 
 </verification_run_contract>
 
@@ -434,7 +434,7 @@ If SPX rejects terminal status, report the rejected command and stderr as the au
 
 <verdict_format>
 
-When the run completes, return the exact run token and rendered `spx verification run render` projection. The projection's `terminalStatus` is authoritative: `approved` passes and `rejected` requires repair. Do not add an `APPROVED` or `REJECTED` prose envelope.
+When the run completes, return the exact run token, the exact run file, and the rendered `spx verification run render` projection. The projection's `terminalStatus` is authoritative: `approved` passes and `rejected` requires repair. Do not add an `APPROVED` or `REJECTED` prose envelope.
 
 Return BLOCKED for three causes: target preparation fails before `spx
 verification run start` (a missing selector or identity field, a failed
@@ -451,7 +451,7 @@ subject path or the governing node that could not be discovered — and
 Name the unit by its `unitId` in the `command` line so the blocked unit is
 identifiable. After a run starts, record a missing required concern skill
 as `missing-skill`, finish with terminal status `rejected`, render, and return
-the run token plus projection.
+the run token, the run file, and the projection.
 
 Preserve each value verbatim from the invocation and command result:
 

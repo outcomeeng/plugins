@@ -6,9 +6,21 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
-## 0.21.6
+## 0.21.7
 
 ### Changed
+
+- **The auditor skeleton in `/skill-standards` returns the run file beside the run token and the rendered projection.** `references/auditor-skeleton.md` now describes a run-recording auditor's `<verdict_format>` as the run token, the run file, and the unmodified rendered projection, matching `/audit-skill`, `/audit-subagent`, and the `/create-skill` auditor template. Before this change, the skeleton told an auditor to return only the token and the projection, so a skill authored or audited against it dropped the run file that a caller hands a Fixer.
+
+- **The `/create-skill` auditor template returns the run file beside the run token and the rendered projection.** `templates/auditor-skill.md` now tells an authored `audit-*` skill to retain the run target that the `spx verification run start` report names, to name the sealed run by its run token and run file in its objective, and to return the token, the run file, and the unmodified rendered projection. Before this change, a skill authored from the template returned only the token and the projection, and only the start report names the run file, so a caller could not pass a Fixer the sealed run.
+
+- **`/audit-skill` returns the run file beside the run token and the rendered projection.** The audit retains the run target that the `spx verification run start` locator reports and returns it as the run file, so a caller reads the verdict from the sealed run's terminal status and hands a Fixer that file unchanged. Before this change, the audit returned only the token and the projection, and only the start report names the run file, so a caller could not pass a Fixer the sealed run.
+
+- **`/audit-subagent` returns the run file beside the run token and the rendered projection.** The audit retains the run target that the `spx verification run start` locator reports and returns it as the run file, so a caller reads the verdict from the sealed run's terminal status and hands a Fixer that file unchanged. Before this change, the audit returned only the token and the projection, and only the start report names the run file, so a caller could not pass a Fixer the sealed run.
+
+- **`skill-auditor` relays the run file beside the run token and the rendered projection.** The agent that drives `/audit-skill` now returns the run file that the skill reports, unchanged, so a caller reads the verdict from the sealed run's terminal status and hands a Fixer that file. Before this change, the agent's result contract named only the run token and the projection, so the run file that `/audit-skill` returns did not reach the caller.
+
+- **`subagent-auditor` relays the run file beside the run token and the rendered projection.** The agent that drives `/audit-subagent` now returns the run file that the skill reports, unchanged, so a caller reads the verdict from the sealed run's terminal status and hands a Fixer that file. Before this change, the agent's result contract named only the run token and the projection, so the run file that `/audit-subagent` returns did not reach the caller.
 
 - **`/audit-skill` records its run through payload files and grants the file-write tool.** The start input, each scope-add payload, and each finding-add payload is written with the file-write tool to its own file in the session scratch directory and passed by path as the value of `--input` or `--payload`. Each run-recording command runs as its own command, and the audit stops at the first nonzero exit. The skill teaches no heredoc and no `printf` pipe, and it no longer grants `Bash(printf '%s\n':*)`, because the dangerous-command guard blocked those forms and left a run open with no sealed verdict. The file-write tool writes payload files only; the audit still changes no bundle or product file beyond those payload files and the run journal its own commands write. The payload form no longer varies by harness environment. A wrapper agent that drives the audit must grant the file-write tool.
 

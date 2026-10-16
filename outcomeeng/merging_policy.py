@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
+
+from outcomeeng.validation.implementation_audit_contract import (
+    RUN_TERMINAL_STATUS_FIELD,
+)
 
 DEFAULT_REVIEW_TRIGGER_PHRASE = "@spec-tree"
 MENTION_REVIEW_NEEDED_TOKEN_SEPARATOR = ":"
@@ -14,15 +18,12 @@ MENTION_REVIEW_NEEDED_TOKEN_SEPARATOR = ":"
 FIELD_CONCLUSION = "conclusion"
 FIELD_FINDINGS = "findings"
 FIELD_KIND = "kind"
-FIELD_OVERALL = "overall"
 FIELD_PRESENT = "present"
-FIELD_ROWS = "rows"
 FIELD_TOUCHES_OR_INVALIDATES_TEXT = "touches_or_invalidates_text"
 FIELD_REVIEWER_WORKFLOW_MODIFIED = "reviewer_workflow_modified"
 FIELD_STATE = "state"
 FIELD_STATE_CATEGORY = "state_category"
 FIELD_STATUS = "status"
-FIELD_VERDICT = "verdict"
 
 
 class RequiredCheckKind(StrEnum):
@@ -117,28 +118,11 @@ class ReviewCheckStateCategory(StrEnum):
     TERMINAL_GREEN = "terminal_green"
 
 
-class AuditorOverall(StrEnum):
-    """Auditor overall statuses the merge policy reads."""
+class AuditorTerminalStatus(StrEnum):
+    """Terminal statuses of a sealed Auditor run the merge policy reads."""
 
-    APPROVED = "APPROVED"
-    REJECTED = "REJECTED"
-    UNKNOWN = "UNKNOWN"
-
-
-class AuditorRowStatus(StrEnum):
-    """Auditor row statuses the merge policy reads."""
-
-    FAIL = "FAIL"
-    PASS = "PASS"
-    UNKNOWN = "UNKNOWN"
-
-
-class AuditorFindingVerdict(StrEnum):
-    """Auditor finding verdicts the merge policy reads."""
-
-    INFO = "INFO"
-    REJECT = "REJECT"
-    WARNING = "WARNING"
+    APPROVED = "approved"
+    REJECTED = "rejected"
 
 
 @dataclass(frozen=True)
@@ -208,11 +192,8 @@ STATUS_CONTEXT_SUCCESS_STATES = frozenset({StatusContextState.SUCCESS})
 STATUS_CONTEXT_TERMINAL_NOT_SUCCESS_STATES = frozenset(
     {StatusContextState.ERROR, StatusContextState.FAILURE}
 )
-AUDITOR_BLOCKING_OVERALLS = frozenset({AuditorOverall.REJECTED, AuditorOverall.UNKNOWN})
-AUDITOR_BLOCKING_ROW_STATUSES = frozenset(
-    {AuditorRowStatus.FAIL, AuditorRowStatus.UNKNOWN}
-)
-AUDITOR_BLOCKING_FINDING_VERDICTS = frozenset({AuditorFindingVerdict.REJECT})
+AUDITOR_BLOCKING_TERMINAL_STATUSES = frozenset({AuditorTerminalStatus.REJECTED})
+AUDITOR_APPROVING_TERMINAL_STATUSES = frozenset({AuditorTerminalStatus.APPROVED})
 
 
 def classify_required_check(
@@ -411,28 +392,7 @@ def _required_check_decision(
 
 
 def _auditor_verdict_blocks_merge(verdict: Mapping[str, Any]) -> bool:
-    if verdict.get(FIELD_OVERALL) in AUDITOR_BLOCKING_OVERALLS:
-        return True
-    return _contains_blocking_row(verdict.get(FIELD_ROWS, ())) or (
-        _contains_blocking_finding(verdict.get(FIELD_FINDINGS, ()))
-    )
-
-
-def _contains_blocking_row(rows: object) -> bool:
-    if not isinstance(rows, Sequence) or isinstance(rows, str):
-        return False
-    return any(
-        isinstance(row, Mapping)
-        and row.get(FIELD_STATUS) in AUDITOR_BLOCKING_ROW_STATUSES
-        for row in rows
-    )
-
-
-def _contains_blocking_finding(findings: object) -> bool:
-    if not isinstance(findings, Sequence) or isinstance(findings, str):
-        return False
-    return any(
-        isinstance(finding, Mapping)
-        and finding.get(FIELD_VERDICT) in AUDITOR_BLOCKING_FINDING_VERDICTS
-        for finding in findings
+    return (
+        verdict.get(RUN_TERMINAL_STATUS_FIELD)
+        not in AUDITOR_APPROVING_TERMINAL_STATUSES
     )

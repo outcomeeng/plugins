@@ -16,7 +16,7 @@ allowed-tools: Read, Grep, Glob, {{! tool('use_skill') !}}, Bash(git rev-parse:*
 {!% require_skill 'instructions:skill-standards' %!}
 
 <objective>
-A sealed changeset-scoped `spx verification run` over the one {{! term('configured_agent') !}} definition a changeset changes, judged against the `/subagent-standards` and `/agent-prompt-standards` rule catalogs — terminal status `approved` when no finding on touched text exists, or `rejected` with each such finding keyed `<unit>:<rule-id>` and naming every location and the evidence, every other finding recorded as `filed` — or a `BLOCKED` diagnostic naming the failed prerequisite or command.
+A sealed changeset-scoped `spx verification run`, named by its run token and run file, over the one {{! term('configured_agent') !}} definition a changeset changes, judged against the `/subagent-standards` and `/agent-prompt-standards` rule catalogs — terminal status `approved` when no finding on touched text exists, or `rejected` with each such finding keyed `<unit>:<rule-id>` and naming every location and the evidence, every other finding recorded as `filed` — or a `BLOCKED` diagnostic naming the failed prerequisite or command.
 </objective>
 
 <constraints>
@@ -62,7 +62,7 @@ Use skill `instructions:instructions-plugin`. Invoke it with the verb `version` 
    spx verification run start --verification-type audit --scope-type changeset --scope '<base-oid>..<head-oid>' --input '<start-file>'
    ```
 
-   Extract the `runToken` field of the returned locator and use exactly that token for every later command.
+   Extract the `runToken` field of the returned locator and use exactly that token for every later command. Retain the run target the locator reports as the run file; only the start report names it.
 2. **Load the standards.** Read `/subagent-standards` and its `<rule_catalog>`, `/agent-prompt-standards` and its `<rule_catalog>`, and the `<catalog_contract>` in `/skill-standards`' `references/rule-catalog.md`, which governs both catalogs. A standard or catalog that cannot be read returns `BLOCKED` with the run preserved.
 3. **Read the target and its context.** Apply `/subagent-standards` `<configuration_subject>` to classify the target and discover any declared source-to-output mapping, and `<configuration>` to resolve the target's governing context. Read the whole target at the head, its governing decisions, selected profile, owning skill, and result contract. When the target is a generation input, read each exact emitted definition as evidence for that input. When the definition delegates its behavior, read the complete invoked skill and distinguish wrapper obligations from behavior that skill already owns. Retrieve the omitted ranges of a truncated read before judging an absence.
 4. **Admit invocation evidence** as `/subagent-standards` `<evidence>` requires, reading the declared acceptance artifact or the retained native-loading and invocation evidence for the target. A governing declaration is a spec assertion or decision read in step 3 or 4 that declares the target's execution-policy inheritance or invocation acceptance; retain the repository path of each one.
@@ -75,7 +75,7 @@ Use skill `instructions:instructions-plugin`. Invoke it with the verb `version` 
    spx verification run finish --verification-type audit --scope-type changeset --scope '<base-oid>..<head-oid>' --run '<run-token>' --terminal-status '<approved-or-rejected>'
    ```
 
-   Then run `spx verification run render` with the same type, scope, and token, and return the token and the rendered projection unchanged. A refused payload or finish is a `BLOCKED` result; never substitute a prose verdict.
+   Then run `spx verification run render` with the same type, scope, and token, and return the token, the run file, and the rendered projection unchanged. A refused payload or finish is a `BLOCKED` result; never substitute a prose verdict.
 
 </execution_sequence>
 
@@ -176,7 +176,7 @@ Idempotency keys are command arguments, never payload fields; quote every path, 
 
 <verdict_format>
 
-Return only the exact run token and the unmodified rendered projection. The projection is the verdict: its `terminalStatus` is `approved` or `rejected`, its `findingCount` is zero for approval, its `findings` group every accepted finding under `blocking`, `debt`, and `filed`, none under `blocking` or `debt` for approval, its `auditScopeUnits` carry the definition unit and one unit for each governing declaration read, and its `events` carry every accepted finding payload and the terminal event. Every finding is keyed `<unit>:<rule-id>` by a catalog identifier; `blocking` and `debt` reject the run and `filed` does not. Keep every SPX field unchanged.
+Return only the exact run token, the exact run file, and the unmodified rendered projection. The projection is the verdict: its `terminalStatus` is `approved` or `rejected`, its `findingCount` is zero for approval, its `findings` group every accepted finding under `blocking`, `debt`, and `filed`, none under `blocking` or `debt` for approval, its `auditScopeUnits` carry the definition unit and one unit for each governing declaration read, and its `events` carry every accepted finding payload and the terminal event. Every finding is keyed `<unit>:<rule-id>` by a catalog identifier; `blocking` and `debt` reject the run and `filed` does not. Keep every SPX field unchanged.
 
 A run that cannot complete returns:
 

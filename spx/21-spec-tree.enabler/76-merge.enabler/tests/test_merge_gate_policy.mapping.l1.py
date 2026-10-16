@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 from outcomeeng.merging_policy import (
-    AUDITOR_BLOCKING_FINDING_VERDICTS,
-    AUDITOR_BLOCKING_OVERALLS,
-    AUDITOR_BLOCKING_ROW_STATUSES,
+    AUDITOR_BLOCKING_TERMINAL_STATUSES,
     CHECK_RUN_NON_TERMINAL_STATUSES,
     CHECK_RUN_SUCCESS_CONCLUSIONS,
     CHECK_RUN_TERMINAL_NOT_SUCCESS_CONCLUSIONS,
@@ -14,30 +12,28 @@ from outcomeeng.merging_policy import (
     FIELD_CONCLUSION,
     FIELD_FINDINGS,
     FIELD_KIND,
-    FIELD_OVERALL,
     FIELD_PRESENT,
     FIELD_REVIEWER_WORKFLOW_MODIFIED,
-    FIELD_ROWS,
     FIELD_STATE,
     FIELD_STATE_CATEGORY,
     FIELD_STATUS,
     FIELD_TOUCHES_OR_INVALIDATES_TEXT,
-    FIELD_VERDICT,
     MENTION_REVIEW_NEEDED_TOKEN_SEPARATOR,
+    RUN_TERMINAL_STATUS_FIELD,
     STATUS_CONTEXT_NON_TERMINAL_STATES,
     STATUS_CONTEXT_SUCCESS_STATES,
     STATUS_CONTEXT_TERMINAL_NOT_SUCCESS_STATES,
-    AuditorFindingVerdict,
-    AuditorOverall,
     AuditorRequiredAction,
-    AuditorRowStatus,
+    AuditorTerminalStatus,
     CheckRunConclusion,
+    CheckRunStatus,
     DeliveryAction,
     DeliveryReadiness,
     RequiredCheckClassification,
     RequiredCheckKind,
     ReviewCheckAction,
     ReviewCheckStateCategory,
+    StatusContextState,
     classify_required_check,
     decide_auditor_verdict,
     decide_deploy_action,
@@ -308,84 +304,115 @@ def test_delivery_phase_mapping() -> None:
 def test_auditor_verdict_mapping() -> None:
     """Assert auditor verdict mapping behavior."""
 
-    for overall in sorted(AUDITOR_BLOCKING_OVERALLS):
-        decision = decide_auditor_verdict(
-            {
-                FIELD_TOUCHES_OR_INVALIDATES_TEXT: True,
-                FIELD_OVERALL: overall,
-                FIELD_ROWS: [{FIELD_STATUS: AuditorRowStatus.PASS}],
-                FIELD_FINDINGS: [],
-            }
-        )
-        assert decision.required_action is AuditorRequiredAction.FIX_BEFORE_MERGE
-        assert decision.merge_blocked is True
-
-    for status in sorted(AUDITOR_BLOCKING_ROW_STATUSES):
-        decision = decide_auditor_verdict(
-            {
-                FIELD_TOUCHES_OR_INVALIDATES_TEXT: True,
-                FIELD_OVERALL: AuditorOverall.APPROVED,
-                FIELD_ROWS: [{FIELD_STATUS: status}],
-                FIELD_FINDINGS: [],
-            }
-        )
-        assert decision.required_action is AuditorRequiredAction.FIX_BEFORE_MERGE
-        assert decision.merge_blocked is True
-
-    for verdict in sorted(AUDITOR_BLOCKING_FINDING_VERDICTS):
-        decision = decide_auditor_verdict(
-            {
-                FIELD_TOUCHES_OR_INVALIDATES_TEXT: True,
-                FIELD_OVERALL: AuditorOverall.APPROVED,
-                FIELD_ROWS: [{FIELD_STATUS: AuditorRowStatus.PASS}],
-                FIELD_FINDINGS: [{FIELD_VERDICT: verdict}],
-            }
-        )
-        assert decision.required_action is AuditorRequiredAction.FIX_BEFORE_MERGE
-        assert decision.merge_blocked is True
+    for status in sorted(AUDITOR_BLOCKING_TERMINAL_STATUSES):
+        for findings in ([], [{RUN_TERMINAL_STATUS_FIELD: status}]):
+            decision = decide_auditor_verdict(
+                {
+                    FIELD_TOUCHES_OR_INVALIDATES_TEXT: True,
+                    RUN_TERMINAL_STATUS_FIELD: status,
+                    FIELD_FINDINGS: findings,
+                }
+            )
+            assert decision.required_action is AuditorRequiredAction.FIX_BEFORE_MERGE
+            assert decision.merge_blocked is True
 
     decision = decide_auditor_verdict(
         {
             FIELD_TOUCHES_OR_INVALIDATES_TEXT: True,
-            FIELD_OVERALL: AuditorOverall.APPROVED,
-            FIELD_ROWS: [{FIELD_STATUS: AuditorRowStatus.PASS}],
-            FIELD_FINDINGS: [
-                {FIELD_VERDICT: AuditorFindingVerdict.INFO},
-                {FIELD_VERDICT: AuditorFindingVerdict.WARNING},
-            ],
+            RUN_TERMINAL_STATUS_FIELD: AuditorTerminalStatus.APPROVED,
+            FIELD_FINDINGS: [],
         }
     )
     assert decision.required_action is AuditorRequiredAction.NO_REPAIR
     assert decision.merge_blocked is False
 
-    untouched_blocking_verdicts = [
-        {
-            FIELD_TOUCHES_OR_INVALIDATES_TEXT: False,
-            FIELD_OVERALL: overall,
-            FIELD_ROWS: [{FIELD_STATUS: AuditorRowStatus.PASS}],
-            FIELD_FINDINGS: [],
-        }
-        for overall in sorted(AUDITOR_BLOCKING_OVERALLS)
+    # A verdict outside the sealed-run vocabulary is not an approved run: its
+    # terminal status is absent, null, or a token from another source-owned domain.
+    non_run_verdicts: list[dict[str, object]] = [
+        {},
+        {RUN_TERMINAL_STATUS_FIELD: None},
+        *(
+            {RUN_TERMINAL_STATUS_FIELD: action.value}
+            for action in sorted(AuditorRequiredAction)
+        ),
     ]
-    untouched_blocking_verdicts += [
-        {
-            FIELD_TOUCHES_OR_INVALIDATES_TEXT: False,
-            FIELD_OVERALL: AuditorOverall.APPROVED,
-            FIELD_ROWS: [{FIELD_STATUS: status}],
-            FIELD_FINDINGS: [],
-        }
-        for status in sorted(AUDITOR_BLOCKING_ROW_STATUSES)
-    ]
-    untouched_blocking_verdicts += [
-        {
-            FIELD_TOUCHES_OR_INVALIDATES_TEXT: False,
-            FIELD_OVERALL: AuditorOverall.APPROVED,
-            FIELD_ROWS: [{FIELD_STATUS: AuditorRowStatus.PASS}],
-            FIELD_FINDINGS: [{FIELD_VERDICT: verdict}],
-        }
-        for verdict in sorted(AUDITOR_BLOCKING_FINDING_VERDICTS)
-    ]
-    for verdict_on_untouched_text in untouched_blocking_verdicts:
-        decision = decide_auditor_verdict(verdict_on_untouched_text)
+    for non_run_verdict in non_run_verdicts:
+        for findings in ([], [{RUN_TERMINAL_STATUS_FIELD: None}]):
+            decision = decide_auditor_verdict(
+                {
+                    FIELD_TOUCHES_OR_INVALIDATES_TEXT: True,
+                    FIELD_FINDINGS: findings,
+                    **non_run_verdict,
+                }
+            )
+            assert decision.required_action is AuditorRequiredAction.FIX_BEFORE_MERGE
+            assert decision.merge_blocked is True
+
+    for status in sorted(AUDITOR_BLOCKING_TERMINAL_STATUSES):
+        for findings in ([], [{RUN_TERMINAL_STATUS_FIELD: status}]):
+            decision = decide_auditor_verdict(
+                {
+                    FIELD_TOUCHES_OR_INVALIDATES_TEXT: False,
+                    RUN_TERMINAL_STATUS_FIELD: status,
+                    FIELD_FINDINGS: findings,
+                }
+            )
+            assert decision.required_action is AuditorRequiredAction.TRACK_OUT_OF_PR
+            assert decision.merge_blocked is False
+
+    for non_run_verdict in non_run_verdicts:
+        decision = decide_auditor_verdict(
+            {
+                FIELD_TOUCHES_OR_INVALIDATES_TEXT: False,
+                FIELD_FINDINGS: [],
+                **non_run_verdict,
+            }
+        )
         assert decision.required_action is AuditorRequiredAction.TRACK_OUT_OF_PR
         assert decision.merge_blocked is False
+
+
+def test_unrecognized_check_vocabulary_is_never_terminal_green() -> None:
+    """Assert check states outside the check-run and status-context vocabularies fail closed."""
+
+    foreign_check_run_statuses = sorted(StatusContextState)
+    for status in foreign_check_run_statuses:
+        decision = classify_required_check(
+            {
+                FIELD_KIND: RequiredCheckKind.CHECK_RUN,
+                FIELD_PRESENT: True,
+                FIELD_STATUS: status,
+                FIELD_CONCLUSION: CheckRunConclusion.SUCCESS,
+            }
+        )
+        assert decision.terminal_green is False
+        assert (
+            decision.classification is RequiredCheckClassification.TERMINAL_NOT_SUCCESS
+        )
+
+    for state in [None, *sorted(CheckRunStatus)]:
+        decision = classify_required_check(
+            {
+                FIELD_KIND: RequiredCheckKind.STATUS_CONTEXT,
+                FIELD_PRESENT: True,
+                FIELD_STATE: state,
+            }
+        )
+        assert decision.terminal_green is False
+        assert (
+            decision.classification is RequiredCheckClassification.TERMINAL_NOT_SUCCESS
+        )
+
+    for status in foreign_check_run_statuses:
+        assert (
+            decide_review_check(
+                {
+                    FIELD_KIND: RequiredCheckKind.CHECK_RUN,
+                    FIELD_PRESENT: True,
+                    FIELD_STATUS: status,
+                    FIELD_CONCLUSION: CheckRunConclusion.SUCCESS,
+                },
+                current_head_review_present=False,
+            ).required_action
+            is ReviewCheckAction.MERGE_BLOCKED_REVIEW_CHECK_FAILED
+        )

@@ -76,3 +76,11 @@ opens with the classification instruction at line 125.
 **Evidence**: `instructions:skill-auditor` finding rule
 `duplicated_boundary_statement`, severity `WARNING`, on head
 `524b9c46c7960a106d84ef856b4020a0ce904b16` during Change #76.
+
+## The shipped ADR audit still produces the structured JSON verdict
+
+The assertions state the sealed-run verdict model: the audit run's terminal status is `approved` or `rejected`, and the `adr-auditor` wrapper relays the run token, the run file and the rendered projection. `src/plugins/spec-tree/skills/audit-adr/SKILL.md` still emits the `<verdict_format>` JSON object with an `overall` field and no run token or run file, so the `[eval]` expectations describe behavior the shipped producer does not yet have.
+
+**Settlement condition.** outcomeeng/changes#513 rewrites the skill and wrapper onto one `spx verification run` over the ADR file scope and migrates the producer-coupled eval expectations, under an unchanged semantic verdict model.
+
+**Evidence**: current-head CI review of pull request 671.

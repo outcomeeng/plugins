@@ -8,7 +8,7 @@ allowed-tools: Read, Grep, Glob, Skill, Bash(git rev-parse:*), Bash(realpath:*),
 ---
 
 <objective>
-A sealed `spx verification run` on {{scope}} against {{governing standards}} — terminal status `approved` with no finding, or `rejected` with each finding naming the artifact location, the violated rule's catalog identifier, and the evidence — or a `BLOCKED` diagnostic naming the failed prerequisite or command.
+A sealed `spx verification run`, named by its run token and run file, on {{scope}} against {{governing standards}} — terminal status `approved` with no finding, or `rejected` with each finding naming the artifact location, the violated rule's catalog identifier, and the evidence — or a `BLOCKED` diagnostic naming the failed prerequisite or command.
 </objective>
 
 <constraints>
@@ -40,12 +40,12 @@ Invoke {{the owning plugin's version capability}} with the verb `version` and re
    spx verification run start --verification-type audit --scope-type {{file-or-changeset}} --scope '{{scope}}' --input '<target-file>'
    ```
 
-   Capture the exact `runToken` and use it for every later command. Read the retained input with `spx verification run input --verification-type audit --scope-type {{file-or-changeset}} --scope '{{scope}}' --run '<run-token>'` and require its `content` to equal the live file; a difference returns `BLOCKED` with the run preserved.
+   Capture the exact `runToken` and use it for every later command. Retain the run target the start report names as the run file; only the start report names it. Read the retained input with `spx verification run input --verification-type audit --scope-type {{file-or-changeset}} --scope '{{scope}}' --run '<run-token>'` and require its `content` to equal the live file; a difference returns `BLOCKED` with the run preserved.
 2. **Load the standards.** Load {{the governing standards, their rule catalogs, and the repository-local specialization}}. A required standard or catalog that cannot be read returns `BLOCKED` with the run preserved, before any judgment.
 3. **Judge.** Judge every applicable catalog rule and collect falsifiable findings. Record a finding only when a catalog rule identifier, a location, and observed-versus-expected evidence back it; a defect no catalog row covers is not recorded, and an observation that a rule holds is not a finding. Every violation of one rule within one unit forms one finding that names each location.
 4. **Record.** Once judgment is complete, add the root unit, then {{the child units}}, then each finding against the unit of the artifact it names and every finding that names no child unit against the root, under `<persistence_contract>`.
 5. **Reconcile.** Read `spx verification run status` with the same type, scope, and token. Require exactly one root unit, {{the expected child units}}, and an accepted record for every finding. Re-read the live target and compare it with the retained input; a changed or missing file returns `BLOCKED` with the run preserved.
-6. **Finish and render.** Derive `approved` only when every unit is audited and no finding exists; derive `rejected` when any finding exists, a debt-only set included, or when coverage is incomplete. Run `spx verification run finish --verification-type audit --scope-type {{file-or-changeset}} --scope '{{scope}}' --run '<run-token>' --terminal-status '<approved-or-rejected>'`, then `spx verification run render` with the same type, scope, and token, and return the token and the rendered projection unchanged. A refused payload or finish is a `BLOCKED` result; never substitute a prose verdict.
+6. **Finish and render.** Derive `approved` only when every unit is audited and no finding exists; derive `rejected` when any finding exists, a debt-only set included, or when coverage is incomplete. Run `spx verification run finish --verification-type audit --scope-type {{file-or-changeset}} --scope '{{scope}}' --run '<run-token>' --terminal-status '<approved-or-rejected>'`, then `spx verification run render` with the same type, scope, and token, and return the token, the run file, and the rendered projection unchanged. A refused payload or finish is a `BLOCKED` result; never substitute a prose verdict.
 
 </execution_sequence>
 
@@ -149,7 +149,7 @@ Idempotency keys are command arguments, never payload fields; quote every path, 
 
 <verdict_format>
 
-Return only the exact run token and the unmodified rendered projection. Its `terminalStatus` is the verdict; every recorded finding, `blocking` or `debt`, rejects the run.
+Return only the exact run token, the exact run file, and the unmodified rendered projection. Its `terminalStatus` is the verdict; every recorded finding, `blocking` or `debt`, rejects the run.
 
 A run that cannot complete returns:
 

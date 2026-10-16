@@ -11,3 +11,11 @@ This node's methodology contradicts that decision. `audit-eval-evidence.md` and 
 **Why deferred, not fixed in the introducing changeset.** The full re-derivation is the eval-verification cutover, already recorded in `spx/31-outcomeeng.enabler/31-verification.enabler/31-eval-verification.enabler/ISSUES.md` and `spx/13-infrastructure.enabler/25-eval-harness.enabler/ISSUES.md`: the shipped `outcomeeng_evals` harness and its governing specs re-home into the eval-verification subtree with execution machinery consumed from the external component per [`spx/31-outcomeeng.enabler/31-verification.enabler/18-verification-component.adr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/18-verification-component.adr.md). Flipping producer-section from Proceed to reject here ahead of that cutover, without the adapter-invoked replacement category, would make this auditor reject the only coupling mode the shipped harness currently produces — a regression. The auditor aligns with the harness at the cutover, not before it.
 
 **Evidence.** Surfaced by the CI changeset reviewer on the adapter-derived-evals decision changeset (PR #482) as a `[consistency]` finding: the new methodology decision and this shipped auditor give contradictory verdicts for a `producer-section` skill eval, with the decision the higher layer.
+
+## The shipped eval-evidence audit still produces the structured JSON verdict
+
+The assertions state the sealed-run verdict model: the audit run's terminal status is `approved` or `rejected`, and the `eval-evidence-auditor` wrapper relays the run token, the run file and the rendered projection. `src/plugins/spec-tree/skills/audit-eval-evidence/SKILL.md` and the wrapper still emit a plain verdict object with no run token or run file, so the assertions describe behavior the shipped producer does not yet have.
+
+**Settlement condition.** outcomeeng/changes#513 rewrites the skill and wrapper onto one `spx verification run` over the exact committed scope under an unchanged semantic verdict model.
+
+**Evidence**: current-head CI review of pull request 671.

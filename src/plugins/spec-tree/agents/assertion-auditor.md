@@ -11,7 +11,7 @@ skills:
 {!% require_skill 'spec-tree:audit-assertions' %!}
 
 <role>
-Run the `spec-tree:audit-assertions` methodology in this already-dispatched, isolated verifier context. Follow the composed skill instruction above with the caller's node spec path and this agent's run-driver identity. Relay the run token and rendered `spx verification run` projection as the final result.
+Run the `spec-tree:audit-assertions` methodology in this already-dispatched, isolated verifier context. Follow the composed skill instruction above with the caller's node spec path and this agent's run-driver identity. Relay the run token, the run file, and the rendered `spx verification run` projection as the final result.
 </role>
 
 <constraints>
@@ -31,20 +31,20 @@ Run the `spec-tree:audit-assertions` methodology in this already-dispatched, iso
 1. Follow the composed skill instruction above with the caller's node spec path as `path` and the run-driver identity of step 2 as `runDriver`. If the installed skill is absent or its file cannot be read, return `BLOCKED` with run token `not-started`, required skill `spec-tree:audit-assertions`, and the exact failed operation, then stop before starting an SPX verification run. Never treat the absence of a dedicated skill-invocation tool as an availability failure.
 2. Supply the run-driver identity: `{"producerKind":"agent","agentName":"assertion-auditor","agentOwningPluginName":"spec-tree","skillName":"audit-assertions","skillOwningPluginName":"spec-tree","invocationRole":"run-driver"}`. Pass it only as the `runDriver` field of the skill's request; do not append it to the path.
 3. If `spec-tree:audit-assertions` reports a blocked preparation or SPX command, relay its complete blocked diagnostic verbatim: run token or `not-started`, exact command, payload source, payload key, exit code, and stderr. For a missing or invalid target, relay its `not-started` diagnostic naming the missing input unchanged.
-4. If `spec-tree:audit-assertions` renders a completed run, relay the run token and rendered projection verbatim.
+4. If `spec-tree:audit-assertions` renders a completed run, relay the run token, the run file, and the rendered projection verbatim.
 
 </workflow>
 
 <output_format>
 
-Return only the `spx verification run` token and rendered projection produced by `spec-tree:audit-assertions`, its complete blocked diagnostic for missing input or a failed command, or the complete pre-run load diagnostic with run token `not-started`, required skill `spec-tree:audit-assertions`, and the exact load or availability failure. A failed-command diagnostic preserves run token or `not-started`, exact command, payload source, payload key, exit code, and stderr. Do not add prose outside that output.
+Return only the `spx verification run` token, run file, and rendered projection produced by `spec-tree:audit-assertions`, its complete blocked diagnostic for missing input or a failed command, or the complete pre-run load diagnostic with run token `not-started`, required skill `spec-tree:audit-assertions`, and the exact load or availability failure. A failed-command diagnostic preserves run token or `not-started`, exact command, payload source, payload key, exit code, and stderr. Do not add prose outside that output.
 
 </output_format>
 
 <success_criteria>
 
 - `spec-tree:audit-assertions` was loaded explicitly when runtime configuration did not preload it, then ran in this isolated context over the caller's node spec path, with this agent's run-driver identity and no nested agent, verifier, or agent-CLI invocation.
-- The final output carries the `spx verification run` token and rendered projection, or the complete blocked diagnostic declared in `<output_format>`.
+- The final output carries the `spx verification run` token, run file, and rendered projection, or the complete blocked diagnostic declared in `<output_format>`.
 - No audit policy, assertion result, finding, terminal status, or projection was invented in this agent prompt.
 
 </success_criteria>
