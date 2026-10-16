@@ -81,6 +81,14 @@ HARNESS_COMMANDS: Final = frozenset(
         "status",
     }
 )
+# Each exempted reference to a skill no marketplace plugin ships yet, mapped to
+# the Change that ships the skill and removes the exemption.
+EXEMPTED_REFERENCES: Final[Mapping[str, str]] = {
+    "/probe": "outcomeeng/changes#363",
+    "spec-tree:probe": "outcomeeng/changes#363",
+    "/eval": "outcomeeng/changes#514",
+    "spec-tree:eval": "outcomeeng/changes#514",
+}
 # Top-level filesystem directories, which a slash-prefixed token names as a path.
 FILESYSTEM_ROOTS: Final = frozenset(
     {
@@ -244,8 +252,16 @@ def stands_alone(line: str, start: int, quotes_open: bool) -> bool:
     return False
 
 
-def find_violations(text: str, path: Path, skills: ShippedSkills) -> list[Violation]:
-    """Return one violation per unshipped skill reference in ``text``."""
+def find_violations(
+    text: str,
+    path: Path,
+    skills: ShippedSkills,
+    exemptions: Mapping[str, str] = EXEMPTED_REFERENCES,
+) -> list[Violation]:
+    """Return one violation per unshipped skill reference in ``text``.
+
+    A reference that is a key of ``exemptions`` is not a violation.
+    """
     quotes_open = path.suffix == MARKDOWN_SUFFIX
     qualified = _qualified_pattern(skills.known_plugins)
     all_names = skills.all_names
@@ -259,7 +275,7 @@ def find_violations(text: str, path: Path, skills: ShippedSkills) -> list[Violat
                     plugin, frozenset()
                 ) | skills.agents_by_plugin.get(plugin, frozenset())
                 unmatched = unmatched_expansions(match.group("name"), shipped)
-                if unmatched:
+                if unmatched and match.group(0) not in exemptions:
                     found.append((match.start(), match.group(0), unmatched))
         for match in _SLASH_REFERENCE.finditer(line):
             name = match.group("name")
@@ -268,7 +284,7 @@ def find_violations(text: str, path: Path, skills: ShippedSkills) -> list[Violat
             if not stands_alone(line, match.start(), quotes_open):
                 continue
             unmatched = unmatched_expansions(name, all_names)
-            if unmatched:
+            if unmatched and match.group(0) not in exemptions:
                 found.append((match.start(), match.group(0), unmatched))
         violations.extend(
             Violation(path=path, line=lineno, reference=reference, unmatched=unmatched)
@@ -310,13 +326,17 @@ def scan_files(root: Path, paths: Sequence[Path]) -> list[Path]:
     return [path for path in candidates if path.is_file() and in_scope(root, path)]
 
 
-def scan_file(path: Path, skills: ShippedSkills) -> list[Violation]:
+def scan_file(
+    path: Path,
+    skills: ShippedSkills,
+    exemptions: Mapping[str, str] = EXEMPTED_REFERENCES,
+) -> list[Violation]:
     """Return the violations in ``path``; a non-text file has none."""
     try:
         text = path.read_text(encoding="utf-8")
     except UnicodeDecodeError:
         return []
-    return find_violations(text, path, skills)
+    return find_violations(text, path, skills, exemptions)
 
 
 def format_violation(violation: Violation) -> str:
