@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.12.12
+
+### Changed
+
+- **`/audit-prose` copies each event path from the file-write result.** The audit now copies the scratch directory the harness names into each event path character for character, stops before a command whose file-write result reports a path outside that directory and returns the blocked outcome naming the reported path, reads the event file at the path exactly as the result reports it, and reruns a journal command once when its diagnostic names the event file as absent before stopping with the blocked outcome naming the run token. Before this change, the audit stopped at the first nonzero exit without a rerun and did not check where an event file landed, so a retyped path failed the append and the run sealed no verdict.
+
 ## 0.12.11
 
 ### Fixed
