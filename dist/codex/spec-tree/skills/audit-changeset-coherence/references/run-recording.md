@@ -81,7 +81,7 @@ Add a finding with `spx verification run finding add` and the same selectors, `-
 }
 ```
 
-A `split-required` finding sits on the root. Its `evidence.observed` lists every cluster on its own line as `cluster-<n> | outcome: <outcome> | authored: <paths> | generated: <paths> | verification: <story> | rollback: <story> | depends_on: <cluster-ids-or-none>`. Its `evidence.expected` carries the review-unit sequence, one line per review unit in dependency order as `review-unit-<n> | clusters: <cluster-ids> | depends_on: <review-unit-ids-or-none>`, covering every cluster exactly once.
+A `split-required` finding sits on the root. Its `evidence.observed` lists every cluster on its own line as `cluster-<n> | outcome: <outcome> | authored: <paths> | generated: <paths> | verification: <story> | rollback: <story> | depends_on: <cluster-ids-or-none> | load: <review-load-signals-or-none>`. Its `evidence.expected` carries the review-unit sequence, one line per review unit in dependency order as `review-unit-<n> | clusters: <cluster-ids> | depends_on: <review-unit-ids-or-none>`, covering every cluster exactly once.
 
 A `missing-*` finding sits on the `incomplete` unit. Its `message` and `evidence.observed` name the cause: the artifact, the relationship, or the read that could not be established. The `incomplete` unit is the review unit whose cluster needs the evidence, or the root when no cluster can be formed.
 

@@ -13,7 +13,7 @@ allowed-tools: Read, Grep, Glob, Write, Bash(python3 "${SKILL_DIR}/scripts/resol
 
 <objective>
 
-A sealed `spx verification run` over one exact committed changeset, with one root unit and one `review-unit` child per semantic cluster, every finding recorded on its unit, returned as the run token, the run file, and the rendered projection, whose `terminalStatus` is `approved` or `rejected`; or the complete `BLOCKED` diagnostic when the scope cannot be resolved or the run cannot finish.
+A sealed `spx verification run` judging whether one exact committed changeset forms one reviewable semantic unit against the coherence model, with one root unit and one `review-unit` child per semantic cluster and findings drawn from its rule catalog — `split-required` or a `missing-*` evidence rule — returned as the run token, the run file, and the rendered projection, whose `terminalStatus` is `approved` or `rejected`; or the complete `BLOCKED` diagnostic when the scope cannot be resolved or the run cannot finish.
 
 </objective>
 
@@ -62,11 +62,13 @@ Use skill `spec-tree:spec-tree-plugin`. Invoke it with the verb `version` and re
 
 <step name="resolve_scope">
 
-**Step 1: Resolve the committed scope**
+**Step 1: Resolve the committed scope and load the foundation**
 
 Run `python3 "${SKILL_DIR}/scripts/resolve_scope.py" "<target>"`, which routes base-ref resolution, remote-tracking-ref composition, commit identity, and three-dot diff scope through the canonical changeset-scope primitives. Retain its `base`, `head`, and `changed_paths` verbatim. NEVER derive a base ref, commit identity, or diff scope from raw git: a bare local branch ref lags `origin/<base>` in a multi-worktree checkout and re-admits already-merged commits.
 
 The resolver fetches the base and refuses a head behind its tip with a dedicated nonzero exit code and a `stale-base` diagnostic on stderr. That refusal and every other nonzero exit return `BLOCKED` with run token `not-started`, the resolver command, its exit code, and its stderr verbatim, before any subject is read and with no run started. Never fabricate commit identities or a replacement scope.
+
+When the live `<SPEC_TREE_FOUNDATION>` marker is absent: Use skill `spec-tree:understand`. Do not proceed without it: a failed load returns `BLOCKED` with run token `not-started`, the load as the command, and the failure as stderr, so no changed path is read and no run starts.
 
 </step>
 
@@ -102,7 +104,7 @@ Resolve every generated artifact to its producing authored artifact from the bui
 
 Extract behavioral claims from the changed declarations and the observable behavior of the changed implementation and evidence. Build the smallest clusters whose artifacts realize one claim, and establish each cluster's facts as `<semantic_clusters>` states.
 
-Fuse every dependency cycle and every set of clusters that cannot be verified or rolled back separately into one inseparable cluster, then order the survivors as `<review_units>` states. Record review-load signals only to raise scrutiny.
+Fuse every dependency cycle and every set of clusters that cannot be verified or rolled back separately into one inseparable cluster, then order the survivors as `<review_units>` states. Establish each cluster's review-load signals after collapse and record them on its cluster line, to raise scrutiny only.
 
 </step>
 

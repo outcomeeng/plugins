@@ -18,7 +18,7 @@ The coherence model of the changeset-coherence audit: the artifact roles, semant
 
 Classify every changed path by exactly one role: decision or specification, test or eval evidence, implementation, generated artifact, workflow or configuration, documentation, migration, deployment, or release. Every role except generated artifact is authored.
 
-A generated artifact resolves to its producing authored artifact through a repository-declared build relationship: a declaration the repository carries that names the generated extent, its authored sources, and its generator. A role label of `generated`, a path that resembles a source, an artifact count, and the presence of a single authored artifact establish no producer. An artifact whose producer the repository's declarations leave unestablished stays unresolved and feeds `missing-generated-source-evidence`.
+A generated artifact resolves to its producing authored artifact through a repository-declared build relationship: a declaration the repository carries that names the generated extent, its authored sources, and the command that regenerates it. A declaration may name a generated region of an authored file instead of a whole file; that region shares its producer's cluster, and the file's other text keeps its authored role. A role label of `generated`, a path that resembles a source, an artifact count, and the presence of a single authored artifact establish no producer. An artifact whose producer the repository's declarations leave unestablished stays unresolved and feeds `missing-generated-source-evidence`.
 
 Collapse each resolved generated artifact onto its producer before path breadth, authored-change size, or review load is assessed. A generated artifact shares the cluster of its producing authored artifact and is carried as that cluster's generated fanout.
 
@@ -39,6 +39,7 @@ Every authored artifact in scope belongs to exactly one cluster. For each cluste
 | Rollback story       | The artifact or operation that reverses the outcome                                                |
 | Dependencies         | The other clusters whose change this cluster requires, or an established absence of any dependency |
 | Mergeable on its own | Whether the cluster can be verified and rolled back without any other cluster                      |
+| Review-load signals  | The cluster's authored-change size and path breadth after collapse, or none                        |
 
 Fuse into one inseparable cluster every dependency cycle and every set of clusters that cannot be verified or rolled back separately. Name clusters `cluster-1`, `cluster-2`, and so on, in dependency order, breaking ties between independent clusters by the lexicographically first authored path.
 
