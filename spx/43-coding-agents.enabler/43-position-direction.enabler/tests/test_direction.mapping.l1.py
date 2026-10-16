@@ -904,3 +904,59 @@ def test_prowl_agents_response_maps_to_panes_with_adapter_supplied_fill() -> Non
     assert (pane.context_percent, pane.last_prompt_origin) == (35.0, "operator")
     with pytest.raises(core.DirectionError):
         core._prowl_panes({"data": {}})
+
+
+class _KeyedMail(_SentMail):
+    """Mail stub whose adapter call resolves the project key as the adapter does."""
+
+    def __init__(self, common: Path) -> None:
+        super().__init__(common)
+        self.keys: list[str] = []
+
+    def execute(self, request: dict) -> dict:
+        client = direction.MailClient()
+        adapter = client.module()
+        self.keys.append(adapter.resolve_project_key(adapter.SubprocessRunner()))
+        return {"status": "succeeded", "data": {"records": []}}
+
+
+def _git_repository(path: Path) -> str:
+    import subprocess
+
+    path.mkdir(parents=True)
+    subprocess.run(["git", "init", "--quiet", str(path)], check=True)
+    return str((path / ".git").resolve())
+
+
+def test_configured_mail_channel_selects_that_repositorys_mail_project(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    invocation = tmp_path / "invocation"
+    invocation_key = _git_repository(invocation)
+    channel = tmp_path / "channel"
+    channel_key = _git_repository(channel)
+    monkeypatch.chdir(invocation)
+    configured = tmp_path / "configured"
+    unset = tmp_path / "unset"
+    _override(
+        configured,
+        "Lead Director",
+        f'+++\n[mail]\nagent = "director"\nchannel = "{channel}"\n+++\n',
+    )
+    _override(unset, "Lead Director", '+++\n[mail]\nagent = "director"\n+++\n')
+    keys: dict[str, list[str]] = {}
+
+    for label, common in (("configured", configured), ("unset", unset)):
+        mail = _KeyedMail(common)
+        status = direction.main(
+            ["inbox", "--position", "Lead Director"],
+            stdout=StringIO(),
+            runtime=(mail, None),  # type: ignore[arg-type]
+            checkout=tmp_path / "checkout",
+        )
+        assert status == 0
+        keys[label] = mail.keys
+
+    assert keys["configured"] == [channel_key]
+    assert keys["unset"] == [invocation_key]
+    assert Path.cwd() == invocation
