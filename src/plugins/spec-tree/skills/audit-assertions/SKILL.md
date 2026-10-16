@@ -18,6 +18,7 @@ A sealed `spx verification run` on one node spec, with one root scope unit for t
 <constraints>
 
 - NEVER modify the target spec, its subjects, or any other product file — the only state the audit changes is its payload files in the session scratch directory and the SPX run journal its own recording commands write, and the file-write tool writes payload files only.
+- NEVER invoke `/contextualize` or `/sync-base`: both can move the checkout, and this audit leaves the checkout unmoved. Step 1 loads the target spec's context read-only.
 - NEVER judge an assertion that carries another tag (`[test]`, `[eval]`, `[probe]`) or no tag — those verification types belong to their own evidence.
 - NEVER judge how an assertion is declared or selected: declaration form, heading placement, and tag fit belong to `/audit-specs`.
 - ALWAYS judge an assertion against the subject it names — the artifact, behavior, or constraint its text identifies — read from the product, never against the spec's wording alone or the conversation.
@@ -42,7 +43,12 @@ Use skill `spec-tree:spec-tree-plugin`. Invoke it with the verb `version` and re
 
 <execution_sequence>
 
-1. **Load context.** Invoke `/understand` when the live `<SPEC_TREE_FOUNDATION>` marker is absent, then invoke `/contextualize` on the directory containing the spec. Read the spec at `path`. A target that is absent or is not a node spec returns `BLOCKED` with the exact failure.
+1. **Load context read-only.** When the live `<SPEC_TREE_FOUNDATION>` marker is absent: Use skill `spec-tree:understand`. Load the target spec's context with `Read`, `Glob`, and `Grep` alone, in this order:
+   1. The product spec.
+   2. Each spec and every decision record in each directory on the path from `spx/` to the directory containing the target spec, root first, the target spec excluded and the product spec not read again.
+   3. Every decision that a loaded spec or decision cites by full `spx/` path, each read once.
+
+   Then read the spec at `path`. A target that is absent or is not a node spec, and a file this order names that cannot be read, returns `BLOCKED` with the exact failure before any command runs.
 2. **Enumerate.** List every assertion under `## Assertions` in document order, numbering each from one. Select those tagged `[audit:{rule-slug}]` and the pathless `[audit]`. A selected assertion's designator is its slug, or `ordinal-<n>` with `<n>` its position in that list when pathless; its unit key is `assertion:<designator>:<path>`.
 3. **Open the run.** Start the run before judging anything:
 
@@ -53,7 +59,7 @@ Use skill `spec-tree:spec-tree-plugin`. Invoke it with the verb `version` and re
    A file-scoped run takes the audited path as its input, passed by path, so the retained input equals the audited file and no start payload is built.
 
    The command prints a JSON locator; take its `runToken` exactly and use it for every later command. Retain the run target the locator reports as the run file; only the start report names it. Never pass the whole locator as `--run`.
-4. **Judge.** For each selected assertion, identify the subject its text names, read that subject completely — recovering any truncated read in bounded ranges — and decide whether the assertion holds of it. A violation is a finding carrying the observed and expected states and a severity of `blocking` or `debt`, whose message opens with the assertion's designator, kept per `${CLAUDE_SKILL_DIR}/references/touched-text.md`. Merge the violations of one rule on one assertion into one finding, because a finding's key is its unit key and rule. A subject the text names that cannot be located is a finding against that assertion. An assertion whose text names no identifiable subject is a finding with rule `subject-unnamed`.
+4. **Judge.** For each selected assertion, identify the subject its text names, read that subject completely — recovering any truncated read in bounded ranges — and decide whether the assertion holds of it. A violation is a finding carrying the observed and expected states and a severity of `blocking` or `debt`, whose message opens with the assertion's designator, kept per `${CLAUDE_SKILL_DIR}/references/touched-text.md`. Record each finding under one rule of `<rule_catalog>` and merge the violations of one rule on one assertion into one finding, because a finding's key is its unit key and rule; the message names the violated constraint.
 5. **Classify.** Resolve the base and run the diff commands as `${CLAUDE_SKILL_DIR}/references/touched-text.md` states, and sort each finding into touched text or standing text.
 6. **Record.** When any assertion is selected, add the root scope unit first, because a run admits one root and every child names it, then one child scope unit per selected assertion, then each finding on touched text on its child unit, per `<persistence_contract>`. Every selected assertion is `audited` whether it holds or carries findings. A standing finding is recorded nowhere in the run.
 7. **Finish.** Derive `rejected` when a finding on touched text exists and `approved` otherwise, whatever standing findings exist; a spec with no selected assertion finishes `approved` with no unit. Run the finish and render commands:
@@ -136,7 +142,7 @@ A child unit:
 }
 ```
 
-Add a finding with `spx verification run finding add` and the same selectors, `--payload <payload-file>` per `<payload_files>`, and `--idempotency-key '<unitId>:<rule>'`, the finding key `${CLAUDE_SKILL_DIR}/references/touched-text.md` defines. Its payload names an accepted child unit; `producerIdentity` repeats that unit's `expectedProducer`; `producerProvenance` carries the plugin version `<request_contract>` retained in both version fields, and no `toolVersion`; `rule` is a lowercase hyphenated identifier naming the violated constraint.
+Add a finding with `spx verification run finding add` and the same selectors, `--payload <payload-file>` per `<payload_files>`, and `--idempotency-key '<unitId>:<rule>'`, the finding key `${CLAUDE_SKILL_DIR}/references/touched-text.md` defines. Its payload names an accepted child unit; `producerIdentity` repeats that unit's `expectedProducer`; `producerProvenance` carries the plugin version `<request_contract>` retained in both version fields, and no `toolVersion`; `rule` is one identifier of `<rule_catalog>`.
 
 ```json
 {
@@ -146,7 +152,7 @@ Add a finding with `spx verification run finding add` and the same selectors, `-
     "agentOwningPluginVersion": "<spec-tree-plugin-version>",
     "skillOwningPluginVersion": "<spec-tree-plugin-version>"
   },
-  "rule": "<violated-rule-id>",
+  "rule": "<catalog-rule-id>",
   "severity": "<blocking-or-debt>",
   "location": "<subject-path-and-line-or-section>",
   "message": "<designator>: <finding-message>",
@@ -183,6 +189,18 @@ Quote every idempotency key as one single-quoted argument; encode a literal apos
 
 </audit_workflow>
 
+<rule_catalog>
+
+Every finding carries one rule below; the severity is `blocking` or `debt` as `${CLAUDE_SKILL_DIR}/references/touched-text.md` defines it.
+
+| Rule                  | Raised when                                                                           |
+| --------------------- | ------------------------------------------------------------------------------------- |
+| `assertion-unmet`     | The subject the assertion names does not satisfy the constraint the assertion states. |
+| `subject-unlocatable` | A subject the assertion's text names cannot be located in the product.                |
+| `subject-unnamed`     | The assertion's text names no identifiable subject.                                   |
+
+</rule_catalog>
+
 <verdict_format>
 
 Return the run token, the run file, and the unchanged `spx verification run render` output; its `terminalStatus` is authoritative. Add no `APPROVED` or `REJECTED` envelope and no restated findings. After the projection, return each standing finding on its own line in the form `${CLAUDE_SKILL_DIR}/references/touched-text.md` gives, or `filed: none`.
@@ -203,11 +221,12 @@ stderr: <exact-stderr-or-none>
 
 <success_criteria>
 
-- When the spec has a selected assertion, the run holds one `audited` root scope unit for the target spec, and every `[audit:{rule-slug}]` and pathless `[audit]` assertion of the spec has exactly one `audited` child unit under its unit key that names the root, and no assertion carrying another tag has a unit.
-- Every recorded finding lies on touched text and sits on an accepted unit, names the violated constraint, the subject location, and observed-versus-expected evidence, and rests on the subject's own content.
+- Every selected assertion was judged against its subject with none skipped, and every unit the run holds is `audited`.
+- No assertion carrying another tag has a unit.
+- The context load read files alone, so the checkout stands at the head the audit started on.
+- Every recorded finding lies on touched text and sits on an accepted unit, carries a rule of `<rule_catalog>`, names the violated constraint, the subject location, and observed-versus-expected evidence, and rests on the subject's own content.
 - Every standing finding appears as a `filed` line carrying its key, `baseRefEvidence`, and `issuesEntry`, and rejects no run.
 - The run was started before the first judgment, finished with a terminal status derived from the recorded findings, and rendered.
 - The same spec, subjects, and base yield the same units, finding keys, and terminal status.
-- The output is the run token and the run file with the unchanged rendered projection and the `filed` lines, or the complete `BLOCKED` diagnostic.
 
 </success_criteria>
