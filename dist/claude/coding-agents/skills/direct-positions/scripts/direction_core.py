@@ -407,6 +407,7 @@ def compose_configuration(
         key: settings.get(key, default) for key, default in DEFAULTS.items()
     }
     composed["mail"] = {**DEFAULTS["mail"], **settings.get("mail", {})}
+    composed["mailDirectory"] = composed["mail"]["channel"]
     if composed["mail"]["channel"] is None:
         composed["mail"]["channel"] = str(common_dir)
     resume_note = state_directory / RESUME_NOTE_FILE
