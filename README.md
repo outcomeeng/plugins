@@ -257,6 +257,7 @@ Coding-agent environments, coordination, and change orchestration: /operate-prow
 | Skill | `/operate-prowl`        | A workflow needs a public Prowl operation or a correlated delegation handback between Prowl coding agents                                                                                                                                        |
 | Skill | `/orchestrate-change`   | Starting the Executor session for a Change, or checking, restarting, or answering a running Executor                                                                                                                                             |
 | Skill | `/recover-prowl-agents` | Preparing for or recovering coding-agent sessions after a Prowl restart                                                                                                                                                                          |
+| Skill | `/wait-for-event`       | A coding-agent workflow must wake on the first of an agent-mail record, a herdr-hosted agent session state change, a consumption-control alert, or a clock instant, within one bounded timeout                                                   |
 
 ### contribute
 
