@@ -10,6 +10,16 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.106.6
+
+### Changed
+
+- **`project-run-journal` copies each event path from the file-write result and allows one rerun of an `append` whose event file is reported absent.** The skill now copies the scratch directory the harness names into each event path character for character, stops before an `append` whose file-write result reports a path outside that directory and names the reported path, and passes `append` the event path exactly as the result reports it. It keeps its stop at the first nonzero exit with one exception: an `append` whose diagnostic names its event file as absent runs once more with the event path copied from the file-write result, and a second nonzero exit stops the run. Before this change, the skill stopped at the first nonzero exit without exception and did not check where an event file landed, which contradicted the single rerun that the audits following its command forms perform.
+
+- **`/audit-implementation` copies each payload path from the file-write result.** The audit now copies the scratch directory the harness names into each payload path character for character, stops before a command whose file-write result reports a path outside that directory and names the reported path, passes `--payload` the path exactly as the result reports it, and reruns a scope-add or finding-add command once when its diagnostic names the payload file as absent before stopping with a `BLOCKED` result naming the run token; a `run start` whose `--input` file is absent stops at once. Before this change, the audit stopped at the first nonzero exit without a rerun and did not check where a payload file landed, so a retyped path failed the scope add and the run sealed no verdict.
+
+- **`/audit-assertions` copies each payload path from the file-write result.** The audit now copies the scratch directory the harness names into each payload path character for character, stops before a command whose file-write result reports a path outside that directory and names the reported path, passes `--payload` the path exactly as the result reports it, and reruns a command once when its diagnostic names the payload file as absent before stopping with a `BLOCKED` result naming the run token. Before this change, the audit stopped at the first nonzero exit without a rerun and did not check where a payload file landed, so a retyped path failed the scope add and the run sealed no verdict.
+
 ## 0.106.5
 
 ### Changed

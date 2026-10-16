@@ -31,3 +31,32 @@ prefix and unique-coverage projection gaps recorded in
 `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/ISSUES.md`
 entries 5 and 6 are fixed in the ported surface rather than in the shipped
 scripts. Revisit when the capability publishes.
+
+## The command-form assertion omits the payload-path rule its skill states
+
+The command-form assertion in
+`spx/21-spec-tree.enabler/16-verification.enabler/18-journal-projection.enabler/journal-projection.md`
+states one command form per journal verb and an `append` that reads its event
+through the input redirect from a file written with the file-write tool in the
+session scratch directory. The `project-run-journal` skill's `<command_forms>`
+also copies the scratch directory into each event path, stops before an
+`append` whose file-write result reports a path outside that directory, passes
+the reported path unchanged, and reruns an `append` once when its diagnostic
+names the event file as absent. The assertion states none of those four rules.
+The audit, audit-assertions, skills, subagents and prose nodes each carry them
+in an assertion.
+
+**Evidence**: CI review finding at
+`spx/21-spec-tree.enabler/16-verification.enabler/18-journal-projection.enabler/journal-projection.md:31`
+on pull request 675, head `ea7372f9e907617492fa654a2c4ee994d8212796`. Returned
+`filed` under properties 11 and 13 of
+[`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md):
+that changeset leaves the assertion unchanged, and the assertion still holds of
+the skill, so the change does not invalidate it.
+
+**Impact**: an assertion audit of this node cannot reject a skill that drops
+the four rules.
+
+**Settlement condition**: an assertion of this node states the four rules for
+the run-journal command forms, and an assertion audit of the node raises no
+finding on it.

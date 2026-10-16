@@ -267,3 +267,19 @@ The changes-reviewer requires a test to pin `SIGNAL_GRACE_SECONDS` to the spec's
 `spec-tree:changes-reviewer` run `2026-09-22_20-40-26-221-404eea4ba809` rejected line 181 of `src/plugins/coding-agents/skills/orchestrate-officers/scripts/derive_ledger.py` by executing the shipped entry point: a JSON array under a read's `cause` is unhashable, so the frozenset membership test raised `TypeError`, outside the entry point's refused-source handler, and the script printed a traceback and exited 1 against a contract of one versioned invalid-input result on stdout and exit two. The implementation audit approved the same file on the same head by reading it. The repair landed at `1ea3cf1567a963c6466366098155fcaa3a04d01a`.
 
 **Settlement condition.** A decision states whether an implementation audit executes a shipped executable, and the review's execution of the subject has a named owner. The full entry is in `spx/31-outcomeeng.enabler/31-verification.enabler/ISSUES.md`.
+
+## The `finding_payload` section of review-changes lacks the payload-path rules the audit skills carry
+
+### DEBT [consistency]: src/plugins/spec-tree/skills/review-changes/SKILL.md:74-77
+
+Reference: rule-catalog.md line 170 adds payload_path_retyped: an audit-* skill that passes payload files to run-recording commands copies the scratch directory into each payload path, stops before a command whose file-write result reports a path outside that directory, passes the reported path unchanged, and reruns a command once on an absent-payload diagnostic before stopping with a blocked result naming the run token. The changeset propagates this copy/stop/rerun-once behavior into audit-skill, audit-subagent, audit-assertions, audit-implementation, and audit-prose.
+
+Evidence: review-changes SKILL.md finding_payload section still carries only the pre-fix contract: ALWAYS write each finding with the file-write tool to a scratch file, then ALWAYS pass the file to append-finding with the input redirect, path written out literally. There is no rule to copy the path from the file-write result rather than retype it, no stop-before-mismatch check, and no allowed one-time rerun when append-finding fails naming the finding file absent, which is exactly the gap this changeset closes everywhere else. apply SKILL.md dispatches review-changes as its Step 9 gate and states that a blocked review launch follows launch_contract and never enters the relaunch loop, so a retyped finding path still fully reproduces the run-sealed-with-no-verdict failure in the apply merge gate, unprotected by this fix.
+
+Required: extend review-changes SKILL.md finding_payload section with the same payload path copy, stop-before-mismatch, and rerun-once-on-absent-diagnostic rules added to the other five auditors, or record why review-changes is deliberately exempt from the new standard.
+
+**Source**: pull request 675 CI review, https://github.com/outcomeeng/plugins/pull/675#issuecomment-6223414441, raised under Change https://github.com/outcomeeng/changes/issues/533.
+
+**Impact**: a retyped finding path in a review run reproduces the run-sealed-with-no-verdict failure in the apply merge gate, because a blocked review launch follows `launch_contract` and never enters the relaunch loop.
+
+**Settlement condition**: the finding_payload section of review-changes carries the copy-the-path, stop-before-mismatch and rerun-once rules, or records why review-changes is exempt

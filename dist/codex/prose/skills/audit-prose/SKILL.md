@@ -30,8 +30,10 @@ A verdict on human-facing text, revealed as the run advances — a sealed audit 
 - NEVER excuse a base-catalog match as "single use" or "it works here" — every match outside an override is a finding.
 - NEVER raise a finding on a sentence outside the changed lines when the arguments name a base revision — the unchanged text is read as context only.
 - NEVER gather a finished result and dump its events at the end — each finding is appended the instant it is raised, per the streaming rule in `/project-run-journal`.
-- NEVER build an event in the shell — no heredoc, pipe, `printf`, or interpreter stage. Write each event with the file-write tool to its own file, named uniquely to this run and event, in the session scratch directory (the one the hosting environment designates, such as `$RUNNER_TEMP` on a hosted runner, where the harness names none) and append it through the command form `/project-run-journal` states in `<command_forms>`. The file-write tool writes only event files there; the audit changes no other file.
-- ALWAYS run each journal command as its own command, one at a time, and stop the audit at the first nonzero exit.
+- NEVER build an event in the shell — no heredoc, pipe, `printf`, or interpreter stage. Copy the scratch directory the harness names for the session (the one the hosting environment designates, such as `$RUNNER_TEMP` on a hosted runner, where the harness names none) into each event path character for character. Write each event with the file-write tool to its own file there, named uniquely to this run and event, and append it through the command form `/project-run-journal` states in `<command_forms>`. The file-write tool writes only event files there; the audit changes no other file.
+- ALWAYS stop before the command that reads an event file when the file-write result reports a path the scratch directory does not contain by whole path components, and return the blocked outcome naming the reported path — a retyped or relocated path voids the append.
+- ALWAYS read the event file through the input redirect at the path exactly as the file-write result reports it, copied from that result, never retyped from memory.
+- ALWAYS run each journal command as its own command, one at a time, and stop the audit at the first nonzero exit, except that a command whose diagnostic names its event file as absent runs once more with the path copied from the file-write result; a second failure stops the audit with the blocked outcome naming the run token.
 
 </constraints>
 
@@ -109,6 +111,10 @@ Claude removed dispatch language from this skill's description to satisfy the au
 **A journal event was built in the shell.**
 
 Claude appended a finding by feeding a heredoc to `spx journal append`, and the dangerous-command guard refused the command. The run stayed open with no sealed verdict, and the findings already appended could not be read as a result. Each event is written to its own file with the file-write tool and appended through the input redirect, so the guard sees one literal command.
+
+**An event path was retyped and the append failed.**
+
+Claude wrote an event with the file-write tool, then typed the path into the append command from memory with one character changed, and the command named the event file as absent. The run stayed open with no sealed verdict. The path the file-write result reports is the only path the append reads.
 
 </failure_modes>
 

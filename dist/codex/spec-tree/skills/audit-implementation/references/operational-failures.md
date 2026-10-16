@@ -21,6 +21,7 @@ Observed implementation-audit failures and their causes and prevention.
 - `coverage_stated_as_findings`
 - `kind_probe_by_invocation`
 - `empty_argument_taken_as_selector`
+- `payload_path_retyped`
 
 </contents>
 
@@ -347,3 +348,27 @@ from the request text when it is empty; an empty substitution binds nothing,
 and only a request with no selector is the missing-input case.
 
 </empty_argument_taken_as_selector>
+
+<payload_path_retyped>
+
+**A retyped payload path voided the run**
+
+What happened: Claude wrote a scope payload with the file-write tool, then typed
+the path into `scope add --payload` from memory. The typed scratch directory
+differed from the reported one by a character, the command exited nonzero
+naming the payload file as absent, and the run sealed no verdict.
+
+Why it failed: A scratch directory name is long and differs from its neighbours
+by a few characters, so retyping it is a transcription task with no later
+referent to contradict it. The failure surfaced only at the command.
+
+How to avoid: Copy the scratch directory the harness names into each payload
+path character for character, and pass each scope-add and finding-add command
+the path exactly as the file-write result reports it. Stop before the command
+when the reported path lies outside that directory by whole path components,
+naming the reported path. Rerun a scope-add or finding-add command once, with
+the path copied from the file-write result, when its diagnostic names the
+payload file as absent; on a second failure return the blocked diagnostic
+naming the run token.
+
+</payload_path_retyped>

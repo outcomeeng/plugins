@@ -60,8 +60,7 @@ Run these stages in order. Each names what holds before the next begins, and
    `base..head` scope, re-issuing a truncated or partial read in bounded
    ranges until the body is complete, per the subject-body constraint.
 6. **Record.** Hold each unit planned until its concern returns a final result,
-   classify each returned finding per the touched-text reference, then persist per `<coverage_model>`.
-   NEVER accept a finding raised before stage 3 loaded that concern's standards and overlays — withdraw it.
+   classify each returned finding per the touched-text reference, then persist per `<coverage_model>`. NEVER accept a finding raised before stage 3 loaded that concern's standards and overlays — withdraw it.
 7. **Reconcile, then finish.** Run the bundled reconciler; `finish` is
    reachable only from its zero exit:
 
@@ -335,11 +334,12 @@ way:
 spx verification run finding add --verification-type audit --scope-type changeset --scope '<base>..<head>' --run '<token>' --idempotency-key '<stable-scope-key>:<rule>' --payload '<finding-file>'
 ```
 
-- ALWAYS write each scope and finding payload with the file-write tool to its own file in the scratch directory the harness names for the session, under a name unique to this run and payload, such as `<run-token>-scope-<n>.json` and `<run-token>-finding-<n>.json`. Where the harness names no scratch directory, use the one the hosting environment designates, such as `$RUNNER_TEMP` on a hosted runner.
-- ALWAYS write only payload files with the file-write tool.
-- ALWAYS pass `--payload` the path exactly as the file-write tool's result reports it, copied from that result, never retyped.
-- ALWAYS pass the file as the value of `--payload`, its path written out literally.
-- ALWAYS add each scope unit and each finding with its own literal command and its own payload file, one at a time, and stop the audit at the first command that exits nonzero, returning the `<verdict_format>` blocked diagnostic.
+- ALWAYS copy the scratch directory the harness names for the session into each payload path character for character, and write each scope and finding payload with the file-write tool to its own file there, under a name unique to this run and payload, such as `<run-token>-scope-<n>.json` and `<run-token>-finding-<n>.json`. Where the harness names no scratch directory, use the one the hosting environment designates, such as `$RUNNER_TEMP` on a hosted runner.
+- ALWAYS stop before the command that reads a payload file when the file-write result reports a path that the scratch directory does not contain by whole path components, returning the `<verdict_format>` blocked diagnostic naming the reported path.
+- ALWAYS pass `--payload` the path exactly as the file-write tool's result reports it, copied from that result, never retyped from memory; pass `--input` the start-input path named in the resolver's `--output` argument, written out literally.
+- ALWAYS write only payload files with the file-write tool, and pass each file as the value of `--payload`, its path written out literally.
+- ALWAYS add each scope unit and each finding with its own literal command and its own payload file, one at a time, and stop the audit at the first command that exits nonzero, other than the one rerun on an absent-payload diagnostic that the next bullet allows, returning the `<verdict_format>` blocked diagnostic.
+- ALWAYS, when a scope-add or finding-add command exits nonzero with a diagnostic that names its payload file as absent, run that command once more with the `--payload` path copied from the file-write result; on a second failure, stop with the `<verdict_format>` blocked diagnostic naming the run token. A `run start` whose diagnostic names its `--input` file as absent runs no second time, because the resolver wrote that file and no file-write result names it: stop with the `<verdict_format>` blocked diagnostic.
 - NEVER send a payload through a heredoc, a pipe, or an inline argument, and never build one with an interpreter or `printf` stage — the dangerous-command guard blocks those forms.
 - NEVER remove a payload file; the harness clears its scratch directory.
 
@@ -397,7 +397,7 @@ Each expected unit carries the scope payload in `<verification_run_contract>`: o
 - After a concern returns, queue one path-scoped row per inspected path, carrying a stable path-scoped unit id, the exact path in `subject`, and `coverageStatus: audited`. NEVER record fewer rows than the concern returned paths, and NEVER collapse several inspected paths into one representative row — the recorded subject set is the evidence that the inspection happened, so a reduced set is an unverifiable claim.
 - Queue that concern's complete scope rows BEFORE any of its findings. A finding is recorded against coverage already accepted, never in place of it; recording a row only where a finding landed states the findings as the coverage.
 - Queue each returned finding on touched text after those scope rows, associated with its matching path-scoped unit. A finding outside touched text is queued nowhere: it is returned as `filed` under `<verdict_format>`.
-- Persist queued units one `spx verification run scope add` command at a time, ordered by the order each kind first appears in the selection, then concern order `code`, `tests`, `architecture`, preserving each command result before the next mutation and stopping at the first nonzero exit.
+- Persist queued units one `spx verification run scope add` command at a time, ordered by the order each kind first appears in the selection, then concern order `code`, `tests`, `architecture`, preserving each command result before the next mutation and stopping at the first nonzero exit, other than the one rerun on an absent-payload diagnostic that `<verification_run_contract>` allows.
 - Derive the concern's finding count from the accepted finding rows; NEVER emit a custom count SPX discards.
 - A concern returning no complete result for a required unit MUST name the failed operation or absent prerequisite. When it names neither, drive the concern to a final result rather than recording a non-audited status.
 - NEVER manufacture a completed result from Claude's own inspection in place of a concern result.
@@ -479,7 +479,7 @@ The rendered SPX projection is the inspection surface. Do not hand-format a comp
 
 For a failed preparation, concern invocation, payload submission, or projection, read
 `${SKILL_DIR}/references/operational-failures.md` to diagnose the observed
-boundary; preserve the exact diagnostic and apply the no-retry rule, since these records authorize no replacement invocation.
+boundary; preserve the exact diagnostic and apply the no-retry rule, since these records authorize no replacement invocation; the one rerun of a scope-add or finding-add command whose diagnostic names its payload file as absent, under `<verification_run_contract>`, is the only retry.
 
 </failure_modes>
 
