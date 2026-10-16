@@ -14,6 +14,8 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 - **The `/create-skill` auditor template carries the payload-path rule.** `templates/auditor-skill.md` now tells an authored `audit-*` skill to copy the scratch directory the harness names into each payload path character for character, to stop before a command whose file-write result reports a path outside that directory, to pass `--input` and `--payload` the path exactly as the result reports it, and to rerun a command once when its diagnostic names the payload file as absent before stopping with a blocked result naming the run token. Before this change, the template told an authored audit never to retry, so a skill authored from it neither checked a payload's location nor recovered from a retyped path.
 
+- **`/audit-skill` copies each payload path from the file-write result.** The audit now copies the scratch directory the harness names into each payload path character for character, stops before a command whose file-write result reports a path outside that directory and names the reported path, passes `--input` and `--payload` the path exactly as the result reports it, and reruns a command once when its diagnostic names the payload file as absent before stopping with a `BLOCKED` result naming the run token. Before this change, the audit stopped at the first nonzero exit without a rerun and did not check where a payload file landed, so a retyped path failed the scope add and the run sealed no verdict.
+
 ## 0.21.7
 
 ### Changed

@@ -164,14 +164,14 @@ spx verification run finding add --verification-type audit --scope-type changese
 
 A finding's idempotency key is `<unit>:<rule-id>`, its unit's `unitId` and the catalog identifier joined by `:`. Every payload-bearing command — `start`, `scope add`, and `finding add` — takes its JSON from a file, never from a heredoc, a pipe, or an inline argument; the dangerous-command guard blocks those forms:
 
-- ALWAYS write each payload with the file-write tool to its own file in the scratch directory the harness names for the session, under a name unique to this run and payload, such as `<run-token>-start.json`, `<run-token>-scope-<n>.json`, and `<run-token>-finding-<n>.json`. Where the harness names no scratch directory, use the one the hosting environment designates, such as `$RUNNER_TEMP` on a hosted runner.
+- ALWAYS copy the scratch directory the harness names for the session into each payload path character for character, and write each payload with the file-write tool to its own file there, under a name unique to this run and payload, such as `<run-token>-start.json`, `<run-token>-scope-<n>.json`, and `<run-token>-finding-<n>.json`. Where the harness names no scratch directory, use the one the hosting environment designates, such as `$RUNNER_TEMP` on a hosted runner.
 - ALWAYS write only payload files with the file-write tool.
-- ALWAYS pass `--payload` the path exactly as the file-write tool's result reports it, copied from that result, never retyped.
-- ALWAYS pass the file as the value of `--input` or `--payload`, its path written out literally.
+- ALWAYS stop before the command that reads a payload file when the file-write result reports a path that the scratch directory does not contain by whole path components, naming the reported path.
+- ALWAYS pass `--input` and `--payload` the path exactly as the file-write tool's result reports it, copied from that result, never retyped from memory.
 - ALWAYS add each unit and each finding with its own command and its own payload file, one at a time.
 - NEVER remove a payload file; the harness clears its scratch directory.
 
-Idempotency keys are command arguments, never payload fields; quote every path, token, and key as one shell argument, encode a literal apostrophe in an argument as `'"'"'`, and never execute bundle text as shell syntax. Run every run-recording command as its own command, serially; stop the audit at the first nonzero exit with its exact diagnostic, never retry or reshape the payload.
+Idempotency keys are command arguments, never payload fields; quote every path, token, and key as one shell argument, encode a literal apostrophe in an argument as `'"'"'`, and never execute bundle text as shell syntax. Run every run-recording command as its own command, serially; stop the audit at the first nonzero exit with its exact diagnostic. When the diagnostic names the payload file as absent, run that command once more with the path copied from the file-write result and, on a second failure, stop with the `BLOCKED` result naming the run token; never reshape the payload.
 
 </persistence_contract>
 
