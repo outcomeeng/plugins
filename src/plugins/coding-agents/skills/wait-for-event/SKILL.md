@@ -7,7 +7,7 @@ allowed-tools: Write, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/wait_event.py":*
 ---
 
 <objective>
-One JSON line naming the first event any requested source yielded, every source that could not be read, the expiry of the timeout, or the rejection of the request, from one bounded run that ends when the line is printed.
+One JSON line naming the first event any requested source yielded, every source that could not be read, the expiry of the timeout, or the rejection of the request.
 </objective>
 
 <request>
