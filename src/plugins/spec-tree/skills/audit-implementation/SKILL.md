@@ -339,7 +339,7 @@ spx verification run finding add --verification-type audit --scope-type changese
 - ALWAYS pass `--payload` the path exactly as the file-write tool's result reports it, copied from that result, never retyped from memory; pass `--input` the start-input path named in the resolver's `--output` argument, written out literally.
 - ALWAYS write only payload files with the file-write tool, and pass each file as the value of `--payload`, its path written out literally.
 - ALWAYS add each scope unit and each finding with its own literal command and its own payload file, one at a time, and stop the audit at the first command that exits nonzero, other than the one rerun on an absent-payload diagnostic that the next bullet allows, returning the `<verdict_format>` blocked diagnostic.
-- ALWAYS, when a command exits nonzero with a diagnostic that names its payload file as absent, run that command once more with the path copied from the file-write result; on a second failure, stop with the `<verdict_format>` blocked diagnostic naming the run token.
+- ALWAYS, when a scope-add or finding-add command exits nonzero with a diagnostic that names its payload file as absent, run that command once more with the `--payload` path copied from the file-write result; on a second failure, stop with the `<verdict_format>` blocked diagnostic naming the run token. A `run start` whose diagnostic names its `--input` file as absent runs no second time, because the resolver wrote that file and no file-write result names it: stop with the `<verdict_format>` blocked diagnostic.
 - NEVER send a payload through a heredoc, a pipe, or an inline argument, and never build one with an interpreter or `printf` stage — the dangerous-command guard blocks those forms.
 - NEVER remove a payload file; the harness clears its scratch directory.
 
@@ -479,7 +479,7 @@ The rendered SPX projection is the inspection surface. Do not hand-format a comp
 
 For a failed preparation, concern invocation, payload submission, or projection, read
 `${CLAUDE_SKILL_DIR}/references/operational-failures.md` to diagnose the observed
-boundary; preserve the exact diagnostic and apply the no-retry rule, since these records authorize no replacement invocation; the one rerun of a command whose diagnostic names its payload file as absent, under `<verification_run_contract>`, is the only retry.
+boundary; preserve the exact diagnostic and apply the no-retry rule, since these records authorize no replacement invocation; the one rerun of a scope-add or finding-add command whose diagnostic names its payload file as absent, under `<verification_run_contract>`, is the only retry.
 
 </failure_modes>
 

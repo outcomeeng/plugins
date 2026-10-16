@@ -363,11 +363,12 @@ by a few characters, so retyping it is a transcription task with no later
 referent to contradict it. The failure surfaced only at the command.
 
 How to avoid: Copy the scratch directory the harness names into each payload
-path character for character, and pass each command the path exactly as the
-file-write result reports it. Stop before the command when the reported path
-lies outside that directory by whole path components, naming the reported path.
-Rerun a command once, with the path copied from the file-write result, when its
-diagnostic names the payload file as absent; on a second failure return the
-blocked diagnostic naming the run token.
+path character for character, and pass each scope-add and finding-add command
+the path exactly as the file-write result reports it. Stop before the command
+when the reported path lies outside that directory by whole path components,
+naming the reported path. Rerun a scope-add or finding-add command once, with
+the path copied from the file-write result, when its diagnostic names the
+payload file as absent; on a second failure return the blocked diagnostic
+naming the run token.
 
 </payload_path_retyped>
