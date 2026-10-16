@@ -13,14 +13,15 @@ Use skill `python:python-architecture-standards`.
 Use skill `python:python-test-standards`.
 
 <objective>
-Binding Python ADRs that constrain implementation, each reported with its canonical path, decision summary, and binding constraints.
+A binding Python ADR whose testability constraints live as ALWAYS/NEVER rules under the `## Verification` section's `### Audit` subsection.
 </objective>
 
 <foundational_stance>
-Standards are pre-loaded by the `require_skill` directives above. `/python-architecture-standards` defines the ADR sections and their prohibitions; `/python-test-standards` defines evidence, level, runner, and dependency-injection constraints.
+Standards are pre-loaded by the `require_skill` directives above. `/python-architecture-standards` defines the ADR sections; `/python-test-standards` defines evidence, level, runner, and dependency-injection constraints.
 
-- Author each ADR to the shape `/python-architecture-standards` defines.
-- Before writing any ADR, Use skill `spec-tree:verify` for verification routing and Use skill `python:author-python-test` for Python test authoring conventions.
+- An ADR follows the authoritative template: title + decision stated directly, Rationale, Invariants (optional), Verification.
+- Testability constraints go under `## Verification`'s `### Audit` subsection as ALWAYS/NEVER rules — never in a separate Testing Strategy section.
+- Before writing any ADR, consult `/verify`, `/author-python-test`, and `/python-test-standards` for verification routing and Python-specific test standards.
 
 </foundational_stance>
 
@@ -46,7 +47,7 @@ The skill produces ADRs at the scope of the decision:
 | Node-specific  | `spx/{NN}-{slug}.enabler/{NN}-{slug}.adr.md`     | "Clone tree approach for snapshots"    |
 | Nested node    | `spx/.../{NN}-{slug}.outcome/{NN}-{slug}.adr.md` | "Use rclone sync with --checksum"      |
 
-ADR numbering uses the sparse integer index [10, 99]; a lower index is a dependency that higher-index ADRs may rely on. Insert at `floor((left + right) / 2)`, append at `floor((last + 99) / 2)`, and use 21 for the first ADR in scope. Within a scope, adr-21 is decided before adr-37. Cross-scope dependencies are documented explicitly in the ADR's decision statement using markdown links. Use skill `spec-tree:author` for the complete ordering rules.
+ADR numbering uses the sparse integer index [10, 99]; a lower index is a dependency that higher-index ADRs may rely on. Insert at `floor((left + right) / 2)`, append at `floor((last + 99) / 2)`, and use 21 for the first ADR in scope. Within a scope, adr-21 is decided before adr-37. Cross-scope dependencies are documented explicitly in the ADR's decision statement using markdown links. See `/author` for the complete ordering rules.
 </outputs>
 
 <adr_creation_protocol>
@@ -58,22 +59,27 @@ Execute these phases in order.
 
 **Phase 2 — Analyze Python-specific implications.** For each decision, consider the type system (annotations, protocols), the architecture pattern, security boundaries, and testability. See `<architectural_principles>`, which links the per-concern reference file for each.
 
-**Phase 3 — Write ADRs.** Author each ADR decision-first to the shape `/python-architecture-standards` `<adr_sections>` defines. State the decision as permanent truth in 1–3 sentences; name a rejected alternative in the Rationale only when it sharpens the decision. Write the dependency-injection testability constraints as `### Audit` rules carrying `([audit])`.
+**Phase 3 — Write ADRs.** Use the authoritative template, decision-first:
+
+1. Title + decision: `# {Decision Name}`, then the decision stated directly as permanent truth in 1–3 sentences. No `Purpose` heading, no `Context` section; business impact and constraints fold into the decision statement and Rationale.
+2. Rationale: why this is right given the constraints; name a rejected alternative only when it sharpens the decision.
+3. Invariants (optional): algebraic properties for all governed code.
+4. Verification: ALWAYS/NEVER rules grouped under `### Testing` (`[{assertion type}]`), `### Eval` (`[eval]`), `### Audit` (`[audit]`), ordered by decreasing enforcement strength; the dependency-injection testability constraints are `### Audit` rules carrying `([audit])`.
 
 **Phase 4 — Verify consistency.** No ADR contradicts another; node ADRs align with ancestor ADRs; nested ADRs do not contradict parent-level ADRs.
 
 **Phase 5 — Return authored ADRs.** Report each canonical ADR path, decision summary, and binding architecture constraints. Audit dispatch and implementation sequencing remain outside this skill.
 
-Common violations to avoid: `l2` assigned to SaaS services, "mock at boundary" language for external services, missing DI Protocol interfaces in the Audit rules, and any mocking language in the ADR.
+Common violations to avoid: a phantom Testing Strategy section, `l2` assigned to SaaS services, "mock at boundary" language for external services, missing DI Protocol interfaces in `## Verification` (`### Audit`), and any mocking language in the ADR.
 </adr_creation_protocol>
 
 <architectural_principles>
 These principles guide every ADR. Each links to the reference carrying the full patterns and code examples.
 
 - **Type safety first** — modern syntax (`X | None`, `list[str]`), no unjustified `Any`, protocols for structural typing, Pydantic at boundaries. See `${CLAUDE_SKILL_DIR}/references/type-system-patterns.md`.
-- **Clean architecture** — ports and adapters, dependency injection through Protocol-typed parameters not globals, a single composition root. See `${CLAUDE_SKILL_DIR}/references/architecture-patterns.md`.
+- **Clean architecture** — DDD entities/value objects/aggregates, dependency injection through parameters not globals, single responsibility, no circular imports. See `${CLAUDE_SKILL_DIR}/references/architecture-patterns.md`.
 - **Security by design** — validate at boundaries, no hardcoded secrets, array-arg subprocess (never `shell=True`), context-aware threat modeling. See `${CLAUDE_SKILL_DIR}/references/security-patterns.md`.
-- **Testability by design** — design for dependency injection (no mocking), prefer pure functions and observable boundaries, and establish constraints that let `/test` select the minimum execution level that gives confidence. ADRs never assign execution levels. See `${CLAUDE_SKILL_DIR}/references/testability-patterns.md`.
+- **Testability by design** — design for dependency injection (no mocking), prefer pure functions and observable boundaries, and establish constraints that let `/test` select the minimum execution level that gives confidence. ADRs never assign execution levels. See `${CLAUDE_SKILL_DIR}/references/testability-patterns.md`, `/python-test-standards`, and `/author-python-test`.
 
 </architectural_principles>
 
@@ -156,7 +162,7 @@ See `${CLAUDE_SKILL_DIR}/references/test-infrastructure-patterns.md` for the ful
 <reference_guides>
 
 - `${CLAUDE_SKILL_DIR}/references/type-system-patterns.md` — Python type-system guidance
-- `${CLAUDE_SKILL_DIR}/references/architecture-patterns.md` — ports, adapters, dependency injection, directory layout
+- `${CLAUDE_SKILL_DIR}/references/architecture-patterns.md` — DDD, hexagonal, DI patterns
 - `${CLAUDE_SKILL_DIR}/references/security-patterns.md` — security-by-design patterns
 - `${CLAUDE_SKILL_DIR}/references/testability-patterns.md` — designing for testability
 - `${CLAUDE_SKILL_DIR}/references/test-infrastructure-patterns.md` — test packaging, pytest config, environment verification
@@ -173,8 +179,8 @@ See `${CLAUDE_SKILL_DIR}/references/test-infrastructure-patterns.md` for the ful
 
 **Claude introduced a noncanonical ADR section**
 
-- **What happened:** Claude added a section the standards template does not define, such as a separate security or testing section.
-- **Why it failed:** Extra sections produce decisions the structural auditor rejects.
+- **What happened:** Claude added Security Context, Testing Strategy, Purpose, Context, or Trade-offs as a separate ADR section.
+- **Why it failed:** The authoritative template's section list is complete; extra sections produce decisions the structural auditor rejects.
 - **How to avoid:** Fold business, threat-model, and trade-off reasoning into the decision statement and Rationale, then place enforceable rules under Verification.
 
 **Claude reintroduced mocking-positive guidance**
@@ -187,8 +193,8 @@ See `${CLAUDE_SKILL_DIR}/references/test-infrastructure-patterns.md` for the ful
 
 <success_criteria>
 
-- Every ADR follows the template `/python-architecture-standards` defines.
-- Testability constraints appear as ALWAYS/NEVER `([audit])` rules under `## Verification`'s `### Audit` subsection, never in a separate section.
+- Every ADR follows the authoritative template (decision-first; Rationale; optional Invariants; Verification with `### Testing` / `### Eval` / `### Audit`).
+- Testability constraints appear as ALWAYS/NEVER `([audit])` rules under `## Verification`'s `### Audit` subsection, never in a separate Testing Strategy section.
 - No mocking language anywhere; external SaaS services are never assigned `l2`.
 - ADRs establish architecture constraints without assigning execution levels.
 - ADRs are placed and numbered per `<outputs>`, consistent with ancestor and sibling decisions.
