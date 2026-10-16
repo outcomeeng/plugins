@@ -152,7 +152,7 @@ Add a finding with `spx verification run finding add` and the same selectors, `-
     "agentOwningPluginVersion": "<spec-tree-plugin-version>",
     "skillOwningPluginVersion": "<spec-tree-plugin-version>"
   },
-  "rule": "<catalog-rule-id>",
+  "rule": "<violated-rule-id>",
   "severity": "<blocking-or-debt>",
   "location": "<subject-path-and-line-or-section>",
   "message": "<designator>: <finding-message>",
