@@ -4,17 +4,16 @@
 from __future__ import annotations
 
 import hashlib
-import importlib.util
 import json
 import os
 import re
 import subprocess
+import sys
 import tempfile
 import time
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
-from types import ModuleType
 from typing import Any, Mapping
 
 SKILLS_ROOT = Path(__file__).resolve().parents[2]
@@ -25,6 +24,15 @@ RESUME_NOTE_FILE = "resume-note.md"
 RUNGS_FILE = "rungs.json"
 QUIET_FILE = "quiet.json"
 OBSERVATIONS_FILE = "observations.json"
+
+ADAPTER_SCHEMA_VERSION = 1
+ADAPTER_RUN = "run"
+ADAPTER_PROJECT_KEY = "project-key"
+ADAPTER_TIMEOUT_SECONDS = 120
+MAIL_RECORD_SCHEMA = 1
+ADAPTER_MAIL = ("operate-agent-mail", "agent_mail")
+ADAPTER_HERDR = ("operate-herdr", "herdr_environment")
+ADAPTER_PROWL = ("operate-prowl", "prowl_environment")
 
 ENVIRONMENT_HERDR = "herdr"
 ENVIRONMENT_PROWL = "prowl"
@@ -79,64 +87,115 @@ class DirectionError(RuntimeError):
     """A stop the skill reports verbatim: it names what failed and changes nothing."""
 
 
-def load_sibling(skill: str, module: str) -> ModuleType:
-    """Import a same-plugin provider script by a path relative to this file."""
-    path = SKILLS_ROOT / skill / "scripts" / f"{module}.py"
-    if not path.is_file():
-        raise DirectionError(
-            f"The provider script {path} does not exist; install the sibling skill "
-            f"coding-agents:{skill} in the same plugin so that {module}.py sits "
-            "under its scripts directory."
-        )
-    spec = importlib.util.spec_from_file_location(f"_direction_{module}", path)
-    if spec is None or spec.loader is None:
-        raise DirectionError(
-            f"The provider script {path} cannot be loaded as a Python module; "
-            f"reinstall the sibling skill coding-agents:{skill} so that {module}.py "
-            "is a readable Python 3.13 or 3.14 file."
-        )
-    loaded = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(loaded)
-    return loaded
+class AdapterClient:
+    """One coding-agents adapter, reached through its own command line.
+
+    The adapter script sits in its sibling skill's scripts directory, found
+    relative to this file. The client sends one JSON request on standard input
+    and reads one JSON result from standard output; the adapter alone builds
+    every environment, mail, and repository command.
+    """
+
+    def __init__(self, adapter: tuple[str, str]) -> None:
+        self._skill, self._module = adapter
+
+    def call(
+        self, cli_operation: str, payload: Mapping[str, Any] | None = None
+    ) -> dict[str, Any]:
+        path = SKILLS_ROOT / self._skill / "scripts" / f"{self._module}.py"
+        if not path.is_file():
+            raise DirectionError(
+                f"The adapter script {path} does not exist; install the sibling skill "
+                f"coding-agents:{self._skill} in the same plugin so that "
+                f"{self._module}.py sits under its scripts directory."
+            )
+        try:
+            completed = subprocess.run(
+                [sys.executable, str(path), cli_operation],
+                input=json.dumps(payload if payload is not None else {}),
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=ADAPTER_TIMEOUT_SECONDS,
+            )
+        except (OSError, subprocess.TimeoutExpired) as error:
+            raise DirectionError(
+                f"The adapter {self._module} {cli_operation} could not run: {error}; "
+                f"run coding-agents:{self._skill} directly to compare its result."
+            ) from error
+        try:
+            result = json.loads(completed.stdout)
+        except json.JSONDecodeError as error:
+            detail = completed.stderr.strip() or "no command detail"
+            raise DirectionError(
+                f"The adapter {self._module} {cli_operation} printed no JSON result "
+                f"({error.msg}): {detail}; run coding-agents:{self._skill} directly "
+                "to compare its result."
+            ) from error
+        if not isinstance(result, dict):
+            raise DirectionError(
+                f"The adapter {self._module} {cli_operation} printed a "
+                f"{type(result).__name__}, not a JSON object; run "
+                f"coding-agents:{self._skill} directly to compare its result."
+            )
+        return result
+
+    def execute(self, request: Mapping[str, Any]) -> dict[str, Any]:
+        return self.call(ADAPTER_RUN, request)
+
+
+class MailClient(AdapterClient):
+    """The agent-mail adapter: the project key, record building, and operations."""
+
+    def __init__(self) -> None:
+        super().__init__(ADAPTER_MAIL)
+
+    def project_key(self) -> str:
+        result = self.call(ADAPTER_PROJECT_KEY)
+        key = result.get("projectKey")
+        if not isinstance(key, str) or not key:
+            raise DirectionError(
+                f"the common Git directory cannot be resolved: "
+                f"{result.get('detail') or result.get('status')}; run the skill "
+                "from inside a Git checkout of the repository."
+            )
+        return key
+
+    def message_record(
+        self,
+        *,
+        kind: str,
+        correlation: str,
+        sender: str,
+        recipient: str,
+        subject: str,
+        body: str,
+        ack_required: bool = False,
+    ) -> dict[str, Any]:
+        return {
+            "schema": MAIL_RECORD_SCHEMA,
+            "kind": kind,
+            "correlation": correlation,
+            "sender": sender,
+            "recipient": recipient,
+            "subject": subject,
+            "body": body,
+            "ackRequired": ack_required,
+        }
 
 
 def override_file_name(display_name: str) -> str:
     return display_name.lower().replace(" ", "-") + ".md"
 
 
-def common_directory(mail: ModuleType) -> Path:
+def common_directory(mail: Any) -> Path:
     """The repository's common Git directory, resolved by the mail adapter."""
-    try:
-        return Path(mail.resolve_project_key(mail.SubprocessRunner()))
-    except mail.AgentMailError as error:
-        raise DirectionError(
-            f"the common Git directory cannot be resolved: {error}; run the skill "
-            "from inside a Git checkout of the repository."
-        ) from error
+    return Path(mail.project_key())
 
 
 def invocation_checkout() -> Path:
-    """The top-level directory of the checkout the skill runs from."""
-    try:
-        result = subprocess.run(
-            ["git", "rev-parse", "--show-toplevel"],
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=30,
-        )
-    except (FileNotFoundError, subprocess.TimeoutExpired) as error:
-        raise DirectionError(
-            f"the invocation checkout cannot be resolved: {error}; run the skill "
-            "from inside a Git checkout of the repository."
-        ) from error
-    if result.returncode != 0 or not result.stdout.strip():
-        detail = result.stderr.strip() or "no command detail"
-        raise DirectionError(
-            f"the invocation checkout cannot be resolved: {detail}; run the skill "
-            "from inside a Git checkout of the repository."
-        )
-    return Path(result.stdout.strip())
+    """The checkout the skill runs from: the working directory of the invocation."""
+    return Path.cwd()
 
 
 def split_front_matter(text: str) -> tuple[str, str]:
@@ -406,27 +465,35 @@ class Pane:
     status: str | None
     name: str | None
     kind: str | None
+    last_prompt_origin: str | None = None
+    context_percent: float | None = None
+
+
+def _optional_text(value: object) -> str | None:
+    return value if isinstance(value, str) and value else None
+
+
+def _optional_percent(value: object) -> float | None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    return float(value)
 
 
 class Environments:
     """Every pane operation, reached through the coding-agents environment adapters."""
 
-    def __init__(
-        self, herdr: ModuleType, prowl: ModuleType, runners: Mapping[str, Any]
-    ):
-        self._modules = {ENVIRONMENT_HERDR: herdr, ENVIRONMENT_PROWL: prowl}
-        self._runners = runners
+    def __init__(self, herdr: Any, prowl: Any):
+        self._adapters = {ENVIRONMENT_HERDR: herdr, ENVIRONMENT_PROWL: prowl}
 
     def _execute(
         self, environment: str, operation: str, **arguments: Any
     ) -> dict[str, Any]:
-        module = self._modules[environment]
         request = {
-            "schemaVersion": module.SCHEMA_VERSION,
+            "schemaVersion": ADAPTER_SCHEMA_VERSION,
             "operation": operation,
             "arguments": arguments,
         }
-        return module.execute(request, self._runners[environment])
+        return self._adapters[environment].execute(request)
 
     def panes(self, environment: str) -> list[Pane]:
         if environment == ENVIRONMENT_HERDR:
@@ -445,6 +512,8 @@ class Environments:
                     item.get("agent_status"),
                     item.get("name"),
                     item.get("agent"),
+                    _optional_text(item.get("last_prompt_origin")),
+                    _optional_percent(item.get("context_percent")),
                 )
                 for item in result["agents"]
             ]
@@ -455,20 +524,7 @@ class Environments:
                 f"{result.get('detail')}; confirm Prowl is running through "
                 "coding-agents:operate-prowl and run the roster again."
             )
-        try:
-            participants = self._modules[environment].participants_from_agents(
-                result["response"]
-            )
-        except self._modules[environment].ProwlEnvironmentError as error:
-            raise DirectionError(
-                f"prowl agents returned a response the adapter cannot read: {error}; "
-                "run the Prowl agents operation through coding-agents:operate-prowl "
-                "and compare its response."
-            ) from error
-        return [
-            Pane(environment, p["pane"], p["worktree"], None, p["agent"], None)
-            for p in participants
-        ]
+        return _prowl_panes(result.get("response"))
 
     def read(self, pane: Pane) -> str:
         if pane.environment == ENVIRONMENT_HERDR:
@@ -515,6 +571,43 @@ class Environments:
         )
 
 
+def _prowl_panes(response: object) -> list[Pane]:
+    """The panes of a public Prowl agents response."""
+    data = response.get("data") if isinstance(response, dict) else None
+    agents = data.get("agents") if isinstance(data, dict) else None
+    if not isinstance(agents, list):
+        raise DirectionError(
+            "prowl agents returned a response with no data.agents list; run the "
+            "Prowl agents operation through coding-agents:operate-prowl and "
+            "compare its response."
+        )
+    panes: list[Pane] = []
+    for item in agents:
+        pane = item.get("pane") if isinstance(item, dict) else None
+        worktree = item.get("worktree") if isinstance(item, dict) else None
+        pane_id = pane.get("id") if isinstance(pane, dict) else None
+        cwd = worktree.get("path") if isinstance(worktree, dict) else None
+        if not isinstance(pane_id, str) or not isinstance(cwd, str):
+            raise DirectionError(
+                "prowl agents returned an agent without a pane id and a worktree "
+                "path; run the Prowl agents operation through "
+                "coding-agents:operate-prowl and compare its response."
+            )
+        panes.append(
+            Pane(
+                ENVIRONMENT_PROWL,
+                pane_id,
+                cwd,
+                None,
+                _optional_text(item.get("id")),
+                None,
+                _optional_text(item.get("last_prompt_origin")),
+                _optional_percent(item.get("context_percent")),
+            )
+        )
+    return panes
+
+
 def _screen_text(response: object) -> str:
     """Collect the terminal text fields of a Prowl read response."""
     if isinstance(response, dict):
@@ -533,17 +626,12 @@ def at_question_screen(screen: str, status: str | None) -> bool:
     )
 
 
-def guard_reasons(
-    pane: Pane,
-    screen: str,
-    untouchable: list[str],
-    last_prompt_origin: str | None = None,
-) -> list[str]:
+def guard_reasons(pane: Pane, screen: str, untouchable: list[str]) -> list[str]:
     """Why no input may reach this pane; an empty list means the pane is open."""
     reasons: list[str] = []
     if pane.pane_id in untouchable or (pane.name or "") in untouchable:
         reasons.append("untouchable")
-    if last_prompt_origin == OPERATOR_ORIGIN:
+    if pane.last_prompt_origin == OPERATOR_ORIGIN:
         reasons.append("operator-prompt")
     if at_question_screen(screen, pane.status):
         reasons.append("question-or-approval-screen")
