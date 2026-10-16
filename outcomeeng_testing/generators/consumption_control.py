@@ -85,3 +85,21 @@ def unsupported_models() -> st.SearchStrategy[str]:
     return st.text(
         alphabet="abcdefghijklmnopqrstuvwxyz0123456789", min_size=1, max_size=30
     ).map(lambda suffix: "unsupported-model-" + suffix)
+
+
+def alert_reads() -> st.SearchStrategy[tuple[list[tuple[str, int, int]], int]]:
+    """Vary stored alert records over identities, recording offsets, and the read cutoff.
+
+    Offsets draw from a narrow range so records share instants, and the cutoff
+    ranges from before the earliest to after the latest possible offset so it
+    lands on, between, and outside the recorded instants.
+    """
+    record = st.tuples(
+        st.binary(min_size=4, max_size=4).map(bytes.hex),
+        st.integers(min_value=0, max_value=12),
+        st.integers(min_value=1, max_value=1_000),
+    )
+    return st.tuples(
+        st.lists(record, max_size=12, unique_by=lambda value: value[0]),
+        st.integers(min_value=-1, max_value=13),
+    )
