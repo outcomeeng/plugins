@@ -189,18 +189,6 @@ Quote every idempotency key as one single-quoted argument; encode a literal apos
 
 </audit_workflow>
 
-<rule_catalog>
-
-Every finding carries one rule below; the severity is `blocking` or `debt` as `${CLAUDE_SKILL_DIR}/references/touched-text.md` defines it.
-
-| Rule                  | Raised when                                                                           |
-| --------------------- | ------------------------------------------------------------------------------------- |
-| `assertion-unmet`     | The subject the assertion names does not satisfy the constraint the assertion states. |
-| `subject-unlocatable` | A subject the assertion's text names cannot be located in the product.                |
-| `subject-unnamed`     | The assertion's text names no identifiable subject.                                   |
-
-</rule_catalog>
-
 <verdict_format>
 
 Return the run token, the run file, and the unchanged `spx verification run render` output; its `terminalStatus` is authoritative. Add no `APPROVED` or `REJECTED` envelope and no restated findings. After the projection, return each standing finding on its own line in the form `${CLAUDE_SKILL_DIR}/references/touched-text.md` gives, or `filed: none`.
@@ -230,3 +218,15 @@ stderr: <exact-stderr-or-none>
 - The same spec, subjects, and base yield the same units, finding keys, and terminal status.
 
 </success_criteria>
+
+<rule_catalog>
+
+Every finding carries one rule below; the severity is `blocking` or `debt` as `${CLAUDE_SKILL_DIR}/references/touched-text.md` defines it.
+
+| Rule                  | Raised when                                                                           |
+| --------------------- | ------------------------------------------------------------------------------------- |
+| `assertion-unmet`     | The subject the assertion names does not satisfy the constraint the assertion states. |
+| `subject-unlocatable` | A subject the assertion's text names cannot be located in the product.                |
+| `subject-unnamed`     | The assertion's text names no identifiable subject.                                   |
+
+</rule_catalog>
