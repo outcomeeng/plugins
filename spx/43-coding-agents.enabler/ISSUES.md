@@ -52,3 +52,21 @@ The apply flow's evidence repair scans for the rejected class inside the linked 
 **Why separate**: the instance belongs to `spx/43-coding-agents.enabler/18-prowl-environment.enabler`, whose skill surface carries its own audit gate and plugin bump.
 
 **Evidence**: `instructions:skill-auditor` finding `f-007`, rule `hedged_never_clause`, against the agent-mail skill surface committed at `5f61aa80ce127256f1829e96535f33a1a0295227`, then a sweep over `src/plugins/*/skills/*/SKILL.md` that found the same clause in the herdr and Prowl sibling descriptions and no others.
+
+## The adapter decisions' bundled-script ownership lines contradict the root import rule
+
+Status: `filed`. Three adapter decisions declare that one skill owns all bundled-script access, which reads as binding composing skills to the skill surface, while the root decision permits a `__file__`-relative import between skills of the same plugin. This node is the lowest common ancestor of the three adapter nodes.
+
+**Evidence.** Each adapter decision states the rule:
+
+- [`spx/43-coding-agents.enabler/18-agent-mail.enabler/21-agent-mail-adapter.adr.md`](spx/43-coding-agents.enabler/18-agent-mail.enabler/21-agent-mail-adapter.adr.md), line 49: "ALWAYS: `/operate-agent-mail` owns all bundled-script access; composing skills invoke the capability through the skill surface rather than manufacturing a cross-skill filesystem path ([audit])"
+- [`spx/43-coding-agents.enabler/18-herdr-environment.enabler/21-herdr-adapter.adr.md`](spx/43-coding-agents.enabler/18-herdr-environment.enabler/21-herdr-adapter.adr.md), line 59: "ALWAYS: `/operate-herdr` owns all bundled-script access; composing skills invoke the capability through the skill surface rather than manufacturing a cross-skill filesystem path ([audit])"
+- [`spx/43-coding-agents.enabler/18-prowl-environment.enabler/15-prowl-adapter.adr.md`](spx/43-coding-agents.enabler/18-prowl-environment.enabler/15-prowl-adapter.adr.md), line 38: "ALWAYS: `/operate-prowl` owns all bundled-script access; composing skills invoke the capability through the runtime skill surface rather than manufacturing a cross-skill filesystem path ([audit])"
+
+[`spx/43-coding-agents.enabler/21-agent-communication.enabler/21-message-record.adr.md`](spx/43-coding-agents.enabler/21-agent-communication.enabler/21-message-record.adr.md) rests its rejection of an adapter import on the first line: "A `__file__`-relative import of the adapter is rejected: [`spx/43-coding-agents.enabler/18-agent-mail.enabler/21-agent-mail-adapter.adr.md`](spx/43-coding-agents.enabler/18-agent-mail.enabler/21-agent-mail-adapter.adr.md) makes `/operate-agent-mail` the owner of all bundled-script access, and a script that reaches across skill directories manufactures the cross-skill path that decision forbids."
+
+The root decision [`spx/13-plugin-and-runtime-conventions.adr.md`](spx/13-plugin-and-runtime-conventions.adr.md) states: "A consumer skill's script reaches a provider skill's logic by a `__file__`-relative import only when the provider skill belongs to the same plugin, because a plugin's runtime relies only on its own installed tree; no script imports or names a path into another plugin's files or the plugin cache."
+
+**Impact**: the three lines forbid every cross-skill filesystem path, including the same-plugin `__file__`-relative import the root decision permits, and the message-record rationale rests on that reading. A lower-index decision contradicts the root decision that governs it.
+
+**Settlement condition**: outcomeeng/changes#476 restates the three adapter decisions' import statements to cite the root rule.
