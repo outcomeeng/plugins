@@ -60,7 +60,7 @@ A scope unit:
 
 Add a unit with `spx verification run scope add --verification-type audit --scope-type <file-or-changeset> --scope <scope> --run <token> --payload <payload-file> --idempotency-key '<unitId>'`. The root unit omits the `parentUnitId` field.
 
-Add a finding with `spx verification run finding add` and the same selectors, `--payload <payload-file>`, and `--idempotency-key '<finding-key>'`, the finding key `${CLAUDE_SKILL_DIR}/references/touched-text.md` defines as `<unitId>:<rule>`. Its payload names an accepted unit; `producerIdentity` repeats that unit's `expectedProducer`; `producerProvenance` carries the spec-tree plugin version the request contract retained in both version fields, and no `toolVersion`; `rule` is one identifier from `<rule_catalog>` in `${CLAUDE_SKILL_DIR}/references/test-evidence-rules.md`, and `severity` is the severity that row declares; name no identifier outside that catalog. `evidence.expected` names the remediation owner the catalog row declares.
+Add a finding with `spx verification run finding add` and the same selectors, `--payload <payload-file>`, and `--idempotency-key '<finding-key>'`, the finding key `<unitId>:<rule>`. Its payload names an accepted unit; `producerIdentity` repeats that unit's `expectedProducer`; `producerProvenance` carries the spec-tree plugin version the request contract retained in both version fields, and no `toolVersion`; `rule` is one identifier from the rule catalog that SKILL.md names, and `severity` is the severity that row declares; name no identifier outside that catalog. `evidence.expected` names the remediation owner the catalog row declares.
 
 ```json
 {
