@@ -65,12 +65,6 @@ result.
 head `843ddd709b058970d414ec755cc10121ff6bb5ff`. The same audit approved the
 corrected least-privilege tool and profile configuration.
 
-## The shipped coherence audit, its wrapper and its eval still produce the structured JSON verdict
-
-The assertions state the sealed-run verdict model: the audit run's terminal status is `approved` or `rejected`, an undecidable unit is `incomplete`, and the wrapper relays the run token, the run file and the rendered projection. The shipped `audit-changeset-coherence` skill, the `changeset-coherence-auditor` wrapper and the `evals/coherence-verdict` suite still produce and score the `APPROVED`, `REJECTED` and `UNKNOWN` JSON verdict, so the `[eval]` expectations and the `[audit]` wrapper assertion describe behavior the shipped producer does not yet have.
-
-**Settlement condition.** outcomeeng/changes#513 rewrites the skill and wrapper onto one `spx verification run` over the exact committed scope and migrates the producer-coupled eval expectations, under an unchanged semantic verdict model.
-
 ## The compliance section holds eleven assertions
 
 The Compliance section holds eleven assertions, above the guideline of about seven for a decomposition candidate. The node stays whole: one `PROVIDES` statement covers every assertion, and the verdict states, the cluster partition, the collapse ordering, the evidence boundaries and the structured projection are one classification contract that the eval suite scores as one producer. Splitting them yields children whose assertions cannot be verified apart. A Verifier skips this decomposition signal.
