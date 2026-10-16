@@ -329,7 +329,7 @@ class _BoundedRunner:
         *,
         timeout_seconds: int = 30,
     ) -> Any:
-        bound = max(1, min(int(timeout_seconds), math.ceil(self._remaining())))
+        bound = max(1, min(int(timeout_seconds), math.floor(self._remaining())))
         return self._inner.run(argv, stdin, timeout_seconds=bound)
 
 
@@ -515,6 +515,9 @@ def wait_event(
         unreadable: list[Unreadable] = []
         for source in others:
             if isinstance(source, PaneSource):
+                # A herdr read needs one whole second before the deadline.
+                if remaining() < 1:
+                    continue
                 outcome: Event | Unreadable | None = _poll_pane(
                     source, runner, remaining
                 )
