@@ -74,39 +74,6 @@ because Change #94 treats the suite as evidence and cannot alter its oracle.
 fixture shape, supplies the matching module-resolution artifact or uses a real
 relative import, and establishes the revised case through both full suites.
 
-## The test-evidence audit carries no guard against synchronizing the audited subject
-
-The test-evidence audit skill loads `/contextualize` for its target node, and `/contextualize` runs `/sync-base`, which rebases the audited branch. `spec-tree:audit-implementation` states that an audit never synchronizes, rebases or otherwise mutates the audited subject; this node's audit path carries no such guard.
-
-**Evidence.** Rollout `agent-a4cedd803fc1a5758.jsonl` of a test-evidence audit dispatched against head `f07db1bbaf225ec031d7a777f02c166daa588871` on 2026-09-16 resolved two conflicts and finished at `15d4309e69c26804cd1b04676248a529fd0235b9`, so the concurrent implementation audit found its sealed head superseded.
-
-**Settlement condition.** The audit selects the Verifier-mode context load that the entry in `spx/21-spec-tree.enabler/18-context-loading.enabler/ISSUES.md` settles, so the audited head stays the dispatched head.
-
-## The shipped test-evidence audit still produces the structured JSON verdict
-
-The assertions state the sealed-run verdict model: the audit run's terminal status is `approved` or `rejected`, and the `test-evidence-auditor` wrapper relays the run token, the run file and the rendered projection. `src/plugins/spec-tree/skills/audit-tests/SKILL.md` and the wrapper still emit the `<verdict_format>` JSON object with no run token or run file, so the assertions describe behavior the shipped producer does not yet have.
-
-**Settlement condition.** outcomeeng/changes#513 rewrites the skill and wrapper onto one `spx verification run` over the exact committed scope under an unchanged semantic verdict model.
-
-**Evidence**: current-head CI review of pull request 671.
-
-## Six skill-standard findings stand on the audit-tests skill body
-
-The skill audit run `2026-10-12_18-41-36-254-8cb4eac53023` of
-`src/plugins/spec-tree/skills/audit-tests/SKILL.md` at head
-`ab5b519f0333258fc6e277b09a458b8b65920941` reported six findings on text the
-changeset leaves unchanged; the changeset changes line 20 only
-(`git diff -U0 2cf9cd80eebb49dc8a682f45dd08922551d54d76...ab5b519f0333258fc6e277b09a458b8b65920941 -- src/plugins/spec-tree/skills/audit-tests/SKILL.md`).
-
-- `auditor-verdict-format`: step `compose_language` records each composed language's NOT_APPLICABLE subjects "in verdict metadata", while the `<verdict_format>` metadata object declares only `branch`, `evidence_chain`, and `coverage_traces`.
-- `composed-dependency-form`: step `load_context` names `/understand` and `/contextualize` as slash invocations instead of `Use skill` instructions, and step `compose_language` loads `<lang>-test-standards` and invokes `audit-<lang>-tests` in prose the same way (run `2026-10-12_18-59-15-708-60d26c4e0044`).
-- `conciseness` and `constraint-strong-modals`: the last `<constraints>` bullet is an author-maintenance note about the skill's own `Bash` grant, stated without MUST, NEVER, or ALWAYS.
-- `constraint-rationale`: the constraint requiring every REJECT finding to name the assertion, the failed property, and the evidentiary gap carries no rationale after a dash.
-- `conciseness` (run `2026-10-12_18-55-10-807-92bff43a2c02`): the `JUDGE COVERAGE BY READING` principle and the first sentence of step `audit_coverage` restate the coverage-by-reading rule that `<constraints>` and Step 3e already state.
-- `semantic-tag-names`: `<step name="full_chain_ownership">` wraps Steps 2b, 3, and 3a, three distinct steps under one name.
-
-**Settlement condition**: the skill states the metadata field for NOT_APPLICABLE language results in `<verdict_format>`, composes `spec-tree:understand` and `spec-tree:contextualize` with `Use skill`, moves the grant note out of the runtime prompt, gives the REJECT-finding constraint its rationale, splits the combined step tag, and a skill audit approves.
-
 ## `test-evidence-auditor` carries no retained release-acceptance or invocation evidence
 
 [`spx/15-subagent-execution.pdr.md`](spx/15-subagent-execution.pdr.md) declares release acceptance per harness and per profile: native loading and one minimal isolated execution for each profile. The tree retains no acceptance artifact for the Claude or the Codex Standard row that `src/plugins/spec-tree/agents/test-evidence-auditor.md` selects, and no exact-definition minimal isolated invocation of the definition. The gap is the one the `adr-auditor` entry in `spx/21-spec-tree.enabler/32-decisions.enabler/21-adr-auditing.enabler/ISSUES.md` records, and it holds for every marketplace definition: the decision binds acceptance to profiles, and no definition's tool grant or sandbox changes the Standard profile it selects.
