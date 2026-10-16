@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import hashlib
+import importlib
 import json
 import os
 import re
@@ -14,6 +15,7 @@ import time
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
+from types import ModuleType
 from typing import Any, Mapping
 
 SKILLS_ROOT = Path(__file__).resolve().parents[2]
@@ -26,9 +28,6 @@ QUIET_FILE = "quiet.json"
 OBSERVATIONS_FILE = "observations.json"
 
 ADAPTER_SCHEMA_VERSION = 1
-ADAPTER_RUN = "run"
-ADAPTER_PROJECT_KEY = "project-key"
-ADAPTER_TIMEOUT_SECONDS = 120
 MAIL_RECORD_SCHEMA = 1
 ADAPTER_MAIL = ("operate-agent-mail", "agent_mail")
 ADAPTER_HERDR = ("operate-herdr", "herdr_environment")
@@ -88,60 +87,52 @@ class DirectionError(RuntimeError):
 
 
 class AdapterClient:
-    """One coding-agents adapter, reached through its own command line.
+    """One coding-agents adapter, reached by a `__file__`-relative import.
 
-    The adapter script sits in its sibling skill's scripts directory, found
-    relative to this file. The client sends one JSON request on standard input
-    and reads one JSON result from standard output; the adapter alone builds
+    The adapter module sits in its sibling skill's scripts directory inside the
+    same plugin, found relative to this file and loaded once. The client hands
+    the adapter one request and returns its result; the adapter alone builds
     every environment, mail, and repository command.
     """
 
     def __init__(self, adapter: tuple[str, str]) -> None:
         self._skill, self._module = adapter
 
-    def call(
-        self, cli_operation: str, payload: Mapping[str, Any] | None = None
-    ) -> dict[str, Any]:
-        path = SKILLS_ROOT / self._skill / "scripts" / f"{self._module}.py"
+    def module(self) -> ModuleType:
+        directory = SKILLS_ROOT / self._skill / "scripts"
+        path = directory / f"{self._module}.py"
         if not path.is_file():
             raise DirectionError(
                 f"The adapter script {path} does not exist; install the sibling skill "
                 f"coding-agents:{self._skill} in the same plugin so that "
                 f"{self._module}.py sits under its scripts directory."
             )
+        cached = sys.modules.get(self._module)
+        if cached is not None and Path(getattr(cached, "__file__", "")) == path:
+            return cached
+        sys.modules.pop(self._module, None)
+        sys.path.insert(0, str(directory))
         try:
-            completed = subprocess.run(
-                [sys.executable, str(path), cli_operation],
-                input=json.dumps(payload if payload is not None else {}),
-                capture_output=True,
-                text=True,
-                check=False,
-                timeout=ADAPTER_TIMEOUT_SECONDS,
-            )
+            return importlib.import_module(self._module)
+        finally:
+            sys.path.remove(str(directory))
+
+    def execute(self, request: Mapping[str, Any]) -> dict[str, Any]:
+        adapter = self.module()
+        try:
+            result = adapter.execute(dict(request), adapter.SubprocessRunner())
         except (OSError, subprocess.TimeoutExpired) as error:
             raise DirectionError(
-                f"The adapter {self._module} {cli_operation} could not run: {error}; "
-                f"run coding-agents:{self._skill} directly to compare its result."
-            ) from error
-        try:
-            result = json.loads(completed.stdout)
-        except json.JSONDecodeError as error:
-            detail = completed.stderr.strip() or "no command detail"
-            raise DirectionError(
-                f"The adapter {self._module} {cli_operation} printed no JSON result "
-                f"({error.msg}): {detail}; run coding-agents:{self._skill} directly "
-                "to compare its result."
+                f"The adapter {self._module} could not run: {error}; run "
+                f"coding-agents:{self._skill} directly to compare its result."
             ) from error
         if not isinstance(result, dict):
             raise DirectionError(
-                f"The adapter {self._module} {cli_operation} printed a "
-                f"{type(result).__name__}, not a JSON object; run "
-                f"coding-agents:{self._skill} directly to compare its result."
+                f"The adapter {self._module} returned a {type(result).__name__}, "
+                f"not an object; run coding-agents:{self._skill} directly to "
+                "compare its result."
             )
         return result
-
-    def execute(self, request: Mapping[str, Any]) -> dict[str, Any]:
-        return self.call(ADAPTER_RUN, request)
 
 
 class MailClient(AdapterClient):
@@ -151,12 +142,17 @@ class MailClient(AdapterClient):
         super().__init__(ADAPTER_MAIL)
 
     def project_key(self) -> str:
-        result = self.call(ADAPTER_PROJECT_KEY)
-        key = result.get("projectKey")
+        adapter = self.module()
+        try:
+            key = adapter.resolve_project_key(adapter.SubprocessRunner())
+        except (adapter.AgentMailError, OSError, subprocess.TimeoutExpired) as error:
+            raise DirectionError(
+                f"the common Git directory cannot be resolved: {error}; run the "
+                "skill from inside a Git checkout of the repository."
+            ) from error
         if not isinstance(key, str) or not key:
             raise DirectionError(
-                f"the common Git directory cannot be resolved: "
-                f"{result.get('detail') or result.get('status')}; run the skill "
+                "the common Git directory cannot be resolved; run the skill "
                 "from inside a Git checkout of the repository."
             )
         return key
