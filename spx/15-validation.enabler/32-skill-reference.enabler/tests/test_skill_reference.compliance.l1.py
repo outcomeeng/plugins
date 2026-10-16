@@ -10,7 +10,9 @@ from pathlib import Path
 
 from outcomeeng.validation.skill_reference import (
     CHANGELOG_FILENAME,
+    EXCLUDED_DIRECTORY_NAMES,
     EXEMPTED_REFERENCES,
+    FILESYSTEM_ROOTS,
     HARNESS_COMMANDS,
     INERT_FIXTURE_ROOT,
     SCAN_ROOTS,
@@ -217,3 +219,40 @@ def test_harness_command_invocations_are_not_skill_references(
     assert commands_run.lines == ()
     assert commands_run.exit_code == 0
     assert unlisted_run.exit_code != 0
+
+
+def test_filesystem_root_tokens_are_not_skill_references(tmp_path: Path) -> None:
+    build_marketplace(tmp_path, {"alpha": ["audit-widget"]})
+    roots = write_plugin_file(
+        tmp_path,
+        "alpha",
+        "".join(f"Run /{root} now.\n" for root in sorted(FILESYSTEM_ROOTS)),
+    )
+    unlisted = write_plugin_file(tmp_path, "alpha", "Run /audit-gadget now.\n")
+
+    roots_run = run_validator(tmp_path, [roots])
+    unlisted_run = run_validator(tmp_path, [unlisted])
+
+    assert roots_run.lines == ()
+    assert roots_run.exit_code == 0
+    assert unlisted_run.exit_code != 0
+
+
+def test_tool_generated_directories_are_excluded_from_the_scan(
+    tmp_path: Path,
+) -> None:
+    build_marketplace(tmp_path, {"alpha": ["audit-widget"]})
+    excluded = [
+        write_file(tmp_path, SCAN_ROOTS[0] / name, "Run /audit-gadget now.\n")
+        for name in sorted(EXCLUDED_DIRECTORY_NAMES)
+    ]
+    scanned = write_file(tmp_path, SCAN_ROOTS[0], "Run /audit-gadget now.\n")
+
+    run = run_validator(tmp_path)
+    explicit_run = run_validator(tmp_path, excluded)
+
+    assert run.exit_code != 0
+    assert len(run.lines) == 1
+    assert str(scanned) in run.lines[0]
+    assert explicit_run.lines == ()
+    assert explicit_run.exit_code == 0
