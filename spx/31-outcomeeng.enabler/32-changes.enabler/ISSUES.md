@@ -185,18 +185,6 @@ Impact: a reader of the table concludes that `count-limits` returns no `path-rej
 
 Revisit and settlement condition: the row names `count-limits` beside `read-candidate`, `start`, and `reconcile`, and one typed skill audit of `audit-change` raises no finding on the blocked-reason table.
 
-## DEBT [consistency]: the changes spec states debt severity and a rejected terminal status where audit-change and author-change use filed and approved
-
-Defect class: `consistency`.
-
-Finding: two `[audit]` assertions of [`spx/31-outcomeeng.enabler/32-changes.enabler/changes.md`](spx/31-outcomeeng.enabler/32-changes.enabler/changes.md) describe a severity vocabulary the skills no longer use. The `audit-change` revision assertion reads "a finding on any other section is recorded as debt, a run whose findings are all debt finishes rejected", while `<execution_sequence>` steps 6 and 10 of `src/plugins/spec-tree/skills/audit-change/SKILL.md` give such a finding severity `filed` and finish the run `approved`. The `author-change` publication assertion reads "publishes a revision whose sealed change-audit run is rejected with no blocking finding and every finding at debt", while `<audit_gate>` step 4 of `src/plugins/spec-tree/skills/author-change/SKILL.md` defines approval as `approved` with every finding `filed`, so the case the assertion describes does not occur.
-
-Evidence: `spec-tree:assertion-auditor` run `2026-10-12_10-41-21-450-61049bb4b5e8` on head `236e6c5b8555d2bacf144ecaa4c4b1e0fd0ed73d` approved and reported both as standing findings, rule `severity-terminal-status-vocabulary`, severity `debt`. The base `f9b6b7d6050497709e352532271fe9919cad8f72` already carries the spec text and the skills' `filed` mechanism, and `git diff --unified=0 f9b6b7d6050497709e352532271fe9919cad8f72` leaves both locations untouched.
-
-Impact: a reader of the spec expects an all-debt revision audit to finish `rejected` and `author-change` to publish on that rejection, while both skills finish and publish on `approved` with every finding `filed`.
-
-Revisit and settlement condition: both assertions state `filed` severity and an `approved` terminal status, and one assertion audit of the changes node raises no `severity-terminal-status-vocabulary` finding.
-
 ## DEBT [consistency]: the read-relations operation returns parentProduct with no remaining reader
 
 Defect class: `consistency`.
@@ -208,18 +196,6 @@ Evidence: the CI review of [PR 658](https://github.com/outcomeeng/plugins/pull/6
 Impact: the runner computes and the skill advertises a value no step reads, and a reader of the operation table can expect a Product comparison the skill no longer makes.
 
 Revisit and settlement condition: the `read-relations` row and result prose name no `parentProduct`, the runner computes none, the linked runner tests pass, and one typed skill audit of `audit-change` raises no finding on the operation table.
-
-## DEBT [consistency]: the changes spec declares the Intent word limit and not the title word limit
-
-Defect class: `consistency`.
-
-Finding: the `intent-word-limit` assertion of [`spx/31-outcomeeng.enabler/32-changes.enabler/changes.md`](spx/31-outcomeeng.enabler/32-changes.enabler/changes.md) declares that the change audit counts the Intent's words and rejects an Intent over 60 words. No assertion of the spec declares the 15-word title limit, which [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) states, the `record-limits` rule of `src/plugins/spec-tree/skills/change-standards/SKILL.md` states, and `_count_limits` in `src/plugins/spec-tree/skills/audit-change/scripts/audit_change_run.py` enforces under `TITLE_WORD_LIMIT`.
-
-Evidence: the CI review of [PR 658](https://github.com/outcomeeng/plugins/pull/658) on head `d863e67349d1247b128dc919a67a87e732212215` raised this as a `DEBT` finding. The disposition comment on the same PR records the merge under the operator's ruling that cosmetic findings do not block it.
-
-Impact: the node's assertion inventory leaves the title limit undeclared, so an assertion audit of the node never judges the title check the runner performs.
-
-Revisit and settlement condition: an assertion of the changes spec declares the title word limit beside the Intent limit, and one assertion audit of the changes node approves it.
 
 ## DEBT [consistency]: the audit-change runner counts title words and Intent words by two definitions
 
