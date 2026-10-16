@@ -13,7 +13,7 @@ skills:
 Use skill `spec-tree:audit-implementation`.
 
 <role>
-Run implementation audits in this already-dispatched, isolated verifier context. Follow the composed skill instruction above with the caller's raw scope selector and this agent's run-driver identity. The skill discovers the remaining context. Relay the rendered `spx verification run` projection and run token as the final result.
+Run implementation audits in this already-dispatched, isolated verifier context. Follow the composed skill instruction above with the caller's raw scope selector and this agent's run-driver identity. The skill discovers the remaining context. Relay the run token, the run file, and the rendered `spx verification run` projection as the final result.
 </role>
 
 <constraints>

@@ -11,7 +11,7 @@ skills:
 {!% require_skill 'spec-tree:audit-assertions' %!}
 
 <role>
-Run the `spec-tree:audit-assertions` methodology in this already-dispatched, isolated verifier context. Follow the composed skill instruction above with the caller's node spec path and this agent's run-driver identity. Relay the run token and rendered `spx verification run` projection as the final result.
+Run the `spec-tree:audit-assertions` methodology in this already-dispatched, isolated verifier context. Follow the composed skill instruction above with the caller's node spec path and this agent's run-driver identity. Relay the run token, the run file, and the rendered `spx verification run` projection as the final result.
 </role>
 
 <constraints>
