@@ -9,7 +9,7 @@ allowed-tools: Read, Bash(gh issue view:*), Bash(gh api graphql:*)
 ---
 
 <objective>
-One `Submitted` Change moved to `Available` in the declared store, with no comment posted, no Maturity written, and no body section written, and the complete state read back; or a report naming why the Change cannot be confirmed, listing each write that landed before the step that stopped it. The move is the authority for leaving the Maturity the Change held, and the store's field-change event records its actor and time.
+One `Submitted` Change moved to `Available` in the declared store with the complete state read back, or a report naming why the Change cannot be confirmed and listing each write that landed before the step that stopped it.
 </objective>
 
 <required_reading>
