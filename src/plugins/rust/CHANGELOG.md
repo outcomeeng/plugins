@@ -25,6 +25,7 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 ### Changed
 
+- **`audit-rust-test` loads each composed skill by its exact installed name.** The prerequisites use `spec-tree:contextualize` through an explicit skill-load instruction instead of a slash mention, and the audit cites `spec-tree:audit-tests` and `spec-tree:test` by their qualified names.
 - **`simplify-rust-code` loads each composed skill by its exact installed name.** The workflow uses `spec-tree:understand`, `spec-tree:scope-changeset`, `spec-tree:contextualize`, and `rust:author-rust-code` through an explicit skill-load instruction instead of a slash mention, so each dependency loads rather than being only recorded.
 
 ## 0.10.0

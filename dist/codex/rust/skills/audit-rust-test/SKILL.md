@@ -33,7 +33,7 @@ Read local overlay files — each routes skill behavior to the product's governi
 Read `spx/local/rust.md` if it exists; otherwise apply the loaded skills only.
 Read `spx/local/rust-tests.md` if it exists; otherwise apply the loaded skills only.
 
-Invoke `/contextualize` on the spec node under audit — `<SPEC_TREE_CONTEXT>` marker must be present before Gate 1.
+Use skill `spec-tree:contextualize` on the spec node under audit — `<SPEC_TREE_CONTEXT>` marker must be present before Gate 1.
 
 This audit runs no deterministic verification — no `cargo fmt`, `cargo clippy`, `cargo test`, `cargo llvm-cov`, or any other project command. Spend the whole audit reading the evidence chain.
 
@@ -50,11 +50,11 @@ Use read-only `git diff` only when the supplied changeset scope requires confirm
 <structural_reading>
 Before judging evidence, read the in-scope test files for structural defects — by reading, never by running the project's gate. These are reading observations folded into Gate 1, not a separate deterministic gate:
 
-- **Filename policy** — each file MUST match `<subject>.<evidence>.<level>[.<runner>].rs` (`<evidence>` ∈ scenario/mapping/conformance/property/compliance, `<level>` ∈ l1/l2/l3). The project's validation owns this convention; note a mismatch as a `filename_policy` finding carrying property `alignment` from the base `/audit-tests` enum — a filename that misdeclares its evidence type or level misaligns the file with the assertion it claims to evidence — and do not re-validate it.
-- **Test-file bindings** — apply the base `/audit-tests` semantic binding screen before coupling. A `const`, `static`, `let`, framework fixture parameter, property-generated parameter, or macro/closure parameter is valid when it only receives an actual result, source-owned contract, generated value, harness observation, callback input, resource handle, or fixture path and introduces no data or policy. Emit a finding carrying property `declarations` and the base `/audit-tests` rule label the choice matches — `test-owned configuration` for runner settings, seed policy, retries, setup policy, or lifecycle policy, and `test-owned data` for hand-picked data, boundary bags, expected outputs, fixture contents, or generator domains. Keep the two labels distinct. Keep every predicate and assertion macro in the linked test function or callback; a binding, closure, or helper that moves a predicate or assertion macro out carries property `predicate-ownership`, rule `assertion-seam`, remediation target `test-file`.
+- **Filename policy** — each file MUST match `<subject>.<evidence>.<level>[.<runner>].rs` (`<evidence>` ∈ scenario/mapping/conformance/property/compliance, `<level>` ∈ l1/l2/l3). The project's validation owns this convention; note a mismatch as a `filename_policy` finding carrying property `alignment` from the base `spec-tree:audit-tests` enum — a filename that misdeclares its evidence type or level misaligns the file with the assertion it claims to evidence — and do not re-validate it.
+- **Test-file bindings** — apply the base `spec-tree:audit-tests` semantic binding screen before coupling. A `const`, `static`, `let`, framework fixture parameter, property-generated parameter, or macro/closure parameter is valid when it only receives an actual result, source-owned contract, generated value, harness observation, callback input, resource handle, or fixture path and introduces no data or policy. Emit a finding carrying property `declarations` and the base `spec-tree:audit-tests` rule label the choice matches — `test-owned configuration` for runner settings, seed policy, retries, setup policy, or lifecycle policy, and `test-owned data` for hand-picked data, boundary bags, expected outputs, fixture contents, or generator domains. Keep the two labels distinct. Keep every predicate and assertion macro in the linked test function or callback; a binding, closure, or helper that moves a predicate or assertion macro out carries property `predicate-ownership`, rule `assertion-seam`, remediation target `test-file`.
 - **Source-file reads** — a test that reads `src/` production files (`read_to_string`, `include_str!`, `std::fs::read`) asserts on source text, not behavior → prose-coupling REJECT in Gate 1 step `four_properties`. Inert fixture data is read by path from `<product>-testing/fixtures/`; co-located `spx/.../tests/` remains the home of typed assertion files. When a loaded overlay points to a governing product spec or decision that explicitly amends this contract, follow that declaration; the overlay does not redefine fixture placement itself.
-- **Disabled evidence** — a bare `#[ignore]` (no reason), skip-by-early-return, `todo!`, or `unimplemented!` in a test body provides no evidence → REJECT in Gate 1 carrying property `coverage` from the base `/audit-tests` enum, since execution never reaches the assertion-relevant path. A reasoned `#[ignore = "..."]` is acceptable in a `.l3.rs` file only when a loaded product spec or decision declares that credentialed Level 3 lane; otherwise disabled evidence rejects. Outside `.l3.rs`, reasoned ignore is misplaced.
-- **Generated mock signal** — `mockall`, `automock`, `faux`, `double::` in a test is read and judged in Gate 1 step `controlled_implementations` against `/test` Stage 5 exceptions.
+- **Disabled evidence** — a bare `#[ignore]` (no reason), skip-by-early-return, `todo!`, or `unimplemented!` in a test body provides no evidence → REJECT in Gate 1 carrying property `coverage` from the base `spec-tree:audit-tests` enum, since execution never reaches the assertion-relevant path. A reasoned `#[ignore = "..."]` is acceptable in a `.l3.rs` file only when a loaded product spec or decision declares that credentialed Level 3 lane; otherwise disabled evidence rejects. Outside `.l3.rs`, reasoned ignore is misplaced.
+- **Generated mock signal** — `mockall`, `automock`, `faux`, `double::` in a test is read and judged in Gate 1 step `controlled_implementations` against `spec-tree:test` Stage 5 exceptions.
 
 </structural_reading>
 
@@ -70,7 +70,7 @@ Challenge the assertion:
 - Is the assertion type correct for the claim?
 - Does it overlap with another assertion in the same node or parent?
 
-Record challenge findings and continue unless the assertion type is invalid. A `challenge` finding carries property `alignment` from the base `/audit-tests` enum — the claim itself is malformed or misaligned with its governing decision.
+Record challenge findings and continue unless the assertion type is invalid. A `challenge` finding carries property `alignment` from the base `spec-tree:audit-tests` enum — the claim itself is malformed or misaligned with its governing decision.
 </step>
 
 <step name="scope">
@@ -82,7 +82,7 @@ Example:
 | -------------------------------------------------- | ---------------------------------------------------- |
 | "MUST exit 0 with no stdout for invalid hook JSON" | (1) invalid JSON input, (2) exit 0, (3) empty stdout |
 
-The linked tests must exercise every clause with an assertion. A single assertion for a multi-clause claim is a `scope` finding carrying property `coverage` from the base `/audit-tests` enum — clauses of the claim go unexercised.
+The linked tests must exercise every clause with an assertion. A single assertion for a multi-clause claim is a `scope` finding carrying property `coverage` from the base `spec-tree:audit-tests` enum — clauses of the claim go unexercised.
 </step>
 
 <step name="evidence">
@@ -102,7 +102,7 @@ An assertion tagged `[audit]` carries no assertion type and is outside Rust test
 </step>
 
 <step name="controlled_implementations">
-Judge controlled implementations against `/test` exceptions:
+Judge controlled implementations against `spec-tree:test` exceptions:
 
 | Exception                | Legitimate Rust pattern                                         |
 | ------------------------ | --------------------------------------------------------------- |
@@ -114,13 +114,13 @@ Judge controlled implementations against `/test` exceptions:
 | 6. Observability         | capture struct for spans, logs, events, or serialized output    |
 | 7. Contract probes       | local stub validated against the same contract schema           |
 
-Generated mock frameworks, fake modules, or stubs that bypass the governed seam reject the assertion unless a Stage 5 exception applies and the real interface or protocol remains intact. Such a rejection carries property `falsifiability` from the base `/audit-tests` enum — a severed seam means no production mutation can break the test.
+Generated mock frameworks, fake modules, or stubs that bypass the governed seam reject the assertion unless a Stage 5 exception applies and the real interface or protocol remains intact. Such a rejection carries property `falsifiability` from the base `spec-tree:audit-tests` enum — a severed seam means no production mutation can break the test.
 </step>
 
 <step name="oracle">
 Identify the source of every expected value.
 
-Reject with an `oracle` finding carrying property `oracle-independence` and remediation target `independent-oracle` from the base `/audit-tests` enum when the expected value is derived from the module under test. This is distinct from `falsifiability`: an expected result computed by the same path that produces the actual result passes even when both are wrong. Proceed when the expected value comes from an independent source: the spec, a public constant owned by a different module, an external protocol/schema, a fixture transcript, or a value hand-computed in the test.
+Reject with an `oracle` finding carrying property `oracle-independence` and remediation target `independent-oracle` from the base `spec-tree:audit-tests` enum when the expected value is derived from the module under test. This is distinct from `falsifiability`: an expected result computed by the same path that produces the actual result passes even when both are wrong. Proceed when the expected value comes from an independent source: the spec, a public constant owned by a different module, an external protocol/schema, a fixture transcript, or a value hand-computed in the test.
 </step>
 
 <step name="harness_chain">
@@ -190,7 +190,7 @@ Applied during Gate 1.
 
 <supplement property="coupling">
 
-This supplement specializes each category of the coupling taxonomy `/audit-tests` owns to Rust paths. Classify from the table below rather than a subset of it; every category the canonical taxonomy names appears here, so a category missing from this table would silently narrow the verdict.
+This supplement specializes each category of the coupling taxonomy `spec-tree:audit-tests` owns to Rust paths. Classify from the table below rather than a subset of it; every category the canonical taxonomy names appears here, so a category missing from this table would silently narrow the verdict.
 
 | Category           | Definition                                                                                                                 | Verdict                                         |
 | ------------------ | -------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
@@ -240,7 +240,7 @@ Coverage notes do not rescue missing coupling, falsifiability, or alignment.
 
 <verdict_format>
 
-This skill composes the base `/audit-tests` verdict: the row names (`gate-1-assertion`, `gate-2-architectural`) and the JSON schema are defined in its `<verdict_format>` and are not redefined here. This skill contributes Rust-specific finding detail into those rows. The audit emits no `gate-0-deterministic` row — it runs no deterministic verification; the structural reading observations from `<structural_reading>` are folded into the Gate 1 (`gate-1-assertion`) findings. Gate 2 extraction target: a module under the `<product>-testing` workspace-member crate, e.g. `<product>_testing::harnesses::{name}`, `<product>_testing::generators::{name}`, or `<product>_testing::fixtures::{name}` — never `tests/support/` or `crate::test_support`, which are legacy non-canonical locations.
+This skill composes the base `spec-tree:audit-tests` verdict: the row names (`gate-1-assertion`, `gate-2-architectural`) and the JSON schema are defined in its `<verdict_format>` and are not redefined here. This skill contributes Rust-specific finding detail into those rows. The audit emits no `gate-0-deterministic` row — it runs no deterministic verification; the structural reading observations from `<structural_reading>` are folded into the Gate 1 (`gate-1-assertion`) findings. Gate 2 extraction target: a module under the `<product>-testing` workspace-member crate, e.g. `<product>_testing::harnesses::{name}`, `<product>_testing::generators::{name}`, or `<product>_testing::fixtures::{name}` — never `tests/support/` or `crate::test_support`, which are legacy non-canonical locations.
 
 When `<audit_scope>` finds that a retired path has no current `[test]` assertion or current evidence-chain owner, emit this alternate concern result instead of the inherited rows:
 
