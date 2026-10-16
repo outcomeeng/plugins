@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.21.9
+
+### Changed
+
+- **`/skill-standards` requires a run-recording audit to copy each payload path from the file-write result.** An `audit-*` skill that passes payload files to run-recording commands now copies the scratch directory into each payload path character for character, stops before a command whose file-write result reports a path outside that directory, names the reported path, passes each command the path exactly as the result reports it, and reruns a command once when its diagnostic names the payload file as absent before stopping with a blocked result naming the run token. The rule is the new `payload_path_retyped` catalog row, and the auditor skeleton's constraints point to it. Before this change, the standard was silent on how an audit forms a payload path, so a retyped path failed the scope add and the run sealed no verdict.
+
 ## 0.21.7
 
 ### Changed
