@@ -342,15 +342,15 @@ Python engineering: /test-python, /code-python, /audit-python-code, /audit-pytho
 
 | Type  | Name                             | Purpose                                                             |
 | ----- | -------------------------------- | ------------------------------------------------------------------- |
-| Skill | `/architect-python`              | Writing ADRs for Python                                             |
 | Skill | `/audit-python-architecture`     | Python-specific architecture audit                                  |
 | Skill | `/audit-python-code`             | Python implementation-code audit methodology                        |
-| Skill | `/audit-python-tests`            | Python test-evidence audit methodology                              |
-| Skill | `/code-python`                   | Writing or fixing implementation code for Python                    |
+| Skill | `/audit-python-test`             | Python test-evidence audit methodology                              |
+| Skill | `/author-python-architecture`    | Writing ADRs for Python                                             |
+| Skill | `/author-python-code`            | Writing or fixing implementation code for Python                    |
+| Skill | `/author-python-test`            | Writing or fixing tests for Python                                  |
 | Skill | `/python-architecture-standards` | Python ADR conventions enforced across architect and auditor skills |
-| Skill | `/python-standards`              | Python code standards enforced across all skills                    |
+| Skill | `/python-code-standards`         | Python code standards enforced across all skills                    |
 | Skill | `/python-test-standards`         | Python test standards enforced across all skills                    |
-| Skill | `/test-python`                   | Writing or fixing tests for Python                                  |
 
 ### rust
 
