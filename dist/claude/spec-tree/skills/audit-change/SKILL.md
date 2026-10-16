@@ -167,12 +167,8 @@ A blocked result names exactly one of these reasons:
    Touched text is the front matter, every touched section, and every
    unchanged text a touched section or front-matter value makes false — a
    section the revised Maturity newly requires, or a statement a touched
-   section contradicts. Record a finding on touched text as `blocking` when
-   it fails a criterion of the declared Maturity's Definition of Ready and as
-   `filed` otherwise. Record a finding on any other section as `filed`; a
-   `filed` finding leaves the run `approved`. Inspect every rule and
-   criterion either way, so a rule judged only on unchanged sections still
-   records `audited`.
+   section contradicts. Inspect every rule and criterion on every section, so
+   a rule judged only on unchanged sections still records `audited`.
 7. **Read authority.** Use skill `spec-tree:change-standards`.
    Invoke it with `Lifecycle`; it loads the common contract and the Lifecycle
    rules. When the request carries `issue`, request `read-authority` with
@@ -377,7 +373,6 @@ the runner over stdin and stdout, and return the `finish` result, whose
   selected by the declared maturity has a reconciled judgment; every rejected
   finding names the violated rule, artifact location, and supporting evidence.
 - A revision of a published record is judged on its front matter, its changed sections, and the unchanged text they make false, against the published body `read-published` returned; a record with no published body is touched in full and judged whole.
-- Only a failed Definition of Ready criterion of the declared Maturity rejects a run; every other finding, the word-limit findings among them, is `filed`, and a record whose findings are all `filed` finishes `approved`.
 - Every length finding comes from the runner's `count-limits` result, and every Parent finding from its `read-relations` result and the candidate's own sections.
 - Authority is judged only from the store's field-change events that `read-authority` returned and never from a comment or the body; a request that names no issue judges no authority, and its verdict says so.
 - The audit's only state change is its own SPX verification-run journal; no
