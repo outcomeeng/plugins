@@ -4,6 +4,8 @@ from typing import cast
 
 from outcomeeng_testing.generators.agent_mail import operation_requests
 from outcomeeng_testing.harnesses.agent_mail import (
+    ScriptedClock,
+    captured_inbox_responses_with_bodies,
     common_dir_seeded_absent_store_runner,
     common_dir_seeded_runner,
     git_project_key_violation_source,
@@ -15,11 +17,18 @@ from outcomeeng_testing.harnesses.agent_mail import (
     run_cli_with_only_adapter_programs,
     run_cli_without_executables,
     run_generated_identities,
+    run_hung_command_under_bound,
     run_label_targeting_cases,
+    run_wait_cases,
     store_program_names,
     store_response_payload,
     store_response_result,
     store_response_text,
+    wait_request,
+    wait_requests_without_valid_timeout,
+    wait_store_runner,
+    wait_workspace,
+    workspace_entries,
 )
 
 
@@ -334,3 +343,102 @@ def test_an_empty_string_is_rejected_in_every_text_field_but_the_display_name() 
                 raise AssertionError(f"{field_name} accepted an empty string")
 
     assert rejected_fields == module.TEXT_ARGUMENT_FIELDS - {module.DISPLAY_NAME_FIELD}
+
+
+def test_a_wait_without_a_valid_timeout_runs_no_store_command() -> None:
+    def assert_case(
+        module: ModuleType, agent: str, project_key: str, timeout_seconds: int
+    ) -> None:
+        for request in wait_requests_without_valid_timeout(module, agent):
+            clock = ScriptedClock()
+            runner = wait_store_runner(module, project_key, clock)
+
+            result = module.execute(request, runner, clock)
+
+            assert result[module.STATUS_FIELD] == module.ExecutionStatus.INVALID_SCHEMA
+            assert runner.calls == [], request
+            assert clock.sleeps == []
+
+    run_wait_cases(assert_case)
+
+
+def test_no_store_command_inside_a_wait_outlives_the_timeout() -> None:
+    def assert_case(
+        module: ModuleType, agent: str, project_key: str, timeout_seconds: int
+    ) -> None:
+        for capture in captured_inbox_responses_with_bodies(module):
+            after_id = max(
+                cast(int, row[module.STORE_ID_FIELD])
+                for row in cast(
+                    list[dict[str, object]], capture.payload[module.STORE_INBOX_FIELD]
+                )
+            )
+            request = wait_request(module, agent, after_id, timeout_seconds)
+            for replies, repeating in (
+                ((None,), None),
+                ((), capture.result),
+                ((capture.result, None), None),
+            ):
+                clock = ScriptedClock()
+                runner = wait_store_runner(
+                    module, project_key, clock, *replies, repeating=repeating
+                )
+
+                result = module.execute(request, runner, clock)
+
+                data = cast(dict[str, object], result[module.DATA_FIELD])
+                assert data[module.OUTCOME_FIELD] == module.WaitOutcome.TIMEOUT
+                store_calls = list(zip(runner.started, runner.timeouts))[1:]
+                assert store_calls
+                for started, bound in store_calls:
+                    assert bound is not None
+                    assert started + bound <= timeout_seconds, capture.capture
+                assert clock.current <= timeout_seconds
+
+    run_wait_cases(assert_case)
+
+
+def test_a_store_command_that_outlives_its_bound_is_stopped_at_the_bound() -> None:
+    module = load_agent_mail()
+
+    observation = run_hung_command_under_bound(module, 1)
+
+    assert observation.timed_out
+    assert observation.elapsed_seconds < module.COMMAND_TIMEOUT_SECONDS
+
+
+def test_a_wait_keeps_no_state_and_issues_only_inbox_listings() -> None:
+    def assert_case(
+        module: ModuleType, agent: str, project_key: str, timeout_seconds: int
+    ) -> None:
+        listing = module.PUBLIC_AM_COMMAND_PREFIXES[module.Operation.WAIT]
+        for capture in captured_inbox_responses_with_bodies(module):
+            ids = sorted(
+                cast(int, row[module.STORE_ID_FIELD])
+                for row in cast(
+                    list[dict[str, object]], capture.payload[module.STORE_INBOX_FIELD]
+                )
+            )
+            for after_id in (ids[0] - 1, ids[-1]):
+                with wait_workspace() as workspace:
+                    before = workspace_entries(workspace)
+                    clock = ScriptedClock()
+                    runner = wait_store_runner(
+                        module, project_key, clock, repeating=capture.result
+                    )
+
+                    result = module.execute(
+                        wait_request(module, agent, after_id, timeout_seconds),
+                        runner,
+                        clock,
+                    )
+
+                    after = workspace_entries(workspace)
+                assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
+                assert after == before, capture.capture
+                store_commands = [argv for argv, _ in runner.calls[1:]]
+                assert store_commands
+                for argv in store_commands:
+                    assert argv[: len(listing)] == listing, argv
+
+    run_wait_cases(assert_case)
