@@ -239,13 +239,7 @@ def _require_text_or_none(value: object, label: str, source: Path) -> None:
         raise _type_stop(source, label, value, "a string")
 
 
-def _validated(settings: dict[str, Any], source: Path) -> dict[str, Any]:
-    unknown = sorted(set(settings) - set(DEFAULTS))
-    if unknown:
-        raise DirectionError(
-            f"{source}: unknown keys {unknown}; the valid keys are "
-            f"{sorted(DEFAULTS)}. Remove or rename each unknown key."
-        )
+def _validate_mail(settings: Mapping[str, Any], source: Path) -> None:
     mail = settings.get("mail", {})
     if not isinstance(mail, dict):
         raise DirectionError(
@@ -260,6 +254,9 @@ def _validated(settings: dict[str, Any], source: Path) -> dict[str, Any]:
         )
     for key in ("channel", "agent"):
         _require_text_or_none(mail.get(key), f"mail.{key}", source)
+
+
+def _validate_entries(settings: Mapping[str, Any], source: Path) -> None:
     for index, entry in enumerate(_require_list(settings, "positions", source)):
         label = f"positions[{index}]"
         position = _require_fields(
@@ -272,6 +269,9 @@ def _validated(settings: dict[str, Any], source: Path) -> dict[str, Any]:
         group = _require_fields(entry, GROUP_FIELDS, GROUP_OPTIONAL, label, source)
         _require_environment(group, label, source)
         _require_entry_types(group, GROUP_TEXTS, frozenset(), label, source)
+
+
+def _validate_collections(settings: Mapping[str, Any], source: Path) -> None:
     launchers = settings.get("launchers", {})
     if not isinstance(launchers, dict) or not all(
         isinstance(k, str) and isinstance(v, str) for k, v in launchers.items()
@@ -292,6 +292,9 @@ def _validated(settings: dict[str, Any], source: Path) -> dict[str, Any]:
             untouchable,
             'a list of pane ids or names such as ["w1:p1"]',
         )
+
+
+def _validate_scalars(settings: Mapping[str, Any], source: Path) -> None:
     for key in ("advisor", "resume_line"):
         _require_text_or_none(settings.get(key), f"key {key}", source)
     for key in (
@@ -305,6 +308,19 @@ def _validated(settings: dict[str, Any], source: Path) -> dict[str, Any]:
                 f"{source}: key {key} is {value!r}; set it to a positive integer "
                 f"such as {DEFAULTS[key]}."
             )
+
+
+def _validated(settings: dict[str, Any], source: Path) -> dict[str, Any]:
+    unknown = sorted(set(settings) - set(DEFAULTS))
+    if unknown:
+        raise DirectionError(
+            f"{source}: unknown keys {unknown}; the valid keys are "
+            f"{sorted(DEFAULTS)}. Remove or rename each unknown key."
+        )
+    _validate_mail(settings, source)
+    _validate_entries(settings, source)
+    _validate_collections(settings, source)
+    _validate_scalars(settings, source)
     return settings
 
 
@@ -325,7 +341,7 @@ def compose_configuration(
         try:
             front, expectations = split_front_matter(source.read_text(encoding="utf-8"))
             settings = tomllib.loads(front)
-        except (ValueError, tomllib.TOMLDecodeError, OSError) as error:
+        except (ValueError, OSError) as error:
             raise DirectionError(
                 f"{source}: malformed file: {error}. Fix the front matter between "
                 "the +++ lines so that it parses as TOML, or move the file aside "
@@ -385,7 +401,7 @@ class Pane:
     """One pane as an environment adapter reports it."""
 
     environment: str
-    pane: str
+    pane_id: str
     cwd: str
     status: str | None
     name: str | None
@@ -456,14 +472,14 @@ class Environments:
 
     def read(self, pane: Pane) -> str:
         if pane.environment == ENVIRONMENT_HERDR:
-            result = self._execute(pane.environment, "read", pane=pane.pane)
+            result = self._execute(pane.environment, "read", pane=pane.pane_id)
             body = result.get("response", {}).get("output", "")
         else:
-            result = self._execute(pane.environment, "read", pane=pane.pane)
+            result = self._execute(pane.environment, "read", pane=pane.pane_id)
             body = _screen_text(result.get("response", {}))
         if result.get("status") != "succeeded":
             raise DirectionError(
-                f"{pane.environment} read of pane {pane.pane} failed with status "
+                f"{pane.environment} read of pane {pane.pane_id} failed with status "
                 f"{result.get('status')!r}: {result.get('detail')}; confirm the pane "
                 "still exists in the roster subcommand's output."
             )
@@ -471,20 +487,20 @@ class Environments:
 
     def prompt(self, pane: Pane, text: str) -> dict[str, Any]:
         operation = "prompt" if pane.environment == ENVIRONMENT_HERDR else "send"
-        return self._execute(pane.environment, operation, pane=pane.pane, text=text)
+        return self._execute(pane.environment, operation, pane=pane.pane_id, text=text)
 
     def restart(self, pane: Pane, timeout_ms: int) -> dict[str, Any]:
         """Stop and relaunch a herdr session as the same agent kind, with no launch arguments."""
         if pane.environment != ENVIRONMENT_HERDR or pane.kind is None:
             return {
                 "status": "unavailable",
-                "detail": f"restart of pane {pane.pane} needs a herdr session whose "
-                f"inventory item names its agent kind; pane {pane.pane} is hosted by "
+                "detail": f"restart of pane {pane.pane_id} needs a herdr session whose "
+                f"inventory item names its agent kind; pane {pane.pane_id} is hosted by "
                 f"{pane.environment} with agent kind {pane.kind!r}. Restart it by "
                 "hand through its environment skill.",
             }
         stopped = self._execute(
-            pane.environment, "stop", pane=pane.pane, mutationAuthorized=True
+            pane.environment, "stop", pane=pane.pane_id, mutationAuthorized=True
         )
         if stopped.get("status") != "succeeded":
             return stopped
@@ -493,7 +509,7 @@ class Environments:
             "relaunch",
             name=pane.name or pane.kind,
             kind=pane.kind,
-            pane=pane.pane,
+            pane=pane.pane_id,
             timeout=timeout_ms,
             mutationAuthorized=True,
         )
@@ -525,7 +541,7 @@ def guard_reasons(
 ) -> list[str]:
     """Why no input may reach this pane; an empty list means the pane is open."""
     reasons: list[str] = []
-    if pane.pane in untouchable or (pane.name or "") in untouchable:
+    if pane.pane_id in untouchable or (pane.name or "") in untouchable:
         reasons.append("untouchable")
     if last_prompt_origin == OPERATOR_ORIGIN:
         reasons.append("operator-prompt")
@@ -543,7 +559,7 @@ def unresolved_pane_detail(
     panes: list[Pane], cwd: str, label: str, environment: str
 ) -> str:
     """Why a configured working directory resolved to no single pane, and the fix."""
-    matched = [pane.pane for pane in panes if pane.cwd == cwd]
+    matched = [pane.pane_id for pane in panes if pane.cwd == cwd]
     available = sorted({pane.cwd for pane in panes})
     found = (
         f"{len(matched)} {environment} panes matched ({matched})"
