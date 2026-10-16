@@ -1,15 +1,15 @@
 ---
 name: confirm-change
 description: >-
-  ALWAYS invoke this skill when the Product's Maintainer confirms or rejects a
-  Submitted Change — it posts the confirmation or rejection comment and moves
-  the Change from Submitted to Available. NEVER move a Submitted Change by hand.
-argument-hint: "<#N | owner/repo#N | issue-url> <confirm | reject <reason>>"
-allowed-tools: Read, Write, Bash(gh issue view:*), Bash(gh issue comment:*), Bash(gh api graphql:*), Bash(printenv CODEX_THREAD_ID), request_user_input
+  ALWAYS invoke this skill when the Product's Maintainer confirms a Submitted
+  Change — it moves the Change from Submitted to Available and posts no
+  comment. NEVER move a Submitted Change by hand.
+argument-hint: "<#N | owner/repo#N | issue-url>"
+allowed-tools: Read, Bash(gh issue view:*), Bash(gh api graphql:*)
 ---
 
 <objective>
-One `Submitted` Change moved to `Available` in the declared store, with one `Confirmation:` or `Rejection:` comment naming the delegate, the operator it acts for, the harness, and the session as the deciding comment of that move, and the complete state read back; or a report naming why the Change cannot be confirmed or rejected, listing each write that landed before the step that stopped it.
+One `Submitted` Change moved to `Available` in the declared store, with no comment posted, no Maturity written, and no body section written, and the complete state read back; or a report naming why the Change cannot be confirmed, listing each write that landed before the step that stopped it. The move is the authority for leaving the Maturity the Change held, and the store's field-change event records its actor and time.
 </objective>
 
 <required_reading>
@@ -20,29 +20,24 @@ Use skill `spec-tree:change-standards`. Invoke it with `Lifecycle`; it loads the
 
 <workflow>
 
-1. **Resolve the target.** Resolve the store and Product under `store-binding`. Read the first token of `$ARGUMENTS` as the issue reference — `#N`, `owner/repo#N`, or an issue URL; a first token matching none of those forms refuses the invocation, naming the three forms, with nothing written; a reference whose repository differs from the overlay store, in the `owner/repo#N` form or in an issue URL, is a blocked operation, and an absent reference stops the invocation naming the missing reference. Read the rest of `$ARGUMENTS` as the decision: `confirm`, or `reject` followed by the reason. The argument alone decides, and the conversation never does. An absent decision, any text after `confirm`, any other word, and a `reject` with no reason refuse the invocation, naming the two accepted forms, with nothing written.
-2. **Verify the precondition.** Read the issue and its fields under `canonical-state`. A confirmation or rejection starts only when the issue is `OPEN`, Product equals the overlay Product, Lifecycle is `Submitted`, the assignee list is empty, and Maturity is `Proposed`, `Framed`, or `Sliced`. Any other state is reported verbatim and stops without mutation.
-3. **Resolve identities.** Resolve the session id from `printenv CODEX_THREAD_ID`. The harness is `Codex`. Take the delegate — the name this session acts under — and the operator it acts for from the name each has been given in this conversation, copied verbatim; when either is absent, ask for it through the structured-question tool, and never infer a name. An empty value stops before any write.
-4. **Compose the comment** under `confirmation-record`: `Confirmation: <Maturity>` with the Maturity read in step 2 for `confirm`, or `Rejection: <Maturity>` for `reject`, then the lines `Delegate`, `For`, `Harness`, and `Session` in that order, and for a rejection the `Reason` line last. Inspect the text under `write-inspection`.
-5. **Write in order**, recording each successful write under `ordered-write`:
-   1. Post the comment with `gh issue comment <N> --repo <store> --body-file <comment-file>`, the text written with the file-write tool to a file in the scratch directory the harness names for this session, under a file name unique to the agent and the Change, per `inert-stdin`; never remove the file. Where the harness names no scratch directory, use the one the environment designates, such as `$RUNNER_TEMP` on a hosted runner.
-   2. Write Lifecycle `Available` through the single-select write under `canonical-state`, with the issue id, the `Lifecycle` field id, and the `Available` option id it resolves.
-6. **Read back** under `complete-readback`: Product equals the overlay Product, Maturity is unchanged, Lifecycle is `Available`, the assignee list is empty, and the deciding comment under `authority-read` is the exact comment just posted.
+1. **Resolve the target.** Resolve the store and Product under `store-binding`. Read `$ARGUMENTS` as the issue reference alone — `#N`, `owner/repo#N`, or an issue URL; an argument matching none of those forms, and any text after the reference, refuse the invocation, naming the three forms, with nothing written; a reference whose repository differs from the overlay store, in the `owner/repo#N` form or in an issue URL, is a blocked operation, and an absent reference stops the invocation naming the missing reference.
+2. **Verify the precondition.** Read the issue and its fields under `canonical-state`. A confirmation starts only when the issue is `OPEN`, Product equals the overlay Product, Lifecycle is `Submitted`, the assignee list is empty, and Maturity is `Proposed`, `Framed`, or `Sliced`. Any other state is reported verbatim and stops without mutation.
+3. **Write Lifecycle `Available`** through the single-select write under `canonical-state`, with the issue id, the `Lifecycle` field id, and the `Available` option id it resolves, recording the write under `ordered-write`. Post no comment and write neither Maturity nor any body section.
+4. **Read back** under `complete-readback`: Product equals the overlay Product, Maturity is unchanged, Lifecycle is `Available`, the assignee list is empty, and the newest field-change event under `authority-read` is the Lifecycle move out of `Submitted` just written.
 
 </workflow>
 
 <result>
 
-Return the issue URL, the readback values verbatim, whether the comment is a confirmation or a rejection with its Maturity, and the next step: `claim-change` claims the Change, and the next Maturity write after a rejection follows `maturity-and-authority`.
+Return the issue URL, the readback values verbatim, the move's actor and time from its field-change event, and the next step: `claim-change` claims the Change.
 
 </result>
 
 <success_criteria>
 
-- The Change was `Submitted` and at `Proposed`, `Framed`, or `Sliced` from current store state before the first write, and any other state produced a report with no mutation.
-- The comment records the decision the argument stated and nothing else decided it, carries exactly the lines `confirmation-record` states for its kind, names the delegate and the operator without inference, and passed `write-inspection` before posting.
-- The comment was posted before Lifecycle moved, and the move wrote neither Maturity nor any body section.
-- The readback shows Lifecycle `Available`, an empty assignee list, Product and Maturity unchanged, and the exact posted comment as the deciding comment.
+- The Change was `Submitted` and at `Proposed`, `Framed`, or `Sliced` from current store state before the write, and any other state produced a report with no mutation.
+- The only write is Lifecycle `Available`: no comment was posted, and neither Maturity nor any body section changed.
+- The readback shows Lifecycle `Available`, an empty assignee list, Product and Maturity unchanged, and the Lifecycle move out of `Submitted` as the newest field-change event.
 - Every failed transition stopped before later mutation and reported the ordered successful writes, the failed operation, and the complete observed state.
 
 </success_criteria>
