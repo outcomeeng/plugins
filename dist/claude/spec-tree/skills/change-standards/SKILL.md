@@ -168,7 +168,7 @@ Execution takes the Governance mutations blocks, then the Spec mutations blocks,
 
 <rule id="open-questions">
 
-`## Open questions` holds each known question that can change the intended Output, unanswered, and ends the record. A Proposed record may carry it; a Framed record and every higher Maturity leave it empty or omit it, because a Frame settles each question as an assumption under `assumptions` or in a Governance mutations or Spec mutations block. A question no assumption can defend stays an open question, returns with its best answer in the result of the refinement as `assumptions` states, and blocks Framed.
+`## Open questions` holds each known question that can change the intended Output, unanswered, and ends the record. A Proposed record may carry it; a Framed record and every higher Maturity leave it empty or omit it, because a Frame settles each question as an assumption under `assumptions` or in a Governance mutations or Spec mutations block. A question no assumption can defend stays an open question, as `assumptions` states, and blocks Framed.
 
 </rule>
 
@@ -223,7 +223,7 @@ A candidate outside the contract receives no judgment, migration, alias, inferre
 - Each record rule is stated once, in `<record_rules>`; a Definition of Ready criterion cites the record rule it applies and adds only the level's own condition.
 - Every loaded criterion has a stable identifier and can be judged from the complete record, the store state the `Lifecycle` reads return, and necessary repository references.
 - The authority for each Maturity advance is read from the store's field-change event for the move out of `Submitted` under `authority-read`, and no rule or criterion requires body authority text or a confirmation comment.
-- Only a failed Definition of Ready criterion is a blocking finding under `review-bar`; every other finding is `filed`, and no finding withholds publication.
+- Every finding's blocking status follows `review-bar` alone.
 - The four Maturity values, the five Lifecycle values, lineage, the Leaf, Parent, and root types, blockers, authority, product truth, and continuation remain distinct.
 
 </success_criteria>

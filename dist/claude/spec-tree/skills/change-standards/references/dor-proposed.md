@@ -1,6 +1,6 @@
 <definition_of_ready maturity="Proposed" cumulative="true">
 
-Judge every criterion; this table is the complete criterion set for Proposed Maturity, so apply no criterion outside it. Each criterion judges the record against the record rule it names in `<record_rules>`. A failed criterion is a blocking finding; a finding against any other record rule is non-blocking under `review-bar`.
+Judge every criterion; this table is the complete criterion set for Proposed Maturity, so apply no criterion outside it. Each criterion judges the record against the record rule it names in `<record_rules>`. A criterion's blocking status follows `review-bar`.
 
 | ID                        | Criterion                                                                                                                                                                  |
 | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

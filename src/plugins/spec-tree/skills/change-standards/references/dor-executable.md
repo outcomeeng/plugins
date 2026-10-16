@@ -1,6 +1,6 @@
 <definition_of_ready maturity="Executable" cumulative="true">
 
-Judge every criterion; this table includes the complete Proposed, Framed, and Sliced requirements and is the complete criterion set for Executable Maturity, so apply no criterion outside it. Each criterion judges the record against the record rule it names in `<record_rules>`. A failed criterion is a blocking finding; a finding against any other record rule is non-blocking under `review-bar`.
+Judge every criterion; this table includes the complete Proposed, Framed, and Sliced requirements and is the complete criterion set for Executable Maturity, so apply no criterion outside it. Each criterion judges the record against the record rule it names in `<record_rules>`. A criterion's blocking status follows `review-bar`.
 
 | ID                          | Criterion                                                                                                                                                                                                                                                                       |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
