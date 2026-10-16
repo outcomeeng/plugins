@@ -59,6 +59,10 @@ records, and it holds for every marketplace definition: the decision binds
 acceptance to profiles, and no definition's tool grant or sandbox changes the
 Standard profile it selects.
 
+**Impact**: nothing in the tree shows the emitted `changeset-coherence-auditor`
+definitions loading natively and returning a run token and projection on either
+harness, so each `subagent-auditor` run on the definition files the finding again.
+
 **Settlement condition**: the release retains passing Standard-profile acceptance
 rows for both harnesses at a location `/audit-subagent` reads, or the subagent
 standards accept the harness's profile acceptance as a definition's invocation
@@ -74,15 +78,19 @@ blocking rule `release_acceptance_evidence` and the blocking rule
 `execution_boundary_mismatch`, which the amended wrapper assertion in commit
 `d92f6f73b0a17127c8840078370fef38d072e02b` resolved. Run
 `2026-10-16_19-59-29-460-b8a7ac7b6830` at that head sealed `approved` and filed
-`release_acceptance_evidence` against this entry. The Plugins Maintainer's
+`instructions:subagent:definition:src/plugins/spec-tree/agents/changeset-coherence-auditor.md:release_acceptance_evidence`
+against this entry, with `baseRefEvidence`
+`184cc92eae6e896050a7cc991f63ce953b236ccd..d92f6f73b0a17127c8840078370fef38d072e02b`. The Plugins Maintainer's
 disposition of this class for the Change's rewritten wrapper definitions
 (outcomeeng/changes#513, comment 6221945881, item 4) leaves no repair in the
 changeset.
 
 ## An approved run records no cluster facts
 
-The assertion that a coherence audit records its cluster facts on an approved run
-stands as declared. The `spx verification run` unit payload has no field that
+The assertion of
+[`spx/21-spec-tree.enabler/68-audit.enabler/32-changeset-coherence.enabler/changeset-coherence.md`](spx/21-spec-tree.enabler/68-audit.enabler/32-changeset-coherence.enabler/changeset-coherence.md)
+that the audit records its semantic clusters and the facts about them in its sealed
+run's units stands as declared. The `spx verification run` unit payload has no field that
 carries cluster facts, so an approved run records none.
 
 **Impact**: the declaration leads the toolchain; the sealed record of an approved
