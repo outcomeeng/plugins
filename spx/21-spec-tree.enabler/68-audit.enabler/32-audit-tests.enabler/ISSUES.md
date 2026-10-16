@@ -82,6 +82,14 @@ The test-evidence audit skill loads `/contextualize` for its target node, and `/
 
 **Settlement condition.** The audit selects the Verifier-mode context load that the entry in `spx/21-spec-tree.enabler/18-context-loading.enabler/ISSUES.md` settles, so the audited head stays the dispatched head.
 
+## The shipped test-evidence audit still produces the structured JSON verdict
+
+The assertions state the sealed-run verdict model: the audit run's terminal status is `approved` or `rejected`, and the `test-evidence-auditor` wrapper relays the run token, the run file and the rendered projection. `src/plugins/spec-tree/skills/audit-tests/SKILL.md` and the wrapper still emit the `<verdict_format>` JSON object with no run token or run file, so the assertions describe behavior the shipped producer does not yet have.
+
+**Settlement condition.** outcomeeng/changes#513 rewrites the skill and wrapper onto one `spx verification run` over the exact committed scope under an unchanged semantic verdict model.
+
+**Evidence**: current-head CI review of pull request 671.
+
 ## Six skill-standard findings stand on the audit-tests skill body
 
 The skill audit run `2026-10-12_18-41-36-254-8cb4eac53023` of
