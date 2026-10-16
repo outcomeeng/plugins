@@ -156,7 +156,7 @@ Execution takes the Governance mutations blocks, then the Spec mutations blocks,
 
 <rule id="assumptions">
 
-`## Assumptions` stands between `## Spec mutations` and `## Slice` and holds each question the Frame settled as its answer and one sentence of reason. It is absent when the Frame settled no question. A question that no assumption can defend is not recorded here: the refiner sends it, with its best answer, to the superior that assigned the refinement — the agent that gave the task, or the operator when no agent did — and continues on every part that does not depend on the answer.
+`## Assumptions` stands between `## Spec mutations` and `## Slice` and holds each question the Frame settled as its answer and one sentence of reason. It is absent when the Frame settled no question. A question that no assumption can defend is not recorded here: refinement returns it, with its best answer, in its result, records it under `open-questions` where the Maturity admits that section, leaves the record at the Maturity the question blocks, and continues on every part that does not depend on the answer.
 
 </rule>
 
@@ -168,7 +168,7 @@ Execution takes the Governance mutations blocks, then the Spec mutations blocks,
 
 <rule id="open-questions">
 
-`## Open questions` holds each known question that can change the intended Output, unanswered, and ends the record. A Proposed record may carry it; a Framed record and every higher Maturity leave it empty or omit it, because a Frame settles each question as an assumption under `assumptions`, in a Governance mutations or Spec mutations block, or by sending it to the superior under `assumptions`. An open question blocks Framed.
+`## Open questions` holds each known question that can change the intended Output, unanswered, and ends the record. A Proposed record may carry it; a Framed record and every higher Maturity leave it empty or omit it, because a Frame settles each question as an assumption under `assumptions` or in a Governance mutations or Spec mutations block. A question no assumption can defend stays an open question, returns with its best answer in the result of the refinement as `assumptions` states, and blocks Framed.
 
 </rule>
 
