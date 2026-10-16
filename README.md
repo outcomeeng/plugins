@@ -358,16 +358,16 @@ Rust engineering: /test-rust, /code-rust, /audit-rust-code, /audit-rust-tests, /
 
 | Type  | Name                           | Purpose                                                           |
 | ----- | ------------------------------ | ----------------------------------------------------------------- |
-| Skill | `/architect-rust`              | Writing ADRs for Rust                                             |
 | Skill | `/audit-rust-architecture`     | Rust-specific architecture audit                                  |
 | Skill | `/audit-rust-code`             | Rust implementation-code audit methodology                        |
-| Skill | `/audit-rust-tests`            | Rust test-evidence audit methodology                              |
-| Skill | `/code-rust`                   | Writing or fixing implementation code for Rust                    |
+| Skill | `/audit-rust-test`             | Rust test-evidence audit methodology                              |
+| Skill | `/author-rust-architecture`    | Writing ADRs for Rust                                             |
+| Skill | `/author-rust-code`            | Writing or fixing implementation code for Rust                    |
+| Skill | `/author-rust-test`            | Writing or fixing tests for Rust                                  |
 | Skill | `/rust-architecture-standards` | Rust ADR conventions enforced across architect and auditor skills |
-| Skill | `/rust-standards`              | Rust code standards enforced across all skills                    |
+| Skill | `/rust-code-standards`         | Rust code standards enforced across all skills                    |
 | Skill | `/rust-test-standards`         | Rust test standards enforced across all skills                    |
-| Skill | `/simplify-rust`               | Simplifying Rust implementation while preserving behavior         |
-| Skill | `/test-rust`                   | Writing or fixing tests for Rust                                  |
+| Skill | `/simplify-rust-code`          | Simplifying Rust implementation while preserving behavior         |
 
 ### spec-tree
 
