@@ -42,3 +42,9 @@ parent: null
 `[spec file name]` states:
 
 - [The Node's assertion as it reads after the Change.]
+
+## Assumptions
+
+<!-- Present only when the Frame settled a question. Remove this section otherwise. -->
+
+- [The question the Frame settled]? [Its answer, and one sentence of reason.]

@@ -19,6 +19,26 @@ parent: null
 - **Observation:** [Optional: the observed state that gives rise to the Change. Remove this line when no observation exists.]
 - **Evidence:** [The observable result by which anyone checks that the Output is achieved.]
 
+## Governance
+
+<!-- A Leaf lists every record that governs the Change or that the Output touches. -->
+
+- `spx/[path of the governing record]`: [in line, amended, or new]
+
+## Governance mutations
+
+<!-- One block for each amended or new record, in record order. A Parent carries no block. -->
+
+`spx/[path of the amended or new record]` states:
+
+- [slug]: [The decision in exact text.]
+
+## Spec mutations
+
+<!-- One block for each affected or intended Node, in execution order, providers first. Proposed names the Node by this opening line alone; Framed adds its assertions. A Parent carries no block. Use none for the malleability before of a Node the Change creates. -->
+
+`spx/[full node path]`: [spec, verification, implementation, or none] -> [spec, verification, or implementation]
+
 ## Open questions
 
 - [Each known question that can change the intended Output, unanswered. Remove this section when none remains.]
