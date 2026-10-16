@@ -298,3 +298,15 @@ def common_dir_output(shape: str, path: str) -> str:
 def expected_project_key(shape: str, path: str) -> str | None:
     """The key one shape resolves: the path it was built around, or none."""
     return path if shape in RESOLVING_COMMON_DIR_SHAPES else None
+
+
+WAIT_TIMEOUT_CASE_CEILING = 30
+
+
+def wait_timeouts(module: ModuleType) -> st.SearchStrategy[int]:
+    """Timeouts over the source-owned bounds, capped at a ceiling that keeps the
+    scripted polls few."""
+    lowest, highest = module.INTEGER_BOUNDS[module.TIMEOUT_SECONDS_FIELD]
+    return st.integers(
+        min_value=lowest, max_value=min(highest, WAIT_TIMEOUT_CASE_CEILING)
+    )

@@ -133,6 +133,12 @@ class AccountingField(StrEnum):
     SHARE_MEASURED_COST = "share_measured_cost"
     HISTORY_COMPLETE = "history_complete"
     UNPRICED_REQUESTS = "unpriced_requests"
+    RECORDED_UTC = "recorded_utc"
+    RECORDS = "records"
+    REASON = "reason"
+    ROOT = "root"
+    SIGNAL = "signal"
+    STATUS = "status"
 
 
 class SignalKind(str, Enum):
@@ -1244,3 +1250,58 @@ def signals(
             }
         )
     return result
+
+
+class AlertReadStatus(StrEnum):
+    READ = "read"
+    UNREADABLE = "unreadable"
+
+
+def recorded_alerts(root: Path, after: dt.datetime) -> Json:
+    """Map the alert records stored after `after` to identity, instant and signal.
+
+    The read opens the detector state read-only, runs no collection, and changes
+    no stored record or journal entry. An absent or unreadable state root yields
+    an unreadable result.
+    """
+
+    def unreadable(reason: str) -> Json:
+        return {
+            AccountingField.STATUS: AlertReadStatus.UNREADABLE,
+            AccountingField.ROOT: str(root),
+            AccountingField.REASON: reason,
+        }
+
+    state = root / STATE_NAME
+    if state.is_symlink() or not state.is_file():
+        return unreadable(f"detector state is absent: {state}")
+    try:
+        db = sqlite3.connect(
+            f"{state.absolute().as_uri()}?mode=ro", uri=True, timeout=1
+        )
+    except sqlite3.Error as error:
+        return unreadable(f"detector state cannot be opened: {error}")
+    try:
+        rows = db.execute("SELECT identity,payload,stamp FROM signals").fetchall()
+        records = []
+        for identity, payload, stamp in rows:
+            instant = timestamp(stamp)
+            if instant > after:
+                records.append((instant, identity, json.loads(payload)))
+    except (sqlite3.Error, ValueError, TypeError) as error:
+        return unreadable(f"detector state cannot be read: {error}")
+    finally:
+        db.close()
+    records.sort(key=lambda record: (record[0], record[1]))
+    return {
+        AccountingField.STATUS: AlertReadStatus.READ,
+        AccountingField.ROOT: str(root),
+        AccountingField.RECORDS: [
+            {
+                AccountingField.IDENTITY: identity,
+                AccountingField.RECORDED_UTC: iso(instant),
+                AccountingField.SIGNAL: signal,
+            }
+            for instant, identity, signal in records
+        ],
+    }

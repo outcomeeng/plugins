@@ -9,10 +9,14 @@ from outcomeeng_testing.harnesses.agent_mail import (
     CapturedInboxResponse,
     CapturedLabelResponse,
     RecordingRunner,
+    ScriptedClock,
+    captured_inbox_responses_with_bodies,
     common_dir_seeded_absent_store_runner,
     common_dir_seeded_runner,
     failed_command_result,
     git_location_variables,
+    inbox_response_up_to,
+    inbox_response_with_ids,
     load_agent_mail,
     mail_pool,
     run_cli_project_key,
@@ -22,10 +26,13 @@ from outcomeeng_testing.harnesses.agent_mail import (
     run_project_key_mapping,
     run_recipient_boundary,
     run_store_response_cases,
+    run_wait_cases,
     store_response_payload,
     store_response_result,
     text_command_result,
     usage_contract_for,
+    wait_request,
+    wait_store_runner,
 )
 from outcomeeng_testing.harnesses.cli_usage import read_argv
 
@@ -113,6 +120,18 @@ def test_agent_mail_operation_mappings() -> None:
         else:
             if operation is module.Operation.RECEIPT:
                 assert reading.positionals == (str(arguments[module.MESSAGE_ID_FIELD]),)
+            if operation is module.Operation.WAIT:
+                bodies_option = module.PUBLIC_AM_ARGUMENT_OPTIONS[
+                    module.INCLUDE_BODIES_FIELD
+                ]
+                limit_option = module.PUBLIC_AM_ARGUMENT_OPTIONS[module.LIMIT_FIELD]
+                assert bodies_option in reading.options_seen
+                assert module.PUBLIC_AM_ARGUMENT_OPTIONS[
+                    module.UNREAD_ONLY_FIELD
+                ] not in (reading.options_seen)
+                assert argv[argv.index(limit_option) + 1] == str(
+                    module.WAIT_LISTING_LIMIT
+                )
             assert (
                 module.attached_option(
                     module.PUBLIC_AM_ARGUMENT_OPTIONS[module.AGENT_FIELD],
@@ -140,7 +159,22 @@ def test_agent_mail_operation_mappings() -> None:
             assert data[module.MESSAGE_ID_FIELD] == arguments[module.MESSAGE_ID_FIELD]
             return
         store = cast(dict[str, object], payload)
-        if operation is module.Operation.INBOX:
+        if operation is module.Operation.WAIT:
+            items = cast(list[dict[str, object]], store[module.STORE_INBOX_FIELD])
+            later = [
+                item
+                for item in items
+                if cast(int, item[module.STORE_ID_FIELD])
+                > cast(int, arguments[module.AFTER_ID_FIELD])
+            ]
+            first = min(later, key=lambda item: cast(int, item[module.STORE_ID_FIELD]))
+            record = cast(dict[str, object], data[module.RECORD_FIELD])
+            assert response == store
+            assert data[module.OUTCOME_FIELD] == module.WaitOutcome.RECEIVED.value
+            assert record[module.RECORD_ID_FIELD] == first[module.STORE_ID_FIELD]
+            (bound,) = cast(list[float], runner.timeouts[1:])
+            assert 0 < bound <= cast(int, arguments[module.TIMEOUT_SECONDS_FIELD])
+        elif operation is module.Operation.INBOX:
             items = cast(list[dict[str, object]], store[module.STORE_INBOX_FIELD])
             records = cast(list[dict[str, object]], data[module.RECORDS_FIELD])
             assert response == store
@@ -519,3 +553,135 @@ def test_an_empty_display_name_reaches_the_store_as_an_empty_value() -> None:
         )
         argv = module.command_for(request, project_key)
         assert not any(word.startswith(option) for word in argv)
+
+
+def test_wait_maps_the_inbox_to_the_first_later_record_or_a_named_outcome() -> None:
+    def assert_case(
+        module: ModuleType, agent: str, project_key: str, timeout_seconds: int
+    ) -> None:
+        for capture in captured_inbox_responses_with_bodies(module):
+            rows = cast(
+                list[dict[str, object]], capture.payload[module.STORE_INBOX_FIELD]
+            )
+            ids = sorted(cast(int, row[module.STORE_ID_FIELD]) for row in rows)
+            for after_id in (ids[0] - 1, *ids):
+                later = [row_id for row_id in ids if row_id > after_id]
+                clock = ScriptedClock()
+                runner = wait_store_runner(
+                    module, project_key, clock, repeating=capture.result
+                )
+
+                result = module.execute(
+                    wait_request(module, agent, after_id, timeout_seconds),
+                    runner,
+                    clock,
+                )
+
+                data = cast(dict[str, object], result[module.DATA_FIELD])
+                assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
+                if not later:
+                    assert data[module.OUTCOME_FIELD] == module.WaitOutcome.TIMEOUT
+                    assert module.RECORD_FIELD not in data
+                    assert clock.current >= timeout_seconds, capture.capture
+                    continue
+                first = next(
+                    row for row in rows if row[module.STORE_ID_FIELD] == later[0]
+                )
+                record = cast(dict[str, object], data[module.RECORD_FIELD])
+                assert data[module.OUTCOME_FIELD] == module.WaitOutcome.RECEIVED
+                assert record[module.RECORD_ID_FIELD] == later[0]
+                assert record[module.SENDER_FIELD] == first[module.STORE_FROM_FIELD]
+                assert (
+                    record[module.CORRELATION_FIELD] == first[module.STORE_THREAD_FIELD]
+                )
+                assert record[module.BODY_FIELD] == first[module.STORE_BODY_FIELD]
+                assert record[module.RECIPIENT_FIELD] == agent
+                assert clock.sleeps == []
+
+    run_wait_cases(assert_case)
+
+
+def test_wait_returns_a_record_that_arrives_before_the_timeout() -> None:
+    def assert_case(
+        module: ModuleType, agent: str, project_key: str, timeout_seconds: int
+    ) -> None:
+        if timeout_seconds <= module.WAIT_POLL_INTERVAL_SECONDS:
+            return
+        for capture in captured_inbox_responses_with_bodies(module):
+            ids = sorted(
+                cast(int, row[module.STORE_ID_FIELD])
+                for row in cast(
+                    list[dict[str, object]], capture.payload[module.STORE_INBOX_FIELD]
+                )
+            )
+            after_id = ids[0]
+            earlier = inbox_response_up_to(module, capture, after_id)
+            clock = ScriptedClock()
+            runner = wait_store_runner(
+                module, project_key, clock, earlier.result, capture.result
+            )
+
+            result = module.execute(
+                wait_request(module, agent, after_id, timeout_seconds), runner, clock
+            )
+
+            data = cast(dict[str, object], result[module.DATA_FIELD])
+            record = cast(dict[str, object], data[module.RECORD_FIELD])
+            assert data[module.OUTCOME_FIELD] == module.WaitOutcome.RECEIVED
+            assert record[module.RECORD_ID_FIELD] == ids[1], earlier.capture
+            assert len(runner.calls) == 3
+            assert 0 < clock.current <= timeout_seconds
+
+    run_wait_cases(assert_case)
+
+
+def test_wait_names_a_listing_that_cannot_reach_back_to_the_id() -> None:
+    def assert_case(
+        module: ModuleType, agent: str, project_key: str, timeout_seconds: int
+    ) -> None:
+        for capture in captured_inbox_responses_with_bodies(module):
+            after_id = max(
+                cast(int, row[module.STORE_ID_FIELD])
+                for row in cast(
+                    list[dict[str, object]], capture.payload[module.STORE_INBOX_FIELD]
+                )
+            )
+            cut_off = inbox_response_with_ids(
+                module,
+                capture,
+                list(range(after_id + 1, after_id + 1 + module.WAIT_LISTING_LIMIT)),
+            )
+            reaching = inbox_response_with_ids(
+                module,
+                capture,
+                list(range(after_id, after_id + module.WAIT_LISTING_LIMIT)),
+            )
+
+            clock = ScriptedClock()
+            cut_off_runner = wait_store_runner(
+                module, project_key, clock, cut_off.result
+            )
+            cut_off_result = module.execute(
+                wait_request(module, agent, after_id, timeout_seconds),
+                cut_off_runner,
+                clock,
+            )
+            reaching_runner = wait_store_runner(
+                module, project_key, ScriptedClock(), reaching.result
+            )
+            reaching_result = module.execute(
+                wait_request(module, agent, after_id, timeout_seconds),
+                reaching_runner,
+                ScriptedClock(),
+            )
+
+            cut_off_data = cast(dict[str, object], cut_off_result[module.DATA_FIELD])
+            reaching_data = cast(dict[str, object], reaching_result[module.DATA_FIELD])
+            assert cut_off_data[module.OUTCOME_FIELD] == module.WaitOutcome.UNREACHABLE
+            assert module.RECORD_FIELD not in cut_off_data, cut_off.capture
+            assert len(cut_off_runner.calls) == 2
+            assert reaching_data[module.OUTCOME_FIELD] == module.WaitOutcome.RECEIVED
+            record = cast(dict[str, object], reaching_data[module.RECORD_FIELD])
+            assert record[module.RECORD_ID_FIELD] == after_id + 1, reaching.capture
+
+    run_wait_cases(assert_case)

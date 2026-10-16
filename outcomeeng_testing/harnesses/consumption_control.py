@@ -33,6 +33,7 @@ from outcomeeng_testing.generators.consumption_control import (
     usage_snapshots,
     unsupported_models,
     duration_snapshots,
+    alert_reads,
 )
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
 
@@ -1284,3 +1285,119 @@ def collection_bounds_observation() -> BoundObservation:
         discovery[AccountingField.GAPS],
         capacity[AccountingField.GAPS],
     )
+
+
+@dataclass(frozen=True)
+class AlertReadObservation:
+    fields: Any
+    statuses: Any
+    stored: tuple[tuple[str, dt.datetime, str, dict[str, Any]], ...]
+    cutoff: dt.datetime
+    result: dict[str, Any]
+    root: Path
+    state_before: dict[str, bytes]
+    state_after: dict[str, bytes]
+    journal_after: bytes
+
+
+def _state_files(root: Path) -> dict[str, bytes]:
+    """Snapshot durable state; SQLite reader sidecars hold no state and are excluded."""
+    return {
+        str(path.relative_to(root)): path.read_bytes()
+        for path in sorted(root.rglob("*"))
+        if path.is_file() and not path.name.endswith(("-shm", "-wal"))
+    }
+
+
+def _journal(root: Path) -> bytes:
+    journal = root / (modules()[0].STATE_NAME + "-wal")
+    return journal.read_bytes() if journal.exists() else b""
+
+
+def alert_read_observation(
+    case: tuple[list[tuple[str, int, int]], int],
+) -> AlertReadObservation:
+    accounting, _, _, _ = modules()
+    records, cutoff_offset = case
+    base = accounting.timestamp(fixture()[AccountingField.TIMESTAMP])
+    with TemporaryDirectory(prefix="alert-read-") as temporary:
+        root = Path(temporary) / "state"
+        config = accounting.Config(root, Path(temporary) / "transcripts", base)
+        stored = tuple(
+            (
+                identity,
+                base + dt.timedelta(seconds=offset),
+                accounting.iso(base + dt.timedelta(seconds=offset)),
+                {
+                    AccountingField.KIND: accounting.SignalKind.ROLLING_THRESHOLD.value,
+                    AccountingField.API_EQUIVALENT_USD: str(amount),
+                },
+            )
+            for identity, offset, amount in records
+        )
+        with accounting.Evidence(config) as evidence, evidence.db:
+            for identity, _, stamp, signal in stored:
+                evidence.db.execute(
+                    "INSERT INTO signals VALUES(?,?,?)",
+                    (identity, accounting.encoded(signal), stamp),
+                )
+        before = _state_files(root)
+        cutoff = base + dt.timedelta(seconds=cutoff_offset)
+        result = accounting.recorded_alerts(root, cutoff)
+        return AlertReadObservation(
+            AccountingField,
+            accounting.AlertReadStatus,
+            stored,
+            cutoff,
+            result,
+            root,
+            before,
+            _state_files(root),
+            _journal(root),
+        )
+
+
+def alert_read_property(check: Callable[[AlertReadObservation], None]) -> None:
+    @seed(SEED)
+    @settings(max_examples=EXAMPLES, deadline=None)
+    @given(alert_reads())
+    def run(case: tuple[list[tuple[str, int, int]], int]) -> None:
+        check(alert_read_observation(case))
+
+    run_replayable_property(
+        run,
+        seed_value=SEED,
+        replay_path=REPLAY.replace("accounting.property.l1", "alerts.mapping.l1"),
+    )
+
+
+@dataclass(frozen=True)
+class UnreadableAlertObservation:
+    fields: Any
+    statuses: Any
+    root: Path
+    result: dict[str, Any]
+    state_before: dict[str, bytes]
+    state_after: dict[str, bytes]
+
+
+def unreadable_alert_observations() -> Iterator[UnreadableAlertObservation]:
+    """Yield a read of an absent detector state and of a state that is no database."""
+    accounting, _, _, _ = modules()
+    base = accounting.timestamp(fixture()[AccountingField.TIMESTAMP])
+    for corrupt in (False, True):
+        with TemporaryDirectory(prefix="alert-unreadable-") as temporary:
+            root = Path(temporary) / "state"
+            root.mkdir()
+            if corrupt:
+                (root / accounting.STATE_NAME).write_bytes(b"not a database" * 64)
+            before = _state_files(root)
+            result = accounting.recorded_alerts(root, base)
+            yield UnreadableAlertObservation(
+                AccountingField,
+                accounting.AlertReadStatus,
+                root,
+                result,
+                before,
+                _state_files(root),
+            )

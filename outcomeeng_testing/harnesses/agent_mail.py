@@ -9,6 +9,7 @@ import re
 import shlex
 import subprocess
 import sys
+import time
 from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -39,6 +40,7 @@ from outcomeeng_testing.generators.agent_mail import (
     store_message_ids,
     terminal_record_kinds,
     unsupported_operation_names,
+    wait_timeouts,
 )
 from outcomeeng_testing.harnesses.cli_usage import (
     UsageContract,
@@ -94,6 +96,9 @@ STORE_RESPONSE_REPLAY_PATH = PROJECT_KEY_MAPPING_REPLAY_PATH
 INBOX_ROW_SEED = 2026091807
 INBOX_ROW_EXAMPLES = 10
 INBOX_ROW_REPLAY_PATH = PROJECT_KEY_MAPPING_REPLAY_PATH
+WAIT_SEED = 2026101601
+WAIT_EXAMPLES = 10
+WAIT_REPLAY_PATH = PROJECT_KEY_MAPPING_REPLAY_PATH
 RECIPIENT_BOUNDARY_SEED = 2026091808
 RECIPIENT_BOUNDARY_EXAMPLES = 20
 RECIPIENT_BOUNDARY_REPLAY_PATH = PROJECT_KEY_MAPPING_REPLAY_PATH
@@ -169,14 +174,17 @@ class RecordingRunner:
 
     results: list[CommandResultContract]
     calls: list[tuple[tuple[str, ...], str | None]] = field(default_factory=list)
+    timeouts: list[float | None] = field(default_factory=list)
 
     def run(
         self,
         argv: tuple[str, ...],
         stdin: str | None = None,
         env: Mapping[str, str] | None = None,
+        timeout_seconds: float | None = None,
     ) -> CommandResultContract:
         self.calls.append((argv, stdin))
+        self.timeouts.append(timeout_seconds)
         if not self.results:
             raise RuntimeError(f"Unexpected command: {argv}")
         return self.results.pop(0)
@@ -195,6 +203,7 @@ class AbsentExecutableRunner:
         argv: tuple[str, ...],
         stdin: str | None = None,
         env: Mapping[str, str] | None = None,
+        timeout_seconds: float | None = None,
     ) -> CommandResultContract:
         self.calls.append((argv, stdin))
         if argv[0] == self.absent_executable:
@@ -267,6 +276,10 @@ def _response_fixture_path(
 ) -> Path:
     name = _command_fixture_name(module, operation)
     suffix = "json" if operation in module.JSON_OPERATIONS else "txt"
+    if operation is module.Operation.WAIT:
+        # A wait lists the inbox with bodies, so the capture taken under that
+        # option is the store's answer to it.
+        arguments = {module.INCLUDE_BODIES_FIELD: True}
     return (
         RESPONSE_FIXTURE_ROOT / f"{name}{_shaping_suffix(module, arguments)}.{suffix}"
     )
@@ -1497,3 +1510,235 @@ def run_cli_without_executables(
         CommandResultContract,
         module.CommandResult(completed.returncode, completed.stdout, completed.stderr),
     )
+
+
+class UnboundedCommandError(RuntimeError):
+    """A store command that could hang was run without a time bound."""
+
+
+@dataclass
+class ScriptedClock:
+    """Time-and-concurrency collaborator: a clock that moves only when the
+    wait sleeps or a hung store command consumes its bound."""
+
+    current: float = 0.0
+    sleeps: list[float] = field(default_factory=list)
+
+    def now(self) -> float:
+        return self.current
+
+    def sleep(self, seconds: float) -> None:
+        self.sleeps.append(seconds)
+        self.current += seconds
+
+
+@dataclass
+class WaitStoreRunner:
+    """Failure-simulation and interaction-protocol collaborator for a wait.
+
+    Replies replay in order; `None` is a store command that never answers, so
+    it consumes the whole bound it was given and times out. When the replies
+    run out, `repeating` answers every further command. Each command's argv,
+    bound, and start instant are recorded against the scripted clock.
+    """
+
+    clock: ScriptedClock
+    replies: list[CommandResultContract | None]
+    repeating: CommandResultContract | None = None
+    calls: list[tuple[tuple[str, ...], str | None]] = field(default_factory=list)
+    timeouts: list[float | None] = field(default_factory=list)
+    started: list[float] = field(default_factory=list)
+
+    def run(
+        self,
+        argv: tuple[str, ...],
+        stdin: str | None = None,
+        env: Mapping[str, str] | None = None,
+        timeout_seconds: float | None = None,
+    ) -> CommandResultContract:
+        self.calls.append((argv, stdin))
+        self.timeouts.append(timeout_seconds)
+        self.started.append(self.clock.current)
+        if self.replies:
+            reply = self.replies.pop(0)
+        elif self.repeating is not None:
+            reply = self.repeating
+        else:
+            raise RuntimeError(f"Unexpected command: {argv}")
+        if reply is not None:
+            return reply
+        if timeout_seconds is None:
+            raise UnboundedCommandError(argv)
+        self.clock.current += timeout_seconds
+        raise subprocess.TimeoutExpired(argv, timeout_seconds)
+
+
+def wait_store_runner(
+    module: ModuleType,
+    project_key: str,
+    clock: ScriptedClock,
+    *replies: CommandResultContract | None,
+    repeating: CommandResultContract | None = None,
+) -> WaitStoreRunner:
+    """A wait runner whose first reply is the repository lookup printing
+    `project_key`, followed by the store replies in order."""
+    return WaitStoreRunner(
+        clock,
+        [
+            text_command_result(
+                module, common_dir_output(COMMON_DIR_EXACT, project_key)
+            ),
+            *replies,
+        ],
+        repeating,
+    )
+
+
+def wait_request(
+    module: ModuleType, agent: str, after_id: int, timeout_seconds: int
+) -> dict[str, object]:
+    """One wait request built through the source-owned request constructor."""
+    return cast(
+        dict[str, object],
+        module.operation_request(
+            module.Operation.WAIT,
+            agent=agent,
+            after_id=after_id,
+            timeout_seconds=timeout_seconds,
+        ),
+    )
+
+
+def inbox_response_up_to(
+    module: ModuleType, response: CapturedInboxResponse, after_id: int
+) -> CapturedInboxResponse:
+    """The captured inbox response keeping only the rows at or below `after_id`:
+    the variant ranges over which rows the listing holds, and names the capture
+    it varies."""
+    rows = [
+        row
+        for row in cast(
+            list[dict[str, object]], response.payload[module.STORE_INBOX_FIELD]
+        )
+        if cast(int, row[module.STORE_ID_FIELD]) <= after_id
+    ]
+    payload = {**response.payload, module.STORE_INBOX_FIELD: rows}
+    return CapturedInboxResponse(
+        f"{response.capture} (rows up to id {after_id})",
+        cast(CommandResultContract, module.CommandResult(0, json.dumps(payload), "")),
+        payload,
+    )
+
+
+def inbox_response_with_ids(
+    module: ModuleType, response: CapturedInboxResponse, ids: list[int]
+) -> CapturedInboxResponse:
+    """The captured inbox response whose rows are the capture's first row
+    repeated with each of `ids` as its id: the variant ranges over the ids
+    alone, and names the capture it varies."""
+    template = CapturedInboxRow(
+        response.capture,
+        cast(list[dict[str, object]], response.payload[module.STORE_INBOX_FIELD])[0],
+    )
+    rows = [_row_variant(template, {module.STORE_ID_FIELD: row_id}) for row_id in ids]
+    payload = {**response.payload, module.STORE_INBOX_FIELD: rows}
+    return CapturedInboxResponse(
+        f"{response.capture} ({len(ids)} rows, ids {min(ids)}..{max(ids)})",
+        cast(CommandResultContract, module.CommandResult(0, json.dumps(payload), "")),
+        payload,
+    )
+
+
+def run_wait_cases(
+    assert_case: Callable[[ModuleType, str, str, int], None],
+) -> None:
+    """Drive generated agents, project keys, and timeouts through a linked wait
+    predicate."""
+    module = _load()
+
+    @seed(WAIT_SEED)
+    @settings(max_examples=WAIT_EXAMPLES, deadline=None, print_blob=True)
+    @given(
+        agent=agent_names(),
+        project_key=project_key_paths(),
+        timeout_seconds=wait_timeouts(module),
+    )
+    def generated_case(agent: str, project_key: str, timeout_seconds: int) -> None:
+        assert_case(module, agent, project_key, timeout_seconds)
+
+    run_replayable_property(
+        generated_case, seed_value=WAIT_SEED, replay_path=WAIT_REPLAY_PATH
+    )
+
+
+def wait_requests_without_valid_timeout(
+    module: ModuleType, agent: str
+) -> list[dict[str, object]]:
+    """Wait requests whose timeout is absent, below its source-owned minimum, or
+    above its source-owned maximum."""
+    lowest, highest = module.INTEGER_BOUNDS[module.TIMEOUT_SECONDS_FIELD]
+    after_id = module.INTEGER_BOUNDS[module.AFTER_ID_FIELD][0]
+    valid = wait_request(module, agent, after_id, lowest)
+    arguments = cast(dict[str, object], valid[module.ARGUMENTS_FIELD])
+    without = {
+        key: value
+        for key, value in arguments.items()
+        if key != module.TIMEOUT_SECONDS_FIELD
+    }
+    return [
+        {**valid, module.ARGUMENTS_FIELD: varied}
+        for varied in (
+            without,
+            {**without, module.TIMEOUT_SECONDS_FIELD: lowest - 1},
+            {**without, module.TIMEOUT_SECONDS_FIELD: highest + 1},
+        )
+    ]
+
+
+@dataclass(frozen=True)
+class HungCommandObservation:
+    elapsed_seconds: float
+    timed_out: bool
+
+
+def run_hung_command_under_bound(
+    module: ModuleType, timeout_seconds: float
+) -> HungCommandObservation:
+    """Run a real subprocess that outlives its bound through the shipped
+    runner, and report how long the runner held it and whether it timed out."""
+    runner = module.SubprocessRunner()
+    started = time.monotonic()
+    timed_out = False
+    try:
+        runner.run(
+            (sys.executable, "-c", "import time; time.sleep(3600)"),
+            timeout_seconds=timeout_seconds,
+        )
+    except subprocess.TimeoutExpired:
+        timed_out = True
+    return HungCommandObservation(time.monotonic() - started, timed_out)
+
+
+@contextmanager
+def wait_workspace() -> Iterator[Path]:
+    """An empty working directory and temporary directory for one wait, so every
+    file the wait leaves behind is observable by listing it."""
+    with TemporaryDirectory() as directory:
+        workspace = Path(directory)
+        previous_directory = Path.cwd()
+        previous_temp = os.environ.get("TMPDIR")
+        os.environ["TMPDIR"] = str(workspace)
+        os.chdir(workspace)
+        try:
+            yield workspace
+        finally:
+            os.chdir(previous_directory)
+            if previous_temp is None:
+                del os.environ["TMPDIR"]
+            else:
+                os.environ["TMPDIR"] = previous_temp
+
+
+def workspace_entries(workspace: Path) -> list[str]:
+    """Every path under the workspace, relative to it, in sorted order."""
+    return sorted(str(path.relative_to(workspace)) for path in workspace.rglob("*"))
