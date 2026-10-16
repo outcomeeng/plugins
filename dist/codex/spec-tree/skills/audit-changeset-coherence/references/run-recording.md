@@ -60,7 +60,7 @@ A scope unit:
 
 Add a unit with `spx verification run scope add --verification-type audit --scope-type changeset --scope <base>..<head> --run <token> --payload <payload-file> --idempotency-key '<unitId>'`. The root unit omits the `parentUnitId` field.
 
-Add a finding with `spx verification run finding add` and the same selectors, `--payload <payload-file>`, and `--idempotency-key '<finding-key>'`, the finding key `<unitId>:<rule>`. One unit and rule yield one finding, which names every location it covers. Its payload names an accepted unit; `producerIdentity` repeats that unit's `expectedProducer`; `producerProvenance` carries the spec-tree plugin version the request contract retained in both version fields, and no `toolVersion`; `rule` is one identifier from the rule catalog in `${SKILL_DIR}/references/coherence-model.md`, and `severity` is the severity that row declares; name no identifier outside that catalog.
+Add a finding with `spx verification run finding add` and the same selectors, `--payload <payload-file>`, and `--idempotency-key '<finding-key>'`, the finding key `<unitId>:<rule>`. One unit and rule yield one finding, which names every location it covers. Its payload names an accepted unit; `producerIdentity` repeats that unit's `expectedProducer`; `producerProvenance` carries the spec-tree plugin version the request contract retained in both version fields, and no `toolVersion`; `rule` is one identifier from the audit's rule catalog, and `severity` is the severity that row declares; name no identifier outside that catalog.
 
 ```json
 {
