@@ -103,3 +103,11 @@
 **Impact**: the count is only as complete as the Handoffs that carry it. A rejection that no Handoff names, such as one a session sealed before it stopped without a release, is absent from the next holder's count, and no command derives the count from the journal to check the Hazards line against.
 
 **Settlement condition**: the SPX CLI lists verification runs with the Change identity each run carries, and the cap counts from that listing instead of from the Handoffs' run tokens.
+
+## `/execute-change` reads six auditor verdicts from a sealed run that their shipped skills do not yet produce
+
+**Evidence**: the sealed-run assertion of `spx/31-outcomeeng.enabler/32-changes.enabler/65-change-execution.enabler/change-execution.md` names `adr-auditor`, `pdr-auditor`, `spec-auditor`, `test-evidence-auditor`, `eval-evidence-auditor` and `changeset-coherence-auditor` beside the four auditors that seal a run. `src/plugins/spec-tree/skills/execute-change/SKILL.md` step 5.3 reads the verdict of a `skill-auditor`, `subagent-auditor` or `assertion-auditor` launch from the sealed run and states that the decision-record audit of a PDR or an ADR seals no verification run, so its approval is the verdict the launch returns and it carries no token into a Handoff or a close. The shipped `audit-adr`, `audit-pdr`, `audit-specs`, `audit-tests`, `audit-eval-evidence` and `audit-changeset-coherence` skills and their wrappers still emit the plain JSON verdict with no run token or run file, as each of their nodes records in its `ISSUES.md`.
+
+**Impact**: an Executor launching one of the six auditors receives a verdict object and no run, which the assertion classifies as an unusable result. The Executor skill names no sealed-run route for the six and carves out the decision-record audits.
+
+**Settlement condition**: outcomeeng/changes#513 rewrites the six audit skills and wrappers onto one `spx verification run` each, after which the `/execute-change` verdict rule names all ten auditors, drops the decision-record carve-out, and one typed skill audit of `execute-change` raises no consistency finding against the assertion.
