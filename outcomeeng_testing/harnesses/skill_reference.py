@@ -19,6 +19,7 @@ from outcomeeng.validation.skill_reference import (
     CATALOG_PATH,
     CATALOG_PLUGIN_NAME_FIELD,
     CATALOG_PLUGINS_FIELD,
+    INERT_FIXTURE_ROOT,
     MARKDOWN_SUFFIX,
     PLUGIN_SOURCE_ROOT,
     ROOT_FLAG,
@@ -29,7 +30,9 @@ from outcomeeng.validation.skill_reference import (
     scan_files,
 )
 
-FIXTURE_ROOT = Path(__file__).resolve().parents[1] / "fixtures" / "skill_reference"
+FIXTURE_ROOT = (
+    Path(__file__).resolve().parents[2] / INERT_FIXTURE_ROOT / "skill_reference"
+)
 UNSHIPPED_REFERENCES_FIXTURE = "unshipped_references" + MARKDOWN_SUFFIX
 INCIDENTAL_FILE_STEM = "incidental"
 OUTSIDE_SCAN_ROOTS_DIRECTORY = Path("unscanned")
