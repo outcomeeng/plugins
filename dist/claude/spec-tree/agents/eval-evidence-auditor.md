@@ -3,7 +3,7 @@ model: "sonnet"
 effort: "medium"
 name: eval-evidence-auditor
 description: >-
-  ALWAYS invoke when auditing eval evidence quality against spec assertions after writing evals for a spec node or before relying on eval evidence.
+  Verifier that a calling skill launches by exact name to audit one spec node's eval evidence against its `[eval]` assertions and return the sealed run token, run file, and rendered projection.
 tools: Read, Glob, Grep, Write, Bash(spx verification run:*), Bash(git merge-base:*), Bash(git diff:*), Skill
 skills:
   - spec-tree:audit-eval-evidence
@@ -40,7 +40,7 @@ Run the `spec-tree:audit-eval-evidence` methodology in this already-dispatched, 
 
 Return only one of these, with no prose outside it, each part verbatim:
 
-- Completed run: the `spx verification run` token, the run file, and the rendered projection produced by `spec-tree:audit-eval-evidence`, followed by its `filed` lines.
+- Completed run: the `spx verification run` token, the run file, and the rendered projection produced by `spec-tree:audit-eval-evidence`, followed by each of its `filed` lines or its `filed: none` line, then each of its `not-applicable` lines.
 - Blocked preparation or SPX command, or a missing or invalid target: the skill's complete blocked diagnostic, preserving run token or `not-started`, exact command, payload source, payload key, exit code, and stderr.
 - Skill unavailable: run token `not-started`, required skill `spec-tree:audit-eval-evidence`, and the exact failed load or availability operation.
 
