@@ -22,6 +22,8 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 - **`pdr-auditor` runs the sealed `/audit-pdr` and returns the run token, the run file, and the rendered projection.** The agent passes the caller's PDR path and its own run-driver identity as the skill's request, relays the `filed` lines beside the projection, and relays a blocked diagnostic whole, with run token `not-started` when the skill cannot load or the request is malformed. Its tool grant adds the file-write tool, `spx verification run`, `git merge-base`, and `git diff` in place of `git branch --show-current`, and the Codex definition's sandbox moves from `read-only` to `workspace-write` so the file-write grant has a native boundary. Before this change, the agent relayed a JSON verdict from a skill that sealed no run, so a caller received no run token or run file to hand a Fixer.
 
+- **`/audit-specs` loads the node spec's context read-only.** The skill reads the product spec, each spec and decision record on the path from `spx/` to the node spec's directory, and each decision those cite by full `spx/` path, with `Read`, `Glob`, and `Grep` alone, and invokes neither `/contextualize` nor `/sync-base`, so the audit leaves the checkout unmoved. Before this change, the skill invoked `/contextualize` to load context, whose base synchronization could move the checkout under the audit.
+
 ## 0.106.6
 
 ### Changed

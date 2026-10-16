@@ -42,6 +42,7 @@ A node states product truth. "The status rollup reports failing when any child f
 Decision-record form (ADR/PDR) is audited by `/audit-adr` and `/audit-pdr`; test-evidence quality is audited by `/audit-tests`. This audit checks the node spec's own form, not its tests or its decisions.
 
 - NEVER modify the node spec under audit or any other file — this audit produces a verdict, never a fix or a commit.
+- NEVER invoke `/contextualize` or `/sync-base`: both can move the checkout, and this audit leaves the checkout unmoved. Step 1 loads the node spec's context read-only.
 - ALWAYS judge each assertion's verification type against `/verify` and each test assertion type against `/test` — never accept a present tag as valid by its mere presence.
 - ALWAYS name the section or assertion, the violated rule, and the evidence in every REJECT finding.
 - NEVER issue a finding the cited rule does not support — drop an unbacked finding rather than reject the node for it.
@@ -57,7 +58,7 @@ Decision-record form (ADR/PDR) is audited by `/audit-adr` and `/audit-pdr`; test
 
 Bind the required node-spec path, preserving spaces within it: `$ARGUMENTS` supplies it when that argument is non-empty; when it is empty, the path is the one the request text carries, and the empty substitution binds nothing. If the request carries no path, run `git branch --show-current` for metadata and emit the `<verdict_format>` JSON with `target: ""`, `overall: "REJECTED"`, and all three property rows marked `FAIL`. Each row carries a `missing-target` finding with severity `REJECT`, location `input`, evidence naming the empty input, and a message naming the required node-spec path. Stop before context loading or artifact inspection.
 
-Invoke `/understand` when the live `<SPEC_TREE_FOUNDATION>` marker is absent or lacks `Template root`, then invoke `/contextualize` on the directory containing the node spec. Read the kind's canonical template beneath that marker's resolved absolute template directory; derive current openings, front matter, and tag forms from it. For a prior enabler/outcome artifact, apply the prior grammar the foundation admits. Reject a product target as `unsupported-target`: product specs carry no assertions and belong to review. Run `git branch --show-current` for metadata. Do not proceed without the foundation, context, and required template; report an unavailable template as `template-missing`.
+Invoke `/understand` when the live `<SPEC_TREE_FOUNDATION>` marker is absent or lacks `Template root`. Load the node spec's context with `Read`, `Glob`, and `Grep` alone, in this order: the product spec; each spec and every decision record in each directory on the path from `spx/` to the directory containing the node spec, root first, the node spec under audit excluded; every decision that a loaded spec or decision cites by full `spx/` path, each read once. Read the kind's canonical template beneath that marker's resolved absolute template directory; derive current openings, front matter, and tag forms from it. For a prior enabler/outcome artifact, apply the prior grammar the foundation admits. Reject a product target as `unsupported-target`: product specs carry no assertions and belong to review. Run `git branch --show-current` for metadata. Do not proceed without the foundation, context, and required template; report an unavailable template as `template-missing`.
 
 </step>
 
@@ -187,6 +188,12 @@ How to avoid: Step 3 judges the heading from the claim's quantifier and form ind
 Claude read a `Given … when … then …` assertion under `### Compliance` and approved the node because the assertion carried `[eval]`. The tag described how the verdict was established; it did not change the assertion from a specific existential interaction into a universal rule.
 
 How to avoid: Step 3 classifies explicit assertion form before verification type. Treat every `Given … when … then …` assertion as a scenario and reject it under any heading other than `### Scenarios` with `heading-mismatch`.
+
+**Failure 5: Loaded context through the synchronizing skills**
+
+Claude invoked `/contextualize` to load the node spec's context, and its `/sync-base` step rebased or advanced the checkout under the audit, so the head the audit judged differed from the head it started on.
+
+How to avoid: Load context with the read-only steps of Step 1 and never invoke either skill.
 
 </failure_modes>
 
