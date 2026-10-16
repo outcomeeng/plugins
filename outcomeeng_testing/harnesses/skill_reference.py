@@ -15,8 +15,15 @@ from io import StringIO
 from pathlib import Path
 
 from outcomeeng.distribution.contracts import SKILL_FILENAME
-from outcomeeng.validation.skill_reference import main
+from outcomeeng.validation.skill_reference import (
+    find_violations,
+    load_shipped_skills,
+    main,
+    scan_file,
+    scan_files,
+)
 
+FIXTURE_ROOT = Path(__file__).resolve().parents[1] / "fixtures" / "skill_reference"
 CATALOG_PATH = Path(".claude-plugin") / "marketplace.json"
 PLUGIN_SOURCE_ROOT = Path("src") / "plugins"
 SKILLS_DIRECTORY = "skills"
@@ -85,6 +92,48 @@ def run_validator(root: Path, paths: Sequence[Path] = ()) -> ValidatorRun:
         exit_code = main([ROOT_FLAG, str(root), *(str(path) for path in paths)])
     return ValidatorRun(
         exit_code=exit_code, lines=tuple(output.getvalue().splitlines())
+    )
+
+
+def fixture_path(name: str) -> Path:
+    """Return the path of the inert skill-reference fixture ``name``."""
+    return FIXTURE_ROOT / name
+
+
+def scan_references(
+    root: Path,
+    paths: Sequence[Path],
+    exemptions: Mapping[str, str],
+) -> tuple[str, ...]:
+    """Return the reference of each violation in ``paths`` under ``exemptions``.
+
+    The shipped skill set derives from the marketplace checkout at ``root``;
+    ``paths`` are scanned as given, and the exemption mapping is passed to the
+    scan unchanged.
+    """
+    skills = load_shipped_skills(root)
+    return tuple(
+        violation.reference
+        for path in paths
+        for violation in scan_file(path, skills, exemptions)
+    )
+
+
+def scan_repository_references(
+    root: Path, exemptions: Mapping[str, str]
+) -> tuple[str, ...]:
+    """Return the reference of each violation across every scanned file of ``root``."""
+    return scan_references(root, scan_files(root, ()), exemptions)
+
+
+def scan_text_references(
+    root: Path, text: str, exemptions: Mapping[str, str]
+) -> tuple[str, ...]:
+    """Return the reference of each violation in ``text`` under ``exemptions``."""
+    skills = load_shipped_skills(root)
+    return tuple(
+        violation.reference
+        for violation in find_violations(text, Path("payload.md"), skills, exemptions)
     )
 
 

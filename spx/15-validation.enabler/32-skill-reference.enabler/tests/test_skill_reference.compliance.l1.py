@@ -8,9 +8,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from outcomeeng.validation.skill_reference import EXEMPTED_REFERENCES
 from outcomeeng_testing.harnesses.skill_reference import (
     build_marketplace,
+    fixture_path,
     run_validator,
+    scan_references,
+    scan_text_references,
     write_file,
 )
 
@@ -45,6 +49,45 @@ def test_unshipped_reference_fails_in_every_recognized_form(tmp_path: Path) -> N
         (report,) = run.lines
         assert str(path) in report
         assert reference in report
+
+
+def test_exemption_mapping_passes_only_the_references_it_names(
+    tmp_path: Path,
+) -> None:
+    build_marketplace(tmp_path, {"alpha": ["audit-widget"]})
+    payload = fixture_path("unshipped_references.md")
+    change = next(iter(EXEMPTED_REFERENCES.values()))
+
+    omitting = scan_references(tmp_path, [payload], {})
+    naming_qualified = scan_references(
+        tmp_path, [payload], {"alpha:audit-gadget": change}
+    )
+    naming_slash = scan_references(tmp_path, [payload], {"/audit-gizmo": change})
+    naming_both = scan_references(
+        tmp_path,
+        [payload],
+        {"alpha:audit-gadget": change, "/audit-gizmo": change},
+    )
+    naming_other = scan_references(tmp_path, [payload], {"/audit-widget": change})
+
+    assert omitting == ("alpha:audit-gadget", "/audit-gizmo")
+    assert naming_qualified == ("/audit-gizmo",)
+    assert naming_slash == ("alpha:audit-gadget",)
+    assert naming_both == ()
+    assert naming_other == omitting
+
+
+def test_exemption_names_the_exact_reference_only(tmp_path: Path) -> None:
+    build_marketplace(tmp_path, {"alpha": ["audit-widget"]})
+    change = next(iter(EXEMPTED_REFERENCES.values()))
+
+    references = scan_text_references(
+        tmp_path,
+        "Run /audit-gadget and /audit-gadget-extra and alpha:audit-gadget.\n",
+        {"/audit-gadget": change},
+    )
+
+    assert references == ("/audit-gadget-extra", "alpha:audit-gadget")
 
 
 def test_unshipped_name_as_path_segment_is_not_a_slash_invocation(
