@@ -426,6 +426,31 @@ The audit side of the divergence between `spec-tree:implementation-auditor` run 
 
 **Settlement condition.** `audit-change` passes its runner request through a file written with the file-write tool, and `--audit-input` takes its JSON through a file.
 
+## Sealed-run audit skills record queued scope units where the decisions require streaming
+
+[`spx/15-audit-result-delivery.pdr.md`](spx/15-audit-result-delivery.pdr.md) and
+[`spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md`](spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md)
+forbid computing a finished result and appending its events as one batch. The
+`audit-implementation` skill on `main` follows the queued recording form, and the
+recording assertion of `spx/21-spec-tree.enabler/68-audit.enabler/audit.md`
+states it ("persist the queued scope units"). The changeset coherence audit of
+outcomeeng/changes#513 follows the same queued form, so the conflict stands
+across every sealed-run audit skill and not in one changeset.
+
+**Impact**: each sealed-run audit skill records its judgment as a batch after
+completion, which the two decisions forbid.
+
+**Why this is a separate larger concern.** The correction changes seven skills and
+the recording assertion of `audit.md`, and no cross-skill sweep runs in the
+changeset that surfaced it.
+
+**Settlement condition**: every sealed-run audit skill appends each scope unit as
+its judgment completes and each finding as it is raised, and the `audit.md`
+recording assertion states that order.
+
+**Evidence**: ruling of the Plugins Maintainer on outcomeeng/changes#513 (comment
+6223578521, item 3), hazard (c).
+
 ## The finding-bearing leg of the implementation-auditor is unproven through the payload-file route
 
 **Evidence.** Run `2026-10-14_22-58-44-451-c48ad7cbafbd` approved the unreached module `outcomeeng/acceptance_fixture.py` on the local scratch branch `work/change-425-acceptance` with zero findings, so the `implementation-auditor` and its `/audit-implementation` skill recorded no finding for a file that no verification reaches.

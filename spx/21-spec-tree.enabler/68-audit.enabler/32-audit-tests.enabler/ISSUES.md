@@ -28,31 +28,6 @@ Step 3a of `/audit-tests` judges a source symbol the test cites by declared-cont
 
 **Resolution shape.** Add the case to the rebuilt suite: a symbol with no in-repository importer whose ownership rests on a published surface — a protocol only third parties implement, a packaging entry point, or a registry lookup — with an approving expected verdict, so removing the declared-contract rule turns that case red. Run it with the rest of the suite at the default budget and commit the resulting rows.
 
-## Eval run history is stale for both full-chain-ownership suites
-
-`evals/full-chain-ownership`: the newest full-suite passing row (2026-07-17,
-git SHA `873fdf84c65d2c5d6dd98e4d9ff63e93c3289da3`) ran 7 cases against a current
-set of 10; the later rows on `056264a21829b8124eb21a4f96a0b3dc44c68172` are
-single-case reruns. Neither SHA is an ancestor of the current head, and the
-producer `src/plugins/spec-tree/skills/audit-tests/SKILL.md`, `cases.jsonl`,
-`eval.toml`, `prompt.md`, and `test-evidence-standards/SKILL.md` all changed after
-every recorded run.
-
-`evals/full-chain-ownership-codex`: the only run over the current 10-case set
-(2026-07-18, git SHA `c18af21b3b023a88d37912da8e5d1273c059cda7`) scored 0.7
-against the 0.85 threshold and recorded `passed: false`; every later row is a
-single-case rerun, two of them failing. The producer
-`dist/codex/spec-tree/skills/audit-tests/SKILL.md`, the shared `cases.jsonl`,
-`eval.toml`, and `prompt.md` changed after the newest row.
-
-**Settlement condition**: one passing full-suite run of each eval on a head that
-carries the current producers, with its rows committed to each `history.jsonl`;
-the Codex suite's last full result is a behavioral failure, so its rerun may
-surface producer defects to repair first.
-
-**Evidence**: `spec-tree:eval-evidence-auditor` findings `f-004` and `f-005` on
-head `a65659114b99767b90b4d920550fff5dc0824794` during Change #76, whose prototype boundary runs no eval.
-
 ## The independent-conformance eval case omits its alias declaration
 
 The `approves-independent-conformance-oracle` case imports
