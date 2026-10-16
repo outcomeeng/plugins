@@ -27,6 +27,7 @@ from direction_core import (
     common_directory,
     compose_configuration,
     guard_reasons,
+    invocation_checkout,
     load_sibling,
     now_seconds,
     quiet_minutes,
@@ -477,12 +478,17 @@ def main(
     stdout: TextIO | None = None,
     runtime: tuple[ModuleType, Environments] | None = None,
     clock: Callable[[], float] = now_seconds,
+    checkout: Path | None = None,
 ) -> int:
     out = sys.stdout if stdout is None else stdout
     args = _parser().parse_args(argv)
     try:
         mail, envs = _runtime() if runtime is None else runtime
-        config = compose_configuration(common_directory(mail), args.position)
+        config = compose_configuration(
+            common_directory(mail),
+            invocation_checkout() if checkout is None else checkout,
+            args.position,
+        )
         if args.subcommand == "compose":
             result: dict[str, Any] = config
         elif args.subcommand == "roster":

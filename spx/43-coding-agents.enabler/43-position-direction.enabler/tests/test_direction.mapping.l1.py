@@ -33,7 +33,9 @@ def _override(common: Path, name: str, text: str) -> Path:
 
 
 def test_absent_override_file_composes_the_defaults(tmp_path: Path) -> None:
-    config = core.compose_configuration(tmp_path, "Lead Director")
+    config = core.compose_configuration(
+        tmp_path, tmp_path / "checkout", "Lead Director"
+    )
 
     assert config["overrideFile"]["present"] is False
     assert config["positions"] == []
@@ -52,7 +54,9 @@ def test_set_keys_replace_defaults_and_omitted_keys_keep_them(tmp_path: Path) ->
         '+++\ninterval_seconds = 60\n[mail]\nagent = "director"\n+++\nExpect brevity.\n',
     )
 
-    config = core.compose_configuration(tmp_path, "Lead Director")
+    config = core.compose_configuration(
+        tmp_path, tmp_path / "checkout", "Lead Director"
+    )
 
     assert config["interval_seconds"] == 60
     assert config["mail"] == {"channel": str(tmp_path), "agent": "director"}
@@ -70,7 +74,7 @@ def test_malformed_file_or_unknown_key_stops_naming_the_file(
     path = _override(tmp_path, "Lead Director", f"+++\n{front_matter}+++\n")
 
     with pytest.raises(core.DirectionError) as stop:
-        core.compose_configuration(tmp_path, "Lead Director")
+        core.compose_configuration(tmp_path, tmp_path / "checkout", "Lead Director")
 
     assert str(path) in str(stop.value)
 
@@ -135,6 +139,7 @@ def test_act_without_authority_stops_naming_both_absent_sources(tmp_path: Path) 
         ],
         stdout=out,
         runtime=(_Mail(tmp_path), None),  # type: ignore[arg-type]
+        checkout=tmp_path / "checkout",
     )
 
     result = json.loads(out.getvalue())
@@ -156,6 +161,7 @@ def test_pass_without_authority_stops_before_any_action(
         [subcommand, "--position", "Lead Director"],
         stdout=out,
         runtime=(_Mail(tmp_path), None),  # type: ignore[arg-type]
+        checkout=tmp_path / "checkout",
     )
 
     result = json.loads(out.getvalue())
@@ -183,6 +189,7 @@ def test_act_names_the_missing_argument_and_its_valid_options(
         ["act", "--position", "Lead Director", "--authority", "grant", *arguments],
         stdout=out,
         runtime=(_Mail(tmp_path), None),  # type: ignore[arg-type]
+        checkout=tmp_path / "checkout",
     )
 
     result = json.loads(out.getvalue())
@@ -198,6 +205,7 @@ def test_send_names_every_missing_argument(tmp_path: Path) -> None:
         ["send", "--position", "Lead Director", "--authority", "grant"],
         stdout=out,
         runtime=(_Mail(tmp_path), None),  # type: ignore[arg-type]
+        checkout=tmp_path / "checkout",
     )
 
     result = json.loads(out.getvalue())
@@ -212,7 +220,7 @@ def test_configuration_stop_names_every_unknown_key_and_the_valid_keys(
     _override(tmp_path, "Lead Director", "+++\nbogus = 1\nother = 2\n+++\n")
 
     with pytest.raises(core.DirectionError) as stop:
-        core.compose_configuration(tmp_path, "Lead Director")
+        core.compose_configuration(tmp_path, tmp_path / "checkout", "Lead Director")
 
     message = str(stop.value)
     assert "bogus" in message and "other" in message
@@ -238,7 +246,7 @@ def test_integer_key_stop_shows_the_value_found_and_an_accepted_form(
     _override(tmp_path, "Lead Director", "+++\ninterval_seconds = 0\n+++\n")
 
     with pytest.raises(core.DirectionError) as stop:
-        core.compose_configuration(tmp_path, "Lead Director")
+        core.compose_configuration(tmp_path, tmp_path / "checkout", "Lead Director")
 
     message = str(stop.value)
     assert "interval_seconds" in message and "0" in message and "1800" in message
@@ -297,6 +305,7 @@ def test_prompt_without_text_stops_naming_the_argument_and_fix(
         ],
         stdout=out,
         runtime=(_Mail(tmp_path), None),  # type: ignore[arg-type]
+        checkout=tmp_path / "checkout",
     )
 
     result = json.loads(out.getvalue())
@@ -314,6 +323,7 @@ def test_every_acting_subcommand_stops_without_authority_naming_the_fix(
         [subcommand, "--position", "Lead Director"],
         stdout=out,
         runtime=(_Mail(tmp_path), None),  # type: ignore[arg-type]
+        checkout=tmp_path / "checkout",
     )
 
     detail = json.loads(out.getvalue())["detail"]
@@ -342,7 +352,7 @@ def test_wrong_typed_value_stops_naming_file_key_value_and_accepted_form(
     path = _override(tmp_path, "Lead Director", f"+++\n{front_matter}+++\n")
 
     with pytest.raises(core.DirectionError) as stop:
-        core.compose_configuration(tmp_path, "Lead Director")
+        core.compose_configuration(tmp_path, tmp_path / "checkout", "Lead Director")
 
     message = str(stop.value)
     assert str(path) in message and named in message
@@ -361,7 +371,7 @@ def test_position_entry_with_agent_arguments_is_an_unknown_field(
     )
 
     with pytest.raises(core.DirectionError) as stop:
-        core.compose_configuration(tmp_path, "Lead Director")
+        core.compose_configuration(tmp_path, tmp_path / "checkout", "Lead Director")
 
     assert "agent_arguments" in str(stop.value)
 
@@ -416,6 +426,7 @@ def test_controller_forwards_a_stalled_guarded_panes_screen_verbatim(
         ["controller", "--position", "Lead Director", "--authority", "grant"],
         stdout=out,
         runtime=(mail, _Panes([pane], screen)),  # type: ignore[arg-type]
+        checkout=tmp_path / "checkout",
     )
 
     result = json.loads(out.getvalue())
@@ -451,6 +462,7 @@ def test_send_with_authority_sends_and_reports_the_authority(tmp_path: Path) -> 
         ],
         stdout=out,
         runtime=(mail, None),  # type: ignore[arg-type]
+        checkout=tmp_path / "checkout",
     )
 
     assert status == 0
@@ -479,6 +491,7 @@ def test_act_on_a_guarded_pane_stops_naming_the_guard_screen_and_fix(
         ],
         stdout=out,
         runtime=(_SentMail(tmp_path), _Panes([pane], "Allow this edit? (y/n)")),  # type: ignore[arg-type]
+        checkout=tmp_path / "checkout",
     )
 
     result = json.loads(out.getvalue())
@@ -506,6 +519,7 @@ def test_controller_with_advisor_unset_reports_forwarding_unavailable(
         ["controller", "--position", "Lead Director", "--authority", "grant"],
         stdout=out,
         runtime=(mail, _Panes([pane], "quiet")),  # type: ignore[arg-type]
+        checkout=tmp_path / "checkout",
     )
 
     result = json.loads(out.getvalue())
@@ -546,9 +560,26 @@ def test_mail_operations_with_mail_agent_unset_report_unavailable(
         [arguments[0], "--position", "Lead Director", *arguments[1:]],
         stdout=out,
         runtime=(_SentMail(tmp_path), None),  # type: ignore[arg-type]
+        checkout=tmp_path / "checkout",
     )
 
     result = json.loads(out.getvalue())
     assert status == 1
     assert result["status"] == "unavailable"
     assert "mail.agent" in result["detail"] and str(override) in result["detail"]
+
+
+def test_state_and_resume_note_live_in_the_invocation_checkout(tmp_path: Path) -> None:
+    common = tmp_path / "common"
+    checkout = tmp_path / "checkout"
+    override = _override(common, "Lead Director", "+++\n+++\nExpect brevity.\n")
+
+    config = core.compose_configuration(common, checkout, "Lead Director")
+
+    state = checkout / ".spx/orchestration/state"
+    assert config["stateDirectory"] == str(state)
+    assert config["resumeNote"] == str(state / "resume-note.md")
+    assert config["overrideFile"]["path"] == str(override)
+    assert str(state / "resume-note.md") in config["resume_line"]
+    assert str(override) in config["resume_line"]
+    assert not (common / ".spx/orchestration/state").exists()
