@@ -24,7 +24,7 @@ A complete store-independent Change record in the final format, authored locally
 - Hold the record only to what its review needs, as `review-bar` states: a failed Definition of Ready criterion of the target Maturity is the one blocking finding, and every other finding is non-blocking.
 - Audit each revision once under `<audit_gate>`; the audit's findings never withhold publication.
 - Keep remote content unchanged until the complete local candidate has received its one audit, except the Maturity lowering `<revision_safety>` states. A local draft grants no remote claim or integration authority.
-- Settle each question that can change the Output with a justified assumption, an answer and one sentence of reason. Record a question no assumption can defend, with the best answer, under `## Open questions` and in the `<result>`, and continue on every part that does not depend on the answer.
+- Settle each question that can change the Output with a justified assumption, an answer and one sentence of reason. Send a question no assumption can defend, with the best answer, to the superior that assigned the refinement — the agent that gave the task, or the operator when no agent did — and continue on every part that does not depend on the answer.
 
 </essential_principles>
 
@@ -176,7 +176,7 @@ Use skill `spec-tree:release-change`. Invoke it only when this session holds the
 - The candidate satisfies the one cumulative Definition of Ready loaded for its declared Maturity, and its Maturity above `Proposed` rests on the store's authority for the level it left.
 - Triage asks only questions whose answers change the Output, its mutations blocks, Maturity, risk, or ownership.
 - The complete unchanged record receives one independent audit per revision before publication, every same-class site and changed-section dependent is resolved before the record publishes, and the record publishes at the highest Maturity whose blocking criteria it meets.
-- A question no assumption can defend is recorded under `## Open questions` and returned in the `<result>` with its best answer, while every part independent of the answer was refined.
+- A question no assumption can defend reached the superior that assigned the refinement with its best answer, while every part independent of the answer was refined.
 - Every front-matter field reads back equal from its one store home, and the issue body equals the approved file from its `## Intent` line.
 - The record contains no store-specific key, received conversation input, audit bookkeeping, body authority line, or authoritative body restatement of front matter.
 - A session with no conversation history resumes from the stored Change, its repository references, and its newest Handoff alone.
