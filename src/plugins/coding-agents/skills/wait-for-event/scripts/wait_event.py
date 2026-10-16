@@ -134,9 +134,17 @@ class Request:
     sources: tuple[Source, ...]
 
 
+def _received(value: object) -> str:
+    text = repr(value)
+    return text if len(text) <= 80 else f"{text[:77]}..."
+
+
 def _instant(value: object, location: str) -> dt.datetime:
     if not isinstance(value, str) or not value:
-        raise InvalidRequest(f"{location} must be an ISO 8601 instant ending in Z")
+        raise InvalidRequest(
+            f"{location} must be an ISO 8601 instant ending in Z, such as "
+            f"2026-10-16T10:00:00Z; received {_received(value)}"
+        )
     try:
         parsed = dt.datetime.fromisoformat(value.replace("Z", "+00:00"))
     except ValueError as error:
@@ -144,19 +152,27 @@ def _instant(value: object, location: str) -> dt.datetime:
             f"{location} must be an ISO 8601 instant ending in Z; received {value!r}"
         ) from error
     if parsed.tzinfo is None:
-        raise InvalidRequest(f"{location} needs an explicit UTC offset; use Z")
+        raise InvalidRequest(
+            f"{location} needs an explicit UTC offset; received {value!r}, "
+            "so end the instant with Z"
+        )
     return parsed.astimezone(dt.timezone.utc)
 
 
 def _text(value: object, location: str) -> str:
     if not isinstance(value, str) or not value:
-        raise InvalidRequest(f"{location} must be a non-empty string")
+        raise InvalidRequest(
+            f"{location} must be a non-empty string; received {_received(value)}"
+        )
     return value
 
 
 def _source(raw: object, location: str) -> Source:
     if not isinstance(raw, dict):
-        raise InvalidRequest(f"{location} must be a JSON object")
+        raise InvalidRequest(
+            f"{location} must be a JSON object with a {KIND_FIELD} field; "
+            f"received {_received(raw)}"
+        )
     kind = raw.get(KIND_FIELD)
     if kind not in SOURCE_KINDS:
         raise InvalidRequest(
@@ -168,7 +184,7 @@ def _source(raw: object, location: str) -> Source:
         if isinstance(after_id, bool) or not isinstance(after_id, int) or after_id < 0:
             raise InvalidRequest(
                 f"{location}.{MAIL_ID_FIELD} must be the whole-number id of the last record handled, "
-                "0 for none"
+                f"0 for none; received {_received(after_id)}"
             )
         return MailSource(
             _text(raw.get(MAIL_AGENT_FIELD), f"{location}.{MAIL_AGENT_FIELD}"), after_id
@@ -178,13 +194,18 @@ def _source(raw: object, location: str) -> Source:
         sessions = raw.get(PANE_SESSIONS_FIELD)
         if not isinstance(sessions, list) or not sessions:
             raise InvalidRequest(
-                f"{location}.{PANE_SESSIONS_FIELD} must be a non-empty array"
+                f"{location}.{PANE_SESSIONS_FIELD} must be a non-empty array of "
+                f"{{{PANE_SESSION_FIELD}, {PANE_STATE_FIELD}}} objects; "
+                f"received {_received(sessions)}"
             )
         pairs = []
         for index, item in enumerate(sessions):
             where = f"{location}.{PANE_SESSIONS_FIELD}[{index}]"
             if not isinstance(item, dict):
-                raise InvalidRequest(f"{where} must be a JSON object")
+                raise InvalidRequest(
+                    f"{where} must be a JSON object with {PANE_SESSION_FIELD} and "
+                    f"{PANE_STATE_FIELD} fields; received {_received(item)}"
+                )
             pairs.append(
                 (
                     _text(
@@ -211,10 +232,17 @@ def _source(raw: object, location: str) -> Source:
     )
 
 
-def parse_request(document: object) -> Request:
-    """Validate one decoded request; raise InvalidRequest before any source is read."""
+def parse_request(document: object, now: dt.datetime) -> Request:
+    """Validate one decoded request; raise InvalidRequest before any source is read.
+
+    `now` is the instant the run starts, from which each clock instant is held
+    to fall before the timeout.
+    """
     if not isinstance(document, dict):
-        raise InvalidRequest("the request must be one JSON object")
+        raise InvalidRequest(
+            "the request must be one JSON object naming "
+            f"{TIMEOUT_FIELD} and {SOURCES_FIELD}; received {_received(document)}"
+        )
     timeout = document.get(TIMEOUT_FIELD)
     if (
         isinstance(timeout, bool)
@@ -222,13 +250,28 @@ def parse_request(document: object) -> Request:
         or not math.isfinite(timeout)
         or timeout <= 0
     ):
-        raise InvalidRequest(f"{TIMEOUT_FIELD} must be a positive number of seconds")
+        raise InvalidRequest(
+            f"{TIMEOUT_FIELD} must be a positive number of seconds; "
+            f"received {_received(timeout)}"
+        )
     sources = document.get(SOURCES_FIELD)
     if not isinstance(sources, list) or not sources:
-        raise InvalidRequest(f"{SOURCES_FIELD} must be a non-empty array")
+        raise InvalidRequest(
+            f"{SOURCES_FIELD} must be a non-empty array of source objects; "
+            f"received {_received(sources)}"
+        )
     parsed = tuple(
         _source(item, f"{SOURCES_FIELD}[{index}]") for index, item in enumerate(sources)
     )
+    horizon = now + dt.timedelta(seconds=float(timeout))
+    for index, source in enumerate(parsed):
+        if isinstance(source, ClockSource) and source.at >= horizon:
+            raise InvalidRequest(
+                f"{SOURCES_FIELD}[{index}].{CLOCK_AT_FIELD} must fall before the "
+                f"timeout, which ends at {horizon.isoformat()}; received "
+                f"{source.at_text!r}, so choose an earlier instant or raise "
+                f"{TIMEOUT_FIELD}"
+            )
     return Request(float(timeout), parsed)
 
 
@@ -447,10 +490,8 @@ def _poll_spend(source: SpendSource) -> Event | Unreadable | None:
     )
 
 
-def _poll_clock(
-    source: ClockSource, now: dt.datetime, horizon: dt.datetime
-) -> Event | None:
-    if source.at >= horizon or now < source.at:
+def _poll_clock(source: ClockSource, now: dt.datetime) -> Event | None:
+    if now < source.at:
         return None
     return Event({SOURCE_FIELD: SOURCE_CLOCK, CLOCK_AT_FIELD: source.at_text})
 
@@ -464,7 +505,6 @@ def wait_event(
     """Read the sources until the first event, an unreadable source, or the timeout."""
     clock = MonotonicClock() if clock is None else clock
     deadline = clock.now() + request.timeout_seconds
-    horizon = clock.instant() + dt.timedelta(seconds=request.timeout_seconds)
 
     def remaining() -> float:
         return deadline - clock.now()
@@ -482,7 +522,7 @@ def wait_event(
                 outcome = _poll_spend(source)
             else:
                 assert isinstance(source, ClockSource)
-                outcome = _poll_clock(source, clock.instant(), horizon)
+                outcome = _poll_clock(source, clock.instant())
             if isinstance(outcome, Event):
                 return _event_line(outcome), EXIT_OK
             if isinstance(outcome, Unreadable):
@@ -554,14 +594,16 @@ def main(
     _parser().parse_args(argv)
     stdin = sys.stdin if stdin is None else stdin
     stdout = sys.stdout if stdout is None else stdout
+    clock = MonotonicClock() if clock is None else clock
     try:
         try:
             document = json.load(stdin)
         except json.JSONDecodeError as error:
             raise InvalidRequest(
-                f"the request is not valid JSON: {error.msg}"
+                f"the request is not valid JSON at line {error.lineno}, column "
+                f"{error.colno}: {error.msg}; write one JSON object to the request file"
             ) from error
-        request = parse_request(document)
+        request = parse_request(document, clock.instant())
     except InvalidRequest as error:
         line: dict[str, Any] = {
             KIND_FIELD: LINE_INVALID,

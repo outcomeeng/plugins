@@ -84,8 +84,6 @@ python3 "${CLAUDE_SKILL_DIR}/scripts/wait_event.py" < <request-file>
 
 <constraints>
 
-- ALWAYS execute the bundled script through `${CLAUDE_SKILL_DIR}` — the skill loader substitutes that expression into this body before the command runs, so only this spelling reaches the shell as this skill's real directory.
-- NEVER copy `${CLAUDE_SKILL_DIR}` into an agent definition or export it — it is no shell variable, so outside this body it yields an empty prefix rather than an error.
 - ALWAYS supply `timeoutSeconds`; the run has no default timeout and rejects a request without a positive one before reading any source.
 - ALWAYS hold a wait to one invocation and re-arm it from the event handled; the script loops only inside its timeout and prints one line.
 - NEVER pass a request through a heredoc, a pipe, or an inline argument, and NEVER remove the request file.
