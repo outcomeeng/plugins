@@ -45,3 +45,47 @@ The subtractive reduction removed the restated language-neutral seam assertions 
 A standard begins by loading the matching `/understand` template when one exists, and no skill encodes the template's shape, because a restated shape drifts the moment the template advances. The prose plugin conforms. In this node's skills, `src/plugins/rust/skills/rust-architecture-standards/SKILL.md` and `src/plugins/rust/skills/author-rust-architecture/SKILL.md` restate the ADR section list inline.
 
 **Settlement condition.** Each restated section list becomes a pointer that loads the decision template through the live `/understand` foundation, keeping only language-specific content rules, with the changeset gating its skills with `instructions:skill-auditor`. The Python and TypeScript pairs carry the same gap in `spx/43-python.enabler/25-python-standards.enabler/21-python-architecture.enabler/ISSUES.md` and `spx/43-typescript.enabler/25-typescript-standards.enabler/21-typescript-architecture.enabler/ISSUES.md`.
+
+## `rust-code-standards` describes and branches on its callers
+
+`instructions:skill-auditor` rejects `src/plugins/rust/skills/rust-code-standards/SKILL.md` for the `caller_coupling` rule at two sentences that the skill-rename changeset leaves as `origin/main` carries them. Line 18, in `<reference_note>`, reads "Composing Rust skills load these standards explicitly before writing, testing, or auditing." Line 22, in `<repo_local_overlay>`, opens "When another skill loads this reference inside a repository, it must also check for `spx/local/rust.md`", which conditions the overlay check on being loaded by another skill. A skill states its own behavior and does not name, describe or branch on its callers. The verdict is blocking, so the skill does not pass `/audit-skill` while the two sentences stand.
+
+**Evidence**: `run-2026-10-16_23-47-02-323-2e1559d6997f.jsonl`, finding `caller_coupling`, severity blocking.
+
+**Settlement condition.** The `<reference_note>` sentence names no caller, and the overlay instruction reads as the skill's own behavior ("inside a repository, check for `spx/local/rust.md` at the repository root, then read it after this reference if it exists"), with the changeset passing `instructions:skill-auditor` over the skill.
+
+## Rust skills state composed skill dependencies as bare slash mentions
+
+`instructions:skill-auditor` rejects three Rust skills for the `composed_dependency_form` rule. Each states a dependency as a slash mention or as `invoke`/`Invoke`/`Read` instead of ``Use skill `{plugin}:{skill}`.`` naming the exact installed skill. Every listed line is unchanged against `origin/main`:
+
+- `src/plugins/rust/skills/author-rust-architecture/SKILL.md` lines 36 ("Invoke `spec-tree:contextualize`"), 101 ("See `/author` skill"), 119 ("Read `/rust-test-standards`"), 124 ("Read `/author` skill for ADR template"), 153 ("(from `/understand`)") and 213 ("`/rust-test-standards` was loaded"). Line 72 of the same file already uses the exact form for `rust:rust-test-standards`, so the file is inconsistent with itself. Run `run-2026-10-16_23-46-45-343-9c6b28e60df3.jsonl`.
+- `src/plugins/rust/skills/simplify-rust-code/SKILL.md` lines 28 (`/understand`), 29 (`/scope-changeset`), 30 (`/contextualize`) and 76 (`/scope-changeset`). Run `run-2026-10-16_23-46-53-896-e4b6c2d39577.jsonl`; run `run-2026-10-16_23-30-17-467-300fe8a25927.jsonl` raised lines 28 to 30 against the same unchanged text.
+- `src/plugins/rust/skills/author-rust-code/SKILL.md` line 96 ("invoke `spec-tree:contextualize` with the full path"). Run `run-2026-10-16_23-46-48-006-fc4c697d67ea.jsonl`.
+
+All are blocking verdicts. The dependency form is the one the sibling lines in the same files already use, so the divergence is inside each skill.
+
+**Settlement condition.** Each listed dependency reads ``Use skill `spec-tree:contextualize`.``, ``Use skill `spec-tree:author`.``, ``Use skill `spec-tree:understand`.``, ``Use skill `spec-tree:scope-changeset`.`` or ``Use skill `rust:rust-test-standards`.`` as the dependency requires, and the changeset passes `instructions:skill-auditor` over the three skills.
+
+## `author-rust-code` workflows name bundled references by bare relative path
+
+`src/plugins/rust/skills/author-rust-code/workflows/implementation.md` and `src/plugins/rust/skills/author-rust-code/workflows/remediation.md` list `references/outcome-engineering-patterns.md`, `references/test-patterns.md` and `references/verification-checklist.md` at lines 4 to 6 of `<required_reading>` without the `${CLAUDE_SKILL_DIR}` token that `SKILL.md` and `references/verification-checklist.md` use for the same files. Both workflow files are byte-identical to `origin/main` apart from the directory. `instructions:skill-auditor` rejects each with the blocking `bundled_file_reference` rule.
+
+**Evidence**: `run-2026-10-16_23-46-48-006-fc4c697d67ea.jsonl` and `run-2026-10-16_23-30-06-545-5578d2816a69.jsonl`, finding `bundled_file_reference`, severity blocking.
+
+**Settlement condition.** Each path at lines 4 to 6 of both workflow files begins with `${CLAUDE_SKILL_DIR}/`, and the changeset passes `instructions:skill-auditor` over the skill.
+
+## `author-rust-code` remediation workflow teaches general Rust knowledge
+
+`src/plugins/rust/skills/author-rust-code/workflows/remediation.md` carries snippets that restate what Claude already knows: borrowing instead of cloning (`<type_and_ownership_issues>`, lines 33 to 43), a `CommandRunner` trait declaration (`<boundary_and_process_issues>`, lines 48 to 54) and a trivial `matches!` error test (`<add_regression_evidence>`, lines 66 to 77). None carries a product-specific convention. The file is byte-identical to `origin/main` apart from the directory. `instructions:skill-auditor` records the `known_content` rule at debt severity.
+
+**Evidence**: `run-2026-10-16_23-30-06-545-5578d2816a69.jsonl`, finding `known_content`, severity debt.
+
+**Settlement condition.** The three snippets are removed or replaced by the repository's own convention, or a Verifier skips the finding on grounds recorded here.
+
+## `author-rust-code` verification checklist routes a read to a sibling reference
+
+`src/plugins/rust/skills/author-rust-code/references/verification-checklist.md` line 56 sends the reader to `${CLAUDE_SKILL_DIR}/references/test-patterns.md` `<anti_patterns>`, so one reference routes a read to another. References sit one level below `SKILL.md` and route to nothing. The file is byte-identical to `origin/main` apart from the directory. `instructions:skill-auditor` records the `nested_reference` rule at debt severity.
+
+**Evidence**: `run-2026-10-16_23-30-06-545-5578d2816a69.jsonl`, finding `nested_reference`, severity debt.
+
+**Settlement condition.** The checklist states the criterion in place, and `SKILL.md` or a workflow routes to `references/test-patterns.md`.
