@@ -10,6 +10,8 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 ### Changed
 
+- **The auditor skeleton in `/skill-standards` returns the run file beside the run token and the rendered projection.** `references/auditor-skeleton.md` now describes a run-recording auditor's `<verdict_format>` as the run token, the run file, and the unmodified rendered projection, matching `/audit-skill`, `/audit-subagent`, and the `/create-skill` auditor template. Before this change, the skeleton told an auditor to return only the token and the projection, so a skill authored or audited against it dropped the run file that a caller hands a Fixer.
+
 - **The `/create-skill` auditor template returns the run file beside the run token and the rendered projection.** `templates/auditor-skill.md` now tells an authored `audit-*` skill to retain the run target that the `spx verification run start` report names, to name the sealed run by its run token and run file in its objective, and to return the token, the run file, and the unmodified rendered projection. Before this change, a skill authored from the template returned only the token and the projection, and only the start report names the run file, so a caller could not pass a Fixer the sealed run.
 
 - **`/audit-skill` returns the run file beside the run token and the rendered projection.** The audit retains the run target that the `spx verification run start` locator reports and returns it as the run file, so a caller reads the verdict from the sealed run's terminal status and hands a Fixer that file unchanged. Before this change, the audit returned only the token and the projection, and only the start report names the run file, so a caller could not pass a Fixer the sealed run.

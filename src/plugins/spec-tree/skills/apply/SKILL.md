@@ -311,7 +311,7 @@ If the full deterministic gate fails, fix the reported defect, run the focused t
 
 <review_gates>
 
-Steps 4, 8, and applicable Step 8a are blocking audit gates. Steps 4 and 8a emit verdicts from their auditor contracts. Step 8 returns an `spx verification run` token and rendered projection whose `terminalStatus` is authoritative; a `BLOCKED` result must relay a complete diagnostic from the implementation-auditor contract as described in Step 8. Step 9 is a blocking whole-changeset review gate that runs whenever the change reaches beyond the target node. Step 10 is the terminal lifecycle boundary for default-branch work.
+Steps 4, 8, and applicable Step 8a are blocking audit gates. Steps 4 and 8a emit verdicts from their auditor contracts. Step 8 returns an `spx verification run` token, run file, and rendered projection whose `terminalStatus` is authoritative; a `BLOCKED` result must relay a complete diagnostic from the implementation-auditor contract as described in Step 8. Step 9 is a blocking whole-changeset review gate that runs whenever the change reaches beyond the target node. Step 10 is the terminal lifecycle boundary for default-branch work.
 
 - Before starting Step 5: require Step 4's workflow-local result to be `APPROVED`. If it is absent or differs, stop and invoke or repair Step 4.
 - Before starting Step 7: require Step 6's record that validation and every other test and eval pass, and that each new or changed test or eval fails only because the implementation it verifies is absent. If the record is absent, run Step 6; if it differs, repair the evidence through Step 5 and run Step 6 again.
