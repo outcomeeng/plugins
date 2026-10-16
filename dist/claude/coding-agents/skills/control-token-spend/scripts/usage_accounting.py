@@ -1276,7 +1276,9 @@ def recorded_alerts(root: Path, after: dt.datetime) -> Json:
     if state.is_symlink() or not state.is_file():
         return unreadable(f"detector state is absent: {state}")
     try:
-        db = sqlite3.connect(f"{state.as_uri()}?mode=ro", uri=True, timeout=1)
+        db = sqlite3.connect(
+            f"{state.absolute().as_uri()}?mode=ro", uri=True, timeout=1
+        )
     except sqlite3.Error as error:
         return unreadable(f"detector state cannot be opened: {error}")
     try:
