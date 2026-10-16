@@ -1260,8 +1260,9 @@ class AlertReadStatus(StrEnum):
 def recorded_alerts(root: Path, after: dt.datetime) -> Json:
     """Map the alert records stored after `after` to identity, instant and signal.
 
-    The read opens the detector state read-only, runs no collection and writes
-    nothing. An absent or unreadable state root yields an unreadable result.
+    The read opens the detector state read-only, runs no collection, and changes
+    no stored record or journal entry. An absent or unreadable state root yields
+    an unreadable result.
     """
 
     def unreadable(reason: str) -> Json:

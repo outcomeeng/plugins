@@ -27,7 +27,7 @@ def test_records_after_instant_map_oldest_first() -> None:
     alert_read_property(check)
 
 
-def test_read_writes_nothing() -> None:
+def test_read_changes_no_stored_record_or_journal_entry() -> None:
     def check(observed: AlertReadObservation) -> None:
         assert observed.state_after == observed.state_before
         assert observed.journal_after == b""

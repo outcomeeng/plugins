@@ -17,14 +17,14 @@ A request is one JSON object naming a required `timeoutSeconds`, a positive numb
 | Kind    | Fields                                                      | Yields an event when                                                                       |
 | ------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
 | `mail`  | `agent`, `id`                                               | a record in the inbox of `agent` has a store id above `id`                                 |
-| `pane`  | `sessions`, each `{session, state}`; optional `environment` | the state of a named hosted agent session differs from the `state` passed                  |
+| `pane`  | `sessions`, each `{session, state}`; optional `environment` | the state of a named hosted agent session differs from its `state`                         |
 | `spend` | `after`; optional `root`                                    | the consumption-control detector recorded an alert after the instant `after`               |
 | `clock` | `at`                                                        | the instant `at`, an ISO 8601 instant ending in `Z` that falls before the timeout, arrives |
 
-What the caller passes, taken from the last event it handled:
+Each value comes from the last event handled:
 
 - `id` is the store id of the last mail record handled, `0` for none, so a run that ends at any point loses no record.
-- `state` is the agent state the caller last handled for that session, one of the states `/operate-herdr` projects. `session` is the agent name or pane id herdr reports. `environment` defaults to `herdr`; any other environment projects no agent session state and is reported as unreadable.
+- `state` is the last agent state handled for that session, one of the states `/operate-herdr` projects. `session` is the agent name or pane id herdr reports. `environment` defaults to `herdr`; any other environment projects no agent session state and is reported as unreadable.
 - `after` and `at` are ISO 8601 instants ending in `Z`. `root` names the detector state root and defaults to the one `/control-token-spend` uses.
 
 ```json
@@ -55,7 +55,7 @@ Every run prints exactly one of these, each one JSON object on one line whose `k
 Event fields by `source`:
 
 - `mail`: `record` with the record's `id`, `sender`, `kind`, and `subject`.
-- `pane`: `environment`, `session`, the new `state`, and the `previousState` passed.
+- `pane`: `environment`, `session`, the new `state`, and `previousState`, the request's `state` for that session.
 - `spend`: the alert's `identity`, `recordedUtc`, and `signal`.
 - `clock`: `at`.
 
