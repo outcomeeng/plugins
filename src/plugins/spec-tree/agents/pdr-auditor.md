@@ -1,7 +1,7 @@
 ---
 name: pdr-auditor
 description: >-
-  ALWAYS invoke when auditing PDR evidence quality after writing a PDR or before implementing outcomes governed by the PDR.
+  Verifier that a calling skill launches by exact name to audit one PDR's evidence quality against the PDR evidence model and return the sealed run token, run file, and rendered projection.
 tools: Read, Glob, Grep, Write, Bash(spx verification run:*), Bash(git merge-base:*), Bash(git diff:*), {{! tool('use_skill') !}}
 profile: standard
 {!% if target == 'codex' %!}

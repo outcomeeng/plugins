@@ -1,5 +1,5 @@
 name = "spec-tree_adr-auditor"
-description = "ALWAYS invoke when auditing ADR evidence quality after writing an ADR or before implementing from it."
+description = "Verifier that a calling skill launches by exact name to audit one ADR's evidence quality against the ADR evidence model and return the sealed run token, run file, and rendered projection."
 model = "gpt-6.1-sol"
 model_reasoning_effort = "high"
 sandbox_mode = "workspace-write"

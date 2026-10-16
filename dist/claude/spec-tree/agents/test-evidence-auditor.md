@@ -3,7 +3,7 @@ model: "sonnet"
 effort: "medium"
 name: test-evidence-auditor
 description: >-
-  ALWAYS invoke when auditing test evidence quality against spec assertions after writing tests for a spec node or before closing an outcome.
+  Verifier that a calling skill launches by exact name to audit test evidence quality against a spec node's assertions and return the sealed run token, run file, and rendered projection.
 tools: Read, Grep, Glob, Write, Bash(spx verification run:*), Bash(git merge-base:*), Bash(git diff:*), Skill
 skills:
   - spec-tree:audit-tests

@@ -1,5 +1,5 @@
 name = "spec-tree_pdr-auditor"
-description = "ALWAYS invoke when auditing PDR evidence quality after writing a PDR or before implementing outcomes governed by the PDR."
+description = "Verifier that a calling skill launches by exact name to audit one PDR's evidence quality against the PDR evidence model and return the sealed run token, run file, and rendered projection."
 model = "gpt-6.1-sol"
 model_reasoning_effort = "high"
 sandbox_mode = "workspace-write"

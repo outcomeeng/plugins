@@ -3,7 +3,7 @@ model: "sonnet"
 effort: "medium"
 name: spec-auditor
 description: >-
-  ALWAYS invoke when auditing a spec node's assertion quality after writing an enabler or outcome node spec or before closing it.
+  Verifier that a calling skill launches by exact name to audit one spec node's assertion quality against the node-spec form and return the sealed run token, run file, and rendered projection.
 tools: Read, Glob, Grep, Write, Bash(spx verification run:*), Bash(git merge-base:*), Bash(git diff:*), Skill
 skills:
   - spec-tree:audit-specs

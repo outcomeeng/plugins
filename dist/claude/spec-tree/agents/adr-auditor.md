@@ -3,7 +3,7 @@ model: "sonnet"
 effort: "medium"
 name: adr-auditor
 description: >-
-  ALWAYS invoke when auditing ADR evidence quality after writing an ADR or before implementing from it.
+  Verifier that a calling skill launches by exact name to audit one ADR's evidence quality against the ADR evidence model and return the sealed run token, run file, and rendered projection.
 tools: Read, Glob, Grep, Write, Bash(spx verification run:*), Bash(git merge-base:*), Bash(git diff:*), Skill
 skills:
   - spec-tree:audit-adr

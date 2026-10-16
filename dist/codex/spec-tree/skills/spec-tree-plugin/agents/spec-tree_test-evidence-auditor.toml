@@ -1,5 +1,5 @@
 name = "spec-tree_test-evidence-auditor"
-description = "ALWAYS invoke when auditing test evidence quality against spec assertions after writing tests for a spec node or before closing an outcome."
+description = "Verifier that a calling skill launches by exact name to audit test evidence quality against a spec node's assertions and return the sealed run token, run file, and rendered projection."
 model = "gpt-6.1-sol"
 model_reasoning_effort = "high"
 sandbox_mode = "workspace-write"
