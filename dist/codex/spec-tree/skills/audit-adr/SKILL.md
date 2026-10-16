@@ -64,7 +64,7 @@ Use skill `spec-tree:spec-tree-plugin`. Invoke it with the verb `version` and re
 
 **Step 1: Load context read-only**
 
-Invoke `/understand` when the live `<SPEC_TREE_FOUNDATION>` marker is absent or lacks `Template root`. Read `decisions/decision-name.adr.md` beneath that marker's resolved absolute template directory. The template remains owned by `/understand`.
+When the live `<SPEC_TREE_FOUNDATION>` marker is absent or lacks `Template root`: Use skill `spec-tree:understand`. Read `decisions/decision-name.adr.md` beneath that marker's resolved absolute template directory. The template remains owned by that skill.
 
 Load the ADR's context with `Read`, `Glob`, and `Grep` alone, in this order:
 
@@ -136,7 +136,7 @@ Check EVERY section for temporal language:
 
 Read each rule's placement before judging tags. An untagged rule directly under `## Verification` has the canonical authoring form. For every such rule, identify its subject, the condition it constrains, and a concrete observation that would violate it. A vague, ambiguous, or unfalsifiable rule is a finding with rule `invalid-draft-rule`: quote the rule with the missing or ambiguous criterion. For example, `ALWAYS: improve quality` fails because it names no observable condition. Check each draft rule against the decision statement and governing decisions; a contradiction also produces `invalid-draft-rule`, citing both conflicting declarations. Select no evidence type or tag during these checks.
 
-A tagged rule must have the matching routed subsection. When `### Testing` contains rules, invoke `spec-tree:test-evidence-standards` and load its assertion-type litmus. Apply that reference and the loaded foundation's assertion-type definitions to the declared claim and tag. If the required reference cannot load, record a blocking `test-standards-unavailable` finding on the `tag-validity` unit. Judge declaration compatibility only; evidence completeness belongs to evidence auditing. Never invoke the mutating `/test` authoring workflow, select a replacement tag, or change the ADR during this audit.
+A tagged rule must have the matching routed subsection. When `### Testing` contains rules: Use skill `spec-tree:test-evidence-standards` and load its assertion-type litmus. Apply that reference and the loaded foundation's assertion-type definitions to the declared claim and tag. If the required reference cannot load, record a blocking `test-standards-unavailable` finding on the `tag-validity` unit. Judge declaration compatibility only; evidence completeness belongs to evidence auditing. Never invoke the mutating `/test` authoring workflow, select a replacement tag, or change the ADR during this audit.
 
 For each routed rule:
 

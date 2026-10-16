@@ -85,16 +85,6 @@ The assertions state the sealed-run verdict model: the audit run's terminal stat
 
 **Evidence**: current-head CI review of pull request 671.
 
-## `audit-adr` composes two skills without the `Use skill` form
-
-`src/plugins/spec-tree/skills/audit-adr/SKILL.md` states two composed skill dependencies as "Invoke ..." rather than the `Use skill` instruction: Step 1 opens "Invoke `/understand` when the live `<SPEC_TREE_FOUNDATION>` marker is absent", naming the skill without its plugin qualifier, and the `tag-validity` property says "invoke `spec-tree:test-evidence-standards` and load its assertion-type litmus".
-
-**Impact**: a composed dependency stated outside the `Use skill` form names no exact installed skill for the first of the two, and reads as prose rather than as a composition instruction.
-
-**Settlement condition**: both sentences read `Use skill spec-tree:understand.` and `Use skill spec-tree:test-evidence-standards.` in the canonical form, and one typed skill audit raises no `composed_dependency_form` finding on the skill.
-
-**Evidence**: `instructions:skill-auditor` run `2026-10-16_16-04-45-033-98c4746db384`, filed finding `instructions:skill:file:src/plugins/spec-tree/skills/audit-adr/SKILL.md:composed_dependency_form`, base `1ae026e6cdc530112782684a8b9d59e27e7a1c5c`; both sentences are unchanged from that base.
-
 ## `adr-auditor` carries no retained release-acceptance evidence
 
 [`spx/15-subagent-execution.pdr.md`](spx/15-subagent-execution.pdr.md) declares release acceptance per harness and per profile: native loading and one minimal isolated execution for each profile. The tree retains no acceptance artifact for the Claude or the Codex Standard row that `src/plugins/spec-tree/agents/adr-auditor.md` selects, and no exact-definition minimal isolated invocation of the definition. The gap is the one the `spx/43-instructions.enabler/21-subagents.enabler/ISSUES.md` entry records for the two instructions auditors, and it holds for every marketplace definition: the decision binds acceptance to profiles, and no definition's change of tool grant or sandbox changes the Standard profile it selects.
