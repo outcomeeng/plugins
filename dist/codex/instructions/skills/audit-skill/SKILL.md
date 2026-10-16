@@ -168,6 +168,7 @@ A finding's idempotency key is `<unit>:<rule-id>`, its unit's `unitId` and the c
 - ALWAYS write only payload files with the file-write tool.
 - ALWAYS stop before the command that reads a payload file when the file-write result reports a path that the scratch directory does not contain by whole path components, naming the reported path.
 - ALWAYS pass `--input` and `--payload` the path exactly as the file-write tool's result reports it, copied from that result, never retyped from memory.
+- ALWAYS pass the file as the value of `--input` or `--payload`, its path written out literally.
 - ALWAYS add each unit and each finding with its own command and its own payload file, one at a time.
 - NEVER remove a payload file; the harness clears its scratch directory.
 

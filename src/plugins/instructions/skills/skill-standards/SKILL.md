@@ -445,7 +445,7 @@ A consumer's harness declares which directories a session may touch: the working
 
 1. Copy the scratch directory the harness names into each payload path character for character.
 2. When a file-write result reports a path that the scratch directory does not contain by whole path components, stop before the command that reads that file and name the reported path.
-3. Pass each run-recording command its payload path exactly as the file-write result reports it.
+3. Pass each run-recording command its payload path exactly as the file-write result reports it, written out literally as the argument, never held in a shell variable or expanded.
 4. When a command exits nonzero with a diagnostic that names its payload file as absent, run that command once more with the path copied from the file-write result; on a second failure, stop with the blocked result naming the run token.
 
 No payload path is retyped from memory: a path rebuilt by hand differs from the written file by one character, and the command then reads no file.
