@@ -11,7 +11,7 @@ allowed-tools: Read, Grep, Glob, Write, Bash(spx verification run:*), Bash(git m
 
 <objective>
 
-A sealed `spx verification run` on one ADR, with one root unit for the ADR and one child unit per evidence-model property (`section-structure`, `atemporal-voice`, `tag-validity`) and per composed language concern, every finding on touched text recorded on its unit, returned as the run token, the run file, and the rendered projection, whose `terminalStatus` is `approved` or `rejected`, followed by each other finding as a `filed` line; or the complete `BLOCKED` diagnostic when the run cannot finish.
+A sealed `spx verification run` judging one ADR against the ADR evidence model, with one root unit for the ADR and one child unit per evidence-model property (`section-structure`, `atemporal-voice`, `tag-validity`) and per composed language concern, every finding on touched text recorded on its unit, returned as the run token, the run file, and the rendered projection, whose `terminalStatus` is `approved` or `rejected`, followed by each other finding as a `filed` line; or the complete `BLOCKED` diagnostic when the run cannot finish.
 
 </objective>
 
@@ -235,7 +235,7 @@ A scope unit:
 
 Add a unit with `spx verification run scope add --verification-type audit --scope-type file --scope <path> --run <token> --payload <payload-file> --idempotency-key '<unitId>'`. The root unit omits the `parentUnitId` field.
 
-Add a finding with `spx verification run finding add` and the same selectors, `--payload <payload-file>`, and `--idempotency-key '<finding-key>'`, the finding key `${CLAUDE_SKILL_DIR}/references/touched-text.md` defines. Its payload names an accepted unit; `producerIdentity` repeats that unit's `expectedProducer`; `producerProvenance` carries the plugin version `<request_contract>` retained in both version fields, and no `toolVersion`; `rule` is the finding identifier. The native identifiers are `missing-section`, `temporal-voice`, `invalid-draft-rule`, `invalid-tag`, `assertion-type-mismatch`, `template-missing`, `test-standards-unavailable`, `context-unavailable`, `language-routing-unavailable`, `language-skill-unavailable`, and `language-result-invalid`; a validated composed finding retains the invoked skill's identifier.
+Add a finding with `spx verification run finding add` and the same selectors, `--payload <payload-file>`, and `--idempotency-key '<finding-key>'`, the finding key `${CLAUDE_SKILL_DIR}/references/touched-text.md` defines as `<unitId>:<rule>`. Its payload names an accepted unit; `producerIdentity` repeats that unit's `expectedProducer`; `producerProvenance` carries the plugin version `<request_contract>` retained in both version fields, and no `toolVersion`; `rule` is the finding identifier. The native identifiers are `missing-section`, `temporal-voice`, `invalid-draft-rule`, `invalid-tag`, `assertion-type-mismatch`, `template-missing`, `test-standards-unavailable`, `context-unavailable`, `language-routing-unavailable`, `language-skill-unavailable`, and `language-result-invalid`; a validated composed finding retains the invoked skill's identifier.
 
 ```json
 {
@@ -321,8 +321,9 @@ Claude invoked `/contextualize` to load the ADR's context, and its `/sync-base` 
 - The run holds one `audited` root unit for the ADR and one `audited` child unit for each of `section-structure`, `atemporal-voice`, and `tag-validity`, plus one per composed language partition, with every ADR rule judged and none skipped.
 - Every recorded finding lies on touched text and sits on an accepted unit, names the section, the violated rule, and the evidence — the missing section, the temporal phrase, or the mismatched tag.
 - Every standing finding appears as a `filed` line carrying its key, `baseRefEvidence`, and `issuesEntry`, and rejects no run.
-- The run was started before the first judgment, finished with a terminal status derived from the recorded findings, and rendered; the audit invoked neither `/contextualize` nor `/sync-base`, so the checkout is unmoved.
+- The terminal status is `rejected` exactly when a finding on touched text is recorded, so no standing finding and no unevaluated unit decides it.
+- The checkout the audit judged is the checkout it started on and left, so the verdict describes one head.
 - The same ADR, context, and base yield the same units, finding keys, and terminal status.
-- The output is the run token and the run file with the unchanged rendered projection, the `filed` lines, and the `not-applicable` lines, or the complete `BLOCKED` diagnostic.
+- The reported terminal status is the run's own, unaltered, and each standing finding and each inapplicable concern is reported outside the run, so the verdict neither hides nor inflates a finding.
 
 </success_criteria>

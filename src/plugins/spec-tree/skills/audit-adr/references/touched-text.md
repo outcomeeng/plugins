@@ -42,7 +42,7 @@ Classify each finding, native or composed, by its `location`: a finding on touch
 
 <finding_key>
 
-A finding is identified by its key, `<adr-file-path>:<location>:<rule>`, where `location` names the section or rule by its text rather than a line number and `rule` is one finding identifier. The key is the finding's idempotency key. The same finding carries the same key in every run and on every head.
+A finding is identified by its key, `<unitId>:<rule>`, where `unitId` is the unit the finding sits on (`adr:root:<adr-file-path>`, `adr:property:<property>:<adr-file-path>`, or `adr:language:<lang>:<adr-file-path>`) and `rule` is one finding identifier. The key is the finding's idempotency key. The finding's `location` field names the section or rule by its text rather than a line number; one unit and rule yield one finding, which names every location it covers. The same finding carries the same key in every run and on every head.
 
 </finding_key>
 
