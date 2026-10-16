@@ -24,7 +24,7 @@ A complete store-independent Change record in the final format, authored locally
 - Hold the record only to what its review needs, as `review-bar` states: a failed Definition of Ready criterion of the target Maturity is the one blocking finding, and every other finding is non-blocking.
 - Audit each revision once under `<audit_gate>`; the audit's findings never withhold publication.
 - Keep remote content unchanged until the complete local candidate has received its one audit, except the Maturity lowering `<revision_safety>` states. A local draft grants no remote claim or integration authority.
-- Settle each question that can change the Output with a justified assumption, an answer and one sentence of reason. Send a question no assumption can defend, with the best answer, to the superior that assigned the refinement — the agent that gave the task, or the operator when no agent did — and continue on every part that does not depend on the answer.
+- Settle each question that can change the Output with a justified assumption, an answer and one sentence of reason. Return each question no assumption can defend, with its best answer, in the result; record it under `## Open questions` where the target Maturity admits that section, leave the record at the Maturity the question blocks, and continue on every part that does not depend on the answer.
 
 </essential_principles>
 
@@ -49,7 +49,7 @@ Resolve these facts before routing:
 3. Intended Output and the established reason it is worth refinement.
 4. Consequential choices still open after reading governing Decisions, specs, affected references, predecessor Changes, blockers, and the current record.
 
-Draft directly when the Output is clear and consequential choices are resolved. Use skill `spec-tree:interview`. Invoke it only for unresolved scope, compatibility, failure behavior, dependency, evidence, rollout, recovery, monitoring, or resource-limit choices that change the Output or its mutations blocks. A problem with no chosen Output returns to operator judgment in discovery. The template supplies output shape and never acts as a questionnaire.
+Draft directly when the Output is clear and consequential choices are resolved. Use skill `spec-tree:interview`. Invoke it only for unresolved scope, compatibility, failure behavior, dependency, evidence, rollout, recovery, monitoring, or resource-limit choices that change the Output or its mutations blocks. A problem with no chosen Output is a question no assumption can defend; return it in the result with its best answer. The template supplies output shape and never acts as a questionnaire.
 
 Never reopen a settled choice, infer silence as agreement, or demand beneficiaries, business value, research, or alternatives for a precise maintenance Change. Re-run triage when investigation exposes a new consequential choice.
 
@@ -134,7 +134,7 @@ Any mismatch or partial write is a failed persistence result. Preserve the local
 
 <result>
 
-Return the canonical Change reference, each finding with its severity, key, rule, and run token, exact persisted Maturity and Lifecycle, whether the operation created or revised the Change, the equality result for every front-matter field, and the next block or unresolved operator question. A stop at `<authority_gate>` returns the result `authority-required` instead, naming the Maturity the Change holds and the move the store lacks.
+Return the canonical Change reference, each finding with its severity, key, rule, and run token, exact persisted Maturity and Lifecycle, whether the operation created or revised the Change, the equality result for every front-matter field, and the next block, with each question no assumption can defend and its best answer. A stop at `<authority_gate>` returns the result `authority-required` instead, naming the Maturity the Change holds and the move the store lacks.
 
 Use skill `spec-tree:release-change`. Invoke it only when this session holds the Change (Lifecycle `Claimed`, with the winning Claim naming this session's assigned worktree root) and work stops or transfers with continuation remaining; a Change this session does not hold needs no release. Invoke it with `submit` when the persisted record is at `Proposed`, `Framed`, or `Sliced` and waits for the Product's Maintainer's confirmation. Preserve any local candidate that received no audit locally and leave the published Change unchanged.
 
@@ -176,7 +176,7 @@ Use skill `spec-tree:release-change`. Invoke it only when this session holds the
 - The candidate satisfies the one cumulative Definition of Ready loaded for its declared Maturity, and its Maturity above `Proposed` rests on the store's authority for the level it left.
 - Triage asks only questions whose answers change the Output, its mutations blocks, Maturity, risk, or ownership.
 - The complete unchanged record receives one independent audit per revision before publication, every same-class site and changed-section dependent is resolved before the record publishes, and the record publishes at the highest Maturity whose blocking criteria it meets.
-- A question no assumption can defend reached the superior that assigned the refinement with its best answer, while every part independent of the answer was refined.
+- Each question no assumption can defend appears in the result with its best answer and under `## Open questions` where the Maturity admits the section, while every part independent of the answer was refined.
 - Every front-matter field reads back equal from its one store home, and the issue body equals the approved file from its `## Intent` line.
 - The record contains no store-specific key, received conversation input, audit bookkeeping, body authority line, or authoritative body restatement of front matter.
 - A session with no conversation history resumes from the stored Change, its repository references, and its newest Handoff alone.
