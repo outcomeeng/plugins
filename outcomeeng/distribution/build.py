@@ -12,6 +12,7 @@ directly instead of keeping test-owned duplicates.
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import shutil
 import subprocess
@@ -52,6 +53,9 @@ from outcomeeng.distribution.profiles import (
     resolve_profile,
 )
 from outcomeeng.distribution.contracts import (
+    AGENT_TOKEN_DATA_FILENAME,
+    AGENT_TOKEN_OWNER_PATH,
+    AGENT_TOKEN_READING_PLUGIN_NAME,
     AGENTS_SUBDIR_NAME,
     MARKDOWN_FILE_SUFFIX,
     BUILD_BLOCK_DELIMITER_END,
@@ -87,8 +91,10 @@ from outcomeeng.distribution.contracts import (
     SKILL_FILENAME,
     SKILLS_SUBDIR_NAME,
     SOURCE_ROOT_NAME,
+    REPOSITORY_ROOT,
     SPX_FLOOR_VARIABLE,
     TEXT_FILE_SUFFIXES as _TEXT_FILE_SUFFIXES,
+    declared_agent_tokens,
     Target as _Target,
 )
 from outcomeeng.distribution.artifact_registry import (
@@ -198,6 +204,7 @@ class EmissionAction(StrEnum):
     COPY = "copy"
     FAN_OUT = "fan-out"
     CONVERT_AGENT = "convert-agent"
+    AGENT_TOKENS = "agent-tokens"
 
 
 @dataclass(frozen=True)
@@ -270,30 +277,30 @@ class RuntimeTokenResolverCase:
 
 
 CONFIGURED_AGENT_PROMPT_FIELD_NAMES: Final[dict[str, str]] = {
-    "claude": "system prompt",
-    "codex": "developer_instructions",
+    _Target.CLAUDE: "system prompt",
+    _Target.CODEX: "developer_instructions",
 }
 CONFIGURED_AGENT_TERM_NAMES: Final[dict[str, dict[str, str]]] = {
     RUNTIME_TOKEN_CONFIGURED_AGENT_CAPABILITY: {
-        "claude": "subagent",
-        "codex": "custom agent",
+        _Target.CLAUDE: "subagent",
+        _Target.CODEX: "custom agent",
     },
-    "configured_agents": {"claude": "subagents", "codex": "custom agents"},
+    "configured_agents": {_Target.CLAUDE: "subagents", _Target.CODEX: "custom agents"},
     "configured_agent_file": {
-        "claude": "subagent file",
-        "codex": "custom agent file",
+        _Target.CLAUDE: "subagent file",
+        _Target.CODEX: "custom agent file",
     },
     "configured_agent_files": {
-        "claude": "subagent files",
-        "codex": "custom agent files",
+        _Target.CLAUDE: "subagent files",
+        _Target.CODEX: "custom agent files",
     },
     RUNTIME_TOKEN_CONFIGURED_AGENT_PROMPT_CAPABILITY: {
-        "claude": "system prompt",
-        "codex": "developer instructions",
+        _Target.CLAUDE: "system prompt",
+        _Target.CODEX: "developer instructions",
     },
     "configured_agent_prompts": {
-        "claude": "system prompts",
-        "codex": "developer instructions",
+        _Target.CLAUDE: "system prompts",
+        _Target.CODEX: "developer instructions",
     },
 }
 
@@ -1115,6 +1122,9 @@ def build(
         if emission.action is EmissionAction.CONVERT_AGENT:
             _emit_converted_agent(emission, dist_root=dist_root, src_root=src_root)
             continue
+        if emission.action is EmissionAction.AGENT_TOKENS:
+            _emit_agent_tokens(emission, dist_root=dist_root)
+            continue
         if emission.action is EmissionAction.FAN_OUT:
             _emit_projected_fan_out(
                 emission,
@@ -1460,6 +1470,43 @@ def _emit_converted_agent(
     _write_text(destination, converted)
 
 
+def _emit_agent_tokens(emission: ProjectedEmission, *, dist_root: Path) -> None:
+    """Render the owner's agent tokens into the data file one script reads."""
+    destination = dist_root / emission.target.value / emission.relative_path
+    _write_text(
+        destination,
+        json.dumps(declared_agent_tokens(), indent=2) + "\n",
+    )
+
+
+def _reads_agent_tokens(source_file: Path, *, src_root: Path) -> bool:
+    """Whether ``source_file`` is a script of the reading plugin naming the data file."""
+    relative_path = plugin_relative_path(source_file, src_root=src_root)
+    return (
+        relative_path.parts[0] == AGENT_TOKEN_READING_PLUGIN_NAME
+        and source_file.suffix == ".py"
+        and AGENT_TOKEN_DATA_FILENAME in source_file.read_text(encoding="utf-8")
+    )
+
+
+def _projected_agent_token_emissions(
+    plugin_sources: tuple[Path, ...], *, src_root: Path
+) -> list[ProjectedEmission]:
+    """Return one rendered token file beside each script that reads it, per target."""
+    return [
+        ProjectedEmission(
+            source=REPOSITORY_ROOT / AGENT_TOKEN_OWNER_PATH,
+            target=target,
+            relative_path=plugin_relative_path(source_file, src_root=src_root).parent
+            / AGENT_TOKEN_DATA_FILENAME,
+            action=EmissionAction.AGENT_TOKENS,
+        )
+        for source_file in plugin_sources
+        if _reads_agent_tokens(source_file, src_root=src_root)
+        for target in _Target
+    ]
+
+
 def _copy_unrendered_file(emission: ProjectedEmission, *, dist_root: Path) -> None:
     destination = dist_root / emission.target.value / emission.relative_path
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -1635,12 +1682,12 @@ class AgentCapability:
 # target adds an entry here. RUNTIME_TOKEN_REGISTRY separately renders divergent
 # names into authored text.
 AGENT_CAPABILITY_REGISTRY: Final[dict[str, AgentCapability]] = {
-    "claude": AgentCapability(
+    _Target.CLAUDE: AgentCapability(
         manifest_declares_agents=True,
         namespaced=True,
         suffix=".md",
     ),
-    "codex": AgentCapability(
+    _Target.CODEX: AgentCapability(
         manifest_declares_agents=False,
         namespaced=False,
         suffix=".toml",
@@ -1731,6 +1778,9 @@ def project_emissions(src_root: Path) -> EmissionProjection:
                 )
             )
     emissions.extend(_projected_template_emissions(src_root, shared_root=shared_root))
+    emissions.extend(
+        _projected_agent_token_emissions(plugin_sources, src_root=src_root)
+    )
     projection = EmissionProjection(
         plugin_sources=plugin_sources, emissions=tuple(emissions)
     )

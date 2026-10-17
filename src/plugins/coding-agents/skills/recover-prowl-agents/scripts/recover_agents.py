@@ -4,13 +4,18 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import os
 import shlex
 import sys
 from dataclasses import dataclass
 from enum import StrEnum
+from pathlib import Path
+from types import ModuleType
 from typing import TextIO, cast
+
+AGENT_TOKEN_MODULE_NAME = "agent_tokens"
 
 SCHEMA_VERSION = 5
 TRANSPORT_SCHEMA_VERSION = 1
@@ -129,10 +134,28 @@ class Resolution(StrEnum):
     ALREADY_CORRELATED = "already-correlated"
 
 
+def _load_agent_tokens() -> ModuleType:
+    """Load the sibling agent-token module by a `__file__`-relative import."""
+    path = Path(__file__).resolve().with_name(f"{AGENT_TOKEN_MODULE_NAME}.py")
+    cached = sys.modules.get(AGENT_TOKEN_MODULE_NAME)
+    if cached is not None and Path(getattr(cached, "__file__", "")) == path:
+        return cached
+    spec = importlib.util.spec_from_file_location(AGENT_TOKEN_MODULE_NAME, path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"cannot load {AGENT_TOKEN_MODULE_NAME} from {path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[AGENT_TOKEN_MODULE_NAME] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+AgentToken = _load_agent_tokens().AgentToken
+
+
 class AgentType(StrEnum):
-    CLAUDE = "claude"
-    CODEX = "codex"
-    PI = "pi"
+    CLAUDE = AgentToken.CLAUDE.value
+    CODEX = AgentToken.CODEX.value
+    PI = AgentToken.PI.value
 
 
 class EvidenceSource(StrEnum):
@@ -160,9 +183,9 @@ POST_RESTART_EVIDENCE_SOURCES = frozenset(
 )
 
 NATIVE_RESUME_PREFIXES: dict[AgentType, tuple[str, ...]] = {
-    AgentType.CLAUDE: ("claude", "--resume"),
-    AgentType.CODEX: ("codex", "resume"),
-    AgentType.PI: ("pi", "--session"),
+    AgentType.CLAUDE: (AgentType.CLAUDE.value, "--resume"),
+    AgentType.CODEX: (AgentType.CODEX.value, "resume"),
+    AgentType.PI: (AgentType.PI.value, "--session"),
 }
 
 NATIVE_WRITABLE_ROOT_OPTIONS: dict[AgentType, str] = {

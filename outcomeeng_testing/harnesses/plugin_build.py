@@ -26,6 +26,8 @@ from outcomeeng.distribution.build import (
     parse_directives,
 )
 from outcomeeng.distribution.contracts import (
+    AGENT_TOKEN_DATA_FILENAME,
+    AGENT_TOKEN_OWNER_PATH,
     DIST_DIR_NAME,
     MARKDOWN_FILE_SUFFIX,
     PLUGINS_DIR_NAME,
@@ -299,6 +301,10 @@ def _source_ancestor_for_dist_path(relative_path: str) -> Path | None:
     direct_source = CANONICAL_SOURCE_ROOT / PLUGINS_DIR_NAME / plugin_relative
     if direct_source.is_file():
         return direct_source
+
+    owner_source = CANONICAL_SOURCE_ROOT.parent / AGENT_TOKEN_OWNER_PATH
+    if path.name == AGENT_TOKEN_DATA_FILENAME and owner_source.is_file():
+        return owner_source
 
     parts = plugin_relative.parts
     if len(parts) < 4 or parts[1] != SKILLS_SUBDIR_NAME:
