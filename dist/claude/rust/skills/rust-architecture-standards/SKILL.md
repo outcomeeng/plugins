@@ -54,10 +54,10 @@ ADRs do not assign testing levels. They establish constraints that make levels a
 
 ### Audit
 
-- ALWAYS: external tool invocations accept an injected runner trait or function parameter -- enables isolated testing without framework mocks ([audit])
-- ALWAYS: configuration is parsed into typed structs at load time -- enables Level 1 verification of config logic ([audit])
-- NEVER: `mockall`, `faux`, or generated mocks as the primary testing strategy for architectural seams -- violates reality-based testing ([audit])
-- NEVER: direct `std::process::Command` construction in domain logic without an injected seam -- prevents isolated testing ([audit])
+- ALWAYS: external tool invocations accept an injected runner trait or function parameter -- enables isolated testing without framework mocks ([audit:injected-tool-runner])
+- ALWAYS: configuration is parsed into typed structs at load time -- enables Level 1 verification of config logic ([audit:typed-config-at-load-time])
+- NEVER: `mockall`, `faux`, or generated mocks as the primary testing strategy for architectural seams -- violates reality-based testing ([audit:no-generated-mocks-for-seams])
+- NEVER: direct `std::process::Command` construction in domain logic without an injected seam -- prevents isolated testing ([audit:no-direct-process-command-in-domain])
 ```
 
 **What this replaces -- the following does NOT belong in an ADR:**

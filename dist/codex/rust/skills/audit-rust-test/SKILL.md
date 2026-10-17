@@ -98,7 +98,7 @@ Match the Rust evidence method to the assertion type:
 
 For property tests, inspect the generator domain. `Just`, one-value ranges, or tiny enumerations reduce the property to examples unless the spec explicitly declares a finite set.
 
-An assertion tagged `[audit]` carries no assertion type and is outside Rust test-evidence scope. Skip it rather than treating the marker as test evidence.
+An assertion tagged `[audit:{rule-slug}]` carries no assertion type and is outside Rust test-evidence scope. Skip it rather than treating the marker as test evidence.
 </step>
 
 <step name="controlled_implementations">
