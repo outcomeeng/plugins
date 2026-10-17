@@ -72,6 +72,9 @@ CONFIG_DIRECTORY = "outcome-engineering"
 CONFIG_FILE = "control-positions.toml"
 INVALID_VALUE = "invalid"
 HUNG_COMMAND_EXIT_CODE = 124
+RECORDS_DIRECTORY = "positions"
+READ_ONLY_MODE = 0o500
+WRITABLE_MODE = 0o700
 NUMERIC_CONFIG_FIELDS = (
     "COMPACTION_CONTEXT_PERCENT",
     "COMPACTION_MULTIPLE",
@@ -172,6 +175,15 @@ class PassStep:
     leading_seconds: Sequence[float] | None = None
     # When set, the token source of this pass alone, replacing the frozen source.
     token_source: Any | None = None
+    # Prowl operations the recorder refuses, as (operation, pane) pairs: the command
+    # fails for that pane and the call is still recorded (Stage 5 failure simulation).
+    refused: frozenset[tuple[str, str]] = frozenset()
+    # Fake seconds that pass between the pass clock's start and its first use, so the
+    # pass bound is reached before the inventory command starts (Stage 5 time).
+    stall_seconds: float = 0.0
+    # When set, the durable record directory refuses writes during this pass alone, so
+    # a pass that records an action raises; the raised error is observed.
+    records_blocked: bool = False
 
 
 def toml_value(value: object) -> str:
@@ -240,15 +252,22 @@ class FakeClock:
         leading_seconds: Sequence[float] = (),
         hangs: bool = False,
         command_timeout: float = 0.0,
+        stall_seconds: float = 0.0,
     ) -> None:
         self.seconds_per_command = seconds_per_command
         self.leading_seconds = tuple(leading_seconds)
         self.hangs = hangs
         self.command_timeout = command_timeout
+        self.stall_seconds = stall_seconds
         self.commands = 0
         self.elapsed = 0.0
+        self.reads = 0
 
     def __call__(self) -> float:
+        # The first read starts the pass clock; the stall lands before the second.
+        self.reads += 1
+        if self.reads == 2:
+            self.elapsed += self.stall_seconds
         return self.elapsed
 
     def consume(self, timeout_seconds: float | None) -> bool:
@@ -280,6 +299,7 @@ class ProwlRecorder:
         self.positions = tuple(positions)
         self.step = step
         self.clock = clock
+        self.refused = step.refused
         self.calls: list[ProwlCall] = []
         self.commands: list[tuple[str, ...]] = []
         self.adapter = load_prowl_environment()
@@ -337,6 +357,8 @@ class ProwlRecorder:
             return CommandResult(0, self._json({"panes": self._panes()}), "")
         if pane not in known:
             return CommandResult(1, "", f"no pane {pane}")
+        if (operation, pane) in self.refused:
+            return CommandResult(1, "", f"{operation} refused for {pane}")
         if operation == "read":
             text = screen_text(known[pane], self.step)
             return CommandResult(0, self._json({"text": text}), "")
@@ -471,6 +493,7 @@ def run_passes(
                 else step.leading_seconds,
                 hangs,
                 command_timeout,
+                step.stall_seconds,
             )
             runner = ProwlRecorder(current.positions, step, clock)
             tokens = FrozenTokens(step, now, clock, token_seconds)
@@ -490,6 +513,10 @@ def run_passes(
             reports: tuple[Any, ...] = ()
             unfinished: tuple[str, ...] = ()
             exit_code: int | None = None
+            records_directory = data_root / RECORDS_DIRECTORY
+            if step.records_blocked:
+                records_directory.mkdir(exist_ok=True)
+                records_directory.chmod(READ_ONLY_MODE)
             try:
                 if via_main:
                     exit_code = module.main(
@@ -501,8 +528,16 @@ def run_passes(
                     result = module.run_pass(config_path, collaborators)
                     reports = tuple(result.reports)
                     unfinished = tuple(result.unfinished)
-            except module.ConfigurationError as raised:
+            except Exception as raised:
+                if not (
+                    isinstance(raised, module.ConfigurationError)
+                    or step.records_blocked
+                ):
+                    raise
                 error = raised
+            finally:
+                if step.records_blocked:
+                    records_directory.chmod(WRITABLE_MODE)
             records = tuple(module.read_records(data_root))
             observations.append(
                 PassObservation(
@@ -615,6 +650,16 @@ class ParserWorld:
         """
         return self.stamp + dt.timedelta(seconds=1) - index * PASS_INTERVAL
 
+    def collection(self) -> Mapping[str, Any]:
+        """Run one real collection and return the accounting's own result."""
+        accounting = self.accounting
+        config = accounting.Config.from_environment(
+            os.environ, accounting.DEFAULT_ROOT, accounting.DEFAULT_PROJECTS
+        )
+        with accounting.Evidence(config) as evidence:
+            collected: Mapping[str, Any] = evidence.collect(self.window[1])
+        return collected
+
     def add_transcript_row(self, worktree: str) -> None:
         """Append one captured assistant row whose workspace is `worktree`."""
         row = json.loads(TRANSCRIPT_FIXTURE.read_text(encoding="utf-8"))
@@ -632,12 +677,16 @@ class ParserWorld:
 
 
 @contextmanager
-def real_parser_world(module: ModuleType) -> Iterator[ParserWorld]:
+def real_parser_world(
+    module: ModuleType, *, transcript_root: bool = True
+) -> Iterator[ParserWorld]:
     """Run the production token source against a real accounting database.
 
     The sibling accounting module is imported fresh under a disposable home so its
     default state and transcript roots lie inside it; the process environment and
-    the module registry are restored afterwards.
+    the module registry are restored afterwards. With `transcript_root` false the
+    transcript directory is never created, so every collection leaves the
+    accounting history incomplete.
     """
     sibling_name = module.TOKEN_ACCOUNTING[1]
     saved_module = sys.modules.get(sibling_name)
@@ -656,7 +705,8 @@ def real_parser_world(module: ModuleType) -> Iterator[ParserWorld]:
             start, end = stamp - accounting.HOUR, stamp + accounting.HOUR
             os.environ[accounting.RESET_ENV] = accounting.iso(start)
             projects = accounting.DEFAULT_PROJECTS
-            projects.mkdir(parents=True)
+            if transcript_root:
+                projects.mkdir(parents=True)
             usage = row[fields.MESSAGE][fields.USAGE]
             yield ParserWorld(
                 accounting=accounting,
