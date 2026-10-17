@@ -22,7 +22,7 @@ Human-facing text drafted against the kind its caller supplied and complying wit
 - NEVER guess when no kind arrives. Ask, from the three-kind list, once.
 - NEVER invent a style outside the taxonomy.
 - NEVER author a repository- or domain-governed artifact here — ownership outranks a supplied kind, and a governed artifact routes to its own workflow before anything else runs.
-- NEVER decide structure against the governing prose ADR. This skill is the artifact's sole writer, and the ADR owns the artifact set's structure; a structural change routes through `/author-prose-architecture` first.
+- NEVER decide structure against the governing prose ADR. This skill is the artifact's sole writer, and the ADR owns the artifact set's structure.
 
 </constraints>
 
