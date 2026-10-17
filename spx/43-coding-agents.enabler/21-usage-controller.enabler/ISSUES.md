@@ -69,3 +69,17 @@ The node carries 12 assertion bullets, lines 14 through 25 of [`spx/43-coding-ag
 **Why accepted.** The Plugins Maintainer accepted the finding by operator decision. The Author tracks it as a separate larger concern: it needs a decomposition of the node along its concern lines, each child a change to the node's assertions that this Change does not make. The node stays whole until that decomposition runs.
 
 **Settlement condition.** The node is decomposed along its concern lines into children that each hold about 7 assertions or fewer, or a recorded ruling states why the node stays whole.
+
+## usage-controller.md:20,25 — parser-worktree-lookup-citation
+
+Status: `accepted`.
+
+Lines 20 and 25 of [`spx/43-coding-agents.enabler/21-usage-controller.enabler/usage-controller.md`](spx/43-coding-agents.enabler/21-usage-controller.enabler/usage-controller.md) state that the controller takes a position's tokens only from the parser of [`spx/43-coding-agents.enabler/18-consumption-control.enabler/consumption-control.md`](spx/43-coding-agents.enabler/18-consumption-control.enabler/consumption-control.md), identified by the pane's worktree, and that it reads token counts only through the consumption-control parser. [`spx/43-coding-agents.enabler/18-consumption-control.enabler/consumption-control.md`](spx/43-coding-agents.enabler/18-consumption-control.enabler/consumption-control.md) declares its measurement model over requests, sessions, models, and native parent/subagent relationships, and declares no parser entity and no worktree-keyed lookup. The words parser and worktree appear nowhere in that node's spec, its `ISSUES.md`, or its tests directory, and no decision record in that enabler directory supplies the term. The shipped `control-token-spend` skill likewise has no worktree-keyed query path in its scripts.
+
+**Impact**: the assertions cite an entity and a lookup their provider does not declare, so the audit gate that later checks the controller's implementation against them has no resolvable target in the cited provider.
+
+**Finding.** DEBT [consistency] at `usage-controller.md:20`, raised in https://github.com/outcomeeng/plugins/pull/665#issuecomment-6236110601. Required: either point the assertion at the identity axis `consumption-control.md` declares, such as the session resolved from a pane's worktree through the cwd or project identity its collection invocation uses, or have `consumption-control.md` declare the parser entity and its worktree-keyed lookup explicitly.
+
+**Why accepted.** The Plugins Maintainer ruling in the Change at https://github.com/outcomeeng/changes/issues/416 accepts the finding on the same terms as the findings recorded above. The node declares `malleability: spec`, and the identity axis the controller reads through is settled when the controller is implemented or the node hardens. The node spec text stays as the Change record states it.
+
+**Settlement condition.** The assertions point at the identity axis `consumption-control.md` declares, or `consumption-control.md` declares the parser entity and its worktree-keyed lookup.
