@@ -407,7 +407,7 @@ A rule earns a sound tag only when it is verifiable (a test, eval, or audit skil
 
 ### Audit
 
-- ALWAYS: every theme variant is selectable from the settings surface ([audit])
+- ALWAYS: every theme variant is selectable from the settings surface ([audit:theme-variants-selectable])
 ```
 
 **Ill-formed verification rules:**
