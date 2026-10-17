@@ -11,6 +11,8 @@ CAN resume the complete intended live set and its unsatisfied operator interacti
 
 ## Assertions
 
+- ALWAYS: recovery selects each prepared agent type's native resume command from the agent tokens the coding-agents agent-token module declares, and the recovery script declares no agent token of its own
+
 ### Mappings
 
 - Each exactly identified native session maps during prepare to one durable candidate containing its original pane, absolute worktree, agent type, complete native session identity, exact native resume locator, applicable native home, evidence, role, and secondary authorization; incomplete, duplicate, and mismatched entries map to a named non-mutating failure while every Prowl status maps to the same eligibility result ([test](tests/test_native_agent_recovery.mapping.l1.py))
