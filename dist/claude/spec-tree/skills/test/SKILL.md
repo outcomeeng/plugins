@@ -74,6 +74,8 @@ Before writing or repairing evidence, read the spec assertion, the existing or p
 
 If the source does not expose the contract the assertion needs, fix the source contract first. Do not patch test predicates around a reviewer example, copy literals into tests, hide domain values in fixtures or generators, or replace behavior the assertion claims to verify.
 
+Repair a source-ownership finding by exporting the value from its production owner and replacing every spelling of that value in the node's linked tests, harnesses, and generators with that export. The cited line is one instance of the value, never its extent.
+
 </source_contract_first_gate>
 
 <assertion_file_ownership>
@@ -448,9 +450,19 @@ In decision-rule mode, add no evidence link to the ADR/PDR. The implementing spe
 
 </step>
 
+<step name="sweep_source_values">
+
+**Step 8: Sweep authored evidence for source-owned values**
+
+Before the evidence faces its first audit, search every test, harness, and generator this invocation created or changed for each literal spelling of a source-owned value named in `<source_contract_first_gate>`, and replace each spelling with the production owner's export. Export the value from its production owner first when none exists. A repair round runs this sweep over the repaired files as it does over new ones.
+
+In decision-rule mode, no test file changes and no sweep runs.
+
+</step>
+
 <step name="report">
 
-**Step 8: Report evidence summary**
+**Step 9: Report evidence summary**
 
 Report which assertions have tests, which do not, and which are stale:
 
@@ -489,6 +501,7 @@ Testing output is sound when:
 - Every explicitly supplied untagged test assertion is moved under its selected assertion-type heading and receives one canonical `[test](path)` link; unrelated untagged assertions remain unchanged.
 - Every test file name encodes the assertion type and execution level; it includes a runner token only when the canonical model requires one.
 - Every test asserts source-coupled behavior with no test-owned data or configuration in the assertion file.
+- Every source-owned value in the authored evidence is imported from its production owner, with no literal spelling of it left in a linked test, harness, or generator.
 - Every property test uses a meaningful generated domain and reports both the seed and replay path on failure.
 - Every property test generates product-owned variable behavior and separates finite real-boundary wiring unless the boundary itself is part of that variable behavior.
 - Every test double maps to one of the seven exception cases and preserves the behavior boundary the assertion claims.

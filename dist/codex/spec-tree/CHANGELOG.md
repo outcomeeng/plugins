@@ -10,6 +10,12 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.106.12
+
+### Changed
+
+- **`/test` replaces every spelling of a source-owned value, both when it repairs a source-ownership finding and before the evidence it authored faces its first audit.** A repair exports the value from its production owner and replaces every spelling of it in the node's linked tests, harnesses, and generators, not only the cited line. A new workflow step, run after the evidence links are updated and before the report, searches the tests, harnesses, and generators the invocation created or changed for each literal spelling of a source-owned value and replaces each with the production owner's export; decision-rule mode runs no sweep. The report step is now Step 9. Before this change, a repair could fix the cited line and leave other spellings of the same value in the node's evidence, and no step swept authored evidence for source-owned literals before its first audit.
+
 ## 0.106.11
 
 ### Fixed
