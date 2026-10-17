@@ -41,3 +41,31 @@ Line 18 of [`spx/43-coding-agents.enabler/21-usage-controller.enabler/usage-cont
 **Why accepted.** The Maintainer ruling (https://github.com/outcomeeng/changes/issues/416#issuecomment-6235170743) accepts the finding. The node declares `malleability: spec`, and the root the records live under is settled when the controller is implemented or the node hardens. The node spec text stays as the Change record states it.
 
 **Settlement condition.** The assertion names a root that `consumption-control.md` declares, or a root `control-positions` owns.
+
+## usage-controller.md:19 — skip-list-title-key
+
+Status: `accepted`.
+
+Line 19 of [`spx/43-coding-agents.enabler/21-usage-controller.enabler/usage-controller.md`](spx/43-coding-agents.enabler/21-usage-controller.enabler/usage-controller.md) sets the configuration contract so that `control-positions.toml` sets the skip list by pane title or worktree path. Line 25 states the controller acts on panes only through the operation surface of [`spx/43-coding-agents.enabler/18-prowl-environment.enabler/prowl-environment.md`](spx/43-coding-agents.enabler/18-prowl-environment.enabler/prowl-environment.md). That node, at line 37 (audit), states operator-target resolution never asks for a pane UUID and never selects by focus, position, or title. The sibling [`spx/43-coding-agents.enabler/21-agent-communication.enabler/agent-communication.md`](spx/43-coding-agents.enabler/21-agent-communication.enabler/agent-communication.md), line 51, declares the same NEVER, linked to `tests/test_agent_message.compliance.l1.py`.
+
+**Impact**: a skip list keyed by pane title is a selection-by-title mechanism, the case the Prowl operation surface and its sibling forbid, so the audit gate that later checks the Prowl operation surface could reject the implementation.
+
+**Finding.** DEBT [consistency] at `usage-controller.md:19`, raised in the review of the Change at https://github.com/outcomeeng/changes/issues/416. Required: either drop pane title as a skip-list key, since worktree path alone identifies a pane through the supported resolution path, or state in the assertion why title-based skipping is exempt from the subtree-wide NEVER.
+
+**Why accepted.** The Plugins Maintainer accepted the finding by operator decision. The Author tracks it as a separate larger concern: it needs a ruling on whether the skip list keys on pane title or only on worktree path, which is a change to the node's assertion text that this Change does not make. The node spec text stays as the Change record states it.
+
+**Settlement condition.** The assertion keys the skip list on worktree path alone, or states why title-based skipping is exempt from the subtree-wide NEVER.
+
+## usage-controller.md:14-25 — assertion-count-decomposition
+
+Status: `accepted`.
+
+The node carries 12 assertion bullets, lines 14 through 25 of [`spx/43-coding-agents.enabler/21-usage-controller.enabler/usage-controller.md`](spx/43-coding-agents.enabler/21-usage-controller.enabler/usage-controller.md). The decompose skill's structural-quality checklist (`src/plugins/spec-tree/skills/decompose/SKILL.md`, Step 11) requires that no node exceed about 7 assertions without a recursive-decomposition issue, and the router decomposes an existing node with more than 7 assertions.
+
+**Impact**: the node mixes independent concerns (scheduling and overlap, compaction and pause and resume thresholds, stop and ceiling, configuration, durable records) in one spec, so each concern is judged, evidenced, and changed together.
+
+**Finding.** DEBT [architecture] at `usage-controller.md`, raised in the review of the Change at https://github.com/outcomeeng/changes/issues/416. Required: either decompose the node along its concern lines, or record why the node stays whole above the guideline.
+
+**Why accepted.** The Plugins Maintainer accepted the finding by operator decision. The Author tracks it as a separate larger concern: it needs a decomposition of the node along its concern lines, each child a change to the node's assertions that this Change does not make. The node stays whole until that decomposition runs.
+
+**Settlement condition.** The node is decomposed along its concern lines into children that each hold about 7 assertions or fewer, or a recorded ruling states why the node stays whole.
