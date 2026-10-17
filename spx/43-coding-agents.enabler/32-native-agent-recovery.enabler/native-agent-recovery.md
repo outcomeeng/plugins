@@ -11,6 +11,10 @@ CAN resume the complete intended live set and its unsatisfied operator interacti
 
 ## Assertions
 
+### Scenarios
+
+- Given a recover request that supplies a writable root for a candidate's worktree, when recovery launches that candidate, then the recovered native session's effective permission policy lists that root as writable ([probe](probes/writable-roots/probe.md))
+
 ### Mappings
 
 - Each exactly identified native session maps during prepare to one durable candidate containing its original pane, absolute worktree, agent type, complete native session identity, exact native resume locator, applicable native home, evidence, role, and secondary authorization; incomplete, duplicate, and mismatched entries map to a named non-mutating failure while every Prowl status maps to the same eligibility result ([test](tests/test_native_agent_recovery.mapping.l1.py))
@@ -18,6 +22,7 @@ CAN resume the complete intended live set and its unsatisfied operator interacti
 - Each bound candidate maps to `resumed` when unoccupied, `already-correlated` when occupied by its exact agent type and session, or a named non-mutating failure when absent, duplicated, mismatched, or occupied by another process ([test](tests/test_native_agent_recovery.mapping.l1.py))
 - The complete verified binding set and one checked stable-screen read for every bound pane map to reassessment planning; an absent or failed pane read maps to zero continuation delivery, while a complete read barrier maps each non-controller candidate to one separately delivered instruction until its session identity appears in the durable reassessed set ([test](tests/test_native_agent_recovery.mapping.l1.py))
 - One candidate per worktree maps to primary recovery; multiple candidates in one worktree map to rejection unless exactly one is primary and every distinct secondary session carries explicit operator authorization ([test](tests/test_native_agent_recovery.mapping.l1.py))
+- Each candidate recovery launches maps, with the writable roots the recover request supplies for its worktree, to its source-owned native resume command carrying one writable-root option per supplied root in the form its agent type's resume command accepts, and, when the request supplies no root, to the native resume command with no writable-root option ([test](tests/test_native_agent_recovery.mapping.l1.py))
 
 ### Properties
 
@@ -36,3 +41,5 @@ CAN resume the complete intended live set and its unsatisfied operator interacti
 - NEVER: recovery uses `spx agent resume --latest`, Prowl status, transcript or rollout recency, terminal presentation, or a sessionless roster entry to select or verify a native session ([test](tests/test_native_agent_recovery.compliance.l1.py))
 - ALWAYS: reassessment treats restart, authentication repair, and tool failure as transport interruption; reconciles every explicitly presented plan and context artifact against delivered acceptance scope before declaring completion; completes the last unsatisfied operator request under its original constraints; restores pending questions, selections, approvals, and blockers without choosing for the operator; and stops only after every operator request is satisfied and the workflow completes or is explicitly cancelled ([audit])
 - NEVER: recovery closes a pane, launches an identity absent from the prepared manifest, types continuation into any recovered pane before the all-pane context-read barrier, treats distinct useful work as satisfying an unreconciled plan, treats delivery as workflow success, asks again for authority already granted, or substitutes repository completion for an unsatisfied operator response ([audit])
+- ALWAYS: recovery takes writable roots from each recover request, preserves each absolute root verbatim, rejects a non-absolute root without filesystem expansion or resolution before any native launch, and records no root in the prepared manifest ([test](tests/test_native_agent_recovery.compliance.l1.py))
+- NEVER: recovery launches a candidate whose agent type's resume command accepts no writable-root option while the recover request supplies a writable root for its worktree, or launches a native resume command that omits a supplied root ([test](tests/test_native_agent_recovery.compliance.l1.py))
