@@ -83,3 +83,17 @@ Lines 20 and 25 of [`spx/43-coding-agents.enabler/21-usage-controller.enabler/us
 **Why accepted.** The Plugins Maintainer ruling in the Change at https://github.com/outcomeeng/changes/issues/416 accepts the finding on the same terms as the findings recorded above. The node declares `malleability: spec`, and the identity axis the controller reads through is settled when the controller is implemented or the node hardens. The node spec text stays as the Change record states it.
 
 **Settlement condition.** The assertions point at the identity axis `consumption-control.md` declares, or `consumption-control.md` declares the parser entity and its worktree-keyed lookup.
+
+## usage-controller.md — other-skill-compacts-prowl-position
+
+Status: `accepted`.
+
+The NEVER assertion of [`spx/43-coding-agents.enabler/21-usage-controller.enabler/usage-controller.md`](spx/43-coding-agents.enabler/21-usage-controller.enabler/usage-controller.md) states that no shipped coding-agents skill other than `control-positions` instructs a position to compact another position whose pane Prowl hosts. The shipped `direct-positions` skill (`src/plugins/coding-agents/skills/direct-positions/SKILL.md`) carries a `compact <position>` row in its arguments table, an act step, and a controller-pass bullet in its passes. Each instructs `act --operation compact`, which reaches the pane through `operate-prowl` for any position whose environment is prowl, and the controller-pass bullet tells the reader to run act with `--operation compact` for each compact-recommended position. The `orchestrate-change` skill (`src/plugins/coding-agents/skills/orchestrate-change/SKILL.md`, Check step 3, first bullet) sends `/compact` when remaining context is at or below 10%, but only to herdr panes, so it does not strain the assertion.
+
+**Impact**: a reader following `direct-positions` can compact a Prowl-hosted position from outside `control-positions`, so the controller is not the sole compacting actor for Prowl panes and the assertion does not hold of the shipped skills.
+
+**Finding.** DEBT [consistency] at `src/plugins/coding-agents/skills/direct-positions/SKILL.md` (arguments table row `compact <position>`, act step, controller-pass bullet in passes) and `src/plugins/coding-agents/skills/orchestrate-change/SKILL.md` (Check step 3, first bullet), raised in assertion-audit run 2026-10-17_17-22-22-076-b5831a95edb6, ordinal 11, severity blocking, rule `other-skill-compacts-prowl-position`. Required: no shipped coding-agents skill other than `control-positions` instructs a position to compact another position whose pane Prowl hosts; `direct-positions` restricts its compact path to herdr panes or drops it for Prowl-hosted positions.
+
+**Why accepted.** The Plugins Maintainer, relaying the operator's choice, accepts the finding as debt and keeps the assertion text and the skill text unchanged. The compaction path in `direct-positions` is removed together with the `direct-positions` skill once the controller job is installed and configured.
+
+**Settlement condition.** Compaction leaves the `direct-positions` skill, the `position-direction` and `position-overrides` specs, and their tests once the controller job is installed and configured, through a Proposed Change under outcomeeng/changes#445.
