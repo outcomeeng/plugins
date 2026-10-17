@@ -1,5 +1,5 @@
 ---
-name: architect-prose
+name: author-prose-architecture
 description: >-
   ALWAYS invoke this skill when writing ADRs for prose.
   NEVER author a prose ADR without this skill.

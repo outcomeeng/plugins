@@ -22,7 +22,7 @@ Human-facing text drafted against the kind its caller supplied and complying wit
 - NEVER guess when no kind arrives. Ask, from the three-kind list, once.
 - NEVER invent a style outside the taxonomy.
 - NEVER author a repository- or domain-governed artifact here — ownership outranks a supplied kind, and a governed artifact routes to its own workflow before anything else runs.
-- NEVER decide structure against the governing prose ADR. This skill is the artifact's sole writer, and the ADR owns the artifact set's structure; a structural change routes through `/architect-prose` first.
+- NEVER decide structure against the governing prose ADR. This skill is the artifact's sole writer, and the ADR owns the artifact set's structure; a structural change routes through `/author-prose-architecture` first.
 
 </constraints>
 
@@ -52,7 +52,7 @@ One text carries one kind. Register variation inside it is carried by the `/pros
 
 2. Resolve the kind through `<kind_intake>`. Nothing is written before it is settled.
 
-3. Locate the governing prose ADR. When the repository's spec tree carries a prose ADR governing the target artifact, read it — it decides the artifact's structure, its place among sibling artifacts, and the terminology homes. When the request needs a structural change the ADR does not decide — a new artifact, a reordered set, a split page — route the structural decision through `/architect-prose` before writing. With no governing ADR, the kind's structural conventions in `/prose-architecture-standards` guide the artifact's shape directly.
+3. Locate the governing prose ADR. When the repository's spec tree carries a prose ADR governing the target artifact, read it — it decides the artifact's structure, its place among sibling artifacts, and the terminology homes. When the request needs a structural change the ADR does not decide — a new artifact, a reordered set, a split page — route the structural decision through `/author-prose-architecture` before writing. With no governing ADR, the kind's structural conventions in `/prose-architecture-standards` guide the artifact's shape directly.
 
 4. Read the kind's style layer — the supplied kind's file from `/prose-standards` `<kind_layers>` — and the kind's structural conventions from `/prose-architecture-standards` `<kind_structures>`.
 

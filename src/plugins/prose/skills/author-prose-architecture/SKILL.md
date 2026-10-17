@@ -1,15 +1,15 @@
 ---
-name: architect-prose
+name: author-prose-architecture
 description: >-
   ALWAYS invoke this skill when writing ADRs for prose.
   NEVER author a prose ADR without this skill.
 argument-hint: "[interface|documentation|copy] <what to structure>"
-allowed-tools: Read, Write, Glob, Grep
+allowed-tools: Read, Write, Glob, Grep, {{! tool('use_skill') !}}
 ---
 
-Use skill `prose:prose-standards`.
+{!% require_skill 'prose:prose-standards' %!}
 
-Use skill `prose:prose-architecture-standards`.
+{!% require_skill 'prose:prose-architecture-standards' %!}
 
 <objective>
 A binding prose ADR, authored to the decision template the `/understand` foundation provides, whose structural rules are ALWAYS/NEVER rules carrying `([audit])`.

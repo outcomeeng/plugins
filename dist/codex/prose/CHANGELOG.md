@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## Unreleased
+
+### Breaking
+
+- **`architect-prose` is renamed `author-prose-architecture`, with no alias.** Invoke the new name; the old name no longer resolves. Every other skill keeps its name.
+
 ## 0.12.12
 
 ### Changed
