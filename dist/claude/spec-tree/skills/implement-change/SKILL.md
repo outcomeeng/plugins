@@ -28,8 +28,7 @@ Use skill `spec-tree:wait-for-load` for every resource-intensive command any ste
 8. When `simplify-{lang}-code` is installed, use it by the exact name step 3 recorded, on that checkpoint. Its `failed` result makes this skill's status `failed` and its `blocked` result makes it `blocked` with the simplify reason; any other result continues. When it is absent, skip to the result.
 9. When step 8 left changes, use skill `spec-tree:commit-changes` to checkpoint them. The final checkpoint is the one this result reports.
 
-Every composed skill's result is read before the next step. A `blocked` result from any composed skill ends this skill `blocked` with that skill's name and reason unchanged; a `failed` result, or a result outside that skill's declared contract, ends it `failed` with that skill's name and result. Step 8 states its own mapping for `simplify-{lang}-code`.
-
+Every composed skill's result is read before the next step. A `blocked` result from any composed skill ends this skill `blocked` with that skill's name and reason unchanged; a `failed` result, or a result outside that skill's declared contract, ends it `failed` with that skill's name and result.
 </workflow>
 
 <constraints>
