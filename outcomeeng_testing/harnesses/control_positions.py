@@ -782,4 +782,7 @@ class ChangedApiTokens:
 
     def tokens(self, worktree: str, start: dt.datetime, end: dt.datetime) -> int | None:
         with changed_sibling_api(self.accounting, self.change, self.worktree):
-            return self.module.ConsumptionTokens().tokens(worktree, start, end)
+            measured: int | None = self.module.ConsumptionTokens().tokens(
+                worktree, start, end
+            )
+        return measured
