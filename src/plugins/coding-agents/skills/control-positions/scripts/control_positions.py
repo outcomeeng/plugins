@@ -74,6 +74,7 @@ __all__ = [
 
 PASS_BOUND_SECONDS: Final = 300
 COMMAND_TIMEOUT_SECONDS: Final = 30
+TOKEN_STEP_SECONDS: Final = 60  # collect and measure, each limited to 30 seconds
 SCREEN_LINES: Final = 40
 PAUSE_STREAK_PASSES: Final = 2
 COMPACT_TEXT: Final = "/compact"
@@ -215,12 +216,22 @@ class ConsumptionTokens:
             with accounting.Evidence(config) as evidence:
                 evidence.collect(end)
                 measured = evidence.measure(start, end)
-        except (FileNotFoundError, OSError, ValueError, sqlite3.Error):
+            group = measured.get(accounting.AccountingField.WORKSPACES, {}).get(
+                worktree
+            )
+            if group is None:
+                return None
+            return int(sum(group[key] for key in accounting.TOKEN_KEYS))
+        except (
+            FileNotFoundError,
+            OSError,
+            ValueError,
+            sqlite3.Error,
+            AttributeError,
+            KeyError,
+            TypeError,
+        ):
             return None
-        group = measured.get(accounting.AccountingField.WORKSPACES, {}).get(worktree)
-        if group is None:
-            return None
-        return int(sum(group[key] for key in accounting.TOKEN_KEYS))
 
 
 class PassBound(Exception):
@@ -232,9 +243,13 @@ class Budget:
     clock: Callable[[], float]
     started: float
 
+    def left(self) -> float:
+        """Seconds left before the pass bound; negative once the bound is passed."""
+        return PASS_BOUND_SECONDS - (self.clock() - self.started)
+
     def remaining(self) -> float:
         """Seconds left before the pass bound; raises PassBound once none is left."""
-        left = PASS_BOUND_SECONDS - (self.clock() - self.started)
+        left = self.left()
         if left <= 0:
             raise PassBound
         return left
@@ -352,6 +367,7 @@ class Measurement:
     screen: Screen | None
     spend: int | None
     share: float | None
+    skipped: str = ""
 
     @property
     def ratio(self) -> float | None:
@@ -475,13 +491,21 @@ class ControlPass:
         if screen is not None and screen.weekly_used is not None:
             known = self.weekly.get(position.subscription, 0.0)
             self.weekly[position.subscription] = max(known, screen.weekly_used)
-        spend = self.collaborators.tokens.tokens(
-            position.worktree, self.window_start, self.window_end
-        )
+        spend: int | None = None
+        reason = ""
+        if self.prowl.budget.left() >= TOKEN_STEP_SECONDS:
+            spend = self.collaborators.tokens.tokens(
+                position.worktree, self.window_start, self.window_end
+            )
+        else:
+            reason = (
+                " The token measurement was skipped because its longest duration "
+                "does not fit in the time left in the pass."
+            )
         pace = self.settings.pace.get(position.subscription)
         count = self.members[position.subscription]
         share = None if pace is None else pace / count
-        return Measurement(screen, spend, share)
+        return Measurement(screen, spend, share, reason)
 
     def _handle(self, target: Target) -> None:
         position = target.position
@@ -494,7 +518,7 @@ class ControlPass:
                 worktree,
                 "No token measurement or pace is available for this position; "
                 "its pace is unmeasured and only context compaction and the "
-                "weekly ceiling apply.",
+                "weekly ceiling apply." + measurement.skipped,
             )
         if worktree in self.state.paused:
             self._resume_if_under_share(target, measurement)
