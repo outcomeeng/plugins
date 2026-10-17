@@ -20,3 +20,5 @@ CAN construct and judge `[test]` evidence from one methodology without duplicati
 - NEVER: a language-specific test specialist owns or repeats a generic test decision ([audit])
 - ALWAYS: a load-gated command `/test` runs executes in the foreground, and `/test` reports its result only after every such command has exited ([audit])
 - ALWAYS: before its first write, a test-authoring round loads the language test skill of each language in which it creates or changes a test file, in a repair round as in a new scaffold, so that the language's standards bind every edit; a language with no installed test skill is reported with the result ([audit])
+- ALWAYS: when `/test` repairs a source-ownership finding, it exports the value from its production owner and replaces every spelling of that value in the node's linked tests, harnesses and generators, not only the cited line ([audit])
+- ALWAYS: before its first audit, `/test` sweeps the evidence it authored for every literal spelling of a source-owned value and replaces each with the production owner's export ([audit])

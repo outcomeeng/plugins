@@ -74,6 +74,8 @@ Before writing or repairing evidence, read the spec assertion, the existing or p
 
 If the source does not expose the contract the assertion needs, fix the source contract first. Do not patch test predicates around a reviewer example, copy literals into tests, hide domain values in fixtures or generators, or replace behavior the assertion claims to verify.
 
+Repair a source-ownership finding by exporting the value from its production owner and replacing every spelling of that value in the node's linked tests, harnesses, and generators with that export. The cited line is one instance of the value, never its extent.
+
 </source_contract_first_gate>
 
 <assertion_file_ownership>
@@ -186,27 +188,7 @@ For each property, name the product-owned behavior the generator varies and clas
 
 <stage_two>
 
-Choose the level from operational reality:
-
-| Spec promise                                      | Minimum level | Reason                          |
-| ------------------------------------------------- | ------------- | ------------------------------- |
-| Prices are calculated correctly                   | `L1`          | Pure calculation                |
-| User can export data as CSV                       | `L1`          | File I/O with temporary folders |
-| CLI processes a product-specific site             | `L2`          | Product-specific binary         |
-| Database query returns users                      | `L2`          | Real database required          |
-| User completes checkout with a live provider      | `L3`          | Remote provider required        |
-| Browser flow works against the live deployed site | `L3`          | Real browser and remote system  |
-
-| Dependency                        | Minimum level |
-| --------------------------------- | ------------- |
-| None, pure function               | `L1`          |
-| Filesystem with temporary folders | `L1`          |
-| Standard development tools        | `L1`          |
-| Database                          | `L2`          |
-| Product-specific binary           | `L2`          |
-| External HTTP API or browser API  | `L2` or `L3`  |
-| Live third-party service          | `L3`          |
-| Real credentials                  | `L3`          |
+Choose the level from operational reality. Read `${CLAUDE_SKILL_DIR}/references/execution-level-lookup.md` for the minimum level of each spec promise and each dependency.
 
 Test product-owned algorithms, parsers, and rules thoroughly at `L1`. Trust mature library behavior and test product-owned wiring, mappings, invariants, failure handling, and boundaries. Add lower-level evidence when it materially narrows diagnosis. Place confidence where it is achievable: math at `L1`, SQL against a database at `L2`, and live user flows at `L3`.
 
@@ -448,9 +430,19 @@ In decision-rule mode, add no evidence link to the ADR/PDR. The implementing spe
 
 </step>
 
+<step name="sweep_source_values">
+
+**Step 8: Sweep authored evidence for source-owned values**
+
+Before the evidence faces its first audit, search every test, harness, and generator this invocation created or changed for each literal spelling of a value a production module owns, and replace each spelling with the production owner's export. A repair round takes its sweep scope from the repair paragraph in `<source_contract_first_gate>`.
+
+In decision-rule mode, no test file changes and no sweep runs.
+
+</step>
+
 <step name="report">
 
-**Step 8: Report evidence summary**
+**Step 9: Report evidence summary**
 
 Report which assertions have tests, which do not, and which are stale:
 
@@ -489,6 +481,7 @@ Testing output is sound when:
 - Every explicitly supplied untagged test assertion is moved under its selected assertion-type heading and receives one canonical `[test](path)` link; unrelated untagged assertions remain unchanged.
 - Every test file name encodes the assertion type and execution level; it includes a runner token only when the canonical model requires one.
 - Every test asserts source-coupled behavior with no test-owned data or configuration in the assertion file.
+- Every source-owned value in the authored evidence is imported from its production owner, with no literal spelling of it left in a linked test, harness, or generator.
 - Every property test uses a meaningful generated domain and reports both the seed and replay path on failure.
 - Every property test generates product-owned variable behavior and separates finite real-boundary wiring unless the boundary itself is part of that variable behavior.
 - Every test double maps to one of the seven exception cases and preserves the behavior boundary the assertion claims.

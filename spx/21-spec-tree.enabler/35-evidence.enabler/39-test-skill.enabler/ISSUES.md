@@ -6,15 +6,17 @@
 
 The configured `skill-auditor` produced inconsistent verdicts on byte-identical skill bundles: it approved heads `86d778748a302217ef03e5e08e7f816bc30970fb` and `086db895f4204d393799b649d5e5e7d640e28f39`, then produced two rejecting verdicts at head `7ca59434d5f62a142fe690e2c00b97bc1f47d6d0`. Both rejections reported `f-002`, rule `caller_independence`, against line 42. The approval on the identical subject remains the Change #94 gate result; the finding is retained here as debt for independent settlement.
 
+Run `2026-10-17_19-43-16-101-974a660b94a1` raised the same finding, rule `caller-independence` against assertion ordinal 3, at severity debt. The finding sits at line 44 of the shared standard, which names the controlled-implementation exception set only by pointing to the generic test workflow, so a consumer that loads the standard alone cannot see the set. Base-ref evidence: `git diff --unified=0 262c63fbf4a417463fd537fda8453fc6c902eb75 -- src/plugins/spec-tree/skills/test-evidence-standards/SKILL.md` shows line 44 untouched in the audited tree.
+
 **Settlement condition**: a separate Change makes the controlled-implementation exception authority independently available from the shared reference, or amends the governing decision to establish why every valid consumer necessarily loads the named workflow authority, then obtains a consistent configured `skill-auditor` verdict on the committed subject.
 
-## The test skill body sits within five lines of the progressive-disclosure ceiling
+## DEBT: the TypeScript test specialist repeats the generic dependency-to-level table and miscounts the exception cases
 
-Finding `f-007`, rule `progressive_disclosure_headroom`, raised by the configured `skill-auditor` against `src/plugins/spec-tree/skills/test/SKILL.md`. The body measures 495 lines against the 500-line budget `/skill-standards` `<progressive_disclosure>` sets, with the whole `<testing_methodology>` inline and two small conditional references beside it. The next inline rule addition breaches the budget or forces an unplanned eager-foundation exception claim. The auditor names `<four_part_progression>` and the two Stage 2 lookup tables as the detail a reader does not need on every invocation.
+Finding from run `2026-10-17_19-43-16-101-974a660b94a1`, rule `language-specialist-repeats-generic-decision`, assertion ordinal 5, severity debt. `src/plugins/typescript/skills/author-typescript-test/SKILL.md` restates the generic Stage 2 dependency-to-level table (Step 2, lines 76-83) and says "6 exception cases" (line 279), while the generic test skill declares seven. The two copies can drift, and the count already disagrees.
 
-**Settlement condition**: the body measures at or below the ceiling with editing headroom restored, by moving that conditional detail into a cited reference or by declaring the eager-foundation exception with its justification. The ceiling itself is the trigger — the entry closes when a later change reaches it.
+Base-ref evidence: `git diff --unified=0 262c63fbf4a417463fd537fda8453fc6c902eb75 -- src/plugins/typescript/skills/author-typescript-test/SKILL.md` is empty; both locations are untouched in the audited tree.
 
-**Why separate from Change #33**: the crowding predates this changeset. The move relocates content Change #33 neither adds nor governs, and it carries its own skill-audit gate.
+**Settlement condition**: the TypeScript specialist cites the generic test skill for the dependency-to-level table and the exception-case set, and carries only the TypeScript-specific expression of each level, then obtains a consistent configured `skill-auditor` verdict on the committed subject.
 
 ## The canonical filename patterns are stated twice in the test skill
 
@@ -31,3 +33,9 @@ Finding `f-010`, rule `constraint_language`, raised by the configured `skill-aud
 **Settlement condition**: the guidance states the selection rule decidably and ties it to the Stage 1 quantifier test that already owns the classification.
 
 **Why separate from Change #33**: the wording predates this changeset, whose property-boundary rules leave it untouched.
+
+## The test skill body sits ten lines under the progressive-disclosure ceiling
+
+`src/plugins/spec-tree/skills/test/SKILL.md` measures 490 lines against the 500-line budget that `/skill-standards` `<progressive_disclosure>` sets. The two Stage 2 lookup tables live in `src/plugins/spec-tree/skills/test/references/execution-level-lookup.md`, which Stage 2 loads when it runs. No eager-foundation exception is declared: the Stage 2 tables are read only outside decision-rule mode, so they are conditional detail. An inline rule addition of ten or more lines leaves the body at 500 lines or more, which breaches the ceiling.
+
+**Settlement condition**: the body gains headroom beyond the next foreseeable rule addition, by moving a section that not every invocation needs behind a conditional reference, then obtains a consistent configured `skill-auditor` verdict on the committed subject.
