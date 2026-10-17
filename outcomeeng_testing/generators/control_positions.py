@@ -102,6 +102,44 @@ def ceiling_rejected_values() -> tuple[float, ...]:
     )
 
 
+TOKEN_MEASUREMENT_DEADLINES = 2  # the sibling's collect and measure each carry one
+
+
+def token_reserve_shortfalls(reserve_seconds: float) -> tuple[float, ...]:
+    """Seconds left before the pass bound that fall short of the reserve.
+
+    Each member is positive and strictly below `reserve_seconds`, so the longest
+    token measurement cannot finish inside it; binary fractions keep the clock
+    arithmetic exact.
+    """
+    return (
+        reserve_seconds - 0.125,
+        reserve_seconds - 1,
+        reserve_seconds / 2,
+        1.0,
+    )
+
+
+class SiblingApiChange(StrEnum):
+    """One way a sibling release can change the accounting API the controller reads."""
+
+    MEASURE_RETURNS_LIST = "measure returns a list"
+    MEASURE_RETURNS_NUMBER = "measure returns a number"
+    MEASURE_RETURNS_NONE = "measure returns nothing"
+    WORKSPACES_NOT_MAPPING = "workspaces are not a mapping"
+    GROUP_MISSING_KEY = "workspace group lacks a token key"
+    GROUP_NOT_MAPPING = "workspace group is not a mapping"
+    CONFIG_CONSTRUCTOR_REMOVED = "config constructor removed"
+    DEFAULT_PROJECTS_REMOVED = "default projects attribute removed"
+    EVIDENCE_REMOVED = "evidence class removed"
+    MEASURE_REMOVED = "measure removed"
+
+
+def sibling_api_changes() -> tuple[SiblingApiChange, ...]:
+    """Every sibling API change the degrade-to-unmeasured claim covers."""
+    return tuple(SiblingApiChange)
+
+
 def just_before_pass_bound(command_timeout_seconds: float) -> tuple[float, ...]:
     """Elapsed seconds at which a command can start with the pass bound still ahead.
 
