@@ -16,9 +16,12 @@ CAN maintain skills and thin agents as one canonical source while delivering nat
   profile selected under [`spx/15-subagent-execution.pdr.md`](spx/15-subagent-execution.pdr.md); each harness keeps
   its own reasoning controls, and authored sources select profiles rather than
   independently selecting model and effort fields ([audit]).
-- ALWAYS: the build loads the coding-agents agent-token module by path, every generated-output target is one of its tokens, and the build declares no agent token of its own
-- ALWAYS: the build renders the agent tokens into a data file beside each spec-tree script that reads them, and the rendered file equals the declaration it renders
-- ALWAYS: the build's per-agent tables — the agent capability registry, the configured-agent prompt-field and term tables, and the marketplace catalog paths — key each agent by its `Target` member, and every generated-tree path derives from a `Target` value
+
+### Mappings
+
+- ALWAYS: the build loads the coding-agents agent-token module by path, every generated-output target is one of its tokens, and the build declares no agent token of its own ([test](tests/test_agent_token_ownership.mapping.l1.py))
+- ALWAYS: the build renders the agent tokens into a data file beside each spec-tree script that reads them, and the rendered file equals the declaration it renders ([test](tests/test_agent_token_rendering.mapping.l1.py))
+- ALWAYS: the build's per-agent tables — the agent capability registry, the configured-agent prompt-field and term tables, and the marketplace catalog paths — key each agent by its `Target` member, and every generated-tree path derives from a `Target` value ([test](tests/test_agent_target_keys.mapping.l1.py))
 
 ### Compliance
 
