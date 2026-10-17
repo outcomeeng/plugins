@@ -13,6 +13,7 @@ CAN operate from a shared structural definition rather than ad hoc conventions
 
 - ALWAYS: decision and output-node templates distinguish untagged authoring declarations directly under `## Verification` or `## Assertions` from the grouped examples produced after verification selection, and permit both forms in one artifact.
 - NEVER: a declaration template treats authoring approval as evidence completeness or Passing state.
+- ALWAYS: the ADR and PDR decision templates write each `### Audit` rule with the tag `[audit:{rule-slug}]`, as the output-kind templates write their audit assertions, and no template writes the pathless `[audit]` tag.
 
 ### Compliance
 
