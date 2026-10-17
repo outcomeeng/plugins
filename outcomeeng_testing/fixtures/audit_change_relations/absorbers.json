@@ -1,0 +1,86 @@
+{
+  "declared": [
+    30,
+    32
+  ],
+  "pages": [
+    {
+      "data": {
+        "repository": {
+          "issues": {
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": "cursor-end"
+            },
+            "nodes": [
+              {
+                "number": 12,
+                "issueFieldValues": {
+                  "pageInfo": {
+                    "hasNextPage": false
+                  },
+                  "nodes": [
+                    {
+                      "value": "example-org/example-changes#5",
+                      "field": {
+                        "name": "Predecessors"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "number": 30,
+                "issueFieldValues": {
+                  "pageInfo": {
+                    "hasNextPage": false
+                  },
+                  "nodes": [
+                    {
+                      "value": "example-org/example-changes#11, example-org/example-changes#12",
+                      "field": {
+                        "name": "Predecessors"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "number": 31,
+                "issueFieldValues": {
+                  "pageInfo": {
+                    "hasNextPage": false
+                  },
+                  "nodes": [
+                    {
+                      "value": "example-org/example-changes#120",
+                      "field": {
+                        "name": "Predecessors"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "number": 32,
+                "issueFieldValues": {
+                  "pageInfo": {
+                    "hasNextPage": false
+                  },
+                  "nodes": [
+                    {
+                      "value": "example-org/example-changes#112, example-org/example-changes#12",
+                      "field": {
+                        "name": "Predecessors"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}
