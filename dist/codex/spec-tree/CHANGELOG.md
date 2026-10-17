@@ -16,6 +16,8 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 - **`/apply` and the merge policy bound each repair of a valid finding to the cited clause and record the clause and its closing check.** A valid review or audit finding is a defect class defined by the rule it cites, as the cited standard defines that rule; its examples are instances, never the definition. Each repair fixes every instance the cited clause covers across the touched nodes and changes nothing the clause does not require. The `sameClassScans` entries of the next `VERIFICATION_DISPATCH_READY` record now carry `clause` and `closingCheck` fields, and the gate reads the next Verifier's verdict, never the closing check. Before this change, a same-class scan reached any rule, contract, pattern, step, or boundary the finding resembled, so a repair could change text the clause did not require, and the readiness record named neither the clause applied nor the check showing the class closed.
 
+- **The merging skills, `/author-change`, and an Executor's Fixer rounds bound each repair of a valid finding to the cited clause and record the clause and its closing check.** `/merging-standards`, `/merge`, `/manage-pr`, and `/open-pr` repair every instance the cited clause covers and nothing the clause does not require, and name the clause and closing check in the next readiness record. `/author-change` applies the same bound in its Change-candidate sweep, and `/execute-change` has each Fixer name the clause applied and the check that shows the class closed. Before this change, these skills swept any rule, contract, or pattern a finding resembled and recorded neither the clause applied nor the check showing the class closed.
+
 ## 0.106.8
 
 ### Changed

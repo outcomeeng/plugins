@@ -35,7 +35,7 @@ Complete the router's `<material_change_name_review>` before applying any change
 
 <step name="repair">
 
-For each finding row, repair every location it names and every other violation of the same catalog rule in the bundle, so the repair removes the defect class rather than one occurrence. Apply each requested change under the `/skill-standards` and `/agent-prompt-standards` rules. Preserve unaffected content, and keep every standard in its owning reference skill rather than copying it into the target.
+For each finding row, repair every location it names and every other instance the cited rule's clause covers in the bundle, as the catalog defines that clause, so the repair removes the defect class rather than one occurrence. The finding's examples are instances, never the definition, and the repair changes nothing the clause does not require. Apply each requested change under the `/skill-standards` and `/agent-prompt-standards` rules. Preserve unaffected content, and keep every standard in its owning reference skill rather than copying it into the target.
 
 </step>
 
@@ -59,7 +59,7 @@ Run the target repository's deterministic skill checks over the exercised build.
 
 <step name="return_bundle">
 
-Return the bundle in the exact state validation passed, with one disposition per inventory row: `repaired` with the paths changed, or `unrepaired` with the reason, and the resolved sweep table.
+Return the bundle in the exact state validation passed, with one disposition per inventory row: `repaired` with the paths changed, the clause applied, and the check that shows the class closed, or `unrepaired` with the reason, and the resolved sweep table.
 
 </step>
 
@@ -71,6 +71,7 @@ Return the bundle in the exact state validation passed, with one disposition per
 | -------------------- | ---------------------------------------------------------------------------------------------------- |
 | Single-site repair   | Fixing the named location while another violation of the same rule remains in the bundle             |
 | Late exercise        | Editing the bundle after validation without validating the edit                                      |
+| Unbounded repair     | Changing bundle text the cited clause does not require                                               |
 | Invented rule        | Repairing toward a rule identifier no catalog carries                                                |
 | Self-verdict         | Declaring the bundle approved, or judging it with an audit skill, inside this workflow               |
 | Lexical batch rename | Renaming unlike skill types because their names share a token, suffix, or grammatical form           |
