@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from outcomeeng.distribution.agents import (
     ALL_TOOLS_SENTINEL,
+    MANUAL_REVIEW_GUIDANCE_OPEN,
     PERMISSION_MODE_LIMITATION,
     PERMISSION_MODE_MAPPINGS,
     READ_ONLY_SANDBOX_MODE,
@@ -148,6 +149,25 @@ def test_write_capable_tool_allowlist_converts_to_manual_review_guidance() -> No
     assert "sandbox_mode" not in converted.values
     assert all(tool in instructions for tool in tools)
     assert TOOLS_GUIDANCE_LIMITATION in instructions
+
+
+def test_manual_guidance_names_exactly_the_tools_of_the_source_tool_set() -> None:
+    universe = tuple(
+        sorted(
+            READ_ONLY_TOOLS
+            | SCRIPT_CAPABLE_TOOLS
+            | WEB_CAPABLE_TOOLS
+            | WRITE_CAPABLE_TOOLS
+        )
+    )
+    for absent in universe:
+        declared = tuple(tool for tool in universe if tool != absent)
+        converted = convert_agent(source_agent(tools=declared, tools_declared=True))
+        instructions = converted_instruction_value(converted)
+        guidance = instructions.split(MANUAL_REVIEW_GUIDANCE_OPEN, 1)[1]
+
+        assert f"`{absent}`" not in guidance, absent
+        assert all(f"`{tool}`" in guidance for tool in declared), absent
 
 
 def test_tool_classification_matches_the_hand_authored_correspondence() -> None:

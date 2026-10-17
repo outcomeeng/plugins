@@ -9,24 +9,17 @@ from outcomeeng.distribution.agents import (
     MANUAL_REVIEW_GUIDANCE_CLOSE,
     MANUAL_REVIEW_GUIDANCE_OPEN,
     PERMISSION_MODE_LIMITATION,
-    READ_ONLY_TOOLS,
-    SCRIPT_CAPABLE_TOOLS,
     SKILL_ENABLEMENT_LIMITATION,
     SUPPORTED_FRONTMATTER_FIELDS,
     TOOLS_GUIDANCE_LIMITATION,
     UNSUPPORTED_FIELDS_LIMITATION,
-    WEB_CAPABLE_TOOLS,
-    WRITE_CAPABLE_TOOLS,
-    convert_agent,
 )
 from outcomeeng.distribution.contracts import Target
 from outcomeeng.distribution.profiles import AGENT_PROFILES, AgentProfile
 from outcomeeng_testing.harnesses.agent_conversion import (
     installed_guarded_writer_toml,
     oracle_string,
-    converted_instruction_value,
     oracle_strings,
-    source_agent,
     toml_string,
 )
 
@@ -61,24 +54,3 @@ def test_manual_guidance_preserves_source_only_fields(tmp_path: Path) -> None:
     assert MANUAL_REVIEW_GUIDANCE_CLOSE in instructions
     assert "##" not in instructions
     assert "sandbox_mode" not in parsed
-
-
-def test_manual_guidance_never_names_a_capability_absent_from_the_source_tool_set() -> (
-    None
-):
-    universe = tuple(
-        sorted(
-            READ_ONLY_TOOLS
-            | SCRIPT_CAPABLE_TOOLS
-            | WEB_CAPABLE_TOOLS
-            | WRITE_CAPABLE_TOOLS
-        )
-    )
-    for absent in universe:
-        declared = tuple(tool for tool in universe if tool != absent)
-        converted = convert_agent(source_agent(tools=declared, tools_declared=True))
-        instructions = converted_instruction_value(converted)
-        guidance = instructions.split(MANUAL_REVIEW_GUIDANCE_OPEN, 1)[1]
-
-        assert f"`{absent}`" not in guidance, absent
-        assert all(f"`{tool}`" in guidance for tool in declared), absent
