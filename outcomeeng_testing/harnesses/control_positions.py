@@ -48,9 +48,11 @@ from outcomeeng_testing.generators.control_positions import (
     PACE_TOKENS,
     PASS_INTERVAL_MINUTES,
     PAUSE_MULTIPLE,
+    TOKEN_MEASUREMENT_DEADLINES,
     WEEKLY_CEILING_PERCENT,
     AgentKind,
     PositionSpec,
+    SiblingApiChange,
 )
 from outcomeeng_testing.harnesses.prowl_environment import load_prowl_environment
 
@@ -368,13 +370,23 @@ class ProwlRecorder:
 class FrozenTokens:
     """Frozen consumption fixtures keyed by pass window and worktree."""
 
-    def __init__(self, step: PassStep, now: dt.datetime) -> None:
+    def __init__(
+        self,
+        step: PassStep,
+        now: dt.datetime,
+        clock: FakeClock | None = None,
+        seconds: float = 0.0,
+    ) -> None:
         self.step = step
         self.now = now
+        self.clock = clock
+        self.seconds = seconds
         self.queries: list[tuple[str, dt.datetime, dt.datetime]] = []
 
     def tokens(self, worktree: str, start: dt.datetime, end: dt.datetime) -> int | None:
         self.queries.append((worktree, start, end))
+        if self.clock is not None:
+            self.clock.elapsed += self.seconds  # Stage 5 time: a measurement's span
         return self.step.tokens.get(worktree)
 
 
@@ -402,13 +414,17 @@ def run_passes(
     leading_seconds: Sequence[float] = (),
     hangs: bool = False,
     via_main: bool = False,
+    token_seconds: float = 0.0,
+    token_source: Any | None = None,
 ) -> list[PassObservation]:
     """Run one pass per step against one persistent configuration and data root.
 
     `leading_seconds` and `hangs` shape the fake clock of every pass (see
     `FakeClock`); a hung command's applied timeout is the optional keyword
     `timeout_seconds` of the runner's `run`, or the default timeout of the entry
-    point's own subprocess runner when the pass passes none.
+    point's own subprocess runner when the pass passes none. `token_seconds` is the
+    span of fake time each frozen token measurement consumes; `token_source`
+    replaces the frozen token source with a caller-supplied one.
     """
     command_timeout = float(module.SubprocessRunner().timeout_seconds)
     observations: list[PassObservation] = []
@@ -430,10 +446,10 @@ def run_passes(
                 seconds_per_command, leading_seconds, hangs, command_timeout
             )
             runner = ProwlRecorder(current.positions, step, clock)
-            tokens = FrozenTokens(step, now)
+            tokens = FrozenTokens(step, now, clock, token_seconds)
             collaborators = module.Collaborators(
                 runner=runner,
-                tokens=tokens,
+                tokens=tokens if token_source is None else token_source,
                 clock=clock,
                 now=now,
                 data_root=data_root,
@@ -618,3 +634,87 @@ def real_parser_world(module: ModuleType) -> Iterator[ParserWorld]:
                 sys.modules.pop(sibling_name, None)
             else:
                 sys.modules[sibling_name] = saved_module
+
+
+def token_measurement_limit_seconds() -> float:
+    """The longest span one token measurement can occupy, from the sibling's limits.
+
+    The built sibling accounting module owns the per-step deadline; collecting and
+    measuring each carry one. The module registry is restored afterwards.
+    """
+    built = load_control_positions(built=True)
+    sibling_name = built.TOKEN_ACCOUNTING[1]
+    saved_module = sys.modules.get(sibling_name)
+    try:
+        accounting = built.load_sibling(*built.TOKEN_ACCOUNTING)
+        return float(TOKEN_MEASUREMENT_DEADLINES * accounting.MAX_SECONDS)
+    finally:
+        if saved_module is None:
+            sys.modules.pop(sibling_name, None)
+        else:
+            sys.modules[sibling_name] = saved_module
+
+
+_REMOVED = object()
+
+
+@contextmanager
+def changed_sibling_api(
+    accounting: ModuleType, change: SiblingApiChange, worktree: str
+) -> Iterator[None]:
+    """Change the loaded sibling accounting module's API as a sibling release would.
+
+    The change is undone on exit. Handles only: the linked test decides what the
+    controller must do under the change.
+    """
+    workspaces = accounting.AccountingField.WORKSPACES
+
+    def measuring(value: object) -> Any:
+        def measure(self: object, start: object, end: object) -> object:
+            return value
+
+        return measure
+
+    evidence, config = accounting.Evidence, accounting.Config
+    plan: dict[SiblingApiChange, tuple[object, str, object]] = {
+        SiblingApiChange.MEASURE_RETURNS_LIST: (evidence, "measure", measuring([])),
+        SiblingApiChange.MEASURE_RETURNS_NUMBER: (evidence, "measure", measuring(7)),
+        SiblingApiChange.MEASURE_RETURNS_NONE: (evidence, "measure", measuring(None)),
+        SiblingApiChange.WORKSPACES_NOT_MAPPING: (
+            evidence,
+            "measure",
+            measuring({workspaces: [worktree]}),
+        ),
+        SiblingApiChange.GROUP_MISSING_KEY: (
+            evidence,
+            "measure",
+            measuring({workspaces: {worktree: {}}}),
+        ),
+        SiblingApiChange.GROUP_NOT_MAPPING: (
+            evidence,
+            "measure",
+            measuring({workspaces: {worktree: 5}}),
+        ),
+        SiblingApiChange.CONFIG_CONSTRUCTOR_REMOVED: (
+            config,
+            "from_environment",
+            _REMOVED,
+        ),
+        SiblingApiChange.DEFAULT_PROJECTS_REMOVED: (
+            accounting,
+            "DEFAULT_PROJECTS",
+            _REMOVED,
+        ),
+        SiblingApiChange.EVIDENCE_REMOVED: (accounting, "Evidence", _REMOVED),
+        SiblingApiChange.MEASURE_REMOVED: (evidence, "measure", _REMOVED),
+    }
+    owner, name, replacement = plan[change]
+    previous = vars(owner)[name]
+    if replacement is _REMOVED:
+        delattr(owner, name)
+    else:
+        setattr(owner, name, replacement)
+    try:
+        yield
+    finally:
+        setattr(owner, name, previous)

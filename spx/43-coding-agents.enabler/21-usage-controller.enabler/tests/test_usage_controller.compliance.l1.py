@@ -23,6 +23,8 @@ from outcomeeng_testing.generators.control_positions import (
     just_before_pass_bound,
     non_finite_values,
     share,
+    sibling_api_changes,
+    token_reserve_shortfalls,
     tokens_above,
     tokens_at_most,
     tokens_under,
@@ -35,7 +37,9 @@ from outcomeeng_testing.harnesses.control_positions import (
     ConfigSpec,
     PassObservation,
     PassStep,
+    changed_sibling_api,
     load_control_positions,
+    token_measurement_limit_seconds,
     real_parser_world,
     run_passes,
     schedule_observation,
@@ -522,3 +526,89 @@ def test_position_in_a_herdr_pane_receives_no_measurement_and_no_action() -> Non
         for call in observed.calls
         if call.operation == "send"
     ] == [(listed.pane, STOP_TEXT)]
+
+
+def test_token_measurement_is_skipped_when_its_longest_span_does_not_fit_the_bound() -> (
+    None
+):
+    module = load_control_positions()
+    positions = alpha_positions(2)
+    config = ConfigSpec(positions)
+    step = PassStep(contexts={item.worktree: LOW_CONTEXT_PERCENT for item in positions})
+    bound = PASS_BOUND_MINUTES * SECONDS_PER_MINUTE
+    reserve = token_measurement_limit_seconds()
+
+    for left in token_reserve_shortfalls(reserve):
+        # The inventory command takes no time; the first read leaves `left` seconds.
+        (short,) = run_passes(
+            module, config, [step], leading_seconds=(0.0, bound - left)
+        )
+        assert not short.token_queries
+        assert not set(short.unfinished) & {item.worktree for item in positions}
+        assert {
+            report.subject
+            for report in short.reports
+            if report.kind == module.ReportKind.UNMEASURED_PACE
+        } == {item.worktree for item in positions}
+
+    (fits,) = run_passes(module, config, [step], leading_seconds=(0.0, bound - reserve))
+    assert positions[0].worktree in {query[0] for query in fits.token_queries}
+
+
+def test_pass_ends_within_five_minutes_when_a_token_measurement_takes_its_longest_span() -> (
+    None
+):
+    module = load_control_positions()
+    positions = alpha_positions(2)
+    config = ConfigSpec(positions)
+    step = PassStep(contexts={item.worktree: LOW_CONTEXT_PERCENT for item in positions})
+    bound = PASS_BOUND_MINUTES * SECONDS_PER_MINUTE
+    reserve = token_measurement_limit_seconds()
+
+    for left in (*token_reserve_shortfalls(reserve), reserve):
+        (observed,) = run_passes(
+            module,
+            config,
+            [step],
+            leading_seconds=(0.0, bound - left),
+            token_seconds=reserve,
+        )
+        assert observed.elapsed_seconds <= bound
+
+
+def test_changed_sibling_api_leaves_pace_unmeasured_and_keeps_context_compaction() -> (
+    None
+):
+    module = load_control_positions(built=True)
+    (position,) = alpha_positions(1)
+    config = ConfigSpec((position,))
+    step = PassStep(contexts={position.worktree: COMPACTION_CONTEXT_PERCENT})
+
+    with real_parser_world(module) as world:
+        world.add_transcript_row(position.worktree)
+        assert (
+            module.ConsumptionTokens().tokens(position.worktree, *world.window)
+            == world.tokens_per_row
+        )
+
+        for change in sibling_api_changes():
+            with changed_sibling_api(world.accounting, change, position.worktree):
+                assert (
+                    module.ConsumptionTokens().tokens(position.worktree, *world.window)
+                    is None
+                ), change
+                (observed,) = run_passes(
+                    module, config, [step], token_source=module.ConsumptionTokens()
+                )
+
+            assert observed.error is None, change
+            assert {
+                report.subject
+                for report in observed.reports
+                if report.kind == module.ReportKind.UNMEASURED_PACE
+            } == {position.worktree}, change
+            assert [
+                (call.pane, call.argument)
+                for call in observed.calls
+                if call.operation == "send"
+            ] == [(position.pane, COMPACT_TEXT)], change
