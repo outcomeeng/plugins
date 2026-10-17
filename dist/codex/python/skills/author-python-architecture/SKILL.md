@@ -64,7 +64,7 @@ Execute these phases in order.
 1. Title + decision: `# {Decision Name}`, then the decision stated directly as permanent truth in 1–3 sentences. No `Purpose` heading, no `Context` section; business impact and constraints fold into the decision statement and Rationale.
 2. Rationale: why this is right given the constraints; name a rejected alternative only when it sharpens the decision.
 3. Invariants (optional): algebraic properties for all governed code.
-4. Verification: ALWAYS/NEVER rules grouped under `### Testing` (`[{assertion type}]`), `### Eval` (`[eval]`), `### Audit` (`[audit]`), ordered by decreasing enforcement strength; the dependency-injection testability constraints are `### Audit` rules carrying `([audit])`.
+4. Verification: ALWAYS/NEVER rules grouped under `### Testing` (`[{assertion type}]`), `### Eval` (`[eval]`), `### Audit` (`[audit:{rule-slug}]`, a slug unique within the ADR), ordered by decreasing enforcement strength; the dependency-injection testability constraints are `### Audit` rules carrying `([audit:{rule-slug}])`.
 
 **Phase 4 — Verify consistency.** No ADR contradicts another; node ADRs align with ancestor ADRs; nested ADRs do not contradict parent-level ADRs.
 
@@ -194,7 +194,7 @@ See `${SKILL_DIR}/references/test-infrastructure-patterns.md` for the full patte
 <success_criteria>
 
 - Every ADR follows the authoritative template (decision-first; Rationale; optional Invariants; Verification with `### Testing` / `### Eval` / `### Audit`).
-- Testability constraints appear as ALWAYS/NEVER `([audit])` rules under `## Verification`'s `### Audit` subsection, never in a separate Testing Strategy section.
+- Testability constraints appear as ALWAYS/NEVER `([audit:{rule-slug}])` rules under `## Verification`'s `### Audit` subsection, never in a separate Testing Strategy section.
 - No mocking language anywhere; external SaaS services are never assigned `l2`.
 - ADRs establish architecture constraints without assigning execution levels.
 - ADRs are placed and numbered per `<outputs>`, consistent with ancestor and sibling decisions.
