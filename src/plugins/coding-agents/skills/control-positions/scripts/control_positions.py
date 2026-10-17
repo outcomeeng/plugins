@@ -132,7 +132,10 @@ class CommandResult:
 
 class CommandRunner(Protocol):
     def run(
-        self, argv: tuple[str, ...], stdin: str | None = None
+        self,
+        argv: tuple[str, ...],
+        stdin: str | None = None,
+        timeout_seconds: float | None = None,
     ) -> CommandOutcome: ...
 
 
@@ -159,7 +162,13 @@ class SubprocessRunner:
 
     timeout_seconds: int = COMMAND_TIMEOUT_SECONDS
 
-    def run(self, argv: tuple[str, ...], stdin: str | None = None) -> CommandResult:
+    def run(
+        self,
+        argv: tuple[str, ...],
+        stdin: str | None = None,
+        timeout_seconds: float | None = None,
+    ) -> CommandResult:
+        applied = self.timeout_seconds if timeout_seconds is None else timeout_seconds
         try:
             completed = subprocess.run(
                 argv,
@@ -167,7 +176,7 @@ class SubprocessRunner:
                 stdin=subprocess.DEVNULL if stdin is None else None,
                 capture_output=True,
                 text=True,
-                timeout=self.timeout_seconds,
+                timeout=applied,
                 check=False,
             )
         except (OSError, subprocess.TimeoutExpired) as error:
@@ -204,6 +213,7 @@ class ConsumptionTokens:
                 os.environ, accounting.DEFAULT_ROOT, accounting.DEFAULT_PROJECTS
             )
             with accounting.Evidence(config) as evidence:
+                evidence.collect(end)
                 measured = evidence.measure(start, end)
         except (FileNotFoundError, OSError, ValueError, sqlite3.Error):
             return None
@@ -222,9 +232,26 @@ class Budget:
     clock: Callable[[], float]
     started: float
 
-    def check(self) -> None:
-        if self.clock() - self.started >= PASS_BOUND_SECONDS:
+    def remaining(self) -> float:
+        """Seconds left before the pass bound; raises PassBound once none is left."""
+        left = PASS_BOUND_SECONDS - (self.clock() - self.started)
+        if left <= 0:
             raise PassBound
+        return left
+
+    def check(self) -> None:
+        self.remaining()
+
+
+@dataclass(frozen=True)
+class _Capped:
+    """A runner whose commands never outlast the time the pass has left."""
+
+    runner: CommandRunner
+    timeout_seconds: float
+
+    def run(self, argv: tuple[str, ...], stdin: str | None = None) -> CommandOutcome:
+        return self.runner.run(argv, stdin, timeout_seconds=self.timeout_seconds)
 
 
 @dataclass(frozen=True)
@@ -253,11 +280,11 @@ class ProwlClient:
         self.budget = budget
 
     def call(self, operation: object, **arguments: object) -> Response:
-        self.budget.check()
+        timeout = min(COMMAND_TIMEOUT_SECONDS, self.budget.remaining())
         adapter = self.adapter
         try:
             request = adapter.operation_request(operation, **arguments)
-            result = adapter.execute(request, self.runner)
+            result = adapter.execute(request, _Capped(self.runner, timeout))
         except adapter.ProwlEnvironmentError as error:
             return Response(False, {}, str(error))
         if result[adapter.STATUS_FIELD] is not adapter.ExecutionStatus.SUCCEEDED:
