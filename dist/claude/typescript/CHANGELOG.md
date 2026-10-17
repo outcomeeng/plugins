@@ -10,7 +10,7 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 ### Changed
 
-- **`/typescript-architecture-standards` and `/author-typescript-architecture` instruct each `### Audit` rule to carry the tag `[audit:{rule-slug}]`, with a slug unique within the ADR.** An ADR written from either skill carries the tag the spec-tree ADR template writes and `/audit-adr` accepts. Before this change, both skills instructed the pathless `[audit]` tag under `### Audit`.
+- **`/typescript-architecture-standards` and `/author-typescript-architecture` instruct each `### Audit` rule to carry the tag `[audit:{rule-slug}]`, with a slug unique within the ADR.** An ADR written from either skill carries the tag the spec-tree ADR template writes and `/audit-adr` accepts. The example ADR rules in `/author-typescript-architecture` and the rules in `/typescript-architecture-standards` each carry their own slug, `/author-typescript-code` checks that a routed audit subject still carries `([audit:{rule-slug}])`, and `/audit-typescript-test` skips a Compliance assertion tagged `[audit:{rule-slug}]`. Before this change, these skills instructed the pathless `[audit]` tag under `### Audit`.
 
 ## 0.28.0
 

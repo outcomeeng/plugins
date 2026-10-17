@@ -55,10 +55,10 @@ ADRs do not assign testing levels. They establish constraints that *make levels 
 
 ### Audit
 
-- ALWAYS: external tool invocations accept a dependency-injected runner parameter -- enables isolated testing without mocking ([audit])
-- ALWAYS: configuration accepts typed inputs, not environment reads -- enables `l1` verification of config logic ([audit])
-- NEVER: `vi.mock()` or `jest.mock()` for any dependency -- violates reality principle ([audit])
-- NEVER: direct `child_process.exec/spawn` without a DI wrapper -- prevents isolated testing ([audit])
+- ALWAYS: external tool invocations accept a dependency-injected runner parameter -- enables isolated testing without mocking ([audit:runner-dependency-injected])
+- ALWAYS: configuration accepts typed inputs, not environment reads -- enables `l1` verification of config logic ([audit:config-typed-inputs])
+- NEVER: `vi.mock()` or `jest.mock()` for any dependency -- violates reality principle ([audit:no-module-mocking])
+- NEVER: direct `child_process.exec/spawn` without a DI wrapper -- prevents isolated testing ([audit:no-direct-child-process])
 ```
 
 **What this replaces -- the following does NOT belong in an ADR:**
