@@ -13,8 +13,8 @@ owned_paths = [
   "dist/codex/spec-tree/skills/test-evidence-standards/SKILL.md",
   "src/plugins/python/skills/python-test-standards/SKILL.md",
   "dist/claude/python/skills/python-test-standards/SKILL.md",
-  "src/plugins/python/skills/audit-python-tests/SKILL.md",
-  "dist/claude/python/skills/audit-python-tests/SKILL.md",
+  "src/plugins/python/skills/audit-python-test/SKILL.md",
+  "dist/claude/python/skills/audit-python-test/SKILL.md",
 ]
 smoke_cases = [
   "rejects-harness-owned-protocol",
