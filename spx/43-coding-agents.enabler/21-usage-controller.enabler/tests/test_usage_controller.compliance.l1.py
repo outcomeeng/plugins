@@ -45,6 +45,7 @@ from outcomeeng_testing.harnesses.control_positions import (
     real_parser_world,
     run_passes,
     schedule_observation,
+    sibling_registry,
     with_config,
 )
 
@@ -1297,3 +1298,93 @@ def test_paused_entry_of_a_removed_worktree_is_cleared_without_action() -> None:
     assert module.Action.RESUME not in {
         record[module.RecordField.ACTION] for record in after.records
     }
+
+
+# Sibling modules and the process. Clause: every collaborator is replaceable and a
+# pass acts only through its data root and the Prowl operations (the clause that the
+# controller reads token counts through the consumption-control parser and acts on
+# panes through the Prowl operation surface by a `__file__`-relative import; the node
+# declares no clause about a pass leaving the process untouched, so this is the
+# closest). The controller loads a sibling skill's script to measure and to act; that
+# load must leave the module registry of the process as the pass found it.
+
+
+def test_a_pass_leaves_the_sibling_module_registry_as_it_found_it() -> None:
+    # Clause: the controller reads tokens only through the consumption-control parser
+    # and acts on panes only through the Prowl adapter, each loaded from a sibling
+    # skill by a `__file__`-relative path. Rejects the mutation that leaves the loaded
+    # sibling registered in `sys.modules` under its bare name (added name), for the
+    # controller loaded from the authored tree and from the built tree, on the token
+    # step, the data-root lookup, and the Prowl adapter load, through `run_pass` and
+    # through `main`.
+    positions = alpha_positions(2)
+    config = ConfigSpec(positions)
+
+    for built in (False, True):
+        module = load_control_positions(built=built)
+        for via_main in (False, True):
+            step = PassStep(
+                contexts={
+                    item.worktree: COMPACTION_CONTEXT_PERCENT for item in positions
+                },
+                token_source=module.ConsumptionTokens(),
+            )
+
+            with sibling_registry(module) as registry:
+                lookup = module.default_collaborators()
+                (observed,) = run_passes(module, config, [step], via_main=via_main)
+
+            leaked = {
+                name
+                for name in registry.names
+                if registry.after[name] is not registry.before[name]
+            }
+            assert leaked == set(), (built, via_main)
+            assert isinstance(lookup.data_root, Path)
+            assert observed.error is None, (built, via_main)
+            assert {
+                report.subject
+                for report in observed.reports
+                if report.kind == module.ReportKind.UNMEASURED_PACE
+            } == {item.worktree for item in positions}, (built, via_main)
+            assert {
+                call.pane for call in observed.calls if call.operation == "send"
+            } == {item.pane for item in positions}, (built, via_main)
+
+
+def test_a_pass_neither_replaces_nor_removes_a_module_registered_under_a_sibling_name() -> (
+    None
+):
+    # Clause: as above. Rejects the mutation that discards the registration of a
+    # sibling name before importing the sibling, replacing a module another part of
+    # the process registered under that name (replaced module object), for the
+    # controller loaded from the authored tree and from the built tree.
+    positions = alpha_positions(2)
+    config = ConfigSpec(positions)
+
+    for built in (False, True):
+        module = load_control_positions(built=built)
+        step = PassStep(
+            contexts={item.worktree: COMPACTION_CONTEXT_PERCENT for item in positions},
+            token_source=module.ConsumptionTokens(),
+        )
+
+        with sibling_registry(module, foreign=True) as registry:
+            module.default_collaborators()
+            (observed,) = run_passes(module, config, [step])
+
+        loaded = {module.TOKEN_ACCOUNTING[1], module.PROWL_ADAPTER[1]}
+        replaced = {
+            name for name in loaded if registry.after[name] is not registry.before[name]
+        }
+        leaked = {
+            name
+            for name in registry.names
+            if registry.after[name] is not registry.before[name]
+        }
+        assert replaced == set(), built
+        assert leaked == set(), built
+        assert observed.error is None, built
+        assert {call.pane for call in observed.calls if call.operation == "send"} == {
+            item.pane for item in positions
+        }, built
