@@ -6,7 +6,6 @@ CAN preserve enforceable restrictions while surfacing unsupported source semanti
 
 ## Assertions
 
-- ALWAYS: converted-agent manual-review guidance names only capabilities present in the rendered source-tool set; a target-absent capability never reappears as guidance.
 - ALWAYS: a generated Codex implementation auditor composes every installed concern skill selected for its changed files through the `Use skill` instruction, without searching for a dedicated skill-invocation tool.
 - ALWAYS: Codex enforces no denial of launching a subagent or of asking the operator, so a source agent that denies either declares the denial for Claude Code alone, its Codex artifact carries neither a restriction nor guidance that presents the denial as enforced, and the attested observation of the deployed Codex child is the evidence that the child keeps within the denial.
 
@@ -19,3 +18,4 @@ CAN preserve enforceable restrictions while surfacing unsupported source semanti
 ### Compliance
 
 - ALWAYS: converted agents keep manual-review guidance for rendered source fields whose Codex semantics remain prompt guidance rather than hard execution boundaries — `disallowedTools` and command-level meanings inside rendered `tools` do not restrict commands executed through allowed shell tools, and `skills.config` enables named skills without proving spawn-time preload behavior ([test](tests/test_execution_policy.compliance.l1.py))
+- ALWAYS: converted-agent manual-review guidance names only capabilities present in the rendered source-tool set; a target-absent capability never reappears as guidance ([test](tests/test_execution_policy.compliance.l1.py))
