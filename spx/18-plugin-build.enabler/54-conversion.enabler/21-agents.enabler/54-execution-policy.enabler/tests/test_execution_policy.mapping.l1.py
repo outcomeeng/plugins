@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from itertools import combinations
+
 from outcomeeng.distribution.agents import (
     ALL_TOOLS_SENTINEL,
     MANUAL_REVIEW_GUIDANCE_OPEN,
@@ -151,8 +154,8 @@ def test_write_capable_tool_allowlist_converts_to_manual_review_guidance() -> No
     assert TOOLS_GUIDANCE_LIMITATION in instructions
 
 
-def test_manual_guidance_names_exactly_the_tools_of_the_source_tool_set() -> None:
-    universe = tuple(
+def _tool_universe() -> tuple[str, ...]:
+    return tuple(
         sorted(
             READ_ONLY_TOOLS
             | SCRIPT_CAPABLE_TOOLS
@@ -160,14 +163,47 @@ def test_manual_guidance_names_exactly_the_tools_of_the_source_tool_set() -> Non
             | WRITE_CAPABLE_TOOLS
         )
     )
-    for absent in universe:
-        declared = tuple(tool for tool in universe if tool != absent)
+
+
+def _every_tool_subset() -> Iterator[tuple[str, ...]]:
+    universe = _tool_universe()
+    for size in range(len(universe) + 1):
+        yield from combinations(universe, size)
+
+
+def test_manual_guidance_names_exactly_the_tools_of_the_source_tool_set() -> None:
+    universe = _tool_universe()
+    for declared in _every_tool_subset():
         converted = convert_agent(source_agent(tools=declared, tools_declared=True))
         instructions = converted_instruction_value(converted)
+        if not declared:
+            assert MANUAL_REVIEW_GUIDANCE_OPEN not in instructions, declared
+            continue
         guidance = instructions.split(MANUAL_REVIEW_GUIDANCE_OPEN, 1)[1]
 
-        assert f"`{absent}`" not in guidance, absent
-        assert all(f"`{tool}`" in guidance for tool in declared), absent
+        for tool in universe:
+            assert (f"`{tool}`" in guidance) == (tool in declared), (tool, declared)
+
+
+def test_converted_web_search_follows_the_web_capability_of_every_tool_set() -> None:
+    for declared in _every_tool_subset():
+        converted = convert_agent(source_agent(tools=declared, tools_declared=True))
+        has_web_tool = any(tool in WEB_CAPABLE_TOOLS for tool in declared)
+
+        assert converted.values.get("web_search") == (
+            None if has_web_tool else WEB_SEARCH_DISABLED
+        ), declared
+
+
+def test_converted_sandbox_follows_the_read_only_capability_of_every_tool_set() -> None:
+    read_only_or_web = READ_ONLY_TOOLS | WEB_CAPABLE_TOOLS
+    for declared in _every_tool_subset():
+        converted = convert_agent(source_agent(tools=declared, tools_declared=True))
+        is_read_only = all(tool in read_only_or_web for tool in declared)
+
+        assert converted.values.get("sandbox_mode") == (
+            READ_ONLY_SANDBOX_MODE if is_read_only else None
+        ), declared
 
 
 def test_tool_classification_matches_the_hand_authored_correspondence() -> None:
