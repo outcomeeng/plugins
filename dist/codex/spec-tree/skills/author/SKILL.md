@@ -330,7 +330,7 @@ How to avoid: read the proposed container name aloud and ask "what would I refus
 
 **Failure 6: Authoring preselected `### Audit` instead of leaving verification routing to `/verify`**
 
-Claude placed PDR rules like "`install` performs an atomic write (write to temp + rename) so settings.json is never observed in a partial state ([audit])" and "Running `install` twice for the same rule is a no-op the second time ([audit])" under `### Audit`. Both rules describe behaviors a finite test can falsify, but authoring preselected audit before the verification router examined their real subjects.
+Claude placed PDR rules like "`install` performs an atomic write (write to temp + rename) so settings.json is never observed in a partial state ([audit:atomic-install-write])" and "Running `install` twice for the same rule is a no-op the second time ([audit:install-idempotent])" under `### Audit`. Both rules describe behaviors a finite test can falsify, but authoring preselected audit before the verification router examined their real subjects.
 
 How to avoid: write each new rule directly under `## Verification` without a subsection or tag. `/apply` invokes `/verify`, which classifies the real subject; `/test` selects the assertion type only after test is selected. Authoring never performs that classification itself.
 

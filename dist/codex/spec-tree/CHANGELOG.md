@@ -20,6 +20,8 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 - **`/audit-pdr` accepts an `### Audit` rule tagged `[audit:{rule-slug}]` and rejects a slug that repeats within the PDR as `invalid-tag`.** The audit still accepts the pathless `[audit]` tag, which the foundation admits for a toolchain without slug support. A PDR written from the shipped template therefore seals with no `invalid-tag` finding on its Audit rules. Before this change, the audit required the pathless `[audit]` tag under `### Audit`, so a record written from the updated template drew an `invalid-tag` rejection.
 
+- **`/verify` and `/interview` name the slug tag for a decision-record Audit rule, and the PDR evidence-model example carries a slug.** `/verify` recognizes `[audit:{rule-slug}]` with a slug unique within the record under `### Audit`, and the pathless `[audit]` for a toolchain without slug support, so a record written from the shipped templates enters verification routing without an invalid-tag rejection. `/interview` tells an author to record an open decision with `([audit:{rule-slug}])`, and the PDR evidence-model example rule ends in `([audit:theme-variants-selectable])`. Before this change, `/verify` recognized only the pathless `[audit]` under `### Audit`, `/interview` named only that tag, and the example showed it.
+
 ## 0.106.12
 
 ### Changed
