@@ -114,8 +114,8 @@ class TestUserValidation:
 ```markdown
 ### Audit
 
-- ALWAYS: user payload normalization is a pure function whose output satisfies the source-owned canonical-form predicate for every valid generated payload ([audit])
-- ALWAYS: property-run settings, seeds, replay, and failure diagnostics live in the property harness; executed assertion files own no Hypothesis policy ([audit])
+- ALWAYS: user payload normalization is a pure function whose output satisfies the source-owned canonical-form predicate for every valid generated payload ([audit:normalization-pure-canonical-form])
+- ALWAYS: property-run settings, seeds, replay, and failure diagnostics live in the property harness; executed assertion files own no Hypothesis policy ([audit:property-harness-owns-hypothesis-policy])
 ```
 
 **Key property**: The architecture makes a source-coupled invariant observable and leaves generation policy outside the assertion file.
@@ -242,9 +242,9 @@ Prepare architecture for property evidence without placing generation policy in 
 ```markdown
 ### Audit
 
-- ALWAYS: total calculation is a pure typed function over source-owned money and order-line contracts ([audit])
-- ALWAYS: the order-line generator varies and shrinks valid quantities, prices, currencies, and list shapes from source-owned constraints ([audit])
-- ALWAYS: the property harness owns Hypothesis settings, seed selection, replay, and failure diagnostics ([audit])
+- ALWAYS: total calculation is a pure typed function over source-owned money and order-line contracts ([audit:total-calculation-pure-typed])
+- ALWAYS: the order-line generator varies and shrinks valid quantities, prices, currencies, and list shapes from source-owned constraints ([audit:order-line-generator-shrinks-valid-inputs])
+- ALWAYS: the property harness owns Hypothesis settings, seed selection, replay, and failure diagnostics ([audit:property-harness-seed-replay])
 ```
 
 `/test` selects property evidence from the assertion's open-domain quantifier and owns the linked invariant predicate.
@@ -397,10 +397,10 @@ ADRs express testability through `### Audit` rules under `## Verification`, not 
 
 ### Audit
 
-- ALWAYS: pure pricing rules live in functions that accept typed values and return typed results -- enables deterministic mapping or property evidence ([audit])
-- ALWAYS: order persistence accepts a repository Protocol -- enables scenario evidence with the real database harness ([audit])
-- ALWAYS: time-dependent behavior accepts a Clock Protocol -- enables deterministic evidence through a controlled clock when `/test` selects the time exception ([audit])
-- NEVER: `unittest.mock.patch` replaces repository, payment, or clock dependencies ([audit])
+- ALWAYS: pure pricing rules live in functions that accept typed values and return typed results -- enables deterministic mapping or property evidence ([audit:pricing-rules-pure-typed])
+- ALWAYS: order persistence accepts a repository Protocol -- enables scenario evidence with the real database harness ([audit:persistence-repository-protocol])
+- ALWAYS: time-dependent behavior accepts a Clock Protocol -- enables deterministic evidence through a controlled clock when `/test` selects the time exception ([audit:time-clock-protocol])
+- NEVER: `unittest.mock.patch` replaces repository, payment, or clock dependencies ([audit:no-mock-patch-dependencies])
 ```
 
 ---

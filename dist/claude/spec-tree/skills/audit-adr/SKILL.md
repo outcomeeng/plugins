@@ -110,12 +110,12 @@ For each routed rule:
 1. The tag is valid for its subsection:
    - under `### Testing` → one of `scenario`, `mapping`, `conformance`, `property`, `compliance`;
    - under `### Eval` → `([eval])`;
-   - under `### Audit` → `([audit])`.
+   - under `### Audit` → `([audit:{rule-slug}])` whose slug no other `### Audit` rule in the ADR repeats, or the pathless `([audit])` that the loaded foundation admits for a toolchain without slug support.
 2. Under `### Testing`, the declared assertion type is compatible with the claim's quantifier and evidence shape under the loaded foundation and shared assertion-type litmus. A universal claim cannot carry `scenario`. Reject a declared type whose required domain or oracle contradicts the claim, citing the claim and the loaded criterion; do not choose among compatible types or require executable evidence for a declaration.
 
-An unsupported bare mechanism tag, a tag disagreeing with its subsection, a missing tag inside a routed subsection, more than one tag, or an assertion type that contradicts the claim's shape is invalid.
+An unsupported bare mechanism tag, a tag disagreeing with its subsection, a missing tag inside a routed subsection, more than one tag, an `### Audit` slug that repeats within the ADR, or an assertion type that contradicts the claim's shape is invalid.
 
-**A routed rule with a missing, unsupported, duplicate, or subsection-mismatched tag → REJECT — "invalid-tag." An assertion type that contradicts the claim's shape → REJECT — "assertion-type-mismatch."**
+**A routed rule with a missing, unsupported, duplicate, repeated-slug, or subsection-mismatched tag → REJECT — "invalid-tag." An assertion type that contradicts the claim's shape → REJECT — "assertion-type-mismatch."**
 
 </step>
 

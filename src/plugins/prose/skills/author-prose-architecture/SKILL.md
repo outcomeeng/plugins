@@ -12,7 +12,7 @@ allowed-tools: Read, Write, Glob, Grep, {{! tool('use_skill') !}}
 {!% require_skill 'prose:prose-architecture-standards' %!}
 
 <objective>
-A binding prose ADR, authored to the decision template the `/understand` foundation provides, whose structural rules are ALWAYS/NEVER rules carrying `([audit])`.
+A binding prose ADR, authored to the decision template the `/understand` foundation provides, whose structural rules are ALWAYS/NEVER rules carrying `([audit:{rule-slug}])`, where the slug is unique within the ADR.
 </objective>
 
 <foundational_stance>
@@ -66,7 +66,7 @@ Execute these phases in order.
 
 **Phase 2 — Select each kind's conventions.** Read every governed kind's reference — each kind the artifact set carries — in `/prose-architecture-standards` `<kind_structures>` and select the shapes the artifact set commits to.
 
-**Phase 3 — Write the ADR.** Load the decision template through the live `/understand` foundation and author to it, applying `/prose-architecture-standards` `<prose_adr_content>`. State structure as ALWAYS/NEVER rules carrying `([audit])`, in atemporal voice — never as a draft, an outline of current pages, or a migration plan.
+**Phase 3 — Write the ADR.** Load the decision template through the live `/understand` foundation and author to it, applying `/prose-architecture-standards` `<prose_adr_content>`. State structure as ALWAYS/NEVER rules carrying `([audit:{rule-slug}])` with each slug unique within the ADR, in atemporal voice — never as a draft, an outline of current pages, or a migration plan.
 
 **Phase 4 — Verify consistency.** The new ADR contradicts no ancestor or sibling decision, and every structural rule is one `/author-prose` can comply with and an audit can judge.
 

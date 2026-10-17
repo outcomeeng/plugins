@@ -30,7 +30,7 @@ A local overlay supplements skill behavior; it does not declare product truth.
 
 The ADR's shape is owned by the `/understand` foundation's decision template. Load that template through the live foundation before authoring or auditing a Go ADR; this standard never restates its sections, because a restated shape drifts the moment the template advances. The template settles which sections exist and in what order; this standard settles only where Go content goes inside it.
 
-Go architecture rules — DI mandates, mocking prohibitions, goroutine ownership, `unsafe` boundaries — require agent judgment, so they live under `## Verification` `### Audit` with `([audit])`.
+Go architecture rules — DI mandates, mocking prohibitions, goroutine ownership, `unsafe` boundaries — require agent judgment, so they live under `## Verification` `### Audit` with `([audit:{rule-slug}])`, a slug unique within the ADR.
 
 **When an ADR is required:** Every package or boundary that makes architectural decisions -- package layout, interface seams, module choice, concurrency model, DI patterns, persistence boundaries, `unsafe` or cgo boundaries -- requires an ADR. Missing ADRs are violations.
 
@@ -49,10 +49,10 @@ ADRs do not assign testing levels. They establish constraints that make levels a
 
 ### Audit
 
-- ALWAYS: external tool invocations accept an injected runner interface or function parameter -- enables isolated testing without generated mocks ([audit])
-- ALWAYS: configuration is parsed into typed structs at load time -- enables Level 1 verification of config logic ([audit])
-- NEVER: `gomock`, `mockery`, or generated mocks as the primary testing strategy for architectural seams -- violates reality-based testing ([audit])
-- NEVER: direct `os/exec` construction in domain logic without an injected seam -- prevents isolated testing ([audit])
+- ALWAYS: external tool invocations accept an injected runner interface or function parameter -- enables isolated testing without generated mocks ([audit:injected-runner-for-external-tools])
+- ALWAYS: configuration is parsed into typed structs at load time -- enables Level 1 verification of config logic ([audit:typed-config-structs-at-load-time])
+- NEVER: `gomock`, `mockery`, or generated mocks as the primary testing strategy for architectural seams -- violates reality-based testing ([audit:no-generated-mocks-for-seams])
+- NEVER: direct `os/exec` construction in domain logic without an injected seam -- prevents isolated testing ([audit:no-uninjected-os-exec-in-domain])
 ```
 
 **What this replaces -- the following does NOT belong in an ADR:**

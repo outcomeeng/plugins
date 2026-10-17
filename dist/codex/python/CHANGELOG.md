@@ -6,6 +6,13 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.25.1
+
+### Changed
+
+- **`/python-architecture-standards` and `/author-python-architecture` instruct each `### Audit` rule to carry the tag `[audit:{rule-slug}]`, with a slug unique within the ADR.** An ADR written from either skill carries the tag the spec-tree ADR template writes and `/audit-adr` accepts. The example ADR rules in both skills and in the architecture references now carry `[audit:{rule-slug}]` with a distinct slug per rule, and `/author-python-code` checks audit-routed requirements against `([audit:{rule-slug}])` or the pathless `([audit])` that the foundation admits for a toolchain without slug support. Before this change, both skills instructed the pathless `[audit]` tag under `### Audit`, and their examples and the code-skill check used it.
+- **The failure-mode example in `/audit-python-test` names no tag.** The example describes assertions reclassified to audit evidence in an existing consumer spec, which may carry either tag form. Before this change, it named the bare `[audit]` tag.
+
 ## 0.25.0
 
 ### Breaking

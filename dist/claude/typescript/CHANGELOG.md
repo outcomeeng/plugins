@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.28.1
+
+### Changed
+
+- **`/typescript-architecture-standards` and `/author-typescript-architecture` instruct each `### Audit` rule to carry the tag `[audit:{rule-slug}]`, with a slug unique within the ADR.** An ADR written from either skill carries the tag the spec-tree ADR template writes and `/audit-adr` accepts. The example ADR rules in `/author-typescript-architecture` and the rules in `/typescript-architecture-standards` each carry their own slug, `/author-typescript-code` confirms that a routed audit subject still carries `([audit:{rule-slug}])` or the pathless `([audit])`, and `/audit-typescript-test` skips a Compliance assertion tagged `[audit:{rule-slug}]` or the pathless `[audit]`. Before this change, these skills instructed the pathless `[audit]` tag under `### Audit`.
+
 ## 0.28.0
 
 ### Breaking

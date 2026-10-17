@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.11.1
+
+### Changed
+
+- **`/rust-architecture-standards` and `/author-rust-architecture` instruct each `### Audit` rule to carry the tag `[audit:{rule-slug}]`, with a slug unique within the ADR.** An ADR written from either skill carries the tag the spec-tree ADR template writes and `/audit-adr` accepts. Before this change, both skills instructed the pathless `[audit]` tag under `### Audit`. The example ADRs in `/author-rust-architecture` and `/rust-architecture-standards` write each rule with its own `[audit:{rule-slug}]` tag, `/author-rust-code` confirms that an audit-routed subject still carries `([audit:{rule-slug}])` or the pathless `([audit])`, and `/audit-rust-test` skips an assertion tagged `[audit:{rule-slug}]` or the pathless `[audit]`.
+
 ## 0.11.0
 
 ### Breaking

@@ -98,7 +98,7 @@ Match the Go evidence method to the assertion type:
 
 For property tests, inspect the generator domain. `rapid.Just`, one-value ranges, or tiny enumerations reduce the property to examples unless the spec explicitly declares a finite set.
 
-An assertion tagged `[audit]` carries no assertion type and is outside Go test-evidence scope. Skip it rather than treating the marker as test evidence.
+An assertion tagged `[audit:{rule-slug}]`, or the pathless `[audit]` that the foundation admits for a toolchain without slug support, carries no assertion type and is outside Go test-evidence scope. Skip it rather than treating the marker as test evidence.
 </step>
 
 <step name="controlled_implementations">

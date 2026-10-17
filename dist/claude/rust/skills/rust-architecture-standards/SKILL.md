@@ -33,9 +33,9 @@ The ADR template (from `/understand`) is decision-first — the decision is stat
 1. **Title + decision** -- `# {Decision Name}`, then the decision stated directly as permanent truth in 1-3 sentences: what it governs and what it decides.
 2. **Rationale** -- Why this is right given the constraints. Name a rejected alternative only when it sharpens the decision. Omit if self-evident.
 3. **Invariants** (optional) -- Algebraic properties that hold for ALL governed code. Omit if none apply.
-4. **Verification** -- Each rule is an ALWAYS guarantee or a NEVER boundary, grouped under the one subsection naming how it is verified: `### Testing` (deterministic test, `([{assertion type}])`), `### Eval` (graded LLM behavior, `([eval])`), `### Audit` (agent judgment, `([audit])`), ordered by decreasing enforcement strength. Include only the subsections that apply.
+4. **Verification** -- Each rule is an ALWAYS guarantee or a NEVER boundary, grouped under the one subsection naming how it is verified: `### Testing` (deterministic test, `([{assertion type}])`), `### Eval` (graded LLM behavior, `([eval])`), `### Audit` (agent judgment, `([audit:{rule-slug}])` with a slug unique within the ADR), ordered by decreasing enforcement strength. Include only the subsections that apply.
 
-**This is the complete list.** An ADR has no other sections. There is no `Purpose` heading, no `Context` section, no `Trade-offs` section, no `Testing Strategy` section, no `Status` field, no `Level Assignments` table — business context and trade-offs fold into the decision statement and Rationale. Rust architecture rules — DI mandates, mocking prohibitions, unsafe boundaries — require agent judgment, so they live under `### Audit` with `([audit])`.
+**This is the complete list.** An ADR has no other sections. There is no `Purpose` heading, no `Context` section, no `Trade-offs` section, no `Testing Strategy` section, no `Status` field, no `Level Assignments` table — business context and trade-offs fold into the decision statement and Rationale. Rust architecture rules — DI mandates, mocking prohibitions, unsafe boundaries — require agent judgment, so they live under `### Audit` with `([audit:{rule-slug}])`.
 
 **When an ADR is required:** Every module or boundary that makes architectural decisions -- module layout, trait seams, library choice, async runtime, DI patterns, persistence boundaries, unsafe boundaries -- requires an ADR. Missing ADRs are violations.
 
@@ -54,10 +54,10 @@ ADRs do not assign testing levels. They establish constraints that make levels a
 
 ### Audit
 
-- ALWAYS: external tool invocations accept an injected runner trait or function parameter -- enables isolated testing without framework mocks ([audit])
-- ALWAYS: configuration is parsed into typed structs at load time -- enables Level 1 verification of config logic ([audit])
-- NEVER: `mockall`, `faux`, or generated mocks as the primary testing strategy for architectural seams -- violates reality-based testing ([audit])
-- NEVER: direct `std::process::Command` construction in domain logic without an injected seam -- prevents isolated testing ([audit])
+- ALWAYS: external tool invocations accept an injected runner trait or function parameter -- enables isolated testing without framework mocks ([audit:injected-tool-runner])
+- ALWAYS: configuration is parsed into typed structs at load time -- enables Level 1 verification of config logic ([audit:typed-config-at-load-time])
+- NEVER: `mockall`, `faux`, or generated mocks as the primary testing strategy for architectural seams -- violates reality-based testing ([audit:no-generated-mocks-for-seams])
+- NEVER: direct `std::process::Command` construction in domain logic without an injected seam -- prevents isolated testing ([audit:no-direct-process-command-in-domain])
 ```
 
 **What this replaces -- the following does NOT belong in an ADR:**

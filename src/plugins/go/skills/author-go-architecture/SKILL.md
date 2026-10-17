@@ -142,7 +142,7 @@ For each decision, consider:
 
 **Phase 3: Write ADRs**
 
-Load the decision template through the live `/understand` foundation and author to it. The template settles the sections and their order; `/go-architecture-standards` `<template_source>` and `<testability_in_verification>` settle the Go placement: the DI/mocking testability constraints are `## Verification` `### Audit` rules carrying `([audit])`, and Go architecture rules that need agent judgment carry the same tag.
+Load the decision template through the live `/understand` foundation and author to it. The template settles the sections and their order; `/go-architecture-standards` `<template_source>` and `<testability_in_verification>` settle the Go placement: the DI/mocking testability constraints are `## Verification` `### Audit` rules carrying `([audit:{rule-slug}])` with a slug unique within the ADR, and Go architecture rules that need agent judgment carry the same tag.
 
 **Phase 4: Verify Consistency**
 

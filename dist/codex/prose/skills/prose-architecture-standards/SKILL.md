@@ -13,7 +13,7 @@ The prose ADR conventions — template source, structure ownership, atemporal vo
 <success_criteria>
 
 - The ADR conforms to the decision template loaded from the live `/understand` foundation; no prose skill restates that template's shape.
-- Structural rules are ALWAYS/NEVER rules carrying `([audit])`.
+- Structural rules are ALWAYS/NEVER rules carrying `([audit:{rule-slug}])`, where the slug is unique within the ADR.
 - The ADR decides structure — artifact set, section architecture, ordering, terminology homes, cross-link topology — and no prose artifact carries structural annotation.
 - Every sentence states permanent truth; no section narrates document history or a migration.
 
@@ -37,7 +37,7 @@ A structural change is an ADR change first. Reordering a document set, splitting
 
 <prose_adr_content>
 
-The ADR's shape is owned by the `/understand` foundation's decision template. Begin by loading that template through the live foundation; this standard never restates its sections, because a restated shape drifts the moment the template advances. Structural conformance of prose is agent judgment, so a prose ADR's verification rules carry `([audit])`.
+The ADR's shape is owned by the `/understand` foundation's decision template. Begin by loading that template through the live foundation; this standard never restates its sections, because a restated shape drifts the moment the template advances. Structural conformance of prose is agent judgment, so a prose ADR's verification rules carry `([audit:{rule-slug}])`, each slug unique within the ADR.
 
 **What a prose ADR decides:** the artifact set and each artifact's kind; each artifact's section architecture and ordering; sequencing and cross-references across sibling and descendant artifacts; terminology homes — which artifact canonically defines each shared concept; and the structural conventions from the kind's reference below that the set commits to. The structure the ADR decides is stated as rules, never reproduced as a draft or an outline of the artifacts themselves.
 

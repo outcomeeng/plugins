@@ -10,6 +10,20 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.106.13
+
+### Changed
+
+- **The ADR and PDR decision templates write each `### Audit` rule with the tag `[audit:{rule-slug}]`, and the ADR example does the same.** A decision record created from either template carries a slug on every Audit rule, unique within the record, as the output-kind node templates already write their audit assertions. Before this change, both templates wrote the pathless `[audit]` tag, so a record written from them carried a tag the 4.0 grammar keys by rule slug.
+
+- **`/audit-adr` accepts an `### Audit` rule tagged `[audit:{rule-slug}]` and rejects a slug that repeats within the ADR as `invalid-tag`.** The audit still accepts the pathless `[audit]` tag, which the foundation admits for a toolchain without slug support. An ADR written from the shipped template therefore seals with no `invalid-tag` finding on its Audit rules. Before this change, the audit required the pathless `[audit]` tag under `### Audit`, so a record written from the updated template drew an `invalid-tag` rejection.
+
+- **`/audit-pdr` accepts an `### Audit` rule tagged `[audit:{rule-slug}]` and rejects a slug that repeats within the PDR as `invalid-tag`.** The audit still accepts the pathless `[audit]` tag, which the foundation admits for a toolchain without slug support. A PDR written from the shipped template therefore seals with no `invalid-tag` finding on its Audit rules. Before this change, the audit required the pathless `[audit]` tag under `### Audit`, so a record written from the updated template drew an `invalid-tag` rejection.
+
+- **`/verify` and `/interview` name the slug tag for a decision-record Audit rule, and the PDR evidence-model example carries a slug.** `/verify` recognizes `[audit:{rule-slug}]` with a slug unique within the record under `### Audit`, and the pathless `[audit]` for a toolchain without slug support, so a record written from the shipped templates enters verification routing without an invalid-tag rejection. `/interview` tells an author to record an open decision with `([audit:{rule-slug}])`, and the PDR evidence-model example rule ends in `([audit:theme-variants-selectable])`. Before this change, `/verify` recognized only the pathless `[audit]` under `### Audit`, `/interview` named only that tag, and the example showed it.
+
+- **`/audit-tests` and `/audit-eval-evidence` skip an assertion tagged `[audit:{rule-slug}]` or the pathless `[audit]`.** An assertion written from the shipped templates carries the slug tag, and the foundation admits the pathless tag for a toolchain without slug support, so each audit leaves either to its own verification lane. Before this change, both named only the bare `[audit]` tag.
+
 ## 0.106.12
 
 ### Changed

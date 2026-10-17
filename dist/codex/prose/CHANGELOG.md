@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.13.1
+
+### Changed
+
+- **`/prose-architecture-standards` and `/author-prose-architecture` tag a prose ADR's structural rules `([audit:{rule-slug}])`.** Each rule carries a slug that is unique within the ADR, matching the decision template the Spec Tree foundation provides. Before this change, both skills taught the bare `([audit])` tag, so a prose ADR authored to them carried a tag the template no longer writes.
+
 ## 0.13.0
 
 ### Breaking

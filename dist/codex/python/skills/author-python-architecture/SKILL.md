@@ -64,7 +64,7 @@ Execute these phases in order.
 1. Title + decision: `# {Decision Name}`, then the decision stated directly as permanent truth in 1–3 sentences. No `Purpose` heading, no `Context` section; business impact and constraints fold into the decision statement and Rationale.
 2. Rationale: why this is right given the constraints; name a rejected alternative only when it sharpens the decision.
 3. Invariants (optional): algebraic properties for all governed code.
-4. Verification: ALWAYS/NEVER rules grouped under `### Testing` (`[{assertion type}]`), `### Eval` (`[eval]`), `### Audit` (`[audit]`), ordered by decreasing enforcement strength; the dependency-injection testability constraints are `### Audit` rules carrying `([audit])`.
+4. Verification: ALWAYS/NEVER rules grouped under `### Testing` (`[{assertion type}]`), `### Eval` (`[eval]`), `### Audit` (`[audit:{rule-slug}]`, a slug unique within the ADR), ordered by decreasing enforcement strength; the dependency-injection testability constraints are `### Audit` rules carrying `([audit:{rule-slug}])`.
 
 **Phase 4 — Verify consistency.** No ADR contradicts another; node ADRs align with ancestor ADRs; nested ADRs do not contradict parent-level ADRs.
 
@@ -117,9 +117,9 @@ These patterns show how testability constraints appear under `## Verification`'s
 ```markdown
 ### Audit
 
-- ALWAYS: functions that call external tools accept a `runner` parameter implementing the `CommandRunner` Protocol -- enables `l1` testing of command-building logic ([audit])
-- ALWAYS: default implementations use `subprocess`; tests inject controlled implementations -- no mocking ([audit])
-- NEVER: direct `subprocess.run` without a DI wrapper -- prevents isolated testing ([audit])
+- ALWAYS: functions that call external tools accept a `runner` parameter implementing the `CommandRunner` Protocol -- enables `l1` testing of command-building logic ([audit:runner-protocol-parameter])
+- ALWAYS: default implementations use `subprocess`; tests inject controlled implementations -- no mocking ([audit:default-subprocess-injected-controls])
+- NEVER: direct `subprocess.run` without a DI wrapper -- prevents isolated testing ([audit:no-direct-subprocess-run])
 ```
 
 **Configuration loading** — validated models for all configuration:
@@ -127,10 +127,10 @@ These patterns show how testability constraints appear under `## Verification`'s
 ```markdown
 ### Audit
 
-- ALWAYS: config files have corresponding Pydantic models -- type-safe, validated config ([audit])
-- ALWAYS: config loading validates at load time with `.model_validate()` -- fail fast with descriptive errors ([audit])
-- NEVER: unvalidated config access at use time -- defers errors to runtime ([audit])
-- NEVER: `Any` type annotations on config fields -- bypasses validation ([audit])
+- ALWAYS: config files have corresponding Pydantic models -- type-safe, validated config ([audit:config-pydantic-models])
+- ALWAYS: config loading validates at load time with `.model_validate()` -- fail fast with descriptive errors ([audit:config-validated-at-load])
+- NEVER: unvalidated config access at use time -- defers errors to runtime ([audit:no-unvalidated-config-access])
+- NEVER: `Any` type annotations on config fields -- bypasses validation ([audit:no-any-config-fields])
 ```
 
 **Test infrastructure** — packaged `{product}_testing/` for products with co-located tests:
@@ -138,10 +138,10 @@ These patterns show how testability constraints appear under `## Verification`'s
 ```markdown
 ### Audit
 
-- ALWAYS: test infrastructure (generators, harnesses, fixtures) lives in `{product}_testing/`, NOT `tests/` -- generators and harnesses importable as a package, fixtures consumed by path ([audit])
-- ALWAYS: `pyproject.toml` includes both packages: `packages = ["{product}", "{product}_testing"]` ([audit])
-- ALWAYS: pytest config uses `--import-mode=importlib` for multiple test directories ([audit])
-- NEVER: test infrastructure in the `tests/` directory -- not importable by spec-tree co-located tests ([audit])
+- ALWAYS: test infrastructure (generators, harnesses, fixtures) lives in `{product}_testing/`, NOT `tests/` -- generators and harnesses importable as a package, fixtures consumed by path ([audit:testing-package-outside-tests])
+- ALWAYS: `pyproject.toml` includes both packages: `packages = ["{product}", "{product}_testing"]` ([audit:pyproject-both-packages])
+- ALWAYS: pytest config uses `--import-mode=importlib` for multiple test directories ([audit:pytest-importlib-mode])
+- NEVER: test infrastructure in the `tests/` directory -- not importable by spec-tree co-located tests ([audit:no-infrastructure-in-tests])
 ```
 
 See `${SKILL_DIR}/references/test-infrastructure-patterns.md` for the full pattern.
@@ -151,10 +151,10 @@ See `${SKILL_DIR}/references/test-infrastructure-patterns.md` for the full patte
 ```markdown
 ### Audit
 
-- ALWAYS: each command is a separate module exporting a registration function -- enables isolated `l1` testing ([audit])
-- ALWAYS: commands delegate to runner functions that accept Protocol-typed DI parameters -- separates parsing from logic ([audit])
-- NEVER: business logic in command handlers -- prevents isolated testing ([audit])
-- NEVER: direct I/O in command modules without DI -- couples commands to environment ([audit])
+- ALWAYS: each command is a separate module exporting a registration function -- enables isolated `l1` testing ([audit:command-per-module])
+- ALWAYS: commands delegate to runner functions that accept Protocol-typed DI parameters -- separates parsing from logic ([audit:commands-delegate-to-runners])
+- NEVER: business logic in command handlers -- prevents isolated testing ([audit:no-logic-in-handlers])
+- NEVER: direct I/O in command modules without DI -- couples commands to environment ([audit:no-direct-io-in-commands])
 ```
 
 </adr_patterns>
@@ -194,7 +194,7 @@ See `${SKILL_DIR}/references/test-infrastructure-patterns.md` for the full patte
 <success_criteria>
 
 - Every ADR follows the authoritative template (decision-first; Rationale; optional Invariants; Verification with `### Testing` / `### Eval` / `### Audit`).
-- Testability constraints appear as ALWAYS/NEVER `([audit])` rules under `## Verification`'s `### Audit` subsection, never in a separate Testing Strategy section.
+- Testability constraints appear as ALWAYS/NEVER `([audit:{rule-slug}])` rules under `## Verification`'s `### Audit` subsection, never in a separate Testing Strategy section.
 - No mocking language anywhere; external SaaS services are never assigned `l2`.
 - ADRs establish architecture constraints without assigning execution levels.
 - ADRs are placed and numbered per `<outputs>`, consistent with ancestor and sibling decisions.

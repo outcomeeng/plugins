@@ -34,9 +34,9 @@ The ADR template (from `/understand`) is decision-first — the decision is stat
 1. **Title + decision** -- `# {Decision Name}`, then the decision stated directly as permanent truth in 1-3 sentences: what it governs and what it decides.
 2. **Rationale** -- Why this is right given the constraints. Name a rejected alternative only when it sharpens the decision. Omit if self-evident.
 3. **Invariants** (optional) -- Algebraic properties that hold for ALL governed code. Omit if none apply.
-4. **Verification** -- Each rule is an ALWAYS guarantee or a NEVER boundary, grouped under the one subsection naming how it is verified: `### Testing` (deterministic test, `([{assertion type}])`), `### Eval` (graded LLM behavior, `([eval])`), `### Audit` (agent judgment, `([audit])`), ordered by decreasing enforcement strength. Include only the subsections that apply.
+4. **Verification** -- Each rule is an ALWAYS guarantee or a NEVER boundary, grouped under the one subsection naming how it is verified: `### Testing` (deterministic test, `([{assertion type}])`), `### Eval` (graded LLM behavior, `([eval])`), `### Audit` (agent judgment, `([audit:{rule-slug}])` with a slug unique within the ADR), ordered by decreasing enforcement strength. Include only the subsections that apply.
 
-**This is the complete list.** An ADR has no other sections. There is no `Purpose` heading, no `Context` section, no `Trade-offs` section, no `Testing Strategy` section, no `Status` field, no `Level Assignments` table — business context and trade-offs fold into the decision statement and Rationale. TypeScript architecture rules — DI mandates, mocking prohibitions — require agent judgment, so they live under `### Audit` with `([audit])`.
+**This is the complete list.** An ADR has no other sections. There is no `Purpose` heading, no `Context` section, no `Trade-offs` section, no `Testing Strategy` section, no `Status` field, no `Level Assignments` table — business context and trade-offs fold into the decision statement and Rationale. TypeScript architecture rules — DI mandates, mocking prohibitions — require agent judgment, so they live under `### Audit` with `([audit:{rule-slug}])`.
 
 **When an ADR is required:** Every module that makes architectural decisions — module layout, library choice, DI patterns — requires an ADR. The absence of an ADR is itself a violation, not a reason to skip the audit.
 
@@ -55,10 +55,10 @@ ADRs do not assign testing levels. They establish constraints that *make levels 
 
 ### Audit
 
-- ALWAYS: external tool invocations accept a dependency-injected runner parameter -- enables isolated testing without mocking ([audit])
-- ALWAYS: configuration accepts typed inputs, not environment reads -- enables `l1` verification of config logic ([audit])
-- NEVER: `vi.mock()` or `jest.mock()` for any dependency -- violates reality principle ([audit])
-- NEVER: direct `child_process.exec/spawn` without a DI wrapper -- prevents isolated testing ([audit])
+- ALWAYS: external tool invocations accept a dependency-injected runner parameter -- enables isolated testing without mocking ([audit:runner-dependency-injected])
+- ALWAYS: configuration accepts typed inputs, not environment reads -- enables `l1` verification of config logic ([audit:config-typed-inputs])
+- NEVER: `vi.mock()` or `jest.mock()` for any dependency -- violates reality principle ([audit:no-module-mocking])
+- NEVER: direct `child_process.exec/spawn` without a DI wrapper -- prevents isolated testing ([audit:no-direct-child-process])
 ```
 
 **What this replaces -- the following does NOT belong in an ADR:**
