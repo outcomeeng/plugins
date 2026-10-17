@@ -11,13 +11,17 @@ from outcomeeng_testing.generators.control_positions import (
     LOW_CONTEXT_PERCENT,
     PACE_TOKENS,
     PASS_INTERVAL_MINUTES,
+    PASS_BOUND_MINUTES,
     PAUSE_MULTIPLE,
+    SECONDS_PER_MINUTE,
     WEEKLY_CEILING_PERCENT,
     AgentKind,
     PositionSpec,
     alpha_positions,
     ceiling_accepted_values,
     ceiling_rejected_values,
+    just_before_pass_bound,
+    non_finite_values,
     share,
     tokens_above,
     tokens_at_most,
@@ -26,11 +30,13 @@ from outcomeeng_testing.generators.control_positions import (
 from outcomeeng_testing.harnesses.control_positions import (
     BASE_TIME,
     INVALID_VALUE,
+    NUMERIC_CONFIG_FIELDS,
     SCALAR_CONFIG_FIELDS,
     ConfigSpec,
     PassObservation,
     PassStep,
     load_control_positions,
+    real_parser_world,
     run_passes,
     schedule_observation,
     with_config,
@@ -86,6 +92,22 @@ def test_pass_stops_at_the_time_bound_and_records_unfinished_positions() -> None
     assert set(bounded.unfinished) <= configured
     assert not measured & unfinished_panes
     assert measured | unfinished_panes == {item.pane for item in positions}
+
+
+def test_pass_ends_within_five_minutes_when_a_command_starts_just_before_the_bound() -> (
+    None
+):
+    module = load_control_positions()
+    positions = alpha_positions(4)
+    config = ConfigSpec(positions)
+    step = PassStep(contexts={item.worktree: LOW_CONTEXT_PERCENT for item in positions})
+    command_timeout = module.SubprocessRunner().timeout_seconds
+
+    for start in just_before_pass_bound(command_timeout):
+        (observed,) = run_passes(
+            module, config, [step], leading_seconds=(start,), hangs=True
+        )
+        assert observed.elapsed_seconds <= PASS_BOUND_MINUTES * SECONDS_PER_MINUTE
 
 
 def test_pass_measures_each_position_once_and_runs_no_polling_loop() -> None:
@@ -241,13 +263,42 @@ def test_ceiling_above_the_maximum_is_rejected_before_any_action() -> None:
         assert accepted.error is None
 
     for ceiling in ceiling_rejected_values():
-        assert ceiling > CEILING_MAXIMUM_PERCENT
+        assert not ceiling <= CEILING_MAXIMUM_PERCENT
         config = ConfigSpec(positions, weekly_ceiling_percent=ceiling)
         (rejected,) = run_passes(module, config, [step])
         assert isinstance(rejected.error, module.ConfigurationError)
         assert rejected.error.field == module.ConfigField.WEEKLY_CEILING_PERCENT
         assert not rejected.calls
         assert not rejected.records
+
+
+def test_non_finite_numbers_are_rejected_naming_every_numeric_field() -> None:
+    module = load_control_positions()
+    positions = alpha_positions(1)
+    (position,) = positions
+    step = PassStep(contexts={position.worktree: COMPACTION_CONTEXT_PERCENT})
+
+    for value in non_finite_values():
+        cases = [
+            (
+                module.ConfigField[name],
+                ConfigSpec(positions, overrides={module.ConfigField[name]: value}),
+            )
+            for name in NUMERIC_CONFIG_FIELDS
+        ]
+        cases.append(
+            (
+                module.ConfigField.PACE_TOKENS,
+                ConfigSpec(positions, pace={position.subscription: value}),
+            )
+        )
+        for field, config in cases:
+            (rejected,) = run_passes(module, config, [step])
+            assert isinstance(rejected.error, module.ConfigurationError)
+            assert rejected.error.field == field
+            assert str(field) in str(rejected.error)
+            assert not rejected.calls
+            assert not rejected.records
 
 
 def test_every_action_is_a_durable_record_and_no_record_recommends_an_unmade_action() -> (
@@ -399,6 +450,31 @@ def test_tokens_come_only_from_the_token_source_by_worktree_and_unmeasured_pace_
     assert (unmeasured.pane, COMPACT_TEXT) in sends
     assert (codex.pane, COMPACT_TEXT) in sends
     assert (codex.pane, STOP_TEXT) in sends
+
+
+def test_consumption_control_parser_measures_the_worktree_after_collecting_its_transcripts() -> (
+    None
+):
+    module = load_control_positions(built=True)
+    measured, other, absent = alpha_positions(3)
+
+    with real_parser_world(module) as world:
+        # No consumption-control job has collected: the source collects itself.
+        world.add_transcript_row(measured.worktree)
+        world.add_transcript_row(other.worktree)
+        world.add_transcript_row(other.worktree)
+
+        first = world.tokens.tokens(measured.worktree, *world.window)
+        second = world.tokens.tokens(other.worktree, *world.window)
+        assert first == world.tokens_per_row
+        assert second == 2 * world.tokens_per_row
+        assert world.tokens.tokens(absent.worktree, *world.window) is None
+        assert world.tokens.tokens(measured.worktree, *world.after_rows_window) is None
+
+        # A transcript written after an earlier measurement is read by the next.
+        world.add_transcript_row(measured.worktree)
+        refreshed = world.tokens.tokens(measured.worktree, *world.window)
+        assert refreshed == 2 * world.tokens_per_row
 
 
 def test_scheduling_manages_one_finite_launchd_job_on_macos_only() -> None:
