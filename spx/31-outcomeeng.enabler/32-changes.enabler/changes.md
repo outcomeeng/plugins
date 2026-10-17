@@ -46,6 +46,10 @@ CAN move a prioritized Output from proposal to executable work without placing m
 - The change audit rejects a record that carries a Governance mutations or Spec mutations block while another Change names it in `parent`, and a Parent at Executable ([audit:parent-child-rejections]).
 - After `close-change` closes a Change `Applied` whose Parent has a Parent and no open child, the same session claims that Parent through `claim-change` and closes it `Applied` through `close-change`, repeating upward; it never closes a root this way, and a Parent whose last child closed `Abandoned` stays open ([audit:parent-cascade-close]).
 - Closing a Change establishes that its changeset is integrated by `git merge-base --is-ancestor` of the merge commit of the pull request or branch the newest Handoff names and the default branch exiting zero ([audit:changeset-integration-check]).
+- ALWAYS: `read-relations` maps a `Parent` number field value, integer or float, to the issue number it names and an absent value to `null`
+- ALWAYS: `read-relations` returns `absorbers`, the numbers of the issues whose `Predecessors` field value, split at every comma followed by one space, names the named issue, and never the issues that the named issue's own `Predecessors` value names
+- ALWAYS: `read-relations` reads the store's issue pages in order until the store reports no further page, so a child on any page is returned, and returns a blocked result naming `100 issues per page, 10 pages` when the tenth page still reports a further page
+- ALWAYS: `read-relations` returns a blocked result naming `50 issue field values per issue` when an issue's field-value connection reports a further page, and returns no Product or Parent read from that partial connection
 
 ### Compliance
 
