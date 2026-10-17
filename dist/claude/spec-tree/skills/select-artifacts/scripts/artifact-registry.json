@@ -13,9 +13,9 @@
             "path_globs": [],
             "filenames": []
           },
-          "author": "code-python",
+          "author": "author-python-code",
           "audit": "audit-python-code",
-          "standard": "python-standards",
+          "standard": "python-code-standards",
           "contract": "concern"
         },
         {
@@ -29,15 +29,15 @@
             ],
             "filenames": []
           },
-          "author": "test-python",
-          "audit": "audit-python-tests",
+          "author": "author-python-test",
+          "audit": "audit-python-test",
           "standard": "python-test-standards",
           "contract": "concern"
         },
         {
           "role": "architecture",
           "detection": null,
-          "author": "architect-python",
+          "author": "author-python-architecture",
           "audit": "audit-python-architecture",
           "standard": "python-architecture-standards",
           "contract": "concern"
@@ -57,9 +57,9 @@
             "path_globs": [],
             "filenames": []
           },
-          "author": "code-typescript",
+          "author": "author-typescript-code",
           "audit": "audit-typescript-code",
-          "standard": "typescript-standards",
+          "standard": "typescript-code-standards",
           "contract": "concern"
         },
         {
@@ -73,15 +73,15 @@
             ],
             "filenames": []
           },
-          "author": "test-typescript",
-          "audit": "audit-typescript-tests",
+          "author": "author-typescript-test",
+          "audit": "audit-typescript-test",
           "standard": "typescript-test-standards",
           "contract": "concern"
         },
         {
           "role": "architecture",
           "detection": null,
-          "author": "architect-typescript",
+          "author": "author-typescript-architecture",
           "audit": "audit-typescript-architecture",
           "standard": "typescript-architecture-standards",
           "contract": "concern"
@@ -101,9 +101,9 @@
             "path_globs": [],
             "filenames": []
           },
-          "author": "code-rust",
+          "author": "author-rust-code",
           "audit": "audit-rust-code",
-          "standard": "rust-standards",
+          "standard": "rust-code-standards",
           "contract": "concern"
         },
         {
@@ -117,15 +117,15 @@
             ],
             "filenames": []
           },
-          "author": "test-rust",
-          "audit": "audit-rust-tests",
+          "author": "author-rust-test",
+          "audit": "audit-rust-test",
           "standard": "rust-test-standards",
           "contract": "concern"
         },
         {
           "role": "architecture",
           "detection": null,
-          "author": "architect-rust",
+          "author": "author-rust-architecture",
           "audit": "audit-rust-architecture",
           "standard": "rust-architecture-standards",
           "contract": "concern"
@@ -145,9 +145,9 @@
             "path_globs": [],
             "filenames": []
           },
-          "author": "code-go",
+          "author": "author-go-code",
           "audit": "audit-go-code",
-          "standard": "go-standards",
+          "standard": "go-code-standards",
           "contract": "concern"
         },
         {
@@ -161,15 +161,15 @@
             ],
             "filenames": []
           },
-          "author": "test-go",
-          "audit": "audit-go-tests",
+          "author": "author-go-test",
+          "audit": "audit-go-test",
           "standard": "go-test-standards",
           "contract": "concern"
         },
         {
           "role": "architecture",
           "detection": null,
-          "author": "architect-go",
+          "author": "author-go-architecture",
           "audit": "audit-go-architecture",
           "standard": "go-architecture-standards",
           "contract": "concern"

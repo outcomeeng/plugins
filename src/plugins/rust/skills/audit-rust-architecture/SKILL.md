@@ -7,7 +7,7 @@ description: >-
 allowed-tools: Read, Grep, Glob, {{! tool('use_skill') !}}
 ---
 
-{!% require_skill 'rust:rust-standards' %!}
+{!% require_skill 'rust:rust-code-standards' %!}
 
 {!% require_skill 'rust:rust-architecture-standards' %!}
 

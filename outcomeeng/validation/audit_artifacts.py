@@ -46,10 +46,15 @@ RETIRED_IMPLEMENTATION_AUDITOR_FILENAMES: Final = (
     "auditor.md",
     "audit-orchestrator.md",
 )
-LANGUAGE_CODE_SKILL_TEMPLATE: Final = "code-{language}"
+LANGUAGE_CODE_SKILL_TEMPLATE: Final = "author-{language}-code"
 LANGUAGE_AUDIT_SKILL_TEMPLATE: Final = "audit-{language}-{concern}"
 RETIRED_LANGUAGE_AUDIT_SKILL_TEMPLATE: Final = "audit-{language}"
-LANGUAGE_AUDIT_CONCERNS: Final = ("code", "tests", "architecture")
+LANGUAGE_AUDIT_CONCERNS: Final = ("code", "test", "architecture")
+RETIRED_LANGUAGE_AUDIT_CONCERNS: Final = ("tests",)
+FORBIDDEN_WRAPPER_CONCERNS: Final = (
+    *LANGUAGE_AUDIT_CONCERNS,
+    *RETIRED_LANGUAGE_AUDIT_CONCERNS,
+)
 RETIRED_AUDIT_RUNTIME_FILENAMES: Final = (
     "verdict.py",
     "aggregate_verdicts.py",
@@ -245,7 +250,7 @@ def check_wrapper_surface(surface: Path) -> list[str]:
         for path, (_plugin, stem) in owners.items()
         if f"{stem}{MARKDOWN_FILE_SUFFIX}" in RETIRED_IMPLEMENTATION_AUDITOR_FILENAMES
     )
-    # A language is a plugin that ships a code-{lang} skill. An agent-owning
+    # A language is a plugin that ships an author-{lang}-code skill. An agent-owning
     # plugin name alone is not a language: an artifact-type auditor may share
     # its owning plugin's name, and only per-programming-language wrappers are
     # forbidden.
@@ -362,7 +367,7 @@ def implementation_languages(surface: Path) -> tuple[str, ...]:
 
 def language_specific_auditor_filenames(language: str) -> frozenset[str]:
     """Return forbidden language-specific implementation wrapper filenames."""
-    concerns = (*LANGUAGE_AUDIT_CONCERNS, "test")
+    concerns = FORBIDDEN_WRAPPER_CONCERNS
     return frozenset(
         {
             f"{language}-auditor.md",
@@ -379,7 +384,7 @@ def is_language_specific_auditor_filename(filename: str) -> bool:
     if not filename.endswith(".md"):
         return False
     stem = filename.removesuffix(".md")
-    concerns = (*LANGUAGE_AUDIT_CONCERNS, "test")
+    concerns = FORBIDDEN_WRAPPER_CONCERNS
     return any(
         (stem.endswith(f"-{concern}-auditor") and stem != f"{concern}-auditor")
         or (

@@ -70,3 +70,17 @@ Rule `objective-criteria-distinct`, severity debt, found by the `skill-auditor` 
 **Impact**: the criterion restates the output instead of naming a property that shows the output sound.
 
 **Settlement condition**: the last success criterion states a soundness property of the sealed run, and the objective alone names the output's shape. The settlement of the verdict-format entry above rewrites both lines, so the two settle together.
+
+## Standing skill-audit finding on text the skill rename leaves unchanged
+
+A sealed `skill-auditor` run over the renamed `author-prose-architecture` skill rejected it on text that the rename (Change 475) neither changes nor invalidates. The finding below falls on lines outside the rename's hunk, and it is recorded once with the run that raised it. The path is the current skill directory; line numbers are current-head lines. Severity is the run's.
+
+### `author-prose-architecture`
+
+- `empty_argument_behavior` (debt): `src/plugins/prose/skills/author-prose-architecture/SKILL.md:6` and `:27-39` (`<kind_intake>`). The skill takes input (argument-hint `[interface|documentation|copy] <what to structure>`) but states behavior only for an absent kind; it states nothing for an absent `<what to structure>`, the artifact set the ADR governs. Finding key `instructions:skill:file:src/plugins/prose/skills/author-prose-architecture/SKILL.md:empty_argument_behavior`. Run `2026-10-17_01-17-14-696-90c7ae07a509`, read at head `c9e338b951c62f42c28f1832faf30689706d9ee8`. Base-ref evidence: `git diff -M -U0 origin/main HEAD -- src/plugins/prose/skills` records the file as a rename of `architect-prose/SKILL.md` (similarity 99%) whose only hunk is line `:2`, the `name` field; lines `:6` and `:27-39` are outside every hunk, and neither cites, quotes, or depends on the changed name.
+
+**Resolution shape**: state in the skill what it does when the arguments name no artifact set or governed path, for example asking for it or deriving it from a stated source.
+
+**Revisit condition**: resolve the finding when the skill next changes, since the fix needs a prose version bump and its own `skill-auditor` gate.
+
+**Evidence**: the sealed run named above, under the audit run store of branch `work/change-475`. The run's terminal status is `rejected` on this single finding, which is standing under property 11 of [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md); the rulings at https://github.com/outcomeeng/changes/issues/475#issuecomment-6226715607 (item 2) and https://github.com/outcomeeng/changes/issues/475#issuecomment-6227759607 (items 1 and 2) bind the record.

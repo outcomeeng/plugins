@@ -121,3 +121,13 @@ orchestration contracts named above apply.
 **Settlement condition**: a test-evidence audit of this node composes the Python
 concern, inspects every listed harness, generator, and production module, and
 evaluates Gate 2.
+
+## DEBT [evidence]: the three formatter-boundary scenarios repeat their stub setup
+
+Defect class: `architectural-duplication`, rule `repeated-formatter-stub-setup`.
+
+Finding: `outcomeeng_testing/harnesses/build_orchestration.py` around line 110 builds the formatter-probe stub, the call-recording runner, and the `BuildError` capture separately for each of the three formatter-boundary scenarios. The entry "build-orchestration verdicts, violating cases, and case literals live in the harness" above records the recording spy as a harness-owned verdict (f-007, WARNING); this entry records the repeated setup itself.
+
+Remediation target: the harness. A shared formatter-boundary harness in `outcomeeng_testing/harnesses`, beside the existing `build_orchestration` harness, returns the observation (recorded runner calls and the captured build error) so each scenario states only its own case.
+
+Settlement condition: the three scenarios consume one formatter-boundary harness, and no formatter-probe stub or call-recording runner setup repeats across them.

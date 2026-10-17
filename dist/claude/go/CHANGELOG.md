@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.4.0
+
+### Breaking
+
+- **Six skills are renamed, with no alias.** Invoke the new name; the old name no longer resolves. `code-go` is now `author-go-code`, `test-go` is `author-go-test`, `architect-go` is `author-go-architecture`, `audit-go-tests` is `audit-go-test`, `go-standards` is `go-code-standards`, and `simplify-go` is `simplify-go-code`. Every other skill keeps its name.
+
 ## 0.3.0
 
 ### Breaking

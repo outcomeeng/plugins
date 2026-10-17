@@ -13,7 +13,7 @@ The canonical Python ADR conventions — sections, how testability appears in Ve
 
 <success_criteria>
 
-- `/python-standards` is loaded before this standard is applied.
+- `/python-code-standards` is loaded before this standard is applied.
 - The ADR uses only the authoritative sections.
 - Testability constraints live in `## Verification`'s `### Audit` subsection.
 - Dependency seams are expressed in Python terms as Protocols.
@@ -202,7 +202,7 @@ The architect needs to understand testing levels to write effective Verification
 | `## Status` field             | Not in the authoritative ADR template          | Git history / commit metadata         |
 | File names to delete          | Temporal; becomes stale immediately            | Code review against ADR invariants    |
 | Migration plans               | Temporal; narrates a transition                | Code review / work items              |
-| Implementation code           | ADRs constrain implementation, not provide it  | `/code-python`                        |
+| Implementation code           | ADRs constrain implementation, not provide it  | `/author-python-code`                 |
 | `src.*` import examples       | Ambiguous convention                           | Use `product.*` / `product_testing.*` |
 
 </anti_patterns>

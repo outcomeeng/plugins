@@ -3,7 +3,7 @@ name: go-test-standards
 user-invocable: false
 description: >-
   Go test standards enforced across all skills. Loaded by other skills, not invoked directly.
-allowed-tools: Read
+allowed-tools: Read, {{! tool('use_skill') !}}
 ---
 
 <objective>
@@ -14,7 +14,7 @@ The canonical Go test standards — filename conventions, level mapping and buil
 Go test guidance follows this standard when:
 
 - `/test` determines the assertion type, execution level, and exception path before implementation
-- `/go-standards` is loaded before this reference
+- Use skill `go:go-code-standards`.
 - co-located spec tests use `<subject>.<evidence>.<level>[.<runner>]_test.go` or the repo-local overlay
 - executed `Test*` functions and their `t.Run` subtests own every predicate and `testing.T` failure call; harnesses, `t.Helper()`-marked functions, and collaborators expose observations without verdict logic
 - test-file bindings introduce no data or policy — `:=`, `var`, `const`, table-row, and closure-parameter bindings are valid only when they receive values selected by their semantic owner
@@ -328,7 +328,7 @@ Level 3 tests must declare their isolation boundary, credentials, cleanup behavi
 Keep deterministic measurement and audit-time evidence judgment distinct:
 
 - The deterministic gate prefers `go test -race -cover -coverprofile`, compares the baseline without the test against the run with the test, and reports the actual per-file or per-function delta. When tooling is unavailable, the gate records that limitation.
-- `/audit-go-tests` runs no coverage command. It reads the evidence chain and judges whether the test drives execution into the assertion-relevant source path, marking trivially total paths `saturated`.
+- `/audit-go-test` runs no coverage command. It reads the evidence chain and judges whether the test drives execution into the assertion-relevant source path, marking trivially total paths `saturated`.
 - A structural reachability judgment never claims a measured percentage or replaces the deterministic gate's coverage result.
 
 </coverage_rules>

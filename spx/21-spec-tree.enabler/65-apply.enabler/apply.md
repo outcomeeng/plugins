@@ -30,7 +30,7 @@ The assertions below govern the lifecycle as a whole — how the work queue is f
 - ALWAYS: the apply lifecycle carries only the bounded projection of each Verifier result — the result reference, exact head, verdict, finding identifiers, defect classes, and next required action — reopening the complete result by reference, per [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md) ([audit])
 - ALWAYS: the apply lifecycle finishes every independent Author-side inspection, repair, same-class scan, deterministic check, readiness-record update, and required commit before it starts a blocking check or Verifier wait, per [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md) ([audit])
 - ALWAYS: after implementation and before the final implementation and evidence
-  audits, the apply instructions run the detected language's `simplify-{lang}`
+  audits, the apply instructions run the detected language's `simplify-{lang}-code`
   skill in the main conversation, which verifies and checkpoints every
   resulting change before Verifier dispatch; a language that ships no
   simplification skill skips this stage ([audit])

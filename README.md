@@ -283,20 +283,20 @@ Frontend design: /design-frontend skill
 
 ### go
 
-Go engineering: /test-go, /code-go, /audit-go-code, /audit-go-tests, /audit-go-architecture, /architect-go, /simplify-go
+Go engineering: /author-go-test, /author-go-code, /audit-go-code, /audit-go-test, /audit-go-architecture, /author-go-architecture, /simplify-go-code
 
 | Type  | Name                         | Purpose                                                         |
 | ----- | ---------------------------- | --------------------------------------------------------------- |
-| Skill | `/architect-go`              | Writing ADRs for Go. NEVER author a Go ADR without this skill   |
 | Skill | `/audit-go-architecture`     | Go-specific architecture audit                                  |
 | Skill | `/audit-go-code`             | Go implementation-code audit methodology                        |
-| Skill | `/audit-go-tests`            | Go test-evidence audit methodology                              |
-| Skill | `/code-go`                   | Writing or fixing implementation code for Go                    |
+| Skill | `/audit-go-test`             | Go test-evidence audit methodology                              |
+| Skill | `/author-go-architecture`    | Writing ADRs for Go. NEVER author a Go ADR without this skill   |
+| Skill | `/author-go-code`            | Writing or fixing implementation code for Go                    |
+| Skill | `/author-go-test`            | Writing or fixing tests for Go                                  |
 | Skill | `/go-architecture-standards` | Go ADR conventions enforced across architect and auditor skills |
-| Skill | `/go-standards`              | Go code standards enforced across all skills                    |
+| Skill | `/go-code-standards`         | Go code standards enforced across all skills                    |
 | Skill | `/go-test-standards`         | Go test standards enforced across all skills                    |
-| Skill | `/simplify-go`               | Simplifying Go implementation while preserving behavior         |
-| Skill | `/test-go`                   | Writing or fixing tests for Go                                  |
+| Skill | `/simplify-go-code`          | Simplifying Go implementation while preserving behavior         |
 
 ### hdl
 
@@ -325,49 +325,49 @@ Instruction authoring: /create-skill, /create-subagent
 
 ### prose
 
-Prose craft through a matched triple (/architect-prose, /author-prose, /audit-prose) over caller-supplied kind layers: interface, documentation, copy
+Prose craft through a matched triple (/author-prose-architecture, /author-prose, /audit-prose) over caller-supplied kind layers: interface, documentation, copy
 
 | Type  | Name                            | Purpose                                                                                                                                                             |
 | ----- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Skill | `/architect-prose`              | Writing ADRs for prose                                                                                                                                              |
 | Skill | `/audit-prose`                  | Prose audit methodology                                                                                                                                             |
 | Skill | `/author-prose`                 | Writing text for human readers — docs pages, UI text, error messages, emails, release notes                                                                         |
+| Skill | `/author-prose-architecture`    | Writing ADRs for prose                                                                                                                                              |
 | Skill | `/prose-architecture-standards` | Prose ADR conventions enforced across architect and auditor skills                                                                                                  |
 | Skill | `/prose-standards`              | Prose standards enforced across all skills                                                                                                                          |
 | Agent | `prose-auditor`                 | Auditing human-facing text — documents, web pages, articles, docs, UI text, product messages, or internal team pages — for prose quality and style-kind conformance |
 
 ### python
 
-Python engineering: /test-python, /code-python, /audit-python-code, /audit-python-tests, /audit-python-architecture, /architect-python
+Python engineering: /author-python-test, /author-python-code, /audit-python-code, /audit-python-test, /audit-python-architecture, /author-python-architecture
 
 | Type  | Name                             | Purpose                                                             |
 | ----- | -------------------------------- | ------------------------------------------------------------------- |
-| Skill | `/architect-python`              | Writing ADRs for Python                                             |
 | Skill | `/audit-python-architecture`     | Python-specific architecture audit                                  |
 | Skill | `/audit-python-code`             | Python implementation-code audit methodology                        |
-| Skill | `/audit-python-tests`            | Python test-evidence audit methodology                              |
-| Skill | `/code-python`                   | Writing or fixing implementation code for Python                    |
+| Skill | `/audit-python-test`             | Python test-evidence audit methodology                              |
+| Skill | `/author-python-architecture`    | Writing ADRs for Python                                             |
+| Skill | `/author-python-code`            | Writing or fixing implementation code for Python                    |
+| Skill | `/author-python-test`            | Writing or fixing tests for Python                                  |
 | Skill | `/python-architecture-standards` | Python ADR conventions enforced across architect and auditor skills |
-| Skill | `/python-standards`              | Python code standards enforced across all skills                    |
+| Skill | `/python-code-standards`         | Python code standards enforced across all skills                    |
 | Skill | `/python-test-standards`         | Python test standards enforced across all skills                    |
-| Skill | `/test-python`                   | Writing or fixing tests for Python                                  |
 
 ### rust
 
-Rust engineering: /test-rust, /code-rust, /audit-rust-code, /audit-rust-tests, /audit-rust-architecture, /architect-rust, /simplify-rust
+Rust engineering: /author-rust-test, /author-rust-code, /audit-rust-code, /audit-rust-test, /audit-rust-architecture, /author-rust-architecture, /simplify-rust-code
 
 | Type  | Name                           | Purpose                                                           |
 | ----- | ------------------------------ | ----------------------------------------------------------------- |
-| Skill | `/architect-rust`              | Writing ADRs for Rust                                             |
 | Skill | `/audit-rust-architecture`     | Rust-specific architecture audit                                  |
 | Skill | `/audit-rust-code`             | Rust implementation-code audit methodology                        |
-| Skill | `/audit-rust-tests`            | Rust test-evidence audit methodology                              |
-| Skill | `/code-rust`                   | Writing or fixing implementation code for Rust                    |
+| Skill | `/audit-rust-test`             | Rust test-evidence audit methodology                              |
+| Skill | `/author-rust-architecture`    | Writing ADRs for Rust                                             |
+| Skill | `/author-rust-code`            | Writing or fixing implementation code for Rust                    |
+| Skill | `/author-rust-test`            | Writing or fixing tests for Rust                                  |
 | Skill | `/rust-architecture-standards` | Rust ADR conventions enforced across architect and auditor skills |
-| Skill | `/rust-standards`              | Rust code standards enforced across all skills                    |
+| Skill | `/rust-code-standards`         | Rust code standards enforced across all skills                    |
 | Skill | `/rust-test-standards`         | Rust test standards enforced across all skills                    |
-| Skill | `/simplify-rust`               | Simplifying Rust implementation while preserving behavior         |
-| Skill | `/test-rust`                   | Writing or fixing tests for Rust                                  |
+| Skill | `/simplify-rust-code`          | Simplifying Rust implementation while preserving behavior         |
 
 ### spec-tree
 
@@ -445,19 +445,19 @@ Spec Tree: /understand, /contextualize, /bootstrap, /author, /decompose, /refact
 
 ### typescript
 
-TypeScript engineering: /test-typescript, /code-typescript, /audit-typescript-code, /audit-typescript-tests, /audit-typescript-architecture, /architect-typescript, /simplify-typescript
+TypeScript engineering: /author-typescript-test, /author-typescript-code, /audit-typescript-code, /audit-typescript-test, /audit-typescript-architecture, /author-typescript-architecture, /simplify-typescript-code
 
 | Type  | Name                                 | Purpose                                                                 |
 | ----- | ------------------------------------ | ----------------------------------------------------------------------- |
-| Skill | `/architect-typescript`              | Writing ADRs for TypeScript                                             |
 | Skill | `/audit-typescript-architecture`     | TypeScript-specific architecture audit                                  |
 | Skill | `/audit-typescript-code`             | TypeScript implementation-code audit methodology                        |
-| Skill | `/audit-typescript-tests`            | TypeScript test-evidence audit methodology                              |
-| Skill | `/code-typescript`                   | Writing or fixing implementation code for TypeScript                    |
-| Skill | `/simplify-typescript`               | Simplifying TypeScript implementation while preserving behavior         |
-| Skill | `/test-typescript`                   | Writing or fixing tests for TypeScript                                  |
+| Skill | `/audit-typescript-test`             | TypeScript test-evidence audit methodology                              |
+| Skill | `/author-typescript-architecture`    | Writing ADRs for TypeScript                                             |
+| Skill | `/author-typescript-code`            | Writing or fixing implementation code for TypeScript                    |
+| Skill | `/author-typescript-test`            | Writing or fixing tests for TypeScript                                  |
+| Skill | `/simplify-typescript-code`          | Simplifying TypeScript implementation while preserving behavior         |
 | Skill | `/typescript-architecture-standards` | TypeScript ADR conventions enforced across architect and auditor skills |
-| Skill | `/typescript-standards`              | TypeScript code standards enforced across all skills                    |
+| Skill | `/typescript-code-standards`         | TypeScript code standards enforced across all skills                    |
 | Skill | `/typescript-test-standards`         | TypeScript test standards enforced across all skills                    |
 
 ### work

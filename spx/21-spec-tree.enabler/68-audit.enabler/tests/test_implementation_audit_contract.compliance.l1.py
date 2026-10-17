@@ -1,6 +1,13 @@
 from __future__ import annotations
 
+from outcomeeng.distribution.artifact_registry import ARTIFACT_KINDS
+from outcomeeng.validation.implementation_audit_contract import (
+    ImplementationAuditConcern,
+    implementation_audit_concern_skill_name,
+)
 from outcomeeng_testing.harnesses.audit_verification_run_contract import (
+    audit_contract_rejects_retired_concern_wrapper,
+    source_language,
     audit_contract_rejects_incomplete_language_trio,
     audit_contract_rejects_missing_generated_audit_host,
     audit_contract_rejects_missing_generated_language,
@@ -26,6 +33,27 @@ def test_implementation_auditor_is_the_only_implementation_wrapper() -> None:
 
 def test_language_concern_skill_trios_exist() -> None:
     assert language_concern_skill_trios_exist()
+
+
+def test_every_concern_names_the_audit_skill_the_registry_ships() -> None:
+    language = source_language()
+    registered = {
+        artifact.audit
+        for kind in ARTIFACT_KINDS
+        if kind.name == language
+        for artifact in kind.artifacts
+    }
+    named = {
+        concern: implementation_audit_concern_skill_name(language, concern)
+        for concern in ImplementationAuditConcern
+    }
+
+    assert len(named) == len(registered)
+    assert set(named.values()) == registered
+
+
+def test_retired_concern_wrapper_is_rejected() -> None:
+    assert audit_contract_rejects_retired_concern_wrapper()
 
 
 def test_language_specific_implementation_wrapper_is_rejected() -> None:

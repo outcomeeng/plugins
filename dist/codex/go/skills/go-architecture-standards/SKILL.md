@@ -11,7 +11,7 @@ The canonical Go ADR conventions — the template source, how Go testability app
 </objective>
 
 <success_criteria>
-Go ADR guidance follows this standard when `/go-standards` is loaded first, ADRs use only the authoritative sections, testability constraints live in `## Verification`'s `### Audit` subsection, dependency seams are expressed in Go terms, and test-level references match `/go-test-standards`.
+Go ADR guidance follows this standard when `/go-code-standards` is loaded first, ADRs use only the authoritative sections, testability constraints live in `## Verification`'s `### Audit` subsection, dependency seams are expressed in Go terms, and test-level references match `/go-test-standards`.
 </success_criteria>
 
 <reference_note>
@@ -38,7 +38,7 @@ Go architecture rules — DI mandates, mocking prohibitions, goroutine ownership
 
 <testability_in_verification>
 
-ADRs do not assign testing levels. They establish constraints that make levels achievable. The `/test` router and `/test-go` decide how assertions are verified once they combine spec assertions, architecture constraints, and product infrastructure.
+ADRs do not assign testing levels. They establish constraints that make levels achievable. The `/test` router and `/author-go-test` decide how assertions are verified once they combine spec assertions, architecture constraints, and product infrastructure.
 
 **The mechanism:** Verification rules under `### Audit` that mandate observable seams, explicit package and boundary types, DI, and the absence of mocking frameworks.
 
@@ -190,6 +190,6 @@ The architect needs enough testing context to write effective Verification rules
 | `## Status` field             | Temporal; a decision is permanent truth                     | Git history / commit metadata      |
 | File names to delete          | Temporal; becomes stale immediately                         | Code review against ADR invariants |
 | Migration plans               | Temporal; narrates a transition                             | Code review / work items           |
-| Implementation code           | ADRs constrain implementation, not provide it               | `/code-go`                         |
+| Implementation code           | ADRs constrain implementation, not provide it               | `/author-go-code`                  |
 
 </anti_patterns>

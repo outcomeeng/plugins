@@ -31,8 +31,8 @@ Inside a repository, check for `spx/local/skills.md` at the repository root. Rea
 Skills follow a **reference pattern** to avoid duplication:
 
 1. **Foundational skill** (e.g., `/test`) — core principles and domain-agnostic patterns.
-2. **Language-specific skills** (e.g., `/test-python`, `/test-typescript`) — reference the foundational skill, provide only language-specific implementations.
-3. **Reference skills** (e.g., `/typescript-standards`, `/skill-standards`) — standards explicitly invoked by composing skills, never selected as standalone user workflows.
+2. **Language-specific skills** (e.g., `/author-python-test`, `/author-typescript-test`) — reference the foundational skill, provide only language-specific implementations.
+3. **Reference skills** (e.g., `/typescript-code-standards`, `/skill-standards`) — standards explicitly invoked by composing skills, never selected as standalone user workflows.
 
 For language-specific skill prose that references a foundation, use the unqualified invocation name (`/test`) so it resolves to whichever foundational skill is installed.
 
@@ -71,7 +71,7 @@ The `name` field is the user invocation path (`/{skill-name}`). Match user speec
 **Rules:**
 
 - Use domain acronyms: `author` not `author-spec-tree-artifacts`
-- Use terms users actually say: `test-python` not `python-unit-test-framework`
+- Use terms users actually say: `test` not `python-unit-test-framework`
 - Think "CD-ROM" not "Compact Disc Read Only Memory"
 - Directory name MUST match: `skills/author/` → `name: author`
 
@@ -84,7 +84,7 @@ Treat generated runtime output and implementation names as lower-layer evidence,
 ```yaml
 # ✅ Matches user speech
 name: author # Users say "author a spec"
-name: test-typescript # Users say "test TypeScript code"
+name: author-typescript-test # Users say "author a TypeScript test"
 name: bootstrap # Users say "bootstrap the spec tree"
 
 # ❌ Nobody says these
@@ -253,11 +253,11 @@ allowed-tools: Read
 **How consuming skills reference it.** Name the reference skill in running text for traceability, then state the dependency as ``Use skill `{plugin}:{skill}`.`` before applying its rules. A bare `See /{skill-name}` instruction is insufficient.
 
 ```markdown
-# In test-typescript/SKILL.md:
+# In author-typescript-test/SKILL.md:
 
 Use skill `typescript:typescript-test-standards`. Apply its test file naming, execution-level, and reusable-pattern rules.
 
-# In audit-typescript-tests/SKILL.md:
+# In audit-typescript-test/SKILL.md:
 
 Before auditing: Use skill `typescript:typescript-test-standards`. Apply its complete catalog of TypeScript test rules.
 ```

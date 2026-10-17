@@ -1,5 +1,5 @@
 ---
-name: audit-python-tests
+name: audit-python-test
 description: Python test-evidence concern producer fixture.
 ---
 

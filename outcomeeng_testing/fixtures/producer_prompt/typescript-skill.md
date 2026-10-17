@@ -1,5 +1,5 @@
 ---
-name: audit-typescript-tests
+name: audit-typescript-test
 description: TypeScript test-evidence concern producer fixture.
 ---
 

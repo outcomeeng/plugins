@@ -183,7 +183,7 @@ Use the appropriate canonical template provided by `/understand` for the artifac
 
 - Every output node has at least one assertion; a spec-malleable assertion may omit its tag, and every harder assertion carries exactly one once `/verify` selects it
 - Each new assertion remains untagged until `/apply` invokes `/verify`; an untagged authoring draft is the input to verification selection, not an invalid authoring result
-- `/verify` selects each assertion's verification type; when it selects test, `/test` and `/test-{language}` select the assertion type and language expression. Authoring chooses neither.
+- `/verify` selects each assertion's verification type; when it selects test, `/test` and `/author-{language}-test` select the assertion type and language expression. Authoring chooses neither.
 
 **Reference rules**:
 

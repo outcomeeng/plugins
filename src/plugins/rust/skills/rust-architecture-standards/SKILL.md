@@ -11,7 +11,7 @@ The canonical Rust ADR conventions — allowed sections, how Rust testability ap
 </objective>
 
 <success_criteria>
-Rust ADR guidance follows this standard when `/rust-standards` is loaded first, ADRs use only the authoritative sections, testability constraints live in `## Verification`'s `### Audit` subsection, dependency seams are expressed in Rust terms, and test-level references match `/rust-test-standards`.
+Rust ADR guidance follows this standard when `/rust-code-standards` is loaded first, ADRs use only the authoritative sections, testability constraints live in `## Verification`'s `### Audit` subsection, dependency seams are expressed in Rust terms, and test-level references match `/rust-test-standards`.
 </success_criteria>
 
 <reference_note>
@@ -43,7 +43,7 @@ The ADR template (from `/understand`) is decision-first — the decision is stat
 
 <testability_in_verification>
 
-ADRs do not assign testing levels. They establish constraints that make levels achievable. The `/test` router and `/test-rust` decide how assertions are verified once they combine spec assertions, architecture constraints, and product infrastructure.
+ADRs do not assign testing levels. They establish constraints that make levels achievable. The `/test` router and `/author-rust-test` decide how assertions are verified once they combine spec assertions, architecture constraints, and product infrastructure.
 
 **The mechanism:** Verification rules under `### Audit` that mandate observable seams, explicit ownership and boundary types, DI, and the absence of mocking frameworks.
 
@@ -199,6 +199,6 @@ The architect needs enough testing context to write effective Verification rules
 | `## Status` field             | Not in the authoritative ADR template          | Git history / commit metadata      |
 | File names to delete          | Temporal; becomes stale immediately            | Code review against ADR invariants |
 | Migration plans               | Temporal; narrates a transition                | Code review / work items           |
-| Implementation code           | ADRs constrain implementation, not provide it  | `/code-rust`                       |
+| Implementation code           | ADRs constrain implementation, not provide it  | `/author-rust-code`                |
 
 </anti_patterns>

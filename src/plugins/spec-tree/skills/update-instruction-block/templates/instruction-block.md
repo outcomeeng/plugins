@@ -294,7 +294,7 @@ The table routes tasks to skills. Only an active skill's explicit invocation ins
 
 <!-- langs:present -->
 
-Per-language code, architecture, and test audits ship as `audit-{lang}-{code|tests|architecture}` skills. The active verification workflow composes the skills for the languages recorded in this instruction block's opening marker.
+Per-language code, architecture, and test audits ship as `audit-{lang}-{code|test|architecture}` skills. The active verification workflow composes the skills for the languages recorded in this instruction block's opening marker.
 
 <!-- /langs:present -->
 <!-- lang:python -->
@@ -303,7 +303,7 @@ Per-language code, architecture, and test audits ship as `audit-{lang}-{code|tes
 | ----------------------- | ---------------------------- |
 | "Audit this code"       | `/audit-python-code`         |
 | "Audit ADRs for Python" | `/audit-python-architecture` |
-| "Audit these tests"     | `/audit-python-tests`        |
+| "Audit these tests"     | `/audit-python-test`         |
 
 <!-- /lang:python -->
 <!-- lang:typescript -->
@@ -312,7 +312,7 @@ Per-language code, architecture, and test audits ship as `audit-{lang}-{code|tes
 | --------------------------- | -------------------------------- |
 | "Audit this code"           | `/audit-typescript-code`         |
 | "Audit ADRs for TypeScript" | `/audit-typescript-architecture` |
-| "Audit these tests"         | `/audit-typescript-tests`        |
+| "Audit these tests"         | `/audit-typescript-test`         |
 
 <!-- /lang:typescript -->
 <!-- lang:rust -->
@@ -322,7 +322,7 @@ Per-language code, architecture, and test audits ship as `audit-{lang}-{code|tes
 | "Audit this code"     | `/audit-rust-code`         |
 | "Audit unsafe Rust"   | `/audit-rust-code`         |
 | "Audit ADRs for Rust" | `/audit-rust-architecture` |
-| "Audit these tests"   | `/audit-rust-tests`        |
+| "Audit these tests"   | `/audit-rust-test`         |
 
 <!-- /lang:rust -->
 <!-- lang:go -->
@@ -332,7 +332,7 @@ Per-language code, architecture, and test audits ship as `audit-{lang}-{code|tes
 | "Audit this code"         | `/audit-go-code`         |
 | "Audit concurrency in Go" | `/audit-go-code`         |
 | "Audit ADRs for Go"       | `/audit-go-architecture` |
-| "Audit these tests"       | `/audit-go-tests`        |
+| "Audit these tests"       | `/audit-go-test`         |
 
 <!-- /lang:go -->
 

@@ -149,7 +149,7 @@ The `/understand` `<files_in_a_node>` eval-lane bullet (authored in `src/plugins
 
 ## 25. The `spx/EXCLUDE` mechanism is still shipped while this repository carries no such file
 
-This repository has no `spx/EXCLUDE` and no root `conftest.py`: no node is in specified state, every declared `[test]` and `[eval]` link resolves, and the `eval-links` validation step fails the gate on a dangling link. The `apply`, `test`, `manage-github-pr`, and `test-typescript` skills still describe exclusion as the specified-state mechanism — the `/understand` foundation states the status-claim model and names the list only as a passing-scope list a toolchain without the claim still reads — and `spx test passing` reads it. The specs `spx/21-spec-tree.enabler/65-apply.enabler/apply.md` and `spx/15-validation.enabler/32-reference-portability.enabler/reference-portability.md` name the file as a mechanism.
+This repository has no `spx/EXCLUDE` and no root `conftest.py`: no node is in specified state, every declared `[test]` and `[eval]` link resolves, and the `eval-links` validation step fails the gate on a dangling link. The `apply`, `test`, `manage-github-pr`, and `author-typescript-test` skills still describe exclusion as the specified-state mechanism — the `/understand` foundation states the status-claim model and names the list only as a passing-scope list a toolchain without the claim still reads — and `spx test passing` reads it. The specs `spx/21-spec-tree.enabler/65-apply.enabler/apply.md` and `spx/15-validation.enabler/32-reference-portability.enabler/reference-portability.md` name the file as a mechanism.
 
 The target model replaces the file with committed per-node `spx.status.json` claims: `spx spec status --update` folds available local evidence into the claims and never runs verification; a claim rests as `passed`, `failed`, or `not-run`; CI reproduces every passing claim and refutes what it cannot reproduce; state derives from the claim (no references → `declared`, not-run → `specified`, passed → `passing`, failed or refuted → `failing`). "No passing claim ⇒ not run" is the automatic exclusion, so the file has no remaining content.
 
@@ -233,3 +233,15 @@ Revisit and settlement condition: one conditional paragraph moved into the refer
 **Impact:** The assertion rests on audit evidence alone, and no eval scores the `/understand` skill's delivered-value declaration.
 
 **Settlement condition:** An eval under this node's `evals/` scores the `/understand` skill's delivered-value declaration and the assertion links it as `[eval]`, or the audit tag stands and gains its rule slug when the tree adopts the `[audit:{rule-slug}]` form.
+
+## DEBT [verdict-source-not-sealed-run]: the apply skill reads four auditor verdicts from structured output, not a sealed run
+
+Defect class: `verdict-source-not-sealed-run`.
+
+Finding: assertion 18 of `spx/21-spec-tree.enabler/65-apply.enabler/apply.md` requires the verdicts of `adr-auditor`, `test-evidence-auditor`, `eval-evidence-auditor` and `implementation-auditor` to be read from the terminal status of a sealed run, as the verification decision [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md) declares. `src/plugins/spec-tree/skills/apply/SKILL.md` Step 4 requires a structured JSON verdict with `APPROVED`, and Step 8a, `<review_gates>` and `<success_criteria>` use `REJECTED`, `FAIL` and `overall: PASS` verdicts for the ADR, test-evidence and eval-evidence auditors; only Step 8, for `implementation-auditor`, reads the sealed-run `terminalStatus`.
+
+Evidence: run token `2026-10-17_01-48-26-442-f2c3646f8f3d`, read at head `1097a3b67e61591f80830bc56e1f7091d46b1a1b`. Base-ref evidence: `git diff -U0 origin/main HEAD` leaves assertion 18 and those SKILL.md passages untouched.
+
+Impact: an approval of an ADR, a test-evidence body or an eval-evidence body in the apply lifecycle rests on a verdict object outside the sealed run, which the assertion forbids.
+
+Revisit and settlement condition: Step 4, Step 8a, `<review_gates>` and `<success_criteria>` of the apply skill read each of the four auditors' verdicts from the terminal status of the sealed run whose token the launch returns, and one typed skill audit approves the amended skill.

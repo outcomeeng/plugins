@@ -7,7 +7,7 @@ description: >-
 allowed-tools: Read, Grep, Glob, Bash(grep:*), Skill
 ---
 
-Use skill `rust:rust-standards`.
+Use skill `rust:rust-code-standards`.
 
 Use skill `rust:rust-test-standards`.
 
@@ -23,7 +23,7 @@ Standards are pre-loaded above. Check for `spx/local/rust.md` at the repository 
 
 - NEVER modify files, generate fixes, write replacement code, commit changes, or change project state — this audit produces a verdict only.
 - NEVER run deterministic validation, formatting, lint, test, or eval commands — this audit reads and judges; it never runs deterministic verification.
-- NEVER evaluate test evidence quality — `/audit-rust-tests` is the separate concern that judges it.
+- NEVER evaluate test evidence quality — `/audit-rust-test` is the separate concern that judges it.
 - ALWAYS keep findings to artifact, violated rule, evidence, and why the cited code violates the rule.
 - NEVER include corrective Rust samples, implementation patches, prescribed refactors, or required-change summaries in the verdict.
 - `APPROVED` means every concern row passes or is explicitly not applicable. `REJECTED` means at least one concern row fails.

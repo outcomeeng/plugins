@@ -14,7 +14,7 @@ The canonical Rust test standards — filename conventions, level mapping, accep
 Rust test guidance follows this standard when:
 
 - `/test` determines the assertion type, execution level, and exception path before implementation
-- `/rust-standards` is loaded before this reference
+- `/rust-code-standards` is loaded before this reference
 - co-located spec tests use `<subject>.<evidence>.<level>[.<runner>].rs` or the repo-local overlay
 - executed `#[test]`/`#[tokio::test]` functions own every predicate and assertion macro; harnesses and collaborators expose observations without verdict logic
 - test-file bindings introduce no data or policy — `let`/`const`/`static`/parameter bindings are valid only when they receive values selected by their semantic owner
@@ -395,7 +395,7 @@ Level 3 tests must declare their isolation boundary, credentials, cleanup behavi
 Keep deterministic measurement and audit-time evidence judgment distinct:
 
 - The deterministic gate prefers `cargo llvm-cov`, compares the baseline without the test against the run with the test, and reports the actual per-file or per-function delta. When tooling is unavailable, the gate records that limitation.
-- `/audit-rust-tests` runs no coverage command. It reads the evidence chain and judges whether the test drives execution into the assertion-relevant source path, marking trivially total paths `saturated`.
+- `/audit-rust-test` runs no coverage command. It reads the evidence chain and judges whether the test drives execution into the assertion-relevant source path, marking trivially total paths `saturated`.
 - A structural reachability judgment never claims a measured percentage or replaces the deterministic gate's coverage result.
 
 </coverage_rules>
