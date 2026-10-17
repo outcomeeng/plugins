@@ -11,6 +11,11 @@ CAN resume the complete intended live set and its unsatisfied operator interacti
 
 ## Assertions
 
+- Each candidate recovery launches maps, with the writable roots the recover request supplies for its worktree, to its source-owned native resume command carrying one writable-root option per supplied root in the form its agent type's resume command accepts, and, when the request supplies no root, to the native resume command with no writable-root option
+- ALWAYS: recovery takes writable roots from each recover request, preserves each absolute root verbatim, rejects a non-absolute root without filesystem expansion or resolution before any native launch, and records no root in the prepared manifest
+- NEVER: recovery launches a candidate whose agent type's resume command accepts no writable-root option while the recover request supplies a writable root for its worktree, or launches a native resume command that omits a supplied root
+- Given a recover request that supplies a writable root for a candidate's worktree, when recovery launches that candidate, then the recovered native session's effective permission policy lists that root as writable
+
 ### Mappings
 
 - Each exactly identified native session maps during prepare to one durable candidate containing its original pane, absolute worktree, agent type, complete native session identity, exact native resume locator, applicable native home, evidence, role, and secondary authorization; incomplete, duplicate, and mismatched entries map to a named non-mutating failure while every Prowl status maps to the same eligibility result ([test](tests/test_native_agent_recovery.mapping.l1.py))
