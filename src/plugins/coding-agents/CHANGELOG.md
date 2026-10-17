@@ -6,6 +6,17 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.16.0
+
+### Added
+
+- **`/control-positions` paces token spend across the positions hosted in Prowl panes.** One finite pass, started every thirty minutes by a macOS launchd job and exiting within five minutes, measures each configured position whose pane is not on the skip list. It sends `/compact` to a position at 30% context use or when its spend over the pass exceeds 1.25 times its share, pauses one that exceeds twice its share on two consecutive passes by the Escape key and resumes it with `continue` once it is back under its share, and sends `/exit` to every position on a subscription whose weekly use reaches the ceiling, 93% by default and never above 95%, leaving each pane open and telling the operator to switch accounts. Pacing counts tokens, never dollar cost. A position in a herdr pane, or one Prowl does not list, receives no action. Each action is a durable record under `positions/` in the consumption-control data root, naming the position, the measurement, the threshold, and the reason. The skill installs, reports the status of, stops, and restarts the job labelled `engineering.outcome.usage-control.positions` and runs one pass on request; `install` asks the operator to confirm the launch agent's destination first, and scheduling on a platform other than macOS returns an explicit unsupported result.
+- **`control-positions.toml` under `$XDG_CONFIG_HOME/outcome-engineering/`, defaulting to `~/.config/outcome-engineering/`, holds the pace per subscription, each position's subscription, the skip list, and every threshold.** The operator's authorization for the Prowl key operation and for stopping positions are two separate settings: without the first nothing is paused and the pass reports why, and without the second nothing is stopped and the pass reports why. An invalid file fails naming its field, and a change takes effect at the next pass.
+
+### Requires
+
+- **A managed Python 3.13 or 3.14 interpreter, Prowl hosting the position panes, and `/control-token-spend` and `/operate-prowl` from the same plugin.** The scripts use the standard library alone and import those skills' scripts by `__file__`-relative paths.
+
 ## 0.15.0
 
 ### Added
