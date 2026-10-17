@@ -7,9 +7,12 @@ file.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from enum import StrEnum
 
+SECONDS_PER_MINUTE = 60
+PASS_BOUND_MINUTES = 5
 PASS_INTERVAL_MINUTES = 30
 PACE_TOKENS = 1_000
 COMPACTION_CONTEXT_PERCENT = 30
@@ -80,6 +83,36 @@ def ceiling_accepted_values() -> tuple[int, ...]:
     return (WEEKLY_CEILING_PERCENT, CEILING_MAXIMUM_PERCENT)
 
 
+def non_finite_values() -> tuple[float, ...]:
+    """The IEEE non-finite members a TOML float literal can spell: nan, inf, -inf."""
+    return (math.nan, math.inf, -math.inf)
+
+
 def ceiling_rejected_values() -> tuple[float, ...]:
-    """Ceilings strictly above the maximum, from the smallest step to the extreme."""
-    return (CEILING_MAXIMUM_PERCENT + 0.01, CEILING_MAXIMUM_PERCENT + 1, 100, 250)
+    """Ceilings outside the accepted range: strictly above the maximum, from the
+    smallest step to the extreme, and the non-finite members a TOML float can spell
+    that no comparison against the maximum catches."""
+    return (
+        CEILING_MAXIMUM_PERCENT + 0.01,
+        CEILING_MAXIMUM_PERCENT + 1,
+        100,
+        250,
+        math.nan,
+        math.inf,
+    )
+
+
+def just_before_pass_bound(command_timeout_seconds: float) -> tuple[float, ...]:
+    """Elapsed seconds at which a command can start with the pass bound still ahead.
+
+    The members are the boundary starts between the bound minus two command timeouts
+    and the bound itself; binary fractions keep the clock arithmetic exact.
+    """
+    bound = PASS_BOUND_MINUTES * SECONDS_PER_MINUTE
+    return (
+        bound - 0.125,
+        bound - 1,
+        bound - command_timeout_seconds / 2,
+        bound - command_timeout_seconds,
+        bound - command_timeout_seconds - 1,
+    )

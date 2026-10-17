@@ -18,6 +18,10 @@ Contract the entry point exposes, and this harness consumes:
 - enumerations `ConfigField`, `RecordField`, `Action`, `ReportKind`,
   `ScheduleOperation`, `ScheduleStatus`
 - `PASS_BOUND_SECONDS`
+- `SubprocessRunner`, whose default `timeout_seconds` is the span a hung command
+  occupies when the pass applies no tighter timeout; a pass that caps a command's
+  timeout passes it to the runner's `run` as the optional keyword `timeout_seconds`
+- `ConsumptionTokens()`, the production token source, and `load_sibling`
 - the token source protocol `tokens(worktree, start, end) -> int | None` over the
   half-open window of the pass, and the clock protocol `clock() -> float` seconds
 """
@@ -27,9 +31,11 @@ from __future__ import annotations
 import datetime as dt
 import importlib.util
 import json
+import os
 import plistlib
 import sys
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterator, Mapping, Sequence
+from contextlib import contextmanager
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -53,12 +59,23 @@ CONTROL_POSITIONS_PATH = (
     ROOT / "src/plugins/coding-agents/skills/control-positions/scripts"
     "/control_positions.py"
 )
+BUILT_CONTROL_POSITIONS_PATH = (
+    ROOT / "dist/claude/coding-agents/skills/control-positions/scripts"
+    "/control_positions.py"
+)
 FIXTURES = ROOT / "outcomeeng_testing/fixtures/control_positions"
 BASE_TIME = dt.datetime(2026, 1, 5, 9, 0, tzinfo=dt.timezone.utc)
 PASS_INTERVAL = dt.timedelta(minutes=PASS_INTERVAL_MINUTES)
 CONFIG_DIRECTORY = "outcome-engineering"
 CONFIG_FILE = "control-positions.toml"
 INVALID_VALUE = "invalid"
+HUNG_COMMAND_EXIT_CODE = 124
+NUMERIC_CONFIG_FIELDS = (
+    "COMPACTION_CONTEXT_PERCENT",
+    "COMPACTION_MULTIPLE",
+    "PAUSE_MULTIPLE",
+    "WEEKLY_CEILING_PERCENT",
+)
 SCALAR_CONFIG_FIELDS = (
     "COMPACTION_CONTEXT_PERCENT",
     "COMPACTION_MULTIPLE",
@@ -70,22 +87,38 @@ SCALAR_CONFIG_FIELDS = (
 )
 
 
-def load_control_positions() -> ModuleType:
-    """Load the shipped entry point by path, as the installed plugin runs it."""
-    spec = importlib.util.spec_from_file_location(
-        "coding_agents_control_positions", CONTROL_POSITIONS_PATH
+def load_control_positions(*, built: bool = False) -> ModuleType:
+    """Load the shipped entry point by path, as the installed plugin runs it.
+
+    `built` loads the generated plugin tree, whose sibling skills carry the rendered
+    price table the consumption-control parser needs; the authored tree carries the
+    unrendered template.
+    """
+    path = BUILT_CONTROL_POSITIONS_PATH if built else CONTROL_POSITIONS_PATH
+    name = (
+        "coding_agents_control_positions_built"
+        if built
+        else "coding_agents_control_positions"
     )
+    spec = importlib.util.spec_from_file_location(name, path)
     if spec is None or spec.loader is None:
-        raise RuntimeError(
-            f"Cannot load control-positions entry point: {CONTROL_POSITIONS_PATH}"
-        )
+        raise RuntimeError(f"Cannot load control-positions entry point: {path}")
     module = importlib.util.module_from_spec(spec)
+    sibling_names = {item.stem for item in path.parent.glob("*.py")} - {path.stem}
+    saved = {item: sys.modules.get(item) for item in sibling_names} if built else {}
+    for item in saved:
+        sys.modules.pop(item, None)
     sys.modules[spec.name] = module
-    sys.path.insert(0, str(CONTROL_POSITIONS_PATH.parent))
+    sys.path.insert(0, str(path.parent))
     try:
         spec.loader.exec_module(module)
     finally:
-        sys.path.remove(str(CONTROL_POSITIONS_PATH.parent))
+        sys.path.remove(str(path.parent))
+        for item, previous in saved.items():
+            if previous is None:
+                sys.modules.pop(item, None)
+            else:
+                sys.modules[item] = previous
     return module
 
 
@@ -108,7 +141,7 @@ class ConfigSpec:
     """The operator's configuration file as a structured value."""
 
     positions: tuple[PositionSpec, ...]
-    pace: Mapping[str, int] = field(default_factory=lambda: {})
+    pace: Mapping[str, float] = field(default_factory=lambda: {})
     skip: tuple[str, ...] = ()
     compaction_context_percent: float = COMPACTION_CONTEXT_PERCENT
     compaction_multiple: float = COMPACTION_MULTIPLE
@@ -184,14 +217,46 @@ def screen_text(item: PositionSpec, step: PassStep) -> str:
 
 
 class FakeClock:
-    """Stage 5 time exception: every Prowl command consumes a fixed span."""
+    """Stage 5 time exception: every Prowl command consumes a span of fake time.
 
-    def __init__(self, seconds_per_command: float) -> None:
+    The first commands consume the listed `leading_seconds`. Later commands consume
+    `seconds_per_command`, or, when `hangs` is set, never return on their own: a
+    hung command consumes the timeout applied to it and is then killed, the span a
+    real subprocess with that timeout occupies.
+    """
+
+    def __init__(
+        self,
+        seconds_per_command: float,
+        leading_seconds: Sequence[float] = (),
+        hangs: bool = False,
+        command_timeout: float = 0.0,
+    ) -> None:
         self.seconds_per_command = seconds_per_command
+        self.leading_seconds = tuple(leading_seconds)
+        self.hangs = hangs
+        self.command_timeout = command_timeout
+        self.commands = 0
         self.elapsed = 0.0
 
     def __call__(self) -> float:
         return self.elapsed
+
+    def consume(self, timeout_seconds: float | None) -> bool:
+        """Advance by one command's span; return False when the timeout killed it."""
+        index = self.commands
+        self.commands += 1
+        if index < len(self.leading_seconds):
+            self.elapsed += self.leading_seconds[index]
+            return True
+        if self.hangs:
+            applied = (
+                self.command_timeout if timeout_seconds is None else timeout_seconds
+            )
+            self.elapsed += max(applied, 0.0)
+            return False
+        self.elapsed += self.seconds_per_command
+        return True
 
 
 class ProwlRecorder:
@@ -240,8 +305,13 @@ class ProwlRecorder:
                 return value
         return None
 
-    def run(self, argv: tuple[str, ...], stdin: str | None = None) -> CommandResult:
-        self.clock.elapsed += self.clock.seconds_per_command
+    def run(
+        self,
+        argv: tuple[str, ...],
+        stdin: str | None = None,
+        timeout_seconds: float | None = None,
+    ) -> CommandResult:
+        completed = self.clock.consume(timeout_seconds)
         self.commands.append(argv)
         operation = self._operation(argv)
         pane = self._pane(argv)
@@ -249,6 +319,8 @@ class ProwlRecorder:
         if operation is None:
             return CommandResult(2, "", "unsupported command")
         self.calls.append(ProwlCall(operation, pane, argument))
+        if not completed:
+            return CommandResult(HUNG_COMMAND_EXIT_CODE, "", "command timed out")
         known = {item.pane: item for item in self._inventory()}
         if operation == "agents":
             return CommandResult(0, self._json({"agents": self._agents()}), "")
@@ -327,9 +399,18 @@ def run_passes(
     steps: Sequence[PassStep],
     *,
     seconds_per_command: float = 0.0,
+    leading_seconds: Sequence[float] = (),
+    hangs: bool = False,
     via_main: bool = False,
 ) -> list[PassObservation]:
-    """Run one pass per step against one persistent configuration and data root."""
+    """Run one pass per step against one persistent configuration and data root.
+
+    `leading_seconds` and `hangs` shape the fake clock of every pass (see
+    `FakeClock`); a hung command's applied timeout is the optional keyword
+    `timeout_seconds` of the runner's `run`, or the default timeout of the entry
+    point's own subprocess runner when the pass passes none.
+    """
+    command_timeout = float(module.SubprocessRunner().timeout_seconds)
     observations: list[PassObservation] = []
     with TemporaryDirectory(prefix="control-positions-evidence-") as temporary:
         root = Path(temporary)
@@ -345,7 +426,9 @@ def run_passes(
                 current = step.config
             config_path.write_text(render_config(module, current), encoding="utf-8")
             now = BASE_TIME + index * PASS_INTERVAL
-            clock = FakeClock(seconds_per_command)
+            clock = FakeClock(
+                seconds_per_command, leading_seconds, hangs, command_timeout
+            )
             runner = ProwlRecorder(current.positions, step, clock)
             tokens = FrozenTokens(step, now)
             collaborators = module.Collaborators(
@@ -451,3 +534,87 @@ class LaunchctlRecorder:
 
 def with_config(config: ConfigSpec, **changes: Any) -> ConfigSpec:
     return replace(config, **changes)
+
+
+TRANSCRIPT_FIXTURE = (
+    ROOT / "outcomeeng_testing/fixtures/consumption_control/assistant.json"
+)
+TRANSCRIPT_WORKSPACE_KEY = "cwd"
+TOKEN_ENVIRONMENT_NAMES = ("ALERT_ENV", "BUDGET_ENV", "PRICE_OVERRIDE_ENV")
+
+
+@dataclass
+class ParserWorld:
+    """The real consumption-control accounting over a disposable home directory.
+
+    Transcripts are captured assistant rows written under the home's transcript
+    directory; the accounting database is built by the production token source
+    from them. Handles and observations only: the linked test owns every verdict.
+    """
+
+    accounting: ModuleType
+    tokens: Any
+    projects: Path
+    window: tuple[dt.datetime, dt.datetime]
+    after_rows_window: tuple[dt.datetime, dt.datetime]
+    tokens_per_row: int
+    appended: int = 0
+
+    def add_transcript_row(self, worktree: str) -> None:
+        """Append one captured assistant row whose workspace is `worktree`."""
+        row = json.loads(TRANSCRIPT_FIXTURE.read_text(encoding="utf-8"))
+        fields = self.accounting.AccountingField
+        self.appended += 1
+        row[TRANSCRIPT_WORKSPACE_KEY] = worktree
+        row[fields.UUID] = f"{row[fields.UUID]}-{self.appended}"
+        row[fields.MESSAGE][fields.ID] = (
+            f"{row[fields.MESSAGE][fields.ID]}-{self.appended}"
+        )
+        session = worktree.strip("/").replace("/", "_")
+        row[fields.SESSIONID] = session
+        with (self.projects / f"{session}.jsonl").open("a", encoding="utf-8") as stream:
+            stream.write(json.dumps(row) + "\n")
+
+
+@contextmanager
+def real_parser_world(module: ModuleType) -> Iterator[ParserWorld]:
+    """Run the production token source against a real accounting database.
+
+    The sibling accounting module is imported fresh under a disposable home so its
+    default state and transcript roots lie inside it; the process environment and
+    the module registry are restored afterwards.
+    """
+    sibling_name = module.TOKEN_ACCOUNTING[1]
+    saved_module = sys.modules.get(sibling_name)
+    saved_environment = dict(os.environ)
+    with TemporaryDirectory(prefix="control-positions-parser-") as temporary:
+        home = Path(temporary).resolve()
+        sys.modules.pop(sibling_name, None)
+        os.environ["HOME"] = str(home)
+        try:
+            accounting = module.load_sibling(*module.TOKEN_ACCOUNTING)
+            for name in TOKEN_ENVIRONMENT_NAMES:
+                os.environ.pop(getattr(accounting, name), None)
+            fields = accounting.AccountingField
+            row = json.loads(TRANSCRIPT_FIXTURE.read_text(encoding="utf-8"))
+            stamp = accounting.timestamp(row[fields.TIMESTAMP])
+            start, end = stamp - accounting.HOUR, stamp + accounting.HOUR
+            os.environ[accounting.RESET_ENV] = accounting.iso(start)
+            projects = accounting.DEFAULT_PROJECTS
+            projects.mkdir(parents=True)
+            usage = row[fields.MESSAGE][fields.USAGE]
+            yield ParserWorld(
+                accounting=accounting,
+                tokens=module.ConsumptionTokens(),
+                projects=projects,
+                window=(start, end),
+                after_rows_window=(stamp + dt.timedelta(seconds=1), end),
+                tokens_per_row=sum(usage[name] for name in accounting.FIELDS),
+            )
+        finally:
+            os.environ.clear()
+            os.environ.update(saved_environment)
+            if saved_module is None:
+                sys.modules.pop(sibling_name, None)
+            else:
+                sys.modules[sibling_name] = saved_module
