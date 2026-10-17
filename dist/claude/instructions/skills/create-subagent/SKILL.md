@@ -44,7 +44,7 @@ ready for independent verification, with native configuration and a declared res
    `profile: executor`, or `profile: fast` according to the governing selection. Let the product build
    emit the complete native configuration. For a product-owned native definition,
    use the selected complete configuration supplied by the loaded standards and examples.
-5. Use skill `instructions:create-skill`. Update the calling skill through it so its
+5. Use skill `instructions:author-skill`. Update the calling skill through it so its
    explicit launch names the configured role and supplies only the target.
 6. Run the product's author command, then apply `/subagent-standards` `<configuration_subject>`
    to identify the authored input and exact emitted definitions, or the directly authored

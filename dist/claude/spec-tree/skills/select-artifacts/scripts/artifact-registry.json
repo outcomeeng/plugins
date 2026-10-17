@@ -249,7 +249,7 @@
               "SKILL.md"
             ]
           },
-          "author": "create-skill",
+          "author": "author-skill",
           "audit": "audit-skill",
           "standard": "skill-standards",
           "contract": "artifact-type"

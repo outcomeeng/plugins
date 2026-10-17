@@ -1,13 +1,13 @@
 ---
-name: create-skill
+name: author-skill
 description: >-
   ALWAYS invoke this skill when creating, editing, or improving SKILL.md files or bundled workflows, references, templates, and scripts; explaining skill patterns; or verifying that skill content is current.
-allowed-tools: Read, Glob, Grep, Edit, Write, Bash, {{! tool('use_skill') !}}, WebFetch, WebSearch
+allowed-tools: Read, Glob, Grep, Edit, Write, Bash, Skill, WebFetch, WebSearch
 ---
 
-{!% require_skill 'instructions:skill-standards' %!}
+Use skill `instructions:skill-standards`.
 
-{!% require_skill 'instructions:agent-prompt-standards' %!}
+Use skill `instructions:agent-prompt-standards`.
 
 <objective>
 A skill-authoring request routed to its matching typed workflow.

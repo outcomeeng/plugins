@@ -3,7 +3,7 @@
 1. Read the role's durable requirements and the owning skill.
 2. Identify the artifact one invocation produces or judges.
 3. Write the smallest wrapper that reaches the skill and preserves its result.
-4. For behavior with no owning skill, Use skill `instructions:create-skill` to create that
+4. For behavior with no owning skill, Use skill `instructions:author-skill` to create that
    skill before placing workflow logic in a wrapper.
 5. Apply `/subagent-standards` and `/agent-prompt-standards` to the complete definition.
 

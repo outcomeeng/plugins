@@ -8,6 +8,10 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 ## 0.22.0
 
+### Breaking
+
+- **`/create-skill` is renamed `/author-skill`.** The skill-authoring skill ships under the one name `author-skill`, so `instructions:create-skill` no longer resolves. Invoke `/author-skill` or `instructions:author-skill` instead; its routes, workflows, references, and templates are unchanged. The spec-tree plugin's `change-skill-author` definition and `/execute-change` name the skill under its new name. Before this change, the skill shipped as `create-skill`, which named its authoring role differently from the `audit-skill` skill that judges its output.
+
 ### Changed
 
 - **`/agent-prompt-standards` names the skill-authoring skill `author-skill` in its repeated-name example.** The structural anti-pattern "Repeating the skill name" now quotes "The author-skill skill is designed to...", the name under which the skill-authoring skill ships, which replaces `create-skill`. Before this change, the example quoted the former name, so a skill that authors against the standard met a name no plugin ships.

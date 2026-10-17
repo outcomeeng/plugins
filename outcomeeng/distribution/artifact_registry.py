@@ -263,7 +263,7 @@ ARTIFACT_KINDS: Final = (
             Artifact(
                 role=ArtifactRole.SKILL,
                 detection=Detection(filenames=(SKILL_FILENAME,)),
-                author="create-skill",
+                author="author-skill",
                 audit="audit-skill",
                 standard="skill-standards",
             ),
