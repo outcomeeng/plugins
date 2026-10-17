@@ -30,7 +30,7 @@ A local overlay supplements skill behavior; it does not declare product truth.
 
 The ADR's shape is owned by the `/understand` foundation's decision template. Load that template through the live foundation before authoring or auditing a Go ADR; this standard never restates its sections, because a restated shape drifts the moment the template advances. The template settles which sections exist and in what order; this standard settles only where Go content goes inside it.
 
-Go architecture rules — DI mandates, mocking prohibitions, goroutine ownership, `unsafe` boundaries — require agent judgment, so they live under `## Verification` `### Audit` with `([audit])`.
+Go architecture rules — DI mandates, mocking prohibitions, goroutine ownership, `unsafe` boundaries — require agent judgment, so they live under `## Verification` `### Audit` with `([audit:{rule-slug}])`, a slug unique within the ADR.
 
 **When an ADR is required:** Every package or boundary that makes architectural decisions -- package layout, interface seams, module choice, concurrency model, DI patterns, persistence boundaries, `unsafe` or cgo boundaries -- requires an ADR. Missing ADRs are violations.
 
