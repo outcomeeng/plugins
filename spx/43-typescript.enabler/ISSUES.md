@@ -98,3 +98,56 @@ classes the auditor will also flag are tracked in `spx/43-instructions.enabler/I
 markdown-heading style — see also "Legacy XML Structure Cleanup" above).
 
 Surfaced by PR #279 (the spec-tree/python/rust Skill-gap sweep).
+
+## Standing skill-audit findings on text the skill rename leaves unchanged
+
+Sealed `skill-auditor` runs over the renamed TypeScript skills rejected each skill on text that the rename (Change 475) neither changes nor invalidates. Each finding below falls on a line outside `git diff -M -U0 origin/main HEAD -- src/plugins/typescript`, and each is recorded once with every run that raised it. Paths are the current skill directories; line numbers are current-head lines, with the run's own line given where it differs. Severity is the run's: `blocking` or `debt`.
+
+### `audit-typescript-test`
+
+- `composed_dependency_form` (blocking): `src/plugins/typescript/skills/audit-typescript-test/SKILL.md:38` names `spec-tree:contextualize` as a bare `/contextualize` mention where the four sibling dependencies use the `require_skill` directive. Run `2026-10-17_00-18-56-089-e4c24f23711f`.
+
+### `typescript-code-standards`
+
+- `caller_coupling` (blocking): `src/plugins/typescript/skills/typescript-code-standards/SKILL.md:18` states what composing skills do with the reference; `:24` requires "another skill" that loads it to check the overlay; `:319` points to `/audit-typescript-code` for false-positive handling. The reference names and constrains its callers. Run `2026-10-17_00-18-43-807-d218f6f62d75`.
+- `composed_dependency_form` (blocking): `src/plugins/typescript/skills/typescript-code-standards/SKILL.md:20` and `:164` depend on `typescript:typescript-test-standards` through a bare `/typescript-test-standards` mention instead of the `Use skill` instruction. Run `2026-10-17_00-18-43-807-d218f6f62d75`.
+
+### `simplify-typescript-code`
+
+- `composed_dependency_form` (blocking): `src/plugins/typescript/skills/simplify-typescript-code/SKILL.md:28`, `:29`, and `:30` invoke `/understand`, `/scope-changeset`, and `/contextualize` by bare slash mention instead of `Use skill` naming `spec-tree:understand`, `spec-tree:scope-changeset`, and `spec-tree:contextualize`. Runs `2026-10-17_00-18-30-775-9d847172c16c` and `2026-10-17_00-24-59-217-b362af15ecb2`.
+
+### `author-typescript-test`
+
+- `duplicated_standards` (debt): `src/plugins/typescript/skills/author-typescript-test/SKILL.md:123-188` (`<literal_reuse_remediation>`) and `:99-101` (Mandatory elements) restate the test-data ownership rules (laundering, shared constant bags, source-owned import versus generator versus inert fixture, valid hardcoded strings) that `src/plugins/typescript/skills/typescript-test-standards/SKILL.md` owns. Run `2026-10-17_00-25-24-767-0aca198a14a6`.
+
+### `author-typescript-architecture`
+
+- `composed_dependency_form` (blocking): `src/plugins/typescript/skills/author-typescript-architecture/SKILL.md:31` (`Invoke spec-tree:contextualize`), `:94` (`See /author`), `:110` (`Read /typescript-architecture-standards`), `:111` (`Invoke /typescript-test-standards`), and `:116` (`Read /author`) name dependencies by mention or by an Invoke, Read, or See verb instead of `Use skill` naming the exact installed skill. Runs `2026-10-17_00-18-28-990-c444ecfdb216` (lines `:30`, `:96`, `:112`, `:113`, `:118`) and `2026-10-17_00-25-21-844-c2bd3f860213`.
+- `objective_criteria_duplication` (debt): `src/plugins/typescript/skills/author-typescript-architecture/SKILL.md:12` (`<objective>`) and `:198` (`<success_criteria>`): the first success criterion restates the objective. Run `2026-10-17_00-18-28-990-c444ecfdb216`.
+- `artifact_language_order` (debt): `src/plugins/typescript/skills/author-typescript-architecture/SKILL.md:5` (frontmatter description, located by the run at line 4): "NEVER author a TypeScript ADR without this skill" names the language before the artifact. Run `2026-10-17_00-18-28-990-c444ecfdb216`.
+- `duplicated_standards` (debt): `src/plugins/typescript/skills/author-typescript-architecture/SKILL.md:18` and `:140-145` (Phase 3) restate the ADR template sections and Verification structure that the authoritative template and `typescript-architecture-standards` own. Run `2026-10-17_00-18-28-990-c444ecfdb216`.
+- `removable_sentence` (debt): `src/plugins/typescript/skills/author-typescript-architecture/SKILL.md:22` repeats the objective and the out-of-scope item at `:157`; `:110` re-reads `typescript-architecture-standards`, which the `require_skill` directive at `:9` already loads. Run `2026-10-17_00-18-28-990-c444ecfdb216`.
+- `reference_toc_missing` (debt): `src/plugins/typescript/skills/author-typescript-architecture/references/typescript-principles.md:1` is a 144-line reference without a table of contents. Runs `2026-10-17_00-18-28-990-c444ecfdb216` and `2026-10-17_00-25-21-844-c2bd3f860213`.
+- `known_content` (debt): `src/plugins/typescript/skills/author-typescript-architecture/references/typescript-principles.md:5-9`, `:11-27`, `:31-34`, `:60-71`, `:104-107`, `:122-127`, and `:129-144` teach general TypeScript and clean-architecture practice (strict mode, `unknown` over `any`, `Readonly`/`Pick`/`Omit`, single responsibility, interface versus type, typed error classes, `execa` array arguments). Runs `2026-10-17_00-18-28-990-c444ecfdb216` (all ranges) and `2026-10-17_00-25-21-844-c2bd3f860213` (`:5-9`, `:31-34`, `:104-107`, `:124-127`).
+
+### `author-typescript-code`
+
+- `composed_dependency_form` (blocking): `src/plugins/typescript/skills/author-typescript-code/SKILL.md:221` (`Use /typescript-test-standards`), `:250` (`Invoke spec-tree:contextualize`), `:261` (`Invoke /contextualize`), and `:283` (`through /verify`); `src/plugins/typescript/skills/author-typescript-code/workflows/implementation.md:22` and `:23` (`invoke /verify`, `/test`, `/typescript-test-standards`); `src/plugins/typescript/skills/author-typescript-code/workflows/remediation.md:34` (`return to /verify`). Each names a dependency by mention or verb instead of `Use skill` naming the exact installed skill. Runs `2026-10-17_00-18-28-505-35c266f7d0f4` (`SKILL.md:250`, `:261`, `:283`; `implementation.md:22`; `remediation.md:34`) and `2026-10-17_00-24-57-654-48f38e0bff56` (`SKILL.md:221`, `:250`, `:261`; `implementation.md:22`, `:23`; `remediation.md:34`).
+- `motivational_prose` (debt): `src/plugins/typescript/skills/author-typescript-code/SKILL.md:289` ("Humility: ... Write code that will survive adversarial review") and `:41` ("These patterns are enforced by the reviewer. Violations will be REJECTED.") urge care instead of stating a constraint. Runs `2026-10-17_00-18-28-505-35c266f7d0f4` (`:289`) and `2026-10-17_00-24-57-654-48f38e0bff56` (`:41`, `:289`).
+- `known_content` (debt): `src/plugins/typescript/skills/author-typescript-code/SKILL.md:165-182` (Discovery Anti-Patterns) and `:320-339` (Never Ignore Type Errors, Never Hardcode Secrets); `src/plugins/typescript/skills/author-typescript-code/workflows/implementation.md:73-160`; `src/plugins/typescript/skills/author-typescript-code/workflows/remediation.md:38-73` teach general TypeScript and security practice. Runs `2026-10-17_00-18-28-505-35c266f7d0f4` (`SKILL.md:167-182`, `:320-339`; `implementation.md:73-160`; `remediation.md:40-63`) and `2026-10-17_00-24-57-654-48f38e0bff56`.
+- `duplicated_standards` (debt): `src/plugins/typescript/skills/author-typescript-code/SKILL.md:43-60`, `:320-327`, and `:341-377` restate the magic-literal, `@ts-ignore`, and deep-relative-import rules that `typescript-code-standards` owns. Run `2026-10-17_00-24-57-654-48f38e0bff56`.
+- `reference_toc_missing` (debt): `src/plugins/typescript/skills/author-typescript-code/references/outcome-engineering-patterns.md:1` (138 lines) and `src/plugins/typescript/skills/author-typescript-code/references/vocabulary-registry-pattern.md:1` (116 lines) open without a table of contents. Runs `2026-10-17_00-18-28-505-35c266f7d0f4` and `2026-10-17_00-24-57-654-48f38e0bff56`.
+
+**Resolution shape**: state each composed dependency as ``Use skill `{plugin}:{skill}`.`` naming the exact installed skill; point to the owning standards skill instead of restating its rules; drop general-knowledge examples and motivational sentences; open each reference over 100 lines with a table of contents; phrase `typescript-code-standards` without naming or constraining the skills that load it.
+
+**Revisit condition**: resolve each file when its skill next changes, since each fix needs a typescript version bump and its own `skill-auditor` gate.
+
+**Evidence**: the sealed runs named per finding, under the audit run store of branch `work/change-475`. Findings on lines the rename changes (`audit-typescript-test/SKILL.md:25`, `author-typescript-architecture/SKILL.md` evidence-routing lines, `author-typescript-code/SKILL.md:219`, `author-typescript-code/workflows/implementation.md:5`, `author-typescript-code/workflows/remediation.md:6`, `simplify-typescript-code/SKILL.md:34`) are not standing and are not recorded.
+
+## `typescript-test-standards` does not cite the test-verification spec or the test-infrastructure PDR
+
+`src/plugins/typescript/skills/typescript-test-standards/SKILL.md` does not cite `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/test-verification.md` or [`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md) by path. The assertion at ordinal 3 of `spx/43-typescript.enabler/typescript.md` declares that the plugin's test standards cite both for the language-neutral seam rules, with the `25-typescript-standards.enabler` subtree declaring only the TypeScript delta. Rule `test-standards-citation-absent`, filed as debt.
+
+**Revisit condition**: resolve when `typescript-test-standards` next changes, since the citation needs a typescript version bump and its own `skill-auditor` gate.
+
+**Evidence**: run `2026-10-17_00-18-22-492-992f79d495fc` (assertion audit of `spx/43-typescript.enabler/typescript.md`, ordinal 3).
