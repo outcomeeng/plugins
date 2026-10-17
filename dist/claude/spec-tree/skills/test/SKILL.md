@@ -18,12 +18,6 @@ Use skill `spec-tree:test-evidence-standards`. If that skill is unavailable, rep
 
 </prerequisites>
 
-<eager_foundation_exception>
-
-This skill applies the eager-foundation exception. Stage 2 selects an execution level for every assertion that needs new test evidence outside decision-rule mode, so the Stage 2 level lookup tables load on every such invocation and stay inline. The conditional detail in `references/` loads only when its own trigger fires. The rendered eager payload stays within the exception's code-point limit.
-
-</eager_foundation_exception>
-
 <shared_standards>
 
 `/test-evidence-standards` authoritatively owns the predicate-seam, semantic-binding, case-provenance, oracle-independence, assertion-type-litmus, mutation litmus, and assertion-design-record rules that test authoring and test auditing both apply. It owns the assertion-type litmus (the reject-condition checks), not assertion-type selection — this skill's routing retains that. Where the inlined methodology below and that shared standard both speak to binding ownership or oracle independence, the shared standard governs.
@@ -194,27 +188,7 @@ For each property, name the product-owned behavior the generator varies and clas
 
 <stage_two>
 
-Choose the level from operational reality:
-
-| Spec promise                                      | Minimum level | Reason                          |
-| ------------------------------------------------- | ------------- | ------------------------------- |
-| Prices are calculated correctly                   | `L1`          | Pure calculation                |
-| User can export data as CSV                       | `L1`          | File I/O with temporary folders |
-| CLI processes a product-specific site             | `L2`          | Product-specific binary         |
-| Database query returns users                      | `L2`          | Real database required          |
-| User completes checkout with a live provider      | `L3`          | Remote provider required        |
-| Browser flow works against the live deployed site | `L3`          | Real browser and remote system  |
-
-| Dependency                        | Minimum level |
-| --------------------------------- | ------------- |
-| None, pure function               | `L1`          |
-| Filesystem with temporary folders | `L1`          |
-| Standard development tools        | `L1`          |
-| Database                          | `L2`          |
-| Product-specific binary           | `L2`          |
-| External HTTP API or browser API  | `L2` or `L3`  |
-| Live third-party service          | `L3`          |
-| Real credentials                  | `L3`          |
+Choose the level from operational reality. Read `${CLAUDE_SKILL_DIR}/references/execution-level-lookup.md` for the minimum level of each spec promise and each dependency.
 
 Test product-owned algorithms, parsers, and rules thoroughly at `L1`. Trust mature library behavior and test product-owned wiring, mappings, invariants, failure handling, and boundaries. Add lower-level evidence when it materially narrows diagnosis. Place confidence where it is achievable: math at `L1`, SQL against a database at `L2`, and live user flows at `L3`.
 

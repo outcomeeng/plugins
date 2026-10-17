@@ -33,3 +33,9 @@ Finding `f-010`, rule `constraint_language`, raised by the configured `skill-aud
 **Settlement condition**: the guidance states the selection rule decidably and ties it to the Stage 1 quantifier test that already owns the classification.
 
 **Why separate from Change #33**: the wording predates this changeset, whose property-boundary rules leave it untouched.
+
+## The test skill body sits ten lines under the progressive-disclosure ceiling
+
+`src/plugins/spec-tree/skills/test/SKILL.md` measures 490 lines against the 500-line budget that `/skill-standards` `<progressive_disclosure>` sets. The two Stage 2 lookup tables live in `src/plugins/spec-tree/skills/test/references/execution-level-lookup.md`, which Stage 2 loads when it runs. No eager-foundation exception is declared: the Stage 2 tables are read only outside decision-rule mode, so they are conditional detail. An inline rule addition of ten or more lines leaves the body at 500 lines or more, which breaches the ceiling.
+
+**Settlement condition**: the body gains headroom beyond the next foreseeable rule addition, by moving a section that not every invocation needs behind a conditional reference, then obtains a consistent configured `skill-auditor` verdict on the committed subject.
