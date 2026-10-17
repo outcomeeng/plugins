@@ -11,6 +11,8 @@ CAN resume the complete intended live set and its unsatisfied operator interacti
 
 ## Assertions
 
+- ALWAYS: recovery selects each prepared agent type's native resume command from the agent tokens the coding-agents agent-token module declares, and the recovery script declares no agent token of its own
+
 ### Scenarios
 
 - Given a recover request that supplies a writable root for a candidate's worktree, when recovery launches that candidate, then the recovered native session's effective permission policy lists that root as writable ([probe](probes/writable-roots/probe.md))
