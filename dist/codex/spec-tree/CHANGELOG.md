@@ -18,6 +18,8 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 - **`/audit-adr` accepts an `### Audit` rule tagged `[audit:{rule-slug}]` and rejects a slug that repeats within the ADR as `invalid-tag`.** The audit still accepts the pathless `[audit]` tag, which the foundation admits for a toolchain without slug support. An ADR written from the shipped template therefore seals with no `invalid-tag` finding on its Audit rules. Before this change, the audit required the pathless `[audit]` tag under `### Audit`, so a record written from the updated template drew an `invalid-tag` rejection.
 
+- **`/audit-pdr` accepts an `### Audit` rule tagged `[audit:{rule-slug}]` and rejects a slug that repeats within the PDR as `invalid-tag`.** The audit still accepts the pathless `[audit]` tag, which the foundation admits for a toolchain without slug support. A PDR written from the shipped template therefore seals with no `invalid-tag` finding on its Audit rules. Before this change, the audit required the pathless `[audit]` tag under `### Audit`, so a record written from the updated template drew an `invalid-tag` rejection.
+
 ## 0.106.12
 
 ### Changed
