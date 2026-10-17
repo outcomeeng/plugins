@@ -2,7 +2,7 @@
 name: recover-prowl-agents
 description: >-
   ALWAYS invoke this skill when preparing for or recovering coding-agent sessions after a Prowl restart. NEVER restart Prowl without a prepared exact-session manifest.
-argument-hint: "<prepare|recover> <absolute-manifest-path>"
+argument-hint: "<prepare|recover> <absolute-manifest-path> [<absolute-writable-roots-path>]"
 allowed-tools: Read, Write, Bash(python3 "${SKILL_DIR}/scripts/recover_agents.py":*), request_user_input
 ---
 
@@ -16,19 +16,20 @@ A durable pre-restart allowlist or an idempotent post-restart recovery in which 
 - Use skill `coding-agents:operate-prowl` for every public Prowl operation.
 - A Prowl-native input-ready prompt for any session whose exact identity or launch context is unavailable from high-confidence public process or agent evidence.
 - One absolute manifest path supplied through `$ARGUMENTS`.
+- For `recover`, an optional absolute path to a JSON file mapping a prepared candidate's absolute worktree path to a list of absolute writable roots.
 
 </dependencies>
 
 <routing>
 
-Parse `$ARGUMENTS` as exactly one mode and one absolute manifest path:
+Parse `$ARGUMENTS` as exactly one mode, one absolute manifest path, and for `recover` alone an optional absolute writable-roots file path:
 
 | Mode      | Workflow                                       |
 | --------- | ---------------------------------------------- |
 | `prepare` | Run `<prepare_workflow>` before Prowl stops.   |
 | `recover` | Run `<recover_workflow>` after Prowl restarts. |
 
-Reject an absent mode, unsupported mode, relative path, extra positional value, or a `recover` path that does not contain a schema-5 `prepared` manifest.
+Reject an absent mode, unsupported mode, relative path, extra positional value, a writable-roots path supplied to `prepare`, or a `recover` manifest path that does not contain a schema-5 `prepared` manifest.
 
 </routing>
 
@@ -86,7 +87,7 @@ Stop preparation when an active session cannot safely reach its native status su
 <recover_workflow>
 
 1. Read the schema-5 `prepared` manifest from the exact absolute path. Never substitute another snapshot, a historical roster, or post-restart inference.
-2. Treat an already resumed controller as a normal prepared candidate. Its post-restart pane UUID may differ; never launch a duplicate controller.
+2. When a writable-roots path is supplied, read it and hold its object unchanged as `writableRoots`; the prepared manifest never records a root. Treat an already resumed controller as a normal prepared candidate. Its post-restart pane UUID may differ; never launch a duplicate controller.
 3. Invoke `/operate-prowl` once for `list` and once for `agents`, then run `activate` with the prepared manifest and checked public arrays.
 4. Read the activation plan exactly:
    - `ready` carries complete existing bindings and no activation.
@@ -94,8 +95,8 @@ Stop preparation when an active session cannot safely reach its native status su
    - `pane-occupied`, `invalid-target`, or `invalid-schema` stops before mutation.
 5. Treat `list` as the instantiated-terminal inventory, not the visible sidebar-worktree inventory. For every `open` action, invoke `/operate-prowl` `open` with the complete prepared worktree path and `mutationAuthorized: true`; the operator's exact `recover` invocation authorizes the visible focus switch and first-tab creation for that prepared path. NEVER enumerate Git worktrees or filesystem directories to invent activation targets. For every `tab-create` action, require the prepared authorized secondary and use the same exact-worktree authorization. Preserve every complete checked result in action order.
 6. Run `bind` with the activation plan and ordered `{originalPaneId, transport}` results. An `open` result passes only with `resolution: exact-root`, an exact returned worktree path, and a complete returned pane; `new-root`, `inside-root`, path mismatch, or missing target stops recovery. Preserve `created_tab` as evidence rather than requiring one value: false can identify an existing exact target and must not trigger an extra pane. Accept only `ready`; every binding preserves one original pane and one distinct Prowl-returned post-restart pane.
-7. Invoke `/operate-prowl` once for `list` and once for `agents`, then run `recover` with the unchanged prepared manifest and exact bindings. Stop on any occupied, missing, duplicate, or mismatched target without partial delivery.
-8. Launch one planned native session at a time. Invoke `/operate-prowl` once for `send` using its complete `paneId`, exact source-owned native command, and immediate-return mode, then require checked transport evidence that a trailing `Enter` was sent. The command contains only the prepared agent type, exact resume locator or session identity, and applicable native home; NEVER append reassessment prose or replace it with a recency selector. Serialize Codex launches sharing one `nativeHome` and wait for the prior Codex TUI to become input-ready before starting the next, preventing shared SQLite initialization locks.
+7. Invoke `/operate-prowl` once for `list` and once for `agents`, then run `recover` with the unchanged prepared manifest and exact bindings, adding `writableRoots` when held. Stop on any occupied, missing, duplicate, or mismatched target, a non-absolute root, or a launching candidate whose agent type accepts no writable-root option while a root is supplied for its worktree, without partial delivery.
+8. Launch one planned native session at a time. Invoke `/operate-prowl` once for `send` using its complete `paneId`, exact source-owned native command, and immediate-return mode, then require checked transport evidence that a trailing `Enter` was sent. The command contains only the prepared agent type, exact resume locator or session identity, applicable native home, and one writable-root option for each root supplied for the candidate's worktree; NEVER append reassessment prose or replace it with a recency selector. Serialize Codex launches sharing one `nativeHome` and wait for the prior Codex TUI to become input-ready before starting the next, preventing shared SQLite initialization locks.
 9. Run `settle` with the exact launch plan and ordered checked transports. Accept only `resumed` or `already-current`; never retry a transport that may have delivered. A transport with no `response.data.input.trailing_enter_sent: true` is not settled.
 10. Wait for each launched native TUI to become input-ready through one bounded stable-screen read. When Claude presents its exact old-session resume-mode prompt, select the recommended `Resume from summary` option with one authorized `Enter`; this preserves the exact native identity while avoiding a full-history reload. Resolve update, trust, authentication, account-selection, or any other usage-affecting dialog only within explicit operator authority; stop that candidate when exact recovery remains unavailable.
 11. Invoke `/operate-prowl` once more for `list` and `agents`. Build exact post-restart `correlationEvidence`: use exact high-confidence public-agent identity where available and `<native_status_protocol>` or process-backed evidence otherwise.
@@ -115,7 +116,7 @@ Every operation takes its JSON input from stdin. Write the input with the file-w
 - `prepare`: `{"items":[],"agents":[],"candidates":[],"correlationEvidence":[]}`, with `--pane <pre-restart-pane-uuid>` repeated per selected pane
 - `activate`: `{"prepared":{},"items":[],"agents":[]}`
 - `bind`: `{"plan":{},"activationResults":[]}`
-- `recover`: `{"prepared":{},"bindings":[],"items":[],"agents":[]}`
+- `recover`: `{"prepared":{},"bindings":[],"items":[],"agents":[],"writableRoots":{}}`, where `writableRoots` is optional and maps an absolute worktree path to its list of absolute roots
 - `settle`: `{"plan":{},"deliveryResults":[]}`
 - `verify`: `{"prepared":{},"bindings":[],"items":[],"agents":[],"correlationEvidence":[]}`
 - `reassess`: `{"prepared":{},"bindings":[],"verification":{},"paneReadResults":[]}`
@@ -134,6 +135,7 @@ python3 "${SKILL_DIR}/scripts/recover_agents.py" <operation> < <input-file>
 - NEVER enumerate worktrees blindly; activation targets only complete worktree paths already preserved by prepared native-session candidates.
 - NEVER type into an occupied mismatched pane, close a pane, launch an unprepared identity, or execute one native session in multiple panes or worktrees.
 - NEVER pass an operation input through a heredoc, a pipe, or an inline argument, and NEVER remove an input file; the harness clears its scratch directory.
+- ALWAYS take writable roots from the recover request, preserve each absolute root verbatim, and record none in the prepared manifest.
 - NEVER start a watcher, polling loop, daemon, background process, or open-ended wait.
 - NEVER plan or send reassessment before every verified pane has one checked context read; one unreadable pane blocks all continuation sends.
 - NEVER combine native launch and reassessment in one send, treat interruption metadata as cancellation, substitute repository completion for an unanswered operator request, treat distinct delivered work as satisfying an unreconciled plan, ask again for existing authority, or silently exit when a pending interaction can be restored.
@@ -142,7 +144,7 @@ python3 "${SKILL_DIR}/scripts/recover_agents.py" <operation> < <input-file>
 
 <testing>
 
-Exercise schema-5 preparation, exact Claude resume locators, applicable Codex homes, lazy activation, checked binding, launch-only native command selection for Claude/Codex/Pi, all-pane context-read barriers, strict launch and reassessment settlement, durable reassessment idempotence, secondary authorization, duplicate rejection, path preservation, external exact correlation evidence, extra-agent rejection, and CLI dispatch through the linked mapping, property, and compliance evidence.
+Exercise schema-5 preparation, exact Claude resume locators, applicable Codex homes, lazy activation, checked binding, launch-only native command selection for Claude/Codex/Pi with supplied writable roots, all-pane context-read barriers, strict launch and reassessment settlement, durable reassessment idempotence, secondary authorization, duplicate rejection, path preservation, external exact correlation evidence, extra-agent rejection, and CLI dispatch through the linked mapping, property, and compliance evidence.
 
 </testing>
 
@@ -179,7 +181,7 @@ Exercise schema-5 preparation, exact Claude resume locators, applicable Codex ho
 <success_criteria>
 
 - Preparation persists one schema-5 candidate per intended exact native session, including exact launch context, with zero unresolved, duplicate, or unauthorized identity; Prowl status never filters the set.
-- Recovery binds every original pane to one distinct post-restart pane in the same worktree and launches only prepared exact native sessions through launch-only sends.
+- Recovery binds every original pane to one distinct post-restart pane in the same worktree and launches only prepared exact native sessions through launch-only sends, each carrying one writable-root option per root the recover request supplies for its worktree.
 - Settlement proves every planned launch and reassessment transport once without caller-supplied delivery claims or retries.
 - Verification reports `verified`, the prepared target count, and empty missing, duplicate, and unexpected agent arrays before reassessment begins.
 - Every verified pane has one checked stable-screen context read before any reassessment delivery is planned or sent; one failed read produces zero continuation sends.

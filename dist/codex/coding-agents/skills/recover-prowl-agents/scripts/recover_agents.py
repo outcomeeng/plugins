@@ -47,6 +47,7 @@ CANDIDATES_FIELD = "candidates"
 CORRELATION_EVIDENCE_FIELD = "correlationEvidence"
 ACTIVATION_RESULTS_FIELD = "activationResults"
 PANE_READ_RESULTS_FIELD = "paneReadResults"
+WRITABLE_ROOTS_FIELD = "writableRoots"
 DELIVERY_RESULTS_FIELD = "deliveryResults"
 PLAN_FIELD = "plan"
 PREPARED_FIELD = "prepared"
@@ -162,6 +163,11 @@ NATIVE_RESUME_PREFIXES: dict[AgentType, tuple[str, ...]] = {
     AgentType.CLAUDE: ("claude", "--resume"),
     AgentType.CODEX: ("codex", "resume"),
     AgentType.PI: ("pi", "--session"),
+}
+
+NATIVE_WRITABLE_ROOT_OPTIONS: dict[AgentType, str] = {
+    AgentType.CLAUDE: "--add-dir",
+    AgentType.CODEX: "--add-dir",
 }
 
 
@@ -966,10 +972,42 @@ def bind_activations(plan: object, result_items: object) -> dict[str, object]:
     }
 
 
-def native_resume_command(candidate: PreparedCandidate) -> str:
+def _writable_roots(value: object) -> dict[str, tuple[str, ...]]:
+    if value is None:
+        return {}
+    roots_by_worktree = _object(value, WRITABLE_ROOTS_FIELD)
+    result: dict[str, tuple[str, ...]] = {}
+    for worktree_path, roots in roots_by_worktree.items():
+        worktree = _absolute_path(worktree_path, f"{WRITABLE_ROOTS_FIELD} worktree")
+        if not isinstance(roots, list):
+            raise AdapterError(
+                ResultStatus.INVALID_SCHEMA,
+                f"Expected an array at {WRITABLE_ROOTS_FIELD}[{worktree!r}].",
+            )
+        result[worktree] = tuple(
+            _absolute_path(root, f"{WRITABLE_ROOTS_FIELD}[{worktree!r}][{index}]")
+            for index, root in enumerate(roots)
+        )
+    return result
+
+
+def native_resume_command(
+    candidate: PreparedCandidate, writable_roots: tuple[str, ...] = ()
+) -> str:
     prefix = NATIVE_RESUME_PREFIXES[candidate.agent_type]
+    if writable_roots and candidate.agent_type not in NATIVE_WRITABLE_ROOT_OPTIONS:
+        raise AdapterError(
+            ResultStatus.INVALID_TARGET,
+            f"The {candidate.agent_type.value} resume command accepts no writable-root "
+            f"option; {candidate.original_pane_id} cannot launch with a supplied root.",
+        )
+    root_arguments = tuple(
+        argument
+        for root in writable_roots
+        for argument in (NATIVE_WRITABLE_ROOT_OPTIONS[candidate.agent_type], root)
+    )
     if candidate.agent_type is AgentType.CLAUDE:
-        return shlex.join((*prefix, candidate.resume_locator))
+        return shlex.join((*prefix, candidate.resume_locator, *root_arguments))
     if candidate.agent_type is AgentType.CODEX and candidate.native_home is not None:
         return shlex.join(
             (
@@ -977,9 +1015,10 @@ def native_resume_command(candidate: PreparedCandidate) -> str:
                 f"CODEX_HOME={candidate.native_home}",
                 *prefix,
                 candidate.session_id,
+                *root_arguments,
             )
         )
-    return shlex.join((*prefix, candidate.session_id))
+    return shlex.join((*prefix, candidate.session_id, *root_arguments))
 
 
 def reassessment_prompt(candidate: PreparedCandidate) -> str:
@@ -995,11 +1034,13 @@ def recover(
     binding_items: object,
     pane_items: list[dict[str, object]],
     agent_items: list[dict[str, object]],
+    writable_root_items: object = None,
 ) -> dict[str, object]:
     candidates = _prepared_candidates(prepared)
     bindings = _validated_bindings(binding_items, candidates)
     panes = _pane_roster(pane_items)
     agents = _agent_roster(agent_items)
+    writable_roots = _writable_roots(writable_root_items)
     candidates_by_original = {
         candidate.original_pane_id: candidate for candidate in candidates
     }
@@ -1043,7 +1084,9 @@ def recover(
                 {
                     ORIGINAL_PANE_ID_FIELD: binding.original_pane_id,
                     PANE_ID_FIELD: binding.pane_id,
-                    TEXT_FIELD: native_resume_command(candidate),
+                    TEXT_FIELD: native_resume_command(
+                        candidate, writable_roots.get(candidate.worktree_path, ())
+                    ),
                 }
             )
     if occupied:
@@ -1407,6 +1450,7 @@ def main(
                 value.get(BINDINGS_FIELD),
                 _array(value.get(ITEMS_FIELD), ITEMS_FIELD),
                 _array(value.get(AGENTS_FIELD), AGENTS_FIELD),
+                value.get(WRITABLE_ROOTS_FIELD),
             )
         elif operation is Operation.SETTLE:
             result = settle_recovery(
