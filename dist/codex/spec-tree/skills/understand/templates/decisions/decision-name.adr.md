@@ -32,7 +32,7 @@ Verified by graded LLM behavior over curated cases — the subject is a skill, a
 
 ### Audit
 
-Verified by an audit skill's judgment against this decision — the subject (a Spec Tree decision, spec, skill, or agent) admits no deterministic test or graded eval.
+Verified by an audit skill's judgment against this decision — the subject (a Spec Tree decision, spec, skill, or agent) admits no deterministic test or graded eval. Each rule's slug is unique within this record.
 
-- ALWAYS: {rule} ([audit])
-- NEVER: {prohibition} ([audit])
+- ALWAYS: {rule} ([audit:{rule-slug}])
+- NEVER: {prohibition} ([audit:{rule-slug}])
