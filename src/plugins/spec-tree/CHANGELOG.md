@@ -10,6 +10,12 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.106.9
+
+### Changed
+
+- **`/apply` and the merge policy bound each repair of a valid finding to the cited clause and record the clause and its closing check.** A valid review or audit finding is a defect class defined by the rule it cites, as the cited standard defines that rule; its examples are instances, never the definition. Each repair fixes every instance the cited clause covers across the touched nodes and changes nothing the clause does not require. The `sameClassScans` entries of the next `VERIFICATION_DISPATCH_READY` record now carry `clause` and `closingCheck` fields, and the gate reads the next Verifier's verdict, never the closing check. Before this change, a same-class scan reached any rule, contract, pattern, step, or boundary the finding resembled, so a repair could change text the clause did not require, and the readiness record named neither the clause applied nor the check showing the class closed.
+
 ## 0.106.8
 
 ### Changed
