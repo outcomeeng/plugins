@@ -11,6 +11,8 @@ CAN use environment capabilities without centralizing workflow ownership or reco
 
 ## Assertions
 
+- ALWAYS: one module in the coding-agents plugin declares the agent tokens `claude`, `codex`, and `pi`, and every coding-agents script that names an agent imports its token from that module
+
 ### Compliance
 
 - ALWAYS: coordination identifies every participating environment, agent, pane or task, worktree, branch, run, and repository with the complete identity value supplied by its authoritative source ([audit])
