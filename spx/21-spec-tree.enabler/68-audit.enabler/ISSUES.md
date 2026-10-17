@@ -336,14 +336,6 @@ The audit side of the divergence between `spec-tree:implementation-auditor` run 
 
 **Settlement condition.** A decision states whether an implementation audit of a shipped executable executes it. The full entry is in `spx/31-outcomeeng.enabler/31-verification.enabler/ISSUES.md`.
 
-## Stage 7 of the implementation audit routes no stale-base exit from the reconciler
-
-**Evidence.** `src/plugins/spec-tree/skills/audit-implementation/SKILL.md` stage 7 routes the reconciler's exits 0, 1 and 2. The reconciler re-resolves the selector through the changeset-scope provider, which exits 3 with a `stale-base` diagnostic when the base advanced during the run. `instructions:skill-auditor` reported the missing route as a warning (`unhandled_command_outcome`) on the registry-selection changeset.
-
-**Impact.** A run whose base moves between `start` and stage 7 has no stated outcome, so the run driver improvises between a blocked diagnostic and a new run.
-
-**Settlement condition.** Stage 7 states that exit 3 returns the blocked diagnostic carrying the reconciler's stale-base stderr, and a test pins the routing.
-
 ## The implementation audit chooses its stdin command form by the kind of caller
 
 **Evidence.** `src/plugins/spec-tree/skills/audit-implementation/SKILL.md` selects the quoted heredoc for interactive sessions and the one-line `printf` pipe for programmatic runners, as [`spx/15-agent-tools.pdr.md`](spx/15-agent-tools.pdr.md) requires of tool guidance. `instructions:skill-auditor` reported the caller-dependent branch as a warning (`caller_independence`) on the registry-selection changeset.
@@ -388,14 +380,6 @@ The audit side of the divergence between `spec-tree:implementation-auditor` run 
 **Impact.** The unit key and the producer shape of that record rest on the skill text and the payload builder alone.
 
 **Settlement condition.** A scenario of this node records the accounting unit for a path the registry selects an artifact-type audit skill for, and asserts the sealed projection carries that kind in the unit key and that skill as its expected producer.
-
-## The verdict format lists three BLOCKED causes while stage 7 routes a fourth
-
-**Evidence.** `instructions:skill-auditor` run `2026-10-08_04-58-52-337-9d7f2e94ea2f` reported, as `debt` (`internal-consistency`) on text the registry-selection changeset left alone, that `<verdict_format>` in `src/plugins/spec-tree/skills/audit-implementation/SKILL.md` returns `BLOCKED` for three causes — target preparation fails, SPX rejects a command, a required unit cannot reach a final status — while stage 7 returns the blocked diagnostic for a reconciler exit 1 that names drifted, unexpected, or nonfinal subjects. The reconciler writes that verdict to stdout, so the diagnostic template's `payloadSource`, `exitCode`, and `stderr` fields have no stated values for the case.
-
-**Impact.** A run driver that reaches stage 7 with a drifted inventory must choose values for fields the skill leaves undefined.
-
-**Settlement condition.** `<verdict_format>` lists every cause the workflow routes to `BLOCKED`, including reconciler drift, and states the diagnostic field values for each.
 
 ## The provenance fields name no source for the plugin and tool versions
 
