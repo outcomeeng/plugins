@@ -20,7 +20,7 @@ CAN stream runs and produce surfaces through one shared, type-agnostic projectio
 ### Mappings
 
 - The rollup projection maps an event prefix's finding severities to the run's overall: any `REJECT` finding maps to a rejected overall; otherwise any `UNKNOWN` finding maps to an unknown overall; otherwise the overall is approved ([test](tests/test_journal_projection.mapping.l1.py))
-- A finding's optional `concern` and `action` map into the finding-reported event data and the rendered line when present (the review kind sets them) and are omitted from both when absent (the audit kind leaves them unset), so the audit shape is unchanged ([test](tests/test_journal_projection.mapping.l1.py))
+- A finding's optional `concern`, `action`, `unit`, and `tracked` map into the finding-reported event data and the rendered line when present (the review kind sets them), `unit` beside the location and `tracked` as the label `TRACKED` after the severity, and are omitted from both when absent (the audit kind leaves them unset), so the audit shape is unchanged ([test](tests/test_journal_projection.mapping.l1.py))
 
 ### Compliance
 
