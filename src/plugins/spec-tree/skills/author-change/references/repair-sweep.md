@@ -33,6 +33,6 @@ One row per site or dependent found:
 | Site | Class or dependent | Disposition |
 | ---- | ------------------ | ----------- |
 
-The disposition is `repaired` with the section changed and, for each repair of a finding, the criterion applied and the check that shows the class closed, or `unresolved` with the reason. The re-audit's verdict, never the recorded check, decides whether the class closed. An edit made to resolve a row is itself an edit, so its own same-class sites and dependents enter the table before the sweep ends.
+The disposition is `repaired` with the section changed and, for each repair of a finding, the criterion applied and the check that shows the class closed, or `unresolved` with the reason. An edit made to resolve a row is itself an edit, so its own same-class sites and dependents enter the table before the sweep ends.
 
 </sweep_table>

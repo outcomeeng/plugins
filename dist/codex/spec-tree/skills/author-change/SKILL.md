@@ -74,13 +74,13 @@ For an existing Change, read its complete current body, each field from its stor
 
 A claim held by another holder blocks takeover. Terminal Lifecycle blocks ordinary resumption. A split creates children as the Sliced workflow states, and a merge closes the absorbed Change `Abandoned` and appends it to the survivor's `predecessors`. A published record in another form — a body that opens with `# Output`, or one that carries `## Nodes`, `## Assertion operations`, `## Decisions`, `## Mutations`, `## Activities`, or `## Artifacts` — takes the final format at this revision under `compatibility-boundary`: author the new record from the proposal it carries, and never convert the old body in place. Reconcile an existing local candidate with the store representation before overwriting either.
 
-Maturity moves backward through this skill only for a reframe, which lowers it to `Proposed` under `maturity-and-authority`, or for a reopened judgment, which lowers it to the Maturity whose Definition of Ready the judgment makes false. This skill writes no rejection lowering: a rejection at `Framed` or `Sliced` lowers Maturity one level, written by whoever rejects before the Lifecycle move out of `Submitted`, so a revision after a rejection finds `Maturity` already lowered and reads authority at that lowered Maturity. A rejection is an instruction naming what to fix, and no rejection record exists. The order `maturity-and-authority` states is the holder's release first, the rejecting Maturity lowering second, the rejecting move out of `Submitted` third, and further refinement only after a session claims the Change again. A rejection at `Proposed` leaves the Change `Submitted` and lowers nothing; it means not now.
+Maturity moves backward through this skill only for a reframe, which lowers it to `Proposed` under `maturity-and-authority`, or for a reopened judgment, which lowers it to the Maturity whose Definition of Ready the judgment makes false. This skill writes no rejection lowering; `maturity-and-authority` states who writes it, its order, and what a rejection means at each Maturity, and a revision reads the `Maturity` the store holds.
 
 </revision_safety>
 
 <authority_gate>
 
-Maturity advances past `Proposed`, `Framed`, and `Sliced` only when the store shows the Product's Maintainer's move of the Change out of `Submitted` at the Maturity it leaves. A new Change is persisted at `Proposed`; a drafting or execution request supplies no authority.
+Maturity advances past `Proposed`, `Framed`, and `Sliced` only on the authority `maturity-and-authority` states. A new Change is persisted at `Proposed`; a drafting or execution request supplies no authority.
 
 Use skill `spec-tree:change-standards`. Invoke it with `Lifecycle`, which `<persistence>` also loads. Read the authority for the Maturity the Change currently holds under `authority-read`, and report each authority found with its actor and time. When the store shows none, stop with `authority-required`, naming that Maturity and the move the store lacks. Leave the candidate and the store record unchanged. A body line never stands in for the move.
 
@@ -144,7 +144,7 @@ Use skill `spec-tree:release-change`. Invoke it only when this session holds the
 
 - `spec-tree:change-standards`: common record contract plus exactly one cumulative Definition of Ready, or the Lifecycle store rules.
 - `${SKILL_DIR}/templates/`: one store-independent seven-key, final-format record template per Maturity — `proposed.md`, `framed.md`, `sliced.md`, `executable.md`.
-- `${SKILL_DIR}/references/repair-sweep.md`: the sweep table of one repair batch and the retained-findings comparison.
+- `${SKILL_DIR}/references/repair-sweep.md`: the sweep table of one repair batch.
 
 </reference_index>
 
