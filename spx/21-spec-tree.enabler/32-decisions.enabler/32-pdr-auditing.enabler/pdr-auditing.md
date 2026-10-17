@@ -17,7 +17,7 @@ Evidence requires five properties checked in order:
 
 1. **Content classification** — every statement is about observable product behavior for the product's declared audience, not architecture or implementation
 2. **Property quality** — product properties are user-observable and falsifiable
-3. **Declaration form and tag validity** — specific untagged rules directly under `## Verification` are valid authoring declarations; each rule in a routed subsection carries a valid tag, and a `### Testing` rule's assertion type fits the claim's quantifier
+3. **Declaration form and tag validity** — specific untagged rules directly under `## Verification` are valid authoring declarations; each rule in a routed subsection carries a valid tag — a `### Audit` rule carries `[audit:{rule-slug}]` with a slug unique within the PDR, or the pathless `[audit]` that the foundation admits for a toolchain without slug support — and a `### Testing` rule's assertion type fits the claim's quantifier
 4. **Atemporal voice** — the PDR states product truth, not history
 5. **Consistency** — the PDR does not contradict the product spec or ancestor PDRs
 
@@ -65,6 +65,7 @@ The distinction: "Sessions expire after 1 hour" is product behavior (PDR). "Sess
 - ALWAYS: check content classification as the first audit phase — a PDR full of architecture content fails regardless of other properties ([audit])
 - ALWAYS: verify product properties are observable from the user's perspective, not from the implementation's perspective ([audit])
 - ALWAYS: verify each `### Testing` rule's assertion type fits the claim's quantifier per the `/test` router — a universal is never `scenario`; reject a type the router would not produce, without relitigating a choice the router leaves open ([audit])
+- ALWAYS: accept an `### Audit` rule tagged `[audit:{rule-slug}]` whose slug is unique within the PDR, or tagged with the pathless `[audit]` that the foundation admits for a toolchain without slug support, and reject a slug that repeats within the PDR as `invalid-tag` ([audit])
 - ALWAYS: compare the PDR against the product spec and ancestor PDRs; a contradiction with either is a consistency violation ([audit])
 - NEVER: approve temporal language in any section — Decision, Rationale, Product properties, Verification all state product truth ([audit])
 - ALWAYS: the PDR auditor rejects only on touched text under [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md), returns each other finding as `filed`, and approves when no touched finding exists ([audit])
