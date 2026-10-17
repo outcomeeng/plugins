@@ -11,6 +11,7 @@ pass every thirty minutes.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import datetime as dt
 import importlib
 import json
@@ -20,7 +21,7 @@ import sqlite3
 import subprocess
 import sys
 import time
-from collections.abc import Callable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
@@ -239,6 +240,39 @@ class SubprocessRunner:
         return CommandResult(completed.returncode, completed.stdout, completed.stderr)
 
 
+_SCOPE_DEPTH = 0
+
+
+def _is_sibling_script(module: object) -> bool:
+    origin = getattr(module, "__file__", None)
+    return origin is not None and SKILLS_ROOT in Path(origin).parents
+
+
+@contextlib.contextmanager
+def sibling_scope() -> Iterator[None]:
+    """Leave `sys.modules` as the operation found it, sharing sibling loads inside.
+
+    Within the scope a sibling imported once stays registered, so every load of one
+    pass sees the same module state. When the outermost scope ends, the names the
+    scope added for sibling scripts are removed and each registration it replaced
+    is put back.
+    """
+    global _SCOPE_DEPTH
+    before = dict(sys.modules) if _SCOPE_DEPTH == 0 else None
+    _SCOPE_DEPTH += 1
+    try:
+        yield
+    finally:
+        _SCOPE_DEPTH -= 1
+        if before is not None:
+            for name in set(sys.modules) - set(before):
+                if _is_sibling_script(sys.modules[name]):
+                    del sys.modules[name]
+            for name, previous in before.items():
+                if sys.modules.get(name) is not previous:
+                    sys.modules[name] = previous
+
+
 def load_sibling(skill: str, module_name: str) -> ModuleType:
     """Import a script of a sibling skill of this plugin by a `__file__`-relative path."""
     directory = SKILLS_ROOT / skill / "scripts"
@@ -268,6 +302,12 @@ class ConsumptionTokens:
         self, worktree: str, start: dt.datetime, end: dt.datetime
     ) -> TokenReading:
         """Measure the worktree; a readable source without its session is distinct."""
+        with sibling_scope():
+            return self._reading(worktree, start, end)
+
+    def _reading(
+        self, worktree: str, start: dt.datetime, end: dt.datetime
+    ) -> TokenReading:
         try:
             accounting = load_sibling(*TOKEN_ACCOUNTING)
             config = accounting.Config.from_environment(
@@ -311,7 +351,8 @@ def token_step_seconds() -> float:
     the pass. A sibling that cannot be read measures nothing and returns at once.
     """
     try:
-        deadline = load_sibling(*TOKEN_ACCOUNTING).MAX_SECONDS
+        with sibling_scope():
+            deadline = load_sibling(*TOKEN_ACCOUNTING).MAX_SECONDS
         return float(TOKEN_STEP_DEADLINES * deadline + TOKEN_LOCK_SECONDS)
     except (
         OSError,
@@ -841,13 +882,14 @@ class ControlPass:
 def run_pass(path: Path, collaborators: Collaborators) -> PassResult:
     """Run one finite pass with the configuration at `path`."""
     settings = load_settings(path)
-    adapter = load_sibling(*PROWL_ADAPTER)
-    token_reserve = token_step_seconds()
-    budget = Budget(collaborators.clock, collaborators.clock())
-    prowl = ProwlClient(adapter, collaborators.runner, budget)
-    collaborators.data_root.mkdir(parents=True, exist_ok=True)
-    state = load_state(collaborators.data_root)
-    return ControlPass(settings, collaborators, prowl, state, token_reserve).run()
+    with sibling_scope():
+        adapter = load_sibling(*PROWL_ADAPTER)
+        token_reserve = token_step_seconds()
+        budget = Budget(collaborators.clock, collaborators.clock())
+        prowl = ProwlClient(adapter, collaborators.runner, budget)
+        collaborators.data_root.mkdir(parents=True, exist_ok=True)
+        state = load_state(collaborators.data_root)
+        return ControlPass(settings, collaborators, prowl, state, token_reserve).run()
 
 
 def schedule(
@@ -865,7 +907,8 @@ def schedule(
 
 
 def default_collaborators() -> Collaborators:
-    data_root = load_sibling(*TOKEN_ACCOUNTING).DEFAULT_ROOT
+    with sibling_scope():
+        data_root = load_sibling(*TOKEN_ACCOUNTING).DEFAULT_ROOT
     return Collaborators(
         runner=SubprocessRunner(),
         tokens=ConsumptionTokens(),

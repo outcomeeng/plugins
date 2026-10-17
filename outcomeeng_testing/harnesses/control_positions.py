@@ -35,11 +35,12 @@ import os
 import plistlib
 import sys
 from collections.abc import Iterator, Mapping, Sequence
-from contextlib import contextmanager
+from contextlib import contextmanager, redirect_stdout
 from dataclasses import dataclass, field, replace
+from io import StringIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from types import ModuleType
+from types import ModuleType, SimpleNamespace
 from typing import Any
 
 from outcomeeng_testing.generators.control_positions import (
@@ -519,11 +520,18 @@ def run_passes(
                 records_directory.chmod(READ_ONLY_MODE)
             try:
                 if via_main:
-                    exit_code = module.main(
-                        ["pass"],
-                        environ={"XDG_CONFIG_HOME": str(config_home)},
-                        collaborators=collaborators,
+                    printed = StringIO()
+                    with redirect_stdout(printed):
+                        exit_code = module.main(
+                            ["pass"],
+                            environ={"XDG_CONFIG_HOME": str(config_home)},
+                            collaborators=collaborators,
+                        )
+                    document = json.loads(printed.getvalue())
+                    reports = tuple(
+                        SimpleNamespace(**report) for report in document["reports"]
                     )
+                    unfinished = tuple(document["unfinished"])
                 else:
                     result = module.run_pass(config_path, collaborators)
                     reports = tuple(result.reports)
