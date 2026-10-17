@@ -8,6 +8,7 @@ CAN preserve enforceable restrictions while surfacing unsupported source semanti
 
 - ALWAYS: converted-agent manual-review guidance names only capabilities present in the rendered source-tool set; a target-absent capability never reappears as guidance.
 - ALWAYS: a generated Codex implementation auditor composes every installed concern skill selected for its changed files through the `Use skill` instruction, without searching for a dedicated skill-invocation tool.
+- ALWAYS: Codex enforces no denial of launching a subagent or of asking the operator, so a source agent that denies either declares the denial for Claude Code alone, its Codex artifact carries neither a restriction nor guidance that presents the denial as enforced, and the attested observation of the deployed Codex child is the evidence that the child keeps within the denial.
 
 ### Mappings
 
