@@ -22,6 +22,16 @@ an expression that reads a value, and a field bound to an interpolation
 placeholder, are no configuration assignment; every other binding, an unquoted
 value included, is an authored assignment.
 
+The agent tokens `claude`, `codex`, and `pi` have one owner, a module in the
+coding-agents plugin; the toolchain loads that module by path, and no toolchain
+module declares an agent token. The build's target registry takes every target's
+value from that owner: it selects the owner's tokens that are generated-output
+targets, `claude` and `codex`, and spells no token itself. The build renders the
+owner's agent tokens into a data file beside each spec-tree script that reads
+them, because a shipped spec-tree script imports nothing from another plugin's
+files, as [`spx/13-plugin-and-runtime-conventions.adr.md`](spx/13-plugin-and-runtime-conventions.adr.md)
+states.
+
 ## Rationale
 
 A single source plus committed `dist/` beats execution-time injection: Codex resolves bundled files through `${SKILL_DIR}` rather than `${CLAUDE_SKILL_DIR}`, so cross-skill sharing must either duplicate at the source, bake at build time, or be replaced by an "invoke this skill" instruction — build-time bake-out keeps one authored source while emitting deterministic outputs both coding agents consume natively. Jinja2 over a custom regex preprocessor because the build does fan-out, conditional frontmatter, path rewriting, and reference-tree copying that custom tooling grows into "Jinja2 but worse". Custom delimiters because standard `{% %}` collides with skill content that teaches templating. Committed `dist/` over CI-only generation because consumers install directly from HEAD and neither coding agent runs a build at install time. Build-time fan-out over execution-time `!`cat`` injection because injection inlines a multi-hundred-line file per invocation and multiplies token cost. A target list on an agent source keeps a definition off a target where its native loading and result are unobserved: shipping it there installs a launchable role no evidence stands behind, while the source stays single and the other targets keep their artifact.
@@ -37,6 +47,18 @@ owner. The supported harness schemas bound the design; no standalone skill mode,
 product-local profile extension, unknown-value pass-through, or compatibility
 fallback participates in resolution.
 
+An agent token has one declaration because a second one drifts from the first:
+a recovery script, an instruction-block writer, and a build target table that
+each spell `claude` and `codex` disagree the moment one agent is added or
+renamed. The coding-agents plugin owns the tokens because it owns the agents the
+tokens name. The build already takes every plugin's authored source under
+`src/plugins/` as its input, so loading one module of that source by path adds
+no relation between the build and the coding-agents plugin that the build does
+not already have. A spec-tree script cannot import that module, because a
+plugin's runtime relies only on its own installed tree; the build, which reads
+the owner, renders its tokens into a data file beside the script, so the
+script's copy is a rendering of the declaration and never a second declaration.
+
 ## Verification
 
 ### Testing
@@ -49,6 +71,7 @@ fallback participates in resolution.
 
 ### Audit
 
+- ALWAYS: the build derives its targets from the coding-agents agent-token module and renders its tokens beside each spec-tree script that reads them; no toolchain module and no authored spec-tree script declares an agent token ([audit])
 - ALWAYS: define each model identifier once in the Python configuration owner;
   profiles reference that identity and keep each harness's complete native
   settings together, with distinct harness-specific types for reasoning controls
