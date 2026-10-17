@@ -102,10 +102,13 @@ class Finding:
     """One finding in a verification run's results.
 
     ``line`` is ``None`` for a whole-file finding. ``identifier``, ``concern``,
-    and ``action`` are optional review-kind fields: the review kind populates
-    them so the finding event carries the full review finding for downstream
-    surfaces and the cross-run fold; the audit kind leaves them ``None`` and
-    the projection omits them, so audit events and surfaces are unchanged.
+    ``action``, ``unit``, and ``tracked`` are optional review-kind fields: the
+    review kind populates them so the finding event carries the full review
+    finding for downstream surfaces and the cross-run fold; ``unit`` is the
+    label of the unit that encloses the finding, and ``tracked`` marks a
+    finding the governing node's ``ISSUES.md`` records. The audit kind leaves
+    them ``None`` and the projection omits them, so audit events and surfaces
+    are unchanged.
     """
 
     file: str
@@ -116,6 +119,8 @@ class Finding:
     identifier: str | None = None
     concern: str | None = None
     action: str | None = None
+    unit: str | None = None
+    tracked: bool | None = None
 
 
 @dataclass(frozen=True)
@@ -337,9 +342,9 @@ def scope_advanced_event(unit: str, *, now: str, attempt: int = 1) -> dict:
 def finding_reported_event(finding: Finding, *, now: str, attempt: int = 1) -> dict:
     """Build a finding-reported event for one raised finding.
 
-    ``concern`` and ``action`` are carried only when the finding sets them
-    (the review kind); the audit kind leaves them ``None`` and they are
-    omitted, so the audit event shape is unchanged.
+    ``concern``, ``action``, ``unit``, and ``tracked`` are carried only when
+    the finding sets them (the review kind); the audit kind leaves them
+    ``None`` and they are omitted, so the audit event shape is unchanged.
     """
     data: dict[str, object] = {
         "file": finding.file,
@@ -354,6 +359,10 @@ def finding_reported_event(finding: Finding, *, now: str, attempt: int = 1) -> d
         data["concern"] = finding.concern
     if finding.action is not None:
         data["action"] = finding.action
+    if finding.unit is not None:
+        data["unit"] = finding.unit
+    if finding.tracked is not None:
+        data["tracked"] = finding.tracked
     return _event(FINDING_REPORTED, data, now=now, attempt=attempt)
 
 
@@ -481,9 +490,17 @@ def render_surface(events: list[dict]) -> str:
             line_no = data.get("line")
             if line_no is not None:
                 location = f"{location}:{line_no}"
+            unit = data.get("unit")
+            if unit is not None:
+                location = f"{location} ({unit})"
             severity = data.get("severity", "")
+            labels = [severity]
+            if data.get("tracked") is True:
+                labels.append("TRACKED")
             concern = data.get("concern")
-            label = f"{severity} {concern}" if concern is not None else severity
+            if concern is not None:
+                labels.append(concern)
+            label = " ".join(labels)
             line = f"- [{label}] {location} — {data.get('message', '')}"
             action = data.get("action")
             if action is not None:

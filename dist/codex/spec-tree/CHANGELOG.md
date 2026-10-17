@@ -34,6 +34,12 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 - **`/audit-tests` and `/audit-eval-evidence` skip an assertion tagged `[audit:{rule-slug}]` or the pathless `[audit]`.** An assertion written from the shipped templates carries the slug tag, and the foundation admits the pathless tag for a toolchain without slug support, so each audit leaves either to its own verification lane. Before this change, both named only the bare `[audit]` tag.
 
+## 0.106.14
+
+### Changed
+
+- **The run-journal projection carries a finding's `unit` and `tracked` fields into the finding event and the rendered line.** A finding that sets `unit`, the label of the unit enclosing it, gains a `unit` entry in its finding-reported event and shows the unit in parentheses after its location, and a finding that sets `tracked` gains a `tracked` entry and shows the label `TRACKED` after its severity, as in `[warning TRACKED consistency] path/to/file:42 (unit) — message`. `TRACKED` stands beside the severity and is no third severity, so the rollup, the severity counts, and `render_review_run.py`'s `Findings` line read a tracked finding as before. A finding that sets neither field produces the event and the line it produced before, so audit events and surfaces are unchanged. Before this change, the projection dropped both fields, so a review could not mark a finding that the governing node's `ISSUES.md` records.
+
 ## 0.106.12
 
 ### Changed
