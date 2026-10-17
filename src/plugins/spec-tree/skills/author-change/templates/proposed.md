@@ -21,9 +21,9 @@ parent: null
 
 ## Governance
 
-<!-- A Leaf lists every record that governs the Change or that the Output touches. -->
+<!-- A Leaf lists every record the Output touches or that governs it, by its path from `spx/`, each with the verdict `in line`, `amended`, or `new`. -->
 
-- `spx/[path of the governing record]`: [in line, amended, or new]
+- `spx/[path of the record]`: [in line, amended, or new]
 
 ## Governance mutations
 

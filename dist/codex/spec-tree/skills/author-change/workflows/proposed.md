@@ -20,7 +20,7 @@ Use skill `spec-tree:change-standards`. Invoke it with `Proposed`; it loads the 
 
 - One Proposed record satisfies every Proposed criterion and reaches `<audit_gate>` as the stabilized local candidate.
 - The Intent states What, Why, and Evidence within the `record-limits` limit, and a raw submission's received text stays out of the record.
-- `## Governance`, `## Governance mutations`, and `## Spec mutations` name every record and Node the Output touches and hold the exact text of every decision it adds or amends.
+- `## Governance` lists every record the Output touches or that governs it, `## Spec mutations` names every Node the Output touches, and `## Governance mutations` holds the exact text of every decision the Output adds or amends.
 - Lineage, `parent`, and blockers are complete in front matter and absent from body restatements.
 - Open consequential questions remain explicit under `## Open questions` without invented answers.
 
