@@ -12,6 +12,8 @@ CAN project the sealed journal into the surface they own without duplicating rev
 
 ## Assertions
 
+- ALWAYS: the `review-changes` skill writes each finding payload with the file-write tool to a file in the scratch directory the harness names for the session, copying that directory into the finding path character for character; when the file-write result reports a path the scratch directory does not contain by whole path components, it stops before `append-finding`, naming the reported path; it passes `append-finding` the path exactly as the file-write result reports it, written out literally; and when `append-finding` exits nonzero with a diagnostic that names the finding file absent, it runs `append-finding` once more with the path copied from the file-write result and, on a second failure, stops and reports the exit, the stderr and the run token; no finding path is retyped from memory
+
 ### Scenarios
 
 - Given `SPX_VERIFY_BASE_REF` set in the environment, `review_run.py start` uses that scope, computes the review-input bundle, opens the review journal, appends the scope-entered event, and returns run state including `runToken`, `statePath`, `diffPath`, `manifestPath`, and `changedFiles` ([test](tests/test_skill_orchestration.scenario.l2.py))
