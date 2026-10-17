@@ -412,6 +412,17 @@ class PassObservation:
     elapsed_seconds: float
 
 
+def pass_time(start_time: dt.datetime, index: int) -> dt.datetime:
+    """The time of pass `index` when the first pass runs at `start_time`."""
+    return start_time + index * PASS_INTERVAL
+
+
+def pass_window(start_time: dt.datetime, index: int) -> tuple[dt.datetime, dt.datetime]:
+    """The span one pass measures: the pass interval ending at the pass time."""
+    end = pass_time(start_time, index)
+    return end - PASS_INTERVAL, end
+
+
 def run_passes(
     module: ModuleType,
     config: ConfigSpec,
@@ -423,8 +434,12 @@ def run_passes(
     via_main: bool = False,
     token_seconds: float = 0.0,
     token_source: Any | None = None,
+    start_time: dt.datetime = BASE_TIME,
 ) -> list[PassObservation]:
     """Run one pass per step against one persistent configuration and data root.
+
+    Pass `index` runs at `pass_time(start_time, index)`; `start_time` defaults to
+    `BASE_TIME`.
 
     `leading_seconds` and `hangs` shape the fake clock of every pass (see
     `FakeClock`); a hung command's applied timeout is the optional keyword
@@ -448,7 +463,7 @@ def run_passes(
             if step.config is not None:
                 current = step.config
             config_path.write_text(render_config(module, current), encoding="utf-8")
-            now = BASE_TIME + index * PASS_INTERVAL
+            now = pass_time(start_time, index)
             clock = FakeClock(
                 seconds_per_command,
                 leading_seconds
@@ -589,7 +604,16 @@ class ParserWorld:
     window: tuple[dt.datetime, dt.datetime]
     after_rows_window: tuple[dt.datetime, dt.datetime]
     tokens_per_row: int
+    stamp: dt.datetime
     appended: int = 0
+
+    def start_time_for(self, index: int) -> dt.datetime:
+        """The first-pass time that puts the fixture row inside pass `index`'s window.
+
+        Pass `index` runs one second after the row's stamp, so the pass is at or
+        after the reset anchor and its window holds the row.
+        """
+        return self.stamp + dt.timedelta(seconds=1) - index * PASS_INTERVAL
 
     def add_transcript_row(self, worktree: str) -> None:
         """Append one captured assistant row whose workspace is `worktree`."""
@@ -641,6 +665,7 @@ def real_parser_world(module: ModuleType) -> Iterator[ParserWorld]:
                 window=(start, end),
                 after_rows_window=(stamp + dt.timedelta(seconds=1), end),
                 tokens_per_row=sum(usage[name] for name in accounting.FIELDS),
+                stamp=stamp,
             )
         finally:
             os.environ.clear()

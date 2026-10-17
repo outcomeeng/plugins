@@ -140,10 +140,42 @@ class CommandRunner(Protocol):
     ) -> CommandOutcome: ...
 
 
+class TokenState(StrEnum):
+    MEASURED = "measured"
+    NO_SESSION = "no-session"
+    UNMEASURED = "unmeasured"
+
+
+@dataclass(frozen=True)
+class TokenReading:
+    """One token measurement: a spend, a readable source with no session, or none."""
+
+    state: TokenState
+    spend: int | None = None
+
+
 class TokenSource(Protocol):
     def tokens(
         self, worktree: str, start: dt.datetime, end: dt.datetime
     ) -> int | None: ...
+
+
+def read_tokens(
+    source: TokenSource, worktree: str, start: dt.datetime, end: dt.datetime
+) -> TokenReading:
+    """Read a source's tokens, using its richer `reading` when it offers one.
+
+    A source that offers only `tokens` answers a spend or nothing; nothing is an
+    unmeasured pace, since that interface cannot say a readable source holds no
+    session for the worktree.
+    """
+    reading = getattr(source, "reading", None)
+    if callable(reading):
+        return reading(worktree, start, end)
+    spend = source.tokens(worktree, start, end)
+    if spend is None:
+        return TokenReading(TokenState.UNMEASURED)
+    return TokenReading(TokenState.MEASURED, spend)
 
 
 @dataclass(frozen=True)
@@ -208,6 +240,12 @@ class ConsumptionTokens:
     """Token source: the consumption-control accounting, keyed by the pane's worktree."""
 
     def tokens(self, worktree: str, start: dt.datetime, end: dt.datetime) -> int | None:
+        return self.reading(worktree, start, end).spend
+
+    def reading(
+        self, worktree: str, start: dt.datetime, end: dt.datetime
+    ) -> TokenReading:
+        """Measure the worktree; a readable source without its session is distinct."""
         try:
             accounting = load_sibling(*TOKEN_ACCOUNTING)
             config = accounting.Config.from_environment(
@@ -220,8 +258,9 @@ class ConsumptionTokens:
                 worktree
             )
             if group is None:
-                return None
-            return int(sum(group[key] for key in accounting.TOKEN_KEYS))
+                return TokenReading(TokenState.NO_SESSION)
+            spend = int(sum(group[key] for key in accounting.TOKEN_KEYS))
+            return TokenReading(TokenState.MEASURED, spend)
         except (
             FileNotFoundError,
             OSError,
@@ -231,7 +270,7 @@ class ConsumptionTokens:
             KeyError,
             TypeError,
         ):
-            return None
+            return TokenReading(TokenState.UNMEASURED)
 
 
 class PassBound(Exception):
@@ -368,6 +407,7 @@ class Measurement:
     spend: int | None
     share: float | None
     skipped: str = ""
+    no_session: bool = False
 
     @property
     def ratio(self) -> float | None:
@@ -492,11 +532,17 @@ class ControlPass:
             known = self.weekly.get(position.subscription, 0.0)
             self.weekly[position.subscription] = max(known, screen.weekly_used)
         spend: int | None = None
+        no_session = False
         reason = ""
         if self.prowl.budget.left() >= TOKEN_STEP_SECONDS:
-            spend = self.collaborators.tokens.tokens(
-                position.worktree, self.window_start, self.window_end
+            reading = read_tokens(
+                self.collaborators.tokens,
+                position.worktree,
+                self.window_start,
+                self.window_end,
             )
+            spend = reading.spend
+            no_session = reading.state is TokenState.NO_SESSION
         else:
             reason = (
                 " The token measurement was skipped because its longest duration "
@@ -505,14 +551,14 @@ class ControlPass:
         pace = self.settings.pace.get(position.subscription)
         count = self.members[position.subscription]
         share = None if pace is None else pace / count
-        return Measurement(screen, spend, share, reason)
+        return Measurement(screen, spend, share, reason, no_session)
 
     def _handle(self, target: Target) -> None:
         position = target.position
         worktree = position.worktree
         measurement = self._measure(target)
         ratio = measurement.ratio
-        if ratio is None and worktree not in self.state.paused:
+        if ratio is None and worktree not in self.state.paused:  # paused: see resume
             self._report(
                 ReportKind.UNMEASURED_PACE,
                 worktree,
@@ -531,22 +577,42 @@ class ControlPass:
         self._compact(target, measurement)
 
     def _resume_if_under_share(self, target: Target, measurement: Measurement) -> None:
+        worktree = target.position.worktree
         ratio = measurement.ratio
+        share = measurement.share
+        idle = measurement.no_session and bool(share)
+        if ratio is None and not idle:
+            self._report(
+                ReportKind.UNMEASURED_PACE,
+                worktree,
+                "No token measurement or pace is available for this paused "
+                "position, so nothing shows its spend is back under its share; it "
+                "stays paused." + measurement.skipped,
+            )
+            return
         if ratio is not None and ratio >= 1:
             return
-        worktree = target.position.worktree
         if not self._act(self.prowl.send(target.pane, CONTINUE_TEXT), worktree):
             return
         self.state.paused.discard(worktree)
         self.state.streaks[worktree] = 0
-        spend = measurement.spend
-        share = measurement.share
+        if ratio is None:
+            self._record(
+                Action.RESUME,
+                worktree,
+                "no session of the position in the last pass window",
+                "spend back under the position's share",
+                f"The position {worktree} made no requests while paused: the "
+                "consumption-control accounting is readable and holds no session "
+                "for it over the last pass, so its spend is zero and under its "
+                "share, and it received `continue` and resumes.",
+            )
+            return
         self._record(
             Action.RESUME,
             worktree,
-            "no tokens measured since the pause"
-            if spend is None or share is None
-            else f"{spend} tokens over the last pass against a share of {share:g}",
+            f"{measurement.spend} tokens over the last pass against a share of "
+            f"{share:g}",
             "spend back under the position's share",
             f"The position {worktree} spent less than its share of the "
             f"subscription's pace over the last pass, so it received `continue` "

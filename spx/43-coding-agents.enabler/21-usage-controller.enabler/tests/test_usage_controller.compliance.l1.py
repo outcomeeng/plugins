@@ -40,6 +40,7 @@ from outcomeeng_testing.harnesses.control_positions import (
     PassStep,
     changed_sibling_api,
     load_control_positions,
+    pass_window,
     token_measurement_limit_seconds,
     real_parser_world,
     run_passes,
@@ -794,14 +795,16 @@ def test_resume_without_a_session_in_the_window_states_its_true_basis() -> None:
 
     with real_parser_world(module) as world:
         world.add_transcript_row(other.worktree)
-        assert (
-            world.tokens.tokens(other.worktree, *world.window) == world.tokens_per_row
-        )
-        assert world.tokens.tokens(position.worktree, *world.window) is None
         no_session = PassStep(token_source=module.ConsumptionTokens())
+        steps = [heavy, heavy, no_session]
+        measuring_pass = len(steps) - 1
+        start_time = world.start_time_for(measuring_pass)
+        window = pass_window(start_time, measuring_pass)
+        assert world.tokens.tokens(other.worktree, *window) == world.tokens_per_row
+        assert world.tokens.tokens(position.worktree, *window) is None
 
         _, second, unmeasured_pass = run_passes(
-            module, config, [heavy, heavy, no_session]
+            module, config, steps, start_time=start_time
         )
 
     (unmeasured,) = resumes(unmeasured_pass)
