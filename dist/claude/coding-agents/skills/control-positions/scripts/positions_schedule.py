@@ -17,6 +17,8 @@ SECONDS_PER_MINUTE: Final = 60
 DARWIN_PLATFORM: Final = "darwin"
 LAUNCHCTL: Final = "launchctl"
 PLIST_SUFFIX: Final = ".plist"
+REPORTS_FILE_NAME: Final = "scheduled-pass-reports.log"
+ERRORS_FILE_NAME: Final = "scheduled-pass-errors.log"
 
 
 class ScheduleOperation(StrEnum):
@@ -69,14 +71,18 @@ def _install(
     domain: str,
     launch_agents_dir: Path,
     program: Sequence[str],
+    data_root: Path,
 ) -> ScheduleResult:
     launch_agents_dir.mkdir(parents=True, exist_ok=True)
+    data_root.mkdir(parents=True, exist_ok=True)
     plist_path = launch_agents_dir / f"{JOB_LABEL}{PLIST_SUFFIX}"
     document = {
         "Label": JOB_LABEL,
         "ProgramArguments": list(program),
         "StartInterval": PASS_INTERVAL_MINUTES * SECONDS_PER_MINUTE,
         "RunAtLoad": False,
+        "StandardOutPath": str(data_root / REPORTS_FILE_NAME),
+        "StandardErrorPath": str(data_root / ERRORS_FILE_NAME),
     }
     plist_path.write_bytes(plistlib.dumps(document))
     runner.run((LAUNCHCTL, "bootout", f"{domain}/{JOB_LABEL}"))
@@ -90,6 +96,7 @@ def run_schedule(
     platform: str,
     launch_agents_dir: Path,
     program: Sequence[str],
+    data_root: Path,
 ) -> ScheduleResult:
     """Run one scheduling operation; any platform but macOS reports unsupported."""
     if platform != DARWIN_PLATFORM:
@@ -100,7 +107,7 @@ def run_schedule(
     domain = f"gui/{os.getuid()}"
     target = f"{domain}/{JOB_LABEL}"
     if operation is ScheduleOperation.INSTALL:
-        return _install(runner, domain, launch_agents_dir, program)
+        return _install(runner, domain, launch_agents_dir, program, data_root)
     if operation is ScheduleOperation.STATUS:
         return _outcome_result(
             runner.run((LAUNCHCTL, "print", target)), "job is loaded"
