@@ -11,17 +11,14 @@ pass every thirty minutes.
 from __future__ import annotations
 
 import argparse
-import contextlib
 import datetime as dt
-import importlib
 import json
 import os
 import re
 import sqlite3
-import subprocess
 import sys
 import time
-from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
@@ -45,10 +42,18 @@ from positions_schedule import (
     ScheduleStatus,
     run_schedule,
 )
+from positions_siblings import (
+    PROWL_ADAPTER,
+    TOKEN_ACCOUNTING,
+    load_sibling,
+    run_bounded,
+    sibling_scope,
+)
 from positions_store import (
     Action,
     PassState,
     RecordField,
+    StoreError,
     append_record,
     load_state,
     read_records,
@@ -117,10 +122,6 @@ CLAUDE_WEEKLY: Final = re.compile(rf"Weekly:\s*{NUMBER}%\s*used")
 CODEX_CONTEXT: Final = re.compile(rf"{NUMBER}%\s*context left")
 CODEX_WEEKLY: Final = re.compile(rf"weekly limit\s*{NUMBER}%\s*left")
 PERCENT_TOTAL: Final = 100
-
-SKILLS_ROOT: Final = Path(__file__).resolve().parents[2]
-PROWL_ADAPTER: Final = ("operate-prowl", "prowl_environment")
-TOKEN_ACCOUNTING: Final = ("control-token-spend", "usage_accounting")
 
 
 class ReportKind(StrEnum):
@@ -216,7 +217,8 @@ class Collaborators:
 
 @dataclass(frozen=True)
 class SubprocessRunner:
-    """Default runner: bounded, argument-vector, fully reaped, no shell."""
+    """Default runner: the sibling's bounded runner, which kills a command at its
+    deadline and bounds the bytes it captures; it takes no standard input."""
 
     timeout_seconds: int = COMMAND_TIMEOUT_SECONDS
 
@@ -227,71 +229,17 @@ class SubprocessRunner:
         timeout_seconds: float | None = None,
     ) -> CommandResult:
         applied = self.timeout_seconds if timeout_seconds is None else timeout_seconds
-        try:
-            completed = subprocess.run(
-                argv,
-                input=stdin,
-                stdin=subprocess.DEVNULL if stdin is None else None,
-                capture_output=True,
-                text=True,
-                timeout=applied,
-                check=False,
+        if stdin is not None:
+            return CommandResult(
+                UNREADABLE_EXIT_CODE,
+                "",
+                f"{argv[0]}: the bounded runner takes no standard input",
             )
-        except (OSError, subprocess.TimeoutExpired) as error:
+        try:
+            completed = run_bounded(argv, applied)
+        except (OSError, TimeoutError, RuntimeError) as error:
             return CommandResult(UNREADABLE_EXIT_CODE, "", f"{argv[0]}: {error}")
         return CommandResult(completed.returncode, completed.stdout, completed.stderr)
-
-
-_SCOPE_DEPTH = 0
-
-
-def _is_sibling_script(module: object) -> bool:
-    origin = getattr(module, "__file__", None)
-    return origin is not None and SKILLS_ROOT in Path(origin).parents
-
-
-@contextlib.contextmanager
-def sibling_scope() -> Iterator[None]:
-    """Leave `sys.modules` as the operation found it, sharing sibling loads inside.
-
-    Within the scope a sibling imported once stays registered, so every load of one
-    pass sees the same module state. When the outermost scope ends, the names the
-    scope added for sibling scripts are removed and each registration it replaced
-    is put back.
-    """
-    global _SCOPE_DEPTH
-    before = dict(sys.modules) if _SCOPE_DEPTH == 0 else None
-    _SCOPE_DEPTH += 1
-    try:
-        yield
-    finally:
-        _SCOPE_DEPTH -= 1
-        if before is not None:
-            for name in set(sys.modules) - set(before):
-                if _is_sibling_script(sys.modules[name]):
-                    del sys.modules[name]
-            for name, previous in before.items():
-                if sys.modules.get(name) is not previous:
-                    sys.modules[name] = previous
-
-
-def load_sibling(skill: str, module_name: str) -> ModuleType:
-    """Import a script of a sibling skill of this plugin by a `__file__`-relative path."""
-    directory = SKILLS_ROOT / skill / "scripts"
-    path = directory / f"{module_name}.py"
-    cached = sys.modules.get(module_name)
-    if cached is not None and Path(getattr(cached, "__file__", "")) == path:
-        return cached
-    if not path.is_file():
-        raise FileNotFoundError(
-            f"{path} is missing; install the sibling skill {skill} in the same plugin"
-        )
-    sys.modules.pop(module_name, None)
-    sys.path.insert(0, str(directory))
-    try:
-        return importlib.import_module(module_name)
-    finally:
-        sys.path.remove(str(directory))
 
 
 class ConsumptionTokens:
@@ -954,6 +902,9 @@ def main(
             result = run_pass(config_path(environment, Path.home()), active)
         except ConfigurationError as error:
             print(f"control-positions: invalid configuration: {error}", file=sys.stderr)
+            return UNREADABLE_EXIT_CODE
+        except StoreError as error:
+            print(f"control-positions: unusable stored file: {error}", file=sys.stderr)
             return UNREADABLE_EXIT_CODE
         print(
             json.dumps(

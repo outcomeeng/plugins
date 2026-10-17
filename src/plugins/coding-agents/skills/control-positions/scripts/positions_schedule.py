@@ -5,12 +5,13 @@ from __future__ import annotations
 
 import os
 import plistlib
-import tempfile
 from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
 from typing import Final, Protocol
+
+from positions_siblings import publish
 
 JOB_LABEL: Final = "engineering.outcome.usage-control.positions"
 PASS_INTERVAL_MINUTES: Final = 30
@@ -90,24 +91,6 @@ def _owned(path: Path) -> bool:
     )
 
 
-def _write(path: Path, content: bytes) -> None:
-    """Publish `content` at `path` through a unique temporary file, never a link."""
-    temporary: Path | None = None
-    try:
-        with tempfile.NamedTemporaryFile(
-            dir=path.parent, prefix=".usage-control-positions-", delete=False
-        ) as stream:
-            temporary = Path(stream.name)
-            stream.write(content)
-            stream.flush()
-            os.fsync(stream.fileno())
-        os.replace(temporary, path)
-        temporary = None
-    finally:
-        if temporary is not None:
-            temporary.unlink(missing_ok=True)
-
-
 def _install(
     runner: CommandRunner,
     domain: str,
@@ -132,7 +115,7 @@ def _install(
         "StandardErrorPath": str(data_root / ERRORS_FILE_NAME),
     }
     try:
-        _write(plist_path, plistlib.dumps(document))
+        publish(plist_path, plistlib.dumps(document))
     except OSError as error:
         return ScheduleResult(
             ScheduleStatus.FAILED, f"Cannot write {plist_path}: {error}"

@@ -22,6 +22,7 @@ DEFAULT_PAUSE_MULTIPLE: Final = 2
 DEFAULT_WEEKLY_CEILING_PERCENT: Final = 93
 CEILING_MAXIMUM_PERCENT: Final = 95
 PERCENT_MAXIMUM: Final = 100
+MAX_CONFIG_BYTES: Final = 64 * 1024
 
 
 class ConfigField(StrEnum):
@@ -171,10 +172,11 @@ def _skip(table: Mapping[str, object]) -> frozenset[str]:
             f'{_received(value)}; write `skip = ["pane title", "/path/to/worktree"]`',
         )
     for index, item in enumerate(value, start=1):
-        if not isinstance(item, str):
+        if not isinstance(item, str) or not item:
             raise ConfigurationError(
                 ConfigField.SKIP,
-                f"in entry {index} of `skip`, expected text, {_received(item)}; "
+                f"in entry {index} of `skip`, expected non-empty text, "
+                f"{_received(item)}; "
                 f'write each entry as a quoted string, for example "pane title"',
             )
     return frozenset(value)
@@ -213,20 +215,42 @@ def _positions(table: Mapping[str, object]) -> tuple[Position, ...]:
     entries = _tables(
         table.get(ConfigField.POSITIONS, []), ConfigField.POSITIONS, "[[positions]]"
     )
-    return tuple(
-        Position(
-            _text(entry, ConfigField.WORKTREE, f"[[positions]] entry {index}"),
-            _text(entry, ConfigField.SUBSCRIPTION, f"[[positions]] entry {index}"),
-        )
-        for index, entry in enumerate(entries, start=1)
-    )
+    positions: list[Position] = []
+    first_entry: dict[str, int] = {}
+    for index, entry in enumerate(entries, start=1):
+        location = f"[[positions]] entry {index}"
+        worktree = _text(entry, ConfigField.WORKTREE, location)
+        subscription = _text(entry, ConfigField.SUBSCRIPTION, location)
+        if worktree in first_entry:
+            raise ConfigurationError(
+                ConfigField.WORKTREE,
+                f"in {location}, the worktree {worktree!r} is already listed in "
+                f"[[positions]] entry {first_entry[worktree]}; list each worktree "
+                f"once, under one subscription",
+            )
+        first_entry[worktree] = index
+        positions.append(Position(worktree, subscription))
+    return tuple(positions)
 
 
 def load_settings(path: Path) -> Settings:
     """Read and validate the configuration file; a changed file applies at the next read."""
+    if path.is_symlink():
+        raise ConfigurationError(
+            ConfigField.POSITIONS,
+            f"configuration file is symlinked: {path}; replace the link with a "
+            f"regular file",
+        )
     try:
         with path.open("rb") as handle:
-            table = tomllib.load(handle)
+            raw = handle.read(MAX_CONFIG_BYTES + 1)
+        if len(raw) > MAX_CONFIG_BYTES:
+            raise ConfigurationError(
+                ConfigField.POSITIONS,
+                f"configuration file is larger than {MAX_CONFIG_BYTES} bytes: "
+                f"{path}; keep only the settings the controller reads",
+            )
+        table = tomllib.loads(raw.decode("utf-8"))
     except FileNotFoundError as error:
         raise ConfigurationError(
             ConfigField.POSITIONS,
@@ -234,7 +258,7 @@ def load_settings(path: Path) -> Settings:
             f'`[[positions]]` section holding `worktree = "..."` and '
             f'`subscription = "..."`',
         ) from error
-    except (OSError, tomllib.TOMLDecodeError) as error:
+    except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError) as error:
         raise ConfigurationError(
             ConfigField.POSITIONS,
             f"configuration file unreadable at {path}: {error}; fix the TOML syntax "

@@ -1,9 +1,16 @@
 """The usage controller's ALWAYS and NEVER rules hold against violating passes."""
 
+import ast
 import json
 import os
 import plistlib
+import sys
+import time
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from pathlib import Path
+from tempfile import TemporaryDirectory
+from typing import Any
 
 from outcomeeng_testing.generators.control_positions import (
     ALPHA,
@@ -640,7 +647,6 @@ def test_changed_sibling_api_leaves_pace_unmeasured_and_keeps_context_compaction
     module = load_control_positions(built=True)
     (position,) = alpha_positions(1)
     config = ConfigSpec((position,))
-    step = PassStep(contexts={position.worktree: COMPACTION_CONTEXT_PERCENT})
 
     with real_parser_world(module) as world:
         world.add_transcript_row(position.worktree)
@@ -650,14 +656,21 @@ def test_changed_sibling_api_leaves_pace_unmeasured_and_keeps_context_compaction
         )
 
         for change in sibling_api_changes():
+            # The change meets the pass at its token step, the one interface the
+            # controller reads from the accounting; the pass publishes its records
+            # through the sibling's file publishing, which the change leaves alone.
+            step = PassStep(
+                contexts={position.worktree: COMPACTION_CONTEXT_PERCENT},
+                token_source=ChangedApiTokens(
+                    module, world.accounting, change, position.worktree
+                ),
+            )
             with changed_sibling_api(world.accounting, change, position.worktree):
                 assert (
                     module.ConsumptionTokens().tokens(position.worktree, *world.window)
                     is None
                 ), change
-                (observed,) = run_passes(
-                    module, config, [step], token_source=module.ConsumptionTokens()
-                )
+            (observed,) = run_passes(module, config, [step])
 
             assert observed.error is None, change
             assert {
@@ -1641,3 +1654,273 @@ def test_status_stop_and_restart_run_launchctl_by_absolute_path() -> None:
         assert observed.calls
         assert all(os.path.isabs(argv[0]) for argv in observed.calls), operation
         assert {argv[0] for argv in observed.calls} == {module.LAUNCHCTL}
+
+
+# Guards of the sibling consumption-control scripts that the position controller's own
+# operations take as well. Each case compares one operation of the controller with the
+# sibling function that does the same and the guard that function takes.
+
+SIBLING_FILE_BYTES = 64 * 1024
+RECORDS_DIRECTORY = "positions"
+RECORD_SUFFIX = ".json"
+CONFIGURATION_FILE = "control-positions.toml"
+STATE_FILE = "control-positions-state.json"
+VALID_POSITION = '[[positions]]\nworktree = "/work/a"\nsubscription = "alpha"\n'
+
+
+def _settings_error(module: Any, text: str) -> Exception | None:
+    with TemporaryDirectory(prefix="control-positions-evidence-") as temporary:
+        path = Path(temporary) / CONFIGURATION_FILE
+        path.write_text(text, encoding="utf-8")
+        try:
+            module.load_settings(path)
+        except module.ConfigurationError as error:
+            return error
+    return None
+
+
+@contextmanager
+def _recorded_fsync() -> Iterator[list[int]]:
+    calls: list[int] = []
+    original = os.fsync
+
+    def recording(descriptor: int) -> None:
+        calls.append(descriptor)
+        original(descriptor)
+
+    os.fsync = recording
+    try:
+        yield calls
+    finally:
+        os.fsync = original
+
+
+def _raised(call: Callable[[], object]) -> Exception | None:
+    try:
+        call()
+    except (ValueError, OSError) as error:
+        return error
+    return None
+
+
+def test_configuration_rejects_a_worktree_listed_twice_naming_the_field() -> None:
+    # Clause: the configuration clause (an invalid file fails naming its field). A
+    # pass keys panes, the paused set, streaks and the unfinished list by worktree, so
+    # a worktree listed twice, under one subscription or under two, is invalid. Rejects
+    # the mutation that accepts a duplicate entry.
+    module = load_control_positions()
+    for second in ("alpha", "beta"):
+        duplicate = f'[[positions]]\nworktree = "/work/a"\nsubscription = "{second}"\n'
+
+        error = _settings_error(module, VALID_POSITION + duplicate)
+
+        assert isinstance(error, module.ConfigurationError), second
+        assert error.field == module.ConfigField.WORKTREE
+        assert "/work/a" in str(error)
+    distinct = '[[positions]]\nworktree = "/work/b"\nsubscription = "alpha"\n'
+    assert _settings_error(module, VALID_POSITION + distinct) is None
+
+
+def test_configuration_rejects_an_empty_skip_entry_naming_the_field() -> None:
+    # Clause: the configuration clause. An empty skip entry names no pane title or
+    # worktree path. Rejects the mutation that accepts it.
+    module = load_control_positions()
+
+    error = _settings_error(module, 'skip = ["pane", ""]\n' + VALID_POSITION)
+
+    assert isinstance(error, module.ConfigurationError)
+    assert error.field == module.ConfigField.SKIP
+    assert _settings_error(module, 'skip = ["pane"]\n' + VALID_POSITION) is None
+
+
+def test_configuration_refuses_a_symlinked_or_oversized_file() -> None:
+    # Clause: the configuration clause. The sibling controller refuses a symlinked
+    # configuration file and one over 64 KiB; the position controller's file takes the
+    # same guards. Rejects the mutation that follows a link or parses any size.
+    module = load_control_positions()
+    with TemporaryDirectory(prefix="control-positions-evidence-") as temporary:
+        root = Path(temporary)
+        real = root / "real.toml"
+        real.write_text(VALID_POSITION, encoding="utf-8")
+        linked = root / CONFIGURATION_FILE
+        linked.symlink_to(real)
+        oversized = root / "oversized.toml"
+        oversized.write_text(
+            VALID_POSITION + "# " + "x" * SIBLING_FILE_BYTES + "\n", encoding="utf-8"
+        )
+
+        assert len(module.load_settings(real).positions) == 1
+        for refused in (linked, oversized):
+            error = _raised(lambda: module.load_settings(refused))
+            assert isinstance(error, module.ConfigurationError), refused.name
+            assert str(refused) in str(error)
+
+
+def test_records_are_numbered_after_the_highest_and_published_durably() -> None:
+    # Clause: the durable-record clause. A record is published as the sibling
+    # publishes a file: through a unique temporary file, an fsync, and a rename, never
+    # replacing a record. Numbering follows the highest number on disk, so a gap in
+    # the numbers neither hides a record nor sends the next one back to number one.
+    # Rejects the mutation that skips the fsync, and the one that probes from one.
+    module = load_control_positions()
+    with TemporaryDirectory(prefix="control-positions-evidence-") as temporary:
+        root = Path(temporary)
+        directory = root / RECORDS_DIRECTORY
+        directory.mkdir()
+        for number in (1, 5):
+            (directory / f"{number:08d}{RECORD_SUFFIX}").write_text(
+                json.dumps({"n": number}), encoding="utf-8"
+            )
+        before = (directory / f"00000001{RECORD_SUFFIX}").read_bytes()
+
+        with _recorded_fsync() as synced:
+            written = module.append_record(root, {"n": 6})
+
+        assert written.name == f"00000006{RECORD_SUFFIX}"
+        assert synced
+        assert (directory / f"00000001{RECORD_SUFFIX}").read_bytes() == before
+        assert sorted(item.name for item in directory.iterdir()) == [
+            f"{number:08d}{RECORD_SUFFIX}" for number in (1, 5, 6)
+        ]
+        assert [record["n"] for record in module.read_records(root)] == [1, 5, 6]
+
+
+def test_a_symlinked_record_is_refused_on_read_and_never_written_through() -> None:
+    # Clause: the durable-record clause. The sibling refuses a symlinked state file;
+    # a record that is a link is refused on read, and a link planted at the next
+    # number is never written through. Rejects the mutation that follows a link.
+    module = load_control_positions()
+    with TemporaryDirectory(prefix="control-positions-evidence-") as temporary:
+        root = Path(temporary)
+        directory = root / RECORDS_DIRECTORY
+        directory.mkdir()
+        victim = root / "victim.json"
+        victim.write_text(json.dumps({"victim": True}), encoding="utf-8")
+        (directory / f"00000001{RECORD_SUFFIX}").symlink_to(victim)
+
+        error = _raised(lambda: module.read_records(root))
+        assert error is not None
+        assert f"00000001{RECORD_SUFFIX}" in str(error)
+
+        (directory / f"00000002{RECORD_SUFFIX}").symlink_to(root / "absent.json")
+        _raised(lambda: module.append_record(root, {"n": 3}))
+        assert json.loads(victim.read_text(encoding="utf-8")) == {"victim": True}
+        assert not (root / "absent.json").exists()
+
+
+def test_state_is_published_durably_and_never_through_a_link() -> None:
+    # Clause: the cross-pass state of the pause and resume clause. The state file is
+    # published as the sibling publishes a file (unique temporary file, fsync, rename)
+    # and a symlinked state file is refused as the sibling refuses it. Rejects the
+    # mutation that writes a fixed temporary name a link can redirect, the one that
+    # skips the fsync, and the one that replaces a linked state file.
+    module = load_control_positions()
+    state = module.PassState(streaks={"/work/a": 2}, paused={"/work/a"})
+    with TemporaryDirectory(prefix="control-positions-evidence-") as temporary:
+        root = Path(temporary)
+        victim = root / "victim.txt"
+        victim.write_text("untouched", encoding="utf-8")
+        (root / "control-positions-state.tmp").symlink_to(victim)
+
+        with _recorded_fsync() as synced:
+            module.save_state(root, state)
+
+        assert synced
+        assert victim.read_text(encoding="utf-8") == "untouched"
+        assert module.load_state(root).paused == {"/work/a"}
+
+    with TemporaryDirectory(prefix="control-positions-evidence-") as temporary:
+        root = Path(temporary)
+        victim = root / "victim.json"
+        victim.write_text("{}", encoding="utf-8")
+        (root / STATE_FILE).symlink_to(victim)
+
+        error = _raised(lambda: module.save_state(root, state))
+
+        assert error is not None
+        assert (root / STATE_FILE).is_symlink()
+        assert victim.read_text(encoding="utf-8") == "{}"
+
+
+def test_state_that_is_linked_or_malformed_is_refused_not_read_as_empty() -> None:
+    # Clause: the pause and resume clause. Empty state would forget a paused position
+    # for good, so a symlinked or malformed state file stops the pass with a message
+    # naming the file, as the sibling refuses a symlinked state. An absent file is a
+    # first pass and reads as empty. Rejects the mutation that reads either as empty.
+    module = load_control_positions()
+    with TemporaryDirectory(prefix="control-positions-evidence-") as temporary:
+        root = Path(temporary)
+        assert module.load_state(root).paused == set()
+        (root / STATE_FILE).write_text("{not json", encoding="utf-8")
+
+        malformed = _raised(lambda: module.load_state(root))
+
+        assert malformed is not None
+        assert str(root / STATE_FILE) in str(malformed)
+
+    with TemporaryDirectory(prefix="control-positions-evidence-") as temporary:
+        root = Path(temporary)
+        real = root / "real.json"
+        real.write_text(json.dumps({"paused": ["/work/a"]}), encoding="utf-8")
+        (root / STATE_FILE).symlink_to(real)
+
+        linked = _raised(lambda: module.load_state(root))
+
+        assert linked is not None
+        assert str(root / STATE_FILE) in str(linked)
+
+
+def test_default_runner_bounds_captured_output_and_kills_a_hung_command() -> None:
+    # Clause: the time-bound clause. The sibling runner kills a command at its
+    # deadline and bounds the bytes it captures to 64 KiB; the position controller's
+    # default runner does both. Rejects the mutation that captures without bound.
+    module = load_control_positions()
+    runner = module.SubprocessRunner()
+
+    flooded = runner.run((sys.executable, "-c", "print('x' * 1_000_000)"))
+    started = time.monotonic()
+    hung = runner.run(
+        (sys.executable, "-c", "import time; time.sleep(60)"), timeout_seconds=1
+    )
+    waited = time.monotonic() - started
+
+    flooded_code = flooded.returncode
+    flooded_bytes = len(flooded.stdout) + len(flooded.stderr)
+    hung_code = hung.returncode
+    assert flooded_code == module.UNREADABLE_EXIT_CODE
+    assert flooded_bytes <= SIBLING_FILE_BYTES
+    assert hung_code == module.UNREADABLE_EXIT_CODE
+    assert waited < 30
+
+
+def test_controller_scripts_reach_sibling_operations_without_restating_them() -> None:
+    # Clause: the last ALWAYS clause (the controller reaches the sibling scripts by a
+    # file-relative import). The atomic write and the bounded subprocess run belong to
+    # the sibling consumption-control scripts, so the position controller's modules
+    # import neither the temporary-file nor the subprocess machinery and call neither
+    # the rename nor the fsync themselves. Rejects the mutation that restates them.
+    module = load_control_positions()
+    scripts = Path(module.__file__).parent
+    forbidden_modules = {"tempfile", "subprocess", "selectors"}
+    forbidden_calls = {("os", "replace"), ("os", "fsync")}
+    for name in ("positions_store", "positions_schedule", "control_positions"):
+        tree = ast.parse((scripts / f"{name}.py").read_text(encoding="utf-8"))
+        imported = {
+            alias.name.split(".")[0]
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Import)
+            for alias in node.names
+        } | {
+            (node.module or "").split(".")[0]
+            for node in ast.walk(tree)
+            if isinstance(node, ast.ImportFrom)
+        }
+        called = {
+            (node.func.value.id, node.func.attr)
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and isinstance(node.func.value, ast.Name)
+        }
+        assert not imported & forbidden_modules, name
+        assert not called & forbidden_calls, name
