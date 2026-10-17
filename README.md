@@ -283,7 +283,7 @@ Frontend design: /design-frontend skill
 
 ### go
 
-Go engineering: /test-go, /code-go, /audit-go-code, /audit-go-tests, /audit-go-architecture, /architect-go, /simplify-go
+Go engineering: /author-go-test, /author-go-code, /audit-go-code, /audit-go-test, /audit-go-architecture, /author-go-architecture, /simplify-go-code
 
 | Type  | Name                         | Purpose                                                         |
 | ----- | ---------------------------- | --------------------------------------------------------------- |
@@ -325,7 +325,7 @@ Instruction authoring: /create-skill, /create-subagent
 
 ### prose
 
-Prose craft through a matched triple (/architect-prose, /author-prose, /audit-prose) over caller-supplied kind layers: interface, documentation, copy
+Prose craft through a matched triple (/author-prose-architecture, /author-prose, /audit-prose) over caller-supplied kind layers: interface, documentation, copy
 
 | Type  | Name                            | Purpose                                                                                                                                                             |
 | ----- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -338,7 +338,7 @@ Prose craft through a matched triple (/architect-prose, /author-prose, /audit-pr
 
 ### python
 
-Python engineering: /test-python, /code-python, /audit-python-code, /audit-python-tests, /audit-python-architecture, /architect-python
+Python engineering: /author-python-test, /author-python-code, /audit-python-code, /audit-python-test, /audit-python-architecture, /author-python-architecture
 
 | Type  | Name                             | Purpose                                                             |
 | ----- | -------------------------------- | ------------------------------------------------------------------- |
@@ -354,7 +354,7 @@ Python engineering: /test-python, /code-python, /audit-python-code, /audit-pytho
 
 ### rust
 
-Rust engineering: /test-rust, /code-rust, /audit-rust-code, /audit-rust-tests, /audit-rust-architecture, /architect-rust, /simplify-rust
+Rust engineering: /author-rust-test, /author-rust-code, /audit-rust-code, /audit-rust-test, /audit-rust-architecture, /author-rust-architecture, /simplify-rust-code
 
 | Type  | Name                           | Purpose                                                           |
 | ----- | ------------------------------ | ----------------------------------------------------------------- |
@@ -445,7 +445,7 @@ Spec Tree: /understand, /contextualize, /bootstrap, /author, /decompose, /refact
 
 ### typescript
 
-TypeScript engineering: /test-typescript, /code-typescript, /audit-typescript-code, /audit-typescript-tests, /audit-typescript-architecture, /architect-typescript, /simplify-typescript
+TypeScript engineering: /author-typescript-test, /author-typescript-code, /audit-typescript-code, /audit-typescript-test, /audit-typescript-architecture, /author-typescript-architecture, /simplify-typescript-code
 
 | Type  | Name                                 | Purpose                                                                 |
 | ----- | ------------------------------------ | ----------------------------------------------------------------------- |
