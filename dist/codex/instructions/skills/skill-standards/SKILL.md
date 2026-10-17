@@ -71,7 +71,7 @@ The `name` field is the user invocation path (`/{skill-name}`). Match user speec
 **Rules:**
 
 - Use domain acronyms: `author` not `author-spec-tree-artifacts`
-- Use terms users actually say: `python-test` not `python-unit-test-framework`
+- Use terms users actually say: `test` not `python-unit-test-framework`
 - Think "CD-ROM" not "Compact Disc Read Only Memory"
 - Directory name MUST match: `skills/author/` → `name: author`
 
