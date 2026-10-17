@@ -287,16 +287,16 @@ Go engineering: /test-go, /code-go, /audit-go-code, /audit-go-tests, /audit-go-a
 
 | Type  | Name                         | Purpose                                                         |
 | ----- | ---------------------------- | --------------------------------------------------------------- |
-| Skill | `/architect-go`              | Writing ADRs for Go. NEVER author a Go ADR without this skill   |
 | Skill | `/audit-go-architecture`     | Go-specific architecture audit                                  |
 | Skill | `/audit-go-code`             | Go implementation-code audit methodology                        |
-| Skill | `/audit-go-tests`            | Go test-evidence audit methodology                              |
-| Skill | `/code-go`                   | Writing or fixing implementation code for Go                    |
+| Skill | `/audit-go-test`             | Go test-evidence audit methodology                              |
+| Skill | `/author-go-architecture`    | Writing ADRs for Go. NEVER author a Go ADR without this skill   |
+| Skill | `/author-go-code`            | Writing or fixing implementation code for Go                    |
+| Skill | `/author-go-test`            | Writing or fixing tests for Go                                  |
 | Skill | `/go-architecture-standards` | Go ADR conventions enforced across architect and auditor skills |
-| Skill | `/go-standards`              | Go code standards enforced across all skills                    |
+| Skill | `/go-code-standards`         | Go code standards enforced across all skills                    |
 | Skill | `/go-test-standards`         | Go test standards enforced across all skills                    |
-| Skill | `/simplify-go`               | Simplifying Go implementation while preserving behavior         |
-| Skill | `/test-go`                   | Writing or fixing tests for Go                                  |
+| Skill | `/simplify-go-code`          | Simplifying Go implementation while preserving behavior         |
 
 ### hdl
 

@@ -7,7 +7,7 @@ description: >-
 allowed-tools: Read, Grep, Glob, Bash(grep:*)
 ---
 
-Use skill `go:go-standards`.
+Use skill `go:go-code-standards`.
 
 Use skill `go:go-test-standards`.
 
@@ -23,7 +23,7 @@ Standards are pre-loaded above. Check for `spx/local/go.md` at the repository ro
 
 - NEVER modify files, generate fixes, write replacement code, commit changes, or change project state — this audit produces a verdict only.
 - NEVER run deterministic validation, formatting, vet, lint, test, or eval commands — this audit reads and judges; it never runs deterministic verification.
-- NEVER evaluate test evidence quality — `/audit-go-tests` is the separate concern that judges it.
+- NEVER evaluate test evidence quality — `/audit-go-test` is the separate concern that judges it.
 - ALWAYS keep findings to artifact, violated rule, evidence, and why the cited code violates the rule.
 - NEVER include corrective Go samples, implementation patches, prescribed refactors, or required-change summaries in the verdict.
 - `APPROVED` means every concern row passes or is explicitly not applicable. `REJECTED` means at least one concern row fails.
