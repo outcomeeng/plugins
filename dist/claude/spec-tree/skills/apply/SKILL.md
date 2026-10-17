@@ -74,7 +74,7 @@ Before any audit gate or whole-changeset review runs, self-converge the diff: re
 
 When a gate returns `REJECTED`, `UNKNOWN`, or `BLOCKED`, or when a review surfaces a valid finding, treat it as evidence of a defect class. Read the touched node(s) — the files they govern — find same-class instances, and fix the class before re-running the gate. The class is the rule the finding cites, as the cited standard defines that rule; the finding's examples are instances of the class, never its definition. Same-class means the same cited clause, the same source contract, evidence pattern, lifecycle step, generated-source relationship, or architectural boundary that clause governs. Fix every instance the cited clause covers across the touched node(s) and change nothing the clause does not require. A patch to the cited line alone is sufficient only when a sweep under that clause proves the defect isolated.
 
-Record each repair with the clause it applies and the check that shows the class closed. That record enters the next `VERIFICATION_DISPATCH_READY` record under `<verification_checkpoint>`. The gate reads the next Verifier's verdict, never the check.
+Record each repair with the clause it applies and the check that shows the class closed. That record enters the next `VERIFICATION_DISPATCH_READY` record under `<verification_checkpoint>`.
 
 Do not re-run a gate after every micro-edit. Batch the class fix, re-read the affected diff, then run the gate once on the stabilized tree.
 
