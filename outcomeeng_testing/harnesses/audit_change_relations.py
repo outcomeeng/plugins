@@ -108,7 +108,7 @@ class _StoreReplay:
         self.cursors: list[str | None] = []
 
     def _end_cursor(self, page: dict[str, object]) -> str:
-        return page["data"]["repository"]["issues"]["pageInfo"]["endCursor"]  # type: ignore[index,return-value]
+        return str(page["data"]["repository"]["issues"]["pageInfo"]["endCursor"])  # type: ignore[index]
 
     def __call__(
         self, argv: Sequence[str], /, *, cwd: Path, stdin: str | None
