@@ -52,7 +52,7 @@ One text carries one kind. Register variation inside it is carried by the `/pros
 
 2. Resolve the kind through `<kind_intake>`. Nothing is written before it is settled.
 
-3. Locate the governing prose ADR. When the repository's spec tree carries a prose ADR governing the target artifact, read it — it decides the artifact's structure, its place among sibling artifacts, and the terminology homes. When the request needs a structural change the ADR does not decide — a new artifact, a reordered set, a split page — route the structural decision through `/author-prose-architecture` before writing. With no governing ADR, the kind's structural conventions in `/prose-architecture-standards` guide the artifact's shape directly.
+3. Locate the governing prose ADR. When the repository's spec tree carries a prose ADR governing the target artifact, read it — it decides the artifact's structure, its place among sibling artifacts, and the terminology homes. When the request needs a structural change the ADR does not decide — a new artifact, a reordered set, a split page — settle the structural decision before writing. Use skill `prose:author-prose-architecture`. With no governing ADR, the kind's structural conventions in `/prose-architecture-standards` guide the artifact's shape directly.
 
 4. Read the kind's style layer — the supplied kind's file from `/prose-standards` `<kind_layers>` — and the kind's structural conventions from `/prose-architecture-standards` `<kind_structures>`.
 
