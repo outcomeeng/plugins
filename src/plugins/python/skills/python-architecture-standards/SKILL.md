@@ -63,11 +63,11 @@ ADRs do not assign testing levels. They establish constraints that *make levels 
 
 ### Audit
 
-- ALWAYS: external tool invocations accept a dependency-injected runner parameter typed as a Protocol -- enables controlled implementations that preserve the real boundary ([audit])
-- ALWAYS: recording collaborators expose observations only; linked tests own every predicate and assertion call ([audit])
-- ALWAYS: configuration accepts typed inputs via Pydantic models, not environment reads -- enables `l1` verification of config logic ([audit])
-- NEVER: `unittest.mock.patch` for any dependency -- violates reality principle ([audit])
-- NEVER: direct `subprocess.run` without a DI wrapper -- prevents isolated testing ([audit])
+- ALWAYS: external tool invocations accept a dependency-injected runner parameter typed as a Protocol -- enables controlled implementations that preserve the real boundary ([audit:runner-protocol-injection])
+- ALWAYS: recording collaborators expose observations only; linked tests own every predicate and assertion call ([audit:recorders-expose-observations-only])
+- ALWAYS: configuration accepts typed inputs via Pydantic models, not environment reads -- enables `l1` verification of config logic ([audit:config-typed-pydantic-inputs])
+- NEVER: `unittest.mock.patch` for any dependency -- violates reality principle ([audit:no-mock-patch])
+- NEVER: direct `subprocess.run` without a DI wrapper -- prevents isolated testing ([audit:no-direct-subprocess-run])
 ```
 
 **What this replaces -- the following does NOT belong in an ADR:**

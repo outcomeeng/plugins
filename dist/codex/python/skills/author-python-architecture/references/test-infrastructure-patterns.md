@@ -184,10 +184,10 @@ Every Python product ADR governing test infrastructure should express rules unde
 
 ### Audit
 
-- ALWAYS: test infrastructure is packaged as `{product}_testing/` with `generators/`, `harnesses/`, and inert fixture data under `fixtures/` ([audit])
-- ALWAYS: `pyproject.toml` includes `{product}` and `{product}_testing` as installable packages ([audit])
-- ALWAYS: pytest uses `--import-mode=importlib` when co-located test files can share module names ([audit])
-- NEVER: tests mutate `sys.path` to import shared generators or harnesses ([audit])
+- ALWAYS: test infrastructure is packaged as `{product}_testing/` with `generators/`, `harnesses/`, and inert fixture data under `fixtures/` ([audit:testing-package-layout])
+- ALWAYS: `pyproject.toml` includes `{product}` and `{product}_testing` as installable packages ([audit:pyproject-installable-packages])
+- ALWAYS: pytest uses `--import-mode=importlib` when co-located test files can share module names ([audit:pytest-importlib-colocated])
+- NEVER: tests mutate `sys.path` to import shared generators or harnesses ([audit:no-sys-path-mutation])
 
 ```toml
 [tool.pytest.ini_options]

@@ -117,9 +117,9 @@ These patterns show how testability constraints appear under `## Verification`'s
 ```markdown
 ### Audit
 
-- ALWAYS: functions that call external tools accept a `runner` parameter implementing the `CommandRunner` Protocol -- enables `l1` testing of command-building logic ([audit])
-- ALWAYS: default implementations use `subprocess`; tests inject controlled implementations -- no mocking ([audit])
-- NEVER: direct `subprocess.run` without a DI wrapper -- prevents isolated testing ([audit])
+- ALWAYS: functions that call external tools accept a `runner` parameter implementing the `CommandRunner` Protocol -- enables `l1` testing of command-building logic ([audit:runner-protocol-parameter])
+- ALWAYS: default implementations use `subprocess`; tests inject controlled implementations -- no mocking ([audit:default-subprocess-injected-controls])
+- NEVER: direct `subprocess.run` without a DI wrapper -- prevents isolated testing ([audit:no-direct-subprocess-run])
 ```
 
 **Configuration loading** — validated models for all configuration:
@@ -127,10 +127,10 @@ These patterns show how testability constraints appear under `## Verification`'s
 ```markdown
 ### Audit
 
-- ALWAYS: config files have corresponding Pydantic models -- type-safe, validated config ([audit])
-- ALWAYS: config loading validates at load time with `.model_validate()` -- fail fast with descriptive errors ([audit])
-- NEVER: unvalidated config access at use time -- defers errors to runtime ([audit])
-- NEVER: `Any` type annotations on config fields -- bypasses validation ([audit])
+- ALWAYS: config files have corresponding Pydantic models -- type-safe, validated config ([audit:config-pydantic-models])
+- ALWAYS: config loading validates at load time with `.model_validate()` -- fail fast with descriptive errors ([audit:config-validated-at-load])
+- NEVER: unvalidated config access at use time -- defers errors to runtime ([audit:no-unvalidated-config-access])
+- NEVER: `Any` type annotations on config fields -- bypasses validation ([audit:no-any-config-fields])
 ```
 
 **Test infrastructure** — packaged `{product}_testing/` for products with co-located tests:
@@ -138,10 +138,10 @@ These patterns show how testability constraints appear under `## Verification`'s
 ```markdown
 ### Audit
 
-- ALWAYS: test infrastructure (generators, harnesses, fixtures) lives in `{product}_testing/`, NOT `tests/` -- generators and harnesses importable as a package, fixtures consumed by path ([audit])
-- ALWAYS: `pyproject.toml` includes both packages: `packages = ["{product}", "{product}_testing"]` ([audit])
-- ALWAYS: pytest config uses `--import-mode=importlib` for multiple test directories ([audit])
-- NEVER: test infrastructure in the `tests/` directory -- not importable by spec-tree co-located tests ([audit])
+- ALWAYS: test infrastructure (generators, harnesses, fixtures) lives in `{product}_testing/`, NOT `tests/` -- generators and harnesses importable as a package, fixtures consumed by path ([audit:testing-package-outside-tests])
+- ALWAYS: `pyproject.toml` includes both packages: `packages = ["{product}", "{product}_testing"]` ([audit:pyproject-both-packages])
+- ALWAYS: pytest config uses `--import-mode=importlib` for multiple test directories ([audit:pytest-importlib-mode])
+- NEVER: test infrastructure in the `tests/` directory -- not importable by spec-tree co-located tests ([audit:no-infrastructure-in-tests])
 ```
 
 See `${CLAUDE_SKILL_DIR}/references/test-infrastructure-patterns.md` for the full pattern.
@@ -151,10 +151,10 @@ See `${CLAUDE_SKILL_DIR}/references/test-infrastructure-patterns.md` for the ful
 ```markdown
 ### Audit
 
-- ALWAYS: each command is a separate module exporting a registration function -- enables isolated `l1` testing ([audit])
-- ALWAYS: commands delegate to runner functions that accept Protocol-typed DI parameters -- separates parsing from logic ([audit])
-- NEVER: business logic in command handlers -- prevents isolated testing ([audit])
-- NEVER: direct I/O in command modules without DI -- couples commands to environment ([audit])
+- ALWAYS: each command is a separate module exporting a registration function -- enables isolated `l1` testing ([audit:command-per-module])
+- ALWAYS: commands delegate to runner functions that accept Protocol-typed DI parameters -- separates parsing from logic ([audit:commands-delegate-to-runners])
+- NEVER: business logic in command handlers -- prevents isolated testing ([audit:no-logic-in-handlers])
+- NEVER: direct I/O in command modules without DI -- couples commands to environment ([audit:no-direct-io-in-commands])
 ```
 
 </adr_patterns>
