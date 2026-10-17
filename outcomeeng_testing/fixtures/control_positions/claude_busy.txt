@@ -1,0 +1,6 @@
+✻ Working… (12s · esc to interrupt)
+
+╭──────────────────────────────────────────────╮
+│ >                                            │
+╰──────────────────────────────────────────────╯
+  Context: {context_used}% used · Weekly: {weekly_used}% used
