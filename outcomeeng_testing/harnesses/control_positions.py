@@ -152,6 +152,7 @@ class ConfigSpec:
     key_authorized: bool = True
     stop_authorized: bool = True
     overrides: Mapping[str, object] = field(default_factory=lambda: {})
+    unpaced: tuple[str, ...] = ()  # subscriptions declared with no configured pace
 
     def subscriptions(self) -> tuple[str, ...]:
         return tuple(dict.fromkeys(item.subscription for item in self.positions))
@@ -166,6 +167,11 @@ class PassStep:
     busy: frozenset[str] = frozenset()
     tokens: Mapping[str, int | None] = field(default_factory=lambda: {})
     config: ConfigSpec | None = None
+    # When set, the fake-clock `leading_seconds` of this pass alone, replacing the
+    # value `run_passes` applies to every pass.
+    leading_seconds: Sequence[float] | None = None
+    # When set, the token source of this pass alone, replacing the frozen source.
+    token_source: Any | None = None
 
 
 def toml_value(value: object) -> str:
@@ -195,10 +201,11 @@ def render_config(module: ModuleType, spec: ConfigSpec) -> str:
     lines = [f"{key} = {toml_value(value)}" for key, value in scalars.items()]
     for subscription in spec.subscriptions():
         lines.append(f"\n[{fields.SUBSCRIPTIONS}.{subscription}]")
-        lines.append(
-            f"{fields.PACE_TOKENS} = "
-            f"{toml_value(spec.pace.get(subscription, PACE_TOKENS))}"
-        )
+        if subscription not in spec.unpaced:
+            lines.append(
+                f"{fields.PACE_TOKENS} = "
+                f"{toml_value(spec.pace.get(subscription, PACE_TOKENS))}"
+            )
     for item in spec.positions:
         lines.append(f"\n[[{fields.POSITIONS}]]")
         lines.append(f"{fields.WORKTREE} = {toml_value(item.worktree)}")
@@ -443,13 +450,21 @@ def run_passes(
             config_path.write_text(render_config(module, current), encoding="utf-8")
             now = BASE_TIME + index * PASS_INTERVAL
             clock = FakeClock(
-                seconds_per_command, leading_seconds, hangs, command_timeout
+                seconds_per_command,
+                leading_seconds
+                if step.leading_seconds is None
+                else step.leading_seconds,
+                hangs,
+                command_timeout,
             )
             runner = ProwlRecorder(current.positions, step, clock)
             tokens = FrozenTokens(step, now, clock, token_seconds)
+            chosen = (
+                step.token_source if step.token_source is not None else token_source
+            )
             collaborators = module.Collaborators(
                 runner=runner,
-                tokens=tokens if token_source is None else token_source,
+                tokens=tokens if chosen is None else chosen,
                 clock=clock,
                 now=now,
                 data_root=data_root,
@@ -718,3 +733,28 @@ def changed_sibling_api(
         yield
     finally:
         setattr(owner, name, previous)
+
+
+class ChangedApiTokens:
+    """The production token source measured while the sibling API is changed.
+
+    Each measurement runs the production source under `changed_sibling_api`, so a
+    pass using this source meets the changed API at its token step. Observations
+    only: the linked test decides what the controller must do.
+    """
+
+    def __init__(
+        self,
+        module: ModuleType,
+        accounting: ModuleType,
+        change: SiblingApiChange,
+        worktree: str,
+    ) -> None:
+        self.module = module
+        self.accounting = accounting
+        self.change = change
+        self.worktree = worktree
+
+    def tokens(self, worktree: str, start: dt.datetime, end: dt.datetime) -> int | None:
+        with changed_sibling_api(self.accounting, self.change, self.worktree):
+            return self.module.ConsumptionTokens().tokens(worktree, start, end)
