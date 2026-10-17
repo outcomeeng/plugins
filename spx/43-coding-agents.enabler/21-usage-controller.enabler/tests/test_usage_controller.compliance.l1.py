@@ -857,3 +857,443 @@ def test_measured_spend_under_the_share_resumes_the_paused_position() -> None:
         for unmeasured in resumed.reports
         if unmeasured.kind == module.ReportKind.UNMEASURED_PACE
     ]
+
+
+# Pause streaks, paused state, and failed actions. Each case names the spec clause it
+# observes and the mutation of the controller it rejects. The sequences start from
+# one position (or the stated number) whose share is its subscription's pace divided
+# among the measured positions.
+
+
+def sends_of(observation: PassObservation) -> list[tuple[str | None, str | None]]:
+    return [
+        (call.pane, call.argument)
+        for call in observation.calls
+        if call.operation == "send"
+    ]
+
+
+def keys_of(observation: PassObservation) -> list[tuple[str | None, str]]:
+    return [
+        (call.pane, (call.argument or "").lower())
+        for call in observation.calls
+        if call.operation == "key"
+    ]
+
+
+def test_paused_position_stays_paused_when_the_accounting_history_is_incomplete() -> (
+    None
+):
+    # Clauses: resumes by `continue` only at the first pass where its spend is back
+    # under its share, and a position the parser measures no session for keeps its
+    # pace unmeasured. A window without a session shows an idle position only when
+    # the collection saw every source. Rejects the mutation that reads the absence
+    # of a session as no session without requiring a complete history: it would send
+    # `continue` and write a RESUME record while the transcript root is absent.
+    module = load_control_positions(built=True)
+    (position,) = alpha_positions(1)
+    config = ConfigSpec((position,))
+    position_share = share(PACE_TOKENS, 1)
+    heavy = PassStep(
+        tokens={position.worktree: tokens_above(position_share, PAUSE_MULTIPLE)}
+    )
+    light = PassStep(tokens={position.worktree: tokens_under(position_share)})
+
+    with real_parser_world(module, transcript_root=False) as world:
+        collected = world.collection()
+        reading = world.tokens.reading(position.worktree, *world.window)
+        incomplete = PassStep(token_source=module.ConsumptionTokens())
+
+        _, second, during, after = run_passes(
+            module, config, [heavy, heavy, incomplete, light]
+        )
+
+    assert collected[world.accounting.AccountingField.HISTORY_COMPLETE] is False
+    assert reading.state == module.TokenState.UNMEASURED
+    assert keys_of(second) == [(position.pane, ESCAPE_KEY)]
+    assert (position.pane, CONTINUE_TEXT) not in sends_of(during)
+    assert module.Action.RESUME not in {
+        record[module.RecordField.ACTION] for record in during.new_records
+    }
+    assert position.worktree in {
+        report.subject
+        for report in during.reports
+        if report.kind == module.ReportKind.UNMEASURED_PACE
+    }
+    assert (position.pane, CONTINUE_TEXT) in sends_of(after)
+    assert module.Action.RESUME in {
+        record[module.RecordField.ACTION] for record in after.new_records
+    }
+
+
+def test_pause_streak_counts_only_passes_that_measured_the_position() -> None:
+    # Clause: a position that exceeds the pause multiple on two consecutive passes
+    # is paused. A pass that did not measure the position (not hosted in Prowl, on
+    # the skip list, or left unfinished at the bound) is not one of the consecutive
+    # passes. Rejects the mutation that carries a streak across an unmeasured pass:
+    # heavy, unmeasured, heavy would then pause on the third pass.
+    module = load_control_positions()
+    (position,) = alpha_positions(1)
+    config = ConfigSpec((position,))
+    position_share = share(PACE_TOKENS, 1)
+    tokens = {position.worktree: tokens_above(position_share, PAUSE_MULTIPLE)}
+    bound = PASS_BOUND_MINUTES * SECONDS_PER_MINUTE
+    heavy = PassStep(tokens=tokens)
+    heavy_again = PassStep(config=config, tokens=tokens)
+    unmeasured_passes = {
+        "not hosted in Prowl": PassStep(
+            config=ConfigSpec((PositionSpec(position.ordinal, ALPHA, in_prowl=False),)),
+            tokens=tokens,
+        ),
+        "on the skip list": PassStep(
+            config=with_config(config, skip=(position.worktree,)), tokens=tokens
+        ),
+        "unfinished at the bound": PassStep(leading_seconds=(bound,), tokens=tokens),
+    }
+
+    for name, between in unmeasured_passes.items():
+        first, skipped, third = run_passes(
+            module, config, [heavy, between, heavy_again]
+        )
+        assert not skipped.token_queries, name
+        assert not keys_of(first) + keys_of(skipped) + keys_of(third), name
+        assert module.Action.PAUSE not in {
+            record[module.RecordField.ACTION] for record in third.records
+        }, name
+
+        *_, paused = run_passes(
+            module, config, [heavy, between, heavy_again, heavy_again]
+        )
+        assert keys_of(paused) == [(position.pane, ESCAPE_KEY)], name
+
+    unfinished = run_passes(
+        module, config, [unmeasured_passes["unfinished at the bound"]]
+    )
+    assert unfinished[0].unfinished == (position.worktree,)
+
+
+def test_pause_is_remembered_when_the_pass_raises_after_the_pause_key() -> None:
+    # Clauses: a position paused by the Escape key resumes at the first pass where
+    # its spend is back under its share, and every pause is a durable record. A pass
+    # whose record write raises after the key was sent has paused the position.
+    # Rejects the mutation that saves the paused state only after a pass ends
+    # without raising: the next pass would not hold the position paused and would
+    # send it no `continue`.
+    module = load_control_positions()
+    (position,) = alpha_positions(1)
+    config = ConfigSpec((position,))
+    position_share = share(PACE_TOKENS, 1)
+    tokens = {position.worktree: tokens_above(position_share, PAUSE_MULTIPLE)}
+    heavy = PassStep(tokens=tokens)
+    failing = PassStep(tokens=tokens, records_blocked=True)
+    light = PassStep(tokens={position.worktree: tokens_under(position_share)})
+
+    _, raised, after = run_passes(module, config, [heavy, failing, light])
+
+    assert isinstance(raised.error, OSError)
+    assert keys_of(raised) == [(position.pane, ESCAPE_KEY)]
+    assert not raised.new_records
+    assert (position.pane, CONTINUE_TEXT) in sends_of(after)
+    assert module.Action.RESUME in {
+        record[module.RecordField.ACTION] for record in after.new_records
+    }
+
+
+def test_switch_account_report_names_the_positions_whose_exit_send_failed() -> None:
+    # Clause: at the weekly ceiling the controller sends `/exit` to every position of
+    # the subscription and tells the operator to switch accounts; no record or
+    # report recommends or claims an action the controller did not take. Rejects the
+    # mutation that reports the positions as stopped, or leaves out the worktrees
+    # that were not, when one or every `/exit` send fails.
+    module = load_control_positions()
+    positions = alpha_positions(3)
+    config = ConfigSpec(positions)
+    ceiling = PassStep(weekly={ALPHA: WEEKLY_CEILING_PERCENT})
+
+    def switch_messages(observation: PassObservation) -> list[str]:
+        return [
+            report.message
+            for report in observation.reports
+            if report.kind == module.ReportKind.SWITCH_ACCOUNT
+        ]
+
+    def stopped_positions(observation: PassObservation) -> set[object]:
+        return {
+            record[module.RecordField.POSITION]
+            for record in observation.new_records
+            if record[module.RecordField.ACTION] == module.Action.STOP
+        }
+
+    (all_stopped,) = run_passes(module, config, [ceiling])
+    (baseline,) = switch_messages(all_stopped)
+    assert stopped_positions(all_stopped) == {item.worktree for item in positions}
+
+    refused_one = PassStep(
+        weekly=ceiling.weekly, refused=frozenset({("send", positions[1].pane)})
+    )
+    (one_failed,) = run_passes(module, config, [refused_one])
+    (message,) = switch_messages(one_failed)
+    assert message != baseline
+    assert positions[1].worktree in message
+    assert stopped_positions(one_failed) == {
+        positions[0].worktree,
+        positions[2].worktree,
+    }
+    assert module.ReportKind.ACTION_FAILED in {
+        report.kind for report in one_failed.reports
+    }
+
+    refused_all = PassStep(
+        weekly=ceiling.weekly,
+        refused=frozenset({("send", item.pane) for item in positions}),
+    )
+    (every_failed,) = run_passes(module, config, [refused_all])
+    (message,) = switch_messages(every_failed)
+    assert message != baseline
+    assert all(item.worktree in message for item in positions)
+    assert not stopped_positions(every_failed)
+    assert {(item.pane, STOP_TEXT) for item in positions} <= set(sends_of(every_failed))
+
+
+def test_failed_exit_send_leaves_the_paused_position_paused() -> None:
+    # Clauses: a paused position resumes at the first pass where its spend is back
+    # under its share, and a stop is a position that received `/exit`. Rejects the
+    # mutation that forgets the paused state of a position whose `/exit` send failed:
+    # the later pass under the share would send it no `continue`.
+    module = load_control_positions()
+    (position,) = alpha_positions(1)
+    config = ConfigSpec((position,))
+    position_share = share(PACE_TOKENS, 1)
+    tokens = {position.worktree: tokens_above(position_share, PAUSE_MULTIPLE)}
+    heavy = PassStep(tokens=tokens)
+    refused_exit = PassStep(
+        tokens=tokens,
+        weekly={ALPHA: WEEKLY_CEILING_PERCENT},
+        refused=frozenset({("send", position.pane)}),
+    )
+    light = PassStep(tokens={position.worktree: tokens_under(position_share)})
+
+    _, _, failed_stop, after = run_passes(
+        module, config, [heavy, heavy, refused_exit, light]
+    )
+
+    assert (position.pane, STOP_TEXT) in sends_of(failed_stop)
+    assert module.Action.STOP not in {
+        record[module.RecordField.ACTION] for record in failed_stop.new_records
+    }
+    assert (position.pane, CONTINUE_TEXT) in sends_of(after)
+    assert module.Action.RESUME in {
+        record[module.RecordField.ACTION] for record in after.new_records
+    }
+
+
+def test_failed_continue_send_keeps_the_position_paused_and_writes_no_record() -> None:
+    # Clauses: a paused position resumes by the prompt `continue`, and a record names
+    # an action the controller took. Rejects the mutation that resumes the position
+    # (forgets the pause or writes a RESUME record) when the `continue` send fails.
+    module = load_control_positions()
+    (position,) = alpha_positions(1)
+    config = ConfigSpec((position,))
+    position_share = share(PACE_TOKENS, 1)
+    heavy = PassStep(
+        tokens={position.worktree: tokens_above(position_share, PAUSE_MULTIPLE)}
+    )
+    light = PassStep(tokens={position.worktree: tokens_under(position_share)})
+    refused_light = PassStep(
+        tokens=light.tokens, refused=frozenset({("send", position.pane)})
+    )
+
+    _, _, failed, retried = run_passes(
+        module, config, [heavy, heavy, refused_light, light]
+    )
+
+    assert (position.pane, CONTINUE_TEXT) in sends_of(failed)
+    assert (position.worktree, module.ReportKind.ACTION_FAILED) in {
+        (report.subject, report.kind) for report in failed.reports
+    }
+    assert not failed.new_records
+    assert (position.pane, CONTINUE_TEXT) in sends_of(retried)
+    assert module.Action.RESUME in {
+        record[module.RecordField.ACTION] for record in retried.new_records
+    }
+
+
+def test_failed_pause_key_leaves_the_position_not_paused_and_writes_no_record() -> None:
+    # Clauses: a position over the pause multiple on two consecutive passes is paused
+    # by the Escape key, and a record names an action the controller took. Rejects
+    # the mutation that marks the position paused, or writes a PAUSE record or the
+    # pause notice, when the key send fails: the later pass under the share would
+    # send `continue` to a position that was never paused.
+    module = load_control_positions()
+    (position,) = alpha_positions(1)
+    config = ConfigSpec((position,))
+    position_share = share(PACE_TOKENS, 1)
+    tokens = {position.worktree: tokens_above(position_share, PAUSE_MULTIPLE)}
+    heavy = PassStep(tokens=tokens)
+    refused_key = PassStep(tokens=tokens, refused=frozenset({("key", position.pane)}))
+    light = PassStep(tokens={position.worktree: tokens_under(position_share)})
+
+    _, failed, under = run_passes(module, config, [heavy, refused_key, light])
+
+    assert keys_of(failed) == [(position.pane, ESCAPE_KEY)]
+    assert (position.worktree, module.ReportKind.ACTION_FAILED) in {
+        (report.subject, report.kind) for report in failed.reports
+    }
+    assert module.ReportKind.PAUSE_NOTICE not in {
+        report.kind for report in failed.reports
+    }
+    assert module.Action.PAUSE not in {
+        record[module.RecordField.ACTION] for record in failed.new_records
+    }
+    assert (position.pane, CONTINUE_TEXT) not in sends_of(under)
+    assert module.Action.RESUME not in {
+        record[module.RecordField.ACTION] for record in under.new_records
+    }
+
+    *_, third = run_passes(module, config, [heavy, refused_key, heavy])
+    assert keys_of(third) == [(position.pane, ESCAPE_KEY)]
+    assert module.Action.PAUSE in {
+        record[module.RecordField.ACTION] for record in third.new_records
+    }
+
+
+def test_inventory_at_the_pass_bound_marks_only_unskipped_positions_unfinished() -> (
+    None
+):
+    # Clause: a pass that reaches the five-minute bound records its unfinished
+    # positions and leaves them to the next pass, and a pane on the skip list
+    # receives no action. Rejects the mutation that marks every configured position
+    # unfinished (the skip-listed one included) or none when the inventory call
+    # meets the bound.
+    module = load_control_positions()
+    positions = alpha_positions(3)
+    skipped = positions[2]
+    config = ConfigSpec(positions, skip=(skipped.worktree,))
+    bound = PASS_BOUND_MINUTES * SECONDS_PER_MINUTE
+    contexts = {item.worktree: COMPACTION_CONTEXT_PERCENT for item in positions}
+
+    stalled, next_pass = run_passes(
+        module,
+        config,
+        [PassStep(stall_seconds=bound), PassStep(contexts=contexts)],
+    )
+
+    assert not stalled.calls
+    assert not stalled.token_queries
+    assert set(stalled.unfinished) == {positions[0].worktree, positions[1].worktree}
+    assert next_pass.unfinished == ()
+    assert {pane for pane, _ in sends_of(next_pass)} == {
+        positions[0].pane,
+        positions[1].pane,
+    }
+
+
+def test_paused_state_holds_while_the_position_is_absent_or_skip_listed() -> None:
+    # Clause: a paused position resumes at the first pass where its spend is back
+    # under its share; a pane the Prowl inventory does not list, or the skip list
+    # names, receives no action. Rejects the mutation that forgets the paused state
+    # of a configured position not acted on in a pass, and the mutation that sends
+    # `continue` to an absent or skip-listed position under its share.
+    module = load_control_positions()
+    (position,) = alpha_positions(1)
+    config = ConfigSpec((position,))
+    position_share = share(PACE_TOKENS, 1)
+    heavy = PassStep(
+        tokens={position.worktree: tokens_above(position_share, PAUSE_MULTIPLE)}
+    )
+    under = {position.worktree: tokens_under(position_share)}
+    away = {
+        "absent from Prowl": PassStep(
+            config=ConfigSpec((PositionSpec(position.ordinal, ALPHA, in_prowl=False),)),
+            tokens=under,
+        ),
+        "newly skip-listed": PassStep(
+            config=with_config(config, skip=(position.worktree,)), tokens=under
+        ),
+    }
+    returned = PassStep(config=config, tokens=under)
+
+    for name, step in away.items():
+        _, second, during, after = run_passes(
+            module, config, [heavy, heavy, step, returned]
+        )
+
+        assert keys_of(second) == [(position.pane, ESCAPE_KEY)], name
+        assert not [call for call in during.calls if call.pane == position.pane], name
+        assert not during.new_records, name
+        assert (position.pane, CONTINUE_TEXT) in sends_of(after), name
+        assert module.Action.RESUME in {
+            record[module.RecordField.ACTION] for record in after.new_records
+        }, name
+
+
+def test_paused_state_persists_across_a_controller_restart() -> None:
+    # Clause: a paused position resumes at the first pass where its spend is back
+    # under its share, so the pause outlives the pass that made it. Each pass runs
+    # with fresh collaborators over the same data root, as a restarted scheduled
+    # pass does. Rejects the mutation that drops the paused state between passes: a
+    # paused position above its share at context use over the compaction threshold
+    # would be compacted, and the pass under the share would send no `continue`.
+    module = load_control_positions()
+    (position,) = alpha_positions(1)
+    config = ConfigSpec((position,))
+    position_share = share(PACE_TOKENS, 1)
+    tokens = {position.worktree: tokens_above(position_share, PAUSE_MULTIPLE)}
+    heavy = PassStep(tokens=tokens)
+    heavy_and_full = PassStep(
+        tokens=tokens, contexts={position.worktree: COMPACTION_CONTEXT_PERCENT}
+    )
+    light = PassStep(tokens={position.worktree: tokens_under(position_share)})
+
+    _, paused, restarted, resumed = run_passes(
+        module, config, [heavy, heavy, heavy_and_full, light]
+    )
+
+    assert module.Action.PAUSE in {
+        record[module.RecordField.ACTION] for record in paused.new_records
+    }
+    assert paused.record_files
+    assert not restarted.new_records
+    assert restarted.record_files == paused.record_files
+    assert not keys_of(restarted)
+    assert not sends_of(restarted)
+    assert (position.pane, CONTINUE_TEXT) in sends_of(resumed)
+    assert module.Action.RESUME in {
+        record[module.RecordField.ACTION] for record in resumed.new_records
+    }
+
+
+def test_paused_entry_of_a_removed_worktree_is_cleared_without_action() -> None:
+    # Clauses: a paused position resumes at the first pass where its spend is back
+    # under its share, and a record names an action the controller took. A worktree
+    # the configuration no longer lists is not held paused by the controller.
+    # Rejects the mutation that keeps the paused entry of a removed worktree: when
+    # the worktree returns under its share it would be sent `continue`, with a RESUME
+    # record for a pause the operator's configuration had ended.
+    module = load_control_positions()
+    watched, other = alpha_positions(2)
+    config = ConfigSpec((watched, other))
+    position_share = share(PACE_TOKENS, 2)
+    heavy = PassStep(
+        tokens={watched.worktree: tokens_above(position_share, PAUSE_MULTIPLE)}
+    )
+    removed = PassStep(config=ConfigSpec((other,)))
+    returned = PassStep(
+        config=config, tokens={watched.worktree: tokens_under(position_share)}
+    )
+
+    _, paused, during, after = run_passes(
+        module, config, [heavy, heavy, removed, returned]
+    )
+
+    assert keys_of(paused) == [(watched.pane, ESCAPE_KEY)]
+    assert not [call for call in during.calls if call.pane == watched.pane]
+    assert not during.new_records
+    assert not [
+        call
+        for call in after.calls
+        if call.pane == watched.pane and call.operation in {"key", "send"}
+    ]
+    assert module.Action.RESUME not in {
+        record[module.RecordField.ACTION] for record in after.records
+    }
