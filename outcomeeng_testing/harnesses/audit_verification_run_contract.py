@@ -23,6 +23,7 @@ from outcomeeng.validation.audit_artifacts import (
     PLUGIN_SURFACE_PATHS,
     RETIRED_AUDIT_RUNTIME_FILENAMES,
     RETIRED_IMPLEMENTATION_AUDITOR_FILENAMES,
+    RETIRED_LANGUAGE_AUDIT_CONCERNS,
     RETIRED_LANGUAGE_AUDIT_SKILL_TEMPLATE,
     SKILL_FILENAME,
     SKILLS_DIR_NAME,
@@ -311,6 +312,19 @@ def audit_contract_rejects_language_specific_wrapper() -> bool:
     return all(
         _language_wrapper_filename_is_rejected(language, filename)
         for filename in language_specific_auditor_filenames(language)
+    )
+
+
+def audit_contract_rejects_retired_concern_wrapper() -> bool:
+    """Reject a wrapper filename carrying a retired concern spelling."""
+    language = source_language()
+    return all(
+        _language_wrapper_filename_is_rejected(language, filename)
+        for concern in RETIRED_LANGUAGE_AUDIT_CONCERNS
+        for filename in (
+            f"{language}-{concern}-auditor.md",
+            f"audit-{language}-{concern}.md",
+        )
     )
 
 
