@@ -74,6 +74,7 @@ CONFIG_FILE = "control-positions.toml"
 INVALID_VALUE = "invalid"
 HUNG_COMMAND_EXIT_CODE = 124
 RECORDS_DIRECTORY = "positions"
+JOB_LABEL = "engineering.outcome.usage-control.positions"
 READ_ONLY_MODE = 0o500
 WRITABLE_MODE = 0o700
 NUMERIC_CONFIG_FIELDS = (
@@ -656,14 +657,103 @@ def installed_job(module: ModuleType) -> InstalledJob:
 
 
 class LaunchctlRecorder:
-    """Recording scheduler collaborator; no shared launchd job is touched."""
+    """Recording scheduler collaborator; no shared launchd job is touched.
 
-    def __init__(self) -> None:
+    `answers` maps a launchctl verb (the second word of a command) to the result the
+    recorder gives that verb; every other verb succeeds.
+    """
+
+    def __init__(self, answers: Mapping[str, CommandResult] | None = None) -> None:
         self.calls: list[tuple[str, ...]] = []
+        self.answers = dict(answers or {})
 
     def run(self, argv: tuple[str, ...], stdin: str | None = None) -> CommandResult:
         self.calls.append(argv)
-        return CommandResult(0, "state = waiting", "")
+        return self.answers.get(argv[1], CommandResult(0, "state = waiting", ""))
+
+
+@dataclass(frozen=True)
+class InstallObservation:
+    """What one install left behind in a disposable home, and what it ran."""
+
+    status: object
+    detail: str
+    calls: tuple[tuple[str, ...], ...]
+    plist_path: Path
+    # The install path of the job, relative to the disposable root.
+    plist_key: str
+    # Every regular file under the disposable root, by path relative to it, with its bytes.
+    files: Mapping[str, bytes]
+    # Every symbolic link under the disposable root, by path relative to it.
+    links: tuple[str, ...]
+    # The names in the launch-agents directory after the install.
+    launch_agent_entries: tuple[str, ...]
+
+
+def install_observation(
+    module: ModuleType,
+    seed: Any | None = None,
+    answers: Mapping[str, CommandResult] | None = None,
+    replace_fails: bool = False,
+) -> InstallObservation:
+    """Install the launchd job in a disposable home after `seed` prepared it.
+
+    `seed(root, plist_path)` may create files, links, or directories under the
+    disposable `root` (the launch-agents directory is `root / "launch-agents"`, and
+    `plist_path` is where the install writes the job). `replace_fails` makes the
+    atomic rename that publishes a written file raise `OSError` for this install
+    alone. Observations only: the linked tests decide what must have happened.
+    """
+    with TemporaryDirectory(prefix="control-positions-evidence-") as temporary:
+        root = Path(temporary)
+        launch_agents = root / "launch-agents"
+        plist_path = launch_agents / f"{JOB_LABEL}.plist"
+        if seed is not None:
+            seed(root, plist_path)
+        recorder = LaunchctlRecorder(answers)
+        collaborators = module.Collaborators(
+            runner=recorder,
+            tokens=FrozenTokens(PassStep(), BASE_TIME),
+            clock=FakeClock(0.0),
+            now=BASE_TIME,
+            data_root=root / "data",
+            platform="darwin",
+            launch_agents_dir=launch_agents,
+        )
+        original_replace = os.replace
+
+        def refusing_replace(*args: Any, **kwargs: Any) -> None:
+            raise OSError("replace refused")
+
+        if replace_fails:
+            os.replace = refusing_replace  # type: ignore[assignment]
+        try:
+            result = module.schedule(module.ScheduleOperation.INSTALL, collaborators)
+        finally:
+            os.replace = original_replace  # type: ignore[assignment]
+        files: dict[str, bytes] = {}
+        links: list[str] = []
+        for path in sorted(root.rglob("*")):
+            relative = str(path.relative_to(root))
+            if path.is_symlink():
+                links.append(relative)
+            if path.is_file():
+                files[relative] = path.read_bytes()
+        entries = (
+            tuple(sorted(item.name for item in launch_agents.iterdir()))
+            if launch_agents.exists()
+            else ()
+        )
+        return InstallObservation(
+            status=result.status,
+            detail=result.detail,
+            calls=tuple(recorder.calls),
+            plist_path=plist_path,
+            plist_key=str(plist_path.relative_to(root)),
+            files=files,
+            links=tuple(links),
+            launch_agent_entries=entries,
+        )
 
 
 def with_config(config: ConfigSpec, **changes: Any) -> ConfigSpec:

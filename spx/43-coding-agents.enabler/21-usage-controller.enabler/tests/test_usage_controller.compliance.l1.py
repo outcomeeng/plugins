@@ -1,6 +1,8 @@
 """The usage controller's ALWAYS and NEVER rules hold against violating passes."""
 
 import json
+import os
+import plistlib
 from pathlib import Path
 
 from outcomeeng_testing.generators.control_positions import (
@@ -33,15 +35,18 @@ from outcomeeng_testing.generators.control_positions import (
 from outcomeeng_testing.harnesses.control_positions import (
     BASE_TIME,
     INVALID_VALUE,
+    JOB_LABEL,
     NUMERIC_CONFIG_FIELDS,
     SCALAR_CONFIG_FIELDS,
     STANDARD_ERROR_PATH_KEY,
     STANDARD_OUT_PATH_KEY,
     ChangedApiTokens,
+    CommandResult,
     ConfigSpec,
     PassObservation,
     PassStep,
     changed_sibling_api,
+    install_observation,
     installed_job,
     load_control_positions,
     pass_window,
@@ -1438,3 +1443,201 @@ def test_a_pass_neither_replaces_nor_removes_a_module_registered_under_a_sibling
         assert {call.pane for call in observed.calls if call.operation == "send"} == {
             item.pane for item in positions
         }, built
+
+
+def test_inventory_that_uses_the_pass_bound_marks_unskipped_positions_unfinished_by_either_key() -> (
+    None
+):
+    # Clause: a pass that reaches the five-minute bound records its unfinished
+    # positions and leaves them to the next pass, and a pane on the skip list
+    # receives no action; the skip list names a pane by title or worktree path.
+    # Here the Prowl inventory call itself uses the rest of the time, so the pass
+    # has read every pane title when it meets the bound. Rejects the mutation that
+    # excludes only the worktree-path key from the unfinished set (a position
+    # skipped by pane title is marked unfinished and ordered first in the next
+    # pass), and the one that marks every configured position unfinished.
+    # Limit: a pass that meets the bound before the inventory call returns has read
+    # no title, and a configured position carries none, so only the worktree-path
+    # key applies there (see the test above); no title store exists to consult.
+    module = load_control_positions()
+    positions = alpha_positions(3)
+    skipped = positions[2]
+    bound = PASS_BOUND_MINUTES * SECONDS_PER_MINUTE
+    contexts = {item.worktree: COMPACTION_CONTEXT_PERCENT for item in positions}
+
+    for key in (skipped.worktree, skipped.title):
+        config = ConfigSpec(positions, skip=(key,))
+
+        used, next_pass = run_passes(
+            module,
+            config,
+            [PassStep(leading_seconds=(bound,)), PassStep(contexts=contexts)],
+        )
+
+        assert not [call for call in used.calls if call.pane == skipped.pane]
+        assert set(used.unfinished) == {positions[0].worktree, positions[1].worktree}, (
+            key
+        )
+        assert next_pass.unfinished == ()
+        assert skipped.pane not in {pane for pane, _ in sends_of(next_pass)}
+
+
+def _seed_plist(document: dict[str, object] | bytes) -> object:
+    def seed(root: Path, plist_path: Path) -> None:
+        plist_path.parent.mkdir(parents=True)
+        plist_path.write_bytes(
+            document if isinstance(document, bytes) else plistlib.dumps(document)
+        )
+
+    return seed
+
+
+def _entry_point_name(module: object) -> str:
+    return Path(module.__file__).name  # type: ignore[attr-defined]
+
+
+def test_install_refuses_a_symlink_at_the_job_path_and_runs_no_launchctl_command() -> (
+    None
+):
+    # Clause: the launchd clause (the installed job starts one finite pass). The
+    # install writes the user's launch-agents directory; a link there is not an
+    # artifact this controller owns. Rejects the mutation that writes through the
+    # link (the link target is overwritten) and the one that refuses but still
+    # loads or unloads a job.
+    module = load_control_positions()
+    target_bytes = b"the operator's file"
+
+    def seed(root: Path, plist_path: Path) -> None:
+        plist_path.parent.mkdir(parents=True)
+        (root / "elsewhere.txt").write_bytes(target_bytes)
+        plist_path.symlink_to(root / "elsewhere.txt")
+
+    observed = install_observation(module, seed)
+
+    assert observed.status == module.ScheduleStatus.FAILED
+    assert str(observed.plist_path) in observed.detail
+    assert "inspect" in observed.detail.lower()
+    assert observed.files["elsewhere.txt"] == target_bytes
+    assert observed.links == (observed.plist_key,)
+    assert not observed.calls
+
+
+def test_install_refuses_a_file_it_does_not_own_and_leaves_it_unchanged() -> None:
+    # Clause: the launchd clause. A regular file at the job path is this
+    # controller's only when it is a plist labelled with the job label whose
+    # program arguments name the controller's entry point. Rejects the mutation that
+    # replaces any file at the path, the one that checks the label only, and the one
+    # that checks the entry point only.
+    module = load_control_positions()
+    entry = _entry_point_name(module)
+    foreign_documents: list[dict[str, object] | bytes] = [
+        b"not a property list",
+        {"Label": "com.example.other", "ProgramArguments": ["/bin/true", entry]},
+        {"Label": JOB_LABEL, "ProgramArguments": ["/bin/true", "other_script.py"]},
+        {"ProgramArguments": ["/bin/true", entry]},
+        {"Label": JOB_LABEL},
+    ]
+
+    for document in foreign_documents:
+        original = document if isinstance(document, bytes) else plistlib.dumps(document)
+
+        observed = install_observation(module, _seed_plist(document))  # type: ignore[arg-type]
+
+        assert observed.status == module.ScheduleStatus.FAILED, document
+        assert str(observed.plist_path) in observed.detail
+        assert "inspect" in observed.detail.lower()
+        assert observed.files[observed.plist_key] == original
+        assert not observed.calls
+        assert observed.launch_agent_entries == (observed.plist_path.name,)
+
+
+def test_install_replaces_a_plist_an_earlier_install_wrote_and_loads_the_job() -> None:
+    # Clause: the launchd clause. A plist an earlier install wrote, whatever
+    # interpreter, location, or version wrote it, is the controller's own and is
+    # replaced. Rejects the mutation that refuses every existing file (a second
+    # install, or an upgrade, never completes).
+    module = load_control_positions()
+    earlier = {
+        "Label": JOB_LABEL,
+        "ProgramArguments": [
+            "/old/python",
+            f"/old/plugin/{_entry_point_name(module)}",
+            "pass",
+        ],
+        "StartInterval": 60,
+    }
+
+    observed = install_observation(module, _seed_plist(earlier))
+
+    assert observed.status == module.ScheduleStatus.SUCCEEDED, observed.detail
+    document = plistlib.loads(observed.files[observed.plist_key])
+    assert document["Label"] == JOB_LABEL
+    assert document["ProgramArguments"] != earlier["ProgramArguments"]
+    assert document["StartInterval"] == THIRTY_MINUTES_SECONDS
+    assert [argv[1] for argv in observed.calls] == ["print", "bootout", "bootstrap"]
+
+
+def test_failed_install_write_leaves_no_temporary_file_and_loads_nothing() -> None:
+    # Clause: the launchd clause. The job file is written to a unique temporary file
+    # beside it and renamed over it, so a write that fails publishes nothing and
+    # leaves no stray file in the user's launch-agents directory. Rejects the
+    # mutation that leaves the temporary file behind when the rename fails, and the
+    # one that goes on to load the job after a failed write.
+    module = load_control_positions()
+    earlier = {
+        "Label": JOB_LABEL,
+        "ProgramArguments": [
+            "/old/python",
+            f"/old/plugin/{_entry_point_name(module)}",
+            "pass",
+        ],
+    }
+
+    observed = install_observation(module, _seed_plist(earlier), replace_fails=True)
+
+    assert observed.status == module.ScheduleStatus.FAILED
+    assert str(observed.plist_path) in observed.detail
+    assert observed.launch_agent_entries == (observed.plist_path.name,)
+    assert observed.files[observed.plist_key] == plistlib.dumps(earlier)
+    assert not observed.calls
+
+
+def test_install_checks_the_job_before_unloading_it_and_runs_launchctl_by_absolute_path() -> (
+    None
+):
+    # Clause: the launchd clause. The install asks launchd whether the job is loaded,
+    # unloads it only when it is, tolerates a "could not find service" answer as not
+    # loaded, stops on any other failed answer with the command's text, and then
+    # loads the new job; every command runs the absolute launchctl path. Rejects the
+    # mutation that unloads without asking, the one that ignores a failed status
+    # answer, and the one that finds launchctl on the search path.
+    module = load_control_positions()
+    not_loaded = CommandResult(113, "", "Could not find service in domain")
+    broken = CommandResult(5, "", "Bootstrap failed: input/output error")
+
+    loaded = install_observation(module)
+    absent = install_observation(module, answers={"print": not_loaded})
+    failing = install_observation(module, answers={"print": broken})
+
+    assert [argv[1] for argv in loaded.calls] == ["print", "bootout", "bootstrap"]
+    assert [argv[1] for argv in absent.calls] == ["print", "bootstrap"]
+    assert absent.status == module.ScheduleStatus.SUCCEEDED
+    assert [argv[1] for argv in failing.calls] == ["print"]
+    assert failing.status == module.ScheduleStatus.FAILED
+    assert broken.stderr in failing.detail
+    for observed in (loaded, absent, failing):
+        assert all(os.path.isabs(argv[0]) for argv in observed.calls)
+        assert {argv[0] for argv in observed.calls} == {module.LAUNCHCTL}
+
+
+def test_status_stop_and_restart_run_launchctl_by_absolute_path() -> None:
+    # Clause: the launchd clause. Rejects the mutation that finds launchctl on the
+    # search path for any scheduling operation.
+    module = load_control_positions()
+
+    for operation in module.ScheduleOperation:
+        observed = schedule_observation(module, operation, "darwin")
+
+        assert observed.calls
+        assert all(os.path.isabs(argv[0]) for argv in observed.calls), operation
+        assert {argv[0] for argv in observed.calls} == {module.LAUNCHCTL}

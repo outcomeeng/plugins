@@ -37,6 +37,7 @@ from positions_config import (
     load_settings,
 )
 from positions_schedule import (
+    LAUNCHCTL,
     PASS_INTERVAL_MINUTES,
     CommandOutcome,
     ScheduleOperation,
@@ -59,6 +60,7 @@ __all__ = [
     "Collaborators",
     "ConfigField",
     "ConfigurationError",
+    "LAUNCHCTL",
     "PASS_BOUND_SECONDS",
     "PassResult",
     "RecordField",
@@ -527,6 +529,7 @@ class ControlPass:
         self.state = state
         self.reports: list[Report] = []
         self.unfinished: list[str] = []
+        self.titles: dict[str, str] = {}
         self.streaks: dict[str, int] = {}
         self.weekly: dict[str, float] = {}
         self.members: dict[str, int] = {}
@@ -547,10 +550,15 @@ class ControlPass:
             targets.sort(key=lambda target: target.position.worktree not in previous)
             self._control(targets)
         except PassBound:
+            # A skip entry names a position by worktree path or by pane title. The
+            # titles are the ones the inventory read gave; a pass that met its bound
+            # before the inventory returned has read none, so only the worktree key
+            # applies to it.
             self._leave(
                 position.worktree
                 for position in self.settings.positions
-                if position.worktree not in self.settings.skip
+                if not {position.worktree, self.titles.get(position.worktree, "")}
+                & self.settings.skip
             )
         finally:
             # An action already taken stays remembered even when a later write fails.
@@ -597,6 +605,8 @@ class ControlPass:
             if isinstance(path, str) and isinstance(pane_id, str):
                 title = pane.get(TITLE_KEY)
                 panes[path] = (pane_id, title if isinstance(title, str) else "")
+        self.titles = {path: title for path, (_, title) in panes.items()}
+        self.prowl.budget.check()
         targets: list[Target] = []
         for position in self.settings.positions:
             hosted = panes.get(position.worktree)
