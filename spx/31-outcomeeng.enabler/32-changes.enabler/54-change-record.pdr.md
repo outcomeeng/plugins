@@ -34,7 +34,7 @@ The body carries no attestation, accountable-person, priority, or overrule text;
 - final-format-only: Skills write, judge, and execute only a Change record in the final format. A record in another form receives no migration, alias, or inferred field, and its next revision authors the record anew from the proposal it carries.
 - record-sections: The record body opens with `## Intent`. Proposed adds `## Governance`, `## Governance mutations`, and `## Spec mutations`, whose blocks name each affected Node by its opening line; Framed states each Node's assertions and adds `## Assumptions` when the Frame settled a question; Sliced adds `## Slice`; Executable adds no section. The order is Intent, Governance, Governance mutations, Spec mutations, Assumptions, Slice, and a Proposed record may end with `## Open questions`, which a Framed record leaves empty.
 - record-intent: The Intent runs at most 60 words including its labels. It holds What, Why, an optional Observation, and Evidence, and a list inside a part stands in parentheses.
-- record-governance: `## Governance` lists every record that governs the Change by its path from `spx/`, each with the verdict `in line`, `amended`, or `new`.
+- record-governance: `## Governance` lists every record the Output touches or that governs it, by its path from `spx/`, each with the verdict `in line`, `amended`, or `new`.
 - record-governance-mutations: `## Governance mutations` holds one block for each amended or new record. The block opens with `<path> states:`, lists its decisions in exact text, each opening with a slug and a colon.
 - record-spec-mutations: `## Spec mutations` holds one block for each Node in execution order. The block opens with `<path>: <malleability before> -> <malleability after>`. The block continues with `<file> states:` and the Node's assertions as bare bullets.
 - record-slice: `## Slice` holds `- Repository:` and `- Check:`, one repository and one observable check, which is one trigger and its result.
@@ -52,7 +52,7 @@ Each Definition of Ready is an independently loadable criterion set, and the set
 
 ### Proposed
 
-- proposed-ready: A Proposed Change is ready when its Intent states What, Why, and Evidence, `## Governance mutations` holds the exact text of every decision the Output adds or amends, and `## Governance` and `## Spec mutations` name every record and Node the Output touches.
+- proposed-ready: A Proposed Change is ready when its Intent states What, Why, and Evidence, `## Governance mutations` holds the exact text of every decision the Output adds or amends, `## Governance` lists every record the Output touches or that governs it, and `## Spec mutations` names every Node the Output touches.
 
 Readiness at Proposed requires no operator review statement in the record.
 
@@ -89,7 +89,7 @@ Maturity advances past Proposed, Framed, and Sliced only when the store shows th
 
 - authority-move: The authority for leaving a Maturity is the Product's Maintainer's Lifecycle move of the Change out of `Submitted` to `Available` while the Change held that Maturity; the store's field-change event gives its actor and time, and no confirmation comment is posted or read. A rejection is an instruction naming what to fix, sent to the Director or the Product's Maintainer or written as a plain comment on the Change; no rejection record exists, and the holder repairs the record and submits it again.
 - frame-next: A Change the Product's Maintainer confirms at Proposed is framed next, ahead of the Product's other Proposed Changes.
-- rejection-lowering: A rejection at Framed or Sliced lowers Maturity one level in the same move that takes the Change out of `Submitted`, written by whoever rejects, so that move authorizes leaving only the lowered Maturity, the one the Change held before the rejected stage; `author-change` writes no lowering; a rejection at Proposed leaves the Change `Submitted`, and it means not now. `change-standards`, `author-change`, and `release-change` state one order: the holder's release comes first, the rejecting move with its lowering second, and further refinement only after a session claims the Change again.
+- rejection-lowering: A rejection at Framed or Sliced lowers Maturity one level in the same move that takes the Change out of `Submitted`, written by whoever rejects, so that move authorizes leaving only the lowered Maturity, the one the Change held before the rejected stage; `author-change` writes no rejection lowering; a rejection at Proposed leaves the Change `Submitted`, and it means not now. `change-standards`, `author-change`, and `release-change` state one order: the holder's release comes first, the rejecting move with its lowering second, and further refinement only after a session claims the Change again.
 
 ## Lifecycle
 
