@@ -21,17 +21,17 @@
     {
       "name": "typescript",
       "source": "./dist/claude/typescript",
-      "description": "TypeScript engineering: /test-typescript, /code-typescript, /audit-typescript-code, /audit-typescript-tests, /audit-typescript-architecture, /architect-typescript, /simplify-typescript"
+      "description": "TypeScript engineering: /author-typescript-test, /author-typescript-code, /audit-typescript-code, /audit-typescript-test, /audit-typescript-architecture, /author-typescript-architecture, /simplify-typescript-code"
     },
     {
       "name": "python",
       "source": "./dist/claude/python",
-      "description": "Python engineering: /test-python, /code-python, /audit-python-code, /audit-python-tests, /audit-python-architecture, /architect-python"
+      "description": "Python engineering: /author-python-test, /author-python-code, /audit-python-code, /audit-python-test, /audit-python-architecture, /author-python-architecture"
     },
     {
       "name": "prose",
       "source": "./dist/claude/prose",
-      "description": "Prose craft through a matched triple (/architect-prose, /author-prose, /audit-prose) over caller-supplied kind layers: interface, documentation, copy"
+      "description": "Prose craft through a matched triple (/author-prose-architecture, /author-prose, /audit-prose) over caller-supplied kind layers: interface, documentation, copy"
     },
     {
       "name": "spec-tree",
@@ -56,12 +56,12 @@
     {
       "name": "rust",
       "source": "./dist/claude/rust",
-      "description": "Rust engineering: /test-rust, /code-rust, /audit-rust-code, /audit-rust-tests, /audit-rust-architecture, /architect-rust, /simplify-rust"
+      "description": "Rust engineering: /author-rust-test, /author-rust-code, /audit-rust-code, /audit-rust-test, /audit-rust-architecture, /author-rust-architecture, /simplify-rust-code"
     },
     {
       "name": "go",
       "source": "./dist/claude/go",
-      "description": "Go engineering: /test-go, /code-go, /audit-go-code, /audit-go-tests, /audit-go-architecture, /architect-go, /simplify-go"
+      "description": "Go engineering: /author-go-test, /author-go-code, /audit-go-code, /audit-go-test, /audit-go-architecture, /author-go-architecture, /simplify-go-code"
     },
     {
       "name": "contribute",
