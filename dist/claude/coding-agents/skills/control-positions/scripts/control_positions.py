@@ -252,23 +252,32 @@ class ConsumptionTokens:
                 os.environ, accounting.DEFAULT_ROOT, accounting.DEFAULT_PROJECTS
             )
             with accounting.Evidence(config) as evidence:
-                evidence.collect(end)
+                collected = evidence.collect(end)
                 measured = evidence.measure(start, end)
             group = measured.get(accounting.AccountingField.WORKSPACES, {}).get(
                 worktree
             )
             if group is None:
-                return TokenReading(TokenState.NO_SESSION)
+                # Absence shows no session only when the collection saw every source.
+                complete = (
+                    isinstance(collected, Mapping)
+                    and collected.get(accounting.AccountingField.HISTORY_COMPLETE)
+                    is True
+                )
+                return TokenReading(
+                    TokenState.NO_SESSION if complete else TokenState.UNMEASURED
+                )
             spend = int(sum(group[key] for key in accounting.TOKEN_KEYS))
             return TokenReading(TokenState.MEASURED, spend)
         except (
-            FileNotFoundError,
             OSError,
             ValueError,
-            sqlite3.Error,
-            AttributeError,
-            KeyError,
+            LookupError,
             TypeError,
+            AttributeError,
+            ImportError,
+            RuntimeError,
+            sqlite3.Error,
         ):
             return TokenReading(TokenState.UNMEASURED)
 
@@ -432,6 +441,7 @@ class ControlPass:
         self.state = state
         self.reports: list[Report] = []
         self.unfinished: list[str] = []
+        self.streaks: dict[str, int] = {}
         self.weekly: dict[str, float] = {}
         self.members: dict[str, int] = {}
         self.window_end = collaborators.now
@@ -446,9 +456,20 @@ class ControlPass:
             targets.sort(key=lambda target: target.position.worktree not in previous)
             self._control(targets)
         except PassBound:
-            self._leave(position.worktree for position in self.settings.positions)
-        self.state.unfinished = list(self.unfinished)
-        save_state(self.collaborators.data_root, self.state)
+            self._leave(
+                position.worktree
+                for position in self.settings.positions
+                if position.worktree not in self.settings.skip
+            )
+        finally:
+            # An action already taken stays remembered even when a later write fails.
+            # Only a position this pass measured heavy keeps its streak: a pass that
+            # did not measure it is not one of the consecutive passes.
+            self.state.streaks = {
+                worktree: streak for worktree, streak in self.streaks.items() if streak
+            }
+            self.state.unfinished = list(self.unfinished)
+            save_state(self.collaborators.data_root, self.state)
         for worktree in self.unfinished:
             self._report(
                 ReportKind.UNFINISHED,
@@ -571,7 +592,7 @@ class ControlPass:
             return
         heavy = ratio is not None and ratio > self.settings.pause_multiple
         streak = self.state.streaks.get(worktree, 0) + 1 if heavy else 0
-        self.state.streaks[worktree] = streak
+        self.streaks[worktree] = streak
         if streak >= PAUSE_STREAK_PASSES and self._pause(target, measurement):
             return
         self._compact(target, measurement)
@@ -595,7 +616,6 @@ class ControlPass:
         if not self._act(self.prowl.send(target.pane, CONTINUE_TEXT), worktree):
             return
         self.state.paused.discard(worktree)
-        self.state.streaks[worktree] = 0
         if ratio is None:
             self._record(
                 Action.RESUME,
@@ -699,6 +719,7 @@ class ControlPass:
                 )
                 continue
             members = [t for t in targets if t.position.subscription == subscription]
+            stopped_worktrees: list[str] = []
             for index, target in enumerate(members):
                 try:
                     stopped = self._act(
@@ -709,6 +730,7 @@ class ControlPass:
                     self._leave(item.position.worktree for item in members[index:])
                     raise
                 if stopped:
+                    stopped_worktrees.append(target.position.worktree)
                     self.state.paused.discard(target.position.worktree)
                     self._record(
                         Action.STOP,
@@ -721,11 +743,19 @@ class ControlPass:
                         f"ceiling, so {target.position.worktree} received `/exit` "
                         "and its pane stays open.",
                     )
+            unstopped = [t.position.worktree for t in members]
+            unstopped = [name for name in unstopped if name not in stopped_worktrees]
+            outcome = (
+                "its positions were stopped"
+                if not unstopped
+                else f"{len(stopped_worktrees)} of {len(members)} positions were "
+                f"stopped; these were not: {', '.join(unstopped)}"
+            )
             self._report(
                 ReportKind.SWITCH_ACCOUNT,
                 subscription,
-                f"Weekly use of {subscription} reached {_percent(weekly)}; its "
-                "positions were stopped. Switch accounts to continue.",
+                f"Weekly use of {subscription} reached {_percent(weekly)}; "
+                f"{outcome}. Switch accounts to continue.",
             )
 
     def _act(self, response: Response, worktree: str) -> bool:
