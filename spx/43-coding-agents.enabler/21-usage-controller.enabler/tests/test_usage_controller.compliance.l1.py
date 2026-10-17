@@ -34,6 +34,7 @@ from outcomeeng_testing.harnesses.control_positions import (
     INVALID_VALUE,
     NUMERIC_CONFIG_FIELDS,
     SCALAR_CONFIG_FIELDS,
+    ChangedApiTokens,
     ConfigSpec,
     PassObservation,
     PassStep,
@@ -612,3 +613,244 @@ def test_changed_sibling_api_leaves_pace_unmeasured_and_keeps_context_compaction
                 for call in observed.calls
                 if call.operation == "send"
             ] == [(position.pane, COMPACT_TEXT)], change
+
+
+# Resume rests on a measurement. Evidence for the clause "resumes by the prompt
+# `continue` at the first pass where its spend is back under its share" and the
+# record clause that a record names a true reason. Each position starts paused by
+# two consecutive heavy passes; the pass under test follows.
+
+
+def test_paused_position_stays_paused_when_the_token_measurement_is_skipped() -> None:
+    # Clause: resume only when spend is back under the share. Rejects the mutation
+    # that treats a skipped token measurement (no ratio) as a spend under the share.
+    module = load_control_positions()
+    (position,) = alpha_positions(1)
+    config = ConfigSpec((position,))
+    position_share = share(PACE_TOKENS, 1)
+    heavy = PassStep(
+        tokens={position.worktree: tokens_above(position_share, PAUSE_MULTIPLE)}
+    )
+    light = PassStep(tokens={position.worktree: tokens_under(position_share)})
+    bound = PASS_BOUND_MINUTES * SECONDS_PER_MINUTE
+    reserve = token_measurement_limit_seconds()
+
+    for left in token_reserve_shortfalls(reserve):
+        skipped = PassStep(leading_seconds=(0.0, bound - left))
+
+        first, second, during, after = run_passes(
+            module, config, [heavy, heavy, skipped, light]
+        )
+
+        assert [
+            (call.pane, (call.argument or "").lower())
+            for call in second.calls
+            if call.operation == "key"
+        ] == [(position.pane, ESCAPE_KEY)], left
+        assert not during.token_queries, left
+        assert (position.pane, CONTINUE_TEXT) not in {
+            (call.pane, call.argument) for call in during.calls
+        }, left
+        assert module.Action.RESUME not in {
+            record[module.RecordField.ACTION] for record in during.new_records
+        }, left
+        assert position.worktree in {
+            report.subject
+            for report in during.reports
+            if report.kind == module.ReportKind.UNMEASURED_PACE
+        }, left
+        assert (position.pane, CONTINUE_TEXT) in {
+            (call.pane, call.argument) for call in after.calls
+        }, left
+        assert module.Action.RESUME in {
+            record[module.RecordField.ACTION] for record in after.new_records
+        }, left
+
+
+def test_paused_position_stays_paused_when_the_token_source_is_unusable() -> None:
+    # Clause: resume only when spend is back under the share. Rejects the mutation
+    # that treats a sibling accounting interface that no longer answers (no ratio)
+    # as a spend under the share.
+    module = load_control_positions(built=True)
+    (position,) = alpha_positions(1)
+    config = ConfigSpec((position,))
+    position_share = share(PACE_TOKENS, 1)
+    heavy = PassStep(
+        tokens={position.worktree: tokens_above(position_share, PAUSE_MULTIPLE)}
+    )
+    light = PassStep(tokens={position.worktree: tokens_under(position_share)})
+
+    with real_parser_world(module) as world:
+        world.add_transcript_row(position.worktree)
+        for change in sibling_api_changes():
+            unusable = PassStep(
+                token_source=ChangedApiTokens(
+                    module, world.accounting, change, position.worktree
+                )
+            )
+
+            first, second, during, after = run_passes(
+                module, config, [heavy, heavy, unusable, light]
+            )
+
+            assert [
+                (call.pane, (call.argument or "").lower())
+                for call in second.calls
+                if call.operation == "key"
+            ] == [(position.pane, ESCAPE_KEY)], change
+            assert (position.pane, CONTINUE_TEXT) not in {
+                (call.pane, call.argument) for call in during.calls
+            }, change
+            assert module.Action.RESUME not in {
+                record[module.RecordField.ACTION] for record in during.new_records
+            }, change
+            assert position.worktree in {
+                report.subject
+                for report in during.reports
+                if report.kind == module.ReportKind.UNMEASURED_PACE
+            }, change
+            assert (position.pane, CONTINUE_TEXT) in {
+                (call.pane, call.argument) for call in after.calls
+            }, change
+            assert module.Action.RESUME in {
+                record[module.RecordField.ACTION] for record in after.new_records
+            }, change
+
+
+def test_paused_position_stays_paused_when_its_subscription_has_no_configured_pace() -> (
+    None
+):
+    # Clause: resume only when spend is back under the share, and the share is the
+    # subscription's pace divided among its positions. Rejects the mutation that
+    # resumes a paused position whose share is undefined (no configured pace).
+    module = load_control_positions()
+    (position,) = alpha_positions(1)
+    config = ConfigSpec((position,))
+    position_share = share(PACE_TOKENS, 1)
+    heavy = PassStep(
+        tokens={position.worktree: tokens_above(position_share, PAUSE_MULTIPLE)}
+    )
+    light = PassStep(
+        config=config, tokens={position.worktree: tokens_under(position_share)}
+    )
+    unpaced = PassStep(
+        config=with_config(config, unpaced=(position.subscription,)),
+        tokens={position.worktree: tokens_under(position_share)},
+    )
+
+    first, second, during, after = run_passes(
+        module, config, [heavy, heavy, unpaced, light]
+    )
+
+    assert [
+        (call.pane, (call.argument or "").lower())
+        for call in second.calls
+        if call.operation == "key"
+    ] == [(position.pane, ESCAPE_KEY)]
+    assert (position.pane, CONTINUE_TEXT) not in {
+        (call.pane, call.argument) for call in during.calls
+    }
+    assert module.Action.RESUME not in {
+        record[module.RecordField.ACTION] for record in during.new_records
+    }
+    assert position.worktree in {
+        report.subject
+        for report in during.reports
+        if report.kind == module.ReportKind.UNMEASURED_PACE
+    }
+    assert (position.pane, CONTINUE_TEXT) in {
+        (call.pane, call.argument) for call in after.calls
+    }
+    assert module.Action.RESUME in {
+        record[module.RecordField.ACTION] for record in after.new_records
+    }
+
+
+def test_resume_without_a_session_in_the_window_states_its_true_basis() -> None:
+    # Clauses: a paused position resumes at the first pass where its spend is back
+    # under its share (a paused position makes no requests, so the parser finds no
+    # session for it), and a record names a true reason. Rejects the mutation that
+    # records an unmeasured resume with the measured-spend reason.
+    module = load_control_positions(built=True)
+    (position,) = alpha_positions(1)
+    other = PositionSpec(2, ALPHA)
+    config = ConfigSpec((position,))
+    position_share = share(PACE_TOKENS, 1)
+    under = tokens_under(position_share)
+    heavy = PassStep(
+        tokens={position.worktree: tokens_above(position_share, PAUSE_MULTIPLE)}
+    )
+    light = PassStep(tokens={position.worktree: under})
+
+    def resumes(observation: PassObservation) -> list[dict[str, object]]:
+        return [
+            record
+            for record in observation.new_records
+            if record[module.RecordField.ACTION] == module.Action.RESUME
+        ]
+
+    *_, measured_pass = run_passes(module, config, [heavy, heavy, light])
+    (measured,) = resumes(measured_pass)
+
+    with real_parser_world(module) as world:
+        world.add_transcript_row(other.worktree)
+        assert (
+            world.tokens.tokens(other.worktree, *world.window) == world.tokens_per_row
+        )
+        assert world.tokens.tokens(position.worktree, *world.window) is None
+        no_session = PassStep(token_source=module.ConsumptionTokens())
+
+        _, second, unmeasured_pass = run_passes(
+            module, config, [heavy, heavy, no_session]
+        )
+
+    (unmeasured,) = resumes(unmeasured_pass)
+    field = module.RecordField
+    assert (position.pane, CONTINUE_TEXT) in {
+        (call.pane, call.argument) for call in unmeasured_pass.calls
+    }
+    assert [
+        (call.pane, (call.argument or "").lower())
+        for call in second.calls
+        if call.operation == "key"
+    ] == [(position.pane, ESCAPE_KEY)]
+    assert str(under) in measured[field.MEASUREMENT]
+    assert unmeasured[field.REASON] not in (None, "")
+    assert unmeasured[field.REASON] != measured[field.REASON]
+    assert not any(char.isdigit() for char in unmeasured[field.MEASUREMENT])
+
+
+def test_measured_spend_under_the_share_resumes_the_paused_position() -> None:
+    # Clause: resumes by `continue` at the first pass where its spend is back under
+    # its share. Rejects the mutation that never resumes (or resumes only after a
+    # second pass) once a measured spend is under the share, and pins the measured
+    # record naming the measured spend.
+    module = load_control_positions()
+    (position,) = alpha_positions(1)
+    config = ConfigSpec((position,))
+    position_share = share(PACE_TOKENS, 1)
+    under = tokens_under(position_share)
+    heavy = PassStep(
+        tokens={position.worktree: tokens_above(position_share, PAUSE_MULTIPLE)}
+    )
+    light = PassStep(tokens={position.worktree: under})
+
+    first, second, resumed = run_passes(module, config, [heavy, heavy, light])
+
+    field = module.RecordField
+    records = [
+        record
+        for record in resumed.new_records
+        if record[field.ACTION] == module.Action.RESUME
+    ]
+    assert (position.pane, CONTINUE_TEXT) in {
+        (call.pane, call.argument) for call in resumed.calls
+    }
+    assert [record[field.POSITION] for record in records] == [position.worktree]
+    assert str(under) in records[0][field.MEASUREMENT]
+    assert records[0][field.REASON] not in (None, "")
+    assert not [
+        unmeasured
+        for unmeasured in resumed.reports
+        if unmeasured.kind == module.ReportKind.UNMEASURED_PACE
+    ]
