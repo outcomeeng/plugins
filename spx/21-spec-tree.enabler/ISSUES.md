@@ -233,3 +233,15 @@ Revisit and settlement condition: one conditional paragraph moved into the refer
 **Impact:** The assertion rests on audit evidence alone, and no eval scores the `/understand` skill's delivered-value declaration.
 
 **Settlement condition:** An eval under this node's `evals/` scores the `/understand` skill's delivered-value declaration and the assertion links it as `[eval]`, or the audit tag stands and gains its rule slug when the tree adopts the `[audit:{rule-slug}]` form.
+
+## DEBT [verdict-source-not-sealed-run]: the apply skill reads four auditor verdicts from structured output, not a sealed run
+
+Defect class: `verdict-source-not-sealed-run`.
+
+Finding: assertion 18 of `spx/21-spec-tree.enabler/65-apply.enabler/apply.md` requires the verdicts of `adr-auditor`, `test-evidence-auditor`, `eval-evidence-auditor` and `implementation-auditor` to be read from the terminal status of a sealed run, as the verification decision [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md) declares. `src/plugins/spec-tree/skills/apply/SKILL.md` Step 4 requires a structured JSON verdict with `APPROVED`, and Step 8a, `<review_gates>` and `<success_criteria>` use `REJECTED`, `FAIL` and `overall: PASS` verdicts for the ADR, test-evidence and eval-evidence auditors; only Step 8, for `implementation-auditor`, reads the sealed-run `terminalStatus`.
+
+Evidence: run token `2026-10-17_01-48-26-442-f2c3646f8f3d`, read at head `1097a3b67e61591f80830bc56e1f7091d46b1a1b`. Base-ref evidence: `git diff -U0 origin/main HEAD` leaves assertion 18 and those SKILL.md passages untouched.
+
+Impact: an approval of an ADR, a test-evidence body or an eval-evidence body in the apply lifecycle rests on a verdict object outside the sealed run, which the assertion forbids.
+
+Revisit and settlement condition: Step 4, Step 8a, `<review_gates>` and `<success_criteria>` of the apply skill read each of the four auditors' verdicts from the terminal status of the sealed run whose token the launch returns, and one typed skill audit approves the amended skill.
