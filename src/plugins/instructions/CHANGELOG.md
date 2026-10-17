@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.21.11
+
+### Changed
+
+- **`/create-skill` bounds each repair of a finding to the cited clause and records the clause and its closing check.** The repair workflow fixes every instance the cited catalog clause covers and changes nothing the clause does not require, and each `repaired` disposition and sweep row names the clause applied and the check that shows the class closed. Before this change, the repair fixed any violation of the same catalog rule and recorded neither.
+
 ## 0.21.9
 
 ### Changed

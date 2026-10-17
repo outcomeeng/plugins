@@ -26,7 +26,7 @@ The skills-about-skills cluster is three peers with distinct roles:
 - ALWAYS: `/audit-skill` records one changeset-scoped verification run with one unit for each changed file under the bundle directory and one for each changed authored shared fragment the bundle includes, directly or through a nested include, every unit keyed `instructions:skill:file:<path>`, keys each finding `<unit>:<rule-id>`, and returns `BLOCKED` when the changeset changes neither a bundle file nor an included fragment or a governing standard is unreadable ([audit])
 - ALWAYS: every rule identifier `/audit-skill` records names a rule in the `/skill-standards` or `/agent-prompt-standards` rule catalog, and no finding is recorded under an identifier outside those catalogs ([audit])
 - ALWAYS: `/audit-skill` rejects only on touched text inside each changed file, and returns each other finding as `filed`, per [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md) ([audit])
-- ALWAYS: `/create-skill`'s repair workflow checks every same-class site and every dependency the repair changes before it returns the repaired bundle ([audit])
+- ALWAYS: `/create-skill`'s repair workflow repairs each supplied finding across every instance the cited clause covers and nothing the clause does not require, checks every same-class site and every dependency the repair changes before it returns the repaired bundle, and returns with the bundle, for each repair, the clause it applies and the check that shows the class closed ([audit])
 
 - ALWAYS: skill-authoring and audit guidance forbids model and reasoning
   overrides in skill frontmatter; a skill retains its invoking agent session's

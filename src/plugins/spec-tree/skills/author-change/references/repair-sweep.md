@@ -6,7 +6,7 @@ The sweep table of one Change-candidate repair batch: every same-class site and 
 
 <same_class_site>
 
-A same-class site is any location in the candidate, in the front matter or any `##` section, that carries the defect class a finding cites: a violation of the same rule or criterion, or the same wording or structure the repair rewrites. Find each by searching the whole candidate for the rewritten pattern and the rule's characteristic text, never by reading only the sections the finding names.
+A same-class site is any location in the candidate, in the front matter or any `##` section, that carries the defect class a finding cites: a violation of the criterion the finding cites, as its standard defines it, or the same wording or structure the repair rewrites. The finding's examples are instances of the class, never its definition, and the repair changes nothing the criterion does not require. Find each by searching the whole candidate for the rewritten pattern and the rule's characteristic text, never by reading only the sections the finding names.
 
 </same_class_site>
 
@@ -33,7 +33,7 @@ One row per site or dependent found:
 | Site | Class or dependent | Disposition |
 | ---- | ------------------ | ----------- |
 
-The disposition is `repaired` with the section changed, or `unresolved` with the reason. An edit made to resolve a row is itself an edit, so its own same-class sites and dependents enter the table before the sweep ends.
+The disposition is `repaired` with the section changed and, for each repair of a finding, the criterion applied and the check that shows the class closed, or `unresolved` with the reason. The re-audit's verdict, never the recorded check, decides whether the class closed. An edit made to resolve a row is itself an edit, so its own same-class sites and dependents enter the table before the sweep ends.
 
 </sweep_table>
 

@@ -6,7 +6,7 @@ The sweep table of one repair: every same-class site and every changed dependenc
 
 <same_class_site>
 
-A same-class site is any location in the bundle, in any file under `SKILL.md`, `references/`, `workflows/`, `templates/`, `assets/`, and `scripts/`, that carries the defect class a repair removes: a violation of the same catalog rule, or the same wording or structure the repair rewrote. Locate each by searching the whole bundle for the rewritten pattern and for the rule's characteristic text, never by reading only the files the finding names.
+A same-class site is any location in the bundle, in any file under `SKILL.md`, `references/`, `workflows/`, `templates/`, `assets/`, and `scripts/`, that carries the defect class a repair removes: a violation of the clause the finding's catalog rule defines, or the same wording or structure the repair rewrote; the repair changes nothing the clause does not require. Locate each by searching the whole bundle for the rewritten pattern and for the rule's characteristic text, never by reading only the files the finding names.
 
 </same_class_site>
 
@@ -32,6 +32,6 @@ One row per site or dependency found:
 | Site | Class or dependency | Disposition |
 | ---- | ------------------- | ----------- |
 
-The disposition is `repaired` with the changed path, or `unresolved` with the reason. A repair that leaves a row `unresolved` without a reason is incomplete. An edit made to resolve a row is itself an edit: its own same-class sites and dependents enter the table before the sweep ends.
+The disposition is `repaired` with the changed path and, for a finding's repair, the clause applied and the check that shows the class closed, or `unresolved` with the reason. A repair that leaves a row `unresolved` without a reason is incomplete. An edit made to resolve a row is itself an edit: its own same-class sites and dependents enter the table before the sweep ends.
 
 </sweep_table>
