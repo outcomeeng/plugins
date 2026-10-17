@@ -329,9 +329,9 @@ Prose craft through a matched triple (/architect-prose, /author-prose, /audit-pr
 
 | Type  | Name                            | Purpose                                                                                                                                                             |
 | ----- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Skill | `/architect-prose`              | Writing ADRs for prose                                                                                                                                              |
 | Skill | `/audit-prose`                  | Prose audit methodology                                                                                                                                             |
 | Skill | `/author-prose`                 | Writing text for human readers — docs pages, UI text, error messages, emails, release notes                                                                         |
+| Skill | `/author-prose-architecture`    | Writing ADRs for prose                                                                                                                                              |
 | Skill | `/prose-architecture-standards` | Prose ADR conventions enforced across architect and auditor skills                                                                                                  |
 | Skill | `/prose-standards`              | Prose standards enforced across all skills                                                                                                                          |
 | Agent | `prose-auditor`                 | Auditing human-facing text — documents, web pages, articles, docs, UI text, product messages, or internal team pages — for prose quality and style-kind conformance |
