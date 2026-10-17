@@ -50,6 +50,11 @@ LANGUAGE_CODE_SKILL_TEMPLATE: Final = "author-{language}-code"
 LANGUAGE_AUDIT_SKILL_TEMPLATE: Final = "audit-{language}-{concern}"
 RETIRED_LANGUAGE_AUDIT_SKILL_TEMPLATE: Final = "audit-{language}"
 LANGUAGE_AUDIT_CONCERNS: Final = ("code", "test", "architecture")
+RETIRED_LANGUAGE_AUDIT_CONCERNS: Final = ("tests",)
+FORBIDDEN_WRAPPER_CONCERNS: Final = (
+    *LANGUAGE_AUDIT_CONCERNS,
+    *RETIRED_LANGUAGE_AUDIT_CONCERNS,
+)
 RETIRED_AUDIT_RUNTIME_FILENAMES: Final = (
     "verdict.py",
     "aggregate_verdicts.py",
@@ -362,7 +367,7 @@ def implementation_languages(surface: Path) -> tuple[str, ...]:
 
 def language_specific_auditor_filenames(language: str) -> frozenset[str]:
     """Return forbidden language-specific implementation wrapper filenames."""
-    concerns = LANGUAGE_AUDIT_CONCERNS
+    concerns = FORBIDDEN_WRAPPER_CONCERNS
     return frozenset(
         {
             f"{language}-auditor.md",
@@ -379,7 +384,7 @@ def is_language_specific_auditor_filename(filename: str) -> bool:
     if not filename.endswith(".md"):
         return False
     stem = filename.removesuffix(".md")
-    concerns = LANGUAGE_AUDIT_CONCERNS
+    concerns = FORBIDDEN_WRAPPER_CONCERNS
     return any(
         (stem.endswith(f"-{concern}-auditor") and stem != f"{concern}-auditor")
         or (
