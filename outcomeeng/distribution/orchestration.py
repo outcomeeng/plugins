@@ -34,8 +34,8 @@ LEFTHOOK_PATH: Final = Path("lefthook.yml")
 CLAUDE_MARKETPLACE_PATH: Final = Path(".claude-plugin") / "marketplace.json"
 CODEX_MARKETPLACE_PATH: Final = Path(".agents") / "plugins" / "marketplace.json"
 CATALOG_PATHS: Final = {
-    "claude": CLAUDE_MARKETPLACE_PATH,
-    "codex": CODEX_MARKETPLACE_PATH,
+    _Target.CLAUDE: CLAUDE_MARKETPLACE_PATH,
+    _Target.CODEX: CODEX_MARKETPLACE_PATH,
 }
 
 CLAUDE_RUNTIME_ROOT: Final = f"./{CLAUDE_DIST_PLUGINS_DIR.as_posix()}"
