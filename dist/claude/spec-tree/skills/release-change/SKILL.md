@@ -42,7 +42,7 @@ Use skill `spec-tree:change-standards`. Invoke it with `Lifecycle`; it loads the
 
 <result>
 
-Return the issue URL, the readback values verbatim, the pushed branch or PR with its head commit, and the Handoff's Next block line. A Change released `Available` is claimable by any agent through `claim-change`; a Change released `Submitted` waits for the Product's Maintainer to move it out of `Submitted`, and no session claims, refines, or executes it before. A rejection at `Framed` or `Sliced` is applied in the order `maturity-and-authority` states: this release comes first, the `author-change` write that lowers Maturity one level second, and further refinement only after a session claims the Change again; a rejection at `Proposed` leaves the Change `Submitted`.
+Return the issue URL, the readback values verbatim, the pushed branch or PR with its head commit, and the Handoff's Next block line. A Change released `Available` is claimable by any agent through `claim-change`; a Change released `Submitted` waits for the Product's Maintainer to move it out of `Submitted`, and no session claims, refines, or executes it before. A rejection at `Framed` or `Sliced` is applied in the order `maturity-and-authority` states: this release comes first, the rejecting move out of `Submitted` with its one-level Maturity lowering second, and further refinement only after a session claims the Change again; a rejection at `Proposed` leaves the Change `Submitted`.
 
 </result>
 
