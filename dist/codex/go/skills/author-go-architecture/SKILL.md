@@ -114,14 +114,6 @@ Execute these phases IN ORDER.
 1. Read the node spec completely (requirements, assertions)
 2. Read product context:
    - `AGENTS.md` - Product structure, navigation, work item management
-3. Use skill `go:go-code-standards`, then use skill `go:go-architecture-standards`
-4. Read `spx/local/go.md` and `spx/local/go-architecture.md` if they exist
-5. Read `/go-test-standards`, then `spx/local/go-tests.md` if it exists
-6. Use skill `spec-tree:verify` for evidence routing; after test is selected, use skill `go:author-go-test` for Go expression
-7. Read existing ADRs for consistency:
-   - `spx/{NN}-{slug}.adr.md` - Product-level ADRs
-   - ADRs interleaved within enabler/outcome nodes
-8. Load the decision template through the live `/understand` foundation
 
 **Phase 1: Identify Decisions Needed**
 
