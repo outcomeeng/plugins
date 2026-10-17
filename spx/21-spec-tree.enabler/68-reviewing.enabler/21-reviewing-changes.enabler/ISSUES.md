@@ -267,3 +267,13 @@ The changes-reviewer requires a test to pin `SIGNAL_GRACE_SECONDS` to the spec's
 `spec-tree:changes-reviewer` run `2026-09-22_20-40-26-221-404eea4ba809` rejected line 181 of `src/plugins/coding-agents/skills/orchestrate-officers/scripts/derive_ledger.py` by executing the shipped entry point: a JSON array under a read's `cause` is unhashable, so the frozenset membership test raised `TypeError`, outside the entry point's refused-source handler, and the script printed a traceback and exited 1 against a contract of one versioned invalid-input result on stdout and exit two. The implementation audit approved the same file on the same head by reading it. The repair landed at `1ea3cf1567a963c6466366098155fcaa3a04d01a`.
 
 **Settlement condition.** A decision states whether an implementation audit executes a shipped executable, and the review's execution of the subject has a named owner. The full entry is in `spx/31-outcomeeng.enabler/31-verification.enabler/ISSUES.md`.
+
+## The script-decomposition ADR's second opening paragraph states a journey, not atemporal truth
+
+The second opening paragraph of [`spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/21-script-decomposition.adr.md`](spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/21-script-decomposition.adr.md) describes the three helper modules by their place in a migration: it says what they remain, what they still own, what the skill path no longer does, and what holds until a later move.
+
+**Evidence.** The paragraph carries the temporal phrases "remain shipped helper and legacy policy modules during the stop-gap", "still owns the full changeset diff bundle", "no longer exposes them to Claude and no longer depends on `journal_emit.py finding-reported`", "For this local mitigation, finding shape and citation validation move out of the skill path", and "is the authoritative event boundary until review-specific validation moves into SPX". The decision-record audit of the ADR, run during outcomeeng/changes#556, filed one temporal-voice finding on this paragraph, which that Change left unchanged.
+
+**Impact.** A reader of the decision learns the modules' state relative to a past and a future rather than the rule that governs them, and each later decision-record audit of the ADR files the same finding again.
+
+**Settlement condition.** The paragraph states atemporal truth after an operator-reviewed amendment of the ADR.
