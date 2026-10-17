@@ -460,7 +460,7 @@ In decision-rule mode, add no evidence link to the ADR/PDR. The implementing spe
 
 **Step 8: Sweep authored evidence for source-owned values**
 
-Before the evidence faces its first audit, search every test, harness, and generator this invocation created or changed for each literal spelling of a value a production module owns, and replace each spelling with the production owner's export. Export the value from its production owner first when none exists, as `<source_contract_first_gate>` requires. A repair round sweeps every spelling of the value across the node's linked tests, harnesses, and generators, not only the repaired files.
+Before the evidence faces its first audit, search every test, harness, and generator this invocation created or changed for each literal spelling of a value a production module owns, and replace each spelling with the production owner's export. A repair round takes its sweep scope from the repair paragraph in `<source_contract_first_gate>`.
 
 In decision-rule mode, no test file changes and no sweep runs.
 
