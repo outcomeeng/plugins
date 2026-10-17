@@ -222,3 +222,15 @@ Impact: a run of the change auditor can have its runner request blocked by the g
 Revisit and settlement condition: `outcomeeng/changes#515` is the home of the fix, which moves the change auditor to file-written requests. `audit-change` passes its runner request by a file written with the file-write tool, with its agent grant and constraints adjusted, or the assertion states why a stdin-fed runner request is outside it.
 
 Reason the fix is a separate larger concern: the fix adds a Write grant to the change-auditor agent, which reverses that agent's no-file-write rule. A separate Change set that rule, and no block of `outcomeeng/changes#425` amends it, so the fix lies outside this changeset.
+
+## DEBT [voice]: change-standards lifecycle inert-stdin names the agent as a subject
+
+Defect class: `voice`.
+
+Finding: the `inert-stdin` rule in `src/plugins/spec-tree/skills/change-standards/references/lifecycle.md` (line 67) uses "the agent" as the subject of "the agent never removes the file". Prompt text in skill content states an instruction in imperative voice or names Claude, and never uses "the agent" as a subject.
+
+Evidence: `instructions:skill-auditor` run `2026-10-17_18-16-04-154-bd168bad0aee`, terminal status approved, returned a `filed` finding under rule `banned_subject` for unit `instructions:skill:file:src/plugins/spec-tree/skills/change-standards/references/lifecycle.md`, base-ref evidence `ffb6bdca9cfea5d4657fd86c184487179df6432e..a101e169becf514e2c8a76cb4f82fe1aa4a7135a`. Observed: line 67 reads "...and the agent never removes the file." Expected: "NEVER remove the file", or a sentence naming Claude. The line lies outside the changeset.
+
+Impact: a later audit of `change-standards` can raise the finding again.
+
+Revisit and settlement condition: `inert-stdin` in `lifecycle.md` states the instruction in imperative voice or names Claude as its subject, and one typed skill audit of `change-standards` raises no `banned_subject` finding on it.
