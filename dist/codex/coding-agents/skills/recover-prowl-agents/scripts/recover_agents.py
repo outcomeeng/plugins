@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
 from types import ModuleType
-from typing import TextIO, cast
+from typing import Any, TextIO, cast
 
 AGENT_TOKEN_MODULE_NAME = "agent_tokens"
 
@@ -140,16 +140,45 @@ def _load_agent_tokens() -> ModuleType:
     cached = sys.modules.get(AGENT_TOKEN_MODULE_NAME)
     if cached is not None and Path(getattr(cached, "__file__", "")) == path:
         return cached
+    advice = (
+        "the module ships beside this script in the coding-agents plugin; "
+        "reinstall or update the coding-agents plugin to restore it"
+    )
     spec = importlib.util.spec_from_file_location(AGENT_TOKEN_MODULE_NAME, path)
     if spec is None or spec.loader is None:
-        raise RuntimeError(f"cannot load {AGENT_TOKEN_MODULE_NAME} from {path}")
+        raise RuntimeError(
+            f"error: cannot load {AGENT_TOKEN_MODULE_NAME} from {path}; {advice}"
+        )
     module = importlib.util.module_from_spec(spec)
     sys.modules[AGENT_TOKEN_MODULE_NAME] = module
-    spec.loader.exec_module(module)
+    try:
+        spec.loader.exec_module(module)
+    except FileNotFoundError as exc:
+        sys.modules.pop(AGENT_TOKEN_MODULE_NAME, None)
+        raise RuntimeError(
+            f"error: agent token module not found: {path}; {advice}"
+        ) from exc
+    except Exception as exc:
+        sys.modules.pop(AGENT_TOKEN_MODULE_NAME, None)
+        raise RuntimeError(
+            f"error: agent token module failed to load: {path} "
+            f"({type(exc).__name__}: {exc}); {advice}"
+        ) from exc
     return module
 
 
-AgentToken = _load_agent_tokens().AgentToken
+def _agent_token_class() -> Any:
+    module = _load_agent_tokens()
+    token_class = getattr(module, "AgentToken", None)
+    if token_class is None:
+        raise RuntimeError(
+            f"error: agent token module {getattr(module, '__file__', AGENT_TOKEN_MODULE_NAME)} "
+            "declares no AgentToken; reinstall or update the coding-agents plugin to restore it"
+        )
+    return token_class
+
+
+AgentToken = _agent_token_class()
 
 
 class AgentType(StrEnum):

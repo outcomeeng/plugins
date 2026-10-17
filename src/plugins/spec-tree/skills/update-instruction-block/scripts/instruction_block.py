@@ -160,7 +160,53 @@ DELEGATION_STUB_MAX_CHARACTERS = 500
 
 # Each agent harness reads its own instruction filename from the product root.
 AGENT_TOKENS_PATH = pathlib.Path(__file__).with_name("agent-tokens.json")
-_AGENT_TOKENS = json.loads(AGENT_TOKENS_PATH.read_text(encoding="utf-8"))
+AGENT_TOKENS_REQUIRED_KEYS = ("CLAUDE", "CODEX")
+AGENT_TOKENS_REINSTALL_ADVICE = (
+    "the file ships beside this script in the spec-tree plugin; "
+    "reinstall or update the spec-tree plugin to restore it"
+)
+
+
+class AgentTokensLoadError(RuntimeError):
+    """Raised when the sibling agent-tokens data file cannot supply the agent tokens."""
+
+
+def load_agent_tokens(path: pathlib.Path) -> dict[str, str]:
+    """Read the agent tokens from ``path``, naming the file and the fix when it cannot supply them."""
+    try:
+        text = path.read_text(encoding="utf-8")
+    except FileNotFoundError as exc:
+        raise AgentTokensLoadError(
+            f"error: agent tokens file not found: {path}; {AGENT_TOKENS_REINSTALL_ADVICE}"
+        ) from exc
+    except OSError as exc:
+        raise AgentTokensLoadError(
+            f"error: agent tokens file unreadable: {path} ({exc}); "
+            f"{AGENT_TOKENS_REINSTALL_ADVICE}"
+        ) from exc
+    try:
+        tokens = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise AgentTokensLoadError(
+            f"error: agent tokens file is not valid JSON: {path} ({exc}); "
+            f"{AGENT_TOKENS_REINSTALL_ADVICE}"
+        ) from exc
+    if not isinstance(tokens, dict):
+        raise AgentTokensLoadError(
+            f"error: agent tokens file must hold a JSON object: {path} "
+            f"(found {type(tokens).__name__}); {AGENT_TOKENS_REINSTALL_ADVICE}"
+        )
+    missing = [key for key in AGENT_TOKENS_REQUIRED_KEYS if key not in tokens]
+    if missing:
+        raise AgentTokensLoadError(
+            f"error: agent tokens file lacks required key(s) {', '.join(missing)}: {path} "
+            f"(keys found: {', '.join(sorted(map(str, tokens))) or 'none'}); "
+            f"{AGENT_TOKENS_REINSTALL_ADVICE}"
+        )
+    return tokens
+
+
+_AGENT_TOKENS = load_agent_tokens(AGENT_TOKENS_PATH)
 CLAUDE_TOKEN = _AGENT_TOKENS["CLAUDE"]
 CODEX_TOKEN = _AGENT_TOKENS["CODEX"]
 AGENT_HARNESS_INSTRUCTION_FILENAMES = {
