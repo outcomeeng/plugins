@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.16.0
+
+### Added
+
+- **`/recover-prowl-agents recover` passes parent-session writable roots to each recovered agent session.** A recover request takes an optional `writableRoots` object that maps a prepared candidate's absolute worktree path to a list of absolute roots, and the skill reads it from an optional absolute file path after the manifest path. Each recovered Claude Code or Codex session launches with one `--add-dir <root>` per root supplied for its worktree, so its effective permission policy lists the root as writable, and a request that supplies no root launches the same command as before. A non-absolute root is rejected as `invalid-schema` before any launch, and a launching Pi candidate whose worktree has a supplied root is rejected as `invalid-target` with no launch, because Pi's resume command accepts no writable-root option. The prepared manifest records no root, so a root supplied at one recovery never carries into the next.
+
 ## 0.15.0
 
 ### Added
