@@ -100,10 +100,10 @@ this order:
    the version `just bump` wrote. The content commits author that heading
    before any bump runs, and `just bump` never reads it, so a base that
    advanced or a changed segment leaves the two apart. Rewrite a differing
-   heading only when the changeset authored it, which holds when that top
-   version heading at the candidate head is absent from the plugin's
-   `CHANGELOG.md` at `version_base_ref`; leave every other top heading
-   unchanged. Rewrite it to the written version, leave the entry text as
+   heading only when the changeset authored it, which holds when the
+   plugin's `CHANGELOG.md` at the candidate head holds more version headings
+   than at `version_base_ref`, so the heading's text alone never decides;
+   leave every other top heading unchanged. Rewrite it to the written version, leave the entry text as
    written, and run `just build-skills` again. Commit the manifests, the changed headings, and
    the generated output together through `/commit-changes`.
 4. Run `just bump-check "$version_base_ref"` on the clean committed head; a
