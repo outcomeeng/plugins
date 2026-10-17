@@ -11,7 +11,9 @@ CAN resume the complete intended live set and its unsatisfied operator interacti
 
 ## Assertions
 
-- Given a recover request that supplies a writable root for a candidate's worktree, when recovery launches that candidate, then the recovered native session's effective permission policy lists that root as writable
+### Scenarios
+
+- Given a recover request that supplies a writable root for a candidate's worktree, when recovery launches that candidate, then the recovered native session's effective permission policy lists that root as writable ([probe](probes/writable-roots/probe.md))
 
 ### Mappings
 
