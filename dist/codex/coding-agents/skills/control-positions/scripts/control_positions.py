@@ -74,7 +74,12 @@ __all__ = [
 
 PASS_BOUND_SECONDS: Final = 300
 COMMAND_TIMEOUT_SECONDS: Final = 30
-TOKEN_STEP_SECONDS: Final = 60  # collect and measure, each limited to 30 seconds
+# The token step occupies the sibling accounting module's `collect` and `measure`,
+# each capped at its MAX_SECONDS deadline, plus the construction of its `Evidence`,
+# whose sqlite connection waits at most one second for a lock. The import of the
+# sibling is done before the pass clock starts, so it occupies no span of the pass.
+TOKEN_STEP_DEADLINES: Final = 2
+TOKEN_SETUP_SECONDS: Final = 1
 SCREEN_LINES: Final = 40
 PAUSE_STREAK_PASSES: Final = 2
 COMPACT_TEXT: Final = "/compact"
@@ -282,6 +287,27 @@ class ConsumptionTokens:
             return TokenReading(TokenState.UNMEASURED)
 
 
+def token_step_seconds() -> float:
+    """The longest span one token measurement can occupy, from the sibling's limits.
+
+    Loading the sibling here, before the pass clock starts, keeps its import out of
+    the pass. A sibling that cannot be read measures nothing and returns at once.
+    """
+    try:
+        deadline = load_sibling(*TOKEN_ACCOUNTING).MAX_SECONDS
+        return float(TOKEN_STEP_DEADLINES * deadline + TOKEN_SETUP_SECONDS)
+    except (
+        OSError,
+        ImportError,
+        SyntaxError,
+        ValueError,
+        TypeError,
+        AttributeError,
+        RuntimeError,
+    ):
+        return 0.0
+
+
 class PassBound(Exception):
     """The pass reached its time bound."""
 
@@ -434,7 +460,9 @@ class ControlPass:
         collaborators: Collaborators,
         prowl: ProwlClient,
         state: PassState,
+        token_reserve: float,
     ) -> None:
+        self.token_reserve = token_reserve
         self.settings = settings
         self.collaborators = collaborators
         self.prowl = prowl
@@ -451,6 +479,11 @@ class ControlPass:
 
     def run(self) -> PassResult:
         previous = set(self.state.unfinished)
+        # A worktree the configuration no longer lists is no longer held paused by
+        # this controller; a configured one that Prowl or the skip list leaves out
+        # keeps its entry, since its pane may return.
+        configured = {position.worktree for position in self.settings.positions}
+        self.state.paused.intersection_update(configured)
         try:
             targets = self._targets()
             targets.sort(key=lambda target: target.position.worktree not in previous)
@@ -555,7 +588,7 @@ class ControlPass:
         spend: int | None = None
         no_session = False
         reason = ""
-        if self.prowl.budget.left() >= TOKEN_STEP_SECONDS:
+        if self.prowl.budget.left() >= self.token_reserve:
             reading = read_tokens(
                 self.collaborators.tokens,
                 position.worktree,
@@ -792,11 +825,12 @@ def run_pass(path: Path, collaborators: Collaborators) -> PassResult:
     """Run one finite pass with the configuration at `path`."""
     settings = load_settings(path)
     adapter = load_sibling(*PROWL_ADAPTER)
+    token_reserve = token_step_seconds()
     budget = Budget(collaborators.clock, collaborators.clock())
     prowl = ProwlClient(adapter, collaborators.runner, budget)
     collaborators.data_root.mkdir(parents=True, exist_ok=True)
     state = load_state(collaborators.data_root)
-    return ControlPass(settings, collaborators, prowl, state).run()
+    return ControlPass(settings, collaborators, prowl, state, token_reserve).run()
 
 
 def schedule(
