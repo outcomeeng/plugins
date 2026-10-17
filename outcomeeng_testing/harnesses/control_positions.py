@@ -689,7 +689,7 @@ def token_measurement_limit_seconds() -> float:
         accounting = built.load_sibling(*built.TOKEN_ACCOUNTING)
         return float(
             TOKEN_MEASUREMENT_DEADLINES * accounting.MAX_SECONDS
-            + built.TOKEN_SETUP_SECONDS
+            + built.TOKEN_LOCK_SECONDS
         )
     finally:
         if saved_module is None:

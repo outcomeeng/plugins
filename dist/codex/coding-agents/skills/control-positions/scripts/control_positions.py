@@ -75,11 +75,28 @@ __all__ = [
 PASS_BOUND_SECONDS: Final = 300
 COMMAND_TIMEOUT_SECONDS: Final = 30
 # The token step occupies the sibling accounting module's `collect` and `measure`,
-# each capped at its MAX_SECONDS deadline, plus the construction of its `Evidence`,
-# whose sqlite connection waits at most one second for a lock. The import of the
+# each capped at its MAX_SECONDS deadline, plus the sqlite lock waits that the
+# sibling's deadline checks do not cover. The sibling opens its store with
+# `sqlite3.connect(..., timeout=1)`, a literal that the sibling does not expose as a
+# constant, so TOKEN_LOCK_WAIT_SECONDS records that contract: each statement that
+# acquires the write lock waits up to that long. In WAL mode a read never waits, and
+# one write transaction waits once, at its first write. The statements that can wait
+# outside a deadline check are:
+#   Evidence.__init__: the `PRAGMA journal_mode=WAL` (1), the eight `CREATE TABLE`
+#   and `CREATE INDEX` statements of its `executescript` (8), and the first write of
+#   its settings transaction (1).
+#   collect: the last discovery or file iteration that starts before the deadline
+#   waits at its transaction's first write and again at its fallback transaction (2),
+#   and the closing retention transaction waits at its first delete (1).
+# `measure` only reads, and its deadline is a progress handler. The import of the
 # sibling is done before the pass clock starts, so it occupies no span of the pass.
 TOKEN_STEP_DEADLINES: Final = 2
-TOKEN_SETUP_SECONDS: Final = 1
+TOKEN_LOCK_WAIT_SECONDS: Final = 1
+TOKEN_INIT_LOCK_WAITS: Final = 1 + 8 + 1
+TOKEN_COLLECT_LOCK_WAITS: Final = 2 + 1
+TOKEN_LOCK_SECONDS: Final = TOKEN_LOCK_WAIT_SECONDS * (
+    TOKEN_INIT_LOCK_WAITS + TOKEN_COLLECT_LOCK_WAITS
+)
 SCREEN_LINES: Final = 40
 PAUSE_STREAK_PASSES: Final = 2
 COMPACT_TEXT: Final = "/compact"
@@ -295,7 +312,7 @@ def token_step_seconds() -> float:
     """
     try:
         deadline = load_sibling(*TOKEN_ACCOUNTING).MAX_SECONDS
-        return float(TOKEN_STEP_DEADLINES * deadline + TOKEN_SETUP_SECONDS)
+        return float(TOKEN_STEP_DEADLINES * deadline + TOKEN_LOCK_SECONDS)
     except (
         OSError,
         ImportError,
