@@ -62,7 +62,8 @@ the empty string when the store holds none.
 
 ``read-relations`` starts ``gh`` once per page of the store's issues and returns
 the named issue's Product and Parent, its Parent's Product, and the issues whose
-Parent is the named issue, within the same page bound as ``read-authority``.
+Parent is the named issue, and the issues whose Predecessors value names it,
+within the same page bound as ``read-authority``.
 
 ``count-limits`` reads the candidate and starts no process beyond the
 repository-root lookup; it returns the title's word count and the Intent
@@ -157,6 +158,7 @@ class ResultField(StrEnum):
     PARENT = "parent"
     PARENT_PRODUCT = "parentProduct"
     CHILDREN = "children"
+    ABSORBERS = "absorbers"
     NUMBER = "number"
     LIMITS = "limits"
     VIOLATIONS = "violations"
@@ -325,11 +327,14 @@ _RELATIONS_QUERY: Final = (
     "{pageInfo{hasNextPage endCursor} nodes{number "
     f"issueFieldValues(first:{ISSUE_FIELD_VALUES_PAGE_SIZE})"
     "{pageInfo{hasNextPage} nodes{... on IssueFieldNumberValue{value field{... on IssueFieldNumber{name}}}"
+    " ... on IssueFieldTextValue{value field{... on IssueFieldText{name}}}"
     " ... on IssueFieldSingleSelectValue{name field{... on IssueFieldSingleSelect"
     "{name}}}}}}}}}"
 )
 PRODUCT_FIELD: Final = "Product"
 PARENT_FIELD: Final = "Parent"
+PREDECESSORS_FIELD: Final = "Predecessors"
+PREDECESSOR_SEPARATOR: Final = ", "
 ISSUE_IDENTITY_PATTERN: Final = re.compile(
     r"([A-Za-z0-9][A-Za-z0-9-]*)/([A-Za-z0-9._-]+)#([1-9][0-9]*)"
 )
@@ -1197,7 +1202,7 @@ def _read_published(
 
 
 def _field_values(node: Mapping[str, object]) -> dict[str, object]:
-    """Return the Product and Parent values one store issue node carries."""
+    """Return the Product, Parent, and Predecessors values one store issue node carries."""
     values: dict[str, object] = {}
     container = node.get(StoreField.ISSUE_FIELD_VALUES)
     entries = container.get(StoreField.NODES) if isinstance(container, dict) else None
@@ -1220,6 +1225,10 @@ def _field_values(node: Mapping[str, object]) -> dict[str, object]:
             and not isinstance(entry.get(StoreField.VALUE), bool)
         ):
             values[PARENT_FIELD] = int(entry[StoreField.VALUE])
+        elif name == PREDECESSORS_FIELD and isinstance(
+            entry.get(StoreField.VALUE), str
+        ):
+            values[PREDECESSORS_FIELD] = entry[StoreField.VALUE]
     return values
 
 
@@ -1229,7 +1238,9 @@ def _read_relations(
     """Return the issue's Product and Parent, its Parent's Product, and its children.
 
     Reads every issue of the store's repository within the page bound; a child
-    is an issue whose ``Parent`` number field equals the named issue's number.
+    is an issue whose ``Parent`` number field equals the named issue's number,
+    and an absorber is an issue whose ``Predecessors`` text field, split at
+    every comma followed by one space, holds the named issue's identity.
     """
     owner, repository, number = _issue_identity(request)
     target = int(number)
@@ -1284,6 +1295,18 @@ def _read_relations(
                     }
                     for child, values in sorted(by_number.items())
                     if values.get(PARENT_FIELD) == target
+                ],
+                ResultField.ABSORBERS: [
+                    absorber
+                    for absorber, values in sorted(by_number.items())
+                    if request[RequestField.ISSUE]
+                    in str(values.get(PREDECESSORS_FIELD, "")).split(
+                        PREDECESSOR_SEPARATOR
+                    )
+                    and f"{owner}/{repository}#{absorber}"
+                    not in str(own.get(PREDECESSORS_FIELD, "")).split(
+                        PREDECESSOR_SEPARATOR
+                    )
                 ],
             }
         cursor = info.get(StoreField.END_CURSOR)

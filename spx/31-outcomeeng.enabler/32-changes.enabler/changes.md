@@ -47,8 +47,15 @@ CAN move a prioritized Output from proposal to executable work without placing m
 - After `close-change` closes a Change `Applied` whose Parent has a Parent and no open child, the same session claims that Parent through `claim-change` and closes it `Applied` through `close-change`, repeating upward; it never closes a root this way, and a Parent whose last child closed `Abandoned` stays open ([audit:parent-cascade-close]).
 - Closing a Change establishes that its changeset is integrated by `git merge-base --is-ancestor` of the merge commit of the pull request or branch the newest Handoff names and the default branch exiting zero ([audit:changeset-integration-check]).
 
+### Mapping
+
+- ALWAYS: `read-relations` maps a `Parent` number field value, integer or float, to the issue number it names and an absent value to `null` ([test](tests/test_audit_change_relations_parent.mapping.l1.py))
+
 ### Compliance
 
+- ALWAYS: `read-relations` returns `absorbers`, the numbers of the issues whose `Predecessors` field value, split at every comma followed by one space, names the named issue, and never the issues that the named issue's own `Predecessors` value names ([test](tests/test_audit_change_relations.compliance.l1.py))
+- ALWAYS: `read-relations` reads the store's issue pages in order until the store reports no further page, so a child on any page is returned, and returns a blocked result naming `100 issues per page, 10 pages` when the tenth page still reports a further page ([test](tests/test_audit_change_relations.compliance.l1.py))
+- ALWAYS: `read-relations` returns a blocked result naming `50 issue field values per issue` when an issue's field-value connection reports a further page, and returns no Product or Parent read from that partial connection ([test](tests/test_audit_change_relations.compliance.l1.py))
 - NEVER: the bundled Python runner of `audit-change` writes a file; each invocation reads one JSON request on stdin and writes one JSON result on stdout, and the SPX run journal is the only state that persists between requests ([test](tests/test_audit_change_run.compliance.l1.py))
 - `confirm-change` moves a `Submitted` Change to `Available` and posts no comment; it writes no Maturity and no body section, and reports any other Lifecycle without mutation ([audit]).
 - `audit-change` reads every authority event from the store's field-change events, never from a comment or the body, and judges a record carrying body authority text as defective ([audit]).

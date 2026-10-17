@@ -1,0 +1,103 @@
+{
+  "declared": [
+    40
+  ],
+  "pages": [
+    {
+      "data": {
+        "repository": {
+          "issues": {
+            "pageInfo": {
+              "hasNextPage": true,
+              "endCursor": "cursor-1"
+            },
+            "nodes": [
+              {
+                "number": 12,
+                "issueFieldValues": {
+                  "pageInfo": {
+                    "hasNextPage": false
+                  },
+                  "nodes": [
+                    {
+                      "name": "Example Product",
+                      "field": {
+                        "name": "Product"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "data": {
+        "repository": {
+          "issues": {
+            "pageInfo": {
+              "hasNextPage": true,
+              "endCursor": "cursor-2"
+            },
+            "nodes": [
+              {
+                "number": 40,
+                "issueFieldValues": {
+                  "pageInfo": {
+                    "hasNextPage": false
+                  },
+                  "nodes": [
+                    {
+                      "name": "Example Product",
+                      "field": {
+                        "name": "Product"
+                      }
+                    },
+                    {
+                      "value": 12,
+                      "field": {
+                        "name": "Parent"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "data": {
+        "repository": {
+          "issues": {
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": "cursor-end"
+            },
+            "nodes": [
+              {
+                "number": 55,
+                "issueFieldValues": {
+                  "pageInfo": {
+                    "hasNextPage": false
+                  },
+                  "nodes": [
+                    {
+                      "name": "Example Product",
+                      "field": {
+                        "name": "Product"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

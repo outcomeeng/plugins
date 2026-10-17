@@ -1,0 +1,41 @@
+{
+  "declared": null,
+  "pages": [
+    {
+      "data": {
+        "repository": {
+          "issues": {
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": "cursor-end"
+            },
+            "nodes": [
+              {
+                "number": 12,
+                "issueFieldValues": {
+                  "pageInfo": {
+                    "hasNextPage": true
+                  },
+                  "nodes": [
+                    {
+                      "name": "Example Product",
+                      "field": {
+                        "name": "Product"
+                      }
+                    },
+                    {
+                      "value": 7,
+                      "field": {
+                        "name": "Parent"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

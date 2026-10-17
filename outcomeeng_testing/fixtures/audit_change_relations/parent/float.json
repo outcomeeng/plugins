@@ -1,0 +1,57 @@
+{
+  "declared": 7.0,
+  "pages": [
+    {
+      "data": {
+        "repository": {
+          "issues": {
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": "cursor-end"
+            },
+            "nodes": [
+              {
+                "number": 7,
+                "issueFieldValues": {
+                  "pageInfo": {
+                    "hasNextPage": false
+                  },
+                  "nodes": [
+                    {
+                      "name": "Example Product",
+                      "field": {
+                        "name": "Product"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "number": 12,
+                "issueFieldValues": {
+                  "pageInfo": {
+                    "hasNextPage": false
+                  },
+                  "nodes": [
+                    {
+                      "name": "Example Product",
+                      "field": {
+                        "name": "Product"
+                      }
+                    },
+                    {
+                      "value": 7.0,
+                      "field": {
+                        "name": "Parent"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}
