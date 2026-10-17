@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.21.12
+
+### Changed
+
+- **`/subagent-standards` admits a Verifier's Codex run-recording write as prompt-bounded.** A Verifier whose skill records its verdict through run-recording commands now has its file-write grant for payload files and, in a Codex definition, the run-recording command scope and the `workspace-write` sandbox that scope emits judged as conforming, because Codex offers no native per-command scope. The admission holds when the definition and its skill limit every write by instruction to the Verifier's own verification-run journal and to payload files in the session scratch directory; every other write grant to a Verifier stays under the native-restriction and verifier-mutation rules. The `prompt_only_restriction` and `verifier_mutation_grant` catalog rows carry the same exception. The admission judges how the grants are bounded and does not establish that the `workspace-write` sandbox completes the run-recording write. Before this change, only the file-write grant was admitted, so a Codex Verifier that emitted `workspace-write` for run recording drew a blocking finding.
+
 ## 0.21.11
 
 ### Changed
