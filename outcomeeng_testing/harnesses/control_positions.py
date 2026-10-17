@@ -839,3 +839,87 @@ class ChangedApiTokens:
                 worktree, start, end
             )
         return measured
+
+
+SIBLING_SKILLS_ROOTS = (
+    CONTROL_POSITIONS_PATH.parents[2],
+    BUILT_CONTROL_POSITIONS_PATH.parents[2],
+)
+FOREIGN_SIBLING_FILE = "/nonexistent/foreign_sibling.py"
+
+
+@dataclass
+class RegistryObservation:
+    """The sibling module names of the controller and the registry around a pass.
+
+    `before` holds the registered object (or None) of each name when the pass
+    window opened; `after` holds the same names when it closed, before the harness
+    restores the registry. Observations only: the linked test decides what the
+    controller may leave behind.
+    """
+
+    names: frozenset[str]
+    before: Mapping[str, object | None]
+    after: Mapping[str, object | None] = field(default_factory=lambda: {})
+
+
+def sibling_module_names(module: ModuleType) -> frozenset[str]:
+    """Every module name the sibling skills the controller loads can be imported as.
+
+    Both the authored and the built tree contribute, because the suite loads the
+    controller from either.
+    """
+    skills = (module.TOKEN_ACCOUNTING[0], module.PROWL_ADAPTER[0])
+    return frozenset(
+        path.stem
+        for root in SIBLING_SKILLS_ROOTS
+        for skill in skills
+        for path in (root / skill / "scripts").glob("*.py")
+    )
+
+
+@contextmanager
+def sibling_registry(
+    module: ModuleType, *, foreign: bool = False, isolated: bool = True
+) -> Iterator[RegistryObservation]:
+    """Open a pass window over a disposable home and observe the sibling registry.
+
+    The home is disposable so a sibling imported inside the window keeps its state
+    and transcript roots inside it. `isolated` unregisters every sibling name when
+    the window opens, so the pass imports each sibling afresh; without it the
+    registrations the suite already holds stay. `foreign` registers a module that
+    belongs to no skill under each sibling name the controller loads. On exit the
+    harness records `after`, then restores the registry and the environment the
+    window found, whatever the pass left behind.
+    """
+    names = sibling_module_names(module)
+    loaded = {module.TOKEN_ACCOUNTING[1], module.PROWL_ADAPTER[1]}
+    saved = {name: sys.modules.get(name) for name in names}
+    saved_environment = dict(os.environ)
+    with TemporaryDirectory(prefix="control-positions-registry-") as temporary:
+        os.environ["HOME"] = str(Path(temporary).resolve())
+        try:
+            if isolated:
+                for name in names:
+                    sys.modules.pop(name, None)
+            if foreign:
+                for name in loaded:
+                    stand_in = ModuleType(name)
+                    stand_in.__file__ = FOREIGN_SIBLING_FILE
+                    sys.modules[name] = stand_in
+            observation = RegistryObservation(
+                names=names,
+                before={name: sys.modules.get(name) for name in names},
+            )
+            try:
+                yield observation
+            finally:
+                observation.after = {name: sys.modules.get(name) for name in names}
+        finally:
+            os.environ.clear()
+            os.environ.update(saved_environment)
+            for name, previous in saved.items():
+                if previous is None:
+                    sys.modules.pop(name, None)
+                else:
+                    sys.modules[name] = previous
