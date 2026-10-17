@@ -11,6 +11,7 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 ### Changed
 
 - **`/python-architecture-standards` and `/author-python-architecture` instruct each `### Audit` rule to carry the tag `[audit:{rule-slug}]`, with a slug unique within the ADR.** An ADR written from either skill carries the tag the spec-tree ADR template writes and `/audit-adr` accepts. The example ADR rules in both skills and in the architecture references now carry `[audit:{rule-slug}]` with a distinct slug per rule, and `/author-python-code` checks audit-routed requirements against the `([audit:{rule-slug}])` form. Before this change, both skills instructed the pathless `[audit]` tag under `### Audit`, and their examples and the code-skill check used it.
+- **The failure-mode example in `/audit-python-test` names the `[audit:{rule-slug}]` tag.** The example describes assertions reclassified to audit evidence with the tag the spec-tree decision templates write. Before this change, it named the bare `[audit]` tag.
 
 ## 0.25.0
 

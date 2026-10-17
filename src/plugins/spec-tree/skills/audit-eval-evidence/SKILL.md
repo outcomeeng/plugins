@@ -75,7 +75,7 @@ Read the spec's Assertions section. For each `[eval]` assertion, extract:
 
 Attribute a missing eval definition to `gate-1-producer-coupling`, a missing prompt to `gate-1-producer-coupling`, missing cases to `gate-2-oracle-quality`, and missing history to `gate-5-run-evidence`. Mark that row `FAIL` and add a `REJECT` finding naming the assertion, missing path, and failed evidence property. Inspect the remaining available artifacts; mark any other property that the absence prevents inspecting `UNKNOWN` with a finding explaining the missing prerequisite. A known failure takes precedence over an unknown result for the same row.
 
-Skip `[test]` and `[audit]` assertions. They belong to their own evidence lanes.
+Skip `[test]` and `[audit:{rule-slug}]` assertions. They belong to their own evidence lanes.
 
 When the target has no `[eval]` assertions, return `UNKNOWN` with all five gate rows `UNKNOWN`, each carrying an `INFO` finding with rule `no-eval-assertions` at the target spec explaining that no eval evidence is applicable. Preserve the target and established branch metadata; never imply that evidence was inspected.
 
