@@ -115,6 +115,9 @@ READ_ONLY_TOOLS: Final = frozenset({"Glob", "Grep", "Read"})
 SCRIPT_CAPABLE_TOOLS: Final = frozenset({"Bash", "Skill"})
 WEB_CAPABLE_TOOLS: Final = frozenset({"WebFetch", "WebSearch"})
 WRITE_CAPABLE_TOOLS: Final = frozenset({"Edit", "NotebookEdit", "Write"})
+SOURCE_TOOL_UNIVERSE: Final = (
+    READ_ONLY_TOOLS | SCRIPT_CAPABLE_TOOLS | WEB_CAPABLE_TOOLS | WRITE_CAPABLE_TOOLS
+)
 
 
 class AgentConversionError(Exception):
@@ -948,6 +951,7 @@ __all__ = [
     "READ_ONLY_TOOLS",
     "SANDBOX_MODE_FIELD",
     "SCRIPT_CAPABLE_TOOLS",
+    "SOURCE_TOOL_UNIVERSE",
     "WEB_CAPABLE_TOOLS",
     "WEB_SEARCH_DISABLED",
     "WRITE_CAPABLE_TOOLS",
