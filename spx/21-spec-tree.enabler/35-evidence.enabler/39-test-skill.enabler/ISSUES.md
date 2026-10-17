@@ -18,14 +18,6 @@ Base-ref evidence: `git diff --unified=0 262c63fbf4a417463fd537fda8453fc6c902eb7
 
 **Settlement condition**: the TypeScript specialist cites the generic test skill for the dependency-to-level table and the exception-case set, and carries only the TypeScript-specific expression of each level, then obtains a consistent configured `skill-auditor` verdict on the committed subject.
 
-## The test skill body sits within five lines of the progressive-disclosure ceiling
-
-Finding `f-007`, rule `progressive_disclosure_headroom`, raised by the configured `skill-auditor` against `src/plugins/spec-tree/skills/test/SKILL.md`. The body measures 495 lines against the 500-line budget `/skill-standards` `<progressive_disclosure>` sets, with the whole `<testing_methodology>` inline and two small conditional references beside it. The next inline rule addition breaches the budget or forces an unplanned eager-foundation exception claim. The auditor names `<four_part_progression>` and the two Stage 2 lookup tables as the detail a reader does not need on every invocation.
-
-**Settlement condition**: the body measures at or below the ceiling with editing headroom restored, by moving that conditional detail into a cited reference or by declaring the eager-foundation exception with its justification. The ceiling itself is the trigger — the entry closes when a later change reaches it.
-
-**Why separate from Change #33**: the crowding predates this changeset. The move relocates content Change #33 neither adds nor governs, and it carries its own skill-audit gate.
-
 ## The canonical filename patterns are stated twice in the test skill
 
 Finding `f-008`, rule `duplicated_canonical_content`, raised by the configured `skill-auditor` against `src/plugins/spec-tree/skills/test/SKILL.md`. The four per-language filename patterns appear as the model in `<naming_and_co_location>` and again as the canonical-pattern column of the legacy-filename table in the scaffolding step. A language addition or token change can leave the two copies disagreeing inside one file.

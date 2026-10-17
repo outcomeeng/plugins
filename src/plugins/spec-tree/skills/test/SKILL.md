@@ -188,27 +188,7 @@ For each property, name the product-owned behavior the generator varies and clas
 
 <stage_two>
 
-Choose the level from operational reality:
-
-| Spec promise                                      | Minimum level | Reason                          |
-| ------------------------------------------------- | ------------- | ------------------------------- |
-| Prices are calculated correctly                   | `L1`          | Pure calculation                |
-| User can export data as CSV                       | `L1`          | File I/O with temporary folders |
-| CLI processes a product-specific site             | `L2`          | Product-specific binary         |
-| Database query returns users                      | `L2`          | Real database required          |
-| User completes checkout with a live provider      | `L3`          | Remote provider required        |
-| Browser flow works against the live deployed site | `L3`          | Real browser and remote system  |
-
-| Dependency                        | Minimum level |
-| --------------------------------- | ------------- |
-| None, pure function               | `L1`          |
-| Filesystem with temporary folders | `L1`          |
-| Standard development tools        | `L1`          |
-| Database                          | `L2`          |
-| Product-specific binary           | `L2`          |
-| External HTTP API or browser API  | `L2` or `L3`  |
-| Live third-party service          | `L3`          |
-| Real credentials                  | `L3`          |
+Choose the level from operational reality. Read `${CLAUDE_SKILL_DIR}/references/execution-level-lookup.md` for the minimum level of each spec promise and each dependency.
 
 Test product-owned algorithms, parsers, and rules thoroughly at `L1`. Trust mature library behavior and test product-owned wiring, mappings, invariants, failure handling, and boundaries. Add lower-level evidence when it materially narrows diagnosis. Place confidence where it is achievable: math at `L1`, SQL against a database at `L2`, and live user flows at `L3`.
 
