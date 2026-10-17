@@ -726,11 +726,11 @@ def install_observation(
             raise OSError("replace refused")
 
         if replace_fails:
-            os.replace = refusing_replace  # type: ignore[assignment]
+            os.replace = refusing_replace
         try:
             result = module.schedule(module.ScheduleOperation.INSTALL, collaborators)
         finally:
-            os.replace = original_replace  # type: ignore[assignment]
+            os.replace = original_replace
         files: dict[str, bytes] = {}
         links: list[str] = []
         for path in sorted(root.rglob("*")):
