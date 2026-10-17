@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import math
 import tomllib
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -98,11 +99,12 @@ def _number(
     value = table.get(field, default)
     example = EXAMPLE_VALUES[field]
     bound = f" no greater than {maximum}" if maximum is not None else ""
-    valid = f"a number above zero{bound}"
+    valid = f"a finite number above zero{bound}"
     fix = f"set `{field} = {example}` in {location}"
     invalid = (
         isinstance(value, bool)
         or not isinstance(value, (int, float))
+        or not math.isfinite(value)
         or value <= 0
         or (maximum is not None and value > maximum)
     )
