@@ -38,9 +38,10 @@ TOKEN_READING_SKILL: Final = "token-reader"
 TOKEN_READING_SCRIPT: Final = (
     Path(SKILLS_SUBDIR_NAME) / TOKEN_READING_SKILL / SCRIPTS_SUBDIR_NAME / "reader.py"
 )
+TOKEN_NON_READING_SKILL: Final = "token-bystander"
 TOKEN_NON_READING_SCRIPT: Final = (
     Path(SKILLS_SUBDIR_NAME)
-    / TOKEN_READING_SKILL
+    / TOKEN_NON_READING_SKILL
     / SCRIPTS_SUBDIR_NAME
     / "unrelated.py"
 )
@@ -124,13 +125,14 @@ def build_sample_agent_token_tree() -> AgentTokenBuild:
     """Build a sample source tree into a temporary directory and observe the emitted tree.
 
     The sample source carries a spec-tree script that names the data file, a
-    spec-tree script that does not, and a script of another plugin that names it.
+    spec-tree script that does not in a scripts directory of its own, and a
+    script of another plugin that names it.
     """
     reading_source = f'DATA_FILE = "{AGENT_TOKEN_DATA_FILENAME}"\n'.encode()
     with src_tree() as builder:
         builder.add_plugin(
             AGENT_TOKEN_READING_PLUGIN_NAME,
-            skills={TOKEN_READING_SKILL: "body\n"},
+            skills={TOKEN_READING_SKILL: "body\n", TOKEN_NON_READING_SKILL: "body\n"},
             artifacts={
                 TOKEN_READING_SCRIPT: reading_source,
                 TOKEN_NON_READING_SCRIPT: b"VALUE = 1\n",
