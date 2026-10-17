@@ -21,9 +21,9 @@ parent: null
 
 ## Governance
 
-<!-- A Leaf lists every record that governs the Change. -->
+<!-- A Leaf lists every record the Output touches or that governs it, by its path from `spx/`, each with the verdict `in line`, `amended`, or `new`. -->
 
-- `spx/[path of the governing record]`: [in line, amended, or new]
+- `spx/[path of the record]`: [in line, amended, or new]
 
 ## Governance mutations
 
@@ -42,6 +42,12 @@ parent: null
 `[spec file name]` states:
 
 - [The Node's assertion as it reads after the Change.]
+
+## Assumptions
+
+<!-- Present only when the Frame settled a question. Remove this section otherwise. -->
+
+- [The question the Frame settled]? [Its answer, and one sentence of reason.]
 
 ## Slice
 

@@ -29,7 +29,7 @@ Apply `<authority>` and `<record_rules>` below for every selection. Then read ex
 
 NEVER load another Maturity's Definition of Ready in the same invocation. Each Definition of Ready is cumulative and complete for its level.
 
-`<record_rules>` states the record rules, and each Definition of Ready states criteria that judge a record against those rules by identifier; the Executable Definition of Ready also carries the `<merge_composition>` that execution applies, and none of them carries a store command. `lifecycle.md` carries the store-binding, canonical-state, authority-read, ordered-write, complete-readback, write-inspection, inert-stdin, claim-record, handoff-record, confirmation-record, and terminal-record rules, together with the store commands those rules name; it alone assigns each field's home in the declared store and names the store reads — fields, lineage, blockers, and authority. A criterion whose evidence is store state, such as the blocker graph of `*-relationships`, is judged from those reads, which a separate `Lifecycle` load supplies; a Maturity selection never infers that state from the record alone.
+`<record_rules>` states the record rules, and each Definition of Ready states criteria that judge a record against those rules by identifier; the Executable Definition of Ready also carries the `<merge_composition>` that execution applies, and none of them carries a store command. `lifecycle.md` carries the store-binding, canonical-state, authority-read, ordered-write, complete-readback, write-inspection, inert-stdin, claim-record, handoff-record, and terminal-record rules, together with the store commands those rules name; it alone assigns each field's home in the declared store and names the store reads — fields, lineage, blockers, and authority. A criterion whose evidence is store state, such as the blocker graph of `*-relationships`, is judged from those reads, which a separate `Lifecycle` load supplies; a Maturity selection never infers that state from the record alone.
 
 </loading_contract>
 
@@ -59,16 +59,29 @@ Each required key appears exactly once. The `compatibility-boundary` rule govern
 
 The body opens with `## Intent`. Each Maturity adds its sections after the Intent, in this order:
 
-| Section                   | First required at | Rule                   |
-| ------------------------- | ----------------- | ---------------------- |
-| `## Intent`               | Proposed          | `intent`               |
-| `## Governance`           | Framed            | `governance`           |
-| `## Governance mutations` | Framed            | `governance-mutations` |
-| `## Spec mutations`       | Framed            | `spec-mutations`       |
-| `## Slice`                | Sliced            | `slice`                |
-| `## Open questions`       | optional          | `open-questions`       |
+| Section                   | First required at                         | Rule                   |
+| ------------------------- | ----------------------------------------- | ---------------------- |
+| `## Intent`               | Proposed                                  | `intent`               |
+| `## Governance`           | Proposed                                  | `governance`           |
+| `## Governance mutations` | Proposed                                  | `governance-mutations` |
+| `## Spec mutations`       | Proposed                                  | `spec-mutations`       |
+| `## Assumptions`          | Framed, when the Frame settled a question | `assumptions`          |
+| `## Slice`                | Sliced                                    | `slice`                |
+| `## Open questions`       | optional, Proposed only                   | `open-questions`       |
 
 A known section may stand before the Maturity that first requires it — the sections a higher Maturity added before the Change's Maturity was lowered — and the declared Maturity's Definition of Ready judges such a section only where one of its criteria names it. Every section present stands in this order, with `## Open questions` last, appears once, and is a level-two heading; a missing required section, a reordered or duplicated section, and an unknown level-two section are defects. Subsections may refine a section. Front-matter values are never restated or maintained as body lines.
+
+</rule>
+
+<rule id="review-bar">
+
+A record is held only to what its review needs. A failed criterion of the declared Maturity's Definition of Ready is a blocking finding. A finding against any other record rule — among them the title and Intent word limits, section order, heading form, verdict wording, and malleability notation — is non-blocking and is returned `filed`. A blocking finding refuses only the Maturity it judges: the record publishes at the highest Maturity whose blocking criteria it meets, and at Proposed when it meets none.
+
+</rule>
+
+<rule id="one-audit">
+
+Each revision of a record receives at most one change audit, and its findings never withhold publication, claiming, or execution. The author repairs what takes a minute and publishes. Before the first audit of a revision, the author checks every same-class site and every section the repair changed.
 
 </rule>
 
@@ -89,7 +102,7 @@ When the Change derives from a raw submission, the Intent restates that submissi
 
 <rule id="record-limits">
 
-The title has at most 15 words and the Intent at most 60 words, labels included. A record over a limit is a defect that names the section, the limit, and the count.
+The title has at most 15 words and the Intent at most 60 words, labels included. A record over a limit is a non-blocking finding under `review-bar` that names the section, the limit, and the count.
 
 </rule>
 
@@ -109,7 +122,7 @@ Preserve the proposal in the proposer's terms while excluding provider conversat
 
 `predecessors` is `[]` or the complete append-only set of Changes this Change absorbed by a merge; it contains canonical Change identities and no duplicate or self reference. `parent` is `null` or the canonical identity of the one Parent Change in the same store, and is no self reference.
 
-The `predecessors` set and the `parent` value are the only authored lineage directions. Derive roots, Leaves, Parents, children, and reverse changeset views. NEVER restate lineage in the body or maintain an authoritative child list. A split creates every child naming the source in `parent`, and the source drops its Governance mutations and Spec mutations blocks. A merge closes the absorbed Change `Abandoned` and adds it to the survivor's `predecessors`. A reframe edits the Change in place and lowers its Maturity to `Proposed`. No skill writes or accepts `Refined`.
+The `predecessors` set and the `parent` value are the only authored lineage directions. Derive roots, Leaves, Parents, children, and reverse changeset views. NEVER restate lineage in the body or maintain an authoritative child list. A split creates every child naming the source in `parent`, and the source drops its Governance mutations and Spec mutations blocks. A merge closes the absorbed Change `Abandoned` and adds it to the survivor's `predecessors`. A reframe edits the Change in place and lowers its Maturity to `Proposed`. No operation writes or accepts `Refined`.
 
 </rule>
 
@@ -123,21 +136,27 @@ A blocker closed `Applied` satisfies the dependency; an open blocker remains a b
 
 <rule id="governance">
 
-`## Governance` lists every record that governs the Change by its path from `spx/`, each with the verdict `in line`, `amended`, or `new`. A record the Change amends or adds takes a block under `governance-mutations`; an `in line` record takes none. Existing paths resolve; a `new` record is labeled as new.
+`## Governance` lists every record the Output touches or that governs it, by its path from `spx/`, each with the verdict `in line`, `amended`, or `new`. A record the Change amends or adds takes a block under `governance-mutations`; an `in line` record takes none. Existing paths resolve; a `new` record is labeled as new.
 
 </rule>
 
 <rule id="governance-mutations">
 
-`## Governance mutations` holds one block for each amended or new record, in record order. The block opens with `<path> states:` and lists the record's decisions in exact text, each opening with a slug and a colon. A Change never overrides a decision or an assertion; the blocks author truth changes before dependent specs and implementation.
+`## Governance mutations` holds one block for each amended or new record, in record order. The block opens with `<path> states:` and lists the exact text of every decision the Output adds or amends, each opening with a slug and a colon. A Change never overrides a decision or an assertion; the blocks author truth changes before dependent specs and implementation.
 
 </rule>
 
 <rule id="spec-mutations">
 
-`## Spec mutations` holds one block for each affected or intended Node, in execution order, providers first. The block opens with `<path>: <malleability before> -> <malleability after>`, and continues with `<file> states:` and the Node's assertions as bare bullets. Malleability before is the value the Node declares before the Change, `none` for a Node the Change creates. Malleability after is the value the Node declares once the Change is applied: `spec`, `verification`, or `implementation`, an absent field meaning `implementation`. The malleability order from most to least malleable is `spec`, `verification`, `implementation`; the least malleable target is the Malleability after value latest in that order. Malleability is a per-Node fact; the record carries no Change-wide target. Existing paths resolve; an intended Node is labeled as intended.
+`## Spec mutations` holds one block for each affected or intended Node, in execution order, providers first. The block opens with `<path>: <malleability before> -> <malleability after>`, which names the Node. From Framed on, the block continues with `<file> states:` and the Node's assertions as bare bullets. Malleability before is the value the Node declares before the Change, `none` for a Node the Change creates. Malleability after is the value the Node declares once the Change is applied: `spec`, `verification`, or `implementation`, an absent field meaning `implementation`. The malleability order from most to least malleable is `spec`, `verification`, `implementation`; the least malleable target is the Malleability after value latest in that order. Malleability is a per-Node fact; the record carries no Change-wide target. Existing paths resolve; an intended Node is labeled as intended.
 
 Execution takes the Governance mutations blocks, then the Spec mutations blocks, each in record order. The record names no result, producer, or Verifier: execution selects each block's results and Verifiers from the merge composition for the Node's malleability after and from the decision-record audit of a record.
+
+</rule>
+
+<rule id="assumptions">
+
+`## Assumptions` stands between `## Spec mutations` and `## Slice` and holds each question the Frame settled as its answer and one sentence of reason. It is absent when the Frame settled no question. A question that no assumption can defend is not recorded here: refinement returns it, with its best answer, in its result, records it under `open-questions` where the Maturity admits that section, leaves the record at the Maturity the question blocks, and continues on every part that does not depend on the answer.
 
 </rule>
 
@@ -149,7 +168,7 @@ Execution takes the Governance mutations blocks, then the Spec mutations blocks,
 
 <rule id="open-questions">
 
-`## Open questions` holds each known question that can change the intended Output, unanswered, and ends the record. A Proposed record may carry it; a Framed record and every higher Maturity leave it empty or omit it, because a settled question lives in a Governance mutations or Spec mutations block.
+`## Open questions` holds each known question that can change the intended Output, unanswered, and ends the record. A Proposed record may carry it; a Framed record and every higher Maturity leave it empty or omit it, because a Frame settles each question as an assumption under `assumptions` or in a Governance mutations or Spec mutations block. A question no assumption can defend stays an open question, as `assumptions` states, and blocks Framed.
 
 </rule>
 
@@ -169,13 +188,15 @@ The body carries no attestation, accountable-person, priority, or overrule text.
 
 Maturity records refinement readiness and may move backward when its Definition of Ready becomes false. Lifecycle records holding, submission, or termination and changes independently. Applied and Abandoned are terminal Lifecycle values.
 
-Maturity advances past Proposed, Framed, and Sliced only when the target level's complete Definition of Ready holds and the store shows the Product's Maintainer's move of the Change out of `Submitted` at the Maturity it leaves. At Proposed that move is the priority decision; at Framed it attests that the Change captures the operator's intent; at Sliced it confirms the slice. The Refiner advances Sliced to Executable inside the authority of the confirmed slice, with no further move, by resolving implementation detail; a reopened product or architecture judgment blocks Executable advancement.
+Maturity advances past Proposed, Framed, and Sliced only when the target level's complete Definition of Ready holds and the store shows the Product's Maintainer's move of the Change out of `Submitted` to `Available` while the Change held the Maturity it leaves. At Proposed that move is the priority decision; at Framed it attests that the Change captures the operator's intent; at Sliced it confirms the slice. A Change the Maintainer moves out of `Submitted` at Proposed is framed next, ahead of the Product's other Proposed Changes. The Refiner advances Sliced to Executable inside the authority of the confirmed slice, with no further move, by resolving implementation detail; a reopened product or architecture judgment blocks Executable advancement.
 
-Authority is read from the store and never from the body. The store's field-change event for the Lifecycle move out of `Submitted` gives the actor and the time; the confirmation comment posted before that move names the delegate that performed it, the operator it acts for, its agent harness, and its agent session.
+Authority is read from the store and never from the body. The store's field-change event for the Lifecycle move out of `Submitted` gives the actor and the time; no confirmation comment is posted or read.
 
-A Change is submitted only at Proposed, Framed, or Sliced; an Executable Change is never submitted, because no authority follows Executable. The move out of `Submitted` changes Lifecycle only and writes no Maturity, whether its comment confirms or rejects. A rejection grants no authority. After a rejection at Framed or Sliced, the Change's next Maturity write lowers it to Proposed or Framed respectively, before any further refinement; after a rejection at Proposed, the Change stays Proposed without the priority decision.
+A Change is submitted only at Proposed, Framed, or Sliced; an Executable Change is never submitted, because no authority follows Executable. `Submitted` means the record waits for the Product's Maintainer's review and is not ready for work at the next Maturity: no session claims, refines, or executes it until the Maintainer moves it out of `Submitted`. A confirming move changes Lifecycle only and writes no Maturity; a rejecting move follows a Maturity lowering as the rule's next paragraph states.
 
-A Claimed holder writes a Handoff and releases the Change before lowering Maturity; the Executor's Handoffs after a completed block and after integration leave the Change Claimed. Author, Fixer, and Verifier roles hold no claim and gain no integration authority from editing or auditing the record.
+A rejection is an instruction naming what to fix, sent to the Director or the Product's Maintainer or written as a plain comment on the Change; no rejection record exists, and the holder repairs the record and submits it again. A rejection at Framed or Sliced lowers Maturity one level, and whoever rejects writes the lowered Maturity before the Lifecycle move out of `Submitted`, so that move is read at the lowered Maturity under `authority-read` and authorizes leaving only the lowered Maturity, the one the Change held before the rejected stage. The order is one: the holder's release comes first, the rejecting lowering of Maturity second, the rejecting move out of `Submitted` third, and further refinement only after a session claims the Change again. A rejection at Proposed leaves the Change `Submitted`, and it means not now.
+
+A Claimed holder writes a Handoff and releases the Change before the rejecting move lowers Maturity; the Executor's Handoffs after a completed block and after integration leave the Change Claimed. Author, Fixer, and Verifier roles hold no claim and gain no integration authority from editing or auditing the record.
 
 </rule>
 
@@ -201,7 +222,8 @@ A candidate outside the contract receives no judgment, migration, alias, inferre
 
 - Each record rule is stated once, in `<record_rules>`; a Definition of Ready criterion cites the record rule it applies and adds only the level's own condition.
 - Every loaded criterion has a stable identifier and can be judged from the complete record, the store state the `Lifecycle` reads return, and necessary repository references.
-- The authority for each Maturity advance is read from the store's field-change events and confirmation comments under `authority-read`, and no rule or criterion requires body authority text.
+- The authority for each Maturity advance is read from the store's field-change event for the move out of `Submitted` under `authority-read`, and no rule or criterion requires body authority text or a confirmation comment.
+- Every finding's blocking status follows `review-bar` alone.
 - The four Maturity values, the five Lifecycle values, lineage, the Leaf, Parent, and root types, blockers, authority, product truth, and continuation remain distinct.
 
 </success_criteria>

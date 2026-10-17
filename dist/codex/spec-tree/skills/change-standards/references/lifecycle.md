@@ -1,13 +1,13 @@
 <contents>
 
 - `<scope>` — what this reference operationalizes
-- `<lifecycle_rules>` — `store-binding`, `canonical-state`, `authority-read`, `ordered-write`, `complete-readback`, `write-inspection`, `inert-stdin`, `claim-record`, `handoff-record`, `confirmation-record`, `terminal-record`
+- `<lifecycle_rules>` — `store-binding`, `canonical-state`, `authority-read`, `ordered-write`, `complete-readback`, `write-inspection`, `inert-stdin`, `claim-record`, `handoff-record`, `terminal-record`, `lifecycle-transitions`
 
 </contents>
 
 <scope>
 
-This reference operationalizes the Lifecycle, authority, and Handoff rules of the Change chapter `<authority>` names, for the store `spx/local/coordination.md` declares; it replaces nothing in the chapter. Lifecycle records who holds a Change, whether it waits for the Product's Maintainer, or how it ended, and moves independently of Maturity.
+This reference operationalizes the Lifecycle, authority, and Handoff rules of the Change chapter `<authority>` names, for the store `spx/local/coordination.md` declares; it replaces nothing in the chapter. The relation of Lifecycle to Maturity is stated in `maturity-and-authority`.
 
 </scope>
 
@@ -21,7 +21,7 @@ Read `spx/local/coordination.md` for the Change store (`owner/repo`) and the Pro
 
 <rule id="canonical-state">
 
-The issue holds each Change field in its one home: the issue title holds `title`; the organization issue fields `Product`, `Maturity`, and `Lifecycle` hold `product`, `maturity`, and `lifecycle`; the organization text issue field `Predecessors` holds `predecessors` as canonical identities such as `owner/repo#N`, separated by a comma and one space and empty for a Change that absorbed none; the organization number issue field `Parent` holds `parent` as the Parent's issue number and is empty for none; native issue dependencies hold `blocked_by`; and the issue body holds the Intent and the sections its Maturity adds, with no front matter and no lineage line. Comments carry the Claim, Handoff, confirmation or rejection, and terminal records; the issue's field-change events carry the actor and time of every field move; and the assignee list represents the holder. No project field holds a Change field.
+The issue holds each Change field in its one home: the issue title holds `title`; the organization issue fields `Product`, `Maturity`, and `Lifecycle` hold `product`, `maturity`, and `lifecycle`; the organization text issue field `Predecessors` holds `predecessors` as canonical identities such as `owner/repo#N`, separated by a comma and one space and empty for a Change that absorbed none; the organization number issue field `Parent` holds `parent` as the Parent's issue number and is empty for none; native issue dependencies hold `blocked_by`; and the issue body holds the Intent and the sections its Maturity adds, with no front matter and no lineage line. Comments carry the Claim, Handoff, and terminal records, which are the store's record of holding and continuation and never of the Change's content; the issue's field-change events carry the actor and time of every field move; and the assignee list represents the holder. No project field holds a Change field.
 
 Read the issue with `gh issue view <N> --repo <store> --json number,title,state,stateReason,assignees,comments,url`. Read its fields with `gh api graphql -f query='query($o:String!,$r:String!,$n:Int!){repository(owner:$o,name:$r){issue(number:$n){id issueFieldValues(first:50){nodes{... on IssueFieldSingleSelectValue{name field{... on IssueFieldSingleSelect{name}}} ... on IssueFieldTextValue{value field{... on IssueFieldText{name}}} ... on IssueFieldNumberValue{value field{... on IssueFieldNumber{name}}}}}}}}' -f o=<owner> -f r=<repo> -F n=<N>`, selecting each value by its field `name`. `Product` and `Maturity` carry exactly one value, and so does `Lifecycle`; an absent `Maturity` or `Lifecycle` is a missing required field, and an absent `Product` is valid only for a root. `Lifecycle` is valid only as `Available`, `Claimed`, `Submitted`, `Applied`, or `Abandoned`; any other value is reported as unrecognized, with nothing written. Never derive a field from issue prose.
 
@@ -35,25 +35,24 @@ A Change's children are the store records whose `Parent` value equals its issue 
 
 <rule id="authority-read">
 
-Authority is read from the store, never from the body. Read the issue's field-change events one page of 100 at a time, at most 10 pages, with one `gh api graphql` call per page: `gh api graphql -f query='query($o:String!,$r:String!,$n:Int!,$after:String){repository(owner:$o,name:$r){issue(number:$n){timelineItems(first:100,after:$after,itemTypes:[ISSUE_FIELD_CHANGED_EVENT]){pageInfo{hasNextPage endCursor} nodes{... on IssueFieldChangedEvent{createdAt actor{login} previousValue newValue issueField{... on IssueFieldSingleSelect{name} ... on IssueFieldText{name}}}}}}}}' -f o=<owner> -f r=<repo> -F n=<N>`, adding `-f after=<endCursor>` from the previous page to each later page. When `hasNextPage` is still true after page 10, the read is blocked: name the bound `100 events per page, 10 pages` and report no authority from the partial read. Read its comments the same way, one page of 100 at a time and at most 10 pages: `gh api graphql -f query='query($o:String!,$r:String!,$n:Int!,$after:String){repository(owner:$o,name:$r){issue(number:$n){comments(first:100,after:$after){pageInfo{hasNextPage endCursor} nodes{createdAt author{login} body}}}}}' -f o=<owner> -f r=<repo> -F n=<N>`, adding `-f after=<endCursor>` from the previous page to each later page. When `hasNextPage` is still true after page 10, the read is blocked: name the bound `100 comments per page, 10 pages` and report no authority from the partial read.
+Read the issue's field-change events one page of 100 at a time, at most 10 pages, with one `gh api graphql` call per page: `gh api graphql -f query='query($o:String!,$r:String!,$n:Int!,$after:String){repository(owner:$o,name:$r){issue(number:$n){timelineItems(first:100,after:$after,itemTypes:[ISSUE_FIELD_CHANGED_EVENT]){pageInfo{hasNextPage endCursor} nodes{... on IssueFieldChangedEvent{createdAt actor{login} previousValue newValue issueField{... on IssueFieldSingleSelect{name} ... on IssueFieldText{name}}}}}}}}' -f o=<owner> -f r=<repo> -F n=<N>`, adding `-f after=<endCursor>` from the previous page to each later page. When `hasNextPage` is still true after page 10, the read is blocked: name the bound `100 events per page, 10 pages` and report no authority from the partial read.
+A move out of `Submitted` is a `Lifecycle` event whose `previousValue` is `Submitted` and whose `newValue` is `Available`. A Change's field-change events are ordered by `createdAt`, and at equal `createdAt` a `Maturity` event comes before a `Lifecycle` event. `Maturity` held `M` at an event's time when `M` is the `newValue` of the newest `Maturity` event before it in that order, so a rejecting lowering written before the move out of `Submitted` is the `Maturity` event before it; with no earlier `Maturity` event, the `previousValue` of the oldest later one; with no `Maturity` event at all, the current `Maturity`.
 
-A move out of `Submitted` is a `Lifecycle` event whose `previousValue` is `Submitted` and whose `newValue` is `Available`. Its deciding comment is the newest `Confirmation:` or `Rejection:` comment under `confirmation-record` posted after the move into `Submitted` that it ends and before the move itself; `complete-readback` selects the same comment. `Maturity` held `M` at an event's time when `M` is the `newValue` of the newest `Maturity` event before it; with no earlier `Maturity` event, the `previousValue` of the oldest later one; with no `Maturity` event at all, the current `Maturity`.
+The authority for leaving Maturity `M` is the one `maturity-and-authority` states. The store records it as the event's `actor`, the account that wrote the move, and `createdAt`, its time.
 
-The authority for leaving Maturity `M` is one move out of `Submitted`, posted while `Maturity` held `M`, whose deciding comment is a `Confirmation:` naming `M`. A move whose deciding comment is a `Rejection:` grants no authority, and so does a move with no deciding comment or a comment with no move. The move is the Product's Maintainer's as the store records it: the comment's `For:` line names the operator the move acts for, and the event's `actor` names the account that wrote it; no other store state identifies the Maintainer.
-
-Report each authority found with the event's `actor` login and `createdAt` and the deciding comment's lines verbatim. When no confirmation exists for `M`, report that the store shows no authority for leaving `M`; a body line never stands in for it.
+Report each authority found with the event's `actor` login and `createdAt`. When no such move exists for `M`, report that the store shows no authority for leaving `M`.
 
 </rule>
 
 <rule id="ordered-write">
 
-A transition records each successful write in its declared order. When a required command fails, a required field is absent, or a readback differs from the intended state, stop before every later mutation and report: the successful writes in order, the failed command or mismatched value, and the observed Product, Maturity, Lifecycle, assignees, issue state and reason, and newest `Claim:`, `Handoff:`, `Confirmation:`, `Rejection:`, or terminal comment. Never repair a partial transition by guessing which later mutation would make it look complete.
+A transition records each successful write in its declared order. When a required command fails, a required field is absent, or a readback differs from the intended state, stop before every later mutation and report: the successful writes in order, the failed command or mismatched value, and the observed Product, Maturity, Lifecycle, assignees, issue state and reason, and newest `Claim:`, `Handoff:`, or terminal comment. Never repair a partial transition by guessing which later mutation would make it look complete.
 
 </rule>
 
 <rule id="complete-readback">
 
-A transition completes only after re-reading the issue and its fields and finding every value equal to the intended state: Product equals the overlay Product, or is empty for a root, Maturity is unchanged, Lifecycle equals the target value, the assignee list equals the intended holder set, and the transition's own record is the one its rule selects: for a claim, the winning Claim under `claim-record` is the exact comment the transition posted; for a confirmation, the deciding comment under `authority-read` is the exact `Confirmation:` or `Rejection:` comment the transition posted; for a release or a close, the newest `Handoff:` or terminal comment is. Report the readback values verbatim.
+A transition completes only after re-reading the issue and its fields and finding every value equal to the intended state: Product equals the overlay Product, or is empty for a root, Maturity is unchanged, Lifecycle equals the target value, the assignee list equals the intended holder set, and the transition's own record is the one its rule selects: for a claim, the winning Claim under `claim-record` is the exact comment the transition posted; for a confirmation, which posts no comment, the Lifecycle is `Available` and the field-change event of the move out of `Submitted` is the newest event; for a release or a close, the newest `Handoff:` or terminal comment is. Report the readback values verbatim.
 
 </rule>
 
@@ -71,7 +70,7 @@ Every field a `gh` command receives from a Change body, conversation state, or i
 
 <rule id="claim-record">
 
-A Claim is one comment, `Claim: <agent session id> <claim root>`, posted after the assignee is added; the claim root is the worktree root the Change is claimed for — the claiming session's own assigned root, or a root it names. The Change's holder is the session whose assigned worktree root equals the claim root of the winning Claim. Holder exclusivity comes from the Claim, never from the assignee alone, because one account may run several sessions: the earliest `Claim:` posted after the newest `Handoff:` that a Lifecycle move to `Available` follows — or since issue creation when none exists — wins. Only an `Available` Change whose Product is the configured Product, or a root that carries no Product, is claimed; a `Submitted` Change waits for its confirmation.
+A Claim is one comment, `Claim: <agent session id> <claim root>`, posted after the assignee is added; the claim root is the worktree root the Change is claimed for — the claiming session's own assigned root, or a root it names. The Change's holder is the session whose assigned worktree root equals the claim root of the winning Claim. Holder exclusivity comes from the Claim, never from the assignee alone, because one account may run several sessions: the earliest `Claim:` posted after the newest `Handoff:` that a Lifecycle move to `Available` follows — or since issue creation when none exists — wins. Only an `Available` Change whose Product is the configured Product, or a root that carries no Product, is claimed; `maturity-and-authority` states the bar for a `Submitted` Change.
 
 </rule>
 
@@ -91,24 +90,15 @@ Handoff:
 - Worktree: <the assigned worktree root>
 ```
 
-The head commit on the `Branch or PR` line is the tip the work stopped at; a reader takes the changeset from the branch or the pull request and reads that commit as the state the Handoff describes, never as the commit a later close checks for integration, except after integration, when the line names the merged pull request with its merge commit. A close reads the merge commit from the newest Handoff, and treats a record its Governance mutations blocks amend or create as audited when that Handoff's `Completed blocks` line lists the block; the decision-record audit seals no verification run, so the line carries no token. A Handoff posted without a release leaves the Change Claimed and its Claim in force: the winning Claim under `claim-record` is the earliest `Claim:` posted after the newest Handoff that a Lifecycle move to `Available` follows. The `Session:` and `Worktree:` lines are the only optional lines, and each appears at most once, after the five. The Handoff records what was true when it was posted; refinement of the Output belongs in the body, before the release. A release that moves the Change to `Submitted` runs only at `Proposed`, `Framed`, or `Sliced`, posts its Handoff before it writes `Submitted`, and its Next block line names the confirmation the Change waits for: `confirmation: <Maturity>`.
+The head commit on the `Branch or PR` line is the tip the work stopped at; a reader takes the changeset from the branch or the pull request and reads that commit as the state the Handoff describes, never as the commit a later close checks for integration, except after integration, when the line names the merged pull request with its merge commit. A close reads the merge commit from the newest Handoff, and treats a record its Governance mutations blocks amend or create as audited when that Handoff's `Completed blocks` line lists the block; the decision-record audit seals no verification run, so the line carries no token. A Handoff posted without a release leaves the Change Claimed and its Claim in force: the winning Claim under `claim-record` is the earliest `Claim:` posted after the newest Handoff that a Lifecycle move to `Available` follows. The `Session:` and `Worktree:` lines are the only optional lines, and each appears at most once, after the five. The Handoff records what was true when it was posted; refinement of the Output belongs in the body, before the release. A release that moves the Change to `Submitted` follows `maturity-and-authority` for the Maturities that admit it, posts its Handoff before it writes `Submitted`, and its Next block line names the Maturity whose review the Change waits for: `confirmation: <Maturity>`.
 
 </rule>
 
-<rule id="confirmation-record">
+<rule id="lifecycle-transitions">
 
-A confirmation or rejection is one comment posted on a `Submitted` Change before its Lifecycle moves to `Available`. A confirmation carries exactly these lines in this order — the opening line, one blank line, and four required lines — and nothing else:
+`Available` means no holder; `Claimed` means one holder; `Submitted` means no holder, as `maturity-and-authority` states; `Applied` and `Abandoned` are terminal. Each transition has one operation and the operation writes nothing else: a claim moves `Available` to `Claimed`; a release moves `Claimed` to `Available`, or to `Submitted` for a submit; a confirmation moves `Submitted` to `Available`; and a close moves `Claimed` to the terminal value its one argument names. None of the four writes Maturity or a body section; the Maturity lowering of a rejection is separate, under `maturity-and-authority`. A claim, a release, and a close each post only their own comment — the Claim, the Handoff, or the terminal record — and a confirmation posts none. A confirmation acts for the Product's Maintainer on a `Submitted` Change only, writes `Available`, and reports any other Lifecycle without mutation.
 
-```markdown
-Confirmation: <Maturity>
-
-- Delegate: <the agent that performs the move>
-- For: <the operator it acts for>
-- Harness: <the agent harness>
-- Session: <the agent session id>
-```
-
-A rejection carries the same lines with two differences, and nothing else: its opening line is `Rejection: <Maturity>`, and a fifth required line `- Reason: <the operator's stated reason>` follows the `Session:` line. `<Maturity>` is the Change's current Maturity: `Proposed`, `Framed`, or `Sliced`. The comment names the delegate and the operator because every session acts through one account, so the field-change event's actor names the account and never the delegate.
+A rejection follows `maturity-and-authority`. No operation posts, reads, or parses a `Rejection:` comment.
 
 </rule>
 

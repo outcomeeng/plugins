@@ -1,7 +1,7 @@
 """Replay harness for the audit-change runner's ``read-authority`` operation.
 
 Backs the ``[test]`` evidence that the operation reads a Change's field-change
-events and comments within a page bound and blocks when a read fills it. The
+events within a page bound, reads no comment, and blocks when a read fills it. The
 runner reaches the store only through its injected command seam, so the harness
 passes the runner a recording collaborator that answers each ``gh api graphql``
 call with a page in the shape of the store's answer. Every page is an inert
@@ -48,9 +48,18 @@ _AFTER_ARGUMENT_PREFIX: Final = "after="
 
 _runner = load_runner()
 AuthorityRead = _runner.AuthorityRead
+
+
+class ReplayedConnection(StrEnum):
+    """A store connection the replay answers; comments exist so a read of one is observable."""
+
+    EVENTS = "events"
+    COMMENTS = "comments"
+
+
 _CONNECTION_ROUTES: Final = (
-    ("timelineItems", AuthorityRead.EVENTS),
-    ("comments(", AuthorityRead.COMMENTS),
+    ("timelineItems", ReplayedConnection.EVENTS),
+    ("comments(", ReplayedConnection.COMMENTS),
 )
 
 
@@ -153,11 +162,12 @@ def read_authority(*, filled: StrEnum | None) -> AuthorityObservation:
 
     The store answers every call for the ``filled`` kind with a page that
     reports a further page; every other call receives a final page. ``None``
-    gives every connection a final page.
+    gives every connection a final page. A call for the comments connection
+    is answered and recorded so the test can observe that none was made.
     """
     answers: dict[StrEnum, str] = {}
     pages: dict[StrEnum, ReplayedPage] = {}
-    for kind in AuthorityRead:
+    for kind in ReplayedConnection:
         answers[kind], pages[kind] = _fixture_page(kind, more=kind == filled)
     replay = _StoreReplay(answers)
     request = json.dumps(

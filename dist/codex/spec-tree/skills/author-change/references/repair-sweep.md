@@ -1,6 +1,6 @@
 <objective>
 
-The sweep table of one Change-candidate repair batch: every same-class site and every changed-section dependent with its disposition, and the result of comparing the stabilized candidate with the retained findings.
+The sweep table of one Change-candidate repair batch: every same-class site and every changed-section dependent with its disposition, resolved before the first audit of a revision and again after the repairs that follow it.
 
 </objective>
 
@@ -33,12 +33,6 @@ One row per site or dependent found:
 | Site | Class or dependent | Disposition |
 | ---- | ------------------ | ----------- |
 
-The disposition is `repaired` with the section changed and, for each repair of a finding, the criterion applied and the check that shows the class closed, or `unresolved` with the reason. The re-audit's verdict, never the recorded check, decides whether the class closed. An edit made to resolve a row is itself an edit, so its own same-class sites and dependents enter the table before the sweep ends.
+The disposition is `repaired` with the section changed and, for each repair of a finding, the criterion applied and the check that shows the class closed, or `unresolved` with the reason. An edit made to resolve a row is itself an edit, so its own same-class sites and dependents enter the table before the sweep ends.
 
 </sweep_table>
-
-<retained_findings_comparison>
-
-Before a re-audit, compare the stabilized candidate with the retained findings of the previous run, each by its unit key and rule identifier. The comparison holds when every retained `blocking` finding's location is repaired in the candidate and every retained `filed` finding is unchanged in severity and left unrepaired by the batch, and it names each retained finding that remains. A finding that the re-audit raises on text the previous run judged and did not report is delayed detection of unchanged text, not a result of the batch.
-
-</retained_findings_comparison>

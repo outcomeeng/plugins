@@ -58,9 +58,9 @@ result.
    and `spec-tree:change-standards`; `Read` serves only those two loaded
    skills' own skill-directory reads — the plugin manifest the `version` verb
    reads and the change-record and Definition of Ready references the declared
-   Maturity selects; `Bash` runs each bundled-runner request, the only command
-   the skill issues. Reach the candidate and every repository path through the
-   runner, never through `Read`.
+   Maturity selects; `Bash` runs each bundled-runner request. Reach the
+   candidate and every repository path through the runner, never through
+   `Read`.
 4. Relay the skill's final output unchanged: the `finish` result object, the
    `OUTSIDE_CONTRACT` result, or the `BLOCKED` diagnostic. Complete the audit
    in this context without nested delegation.
