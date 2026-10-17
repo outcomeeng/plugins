@@ -95,7 +95,7 @@ The legitimate pattern: production defines a typed constant (object, dict, froze
 
 When the value originates outside the codebase — an HTTP status, a POSIX errno, a protocol opcode — both production and test import directly from the platform or library origin. Production never re-exports a library constant; tests import from where production imports from.
 
-When the audit rejects bare literals, the verdict reports the positive pattern as the remediation. Language-specific structural rules (the constant-object syntax, the type derivation, the no-enums policy) live in `/typescript-standards`, `/python-standards`, and `/rust-standards`.
+When the audit rejects bare literals, the verdict reports the positive pattern as the remediation. Language-specific structural rules (the constant-object syntax, the type derivation, the no-enums policy) live in `/typescript-code-standards`, `/python-code-standards`, and `/rust-code-standards`.
 
 ## Assertions
 
