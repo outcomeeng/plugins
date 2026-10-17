@@ -1,7 +1,8 @@
-"""Observations of the agent-token owner, its rendered copies, and the build's per-agent tables."""
+"""Observations of the agent-token owner, the build's agent-token consumers, and a build's rendered agent tokens."""
 
 from __future__ import annotations
 
+import ast
 import json
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -12,43 +13,65 @@ from outcomeeng.distribution.build import (
     AGENT_CAPABILITY_REGISTRY,
     CONFIGURED_AGENT_PROMPT_FIELD_NAMES,
     CONFIGURED_AGENT_TERM_NAMES,
+    build,
 )
 from outcomeeng.distribution.contracts import (
+    AGENT_TOKEN_DATA_FILENAME,
+    AGENT_TOKEN_ENUM_NAME,
+    AGENT_TOKEN_OWNER_PATH,
+    AGENT_TOKEN_READING_PLUGIN_NAME,
     DIST_DIR_NAME,
-    PLUGINS_DIR_NAME,
-    SOURCE_ROOT_NAME,
-    Target,
+    REPOSITORY_ROOT,
+    SCRIPTS_SUBDIR_NAME,
+    SKILLS_SUBDIR_NAME,
 )
 from outcomeeng.distribution.orchestration import CATALOG_PATHS
-from outcomeeng.distribution.shipped_scripts import load_shipped_module
-from outcomeeng_testing.harnesses.dist_tree import DistTreeReader
+from outcomeeng_testing.harnesses.src_tree import src_tree
 
-# ``parents[2]`` reaches the repository root from
-# ``outcomeeng_testing/harnesses/agent_tokens.py``.
-REPO_ROOT: Final = Path(__file__).resolve().parents[2]
-
-AGENT_TOKEN_OWNER_PATH: Final = (
-    Path(SOURCE_ROOT_NAME)
-    / PLUGINS_DIR_NAME
-    / "coding-agents"
-    / "skills"
-    / "recover-prowl-agents"
-    / "scripts"
-    / "agent_tokens.py"
+# The modules that make up the build and the targets it generates.
+BUILD_MODULE_PATHS: Final = tuple(
+    Path("outcomeeng") / "distribution" / filename
+    for filename in ("build.py", "contracts.py", "orchestration.py")
 )
-AGENT_TOKEN_OWNER_MODULE_NAME: Final = "agent_tokens"
-AGENT_TOKEN_ENUM_NAME: Final = "AgentToken"
-AGENT_TOKEN_DATA_FILENAME: Final = "agent-tokens.json"
-SPEC_TREE_PLUGIN_NAME: Final = "spec-tree"
+
+TOKEN_READING_SKILL: Final = "token-reader"
+TOKEN_READING_SCRIPT: Final = (
+    Path(SKILLS_SUBDIR_NAME) / TOKEN_READING_SKILL / SCRIPTS_SUBDIR_NAME / "reader.py"
+)
+TOKEN_NON_READING_SCRIPT: Final = (
+    Path(SKILLS_SUBDIR_NAME)
+    / TOKEN_READING_SKILL
+    / SCRIPTS_SUBDIR_NAME
+    / "unrelated.py"
+)
+OTHER_PLUGIN_NAME: Final = "other-plugin"
+OTHER_PLUGIN_READING_SCRIPT: Final = TOKEN_READING_SCRIPT
 
 
 @dataclass(frozen=True)
-class RenderedAgentTokens:
-    """The data file one target's tree carries beside one script that reads it."""
+class TokenLiteral:
+    """One string constant of a build module that spells an agent token."""
 
-    target: Target
-    script: Path
-    document: Mapping[str, object] | None
+    module: Path
+    line: int
+    value: str
+
+
+@dataclass(frozen=True)
+class RenderedTokenFile:
+    """One agent-token data file a build emitted, located within its generated tree."""
+
+    target_directory: str
+    path: Path
+    document: Mapping[str, object]
+
+
+@dataclass(frozen=True)
+class AgentTokenBuild:
+    """What one build of a sample source tree emitted."""
+
+    tree_directories: frozenset[str]
+    token_files: tuple[RenderedTokenFile, ...]
 
 
 @dataclass(frozen=True)
@@ -59,41 +82,79 @@ class AgentKeyedTable:
     keys: tuple[object, ...]
 
 
-def declared_agent_tokens() -> Mapping[str, str]:
-    """Return each ``AgentToken`` member name and its token, read from the owner module."""
-    module = load_shipped_module(
-        AGENT_TOKEN_OWNER_MODULE_NAME, REPO_ROOT / AGENT_TOKEN_OWNER_PATH
-    )
-    enum_class = getattr(module, AGENT_TOKEN_ENUM_NAME)
-    return {member.name: member.value for member in enum_class}
+def owner_source_tokens() -> Mapping[str, str]:
+    """Return each member name and token the owner module's source declares.
 
-
-def rendered_agent_token_files() -> tuple[RenderedAgentTokens, ...]:
-    """Observe the data file beside each spec-tree script that reads it, in every target tree.
-
-    A script reads the data file when its authored source names the file.
+    The owner's source is parsed, not imported, so the observation does not
+    share the build's loader.
     """
-    plugin_source = (
-        REPO_ROOT / SOURCE_ROOT_NAME / PLUGINS_DIR_NAME / SPEC_TREE_PLUGIN_NAME
+    owner_source = (REPOSITORY_ROOT / AGENT_TOKEN_OWNER_PATH).read_text(
+        encoding="utf-8"
     )
-    reading_scripts = sorted(
-        script.relative_to(plugin_source)
-        for script in plugin_source.rglob("*.py")
-        if AGENT_TOKEN_DATA_FILENAME in script.read_text(encoding="utf-8")
+    for node in ast.parse(owner_source).body:
+        if isinstance(node, ast.ClassDef) and node.name == AGENT_TOKEN_ENUM_NAME:
+            return {
+                statement.targets[0].id: statement.value.value
+                for statement in node.body
+                if isinstance(statement, ast.Assign)
+                and isinstance(statement.targets[0], ast.Name)
+                and isinstance(statement.value, ast.Constant)
+                and isinstance(statement.value.value, str)
+            }
+    raise LookupError(
+        f"{AGENT_TOKEN_ENUM_NAME} is absent from {AGENT_TOKEN_OWNER_PATH}"
     )
-    reader = DistTreeReader(REPO_ROOT)
-    observations: list[RenderedAgentTokens] = []
-    for target in Target:
-        plugin_root = reader.target_root(target) / SPEC_TREE_PLUGIN_NAME
-        for script in reading_scripts:
-            data_file = plugin_root / script.parent / AGENT_TOKEN_DATA_FILENAME
-            document = (
-                json.loads(data_file.read_text(encoding="utf-8"))
-                if data_file.is_file()
-                else None
+
+
+def build_module_token_literals() -> tuple[TokenLiteral, ...]:
+    """Observe every string constant in the build's modules equal to an owner token."""
+    tokens = frozenset(owner_source_tokens().values())
+    literals: list[TokenLiteral] = []
+    for module in BUILD_MODULE_PATHS:
+        tree = ast.parse((REPOSITORY_ROOT / module).read_text(encoding="utf-8"))
+        literals.extend(
+            TokenLiteral(module, node.lineno, node.value)
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Constant) and node.value in tokens
+        )
+    return tuple(literals)
+
+
+def build_sample_agent_token_tree() -> AgentTokenBuild:
+    """Build a sample source tree into a temporary directory and observe the emitted tree.
+
+    The sample source carries a spec-tree script that names the data file, a
+    spec-tree script that does not, and a script of another plugin that names it.
+    """
+    reading_source = f'DATA_FILE = "{AGENT_TOKEN_DATA_FILENAME}"\n'.encode()
+    with src_tree() as builder:
+        builder.add_plugin(
+            AGENT_TOKEN_READING_PLUGIN_NAME,
+            skills={TOKEN_READING_SKILL: "body\n"},
+            artifacts={
+                TOKEN_READING_SCRIPT: reading_source,
+                TOKEN_NON_READING_SCRIPT: b"VALUE = 1\n",
+            },
+        )
+        builder.add_plugin(
+            OTHER_PLUGIN_NAME,
+            skills={TOKEN_READING_SKILL: "body\n"},
+            artifacts={OTHER_PLUGIN_READING_SCRIPT: reading_source},
+        )
+        dist_root = builder.root / DIST_DIR_NAME
+        build(builder.src_root, dist_root)
+        tree_directories = frozenset(
+            entry.name for entry in dist_root.iterdir() if entry.is_dir()
+        )
+        token_files = tuple(
+            RenderedTokenFile(
+                target_directory=data_file.relative_to(dist_root).parts[0],
+                path=Path(*data_file.relative_to(dist_root).parts[1:]),
+                document=json.loads(data_file.read_text(encoding="utf-8")),
             )
-            observations.append(RenderedAgentTokens(target, script, document))
-    return tuple(observations)
+            for data_file in sorted(dist_root.rglob(AGENT_TOKEN_DATA_FILENAME))
+        )
+    return AgentTokenBuild(tree_directories, token_files)
 
 
 def build_agent_keyed_tables() -> tuple[AgentKeyedTable, ...]:
@@ -111,9 +172,3 @@ def build_agent_keyed_tables() -> tuple[AgentKeyedTable, ...]:
         for capability, names in CONFIGURED_AGENT_TERM_NAMES.items()
     )
     return tuple(tables)
-
-
-def generated_tree_directory_names() -> frozenset[str]:
-    """Observe the names of the generated trees directly under ``dist/``."""
-    dist_root = REPO_ROOT / DIST_DIR_NAME
-    return frozenset(entry.name for entry in dist_root.iterdir() if entry.is_dir())

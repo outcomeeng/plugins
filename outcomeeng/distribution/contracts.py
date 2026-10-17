@@ -34,7 +34,6 @@ OUTPUT_STYLES_SUBDIR_NAME: Final = "output-styles"
 CLAUDE_PLUGIN_SUBDIR_NAME: Final = ".claude-plugin"
 CODEX_PLUGIN_SUBDIR_NAME: Final = ".codex-plugin"
 CODEX_PLUGIN_MANIFEST: Final = Path(CODEX_PLUGIN_SUBDIR_NAME) / "plugin.json"
-DIST_CODEX_PLUGINS_DIR: Final = Path(DIST_DIR_NAME) / "codex"
 REFERENCES_SUBDIR_NAME: Final = "references"
 SKILL_FILENAME: Final = "SKILL.md"
 MARKDOWN_FILE_SUFFIX: Final = ".md"
@@ -118,6 +117,9 @@ class Target(StrEnum):
 
     CLAUDE = _AGENT_TOKENS["CLAUDE"]
     CODEX = _AGENT_TOKENS["CODEX"]
+
+
+DIST_CODEX_PLUGINS_DIR: Final = Path(DIST_DIR_NAME) / Target.CODEX.value
 
 
 RUNTIME_TOKEN_TOOL_KIND: Final = "tool"
