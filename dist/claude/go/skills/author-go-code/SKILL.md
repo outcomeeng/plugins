@@ -23,7 +23,7 @@ References live at `${CLAUDE_SKILL_DIR}/references/` and workflows at `${CLAUDE_
 1. Read the repo-local Go overlays when present; the standards above are already loaded.
 2. Follow `<context_loading>` when this is a spec-tree work item.
 3. Read `${CLAUDE_SKILL_DIR}/workflows/implementation.md` for new work or `${CLAUDE_SKILL_DIR}/workflows/remediation.md` for review feedback.
-4. Invoke `/verify` when behavior changes require new or revised evidence; after test is selected, for Go expression: Use skill `go:author-go-test`.
+4. When behavior changes require new or revised evidence: Use skill `spec-tree:verify`. After it selects test: Use skill `go:author-go-test` for Go expression.
 5. Finish with the repository validation sequence or, if none is published, `gofmt -l .`, `go vet ./...`, the repository's linter, and `go test -race ./...`.
 
 `allowed-tools` preapproves only the listed raw-tool fallbacks. A repository-canonical wrapper outside those patterns uses the runtime's normal per-call approval path; NEVER select a fallback merely to avoid that approval.
@@ -45,7 +45,7 @@ NEVER declare work complete until the full validation sequence passes.
 </essential_principles>
 
 <repo_local_overlay>
-Use skill `go:go-code-standards` and `/go-test-standards`, then check for `spx/local/go.md` and `spx/local/go-tests.md` at the repository root. Read each file that exists before discovery and implementation. Treat each as repo-local routing to the product's governing specs and decisions; a local overlay supplements skill behavior and does not declare product truth.
+Check for `spx/local/go.md` and `spx/local/go-tests.md` at the repository root. Read each file that exists before discovery and implementation. Treat each as repo-local routing to the product's governing specs and decisions; a local overlay supplements skill behavior and does not declare product truth.
 </repo_local_overlay>
 
 <hierarchy_of_authority>
@@ -85,7 +85,7 @@ Before implementation, confirm:
 </codebase_discovery>
 
 <testing_methodology>
-Invoke `/verify` before adding or revising evidence. When it selects test, for Go expression Use skill `go:author-go-test` and follow RED/GREEN. When it selects evaluate, read the eval definition, cases, materialized prompt, real producer contract, selected product command, and threshold; run that command before and after implementation. When it selects audit, preserve the pathless requirement for the isolated verifier without inventing a test. If the change alters behavior and no evidence already proves that behavior, establish the selected evidence first.
+Use skill `spec-tree:verify` before adding or revising evidence. When it selects test: Use skill `go:author-go-test` for Go expression, then follow RED/GREEN. When it selects evaluate, read the eval definition, cases, materialized prompt, real producer contract, selected product command, and threshold; run that command before and after implementation. When it selects audit, preserve the pathless requirement for the isolated verifier without inventing a test. If the change alters behavior and no evidence already proves that behavior, establish the selected evidence first.
 
 Use `/go-test-standards` as the canonical source for filenames, evidence levels, controlled implementations, property tests, toolchain-oracle evidence, fixture placement, and coverage expectations. Keep production code aligned with those constraints instead of re-declaring test policy here.
 </testing_methodology>

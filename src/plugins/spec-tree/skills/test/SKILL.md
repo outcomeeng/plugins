@@ -407,12 +407,12 @@ In decision-rule mode, stop after assertion-type selection. Execution level, lan
 
 Before the first write of any test file, load the test skill of each language in which this invocation creates or changes a test file, in a repair round as in a new scaffold, so that the language's structure, execution-level, reusable-pattern, and standards rules bind every edit. Load each skill once. An existing file's language follows from its canonical filename rendering; a new file's from the node's implementation and existing tests. Load exactly the matching skill per language:
 
-| Language   | Skill                                              |
-| ---------- | -------------------------------------------------- |
-| Go         | {!% require_skill 'go:test-go' %!}                 |
-| Python     | {!% require_skill 'python:author-python-test' %!}  |
-| Rust       | {!% require_skill 'rust:author-rust-test' %!}      |
-| TypeScript | {!% require_skill 'typescript:test-typescript' %!} |
+| Language   | Skill                                                     |
+| ---------- | --------------------------------------------------------- |
+| Go         | {!% require_skill 'go:author-go-test' %!}                 |
+| Python     | {!% require_skill 'python:author-python-test' %!}         |
+| Rust       | {!% require_skill 'rust:author-rust-test' %!}             |
+| TypeScript | {!% require_skill 'typescript:author-typescript-test' %!} |
 
 When a changed language has no installed test skill, work from `<naming_and_co_location>` and the shared standards, and report the missing language skill with the result.
 

@@ -312,7 +312,7 @@ Per-language code, architecture, and test audits ship as `audit-{lang}-{code|tes
 | --------------------------- | -------------------------------- |
 | "Audit this code"           | `/audit-typescript-code`         |
 | "Audit ADRs for TypeScript" | `/audit-typescript-architecture` |
-| "Audit these tests"         | `/audit-typescript-tests`        |
+| "Audit these tests"         | `/audit-typescript-test`         |
 
 <!-- /lang:typescript -->
 <!-- lang:rust -->
@@ -332,7 +332,7 @@ Per-language code, architecture, and test audits ship as `audit-{lang}-{code|tes
 | "Audit this code"         | `/audit-go-code`         |
 | "Audit concurrency in Go" | `/audit-go-code`         |
 | "Audit ADRs for Go"       | `/audit-go-architecture` |
-| "Audit these tests"       | `/audit-go-tests`        |
+| "Audit these tests"       | `/audit-go-test`         |
 
 <!-- /lang:go -->
 

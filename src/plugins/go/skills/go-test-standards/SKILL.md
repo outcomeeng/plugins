@@ -3,7 +3,7 @@ name: go-test-standards
 user-invocable: false
 description: >-
   Go test standards enforced across all skills. Loaded by other skills, not invoked directly.
-allowed-tools: Read
+allowed-tools: Read, {{! tool('use_skill') !}}
 ---
 
 <objective>

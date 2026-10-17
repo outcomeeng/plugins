@@ -69,7 +69,7 @@ Read these files to understand product structure and workflow:
 
 - `CLAUDE.md` - Product navigation, work item status, sparse integer index dependencies
 
-For evidence routing, invoke `/verify`. After test is selected, read `/go-test-standards`. Use skill `go:author-go-test` for Go expression.
+For evidence routing, use skill `spec-tree:verify`. After test is selected, use skill `go:go-test-standards`, then use skill `go:author-go-test` for Go expression.
 
 **3. Existing Decisions**
 
@@ -114,10 +114,10 @@ Execute these phases IN ORDER.
 1. Read the node spec completely (requirements, assertions)
 2. Read product context:
    - `CLAUDE.md` - Product structure, navigation, work item management
-3. Use skill `go:go-code-standards`, then read `/go-architecture-standards`
+3. Use skill `go:go-code-standards`, then use skill `go:go-architecture-standards`
 4. Read `spx/local/go.md` and `spx/local/go-architecture.md` if they exist
 5. Read `/go-test-standards`, then `spx/local/go-tests.md` if it exists
-6. Invoke `/verify` for evidence routing; after test is selected, for Go expression: Use skill `go:author-go-test`.
+6. Use skill `spec-tree:verify` for evidence routing; after test is selected, use skill `go:author-go-test` for Go expression
 7. Read existing ADRs for consistency:
    - `spx/{NN}-{slug}.adr.md` - Product-level ADRs
    - ADRs interleaved within enabler/outcome nodes

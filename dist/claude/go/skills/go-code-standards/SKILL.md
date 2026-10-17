@@ -23,14 +23,14 @@ When another skill loads this reference inside a repository, it must also check 
 </repo_local_overlay>
 
 <standard_family>
-Use skill `go:go-code-standards` as the container before any specialized Go standard.
+This reference is the container; apply it before any specialized Go standard.
 
 | Work area                  | Specialized standard         | Purpose                                                                                    |
 | -------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------ |
 | test code                  | `/go-test-standards`         | Go test filenames, levels, evidence rules, doubles, harnesses, fixtures, and examples      |
 | ADRs and architecture docs | `/go-architecture-standards` | Go architecture decision structure, testability constraints, and architecture review rules |
 
-Keep examples in standardizing skills. Task skills such as `/author-go-code`, `/author-go-test`, and `/audit-go-test` describe workflow and load order; the standardizing family owns reusable policy and concrete examples.
+Keep examples in standardizing skills. The standardizing family owns reusable policy and concrete examples; workflow and load order belong to task skills.
 </standard_family>
 
 <tooling_baseline>
