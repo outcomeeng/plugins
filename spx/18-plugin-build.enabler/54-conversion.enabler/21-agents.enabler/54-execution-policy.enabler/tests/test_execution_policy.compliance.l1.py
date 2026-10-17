@@ -63,7 +63,9 @@ def test_manual_guidance_preserves_source_only_fields(tmp_path: Path) -> None:
     assert "sandbox_mode" not in parsed
 
 
-def test_manual_guidance_never_names_a_capability_absent_from_the_source_tool_set() -> None:
+def test_manual_guidance_never_names_a_capability_absent_from_the_source_tool_set() -> (
+    None
+):
     universe = tuple(
         sorted(
             READ_ONLY_TOOLS
