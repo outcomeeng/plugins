@@ -1,6 +1,6 @@
 {
   "name": "prose",
-  "version": "0.12.12",
+  "version": "0.13.0",
   "description": "Prose craft through a matched triple (/author-prose-architecture, /author-prose, /audit-prose) over caller-supplied kind layers: interface, documentation, copy",
   "author": {
     "name": "Simon Heimlicher"
