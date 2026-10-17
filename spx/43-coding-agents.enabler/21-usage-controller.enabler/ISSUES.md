@@ -27,3 +27,17 @@ Lines 14 and 21 of [`spx/43-coding-agents.enabler/21-usage-controller.enabler/us
 **Why accepted.** The Plugins Maintainer ruling (https://github.com/outcomeeng/changes/issues/416#issuecomment-6234943244) accepts the finding and keeps the record unchanged. The node spec text stays as the Change record states it.
 
 **Settlement condition.** The scheduled-pass or launchd-job assertion of the node declares that a running pass excludes the next scheduled and on-request pass, matching the consumption-control pattern.
+
+## usage-controller.md:18 — stable-data-root-citation
+
+Status: `accepted`.
+
+Line 18 of [`spx/43-coding-agents.enabler/21-usage-controller.enabler/usage-controller.md`](spx/43-coding-agents.enabler/21-usage-controller.enabler/usage-controller.md) anchors the storage location of the position records to "the stable data root of `spx/43-coding-agents.enabler/18-consumption-control.enabler/consumption-control.md`". [`spx/43-coding-agents.enabler/18-consumption-control.enabler/consumption-control.md`](spx/43-coding-agents.enabler/18-consumption-control.enabler/consumption-control.md) declares "stable versioned assets" and a detector-scoped "detector state root", and declares no "stable data root".
+
+**Impact**: the assertion cites a concept its provider does not declare, so the audit gate that later checks the implementation against this assertion has no resolvable root to check.
+
+**Finding.** DEBT [consistency] at `usage-controller.md:18`, raised in https://github.com/outcomeeng/plugins/pull/665#issuecomment-6235016647. Required: either point the assertion at wherever a general-purpose stable data root actually is declared (or have `consumption-control.md` declare one explicitly), or replace the citation with the concrete root `control-positions` itself owns, so the audit gate that will later check implementation against this assertion has a resolvable target.
+
+**Why accepted.** The Maintainer ruling (https://github.com/outcomeeng/changes/issues/416#issuecomment-6235170743) accepts the finding. The node declares `malleability: spec`, and the root the records live under is settled when the controller is implemented or the node hardens. The node spec text stays as the Change record states it.
+
+**Settlement condition.** The assertion names a root that `consumption-control.md` declares, or a root `control-positions` owns.
