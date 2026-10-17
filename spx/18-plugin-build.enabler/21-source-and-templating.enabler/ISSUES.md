@@ -181,3 +181,13 @@ Class D (REJECT, source ownership and declarations); f-014 and f-015 overlap the
 **Invalidation check.** The cited text neither cites, restates, nor depends on anything this changeset changed. The changeset adds symbols to `outcomeeng/distribution/profiles.py`, narrows the guard in `outcomeeng/validation/profile_configuration.py`, adds model-price and profile-binding generators, harnesses, and tests, and narrows the `inert_fragment_bodies` generator. The cited tests drive directive parsing, include expansion, and rendering in `outcomeeng/distribution/build.py` and `outcomeeng/distribution/contracts.py`, which the changeset does not change. The added `COMMENT_DELIMITER_START` import follows the module's existing pattern of importing each delimiter from `outcomeeng/distribution/build.py`, which aliases the constant `outcomeeng/distribution/contracts.py` owns; it restates no delimiter literal, so it does not extend f-015, which concerns the hand-written `_DELIMITER_TOKENS` list.
 
 **Settlement condition**: the source exports a directive-name contract that the harness imports, the generator imports the delimiters from `outcomeeng/distribution/contracts.py`, the tree cases are test-owned, and a passing test-evidence audit of this node.
+
+## DEBT [evidence]: two harnesses build the same single-skill source tree
+
+Defect class: `architectural-duplication`, rule `duplicated-source-tree-construction`.
+
+Finding: `outcomeeng_testing/harnesses/source_absence.py` (around line 139) and `outcomeeng_testing/harnesses/source_and_templating.py` each define their own `_source_tree` and `_skill_body` helpers, and both build the same single-skill source tree.
+
+Remediation target: the harness. The helpers move into one shared source-tree harness, `outcomeeng_testing/harnesses/src_tree.py`, which both modules import.
+
+Settlement condition: `_source_tree` and `_skill_body` are defined once, in the shared harness, and neither `source_absence.py` nor `source_and_templating.py` defines its own copy.
