@@ -12,7 +12,7 @@ The canonical TypeScript ADR conventions — sections, how testability appears i
 </objective>
 
 <success_criteria>
-TypeScript ADR guidance follows this standard when `/typescript-standards` is loaded first, ADRs use only the authoritative sections, testability constraints live in `## Verification`'s `### Audit` subsection, dependency seams are expressed in TypeScript terms, and test-level references match `/typescript-test-standards`.
+TypeScript ADR guidance follows this standard when `/typescript-code-standards` is loaded first, ADRs use only the authoritative sections, testability constraints live in `## Verification`'s `### Audit` subsection, dependency seams are expressed in TypeScript terms, and test-level references match `/typescript-test-standards`.
 </success_criteria>
 
 <reference_note>
@@ -188,6 +188,6 @@ The architect needs to understand testing levels to write effective Verification
 | `## Status` field             | Not in the authoritative ADR template          | Git history / commit metadata      |
 | File names to delete          | Temporal; becomes stale immediately            | Code review against ADR invariants |
 | Migration plans               | Temporal; narrates a transition                | Code review / work items           |
-| Implementation code           | ADRs constrain implementation, not provide it  | `/code-typescript`                 |
+| Implementation code           | ADRs constrain implementation, not provide it  | `/author-typescript-code`          |
 
 </anti_patterns>

@@ -449,15 +449,15 @@ TypeScript engineering: /test-typescript, /code-typescript, /audit-typescript-co
 
 | Type  | Name                                 | Purpose                                                                 |
 | ----- | ------------------------------------ | ----------------------------------------------------------------------- |
-| Skill | `/architect-typescript`              | Writing ADRs for TypeScript                                             |
 | Skill | `/audit-typescript-architecture`     | TypeScript-specific architecture audit                                  |
 | Skill | `/audit-typescript-code`             | TypeScript implementation-code audit methodology                        |
-| Skill | `/audit-typescript-tests`            | TypeScript test-evidence audit methodology                              |
-| Skill | `/code-typescript`                   | Writing or fixing implementation code for TypeScript                    |
-| Skill | `/simplify-typescript`               | Simplifying TypeScript implementation while preserving behavior         |
-| Skill | `/test-typescript`                   | Writing or fixing tests for TypeScript                                  |
+| Skill | `/audit-typescript-test`             | TypeScript test-evidence audit methodology                              |
+| Skill | `/author-typescript-architecture`    | Writing ADRs for TypeScript                                             |
+| Skill | `/author-typescript-code`            | Writing or fixing implementation code for TypeScript                    |
+| Skill | `/author-typescript-test`            | Writing or fixing tests for TypeScript                                  |
+| Skill | `/simplify-typescript-code`          | Simplifying TypeScript implementation while preserving behavior         |
 | Skill | `/typescript-architecture-standards` | TypeScript ADR conventions enforced across architect and auditor skills |
-| Skill | `/typescript-standards`              | TypeScript code standards enforced across all skills                    |
+| Skill | `/typescript-code-standards`         | TypeScript code standards enforced across all skills                    |
 | Skill | `/typescript-test-standards`         | TypeScript test standards enforced across all skills                    |
 
 ### work
