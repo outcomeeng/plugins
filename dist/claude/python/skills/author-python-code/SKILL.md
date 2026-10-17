@@ -46,11 +46,11 @@ If required evidence does not exist or lacks approval, return to the evidence wo
 
 <audit_requirement_handoff>
 
-For every `/verify` routing row whose verification type is audit, the authoritative requirement is the exact assertion or decision-rule text in the routed spec or decision artifact carrying `([audit:{rule-slug}])`.
+For every `/verify` routing row whose verification type is audit, the authoritative requirement is the exact assertion or decision-rule text in the routed spec or decision artifact carrying `([audit:{rule-slug}])` or the pathless `([audit])` that the foundation admits for a toolchain without slug support.
 
 Before reporting completion:
 
-1. Read the routed source artifact again and confirm the exact subject text still carries `([audit:{rule-slug}])`.
+1. Read the routed source artifact again and confirm the exact subject text still carries `([audit:{rule-slug}])` or the pathless `([audit])` that the foundation admits for a toolchain without slug support.
 2. Emit one row per audit routing row under `Audit requirements`:
 
 ```text
@@ -306,7 +306,7 @@ What happened: tests, mypy, and Ruff passed, then the readiness report omitted t
 
 Why it failed: “preserve the audit requirement” named no source artifact or observable handoff.
 
-How to avoid: apply `<audit_requirement_handoff>`, re-read each routed `([audit:{rule-slug}])` subject, and require one `preserved` report row per audit routing row before readiness.
+How to avoid: apply `<audit_requirement_handoff>`, re-read each routed audit subject tagged `([audit:{rule-slug}])` or the pathless `([audit])`, and require one `preserved` report row per audit routing row before readiness.
 
 **Claude self-attested Python standards compliance.**
 

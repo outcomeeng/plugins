@@ -238,7 +238,7 @@ When implementation changes affect test-owned interfaces, harnesses, or fixture 
 
 <audit_requirement_handoff>
 
-For each `/verify` routing row whose verification type is audit, re-read the routed spec or decision artifact and confirm the exact subject still carries `([audit:{rule-slug}])`. The completion report includes one `Audit requirements` row per audit routing row with the full `spx/...` source path, exact subject text, and status `preserved`. The row count must equal the routing result's audit-row count; when that count is zero, report `Audit requirements: none selected`.
+For each `/verify` routing row whose verification type is audit, re-read the routed spec or decision artifact and confirm the exact subject still carries `([audit:{rule-slug}])` or the pathless `([audit])` that the foundation admits for a toolchain without slug support. The completion report includes one `Audit requirements` row per audit routing row with the full `spx/...` source path, exact subject text, and status `preserved`. The row count must equal the routing result's audit-row count; when that count is zero, report `Audit requirements: none selected`.
 
 </audit_requirement_handoff>
 

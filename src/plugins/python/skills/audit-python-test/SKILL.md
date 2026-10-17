@@ -339,7 +339,7 @@ How to avoid: Name the missing source-of-truth module and the spec-tree node tha
 
 Failure 8: Required restoration of retired deterministic evidence.
 
-What happened: Claude followed a base revision's former link to a deleted Python test and harness and rejected the implementation because the deleted files no longer supplied deterministic evidence. The current spec had reclassified the assertions to `[audit:{rule-slug}]` evidence.
+What happened: Claude followed a base revision's former link to a deleted Python test and harness and rejected the implementation because the deleted files no longer supplied deterministic evidence. The current spec had reclassified the assertions to audit evidence.
 
 Why it failed: Historical evidence ownership overrode the current governing declaration.
 

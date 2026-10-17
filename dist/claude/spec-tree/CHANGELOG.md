@@ -22,7 +22,7 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 - **`/verify` and `/interview` name the slug tag for a decision-record Audit rule, and the PDR evidence-model example carries a slug.** `/verify` recognizes `[audit:{rule-slug}]` with a slug unique within the record under `### Audit`, and the pathless `[audit]` for a toolchain without slug support, so a record written from the shipped templates enters verification routing without an invalid-tag rejection. `/interview` tells an author to record an open decision with `([audit:{rule-slug}])`, and the PDR evidence-model example rule ends in `([audit:theme-variants-selectable])`. Before this change, `/verify` recognized only the pathless `[audit]` under `### Audit`, `/interview` named only that tag, and the example showed it.
 
-- **`/audit-tests` and `/audit-eval-evidence` skip an assertion tagged `[audit:{rule-slug}]`.** An assertion written from the shipped templates carries the slug tag, so each audit leaves it to its own verification lane. Before this change, both named the bare `[audit]` tag.
+- **`/audit-tests` and `/audit-eval-evidence` skip an assertion tagged `[audit:{rule-slug}]` or the pathless `[audit]`.** An assertion written from the shipped templates carries the slug tag, and the foundation admits the pathless tag for a toolchain without slug support, so each audit leaves either to its own verification lane. Before this change, both named only the bare `[audit]` tag.
 
 ## 0.106.12
 

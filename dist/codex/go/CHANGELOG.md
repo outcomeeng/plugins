@@ -10,7 +10,7 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 ### Changed
 
-- **`/go-architecture-standards` and `/author-go-architecture` instruct each `### Audit` rule to carry the tag `[audit:{rule-slug}]`, with a slug unique within the ADR; their example ADR rules each carry their own slug, `/author-go-code` checks that an audit subject still carries `([audit:{rule-slug}])`, and `/audit-go-test` skips an assertion tagged `[audit:{rule-slug}]`.** An ADR written from either skill carries the tag the spec-tree ADR template writes and `/audit-adr` accepts. Before this change, both skills instructed the pathless `[audit]` tag under `### Audit`, their examples showed it, and the code skill and test-audit skill named it.
+- **`/go-architecture-standards` and `/author-go-architecture` instruct each `### Audit` rule to carry the tag `[audit:{rule-slug}]`, with a slug unique within the ADR; their example ADR rules each carry their own slug, `/author-go-code` confirms that an audit subject still carries `([audit:{rule-slug}])` or the pathless `([audit])`, and `/audit-go-test` skips an assertion tagged `[audit:{rule-slug}]` or the pathless `[audit]`.** An ADR written from either skill carries the tag the spec-tree ADR template writes and `/audit-adr` accepts. Before this change, both skills instructed the pathless `[audit]` tag under `### Audit`, their examples showed it, and the code skill and test-audit skill named it.
 
 ## 0.4.0
 
