@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.22.0
+
+### Changed
+
+- **`/agent-prompt-standards` names the skill-authoring skill `author-skill` in its repeated-name example.** The structural anti-pattern "Repeating the skill name" now quotes "The author-skill skill is designed to...", the name under which the skill-authoring skill ships, which replaces `create-skill`. Before this change, the example quoted the former name, so a skill that authors against the standard met a name no plugin ships.
+
 ## 0.21.12
 
 ### Changed
