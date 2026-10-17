@@ -38,7 +38,7 @@ python3 "${SKILL_DIR}/scripts/review_run.py" finish --state "<statePath>"
 
 `finish` reads the journal prefix, appends the terminal run-completed event with review status and finding counts, seals the run, removes runner-owned scratch storage, and prints the raw run token.
 
-When any runner verb exits non-zero, stop and surface its stderr; the command boundary in `<constraints>` admits no repair outside the runner.
+When any runner verb exits non-zero, stop and surface its stderr, except for the single `append-finding` rerun `<finding_payload>` directs; the command boundary in `<constraints>` admits no repair outside the runner.
 
 </api_surface>
 
@@ -61,7 +61,7 @@ Use `manifestPath` and `changedFiles` for navigation, but treat the diff file as
 2. Load the prompt reference and diff bundle.
 3. Examine every changed file and every emitted diff section, applying the prompt's `<adversarial_probes>` before treating a file as clean. After each changed file has been examined, call `append-scope` for that file.
 4. For each changed governing declaration, discover and read its unchanged consumers per the prompt's `<review_scope>` consumers-of-changed-truth item. A contradiction there is a finding cited at the consumer's location; consumers are not `append-scope` units — the journal's scope coverage remains the changed-file set.
-5. When a finding is raised, immediately write that one finding JSON object to its own scratch file and pass it to `append-finding` through the input redirect. Do not collect findings into a later batch.
+5. When a finding is raised, immediately write that one finding JSON object to its own scratch file and pass it to `append-finding` through the input redirect, following `<finding_payload>`. Do not collect findings into a later batch.
 6. When review is complete, call `finish`.
 7. Report only the raw `runToken` to the caller.
 
@@ -72,7 +72,10 @@ Use `manifestPath` and `changedFiles` for navigation, but treat the diff file as
 A finding is a payload: it carries code spans, quotes, and JSON.
 
 - ALWAYS: write each finding with the file-write tool to a file in the scratch directory the harness names for this session, under a file name unique to this agent and run, such as `finding-<runToken>-<n>.json`. Where the harness names no scratch directory, use the one the hosting environment designates, such as `$RUNNER_TEMP` on a hosted runner.
-- ALWAYS: pass the file to `append-finding` with the input redirect `< <finding-file>`, with the path written out literally.
+- ALWAYS: copy the scratch directory the harness names into each finding path character for character — a path rebuilt by hand differs from the written file by one character, and the runner then reads no file.
+- ALWAYS: when a file-write result reports a path that the scratch directory does not contain by whole path components, stop before `append-finding` and name the reported path.
+- ALWAYS: pass the file to `append-finding` with the input redirect `< <finding-file>`, with the path exactly as the file-write result reports it, written out literally, never held in a shell variable or expanded.
+- ALWAYS: when `append-finding` exits non-zero with a diagnostic that names the finding file as absent, run `append-finding` once more with the path copied from the file-write result; on a second failure, stop and report the exit, the stderr, and the run token.
 - NEVER: send a finding through a heredoc, a pipe, or an inline argument.
 - NEVER: remove a finding file; the harness clears its scratch directory.
 
@@ -93,6 +96,8 @@ A finding is a payload: it carries code spans, quotes, and JSON.
 <failure_modes>
 
 **Runner failure bypassed the command boundary.** A runner verb exited non-zero, and Claude attempted to repair the journal through direct `spx journal` or scratch-file commands. Stop on the failed verb and surface its stderr; the runner remains the only command boundary.
+
+**A retyped finding path sealed a review with no verdict.** Claude rebuilt the finding file path by hand, `append-finding` read no file, and the run ended without recording the finding. Copy the path from the file-write result, and rerun once only when the diagnostic names the file as absent.
 
 **A clean review became a finding.** Claude appended a no-findings comment or synthetic finding before `finish`. Append no finding object for a clean review; `finish` records zero finding counts in the terminal event and returns the raw run token.
 
