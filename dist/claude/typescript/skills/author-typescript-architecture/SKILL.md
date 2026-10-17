@@ -64,8 +64,6 @@ Read these files to understand product structure and workflow:
 
 - `CLAUDE.md` - Product navigation, work item status, sparse integer index dependencies
 
-For evidence routing, invoke `/verify`. After test is selected, invoke `/typescript-test-standards` and `/author-typescript-test` for TypeScript expression.
-
 **3. Existing Decisions**
 
 Read existing ADRs/PDRs to ensure consistency:
@@ -111,7 +109,7 @@ Execute these phases IN ORDER.
    - `CLAUDE.md` - Product structure, navigation, work item management
 3. Read `/typescript-architecture-standards` for canonical ADR conventions
 4. Invoke `/typescript-test-standards` for canonical test standards
-5. Invoke `/verify` for evidence routing; after test is selected, invoke `/author-typescript-test` for TypeScript expression and patterns
+5. Use skill `spec-tree:verify` for evidence routing. After test is selected, use skill `typescript:author-typescript-test` for TypeScript expression and patterns
 6. Read existing ADRs for consistency:
    - `spx/{NN}-{slug}.adr.md` - Product-level ADRs
    - ADRs interleaved within enabler/outcome nodes

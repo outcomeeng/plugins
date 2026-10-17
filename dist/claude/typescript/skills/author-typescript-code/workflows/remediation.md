@@ -3,7 +3,7 @@
 - Read the complete rejection feedback, including every referenced file and line.
 - Read the affected code in context before editing.
 - Read the governing spec, ADR, or PDR when the rejection concerns compliance or product behavior.
-- Read `/typescript-code-standards` and `/typescript-test-standards` before changing implementation or tests.
+- Use skill `typescript:typescript-code-standards` and use skill `typescript:typescript-test-standards` before changing implementation or tests.
 
 </required_reading>
 

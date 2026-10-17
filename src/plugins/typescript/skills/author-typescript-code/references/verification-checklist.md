@@ -12,7 +12,7 @@ Pre-submission verification checks for TypeScript implementation work.
 - [ ] Every eval command selected by `/verify` meets its declared completion threshold
 - [ ] The completion report has one `Audit requirements` row with status `preserved` per audit row from `/verify`, or reports `none selected` when no audit row exists
 - [ ] Any coverage, documentation, TODO, logging, or security threshold enforced by the resolved commands or loaded standards passes through those commands
-- [ ] Manual review confirms the implementation follows `/typescript-code-standards` and any loaded `spx/local/typescript.md` overlay
+- [ ] Manual review confirms the implementation follows the rules of skill `typescript:typescript-code-standards` and any loaded `spx/local/typescript.md` overlay
 
 </required_checks>
 
@@ -62,14 +62,14 @@ When sources conflict, resolve in this priority: local agent instructions, repos
 
 <type_safety>
 
-- Follow the type-safety rules in `/typescript-code-standards`
+- Follow the type-safety rules of skill `typescript:typescript-code-standards`
 - Treat `any`, suppression comments, and missing annotations according to the loaded standards and resolved type-check command
 
 </type_safety>
 
 <code_quality>
 
-- Follow the code-quality, dependency-injection, source-owned-value, import, and hygiene rules in `/typescript-code-standards`
+- Follow the code-quality, dependency-injection, source-owned-value, import, and hygiene rules of skill `typescript:typescript-code-standards`
 - Apply documentation, TODO, logging, and security requirements only when they are declared by the loaded standards, repo-local overlay, or resolved product commands
 
 </code_quality>

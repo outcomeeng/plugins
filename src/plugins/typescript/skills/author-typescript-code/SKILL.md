@@ -216,7 +216,7 @@ Before writing code, confirm:
 </codebase_discovery>
 
 <testing_methodology>
-Invoke `/verify` before adding or revising evidence. When it selects test, load both `/typescript-test-standards` and `/author-typescript-test` for TypeScript expression.
+Use skill `spec-tree:verify` before adding or revising evidence. When it selects test, use skill `typescript:typescript-test-standards` and use skill `typescript:author-typescript-test` for TypeScript expression.
 
 Use `/typescript-test-standards` as the canonical source for:
 
@@ -226,7 +226,7 @@ Use `/typescript-test-standards` as the canonical source for:
 - harness ownership and fixture placement
 - source-owned test values and inline diagnostics
 
-Use `/author-typescript-test` for:
+Use skill `typescript:author-typescript-test` for:
 
 - router-driven level selection
 - concrete Vitest and Playwright implementation patterns
@@ -427,7 +427,7 @@ The implementation is ready for review when:
 - [ ] The product's resolved TypeScript lint/format check command passes
 - [ ] Every TypeScript test command selected by `/verify` passes and every selected eval command meets its declared threshold
 - [ ] The `Audit requirements` report has one `preserved` row per audit routing row from `/verify`, or reports `none selected` when the routing result has none
-- [ ] The implementation follows `/typescript-code-standards` and any `spx/local/typescript.md` overlay loaded for the repository
+- [ ] The implementation follows the rules of skill `typescript:typescript-code-standards` and any `spx/local/typescript.md` overlay loaded for the repository
 - [ ] Any coverage, documentation, TODO, logging, or security threshold enforced by the product's resolved commands or loaded standards passes through those commands
 - [ ] FIX mode addresses every supplied reviewer finding with a code change or a stated evidence-based rejection
 

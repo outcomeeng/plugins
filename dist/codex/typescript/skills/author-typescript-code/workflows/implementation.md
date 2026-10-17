@@ -2,7 +2,7 @@
 
 - Read the specification completely: node spec, ADR/PDR, design note, ticket, or user request.
 - Read repository-local authority before existing code: root guide, docs, and any spec-tree context already loaded by `spec-tree:contextualize`.
-- Read `/typescript-code-standards` and `/typescript-test-standards`; they own TypeScript code and test conventions.
+- Use skill `typescript:typescript-code-standards` and use skill `typescript:typescript-test-standards`; they own TypeScript code and test conventions.
 - Read `package.json`, `tsconfig*`, test configuration, and relevant local overlays or harness guides before selecting commands.
 
 </required_reading>
@@ -187,6 +187,6 @@ for (let attempt = 0; attempt < 3; attempt++) {
 - Behavior-changing work has selected tests that fail before the implementation change for the expected reason and pass afterward; behavior-preserving work has sufficient unchanged tests that pass before and after the change.
 - Selected evals have a valid baseline and meet their declared completion thresholds after the change; the `Audit requirements` report matches `/verify`'s audit routing rows.
 - Typecheck, lint, and every selected deterministic command pass through repository-selected wrappers or documented fallbacks.
-- No new dependency, command, import shape, or test-infrastructure placement contradicts `/typescript-code-standards`, `/typescript-test-standards`, or loaded repository authority.
+- No new dependency, command, import shape, or test-infrastructure placement contradicts the rules of skill `typescript:typescript-code-standards`, skill `typescript:typescript-test-standards`, or loaded repository authority.
 
 </success_criteria>
