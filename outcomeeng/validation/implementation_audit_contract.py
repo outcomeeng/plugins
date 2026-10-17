@@ -123,7 +123,8 @@ def implementation_audit_concern_skill_name(
     language: str, concern: ImplementationAuditConcern
 ) -> str:
     """Return the name of the concern skill expected to cover one language partition."""
-    return f"audit-{language}-{concern.value}"
+    skill_concern = "test" if concern is ImplementationAuditConcern.TESTS else concern.value
+    return f"audit-{language}-{skill_concern}"
 
 
 def implementation_audit_producer_identity(
