@@ -49,10 +49,10 @@ ADRs do not assign testing levels. They establish constraints that make levels a
 
 ### Audit
 
-- ALWAYS: external tool invocations accept an injected runner interface or function parameter -- enables isolated testing without generated mocks ([audit])
-- ALWAYS: configuration is parsed into typed structs at load time -- enables Level 1 verification of config logic ([audit])
-- NEVER: `gomock`, `mockery`, or generated mocks as the primary testing strategy for architectural seams -- violates reality-based testing ([audit])
-- NEVER: direct `os/exec` construction in domain logic without an injected seam -- prevents isolated testing ([audit])
+- ALWAYS: external tool invocations accept an injected runner interface or function parameter -- enables isolated testing without generated mocks ([audit:injected-runner-for-external-tools])
+- ALWAYS: configuration is parsed into typed structs at load time -- enables Level 1 verification of config logic ([audit:typed-config-structs-at-load-time])
+- NEVER: `gomock`, `mockery`, or generated mocks as the primary testing strategy for architectural seams -- violates reality-based testing ([audit:no-generated-mocks-for-seams])
+- NEVER: direct `os/exec` construction in domain logic without an injected seam -- prevents isolated testing ([audit:no-uninjected-os-exec-in-domain])
 ```
 
 **What this replaces -- the following does NOT belong in an ADR:**

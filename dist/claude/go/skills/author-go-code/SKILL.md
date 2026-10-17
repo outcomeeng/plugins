@@ -92,7 +92,7 @@ Use `/go-test-standards` as the canonical source for filenames, evidence levels,
 
 <audit_requirement_handoff>
 
-For each `/verify` routing row whose verification type is audit, re-read the routed spec or decision artifact and confirm the exact subject still carries `([audit])`. The completion report includes one `Audit requirements` row per audit routing row with the full `spx/...` source path, exact subject text, and status `preserved`. The row count must equal the routing result's audit-row count; when that count is zero, report `Audit requirements: none selected`.
+For each `/verify` routing row whose verification type is audit, re-read the routed spec or decision artifact and confirm the exact subject still carries `([audit:{rule-slug}])`. The completion report includes one `Audit requirements` row per audit routing row with the full `spx/...` source path, exact subject text, and status `preserved`. The row count must equal the routing result's audit-row count; when that count is zero, report `Audit requirements: none selected`.
 
 </audit_requirement_handoff>
 
