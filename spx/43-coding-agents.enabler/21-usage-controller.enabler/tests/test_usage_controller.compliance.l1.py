@@ -1,5 +1,6 @@
 """The usage controller's ALWAYS and NEVER rules hold against violating passes."""
 
+import json
 from pathlib import Path
 
 from outcomeeng_testing.generators.control_positions import (
@@ -34,11 +35,14 @@ from outcomeeng_testing.harnesses.control_positions import (
     INVALID_VALUE,
     NUMERIC_CONFIG_FIELDS,
     SCALAR_CONFIG_FIELDS,
+    STANDARD_ERROR_PATH_KEY,
+    STANDARD_OUT_PATH_KEY,
     ChangedApiTokens,
     ConfigSpec,
     PassObservation,
     PassStep,
     changed_sibling_api,
+    installed_job,
     load_control_positions,
     pass_window,
     token_measurement_limit_seconds,
@@ -504,6 +508,52 @@ def test_scheduling_manages_one_finite_launchd_job_on_macos_only() -> None:
             assert observed.status == module.ScheduleStatus.UNSUPPORTED
             assert not observed.calls
             assert not observed.launch_agent_files
+
+
+def test_installed_job_delivers_each_pass_output_to_files_in_the_data_root() -> None:
+    # Clauses: the launchd clause (the installed job starts one finite pass) and the
+    # ceiling clause (the controller "tells the operator to switch accounts" and
+    # "reports why" it stopped nothing). The scheduled pass is the only unattended
+    # pass, and launchd discards the standard streams of a job that names no file for
+    # them, so the notices a pass prints reach the operator only through a file. The
+    # contract: the installed plist names a standard output path and a standard error
+    # path, each a file inside the data root the installed pass writes to; the two
+    # paths may be equal or distinct. Rejects the mutation that installs the job with
+    # no output paths (launchd discards the notices), and the one that points them
+    # outside the data root (/dev/null or a directory the operator never reads).
+    module = load_control_positions()
+
+    job = installed_job(module)
+
+    for key in (STANDARD_OUT_PATH_KEY, STANDARD_ERROR_PATH_KEY):
+        assert key in job.plist, (
+            f"installed plist lacks {key}: keys {sorted(job.plist)}"
+        )
+        path = Path(job.plist[key])
+        assert path.is_absolute(), (key, path)
+        assert path.parent.is_relative_to(job.data_root), (key, path, job.data_root)
+
+
+def test_interactive_pass_prints_one_json_line_with_the_reports_on_standard_output() -> (
+    None
+):
+    # Clauses: the launchd clause (the skill runs one pass on request) and the ceiling
+    # clause ("reports why" nothing was stopped). Rejects the mutation that moves the
+    # redirect of the scheduled job into the pass itself, so the interactive run prints
+    # nothing, or prints more than the one JSON line, on standard output.
+    module = load_control_positions()
+    positions = alpha_positions(2)
+    config = ConfigSpec(positions, stop_authorized=False)
+    at_ceiling = PassStep(weekly={ALPHA: WEEKLY_CEILING_PERCENT})
+
+    (observed,) = run_passes(module, config, [at_ceiling], via_main=True)
+
+    lines = observed.stdout.splitlines()
+    assert len(lines) == 1, observed.stdout
+    document = json.loads(lines[0])
+    assert module.ReportKind.STOP_UNAUTHORIZED in {
+        report["kind"] for report in document["reports"]
+    }, document
 
 
 def test_position_in_a_herdr_pane_receives_no_measurement_and_no_action() -> None:

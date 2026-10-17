@@ -433,6 +433,8 @@ class PassObservation:
     error: Exception | None
     exit_code: int | None
     elapsed_seconds: float
+    # What `main` printed to standard output; empty when the pass ran without `main`.
+    stdout: str = ""
 
 
 def pass_time(start_time: dt.datetime, index: int) -> dt.datetime:
@@ -514,6 +516,7 @@ def run_passes(
             reports: tuple[Any, ...] = ()
             unfinished: tuple[str, ...] = ()
             exit_code: int | None = None
+            stdout = ""
             records_directory = data_root / RECORDS_DIRECTORY
             if step.records_blocked:
                 records_directory.mkdir(exist_ok=True)
@@ -527,7 +530,8 @@ def run_passes(
                             environ={"XDG_CONFIG_HOME": str(config_home)},
                             collaborators=collaborators,
                         )
-                    document = json.loads(printed.getvalue())
+                    stdout = printed.getvalue()
+                    document = json.loads(stdout)
                     reports = tuple(
                         SimpleNamespace(**report) for report in document["reports"]
                     )
@@ -560,6 +564,7 @@ def run_passes(
                     error=error,
                     exit_code=exit_code,
                     elapsed_seconds=clock.elapsed,
+                    stdout=stdout,
                 )
             )
             seen = len(records)
@@ -608,6 +613,46 @@ def schedule_observation(
             plist_name=name,
             launch_agent_files=tuple(path.name for path in files),
         )
+
+
+# launchd.plist keys that redirect a job's standard streams to files.
+STANDARD_OUT_PATH_KEY = "StandardOutPath"
+STANDARD_ERROR_PATH_KEY = "StandardErrorPath"
+
+
+@dataclass(frozen=True)
+class InstalledJob:
+    """The launchd job one install writes, and the data root its pass writes to."""
+
+    plist: dict[str, Any]
+    data_root: Path
+
+
+def installed_job(module: ModuleType) -> InstalledJob:
+    """Install the launchd job through a recording launchctl and read back its plist.
+
+    The pass the installed `ProgramArguments` start resolves its data root through
+    the entry point's default collaborators, so the install runs with that data root
+    under a disposable home. Handles and observations only: the linked test decides
+    what the plist must carry.
+    """
+    with sibling_registry(module):
+        data_root = module.default_collaborators().data_root
+        with TemporaryDirectory(prefix="control-positions-evidence-") as temporary:
+            launch_agents = Path(temporary) / "launch-agents"
+            collaborators = module.Collaborators(
+                runner=LaunchctlRecorder(),
+                tokens=FrozenTokens(PassStep(), BASE_TIME),
+                clock=FakeClock(0.0),
+                now=BASE_TIME,
+                data_root=data_root,
+                platform="darwin",
+                launch_agents_dir=launch_agents,
+            )
+            module.schedule(module.ScheduleOperation.INSTALL, collaborators)
+            (plist_path,) = sorted(launch_agents.rglob("*.plist"))
+            plist = plistlib.loads(plist_path.read_bytes())
+    return InstalledJob(plist=plist, data_root=data_root)
 
 
 class LaunchctlRecorder:
