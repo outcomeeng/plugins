@@ -1303,6 +1303,10 @@ def _read_relations(
                     in str(values.get(PREDECESSORS_FIELD, "")).split(
                         PREDECESSOR_SEPARATOR
                     )
+                    and f"{owner}/{repository}#{absorber}"
+                    not in str(own.get(PREDECESSORS_FIELD, "")).split(
+                        PREDECESSOR_SEPARATOR
+                    )
                 ],
             }
         cursor = info.get(StoreField.END_CURSOR)

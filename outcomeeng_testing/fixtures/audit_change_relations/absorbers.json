@@ -21,7 +21,7 @@
                   },
                   "nodes": [
                     {
-                      "value": "example-org/example-changes#5",
+                      "value": "example-org/example-changes#5, example-org/example-changes#33",
                       "field": {
                         "name": "Predecessors"
                       }
@@ -70,6 +70,22 @@
                   "nodes": [
                     {
                       "value": "example-org/example-changes#112, example-org/example-changes#12",
+                      "field": {
+                        "name": "Predecessors"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "number": 33,
+                "issueFieldValues": {
+                  "pageInfo": {
+                    "hasNextPage": false
+                  },
+                  "nodes": [
+                    {
+                      "value": "example-org/example-changes#12",
                       "field": {
                         "name": "Predecessors"
                       }
