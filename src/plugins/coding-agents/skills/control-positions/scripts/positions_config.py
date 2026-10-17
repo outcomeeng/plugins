@@ -72,33 +72,69 @@ def config_path(environ: Mapping[str, str], home: Path) -> Path:
     return base / CONFIG_DIRECTORY / CONFIG_FILE
 
 
+TOP_LEVEL: Final = "the top level of the file"
+EXAMPLE_VALUES: Final = {
+    ConfigField.COMPACTION_CONTEXT_PERCENT: "30",
+    ConfigField.COMPACTION_MULTIPLE: "1.25",
+    ConfigField.PAUSE_MULTIPLE: "2",
+    ConfigField.WEEKLY_CEILING_PERCENT: "93",
+    ConfigField.PACE_TOKENS: "50000",
+    ConfigField.KEY_AUTHORIZED: "true",
+    ConfigField.STOP_AUTHORIZED: "false",
+}
+
+
+def _received(value: object) -> str:
+    return f"received {value!r} ({type(value).__name__})"
+
+
 def _number(
     table: Mapping[str, object],
     field: ConfigField,
     default: float,
     maximum: float | None = None,
+    location: str = TOP_LEVEL,
 ) -> float:
     value = table.get(field, default)
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
-        raise ConfigurationError(field, "expected a number")
-    if value <= 0:
-        raise ConfigurationError(field, "expected a number above zero")
-    if maximum is not None and value > maximum:
-        raise ConfigurationError(field, f"expected a number no greater than {maximum}")
+    example = EXAMPLE_VALUES[field]
+    bound = f" no greater than {maximum}" if maximum is not None else ""
+    valid = f"a number above zero{bound}"
+    fix = f"set `{field} = {example}` in {location}"
+    invalid = (
+        isinstance(value, bool)
+        or not isinstance(value, (int, float))
+        or value <= 0
+        or (maximum is not None and value > maximum)
+    )
+    if invalid:
+        raise ConfigurationError(
+            field, f"in {location}, expected {valid}, {_received(value)}; {fix}"
+        )
     return float(value)
 
 
 def _boolean(table: Mapping[str, object], field: ConfigField) -> bool:
     value = table.get(field, False)
     if not isinstance(value, bool):
-        raise ConfigurationError(field, "expected true or false")
+        raise ConfigurationError(
+            field,
+            f"in {TOP_LEVEL}, expected true or false, {_received(value)}; "
+            f"set `{field} = {EXAMPLE_VALUES[field]}` without quotes",
+        )
     return value
 
 
 def _text(table: Mapping[str, object], field: ConfigField, location: str) -> str:
     value = table.get(field)
     if not isinstance(value, str) or not value:
-        raise ConfigurationError(field, f"expected text in {location}")
+        found = "the key is absent" if field not in table else _received(value)
+        raise ConfigurationError(
+            field,
+            f"in {location}, expected non-empty text, {found}; "
+            f'set `{field} = "..."` in {location}, for example '
+            f'`[[positions]]` with `worktree = "/path/to/worktree"` and '
+            f'`subscription = "name"`',
+        )
     return value
 
 
@@ -106,51 +142,81 @@ def _tables(
     value: object, field: ConfigField, location: str
 ) -> list[Mapping[str, object]]:
     if not isinstance(value, list):
-        raise ConfigurationError(field, f"expected a list of tables in {location}")
+        raise ConfigurationError(
+            field,
+            f"expected an array of tables for `{field}`, {_received(value)}; "
+            f"declare each one as a `[[{field}]]` section",
+        )
     tables: list[Mapping[str, object]] = []
-    for item in value:
+    for index, item in enumerate(value, start=1):
         if not isinstance(item, dict):
-            raise ConfigurationError(field, f"expected a table in {location}")
+            raise ConfigurationError(
+                field,
+                f"in {location} entry {index}, expected a table, "
+                f"{_received(item)}; declare it as a `[[{field}]]` section "
+                f"with key = value lines beneath",
+            )
         tables.append(item)
     return tables
 
 
 def _skip(table: Mapping[str, object]) -> frozenset[str]:
     value = table.get(ConfigField.SKIP, [])
-    if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
+    if not isinstance(value, list):
         raise ConfigurationError(
-            ConfigField.SKIP, "expected a list of pane titles or worktree paths"
+            ConfigField.SKIP,
+            f"expected a list of pane titles or worktree paths, "
+            f'{_received(value)}; write `skip = ["pane title", "/path/to/worktree"]`',
         )
-    return frozenset(str(item) for item in value)
+    for index, item in enumerate(value, start=1):
+        if not isinstance(item, str):
+            raise ConfigurationError(
+                ConfigField.SKIP,
+                f"in entry {index} of `skip`, expected text, {_received(item)}; "
+                f'write each entry as a quoted string, for example "pane title"',
+            )
+    return frozenset(value)
 
 
 def _pace(table: Mapping[str, object]) -> dict[str, float]:
     value = table.get(ConfigField.SUBSCRIPTIONS, {})
     if not isinstance(value, dict):
         raise ConfigurationError(
-            ConfigField.SUBSCRIPTIONS, "expected one table per subscription"
+            ConfigField.SUBSCRIPTIONS,
+            f"expected one table per subscription, {_received(value)}; "
+            f"declare each as `[subscriptions.NAME]` with "
+            f"`pace_tokens = {EXAMPLE_VALUES[ConfigField.PACE_TOKENS]}`",
         )
     pace: dict[str, float] = {}
     for name, subscription in value.items():
         if not isinstance(subscription, dict):
             raise ConfigurationError(
-                ConfigField.SUBSCRIPTIONS, f"expected a table for {name}"
+                ConfigField.SUBSCRIPTIONS,
+                f"in `subscriptions.{name}`, expected a table, "
+                f"{_received(subscription)}; declare it as "
+                f"`[subscriptions.{name}]` with "
+                f"`pace_tokens = {EXAMPLE_VALUES[ConfigField.PACE_TOKENS]}`",
             )
         if ConfigField.PACE_TOKENS in subscription:
-            pace[str(name)] = _number(subscription, ConfigField.PACE_TOKENS, 0)
+            pace[str(name)] = _number(
+                subscription,
+                ConfigField.PACE_TOKENS,
+                0,
+                location=f"[subscriptions.{name}]",
+            )
     return pace
 
 
 def _positions(table: Mapping[str, object]) -> tuple[Position, ...]:
     entries = _tables(
-        table.get(ConfigField.POSITIONS, []), ConfigField.POSITIONS, "positions"
+        table.get(ConfigField.POSITIONS, []), ConfigField.POSITIONS, "[[positions]]"
     )
     return tuple(
         Position(
-            _text(entry, ConfigField.WORKTREE, "a position"),
-            _text(entry, ConfigField.SUBSCRIPTION, "a position"),
+            _text(entry, ConfigField.WORKTREE, f"[[positions]] entry {index}"),
+            _text(entry, ConfigField.SUBSCRIPTION, f"[[positions]] entry {index}"),
         )
-        for entry in entries
+        for index, entry in enumerate(entries, start=1)
     )
 
 
@@ -161,11 +227,16 @@ def load_settings(path: Path) -> Settings:
             table = tomllib.load(handle)
     except FileNotFoundError as error:
         raise ConfigurationError(
-            ConfigField.POSITIONS, f"configuration file not found: {path}"
+            ConfigField.POSITIONS,
+            f"configuration file not found: {path}; create it with at least one "
+            f'`[[positions]]` section holding `worktree = "..."` and '
+            f'`subscription = "..."`',
         ) from error
     except (OSError, tomllib.TOMLDecodeError) as error:
         raise ConfigurationError(
-            ConfigField.POSITIONS, f"configuration file unreadable: {error}"
+            ConfigField.POSITIONS,
+            f"configuration file unreadable at {path}: {error}; fix the TOML syntax "
+            f"or the file permissions named above",
         ) from error
     return Settings(
         positions=_positions(table),
