@@ -6,8 +6,9 @@ import importlib.util
 import json
 import shlex
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from copy import deepcopy
+from dataclasses import dataclass
 from io import StringIO
 from pathlib import Path
 from types import ModuleType
@@ -818,3 +819,102 @@ def verify_native_agent_recovery_compliance() -> list[str]:
     if exit_code != 0 or rendered[module.STATUS_FIELD] != module.ResultStatus.PREPARED:
         failures.append("prepare CLI did not emit a durable manifest")
     return failures
+
+
+@dataclass(frozen=True)
+class WritableRootLaunch:
+    """One native launch command recovery planned, with its supplied roots."""
+
+    agent_type: str
+    resume_prefix: tuple[str, ...]
+    resume_locator: str
+    roots: tuple[str, ...]
+    command: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class WritableRootRecovery:
+    """What recovery planned, or the status it failed with, for one request."""
+
+    launches: tuple[WritableRootLaunch, ...]
+    prepared_before: str
+    prepared_after: str
+    error_status: str | None
+
+
+def recovery_agent_types() -> tuple[str, ...]:
+    return tuple(agent_type.value for agent_type in _load().AgentType)
+
+
+def writable_root_agent_types() -> tuple[str, ...]:
+    module = _load()
+    return tuple(agent_type.value for agent_type in module.NATIVE_WRITABLE_ROOT_OPTIONS)
+
+
+def rootless_agent_types() -> tuple[str, ...]:
+    accepting = writable_root_agent_types()
+    return tuple(
+        agent_type
+        for agent_type in recovery_agent_types()
+        if agent_type not in accepting
+    )
+
+
+def recovery_result_status() -> type:
+    return cast(type, _load().ResultStatus)
+
+
+def observe_writable_root_recovery(
+    roots_by_agent_type: Mapping[str, tuple[str, ...]],
+) -> WritableRootRecovery:
+    """Run recovery over the operational roster, supplying roots per agent type.
+
+    Each worktree whose candidate has a listed agent type receives that type's
+    roots in the recover request; other worktrees receive none.
+    """
+    module = _load()
+    roster = OPERATIONAL_RECOVERY_ROSTER
+    prepared = _prepared(module, roster)
+    prepared_before = json.dumps(prepared, sort_keys=True)
+    panes, _ = _post_restart_rosters(module, roster, len(roster.original_pane_ids))
+    request_roots = {
+        str(worktree): list(roots_by_agent_type[agent_type])
+        for worktree, agent_type in zip(
+            roster.worktree_paths, roster.agent_types, strict=True
+        )
+        if agent_type in roots_by_agent_type
+    }
+    candidates = {
+        item[module.ORIGINAL_PANE_ID_FIELD]: item
+        for item in cast(list[dict[str, object]], prepared[module.CANDIDATES_FIELD])
+    }
+    try:
+        plan = module.recover(
+            prepared, _all_bindings(module, roster), panes, [], request_roots
+        )
+    except module.AdapterError as error:
+        return WritableRootRecovery(
+            (), prepared_before, json.dumps(prepared, sort_keys=True), str(error.status)
+        )
+    launches = []
+    for delivery in cast(list[dict[str, object]], plan[module.DELIVERIES_FIELD]):
+        candidate = candidates[delivery[module.ORIGINAL_PANE_ID_FIELD]]
+        agent_type = cast(str, candidate[module.AGENT_TYPE_FIELD])
+        launches.append(
+            WritableRootLaunch(
+                agent_type=agent_type,
+                resume_prefix=tuple(
+                    module.NATIVE_RESUME_PREFIXES[module.AgentType(agent_type)]
+                ),
+                resume_locator=cast(str, candidate[module.RESUME_LOCATOR_FIELD]),
+                roots=tuple(
+                    request_roots.get(
+                        cast(str, candidate[module.WORKTREE_PATH_FIELD]), []
+                    )
+                ),
+                command=tuple(shlex.split(cast(str, delivery[module.TEXT_FIELD]))),
+            )
+        )
+    return WritableRootRecovery(
+        tuple(launches), prepared_before, json.dumps(prepared, sort_keys=True), None
+    )
