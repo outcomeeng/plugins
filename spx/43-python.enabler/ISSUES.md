@@ -38,6 +38,8 @@ The objective at `src/plugins/python/skills/author-python-architecture/SKILL.md`
 
 **Evidence**: `run-2026-10-16_23-46-46-029-7adab72f9537.jsonl`, finding `objective_criteria_duplication`, severity debt.
 
+**Evidence**: `run-2026-10-17_00-04-34-405-76b26fa5fae9.jsonl`, finding `objective_criteria_duplication`, severity debt, at `src/plugins/python/skills/author-python-architecture/SKILL.md` lines 16 and 197. The `<success_criteria>` bullet restates the objective's output property instead of adding a distinct soundness property.
+
 **Settlement condition.** The objective and `<success_criteria>` share no restated property.
 
 ## `author-python-architecture` references route reads to a sibling and teach general knowledge
@@ -48,5 +50,7 @@ The five files under `src/plugins/python/skills/author-python-architecture/refer
 - Four files teach knowledge Claude already has (`known_content`): `architecture-patterns.md` lines 23 to 99, 247 to 299 and 367 to 420 (domain-driven entity, value-object and aggregate tutorials, single-responsibility examples, a definition of purity); `security-patterns.md` lines 274 to 314, 318 to 345 and 389 to 479 (`eval`/`exec`, SSL verification, path traversal and `pickle` tutorials); `testability-patterns.md` lines 29 to 102, 169 to 236 and 291 to 343 (debugging, regression and documentation test examples, a development progression of tests, pure-function and boundary-separation tutorials); `type-system-patterns.md` lines 144 to 192, 281 to 325 and 329 to 358 (`TypeVar`, generics, narrowing and dataclass tutorials).
 
 **Evidence**: `run-2026-10-16_23-46-46-029-7adab72f9537.jsonl`, findings `nested_reference` and `known_content`, severity debt.
+
+**Evidence**: `run-2026-10-17_00-04-34-405-76b26fa5fae9.jsonl`, finding `nested_reference`, severity debt, at `src/plugins/python/skills/author-python-architecture/references/architecture-patterns.md` line 452, which ends "See `test-infrastructure-patterns.md`." and routes a read from one reference to a sibling reference.
 
 **Settlement condition.** No reference routes a read to another reference, and each reference keeps only product-specific conventions, non-training-data knowledge and verification thresholds, or a Verifier skips the findings on grounds recorded here.
