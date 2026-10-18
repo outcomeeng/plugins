@@ -3,6 +3,7 @@
 import json
 import tempfile
 from pathlib import Path
+from typing import cast
 
 from outcomeeng.distribution.contracts import Target
 from outcomeeng.distribution.installation import (
@@ -36,8 +37,12 @@ from outcomeeng_testing.generators.installation import (
 from outcomeeng_testing.harnesses.installation import (
     MARKETPLACE,
     RegistryState,
+    absent_from_every_agent,
+    captured_non_pending_failure_wordings,
+    committed_catalog_plugin_names,
     install_record_fixture_path,
     observe_codex_config_independence,
+    observe_designated_failure,
     observe_racing_install_record_rewrite,
     observe_first_failure,
     observe_inspection_failure,
@@ -48,6 +53,7 @@ from outcomeeng_testing.harnesses.installation import (
     observe_record_refresh_plan,
     observe_repository_plan,
     observe_uncached_fetch,
+    observe_unpublished_plugin,
     observe_unreadable_source,
 )
 
@@ -381,6 +387,104 @@ def test_no_agent_announces_a_first_install_its_plan_does_not_carry() -> None:
             ]
             if announced:
                 assert installs, (case.state, agent)
+            pending = {
+                entry[ReportField.PLUGIN]
+                for entry in cast(
+                    "list[dict[str, str]]",
+                    case.document[ReportField.PENDING_PUBLICATION],
+                )
+                if entry[ReportField.AGENT] == agent.value
+            }
+            reached = {
+                command.plugin
+                for command in case.attempted
+                if command.agent is agent
+                and command.operation
+                in {Operation.PLUGIN_INSTALL, Operation.PLUGIN_UPDATE}
+            } - pending
+            named = cast(
+                "list[str]",
+                case.document[
+                    ReportField.CLAUDE_PLUGINS
+                    if agent is Target.CLAUDE
+                    else ReportField.CODEX_PLUGINS
+                ],
+            )
+            assert set(named) == reached, (case.state, agent)
+
+
+def test_an_empty_selection_supplies_only_spec_tree_with_a_warning_and_disabled_codex_activation() -> (
+    None
+):
+    observation = observe_persistent_plan(
+        installed={agent: frozenset() for agent in Target},
+    )
+    plan = observation.plan
+    installs = [
+        command
+        for command in plan.commands
+        if command.operation is Operation.PLUGIN_INSTALL
+    ]
+
+    assert plan.claude_plugins == (SPEC_TREE_PLUGIN,)
+    assert plan.codex_plugins == (SPEC_TREE_PLUGIN,)
+    assert {command.agent for command in installs} == set(Target)
+    assert {command.plugin for command in installs} == {SPEC_TREE_PLUGIN}
+    assert {(warning.agent, warning.message) for warning in plan.warnings} == {
+        (
+            agent,
+            FIRST_INSTALL_WARNING.format(
+                marketplace=plan.roots.marketplace,
+                agent=agent.value,
+                plugin=SPEC_TREE_PLUGIN,
+            ),
+        )
+        for agent in Target
+    }
+    assert plan.codex_disabled == (SPEC_TREE_PLUGIN,)
+
+
+def test_an_established_pending_publication_absence_is_reported_in_persistent_mode_and_terminal_in_isolated_mode() -> (
+    None
+):
+    for absent in committed_catalog_plugin_names():
+        persistent = observe_unpublished_plugin(
+            isolated=False, unpublished=absent_from_every_agent(frozenset({absent}))
+        )
+        isolated = observe_unpublished_plugin(
+            isolated=True, unpublished=absent_from_every_agent(frozenset({absent}))
+        )
+
+        assert persistent.failure is None, absent
+        assert persistent.report is not None, absent
+        assert {entry.plugin for entry in persistent.report.pending_publication} == {
+            absent
+        }
+        assert isolated.report is None, absent
+        assert isolated.failure is not None, absent
+        assert isolated.failure.command.plugin == absent
+
+
+def test_a_persistent_update_failure_outside_the_pending_wording_stops_every_later_operation() -> (
+    None
+):
+    failures = [
+        observe_designated_failure(
+            isolated=False,
+            operation=Operation.PLUGIN_UPDATE,
+            stderr=wording,
+        )
+        for wording in captured_non_pending_failure_wordings(
+            sorted(committed_catalog_plugin_names()), MARKETPLACE
+        )
+    ]
+
+    assert failures
+    for observation in failures:
+        assert observation.report is None
+        assert observation.failure is not None
+        assert observation.failure.command.operation is Operation.PLUGIN_UPDATE
+        assert observation.calls[-1] == observation.failure.command
 
 
 def test_trusted_product_codex_configuration_changes_no_installation_command() -> None:
