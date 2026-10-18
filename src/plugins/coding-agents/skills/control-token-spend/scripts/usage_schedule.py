@@ -357,6 +357,9 @@ def investigate(
         }
 
 
+RETAINED_JOBS = "retained_jobs"
+
+
 def install_plan(
     config: Config, source: Path, python: Path, agents_directory: Path, platform: str
 ) -> Json:
@@ -438,11 +441,16 @@ def install(
         return plan
     installed_path = config.root / INSTALL_NAME
     prior = manifest(config.root)
-    owned_paths = (
-        {job["path"] for job in prior.get(ScheduleField.JOBS, [])}
+    prior_jobs = (
+        [*prior.get(ScheduleField.JOBS, []), *prior.get(RETAINED_JOBS, [])]
         if isinstance(prior, dict)
-        else set()
+        else []
     )
+    owned_paths = {job["path"] for job in prior_jobs}
+    planned_paths = {job["path"] for job in plan[ScheduleField.JOBS]}
+    plan[RETAINED_JOBS] = [
+        job for job in prior_jobs if job["path"] not in planned_paths
+    ]
     for job in plan[ScheduleField.JOBS]:
         path = Path(job["path"])
         if path.is_symlink() or (path.exists() and str(path) not in owned_paths):
@@ -450,9 +458,7 @@ def install(
                 f"Unowned launch agent exists: {path}; inspect it before installation"
             )
         if path.exists() and isinstance(prior, dict):
-            old = next(
-                item for item in prior[ScheduleField.JOBS] if item["path"] == str(path)
-            )
+            old = next(item for item in prior_jobs if item["path"] == str(path))
             if path.read_bytes() != plistlib.dumps(old[ScheduleField.PLIST]):
                 raise ValueError(
                     f"Managed launch agent changed externally: {path}; inspect it before replacement"
