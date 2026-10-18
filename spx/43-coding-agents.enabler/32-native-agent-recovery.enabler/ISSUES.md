@@ -110,6 +110,15 @@ leaves the assertion Declared and the node merges as itself.
 **Settlement condition**: `probes/writable-roots/` retains an attested run for one Claude Code candidate
 and one Codex candidate, and each retained screen lists the supplied root as writable.
 
+**Blocked run**: the Author's attempt to prepare the two probe candidates ended with `invalid-target`
+and the detail "Recovery candidates require exactly one current-session controller." The Author's agent
+session holds no Prowl pane, so neither probe candidate can carry `current-session` evidence, and
+`_validate_candidate_set` in
+`src/plugins/coding-agents/skills/recover-prowl-agents/scripts/recover_agents.py` applies that check
+to every phase that reads the manifest. The run needs either a stand-in controller label on one test
+candidate, which the evidence contract does not define, or a recovery request that admits a set with no
+controller.
+
 ## DEBT [consistency]: an absent or unusable agent-token module ends recovery with a traceback
 
 The local review of https://github.com/outcomeeng/plugins/pull/694, run
@@ -144,3 +153,27 @@ follow-up Change states the decision line and the assertion, and carries the fix
 **Settlement condition**: an absent, non-executing, or `AgentToken`-less agent-token module makes
 recovery print one `error:` line on stderr and exit 2. A linked scenario test holds that rule, and the
 coding-agents changelog records it.
+
+## DEBT [consistency]: recovery admits no candidate set without a current-session controller
+
+`_validate_candidate_set` in `src/plugins/coding-agents/skills/recover-prowl-agents/scripts/recover_agents.py`
+rejects a candidate set unless exactly one candidate carries `current-session` evidence. Prepare, activate,
+recover, verify, and reassess each read the manifest through `_prepared_candidates`, so each rejects such
+a set.
+
+**Evidence**: running `prepare` for one Claude Code candidate (evidence `public-agent`) and one Codex
+candidate (evidence `native-status`), each in its own Prowl pane, returned
+`{"detail": "Recovery candidates require exactly one current-session controller.", "schemaVersion": 5, "status": "invalid-target"}`.
+The session that ran the command holds no Prowl pane.
+
+**Impact**: a session outside every Prowl pane cannot recover a set of Prowl panes, and the writable-roots
+probe cannot run its protocol without a candidate mislabeled as the controller.
+
+**Resolution shape**: the node's spec and the exact-native-recovery decision state whether the controller is
+required; the source and the compliance test follow the answer.
+
+**Deferral reason**: the requirement is a stated product rule that no Change authorizes this changeset to
+amend.
+
+**Settlement condition**: the decision and the spec state the controller rule, and the source and linked
+tests comply with it.
