@@ -82,24 +82,11 @@ Invalidation check. The cited text neither cites, restates, nor depends on anyth
 
 **Settlement condition.** Both assertions take their inputs from source-owned generators, and a focused run plus a test-evidence audit over the repaired chain pass.
 
-## DEBT [evidence]: the ignored-file oracle calls production is_ignored (f-006) `outcomeeng_testing/harnesses/runtime_tokens.py`, `ignored_files`, `oracle-independence`
+## DEBT [evidence]: runtime-token harness oracle reuses production enumeration (f-006, f-007)
 
 The same second `spec-tree:test-evidence-auditor` verdict at head `7e15b3c437ca8326e0e63dbd0e54d45a62245ba6` rejected existing text in `outcomeeng_testing/harnesses/runtime_tokens.py`. The verdict carries no sealed run token.
 
 - f-006 (REJECT, oracle-independence): line 104, `ignored_files` is computed with production `is_ignored()` and then compared by membership in the same table, so a defect in production is shared by the code and its check.
-
-Resolution shape: give f-006 an independent oracle that does not call `is_ignored()`, and give f-007 an independent enumeration over `src/plugins`, `src/_shared`, and `src/templates`.
-
-Evidence that the text lies outside the change: `git diff -U0 origin/main...HEAD` (merge base `149a55f71befdf61e88be9bda2aae725db1f2381`) reports no hunk on line 91 or line 104 of the cited file.
-
-Invalidation check. The cited text neither cites, restates, nor depends on anything this changeset changed. The changeset adds symbols to `outcomeeng/distribution/profiles.py` (model prices; no existing symbol changes) and adds one filter to `outcomeeng/validation/profile_configuration.py` (`_is_authored_binding`, which drops a match whose binding reads a value or is an interpolation placeholder). The harness drives the runtime-token scanner and its ignore list; the changeset changes neither.
-
-**Settlement condition.** The ignored-file oracle shares no predicate with production, the expected files come from an independent enumeration over the three named roots, and a focused run plus a test-evidence audit over the repaired chain pass.
-
-## DEBT [evidence]: the expected-file oracle repeats the production enumeration (f-007) `outcomeeng_testing/harnesses/runtime_tokens.py`, `expected_files`, `oracle-independence`
-
-The same second `spec-tree:test-evidence-auditor` verdict at head `7e15b3c437ca8326e0e63dbd0e54d45a62245ba6` rejected existing text in `outcomeeng_testing/harnesses/runtime_tokens.py`. The verdict carries no sealed run token.
-
 - f-007 (REJECT, oracle-independence): line 91, `expected_files` repeats the algorithm of `runtime_token_files()`, and `enforced_roots` is the single root `src` instead of the three roots the assertion names.
 
 Resolution shape: give f-006 an independent oracle that does not call `is_ignored()`, and give f-007 an independent enumeration over `src/plugins`, `src/_shared`, and `src/templates`.

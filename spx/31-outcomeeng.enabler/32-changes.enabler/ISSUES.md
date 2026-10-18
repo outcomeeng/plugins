@@ -65,23 +65,11 @@ Impact: each later audit of the skill can raise the grant deviation and the two 
 
 Revisit and settlement condition: the audit standards state that an audit skill whose only read path is a bundled runner that appends to the SPX verification-run journal grants that runner and the skill-composition tool and no Read, Grep, or Glob, may hold its reason inventory inline, and may return a reduced result the owning spec declares; one typed skill audit of `audit-change` then raises none of the three findings.
 
-## DEBT [subagent-contract]: change-auditor restates the skill's result contract `src/plugins/spec-tree/agents/change-auditor.md`, `<output_format>`, `configuration/thin-wrapper-contract-copy`
+## DEBT [subagent-contract]: change-auditor restates the skill's result contract and carries a description-match description
 
 Defect class: `subagent-contract`.
 
-Finding: two warnings stand against the `change-auditor` definition. Its `<output_format>` restates the skill's result contract field by field, and its list of fields for a failed command omits `liveSha256`, `sha256`, and `retainedSha256`, which the skill's `<verdict_format>` carries for `candidate-changed` and `retained-input-mismatch`.
-
-Evidence: `instructions:subagent-auditor` findings f-003 (rule `description-style/exact-name-invocation`) and f-004 (rule `configuration/thin-wrapper-contract-copy`), each severity `WARNING`, against `src/plugins/spec-tree/agents/change-auditor.md` lines 3 and 91, in the typed subagent audit on head `95da1302cb72c523328f0d7d02b3a05b23df603b`, which rejected on the standing findings f-001 and f-002 recorded in the native-artifact node and in the `adr-pdr-compliance` entry above. The directive description is the wording every spec-tree agent definition carries.
-
-Impact: the wrapper's copied field list drifts each time the runner contract changes, and a relaying session can take the narrower list as the expected shape; the description invites a launch the calling skills have not instructed.
-
-Revisit and settlement condition: the wrapper points at the skill's `<verdict_format>` for the completed, `OUTSIDE_CONTRACT`, and runner-blocked shapes and keeps only its own pre-run diagnostic shape, and the description states its subject and the conditions under which the owning skills invoke the role in passive wording; one typed subagent audit of `change-auditor` then raises neither warning.
-
-## DEBT [subagent-contract]: change-auditor carries a description-match description `src/plugins/spec-tree/agents/change-auditor.md`, `description`, `description-style/exact-name-invocation`
-
-Defect class: `subagent-contract`.
-
-Finding: two warnings stand against the `change-auditor` definition. Its description is directive description-match wording, although the owning skills dispatch the role by exact configured name.
+Finding: two warnings stand against the `change-auditor` definition. Its `<output_format>` restates the skill's result contract field by field, and its list of fields for a failed command omits `liveSha256`, `sha256`, and `retainedSha256`, which the skill's `<verdict_format>` carries for `candidate-changed` and `retained-input-mismatch`. Its description is directive description-match wording, although the owning skills dispatch the role by exact configured name.
 
 Evidence: `instructions:subagent-auditor` findings f-003 (rule `description-style/exact-name-invocation`) and f-004 (rule `configuration/thin-wrapper-contract-copy`), each severity `WARNING`, against `src/plugins/spec-tree/agents/change-auditor.md` lines 3 and 91, in the typed subagent audit on head `95da1302cb72c523328f0d7d02b3a05b23df603b`, which rejected on the standing findings f-001 and f-002 recorded in the native-artifact node and in the `adr-pdr-compliance` entry above. The directive description is the wording every spec-tree agent definition carries.
 

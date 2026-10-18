@@ -10,50 +10,14 @@ Moving the guard is not a text edit. The skill declares narrow prefix-matched gr
 
 **Settlement condition.** The matcher's treatment of an environment-variable prefix is established, and one fix applies across this skill and `src/plugins/spec-tree/skills/open-pr/SKILL.md` in the same change, with each plugin gated by `instructions:skill-auditor`. The entry for the spec-tree side is in `spx/21-spec-tree.enabler/76-merge.enabler/32-github-pr.enabler/ISSUES.md`.
 
-## The manage-upstream-pr objective omits the state report `src/plugins/contribute/skills/manage-upstream-pr/SKILL.md`, `<objective>`, `objective-shape`
+## `manage-upstream-pr` carries five skill-audit debt findings
 
 `instructions:skill-auditor` run `2026-10-06_18-43-57-728-e627f9fb5e45` rejected the post-edit audit of `src/plugins/contribute/skills/manage-upstream-pr/SKILL.md` at head `4be7a922d11c27af632039953b5baf36db8b999f` on five `debt` findings. The changeset's diff of the file is lines 25, 28-29, 43, 46-47, 56, 194, and 234. No finding's cited location lies in those lines. Two findings cite text that overlaps them, recorded under each.
 
 - Rule `objective-shape`, line 11 (`<objective>`): the objective names the revision-and-reply output, while the description and Step 8 promise a state report that a state-only, closed, or merged pass produces.
-
-**Impact.** A state-only pass produces a report the objective does not name, and Step 3 leaves findings in review bodies and conversation comments without a selection rule.
-
-**Settlement condition.** The objective names the state report, the constraint names the post-push confirmation read or Step 6 drops it, Step 2 names where `detail` comes from and uses `Use skill` for `/upstream`, and Step 3 states a deterministic condition for the line-anchored read and a selection rule for every surface it reads; one typed skill audit of `manage-upstream-pr` then raises none of the five findings.
-
-## manage-upstream-pr reads the pull request's state more than once `src/plugins/contribute/skills/manage-upstream-pr/SKILL.md`, `Step 6`, `internal-consistency`
-
-`instructions:skill-auditor` run `2026-10-06_18-43-57-728-e627f9fb5e45` rejected the post-edit audit of `src/plugins/contribute/skills/manage-upstream-pr/SKILL.md` at head `4be7a922d11c27af632039953b5baf36db8b999f` on five `debt` findings. The changeset's diff of the file is lines 25, 28-29, 43, 46-47, 56, 194, and 234. No finding's cited location lies in those lines. Two findings cite text that overlaps them, recorded under each.
-
 - Rule `internal-consistency`, lines 116-122 (Step 6): Step 6 runs `gh pr view ... --json headRefOid` after the push, and the constraint at line 194 says the pull request's state is read exactly once. Line 194 lies in the diff, which added only the clause that the pages of the review-thread comments count as one read; the `headRefOid` read and the "exactly once" wording predate it.
-
-**Impact.** A state-only pass produces a report the objective does not name, and Step 3 leaves findings in review bodies and conversation comments without a selection rule.
-
-**Settlement condition.** The objective names the state report, the constraint names the post-push confirmation read or Step 6 drops it, Step 2 names where `detail` comes from and uses `Use skill` for `/upstream`, and Step 3 states a deterministic condition for the line-anchored read and a selection rule for every surface it reads; one typed skill audit of `manage-upstream-pr` then raises none of the five findings.
-
-## manage-upstream-pr reports a marker attribute the marker does not carry `src/plugins/contribute/skills/manage-upstream-pr/SKILL.md`, `Step 2`, `cross-skill-reference`
-
-`instructions:skill-auditor` run `2026-10-06_18-43-57-728-e627f9fb5e45` rejected the post-edit audit of `src/plugins/contribute/skills/manage-upstream-pr/SKILL.md` at head `4be7a922d11c27af632039953b5baf36db8b999f` on five `debt` findings. The changeset's diff of the file is lines 25, 28-29, 43, 46-47, 56, 194, and 234. No finding's cited location lies in those lines. Two findings cite text that overlaps them, recorded under each.
-
 - Rule `cross-skill-reference`, line 20 (Step 2): the step directs reporting `detail` from the live `<UPSTREAM_TARGET>` marker, and the marker carries no `detail` attribute.
-
-**Impact.** A state-only pass produces a report the objective does not name, and Step 3 leaves findings in review bodies and conversation comments without a selection rule.
-
-**Settlement condition.** The objective names the state report, the constraint names the post-push confirmation read or Step 6 drops it, Step 2 names where `detail` comes from and uses `Use skill` for `/upstream`, and Step 3 states a deterministic condition for the line-anchored read and a selection rule for every surface it reads; one typed skill audit of `manage-upstream-pr` then raises none of the five findings.
-
-## manage-upstream-pr invokes /upstream by slash name `src/plugins/contribute/skills/manage-upstream-pr/SKILL.md`, `Step 2`, `composed-skill-dependency`
-
-`instructions:skill-auditor` run `2026-10-06_18-43-57-728-e627f9fb5e45` rejected the post-edit audit of `src/plugins/contribute/skills/manage-upstream-pr/SKILL.md` at head `4be7a922d11c27af632039953b5baf36db8b999f` on five `debt` findings. The changeset's diff of the file is lines 25, 28-29, 43, 46-47, 56, 194, and 234. No finding's cited location lies in those lines. Two findings cite text that overlaps them, recorded under each.
-
 - Rule `composed-skill-dependency`, line 20 (Step 2): the step invokes `/upstream` by slash name instead of the `Use skill` instruction.
-
-**Impact.** A state-only pass produces a report the objective does not name, and Step 3 leaves findings in review bodies and conversation comments without a selection rule.
-
-**Settlement condition.** The objective names the state report, the constraint names the post-push confirmation read or Step 6 drops it, Step 2 names where `detail` comes from and uses `Use skill` for `/upstream`, and Step 3 states a deterministic condition for the line-anchored read and a selection rule for every surface it reads; one typed skill audit of `manage-upstream-pr` then raises none of the five findings.
-
-## manage-upstream-pr leaves the line-anchored comment read undecidable `src/plugins/contribute/skills/manage-upstream-pr/SKILL.md`, `Step 3`, `operational-ambiguity`
-
-`instructions:skill-auditor` run `2026-10-06_18-43-57-728-e627f9fb5e45` rejected the post-edit audit of `src/plugins/contribute/skills/manage-upstream-pr/SKILL.md` at head `4be7a922d11c27af632039953b5baf36db8b999f` on five `debt` findings. The changeset's diff of the file is lines 25, 28-29, 43, 46-47, 56, 194, and 234. No finding's cited location lies in those lines. Two findings cite text that overlaps them, recorded under each.
-
 - Rule `operational-ambiguity`, lines 40-54 (Step 3): the line-anchored comment read depends on "when line-anchored comments matter" at line 40, and the selection rule at line 54 covers only line-anchored comments, not review bodies or conversation comments. The range spans the diff's lines 43 and 46-47, and the finding concerns line 40 and line 54, which are outside them.
 
 **Impact.** A state-only pass produces a report the objective does not name, and Step 3 leaves findings in review bodies and conversation comments without a selection rule.
