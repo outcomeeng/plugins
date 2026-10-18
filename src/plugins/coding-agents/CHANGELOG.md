@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.17.0
+
+### Added
+
+- **`/control-token-spend` installs its macOS launchd jobs under a label namespace the operator chooses.** The `--launchd-namespace` option and the `SPX_USAGE_LAUNCHD_NAMESPACE` environment variable set the namespace, read like the reset anchor, alert threshold, weekly budget, and price file. A namespace is one or more dot-separated segments of ASCII letters, digits, hyphens, and underscores, none empty; an invalid one fails naming `SPX_USAGE_LAUNCHD_NAMESPACE` as the rejected field. The default is `engineering.outcome.usage-control`, so job labels and plist file names stay `engineering.outcome.usage-control.<mode>` and a host with installed jobs keeps them without a reinstall. `install` saves the namespace in the installation record, and `status`, `stop`, and `restart` read, stop, and replace only the jobs under the namespace that record names, leaving jobs under any other namespace unread and unchanged. A reinstall under another namespace replaces only that namespace's jobs and leaves the earlier ones installed; stop them under their own namespace.
+
 ## 0.16.1
 
 ### Changed
