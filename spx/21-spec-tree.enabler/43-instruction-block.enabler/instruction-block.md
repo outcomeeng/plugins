@@ -11,6 +11,9 @@ CAN retain the Spec Tree routing instructions and reach the product's own phase 
 
 ## Assertions
 
+- ALWAYS: the instruction-block generator reads the agent tokens from the data file the build renders beside it and maps to a root instruction file only the tokens that have one: `claude` to `CLAUDE.md` and `codex` to `AGENTS.md`
+- NEVER: the toolchain's instruction-block writer or a test of this node declares an agent token; each takes it from the module that owns it
+
 ### Scenarios
 
 - Given a template with language blocks and per-harness blocks, when the managed surface is generated for an enabled-language set, then both `CLAUDE.md` and `AGENTS.md` are written, each with its router block first, preserving content outside every managed fence, and containing inside the router block exactly the enabled languages' blocks and only its own harness's blocks ([test](tests/test_instruction_block.scenario.l1.py))
