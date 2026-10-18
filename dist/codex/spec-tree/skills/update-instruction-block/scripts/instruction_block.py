@@ -168,6 +168,15 @@ AGENT_TOKENS_REINSTALL_ADVICE = (
     "the file ships beside this script in the spec-tree plugin; "
     "reinstall or update the spec-tree plugin to restore it"
 )
+AGENT_TOKENS_ERROR_PREFIX = "error: agent tokens file"
+AGENT_TOKENS_NOT_FOUND = "not found: "
+AGENT_TOKENS_UNREADABLE = "unreadable: "
+AGENT_TOKENS_NOT_VALID_JSON = "is not valid JSON: "
+AGENT_TOKENS_NOT_AN_OBJECT = "must hold a JSON object: "
+AGENT_TOKENS_LACKS_KEYS = "lacks required key(s)"
+AGENT_TOKENS_FOUND_TYPE_OPEN = "(found "
+AGENT_TOKENS_KEYS_FOUND_OPEN = "(keys found: "
+AGENT_TOKENS_NO_KEYS = "none"
 
 
 class AgentTokensLoadError(RuntimeError):
@@ -180,30 +189,30 @@ def load_agent_tokens(path: pathlib.Path) -> dict[str, str]:
         text = path.read_text(encoding="utf-8")
     except FileNotFoundError as exc:
         raise AgentTokensLoadError(
-            f"error: agent tokens file not found: {path}; {AGENT_TOKENS_REINSTALL_ADVICE}"
+            f"{AGENT_TOKENS_ERROR_PREFIX} {AGENT_TOKENS_NOT_FOUND}{path}; {AGENT_TOKENS_REINSTALL_ADVICE}"
         ) from exc
     except OSError as exc:
         raise AgentTokensLoadError(
-            f"error: agent tokens file unreadable: {path} ({exc}); "
+            f"{AGENT_TOKENS_ERROR_PREFIX} {AGENT_TOKENS_UNREADABLE}{path} ({exc}); "
             f"{AGENT_TOKENS_REINSTALL_ADVICE}"
         ) from exc
     try:
         tokens = json.loads(text)
     except json.JSONDecodeError as exc:
         raise AgentTokensLoadError(
-            f"error: agent tokens file is not valid JSON: {path} ({exc}); "
+            f"{AGENT_TOKENS_ERROR_PREFIX} {AGENT_TOKENS_NOT_VALID_JSON}{path} ({exc}); "
             f"{AGENT_TOKENS_REINSTALL_ADVICE}"
         ) from exc
     if not isinstance(tokens, dict):
         raise AgentTokensLoadError(
-            f"error: agent tokens file must hold a JSON object: {path} "
-            f"(found {type(tokens).__name__}); {AGENT_TOKENS_REINSTALL_ADVICE}"
+            f"{AGENT_TOKENS_ERROR_PREFIX} {AGENT_TOKENS_NOT_AN_OBJECT}{path} "
+            f"{AGENT_TOKENS_FOUND_TYPE_OPEN}{type(tokens).__name__}); {AGENT_TOKENS_REINSTALL_ADVICE}"
         )
     missing = [key for key in AGENT_TOKENS_REQUIRED_KEYS if key not in tokens]
     if missing:
         raise AgentTokensLoadError(
-            f"error: agent tokens file lacks required key(s) {', '.join(missing)}: {path} "
-            f"(keys found: {', '.join(sorted(map(str, tokens))) or 'none'}); "
+            f"{AGENT_TOKENS_ERROR_PREFIX} {AGENT_TOKENS_LACKS_KEYS} {', '.join(missing)}: {path} "
+            f"{AGENT_TOKENS_KEYS_FOUND_OPEN}{', '.join(sorted(map(str, tokens))) or AGENT_TOKENS_NO_KEYS}); "
             f"{AGENT_TOKENS_REINSTALL_ADVICE}"
         )
     return tokens
