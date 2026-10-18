@@ -13,7 +13,7 @@ An operator who supplies a writable root in a recover request expects each recov
 - The Author's own session runs in a Prowl pane on its worktree and is prepared as the third candidate, with `current-session` evidence. Recovery admits a candidate set only with exactly one such controller, and an already resumed controller is a normal prepared candidate that recovery never launches again.
 - An absolute directory that lies outside both worktrees and outside each agent's default writable scope, supplied as the writable root for each probe candidate's worktree.
 - Each agent's own status surface reachable from its pane: the effective permission display of Claude Code and the status display of Codex.
-- An approval policy left at the operator's setting; the protocol adds no sandbox, approval, or permission option.
+- The Codex candidate's sandbox mode is `workspace-write`, set through the `sandbox_mode` key of the home's own configuration for the run, because under `danger-full-access` the Codex status display lists no writable directory. The approval policy stays at the operator's setting, and the protocol adds no sandbox, approval, or permission option to any launch command.
 
 ## Protocol
 
@@ -39,7 +39,11 @@ An operator who supplies a writable root in a recover request expects each recov
 - Codex without the root: the `/status` screen matches the screen with the root line for line. Under `danger-full-access` the display lists no writable directory, so the two Codex screens do not differ.
 - The probe stopped after verification. Reassessment sends work instructions to the recovered sessions and lies outside the protocol.
 - Codex printed `Disconnected from this task. Any running work continues.` after each exit, and `/status` reported `Server: Local background server`. The resumed session therefore attached to Codex's background server, which this probe does not exercise further.
-- Artifacts: [Claude Code with the root](claude-permissions-with-root.txt), [Claude Code without the root](claude-permissions-without-root.txt), [Codex with the root](codex-status-with-root.txt), [Codex without the root](codex-status-without-root.txt)
+- Codex rerun at `workspace-write`: the `sandbox_mode` line of the Codex home's `config.toml` read `sandbox_mode = "danger-full-access"` before the rerun, `sandbox_mode = "workspace-write"` during it, and `sandbox_mode = "danger-full-access"` after it, restored exactly and read back. The rerun prepared this session as the controller and the Codex candidate, and left the Claude Code candidate out of the manifest, so its recorded result stands.
+- Codex rerun with the root: `prepare` returned `prepared` with two candidates, the Codex session ended with `/exit`, and activation returned `ready` with no `open` action. Recovery planned `env CODEX_HOME=/Users/shz/.local/state/codex/accounts/outcomeeng codex resume 01a14e61-8774-7581-bd90-7a6bad4ef72d --add-dir /Users/shz/Code/outcomeeng/plugins/worktrees/executor-593/.spx/probe-writable-root`, reported the controller `already-correlated` and the Codex candidate `resumed`, and `verify` returned `verified` with two targets and empty missing, duplicate, and unexpected arrays. `/status` reports `Permissions:         Custom (workspace with network access [/Users/shz/Code/outcomeeng/plugins/worktrees/executor-593/.spx/probe-writable-root], Ask for approval)`.
+- Codex rerun without the root: the same sequence with no `writableRoots`. Recovery planned `env CODEX_HOME=/Users/shz/.local/state/codex/accounts/outcomeeng codex resume 01a14e61-8774-7581-bd90-7a6bad4ef72d`, and `verify` returned `verified` with two targets and empty arrays. `/status` reports the same `Permissions` line, with the root listed in brackets, and matches the screen with the root line for line.
+- The two rerun screens do not differ. The same Codex thread had been resumed with the root in the first run and in the first recovery of the rerun, and every screen reports `Server: Local background server`. The probe did not establish whether the listed root persists in the thread, in the background server, or in the resume path.
+- Artifacts: [Claude Code with the root](claude-permissions-with-root.txt), [Claude Code without the root](claude-permissions-without-root.txt), [Codex with the root, full access](codex-status-with-root.txt), [Codex without the root, full access](codex-status-without-root.txt), [Codex with the root, workspace-write](codex-status-workspace-write-with-root.txt), [Codex without the root, workspace-write](codex-status-workspace-write-without-root.txt)
 
 ## Verdict
 
@@ -47,12 +51,14 @@ An operator who supplies a writable root in a recover request expects each recov
 
 Claude Code `passed`. The recovered session lists the supplied root among its workspace directories when recovery appends the option, and lists none when recovery appends none, so the option reaches the session's permission policy.
 
-Codex `failed` to show the root. Both screens report `Custom (danger-full-access, Ask for approval)` and list no writable directory, so the supplied root shows on neither. The two screens are the same with and without the root, which shows neither that the option reached the session nor that the resume path dropped it.
+Codex `failed`. Under `danger-full-access`, both screens report `Custom (danger-full-access, Ask for approval)` and list no writable directory, so the supplied root shows on neither. Under `workspace-write`, the screen after a recovery that supplies the root lists it in `Permissions:         Custom (workspace with network access [/Users/shz/Code/outcomeeng/plugins/worktrees/executor-593/.spx/probe-writable-root], Ask for approval)`, and the screen after a recovery that supplies none lists it too. The control does not separate the appended option from earlier state of the same thread, so the screens show neither that the option reached the session nor that the resume path dropped it.
 
 ## Limitations
 
 - The protocol reads the policy each agent reports and never exercises a write through it.
-- Under the operator's setting, `danger-full-access`, the Codex `/status` display lists no writable directory. Whether it lists the added directory under a restricting sandbox was not observed. A Codex run that decides the claim needs the same recovery under a restricting sandbox or on a surface that lists the added directory, and the protocol adds no sandbox option.
+- Under the operator's setting, `danger-full-access`, the Codex `/status` display lists no writable directory. Under `workspace-write` it lists an added directory in the `Permissions` line.
+- The Codex rerun reused the thread that the first run had resumed with the root, so the no-root control lacks independence. A Codex run that decides the claim needs a Codex thread that has never carried the root, resumed first without the root and then with it, under `workspace-write`.
+- The `workspace-write` setting applied to the operator's Codex home for the rerun alone. It was restored afterwards, and the protocol adds no sandbox option to any launch command.
 - The protocol ends each native session while Prowl keeps running, so recovery binds each prepared candidate to the existing pane in its worktree. Activation of an absent pane after a real Prowl restart lies outside the probe, because the assertion concerns the launch only; the node's mapping and compliance tests cover that activation.
 - The Author session serves as the controller, and recovery launches nothing for it. A controller launch with a supplied root is not exercised.
 - A Pi candidate is not exercised, because its resume command accepts no writable-root option and recovery launches none while a root is supplied.

@@ -120,10 +120,15 @@ approval)`, and its `/status` screen lists no writable directory with or without
 half does not hold: the two screens are the same and show neither that the option reached the session nor
 that the resume path dropped it. The probe verdict is `failed` for that reason.
 
-**Remaining settlement condition**: the Codex half. A Codex recovery that supplies the root shows it as
-writable on a status surface, which needs either a restricting sandbox for the recovered session or a Codex
-surface that lists an added directory under full access. The protocol adds no sandbox option, so the
-choice is the operator's.
+A rerun of the Codex half under `workspace-write`, set in the Codex home's configuration for that rerun
+alone, shows the root in the `Permissions` line after a recovery that supplies it:
+`Custom (workspace with network access [/Users/shz/Code/outcomeeng/plugins/worktrees/executor-593/.spx/probe-writable-root], Ask for approval)`.
+The screen after a recovery that supplies no root shows the same line, so the control does not separate the
+appended option from earlier state of the same Codex thread, and the probe verdict for Codex stays `failed`.
+
+**Remaining settlement condition**: the Codex half. A Codex thread that has never carried the root is
+resumed first without the root and then with it, under `workspace-write`, and the status screen after the
+first recovery omits the root while the screen after the second lists it.
 
 ## DEBT [consistency]: an absent or unusable agent-token module ends recovery with a traceback
 
