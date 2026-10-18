@@ -14,6 +14,7 @@ CAN refresh selected Claude Code and Codex plugins without widening either insta
 - ALWAYS: the registered marketplace entry carrying the catalog's name is the source persistent refresh refreshes from and names in its report; an absent entry is registered from the invocation checkout's own declaration.
 - ALWAYS: persistent planning rejects every nonempty selected subset that omits `spec-tree` before a state-changing operation.
 - ALWAYS: an agent-CLI failure identifies the exact agent and operation and stops every subsequent installation operation, except an established pending-publication absence for a selected plugin in persistent mode.
+- ALWAYS: marketplace installation and native profile execution name each agent by its `Target` member, installation declares no agent enum of its own, and native profile execution takes each agent's disposable home directory from the isolated configuration directory names installation declares
 
 ### Compliance
 
