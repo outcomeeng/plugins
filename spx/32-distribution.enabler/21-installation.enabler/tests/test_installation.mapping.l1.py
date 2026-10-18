@@ -6,6 +6,10 @@ from pathlib import Path
 from outcomeeng.distribution.contracts import Target
 from outcomeeng.distribution.installation import (
     CLAUDE_CATALOG_PATH,
+    CLAUDE_PROJECT_SETTINGS_PATH,
+    CLAUDE_REPOSITORY_FIELD,
+    CLAUDE_SOURCE_FIELD,
+    EXTRA_MARKETPLACES_FIELD,
     CLAUDE_PLUGIN_ID_FIELD,
     CLAUDE_PLUGIN_PROJECT_PATH_FIELD,
     CLAUDE_PLUGIN_SCOPE_FIELD,
@@ -158,13 +162,21 @@ def test_each_registry_entry_shape_maps_to_the_source_the_run_refreshes_from() -
     )
     marketplace = committed_catalog["name"]
     assert observation.marketplace == marketplace
+    committed_settings = json.loads(
+        (Path(__file__).resolve().parents[4] / CLAUDE_PROJECT_SETTINGS_PATH).read_text(
+            encoding="utf-8"
+        )
+    )
+    declared_source = committed_settings[EXTRA_MARKETPLACES_FIELD][marketplace][
+        CLAUDE_SOURCE_FIELD
+    ][CLAUDE_REPOSITORY_FIELD]
 
     for payload, shape, expected_source, expected_action in observation.rows:
         registered = claude_registered_marketplace(payload, marketplace)
         plan = observation.plans[shape]
         document = observation.documents[shape]
         assert document[ReportField.SOURCE] == (
-            observation.declared_source if expected_source is None else expected_source
+            declared_source if expected_source is None else expected_source
         ), shape
         assert document[ReportField.MARKETPLACE] == marketplace
         source_operations = [
@@ -178,7 +190,7 @@ def test_each_registry_entry_shape_maps_to_the_source_the_run_refreshes_from() -
         if expected_action is SourceAction.ADD:
             assert registered is None, shape
             assert source_operations[0].operation is Operation.MARKETPLACE_ADD
-            assert observation.declared_source in source_operations[0].argv, shape
+            assert declared_source in source_operations[0].argv, shape
         else:
             assert registered is not None, shape
             assert registered.source == expected_source, shape

@@ -91,6 +91,8 @@ from outcomeeng.distribution.installation import (
     CODEX_PLUGIN_MARKETPLACE_FIELD,
     CODEX_SQLITE_HOME_ENV,
     CommandResult,
+    CLAUDE_REPOSITORY_FIELD,
+    CLAUDE_SOURCE_FIELD,
     EXTRA_MARKETPLACES_FIELD,
     HOME_ENV,
     InstallationCommand,
@@ -123,8 +125,6 @@ from outcomeeng.distribution.installation import (
     MARKETPLACE_IDENTIFIER_JOINER,
     codex_registered_marketplace,
     claude_registered_marketplace,
-    catalog_marketplace_name,
-    declared_claude_source,
     declared_codex_source,
     MarketplaceTarget,
     RecordRewrite,
@@ -196,14 +196,15 @@ from outcomeeng_testing.harnesses.discovery_auth import (
 
 REQUIRED_BINARIES: tuple[str, ...] = (JUST_BINARY, CLAUDE_EXECUTABLE, CODEX_EXECUTABLE)
 _RECORDED_JUST_INVOCATION_ENV = "OUTCOMEENG_RECORDED_JUST_INVOCATION"
-MARKETPLACE = catalog_marketplace_name(
-    Path(__file__).resolve().parents[2] / CLAUDE_CATALOG_PATH
-)
-"""The marketplace's name as this checkout's committed catalog declares it."""
-DECLARED_CLAUDE_SOURCE = declared_claude_source(
-    Path(__file__).resolve().parents[2], MARKETPLACE
-)
-"""The source this checkout's own settings declare for the marketplace, as Claude Code adds it."""
+_REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+MARKETPLACE: str = json.loads(
+    (_REPOSITORY_ROOT / CLAUDE_CATALOG_PATH).read_text(encoding="utf-8")
+)["name"]
+"""The marketplace's name read from this checkout's raw committed catalog."""
+DECLARED_CLAUDE_SOURCE: str = json.loads(
+    (_REPOSITORY_ROOT / CLAUDE_PROJECT_SETTINGS_PATH).read_text(encoding="utf-8")
+)[EXTRA_MARKETPLACES_FIELD][MARKETPLACE][CLAUDE_SOURCE_FIELD][CLAUDE_REPOSITORY_FIELD]
+"""The source this checkout's raw project settings declare for the marketplace."""
 DECLARED_CODEX_SOURCE = declared_codex_source(
     Path(__file__).resolve().parents[2], MARKETPLACE
 )
@@ -1384,7 +1385,7 @@ def observe_record_refresh_plan(
         environment = _persistent_environment(temporary_root)
         _prepare_agent_state(environment)
         preflight = build_persistent_preflight(mirror, environment)
-        marketplace = preflight.roots.marketplace
+        marketplace = MARKETPLACE
         catalog = _catalogs_from_documents(mirror)[Target.CLAUDE]
         groups = generated_claude_install_records(
             catalog,
@@ -1543,7 +1544,7 @@ def observe_uncached_fetch(
         environment = _persistent_environment(temporary_root)
         _prepare_agent_state(environment)
         preflight = build_persistent_preflight(mirror, environment)
-        marketplace = preflight.roots.marketplace
+        marketplace = MARKETPLACE
         catalog = _catalogs_from_documents(mirror)[Target.CLAUDE]
         states = {
             plugin: (
@@ -1703,7 +1704,7 @@ def observe_unlocated_registry_plan() -> UnlocatedRegistryObservation:
         environment = _persistent_environment(temporary_root)
         _prepare_agent_state(environment)
         preflight = build_persistent_preflight(mirror, environment)
-        listing = generated_unlocated_registry_entry(preflight.roots.marketplace)
+        listing = generated_unlocated_registry_entry(MARKETPLACE)
         runner = RecordingRunner(
             installed={agent: frozenset({SPEC_TREE_PLUGIN}) for agent in Target},
             claude_marketplace_listing=listing,
@@ -1735,7 +1736,7 @@ def observe_registry_shape_plan() -> RegistryShapeObservation:
         environment = _persistent_environment(temporary_root)
         _prepare_agent_state(environment)
         preflight = build_persistent_preflight(mirror, environment)
-        marketplace = preflight.roots.marketplace
+        marketplace = MARKETPLACE
         rows = generated_marketplace_registry_entries(marketplace, clone, mirror)
         plans: dict[RegistryShape, InstallationPlan] = {}
         documents: dict[RegistryShape, dict[str, object]] = {}
@@ -2148,7 +2149,7 @@ def _unreadable_source_case(
     environment = _persistent_environment(state_root)
     _prepare_agent_state(environment)
     preflight = build_persistent_preflight(mirror, environment)
-    marketplace = preflight.roots.marketplace
+    marketplace = MARKETPLACE
     records = (
         generated_no_target_records(
             marketplace, SPEC_TREE_PLUGIN, mirror, other, LISTED_VERSION
@@ -2239,7 +2240,7 @@ def observe_defective_record_listing(
         environment = _persistent_environment(temporary_root)
         _prepare_agent_state(environment)
         preflight = build_persistent_preflight(mirror, environment)
-        marketplace = preflight.roots.marketplace
+        marketplace = MARKETPLACE
         cases = generated_listing_defect_records(
             marketplace,
             SPEC_TREE_PLUGIN,
@@ -2506,7 +2507,7 @@ def observe_unresolved_target_record() -> UnresolvedTargetObservation:
         environment = _persistent_environment(temporary_root)
         _prepare_agent_state(environment)
         preflight = build_persistent_preflight(mirror, environment)
-        marketplace = preflight.roots.marketplace
+        marketplace = MARKETPLACE
         catalog = _catalogs_from_documents(mirror)[Target.CLAUDE]
         unresolved_plugin = next(
             plugin for plugin in catalog if plugin != SPEC_TREE_PLUGIN
@@ -2590,7 +2591,7 @@ def observe_bootstrap_record_drift() -> BootstrapDriftObservation:
         environment = _persistent_environment(temporary_root)
         _prepare_agent_state(environment)
         preflight = build_persistent_preflight(mirror, environment)
-        marketplace = preflight.roots.marketplace
+        marketplace = MARKETPLACE
         cases = generated_no_target_records(
             marketplace,
             SPEC_TREE_PLUGIN,
@@ -2676,7 +2677,7 @@ def observe_unreadable_head_record() -> UnreadableHeadObservation:
         environment = _persistent_environment(temporary_root)
         _prepare_agent_state(environment)
         preflight = build_persistent_preflight(mirror, environment)
-        marketplace = preflight.roots.marketplace
+        marketplace = MARKETPLACE
         cases = generated_no_target_records(
             marketplace,
             SPEC_TREE_PLUGIN,
@@ -3643,6 +3644,9 @@ def observe_codex_config_independence() -> ConfigObservation:
         state = temporary_root / "state"
         before = build_isolated_installation_plan(mirror, state, os.environ)
         environment = _persistent_environment(temporary_root / "persistent")
+        # The first run records the home's ownership; the compared plans both
+        # start from that settled state so only the product config differs.
+        execute_persistent_installation(mirror, environment, RecordingRunner())
         persistent_before = execute_persistent_installation(
             mirror, environment, RecordingRunner()
         ).plan

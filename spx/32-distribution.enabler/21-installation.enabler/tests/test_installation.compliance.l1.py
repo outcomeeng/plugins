@@ -8,6 +8,7 @@ from typing import cast
 
 from outcomeeng.distribution.contracts import Target
 from outcomeeng.distribution.installation import (
+    CLAUDE_CATALOG_PATH,
     CLAUDE_PLUGIN_ID_FIELD,
     CLAUDE_PLUGIN_PROJECT_PATH_FIELD,
     CLAUDE_PLUGIN_SCOPE_FIELD,
@@ -37,7 +38,6 @@ from outcomeeng_testing.generators.installation import (
     UNCACHED_OTHER_CHECKOUT_STATE,
 )
 from outcomeeng_testing.harnesses.installation import (
-    MARKETPLACE,
     RegistryState,
     absent_from_every_agent,
     captured_non_pending_failure_wordings,
@@ -59,6 +59,16 @@ from outcomeeng_testing.harnesses.installation import (
     observe_unpublished_plugin,
     observe_unreadable_source,
 )
+
+
+def committed_marketplace_name() -> str:
+    """The marketplace name read from the raw committed catalog."""
+    catalog = json.loads(
+        (Path(__file__).resolve().parents[4] / CLAUDE_CATALOG_PATH).read_text(
+            encoding="utf-8"
+        )
+    )
+    return cast("str", catalog["name"])
 
 
 def test_every_command_uses_the_explicit_checkout_and_agent_homes() -> None:
@@ -140,9 +150,10 @@ def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None
         and command.operation is Operation.PLUGIN_UPDATE
     )
     spread = observe_record_refresh_plan()
+    marketplace = committed_marketplace_name()
     expected_updates = {
         (
-            marketplace_plugin_name(entry[CLAUDE_PLUGIN_ID_FIELD], spread.marketplace),
+            marketplace_plugin_name(entry[CLAUDE_PLUGIN_ID_FIELD], marketplace),
             entry[CLAUDE_PLUGIN_SCOPE_FIELD],
             Path(entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD]),
         )
@@ -151,7 +162,7 @@ def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None
     }
     expected_rewrites = {
         (
-            marketplace_plugin_name(entry[CLAUDE_PLUGIN_ID_FIELD], spread.marketplace),
+            marketplace_plugin_name(entry[CLAUDE_PLUGIN_ID_FIELD], marketplace),
             entry[CLAUDE_PLUGIN_SCOPE_FIELD],
             Path(entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD]),
         )
@@ -356,7 +367,7 @@ def test_a_record_the_closing_listing_leaves_off_the_target_fails_the_run() -> N
     assert len(stale) == 1
     (entry,) = stale
     plugin = marketplace_plugin_name(
-        entry[CLAUDE_PLUGIN_ID_FIELD], observation.marketplace
+        entry[CLAUDE_PLUGIN_ID_FIELD], committed_marketplace_name()
     )
     off_target = cast(
         "list[dict[str, str]]", observation.document[ReportField.OFF_TARGET_RECORDS]
@@ -372,6 +383,7 @@ def test_a_record_the_closing_listing_leaves_off_the_target_fails_the_run() -> N
 
 def test_no_agent_announces_a_first_install_its_plan_does_not_carry() -> None:
     observation = observe_unreadable_source(generated_boolean_states(RegistryState))
+    marketplace = committed_marketplace_name()
 
     for case in observation.cases:
         reported = cast("list[dict[str, str]]", case.document[ReportField.WARNINGS])
@@ -379,7 +391,7 @@ def test_no_agent_announces_a_first_install_its_plan_does_not_carry() -> None:
             announced = {
                 ReportField.AGENT: agent.value,
                 ReportField.MESSAGE: FIRST_INSTALL_WARNING.format(
-                    marketplace=MARKETPLACE,
+                    marketplace=marketplace,
                     agent=agent.value,
                     plugin=SPEC_TREE_PLUGIN,
                 ),
@@ -420,6 +432,7 @@ def test_an_empty_selection_supplies_only_spec_tree_with_a_warning_and_disabled_
     observation = observe_persistent_plan(
         installed={agent: frozenset() for agent in Target},
     )
+    marketplace = committed_marketplace_name()
     plan = observation.plan
     installs = [
         command
@@ -435,7 +448,7 @@ def test_an_empty_selection_supplies_only_spec_tree_with_a_warning_and_disabled_
         (
             agent,
             FIRST_INSTALL_WARNING.format(
-                marketplace=plan.roots.marketplace,
+                marketplace=marketplace,
                 agent=agent.value,
                 plugin=SPEC_TREE_PLUGIN,
             ),
@@ -449,7 +462,7 @@ def test_an_empty_selection_writes_disabled_activation_into_the_selected_codex_h
     None
 ):
     observation = observe_empty_selection_execution()
-    marketplace = observation.report.plan.roots.marketplace
+    marketplace = committed_marketplace_name()
 
     assert observation.codex_config is not None
     written = tomllib.loads(observation.codex_config.decode("utf-8"))
@@ -485,6 +498,7 @@ def test_an_established_pending_publication_absence_is_reported_in_persistent_mo
 def test_a_persistent_update_failure_outside_the_pending_wording_stops_every_later_operation() -> (
     None
 ):
+    marketplace = committed_marketplace_name()
     failures = [
         observe_designated_failure(
             isolated=False,
@@ -492,7 +506,7 @@ def test_a_persistent_update_failure_outside_the_pending_wording_stops_every_lat
             stderr=wording,
         )
         for wording in captured_non_pending_failure_wordings(
-            sorted(committed_catalog_plugin_names()), MARKETPLACE
+            sorted(committed_catalog_plugin_names()), marketplace
         )
     ]
 
@@ -509,12 +523,22 @@ def test_trusted_product_codex_configuration_changes_no_installation_command() -
 
     assert observation.before.commands == observation.after.commands
     assert observation.before.codex_plugins == observation.after.codex_plugins
+    assert observation.before.agent_home == observation.after.agent_home
+    assert observation.before.codex_disabled == observation.after.codex_disabled
     assert (
         observation.persistent_before.commands == observation.persistent_after.commands
     )
     assert (
         observation.persistent_before.codex_plugins
         == observation.persistent_after.codex_plugins
+    )
+    assert (
+        observation.persistent_before.agent_home
+        == observation.persistent_after.agent_home
+    )
+    assert (
+        observation.persistent_before.codex_disabled
+        == observation.persistent_after.codex_disabled
     )
     assert observation.config_observed == observation.config_written
     assert all(
