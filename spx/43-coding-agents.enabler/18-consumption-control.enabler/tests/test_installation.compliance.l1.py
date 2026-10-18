@@ -1,11 +1,14 @@
 """Managed assets and job failures cross the recording command boundary."""
 
 from outcomeeng_testing.harnesses.consumption_control import (
+    MalformedRetainedFieldObservation,
     MalformedRetainedRecordObservation,
     NamespaceReinstallObservation,
     NamespaceReturnObservation,
     NamespaceScopeObservation,
+    RetainedRecordMalformation,
     installation_observation,
+    malformed_retained_field_property,
     malformed_retained_record_property,
     namespace_reinstall_property,
     namespace_return_property,
@@ -96,3 +99,36 @@ def test_retained_job_with_a_nonconforming_path_is_rejected_naming_file_and_fiel
         assert observed.field in observed.message
 
     malformed_retained_record_property(check)
+
+
+def test_a_retained_job_without_a_path_is_rejected_naming_file_and_field() -> None:
+    def check(observed: MalformedRetainedFieldObservation) -> None:
+        assert observed.message
+        assert observed.record_path in observed.message
+        assert observed.field in observed.message
+
+    malformed_retained_field_property(RetainedRecordMalformation.MISSING_PATH, check)
+
+
+def test_a_retained_jobs_value_that_is_not_a_list_is_rejected_naming_file_and_field() -> (
+    None
+):
+    def check(observed: MalformedRetainedFieldObservation) -> None:
+        assert observed.message
+        assert observed.record_path in observed.message
+        assert observed.field in observed.message
+
+    malformed_retained_field_property(RetainedRecordMalformation.NON_LIST_VALUE, check)
+
+
+def test_a_retained_job_entry_that_is_not_an_object_is_rejected_naming_file_and_field() -> (
+    None
+):
+    def check(observed: MalformedRetainedFieldObservation) -> None:
+        assert observed.message
+        assert observed.record_path in observed.message
+        assert observed.field in observed.message
+
+    malformed_retained_field_property(
+        RetainedRecordMalformation.NON_MAPPING_ENTRY, check
+    )

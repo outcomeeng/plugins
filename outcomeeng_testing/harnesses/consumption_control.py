@@ -38,6 +38,8 @@ from outcomeeng_testing.generators.consumption_control import (
     alert_reads,
     distinct_namespace_pairs,
     invalid_namespaces,
+    non_list_retained_values,
+    non_mapping_retained_entries,
     nonconforming_plist_paths,
     valid_namespaces,
 )
@@ -1862,6 +1864,77 @@ def malformed_retained_record_property(
             check(
                 MalformedRetainedRecordObservation(
                     str(record_path), schedule.RETAINED_JOBS, rejected, message
+                )
+            )
+
+    run_replayable_property(
+        run,
+        seed_value=SEED,
+        replay_path=REPLAY.replace(
+            "accounting.property.l1", "installation.compliance.l1"
+        ),
+    )
+
+
+class RetainedRecordMalformation(StrEnum):
+    MISSING_PATH = "missing_path"
+    NON_LIST_VALUE = "non_list_value"
+    NON_MAPPING_ENTRY = "non_mapping_entry"
+
+
+@dataclass(frozen=True)
+class MalformedRetainedFieldObservation:
+    record_path: str
+    field: str
+    message: str
+
+
+def malformed_retained_field_property(
+    malformation: RetainedRecordMalformation,
+    check: Callable[[MalformedRetainedFieldObservation], None],
+) -> None:
+    """Install under one namespace, then another, so the installation record carries
+    retained jobs; apply ``malformation`` to the retained jobs field and read the
+    record. The observation is the rejection message, empty when the record was
+    accepted. Any exception other than ValueError propagates to the linked test."""
+    _, _, schedule, _ = modules()
+
+    @seed(SEED)
+    @settings(max_examples=EXAMPLES, deadline=None)
+    @given(distinct_namespace_pairs(), st.data())
+    def run(namespaces: tuple[str, str], data: st.DataObject) -> None:
+        first, second = namespaces
+        with workspace() as work:
+            runner = RecordingRunner()
+            agents = work.root / "launch-agents"
+            for namespace in (first, second):
+                schedule.install(
+                    replace(work.config, namespace=namespace),
+                    SCRIPTS,
+                    agents,
+                    runner,
+                    "darwin",
+                    True,
+                )
+            record_path = work.config.root / schedule.INSTALL_NAME
+            record = json.loads(record_path.read_text())
+            retained = record[schedule.RETAINED_JOBS]
+            index = data.draw(st.integers(0, len(retained) - 1))
+            if malformation is RetainedRecordMalformation.MISSING_PATH:
+                del retained[index]["path"]
+            elif malformation is RetainedRecordMalformation.NON_LIST_VALUE:
+                record[schedule.RETAINED_JOBS] = data.draw(non_list_retained_values())
+            else:
+                retained[index] = data.draw(non_mapping_retained_entries())
+            record_path.write_text(json.dumps(record), encoding="utf-8")
+            try:
+                schedule.manifest(work.config.root)
+                message = ""
+            except ValueError as error:
+                message = str(error)
+            check(
+                MalformedRetainedFieldObservation(
+                    str(record_path), schedule.RETAINED_JOBS, message
                 )
             )
 

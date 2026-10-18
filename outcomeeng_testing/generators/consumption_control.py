@@ -143,6 +143,30 @@ def nonconforming_plist_paths(directory: str, label: str) -> st.SearchStrategy[s
     return st.one_of(relative, renamed, unsuffixed)
 
 
+def non_list_retained_values() -> st.SearchStrategy[object]:
+    """Vary present retained-jobs values that are not a list of entries: a string, a
+    number, a boolean, null, or an object."""
+    return st.one_of(
+        _segments(),
+        st.integers(),
+        st.booleans(),
+        st.none(),
+        st.dictionaries(_segments(), _segments(), max_size=3),
+    )
+
+
+def non_mapping_retained_entries() -> st.SearchStrategy[object]:
+    """Vary retained-job entries that are not objects: a string, a number, a boolean,
+    null, or a list."""
+    return st.one_of(
+        _segments(),
+        st.integers(),
+        st.booleans(),
+        st.none(),
+        st.lists(_segments(), max_size=3),
+    )
+
+
 def invalid_namespaces(maximum: int) -> st.SearchStrategy[str]:
     """Vary namespaces broken by construction: an empty value, an empty segment, a
     whitespace or path-separator character, another foreign ASCII character, or a
