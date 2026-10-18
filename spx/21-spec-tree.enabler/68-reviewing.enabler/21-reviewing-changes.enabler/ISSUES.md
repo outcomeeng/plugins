@@ -4,7 +4,7 @@ Known issues for `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-cha
 
 ## Consumer inspections are not journaled as review scope
 
-The review prompt's scope reaches unchanged consumers of a changed governing declaration, but `review_run.py append-scope` refuses a unit outside `changedFiles`, so an inspected consumer is recorded only when it yields a finding. Coverage of consumers that were inspected and found clean is invisible to the journal projection.
+The review prompt's scope reaches unchanged consumers of a changed governing declaration, but `review_run.py finish` rejects a scope-advanced event whose unit is outside `changedFiles`, so an inspected consumer is recorded only when it yields a finding. Coverage of consumers that were inspected and found clean is invisible to the journal projection.
 
 **Resolution shape**: when review moves into the SPX CLI (entry 9), generalize the scope unit from "changed file" to "reviewed unit" with a `scopeKind` of `changed`, `consumer`, or `governance`, project authoritative coverage from the changed-file units, and record consumer units as inspected without making them a `finish` precondition. Not a bounded fix here: it changes the runner's scope contract in a script owed to extraction.
 
