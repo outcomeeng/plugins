@@ -8,22 +8,28 @@ An operator who supplies a writable root in a recover request expects each recov
 
 ## Environment and preconditions
 
-- A running Prowl instance with one prepared Claude Code candidate and one prepared Codex candidate, each in its own worktree and its own pane, with an exact session identity, resume locator, and applicable native home. The operator chooses the Codex home, and the Codex candidate starts under it, so the prepared native home is that home.
-- The Codex candidate's project is trusted in that home, because an untrusted Codex project runs read-only and a writable root cannot show there. The trust entry lives in the home's own configuration and carries no credential.
-- The Author's own session runs in a Prowl pane on its worktree and is prepared as the third candidate, with `current-session` evidence. Recovery admits a candidate set only with exactly one such controller, and an already resumed controller is a normal prepared candidate that recovery never launches again.
-- An absolute directory that lies outside both worktrees and outside each agent's default writable scope, supplied as the writable root for each probe candidate's worktree.
+- A running Prowl instance with one prepared Claude Code candidate and one prepared Codex candidate, each in its own worktree and its own pane, with an exact session identity, resume locator, and applicable native home.
+- The Codex candidate runs in a disposable Codex home that the executable provisions. Its `config.toml` sets `sandbox_mode = "workspace-write"` and `daemon_auto_start = false`, and trusts the candidate's project, because an untrusted Codex project runs read-only and a writable root cannot show there, and because under `danger-full-access` the Codex status display lists no writable directory. The home holds no credential of its own: its only credential is a link to the operator's selected saved-login file, which `outcomeeng_testing/harnesses/discovery_auth.py` creates after its write-through check, holds for the run, and scrubs from every capture. The protocol runs no login or logout, and adds no sandbox, approval, or permission option to any recovery launch.
+- The Codex candidate is a fresh seed thread, one that no earlier recovery has launched, because a resumed thread keeps the options of its earlier launches and a reused thread cannot separate an appended root from them. The shared Codex home's `config.toml` is read for its SHA-256 before and after the run and is never written.
+- The Author's own session runs in a Prowl pane on its worktree and is prepared as the controller, with `current-session` evidence. Recovery admits a candidate set only with exactly one such controller, and an already resumed controller is a normal prepared candidate that recovery never launches again. The prepared roster holds the controller and the probe candidates only, so no other live session enters the manifest.
+- A fresh absolute directory that lies outside the candidate worktree, outside the disposable home, outside every temporary directory, and outside each agent's default writable scope, supplied as the writable root for the candidate's worktree in the second recovery only.
 - Each agent's own status surface reachable from its pane: the effective permission display of Claude Code and the status display of Codex.
-- The Codex candidate's sandbox mode is `workspace-write`, set through the `sandbox_mode` key of the home's own configuration for the run, because under `danger-full-access` the Codex status display lists no writable directory. The approval policy stays at the operator's setting, and the protocol adds no sandbox, approval, or permission option to any launch command.
 
 ## Protocol
 
-1. Prepare the two probe candidates and the controller, and record the manifest.
-2. End each probe candidate's native session with its own exit, so its pane stays at its shell, and keep Prowl running.
-3. Run recovery with a recover request that supplies the absolute directory as the writable root for each probe candidate's worktree.
-4. Wait until recovery reports both probe candidates as resumed and verified, and the controller as already correlated.
-5. Open each recovered agent's own status surface in its pane and read the directories it lists as writable.
-6. Retain a screen capture of each status surface as an artifact in this directory.
-7. Repeat steps 2 through 6 once with a recover request that supplies no root, and confirm the directory is absent from each status surface.
+1. Start the fresh candidate session, and for Codex read its status display to take its session identity and to confirm the workspace sandbox, the candidate directory, no server attachment, and the root absent.
+2. Prepare the candidate and the controller, and record the manifest.
+3. End the candidate's native session with its own exit, so its pane stays at its shell, confirm no agent and no server socket remain, and keep Prowl running.
+4. Run recovery with a recover request that supplies no root, wait until recovery reports the candidate as resumed and verified and the controller as already correlated, read the directories the status surface lists as writable, and retain a screen capture as the control artifact. A control that already lists the root, a changed sandbox, or a server attachment ends the protocol as invalid.
+5. End the candidate's native session again and confirm the same absences.
+6. Run recovery with a recover request that supplies the fresh directory as the writable root for the candidate's worktree, wait for the same resumed and verified result, read the directories the status surface lists as writable, and retain a screen capture as the treatment artifact.
+7. End the candidate's native session and compare the shared configuration digest read after the run with the digest read before it.
+
+The protocol stops at the first invalid or undecided condition with the evidence it holds. It never retries a step, never reorders steps, and never reuses a spent thread.
+
+## Executable
+
+`outcomeeng_testing/harnesses/writable_roots_probe.py` executes the Codex form of this protocol through `just probe-writable-roots-codex`. It reserves a Prowl pane in the candidate worktree, starts the seed thread, prepares and recovers the candidate through `src/plugins/coding-agents/skills/recover-prowl-agents/scripts/recover_agents.py`, drives each pane through the shipped Prowl adapter, captures each status screen with the credential scrubbed, and prints the observations and the first stop condition. It judges no verdict. The Author reads the captures and records the verdict under Verdict. The Claude Code form was executed by hand, and its recorded run stands.
 
 ## Attested run
 
