@@ -29,7 +29,7 @@ non-pytest-bearing changes.
 
 **Resolution shape**: derive the selector's generated-path patterns from `spx/local/generated-sources.toml`. The migration is deferred because it is an implementation change with its own test evidence in the validation infrastructure, and the `spx` verification scope projection partly supersedes the selector's consumption of the declaration; revisit the migration scope when that projection lands. `spx/31-outcomeeng.enabler/31-verification.enabler/ISSUES.md` records the agentic-runner side of the same projection.
 
-## DEBT [evidence]: the lane-mapping oracle reuses the production lane table `spx/15-validation.enabler/65-gate.enabler/21-selected-gate.enabler/tests/test_selected_gate.mapping.l1.py`, `_lane_steps`, `evidence`
+## DEBT [evidence]: the lane-mapping oracle reuses the production lane table
 
 Defect class: `oracle-independence`.
 

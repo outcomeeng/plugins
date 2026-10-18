@@ -76,7 +76,7 @@ report carries the replay hint.
 **Revisit condition**: resolve with the next behavioral change to this node's
 test evidence, alongside the signal-harness seam entry above.
 
-## DEBT [evidence]: no test reaches the production handle's direct-reap poll fallback `outcomeeng/validation/_spawner.py`, `_PopenHandle.poll`, `evidence`
+## DEBT [evidence]: no test reaches the production handle's direct-reap poll fallback
 
 `_PopenHandle.poll` in `outcomeeng/validation/_spawner.py` reaps the child through `os.waitpid(pid, os.WNOHANG)` when `Popen.poll` returns `None`, because the orchestrator's signal handler runs inside the interrupted `Popen.wait` that holds the handle's waitpid lock. The fallback carries two observable effects: the grace wait ends as soon as a child that honours SIGTERM exits, and after the SIGKILL escalation the orchestrator reaps its direct child itself.
 

@@ -97,7 +97,7 @@ Invalidation check. The cited text neither cites, restates, nor depends on anyth
 
 **Settlement condition.** The ignored-file oracle shares no predicate with production, the expected files come from an independent enumeration over the three named roots, and a focused run plus a test-evidence audit over the repaired chain pass.
 
-## DEBT [consistency]: a read-expression prefix exempts a binding that also carries a literal `outcomeeng/validation/profile_configuration.py`, `_is_authored_binding`, `consistency`
+## DEBT [consistency]: a read-expression prefix exempts a binding that also carries a literal
 
 Local review run `2026-10-11_07-00-03-767-748ffd1ab022` at head `f40dc3cb3fe9b9eb646da1160692d1a6b3abe86e` reported, at `outcomeeng/validation/profile_configuration.py` (`_is_authored_binding`), that the guard decides the read-expression branch with a prefix match. A binding that begins with a call, a subscript, or an attribute access is therefore no assignment even when the rest of the binding carries an authored literal, as in `effort = settings.get("effort") or "high"` and `effort: lookup(key) if flag else "high"`. The interpolation-placeholder branch decides by the whole binding, so the two branches differ.
 
@@ -107,7 +107,7 @@ Local review run `2026-10-11_07-00-03-767-748ffd1ab022` at head `f40dc3cb3fe9b9e
 
 **Settlement condition.** The spec and the decision state where a read expression ends, the guard decides the read-expression branch by that rule, and the generator and the mapping and compliance tests drive a read expression joined with a literal fallback; a focused run of the node's tests passes.
 
-## DEBT [consistency]: the interpolation placeholder forms have no owner but the guard's pattern `outcomeeng/validation/profile_configuration.py`, `_INTERPOLATION_PLACEHOLDER`, `consistency`
+## DEBT [consistency]: the interpolation placeholder forms have no owner but the guard's pattern
 
 Local review run `2026-10-11_07-31-47-634-135100d3b226` at head `c75b66dd5d909083270ba559d80f748086122382` reported, at `outcomeeng/validation/profile_configuration.py` (`_INTERPOLATION_PLACEHOLDER`), that [`spx/15-validation.enabler/32-runtime-token.enabler/runtime-token.md`](spx/15-validation.enabler/32-runtime-token.enabler/runtime-token.md) and [`spx/18-plugin-build.enabler/15-build-architecture.adr.md`](spx/18-plugin-build.enabler/15-build-architecture.adr.md) state that a field bound to an interpolation placeholder is no assignment without saying which forms are placeholders. The pattern fixes an undeclared set: brace fields over a narrow character class, the percent conversions `s`, `d`, `r`, and `f`, and `$name` and `${name}`. Placeholders of the same families fall outside it and count as authored: `{name:>8}`, `%5s`, `%x`, `%i`, and `%(name)5d`.
 

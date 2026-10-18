@@ -77,7 +77,7 @@ Impact: the wrapper's copied field list drifts each time the runner contract cha
 
 Revisit and settlement condition: the wrapper points at the skill's `<verdict_format>` for the completed, `OUTSIDE_CONTRACT`, and runner-blocked shapes and keeps only its own pre-run diagnostic shape, and the description states its subject and the conditions under which the owning skills invoke the role in passive wording; one typed subagent audit of `change-auditor` then raises neither warning.
 
-## DEBT [skill-audit]: close-change names no current-state source for the merge commit `src/plugins/spec-tree/skills/close-change/SKILL.md`, `Integrated`, `ambiguous-instruction`
+## DEBT [skill-audit]: close-change names no current-state source for the merge commit
 
 Defect class: `skill-audit`.
 
@@ -125,7 +125,7 @@ Impact: a later audit of `audit-change` can raise the finding again, and a run w
 
 Revisit and settlement condition: the objective keeps the output and its shape, the success criterion states the soundness property of the `filed` listing without restating the rejection rule, and one typed skill audit of `audit-change` raises no `objective_criteria_duplication` finding.
 
-## DEBT [finding-identity]: the audit-change runner derives a finding key from its position in the finding list `src/plugins/spec-tree/skills/audit-change/scripts/audit_change_run.py`, `finding_key`, `finding-identity`
+## DEBT [finding-identity]: the audit-change runner derives a finding key from its position in the finding list
 
 Defect class: `finding-identity`.
 
@@ -161,7 +161,7 @@ Impact: two reviewers can apply different close rules to a top-level Parent, one
 
 Revisit and settlement condition: `## Lifecycle` names the close rule that governs a Parent with `parent: null`; one PDR audit then raises no `ambiguous-criterion` finding on the type derivation and the close rule.
 
-## DEBT [consistency]: the path-rejected row of the audit-change runner contract omits count-limits `src/plugins/spec-tree/skills/audit-change/SKILL.md`, `path-rejected`, `consistency`
+## DEBT [consistency]: the path-rejected row of the audit-change runner contract omits count-limits
 
 Defect class: `consistency`.
 
@@ -185,7 +185,7 @@ Impact: the runner computes and the skill advertises a value no step reads, and 
 
 Revisit and settlement condition: the `read-relations` row and result prose name no `parentProduct`, the runner computes none, the linked runner tests pass, and one typed skill audit of `audit-change` raises no finding on the operation table.
 
-## DEBT [consistency]: the audit-change runner counts title words and Intent words by two definitions `src/plugins/spec-tree/skills/audit-change/scripts/audit_change_run.py`, `_count_limits`, `consistency`
+## DEBT [consistency]: the audit-change runner counts title words and Intent words by two definitions
 
 Defect class: `consistency`.
 
@@ -211,7 +211,7 @@ Revisit and settlement condition: `outcomeeng/changes#515` is the home of the fi
 
 Reason the fix is a separate larger concern: the fix adds a Write grant to the change-auditor agent, which reverses that agent's no-file-write rule. A separate Change set that rule, and no block of `outcomeeng/changes#425` amends it, so the fix lies outside this changeset.
 
-## DEBT [voice]: change-standards lifecycle inert-stdin names the agent as a subject `src/plugins/spec-tree/skills/change-standards/references/lifecycle.md`, `inert-stdin`, `banned_subject`
+## DEBT [voice]: change-standards lifecycle inert-stdin names the agent as a subject
 
 Defect class: `voice`.
 

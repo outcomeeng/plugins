@@ -234,7 +234,7 @@ Revisit and settlement condition: one conditional paragraph moved into the refer
 
 **Settlement condition:** An eval under this node's `evals/` scores the `/understand` skill's delivered-value declaration and the assertion links it as `[eval]`, or the audit tag stands and gains its rule slug when the tree adopts the `[audit:{rule-slug}]` form.
 
-## DEBT [verdict-source-not-sealed-run]: the apply skill reads four auditor verdicts from structured output, not a sealed run `src/plugins/spec-tree/skills/apply/SKILL.md`, `Step 4`, `verdict-source-not-sealed-run`
+## DEBT [verdict-source-not-sealed-run]: the apply skill reads four auditor verdicts from structured output, not a sealed run
 
 Defect class: `verdict-source-not-sealed-run`.
 

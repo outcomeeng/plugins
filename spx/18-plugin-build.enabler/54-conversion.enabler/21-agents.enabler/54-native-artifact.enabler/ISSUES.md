@@ -63,7 +63,7 @@ Successor: [outcomeeng/changes#85](https://github.com/outcomeeng/changes/issues/
 
 Revisit and settlement condition: Change #85 establishes production-owned conversion vocabulary and source-payload contracts, migrates every affected native-artifact test and imported harness use, and passes the applicable test-evidence audit.
 
-## DEBT [source-ownership]: harness-owned source payload at line 177 `outcomeeng_testing/harnesses/agent_conversion.py`, `source_agent`, `source-ownership`
+## DEBT [source-ownership]: harness-owned source payload at line 177
 
 Defect class: `source-ownership`.
 
@@ -186,7 +186,7 @@ agent conversion does not call.
 **Settlement condition**: the test reads the `skills` values through an
 exported constant.
 
-## DEBT [evidence]: harness supplies hand-authored source-agent defaults (f-004) `outcomeeng_testing/harnesses/agent_conversion.py`, `source_agent`, `evidence`
+## DEBT [evidence]: harness supplies hand-authored source-agent defaults (f-004)
 
 Finding f-004 (REJECT) at
 `outcomeeng_testing/harnesses/agent_conversion.py:177`: `source_agent()`

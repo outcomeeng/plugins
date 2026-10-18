@@ -221,7 +221,7 @@ Its attested run is dated 2026-10-06 against head `45772763e227a276a609f76c455fb
 
 **Settlement condition.** A later Change adds that fixture and records a new attested run on the then-current head, and the node's status claim then carries the attested result.
 
-## The merge policy reference reads Auditor verdicts in retired vocabulary `src/plugins/spec-tree/skills/merging-standards/references/merge-policy.md`, `Loop semantics`, `consistency`
+## The merge policy reference reads Auditor verdicts in retired vocabulary
 
 **Evidence**: `spec-tree:changes-reviewer` run `2026-10-16_10-53-24-065-92fe6cead926`, finding severity `warning`, category consistency, against `src/plugins/spec-tree/skills/merging-standards/references/merge-policy.md` line 527 (Loop semantics). The text defines blocking verdicts as `REJECTED` or `UNKNOWN` overall, `FAIL` or `UNKNOWN` row, and `REJECT` finding, and never reads a sealed run's terminal status. `merge.md` and [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md) define an Auditor verdict as the terminal status of a sealed run, and a `rejected` run with no finding, such as an incomplete unit, is unresolved work that the reference text does not classify.
 
