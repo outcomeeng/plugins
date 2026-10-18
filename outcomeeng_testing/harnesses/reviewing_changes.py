@@ -4,8 +4,11 @@ Provides the shared scaffolding consumed by every test file under
 ``spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/tests/``:
 
 - ``SCRIPTS_DIR`` and the per-script paths derived from it. A single source
-  keeps every test file from walking ``__file__.parents[...]`` to find
-  ``src/plugins/spec-tree/skills/review-changes/scripts``.
+  keeps every test file from walking ``__file__.parents[...]`` to find the
+  generated ``dist/claude/spec-tree/skills/review-changes/scripts`` tree, which
+  carries the agent-tokens data file the build renders beside ``review_result.py``.
+- ``run_review_result_with_agent_tokens_file``. Runs a copy of the module beside
+  an agent-tokens file in a chosen state, observing the load failure it reports.
 - ``REFERENCES_DIR`` and ``REVIEW_PROMPT_PATH``. Tests that assert the
   swappable prompt is a standalone reference file consume the path from
   one source.
@@ -46,13 +49,25 @@ from types import ModuleType
 from typing import Any, Callable, cast
 from unittest.mock import patch
 
+from outcomeeng.distribution.contracts import Target
+from outcomeeng_testing.harnesses.dist_tree import DistTreeReader
+
 # Two ``parents`` hops land at the repository root: this file lives at
 # ``outcomeeng_testing/harnesses/reviewing_changes.py``.
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 
 SKILL_DIR = REPO_ROOT / "src" / "plugins" / "spec-tree" / "skills" / "review-changes"
 SKILL_FILE = SKILL_DIR / "SKILL.md"
-SCRIPTS_DIR = SKILL_DIR / "scripts"
+# The scripts run from the generated tree: the build renders the agent-tokens data file
+# beside the one that reads it, so the authored directory alone cannot load that script.
+SCRIPTS_DIR = (
+    DistTreeReader(REPO_ROOT).target_root(Target.CLAUDE)
+    / "spec-tree"
+    / "skills"
+    / "review-changes"
+    / "scripts"
+)
+AGENT_TOKENS_FILENAME = "agent-tokens.json"
 REFERENCES_DIR = SKILL_DIR / "references"
 REVIEW_PROMPT_PATH = REFERENCES_DIR / "review-prompt.md"
 
@@ -121,6 +136,34 @@ def load_review_result_module() -> ModuleType:
     sys.modules["review_result"] = module
     spec.loader.exec_module(module)
     return module
+
+
+def run_review_result_with_agent_tokens_file(
+    scratch: pathlib.Path, *, tokens: str | None, make_directory: bool = False
+) -> subprocess.CompletedProcess[str]:
+    """Run a copy of the shipped module beside an agent-tokens file of the given state.
+
+    ``tokens`` is the file's text, or ``None`` for an absent file; ``make_directory`` places a
+    directory at the file's path so reading it fails as an unreadable file. The copy loads in
+    its own interpreter so the import-time load is the behavior under observation.
+    """
+    scripts_dir = scratch / "scripts"
+    scripts_dir.mkdir()
+    module = scripts_dir / REVIEW_RESULT_MODULE_PATH.name
+    module.write_text(
+        REVIEW_RESULT_MODULE_PATH.read_text(encoding="utf-8"), encoding="utf-8"
+    )
+    tokens_path = scripts_dir / AGENT_TOKENS_FILENAME
+    if make_directory:
+        tokens_path.mkdir()
+    elif tokens is not None:
+        tokens_path.write_text(tokens, encoding="utf-8")
+    return subprocess.run(  # noqa: S603 — the interpreter and the copied module are harness-built
+        [sys.executable, "-I", str(module)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
 
 
 def load_compute_diff_module() -> ModuleType:

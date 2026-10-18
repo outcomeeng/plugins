@@ -26,6 +26,10 @@ Tested with:
 - Unknown severity and concern values -> names the value and allowed set.
 - Malformed JSON -> raises ``ReviewResultValidationError``.
 - Round trips through ``to_json_dict`` and ``from_json_dict`` -> preserve equality.
+- The sibling ``agent-tokens.json`` file absent, unreadable, malformed JSON, a non-object JSON
+  value, and missing the ``CLAUDE`` or ``CODEX`` key -> each prints its ``error:`` line on
+  stderr and exits 2 with no traceback when the module loads; a complete file -> the
+  generated-tree citation candidates derive from its tokens.
 
 A review carries findings only — no summary, acknowledgement, decision, or
 verdict field. The journal-rendered findings surface is the review's whole
@@ -37,11 +41,74 @@ from __future__ import annotations
 import json
 import pathlib
 import re
+import sys
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any, cast
 
 SCHEMA_VERSION = 4
+
+AGENT_TOKENS_PATH = pathlib.Path(__file__).with_name("agent-tokens.json")
+AGENT_TOKENS_REQUIRED_KEYS = ("CLAUDE", "CODEX")
+AGENT_TOKENS_REINSTALL_ADVICE = (
+    "the file ships beside this script in the spec-tree plugin; "
+    "reinstall or update the spec-tree plugin to restore it"
+)
+AGENT_TOKENS_LOAD_FAILURE_EXIT_CODE = 2
+
+
+class AgentTokensLoadError(RuntimeError):
+    """Raised when the sibling agent-tokens data file cannot supply the agent tokens."""
+
+
+def load_agent_tokens(path: pathlib.Path) -> dict[str, str]:
+    """Read the agent tokens from ``path``, naming the file and the fix when it cannot supply them."""
+    try:
+        text = path.read_text(encoding="utf-8")
+    except FileNotFoundError as exc:
+        raise AgentTokensLoadError(
+            f"error: agent tokens file not found: {path}; {AGENT_TOKENS_REINSTALL_ADVICE}"
+        ) from exc
+    except OSError as exc:
+        raise AgentTokensLoadError(
+            f"error: agent tokens file unreadable: {path} ({exc}); "
+            f"{AGENT_TOKENS_REINSTALL_ADVICE}"
+        ) from exc
+    try:
+        tokens = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise AgentTokensLoadError(
+            f"error: agent tokens file is not valid JSON: {path} ({exc}); "
+            f"{AGENT_TOKENS_REINSTALL_ADVICE}"
+        ) from exc
+    if not isinstance(tokens, dict):
+        raise AgentTokensLoadError(
+            f"error: agent tokens file must hold a JSON object: {path} "
+            f"(found {type(tokens).__name__}); {AGENT_TOKENS_REINSTALL_ADVICE}"
+        )
+    missing = [key for key in AGENT_TOKENS_REQUIRED_KEYS if key not in tokens]
+    if missing:
+        raise AgentTokensLoadError(
+            f"error: agent tokens file lacks required key(s) {', '.join(missing)}: {path} "
+            f"(keys found: {', '.join(sorted(map(str, tokens))) or 'none'}); "
+            f"{AGENT_TOKENS_REINSTALL_ADVICE}"
+        )
+    return tokens
+
+
+def _load_agent_tokens_or_exit(path: pathlib.Path) -> dict[str, str]:
+    """Load the agent tokens, or report the failure as an ``error:`` line and exit 2."""
+    try:
+        return load_agent_tokens(path)
+    except AgentTokensLoadError as exc:
+        print(exc, file=sys.stderr)
+        raise SystemExit(AGENT_TOKENS_LOAD_FAILURE_EXIT_CODE) from exc
+
+
+_AGENT_TOKENS = _load_agent_tokens_or_exit(AGENT_TOKENS_PATH)
+GENERATED_TREE_AGENT_TOKENS = tuple(
+    _AGENT_TOKENS[key] for key in AGENT_TOKENS_REQUIRED_KEYS
+)
 
 
 class Severity(StrEnum):
@@ -534,8 +601,10 @@ def _resolve_plugin_skill_path(plugin: str, skill: str, rule: str) -> pathlib.Pa
     suffix = pathlib.Path(plugin) / "skills" / skill / "SKILL.md"
     candidates = (
         pathlib.Path("src") / "plugins" / suffix,
-        pathlib.Path("dist") / "claude" / suffix,
-        pathlib.Path("dist") / "codex" / suffix,
+        *(
+            pathlib.Path("dist") / token / suffix
+            for token in GENERATED_TREE_AGENT_TOKENS
+        ),
         *_runtime_plugin_skill_candidates(plugin, skill),
         *(ancestor / suffix for ancestor in pathlib.Path(__file__).resolve().parents),
     )
