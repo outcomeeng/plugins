@@ -62,7 +62,7 @@ Use `manifestPath` and `changedFiles` for navigation, but treat the diff file as
 3. Examine every changed file and every emitted diff section, applying the prompt's `<adversarial_probes>` before treating a file as clean. After each changed file has been examined, call `append-scope` for that file.
 4. For each changed governing declaration, discover and read its unchanged consumers per the prompt's `<review_scope>` consumers-of-changed-truth item. A contradiction there is a finding cited at the consumer's location; consumers are not `append-scope` units — the journal's scope coverage remains the changed-file set.
 5. Before judging any `debt` finding, locate and read the `ISSUES.md` of each governing node of the changed files per the prompt's `<tracked_debt>` section.
-6. When a finding is raised, immediately write that one finding JSON object to its own scratch file and pass it to `append-finding` through the input redirect, following `<finding_payload>`. Do not collect findings into a later batch. Set the finding's `unit` field to the label of the unit that encloses it, as the prompt's `<tracked_debt>` and `<finding_shape>` direct. Set `tracked` to `true` on a `debt` finding when one `ISSUES.md` heading carries all three parts of its entry key; never set it on a `blocking` finding.
+6. When a finding is raised, immediately write that one finding JSON object to its own scratch file and pass it to `append-finding` through the input redirect, following `<finding_payload>`. Do not collect findings into a later batch. Set the finding's `unit` and `tracked` fields as the prompt's `<finding_shape>` and `<tracked_debt>` direct.
 7. When review is complete, call `finish`.
 8. Report only the raw `runToken` to the caller.
 
@@ -70,7 +70,7 @@ Use `manifestPath` and `changedFiles` for navigation, but treat the diff file as
 
 <finding_payload>
 
-A finding is a payload: it carries code spans, quotes, and JSON. Its object carries the `unit` field on every finding and the `tracked` field on a `TRACKED` `debt` finding, per the prompt's `<finding_shape>`.
+A finding is a payload: it carries code spans, quotes, and JSON.
 
 - ALWAYS: write each finding with the file-write tool to a file in the scratch directory the harness names for this session, under a file name unique to this agent and run, such as `finding-<runToken>-<n>.json`. Where the harness names no scratch directory, use the one the hosting environment designates, such as `$RUNNER_TEMP` on a hosted runner.
 - ALWAYS: copy the scratch directory the harness names into each finding path character for character — a path rebuilt by hand differs from the written file by one character, and the runner then reads no file.
