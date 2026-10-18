@@ -7,27 +7,31 @@ import pathlib
 
 import pytest
 
-from outcomeeng.distribution.contracts import declared_agent_tokens
+from outcomeeng.distribution.contracts import (
+    AGENT_TOKEN_DATA_FILENAME,
+    declared_agent_tokens,
+)
 from outcomeeng_testing.harnesses import reviewing_changes as harness
 
 MODULE = harness.load_review_result_module()
-USAGE_ERROR_EXIT_CODE = 2
-ERROR_PREFIX = "error: agent tokens file"
+USAGE_ERROR_EXIT_CODE = MODULE.AGENT_TOKENS_LOAD_FAILURE_EXIT_CODE
+ERROR_PREFIX = MODULE.AGENT_TOKENS_ERROR_PREFIX
 TRACEBACK_MARKER = "Traceback"
 ADVICE = MODULE.AGENT_TOKENS_REINSTALL_ADVICE
 VALID_TOKENS = declared_agent_tokens()
+NON_OBJECT_DOCUMENT = json.dumps(list(VALID_TOKENS.values()))
 PARTIAL_DOCUMENT_ROWS = [
     (
         json.dumps({key: token for key, token in VALID_TOKENS.items() if key != missing}),
         False,
-        f"{ERROR_PREFIX} lacks required key(s) {missing}: ",
+        f"{ERROR_PREFIX} {MODULE.AGENT_TOKENS_LACKS_KEYS} {missing}: ",
     )
     for missing in MODULE.AGENT_TOKENS_REQUIRED_KEYS
 ]
 PARTIAL_DOCUMENT_IDS = [
     f"no-{VALID_TOKENS[missing]}" for missing in MODULE.AGENT_TOKENS_REQUIRED_KEYS
 ]
-RENDERED_TOKENS_PATH = harness.SCRIPTS_DIR / harness.AGENT_TOKENS_FILENAME
+RENDERED_TOKENS_PATH = harness.SCRIPTS_DIR / AGENT_TOKEN_DATA_FILENAME
 
 
 def _load_error(path: pathlib.Path) -> str:
@@ -52,49 +56,58 @@ def test_the_citation_candidates_derive_from_the_rendered_tokens() -> None:
 
 
 def test_a_complete_file_loads_its_tokens(tmp_path: pathlib.Path) -> None:
-    path = tmp_path / harness.AGENT_TOKENS_FILENAME
+    path = tmp_path / AGENT_TOKEN_DATA_FILENAME
     path.write_text(json.dumps(VALID_TOKENS), encoding="utf-8")
 
     assert MODULE.load_agent_tokens(path) == VALID_TOKENS
 
 
 def test_an_absent_file_names_its_path_and_the_fix(tmp_path: pathlib.Path) -> None:
-    path = tmp_path / harness.AGENT_TOKENS_FILENAME
+    path = tmp_path / AGENT_TOKEN_DATA_FILENAME
 
     message = _load_error(path)
 
-    assert message.startswith(f"{ERROR_PREFIX} not found: {path}")
+    assert message.startswith(
+        f"{ERROR_PREFIX} {MODULE.AGENT_TOKENS_NOT_FOUND}{path}"
+    )
     assert message.endswith(ADVICE)
 
 
 def test_an_unreadable_file_names_its_path_and_the_fix(tmp_path: pathlib.Path) -> None:
-    path = tmp_path / harness.AGENT_TOKENS_FILENAME
+    path = tmp_path / AGENT_TOKEN_DATA_FILENAME
     path.mkdir()
 
     message = _load_error(path)
 
-    assert message.startswith(f"{ERROR_PREFIX} unreadable: {path}")
+    assert message.startswith(
+        f"{ERROR_PREFIX} {MODULE.AGENT_TOKENS_UNREADABLE}{path}"
+    )
     assert message.endswith(ADVICE)
 
 
 def test_malformed_json_names_its_path_and_the_fix(tmp_path: pathlib.Path) -> None:
-    path = tmp_path / harness.AGENT_TOKENS_FILENAME
+    path = tmp_path / AGENT_TOKEN_DATA_FILENAME
     path.write_text("{not json", encoding="utf-8")
 
     message = _load_error(path)
 
-    assert message.startswith(f"{ERROR_PREFIX} is not valid JSON: {path}")
+    assert message.startswith(
+        f"{ERROR_PREFIX} {MODULE.AGENT_TOKENS_NOT_VALID_JSON}{path}"
+    )
     assert message.endswith(ADVICE)
 
 
 def test_a_non_object_value_names_its_type_and_the_fix(tmp_path: pathlib.Path) -> None:
-    path = tmp_path / harness.AGENT_TOKENS_FILENAME
-    path.write_text(json.dumps(["CLAUDE", "CODEX"]), encoding="utf-8")
+    path = tmp_path / AGENT_TOKEN_DATA_FILENAME
+    path.write_text(NON_OBJECT_DOCUMENT, encoding="utf-8")
 
     message = _load_error(path)
 
-    assert message.startswith(f"{ERROR_PREFIX} must hold a JSON object: {path}")
-    assert "(found list)" in message
+    found_type = type(json.loads(NON_OBJECT_DOCUMENT)).__name__
+    assert message.startswith(
+        f"{ERROR_PREFIX} {MODULE.AGENT_TOKENS_NOT_AN_OBJECT}{path}"
+    )
+    assert f"{MODULE.AGENT_TOKENS_FOUND_TYPE_OPEN}{found_type})" in message
     assert message.endswith(ADVICE)
 
 
@@ -102,37 +115,45 @@ def test_a_non_object_value_names_its_type_and_the_fix(tmp_path: pathlib.Path) -
 def test_a_missing_required_key_names_it_and_the_keys_found(
     tmp_path: pathlib.Path, missing: str
 ) -> None:
-    path = tmp_path / harness.AGENT_TOKENS_FILENAME
+    path = tmp_path / AGENT_TOKEN_DATA_FILENAME
     kept = {key: token for key, token in VALID_TOKENS.items() if key != missing}
     path.write_text(json.dumps(kept), encoding="utf-8")
 
     message = _load_error(path)
 
-    assert message.startswith(f"{ERROR_PREFIX} lacks required key(s) {missing}: {path}")
-    assert f"(keys found: {', '.join(sorted(kept))})" in message
+    assert message.startswith(
+        f"{ERROR_PREFIX} {MODULE.AGENT_TOKENS_LACKS_KEYS} {missing}: {path}"
+    )
+    assert (
+        f"{MODULE.AGENT_TOKENS_KEYS_FOUND_OPEN}{', '.join(sorted(kept))})" in message
+    )
     assert message.endswith(ADVICE)
 
 
 def test_an_empty_object_names_every_required_key_and_no_keys_found(
     tmp_path: pathlib.Path,
 ) -> None:
-    path = tmp_path / harness.AGENT_TOKENS_FILENAME
+    path = tmp_path / AGENT_TOKEN_DATA_FILENAME
     path.write_text("{}", encoding="utf-8")
 
     message = _load_error(path)
 
     required = ", ".join(MODULE.AGENT_TOKENS_REQUIRED_KEYS)
-    assert f"lacks required key(s) {required}" in message
-    assert "(keys found: none)" in message
+    assert f"{MODULE.AGENT_TOKENS_LACKS_KEYS} {required}" in message
+    assert f"{MODULE.AGENT_TOKENS_KEYS_FOUND_OPEN}{MODULE.AGENT_TOKENS_NO_KEYS})" in message
 
 
 @pytest.mark.parametrize(
     ("tokens", "make_directory", "expected_fragment"),
     [
-        (None, False, f"{ERROR_PREFIX} not found: "),
-        (None, True, f"{ERROR_PREFIX} unreadable: "),
-        ("{not json", False, f"{ERROR_PREFIX} is not valid JSON: "),
-        ("[]", False, f"{ERROR_PREFIX} must hold a JSON object: "),
+        (None, False, f"{ERROR_PREFIX} {MODULE.AGENT_TOKENS_NOT_FOUND}"),
+        (None, True, f"{ERROR_PREFIX} {MODULE.AGENT_TOKENS_UNREADABLE}"),
+        ("{not json", False, f"{ERROR_PREFIX} {MODULE.AGENT_TOKENS_NOT_VALID_JSON}"),
+        (
+            NON_OBJECT_DOCUMENT,
+            False,
+            f"{ERROR_PREFIX} {MODULE.AGENT_TOKENS_NOT_AN_OBJECT}",
+        ),
         *PARTIAL_DOCUMENT_ROWS,
     ],
     ids=["absent", "unreadable", "malformed", "non-object", *PARTIAL_DOCUMENT_IDS],

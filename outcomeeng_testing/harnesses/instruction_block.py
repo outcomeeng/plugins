@@ -40,6 +40,7 @@ from typing import Final, cast
 from hypothesis import given, seed, settings
 
 from outcomeeng.distribution import instruction_block as distribution
+from outcomeeng.distribution.contracts import AGENT_TOKEN_DATA_FILENAME
 from outcomeeng.distribution.shipped_scripts import load_shipped_module
 from outcomeeng_testing.generators.instruction_block import (
     DelegationCandidateCase,
@@ -57,7 +58,6 @@ from outcomeeng_testing.harnesses.property_evidence import run_replayable_proper
 
 REPO_ROOT: Final = pathlib.Path(__file__).resolve().parents[2]
 INSTRUCTION_BLOCK_MODULE_PATH = distribution.GENERATOR_PATH
-AGENT_TOKENS_FILENAME: Final = "agent-tokens.json"
 FIXTURES_DIR: Final = REPO_ROOT / "outcomeeng_testing/fixtures/instruction_block"
 
 INSTRUCTION_BLOCK_PROPERTY_EXAMPLES: Final = 50
@@ -429,7 +429,7 @@ def run_script_with_agent_tokens_file(
     script.write_text(
         INSTRUCTION_BLOCK_MODULE_PATH.read_text(encoding="utf-8"), encoding="utf-8"
     )
-    tokens_path = scripts_dir / AGENT_TOKENS_FILENAME
+    tokens_path = scripts_dir / AGENT_TOKEN_DATA_FILENAME
     if make_directory:
         tokens_path.mkdir()
     elif tokens is not None:

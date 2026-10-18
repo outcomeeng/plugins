@@ -49,7 +49,7 @@ from types import ModuleType
 from typing import Any, Callable, cast
 from unittest.mock import patch
 
-from outcomeeng.distribution.contracts import Target
+from outcomeeng.distribution.contracts import AGENT_TOKEN_DATA_FILENAME, Target
 from outcomeeng_testing.harnesses.dist_tree import DistTreeReader
 
 # Two ``parents`` hops land at the repository root: this file lives at
@@ -67,7 +67,6 @@ SCRIPTS_DIR = (
     / "review-changes"
     / "scripts"
 )
-AGENT_TOKENS_FILENAME = "agent-tokens.json"
 REFERENCES_DIR = SKILL_DIR / "references"
 REVIEW_PROMPT_PATH = REFERENCES_DIR / "review-prompt.md"
 
@@ -153,7 +152,7 @@ def run_review_result_with_agent_tokens_file(
     module.write_text(
         REVIEW_RESULT_MODULE_PATH.read_text(encoding="utf-8"), encoding="utf-8"
     )
-    tokens_path = scripts_dir / AGENT_TOKENS_FILENAME
+    tokens_path = scripts_dir / AGENT_TOKEN_DATA_FILENAME
     if make_directory:
         tokens_path.mkdir()
     elif tokens is not None:
