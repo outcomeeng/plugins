@@ -2,6 +2,7 @@ import pytest
 
 from outcomeeng_testing.generators.native_agent_recovery import (
     NON_ABSOLUTE_WRITABLE_ROOTS,
+    UNPREPARED_WORKTREE_PATHS,
     VERBATIM_WRITABLE_ROOTS,
 )
 from outcomeeng_testing.harnesses.native_agent_recovery import (
@@ -69,3 +70,23 @@ def test_recovery_reports_an_occupied_pane_before_a_rootless_agent_root_rejectio
     assert observation.error_status is None
     assert observation.plan_status == recovery_result_status().PANE_OCCUPIED
     assert observation.launches == ()
+
+
+@pytest.mark.parametrize("worktree", UNPREPARED_WORKTREE_PATHS)
+@pytest.mark.parametrize("occupy_first_pane", [False, True])
+def test_recovery_rejects_a_root_keyed_to_an_unprepared_worktree_before_any_launch(
+    worktree: str, occupy_first_pane: bool
+) -> None:
+    observation = observe_writable_root_recovery(
+        {
+            agent_type: VERBATIM_WRITABLE_ROOTS
+            for agent_type in writable_root_agent_types()
+        },
+        occupy_first_pane=occupy_first_pane,
+        unprepared_worktrees=(worktree,),
+    )
+
+    assert observation.error_status == recovery_result_status().INVALID_TARGET
+    assert observation.launches == ()
+    assert observation.plan_status is None
+    assert observation.prepared_after == observation.prepared_before

@@ -325,3 +325,11 @@ NON_ABSOLUTE_WRITABLE_ROOTS: tuple[str, ...] = (
     "$HOME/root",
     "",
 )
+
+
+UNPREPARED_WORKTREE_PATHS: tuple[str, ...] = (
+    f"{OPERATIONAL_RECOVERY_ROSTER.worktree_paths[0]}/",
+    f"{OPERATIONAL_RECOVERY_ROSTER.worktree_paths[0]}-stale",
+    str(OPERATIONAL_RECOVERY_ROSTER.worktree_paths[0].parent / "worktree-mistyped"),
+    "/restart-recovery-other-product/worktree-0",
+)

@@ -875,13 +875,15 @@ def observe_writable_root_recovery(
     *,
     occupy_first_pane: bool = False,
     native_homes_by_agent_type: Mapping[str, str] | None = None,
+    unprepared_worktrees: tuple[str, ...] = (),
 ) -> WritableRootRecovery:
     """Run recovery over the operational roster, supplying roots per agent type.
 
     Each worktree whose candidate has a listed agent type receives that type's
     roots in the recover request; other worktrees receive none. When
     `occupy_first_pane` is set, the first bound pane holds an agent running a
-    different session than its prepared candidate.
+    different session than its prepared candidate. Each `unprepared_worktrees`
+    path is added to the request as a writable-root key.
     """
     module = _load()
     roster = OPERATIONAL_RECOVERY_ROSTER
@@ -908,6 +910,8 @@ def observe_writable_root_recovery(
         )
         if agent_type in roots_by_agent_type
     }
+    for worktree in unprepared_worktrees:
+        request_roots[worktree] = ["/srv/unprepared-root"]
     candidates = {
         item[module.ORIGINAL_PANE_ID_FIELD]: item
         for item in cast(list[dict[str, object]], prepared[module.CANDIDATES_FIELD])
