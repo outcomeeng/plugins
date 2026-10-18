@@ -13,6 +13,7 @@ from pathlib import Path
 import pytest
 
 from outcomeeng.validation.hook_contract import (
+    PRE_TOOL_USE_EVENT,
     PRE_WRITE_COMMAND_CLAUDE,
     PRE_WRITE_MATCHER_SEPARATOR,
     PRE_WRITE_PLUGIN,
@@ -136,7 +137,7 @@ def test_spec_tree_pre_write_hook_scans_clean_and_other_plugin_is_reported(
     matcher = PRE_WRITE_MATCHER_SEPARATOR.join(sorted(PRE_WRITE_TOOLS))
     config = {
         "hooks": {
-            "PreToolUse": [
+            PRE_TOOL_USE_EVENT: [
                 {
                     "matcher": matcher,
                     "hooks": [

@@ -16,7 +16,9 @@ from pathlib import Path
 import pytest
 
 from outcomeeng.validation.hook_contract import (
+    CLAUDE_PLUGIN_ROOT_TOKEN,
     PRE_TOOL_USE_EVENT,
+    PRE_WRITE_ADAPTER_INTERPRETER,
     PRE_WRITE_COMMAND_CLAUDE,
     PRE_WRITE_COMMAND_CODEX,
     PRE_WRITE_EMPTY_RESULT,
@@ -278,15 +280,31 @@ def test_pre_write_exception_is_flagged_for_another_plugin() -> None:
     assert hook_config_violations(pre_write_config())
 
 
+EDIT_TOOL, WRITE_TOOL = sorted(PRE_WRITE_TOOLS)
+SEPARATOR = PRE_WRITE_MATCHER_SEPARATOR
+
+
 @pytest.mark.parametrize(
-    "matcher", ["", "Write", "Edit", "Write|Edit|Bash", "Write|Read", "Bash", ".*"]
+    "matcher",
+    [
+        "",
+        WRITE_TOOL,
+        EDIT_TOOL,
+        f"{WRITE_TOOL}{SEPARATOR}{EDIT_TOOL}{SEPARATOR}Bash",
+        f"{WRITE_TOOL}{SEPARATOR}Read",
+        "Bash",
+        ".*",
+    ],
 )
 def test_pre_write_exception_is_flagged_for_a_different_matcher(matcher: str) -> None:
     assert hook_config_violations(pre_write_config(matcher=matcher), PRE_WRITE_PLUGIN)
 
 
 def test_pre_write_exception_is_flagged_for_a_different_command() -> None:
-    other = "python3 ${CLAUDE_PLUGIN_ROOT}/scripts/other.py || echo '{}'"
+    other = (
+        f"{PRE_WRITE_ADAPTER_INTERPRETER} {CLAUDE_PLUGIN_ROOT_TOKEN}/scripts/other.py"
+        f" || echo '{PRE_WRITE_EMPTY_RESULT}'"
+    )
     assert hook_config_violations(pre_write_config(command=other), PRE_WRITE_PLUGIN)
 
 
