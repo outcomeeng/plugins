@@ -57,6 +57,7 @@ from outcomeeng_testing.harnesses.property_evidence import run_replayable_proper
 
 REPO_ROOT: Final = pathlib.Path(__file__).resolve().parents[2]
 INSTRUCTION_BLOCK_MODULE_PATH = distribution.GENERATOR_PATH
+AGENT_TOKENS_FILENAME: Final = "agent-tokens.json"
 FIXTURES_DIR: Final = REPO_ROOT / "outcomeeng_testing/fixtures/instruction_block"
 
 INSTRUCTION_BLOCK_PROPERTY_EXAMPLES: Final = 50
@@ -411,6 +412,34 @@ def observe_root_instruction_topology_seeds(
 def load_instruction_block_module() -> ModuleType:
     """Load the ``instruction_block`` module and cache it."""
     return load_shipped_module("instruction_block", INSTRUCTION_BLOCK_MODULE_PATH)
+
+
+def run_script_with_agent_tokens_file(
+    scratch: pathlib.Path, *, tokens: str | None, make_directory: bool = False
+) -> subprocess.CompletedProcess[str]:
+    """Run a copy of the shipped script beside an agent-tokens file of the given state.
+
+    ``tokens`` is the file's text, or ``None`` for an absent file; ``make_directory`` places a
+    directory at the file's path so reading it fails as an unreadable file. The copy runs in
+    its own interpreter so the import-time load is the behavior under observation.
+    """
+    scripts_dir = scratch / "scripts"
+    scripts_dir.mkdir()
+    script = scripts_dir / INSTRUCTION_BLOCK_MODULE_PATH.name
+    script.write_text(
+        INSTRUCTION_BLOCK_MODULE_PATH.read_text(encoding="utf-8"), encoding="utf-8"
+    )
+    tokens_path = scripts_dir / AGENT_TOKENS_FILENAME
+    if make_directory:
+        tokens_path.mkdir()
+    elif tokens is not None:
+        tokens_path.write_text(tokens, encoding="utf-8")
+    return subprocess.run(
+        [sys.executable, "-I", str(script), "--check", "--template", str(script)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
 
 
 def canonical_template_path(agent_harness: str | None = None) -> pathlib.Path:

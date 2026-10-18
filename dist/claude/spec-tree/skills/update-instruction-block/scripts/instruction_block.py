@@ -43,7 +43,10 @@ and an operator tie break; a dirty root file; and the CLI rejections (missing or
 template without ``template_version``, a symlink escaping the repository, an unsupported language
 token, a duplicate flag); and a fitting and a breaching root instruction file measured against
 the project-doc ceiling, with exact byte-size and overage assertions on the reported budget
-lines. The executable cases live in the governing node's ``tests/`` directory.
+lines; and the sibling agent-tokens data file absent, unreadable, malformed JSON, a non-object
+JSON value, and missing the CLAUDE or CODEX key, each reporting its ``error:`` line on stderr
+with exit code 2 and no traceback when the script runs. The executable cases live in the
+governing node's ``tests/`` directory.
 
 """
 
@@ -206,7 +209,23 @@ def load_agent_tokens(path: pathlib.Path) -> dict[str, str]:
     return tokens
 
 
-_AGENT_TOKENS = load_agent_tokens(AGENT_TOKENS_PATH)
+AGENT_TOKENS_LOAD_FAILURE_EXIT_CODE = 2
+
+
+def _load_agent_tokens_or_exit(path: pathlib.Path) -> dict[str, str]:
+    """Load the agent tokens, or report the failure as an ``error:`` line and exit 2.
+
+    The tokens key the module's constants, so a load failure surfaces at import; it leaves
+    the script as the usage-error form the CLI's other input failures use, not as a traceback.
+    """
+    try:
+        return load_agent_tokens(path)
+    except AgentTokensLoadError as exc:
+        print(exc, file=sys.stderr)
+        raise SystemExit(AGENT_TOKENS_LOAD_FAILURE_EXIT_CODE) from exc
+
+
+_AGENT_TOKENS = _load_agent_tokens_or_exit(AGENT_TOKENS_PATH)
 CLAUDE_TOKEN = _AGENT_TOKENS["CLAUDE"]
 CODEX_TOKEN = _AGENT_TOKENS["CODEX"]
 AGENT_HARNESS_INSTRUCTION_FILENAMES = {
