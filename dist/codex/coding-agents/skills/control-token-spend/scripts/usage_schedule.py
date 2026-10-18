@@ -185,32 +185,6 @@ def job_label(namespace: str, mode: str) -> str:
     return namespace + "." + mode
 
 
-def saved_namespace(root: Path) -> str:
-    """The launchd label namespace the saved configuration under ``root`` names."""
-    path = root / CONFIG_NAME
-    if not path.exists():
-        return DEFAULT_NAMESPACE
-    if path.is_symlink() or path.stat().st_size > COMMAND_BYTES:
-        raise ValueError(
-            f"Invalid saved configuration file: {path}; inspect its path and size"
-        )
-    try:
-        value = json.loads(path.read_text())
-    except json.JSONDecodeError as error:
-        raise ValueError(
-            f"Saved configuration is not valid JSON: {path}: {error}; "
-            "correct the file or reinstall through install"
-        ) from error
-    if not isinstance(value, dict):
-        raise ValueError(
-            f"Saved configuration must be a JSON object: {path}; "
-            "correct the file or reinstall through install"
-        )
-    return checked_namespace(
-        str(value.get(NAMESPACE_ENV, DEFAULT_NAMESPACE)), NAMESPACE_ENV
-    )
-
-
 def checked(runner: Runner, argv: tuple[str, ...]) -> CommandResult:
     result = runner.run(argv)
     if result.returncode:
@@ -224,7 +198,7 @@ def absent(result: CommandResult) -> bool:
     return result.returncode != 0 and "could not find service" in result.stderr.lower()
 
 
-def manifest(root: Path, namespace: str) -> Json | None:
+def manifest(root: Path) -> Json | None:
     path = root / INSTALL_NAME
     if not path.exists():
         return None
@@ -249,14 +223,9 @@ def manifest(root: Path, namespace: str) -> Json | None:
             f"Invalid managed installation identity: {path} must carry schema_version 1 "
             f"and root {root}; inspect the file and reinstall through install"
         )
-    recorded = value.get(NAMESPACE_ENV, DEFAULT_NAMESPACE)
-    if recorded != namespace:
-        raise ValueError(
-            f"Managed installation namespace mismatch: {path} records "
-            f"{recorded!r} but {NAMESPACE_ENV} is {namespace!r}; "
-            "only jobs under the configured namespace are managed, so address the "
-            "recorded namespace to inspect or stop them"
-        )
+    namespace = checked_namespace(
+        str(value.get(NAMESPACE_ENV, DEFAULT_NAMESPACE)), NAMESPACE_ENV
+    )
     recorded_jobs = value.get(ScheduleField.JOBS)
     if not isinstance(recorded_jobs, list) or len(recorded_jobs) != len(MODES):
         raise ValueError(
@@ -468,7 +437,7 @@ def install(
     if plan[ScheduleField.STATUS] == "unsupported" or not activate:
         return plan
     installed_path = config.root / INSTALL_NAME
-    prior = manifest(config.root, config.namespace)
+    prior = manifest(config.root)
     owned_paths = (
         {job["path"] for job in prior.get(ScheduleField.JOBS, [])}
         if isinstance(prior, dict)
@@ -596,10 +565,12 @@ def jobs(root: Path, operation: str, runner: Runner, platform: str) -> Json:
             "operation": operation,
             "root": str(root),
         }
-    namespace = saved_namespace(root)
-    value = manifest(root, namespace)
+    value = manifest(root)
     if value is None:
         return {ScheduleField.STATUS: JobStatus.NOT_INSTALLED, "operation": operation}
+    namespace = checked_namespace(
+        str(value.get(NAMESPACE_ENV, DEFAULT_NAMESPACE)), NAMESPACE_ENV
+    )
     domain = f"gui/{os.getuid()}"
     result: Json = {
         "operation": operation,

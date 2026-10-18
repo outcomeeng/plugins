@@ -47,9 +47,7 @@ PRICE_OVERRIDE_ENV: Final = "SPX_USAGE_PRICE_FILE"
 NAMESPACE_ENV: Final = "SPX_USAGE_LAUNCHD_NAMESPACE"
 DEFAULT_NAMESPACE: Final = "engineering.outcome.usage-control"
 NAMESPACE_MAX_CHARS: Final = 128
-NAMESPACE_PATTERN: Final = re.compile(
-    r"[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)*"
-)
+NAMESPACE_PATTERN: Final = re.compile(r"[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*")
 PRICE_DOCUMENT_KEY: Final = "prices"
 PRICE_CLASSES: Final = (
     "input",
@@ -187,7 +185,7 @@ def money(raw: str, field: str) -> Decimal:
 def checked_namespace(raw: str, field: str) -> str:
     if len(raw) > NAMESPACE_MAX_CHARS or NAMESPACE_PATTERN.fullmatch(raw) is None:
         raise ValueError(
-            f"{field}: use dot-separated segments of letters, digits and inner hyphens, "
+            f"{field}: use dot-separated segments of ASCII letters, digits, hyphens and underscores, none empty, "
             f"at most {NAMESPACE_MAX_CHARS} characters; received {raw!r}"
         )
     return raw
