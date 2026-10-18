@@ -433,3 +433,11 @@ The audit side of the divergence between `spec-tree:implementation-auditor` run 
 **Impact.** The path on which the implementation-auditor flags an unreached file and records a finding is unproven through the payload-file route.
 
 **Settlement condition.** A finding-bearing guarded `implementation-auditor` run flags an unreached file.
+
+## The blocked-diagnostic assertion forbids the skill's no-evidence branch for an unfinished unit
+
+**Evidence.** The blocked-diagnostic `ALWAYS` assertion of `audit.md` requires a started run's blocked diagnostic to carry a failed command's evidence in its `exitCode` and `stderr` lines. `src/plugins/spec-tree/skills/audit-implementation/SKILL.md` lines 446-450 give a required unit that cannot reach a final status a diagnostic with `exitCode: none` and `stderr: none`, and line 495 names "a concrete failed operation or absent prerequisite" without that evidence.
+
+**Impact.** A run driver that follows the skill returns a started-run `BLOCKED` the assertion forbids, so unfinished reading can still pass as a blocked cause until the skill changes.
+
+**Settlement condition.** outcomeeng/changes#574 merges, and the skill's blocked branch for a required unit carries the failed operation with one of the three evidence shapes the assertion names.
