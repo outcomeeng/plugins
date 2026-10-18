@@ -7,6 +7,7 @@ import pathlib
 
 import pytest
 
+from outcomeeng.distribution.contracts import declared_agent_tokens
 from outcomeeng_testing.harnesses import reviewing_changes as harness
 
 MODULE = harness.load_review_result_module()
@@ -14,7 +15,18 @@ USAGE_ERROR_EXIT_CODE = 2
 ERROR_PREFIX = "error: agent tokens file"
 TRACEBACK_MARKER = "Traceback"
 ADVICE = MODULE.AGENT_TOKENS_REINSTALL_ADVICE
-VALID_TOKENS = {"CLAUDE": "claude", "CODEX": "codex"}
+VALID_TOKENS = declared_agent_tokens()
+PARTIAL_DOCUMENT_ROWS = [
+    (
+        json.dumps({key: token for key, token in VALID_TOKENS.items() if key != missing}),
+        False,
+        f"{ERROR_PREFIX} lacks required key(s) {missing}: ",
+    )
+    for missing in MODULE.AGENT_TOKENS_REQUIRED_KEYS
+]
+PARTIAL_DOCUMENT_IDS = [
+    f"no-{VALID_TOKENS[missing]}" for missing in MODULE.AGENT_TOKENS_REQUIRED_KEYS
+]
 RENDERED_TOKENS_PATH = harness.SCRIPTS_DIR / harness.AGENT_TOKENS_FILENAME
 
 
@@ -91,7 +103,7 @@ def test_a_missing_required_key_names_it_and_the_keys_found(
     tmp_path: pathlib.Path, missing: str
 ) -> None:
     path = tmp_path / harness.AGENT_TOKENS_FILENAME
-    kept = {key: key.lower() for key in VALID_TOKENS if key != missing}
+    kept = {key: token for key, token in VALID_TOKENS.items() if key != missing}
     path.write_text(json.dumps(kept), encoding="utf-8")
 
     message = _load_error(path)
@@ -121,14 +133,9 @@ def test_an_empty_object_names_every_required_key_and_no_keys_found(
         (None, True, f"{ERROR_PREFIX} unreadable: "),
         ("{not json", False, f"{ERROR_PREFIX} is not valid JSON: "),
         ("[]", False, f"{ERROR_PREFIX} must hold a JSON object: "),
-        (
-            '{"CLAUDE": "claude"}',
-            False,
-            f"{ERROR_PREFIX} lacks required key(s) CODEX: ",
-        ),
-        ('{"CODEX": "codex"}', False, f"{ERROR_PREFIX} lacks required key(s) CLAUDE: "),
+        *PARTIAL_DOCUMENT_ROWS,
     ],
-    ids=["absent", "unreadable", "malformed", "non-object", "no-codex", "no-claude"],
+    ids=["absent", "unreadable", "malformed", "non-object", *PARTIAL_DOCUMENT_IDS],
 )
 def test_the_module_reports_a_load_failure_as_an_error_line_with_exit_two(
     tmp_path: pathlib.Path,
