@@ -16,13 +16,13 @@ The write-boundary adapter stays in the plugin under [`spx/12-shipped-scripting.
 - The `SessionStart` hook delegates to `spx hook run session-start`; the `spx` CLI performs the `$CLAUDE_ENV_FILE` identity and project-dir writes and the worktree-occupancy claim. The hook embeds no `.spx/`, git, transcript, or session logic of its own.
 - The `PreToolUse` hook runs the plugin-local write-boundary adapter, which reads only the hook payload, the harness environment, and the Claude Code settings files, runs no subprocess, and reimplements no `.spx/`, git, transcript, or session logic.
 - `.spx/` state logic is owned by the `spx` CLI — invoked by skills and by the `SessionStart` hook — and is never reimplemented in a plugin-shipped script.
-- Both hooks conform to [`spx/15-hook-safety.pdr.md`](spx/15-hook-safety.pdr.md): the `SessionStart` hook is a non-blocking event, and the `PreToolUse` hook is the one pre-write exception that document names; each uses an inline-guard command with a valid-empty-result floor, an explicit timeout, an environment kill switch, and `spx` resolved as a PATH-probed optional dependency where it is used.
+- The `SessionStart` hook conforms to [`spx/15-hook-safety.pdr.md`](spx/15-hook-safety.pdr.md): a non-blocking event, an inline-guard command with a valid-empty-result floor, an explicit timeout, an environment kill switch, and `spx` resolved as a PATH-probed optional dependency.
 
 ## Verification
 
 ### Audit
 
 - ALWAYS: the spec-tree plugin ships exactly two runtime hooks — a `SessionStart` hook that delegates to `spx hook run session-start`, and which on the disabled-or-absent path exits with a valid empty result and writes nothing, and a `PreToolUse` pre-write check whose matcher names exactly the Write and Edit tools and whose command runs the write-boundary adapter inside the inline guard ([audit])
-- ALWAYS: each hook satisfies [`spx/15-hook-safety.pdr.md`](spx/15-hook-safety.pdr.md) — the `SessionStart` hook as a non-blocking event and the `PreToolUse` hook as that document's pre-write exception, each with an inline-guard command with a valid-empty-result floor, an explicit timeout, and an environment kill switch ([audit])
+- ALWAYS: the `SessionStart` hook satisfies [`spx/15-hook-safety.pdr.md`](spx/15-hook-safety.pdr.md) — non-blocking event, inline-guard command with a valid-empty-result floor, explicit timeout, environment kill switch, and `spx` resolved as a PATH-probed optional dependency ([audit])
 - NEVER: a plugin-shipped hook script reimplements `.spx/` state, git inspection, transcript parsing, or session and worktree logic the `spx` CLI owns — the hook delegates to the CLI ([audit])
 - NEVER: the write-boundary adapter runs a subprocess or reads anything beyond the hook payload, the harness environment, and the Claude Code settings files that apply to the project directory ([audit])
