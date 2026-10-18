@@ -55,3 +55,31 @@ instruction that uses the dependency to state "Use skill `coding-agents:operate-
 **Settlement condition**: every mention of the composed skill in that file that instructs its use is
 the instruction "Use skill `coding-agents:operate-prowl`", and a rerun of the skill auditor raises no
 `composed_dependency_form` finding on the file.
+
+## DEBT [consistency]: a `writableRoots` key naming no prepared candidate's worktree is dropped without an error
+
+The CI review of https://github.com/outcomeeng/plugins/pull/689 at head
+34741a48b95b26555c5217e122862026dceccb5e raised this finding at
+`src/plugins/coding-agents/skills/recover-prowl-agents/scripts/recover_agents.py:1101`
+(https://github.com/outcomeeng/plugins/pull/689#issuecomment-6244343208).
+
+**Evidence**: the launch loop builds each delivery with `writable_roots.get(candidate.worktree_path, ())`.
+A `writableRoots` key that names a stale or mistyped worktree path matches no launching candidate, so
+recovery drops its roots and reports no error. Every other worktree- or pane-keyed identity check in
+the file raises `AdapterError` with status `INVALID_TARGET` on a mismatch. No test in
+`tests/test_native_agent_recovery.mapping.l1.py` or `tests/test_native_agent_recovery.compliance.l1.py`
+supplies a key that matches no candidate, and the harness's `observe_writable_root_recovery` keys its
+request roots only by worktrees the roster's candidates hold.
+
+**Resolution shape**: reject a recover request whose `writableRoots` names a worktree held by no
+prepared candidate, with the `INVALID_TARGET` status, before any binding, activation, or native launch,
+and cover it with a compliance test that supplies several unprepared key forms.
+
+**Deferral reason**: the fix needs a decision line and a spec assertion that
+outcomeeng/changes#593's record does not state. The exact-native-recovery decision changes only through
+a Change's Governance mutations, and the node's spec assertion has no decision to trace to. A Proposed
+follow-up Change will state the decision line and the assertion, and carries the fix.
+
+**Settlement condition**: a recover request whose `writableRoots` names a worktree held by no prepared
+candidate ends with `INVALID_TARGET` before any activation or native launch, and a linked compliance
+test holds that rule.
