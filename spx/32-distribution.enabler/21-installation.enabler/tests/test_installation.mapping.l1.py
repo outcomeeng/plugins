@@ -1,15 +1,7 @@
 """Finite catalog-to-agent mapping evidence for repository installation."""
 
-import json
-from pathlib import Path
-
 from outcomeeng.distribution.contracts import Target
 from outcomeeng.distribution.installation import (
-    CLAUDE_CATALOG_PATH,
-    CLAUDE_PROJECT_SETTINGS_PATH,
-    CLAUDE_REPOSITORY_FIELD,
-    CLAUDE_SOURCE_FIELD,
-    EXTRA_MARKETPLACES_FIELD,
     CLAUDE_PLUGIN_ID_FIELD,
     CLAUDE_PLUGIN_PROJECT_PATH_FIELD,
     CLAUDE_PLUGIN_SCOPE_FIELD,
@@ -32,6 +24,7 @@ from outcomeeng_testing.generators.installation import (
     generated_persistent_catalog_selections,
 )
 from outcomeeng_testing.harnesses.installation import (
+    observe_committed_declarations,
     observe_persistent_catalog_subset_plans,
     observe_record_refresh_plan,
     observe_registry_shape_plan,
@@ -78,12 +71,7 @@ def test_each_mode_maps_its_selection_to_catalog_order() -> None:
 
 def test_every_claude_install_record_maps_to_its_refresh_disposition() -> None:
     observation = observe_record_refresh_plan()
-    committed_catalog = json.loads(
-        (Path(__file__).resolve().parents[4] / CLAUDE_CATALOG_PATH).read_text(
-            encoding="utf-8"
-        )
-    )
-    marketplace = committed_catalog["name"]
+    marketplace = observe_committed_declarations().marketplace
     assert observation.marketplace == marketplace
     updates = [
         command
@@ -155,21 +143,10 @@ def test_every_claude_install_record_maps_to_its_refresh_disposition() -> None:
 
 def test_each_registry_entry_shape_maps_to_the_source_the_run_refreshes_from() -> None:
     observation = observe_registry_shape_plan()
-    committed_catalog = json.loads(
-        (Path(__file__).resolve().parents[4] / CLAUDE_CATALOG_PATH).read_text(
-            encoding="utf-8"
-        )
-    )
-    marketplace = committed_catalog["name"]
+    committed = observe_committed_declarations()
+    marketplace = committed.marketplace
     assert observation.marketplace == marketplace
-    committed_settings = json.loads(
-        (Path(__file__).resolve().parents[4] / CLAUDE_PROJECT_SETTINGS_PATH).read_text(
-            encoding="utf-8"
-        )
-    )
-    declared_source = committed_settings[EXTRA_MARKETPLACES_FIELD][marketplace][
-        CLAUDE_SOURCE_FIELD
-    ][CLAUDE_REPOSITORY_FIELD]
+    declared_source = committed.declared_claude_source
 
     for payload, shape, expected_source, expected_action in observation.rows:
         registered = claude_registered_marketplace(payload, marketplace)

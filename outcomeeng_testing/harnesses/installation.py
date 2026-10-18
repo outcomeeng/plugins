@@ -196,18 +196,52 @@ from outcomeeng_testing.harnesses.discovery_auth import (
 
 REQUIRED_BINARIES: tuple[str, ...] = (JUST_BINARY, CLAUDE_EXECUTABLE, CODEX_EXECUTABLE)
 _RECORDED_JUST_INVOCATION_ENV = "OUTCOMEENG_RECORDED_JUST_INVOCATION"
-_REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
-MARKETPLACE: str = json.loads(
-    (_REPOSITORY_ROOT / CLAUDE_CATALOG_PATH).read_text(encoding="utf-8")
-)["name"]
+
+
+def repository_root() -> Path:
+    """Return the checkout containing this installed harness package."""
+    return Path(__file__).resolve().parents[2]
+
+
+@dataclass(frozen=True)
+class CommittedDeclarations:
+    """Values read from the raw committed catalog and project settings."""
+
+    marketplace: str
+    declared_claude_source: str
+
+
+def observe_committed_declarations() -> CommittedDeclarations:
+    """Read the marketplace name and declared source from the raw committed JSON.
+
+    The read uses json.loads over the committed files and none of the
+    production readers, so it stays independent of the code under test.
+    """
+    root = repository_root()
+    marketplace = cast(
+        "str",
+        json.loads((root / CLAUDE_CATALOG_PATH).read_text(encoding="utf-8"))["name"],
+    )
+    settings = json.loads(
+        (root / CLAUDE_PROJECT_SETTINGS_PATH).read_text(encoding="utf-8")
+    )
+    return CommittedDeclarations(
+        marketplace=marketplace,
+        declared_claude_source=cast(
+            "str",
+            settings[EXTRA_MARKETPLACES_FIELD][marketplace][CLAUDE_SOURCE_FIELD][
+                CLAUDE_REPOSITORY_FIELD
+            ],
+        ),
+    )
+
+
+_COMMITTED = observe_committed_declarations()
+MARKETPLACE: str = _COMMITTED.marketplace
 """The marketplace's name read from this checkout's raw committed catalog."""
-DECLARED_CLAUDE_SOURCE: str = json.loads(
-    (_REPOSITORY_ROOT / CLAUDE_PROJECT_SETTINGS_PATH).read_text(encoding="utf-8")
-)[EXTRA_MARKETPLACES_FIELD][MARKETPLACE][CLAUDE_SOURCE_FIELD][CLAUDE_REPOSITORY_FIELD]
+DECLARED_CLAUDE_SOURCE: str = _COMMITTED.declared_claude_source
 """The source this checkout's raw project settings declare for the marketplace."""
-DECLARED_CODEX_SOURCE = declared_codex_source(
-    Path(__file__).resolve().parents[2], MARKETPLACE
-)
+DECLARED_CODEX_SOURCE = declared_codex_source(repository_root(), MARKETPLACE)
 """The same declared source in the form Codex adds it."""
 EMPTY_CODEX_MARKETPLACE_LISTING = json.dumps({CODEX_MARKETPLACES_FIELD: []})
 """A Codex registry listing carrying no marketplace, as a home with none reports."""
@@ -929,11 +963,6 @@ marketplace's current one is enough to age the record.
 """
 SEEDED_OLDER_VERSION = recorded_version(0)
 """The version a seeded stale install record is rewritten to before a real refresh."""
-
-
-def repository_root() -> Path:
-    """Return the checkout containing this installed harness package."""
-    return Path(__file__).resolve().parents[2]
 
 
 def _installed_or_catalog_plugins(
@@ -2095,6 +2124,8 @@ class UnreadableSourceObservation:
 
 def observe_unreadable_source(
     states: Sequence[RegistryState],
+    *,
+    codex_inventory_empty: bool = False,
 ) -> UnreadableSourceObservation:
     """Run persistent installation with the invocation checkout's settings malformed.
 
@@ -2106,6 +2137,11 @@ def observe_unreadable_source(
     state that asks for it also records `spec-tree` for the invocation
     checkout itself. Each run's plan, warnings, commands, install-record
     document, target version, and exit code are the observations.
+
+    With `codex_inventory_empty` the Codex home carries no installed plugin
+    of the marketplace, so a run whose Codex registration stands proposes
+    and issues the Codex bootstrap install and announces a first install;
+    otherwise Codex reports the whole catalog installed.
     """
     checkout = repository_root()
     with TemporaryDirectory() as temporary_directory:
@@ -2126,6 +2162,7 @@ def observe_unreadable_source(
                 other,
                 temporary_root / f"state-{index}",
                 state,
+                codex_inventory_empty,
             )
             for index, state in enumerate(states)
         )
@@ -2144,6 +2181,7 @@ def _unreadable_source_case(
     other: Path,
     state_root: Path,
     state: RegistryState,
+    codex_inventory_empty: bool,
 ) -> UnreadableSourceCase:
     """One persistent run against one registry state in its own disposable agent state."""
     environment = _persistent_environment(state_root)
@@ -2176,6 +2214,17 @@ def _unreadable_source_case(
         served_version=target_version,
         registered=state.claude,
         codex_registered=state.codex,
+        installed=(
+            {
+                **{
+                    agent: frozenset(names)
+                    for agent, names in _catalogs_from_documents(mirror).items()
+                },
+                Target.CODEX: frozenset(),
+            }
+            if codex_inventory_empty
+            else None
+        ),
     )
     stdout = StringIO()
     with redirect_stdout(stdout):
@@ -5143,6 +5192,8 @@ __all__ = [
     "EMPTY_CODEX_MARKETPLACE_LISTING",
     "MARKETPLACE",
     "DECLARED_CLAUDE_SOURCE",
+    "CommittedDeclarations",
+    "observe_committed_declarations",
     "DECLARED_CODEX_SOURCE",
     "observe_planned_operations",
     "observe_real_first_install",
