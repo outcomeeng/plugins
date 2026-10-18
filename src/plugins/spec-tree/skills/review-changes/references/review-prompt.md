@@ -111,7 +111,7 @@ Every finding carries an entry key: the path of the file it names, the label of 
 
 An `ISSUES.md` entry heading ends with its entry key as three code spans in order: the file path, the unit label, and the rule citation. Label a `debt` finding `TRACKED` when one such heading carries all three, each equal to the finding's `file`, `unit`, and `rule`. `TRACKED` stands beside the severity, is no third severity, and blocks nothing. A `blocking` finding is never `TRACKED`, and a `debt` finding whose entry key no heading carries is not `TRACKED`.
 
-An `ISSUES.md` entry recorded before its heading carried an entry key matches no finding. When the review raises that entry's finding again, report it as a new `debt` finding, never `TRACKED`, and rewrite no heading.
+An `ISSUES.md` entry recorded before its heading carried an entry key matches no finding. A review that raises its finding again reports a new `debt` finding that takes its own ruling. No existing heading is rewritten ahead of a ruling, because its rule citation exists only in the review that raises the finding.
 
 </tracked_debt>
 
