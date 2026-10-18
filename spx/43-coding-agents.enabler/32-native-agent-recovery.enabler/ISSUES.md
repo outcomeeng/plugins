@@ -55,3 +55,57 @@ instruction that uses the dependency to state "Use skill `coding-agents:operate-
 **Settlement condition**: every mention of the composed skill in that file that instructs its use is
 the instruction "Use skill `coding-agents:operate-prowl`", and a rerun of the skill auditor raises no
 `composed_dependency_form` finding on the file.
+
+## DEBT [consistency]: a `writableRoots` key naming no prepared candidate's worktree is dropped without an error
+
+The CI review of https://github.com/outcomeeng/plugins/pull/689 at head
+34741a48b95b26555c5217e122862026dceccb5e raised this finding at
+`src/plugins/coding-agents/skills/recover-prowl-agents/scripts/recover_agents.py:1101`
+(https://github.com/outcomeeng/plugins/pull/689#issuecomment-6244343208).
+
+**Evidence**: the launch loop builds each delivery with `writable_roots.get(candidate.worktree_path, ())`.
+A `writableRoots` key that names a stale or mistyped worktree path matches no launching candidate, so
+recovery drops its roots and reports no error. Every other worktree- or pane-keyed identity check in
+the file raises `AdapterError` with status `INVALID_TARGET` on a mismatch. No test in
+`tests/test_native_agent_recovery.mapping.l1.py` or `tests/test_native_agent_recovery.compliance.l1.py`
+supplies a key that matches no candidate, and the harness's `observe_writable_root_recovery` keys its
+request roots only by worktrees the roster's candidates hold.
+
+**Resolution shape**: reject a recover request whose `writableRoots` names a worktree held by no
+prepared candidate, with the `INVALID_TARGET` status, before any binding, activation, or native launch,
+and cover it with a compliance test that supplies several unprepared key forms.
+
+**Deferral reason**: the fix needs a decision line and a spec assertion that
+outcomeeng/changes#593's record does not state. The exact-native-recovery decision changes only through
+a Change's Governance mutations, and the node's spec assertion has no decision to trace to. A Proposed
+follow-up Change will state the decision line and the assertion, and carries the fix.
+
+**Settlement condition**: a recover request whose `writableRoots` names a worktree held by no prepared
+candidate ends with `INVALID_TARGET` before any activation or native launch, and a linked compliance
+test holds that rule.
+
+## DEBT [evidence]: the writable-roots probe has no attested run
+
+The CI review of https://github.com/outcomeeng/plugins/pull/689 at head
+91fa1eab0532df6b23c20a6870e1d39c4a0a5b15 raised this finding at
+`spx/43-coding-agents.enabler/32-native-agent-recovery.enabler/native-agent-recovery.md:16`
+(https://github.com/outcomeeng/plugins/pull/689#issuecomment-6245101073).
+
+**Evidence**: the assertion that a recovered native session's effective permission policy lists a
+supplied writable root links `probes/writable-roots/probe.md`, and that probe has no attested run.
+`probes/writable-roots/` holds the protocol and no `runs/` artifact. The linked tests in
+`tests/test_native_agent_recovery.mapping.l1.py` and `tests/test_native_agent_recovery.compliance.l1.py`
+assert the rendered resume command and its option placement. None of them launches a native agent
+session or reads its effective policy, so nothing yet shows that the appended `--add-dir` option reaches
+a recovered session's permissions.
+
+**Resolution shape**: run the protocol in `probes/writable-roots/probe.md` against a live Claude Code
+session and a live Codex session, read each recovered session's effective policy through that agent's own
+status surface, and retain each screen as the probe's inspectable artifact.
+
+**Deferral reason**: the attested run restarts Prowl, which the operator owns, so the run has no form
+inside the Change that links the probe. The node declares `malleability: spec`, so an unattested probe
+leaves the assertion Declared and the node merges as itself.
+
+**Settlement condition**: `probes/writable-roots/` retains an attested run for one Claude Code candidate
+and one Codex candidate, and each retained screen lists the supplied root as writable.

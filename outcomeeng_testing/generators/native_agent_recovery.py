@@ -298,3 +298,30 @@ def invalid_recovery_evidence(
         min_size=1,
         max_size=16,
     ).filter(lambda evidence: evidence not in evidence_kinds)
+
+
+VERBATIM_WRITABLE_ROOTS: tuple[str, ...] = (
+    "/srv/shared evidence",
+    "/srv/trailing/",
+    "/srv//double//separator",
+    "/srv/parent/../sibling",
+    "/srv/~tilde/$HOME",
+)
+
+WRITABLE_ROOT_SETS: tuple[tuple[str, ...], ...] = (
+    (),
+    ("/srv/shared-evidence",),
+    ("/srv/first-root", "/srv/second-root"),
+    VERBATIM_WRITABLE_ROOTS,
+)
+
+NATIVE_HOME_PATH = "/srv/prepared-native-home/.codex-home"
+
+NON_ABSOLUTE_WRITABLE_ROOTS: tuple[str, ...] = (
+    "relative/root",
+    "./current/root",
+    "../parent/root",
+    "~/home/root",
+    "$HOME/root",
+    "",
+)
