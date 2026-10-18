@@ -1067,7 +1067,7 @@ def recover(
             occupied.append(binding.pane_id)
             continue
         resolution = Resolution.ALREADY_CORRELATED if matches else Resolution.RESUMED
-        target = {
+        target: dict[str, object] = {
             **binding.result(),
             WORKTREE_ID_FIELD: pane.worktree_id,
             WORKTREE_PATH_FIELD: pane.worktree_path,
