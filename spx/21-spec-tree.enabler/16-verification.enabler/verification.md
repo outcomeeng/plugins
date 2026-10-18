@@ -22,6 +22,8 @@ The six verification types and the two axes that classify them — verdict mode 
 
 Each rule enforces a guarantee of [`spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md`](spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md).
 
+- ALWAYS: every agentic verification run writes its journal and its context only to the repository-shared locations SPX resolves, per [`spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md`](spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md)
+- ALWAYS: an agentic verification skill whose run-recording write the native permission policy refuses stops the run, retries no write, writes to no other location, and returns a blocked result whose diagnostic is a configuration error naming the refused path
 - ALWAYS: every agentic verification run records its durable facts as appended events on one journal that is the run's sole source of truth ([audit])
 - ALWAYS: every agentic verification run streams its events live — opening the journal at the start and appending each domain event (scope entered, scope advanced as each unit of scope is examined, finding reported the instant it is raised, run completed) at the moment the run reaches it — so the journal reflects the run's progress in flight, per [`spx/15-audit-result-delivery.pdr.md`](spx/15-audit-result-delivery.pdr.md) ([audit])
 - NEVER: an agentic verification run computes a finished result and appends its events as one batch at completion — an opaque run that reveals nothing until it finishes defeats the in-flight legibility the journal exists to provide, per [`spx/15-audit-result-delivery.pdr.md`](spx/15-audit-result-delivery.pdr.md) ([audit])
@@ -34,5 +36,5 @@ Each rule enforces a guarantee of [`spx/21-spec-tree.enabler/16-verification.ena
 - ALWAYS: every agentic verification skill derives its changeset scope through the shared changeset-scope primitives (`spx/21-spec-tree.enabler/14-version-control.enabler/15-changeset-scope.enabler/changeset-scope.md`) ([audit])
 - NEVER: an agentic verification skill reads authoritative run state from a rendered surface rather than from the journal ([audit])
 - NEVER: an agentic verification skill hand-validates the records it emitted — the channel's exit code is the validity signal ([audit])
-- NEVER: a wrapper agent hard-codes a storage path, backend, or surface in its prose — backend selection is bound at the edge and swappable without changing the agent ([audit])
+- NEVER: a wrapper agent hard-codes a storage path, backend, or surface in its prose or its native configuration, and no agent definition contains an installation-specific store path — backend selection is bound at the edge and swappable without changing the agent
 - NEVER: an agentic verification skill duplicates or reinvents the changeset-scope derivation ([audit])
