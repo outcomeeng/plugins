@@ -610,6 +610,94 @@ def captured_stopped_panes(module: ModuleType) -> list[dict[str, object]]:
     return cast(list[dict[str, object]], result[PANE_LIST_FIELD])
 
 
+BACKGROUND_WORK_SCREEN_FIXTURE = (
+    RESPONSE_FIXTURE_ROOT / "stop" / "agent-read.background-work.txt"
+)
+AGENT_NOT_FOUND_GET_FIXTURE = ERROR_FIXTURE_ROOT / "agent-get.agent_not_found.json"
+
+
+@dataclass
+class BackgroundWorkExitRunner:
+    """Interaction-protocol collaborator: a hosted session whose `/exit` meets a
+    pane read answering with the given screen until a key is sent, after which
+    herdr reports no agent session in that pane. It records every argument
+    vector and returns captured results only; it judges nothing."""
+
+    prompt: CommandResultContract
+    agent: CommandResultContract
+    screen: CommandResultContract
+    keyed: CommandResultContract
+    gone: CommandResultContract
+    prompt_prefix: tuple[str, ...]
+    get_prefix: tuple[str, ...]
+    read_prefix: tuple[str, ...]
+    keys_prefix: tuple[str, ...]
+    calls: list[tuple[str, ...]] = field(default_factory=list)
+    key_sent: bool = False
+
+    def run(
+        self,
+        argv: tuple[str, ...],
+        stdin: str | None = None,
+        *,
+        timeout_seconds: int = 0,
+    ) -> CommandResultContract:
+        self.calls.append(argv)
+        if argv[: len(self.keys_prefix)] == self.keys_prefix:
+            self.key_sent = True
+            return self.keyed
+        if argv[: len(self.get_prefix)] == self.get_prefix:
+            return self.gone if self.key_sent else self.agent
+        if argv[: len(self.read_prefix)] == self.read_prefix:
+            return self.screen
+        if argv[: len(self.prompt_prefix)] == self.prompt_prefix:
+            return self.prompt
+        raise RuntimeError(f"Unexpected command: {argv}")
+
+
+def background_work_exit_runner(
+    module: ModuleType,
+    *,
+    screen: CommandResultContract | None = None,
+    agent_kind: str | None = None,
+) -> tuple[BackgroundWorkExitRunner, str] | None:
+    """The runner for a stop of a captured session, and that session's pane, or
+    None while herdr's confirmation screen is uncaptured. `screen` replaces the
+    pane read; `agent_kind` replaces the kind herdr's evidence names."""
+    stopped = captured_success_response(module, module.Operation.STOP)
+    looked_up = captured_success_response(module, module.Operation.READ)
+    if (
+        stopped is None
+        or looked_up is None
+        or not BACKGROUND_WORK_SCREEN_FIXTURE.is_file()
+    ):
+        return None
+    if agent_kind is not None:
+        agent = {
+            **captured_session_agent(module, looked_up),
+            module.AGENT_KIND_FIELD: agent_kind,
+        }
+        looked_up = session_envelope(module, looked_up, agent)
+    pane = cast(str, captured_session_agent(module, looked_up)[module.PANE_ID_FIELD])
+    keyed = captured_success_response(module, module.Operation.KEY)
+    assert keyed is not None, "no captured key response"
+    prefixes = module.PUBLIC_HERDR_COMMAND_PREFIXES
+    return (
+        BackgroundWorkExitRunner(
+            prompt=stopped.result,
+            agent=looked_up.evidence or looked_up.result,
+            screen=screen or _success_result(module, BACKGROUND_WORK_SCREEN_FIXTURE),
+            keyed=keyed.result,
+            gone=_error_result(module, AGENT_NOT_FOUND_GET_FIXTURE),
+            prompt_prefix=tuple(prefixes[module.Operation.PROMPT]),
+            get_prefix=tuple(module.EVIDENCE_COMMAND_PREFIXES[module.Operation.READ]),
+            read_prefix=tuple(prefixes[module.Operation.READ]),
+            keys_prefix=tuple(prefixes[module.Operation.KEY]),
+        ),
+        pane,
+    )
+
+
 @dataclass(frozen=True)
 class ListedWorktree:
     """One Git worktree herdr's worktree list names: its checkout path, the

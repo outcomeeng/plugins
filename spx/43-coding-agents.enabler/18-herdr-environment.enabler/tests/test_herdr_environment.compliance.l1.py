@@ -5,6 +5,7 @@ from typing import cast
 from outcomeeng_testing.generators.herdr_environment import operation_requests
 from outcomeeng_testing.harnesses.herdr_environment import (
     RecordingRunner,
+    background_work_exit_runner,
     captured_success_response,
     disposable_worktree,
     herdr_command_source_texts,
@@ -303,3 +304,38 @@ def test_create_worktree_records_no_occupancy_claim() -> None:
         assert worktree.files() != untouched
 
     assert created > 0
+
+
+def test_stop_sends_a_key_only_to_the_background_work_confirmation_of_a_claude_session() -> (
+    None
+):
+    module = load_herdr_environment()
+    armed = background_work_exit_runner(module)
+    assert armed is not None, "no captured background-work exit confirmation"
+    _, pane = armed
+    keys = module.PUBLIC_HERDR_COMMAND_PREFIXES[module.Operation.KEY]
+
+    unrequested = module.operation_request(
+        module.Operation.STOP, pane=pane, mutation_authorized=True
+    )
+    without_request, _ = cast(tuple, background_work_exit_runner(module))
+    module.execute(unrequested, without_request)
+    assert not any(call[: len(keys)] == tuple(keys) for call in without_request.calls)
+
+    requested = module.operation_request(
+        module.Operation.STOP,
+        pane=pane,
+        stop_background_work=True,
+        mutation_authorized=True,
+    )
+    other_kind, _ = cast(tuple, background_work_exit_runner(module, agent_kind="codex"))
+    module.execute(requested, other_kind)
+    assert not any(call[: len(keys)] == tuple(keys) for call in other_kind.calls)
+
+    other_screen = captured_success_response(module, module.Operation.READ)
+    assert other_screen is not None, "no captured pane read"
+    elsewhere, _ = cast(
+        tuple, background_work_exit_runner(module, screen=other_screen.result)
+    )
+    module.execute(requested, elsewhere)
+    assert not any(call[: len(keys)] == tuple(keys) for call in elsewhere.calls)

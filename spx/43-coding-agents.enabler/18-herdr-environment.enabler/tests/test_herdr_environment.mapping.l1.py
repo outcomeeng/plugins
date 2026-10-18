@@ -13,6 +13,7 @@ from outcomeeng_testing.harnesses.herdr_environment import (
     AbsentExecutableRunner,
     CapturedResponse,
     RecordingRunner,
+    background_work_exit_runner,
     captured_error_message,
     captured_error_responses,
     captured_incomplete_agents,
@@ -685,3 +686,29 @@ def test_stop_submits_the_agents_exit_and_keeps_its_pane_for_a_relaunch() -> Non
     session = cast(dict[str, object], relaunch_result[module.SESSION_RESULT_FIELD])
     assert session[module.PANE_ID_FIELD] == pane
     assert module.MISSING_FIELDS_FIELD not in session
+
+
+def test_stop_answers_the_background_work_confirmation_with_exactly_one_key() -> None:
+    module = load_herdr_environment()
+    armed = background_work_exit_runner(module)
+    assert armed is not None, "no captured background-work exit confirmation"
+    runner, pane = armed
+    request = module.operation_request(
+        module.Operation.STOP,
+        pane=pane,
+        stop_background_work=True,
+        mutation_authorized=True,
+    )
+
+    result = module.execute(request, runner)
+
+    key = module.command_for(
+        module.operation_request(
+            module.Operation.KEY,
+            pane=pane,
+            keys=module.BACKGROUND_WORK_EXIT_KEY,
+            mutation_authorized=True,
+        )
+    )
+    assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
+    assert runner.calls.count(key) == 1
