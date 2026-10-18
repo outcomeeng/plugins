@@ -1041,6 +1041,16 @@ def recover(
     panes = _pane_roster(pane_items)
     agents = _agent_roster(agent_items)
     writable_roots = _writable_roots(writable_root_items)
+    prepared_worktrees = {candidate.worktree_path for candidate in candidates}
+    unprepared_worktrees = [
+        worktree for worktree in writable_roots if worktree not in prepared_worktrees
+    ]
+    if unprepared_worktrees:
+        raise AdapterError(
+            ResultStatus.INVALID_TARGET,
+            f"{WRITABLE_ROOTS_FIELD} names a worktree held by no prepared candidate: "
+            f"{unprepared_worktrees!r}.",
+        )
     candidates_by_original = {
         candidate.original_pane_id: candidate for candidate in candidates
     }
