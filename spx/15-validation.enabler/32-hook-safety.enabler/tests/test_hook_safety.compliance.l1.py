@@ -222,7 +222,7 @@ def test_version_pinned_cache_path_is_flagged() -> None:
 
 
 def _write_config(root: Path, runtime: str, cfg: Mapping[str, object]) -> None:
-    path = root / runtime / "spec-tree" / "hooks" / "hooks.json"
+    path = root / runtime / PRE_WRITE_PLUGIN / "hooks" / "hooks.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(cfg), encoding="utf-8")
 
@@ -256,10 +256,12 @@ def pre_write_config(
     matcher: str = PRE_WRITE_MATCHER,
     command: str = PRE_WRITE_COMMAND_CLAUDE,
     extra_entries: int = 0,
+    extra_handlers: int = 0,
 ) -> Mapping[str, object]:
     handler: dict[str, object] = {"type": "command", "command": command, "timeout": 5}
     entries = [
-        {"matcher": matcher, "hooks": [handler]} for _ in range(1 + extra_entries)
+        {"matcher": matcher, "hooks": [handler] * (1 + extra_handlers)}
+        for _ in range(1 + extra_entries)
     ]
     return {"hooks": {PRE_TOOL_USE_EVENT: entries}}
 
@@ -310,6 +312,10 @@ def test_pre_write_exception_is_flagged_for_a_different_command() -> None:
 
 def test_second_pre_tool_use_entry_beside_the_exception_is_flagged() -> None:
     assert hook_config_violations(pre_write_config(extra_entries=1), PRE_WRITE_PLUGIN)
+
+
+def test_second_handler_inside_the_exception_block_is_flagged() -> None:
+    assert hook_config_violations(pre_write_config(extra_handlers=1), PRE_WRITE_PLUGIN)
 
 
 @pytest.mark.parametrize(
