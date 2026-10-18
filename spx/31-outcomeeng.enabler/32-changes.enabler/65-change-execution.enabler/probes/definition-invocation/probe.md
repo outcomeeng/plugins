@@ -55,14 +55,14 @@ This run records `change-executor`, whose emitted definition selects the Executo
 
 This run records `change-skill-author` and `change-subagent-author`, the two definitions that front skills of the `instructions` plugin. The protocol ran unchanged, from an empty scratch directory with `dist/claude/spec-tree` as the only spec-tree plugin and the protocol's `--max-budget-usd 2.00` ceiling.
 
-- Date: 2026-10-03
-- Subject commits: `6cbb66684b7e53b3314237b60681e50016757ac9` for `change-skill-author`, and `0942beb61734927d2f07fc7b81c66209e27f876b` for `change-subagent-author`, whose first run on `6cbb66684b7e53b3314237b60681e50016757ac9` is superseded by the run on its next definition and is not retained.
+- Date: 2026-10-18
+- Subject commit: `b05112746a7442a8c6ec7554af1fef923312aed7` for both definitions. Their earlier runs, on `6cbb66684b7e53b3314237b60681e50016757ac9` and `0942beb61734927d2f07fc7b81c66209e27f876b`, covered definitions that fronted the skills under their earlier names; this run supersedes them and they are not retained.
 - Observations:
-  - Each emitted definition carries `disallowedTools: "AskUserQuestion"`, `model: "opus"` and `effort: "medium"`.
+  - Each emitted definition carries `model: "sonnet"`, `effort: "medium"` and `disallowedTools: Agent, AskUserQuestion`, and preloads its fronted skill, `instructions:author-skill` and `instructions:author-subagent` respectively.
   - Each parent session listed its definition, loaded spec-tree from `dist/claude/spec-tree`, and made exactly one `Agent` launch with `subagent_type` `spec-tree:<name>` and prompt `not-a-target`.
-  - Each child's first event carries the launch's `parent_tool_use_id` and the `subagent_type` of its definition, and each launch's tool result reports `status` `completed`, the `agentType` of its definition, and `resolvedModel` `claude-opus-5-5`, which the Standard profile's `model: opus` selects.
-  - Each child invoked its fronted skill, `instructions:author-skill` and `instructions:author-subagent` respectively, with the task message. The probe installs no `instructions` plugin, so the Skill tool returned `Unknown skill`, and each child returned a `blocked` result naming the required skill and the exact failure.
-  - No child wrote a file or ran a store command. The runs cost USD 0.22 and USD 0.16 against the USD 2.00 ceiling.
+  - Each child's first event carries the launch's `parent_tool_use_id`, and each launch's tool result reports `status` `completed`, the `agentType` of its definition, and `resolvedModel` `claude-sonnet-5-5`, which the Standard profile's `model: sonnet` selects.
+  - Each child invoked its fronted skill with the task message. The probe installs no `instructions` plugin, so the Skill tool returned `Unknown skill: instructions:author-skill` and `Unknown skill: instructions:author-subagent`, and each child returned a `blocked` result naming the required skill and the exact failure.
+  - No child wrote a file or ran a store command. The runs cost USD 0.20 and USD 0.18 against the USD 2.00 ceiling.
 - Artifacts:
   - [change-skill-author.result.json](change-skill-author.result.json)
   - [change-subagent-author.result.json](change-subagent-author.result.json)
