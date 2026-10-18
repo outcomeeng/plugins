@@ -43,6 +43,7 @@ from positions_schedule import (
     run_schedule,
 )
 from positions_siblings import (
+    COMMAND_RUNNER,
     PROWL_ADAPTER,
     TOKEN_ACCOUNTING,
     load_sibling,
@@ -242,6 +243,46 @@ class SubprocessRunner:
         return CommandResult(completed.returncode, completed.stdout, completed.stderr)
 
 
+SAVED_SETTING_PREFIX: Final = "SPX_USAGE_"
+SAVED_PROJECTS_KEY: Final = "projects"
+SAVED_CONFIGURATION_MAX_BYTES: Final = 64 * 1024
+
+
+def saved_configuration(accounting: ModuleType) -> tuple[dict[str, str], Path]:
+    """The settings consumption control saved under its data root, and its projects.
+
+    A pass started by the installed launchd job inherits none of the operator's
+    shell exports, so the saved file is the base the process environment overlays,
+    as the consumption-control entry point derives its configuration. An absent
+    file yields no settings; an unreadable or malformed one raises `ValueError`.
+    """
+    name = load_sibling(*COMMAND_RUNNER).CONFIG_NAME
+    saved = accounting.DEFAULT_ROOT / name
+    projects = accounting.DEFAULT_PROJECTS
+    environment: dict[str, str] = {}
+    if not saved.exists():
+        return environment, projects
+    if saved.is_symlink() or saved.stat().st_size > SAVED_CONFIGURATION_MAX_BYTES:
+        raise ValueError(f"Invalid saved configuration file: {saved}")
+    try:
+        value = json.loads(saved.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as error:
+        raise ValueError(f"Saved configuration is not valid JSON: {saved}") from error
+    if not isinstance(value, dict):
+        raise ValueError(f"Saved configuration must be a JSON object: {saved}")
+    environment.update(
+        {
+            key: str(item)
+            for key, item in value.items()
+            if key.startswith(SAVED_SETTING_PREFIX) and item is not None
+        }
+    )
+    saved_projects = value.get(SAVED_PROJECTS_KEY, str(projects))
+    if not isinstance(saved_projects, str):
+        raise ValueError(f"Saved configuration field projects must be a path: {saved}")
+    return environment, Path(saved_projects)
+
+
 class ConsumptionTokens:
     """Token source: the consumption-control accounting, keyed by the pane's worktree."""
 
@@ -260,8 +301,10 @@ class ConsumptionTokens:
     ) -> TokenReading:
         try:
             accounting = load_sibling(*TOKEN_ACCOUNTING)
+            environment, projects = saved_configuration(accounting)
+            environment.update(os.environ)
             config = accounting.Config.from_environment(
-                os.environ, accounting.DEFAULT_ROOT, accounting.DEFAULT_PROJECTS
+                environment, accounting.DEFAULT_ROOT, projects
             )
             with accounting.Evidence(config) as evidence:
                 collected = evidence.collect(end)
