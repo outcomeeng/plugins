@@ -135,7 +135,7 @@ python3 "${SKILL_DIR}/scripts/recover_agents.py" <operation> < <input-file>
 - NEVER enumerate worktrees blindly; activation targets only complete worktree paths already preserved by prepared native-session candidates.
 - NEVER type into an occupied mismatched pane, close a pane, launch an unprepared identity, or execute one native session in multiple panes or worktrees.
 - NEVER pass an operation input through a heredoc, a pipe, or an inline argument, and NEVER remove an input file; the harness clears its scratch directory.
-- ALWAYS take writable roots from the recover request, preserve each absolute root verbatim, and record none in the prepared manifest; a `writableRoots` key naming a worktree held by no prepared candidate is rejected as `invalid-target`.
+- ALWAYS take writable roots from the recover request, preserve each absolute root verbatim, and record none in the prepared manifest.
 - NEVER start a watcher, polling loop, daemon, background process, or open-ended wait.
 - NEVER plan or send reassessment before every verified pane has one checked context read; one unreadable pane blocks all continuation sends.
 - NEVER combine native launch and reassessment in one send, treat interruption metadata as cancellation, substitute repository completion for an unanswered operator request, treat distinct delivered work as satisfying an unreconciled plan, ask again for existing authority, or silently exit when a pending interaction can be restored.
