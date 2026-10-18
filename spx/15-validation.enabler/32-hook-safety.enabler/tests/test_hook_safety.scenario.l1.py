@@ -14,6 +14,13 @@ import pytest
 
 from outcomeeng.validation.hook_contract import (
     CLAUDE_PLUGIN_ROOT_TOKEN,
+    CLAUDE_RUNTIME_TREE,
+    CODEX_RUNTIME_TREE,
+    COMMAND_KEY,
+    HOOKS_CONFIG_FILE,
+    HOOKS_DIRECTORY,
+    HOOKS_KEY,
+    MATCHER_KEY,
     PRE_TOOL_USE_EVENT,
     PRE_WRITE_ADAPTER_INTERPRETER,
     PRE_WRITE_COMMAND_CLAUDE,
@@ -22,6 +29,7 @@ from outcomeeng.validation.hook_contract import (
     PRE_WRITE_PLUGIN,
     PRE_WRITE_TOOLS,
     SESSION_START_EVENT,
+    TIMEOUT_KEY,
 )
 from outcomeeng.validation.hook_safety import iter_tree_violations, main
 
@@ -32,7 +40,7 @@ SAFE_COMMAND = f"echo '{PRE_WRITE_EMPTY_RESULT}'"
 def write_hooks(
     root: Path, runtime: str, plugin: str, config: dict[str, object]
 ) -> Path:
-    path = root / runtime / plugin / "hooks" / "hooks.json"
+    path = root / runtime / plugin / HOOKS_DIRECTORY / HOOKS_CONFIG_FILE
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(config), encoding="utf-8")
     return path
@@ -40,12 +48,12 @@ def write_hooks(
 
 def blocking_config() -> dict[str, object]:
     return {
-        "hooks": {
+        HOOKS_KEY: {
             PRE_TOOL_USE_EVENT: [
                 {
-                    "matcher": "",
-                    "hooks": [
-                        {"type": "command", "command": SAFE_COMMAND, "timeout": 5}
+                    MATCHER_KEY: "",
+                    HOOKS_KEY: [
+                        {"type": "command", COMMAND_KEY: SAFE_COMMAND, TIMEOUT_KEY: 5}
                     ],
                 }
             ]
@@ -55,12 +63,12 @@ def blocking_config() -> dict[str, object]:
 
 def safe_config() -> dict[str, object]:
     return {
-        "hooks": {
+        HOOKS_KEY: {
             SESSION_START_EVENT: [
                 {
-                    "matcher": "",
-                    "hooks": [
-                        {"type": "command", "command": SAFE_COMMAND, "timeout": 5}
+                    MATCHER_KEY: "",
+                    HOOKS_KEY: [
+                        {"type": "command", COMMAND_KEY: SAFE_COMMAND, TIMEOUT_KEY: 5}
                     ],
                 }
             ]
@@ -69,7 +77,7 @@ def safe_config() -> dict[str, object]:
 
 
 def test_blocking_hook_is_reported_with_location(tmp_path: Path) -> None:
-    write_hooks(tmp_path, "dist/claude", PRE_WRITE_PLUGIN, blocking_config())
+    write_hooks(tmp_path, CLAUDE_RUNTIME_TREE, PRE_WRITE_PLUGIN, blocking_config())
 
     violations = iter_tree_violations(tmp_path)
 
@@ -78,13 +86,13 @@ def test_blocking_hook_is_reported_with_location(tmp_path: Path) -> None:
     )
     report = "\n".join(violations)
     assert PRE_WRITE_PLUGIN in report  # plugin
-    assert "hooks.json" in report  # file
+    assert HOOKS_CONFIG_FILE in report  # file
     assert PRE_TOOL_USE_EVENT in report  # event
 
 
 def test_clean_tree_reports_nothing(tmp_path: Path) -> None:
-    write_hooks(tmp_path, "dist/claude", PRE_WRITE_PLUGIN, safe_config())
-    write_hooks(tmp_path, "dist/codex", PRE_WRITE_PLUGIN, safe_config())
+    write_hooks(tmp_path, CLAUDE_RUNTIME_TREE, PRE_WRITE_PLUGIN, safe_config())
+    write_hooks(tmp_path, CODEX_RUNTIME_TREE, PRE_WRITE_PLUGIN, safe_config())
 
     assert iter_tree_violations(tmp_path) == []
 
@@ -93,11 +101,13 @@ def guarded_substituted_config() -> dict[str, object]:
     # A non-blocking hook whose command IS a substituted-path invocation, guarded.
     command = f"{PRE_WRITE_ADAPTER_INTERPRETER} {CLAUDE_PLUGIN_ROOT_TOKEN}/scripts/session-start.py || echo '{PRE_WRITE_EMPTY_RESULT}'"
     return {
-        "hooks": {
+        HOOKS_KEY: {
             SESSION_START_EVENT: [
                 {
-                    "matcher": "",
-                    "hooks": [{"type": "command", "command": command, "timeout": 5}],
+                    MATCHER_KEY: "",
+                    HOOKS_KEY: [
+                        {"type": "command", COMMAND_KEY: command, TIMEOUT_KEY: 5}
+                    ],
                 }
             ]
         }
@@ -107,7 +117,9 @@ def guarded_substituted_config() -> dict[str, object]:
 def test_guarded_substituted_path_hook_reports_nothing(tmp_path: Path) -> None:
     # Scenario witness for the assertion's "uses a guarded command" clause: a guarded
     # substituted-path invocation in an otherwise clean tree produces no violations.
-    write_hooks(tmp_path, "dist/claude", PRE_WRITE_PLUGIN, guarded_substituted_config())
+    write_hooks(
+        tmp_path, CLAUDE_RUNTIME_TREE, PRE_WRITE_PLUGIN, guarded_substituted_config()
+    )
 
     assert iter_tree_violations(tmp_path) == []
 
@@ -117,22 +129,29 @@ def test_main_reports_location_and_exits_non_zero(
 ) -> None:
     # The first scenario assertion couples both halves: reports plugin/file/event AND
     # exits non-zero. Verify them together at the CLI entry point.
-    root = tmp_path / "dist/claude"
-    write_hooks(tmp_path, "dist/claude", PRE_WRITE_PLUGIN, blocking_config())
+    root = tmp_path / CLAUDE_RUNTIME_TREE
+    write_hooks(tmp_path, CLAUDE_RUNTIME_TREE, PRE_WRITE_PLUGIN, blocking_config())
 
     code = main([str(root)])
     err = capsys.readouterr().err
 
     assert code == 1
-    assert PRE_WRITE_PLUGIN in err and "hooks.json" in err and PRE_TOOL_USE_EVENT in err
+    assert (
+        PRE_WRITE_PLUGIN in err
+        and HOOKS_CONFIG_FILE in err
+        and PRE_TOOL_USE_EVENT in err
+    )
 
 
 def test_main_exits_zero_for_a_clean_tree(tmp_path: Path) -> None:
     # The assertion frames "the dist trees" (plural): exercise both at the CLI entry.
-    write_hooks(tmp_path, "dist/claude", PRE_WRITE_PLUGIN, safe_config())
-    write_hooks(tmp_path, "dist/codex", PRE_WRITE_PLUGIN, safe_config())
+    write_hooks(tmp_path, CLAUDE_RUNTIME_TREE, PRE_WRITE_PLUGIN, safe_config())
+    write_hooks(tmp_path, CODEX_RUNTIME_TREE, PRE_WRITE_PLUGIN, safe_config())
 
-    assert main([str(tmp_path / "dist/claude"), str(tmp_path / "dist/codex")]) == 0
+    assert (
+        main([str(tmp_path / CLAUDE_RUNTIME_TREE), str(tmp_path / CODEX_RUNTIME_TREE)])
+        == 0
+    )
 
 
 def test_spec_tree_pre_write_hook_scans_clean_and_other_plugin_is_reported(
@@ -140,25 +159,25 @@ def test_spec_tree_pre_write_hook_scans_clean_and_other_plugin_is_reported(
 ) -> None:
     matcher = PRE_WRITE_MATCHER_SEPARATOR.join(sorted(PRE_WRITE_TOOLS))
     config = {
-        "hooks": {
+        HOOKS_KEY: {
             PRE_TOOL_USE_EVENT: [
                 {
-                    "matcher": matcher,
-                    "hooks": [
+                    MATCHER_KEY: matcher,
+                    HOOKS_KEY: [
                         {
                             "type": "command",
-                            "command": PRE_WRITE_COMMAND_CLAUDE,
-                            "timeout": 5,
+                            COMMAND_KEY: PRE_WRITE_COMMAND_CLAUDE,
+                            TIMEOUT_KEY: 5,
                         }
                     ],
                 }
             ]
         }
     }
-    write_hooks(tmp_path, "dist/claude", PRE_WRITE_PLUGIN, config)
+    write_hooks(tmp_path, CLAUDE_RUNTIME_TREE, PRE_WRITE_PLUGIN, config)
     assert iter_tree_violations(tmp_path) == []
 
-    write_hooks(tmp_path, "dist/claude", "other-plugin", config)
+    write_hooks(tmp_path, CLAUDE_RUNTIME_TREE, "other-plugin", config)
     violations = iter_tree_violations(tmp_path)
     assert violations
     assert all("other-plugin" in v for v in violations)

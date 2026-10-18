@@ -16,8 +16,18 @@ from pathlib import Path
 import pytest
 
 from outcomeeng.validation.hook_contract import (
+    BLOCKING_EVENT_VIOLATION_MARKER,
     CLAUDE_PLUGIN_ROOT_TOKEN,
+    CLAUDE_RUNTIME_TREE,
+    CLAUDE_SKILL_DIR_TOKEN,
     CODEX_PLUGIN_ROOT_TOKEN,
+    CODEX_RUNTIME_TREE,
+    CODEX_SKILL_DIR_TOKEN,
+    COMMAND_KEY,
+    HOOKS_CONFIG_FILE,
+    HOOKS_DIRECTORY,
+    HOOKS_KEY,
+    MATCHER_KEY,
     PRE_TOOL_USE_EVENT,
     PRE_WRITE_ADAPTER_INTERPRETER,
     PRE_WRITE_COMMAND_CLAUDE,
@@ -28,6 +38,7 @@ from outcomeeng.validation.hook_contract import (
     PRE_WRITE_PLUGIN,
     PRE_WRITE_TOOLS,
     SESSION_START_EVENT,
+    TIMEOUT_KEY,
 )
 from outcomeeng.validation.hook_safety import (
     BLOCKING_EVENTS,
@@ -43,10 +54,10 @@ def config(
     timeout: int | None = 5,
 ) -> Mapping[str, object]:
     """Build a one-hook hooks.json config for ``event`` with an overridable command/timeout."""
-    handler: dict[str, object] = {"type": "command", "command": command}
+    handler: dict[str, object] = {"type": "command", COMMAND_KEY: command}
     if timeout is not None:
-        handler["timeout"] = timeout
-    return {"hooks": {event: [{"matcher": "", "hooks": [handler]}]}}
+        handler[TIMEOUT_KEY] = timeout
+    return {HOOKS_KEY: {event: [{MATCHER_KEY: "", HOOKS_KEY: [handler]}]}}
 
 
 @pytest.mark.parametrize("event", sorted(BLOCKING_EVENTS))
@@ -80,15 +91,14 @@ def test_script_invocation_with_inline_fallback_passes() -> None:
 
 def test_bare_skill_dir_invocation_is_flagged() -> None:
     # The substituted-path check covers ${CLAUDE_SKILL_DIR}, not only ${CLAUDE_PLUGIN_ROOT}.
-    bare = f"{PRE_WRITE_ADAPTER_INTERPRETER} " + "${CLAUDE_SKILL_DIR}/scripts/run.py"
+    bare = f"{PRE_WRITE_ADAPTER_INTERPRETER} {CLAUDE_SKILL_DIR_TOKEN}/scripts/run.py"
     assert hook_config_violations(config(SESSION_START_EVENT, command=bare))
 
 
 def test_skill_dir_invocation_with_inline_fallback_passes() -> None:
     guarded = (
-        f"{PRE_WRITE_ADAPTER_INTERPRETER} "
-        + "${CLAUDE_SKILL_DIR}/scripts/run.py"
-        + f" || echo '{PRE_WRITE_EMPTY_RESULT}'"
+        f"{PRE_WRITE_ADAPTER_INTERPRETER} {CLAUDE_SKILL_DIR_TOKEN}/scripts/run.py"
+        f" || echo '{PRE_WRITE_EMPTY_RESULT}'"
     )
     assert hook_config_violations(config(SESSION_START_EVENT, command=guarded)) == []
 
@@ -96,7 +106,7 @@ def test_skill_dir_invocation_with_inline_fallback_passes() -> None:
 def test_codex_skill_dir_token_invocation_is_flagged() -> None:
     # The build rewrites ${CLAUDE_SKILL_DIR} to ${SKILL_DIR} in dist/codex; a bare
     # invocation via the Codex token must be caught when that tree is scanned.
-    bare = f"{PRE_WRITE_ADAPTER_INTERPRETER} " + "${SKILL_DIR}/scripts/run.py"
+    bare = f"{PRE_WRITE_ADAPTER_INTERPRETER} {CODEX_SKILL_DIR_TOKEN}/scripts/run.py"
     assert hook_config_violations(config(SESSION_START_EVENT, command=bare))
 
 
@@ -138,13 +148,13 @@ def test_omitted_matcher_block_is_handled() -> None:
     # Codex allows a matcher-less block (as the live ~/.codex/hooks.json uses); a bare
     # hook in that form is still flagged on timeout and command shape.
     omitted: Mapping[str, object] = {
-        "hooks": {
+        HOOKS_KEY: {
             SESSION_START_EVENT: [
                 {
-                    "hooks": [
+                    HOOKS_KEY: [
                         {
                             "type": "command",
-                            "command": f"{PRE_WRITE_ADAPTER_INTERPRETER} {CLAUDE_PLUGIN_ROOT_TOKEN}/x.py",
+                            COMMAND_KEY: f"{PRE_WRITE_ADAPTER_INTERPRETER} {CLAUDE_PLUGIN_ROOT_TOKEN}/x.py",
                         }
                     ]
                 }
@@ -157,14 +167,14 @@ def test_omitted_matcher_block_is_handled() -> None:
 def test_omitted_matcher_safe_form_passes() -> None:
     # The same matcher-less shape, guarded and timed, is clean.
     safe: Mapping[str, object] = {
-        "hooks": {
+        HOOKS_KEY: {
             SESSION_START_EVENT: [
                 {
-                    "hooks": [
+                    HOOKS_KEY: [
                         {
                             "type": "command",
-                            "command": f"{PRE_WRITE_ADAPTER_INTERPRETER} {CLAUDE_PLUGIN_ROOT_TOKEN}/x.py || echo '{PRE_WRITE_EMPTY_RESULT}'",
-                            "timeout": 5,
+                            COMMAND_KEY: f"{PRE_WRITE_ADAPTER_INTERPRETER} {CLAUDE_PLUGIN_ROOT_TOKEN}/x.py || echo '{PRE_WRITE_EMPTY_RESULT}'",
+                            TIMEOUT_KEY: 5,
                         }
                     ]
                 }
@@ -210,27 +220,29 @@ def test_quoted_substituted_path_with_fallback_passes() -> None:
 def test_blocking_event_violation_reported_once_per_event() -> None:
     # Two handlers on one blocking event produce exactly one event-level violation.
     cfg: Mapping[str, object] = {
-        "hooks": {
+        HOOKS_KEY: {
             PRE_TOOL_USE_EVENT: [
                 {
-                    "matcher": "",
-                    "hooks": [
+                    MATCHER_KEY: "",
+                    HOOKS_KEY: [
                         {
                             "type": "command",
-                            "command": f"echo '{PRE_WRITE_EMPTY_RESULT}'",
-                            "timeout": 5,
+                            COMMAND_KEY: f"echo '{PRE_WRITE_EMPTY_RESULT}'",
+                            TIMEOUT_KEY: 5,
                         },
                         {
                             "type": "command",
-                            "command": f"echo '{PRE_WRITE_EMPTY_RESULT}'",
-                            "timeout": 5,
+                            COMMAND_KEY: f"echo '{PRE_WRITE_EMPTY_RESULT}'",
+                            TIMEOUT_KEY: 5,
                         },
                     ],
                 }
             ]
         }
     }
-    blocking = [v for v in hook_config_violations(cfg) if "blocking-capable event" in v]
+    blocking = [
+        v for v in hook_config_violations(cfg) if BLOCKING_EVENT_VIOLATION_MARKER in v
+    ]
     assert len(blocking) == 1
 
 
@@ -241,7 +253,7 @@ def test_version_pinned_cache_path_is_flagged() -> None:
 
 
 def _write_config(root: Path, runtime: str, cfg: Mapping[str, object]) -> None:
-    path = root / runtime / PRE_WRITE_PLUGIN / "hooks" / "hooks.json"
+    path = root / runtime / PRE_WRITE_PLUGIN / HOOKS_DIRECTORY / HOOKS_CONFIG_FILE
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(cfg), encoding="utf-8")
 
@@ -257,8 +269,8 @@ def test_rules_apply_identically_across_both_runtime_trees(tmp_path: Path) -> No
     blocking = config(PRE_TOOL_USE_EVENT)
     claude_root = tmp_path / "claude"
     codex_root = tmp_path / "codex"
-    _write_config(claude_root, "dist/claude", blocking)
-    _write_config(codex_root, "dist/codex", blocking)
+    _write_config(claude_root, CLAUDE_RUNTIME_TREE, blocking)
+    _write_config(codex_root, CODEX_RUNTIME_TREE, blocking)
 
     claude_rules = _rule_messages(iter_tree_violations(claude_root))
     codex_rules = _rule_messages(iter_tree_violations(codex_root))
@@ -277,22 +289,29 @@ def pre_write_config(
     extra_entries: int = 0,
     extra_handlers: int = 0,
 ) -> Mapping[str, object]:
-    handler: dict[str, object] = {"type": "command", "command": command, "timeout": 5}
+    handler: dict[str, object] = {
+        "type": "command",
+        COMMAND_KEY: command,
+        TIMEOUT_KEY: 5,
+    }
     entries = [
-        {"matcher": matcher, "hooks": [handler] * (1 + extra_handlers)}
+        {MATCHER_KEY: matcher, HOOKS_KEY: [handler] * (1 + extra_handlers)}
         for _ in range(1 + extra_entries)
     ]
-    return {"hooks": {PRE_TOOL_USE_EVENT: entries}}
+    return {HOOKS_KEY: {PRE_TOOL_USE_EVENT: entries}}
 
 
 @pytest.mark.parametrize(
     ("runtime", "command"),
-    [("claude", PRE_WRITE_COMMAND_CLAUDE), ("codex", PRE_WRITE_COMMAND_CODEX)],
+    [
+        (CLAUDE_RUNTIME_TREE, PRE_WRITE_COMMAND_CLAUDE),
+        (CODEX_RUNTIME_TREE, PRE_WRITE_COMMAND_CODEX),
+    ],
 )
 def test_pre_write_exception_passes_in_its_runtime_tree(
     tmp_path: Path, runtime: str, command: str
 ) -> None:
-    _write_config(tmp_path, f"dist/{runtime}", pre_write_config(command=command))
+    _write_config(tmp_path, runtime, pre_write_config(command=command))
     assert iter_tree_violations(tmp_path) == []
 
 
@@ -328,11 +347,11 @@ def test_pre_write_exception_is_flagged_on_another_blocking_event(event: str) ->
     # the block is the exact pre-write exception registered by its plugin.
     handler: dict[str, object] = {
         "type": "command",
-        "command": PRE_WRITE_COMMAND_CLAUDE,
-        "timeout": 5,
+        COMMAND_KEY: PRE_WRITE_COMMAND_CLAUDE,
+        TIMEOUT_KEY: 5,
     }
     on_event: Mapping[str, object] = {
-        "hooks": {event: [{"matcher": PRE_WRITE_MATCHER, "hooks": [handler]}]}
+        HOOKS_KEY: {event: [{MATCHER_KEY: PRE_WRITE_MATCHER, HOOKS_KEY: [handler]}]}
     }
     assert hook_config_violations(on_event, PRE_WRITE_PLUGIN)
 
@@ -340,11 +359,11 @@ def test_pre_write_exception_is_flagged_on_another_blocking_event(event: str) ->
 def test_pre_write_exception_without_a_matcher_key_is_flagged() -> None:
     handler: dict[str, object] = {
         "type": "command",
-        "command": PRE_WRITE_COMMAND_CLAUDE,
-        "timeout": 5,
+        COMMAND_KEY: PRE_WRITE_COMMAND_CLAUDE,
+        TIMEOUT_KEY: 5,
     }
     matcherless: Mapping[str, object] = {
-        "hooks": {PRE_TOOL_USE_EVENT: [{"hooks": [handler]}]}
+        HOOKS_KEY: {PRE_TOOL_USE_EVENT: [{HOOKS_KEY: [handler]}]}
     }
     assert hook_config_violations(matcherless, PRE_WRITE_PLUGIN)
 
