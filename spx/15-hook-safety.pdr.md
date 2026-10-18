@@ -18,10 +18,9 @@ The contract binds each version at the moment it is built: a shipped version is 
 
 ## Verification
 
-- ALWAYS: the pre-write check allows the call, exiting zero with a valid empty result, on every failure: an absent, unreadable, or malformed payload, a missing script, an absent interpreter, an exception, and a timeout
-
 ### Testing
 
+- ALWAYS: the pre-write check allows the call, exiting zero with a valid empty result, on every failure: an absent, unreadable, or malformed payload, a missing script, an absent interpreter, an exception, and a timeout ([compliance])
 - NEVER: a shipped hook registers on a blocking-capable event — PreToolUse, UserPromptSubmit, UserPromptExpansion, PermissionRequest, PostToolBatch, Stop, SubagentStop, PreCompact, or any other event on which exit 2, a deny or block decision, or a timeout denies the agent's action — except the spec-tree plugin's pre-write check, a `PreToolUse` entry whose matcher names exactly the Write and Edit tools and whose command runs the write-boundary adapter inside the inline guard ([compliance])
 - ALWAYS: every shipped hook entry declares an explicit timeout, never inheriting the agent's multi-minute default ([compliance])
 - NEVER: a shipped hook command is a bare invocation of a script file at a substituted path with no inline fallback — the command's reachable floor is a successful exit emitting a well-formed empty result ([compliance])
