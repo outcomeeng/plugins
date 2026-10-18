@@ -129,7 +129,9 @@ def build_module_token_literals() -> tuple[TokenLiteral, ...]:
         literals.extend(
             TokenLiteral(module, node.lineno, node.value)
             for node in ast.walk(tree)
-            if isinstance(node, ast.Constant) and node.value in tokens
+            if isinstance(node, ast.Constant)
+            and isinstance(node.value, str)
+            and node.value in tokens
         )
     return tuple(literals)
 
