@@ -36,7 +36,15 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Final
 
-from outcomeeng.validation.hook_contract import SESSION_START_EVENT
+from outcomeeng.validation.hook_contract import (
+    PRE_TOOL_USE_EVENT,
+    PRE_WRITE_ADAPTER_INTERPRETER,
+    PRE_WRITE_ADAPTER_SCRIPT,
+    PRE_WRITE_MATCHER_SEPARATOR,
+    PRE_WRITE_PLUGIN,
+    PRE_WRITE_TOOLS,
+    SESSION_START_EVENT,
+)
 
 # Events observational on EVERY runtime the marketplace ships a hook to. The same
 # hooks.json ships byte-identical to dist/claude and dist/codex, so an event is safe
@@ -100,7 +108,44 @@ _SUBSTITUTED_SCRIPT: Final[re.Pattern[str]] = re.compile(
 # not this check.
 _FALLBACK: Final[re.Pattern[str]] = re.compile(r"\|\|")
 # A version-pinned plugin cache path (a semver segment under a cache directory).
+# The write-boundary adapter invoked through the plugin-root path token of either tree.
+_ADAPTER_INVOCATION: Final[re.Pattern[str]] = re.compile(
+    re.escape(PRE_WRITE_ADAPTER_INTERPRETER)
+    + r"\s+\"?\$\{(?:CLAUDE_PLUGIN_ROOT|PLUGIN_ROOT)\}\"?/"
+    + re.escape(PRE_WRITE_ADAPTER_SCRIPT)
+)
 _PINNED_CACHE: Final[re.Pattern[str]] = re.compile(r"/cache/\S*?\d+\.\d+\.\d+")
+
+
+def _is_pre_write_exception(plugin: str | None, blocks: list[object]) -> bool:
+    """Return True when ``blocks`` is exactly the source-owned pre-write exception.
+
+    The exception is the spec-tree plugin's sole ``PreToolUse`` entry: one block with
+    one handler, a matcher naming exactly the Write and Edit tools, and a command that
+    runs the write-boundary adapter. Any other plugin, matcher, command, or a second
+    entry beside it is not the exception.
+    """
+    if plugin != PRE_WRITE_PLUGIN or len(blocks) != 1:
+        return False
+    block = blocks[0]
+    if not isinstance(block, Mapping):
+        return False
+    matcher = block.get("matcher")
+    if not isinstance(matcher, str):
+        return False
+    names = matcher.split(PRE_WRITE_MATCHER_SEPARATOR)
+    if len(names) != len(PRE_WRITE_TOOLS) or set(names) != PRE_WRITE_TOOLS:
+        return False
+    handlers = block.get("hooks")
+    if not isinstance(handlers, list) or len(handlers) != 1:
+        return False
+    handler = handlers[0]
+    if not isinstance(handler, Mapping):
+        return False
+    command = handler.get("command")
+    if not isinstance(command, str):
+        return False
+    return _ADAPTER_INVOCATION.search(command) is not None
 
 
 def _event_violation(event: str) -> str | None:
@@ -130,13 +175,16 @@ def _command_violations(event: str, command: str) -> list[str]:
     return found
 
 
-def hook_config_violations(config: Mapping[str, object]) -> list[str]:
+def hook_config_violations(
+    config: Mapping[str, object], plugin: str | None = None
+) -> list[str]:
     """Return every hook-safety violation in a parsed ``hooks.json`` config.
 
     An empty list means the config registers hooks only on non-blocking events,
     declares an explicit timeout on each handler, carries an inline short-circuit
     fallback after every substituted-path script invocation, and names no pinned
-    cache path.
+    cache path. ``plugin`` names the plugin that ships the config; it scopes the
+    pre-write exception to the one plugin the contract names.
     """
     violations: list[str] = []
     hooks = config.get("hooks")
@@ -147,6 +195,8 @@ def hook_config_violations(config: Mapping[str, object]) -> list[str]:
         if not isinstance(blocks, list):
             continue
         event_issue = _event_violation(event)
+        if event == PRE_TOOL_USE_EVENT and _is_pre_write_exception(plugin, blocks):
+            event_issue = None
         saw_handler = False
         for block in blocks:
             if not isinstance(block, Mapping):
@@ -186,7 +236,8 @@ def iter_tree_violations(root: Path) -> list[str]:
             continue
         relative = hooks_file.relative_to(root)
         violations.extend(
-            f"{relative}: {issue}" for issue in hook_config_violations(parsed)
+            f"{relative}: {issue}"
+            for issue in hook_config_violations(parsed, hooks_file.parent.parent.name)
         )
     return violations
 

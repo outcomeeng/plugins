@@ -12,6 +12,11 @@ from pathlib import Path
 
 import pytest
 
+from outcomeeng.validation.hook_contract import (
+    PRE_WRITE_ADAPTER_INTERPRETER,
+    PRE_WRITE_ADAPTER_SCRIPT,
+    PRE_WRITE_PLUGIN,
+)
 from outcomeeng.validation.hook_safety import iter_tree_violations, main
 
 # A command-shape-clean command, so a fixture's only possible violation is its event.
@@ -122,3 +127,29 @@ def test_main_exits_zero_for_a_clean_tree(tmp_path: Path) -> None:
     write_hooks(tmp_path, "dist/codex", "spec-tree", safe_config())
 
     assert main([str(tmp_path / "dist/claude"), str(tmp_path / "dist/codex")]) == 0
+
+
+def test_spec_tree_pre_write_hook_scans_clean_and_other_plugin_is_reported(
+    tmp_path: Path,
+) -> None:
+    command = (
+        f"{PRE_WRITE_ADAPTER_INTERPRETER} "
+        f"${{CLAUDE_PLUGIN_ROOT}}/{PRE_WRITE_ADAPTER_SCRIPT} || echo '{{}}'"
+    )
+    config = {
+        "hooks": {
+            "PreToolUse": [
+                {
+                    "matcher": "Write|Edit",
+                    "hooks": [{"type": "command", "command": command, "timeout": 5}],
+                }
+            ]
+        }
+    }
+    write_hooks(tmp_path, "dist/claude", PRE_WRITE_PLUGIN, config)
+    assert iter_tree_violations(tmp_path) == []
+
+    write_hooks(tmp_path, "dist/claude", "other-plugin", config)
+    violations = iter_tree_violations(tmp_path)
+    assert violations
+    assert all("other-plugin" in v for v in violations)

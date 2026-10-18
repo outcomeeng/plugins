@@ -15,6 +15,14 @@ from pathlib import Path
 
 import pytest
 
+from outcomeeng.validation.hook_contract import (
+    PRE_TOOL_USE_EVENT,
+    PRE_WRITE_ADAPTER_INTERPRETER,
+    PRE_WRITE_ADAPTER_SCRIPT,
+    PRE_WRITE_MATCHER_SEPARATOR,
+    PRE_WRITE_PLUGIN,
+    PRE_WRITE_TOOLS,
+)
 from outcomeeng.validation.hook_safety import (
     BLOCKING_EVENTS,
     hook_config_violations,
@@ -234,3 +242,48 @@ def test_rules_apply_identically_across_both_runtime_trees(tmp_path: Path) -> No
 
     assert claude_rules, "the blocking event must be flagged in each runtime tree"
     assert claude_rules == codex_rules
+
+
+PRE_WRITE_MATCHER = PRE_WRITE_MATCHER_SEPARATOR.join(sorted(PRE_WRITE_TOOLS))
+PRE_WRITE_COMMAND = (
+    f'if [ "${{SPECTREE_WRITE_BOUNDARY_DISABLED:-}}" = "1" ]; then echo \'{{}}\'; '
+    f"else {PRE_WRITE_ADAPTER_INTERPRETER} ${{CLAUDE_PLUGIN_ROOT}}/{PRE_WRITE_ADAPTER_SCRIPT} || echo '{{}}'; fi"
+)
+
+
+def pre_write_config(
+    *,
+    matcher: str = PRE_WRITE_MATCHER,
+    command: str = PRE_WRITE_COMMAND,
+    extra_entries: int = 0,
+) -> Mapping[str, object]:
+    handler: dict[str, object] = {"type": "command", "command": command, "timeout": 5}
+    entries = [
+        {"matcher": matcher, "hooks": [handler]} for _ in range(1 + extra_entries)
+    ]
+    return {"hooks": {PRE_TOOL_USE_EVENT: entries}}
+
+
+def test_pre_write_exception_passes_for_its_plugin() -> None:
+    assert hook_config_violations(pre_write_config(), PRE_WRITE_PLUGIN) == []
+
+
+def test_pre_write_exception_is_flagged_for_another_plugin() -> None:
+    assert hook_config_violations(pre_write_config(), "other-plugin")
+    assert hook_config_violations(pre_write_config())
+
+
+@pytest.mark.parametrize(
+    "matcher", ["", "Write", "Edit", "Write|Edit|Bash", "Write|Read", "Bash", ".*"]
+)
+def test_pre_write_exception_is_flagged_for_a_different_matcher(matcher: str) -> None:
+    assert hook_config_violations(pre_write_config(matcher=matcher), PRE_WRITE_PLUGIN)
+
+
+def test_pre_write_exception_is_flagged_for_a_different_command() -> None:
+    other = "python3 ${CLAUDE_PLUGIN_ROOT}/scripts/other.py || echo '{}'"
+    assert hook_config_violations(pre_write_config(command=other), PRE_WRITE_PLUGIN)
+
+
+def test_second_pre_tool_use_entry_beside_the_exception_is_flagged() -> None:
+    assert hook_config_violations(pre_write_config(extra_entries=1), PRE_WRITE_PLUGIN)
