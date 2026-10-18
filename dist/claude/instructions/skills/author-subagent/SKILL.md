@@ -1,11 +1,11 @@
 ---
-name: create-subagent
+name: author-subagent
 description: >-
   ALWAYS invoke this skill when creating, editing, or configuring subagents.
   NEVER create subagents without this skill.
-argument-hint: "<configuration-path-or-role>"
+argument-hint: "<configuration-path-or-role> [repair-input]"
 arguments: configuration_target
-allowed-tools: Read, Glob, Write, Edit, Skill
+allowed-tools: Read, Glob, Write, Edit, Bash, Skill
 ---
 
 Use skill `instructions:subagent-standards`.
@@ -27,15 +27,34 @@ ready for independent verification, with native configuration and a declared res
 - NEVER: dispatch a subagent auditor or wait on an audit verdict — a
   verdict on the definition comes from `/audit-subagent` run in an agent session separate from
   the one that authored it.
+- ALWAYS: write to the invocation checkout. Reach a user-scope destination outside it —
+  creating, editing, or deleting — only after the operator confirms the exact absolute
+  destination; one approval covers one write.
+- NEVER: widen an approved checkout-scope write to user scope on the judgment that the
+  configured agent suits other projects.
 
 </constraints>
 
+<intake>
+
+Select the route from the task message:
+
+| Task message carries                                                                                   | Route                    |
+| ------------------------------------------------------------------------------------------------------ | ------------------------ |
+| A target path or role only                                                                             | `<workflow>`             |
+| A target followed by a sealed run file and the instruction to attend to every rule the run names       | `<repair_from_run_file>` |
+| A target followed by the command line and complete output of a deterministic command that failed on it | `<repair_from_command>`  |
+
+</intake>
+
 <workflow>
 
-1. Require `$configuration_target`. When it is empty, request a configuration path
-   or role and stop. Read the requested target and its governing requirements. Identify the role's
+1. Require `$configuration_target`. When it is empty, return a `blocked` result naming the
+   missing configuration path or role. Read the requested target and its governing requirements. Identify the role's
    owning skill, exact configured name, destination, selected profile, and result.
-   Resolve a missing product decision in the invoking conversation before dependent edits.
+   Return a `blocked` result naming the missing input when a product decision or a required
+   input is absent. When the definition already holds the requested result, return an
+   `unchanged` result naming the committed head and the path that holds it, and edit nothing.
 2. Apply `/subagent-standards` to placement, capabilities, profiles, isolation,
    invocation, and evidence. Read the relevant references from the index below.
 3. For a skill-backed role, author a thin wrapper that invokes the owning skill
@@ -65,6 +84,36 @@ ready for independent verification, with native configuration and a declared res
 This skill launches no configuration it authors.
 
 </workflow>
+
+<repair_from_run_file>
+
+Read every finding to repair, by its `<unit>:<rule-id>` key, from the run file alone, and read
+the definition to repair from the unit the run records for it. Ignore any summary, remedy, or
+class name in the task message. Attend to every rule the run names and sweep each named class
+across the whole target. Then follow the `<repair>` steps.
+
+</repair_from_run_file>
+
+<repair_from_command>
+
+Repair the defect the command's output names at its authored source, never in an emitted
+definition. Then follow the `<repair>` steps.
+
+</repair_from_command>
+
+<repair>
+
+1. Repair each finding across every instance the cited clause covers, and change nothing the
+   clause does not require.
+2. Before returning, list every same-class site and every dependency the repair changed — a
+   renamed field, a changed profile, a changed result contract — and resolve each, in the
+   authored input and in each emitted definition.
+3. Run workflow steps 6 to 8 on the repaired definition.
+4. Return the repaired definition with, for each repair, the clause applied and the check that
+   shows the class closed, plus the outstanding verification the workflow names. Return a
+   `blocked` result naming the missing input when the run file or the command output is absent.
+
+</repair>
 
 <reference>
 
@@ -116,6 +165,10 @@ actual result.
   definition, and every emitted definition the result names exists at its path.
 - The result names the configuration path, the configured role, each emitted definition, the
   pending `/audit-subagent` run, and the pending native loading and minimal isolated execution.
+- A repair returns, for each finding, the clause applied and the check that shows the class
+  closed, with every same-class site and changed dependency resolved.
+- A definition that already holds the requested result returns `unchanged`; an absent input
+  or composed skill returns `blocked`.
 - No configuration load or execution approval is claimed before its actual result exists.
 
 </success_criteria>

@@ -271,7 +271,7 @@
             ],
             "filenames": []
           },
-          "author": "create-subagent",
+          "author": "author-subagent",
           "audit": "audit-subagent",
           "standard": "subagent-standards",
           "contract": "artifact-type"

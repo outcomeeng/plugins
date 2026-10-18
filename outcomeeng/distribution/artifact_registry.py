@@ -276,7 +276,7 @@ ARTIFACT_KINDS: Final = (
             Artifact(
                 role=ArtifactRole.SUBAGENT,
                 detection=_markdown_detection(SUBAGENT_PATH_GLOB),
-                author="create-subagent",
+                author="author-subagent",
                 audit="audit-subagent",
                 standard="subagent-standards",
             ),
