@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## Unreleased
+
+### Changed
+
+- **`/audit-skill` stops on a refused run-recording write and returns a configuration error.** When the native permission policy refuses a payload file, a run-recording command, or the journal, the audit stops at that write, retries nothing, writes to no other location, and returns `BLOCKED` with a `diagnostic` line that names the configuration error and the refused path. The audit writes its journal and context only to the locations `spx verification run` resolves, and its permission-refusal stop is separate from the one rerun it allows for an absent payload file. A host that launches the audit must grant those paths; the audit never widens its own access. Before this change, a refused write ended in a generic blocked result that named no configuration cause, and the skill was silent on where else a write could land.
+
 ## 0.22.0
 
 ### Breaking
