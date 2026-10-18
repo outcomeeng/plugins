@@ -126,6 +126,8 @@ alone, shows the root in the `Permissions` line after a recovery that supplies i
 The screen after a recovery that supplies no root shows the same line, so the control does not separate the
 appended option from earlier state of the same Codex thread, and the probe verdict for Codex stays `failed`.
 
+A run of `outcomeeng_testing/harnesses/writable_roots_probe.py` for Codex on the free worktree `/Users/shz/Code/outcomeeng/plugins/worktrees/executor-180` stopped `undecided` at `reserve-candidate` before any observation: no pane ran in that worktree, so the Prowl pane inventory held no worktree for it. The runner reserves a candidate pane only in a worktree that already runs a pane.
+
 **Remaining settlement condition**: the Codex half. A Codex thread that has never carried the root is
 resumed first without the root and then with it, under `workspace-write`, and the status screen after the
 first recovery omits the root while the screen after the second lists it.

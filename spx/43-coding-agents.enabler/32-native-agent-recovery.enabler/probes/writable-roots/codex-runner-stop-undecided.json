@@ -1,0 +1,19 @@
+{
+  "candidatePaneId": null,
+  "captures": {},
+  "codexVersion": "codex-cli 0.163.0",
+  "exits": [],
+  "recoveries": {},
+  "recoverySourceDigest": "3a407707b216614471a7b9df9d212dbedca3232a3139b7d62647d68ee144dc27",
+  "sessionId": null,
+  "sharedConfigDigestAfter": "c9e579f299dd36a073cd317267132439c36fa1d29928e678719a140a8ed9523d",
+  "sharedConfigDigestBefore": "c9e579f299dd36a073cd317267132439c36fa1d29928e678719a140a8ed9523d",
+  "stop": {
+    "condition": "undecided",
+    "evidence": {
+      "worktrees": []
+    },
+    "reason": "The Prowl inventory holds no single worktree for the candidate path.",
+    "step": "reserve-candidate"
+  }
+}
