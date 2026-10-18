@@ -14,6 +14,7 @@ import sys
 from collections.abc import Callable, Iterable, Iterator
 from contextlib import contextmanager
 from dataclasses import astuple, dataclass, replace
+from enum import StrEnum
 from decimal import Decimal
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -330,6 +331,92 @@ def invalid_namespace_property(check: Callable[[tuple[str, str]], None]) -> None
             check((accounting.NAMESPACE_ENV, ""))
         except ValueError as error:
             check((accounting.NAMESPACE_ENV, str(error)))
+
+    run_replayable_property(
+        run, seed_value=SEED, replay_path=REPLAY.replace("accounting", "configuration")
+    )
+
+
+class NamespaceRoute(StrEnum):
+    """The two operator-facing routes by which a namespace reaches the merged configuration."""
+
+    SAVED = "saved installation configuration"
+    OPTION = "--launchd-namespace"
+
+
+@contextmanager
+def _without_usage_environment() -> Iterator[None]:
+    held = {
+        key: os.environ.pop(key)
+        for key in list(os.environ)
+        if key.startswith("SPX_USAGE_")
+    }
+    try:
+        yield
+    finally:
+        os.environ.update(held)
+
+
+def _routed_configuration(route: NamespaceRoute, namespace: str) -> Any:
+    """Merge one namespace through usage_control.configuration() by the given route."""
+    accounting, _, _, control = modules()
+    reset = fixture()[AccountingField.TIMESTAMP]
+    with (
+        TemporaryDirectory(prefix="namespace-route-") as temporary,
+        _without_usage_environment(),
+    ):
+        root = Path(temporary)
+        arguments = [control.Option.ROOT, str(root), control.Option.END, reset]
+        if route is NamespaceRoute.SAVED:
+            (root / control.CONFIG_NAME).write_text(
+                json.dumps(
+                    {accounting.RESET_ENV: reset, accounting.NAMESPACE_ENV: namespace}
+                ),
+                encoding="utf-8",
+            )
+        else:
+            arguments += [control.Option.RESET_AT, reset]
+            arguments.append(f"{control.Option.LAUNCHD_NAMESPACE}={namespace}")
+        args = control.parser().parse_args(arguments)
+        return control.configuration(args, accounting.timestamp(reset))
+
+
+def valid_routed_namespace_property(
+    check: Callable[[NamespaceRoute, str, str], None],
+) -> None:
+    """Drive each valid namespace through usage_control.configuration() by each route."""
+    accounting, _, _, _ = modules()
+
+    @seed(SEED)
+    @settings(max_examples=EXAMPLES, deadline=None)
+    @given(valid_namespaces())
+    def run(namespace: str) -> None:
+        for route in NamespaceRoute:
+            config = _routed_configuration(route, namespace)
+            check(route, namespace, config.effective()[accounting.NAMESPACE_ENV])
+
+    run_replayable_property(
+        run, seed_value=SEED, replay_path=REPLAY.replace("accounting", "configuration")
+    )
+
+
+def invalid_routed_namespace_property(
+    check: Callable[[NamespaceRoute, str, tuple[str, str]], None],
+) -> None:
+    """Drive each invalid namespace through usage_control.configuration() by each route;
+    the observation is the rejection message, empty when the namespace was accepted."""
+    accounting, _, _, _ = modules()
+
+    @seed(SEED)
+    @settings(max_examples=EXAMPLES, deadline=None)
+    @given(invalid_namespaces(accounting.NAMESPACE_MAX_CHARS))
+    def run(namespace: str) -> None:
+        for route in NamespaceRoute:
+            try:
+                _routed_configuration(route, namespace)
+                check(route, namespace, (accounting.NAMESPACE_ENV, ""))
+            except ValueError as error:
+                check(route, namespace, (accounting.NAMESPACE_ENV, str(error)))
 
     run_replayable_property(
         run, seed_value=SEED, replay_path=REPLAY.replace("accounting", "configuration")
