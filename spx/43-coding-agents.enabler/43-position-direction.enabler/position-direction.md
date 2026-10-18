@@ -13,13 +13,15 @@ The skill reaches panes through the environment adapters of `spx/43-coding-agent
 
 ## Assertions
 
+- A restart maps to one stop request carrying `stopBackgroundWork: true`, followed by a relaunch only when the stop succeeds; a stop that returns `exit-blocked` maps to that result with the pane's visible text and no relaunch
+
 ### Compliance
 
 - ALWAYS: `/direct-positions` resumes a directing session after every compaction from its own resume note, the configuration its override file and the shipped defaults compose, and its unread mail ([audit])
 - NEVER: the skill or a script names one operation's people, mail names, Products, panes, worktree paths, dates, or incidents; each such value comes from the composed configuration ([audit])
 - ALWAYS: the monitor, the doorbell, and the controller each run one bounded pass per invocation and exit; the skill re-arms the next pass through a session-scoped harness capability, the harness monitor for the monitor and a bounded background run whose exit the harness reports for the doorbell and the controller, and no script loops, waits for its next pass, or outlives the session that started it ([audit])
 - ALWAYS: every pane read, prompt, key, compaction, restart, and reload runs through the coding-agents environment adapters, and every mail operation through the agent-mail adapter, each reached by a `__file__`-relative import inside the plugin; no script constructs a raw environment or mail command or names a path into the plugin cache ([audit])
-- NEVER: a script types into, compacts, restarts, or reloads a pane the configuration marks untouchable, a pane whose last prompt the environment adapter shows came from the operator, or a pane that waits at a question or approval screen ([audit])
+- NEVER: a script types into, compacts, restarts, or reloads a pane the configuration marks untouchable, a pane whose last prompt the environment adapter shows came from the operator, or a pane that waits at a question or approval screen, other than the key `1` a restart's own stop sends through the herdr adapter at the background-work exit confirmation that stop raised ([audit])
 - NEVER: a script reads a harness transcript file; a pane's last prompt and context fill come from the environment adapters or are reported unavailable ([audit])
 - ALWAYS: a position acts only when the declared methodology chapter defines it or an operator grant in the composed configuration names it with its bounds, and only within the authority that source establishes; an action that neither source establishes stops and names the absent definition and the absent grant ([audit])
 - ALWAYS: the Director ranks a Change the Product's Maintainer confirmed at Proposed for its Frame ahead of the Product's other Proposed Changes ([audit])
