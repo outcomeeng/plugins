@@ -17,8 +17,10 @@ import pytest
 
 from outcomeeng.validation.hook_contract import (
     PRE_TOOL_USE_EVENT,
-    PRE_WRITE_ADAPTER_INTERPRETER,
-    PRE_WRITE_ADAPTER_SCRIPT,
+    PRE_WRITE_COMMAND_CLAUDE,
+    PRE_WRITE_COMMAND_CODEX,
+    PRE_WRITE_EMPTY_RESULT,
+    PRE_WRITE_KILL_SWITCH,
     PRE_WRITE_MATCHER_SEPARATOR,
     PRE_WRITE_PLUGIN,
     PRE_WRITE_TOOLS,
@@ -245,16 +247,12 @@ def test_rules_apply_identically_across_both_runtime_trees(tmp_path: Path) -> No
 
 
 PRE_WRITE_MATCHER = PRE_WRITE_MATCHER_SEPARATOR.join(sorted(PRE_WRITE_TOOLS))
-PRE_WRITE_COMMAND = (
-    f'if [ "${{SPECTREE_WRITE_BOUNDARY_DISABLED:-}}" = "1" ]; then echo \'{{}}\'; '
-    f"else {PRE_WRITE_ADAPTER_INTERPRETER} ${{CLAUDE_PLUGIN_ROOT}}/{PRE_WRITE_ADAPTER_SCRIPT} || echo '{{}}'; fi"
-)
 
 
 def pre_write_config(
     *,
     matcher: str = PRE_WRITE_MATCHER,
-    command: str = PRE_WRITE_COMMAND,
+    command: str = PRE_WRITE_COMMAND_CLAUDE,
     extra_entries: int = 0,
 ) -> Mapping[str, object]:
     handler: dict[str, object] = {"type": "command", "command": command, "timeout": 5}
@@ -264,8 +262,15 @@ def pre_write_config(
     return {"hooks": {PRE_TOOL_USE_EVENT: entries}}
 
 
-def test_pre_write_exception_passes_for_its_plugin() -> None:
-    assert hook_config_violations(pre_write_config(), PRE_WRITE_PLUGIN) == []
+@pytest.mark.parametrize(
+    ("runtime", "command"),
+    [("claude", PRE_WRITE_COMMAND_CLAUDE), ("codex", PRE_WRITE_COMMAND_CODEX)],
+)
+def test_pre_write_exception_passes_in_its_runtime_tree(
+    tmp_path: Path, runtime: str, command: str
+) -> None:
+    _write_config(tmp_path, f"dist/{runtime}", pre_write_config(command=command))
+    assert iter_tree_violations(tmp_path) == []
 
 
 def test_pre_write_exception_is_flagged_for_another_plugin() -> None:
@@ -287,3 +292,20 @@ def test_pre_write_exception_is_flagged_for_a_different_command() -> None:
 
 def test_second_pre_tool_use_entry_beside_the_exception_is_flagged() -> None:
     assert hook_config_violations(pre_write_config(extra_entries=1), PRE_WRITE_PLUGIN)
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        PRE_WRITE_COMMAND_CLAUDE.replace(
+            PRE_WRITE_KILL_SWITCH, f"{PRE_WRITE_KILL_SWITCH}_OTHER"
+        ),
+        PRE_WRITE_COMMAND_CLAUDE.replace(PRE_WRITE_EMPTY_RESULT, ""),
+    ],
+)
+def test_pre_write_exception_is_flagged_for_a_command_with_a_changed_guard(
+    command: str,
+) -> None:
+    # The changed command still reaches the adapter through ${CLAUDE_PLUGIN_ROOT} with
+    # an inline fallback, so only equality with the source-owned command flags it.
+    assert hook_config_violations(pre_write_config(command=command), PRE_WRITE_PLUGIN)

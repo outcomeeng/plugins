@@ -13,9 +13,10 @@ from pathlib import Path
 import pytest
 
 from outcomeeng.validation.hook_contract import (
-    PRE_WRITE_ADAPTER_INTERPRETER,
-    PRE_WRITE_ADAPTER_SCRIPT,
+    PRE_WRITE_COMMAND_CLAUDE,
+    PRE_WRITE_MATCHER_SEPARATOR,
     PRE_WRITE_PLUGIN,
+    PRE_WRITE_TOOLS,
 )
 from outcomeeng.validation.hook_safety import iter_tree_violations, main
 
@@ -132,16 +133,19 @@ def test_main_exits_zero_for_a_clean_tree(tmp_path: Path) -> None:
 def test_spec_tree_pre_write_hook_scans_clean_and_other_plugin_is_reported(
     tmp_path: Path,
 ) -> None:
-    command = (
-        f"{PRE_WRITE_ADAPTER_INTERPRETER} "
-        f"${{CLAUDE_PLUGIN_ROOT}}/{PRE_WRITE_ADAPTER_SCRIPT} || echo '{{}}'"
-    )
+    matcher = PRE_WRITE_MATCHER_SEPARATOR.join(sorted(PRE_WRITE_TOOLS))
     config = {
         "hooks": {
             "PreToolUse": [
                 {
-                    "matcher": "Write|Edit",
-                    "hooks": [{"type": "command", "command": command, "timeout": 5}],
+                    "matcher": matcher,
+                    "hooks": [
+                        {
+                            "type": "command",
+                            "command": PRE_WRITE_COMMAND_CLAUDE,
+                            "timeout": 5,
+                        }
+                    ],
                 }
             ]
         }
