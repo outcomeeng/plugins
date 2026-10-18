@@ -28,7 +28,7 @@ The assertion that a target's native agent format, filename shape, and namespace
 
 **Settlement condition.** A real Codex-only field exists, and `strip_frontmatter_fields` generalizes to a per-target frontmatter schema that strips every field the target's schema does not carry, in either direction.
 
-## DEBT [evidence]: seam-dependent registry findings repeat at the latest audit (f-001, f-002)
+## DEBT [evidence]: emission reads the module-global registry and accepts no registry input (f-001) `outcomeeng/distribution/build.py`, `AGENT_CAPABILITY_REGISTRY`, `untestable source`
 
 Two findings (both REJECT) on
 `spx/18-plugin-build.enabler/43-target-emission.enabler/tests/test_target_emission.compliance.l1.py`:
@@ -40,6 +40,37 @@ Two findings (both REJECT) on
   changed registry entry. This repeats the entry "The registry-resolution
   assertion has no observable seam" above; its resolution and settlement
   condition apply unchanged.
+
+The audit is a `spec-tree:test-evidence-auditor` verdict on this node at head
+`6ef55dd4d93b24b8fa701b8779116bbe7c9bbc04`. The verdict carries no sealed run
+token.
+
+**Resolution shape**: f-001 takes the resolution of the entry above. f-002 is
+settled by the same seam: the test drives emission over a changed and an added
+registry entry and observes the suffix and prefix follow each.
+
+**Out-of-change evidence**: the text lies outside the Change.
+`git diff -U0 origin/main...HEAD` reports no hunk in the cited test, the
+harness, or `outcomeeng/distribution/build.py`, against merge base
+`149a55f71befdf61e88be9bda2aae725db1f2381`.
+
+**Invalidation check.** The cited text neither cites, restates, nor depends on
+anything this changeset changed. The changeset adds symbols to
+`outcomeeng/distribution/profiles.py`, narrows the guard in
+`outcomeeng/validation/profile_configuration.py`, and adds model-price and
+profile-binding generators, harnesses, and tests. The cited test drives target
+emission through `outcomeeng/distribution/build.py`, which the changeset does
+not change.
+
+**Settlement condition**: emission accepts the registry as an input and the
+test at line 337 drives emission over a changed and an added registry entry; a
+hardcoded suffix or prefix then fails it.
+
+## DEBT [evidence]: the registry-resolution test passes the registry's own capability into agent_slug (f-002) `spx/18-plugin-build.enabler/43-target-emission.enabler/tests/test_target_emission.compliance.l1.py`, `test_agent_capabilities_resolve_from_the_source_owned_registry`, `evidence`
+
+Two findings (both REJECT) on
+`spx/18-plugin-build.enabler/43-target-emission.enabler/tests/test_target_emission.compliance.l1.py`:
+
 - f-002 at line 337: `test_agent_capabilities_resolve_from_the_source_owned_registry`
   passes the registry's own capability into `agent_slug` and never drives
   emission; a hardcoded `.toml` suffix and `plugin_` prefix in

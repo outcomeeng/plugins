@@ -75,7 +75,7 @@ implementation-audit orchestration, not to skill composition.
 `approved` with zero findings over 319 `coverage-gap` units, observed on Change
 #76 subject `6c64464abf07a2e384dabea0d3d0bc19a1b12956`.
 
-## DEBT [evidence]: compliance tests exercise only conforming inputs (f-001, f-002, f-003)
+## DEBT [evidence]: the environment-marker compliance test exercises only conforming agents (f-001) `spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/tests/test_agents.compliance.l1.py`, `test_environment_marker_is_namespaced_by_source_plugin`, `evidence`
 
 Three findings (all REJECT) on
 `spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/tests/test_agents.compliance.l1.py`,
@@ -86,9 +86,79 @@ violation rejected:
   exercises only conforming repository agents. The same-word case the
   assertion names is not exercised, and no violating input shows that a marker
   dropping or merging the plugin component is rejected.
+
+The audit is a second `spec-tree:test-evidence-auditor` verdict on this node at
+head `7e15b3c437ca8326e0e63dbd0e54d45a62245ba6`. The verdict carries no sealed
+run token.
+
+**Resolution shape**: add a generated violating case to each test, which the
+assertion must reject: a marker that drops or merges the plugin component for
+f-001, a source or build input lacking the plugin slug prefix for f-002, and an
+agent outside the declared skill surface or a manifest declaring an agents
+field for f-003.
+
+**Out-of-change evidence**: the text lies outside the Change.
+`git diff -U0 origin/main...HEAD` reports no hunk on the cited file, against
+merge base `149a55f71befdf61e88be9bda2aae725db1f2381`.
+
+**Invalidation check.** The cited text neither cites, restates, nor depends on
+anything this changeset changed. The changeset adds symbols to
+`outcomeeng/distribution/profiles.py` (model prices, `UsageTokenClass`,
+`UnpricedModelError`, `resolve_model_price`; no existing symbol changes), adds
+the model-price generator, harness, and tests, and narrows the configuration
+guard in `outcomeeng/validation/profile_configuration.py`. The three tests at
+lines 54, 125, and 163 of `test_agents.compliance.l1.py` drive agent conversion
+and the build through `outcomeeng/distribution/agents.py` and
+`outcomeeng/distribution/build.py`, which the changeset does not change.
+
+**Settlement condition**: each of the three tests is exercised against a
+generated violating case and rejects it.
+
+## DEBT [evidence]: the plugin-slug prefix compliance test reads conforming agents only (f-002) `spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/tests/test_agents.compliance.l1.py`, `test_flat_namespace_agents_carry_the_plugin_slug_prefix`, `evidence`
+
+Three findings (all REJECT) on
+`spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/tests/test_agents.compliance.l1.py`,
+each a compliance test that exercises conforming output only and shows no
+violation rejected:
+
 - f-002 at line 125: `test_flat_namespace_agents_carry_the_plugin_slug_prefix`
   reads the built tree of conforming agents only. This repeats f-002 of the
   earlier audit of this node.
+
+The audit is a second `spec-tree:test-evidence-auditor` verdict on this node at
+head `7e15b3c437ca8326e0e63dbd0e54d45a62245ba6`. The verdict carries no sealed
+run token.
+
+**Resolution shape**: add a generated violating case to each test, which the
+assertion must reject: a marker that drops or merges the plugin component for
+f-001, a source or build input lacking the plugin slug prefix for f-002, and an
+agent outside the declared skill surface or a manifest declaring an agents
+field for f-003.
+
+**Out-of-change evidence**: the text lies outside the Change.
+`git diff -U0 origin/main...HEAD` reports no hunk on the cited file, against
+merge base `149a55f71befdf61e88be9bda2aae725db1f2381`.
+
+**Invalidation check.** The cited text neither cites, restates, nor depends on
+anything this changeset changed. The changeset adds symbols to
+`outcomeeng/distribution/profiles.py` (model prices, `UsageTokenClass`,
+`UnpricedModelError`, `resolve_model_price`; no existing symbol changes), adds
+the model-price generator, harness, and tests, and narrows the configuration
+guard in `outcomeeng/validation/profile_configuration.py`. The three tests at
+lines 54, 125, and 163 of `test_agents.compliance.l1.py` drive agent conversion
+and the build through `outcomeeng/distribution/agents.py` and
+`outcomeeng/distribution/build.py`, which the changeset does not change.
+
+**Settlement condition**: each of the three tests is exercised against a
+generated violating case and rejects it.
+
+## DEBT [evidence]: the manifest-declared surface compliance test inspects conforming output only (f-003) `spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/tests/test_agents.compliance.l1.py`, `test_converted_agents_ship_inside_a_manifest_declared_surface`, `evidence`
+
+Three findings (all REJECT) on
+`spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/tests/test_agents.compliance.l1.py`,
+each a compliance test that exercises conforming output only and shows no
+violation rejected:
+
 - f-003 at line 163: `test_converted_agents_ship_inside_a_manifest_declared_surface`
   inspects only conforming build output. Nothing shows that an agent placed
   outside the declared skill surface, or a manifest that declares an agents
