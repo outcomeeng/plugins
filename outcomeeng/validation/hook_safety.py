@@ -237,7 +237,9 @@ def iter_tree_violations(root: Path) -> list[str]:
         if hooks_file.parent.name != HOOKS_DIRECTORY:
             continue
         try:
-            parsed: object = json.loads(hooks_file.read_text(encoding=HOOKS_CONFIG_ENCODING))
+            parsed: object = json.loads(
+                hooks_file.read_text(encoding=HOOKS_CONFIG_ENCODING)
+            )
         except (OSError, json.JSONDecodeError) as exc:
             violations.append(
                 f"{hooks_file}{REPORT_LOCATION_SEPARATOR}unreadable hook config ({exc})"
