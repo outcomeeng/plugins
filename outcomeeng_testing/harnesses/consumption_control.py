@@ -1489,3 +1489,76 @@ def namespace_scope_property(
             "test_accounting.property", "test_installation_namespace.property"
         ),
     )
+
+
+@dataclass(frozen=True)
+class NamespaceReinstallObservation:
+    first: str
+    second: str
+    error: str | None
+    record_before: str
+    record_after: str
+    loaded_before: frozenset[str]
+    loaded_after: frozenset[str]
+    second_labels: frozenset[str]
+
+
+def namespace_reinstall_property(
+    check: Callable[[NamespaceReinstallObservation], None],
+) -> None:
+    """Install under one namespace, then install under another against the same root."""
+    _, _, schedule, _ = modules()
+
+    @seed(SEED)
+    @settings(max_examples=EXAMPLES, deadline=None)
+    @given(distinct_namespace_pairs())
+    def run(namespaces: tuple[str, str]) -> None:
+        first, second = namespaces
+        with workspace() as work:
+            runner = RecordingRunner()
+            agents = work.root / "launch-agents"
+            schedule.install(
+                replace(work.config, namespace=first),
+                SCRIPTS,
+                agents,
+                runner,
+                "darwin",
+                True,
+            )
+            record = work.config.root / schedule.INSTALL_NAME
+            record_before = record.read_text()
+            loaded_before = frozenset(runner.loaded)
+            error: str | None = None
+            try:
+                schedule.install(
+                    replace(work.config, namespace=second),
+                    SCRIPTS,
+                    agents,
+                    runner,
+                    "darwin",
+                    True,
+                )
+            except ValueError as raised:
+                error = str(raised)
+            check(
+                NamespaceReinstallObservation(
+                    first,
+                    second,
+                    error,
+                    record_before,
+                    record.read_text(),
+                    loaded_before,
+                    frozenset(runner.loaded),
+                    frozenset(
+                        schedule.job_label(second, mode) for mode in schedule.MODES
+                    ),
+                )
+            )
+
+    run_replayable_property(
+        run,
+        seed_value=SEED,
+        replay_path=REPLAY.replace(
+            "test_accounting.property", "test_installation_namespace.property"
+        ),
+    )
