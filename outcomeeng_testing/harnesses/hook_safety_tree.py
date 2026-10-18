@@ -387,53 +387,6 @@ class HookTree:
             matcher=matcher,
         )
 
-    def write_pre_write_hook(
-        self,
-        runtime: str,
-        plugin: str,
-        *,
-        matcher: str | None = None,
-        command: str | None = None,
-        event: str = PRE_TOOL_USE_EVENT,
-        entries: int = 1,
-        handlers: int = 1,
-    ) -> Path:
-        """Write a payload shaped as the pre-write exception, with overridable parts.
-
-        The defaults are the source-owned exception for ``runtime``: the exact
-        Write and Edit matcher and the runtime's pre-write command. A ``None``
-        override keeps the default; pass ``matcher=""`` for an empty matcher.
-        """
-        default_command = (
-            PRE_WRITE_COMMAND_CODEX
-            if runtime == CODEX_RUNTIME_TREE
-            else PRE_WRITE_COMMAND_CLAUDE
-        )
-        return self.write_hooks(
-            runtime,
-            plugin,
-            hook_config(
-                event,
-                command=default_command if command is None else command,
-                matcher=pre_write_matcher() if matcher is None else matcher,
-                entries=entries,
-                handlers=handlers,
-            ),
-        )
-
-    def write_matcherless_pre_write_hook(self, runtime: str, plugin: str) -> Path:
-        """Write the pre-write exception with its matcher key omitted."""
-        command = (
-            PRE_WRITE_COMMAND_CODEX
-            if runtime == CODEX_RUNTIME_TREE
-            else PRE_WRITE_COMMAND_CLAUDE
-        )
-        return self.write_hooks(
-            runtime,
-            plugin,
-            hook_config(PRE_TOOL_USE_EVENT, command=command, matcher=None),
-        )
-
     def scan_default_roots(self, argv: Sequence[str] = ()) -> ScanReport:
         """Run ``main`` with this tree's root as the working directory; report the outcome.
 
@@ -450,10 +403,6 @@ class HookTree:
         finally:
             os.chdir(previous)
         return ScanReport(exit_code=exit_code, stderr=stderr.getvalue())
-
-    def subtree(self, name: str) -> HookTree:
-        """Return an isolated tree rooted in a named directory beneath this one."""
-        return HookTree(self.root / name)
 
 
 @contextmanager
