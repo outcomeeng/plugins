@@ -281,6 +281,41 @@ def test_restart_relaunches_the_same_agent_kind_with_no_launch_arguments() -> No
     assert "agent_arguments" not in relaunch["arguments"]
 
 
+def test_restart_stop_request_carries_background_work_stop_and_authorization() -> None:
+    herdr = _Herdr()
+    envs = core.Environments(herdr, None)  # type: ignore[arg-type]
+    pane = core.Pane("herdr", "w1:p1", "/work/a", "idle", "exec", "claude")
+
+    envs.restart(pane, 1000)
+
+    stop = herdr.requests[0]
+    assert stop["operation"] == "stop"
+    assert stop["arguments"]["stopBackgroundWork"] is True
+    assert stop["arguments"]["pane"] == pane.pane_id
+
+
+def test_restart_whose_stop_returns_exit_blocked_returns_it_without_relaunch() -> None:
+    blocked = {
+        "status": "exit-blocked",
+        "detail": "the session still holds the pane",
+        "output": "Background work is running\n1. Stop it",
+    }
+
+    class _Blocked(_Herdr):
+        def execute(self, request: dict) -> dict:
+            self.requests.append(request)
+            return blocked
+
+    herdr = _Blocked()
+    envs = core.Environments(herdr, None)  # type: ignore[arg-type]
+    pane = core.Pane("herdr", "w1:p1", "/work/a", "idle", "exec", "claude")
+
+    result = envs.restart(pane, 1000)
+
+    assert result == blocked
+    assert [r["operation"] for r in herdr.requests] == ["stop"]
+
+
 def test_prompt_without_text_stops_naming_the_argument_and_fix(
     tmp_path: Path,
 ) -> None:

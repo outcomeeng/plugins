@@ -13,7 +13,9 @@ The skill reaches panes through the environment adapters of `spx/43-coding-agent
 
 ## Assertions
 
-- A restart maps to one stop request carrying `stopBackgroundWork: true`, followed by a relaunch only when the stop succeeds; a stop that returns `exit-blocked` maps to that result with the pane's visible text and no relaunch
+### Mapping
+
+- A restart maps to one stop request carrying `stopBackgroundWork: true`, followed by a relaunch only when the stop succeeds; a stop that returns `exit-blocked` maps to that result with the pane's visible text and no relaunch ([test](tests/test_direction.mapping.l1.py))
 
 ### Compliance
 
