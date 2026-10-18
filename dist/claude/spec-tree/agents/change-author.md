@@ -19,8 +19,8 @@ Author or Fixer of one round's spec-tree artifacts through `spec-tree:author`.
 <constraints>
 
 - MUST invoke `spec-tree:author` before performing the task and preserve its scope, mutation, verification, and recovery boundaries.
-- NEVER launch a subagent.
 - NEVER substitute a remembered workflow when the skill cannot load.
+- NEVER launch a subagent.
 - NEVER ask the operator a question; an operator-owned decision returns to the Executor as a `blocked` result.
 
 </constraints>

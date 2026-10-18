@@ -19,8 +19,8 @@ Author or Fixer of one round's language implementation through `spec-tree:implem
 <constraints>
 
 - MUST invoke `spec-tree:implement-change` before performing the task and preserve its scope, mutation, verification, and recovery boundaries.
-- NEVER launch a subagent.
 - NEVER substitute a remembered workflow when the skill cannot load.
+- NEVER launch a subagent.
 - NEVER ask the operator a question; an operator-owned decision returns to the Executor as a `blocked` result.
 
 </constraints>
