@@ -13,12 +13,13 @@ import subprocess
 import sys
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
-from dataclasses import astuple, dataclass
+from dataclasses import astuple, dataclass, replace
 from decimal import Decimal
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import ModuleType
 from typing import Any
+from uuid import uuid4
 
 from hypothesis import given, seed, settings
 from hypothesis import strategies as st
@@ -704,8 +705,9 @@ def native_installation_observation(work: Workspace) -> NativeInstallationObserv
             (),
         )
     domain = f"gui/{os.getuid()}"
+    config = replace(work.config, namespace=f"{work.config.namespace}-{uuid4().hex}")
     for mode in schedule.MODES:
-        handle = domain + "/" + schedule.LABEL_PREFIX + "." + mode
+        handle = domain + "/" + schedule.job_label(config.namespace, mode)
         observed = runner.run(
             (schedule.LAUNCHCTL, schedule.LaunchctlOperation.PRINT, handle)
         )
@@ -720,7 +722,7 @@ def native_installation_observation(work: Workspace) -> NativeInstallationObserv
     cleanup: dict[str, Any] = {}
     try:
         schedule.install(
-            work.config,
+            config,
             SCRIPTS,
             work.root / "native-launch-agents",
             runner,

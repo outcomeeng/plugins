@@ -17,10 +17,15 @@ from pathlib import Path
 from typing import Protocol
 
 from usage_accounting import AccountingField
-from usage_accounting import Config, Json
+from usage_accounting import (
+    DEFAULT_NAMESPACE,
+    NAMESPACE_ENV,
+    Config,
+    Json,
+    checked_namespace,
+)
 from usage_reports import atomic_write, json_write
 
-LABEL_PREFIX = "engineering.outcome.usage-control"
 COMMAND_SECONDS = 30
 COMMAND_BYTES = 64 * 1024
 AISE_VERSION = "aise 1.0.0-rc.4"
@@ -176,6 +181,36 @@ class SubprocessRunner:
         )
 
 
+def job_label(namespace: str, mode: str) -> str:
+    return namespace + "." + mode
+
+
+def saved_namespace(root: Path) -> str:
+    """The launchd label namespace the saved configuration under ``root`` names."""
+    path = root / CONFIG_NAME
+    if not path.exists():
+        return DEFAULT_NAMESPACE
+    if path.is_symlink() or path.stat().st_size > COMMAND_BYTES:
+        raise ValueError(
+            f"Invalid saved configuration file: {path}; inspect its path and size"
+        )
+    try:
+        value = json.loads(path.read_text())
+    except json.JSONDecodeError as error:
+        raise ValueError(
+            f"Saved configuration is not valid JSON: {path}: {error}; "
+            "correct the file or reinstall through install"
+        ) from error
+    if not isinstance(value, dict):
+        raise ValueError(
+            f"Saved configuration must be a JSON object: {path}; "
+            "correct the file or reinstall through install"
+        )
+    return checked_namespace(
+        str(value.get(NAMESPACE_ENV, DEFAULT_NAMESPACE)), NAMESPACE_ENV
+    )
+
+
 def checked(runner: Runner, argv: tuple[str, ...]) -> CommandResult:
     result = runner.run(argv)
     if result.returncode:
@@ -189,7 +224,7 @@ def absent(result: CommandResult) -> bool:
     return result.returncode != 0 and "could not find service" in result.stderr.lower()
 
 
-def manifest(root: Path) -> Json | None:
+def manifest(root: Path, namespace: str) -> Json | None:
     path = root / INSTALL_NAME
     if not path.exists():
         return None
@@ -213,6 +248,14 @@ def manifest(root: Path) -> Json | None:
         raise ValueError(
             f"Invalid managed installation identity: {path} must carry schema_version 1 "
             f"and root {root}; inspect the file and reinstall through install"
+        )
+    recorded = value.get(NAMESPACE_ENV, DEFAULT_NAMESPACE)
+    if recorded != namespace:
+        raise ValueError(
+            f"Managed installation namespace mismatch: {path} records "
+            f"{recorded!r} but {NAMESPACE_ENV} is {namespace!r}; "
+            "only jobs under the configured namespace are managed, so address the "
+            "recorded namespace to inspect or stop them"
         )
     recorded_jobs = value.get(ScheduleField.JOBS)
     if not isinstance(recorded_jobs, list) or len(recorded_jobs) != len(MODES):
@@ -239,12 +282,12 @@ def manifest(root: Path) -> Json | None:
             )
         label = job.get("label")
         if (
-            label not in tuple(LABEL_PREFIX + "." + mode for mode in MODES)
+            label not in tuple(job_label(namespace, mode) for mode in MODES)
             or label in labels
         ):
             raise ValueError(
                 f"Invalid managed job label {label!r}: {path} must use one distinct "
-                f"label per mode under {LABEL_PREFIX}; inspect the file and reinstall through install"
+                f"label per mode under {namespace}; inspect the file and reinstall through install"
             )
         labels.add(label)
         location = Path(str(job.get("path")))
@@ -361,7 +404,7 @@ def install_plan(
     assets = config.root / "assets" / version
     jobs = []
     for mode in MODES:
-        label = LABEL_PREFIX + "." + mode
+        label = job_label(config.namespace, mode)
         schedule = (
             [{"Minute": minute} for minute in (0, 15, 30, 45)]
             if mode == "detect"
@@ -395,6 +438,7 @@ def install_plan(
         )
     return {
         "schema_version": 1,
+        NAMESPACE_ENV: config.namespace,
         ScheduleField.STATUS: "planned",
         "asset_version": version,
         ScheduleField.ASSETS: str(assets),
@@ -424,7 +468,7 @@ def install(
     if plan[ScheduleField.STATUS] == "unsupported" or not activate:
         return plan
     installed_path = config.root / INSTALL_NAME
-    prior = manifest(config.root)
+    prior = manifest(config.root, config.namespace)
     owned_paths = (
         {job["path"] for job in prior.get(ScheduleField.JOBS, [])}
         if isinstance(prior, dict)
@@ -552,7 +596,8 @@ def jobs(root: Path, operation: str, runner: Runner, platform: str) -> Json:
             "operation": operation,
             "root": str(root),
         }
-    value = manifest(root)
+    namespace = saved_namespace(root)
+    value = manifest(root, namespace)
     if value is None:
         return {ScheduleField.STATUS: JobStatus.NOT_INSTALLED, "operation": operation}
     domain = f"gui/{os.getuid()}"
@@ -563,7 +608,7 @@ def jobs(root: Path, operation: str, runner: Runner, platform: str) -> Json:
     }
     for job in value[ScheduleField.JOBS]:
         label, path = str(job["label"]), Path(job["path"])
-        if label not in tuple(LABEL_PREFIX + "." + mode for mode in MODES):
+        if label not in tuple(job_label(namespace, mode) for mode in MODES):
             raise ValueError(
                 f"Unrecognized managed label: {label}; inspect {installation}"
             )
