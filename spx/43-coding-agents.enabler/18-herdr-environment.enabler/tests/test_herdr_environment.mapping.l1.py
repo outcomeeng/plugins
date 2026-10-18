@@ -50,6 +50,7 @@ def test_herdr_operation_mappings() -> None:
         operation = module.Operation(request[module.OPERATION_FIELD])
         arguments = cast(dict[str, object], request[module.ARGUMENTS_FIELD])
         argv = module.command_for(request)
+        pane = arguments.get(module.PANE_FIELD)
         contract = usage_contract_for(module, operation)
         reading = read_argv(contract, argv)
 
@@ -121,9 +122,17 @@ def test_herdr_operation_mappings() -> None:
             assert response == {module.OUTPUT_FIELD: captured_payload(captured)}
         else:
             assert response == captured_payload(captured)
+        # Stop's pane polling asks herdr for the agent of its pane once, and the
+        # captured answer reports the session ended.
+        polled = (
+            [(*module.EVIDENCE_COMMAND_PREFIXES[module.Operation.READ], pane)]
+            if operation is module.Operation.STOP
+            else []
+        )
         assert [call[0] for call in runner.calls] == [
             argv,
             *([] if evidence_argv is None else [evidence_argv]),
+            *polled,
         ]
         called_argv, stdin, bound = runner.calls[0]
         assert (called_argv, stdin) == (argv, None)
@@ -661,7 +670,10 @@ def test_stop_submits_the_agents_exit_and_keeps_its_pane_for_a_relaunch() -> Non
     runner = RecordingRunner(replay(stopped))
     result = module.execute(request, runner)
     assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
-    assert [call[0] for call in runner.calls] == [argv]
+    assert [call[0] for call in runner.calls] == [
+        argv,
+        (*module.EVIDENCE_COMMAND_PREFIXES[module.Operation.READ], pane),
+    ]
 
     kept = [
         listed

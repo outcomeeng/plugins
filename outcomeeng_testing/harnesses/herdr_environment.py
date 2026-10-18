@@ -322,13 +322,20 @@ class CapturedResponse:
     # The captured response of the evidence command the operation runs after its
     # own, when it runs one.
     evidence: CommandResultContract | None = None
+    # The captured answer of the agent lookup the operation's pane polling makes
+    # once its command succeeded, when it polls: herdr's `agent_not_found` for the
+    # pane stop ended.
+    ended: CommandResultContract | None = None
 
 
 def replay(captured: CapturedResponse) -> list[CommandResultContract]:
     """The command results a run of the captured operation receives, in order."""
-    if captured.evidence is None:
-        return [captured.result]
-    return [captured.result, captured.evidence]
+    results = [captured.result]
+    if captured.evidence is not None:
+        results.append(captured.evidence)
+    if captured.ended is not None:
+        results.append(captured.ended)
+    return results
 
 
 def _load() -> ModuleType:
@@ -391,6 +398,15 @@ def _evidence_result(
     if not path.is_file():
         raise CaptureError(f"no captured evidence response at {path}")
     return _success_result(module, path)
+
+
+def _ended_result(
+    module: ModuleType, operation: object
+) -> CommandResultContract | None:
+    """What stop's pane polling receives once the exit prompt ended the session."""
+    if operation is not module.Operation.STOP:
+        return None
+    return _error_result(module, AGENT_NOT_FOUND_GET_FIXTURE)
 
 
 def _success_result(module: ModuleType, path: Path) -> CommandResultContract:
@@ -491,6 +507,7 @@ def _captured_success_under(
         None,
         fields,
         _evidence_result(module, operation, root),
+        _ended_result(module, operation),
     )
 
 
