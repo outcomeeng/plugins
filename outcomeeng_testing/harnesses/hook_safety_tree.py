@@ -261,6 +261,13 @@ def pre_write_violation_cases() -> tuple[HookCase, ...]:
         for tool in sorted(PRE_WRITE_TOOLS)
     )
     cases.extend(
+        _pre_write_case(
+            f"matcher naming both tools and repeating {tool}",
+            matcher=PRE_WRITE_MATCHER_SEPARATOR.join((*sorted(PRE_WRITE_TOOLS), tool)),
+        )
+        for tool in sorted(PRE_WRITE_TOOLS)
+    )
+    cases.extend(
         (
             _pre_write_case("empty matcher", matcher=""),
             _pre_write_case("no matcher key", matcher=None),
