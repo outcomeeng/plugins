@@ -22,6 +22,31 @@ PRE_WRITE_KILL_SWITCH: Final = "SPECTREE_WRITE_BOUNDARY_HOOK_DISABLED"
 PRE_WRITE_EMPTY_RESULT: Final = "{}"
 CLAUDE_PLUGIN_ROOT_TOKEN: Final = "${CLAUDE_PLUGIN_ROOT}"
 CODEX_PLUGIN_ROOT_TOKEN: Final = "${PLUGIN_ROOT}"
+# The build rewrites ${CLAUDE_SKILL_DIR} to ${SKILL_DIR} in the dist/codex tree.
+CLAUDE_SKILL_DIR_TOKEN: Final = "${CLAUDE_SKILL_DIR}"
+CODEX_SKILL_DIR_TOKEN: Final = "${SKILL_DIR}"
+SUBSTITUTED_PATH_TOKENS: Final[tuple[str, ...]] = (
+    CLAUDE_PLUGIN_ROOT_TOKEN,
+    CLAUDE_SKILL_DIR_TOKEN,
+    CODEX_PLUGIN_ROOT_TOKEN,
+    CODEX_SKILL_DIR_TOKEN,
+)
+
+# The generated runtime trees a hook config ships under, and where a plugin keeps it.
+CLAUDE_RUNTIME_TREE: Final = "dist/claude"
+CODEX_RUNTIME_TREE: Final = "dist/codex"
+RUNTIME_TREES: Final[tuple[str, ...]] = (CLAUDE_RUNTIME_TREE, CODEX_RUNTIME_TREE)
+HOOKS_DIRECTORY: Final = "hooks"
+HOOKS_CONFIG_FILE: Final = "hooks.json"
+
+# The hooks.json schema keys the validator reads.
+HOOKS_KEY: Final = "hooks"
+MATCHER_KEY: Final = "matcher"
+COMMAND_KEY: Final = "command"
+TIMEOUT_KEY: Final = "timeout"
+
+# Report wording that identifies an event-level violation.
+BLOCKING_EVENT_VIOLATION_MARKER: Final = "hook on blocking-capable event"
 
 
 def _pre_write_command(plugin_root_token: str) -> str:
@@ -56,8 +81,21 @@ def session_start_payload(
 
 
 __all__ = [
+    "BLOCKING_EVENT_VIOLATION_MARKER",
     "CLAUDE_PLUGIN_ROOT_TOKEN",
+    "CLAUDE_RUNTIME_TREE",
+    "CLAUDE_SKILL_DIR_TOKEN",
     "CODEX_PLUGIN_ROOT_TOKEN",
+    "CODEX_RUNTIME_TREE",
+    "CODEX_SKILL_DIR_TOKEN",
+    "COMMAND_KEY",
+    "HOOKS_CONFIG_FILE",
+    "HOOKS_DIRECTORY",
+    "HOOKS_KEY",
+    "MATCHER_KEY",
+    "RUNTIME_TREES",
+    "SUBSTITUTED_PATH_TOKENS",
+    "TIMEOUT_KEY",
     "PRE_WRITE_COMMANDS",
     "PRE_WRITE_COMMAND_CLAUDE",
     "PRE_WRITE_COMMAND_CODEX",

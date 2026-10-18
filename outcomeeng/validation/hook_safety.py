@@ -37,12 +37,21 @@ from pathlib import Path
 from typing import Final
 
 from outcomeeng.validation.hook_contract import (
+    BLOCKING_EVENT_VIOLATION_MARKER,
+    COMMAND_KEY,
+    HOOKS_CONFIG_FILE,
+    HOOKS_DIRECTORY,
+    HOOKS_KEY,
+    MATCHER_KEY,
     PRE_TOOL_USE_EVENT,
     PRE_WRITE_COMMANDS,
     PRE_WRITE_MATCHER_SEPARATOR,
     PRE_WRITE_PLUGIN,
     PRE_WRITE_TOOLS,
+    RUNTIME_TREES,
     SESSION_START_EVENT,
+    SUBSTITUTED_PATH_TOKENS,
+    TIMEOUT_KEY,
 )
 
 # Events observational on EVERY runtime the marketplace ships a hook to. The same
@@ -97,7 +106,9 @@ BLOCKING_EVENTS: Final[frozenset[str]] = frozenset(
 # ``${CLAUDE_PLUGIN_ROOT}`` is preserved via Codex's alias). All four are matched so a
 # bare invocation is caught in whichever tree it lands.
 _SUBSTITUTED_SCRIPT: Final[re.Pattern[str]] = re.compile(
-    r"\$\{(?:CLAUDE_PLUGIN_ROOT|CLAUDE_SKILL_DIR|PLUGIN_ROOT|SKILL_DIR)\}[\"']?/[^\s|;&]*"
+    "(?:"
+    + "|".join(re.escape(token) for token in SUBSTITUTED_PATH_TOKENS)
+    + r")[\"']?/[^\s|;&]*"
 )
 # A short-circuit fallback (``||``) following the substituted-path invocation. This is
 # the deterministic, falsifiable half of the contract: a substituted-path command with
@@ -123,19 +134,19 @@ def _is_pre_write_exception(plugin: str | None, blocks: list[object]) -> bool:
     block = blocks[0]
     if not isinstance(block, Mapping):
         return False
-    matcher = block.get("matcher")
+    matcher = block.get(MATCHER_KEY)
     if not isinstance(matcher, str):
         return False
     names = matcher.split(PRE_WRITE_MATCHER_SEPARATOR)
     if len(names) != len(PRE_WRITE_TOOLS) or set(names) != PRE_WRITE_TOOLS:
         return False
-    handlers = block.get("hooks")
+    handlers = block.get(HOOKS_KEY)
     if not isinstance(handlers, list) or len(handlers) != 1:
         return False
     handler = handlers[0]
     if not isinstance(handler, Mapping):
         return False
-    command = handler.get("command")
+    command = handler.get(COMMAND_KEY)
     if not isinstance(command, str):
         return False
     return command in PRE_WRITE_COMMANDS
@@ -146,7 +157,7 @@ def _event_violation(event: str) -> str | None:
     if event in SAFE_EVENTS:
         return None
     if event in BLOCKING_EVENTS:
-        return f"{event}: hook on blocking-capable event — exit 2 or a timeout would deny the agent's action"
+        return f"{event}: {BLOCKING_EVENT_VIOLATION_MARKER} — exit 2 or a timeout would deny the agent's action"
     return f"{event}: hook on an event outside the known non-blocking set — only observe/inject events are permitted"
 
 
@@ -180,7 +191,7 @@ def hook_config_violations(
     pre-write exception to the one plugin the contract names.
     """
     violations: list[str] = []
-    hooks = config.get("hooks")
+    hooks = config.get(HOOKS_KEY)
     if not isinstance(hooks, Mapping):
         return violations
     for raw_event, blocks in hooks.items():
@@ -194,18 +205,18 @@ def hook_config_violations(
         for block in blocks:
             if not isinstance(block, Mapping):
                 continue
-            handlers = block.get("hooks")
+            handlers = block.get(HOOKS_KEY)
             if not isinstance(handlers, list):
                 continue
             for handler in handlers:
                 if not isinstance(handler, Mapping):
                     continue
                 saw_handler = True
-                if "timeout" not in handler:
+                if TIMEOUT_KEY not in handler:
                     violations.append(
                         f"{event}: hook handler declares no explicit timeout"
                     )
-                command = handler.get("command")
+                command = handler.get(COMMAND_KEY)
                 if isinstance(command, str):
                     violations.extend(_command_violations(event, command))
         # Report the event-level violation once per event, not once per handler.
@@ -217,8 +228,8 @@ def hook_config_violations(
 def iter_tree_violations(root: Path) -> list[str]:
     """Scan every ``hooks/hooks.json`` under ``root`` and return located violations."""
     violations: list[str] = []
-    for hooks_file in sorted(root.rglob("hooks.json")):
-        if hooks_file.parent.name != "hooks":
+    for hooks_file in sorted(root.rglob(HOOKS_CONFIG_FILE)):
+        if hooks_file.parent.name != HOOKS_DIRECTORY:
             continue
         try:
             parsed: object = json.loads(hooks_file.read_text(encoding="utf-8"))
@@ -236,7 +247,7 @@ def iter_tree_violations(root: Path) -> list[str]:
 
 
 # The generated runtime trees a hook config can ship under, scanned by default.
-DEFAULT_ROOTS: Final[tuple[Path, ...]] = (Path("dist/claude"), Path("dist/codex"))
+DEFAULT_ROOTS: Final[tuple[Path, ...]] = tuple(Path(tree) for tree in RUNTIME_TREES)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
