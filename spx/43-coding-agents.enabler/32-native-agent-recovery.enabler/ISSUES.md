@@ -103,21 +103,27 @@ a recovered session's permissions.
 session and a live Codex session, read each recovered session's effective policy through that agent's own
 status surface, and retain each screen as the probe's inspectable artifact.
 
-**Deferral reason**: the attested run restarts Prowl, which the operator owns, so the run has no form
-inside the Change that links the probe. The node declares `malleability: spec`, so an unattested probe
+**Deferral reason**: the attested run needs live sessions in Prowl panes and the operator's Codex home,
+which the operator owns, so the run has no form inside the Change that links the probe. The node declares `malleability: spec`, so an unattested probe
 leaves the assertion Declared and the node merges as itself.
 
 **Settlement condition**: `probes/writable-roots/` retains an attested run for one Claude Code candidate
 and one Codex candidate, and each retained screen lists the supplied root as writable.
 
-**Blocked run**: the Author's attempt to prepare the two probe candidates ended with `invalid-target`
-and the detail "Recovery candidates require exactly one current-session controller." The Author's agent
-session holds no Prowl pane, so neither probe candidate can carry `current-session` evidence, and
-`_validate_candidate_set` in
-`src/plugins/coding-agents/skills/recover-prowl-agents/scripts/recover_agents.py` applies that check
-to every phase that reads the manifest. The run needs either a stand-in controller label on one test
-candidate, which the evidence contract does not define, or a recovery request that admits a set with no
-controller.
+**Attested run, partly settled**: the probe holds an attested run of 2026-10-18 with one Claude Code
+candidate and one Codex candidate, and the Author session served as the `current-session` controller from
+its own Prowl pane. Claude Code's `/permissions` Workspace tab lists
+`/Users/shz/Code/outcomeeng/plugins/worktrees/executor-593/.spx/probe-writable-root` after a recovery that
+appends it and lists no such directory after a recovery that appends none, so the Claude Code half of the
+settlement condition holds. Codex runs under the operator's setting `Custom (danger-full-access, Ask for
+approval)`, and its `/status` screen lists no writable directory with or without the root, so the Codex
+half does not hold: the two screens are the same and show neither that the option reached the session nor
+that the resume path dropped it. The probe verdict is `failed` for that reason.
+
+**Remaining settlement condition**: the Codex half. A Codex recovery that supplies the root shows it as
+writable on a status surface, which needs either a restricting sandbox for the recovered session or a Codex
+surface that lists an added directory under full access. The protocol adds no sandbox option, so the
+choice is the operator's.
 
 ## DEBT [consistency]: an absent or unusable agent-token module ends recovery with a traceback
 
@@ -166,8 +172,9 @@ candidate (evidence `native-status`), each in its own Prowl pane, returned
 `{"detail": "Recovery candidates require exactly one current-session controller.", "schemaVersion": 5, "status": "invalid-target"}`.
 The session that ran the command holds no Prowl pane.
 
-**Impact**: a session outside every Prowl pane cannot recover a set of Prowl panes, and the writable-roots
-probe cannot run its protocol without a candidate mislabeled as the controller.
+**Impact**: a session outside every Prowl pane cannot recover a set of Prowl panes. The writable-roots probe
+ran only after the Author session moved into a Prowl pane and served as the controller; before that, its
+protocol could not run without a candidate mislabeled as the controller.
 
 **Resolution shape**: the node's spec and the exact-native-recovery decision state whether the controller is
 required; the source and the compliance test follow the answer.
