@@ -375,7 +375,7 @@ def test_no_agent_announces_a_first_install_its_plan_does_not_carry() -> None:
 
     for case in observation.cases:
         reported = cast("list[dict[str, str]]", case.document[ReportField.WARNINGS])
-        for agent in (Target.CLAUDE, Target.CODEX):
+        for agent in Target:
             announced = {
                 ReportField.AGENT: agent.value,
                 ReportField.MESSAGE: FIRST_INSTALL_WARNING.format(
@@ -409,11 +409,7 @@ def test_no_agent_announces_a_first_install_its_plan_does_not_carry() -> None:
             } - pending
             named = cast(
                 "list[str]",
-                case.document[
-                    ReportField.CLAUDE_PLUGINS
-                    if agent is Target.CLAUDE
-                    else ReportField.CODEX_PLUGINS
-                ],
+                case.document[ReportField(f"{agent.value}_plugins")],
             )
             assert set(named) == reached, (case.state, agent)
 

@@ -1,7 +1,11 @@
 """Finite catalog-to-agent mapping evidence for repository installation."""
 
+import json
+from pathlib import Path
+
 from outcomeeng.distribution.contracts import Target
 from outcomeeng.distribution.installation import (
+    CLAUDE_CATALOG_PATH,
     CLAUDE_PLUGIN_ID_FIELD,
     CLAUDE_PLUGIN_PROJECT_PATH_FIELD,
     CLAUDE_PLUGIN_SCOPE_FIELD,
@@ -70,7 +74,13 @@ def test_each_mode_maps_its_selection_to_catalog_order() -> None:
 
 def test_every_claude_install_record_maps_to_its_refresh_disposition() -> None:
     observation = observe_record_refresh_plan()
-    marketplace = observation.marketplace
+    committed_catalog = json.loads(
+        (Path(__file__).resolve().parents[4] / CLAUDE_CATALOG_PATH).read_text(
+            encoding="utf-8"
+        )
+    )
+    marketplace = committed_catalog["name"]
+    assert observation.marketplace == marketplace
     updates = [
         command
         for command in observation.plan.commands
@@ -141,15 +151,22 @@ def test_every_claude_install_record_maps_to_its_refresh_disposition() -> None:
 
 def test_each_registry_entry_shape_maps_to_the_source_the_run_refreshes_from() -> None:
     observation = observe_registry_shape_plan()
+    committed_catalog = json.loads(
+        (Path(__file__).resolve().parents[4] / CLAUDE_CATALOG_PATH).read_text(
+            encoding="utf-8"
+        )
+    )
+    marketplace = committed_catalog["name"]
+    assert observation.marketplace == marketplace
 
     for payload, shape, expected_source, expected_action in observation.rows:
-        registered = claude_registered_marketplace(payload, observation.marketplace)
+        registered = claude_registered_marketplace(payload, marketplace)
         plan = observation.plans[shape]
         document = observation.documents[shape]
         assert document[ReportField.SOURCE] == (
             observation.declared_source if expected_source is None else expected_source
         ), shape
-        assert document[ReportField.MARKETPLACE] == observation.marketplace
+        assert document[ReportField.MARKETPLACE] == marketplace
         source_operations = [
             command
             for command in plan.commands
@@ -166,6 +183,6 @@ def test_each_registry_entry_shape_maps_to_the_source_the_run_refreshes_from() -
             assert registered is not None, shape
             assert registered.source == expected_source, shape
             assert source_operations[0].operation is Operation.MARKETPLACE_REFRESH
-            assert source_operations[0].argv[-1] == observation.marketplace
+            assert source_operations[0].argv[-1] == marketplace
             assert expected_source not in source_operations[0].argv, shape
     assert {shape for _, shape, _, _ in observation.rows} == set(RegistryShape)
