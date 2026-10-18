@@ -8,6 +8,7 @@ from outcomeeng_testing.harnesses.consumption_control import (
     invalid_namespace_property,
     invalid_price_override_property,
     price_override_property,
+    valid_namespace_property,
 )
 
 
@@ -42,3 +43,11 @@ def test_invalid_namespace_names_its_rejected_field() -> None:
         assert field in message
 
     invalid_namespace_property(check)
+
+
+def test_valid_namespace_is_accepted_and_saved_unchanged() -> None:
+    def check(namespace: str, resolved: str, saved: str) -> None:
+        assert resolved == namespace
+        assert saved == namespace
+
+    valid_namespace_property(check)

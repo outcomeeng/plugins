@@ -105,23 +105,21 @@ def alert_reads() -> st.SearchStrategy[tuple[list[tuple[str, int, int]], int]]:
     )
 
 
-_NAMESPACE_EDGE = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-_NAMESPACE_INNER = _NAMESPACE_EDGE + "-"
+_NAMESPACE_SEGMENT_ALPHABET = (
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_"
+)
+_NAMESPACE_SEPARATOR = "."
 
 
 def _segments() -> st.SearchStrategy[str]:
-    """One dot-free label segment built from letters, digits, and inner hyphens."""
-    edge = st.sampled_from(_NAMESPACE_EDGE)
-    inner = st.text(alphabet=_NAMESPACE_INNER, max_size=14)
-    return st.one_of(
-        edge,
-        st.tuples(edge, inner, edge).map("".join),
-    )
+    """One non-empty segment of ASCII letters, digits, hyphens and underscores."""
+    return st.text(alphabet=_NAMESPACE_SEGMENT_ALPHABET, min_size=1, max_size=14)
 
 
 def valid_namespaces() -> st.SearchStrategy[str]:
-    """Vary reverse-DNS style launchd namespaces built segment by segment."""
-    return st.lists(_segments(), min_size=1, max_size=4).map(".".join)
+    """Vary namespaces of one or more dot-separated non-empty segments, so hyphens and
+    underscores fall at segment edges and in the interior."""
+    return st.lists(_segments(), min_size=1, max_size=4).map(_NAMESPACE_SEPARATOR.join)
 
 
 def distinct_namespace_pairs() -> st.SearchStrategy[tuple[str, str]]:
@@ -132,25 +130,44 @@ def distinct_namespace_pairs() -> st.SearchStrategy[tuple[str, str]]:
 
 
 def invalid_namespaces(maximum: int) -> st.SearchStrategy[str]:
-    """Vary namespaces broken by construction: a foreign character, a stray separator,
-    an empty segment, an empty value, or a length beyond ``maximum``."""
+    """Vary namespaces broken by construction: an empty value, an empty segment, a
+    whitespace or path-separator character, another foreign ASCII character, or a
+    length beyond ``maximum``."""
     foreign = st.characters(codec="ascii").filter(
-        lambda character: character not in _NAMESPACE_INNER + "."
-    )
-    corrupted = st.tuples(valid_namespaces(), foreign, st.integers(min_value=0)).map(
-        lambda parts: (
-            parts[0][: parts[2] % (len(parts[0]) + 1)]
-            + parts[1]
-            + parts[0][parts[2] % (len(parts[0]) + 1) :]
+        lambda character: (
+            character not in _NAMESPACE_SEGMENT_ALPHABET + _NAMESPACE_SEPARATOR
         )
     )
-    edged = st.tuples(valid_namespaces(), st.sampled_from(".-"), st.booleans()).map(
-        lambda parts: parts[1] + parts[0] if parts[2] else parts[0] + parts[1]
+    whitespace = st.sampled_from(" \t\n\r\v\f")
+    separators = st.sampled_from("/\\")
+    broken = st.one_of(foreign, whitespace, separators)
+
+    def insert(parts: tuple[str, str, int]) -> str:
+        namespace, character, position = parts
+        offset = position % (len(namespace) + 1)
+        return namespace[:offset] + character + namespace[offset:]
+
+    corrupted = st.tuples(valid_namespaces(), broken, st.integers(min_value=0)).map(
+        insert
+    )
+    edged = st.tuples(valid_namespaces(), st.booleans()).map(
+        lambda parts: (
+            _NAMESPACE_SEPARATOR + parts[0]
+            if parts[1]
+            else parts[0] + _NAMESPACE_SEPARATOR
+        )
     )
     gapped = st.tuples(valid_namespaces(), valid_namespaces()).map(
-        lambda parts: parts[0] + ".." + parts[1]
+        lambda parts: parts[0] + _NAMESPACE_SEPARATOR * 2 + parts[1]
     )
     overlong = st.integers(min_value=maximum + 1, max_value=maximum + 40).map(
         lambda length: "a" * length
     )
-    return st.one_of(corrupted, edged, gapped, overlong, st.just(""))
+    return st.one_of(
+        corrupted,
+        edged,
+        gapped,
+        overlong,
+        st.just(""),
+        st.just(_NAMESPACE_SEPARATOR),
+    )

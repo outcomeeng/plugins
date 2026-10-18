@@ -11,7 +11,7 @@ import os
 import shutil
 import subprocess
 import sys
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterable, Iterator
 from contextlib import contextmanager
 from dataclasses import astuple, dataclass, replace
 from decimal import Decimal
@@ -37,6 +37,7 @@ from outcomeeng_testing.generators.consumption_control import (
     alert_reads,
     distinct_namespace_pairs,
     invalid_namespaces,
+    valid_namespaces,
 )
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
 
@@ -279,6 +280,32 @@ def configuration_property(check: Callable[[list[tuple[str, str]]], None]) -> No
             except ValueError as error:
                 diagnostics.append((field, str(error)))
         check(diagnostics)
+
+    run_replayable_property(
+        run, seed_value=SEED, replay_path=REPLAY.replace("accounting", "configuration")
+    )
+
+
+def valid_namespace_property(check: Callable[[str, str, str], None]) -> None:
+    """Resolve each valid namespace through the environment and the saved effective configuration."""
+    accounting, _, _, _ = modules()
+
+    @seed(SEED)
+    @settings(max_examples=EXAMPLES, deadline=None)
+    @given(valid_namespaces())
+    def run(namespace: str) -> None:
+        environment = {
+            accounting.RESET_ENV: fixture()[AccountingField.TIMESTAMP],
+            accounting.NAMESPACE_ENV: namespace,
+        }
+        config = accounting.Config.from_environment(
+            environment, Path("/state"), Path("/transcripts")
+        )
+        check(
+            namespace,
+            config.namespace,
+            config.effective()[accounting.NAMESPACE_ENV],
+        )
 
     run_replayable_property(
         run, seed_value=SEED, replay_path=REPLAY.replace("accounting", "configuration")
@@ -1486,7 +1513,7 @@ def namespace_scope_property(
         run,
         seed_value=SEED,
         replay_path=REPLAY.replace(
-            "test_accounting.property", "test_installation_namespace.property"
+            "accounting.property.l1", "installation.compliance.l1"
         ),
     )
 
@@ -1495,19 +1522,35 @@ def namespace_scope_property(
 class NamespaceReinstallObservation:
     first: str
     second: str
-    error: str | None
-    record_before: str
-    record_after: str
-    loaded_before: frozenset[str]
-    loaded_after: frozenset[str]
+    namespace_key: str
+    record_after: dict[str, Any]
+    first_labels: frozenset[str]
     second_labels: frozenset[str]
+    first_files_before: dict[str, bytes]
+    first_files_after: dict[str, bytes]
+    loaded_after_install: frozenset[str]
+    loaded_after_stop: frozenset[str]
+    loaded_after_restart: frozenset[str]
+    reinstall_labels: frozenset[str]
+    status_labels: frozenset[str]
+    stop_labels: frozenset[str]
+    restart_labels: frozenset[str]
 
 
 def namespace_reinstall_property(
     check: Callable[[NamespaceReinstallObservation], None],
 ) -> None:
-    """Install under one namespace, then install under another against the same root."""
-    _, _, schedule, _ = modules()
+    """Install under one namespace, reinstall under another against the same root,
+    then inspect, stop, and restart through the installation record."""
+    accounting, _, schedule, _ = modules()
+
+    def addressed(calls: Iterable[tuple[str, ...]]) -> frozenset[str]:
+        return frozenset(
+            Path(call[-1]).stem
+            if call[1] == schedule.LaunchctlOperation.BOOTSTRAP
+            else call[-1].rsplit("/", 1)[-1]
+            for call in calls
+        )
 
     @seed(SEED)
     @settings(max_examples=EXAMPLES, deadline=None)
@@ -1517,7 +1560,7 @@ def namespace_reinstall_property(
         with workspace() as work:
             runner = RecordingRunner()
             agents = work.root / "launch-agents"
-            schedule.install(
+            first_plan = schedule.install(
                 replace(work.config, namespace=first),
                 SCRIPTS,
                 agents,
@@ -1525,33 +1568,53 @@ def namespace_reinstall_property(
                 "darwin",
                 True,
             )
-            record = work.config.root / schedule.INSTALL_NAME
-            record_before = record.read_text()
-            loaded_before = frozenset(runner.loaded)
-            error: str | None = None
-            try:
-                schedule.install(
-                    replace(work.config, namespace=second),
-                    SCRIPTS,
-                    agents,
-                    runner,
-                    "darwin",
-                    True,
-                )
-            except ValueError as raised:
-                error = str(raised)
+            first_paths = tuple(
+                Path(job["path"]) for job in first_plan[ScheduleField.JOBS]
+            )
+            first_files_before = {str(path): path.read_bytes() for path in first_paths}
+            mark = len(runner.calls)
+            schedule.install(
+                replace(work.config, namespace=second),
+                SCRIPTS,
+                agents,
+                runner,
+                "darwin",
+                True,
+            )
+            reinstall_labels = addressed(runner.calls[mark:])
+            loaded_after_install = frozenset(runner.loaded)
+            labels: dict[str, frozenset[str]] = {}
+            loaded: dict[str, frozenset[str]] = {}
+            for operation in (
+                schedule.JobOperation.STATUS,
+                schedule.JobOperation.STOP,
+                schedule.JobOperation.RESTART,
+            ):
+                mark = len(runner.calls)
+                schedule.jobs(work.config.root, operation, runner, "darwin")
+                labels[operation] = addressed(runner.calls[mark:])
+                loaded[operation] = frozenset(runner.loaded)
             check(
                 NamespaceReinstallObservation(
                     first,
                     second,
-                    error,
-                    record_before,
-                    record.read_text(),
-                    loaded_before,
-                    frozenset(runner.loaded),
+                    accounting.NAMESPACE_ENV,
+                    json.loads((work.config.root / schedule.INSTALL_NAME).read_text()),
+                    frozenset(
+                        schedule.job_label(first, mode) for mode in schedule.MODES
+                    ),
                     frozenset(
                         schedule.job_label(second, mode) for mode in schedule.MODES
                     ),
+                    first_files_before,
+                    {str(path): path.read_bytes() for path in first_paths},
+                    loaded_after_install,
+                    loaded[schedule.JobOperation.STOP],
+                    loaded[schedule.JobOperation.RESTART],
+                    reinstall_labels,
+                    labels[schedule.JobOperation.STATUS],
+                    labels[schedule.JobOperation.STOP],
+                    labels[schedule.JobOperation.RESTART],
                 )
             )
 
@@ -1559,6 +1622,6 @@ def namespace_reinstall_property(
         run,
         seed_value=SEED,
         replay_path=REPLAY.replace(
-            "test_accounting.property", "test_installation_namespace.property"
+            "accounting.property.l1", "installation.compliance.l1"
         ),
     )
