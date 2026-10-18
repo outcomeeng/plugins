@@ -1046,6 +1046,7 @@ def recover(
     }
     targets: list[dict[str, object]] = []
     deliveries: list[dict[str, object]] = []
+    launches: list[tuple[Binding, PreparedCandidate]] = []
     occupied: list[str] = []
     for binding in bindings:
         candidate = candidates_by_original[binding.original_pane_id]
@@ -1080,15 +1081,7 @@ def recover(
         }
         targets.append(target)
         if not matches:
-            deliveries.append(
-                {
-                    ORIGINAL_PANE_ID_FIELD: binding.original_pane_id,
-                    PANE_ID_FIELD: binding.pane_id,
-                    TEXT_FIELD: native_resume_command(
-                        candidate, writable_roots.get(candidate.worktree_path, ())
-                    ),
-                }
-            )
+            launches.append((binding, candidate))
     if occupied:
         return {
             SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
@@ -1099,6 +1092,16 @@ def recover(
             TARGETS_FIELD: [],
             DELIVERIES_FIELD: [],
         }
+    for binding, candidate in launches:
+        deliveries.append(
+            {
+                ORIGINAL_PANE_ID_FIELD: binding.original_pane_id,
+                PANE_ID_FIELD: binding.pane_id,
+                TEXT_FIELD: native_resume_command(
+                    candidate, writable_roots.get(candidate.worktree_path, ())
+                ),
+            }
+        )
     return {
         SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
         STATUS_FIELD: (
