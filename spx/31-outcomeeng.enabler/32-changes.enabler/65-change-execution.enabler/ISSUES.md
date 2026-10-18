@@ -80,14 +80,6 @@
 
 **Settlement condition**: each declared result has a success criterion, step 6 states a route for a finding whose file has no producing round in this session, and one typed skill audit of `execute-change` raises neither finding.
 
-## The `definition-invocation` probe's attested runs predate its amended protocol
-
-**Evidence**: `probes/definition-invocation/probe.md` records its attested runs on subject commits `d090bb966859c3b4770a78a4ba2de5410d4fc53f`, `8a5ddbe8d21caa37a7db2d7d304b613c6805b9a8`, `6cbb66684b7e53b3314237b60681e50016757ac9` and `0942beb61734927d2f07fc7b81c66209e27f876b`. Its Limitations no longer state that a whole instruction round includes a launch of `instructions:skill-auditor` by `change-skill-author` or `change-subagent-author`, because neither `instructions:author-skill` nor `instructions:author-subagent` launches an auditor. No attested run covers the protocol as amended.
-
-**Impact**: the probe's `passed` verdict rests on a protocol text that has since changed, so the `[probe]` assertion of `change-execution.md` carries no attested result pinned to the current protocol.
-
-**Settlement condition**: a fresh attested run of the amended protocol, recorded in `probes/definition-invocation/probe.md` with its retained artifacts.
-
 ## The SPX CLI lists no verification runs by Change identity
 
 **Evidence**: `change-execution.md` caps each agentic gate at two counted rejections per Change, counting every rejection from any session. The SPX CLI records each run in its verification run journal and reads one run by token through `spx verification run status`, and it offers no listing of runs that carries the Change a run serves. The Decisions of `outcomeeng/changes#374`, under "Where does the count live?", therefore keep the count in the Change store: each Handoff's Hazards line names every counted rejection by gate with its run token, and the claiming session counts those tokens plus its own launches.
