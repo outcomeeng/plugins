@@ -35,6 +35,8 @@ from outcomeeng_testing.generators.consumption_control import (
     unsupported_models,
     duration_snapshots,
     alert_reads,
+    distinct_namespace_pairs,
+    invalid_namespaces,
 )
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
 
@@ -277,6 +279,30 @@ def configuration_property(check: Callable[[list[tuple[str, str]]], None]) -> No
             except ValueError as error:
                 diagnostics.append((field, str(error)))
         check(diagnostics)
+
+    run_replayable_property(
+        run, seed_value=SEED, replay_path=REPLAY.replace("accounting", "configuration")
+    )
+
+
+def invalid_namespace_property(check: Callable[[tuple[str, str]], None]) -> None:
+    accounting, _, _, _ = modules()
+
+    @seed(SEED)
+    @settings(max_examples=EXAMPLES, deadline=None)
+    @given(invalid_namespaces(accounting.NAMESPACE_MAX_CHARS))
+    def run(namespace: str) -> None:
+        environment = {
+            accounting.RESET_ENV: fixture()[AccountingField.TIMESTAMP],
+            accounting.NAMESPACE_ENV: namespace,
+        }
+        try:
+            accounting.Config.from_environment(
+                environment, Path("/state"), Path("/transcripts")
+            )
+            check((accounting.NAMESPACE_ENV, ""))
+        except ValueError as error:
+            check((accounting.NAMESPACE_ENV, str(error)))
 
     run_replayable_property(
         run, seed_value=SEED, replay_path=REPLAY.replace("accounting", "configuration")
@@ -1403,3 +1429,63 @@ def unreadable_alert_observations() -> Iterator[UnreadableAlertObservation]:
                 before,
                 _state_files(root),
             )
+
+
+@dataclass(frozen=True)
+class NamespaceScopeObservation:
+    namespace: str
+    foreign_labels: frozenset[str]
+    installed_labels: tuple[str, ...]
+    touched_labels: tuple[str, ...]
+    loaded_after: frozenset[str]
+
+
+def namespace_scope_property(
+    check: Callable[[NamespaceScopeObservation], None],
+) -> None:
+    """Install, inspect, stop, and restart under one namespace beside another's jobs."""
+    _, _, schedule, _ = modules()
+
+    @seed(SEED)
+    @settings(max_examples=EXAMPLES, deadline=None)
+    @given(distinct_namespace_pairs())
+    def run(namespaces: tuple[str, str]) -> None:
+        namespace, foreign = namespaces
+        with workspace() as work:
+            config = replace(work.config, namespace=namespace)
+            runner = RecordingRunner()
+            foreign_labels = frozenset(
+                schedule.job_label(foreign, mode) for mode in schedule.MODES
+            )
+            runner.loaded.update(foreign_labels)
+            plan = schedule.install(
+                config, SCRIPTS, work.root / "launch-agents", runner, "darwin", True
+            )
+            for operation in (
+                schedule.JobOperation.STATUS,
+                schedule.JobOperation.STOP,
+                schedule.JobOperation.RESTART,
+            ):
+                schedule.jobs(config.root, operation, runner, "darwin")
+            check(
+                NamespaceScopeObservation(
+                    namespace,
+                    foreign_labels,
+                    tuple(str(job["label"]) for job in plan[ScheduleField.JOBS]),
+                    tuple(
+                        Path(call[-1]).stem
+                        if call[1] == schedule.LaunchctlOperation.BOOTSTRAP
+                        else call[-1].rsplit("/", 1)[-1]
+                        for call in runner.calls
+                    ),
+                    frozenset(runner.loaded),
+                )
+            )
+
+    run_replayable_property(
+        run,
+        seed_value=SEED,
+        replay_path=REPLAY.replace(
+            "test_accounting.property", "test_installation_namespace.property"
+        ),
+    )

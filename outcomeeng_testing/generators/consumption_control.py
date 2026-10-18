@@ -103,3 +103,54 @@ def alert_reads() -> st.SearchStrategy[tuple[list[tuple[str, int, int]], int]]:
         st.lists(record, max_size=12, unique_by=lambda value: value[0]),
         st.integers(min_value=-1, max_value=13),
     )
+
+
+_NAMESPACE_EDGE = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+_NAMESPACE_INNER = _NAMESPACE_EDGE + "-"
+
+
+def _segments() -> st.SearchStrategy[str]:
+    """One dot-free label segment built from letters, digits, and inner hyphens."""
+    edge = st.sampled_from(_NAMESPACE_EDGE)
+    inner = st.text(alphabet=_NAMESPACE_INNER, max_size=14)
+    return st.one_of(
+        edge,
+        st.tuples(edge, inner, edge).map("".join),
+    )
+
+
+def valid_namespaces() -> st.SearchStrategy[str]:
+    """Vary reverse-DNS style launchd namespaces built segment by segment."""
+    return st.lists(_segments(), min_size=1, max_size=4).map(".".join)
+
+
+def distinct_namespace_pairs() -> st.SearchStrategy[tuple[str, str]]:
+    """Vary two namespaces that name different job sets, including nested ones."""
+    return st.tuples(valid_namespaces(), valid_namespaces()).filter(
+        lambda pair: pair[0] != pair[1]
+    )
+
+
+def invalid_namespaces(maximum: int) -> st.SearchStrategy[str]:
+    """Vary namespaces broken by construction: a foreign character, a stray separator,
+    an empty segment, an empty value, or a length beyond ``maximum``."""
+    foreign = st.characters(codec="ascii").filter(
+        lambda character: character not in _NAMESPACE_INNER + "."
+    )
+    corrupted = st.tuples(valid_namespaces(), foreign, st.integers(min_value=0)).map(
+        lambda parts: (
+            parts[0][: parts[2] % (len(parts[0]) + 1)]
+            + parts[1]
+            + parts[0][parts[2] % (len(parts[0]) + 1) :]
+        )
+    )
+    edged = st.tuples(valid_namespaces(), st.sampled_from(".-"), st.booleans()).map(
+        lambda parts: parts[1] + parts[0] if parts[2] else parts[0] + parts[1]
+    )
+    gapped = st.tuples(valid_namespaces(), valid_namespaces()).map(
+        lambda parts: parts[0] + ".." + parts[1]
+    )
+    overlong = st.integers(min_value=maximum + 1, max_value=maximum + 40).map(
+        lambda length: "a" * length
+    )
+    return st.one_of(corrupted, edged, gapped, overlong, st.just(""))

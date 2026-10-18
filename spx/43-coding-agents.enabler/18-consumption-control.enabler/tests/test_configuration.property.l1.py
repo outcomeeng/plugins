@@ -5,6 +5,7 @@ from decimal import Decimal
 from outcomeeng_testing.harnesses.consumption_control import (
     PriceOverrideObservation,
     configuration_property,
+    invalid_namespace_property,
     invalid_price_override_property,
     price_override_property,
 )
@@ -33,3 +34,11 @@ def test_invalid_price_override_names_its_rejected_field() -> None:
         assert location in message
 
     invalid_price_override_property(check)
+
+
+def test_invalid_namespace_names_its_rejected_field() -> None:
+    def check(diagnostic: tuple[str, str]) -> None:
+        field, message = diagnostic
+        assert field in message
+
+    invalid_namespace_property(check)
