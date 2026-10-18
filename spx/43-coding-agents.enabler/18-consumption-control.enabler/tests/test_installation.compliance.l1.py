@@ -58,7 +58,9 @@ def test_reinstall_under_another_namespace_replaces_only_its_own_jobs() -> None:
     namespace_reinstall_property(check)
 
 
-def test_reinstall_under_a_previously_used_namespace_replaces_only_its_own_jobs() -> None:
+def test_reinstall_under_a_previously_used_namespace_replaces_only_its_own_jobs() -> (
+    None
+):
     def check(observed: NamespaceReturnObservation) -> None:
         assert observed.record_after[observed.namespace_key] == observed.first
         assert observed.return_labels
