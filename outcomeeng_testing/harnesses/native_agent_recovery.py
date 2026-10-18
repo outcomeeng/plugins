@@ -840,6 +840,7 @@ class WritableRootRecovery:
     prepared_before: str
     prepared_after: str
     error_status: str | None
+    plan_status: str | None = None
 
 
 def recovery_agent_types() -> tuple[str, ...]:
@@ -866,11 +867,15 @@ def recovery_result_status() -> type:
 
 def observe_writable_root_recovery(
     roots_by_agent_type: Mapping[str, tuple[str, ...]],
+    *,
+    occupy_first_pane: bool = False,
 ) -> WritableRootRecovery:
     """Run recovery over the operational roster, supplying roots per agent type.
 
     Each worktree whose candidate has a listed agent type receives that type's
-    roots in the recover request; other worktrees receive none.
+    roots in the recover request; other worktrees receive none. When
+    `occupy_first_pane` is set, the first bound pane holds an agent running a
+    different session than its prepared candidate.
     """
     module = _load()
     roster = OPERATIONAL_RECOVERY_ROSTER
@@ -888,9 +893,20 @@ def observe_writable_root_recovery(
         item[module.ORIGINAL_PANE_ID_FIELD]: item
         for item in cast(list[dict[str, object]], prepared[module.CANDIDATES_FIELD])
     }
+    agents: list[dict[str, object]] = []
+    if occupy_first_pane:
+        agents = [
+            _agent_item(
+                module,
+                roster.worktree_paths[0],
+                roster.post_restart_pane_ids[0],
+                roster.agent_types[0],
+                roster.session_ids[1],
+            )
+        ]
     try:
         plan = module.recover(
-            prepared, _all_bindings(module, roster), panes, [], request_roots
+            prepared, _all_bindings(module, roster), panes, agents, request_roots
         )
     except module.AdapterError as error:
         return WritableRootRecovery(
@@ -916,5 +932,9 @@ def observe_writable_root_recovery(
             )
         )
     return WritableRootRecovery(
-        tuple(launches), prepared_before, json.dumps(prepared, sort_keys=True), None
+        tuple(launches),
+        prepared_before,
+        json.dumps(prepared, sort_keys=True),
+        None,
+        str(plan[module.STATUS_FIELD]),
     )

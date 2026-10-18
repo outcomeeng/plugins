@@ -56,3 +56,16 @@ def test_recovery_launches_nothing_for_an_agent_type_that_accepts_no_root(
 
     assert observation.error_status == recovery_result_status().INVALID_TARGET
     assert observation.launches == ()
+
+
+@pytest.mark.parametrize("agent_type", rootless_agent_types())
+def test_recovery_reports_an_occupied_pane_before_a_rootless_agent_root_rejection(
+    agent_type: str,
+) -> None:
+    observation = observe_writable_root_recovery(
+        {agent_type: ("/srv/supplied-root",)}, occupy_first_pane=True
+    )
+
+    assert observation.error_status is None
+    assert observation.plan_status == recovery_result_status().PANE_OCCUPIED
+    assert observation.launches == ()
