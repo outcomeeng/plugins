@@ -198,6 +198,46 @@ def absent(result: CommandResult) -> bool:
     return result.returncode != 0 and "could not find service" in result.stderr.lower()
 
 
+RETAINED_JOBS = "retained_jobs"
+
+
+def checked_retained_jobs(path: Path, value: Json) -> None:
+    retained = value.get(RETAINED_JOBS, [])
+    if not isinstance(retained, list):
+        raise ValueError(
+            f"Invalid {RETAINED_JOBS} field: {path} must hold a list; "
+            "inspect the file and reinstall through install"
+        )
+    for job in retained:
+        if not isinstance(job, dict):
+            raise ValueError(
+                f"Invalid {RETAINED_JOBS} entry: {path} entries must be objects; "
+                "inspect the file and reinstall through install"
+            )
+        label, raw, settings = (
+            job.get("label"),
+            job.get("path"),
+            job.get(ScheduleField.PLIST),
+        )
+        if not isinstance(label, str) or not label or not isinstance(raw, str):
+            raise ValueError(
+                f"Invalid {RETAINED_JOBS} entry: {path} entries must carry a label "
+                "and a path string; inspect the file and reinstall through install"
+            )
+        location = Path(raw)
+        if (
+            not location.is_absolute()
+            or location.name != label + ".plist"
+            or location.is_symlink()
+            or not isinstance(settings, dict)
+        ):
+            raise ValueError(
+                f"Invalid {RETAINED_JOBS} entry for {label}: {path} must name an "
+                f"absolute non-symlink {label}.plist path and a plist object; "
+                "inspect the file and reinstall through install"
+            )
+
+
 def manifest(root: Path) -> Json | None:
     path = root / INSTALL_NAME
     if not path.exists():
@@ -288,6 +328,7 @@ def manifest(root: Path) -> Json | None:
                 f"Managed job {label} does not match installed assets: {path} must run "
                 f"{assets / 'usage_control.py'} with --root {root}; inspect the file and reinstall through install"
             )
+    checked_retained_jobs(path, value)
     return value
 
 
@@ -355,9 +396,6 @@ def investigate(
             ScheduleField.STATUS: InvestigationStatus.FAILED,
             "gap": f"Optional investigation failed; accounting preserved: {error}",
         }
-
-
-RETAINED_JOBS = "retained_jobs"
 
 
 def install_plan(
