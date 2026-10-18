@@ -51,7 +51,7 @@ Run `python3 -B "${SKILL_DIR}/scripts/control_positions.py" <operation>` with ex
 | `install` | Writes the launchd job `engineering.outcome.usage-control.positions` that starts one `pass` every thirty minutes, then prints `succeeded: <detail>` or a failure and exits 1. |
 | `status`  | Prints the job's observed state.                                                                                                                                              |
 | `stop`    | Stops the job and prints the checked outcome.                                                                                                                                 |
-| `restart` | Restarts the job and prints the checked outcome.                                                                                                                              |
+| `restart` | Restarts the job, which starts one `pass` at once, and prints the checked outcome.                                                                                            |
 
 Every scheduling operation prints `<status>: <detail>` and exits 1 unless the status is `succeeded`. On a platform other than macOS the status is `unsupported`. `install` refuses a symlink at the launch-agent path and a file there that is not a plist labelled with this job whose program arguments name this entry point, leaves the file unchanged, runs no `launchctl` command, and tells the operator to inspect the path before installing. An invalid configuration prints `control-positions: invalid configuration: <field>` to standard error and exits non-zero.
 
@@ -65,18 +65,19 @@ A pass ends within five minutes: it caps each Prowl command at the time left in 
 
 <step name="validate">
 
-Resolve the operation from the request. Reject an unsupported interpreter version before running. For `pass`, read the configuration path and state which authorizations it grants before running, because a pass compacts, pauses, and stops positions in live panes. Run `pass` only when the request asks for one, and only after `confirm_writes`.
+Resolve the operation from the request. Reject an unsupported interpreter version before running. For `pass` and `restart`, read the configuration path and state which authorizations it grants before running, because a pass compacts, pauses, and stops positions in live panes, and `restart` starts one at once. Run `pass` or `restart` only when the request asks for it, and only after `confirm_writes`.
 
 </step>
 
 <step name="confirm_writes">
 
-`pass` writes records and state under the consumption-control data root, and the job `install` creates writes there every thirty minutes; `install` also writes a launch agent. Both lie under the operator's home directory, outside the invocation checkout. Present each absolute destination, expanded to the home directory, through request_user_input and run the operation only after the operator confirms it:
+`pass` writes records and state under the consumption-control data root, and the job `install` creates writes there every thirty minutes; `install` also writes a launch agent; `restart` starts that job at once, so the pass it starts writes there. Both destinations lie under the operator's home directory, outside the invocation checkout. Present each absolute destination, expanded to the home directory, through request_user_input and run the operation only after the operator confirms it:
 
 - For `pass`: `~/Library/Application Support/Outcome Engineering/usage-control`.
 - For `install`: `~/Library/LaunchAgents/engineering.outcome.usage-control.positions.plist`, and the data root above, which the scheduled passes write.
+- For `restart`: the data root above, which the pass it starts writes.
 
-One confirmation covers one operation; the next `pass` or `install` asks again. Run `status`, `stop`, and `restart` without confirmation.
+One confirmation covers one operation; the next `pass`, `install`, or `restart` asks again. Run `status` and `stop` without confirmation.
 
 </step>
 
@@ -111,7 +112,7 @@ The five bundled scripts were tested together through the entry point `control_p
 <success_criteria>
 
 - The printed output of exactly one operation is returned verbatim with its exit code.
-- A pass runs, and a launchd job is written, only after the operator confirmed each absolute destination.
+- A pass runs, including the one `restart` starts, and a launchd job is written, only after the operator confirmed each absolute destination.
 - No pause or stop is claimed unless the configuration grants its authorization.
 - No operation runs a daemon, edits the configuration, or invokes a model.
 
