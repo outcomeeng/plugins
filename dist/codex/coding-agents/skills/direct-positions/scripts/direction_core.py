@@ -553,7 +553,11 @@ class Environments:
                 "hand through its environment skill.",
             }
         stopped = self._execute(
-            pane.environment, "stop", pane=pane.pane_id, mutationAuthorized=True
+            pane.environment,
+            "stop",
+            pane=pane.pane_id,
+            mutationAuthorized=True,
+            stopBackgroundWork=True,
         )
         if stopped.get("status") != "succeeded":
             return stopped

@@ -5,9 +5,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import re
 import subprocess
 import sys
+import time
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Final, Mapping, Protocol, TextIO, cast
@@ -55,6 +57,25 @@ AGENT_EXIT_TEXT = "/exit"
 # command and the alias both agents accept for it. A prompt whose text, stripped
 # of surrounding whitespace, is one of these ends the session as stop does.
 AGENT_SESSION_ENDING_TEXTS = frozenset({AGENT_EXIT_TEXT, "/quit"})
+
+# Claude Code answers `/exit` in a session that still runs background work with
+# a confirmation that keeps the session running until a key answers it. The five
+# lines identify it; the cursor mark moves with the selected option and is not
+# one of them. Its numbered menu takes an option's digit wherever the cursor
+# stands, so the key `1` selects `1. Exit and stop tasks`.
+BACKGROUND_WORK_EXIT_LINES: Final[tuple[str, ...]] = (
+    "Background work is running",
+    "The following will stop when you exit:",
+    "1. Exit and stop tasks",
+    "2. Move to background and exit",
+    "3. Stay",
+)
+BACKGROUND_WORK_EXIT_KEY: Final[list[str]] = ["1"]
+# The one agent kind whose confirmation stop answers.
+BACKGROUND_WORK_AGENT_KIND = "claude"
+# Stop reads its pane for this long after `/exit` returns, every half second.
+STOP_BOUND_SECONDS = 10
+STOP_POLL_SECONDS = 0.5
 
 # Fields of herdr's public JSON envelope.
 RESULT_FIELD = "result"
@@ -115,6 +136,8 @@ BRANCH_FIELD = "branch"
 BASE_FIELD = "base"
 AGENT_ARGUMENTS_FIELD = "agentArguments"
 MUTATION_AUTHORIZED_FIELD = "mutationAuthorized"
+# A stop request sets this only for a session whose end its own authority orders.
+STOP_BACKGROUND_WORK_FIELD = "stopBackgroundWork"
 # The verbatim terminal text a read returns; herdr writes it as text, not JSON.
 OUTPUT_FIELD = "output"
 # The projection of the one hosted agent session a start, relaunch, wait, read,
@@ -147,7 +170,7 @@ SUCCESS_RESULT_OPTIONAL_FIELDS = frozenset(
     {SESSION_RESULT_FIELD, AGENTS_RESULT_FIELD, WORKTREE_RESULT_FIELD}
 )
 FAILURE_RESULT_OPTIONAL_FIELDS = frozenset(
-    {COMMAND_EXIT_CODE_FIELD, ERROR_CODE_FIELD, SESSION_RESULT_FIELD}
+    {COMMAND_EXIT_CODE_FIELD, ERROR_CODE_FIELD, SESSION_RESULT_FIELD, OUTPUT_FIELD}
 )
 SELECTOR_FIELDS = (AGENT_FIELD, PANE_FIELD)
 
@@ -239,6 +262,9 @@ class ExecutionStatus(StrEnum):
     # A start, relaunch, or wait whose readiness judgment needs a field the
     # agent's evidence lacks: no readiness verdict, the incomplete item instead.
     AGENT_EVIDENCE_INCOMPLETE = "agent-evidence-incomplete"
+    # A stop whose session still holds the pane at the stop's bound: the pane's
+    # visible text verbatim under `output`, the last session lookup under `session`.
+    EXIT_BLOCKED = "exit-blocked"
 
 
 # The herdr error codes the operating workflows branch on, projected to a
@@ -329,7 +355,12 @@ OPERATION_CONTRACTS: Final[Mapping[Operation, OperationContract]] = {
     Operation.START: OperationContract((START_SHAPE,)),
     Operation.RELAUNCH: OperationContract((START_SHAPE,)),
     Operation.STOP: OperationContract(
-        (RequestShape(frozenset({PANE_FIELD, MUTATION_AUTHORIZED_FIELD})),)
+        (
+            RequestShape(
+                frozenset({PANE_FIELD, MUTATION_AUTHORIZED_FIELD}),
+                frozenset({STOP_BACKGROUND_WORK_FIELD}),
+            ),
+        )
     ),
     # A worktree request names its workspace. One without it matches no shape
     # and returns invalid-schema, the source-owned invalid-request result,
@@ -386,7 +417,9 @@ INTEGER_BOUNDS: Final[Mapping[str, tuple[int, int]]] = {
     LINES_FIELD: (1, 100_000),
     TIMEOUT_FIELD: (1, 300_000),
 }
-BOOLEAN_ARGUMENT_FIELDS = frozenset({WAIT_FIELD, MUTATION_AUTHORIZED_FIELD})
+BOOLEAN_ARGUMENT_FIELDS = frozenset(
+    {WAIT_FIELD, MUTATION_AUTHORIZED_FIELD, STOP_BACKGROUND_WORK_FIELD}
+)
 TEXT_ARGUMENT_FIELDS = frozenset(
     {
         AGENT_FIELD,
@@ -419,6 +452,7 @@ ARGUMENT_NAMES: Final[Mapping[str, str]] = {
     "base": BASE_FIELD,
     "agent_arguments": AGENT_ARGUMENTS_FIELD,
     "mutation_authorized": MUTATION_AUTHORIZED_FIELD,
+    "stop_background_work": STOP_BACKGROUND_WORK_FIELD,
 }
 RAW_HERDR_COMMAND_PATTERNS: Final[tuple[re.Pattern[str], ...]] = (
     re.compile(r"\bHERDR_COMMAND\b|[\[(]['\"]herdr['\"]"),
@@ -444,6 +478,23 @@ class CommandRunner(Protocol):
         *,
         timeout_seconds: int = COMMAND_TIMEOUT_SECONDS,
     ) -> CommandResult: ...
+
+
+class Clock(Protocol):
+    def now(self) -> float: ...
+
+    def sleep(self, seconds: float) -> None: ...
+
+
+@dataclass(frozen=True)
+class MonotonicClock:
+    """The wall-clock implementation of stop's time source."""
+
+    def now(self) -> float:
+        return time.monotonic()
+
+    def sleep(self, seconds: float) -> None:
+        time.sleep(seconds)
 
 
 class HerdrEnvironmentError(RuntimeError):
@@ -998,6 +1049,13 @@ def validate_operation_result(result: object) -> dict[str, object]:
         validated[SESSION_RESULT_FIELD] = _object(
             value[SESSION_RESULT_FIELD], SESSION_RESULT_FIELD
         )
+    if OUTPUT_FIELD in value:
+        if not isinstance(value[OUTPUT_FIELD], str):
+            raise HerdrEnvironmentError(
+                ExecutionStatus.INVALID_SCHEMA,
+                f"Expected text at result.{OUTPUT_FIELD}.",
+            )
+        validated[OUTPUT_FIELD] = value[OUTPUT_FIELD]
     return validated
 
 
@@ -1008,6 +1066,7 @@ def _failure_result(
     command_exit_code: int | None = None,
     error_code: str | None = None,
     session: dict[str, object] | None = None,
+    output: str | None = None,
 ) -> dict[str, object]:
     result: dict[str, object] = {
         SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
@@ -1021,6 +1080,8 @@ def _failure_result(
         result[ERROR_CODE_FIELD] = error_code
     if session is not None:
         result[SESSION_RESULT_FIELD] = session
+    if output is not None:
+        result[OUTPUT_FIELD] = output
     return validate_operation_result(result)
 
 
@@ -1082,7 +1143,92 @@ def _run(
     )
 
 
-def execute(request: object, runner: CommandRunner) -> dict[str, object]:
+def _command_bound(remaining: float) -> int:
+    return max(1, math.ceil(remaining))
+
+
+def _await_stop(
+    arguments: dict[str, object],
+    prompt_result: CommandResult,
+    runner: CommandRunner,
+    clock: Clock,
+) -> dict[str, object] | None:
+    """Read the pane after stop's `/exit` until herdr reports no agent session in
+    it or the bound passes. Return None when the session ended, the failure of
+    the command that failed, or `exit-blocked` when the session holds the pane.
+
+    The one key `1` goes to the pane only when the request carries
+    `stopBackgroundWork: true`, herdr's evidence names agent kind `claude`, and
+    the visible text holds every line of the background-work confirmation."""
+    operation = Operation.STOP
+    pane = str(arguments[PANE_FIELD])
+    prefixes = PUBLIC_HERDR_COMMAND_PREFIXES
+    get_command = (*EVIDENCE_COMMAND_PREFIXES[Operation.READ], pane)
+    read_command = (
+        *prefixes[Operation.READ],
+        pane,
+        SOURCE_OPTION,
+        ReadSource.VISIBLE.value,
+    )
+    key_command = (*prefixes[Operation.KEY], pane, *BACKGROUND_WORK_EXIT_KEY)
+    may_answer = arguments.get(STOP_BACKGROUND_WORK_FIELD) is True
+    key_sent = False
+    deadline = clock.now() + STOP_BOUND_SECONDS
+    session: dict[str, object] | None = None
+    screen = ""
+    while True:
+        remaining = deadline - clock.now()
+        looked_up = _run(operation, get_command, _command_bound(remaining), runner)
+        if isinstance(looked_up, dict):
+            if looked_up[STATUS_FIELD] is ExecutionStatus.IDENTITY_UNAVAILABLE:
+                return None
+            return looked_up
+        try:
+            session = session_from_response(
+                _object(json.loads(looked_up.stdout), RESPONSE_FIELD)
+            )
+        except (json.JSONDecodeError, HerdrEnvironmentError) as error:
+            return _failure_result(
+                operation.value,
+                ExecutionStatus.INVALID_SCHEMA,
+                f"herdr returned an unexpected response: {error}",
+                looked_up.returncode,
+            )
+        remaining = deadline - clock.now()
+        read = _run(operation, read_command, _command_bound(remaining), runner)
+        if isinstance(read, dict):
+            return read
+        screen = read.stdout
+        if (
+            may_answer
+            and not key_sent
+            and session.get(AGENT_KIND_FIELD) == BACKGROUND_WORK_AGENT_KIND
+            and all(line in screen for line in BACKGROUND_WORK_EXIT_LINES)
+        ):
+            remaining = deadline - clock.now()
+            keyed = _run(operation, key_command, _command_bound(remaining), runner)
+            if isinstance(keyed, dict):
+                return keyed
+            key_sent = True
+            continue
+        remaining = deadline - clock.now()
+        if remaining <= 0:
+            break
+        clock.sleep(min(STOP_POLL_SECONDS, remaining))
+    return _failure_result(
+        operation.value,
+        ExecutionStatus.EXIT_BLOCKED,
+        f"The agent session still holds pane {pane} {STOP_BOUND_SECONDS} seconds "
+        f"after {AGENT_EXIT_TEXT}; the pane's visible text is under output.",
+        prompt_result.returncode,
+        session=session,
+        output=screen,
+    )
+
+
+def execute(
+    request: object, runner: CommandRunner, clock: Clock | None = None
+) -> dict[str, object]:
     """Run one operation's herdr commands and return the checked, projected result."""
     operation_value = "unknown"
     try:
@@ -1099,6 +1245,13 @@ def execute(request: object, runner: CommandRunner) -> dict[str, object]:
     ran = _run(operation, command, bound, runner)
     if isinstance(ran, dict):
         return ran
+    if operation is Operation.STOP:
+        _, stop_arguments = _validated_request(request)
+        ended = _await_stop(
+            stop_arguments, ran, runner, MonotonicClock() if clock is None else clock
+        )
+        if ended is not None:
+            return ended
     evidence = ran
     if evidence_command is not None:
         evidence_ran = _run(
