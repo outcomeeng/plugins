@@ -121,7 +121,7 @@ and the build through `outcomeeng/distribution/agents.py` and
 **Settlement condition**: each of the three tests is exercised against a
 generated violating case and rejects it.
 
-## DEBT [evidence]: native effort absence checked for one model only (f-004)
+## DEBT [evidence]: native effort absence checked for one model only (f-004) `spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/tests/test_profiles.mapping.l1.py`, `test_native_effort_absence_matches_the_model_capability`, `evidence`
 
 Finding f-004 (REJECT, mapping-incomplete-domain) at
 `spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/tests/test_profiles.mapping.l1.py:80`:
