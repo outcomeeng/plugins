@@ -52,6 +52,7 @@ from outcomeeng_testing.harnesses.control_positions import (
     ConfigSpec,
     PassObservation,
     PassStep,
+    ResetSource,
     changed_sibling_api,
     install_observation,
     installed_job,
@@ -498,6 +499,37 @@ def test_consumption_control_parser_measures_the_worktree_after_collecting_its_t
         world.add_transcript_row(measured.worktree)
         refreshed = world.tokens.tokens(measured.worktree, *world.window)
         assert refreshed == 2 * world.tokens_per_row
+
+
+def test_parser_measures_tokens_when_only_the_saved_configuration_carries_the_reset() -> (
+    None
+):
+    # Clause: the controller takes a position's tokens from the consumption-control
+    # parser. The installed launchd job starts the pass with none of the operator's
+    # shell exports, so the weekly reset timestamp reaches the parser only through
+    # the configuration file consumption control saved under its data root. The
+    # contract: with the reset variable absent from the process environment and
+    # present in that file, the source measures the worktree exactly as it does when
+    # the environment carries the variable. Rejects the mutation that builds the
+    # accounting configuration from the process environment alone, which reports
+    # every position unmeasured.
+    module = load_control_positions(built=True)
+    measured, absent = alpha_positions(2)
+
+    with real_parser_world(
+        module, reset_source=ResetSource.SAVED_CONFIGURATION
+    ) as world:
+        assert world.accounting.RESET_ENV not in os.environ
+        world.add_transcript_row(measured.worktree)
+        world.add_transcript_row(measured.worktree)
+
+        reading = world.tokens.reading(measured.worktree, *world.window)
+        assert reading.state == module.TokenState.MEASURED
+        assert reading.spend == 2 * world.tokens_per_row
+        assert (
+            world.tokens.reading(absent.worktree, *world.window).state
+            == module.TokenState.NO_SESSION
+        )
 
 
 def test_scheduling_manages_one_finite_launchd_job_on_macos_only() -> None:

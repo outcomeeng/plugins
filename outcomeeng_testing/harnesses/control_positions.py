@@ -37,6 +37,7 @@ import sys
 from collections.abc import Iterator, Mapping, Sequence
 from contextlib import contextmanager, redirect_stdout
 from dataclasses import dataclass, field, replace
+from enum import StrEnum
 from io import StringIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -819,9 +820,35 @@ class ParserWorld:
             stream.write(json.dumps(row) + "\n")
 
 
+def command_runner_sibling(module: ModuleType) -> tuple[str, str]:
+    """The sibling skill and script that own the saved-configuration file name.
+
+    Read from the sibling-location module the entry point imports from, loaded by
+    path without registering it.
+    """
+    path = Path(module.__file__).with_name("positions_siblings.py")
+    spec = importlib.util.spec_from_file_location("positions_siblings_probe", path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Cannot load sibling locations: {path}")
+    locations = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(locations)
+    skill, script = locations.COMMAND_RUNNER
+    return str(skill), str(script)
+
+
+class ResetSource(StrEnum):
+    """Where the weekly reset timestamp reaches the token source."""
+
+    ENVIRONMENT = "environment"
+    SAVED_CONFIGURATION = "saved_configuration"
+
+
 @contextmanager
 def real_parser_world(
-    module: ModuleType, *, transcript_root: bool = True
+    module: ModuleType,
+    *,
+    transcript_root: bool = True,
+    reset_source: ResetSource = ResetSource.ENVIRONMENT,
 ) -> Iterator[ParserWorld]:
     """Run the production token source against a real accounting database.
 
@@ -829,10 +856,15 @@ def real_parser_world(
     default state and transcript roots lie inside it; the process environment and
     the module registry are restored afterwards. With `transcript_root` false the
     transcript directory is never created, so every collection leaves the
-    accounting history incomplete.
+    accounting history incomplete. With `reset_source` saved configuration the
+    process environment holds no reset timestamp, as in a scheduled job's process;
+    only the consumption-control configuration file under the accounting data root
+    carries it, written under the file name the sibling schedule module owns.
     """
     sibling_name = module.TOKEN_ACCOUNTING[1]
     saved_module = sys.modules.get(sibling_name)
+    schedule_skill, schedule_name = command_runner_sibling(module)
+    saved_schedule = sys.modules.get(schedule_name)
     saved_environment = dict(os.environ)
     with TemporaryDirectory(prefix="control-positions-parser-") as temporary:
         home = Path(temporary).resolve()
@@ -846,7 +878,16 @@ def real_parser_world(
             row = json.loads(TRANSCRIPT_FIXTURE.read_text(encoding="utf-8"))
             stamp = accounting.timestamp(row[fields.TIMESTAMP])
             start, end = stamp - accounting.HOUR, stamp + accounting.HOUR
-            os.environ[accounting.RESET_ENV] = accounting.iso(start)
+            os.environ.pop(accounting.RESET_ENV, None)
+            if reset_source is ResetSource.ENVIRONMENT:
+                os.environ[accounting.RESET_ENV] = accounting.iso(start)
+            else:
+                schedule = module.load_sibling(schedule_skill, schedule_name)
+                accounting.DEFAULT_ROOT.mkdir(parents=True)
+                (accounting.DEFAULT_ROOT / schedule.CONFIG_NAME).write_text(
+                    json.dumps({accounting.RESET_ENV: accounting.iso(start)}),
+                    encoding="utf-8",
+                )
             projects = accounting.DEFAULT_PROJECTS
             if transcript_root:
                 projects.mkdir(parents=True)
@@ -867,6 +908,10 @@ def real_parser_world(
                 sys.modules.pop(sibling_name, None)
             else:
                 sys.modules[sibling_name] = saved_module
+            if saved_schedule is None:
+                sys.modules.pop(schedule_name, None)
+            else:
+                sys.modules[schedule_name] = saved_schedule
 
 
 def token_measurement_limit_seconds() -> float:
