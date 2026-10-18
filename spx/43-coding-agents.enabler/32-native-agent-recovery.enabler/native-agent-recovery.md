@@ -11,6 +11,8 @@ CAN resume the complete intended live set and its unsatisfied operator interacti
 
 ## Assertions
 
+- Recovery rejects a recover request whose writable-root map names a worktree held by no prepared candidate with a named non-mutating failure before any activation or native launch, and never drops the root silently
+
 ### Scenarios
 
 - Given a recover request that supplies a writable root for a candidate's worktree, when recovery launches that candidate, then the recovered native session's effective permission policy lists that root as writable ([probe](probes/writable-roots/probe.md))
