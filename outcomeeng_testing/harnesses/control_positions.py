@@ -826,7 +826,10 @@ def command_runner_sibling(module: ModuleType) -> tuple[str, str]:
     Read from the sibling-location module the entry point imports from, loaded by
     path without registering it.
     """
-    path = Path(module.__file__).with_name("positions_siblings.py")
+    origin = module.__file__
+    if origin is None:
+        raise RuntimeError(f"Entry point has no file location: {module.__name__}")
+    path = Path(origin).with_name("positions_siblings.py")
     spec = importlib.util.spec_from_file_location("positions_siblings_probe", path)
     if spec is None or spec.loader is None:
         raise RuntimeError(f"Cannot load sibling locations: {path}")
