@@ -2,9 +2,11 @@
 
 from outcomeeng_testing.harnesses.consumption_control import (
     NamespaceReinstallObservation,
+    NamespaceReturnObservation,
     NamespaceScopeObservation,
     installation_observation,
     namespace_reinstall_property,
+    namespace_return_property,
     namespace_scope_property,
     workspace,
 )
@@ -54,6 +56,18 @@ def test_reinstall_under_another_namespace_replaces_only_its_own_jobs() -> None:
         assert observed.first_files_after == observed.first_files_before
 
     namespace_reinstall_property(check)
+
+
+def test_reinstall_under_a_previously_used_namespace_replaces_only_its_own_jobs() -> None:
+    def check(observed: NamespaceReturnObservation) -> None:
+        assert observed.record_after[observed.namespace_key] == observed.first
+        assert observed.return_labels
+        assert observed.return_labels <= observed.first_labels
+        assert observed.first_labels <= observed.loaded_after_return
+        assert observed.second_labels <= observed.loaded_after_return
+        assert observed.second_files_after == observed.second_files_before
+
+    namespace_return_property(check)
 
 
 def test_status_stop_and_restart_act_on_the_namespace_the_record_names() -> None:

@@ -1519,6 +1519,102 @@ def namespace_scope_property(
 
 
 @dataclass(frozen=True)
+class NamespaceReturnObservation:
+    first: str
+    second: str
+    namespace_key: str
+    record_after: dict[str, Any]
+    first_labels: frozenset[str]
+    second_labels: frozenset[str]
+    second_files_before: dict[str, bytes]
+    second_files_after: dict[str, bytes]
+    return_labels: frozenset[str]
+    loaded_after_return: frozenset[str]
+
+
+def namespace_return_property(
+    check: Callable[[NamespaceReturnObservation], None],
+) -> None:
+    """Install under one namespace, then another, then the first again against the same
+    root. An install that raises propagates to the linked test."""
+    accounting, _, schedule, _ = modules()
+
+    def addressed(calls: Iterable[tuple[str, ...]]) -> frozenset[str]:
+        return frozenset(
+            Path(call[-1]).stem
+            if call[1] == schedule.LaunchctlOperation.BOOTSTRAP
+            else call[-1].rsplit("/", 1)[-1]
+            for call in calls
+        )
+
+    @seed(SEED)
+    @settings(max_examples=EXAMPLES, deadline=None)
+    @given(distinct_namespace_pairs())
+    def run(namespaces: tuple[str, str]) -> None:
+        first, second = namespaces
+        with workspace() as work:
+            runner = RecordingRunner()
+            agents = work.root / "launch-agents"
+            schedule.install(
+                replace(work.config, namespace=first),
+                SCRIPTS,
+                agents,
+                runner,
+                "darwin",
+                True,
+            )
+            second_plan = schedule.install(
+                replace(work.config, namespace=second),
+                SCRIPTS,
+                agents,
+                runner,
+                "darwin",
+                True,
+            )
+            second_paths = tuple(
+                Path(job["path"]) for job in second_plan[ScheduleField.JOBS]
+            )
+            second_files_before = {
+                str(path): path.read_bytes() for path in second_paths
+            }
+            mark = len(runner.calls)
+            schedule.install(
+                replace(work.config, namespace=first),
+                SCRIPTS,
+                agents,
+                runner,
+                "darwin",
+                True,
+            )
+            check(
+                NamespaceReturnObservation(
+                    first,
+                    second,
+                    accounting.NAMESPACE_ENV,
+                    json.loads((work.config.root / schedule.INSTALL_NAME).read_text()),
+                    frozenset(
+                        schedule.job_label(first, mode) for mode in schedule.MODES
+                    ),
+                    frozenset(
+                        schedule.job_label(second, mode) for mode in schedule.MODES
+                    ),
+                    second_files_before,
+                    {str(path): path.read_bytes() for path in second_paths},
+                    addressed(runner.calls[mark:]),
+                    frozenset(runner.loaded),
+                )
+            )
+
+    run_replayable_property(
+        run,
+        seed_value=SEED,
+        replay_path=REPLAY.replace(
+            "accounting.property.l1", "installation.compliance.l1"
+        ),
+    )
+
+
+@dataclass(frozen=True)
 class NamespaceReinstallObservation:
     first: str
     second: str
