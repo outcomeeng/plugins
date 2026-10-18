@@ -7,6 +7,7 @@ from typing import Final
 
 SESSION_START_EVENT: Final = "SessionStart"
 PRE_TOOL_USE_EVENT: Final = "PreToolUse"
+POST_TOOL_USE_EVENT: Final = "PostToolUse"
 SESSION_ID_FIELD: Final = "session_id"
 CURRENT_WORKING_DIRECTORY_FIELD: Final = "cwd"
 
@@ -38,12 +39,16 @@ CODEX_RUNTIME_TREE: Final = "dist/codex"
 RUNTIME_TREES: Final[tuple[str, ...]] = (CLAUDE_RUNTIME_TREE, CODEX_RUNTIME_TREE)
 HOOKS_DIRECTORY: Final = "hooks"
 HOOKS_CONFIG_FILE: Final = "hooks.json"
+HOOKS_CONFIG_ENCODING: Final = "utf-8"
 
 # The hooks.json schema keys the validator reads.
 HOOKS_KEY: Final = "hooks"
 MATCHER_KEY: Final = "matcher"
 COMMAND_KEY: Final = "command"
 TIMEOUT_KEY: Final = "timeout"
+
+# Separates a violation's location from its issue in a report line.
+REPORT_LOCATION_SEPARATOR: Final = ": "
 
 # Report wording that identifies an event-level violation.
 BLOCKING_EVENT_VIOLATION_MARKER: Final = "hook on blocking-capable event"
@@ -89,10 +94,13 @@ __all__ = [
     "CODEX_RUNTIME_TREE",
     "CODEX_SKILL_DIR_TOKEN",
     "COMMAND_KEY",
+    "HOOKS_CONFIG_ENCODING",
     "HOOKS_CONFIG_FILE",
     "HOOKS_DIRECTORY",
     "HOOKS_KEY",
     "MATCHER_KEY",
+    "POST_TOOL_USE_EVENT",
+    "REPORT_LOCATION_SEPARATOR",
     "RUNTIME_TREES",
     "SUBSTITUTED_PATH_TOKENS",
     "TIMEOUT_KEY",

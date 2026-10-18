@@ -39,15 +39,18 @@ from typing import Final
 from outcomeeng.validation.hook_contract import (
     BLOCKING_EVENT_VIOLATION_MARKER,
     COMMAND_KEY,
+    HOOKS_CONFIG_ENCODING,
     HOOKS_CONFIG_FILE,
     HOOKS_DIRECTORY,
     HOOKS_KEY,
     MATCHER_KEY,
+    POST_TOOL_USE_EVENT,
     PRE_TOOL_USE_EVENT,
     PRE_WRITE_COMMANDS,
     PRE_WRITE_MATCHER_SEPARATOR,
     PRE_WRITE_PLUGIN,
     PRE_WRITE_TOOLS,
+    REPORT_LOCATION_SEPARATOR,
     RUNTIME_TREES,
     SESSION_START_EVENT,
     SUBSTITUTED_PATH_TOKENS,
@@ -81,7 +84,7 @@ BLOCKING_EVENTS: Final[frozenset[str]] = frozenset(
         "UserPromptExpansion",
         "PermissionRequest",
         "PostToolBatch",
-        "PostToolUse",
+        POST_TOOL_USE_EVENT,
         "PostToolUseFailure",
         "Stop",
         "SubagentStop",
@@ -157,8 +160,8 @@ def _event_violation(event: str) -> str | None:
     if event in SAFE_EVENTS:
         return None
     if event in BLOCKING_EVENTS:
-        return f"{event}: {BLOCKING_EVENT_VIOLATION_MARKER} — exit 2 or a timeout would deny the agent's action"
-    return f"{event}: hook on an event outside the known non-blocking set — only observe/inject events are permitted"
+        return f"{event}{REPORT_LOCATION_SEPARATOR}{BLOCKING_EVENT_VIOLATION_MARKER} — exit 2 or a timeout would deny the agent's action"
+    return f"{event}{REPORT_LOCATION_SEPARATOR}hook on an event outside the known non-blocking set — only observe/inject events are permitted"
 
 
 def _command_violations(event: str, command: str) -> list[str]:
@@ -171,11 +174,13 @@ def _command_violations(event: str, command: str) -> list[str]:
         statement = command[match.end() :].split(";", 1)[0]
         if _FALLBACK.search(statement) is None:
             found.append(
-                f"{event}: hook command invokes a script at a substituted path with no inline short-circuit fallback"
+                f"{event}{REPORT_LOCATION_SEPARATOR}hook command invokes a script at a substituted path with no inline short-circuit fallback"
             )
             break
     if _PINNED_CACHE.search(command):
-        found.append(f"{event}: hook command names a version-pinned plugin cache path")
+        found.append(
+            f"{event}{REPORT_LOCATION_SEPARATOR}hook command names a version-pinned plugin cache path"
+        )
     return found
 
 
@@ -214,7 +219,7 @@ def hook_config_violations(
                 saw_handler = True
                 if TIMEOUT_KEY not in handler:
                     violations.append(
-                        f"{event}: hook handler declares no explicit timeout"
+                        f"{event}{REPORT_LOCATION_SEPARATOR}hook handler declares no explicit timeout"
                     )
                 command = handler.get(COMMAND_KEY)
                 if isinstance(command, str):
@@ -232,15 +237,17 @@ def iter_tree_violations(root: Path) -> list[str]:
         if hooks_file.parent.name != HOOKS_DIRECTORY:
             continue
         try:
-            parsed: object = json.loads(hooks_file.read_text(encoding="utf-8"))
+            parsed: object = json.loads(hooks_file.read_text(encoding=HOOKS_CONFIG_ENCODING))
         except (OSError, json.JSONDecodeError) as exc:
-            violations.append(f"{hooks_file}: unreadable hook config ({exc})")
+            violations.append(
+                f"{hooks_file}{REPORT_LOCATION_SEPARATOR}unreadable hook config ({exc})"
+            )
             continue
         if not isinstance(parsed, Mapping):
             continue
         relative = hooks_file.relative_to(root)
         violations.extend(
-            f"{relative}: {issue}"
+            f"{relative}{REPORT_LOCATION_SEPARATOR}{issue}"
             for issue in hook_config_violations(parsed, hooks_file.parent.parent.name)
         )
     return violations
