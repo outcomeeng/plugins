@@ -2,6 +2,7 @@
 
 import json
 import tempfile
+import tomllib
 from pathlib import Path
 from typing import cast
 
@@ -26,6 +27,7 @@ from outcomeeng.distribution.installation import (
     ReportField,
     SPEC_TREE_PLUGIN,
     STATE_ENV_NAMES,
+    marketplace_plugin_identifier,
     marketplace_plugin_name,
 )
 from outcomeeng_testing.generators.installation import (
@@ -43,6 +45,7 @@ from outcomeeng_testing.harnesses.installation import (
     install_record_fixture_path,
     observe_codex_config_independence,
     observe_designated_failure,
+    observe_empty_selection_execution,
     observe_racing_install_record_rewrite,
     observe_first_failure,
     observe_inspection_failure,
@@ -355,7 +358,9 @@ def test_a_record_the_closing_listing_leaves_off_the_target_fails_the_run() -> N
     plugin = marketplace_plugin_name(
         entry[CLAUDE_PLUGIN_ID_FIELD], observation.marketplace
     )
-    off_target = observation.document[ReportField.OFF_TARGET_RECORDS]
+    off_target = cast(
+        "list[dict[str, str]]", observation.document[ReportField.OFF_TARGET_RECORDS]
+    )
     assert {
         ReportField.PLUGIN: plugin,
         ReportField.SCOPE: entry[CLAUDE_PLUGIN_SCOPE_FIELD],
@@ -369,7 +374,7 @@ def test_no_agent_announces_a_first_install_its_plan_does_not_carry() -> None:
     observation = observe_unreadable_source(generated_boolean_states(RegistryState))
 
     for case in observation.cases:
-        reported = case.document[ReportField.WARNINGS]
+        reported = cast("list[dict[str, str]]", case.document[ReportField.WARNINGS])
         for agent in (Target.CLAUDE, Target.CODEX):
             announced = {
                 ReportField.AGENT: agent.value,
@@ -444,6 +449,22 @@ def test_an_empty_selection_supplies_only_spec_tree_with_a_warning_and_disabled_
     assert plan.codex_disabled == (SPEC_TREE_PLUGIN,)
 
 
+def test_an_empty_selection_writes_disabled_activation_into_the_selected_codex_home() -> (
+    None
+):
+    observation = observe_empty_selection_execution()
+    marketplace = observation.report.plan.roots.marketplace
+
+    assert observation.codex_config is not None
+    written = tomllib.loads(observation.codex_config.decode("utf-8"))
+    assert (
+        written["plugins"][
+            marketplace_plugin_identifier(SPEC_TREE_PLUGIN, marketplace)
+        ]["enabled"]
+        is False
+    )
+
+
 def test_an_established_pending_publication_absence_is_reported_in_persistent_mode_and_terminal_in_isolated_mode() -> (
     None
 ):
@@ -514,7 +535,10 @@ def test_a_record_written_after_the_listing_read_survives_the_install_record_wri
     observation = observe_racing_install_record_rewrite(
         install_record_fixture_path(), tmp_path
     )
-    plugins = observation.document_after[CLAUDE_INSTALLED_PLUGINS_FIELD]
+    plugins = cast(
+        "dict[str, list[dict[str, str]]]",
+        observation.document_after[CLAUDE_INSTALLED_PLUGINS_FIELD],
+    )
     concurrent_path = observation.concurrent_entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD]
     surviving = [
         entry

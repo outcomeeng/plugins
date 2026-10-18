@@ -2797,6 +2797,31 @@ def observe_persistent_execution() -> PersistentExecutionObservation:
     )
 
 
+@dataclass(frozen=True)
+class EmptySelectionExecutionObservation:
+    """The report and the selected Codex home's written configuration from an empty-inventory run."""
+
+    report: InstallationReport
+    codex_config: bytes | None
+
+
+def observe_empty_selection_execution() -> EmptySelectionExecutionObservation:
+    """Execute the persistent path with no installed plugin and read the Codex home's configuration."""
+    checkout = repository_root()
+    with TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory)
+        mirror = temporary_root / "checkout"
+        mirror_installation_inputs(checkout, mirror)
+        _write_project_marketplace(mirror, DECLARED_CLAUDE_SOURCE)
+        environment = _persistent_environment(temporary_root)
+        runner = RecordingRunner(installed={agent: frozenset() for agent in Target})
+        report = execute_persistent_installation(mirror, environment, runner)
+        return EmptySelectionExecutionObservation(
+            report=report,
+            codex_config=codex_home_config(report.plan.roots.codex_home),
+        )
+
+
 def observe_persistent_catalog_subset_plans() -> tuple[
     CatalogSubsetPlanObservation, ...
 ]:
@@ -5084,6 +5109,8 @@ __all__ = [
     "observe_invalid_persistent_selections",
     "observe_missing_codex_home",
     "observe_persistent_execution",
+    "observe_empty_selection_execution",
+    "EmptySelectionExecutionObservation",
     "observe_persistent_catalog_subset_plans",
     "observe_persistent_plan",
     "observe_record_refresh_plan",
