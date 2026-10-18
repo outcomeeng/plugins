@@ -10,54 +10,57 @@ Product-level decisions carry per-agent facts inline, so adding an agent harness
 
 **Revisit condition.** Resolve before a third agent harness ships, since that is the change the coupling taxes. The agent-harness terminology sweep in `spx/18-plugin-build.enabler/ISSUES.md` can share the decomposition.
 
-## DEBT [evidence]: installation mapping and compliance tests leave inputs unvaried (f-001, f-002, f-003)
+## DEBT [evidence]: installation mapping and compliance tests leave inputs unvaried (f-003, f-004)
 
-Two findings (both REJECT) on tests under
-`spx/32-distribution.enabler/21-installation.enabler/tests/`, and one warning on
-the generator that feeds them:
+Two filed findings (severity FILED) on tests under
+`spx/32-distribution.enabler/21-installation.enabler/tests/`, numbered as in the
+test-evidence audit verdict on this node at head
+`18ad3df27fa85898687bfc3c196ff7c9901db240`:
 
-- f-001 at `test_installation.mapping.l1.py` (alignment): the mapping never
-  drives the scope and marketplace filter of the reported inventory. Every
-  listing the harness feeds (`_plugin_listing_payload`) carries only
-  project-scope records at the invocation checkout, or Codex entries of the
-  product's own marketplace, so `installed_plugin_names` could stop filtering on
-  scope, project path, or marketplace and the test would still pass.
-- f-002 at `test_installation.compliance.l1.py` (oracle independence): the
-  selected homes are never compared with the values the caller selected. Each
-  command's `CODEX_HOME` is compared with `plan.roots.codex_home`, which
-  production computes, and the isolated state root with the plan's own
-  `roots.state`. A mutation that ignores the selected `CODEX_HOME` passes.
-- WARNING f-003 at `outcomeeng_testing/generators/installation.py:111`:
-  `generated_valid_catalog_subsets` and `generated_invalid_catalog_subsets`
-  produce one rotating-window subset per size class, with no recorded rationale
-  and no complete enumeration.
+- f-003 at `test_installation.mapping.l1.py` (alignment, remediation target
+  harness): the mapping never drives the scope, project-path, or marketplace
+  filter of the reported inventory. The verdict's message reads: "Standing
+  defect. The mapping never drives the scope, project-path, or marketplace
+  filter of the reported inventory. observe_persistent_catalog_subset_plans
+  feeds _plugin_listing_payload, which lists only project-scope records at the
+  invocation checkout. generated_claude_listing_entries, which varies scope and
+  path, is not used here. The diff touches this function only to rename Agent to
+  Target, so no changed basis is named." Its `baseRefEvidence` is
+  `b9e1245462c8f5e345beb67140cd0eedab28861c..HEAD`.
+- f-004 at `test_installation.compliance.l1.py` (oracle independence,
+  remediation target independent-oracle): the selected homes are compared with
+  values production computes. The verdict's message reads: "Standing defect.
+  Each command's CODEX_HOME is compared with plan.roots.codex_home, and the
+  isolated state root with plan.roots.state. Production computes both, so a
+  mutation that ignores the caller-selected home passes. The diff touches these
+  test functions only for the Agent to Target rename, so no changed basis is
+  named." Its `baseRefEvidence` is
+  `b9e1245462c8f5e345beb67140cd0eedab28861c..HEAD`.
 
-The audit is a `spec-tree:test-evidence-auditor` verdict on this node at head
-`6ef55dd4d93b24b8fa701b8779116bbe7c9bbc04`. The verdict carries no sealed run
-token.
+The verdict carries no sealed run token.
 
-**Resolution shape**: for f-001, drive the mapping with
+**Resolution shape**: for f-003, drive the mapping with
 `generated_claude_listing_entries` and `generated_codex_listing_entries`, as the
-child repository-installation mapping test does. For f-002, expose the
+child repository-installation mapping test does. For f-004, expose the
 harness-chosen homes in the observation and compare each command's
-`CODEX_HOME` and the isolated state root with them. For f-003, record the
-rationale for the rotating window in the generator, or enumerate the subsets
-completely.
+`CODEX_HOME` and the isolated state root with them.
 
-**Evidence that the text lies outside the change.**
-`git diff -U0 origin/main...HEAD` reports no hunk in the cited tests, harness,
-or generator, against merge base `149a55f71befdf61e88be9bda2aae725db1f2381`.
+**Evidence that the text lies outside the change.** The verdict names no changed
+basis for either finding: against `b9e1245462c8f5e345beb67140cd0eedab28861c..HEAD`
+the changeset touches the cited test functions only for the rename from Agent to
+Target. The cited tests and the filter and home comparisons they leave unvaried
+predate the changeset.
 
-**Invalidation check.** The cited text neither cites, restates, nor depends on
-anything this changeset changed. The changeset adds symbols to
-`outcomeeng/distribution/profiles.py` (model prices, `UsageTokenClass`,
-`UnpricedModelError`, `resolve_model_price`; no existing symbol changes), adds
-the model-price and profile-binding generators, harnesses, and tests, and
-narrows the configuration guard in
-`outcomeeng/validation/profile_configuration.py`. The cited tests drive
-`outcomeeng/distribution/installation.py`, which the changeset does not change.
+**Invalidation check.** The changeset renames Agent to Target in
+`outcomeeng/distribution/installation.py`,
+`outcomeeng_testing/harnesses/installation.py`,
+`outcomeeng_testing/generators/installation.py`, and the cited tests, and
+repairs two other findings of the same verdict (f-001 and f-002) in those tests.
+The rename changes identifiers only. It changes neither the scope, project-path,
+and marketplace filtering that `installed_plugin_names` performs, nor the
+derivation of `plan.roots.codex_home` and `plan.roots.state`, so the cited text
+neither cites, restates, nor depends on a change that falsifies it.
 
 **Settlement condition**: the mapping rejects an inventory that stops filtering
-on scope, project path, or marketplace; the compliance test rejects a plan that
-ignores the selected `CODEX_HOME`; and the catalog-subset generators either
-enumerate every subset or state why one subset per size class suffices.
+on scope, project path, or marketplace, and the compliance test rejects a plan
+that ignores the selected `CODEX_HOME` or isolated state root.
