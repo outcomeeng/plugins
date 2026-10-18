@@ -5,8 +5,8 @@ from typing import cast
 
 import pytest
 
+from outcomeeng.distribution.contracts import Target
 from outcomeeng.distribution.installation import (
-    Agent,
     CLAUDE_CATALOG_PATH,
     CLAUDE_GIT_SOURCE_TYPE,
     CLAUDE_PLUGIN_ID_FIELD,
@@ -66,18 +66,18 @@ def test_explicit_isolated_subsets_map_to_their_selection_in_catalog_order() -> 
     observation = observe_isolated_subset_plan()
 
     catalogs = {
-        Agent.CLAUDE: catalog_plugin_names_from_document(
+        Target.CLAUDE: catalog_plugin_names_from_document(
             repository_root() / CLAUDE_CATALOG_PATH
         ),
-        Agent.CODEX: catalog_plugin_names_from_document(
+        Target.CODEX: catalog_plugin_names_from_document(
             repository_root() / CODEX_CATALOG_PATH
         ),
     }
     planned = {
-        Agent.CLAUDE: observation.plan.claude_plugins,
-        Agent.CODEX: observation.plan.codex_plugins,
+        Target.CLAUDE: observation.plan.claude_plugins,
+        Target.CODEX: observation.plan.codex_plugins,
     }
-    for agent in Agent:
+    for agent in Target:
         assert set(planned[agent]) == set(observation.subsets[agent])
         positions = [catalogs[agent].index(plugin) for plugin in planned[agent]]
         assert positions == sorted(set(positions))
@@ -89,7 +89,7 @@ def test_claude_inventory_maps_only_the_invocation_checkout_refresh_scopes() -> 
     entries, in_scope = generated_claude_listing_entries(catalog, checkout, MARKETPLACE)
 
     observed = installed_plugin_names(
-        Agent.CLAUDE,
+        Target.CLAUDE,
         json.dumps(list(entries)),
         checkout=checkout,
         marketplace=MARKETPLACE,
@@ -104,7 +104,7 @@ def test_codex_inventory_maps_only_outcomeeng_marketplace_entries() -> None:
     entries, in_scope = generated_codex_listing_entries(catalog, MARKETPLACE)
 
     observed = installed_plugin_names(
-        Agent.CODEX,
+        Target.CODEX,
         json.dumps({CODEX_PLUGIN_ENTRIES_FIELD: list(entries)}),
         checkout=checkout,
         marketplace=MARKETPLACE,
@@ -157,7 +157,7 @@ def test_absent_plugin_wording_is_pending_only_for_persistent_plugin_operations(
         source=source,
         operation=operation,
         plugin=plugin if carries_plugin else None,
-        stderr=captured_unpublished_plugin_stderr(Agent.CODEX, plugin),
+        stderr=captured_unpublished_plugin_stderr(Target.CODEX, plugin),
     )
 
     if pending:
@@ -189,13 +189,13 @@ def test_every_claude_install_record_maps_to_one_update_one_rewrite_or_one_warni
     updates = [
         command
         for command in observation.plan.commands
-        if command.agent is Agent.CLAUDE
+        if command.agent is Target.CLAUDE
         and command.operation is Operation.PLUGIN_UPDATE
     ]
     warnings = [
         warning.message
         for warning in observation.plan.warnings
-        if warning.agent is Agent.CLAUDE
+        if warning.agent is Target.CLAUDE
     ]
     unmatched_updates = list(updates)
     unmatched_rewrites = list(observation.plan.rewrite_records)
@@ -354,7 +354,7 @@ def test_each_registry_entry_shape_maps_to_the_source_the_run_refreshes_from() -
         source_operations = [
             command
             for command in plan.commands
-            if command.agent is Agent.CLAUDE
+            if command.agent is Target.CLAUDE
             and command.operation
             in {Operation.MARKETPLACE_ADD, Operation.MARKETPLACE_REFRESH}
         ]

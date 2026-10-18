@@ -3,8 +3,8 @@
 import json
 from typing import cast
 
+from outcomeeng.distribution.contracts import Target
 from outcomeeng.distribution.installation import (
-    Agent,
     PLUGIN_OPERATIONS,
     ReportField,
 )
@@ -37,8 +37,8 @@ def test_real_agent_clis_map_full_and_generated_subsets() -> None:
 
     commands = cast(list[dict[str, str]], persistent_report[ReportField.COMMANDS])
     selected_by_agent = {
-        Agent.CLAUDE: observation.persistent_claude_selected,
-        Agent.CODEX: observation.persistent_codex_selected,
+        Target.CLAUDE: observation.persistent_claude_selected,
+        Target.CODEX: observation.persistent_codex_selected,
     }
 
     assert observation.persistent_exit_code == 0, observation.persistent_stderr

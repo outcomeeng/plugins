@@ -31,7 +31,12 @@ from outcomeeng_testing.harnesses.src_tree import src_tree
 # The modules that make up the build and the targets it generates.
 BUILD_MODULE_PATHS: Final = tuple(
     Path("outcomeeng") / "distribution" / filename
-    for filename in ("build.py", "contracts.py", "orchestration.py")
+    for filename in (
+        "build.py",
+        "contracts.py",
+        "installation.py",
+        "orchestration.py",
+    )
 )
 
 TOKEN_READING_SKILL: Final = "token-reader"

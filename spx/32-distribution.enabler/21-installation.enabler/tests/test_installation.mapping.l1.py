@@ -1,7 +1,7 @@
 """Finite catalog-to-agent mapping evidence for repository installation."""
 
+from outcomeeng.distribution.contracts import Target
 from outcomeeng.distribution.installation import (
-    Agent,
     CLAUDE_PLUGIN_ID_FIELD,
     CLAUDE_PLUGIN_PROJECT_PATH_FIELD,
     CLAUDE_PLUGIN_SCOPE_FIELD,
@@ -40,7 +40,7 @@ def test_each_mode_maps_its_selection_to_catalog_order() -> None:
         isolated.codex_catalog
     )
     observations = observe_persistent_catalog_subset_plans()
-    assert tuple(observation.agent for observation in observations) == tuple(Agent)
+    assert tuple(observation.agent for observation in observations) == tuple(Target)
     for observation in observations:
         assert tuple(mapping.selected for mapping in observation.mappings) == (
             generated_persistent_catalog_selections(observation.catalog)
@@ -56,14 +56,14 @@ def test_each_mode_maps_its_selection_to_catalog_order() -> None:
                     observation.catalog.index(plugin) for plugin in mapping.planned
                 ]
                 assert positions == sorted(set(positions))
-            if observation.agent is Agent.CLAUDE and mapping.selected:
+            if observation.agent is Target.CLAUDE and mapping.selected:
                 assert mapping.installs == ()
                 assert mapping.enables == ()
                 assert mapping.updates == mapping.planned
             else:
                 assert mapping.installs == mapping.planned
                 assert mapping.enables == (
-                    mapping.planned if observation.agent is Agent.CLAUDE else ()
+                    mapping.planned if observation.agent is Target.CLAUDE else ()
                 )
                 assert mapping.updates == ()
 
@@ -74,13 +74,13 @@ def test_every_claude_install_record_maps_to_its_refresh_disposition() -> None:
     updates = [
         command
         for command in observation.plan.commands
-        if command.agent is Agent.CLAUDE
+        if command.agent is Target.CLAUDE
         and command.operation is Operation.PLUGIN_UPDATE
     ]
     warnings = [
         warning.message
         for warning in observation.plan.warnings
-        if warning.agent is Agent.CLAUDE
+        if warning.agent is Target.CLAUDE
     ]
     unmatched_updates = list(updates)
     unmatched_rewrites = list(observation.plan.rewrite_records)
@@ -153,7 +153,7 @@ def test_each_registry_entry_shape_maps_to_the_source_the_run_refreshes_from() -
         source_operations = [
             command
             for command in plan.commands
-            if command.agent is Agent.CLAUDE
+            if command.agent is Target.CLAUDE
             and command.operation
             in {Operation.MARKETPLACE_ADD, Operation.MARKETPLACE_REFRESH}
         ]

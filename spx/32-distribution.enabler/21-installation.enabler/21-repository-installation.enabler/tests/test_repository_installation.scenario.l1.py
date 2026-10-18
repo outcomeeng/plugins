@@ -3,8 +3,8 @@
 import json
 from typing import cast
 
+from outcomeeng.distribution.contracts import Target
 from outcomeeng.distribution.installation import (
-    Agent,
     UNLOCATED_REGISTRY_DIAGNOSTIC,
     CLAUDE_INSTALLED_PLUGINS_FIELD,
     CLAUDE_INSTALLED_RECORD_COMMIT_FIELD,
@@ -68,7 +68,7 @@ from outcomeeng_testing.harnesses.installation import (
 )
 
 
-def _first_install_warning(agent: Agent) -> str:
+def _first_install_warning(agent: Target) -> str:
     """The bootstrap warning for one agent, named for this checkout's marketplace."""
     return FIRST_INSTALL_WARNING.format(
         marketplace=MARKETPLACE, agent=agent.value, plugin=SPEC_TREE_PLUGIN
@@ -131,9 +131,9 @@ def test_first_persistent_run_installs_only_spec_tree_and_warns() -> None:
     ]
 
     assert observation.exit_code == 0
-    assert [command.agent for command in install_commands] == list(Agent)
+    assert [command.agent for command in install_commands] == list(Target)
     assert {command.plugin for command in install_commands} == {SPEC_TREE_PLUGIN}
-    assert [command.agent for command in enable_commands] == [Agent.CLAUDE]
+    assert [command.agent for command in enable_commands] == [Target.CLAUDE]
     assert {command.plugin for command in enable_commands} == {SPEC_TREE_PLUGIN}
     assert document[ReportField.CLAUDE_PLUGINS] == [SPEC_TREE_PLUGIN]
     assert document[ReportField.CODEX_PLUGINS] == [SPEC_TREE_PLUGIN]
@@ -142,10 +142,10 @@ def test_first_persistent_run_installs_only_spec_tree_and_warns() -> None:
             ReportField.AGENT: agent.value,
             ReportField.MESSAGE: _first_install_warning(agent),
         }
-        for agent in Agent
+        for agent in Target
     ]
     assert observation.stderr.splitlines() == [
-        f"{STDERR_WARNING_PREFIX}{_first_install_warning(agent)}" for agent in Agent
+        f"{STDERR_WARNING_PREFIX}{_first_install_warning(agent)}" for agent in Target
     ]
 
 
@@ -222,7 +222,7 @@ def test_isolated_installation_treats_an_absent_plugin_as_terminal() -> None:
 
 
 def test_the_json_report_never_lists_a_pending_plugin_as_installed() -> None:
-    for agent in Agent:
+    for agent in Target:
         for absent in committed_catalog_plugin_names():
             observation = observe_unpublished_plugin(
                 isolated=False, unpublished={agent: frozenset({absent})}
@@ -242,12 +242,12 @@ def test_the_json_report_never_lists_a_pending_plugin_as_installed() -> None:
                         list[str],
                         document[
                             ReportField.CLAUDE_PLUGINS
-                            if other is Agent.CLAUDE
+                            if other is Target.CLAUDE
                             else ReportField.CODEX_PLUGINS
                         ],
                     )
                 )
-                for other in Agent
+                for other in Target
             }
 
             # The text summary and this document answer from the same
@@ -256,13 +256,13 @@ def test_the_json_report_never_lists_a_pending_plugin_as_installed() -> None:
             # unpublished, and the two disagreed inside one document.
             assert pending == {absent}, (agent, absent)
             assert not pending & installed[agent], (agent, absent)
-            for other in Agent:
+            for other in Target:
                 if other is not agent:
                     assert absent in installed[other], (agent, absent, other)
 
 
 def test_a_plugin_absent_from_one_agent_stays_installed_for_the_other() -> None:
-    for agent in Agent:
+    for agent in Target:
         for absent in committed_catalog_plugin_names():
             observation = observe_unpublished_plugin(
                 isolated=False, unpublished={agent: frozenset({absent})}
@@ -275,7 +275,7 @@ def test_a_plugin_absent_from_one_agent_stays_installed_for_the_other() -> None:
             # record carrying only the plugin name cannot express that, and
             # drops the plugin from both agents' installed counts on either
             # one's failure.
-            for other in Agent:
+            for other in Target:
                 assert observation.report.pending_for(other) == (
                     frozenset({absent}) if other is agent else frozenset()
                 ), (agent, absent, other)
@@ -287,7 +287,7 @@ def test_fresh_home_plan_adds_the_declared_marketplace() -> None:
     source_operations = [
         command.operation
         for command in observation.plan.commands
-        if command.agent is Agent.CLAUDE
+        if command.agent is Target.CLAUDE
         and command.operation
         in {Operation.MARKETPLACE_ADD, Operation.MARKETPLACE_REFRESH}
     ]
@@ -295,7 +295,7 @@ def test_fresh_home_plan_adds_the_declared_marketplace() -> None:
     assert [
         command.source
         for command in observation.plan.commands
-        if command.agent is Agent.CLAUDE
+        if command.agent is Target.CLAUDE
         and command.operation is Operation.MARKETPLACE_ADD
     ] == [DECLARED_CLAUDE_SOURCE]
 
@@ -307,7 +307,7 @@ def test_persistent_run_moves_every_record_without_a_command_in_another_checkout
     claude_commands = [
         command
         for command in observation.plan.commands
-        if command.agent is Agent.CLAUDE
+        if command.agent is Target.CLAUDE
     ]
     updates = [
         command
@@ -458,7 +458,7 @@ def test_a_defective_refresh_scope_entry_is_reported_and_the_run_continues() -> 
     assert [
         command.operation
         for command in observation.attempted
-        if command.agent is Agent.CLAUDE
+        if command.agent is Target.CLAUDE
     ] == [
         Operation.MARKETPLACE_INSPECT,
         Operation.PLUGIN_INSPECT,
@@ -485,7 +485,7 @@ def test_a_defective_entry_leaves_the_invocation_checkouts_native_update_running
 ):
     observation = observe_defective_record_listing(invocation_checkout_recorded=True)
     claude_commands = [
-        command for command in observation.attempted if command.agent is Agent.CLAUDE
+        command for command in observation.attempted if command.agent is Target.CLAUDE
     ]
     updates = [
         command
@@ -694,7 +694,7 @@ def test_unreadable_invocation_settings_stop_bootstrap_and_nothing_else() -> Non
         ]
         assert len(settings_warnings) == 1, state
         assert str(observation.settings_path) in settings_warnings[0], state
-        claude_operations = _agent_operations(case, Agent.CLAUDE)
+        claude_operations = _agent_operations(case, Target.CLAUDE)
         assert Operation.PLUGIN_INSTALL not in claude_operations, state
         assert Operation.PLUGIN_ENABLE not in claude_operations, state
         assert {
@@ -704,8 +704,8 @@ def test_unreadable_invocation_settings_stop_bootstrap_and_nothing_else() -> Non
         } == {
             agent.value
             for agent, registered in (
-                (Agent.CLAUDE, state.claude),
-                (Agent.CODEX, state.codex),
+                (Target.CLAUDE, state.claude),
+                (Target.CODEX, state.codex),
             )
             if not registered
         }, state
@@ -739,7 +739,7 @@ def test_unreadable_invocation_settings_stop_bootstrap_and_nothing_else() -> Non
         # own native update even though the settings that would have carried a
         # bootstrap cannot be read.
         native_update = (Operation.PLUGIN_UPDATE,) if state.recorded else ()
-        assert _agent_operations(case, Agent.CLAUDE) == (
+        assert _agent_operations(case, Target.CLAUDE) == (
             Operation.MARKETPLACE_INSPECT,
             Operation.PLUGIN_INSPECT,
             Operation.MARKETPLACE_REFRESH,
@@ -769,7 +769,7 @@ def test_unreadable_invocation_settings_stop_bootstrap_and_nothing_else() -> Non
 
     for state, case in by_state.items():
         if not state.codex:
-            assert _agent_operations(case, Agent.CODEX) == (
+            assert _agent_operations(case, Target.CODEX) == (
                 Operation.MARKETPLACE_INSPECT,
                 Operation.PLUGIN_INSPECT,
             ), state
@@ -780,7 +780,7 @@ def test_unreadable_invocation_settings_stop_bootstrap_and_nothing_else() -> Non
         # registration leaves it in place while withholding every command
         # that names the marketplace — the native update of the invocation
         # checkout's own record among them.
-        assert _agent_operations(case, Agent.CLAUDE) == (
+        assert _agent_operations(case, Target.CLAUDE) == (
             Operation.MARKETPLACE_INSPECT,
             Operation.PLUGIN_INSPECT,
             Operation.PLUGIN_LIST,
@@ -804,7 +804,7 @@ def test_unreadable_invocation_settings_stop_bootstrap_and_nothing_else() -> Non
 
 
 def _agent_operations(
-    case: UnreadableSourceCase, agent: Agent
+    case: UnreadableSourceCase, agent: Target
 ) -> tuple[Operation, ...]:
     return tuple(
         command.operation for command in case.attempted if command.agent is agent
@@ -860,7 +860,7 @@ def test_a_record_written_between_the_listing_reads_is_reported_and_fails_the_ru
     claude_operations = [
         command.operation
         for command in observation.attempted
-        if command.agent is Agent.CLAUDE
+        if command.agent is Target.CLAUDE
     ]
     assert claude_operations.count(Operation.PLUGIN_LIST) == 1
     assert claude_operations[-1] is Operation.PLUGIN_LIST

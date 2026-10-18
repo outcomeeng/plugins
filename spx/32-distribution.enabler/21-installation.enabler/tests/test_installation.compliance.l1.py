@@ -4,8 +4,8 @@ import json
 import tempfile
 from pathlib import Path
 
+from outcomeeng.distribution.contracts import Target
 from outcomeeng.distribution.installation import (
-    Agent,
     CLAUDE_PLUGIN_ID_FIELD,
     CLAUDE_PLUGIN_PROJECT_PATH_FIELD,
     CLAUDE_PLUGIN_SCOPE_FIELD,
@@ -93,20 +93,20 @@ def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None
     refreshing = observe_persistent_execution()
     registering = observe_persistent_plan(claude_marketplace_listed=False)
     bootstrapping = observe_persistent_plan(
-        installed={agent: frozenset() for agent in Agent},
+        installed={agent: frozenset() for agent in Target},
     )
     plans = (refreshing.report.plan, registering.plan, bootstrapping.plan)
     claude_commands = [
         command
         for plan in plans
         for command in (*plan.commands, *plan.closing)
-        if command.agent is Agent.CLAUDE
+        if command.agent is Target.CLAUDE
     ]
     codex_commands = [
         command
         for plan in plans
         for command in (*plan.commands, *plan.closing)
-        if command.agent is Agent.CODEX
+        if command.agent is Target.CODEX
     ]
 
     observed = {command.operation for command in claude_commands}
@@ -118,7 +118,7 @@ def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None
         and command.cwd == plan.roots.checkout
         for plan in plans
         for command in plan.commands
-        if command.agent is Agent.CLAUDE
+        if command.agent is Target.CLAUDE
         and command.operation in CLAUDE_SCOPE_BEARING_OPERATIONS
         and command.operation is not Operation.PLUGIN_UPDATE
     )
@@ -127,7 +127,7 @@ def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None
         and command.cwd == plan.roots.checkout
         for plan in plans
         for command in plan.commands
-        if command.agent is Agent.CLAUDE
+        if command.agent is Target.CLAUDE
         and command.operation is Operation.PLUGIN_UPDATE
     )
     spread = observe_record_refresh_plan()
@@ -153,7 +153,7 @@ def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None
     observed_updates = [
         (command.plugin, command.argv[-1], command.cwd)
         for command in spread.plan.commands
-        if command.agent is Agent.CLAUDE
+        if command.agent is Target.CLAUDE
         and command.operation is Operation.PLUGIN_UPDATE
     ]
     assert {scope for _, scope, _ in expected_updates} == CLAUDE_REFRESH_SCOPES
@@ -170,7 +170,7 @@ def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None
     assert all(
         command.argv[-2] == CLAUDE_SCOPE_FLAG
         for command in spread.plan.commands
-        if command.agent is Agent.CLAUDE
+        if command.agent is Target.CLAUDE
         and command.operation is Operation.PLUGIN_UPDATE
     )
     assert all(
@@ -183,7 +183,7 @@ def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None
         dict(command.environment)[CODEX_HOME_ENV] == str(plan.roots.codex_home)
         for plan in plans
         for command in plan.commands
-        if command.agent is Agent.CODEX
+        if command.agent is Target.CODEX
     )
     assert refreshing.attempted[len(refreshing.preflight.inspections) :] == (
         *refreshing.report.plan.commands,
@@ -194,7 +194,7 @@ def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None
         Operation.MARKETPLACE_INSPECT,
         Operation.PLUGIN_INSPECT,
     }
-    assert {command.agent for command in inspections} == set(Agent)
+    assert {command.agent for command in inspections} == set(Target)
     assert all(
         command.cwd == refreshing.preflight.roots.checkout
         and CLAUDE_SCOPE_FLAG not in command.argv
@@ -248,7 +248,7 @@ def test_an_enable_failure_stops_the_run_rather_than_reading_as_idempotent() -> 
     document = json.loads(observation.stderr)
 
     assert observation.exit_code != 0
-    assert document[ReportField.AGENT] == Agent.CLAUDE.value
+    assert document[ReportField.AGENT] == Target.CLAUDE.value
     assert document[ReportField.OPERATION] == Operation.PLUGIN_ENABLE.value
     assert document[ReportField.PLUGIN] == observation.attempted[-1].plugin
     assert (
@@ -286,11 +286,11 @@ def test_invalid_installed_selection_never_reaches_a_state_changing_operation() 
 
 
 def test_a_codex_operation_failure_reports_the_codex_agent_and_stops() -> None:
-    observation = observe_first_failure(Operation.PLUGIN_INSTALL, agent=Agent.CODEX)
+    observation = observe_first_failure(Operation.PLUGIN_INSTALL, agent=Target.CODEX)
     document = json.loads(observation.stderr)
 
     assert observation.exit_code != 0
-    assert document[ReportField.AGENT] == Agent.CODEX.value
+    assert document[ReportField.AGENT] == Target.CODEX.value
     assert document[ReportField.OPERATION] == Operation.PLUGIN_INSTALL.value
     assert document[ReportField.PLUGIN] == observation.attempted[-1].plugin
     assert document[ReportField.COMPLETED_OPERATIONS] == len(observation.attempted) - 1
@@ -305,7 +305,7 @@ def test_first_agent_cli_failure_reports_the_operation_and_stops() -> None:
     document = json.loads(observation.stderr)
 
     assert observation.exit_code != 0
-    assert document[ReportField.AGENT] == Agent.CLAUDE.value
+    assert document[ReportField.AGENT] == Target.CLAUDE.value
     assert document[ReportField.OPERATION] == Operation.PLUGIN_INSTALL.value
     assert document[ReportField.PLUGIN] == observation.attempted[-1].plugin
     assert document[ReportField.STDERR] == Operation.PLUGIN_INSTALL.value
@@ -322,7 +322,7 @@ def test_a_persistent_run_plans_from_one_listing_and_reads_it_once_more_after_ex
 ):
     observation = observe_persistent_execution()
     claude = [
-        command for command in observation.attempted if command.agent is Agent.CLAUDE
+        command for command in observation.attempted if command.agent is Target.CLAUDE
     ]
     operations = [command.operation for command in claude]
 
@@ -364,7 +364,7 @@ def test_no_agent_announces_a_first_install_its_plan_does_not_carry() -> None:
 
     for case in observation.cases:
         reported = case.document[ReportField.WARNINGS]
-        for agent in (Agent.CLAUDE, Agent.CODEX):
+        for agent in (Target.CLAUDE, Target.CODEX):
             announced = {
                 ReportField.AGENT: agent.value,
                 ReportField.MESSAGE: FIRST_INSTALL_WARNING.format(
