@@ -7,7 +7,6 @@ from typing import Final
 
 SESSION_START_EVENT: Final = "SessionStart"
 PRE_TOOL_USE_EVENT: Final = "PreToolUse"
-POST_TOOL_USE_EVENT: Final = "PostToolUse"
 SESSION_ID_FIELD: Final = "session_id"
 CURRENT_WORKING_DIRECTORY_FIELD: Final = "cwd"
 
@@ -64,7 +63,6 @@ __all__ = [
     "PRE_WRITE_COMMAND_CODEX",
     "PRE_WRITE_EMPTY_RESULT",
     "PRE_WRITE_KILL_SWITCH",
-    "POST_TOOL_USE_EVENT",
     "PRE_TOOL_USE_EVENT",
     "PRE_WRITE_ADAPTER_INTERPRETER",
     "PRE_WRITE_ADAPTER_SCRIPT",

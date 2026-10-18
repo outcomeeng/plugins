@@ -18,7 +18,6 @@ import pytest
 from outcomeeng.validation.hook_contract import (
     CLAUDE_PLUGIN_ROOT_TOKEN,
     CODEX_PLUGIN_ROOT_TOKEN,
-    POST_TOOL_USE_EVENT,
     PRE_TOOL_USE_EVENT,
     PRE_WRITE_ADAPTER_INTERPRETER,
     PRE_WRITE_COMMAND_CLAUDE,
@@ -31,14 +30,10 @@ from outcomeeng.validation.hook_contract import (
     SESSION_START_EVENT,
 )
 from outcomeeng.validation.hook_safety import (
-    BLOCKING_EVENT_FRAGMENT,
     BLOCKING_EVENTS,
-    DEFAULT_ROOTS,
     hook_config_violations,
     iter_tree_violations,
 )
-
-CLAUDE_TREE, CODEX_TREE = DEFAULT_ROOTS
 
 
 def config(
@@ -136,7 +131,7 @@ def test_unrecognized_event_is_flagged() -> None:
 def test_event_blocking_on_one_runtime_only_is_flagged() -> None:
     # PostToolUse is non-blocking on Claude Code but can block continuation on Codex.
     # The same hooks.json ships to both, so it is outside the cross-runtime safe set.
-    assert hook_config_violations(config(POST_TOOL_USE_EVENT))
+    assert hook_config_violations(config("PostToolUse"))
 
 
 def test_omitted_matcher_block_is_handled() -> None:
@@ -235,7 +230,7 @@ def test_blocking_event_violation_reported_once_per_event() -> None:
             ]
         }
     }
-    blocking = [v for v in hook_config_violations(cfg) if BLOCKING_EVENT_FRAGMENT in v]
+    blocking = [v for v in hook_config_violations(cfg) if "blocking-capable event" in v]
     assert len(blocking) == 1
 
 
@@ -245,7 +240,7 @@ def test_version_pinned_cache_path_is_flagged() -> None:
     assert hook_config_violations(config(SESSION_START_EVENT, command=pinned))
 
 
-def _write_config(root: Path, runtime: Path, cfg: Mapping[str, object]) -> None:
+def _write_config(root: Path, runtime: str, cfg: Mapping[str, object]) -> None:
     path = root / runtime / PRE_WRITE_PLUGIN / "hooks" / "hooks.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(cfg), encoding="utf-8")
@@ -262,8 +257,8 @@ def test_rules_apply_identically_across_both_runtime_trees(tmp_path: Path) -> No
     blocking = config(PRE_TOOL_USE_EVENT)
     claude_root = tmp_path / "claude"
     codex_root = tmp_path / "codex"
-    _write_config(claude_root, CLAUDE_TREE, blocking)
-    _write_config(codex_root, CODEX_TREE, blocking)
+    _write_config(claude_root, "dist/claude", blocking)
+    _write_config(codex_root, "dist/codex", blocking)
 
     claude_rules = _rule_messages(iter_tree_violations(claude_root))
     codex_rules = _rule_messages(iter_tree_violations(codex_root))
@@ -292,12 +287,12 @@ def pre_write_config(
 
 @pytest.mark.parametrize(
     ("runtime", "command"),
-    [(CLAUDE_TREE, PRE_WRITE_COMMAND_CLAUDE), (CODEX_TREE, PRE_WRITE_COMMAND_CODEX)],
+    [("claude", PRE_WRITE_COMMAND_CLAUDE), ("codex", PRE_WRITE_COMMAND_CODEX)],
 )
 def test_pre_write_exception_passes_in_its_runtime_tree(
-    tmp_path: Path, runtime: Path, command: str
+    tmp_path: Path, runtime: str, command: str
 ) -> None:
-    _write_config(tmp_path, runtime, pre_write_config(command=command))
+    _write_config(tmp_path, f"dist/{runtime}", pre_write_config(command=command))
     assert iter_tree_violations(tmp_path) == []
 
 
