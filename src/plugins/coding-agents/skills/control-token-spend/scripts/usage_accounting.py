@@ -7,6 +7,7 @@ import datetime as dt
 import hashlib
 import json
 import os
+import re
 import sqlite3
 import time
 from collections.abc import Callable, Mapping
@@ -43,6 +44,12 @@ PRICE_SOURCE: Final = "https://platform.claude.com/docs/en/about-claude/pricing"
 PRICE_DATE: Final = "2026-10-09"
 PRICE_FILE: Final = "model-prices.json"
 PRICE_OVERRIDE_ENV: Final = "SPX_USAGE_PRICE_FILE"
+NAMESPACE_ENV: Final = "SPX_USAGE_LAUNCHD_NAMESPACE"
+DEFAULT_NAMESPACE: Final = "engineering.outcome.usage-control"
+NAMESPACE_MAX_CHARS: Final = 128
+NAMESPACE_PATTERN: Final = re.compile(
+    r"[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)*"
+)
 PRICE_DOCUMENT_KEY: Final = "prices"
 PRICE_CLASSES: Final = (
     "input",
@@ -177,6 +184,15 @@ def money(raw: str, field: str) -> Decimal:
     return value
 
 
+def checked_namespace(raw: str, field: str) -> str:
+    if len(raw) > NAMESPACE_MAX_CHARS or NAMESPACE_PATTERN.fullmatch(raw) is None:
+        raise ValueError(
+            f"{field}: use dot-separated segments of letters, digits and inner hyphens, "
+            f"at most {NAMESPACE_MAX_CHARS} characters; received {raw!r}"
+        )
+    return raw
+
+
 @dataclass(frozen=True)
 class Price:
     input: Decimal
@@ -234,6 +250,7 @@ class Config:
     weekly_budget: Decimal | None = None
     price_file: Path | None = None
     prices: Mapping[str, Price] = dataclasses.field(default_factory=bundled_prices)
+    namespace: str = DEFAULT_NAMESPACE
 
     def __post_init__(self) -> None:
         if not self.root.is_absolute() or not self.projects.is_absolute():
@@ -251,6 +268,7 @@ class Config:
         money(str(self.alert), ALERT_ENV)
         if self.weekly_budget is not None:
             money(str(self.weekly_budget), BUDGET_ENV)
+        checked_namespace(self.namespace, NAMESPACE_ENV)
 
     @classmethod
     def from_environment(
@@ -289,6 +307,9 @@ class Config:
             budget,
             price_file,
             prices,
+            checked_namespace(
+                environment.get(NAMESPACE_ENV, DEFAULT_NAMESPACE), NAMESPACE_ENV
+            ),
         )
 
     def period(self, now: dt.datetime) -> tuple[dt.datetime, dt.datetime]:
@@ -306,6 +327,7 @@ class Config:
             BUDGET_ENV: str(self.weekly_budget) if self.weekly_budget else None,
             RESET_ENV: iso(self.reset),
             PRICE_OVERRIDE_ENV: str(self.price_file) if self.price_file else None,
+            NAMESPACE_ENV: self.namespace,
             "root": str(self.root),
             "projects": str(self.projects),
         }
