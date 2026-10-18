@@ -1557,6 +1557,47 @@ class NamespaceScopeObservation:
     loaded_after: frozenset[str]
 
 
+INSTALLATION_REPLAY = REPLAY.replace(
+    "accounting.property.l1", "installation.compliance.l1"
+)
+
+
+def _address(schedule: Any, call: tuple[str, ...]) -> str:
+    """The job label one recorded launchctl call addresses."""
+    if call[1] == schedule.LaunchctlOperation.BOOTSTRAP:
+        return Path(call[-1]).stem
+    return call[-1].rsplit("/", 1)[-1]
+
+
+def _addressed(schedule: Any, calls: Iterable[tuple[str, ...]]) -> frozenset[str]:
+    """The job labels the recorded launchctl calls address."""
+    return frozenset(_address(schedule, call) for call in calls)
+
+
+def _install_under(
+    schedule: Any, work: Any, runner: Any, agents: Path, namespace: str
+) -> Any:
+    """Install the schedule under ``namespace`` against the workspace root."""
+    return schedule.install(
+        replace(work.config, namespace=namespace),
+        SCRIPTS,
+        agents,
+        runner,
+        "darwin",
+        True,
+    )
+
+
+def _manifest_rejection(schedule: Any, root: Path) -> str:
+    """The message of the ValueError reading the manifest raises, empty when the record
+    was accepted. Any other exception propagates."""
+    try:
+        schedule.manifest(root)
+    except ValueError as error:
+        return str(error)
+    return ""
+
+
 def namespace_scope_property(
     check: Callable[[NamespaceScopeObservation], None],
 ) -> None:
@@ -1589,12 +1630,7 @@ def namespace_scope_property(
                     namespace,
                     foreign_labels,
                     tuple(str(job["label"]) for job in plan[ScheduleField.JOBS]),
-                    tuple(
-                        Path(call[-1]).stem
-                        if call[1] == schedule.LaunchctlOperation.BOOTSTRAP
-                        else call[-1].rsplit("/", 1)[-1]
-                        for call in runner.calls
-                    ),
+                    tuple(_address(schedule, call) for call in runner.calls),
                     frozenset(runner.loaded),
                 )
             )
@@ -1602,9 +1638,7 @@ def namespace_scope_property(
     run_replayable_property(
         run,
         seed_value=SEED,
-        replay_path=REPLAY.replace(
-            "accounting.property.l1", "installation.compliance.l1"
-        ),
+        replay_path=INSTALLATION_REPLAY,
     )
 
 
@@ -1629,14 +1663,6 @@ def namespace_return_property(
     root. An install that raises propagates to the linked test."""
     accounting, _, schedule, _ = modules()
 
-    def addressed(calls: Iterable[tuple[str, ...]]) -> frozenset[str]:
-        return frozenset(
-            Path(call[-1]).stem
-            if call[1] == schedule.LaunchctlOperation.BOOTSTRAP
-            else call[-1].rsplit("/", 1)[-1]
-            for call in calls
-        )
-
     @seed(SEED)
     @settings(max_examples=EXAMPLES, deadline=None)
     @given(distinct_namespace_pairs())
@@ -1645,22 +1671,8 @@ def namespace_return_property(
         with workspace() as work:
             runner = RecordingRunner()
             agents = work.root / "launch-agents"
-            schedule.install(
-                replace(work.config, namespace=first),
-                SCRIPTS,
-                agents,
-                runner,
-                "darwin",
-                True,
-            )
-            second_plan = schedule.install(
-                replace(work.config, namespace=second),
-                SCRIPTS,
-                agents,
-                runner,
-                "darwin",
-                True,
-            )
+            _install_under(schedule, work, runner, agents, first)
+            second_plan = _install_under(schedule, work, runner, agents, second)
             second_paths = tuple(
                 Path(job["path"]) for job in second_plan[ScheduleField.JOBS]
             )
@@ -1668,14 +1680,7 @@ def namespace_return_property(
                 str(path): path.read_bytes() for path in second_paths
             }
             mark = len(runner.calls)
-            schedule.install(
-                replace(work.config, namespace=first),
-                SCRIPTS,
-                agents,
-                runner,
-                "darwin",
-                True,
-            )
+            _install_under(schedule, work, runner, agents, first)
             check(
                 NamespaceReturnObservation(
                     first,
@@ -1690,7 +1695,7 @@ def namespace_return_property(
                     ),
                     second_files_before,
                     {str(path): path.read_bytes() for path in second_paths},
-                    addressed(runner.calls[mark:]),
+                    _addressed(schedule, runner.calls[mark:]),
                     frozenset(runner.loaded),
                 )
             )
@@ -1698,9 +1703,7 @@ def namespace_return_property(
     run_replayable_property(
         run,
         seed_value=SEED,
-        replay_path=REPLAY.replace(
-            "accounting.property.l1", "installation.compliance.l1"
-        ),
+        replay_path=INSTALLATION_REPLAY,
     )
 
 
@@ -1730,14 +1733,6 @@ def namespace_reinstall_property(
     then inspect, stop, and restart through the installation record."""
     accounting, _, schedule, _ = modules()
 
-    def addressed(calls: Iterable[tuple[str, ...]]) -> frozenset[str]:
-        return frozenset(
-            Path(call[-1]).stem
-            if call[1] == schedule.LaunchctlOperation.BOOTSTRAP
-            else call[-1].rsplit("/", 1)[-1]
-            for call in calls
-        )
-
     @seed(SEED)
     @settings(max_examples=EXAMPLES, deadline=None)
     @given(distinct_namespace_pairs())
@@ -1746,28 +1741,14 @@ def namespace_reinstall_property(
         with workspace() as work:
             runner = RecordingRunner()
             agents = work.root / "launch-agents"
-            first_plan = schedule.install(
-                replace(work.config, namespace=first),
-                SCRIPTS,
-                agents,
-                runner,
-                "darwin",
-                True,
-            )
+            first_plan = _install_under(schedule, work, runner, agents, first)
             first_paths = tuple(
                 Path(job["path"]) for job in first_plan[ScheduleField.JOBS]
             )
             first_files_before = {str(path): path.read_bytes() for path in first_paths}
             mark = len(runner.calls)
-            schedule.install(
-                replace(work.config, namespace=second),
-                SCRIPTS,
-                agents,
-                runner,
-                "darwin",
-                True,
-            )
-            reinstall_labels = addressed(runner.calls[mark:])
+            _install_under(schedule, work, runner, agents, second)
+            reinstall_labels = _addressed(schedule, runner.calls[mark:])
             loaded_after_install = frozenset(runner.loaded)
             labels: dict[str, frozenset[str]] = {}
             loaded: dict[str, frozenset[str]] = {}
@@ -1778,7 +1759,7 @@ def namespace_reinstall_property(
             ):
                 mark = len(runner.calls)
                 schedule.jobs(work.config.root, operation, runner, "darwin")
-                labels[operation] = addressed(runner.calls[mark:])
+                labels[operation] = _addressed(schedule, runner.calls[mark:])
                 loaded[operation] = frozenset(runner.loaded)
             check(
                 NamespaceReinstallObservation(
@@ -1807,9 +1788,7 @@ def namespace_reinstall_property(
     run_replayable_property(
         run,
         seed_value=SEED,
-        replay_path=REPLAY.replace(
-            "accounting.property.l1", "installation.compliance.l1"
-        ),
+        replay_path=INSTALLATION_REPLAY,
     )
 
 
@@ -1839,14 +1818,7 @@ def malformed_retained_record_property(
             runner = RecordingRunner()
             agents = work.root / "launch-agents"
             for namespace in (first, second):
-                schedule.install(
-                    replace(work.config, namespace=namespace),
-                    SCRIPTS,
-                    agents,
-                    runner,
-                    "darwin",
-                    True,
-                )
+                _install_under(schedule, work, runner, agents, namespace)
             record_path = work.config.root / schedule.INSTALL_NAME
             record = json.loads(record_path.read_text())
             index = data.draw(st.integers(0, len(record[schedule.RETAINED_JOBS]) - 1))
@@ -1856,11 +1828,7 @@ def malformed_retained_record_property(
             )
             entry["path"] = rejected
             record_path.write_text(json.dumps(record), encoding="utf-8")
-            try:
-                schedule.manifest(work.config.root)
-                message = ""
-            except ValueError as error:
-                message = str(error)
+            message = _manifest_rejection(schedule, work.config.root)
             check(
                 MalformedRetainedRecordObservation(
                     str(record_path), schedule.RETAINED_JOBS, rejected, message
@@ -1870,9 +1838,7 @@ def malformed_retained_record_property(
     run_replayable_property(
         run,
         seed_value=SEED,
-        replay_path=REPLAY.replace(
-            "accounting.property.l1", "installation.compliance.l1"
-        ),
+        replay_path=INSTALLATION_REPLAY,
     )
 
 
@@ -1908,14 +1874,7 @@ def malformed_retained_field_property(
             runner = RecordingRunner()
             agents = work.root / "launch-agents"
             for namespace in (first, second):
-                schedule.install(
-                    replace(work.config, namespace=namespace),
-                    SCRIPTS,
-                    agents,
-                    runner,
-                    "darwin",
-                    True,
-                )
+                _install_under(schedule, work, runner, agents, namespace)
             record_path = work.config.root / schedule.INSTALL_NAME
             record = json.loads(record_path.read_text())
             retained = record[schedule.RETAINED_JOBS]
@@ -1927,11 +1886,7 @@ def malformed_retained_field_property(
             else:
                 retained[index] = data.draw(non_mapping_retained_entries())
             record_path.write_text(json.dumps(record), encoding="utf-8")
-            try:
-                schedule.manifest(work.config.root)
-                message = ""
-            except ValueError as error:
-                message = str(error)
+            message = _manifest_rejection(schedule, work.config.root)
             check(
                 MalformedRetainedFieldObservation(
                     str(record_path), schedule.RETAINED_JOBS, message
@@ -1941,7 +1896,5 @@ def malformed_retained_field_property(
     run_replayable_property(
         run,
         seed_value=SEED,
-        replay_path=REPLAY.replace(
-            "accounting.property.l1", "installation.compliance.l1"
-        ),
+        replay_path=INSTALLATION_REPLAY,
     )
