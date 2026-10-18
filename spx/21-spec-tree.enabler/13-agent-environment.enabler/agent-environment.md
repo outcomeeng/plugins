@@ -22,7 +22,7 @@ The spec-tree plugin's only runtime hook is a `SessionStart` hook that delegates
 
 ### Conformance
 
-- The spec-tree plugin's `hooks.json` declares exactly one hook event — `SessionStart` — whose command delegates to `spx hook run session-start` and names no plugin-shipped script path ([test](tests/test_agent_environment.conformance.l1.py))
+- The spec-tree plugin's `hooks.json` declares exactly two hook events — `SessionStart`, whose command delegates to `spx hook run session-start` and names no plugin-shipped script path, and `PreToolUse`, whose matcher names exactly the Write and Edit tools and whose command runs the write-boundary adapter inside the inline guard ([test](tests/test_agent_environment.conformance.l1.py))
 
 ### Compliance
 
