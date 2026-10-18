@@ -32,6 +32,8 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 - **The merge lifecycle settles a `blocking` finding by its fix, its drop as unbacked, or its recorded deferral, and records a split-out finding in the owning node's `ISSUES.md` only.** `merging-standards`, `/manage-pr`, `/open-pr`, and `/merge` (for the direct-push transport) accept a `blocking` finding on touched or invalidated text as resolved for the `MERGE_READINESS` review predicate when an entry in the owning node's `ISSUES.md` carries a reason naming why its fix is a separate larger concern, and the merge-readiness decision table routes such a finding to no `FIX_FINDING`. `/open-pr` restricts the split-out to `blocking` findings whose fix is too large to belong and names `ISSUES.md` alone as the record, no longer `PLAN.md` or the governing Change. Before this change, the predicate accepted only a fix or a drop as unbacked, so a deferred `blocking` finding held the merge, and `/open-pr` and `merge-policy.md` named `PLAN.md` or the governing Change as record locations for a split-out finding.
 
+- **The `review_result.py` `Severity` docstring and the merge policy's forbidden-taxonomies and foundational-path passages give a `debt` finding's disposition to its ruling.** The docstring in `review-changes` states that the author judges the disposition of each `blocking` finding and that a `debt` finding on text the changeset touches or invalidates takes its disposition from the ruling of a position above the changeset's author; the two `merging-standards` passages no longer give the Author the disposition of a `debt` finding.
+
 ## 0.106.14
 
 ### Changed

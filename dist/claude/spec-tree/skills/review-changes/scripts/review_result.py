@@ -49,7 +49,9 @@ class Severity(StrEnum):
 
     ``blocking`` marks a merge-safety defect; ``debt`` marks a real defect
     that does not jeopardize merge safety. The reviewer judges validity and
-    severity; the author judges disposition (fix-in-PR or track-out-of-scope).
+    severity; the author judges the disposition of each ``blocking`` finding,
+    and a ``debt`` finding on text the changeset touches or invalidates takes
+    its disposition from the ruling of a position above the changeset's author.
     """
 
     BLOCKING = "blocking"
