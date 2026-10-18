@@ -37,6 +37,7 @@ from pathlib import Path
 from typing import Final
 
 from outcomeeng.validation.hook_contract import (
+    POST_TOOL_USE_EVENT,
     PRE_TOOL_USE_EVENT,
     PRE_WRITE_COMMANDS,
     PRE_WRITE_MATCHER_SEPARATOR,
@@ -72,7 +73,7 @@ BLOCKING_EVENTS: Final[frozenset[str]] = frozenset(
         "UserPromptExpansion",
         "PermissionRequest",
         "PostToolBatch",
-        "PostToolUse",
+        POST_TOOL_USE_EVENT,
         "PostToolUseFailure",
         "Stop",
         "SubagentStop",
@@ -87,6 +88,9 @@ BLOCKING_EVENTS: Final[frozenset[str]] = frozenset(
         "ElicitationResult",
     }
 )
+
+# The wording that identifies a blocking-event violation in a report.
+BLOCKING_EVENT_FRAGMENT: Final = "hook on blocking-capable event"
 
 # A reference into the plugin tree by a substituted path, regardless of extension — a
 # ``.py``/``.sh`` script, an extensionless wrapper, or any file whose absence under a
@@ -146,7 +150,7 @@ def _event_violation(event: str) -> str | None:
     if event in SAFE_EVENTS:
         return None
     if event in BLOCKING_EVENTS:
-        return f"{event}: hook on blocking-capable event — exit 2 or a timeout would deny the agent's action"
+        return f"{event}: {BLOCKING_EVENT_FRAGMENT} — exit 2 or a timeout would deny the agent's action"
     return f"{event}: hook on an event outside the known non-blocking set — only observe/inject events are permitted"
 
 

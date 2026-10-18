@@ -23,14 +23,20 @@ from outcomeeng.validation.hook_contract import (
     PRE_WRITE_TOOLS,
     SESSION_START_EVENT,
 )
-from outcomeeng.validation.hook_safety import iter_tree_violations, main
+from outcomeeng.validation.hook_safety import (
+    DEFAULT_ROOTS,
+    iter_tree_violations,
+    main,
+)
+
+CLAUDE_TREE, CODEX_TREE = DEFAULT_ROOTS
 
 # A command-shape-clean command, so a fixture's only possible violation is its event.
 SAFE_COMMAND = f"echo '{PRE_WRITE_EMPTY_RESULT}'"
 
 
 def write_hooks(
-    root: Path, runtime: str, plugin: str, config: dict[str, object]
+    root: Path, runtime: Path, plugin: str, config: dict[str, object]
 ) -> Path:
     path = root / runtime / plugin / "hooks" / "hooks.json"
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -69,7 +75,7 @@ def safe_config() -> dict[str, object]:
 
 
 def test_blocking_hook_is_reported_with_location(tmp_path: Path) -> None:
-    write_hooks(tmp_path, "dist/claude", PRE_WRITE_PLUGIN, blocking_config())
+    write_hooks(tmp_path, CLAUDE_TREE, PRE_WRITE_PLUGIN, blocking_config())
 
     violations = iter_tree_violations(tmp_path)
 
@@ -83,8 +89,8 @@ def test_blocking_hook_is_reported_with_location(tmp_path: Path) -> None:
 
 
 def test_clean_tree_reports_nothing(tmp_path: Path) -> None:
-    write_hooks(tmp_path, "dist/claude", PRE_WRITE_PLUGIN, safe_config())
-    write_hooks(tmp_path, "dist/codex", PRE_WRITE_PLUGIN, safe_config())
+    write_hooks(tmp_path, CLAUDE_TREE, PRE_WRITE_PLUGIN, safe_config())
+    write_hooks(tmp_path, CODEX_TREE, PRE_WRITE_PLUGIN, safe_config())
 
     assert iter_tree_violations(tmp_path) == []
 
@@ -107,7 +113,7 @@ def guarded_substituted_config() -> dict[str, object]:
 def test_guarded_substituted_path_hook_reports_nothing(tmp_path: Path) -> None:
     # Scenario witness for the assertion's "uses a guarded command" clause: a guarded
     # substituted-path invocation in an otherwise clean tree produces no violations.
-    write_hooks(tmp_path, "dist/claude", PRE_WRITE_PLUGIN, guarded_substituted_config())
+    write_hooks(tmp_path, CLAUDE_TREE, PRE_WRITE_PLUGIN, guarded_substituted_config())
 
     assert iter_tree_violations(tmp_path) == []
 
@@ -117,8 +123,8 @@ def test_main_reports_location_and_exits_non_zero(
 ) -> None:
     # The first scenario assertion couples both halves: reports plugin/file/event AND
     # exits non-zero. Verify them together at the CLI entry point.
-    root = tmp_path / "dist/claude"
-    write_hooks(tmp_path, "dist/claude", PRE_WRITE_PLUGIN, blocking_config())
+    root = tmp_path / CLAUDE_TREE
+    write_hooks(tmp_path, CLAUDE_TREE, PRE_WRITE_PLUGIN, blocking_config())
 
     code = main([str(root)])
     err = capsys.readouterr().err
@@ -129,10 +135,10 @@ def test_main_reports_location_and_exits_non_zero(
 
 def test_main_exits_zero_for_a_clean_tree(tmp_path: Path) -> None:
     # The assertion frames "the dist trees" (plural): exercise both at the CLI entry.
-    write_hooks(tmp_path, "dist/claude", PRE_WRITE_PLUGIN, safe_config())
-    write_hooks(tmp_path, "dist/codex", PRE_WRITE_PLUGIN, safe_config())
+    write_hooks(tmp_path, CLAUDE_TREE, PRE_WRITE_PLUGIN, safe_config())
+    write_hooks(tmp_path, CODEX_TREE, PRE_WRITE_PLUGIN, safe_config())
 
-    assert main([str(tmp_path / "dist/claude"), str(tmp_path / "dist/codex")]) == 0
+    assert main([str(tmp_path / CLAUDE_TREE), str(tmp_path / CODEX_TREE)]) == 0
 
 
 def test_spec_tree_pre_write_hook_scans_clean_and_other_plugin_is_reported(
@@ -155,10 +161,10 @@ def test_spec_tree_pre_write_hook_scans_clean_and_other_plugin_is_reported(
             ]
         }
     }
-    write_hooks(tmp_path, "dist/claude", PRE_WRITE_PLUGIN, config)
+    write_hooks(tmp_path, CLAUDE_TREE, PRE_WRITE_PLUGIN, config)
     assert iter_tree_violations(tmp_path) == []
 
-    write_hooks(tmp_path, "dist/claude", "other-plugin", config)
+    write_hooks(tmp_path, CLAUDE_TREE, "other-plugin", config)
     violations = iter_tree_violations(tmp_path)
     assert violations
     assert all("other-plugin" in v for v in violations)
