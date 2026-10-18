@@ -313,12 +313,40 @@ SEPARATOR = PRE_WRITE_MATCHER_SEPARATOR
         EDIT_TOOL,
         f"{WRITE_TOOL}{SEPARATOR}{EDIT_TOOL}{SEPARATOR}Bash",
         f"{WRITE_TOOL}{SEPARATOR}Read",
+        f"{EDIT_TOOL}{SEPARATOR}{WRITE_TOOL}{SEPARATOR}{WRITE_TOOL}",
         "Bash",
         ".*",
     ],
 )
 def test_pre_write_exception_is_flagged_for_a_different_matcher(matcher: str) -> None:
     assert hook_config_violations(pre_write_config(matcher=matcher), PRE_WRITE_PLUGIN)
+
+
+@pytest.mark.parametrize("event", sorted(BLOCKING_EVENTS - {PRE_TOOL_USE_EVENT}))
+def test_pre_write_exception_is_flagged_on_another_blocking_event(event: str) -> None:
+    # NEVER: pass a hook on a blocking-capable event other than PreToolUse, even when
+    # the block is the exact pre-write exception registered by its plugin.
+    handler: dict[str, object] = {
+        "type": "command",
+        "command": PRE_WRITE_COMMAND_CLAUDE,
+        "timeout": 5,
+    }
+    on_event: Mapping[str, object] = {
+        "hooks": {event: [{"matcher": PRE_WRITE_MATCHER, "hooks": [handler]}]}
+    }
+    assert hook_config_violations(on_event, PRE_WRITE_PLUGIN)
+
+
+def test_pre_write_exception_without_a_matcher_key_is_flagged() -> None:
+    handler: dict[str, object] = {
+        "type": "command",
+        "command": PRE_WRITE_COMMAND_CLAUDE,
+        "timeout": 5,
+    }
+    matcherless: Mapping[str, object] = {
+        "hooks": {PRE_TOOL_USE_EVENT: [{"hooks": [handler]}]}
+    }
+    assert hook_config_violations(matcherless, PRE_WRITE_PLUGIN)
 
 
 def test_pre_write_exception_is_flagged_for_a_different_command() -> None:
