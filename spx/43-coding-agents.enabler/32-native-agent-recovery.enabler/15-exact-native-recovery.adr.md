@@ -13,6 +13,7 @@ Prowl preserves sidebar worktree topology independently from instantiated termin
 - One native session identity executes in at most one pane and one worktree.
 - An exact native command contains only the prepared agent type, resume locator or complete session identity, applicable native home, and one writable-root option for each root the recover request supplies for the candidate's worktree; no continuation prose, Prowl status, or recency selector participates in launch or verification.
 - A candidate whose agent type's resume command accepts no writable-root option receives no native launch while the recover request supplies a writable root for its worktree.
+- Every writable-root key names a worktree held by a prepared candidate; a key naming any other worktree is rejected before any activation or native launch.
 - Activation opens only a prepared worktree and accepts only an exact-root result whose returned path and pane bind that target; no Git-worktree or filesystem enumeration creates recovery targets.
 - Native launches sharing one home are serialized through input-ready state.
 - Reassessment planning requires one checked stable-screen context read for every verified pane, including the controller and already-correlated panes; one absent or failed read permits no continuation send.
@@ -29,6 +30,7 @@ Prowl preserves sidebar worktree topology independently from instantiated termin
 - ALWAYS: the complete verified binding set maps with one checked pane read per binding to reassessment planning; absent or failed reads map to zero delivery, while verified non-controller candidates not present in the reassessed set map after the read barrier to one separate delivery ([mapping])
 - ALWAYS: repeated recovery with every candidate exactly correlated and reassessed emits no activation or delivery ([property])
 - ALWAYS: verification accepts only distinct bindings whose process-backed, native-status, current-session, or exact public-agent evidence matches the prepared worktree, agent type, and native session identity ([compliance])
+- ALWAYS: recovery rejects a writable-root map that names a worktree held by no prepared candidate with a named non-mutating failure and never drops the root silently ([compliance])
 - NEVER: preparation, activation, launch, or verification accepts transcript recency, rollout recency, terminal presentation, a roster entry without exact session identity, or a latest-session selector as exact evidence ([compliance])
 - NEVER: recovery launches a candidate whose agent type's resume command accepts no writable-root option while the recover request supplies a writable root for its worktree, or launches a native resume command that omits a supplied root ([compliance])
 
