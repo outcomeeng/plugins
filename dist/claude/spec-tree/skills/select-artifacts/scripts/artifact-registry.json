@@ -249,7 +249,7 @@
               "SKILL.md"
             ]
           },
-          "author": "create-skill",
+          "author": "author-skill",
           "audit": "audit-skill",
           "standard": "skill-standards",
           "contract": "artifact-type"
@@ -271,7 +271,7 @@
             ],
             "filenames": []
           },
-          "author": "create-subagent",
+          "author": "author-subagent",
           "audit": "audit-subagent",
           "standard": "subagent-standards",
           "contract": "artifact-type"

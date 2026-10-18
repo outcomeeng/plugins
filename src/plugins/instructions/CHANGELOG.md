@@ -6,6 +6,18 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.22.0
+
+### Breaking
+
+- **`/create-skill` is renamed `/author-skill`.** The skill-authoring skill ships under the one name `author-skill`, so `instructions:create-skill` no longer resolves. Invoke `/author-skill` or `instructions:author-skill` instead; its routes, workflows, references, and templates are unchanged. The spec-tree plugin's `change-skill-author` definition and `/execute-change` name the skill under its new name. Before this change, the skill shipped as `create-skill`, which named its authoring role differently from the `audit-skill` skill that judges its output.
+
+- **`/create-subagent` is renamed `/author-subagent` and repairs from a Fixer's inputs.** The subagent-authoring skill ships under the one name `author-subagent`, so `instructions:create-subagent` no longer resolves. Invoke `/author-subagent` or `instructions:author-subagent` instead. The skill now repairs a definition from a rejected run's sealed run file, reading each finding by its `<unit>:<rule-id>` key from that file alone, and from the command line and complete output of a deterministic command that failed on it. Each repair covers every instance the cited clause covers and nothing more, resolves every same-class site and changed dependency, and returns the clause applied and the check that shows the class closed. The skill returns `unchanged` with the committed head and path when the definition already holds the requested result, and `blocked` naming the missing input or skill when one is absent. It writes to the checkout by default and writes to user scope only after the operator confirms the absolute destination. The spec-tree plugin's `change-subagent-author` definition and `/execute-change` name the skill under its new name, and `/execute-change` no longer excepts it from reading a Fixer's repair block. Before this change, the skill shipped as `create-subagent`, which named its authoring role differently from the `audit-subagent` skill that judges its output, and took no repair input.
+
+### Changed
+
+- **`/agent-prompt-standards` names the skill-authoring skill `author-skill` in its repeated-name example.** The structural anti-pattern "Repeating the skill name" now quotes "The author-skill skill is designed to...", the name under which the skill-authoring skill ships, which replaces `create-skill`. Before this change, the example quoted the former name, so a skill that authors against the standard met a name no plugin ships.
+
 ## 0.21.12
 
 ### Changed

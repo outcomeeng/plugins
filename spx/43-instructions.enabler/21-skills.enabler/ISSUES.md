@@ -5,7 +5,7 @@ Actionable findings from the post-merge skill audit of PR 458 at
 
 ## Split router authority by workflow needs
 
-`src/plugins/instructions/skills/create-skill/SKILL.md:5` grants `Bash`, `Write`,
+`src/plugins/instructions/skills/author-skill/SKILL.md:5` grants `Bash`, `Write`,
 `WebFetch`, and `WebSearch` to every route. Read-only audit and pattern-explanation
 routes inherit mutation and network capabilities they do not use.
 
@@ -210,7 +210,7 @@ Surfaces of the `instructions` plugin teach payload forms that [`spx/15-agent-to
 **Evidence.**
 
 - `src/plugins/instructions/skills/skill-standards/SKILL.md` line 49 teaches choosing a quoted heredoc or a one-line `printf '%s\n' ... | <tool>` pipe by harness environment.
-- `src/plugins/instructions/skills/create-skill/templates/auditor-skill.md` lines 98, 130 and 135 teach a quoted heredoc and a `printf` pipe for `spx verification run scope add` and `finding add` payloads, with `Bash(printf '%s\n':*)` in the template's `allowed-tools`.
+- `src/plugins/instructions/skills/author-skill/templates/auditor-skill.md` lines 98, 130 and 135 teach a quoted heredoc and a `printf` pipe for `spx verification run scope add` and `finding add` payloads, with `Bash(printf '%s\n':*)` in the template's `allowed-tools`.
 - `src/plugins/instructions/skills/skill-standards/SKILL.md` line 452 states the guard-block rule with "a pipe between two operations other than a payload pipe".
 - `src/plugins/instructions/skills/skill-standards/references/command-capabilities.md` line 98 says "other than the payload pipe above".
 - `src/plugins/instructions/skills/skill-standards/references/rule-catalog.md` line 175, rule `unbounded_guard_rerun`, says "a payload pipe is never split".

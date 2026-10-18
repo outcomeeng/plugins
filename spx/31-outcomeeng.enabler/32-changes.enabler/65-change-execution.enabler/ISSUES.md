@@ -42,31 +42,23 @@
 
 ## An instruction round's changelog entry has no declared owner in the fronted skills
 
-**Evidence**: `spec-tree:changes-reviewer` run `2026-10-03_21-00-54-163-94f69948f54e` on head `a5828b89d9470a14436c069f6884a556847610bc`, finding severity `DEBT`, category consistency, against `change-execution.md`. Neither `instructions:create-skill` nor `instructions:create-subagent` declares changelog authoring. The `/execute-change` task message carries the instruction as a sentence, and the 0.101.0 entry of the spec-tree changelog states that each round produces the entry that records its surface. A surface outside any plugin has no plugin changelog.
+**Evidence**: `spec-tree:changes-reviewer` run `2026-10-03_21-00-54-163-94f69948f54e` on head `a5828b89d9470a14436c069f6884a556847610bc`, finding severity `DEBT`, category consistency, against `change-execution.md`. Neither `instructions:author-skill` nor `instructions:author-subagent` declares changelog authoring. The `/execute-change` task message carries the instruction as a sentence, and the 0.101.0 entry of the spec-tree changelog states that each round produces the entry that records its surface. A surface outside any plugin has no plugin changelog.
 
 **Impact**: a round produces the changelog entry only as far as its fronted skill follows an instruction its declared scope does not name, and the Executor can neither detect nor fill the gap without producing an artifact itself.
 
-**Settlement condition**: `instructions:create-skill` and `instructions:create-subagent` each declare a changelog step with its scope for a surface outside any plugin, or the entry moves to its own Activity and definition; the change-execution spec assertion, the `execute-change` task-message rule and the spec-tree changelog entry then name that owner.
+**Settlement condition**: `instructions:author-skill` and `instructions:author-subagent` each declare a changelog step with its scope for a surface outside any plugin, or the entry moves to its own Activity and definition; the change-execution spec assertion, the `execute-change` task-message rule and the spec-tree changelog entry then name that owner.
 
 ## A subagent-definition round carries no committed-head skill audit for its calling-skill update
 
-**Evidence**: `spec-tree:changes-reviewer` run `2026-10-03_21-54-22-438-ece57dd8f255` on head `1fd878a45b689558d17066797f74d806631edd92`, finding severity `DEBT`, category evidence, against `src/plugins/spec-tree/skills/execute-change/SKILL.md` and `change-execution.md`. `instructions:create-subagent` step 5 updates the calling skill through `instructions:create-skill`, which dispatches no skill audit, while the Verifier pairing of a `change-subagent-author` round names `instructions:subagent-auditor` only.
+**Evidence**: `spec-tree:changes-reviewer` run `2026-10-03_21-54-22-438-ece57dd8f255` on head `1fd878a45b689558d17066797f74d806631edd92`, finding severity `DEBT`, category evidence, against `src/plugins/spec-tree/skills/execute-change/SKILL.md` and `change-execution.md`. `instructions:author-subagent` step 5 updates the calling skill through `instructions:author-skill`, which dispatches no skill audit, while the Verifier pairing of a `change-subagent-author` round names `instructions:subagent-auditor` only.
 
 **Impact**: when a Change's subagent-definition Activity also edits a calling skill, that edit reaches `/merge` with a skill audit only if the Change's Frame names a skill-surface obligation for it.
 
 **Settlement condition**: the pairing of a subagent-definition round names `instructions:skill-auditor` as well whenever the round's committed diff changes a skill surface, in the `execute-change` definitions text, its step 5.3 and the change-execution assertion, and one typed skill audit of `execute-change` then approves.
 
-## `instructions:create-subagent` declares no repair-block intake for a Fixer round
-
-**Evidence**: `spec-tree:changes-reviewer` run `2026-10-03_22-50-05-358-7abe73e44d07` on head `59622008c0a2f9b78310058eda2d61bce96f9f52`, finding severity `DEBT`, category consistency, against the Fixer rule of `src/plugins/spec-tree/skills/execute-change/SKILL.md`. A Fixer round of `change-skill-author` or `change-subagent-author` receives its Author's task message and a repair block of rejected verdicts and failed command output. The `improve` route of `instructions:create-skill` routes supplied findings to `workflows/repair-skill.md`, which takes each supplied finding and each requested change as one inventory row and returns a disposition for every row. `instructions:create-subagent` takes only its configuration target and declares no intake for a supplied block.
-
-**Impact**: a `change-subagent-author` Fixer round started by a rejected verdict, a failed deterministic command or a `/merge` finding repairs only what its own catalog check of the definition finds, so a defect that check does not reproduce returns to the repeated-defect stop of `/execute-change`.
-
-**Settlement condition**: `instructions:create-subagent` declares an intake that joins a supplied repair block of verdicts and failed command output to the findings the round repairs, and the Fixer rule of `/execute-change` then drops its exception for that skill.
-
 ## No route produces the invocation evidence of a subagent definition an Executor delivers
 
-**Evidence**: `spec-tree:changes-reviewer` run `2026-10-03_22-56-23-685-4cdbf8555ae6` on head `72378e875578070b6574c37595f0882802f41e3d`, finding severity `DEBT`, category evidence, against `src/plugins/spec-tree/skills/execute-change/SKILL.md` and `change-execution.md`. `/subagent-standards` requires each subagent definition without declared per-harness release acceptance to retain its exact-definition minimal isolated invocation, and `instructions:create-subagent` returns that invocation as verification still outstanding. The `<definitions>` table of `/execute-change` has no row whose result is a retained invocation run, the Executor produces no artifact, and the paired Verifier of a `change-subagent-author` round is `instructions:subagent-auditor` alone.
+**Evidence**: `spec-tree:changes-reviewer` run `2026-10-03_22-56-23-685-4cdbf8555ae6` on head `72378e875578070b6574c37595f0882802f41e3d`, finding severity `DEBT`, category evidence, against `src/plugins/spec-tree/skills/execute-change/SKILL.md` and `change-execution.md`. `/subagent-standards` requires each subagent definition without declared per-harness release acceptance to retain its exact-definition minimal isolated invocation, and `instructions:author-subagent` returns that invocation as verification still outstanding. The `<definitions>` table of `/execute-change` has no row whose result is a retained invocation run, the Executor produces no artifact, and the paired Verifier of a `change-subagent-author` round is `instructions:subagent-auditor` alone.
 
 **Impact**: a subagent-definition Activity completes only when its auditor finds the invocation evidence present, so a definition whose evidence is absent reaches the repeated-defect stop of `/execute-change` with no round that can produce it.
 
@@ -87,14 +79,6 @@
 **Impact**: a result that is correct but not `closed` or `released` has no criterion that judges it, and an Executor resumed from a Handoff has no stated route for a finding on a file an earlier session produced.
 
 **Settlement condition**: each declared result has a success criterion, step 6 states a route for a finding whose file has no producing round in this session, and one typed skill audit of `execute-change` raises neither finding.
-
-## The `definition-invocation` probe's attested runs predate its amended protocol
-
-**Evidence**: `probes/definition-invocation/probe.md` records its attested runs on subject commits `d090bb966859c3b4770a78a4ba2de5410d4fc53f`, `8a5ddbe8d21caa37a7db2d7d304b613c6805b9a8`, `6cbb66684b7e53b3314237b60681e50016757ac9` and `0942beb61734927d2f07fc7b81c66209e27f876b`. Its Limitations no longer state that a whole instruction round includes a launch of `instructions:skill-auditor` by `change-skill-author` or `change-subagent-author`, because neither `instructions:create-skill` nor `instructions:create-subagent` launches an auditor. No attested run covers the protocol as amended.
-
-**Impact**: the probe's `passed` verdict rests on a protocol text that has since changed, so the `[probe]` assertion of `change-execution.md` carries no attested result pinned to the current protocol.
-
-**Settlement condition**: a fresh attested run of the amended protocol, recorded in `probes/definition-invocation/probe.md` with its retained artifacts.
 
 ## The SPX CLI lists no verification runs by Change identity
 

@@ -11,7 +11,7 @@
     {
       "name": "instructions",
       "source": "./dist/claude/instructions",
-      "description": "Instruction authoring: /create-skill, /create-subagent"
+      "description": "Instruction authoring: /author-skill, /author-subagent"
     },
     {
       "name": "frontend",
