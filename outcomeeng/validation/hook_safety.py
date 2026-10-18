@@ -38,8 +38,7 @@ from typing import Final
 
 from outcomeeng.validation.hook_contract import (
     PRE_TOOL_USE_EVENT,
-    PRE_WRITE_ADAPTER_INTERPRETER,
-    PRE_WRITE_ADAPTER_SCRIPT,
+    PRE_WRITE_COMMANDS,
     PRE_WRITE_MATCHER_SEPARATOR,
     PRE_WRITE_PLUGIN,
     PRE_WRITE_TOOLS,
@@ -108,12 +107,6 @@ _SUBSTITUTED_SCRIPT: Final[re.Pattern[str]] = re.compile(
 # not this check.
 _FALLBACK: Final[re.Pattern[str]] = re.compile(r"\|\|")
 # A version-pinned plugin cache path (a semver segment under a cache directory).
-# The write-boundary adapter invoked through the plugin-root path token of either tree.
-_ADAPTER_INVOCATION: Final[re.Pattern[str]] = re.compile(
-    re.escape(PRE_WRITE_ADAPTER_INTERPRETER)
-    + r"\s+\"?\$\{(?:CLAUDE_PLUGIN_ROOT|PLUGIN_ROOT)\}\"?/"
-    + re.escape(PRE_WRITE_ADAPTER_SCRIPT)
-)
 _PINNED_CACHE: Final[re.Pattern[str]] = re.compile(r"/cache/\S*?\d+\.\d+\.\d+")
 
 
@@ -121,8 +114,8 @@ def _is_pre_write_exception(plugin: str | None, blocks: list[object]) -> bool:
     """Return True when ``blocks`` is exactly the source-owned pre-write exception.
 
     The exception is the spec-tree plugin's sole ``PreToolUse`` entry: one block with
-    one handler, a matcher naming exactly the Write and Edit tools, and a command that
-    runs the write-boundary adapter. Any other plugin, matcher, command, or a second
+    one handler, a matcher naming exactly the Write and Edit tools, and a command equal to
+    the source-owned pre-write command of either runtime tree. Any other plugin, matcher, command, or a second
     entry beside it is not the exception.
     """
     if plugin != PRE_WRITE_PLUGIN or len(blocks) != 1:
@@ -145,7 +138,7 @@ def _is_pre_write_exception(plugin: str | None, blocks: list[object]) -> bool:
     command = handler.get("command")
     if not isinstance(command, str):
         return False
-    return _ADAPTER_INVOCATION.search(command) is not None
+    return command in PRE_WRITE_COMMANDS
 
 
 def _event_violation(event: str) -> str | None:
