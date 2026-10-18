@@ -17,6 +17,7 @@ from outcomeeng.validation.hook_contract import (
     CLAUDE_RUNTIME_TREE,
     CODEX_RUNTIME_TREE,
     COMMAND_KEY,
+    HOOKS_CONFIG_ENCODING,
     HOOKS_CONFIG_FILE,
     HOOKS_DIRECTORY,
     HOOKS_KEY,
@@ -42,7 +43,7 @@ def write_hooks(
 ) -> Path:
     path = root / runtime / plugin / HOOKS_DIRECTORY / HOOKS_CONFIG_FILE
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(config), encoding="utf-8")
+    path.write_text(json.dumps(config), encoding=HOOKS_CONFIG_ENCODING)
     return path
 
 
@@ -52,9 +53,7 @@ def blocking_config() -> dict[str, object]:
             PRE_TOOL_USE_EVENT: [
                 {
                     MATCHER_KEY: "",
-                    HOOKS_KEY: [
-                        {"type": "command", COMMAND_KEY: SAFE_COMMAND, TIMEOUT_KEY: 5}
-                    ],
+                    HOOKS_KEY: [{COMMAND_KEY: SAFE_COMMAND, TIMEOUT_KEY: 5}],
                 }
             ]
         }
@@ -67,9 +66,7 @@ def safe_config() -> dict[str, object]:
             SESSION_START_EVENT: [
                 {
                     MATCHER_KEY: "",
-                    HOOKS_KEY: [
-                        {"type": "command", COMMAND_KEY: SAFE_COMMAND, TIMEOUT_KEY: 5}
-                    ],
+                    HOOKS_KEY: [{COMMAND_KEY: SAFE_COMMAND, TIMEOUT_KEY: 5}],
                 }
             ]
         }
@@ -105,9 +102,7 @@ def guarded_substituted_config() -> dict[str, object]:
             SESSION_START_EVENT: [
                 {
                     MATCHER_KEY: "",
-                    HOOKS_KEY: [
-                        {"type": "command", COMMAND_KEY: command, TIMEOUT_KEY: 5}
-                    ],
+                    HOOKS_KEY: [{COMMAND_KEY: command, TIMEOUT_KEY: 5}],
                 }
             ]
         }
@@ -165,7 +160,6 @@ def test_spec_tree_pre_write_hook_scans_clean_and_other_plugin_is_reported(
                     MATCHER_KEY: matcher,
                     HOOKS_KEY: [
                         {
-                            "type": "command",
                             COMMAND_KEY: PRE_WRITE_COMMAND_CLAUDE,
                             TIMEOUT_KEY: 5,
                         }

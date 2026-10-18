@@ -24,10 +24,12 @@ from outcomeeng.validation.hook_contract import (
     CODEX_RUNTIME_TREE,
     CODEX_SKILL_DIR_TOKEN,
     COMMAND_KEY,
+    HOOKS_CONFIG_ENCODING,
     HOOKS_CONFIG_FILE,
     HOOKS_DIRECTORY,
     HOOKS_KEY,
     MATCHER_KEY,
+    POST_TOOL_USE_EVENT,
     PRE_TOOL_USE_EVENT,
     PRE_WRITE_ADAPTER_INTERPRETER,
     PRE_WRITE_COMMAND_CLAUDE,
@@ -37,6 +39,7 @@ from outcomeeng.validation.hook_contract import (
     PRE_WRITE_MATCHER_SEPARATOR,
     PRE_WRITE_PLUGIN,
     PRE_WRITE_TOOLS,
+    REPORT_LOCATION_SEPARATOR,
     SESSION_START_EVENT,
     TIMEOUT_KEY,
 )
@@ -54,7 +57,7 @@ def config(
     timeout: int | None = 5,
 ) -> Mapping[str, object]:
     """Build a one-hook hooks.json config for ``event`` with an overridable command/timeout."""
-    handler: dict[str, object] = {"type": "command", COMMAND_KEY: command}
+    handler: dict[str, object] = {COMMAND_KEY: command}
     if timeout is not None:
         handler[TIMEOUT_KEY] = timeout
     return {HOOKS_KEY: {event: [{MATCHER_KEY: "", HOOKS_KEY: [handler]}]}}
@@ -65,7 +68,7 @@ def test_blocking_event_is_flagged(event: str) -> None:
     # NEVER: pass a hook registered on a blocking-capable event. The default
     # ``echo '{}'`` command is command-shape-clean, so the only violation is the event.
     assert hook_config_violations(config(event)), (
-        f"a hook on blocking-capable event {event!r} must be flagged"
+        f"a {BLOCKING_EVENT_VIOLATION_MARKER} {event!r} must be flagged"
     )
 
 
@@ -141,7 +144,7 @@ def test_unrecognized_event_is_flagged() -> None:
 def test_event_blocking_on_one_runtime_only_is_flagged() -> None:
     # PostToolUse is non-blocking on Claude Code but can block continuation on Codex.
     # The same hooks.json ships to both, so it is outside the cross-runtime safe set.
-    assert hook_config_violations(config("PostToolUse"))
+    assert hook_config_violations(config(POST_TOOL_USE_EVENT))
 
 
 def test_omitted_matcher_block_is_handled() -> None:
@@ -153,7 +156,6 @@ def test_omitted_matcher_block_is_handled() -> None:
                 {
                     HOOKS_KEY: [
                         {
-                            "type": "command",
                             COMMAND_KEY: f"{PRE_WRITE_ADAPTER_INTERPRETER} {CLAUDE_PLUGIN_ROOT_TOKEN}/x.py",
                         }
                     ]
@@ -172,7 +174,6 @@ def test_omitted_matcher_safe_form_passes() -> None:
                 {
                     HOOKS_KEY: [
                         {
-                            "type": "command",
                             COMMAND_KEY: f"{PRE_WRITE_ADAPTER_INTERPRETER} {CLAUDE_PLUGIN_ROOT_TOKEN}/x.py || echo '{PRE_WRITE_EMPTY_RESULT}'",
                             TIMEOUT_KEY: 5,
                         }
@@ -226,12 +227,10 @@ def test_blocking_event_violation_reported_once_per_event() -> None:
                     MATCHER_KEY: "",
                     HOOKS_KEY: [
                         {
-                            "type": "command",
                             COMMAND_KEY: f"echo '{PRE_WRITE_EMPTY_RESULT}'",
                             TIMEOUT_KEY: 5,
                         },
                         {
-                            "type": "command",
                             COMMAND_KEY: f"echo '{PRE_WRITE_EMPTY_RESULT}'",
                             TIMEOUT_KEY: 5,
                         },
@@ -255,12 +254,14 @@ def test_version_pinned_cache_path_is_flagged() -> None:
 def _write_config(root: Path, runtime: str, cfg: Mapping[str, object]) -> None:
     path = root / runtime / PRE_WRITE_PLUGIN / HOOKS_DIRECTORY / HOOKS_CONFIG_FILE
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(cfg), encoding="utf-8")
+    path.write_text(json.dumps(cfg), encoding=HOOKS_CONFIG_ENCODING)
 
 
 def _rule_messages(violations: list[str]) -> list[str]:
     # Drop the leading ``<relative-path>: `` so two trees compare on rule text alone.
-    return [violation.split(": ", 1)[1] for violation in violations]
+    return [
+        violation.split(REPORT_LOCATION_SEPARATOR, 1)[1] for violation in violations
+    ]
 
 
 def test_rules_apply_identically_across_both_runtime_trees(tmp_path: Path) -> None:
@@ -290,7 +291,6 @@ def pre_write_config(
     extra_handlers: int = 0,
 ) -> Mapping[str, object]:
     handler: dict[str, object] = {
-        "type": "command",
         COMMAND_KEY: command,
         TIMEOUT_KEY: 5,
     }
@@ -346,7 +346,6 @@ def test_pre_write_exception_is_flagged_on_another_blocking_event(event: str) ->
     # NEVER: pass a hook on a blocking-capable event other than PreToolUse, even when
     # the block is the exact pre-write exception registered by its plugin.
     handler: dict[str, object] = {
-        "type": "command",
         COMMAND_KEY: PRE_WRITE_COMMAND_CLAUDE,
         TIMEOUT_KEY: 5,
     }
@@ -358,7 +357,6 @@ def test_pre_write_exception_is_flagged_on_another_blocking_event(event: str) ->
 
 def test_pre_write_exception_without_a_matcher_key_is_flagged() -> None:
     handler: dict[str, object] = {
-        "type": "command",
         COMMAND_KEY: PRE_WRITE_COMMAND_CLAUDE,
         TIMEOUT_KEY: 5,
     }
