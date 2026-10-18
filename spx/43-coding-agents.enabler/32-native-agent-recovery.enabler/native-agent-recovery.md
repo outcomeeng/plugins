@@ -11,8 +11,6 @@ CAN resume the complete intended live set and its unsatisfied operator interacti
 
 ## Assertions
 
-- Recovery rejects a recover request whose writable-root map names a worktree held by no prepared candidate with a named non-mutating failure before any activation or native launch, and never drops the root silently
-
 ### Scenarios
 
 - Given a recover request that supplies a writable root for a candidate's worktree, when recovery launches that candidate, then the recovered native session's effective permission policy lists that root as writable ([probe](probes/writable-roots/probe.md))
@@ -33,6 +31,7 @@ CAN resume the complete intended live set and its unsatisfied operator interacti
 
 ### Compliance
 
+- ALWAYS: recovery rejects a recover request whose writable-root map names a worktree held by no prepared candidate with a named non-mutating failure before any activation or native launch, and never drops the root silently ([test](tests/test_native_agent_recovery.compliance.l1.py))
 - ALWAYS: prepare captures a fresh allowlist before restart and preserves every original pane, worktree, agent type, session, resume locator, applicable native home, evidence, role, secondary-authorization identity, and reassessed-session identity in a versioned manifest ([test](tests/test_native_agent_recovery.compliance.l1.py))
 - ALWAYS: recovery activates absent panes through authorized `/operate-prowl` `open` against prepared paths only, requires exact-root path-and-pane results, preserves Prowl-returned post-restart pane identities, and never scans Git worktrees or filesystem directories for activation targets ([test](tests/test_native_agent_recovery.compliance.l1.py))
 - ALWAYS: recovery serializes exact native launches sharing one native home through input-ready state and selects Claude's recommended summary resumption when that exact-session prompt appears ([test](tests/test_native_agent_recovery.compliance.l1.py))
