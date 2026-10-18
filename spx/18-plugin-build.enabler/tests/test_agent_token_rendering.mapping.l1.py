@@ -8,22 +8,23 @@ from outcomeeng.distribution.contracts import (
     Target,
 )
 from outcomeeng_testing.harnesses.agent_tokens import (
-    TOKEN_READING_SCRIPT,
+    TOKEN_READING_SCRIPTS,
     build_sample_agent_token_tree,
     owner_source_tokens,
 )
 
 
-def test_a_data_file_stands_beside_the_reading_script_in_every_target_tree() -> None:
+def test_a_data_file_stands_beside_each_reading_script_in_every_target_tree() -> None:
     built = build_sample_agent_token_tree()
     expected = {
         (
             target.value,
             AGENT_TOKEN_READING_PLUGIN_NAME
-            / TOKEN_READING_SCRIPT.parent
+            / reading_script.parent
             / AGENT_TOKEN_DATA_FILENAME,
         )
         for target in Target
+        for reading_script in TOKEN_READING_SCRIPTS
     }
     assert {
         (file.target_directory, file.path) for file in built.token_files
