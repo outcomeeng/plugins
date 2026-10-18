@@ -61,7 +61,7 @@ This run records `change-skill-author` and `change-subagent-author`, the two def
   - Each emitted definition carries `disallowedTools: "AskUserQuestion"`, `model: "opus"` and `effort: "medium"`.
   - Each parent session listed its definition, loaded spec-tree from `dist/claude/spec-tree`, and made exactly one `Agent` launch with `subagent_type` `spec-tree:<name>` and prompt `not-a-target`.
   - Each child's first event carries the launch's `parent_tool_use_id` and the `subagent_type` of its definition, and each launch's tool result reports `status` `completed`, the `agentType` of its definition, and `resolvedModel` `claude-opus-5-5`, which the Standard profile's `model: opus` selects.
-  - Each child invoked its fronted skill, `instructions:create-skill` and `instructions:create-subagent` respectively, with the task message. The probe installs no `instructions` plugin, so the Skill tool returned `Unknown skill`, and each child returned a `blocked` result naming the required skill and the exact failure.
+  - Each child invoked its fronted skill, `instructions:author-skill` and `instructions:author-subagent` respectively, with the task message. The probe installs no `instructions` plugin, so the Skill tool returned `Unknown skill`, and each child returned a `blocked` result naming the required skill and the exact failure.
   - No child wrote a file or ran a store command. The runs cost USD 0.22 and USD 0.16 against the USD 2.00 ceiling.
 - Artifacts:
   - [change-skill-author.result.json](change-skill-author.result.json)
@@ -75,6 +75,6 @@ This run records `change-skill-author` and `change-subagent-author`, the two def
 
 - The run exercises only the stop at an unaccepted target; a round that produces an artifact, and a Fixer's repair block, stay unexercised.
 - The emitted effort is recorded from the definition file — `effort: medium` for the six Standard-profile definitions and `effort: high` for `change-executor`; each child's tool result reports the resolved model and no effort value.
-- The run of the two instruction round definitions exercises the `blocked` result for an uninstalled fronted skill. A round that runs `instructions:create-skill` or `instructions:create-subagent` whole stays unexercised because the probe installs no `instructions` plugin. Neither fronted skill launches an auditor; the Verifier of such a round is a separate launch by `/execute-change`, outside this protocol.
+- The run of the two instruction round definitions exercises the `blocked` result for an uninstalled fronted skill. A round that runs `instructions:author-skill` or `instructions:author-subagent` whole stays unexercised because the probe installs no `instructions` plugin. Neither fronted skill launches an auditor; the Verifier of such a round is a separate launch by `/execute-change`, outside this protocol.
 - The Codex renderings are not invoked; the node's `ISSUES.md` records that gap.
 - A later change to an emitted definition invalidates its record here until the protocol runs again on the new commit.
