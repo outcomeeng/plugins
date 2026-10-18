@@ -9,9 +9,7 @@ module owns. The detection logic lives in the source module under test.
 
 from __future__ import annotations
 
-import json
 from collections.abc import Mapping
-from pathlib import Path
 
 import pytest
 
@@ -24,9 +22,6 @@ from outcomeeng.validation.hook_contract import (
     CODEX_RUNTIME_TREE,
     CODEX_SKILL_DIR_TOKEN,
     COMMAND_KEY,
-    HOOKS_CONFIG_ENCODING,
-    HOOKS_CONFIG_FILE,
-    HOOKS_DIRECTORY,
     HOOKS_KEY,
     MATCHER_KEY,
     POST_TOOL_USE_EVENT,
@@ -48,6 +43,7 @@ from outcomeeng.validation.hook_safety import (
     hook_config_violations,
     iter_tree_violations,
 )
+from outcomeeng_testing.harnesses.hook_safety_tree import hook_tree
 
 
 def config(
@@ -251,12 +247,6 @@ def test_version_pinned_cache_path_is_flagged() -> None:
     assert hook_config_violations(config(SESSION_START_EVENT, command=pinned))
 
 
-def _write_config(root: Path, runtime: str, cfg: Mapping[str, object]) -> None:
-    path = root / runtime / PRE_WRITE_PLUGIN / HOOKS_DIRECTORY / HOOKS_CONFIG_FILE
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(cfg), encoding=HOOKS_CONFIG_ENCODING)
-
-
 def _rule_messages(violations: list[str]) -> list[str]:
     # Drop the leading ``<relative-path>: `` so two trees compare on rule text alone.
     return [
@@ -264,17 +254,18 @@ def _rule_messages(violations: list[str]) -> list[str]:
     ]
 
 
-def test_rules_apply_identically_across_both_runtime_trees(tmp_path: Path) -> None:
+def test_rules_apply_identically_across_both_runtime_trees() -> None:
     # ALWAYS: each runtime tree, scanned in isolation, yields the same rule violation —
     # so a bug that skipped one subtree would make the two lists differ.
     blocking = config(PRE_TOOL_USE_EVENT)
-    claude_root = tmp_path / "claude"
-    codex_root = tmp_path / "codex"
-    _write_config(claude_root, CLAUDE_RUNTIME_TREE, blocking)
-    _write_config(codex_root, CODEX_RUNTIME_TREE, blocking)
+    with hook_tree() as tree:
+        claude_tree = tree.subtree(CLAUDE_RUNTIME_TREE)
+        codex_tree = tree.subtree(CODEX_RUNTIME_TREE)
+        claude_tree.write_hooks(CLAUDE_RUNTIME_TREE, PRE_WRITE_PLUGIN, blocking)
+        codex_tree.write_hooks(CODEX_RUNTIME_TREE, PRE_WRITE_PLUGIN, blocking)
 
-    claude_rules = _rule_messages(iter_tree_violations(claude_root))
-    codex_rules = _rule_messages(iter_tree_violations(codex_root))
+        claude_rules = _rule_messages(iter_tree_violations(claude_tree.root))
+        codex_rules = _rule_messages(iter_tree_violations(codex_tree.root))
 
     assert claude_rules, "the blocking event must be flagged in each runtime tree"
     assert claude_rules == codex_rules
@@ -309,10 +300,12 @@ def pre_write_config(
     ],
 )
 def test_pre_write_exception_passes_in_its_runtime_tree(
-    tmp_path: Path, runtime: str, command: str
+    runtime: str, command: str
 ) -> None:
-    _write_config(tmp_path, runtime, pre_write_config(command=command))
-    assert iter_tree_violations(tmp_path) == []
+    with hook_tree() as tree:
+        tree.write_hooks(runtime, PRE_WRITE_PLUGIN, pre_write_config(command=command))
+
+        assert iter_tree_violations(tree.root) == []
 
 
 def test_pre_write_exception_is_flagged_for_another_plugin() -> None:

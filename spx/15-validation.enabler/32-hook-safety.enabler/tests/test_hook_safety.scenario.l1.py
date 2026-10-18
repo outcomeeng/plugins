@@ -7,9 +7,6 @@ deterministic, and observable.
 
 from __future__ import annotations
 
-import json
-from pathlib import Path
-
 import pytest
 
 from outcomeeng.validation.hook_contract import (
@@ -17,9 +14,7 @@ from outcomeeng.validation.hook_contract import (
     CLAUDE_RUNTIME_TREE,
     CODEX_RUNTIME_TREE,
     COMMAND_KEY,
-    HOOKS_CONFIG_ENCODING,
     HOOKS_CONFIG_FILE,
-    HOOKS_DIRECTORY,
     HOOKS_KEY,
     MATCHER_KEY,
     PRE_TOOL_USE_EVENT,
@@ -33,18 +28,10 @@ from outcomeeng.validation.hook_contract import (
     TIMEOUT_KEY,
 )
 from outcomeeng.validation.hook_safety import iter_tree_violations, main
+from outcomeeng_testing.harnesses.hook_safety_tree import hook_tree
 
 # A command-shape-clean command, so a fixture's only possible violation is its event.
 SAFE_COMMAND = f"echo '{PRE_WRITE_EMPTY_RESULT}'"
-
-
-def write_hooks(
-    root: Path, runtime: str, plugin: str, config: dict[str, object]
-) -> Path:
-    path = root / runtime / plugin / HOOKS_DIRECTORY / HOOKS_CONFIG_FILE
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(config), encoding=HOOKS_CONFIG_ENCODING)
-    return path
 
 
 def blocking_config() -> dict[str, object]:
@@ -73,10 +60,11 @@ def safe_config() -> dict[str, object]:
     }
 
 
-def test_blocking_hook_is_reported_with_location(tmp_path: Path) -> None:
-    write_hooks(tmp_path, CLAUDE_RUNTIME_TREE, PRE_WRITE_PLUGIN, blocking_config())
+def test_blocking_hook_is_reported_with_location() -> None:
+    with hook_tree() as tree:
+        tree.write_hooks(CLAUDE_RUNTIME_TREE, PRE_WRITE_PLUGIN, blocking_config())
 
-    violations = iter_tree_violations(tmp_path)
+        violations = iter_tree_violations(tree.root)
 
     assert violations, (
         "a blocking-capable hook must produce a non-empty report (non-zero exit)"
@@ -87,11 +75,12 @@ def test_blocking_hook_is_reported_with_location(tmp_path: Path) -> None:
     assert PRE_TOOL_USE_EVENT in report  # event
 
 
-def test_clean_tree_reports_nothing(tmp_path: Path) -> None:
-    write_hooks(tmp_path, CLAUDE_RUNTIME_TREE, PRE_WRITE_PLUGIN, safe_config())
-    write_hooks(tmp_path, CODEX_RUNTIME_TREE, PRE_WRITE_PLUGIN, safe_config())
+def test_clean_tree_reports_nothing() -> None:
+    with hook_tree() as tree:
+        tree.write_hooks(CLAUDE_RUNTIME_TREE, PRE_WRITE_PLUGIN, safe_config())
+        tree.write_hooks(CODEX_RUNTIME_TREE, PRE_WRITE_PLUGIN, safe_config())
 
-    assert iter_tree_violations(tmp_path) == []
+        assert iter_tree_violations(tree.root) == []
 
 
 def guarded_substituted_config() -> dict[str, object]:
@@ -109,25 +98,26 @@ def guarded_substituted_config() -> dict[str, object]:
     }
 
 
-def test_guarded_substituted_path_hook_reports_nothing(tmp_path: Path) -> None:
+def test_guarded_substituted_path_hook_reports_nothing() -> None:
     # Scenario witness for the assertion's "uses a guarded command" clause: a guarded
     # substituted-path invocation in an otherwise clean tree produces no violations.
-    write_hooks(
-        tmp_path, CLAUDE_RUNTIME_TREE, PRE_WRITE_PLUGIN, guarded_substituted_config()
-    )
+    with hook_tree() as tree:
+        tree.write_hooks(
+            CLAUDE_RUNTIME_TREE, PRE_WRITE_PLUGIN, guarded_substituted_config()
+        )
 
-    assert iter_tree_violations(tmp_path) == []
+        assert iter_tree_violations(tree.root) == []
 
 
 def test_main_reports_location_and_exits_non_zero(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     # The first scenario assertion couples both halves: reports plugin/file/event AND
     # exits non-zero. Verify them together at the CLI entry point.
-    root = tmp_path / CLAUDE_RUNTIME_TREE
-    write_hooks(tmp_path, CLAUDE_RUNTIME_TREE, PRE_WRITE_PLUGIN, blocking_config())
+    with hook_tree() as tree:
+        tree.write_hooks(CLAUDE_RUNTIME_TREE, PRE_WRITE_PLUGIN, blocking_config())
 
-    code = main([str(root)])
+        code = main([str(tree.runtime_root(CLAUDE_RUNTIME_TREE))])
     err = capsys.readouterr().err
 
     assert code == 1
@@ -138,20 +128,41 @@ def test_main_reports_location_and_exits_non_zero(
     )
 
 
-def test_main_exits_zero_for_a_clean_tree(tmp_path: Path) -> None:
+def test_main_exits_zero_for_a_clean_tree() -> None:
     # The assertion frames "the dist trees" (plural): exercise both at the CLI entry.
-    write_hooks(tmp_path, CLAUDE_RUNTIME_TREE, PRE_WRITE_PLUGIN, safe_config())
-    write_hooks(tmp_path, CODEX_RUNTIME_TREE, PRE_WRITE_PLUGIN, safe_config())
+    with hook_tree() as tree:
+        tree.write_hooks(CLAUDE_RUNTIME_TREE, PRE_WRITE_PLUGIN, safe_config())
+        tree.write_hooks(CODEX_RUNTIME_TREE, PRE_WRITE_PLUGIN, safe_config())
 
-    assert (
-        main([str(tmp_path / CLAUDE_RUNTIME_TREE), str(tmp_path / CODEX_RUNTIME_TREE)])
-        == 0
-    )
+        code = main(
+            [
+                str(tree.runtime_root(CLAUDE_RUNTIME_TREE)),
+                str(tree.runtime_root(CODEX_RUNTIME_TREE)),
+            ]
+        )
+
+    assert code == 0
 
 
-def test_spec_tree_pre_write_hook_scans_clean_and_other_plugin_is_reported(
-    tmp_path: Path,
+def test_main_scans_both_dist_trees_under_the_current_directory_by_default(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
+    # With no roots given, main scans the default dist trees relative to the current
+    # directory: a blocking hook in each runtime tree is reported for both.
+    with hook_tree() as tree:
+        tree.write_hooks(CLAUDE_RUNTIME_TREE, PRE_WRITE_PLUGIN, blocking_config())
+        tree.write_hooks(CODEX_RUNTIME_TREE, PRE_WRITE_PLUGIN, blocking_config())
+        monkeypatch.chdir(tree.root)
+
+        code = main([])
+    err = capsys.readouterr().err
+
+    assert code == 1
+    assert CLAUDE_RUNTIME_TREE in err
+    assert CODEX_RUNTIME_TREE in err
+
+
+def test_spec_tree_pre_write_hook_scans_clean_and_other_plugin_is_reported() -> None:
     matcher = PRE_WRITE_MATCHER_SEPARATOR.join(sorted(PRE_WRITE_TOOLS))
     config = {
         HOOKS_KEY: {
@@ -168,10 +179,13 @@ def test_spec_tree_pre_write_hook_scans_clean_and_other_plugin_is_reported(
             ]
         }
     }
-    write_hooks(tmp_path, CLAUDE_RUNTIME_TREE, PRE_WRITE_PLUGIN, config)
-    assert iter_tree_violations(tmp_path) == []
+    with hook_tree() as tree:
+        tree.write_hooks(CLAUDE_RUNTIME_TREE, PRE_WRITE_PLUGIN, config)
+        clean = iter_tree_violations(tree.root)
 
-    write_hooks(tmp_path, CLAUDE_RUNTIME_TREE, "other-plugin", config)
-    violations = iter_tree_violations(tmp_path)
+        tree.write_hooks(CLAUDE_RUNTIME_TREE, "other-plugin", config)
+        violations = iter_tree_violations(tree.root)
+
+    assert clean == []
     assert violations
     assert all("other-plugin" in v for v in violations)
