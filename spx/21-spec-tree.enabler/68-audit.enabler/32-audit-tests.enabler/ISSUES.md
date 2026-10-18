@@ -90,7 +90,7 @@ The assertions state the sealed-run verdict model: the audit run's terminal stat
 
 **Evidence**: current-head CI review of pull request 671.
 
-## The skill records NOT_APPLICABLE language results in metadata the verdict format does not declare `src/plugins/spec-tree/skills/audit-tests/SKILL.md`, `compose_language`, `auditor-verdict-format`
+## Six skill-standard findings stand on the audit-tests skill body
 
 The skill audit run `2026-10-12_18-41-36-254-8cb4eac53023` of
 `src/plugins/spec-tree/skills/audit-tests/SKILL.md` at head
@@ -99,81 +99,19 @@ changeset leaves unchanged; the changeset changes line 20 only
 (`git diff -U0 2cf9cd80eebb49dc8a682f45dd08922551d54d76...ab5b519f0333258fc6e277b09a458b8b65920941 -- src/plugins/spec-tree/skills/audit-tests/SKILL.md`).
 
 - `auditor-verdict-format`: step `compose_language` records each composed language's NOT_APPLICABLE subjects "in verdict metadata", while the `<verdict_format>` metadata object declares only `branch`, `evidence_chain`, and `coverage_traces`.
-
-**Settlement condition**: the skill states the metadata field for NOT_APPLICABLE language results in `<verdict_format>`, composes `spec-tree:understand` and `spec-tree:contextualize` with `Use skill`, moves the grant note out of the runtime prompt, gives the REJECT-finding constraint its rationale, splits the combined step tag, and a skill audit approves.
-
-## The skill names its composed dependencies as slash invocations `src/plugins/spec-tree/skills/audit-tests/SKILL.md`, `load_context`, `composed-dependency-form`
-
-The skill audit run `2026-10-12_18-41-36-254-8cb4eac53023` of
-`src/plugins/spec-tree/skills/audit-tests/SKILL.md` at head
-`ab5b519f0333258fc6e277b09a458b8b65920941` reported six findings on text the
-changeset leaves unchanged; the changeset changes line 20 only
-(`git diff -U0 2cf9cd80eebb49dc8a682f45dd08922551d54d76...ab5b519f0333258fc6e277b09a458b8b65920941 -- src/plugins/spec-tree/skills/audit-tests/SKILL.md`).
-
 - `composed-dependency-form`: step `load_context` names `/understand` and `/contextualize` as slash invocations instead of `Use skill` instructions, and step `compose_language` loads `<lang>-test-standards` and invokes `audit-<lang>-tests` in prose the same way (run `2026-10-12_18-59-15-708-60d26c4e0044`).
-
-**Settlement condition**: the skill states the metadata field for NOT_APPLICABLE language results in `<verdict_format>`, composes `spec-tree:understand` and `spec-tree:contextualize` with `Use skill`, moves the grant note out of the runtime prompt, gives the REJECT-finding constraint its rationale, splits the combined step tag, and a skill audit approves.
-
-## The last constraint is an author-maintenance note about the skill's own grant `src/plugins/spec-tree/skills/audit-tests/SKILL.md`, `<constraints>`, `conciseness`
-
-The skill audit run `2026-10-12_18-41-36-254-8cb4eac53023` of
-`src/plugins/spec-tree/skills/audit-tests/SKILL.md` at head
-`ab5b519f0333258fc6e277b09a458b8b65920941` reported six findings on text the
-changeset leaves unchanged; the changeset changes line 20 only
-(`git diff -U0 2cf9cd80eebb49dc8a682f45dd08922551d54d76...ab5b519f0333258fc6e277b09a458b8b65920941 -- src/plugins/spec-tree/skills/audit-tests/SKILL.md`).
-
 - `conciseness` and `constraint-strong-modals`: the last `<constraints>` bullet is an author-maintenance note about the skill's own `Bash` grant, stated without MUST, NEVER, or ALWAYS.
-
-**Settlement condition**: the skill states the metadata field for NOT_APPLICABLE language results in `<verdict_format>`, composes `spec-tree:understand` and `spec-tree:contextualize` with `Use skill`, moves the grant note out of the runtime prompt, gives the REJECT-finding constraint its rationale, splits the combined step tag, and a skill audit approves.
-
-## The REJECT-finding constraint carries no rationale `src/plugins/spec-tree/skills/audit-tests/SKILL.md`, `<constraints>`, `constraint-rationale`
-
-The skill audit run `2026-10-12_18-41-36-254-8cb4eac53023` of
-`src/plugins/spec-tree/skills/audit-tests/SKILL.md` at head
-`ab5b519f0333258fc6e277b09a458b8b65920941` reported six findings on text the
-changeset leaves unchanged; the changeset changes line 20 only
-(`git diff -U0 2cf9cd80eebb49dc8a682f45dd08922551d54d76...ab5b519f0333258fc6e277b09a458b8b65920941 -- src/plugins/spec-tree/skills/audit-tests/SKILL.md`).
-
 - `constraint-rationale`: the constraint requiring every REJECT finding to name the assertion, the failed property, and the evidentiary gap carries no rationale after a dash.
-
-**Settlement condition**: the skill states the metadata field for NOT_APPLICABLE language results in `<verdict_format>`, composes `spec-tree:understand` and `spec-tree:contextualize` with `Use skill`, moves the grant note out of the runtime prompt, gives the REJECT-finding constraint its rationale, splits the combined step tag, and a skill audit approves.
-
-## The coverage principle and the first sentence of audit_coverage restate constraints `src/plugins/spec-tree/skills/audit-tests/SKILL.md`, `audit_coverage`, `conciseness`
-
-The skill audit run `2026-10-12_18-41-36-254-8cb4eac53023` of
-`src/plugins/spec-tree/skills/audit-tests/SKILL.md` at head
-`ab5b519f0333258fc6e277b09a458b8b65920941` reported six findings on text the
-changeset leaves unchanged; the changeset changes line 20 only
-(`git diff -U0 2cf9cd80eebb49dc8a682f45dd08922551d54d76...ab5b519f0333258fc6e277b09a458b8b65920941 -- src/plugins/spec-tree/skills/audit-tests/SKILL.md`).
-
 - `conciseness` (run `2026-10-12_18-55-10-807-92bff43a2c02`): the `JUDGE COVERAGE BY READING` principle and the first sentence of step `audit_coverage` restate the coverage-by-reading rule that `<constraints>` and Step 3e already state.
-
-**Settlement condition**: the skill states the metadata field for NOT_APPLICABLE language results in `<verdict_format>`, composes `spec-tree:understand` and `spec-tree:contextualize` with `Use skill`, moves the grant note out of the runtime prompt, gives the REJECT-finding constraint its rationale, splits the combined step tag, and a skill audit approves.
-
-## One step tag wraps three distinct steps `src/plugins/spec-tree/skills/audit-tests/SKILL.md`, `full_chain_ownership`, `semantic-tag-names`
-
-The skill audit run `2026-10-12_18-41-36-254-8cb4eac53023` of
-`src/plugins/spec-tree/skills/audit-tests/SKILL.md` at head
-`ab5b519f0333258fc6e277b09a458b8b65920941` reported six findings on text the
-changeset leaves unchanged; the changeset changes line 20 only
-(`git diff -U0 2cf9cd80eebb49dc8a682f45dd08922551d54d76...ab5b519f0333258fc6e277b09a458b8b65920941 -- src/plugins/spec-tree/skills/audit-tests/SKILL.md`).
-
 - `semantic-tag-names`: `<step name="full_chain_ownership">` wraps Steps 2b, 3, and 3a, three distinct steps under one name.
 
 **Settlement condition**: the skill states the metadata field for NOT_APPLICABLE language results in `<verdict_format>`, composes `spec-tree:understand` and `spec-tree:contextualize` with `Use skill`, moves the grant note out of the runtime prompt, gives the REJECT-finding constraint its rationale, splits the combined step tag, and a skill audit approves.
 
-## Assertion 15 requires a literal rule the skill does not define `spx/21-spec-tree.enabler/68-audit.enabler/32-audit-tests.enabler/audit-tests.md`, `assertion 15`, `literal-rule-undefined`
+## Two assertion-audit findings stand on assertions 15 and 20 and the skill passages they govern
 
 The sealed assertion-audit run `2026-10-17_01-48-01-824-32b1ebea83ce` of `spx/21-spec-tree.enabler/68-audit.enabler/32-audit-tests.enabler/audit-tests.md`, read at head `1097a3b67e61591f80830bc56e1f7091d46b1a1b`, reported two findings on text the changeset neither changes nor invalidates. Under property 11 of [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md) both are standing. Base-ref evidence for both: `git diff -U0 origin/main HEAD` against `spx/21-spec-tree.enabler/68-audit.enabler/32-audit-tests.enabler/audit-tests.md` and `src/plugins/spec-tree/skills/audit-tests/SKILL.md` records hunks only at `audit-tests.md:98` and `SKILL.md:299`, `:301`, and `:303`, so assertions 15 and 20 and the `SKILL.md` passages below lie outside every hunk.
 
 - `literal-rule-undefined` (debt): assertion 15 of `spx/21-spec-tree.enabler/68-audit.enabler/32-audit-tests.enabler/audit-tests.md:118` requires the literal rule at testability, coupling, falsifiability, and rejection, with the allowlist `{-1, 0, 1, 2}` for numbers and `{""}` for strings. `src/plugins/spec-tree/skills/audit-tests/SKILL.md:49` says only "Apply the literal rule by reading the test's literals against their sources". Neither it nor `test-evidence-standards` states the allowlist or applies the rule at the four points. Finding key `assertion:ordinal-15:spx/21-spec-tree.enabler/68-audit.enabler/32-audit-tests.enabler/audit-tests.md:literal-rule-undefined`. Run `2026-10-17_01-48-01-824-32b1ebea83ce`.
-
-**Settlement condition**: the skill and `test-evidence-standards` state the numeric and string allowlist and apply the literal rule at testability, coupling, falsifiability, and rejection, and direct a rejection of bare literals to name a library origin, a production-owned constant, or a generator, and a skill audit and an assertion audit approve.
-
-## Assertion 20 requires a remediation the skill does not direct `spx/21-spec-tree.enabler/68-audit.enabler/32-audit-tests.enabler/audit-tests.md`, `assertion 20`, `positive-pattern-remediation-absent`
-
-The sealed assertion-audit run `2026-10-17_01-48-01-824-32b1ebea83ce` of `spx/21-spec-tree.enabler/68-audit.enabler/32-audit-tests.enabler/audit-tests.md`, read at head `1097a3b67e61591f80830bc56e1f7091d46b1a1b`, reported two findings on text the changeset neither changes nor invalidates. Under property 11 of [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md) both are standing. Base-ref evidence for both: `git diff -U0 origin/main HEAD` against `spx/21-spec-tree.enabler/68-audit.enabler/32-audit-tests.enabler/audit-tests.md` and `src/plugins/spec-tree/skills/audit-tests/SKILL.md` records hunks only at `audit-tests.md:98` and `SKILL.md:299`, `:301`, and `:303`, so assertions 15 and 20 and the `SKILL.md` passages below lie outside every hunk.
-
 - `positive-pattern-remediation-absent` (debt): assertion 20 of `spx/21-spec-tree.enabler/68-audit.enabler/32-audit-tests.enabler/audit-tests.md:123` requires the verdict to name a library origin, a production-owned constant, or a generator when bare literals are rejected. `src/plugins/spec-tree/skills/audit-tests/SKILL.md` and `test-evidence-standards` never direct the verdict to name one; the only remediation passage, `SKILL.md:55`, names remediation targets for rejected bindings and not for rejected literals. Finding key `assertion:ordinal-20:spx/21-spec-tree.enabler/68-audit.enabler/32-audit-tests.enabler/audit-tests.md:positive-pattern-remediation-absent`. Run `2026-10-17_01-48-01-824-32b1ebea83ce`.
 
 **Settlement condition**: the skill and `test-evidence-standards` state the numeric and string allowlist and apply the literal rule at testability, coupling, falsifiability, and rejection, and direct a rejection of bare literals to name a library origin, a production-owned constant, or a generator, and a skill audit and an assertion audit approve.

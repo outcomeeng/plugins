@@ -94,82 +94,16 @@ Most bullets of the `<success_criteria>` of `src/plugins/spec-tree/skills/manage
 
 **Settlement condition:** each success criterion states a property of the merged PR, the closeout-ready result or the reported blocking condition, and one typed skill audit of `manage-pr` raises no `success-criteria-properties` finding.
 
-## manage-pr names a tracking mechanism no section defines `src/plugins/spec-tree/skills/manage-pr/SKILL.md`, `Used GitHub mergeability as authority`, `ambiguous-instruction`
+## 9. `manage-pr` carries seven skill-audit debt findings
 
 `instructions:skill-auditor` run `2026-10-06_18-43-57-466-ceb2c552ad89` rejected the post-edit audit of `manage-pr` at head `4be7a922d11c27af632039953b5baf36db8b999f` on seven `debt` findings. The changeset's diff of `src/plugins/spec-tree/skills/manage-pr/SKILL.md` is lines 40 and 43; the script is outside it. No finding lies on changed text.
 
 - Rule `ambiguous-instruction`, `SKILL.md` line 240 (`<failure_modes>`, "Used GitHub mergeability as authority"): the avoidance step ends "emit the wait token and refresh tracking", and no section defines a tracking mechanism.
-
-`instructions:skill-auditor` run `2026-10-07_06-38-38-191-06ac6f474845` rejected the audit of `manage-pr` at head `3f9a679fe2e4b2531e671242bb8242cb7c14dc8c` on eight `debt` findings. The changeset's diff of `src/plugins/spec-tree/skills/manage-pr/SKILL.md` against the base is lines 40 and 43 and the decision table rows at lines 102 to 113; the script is outside it. No finding lies on changed text. The run repeats six of the seven findings above (`anti-pattern-repeating-skill-name`, `xml-semantic-names`, `conciseness`, the step-number inconsistency and the undefined tracking action, and `script-validation-message` at lines 146 and 237 of the script) and adds the `description-trigger-conflict` finding that entry 6 records. It raised no `tool-restriction-grant-coverage` finding.
-
-**Impact.** A reader of the skill meets a tracking mechanism that does not exist, two step numbers for one command, and a Step 6 command outside the grant.
-
-**Settlement condition.** Each of the seven findings is resolved in the skill and its script, and one typed skill audit of `manage-pr` then raises none of them.
-
-## manage-pr attributes the foreground wait to the wrong step `src/plugins/spec-tree/skills/manage-pr/SKILL.md`, `Wait-token-only without the foreground wait`, `internal-consistency`
-
-`instructions:skill-auditor` run `2026-10-06_18-43-57-466-ceb2c552ad89` rejected the post-edit audit of `manage-pr` at head `4be7a922d11c27af632039953b5baf36db8b999f` on seven `debt` findings. The changeset's diff of `src/plugins/spec-tree/skills/manage-pr/SKILL.md` is lines 40 and 43; the script is outside it. No finding lies on changed text.
-
 - Rule `internal-consistency`, `SKILL.md` line 236 (`<failure_modes>`, "Wait-token-only without the foreground wait"): the failure mode attributes the foreground wait to Step 8, and the workflow assigns it to Step 7.
-
-`instructions:skill-auditor` run `2026-10-07_06-38-38-191-06ac6f474845` rejected the audit of `manage-pr` at head `3f9a679fe2e4b2531e671242bb8242cb7c14dc8c` on eight `debt` findings. The changeset's diff of `src/plugins/spec-tree/skills/manage-pr/SKILL.md` against the base is lines 40 and 43 and the decision table rows at lines 102 to 113; the script is outside it. No finding lies on changed text. The run repeats six of the seven findings above (`anti-pattern-repeating-skill-name`, `xml-semantic-names`, `conciseness`, the step-number inconsistency and the undefined tracking action, and `script-validation-message` at lines 146 and 237 of the script) and adds the `description-trigger-conflict` finding that entry 6 records. It raised no `tool-restriction-grant-coverage` finding.
-
-**Impact.** A reader of the skill meets a tracking mechanism that does not exist, two step numbers for one command, and a Step 6 command outside the grant.
-
-**Settlement condition.** Each of the seven findings is resolved in the skill and its script, and one typed skill audit of `manage-pr` then raises none of them.
-
-## manage-pr invokes its own name as the actor `src/plugins/spec-tree/skills/manage-pr/SKILL.md`, `pr_wait_and_reentry_policy`, `anti-pattern-repeating-skill-name`
-
-`instructions:skill-auditor` run `2026-10-06_18-43-57-466-ceb2c552ad89` rejected the post-edit audit of `manage-pr` at head `4be7a922d11c27af632039953b5baf36db8b999f` on seven `debt` findings. The changeset's diff of `src/plugins/spec-tree/skills/manage-pr/SKILL.md` is lines 40 and 43; the script is outside it. No finding lies on changed text.
-
 - Rule `anti-pattern-repeating-skill-name`, `SKILL.md` lines 23 and 27 (`pr_wait_and_reentry_policy`): the body invokes `/manage-pr` and names it as the actor.
-
-`instructions:skill-auditor` run `2026-10-07_06-38-38-191-06ac6f474845` rejected the audit of `manage-pr` at head `3f9a679fe2e4b2531e671242bb8242cb7c14dc8c` on eight `debt` findings. The changeset's diff of `src/plugins/spec-tree/skills/manage-pr/SKILL.md` against the base is lines 40 and 43 and the decision table rows at lines 102 to 113; the script is outside it. No finding lies on changed text. The run repeats six of the seven findings above (`anti-pattern-repeating-skill-name`, `xml-semantic-names`, `conciseness`, the step-number inconsistency and the undefined tracking action, and `script-validation-message` at lines 146 and 237 of the script) and adds the `description-trigger-conflict` finding that entry 6 records. It raised no `tool-restriction-grant-coverage` finding.
-
-**Impact.** A reader of the skill meets a tracking mechanism that does not exist, two step numbers for one command, and a Step 6 command outside the grant.
-
-**Settlement condition.** Each of the seven findings is resolved in the skill and its script, and one typed skill audit of `manage-pr` then raises none of them.
-
-## manage-pr wraps its steps in a step container with nested step tags `src/plugins/spec-tree/skills/manage-pr/SKILL.md`, `the_managing_flow`, `xml-semantic-names`
-
-`instructions:skill-auditor` run `2026-10-06_18-43-57-466-ceb2c552ad89` rejected the post-edit audit of `manage-pr` at head `4be7a922d11c27af632039953b5baf36db8b999f` on seven `debt` findings. The changeset's diff of `src/plugins/spec-tree/skills/manage-pr/SKILL.md` is lines 40 and 43; the script is outside it. No finding lies on changed text.
-
 - Rule `xml-semantic-names`, `SKILL.md` lines 47-159 (`the_managing_flow`): Steps 0-9 sit in a `step` container with three nested `step` tags while the other steps are bold-prose paragraphs.
-
-`instructions:skill-auditor` run `2026-10-07_06-38-38-191-06ac6f474845` rejected the audit of `manage-pr` at head `3f9a679fe2e4b2531e671242bb8242cb7c14dc8c` on eight `debt` findings. The changeset's diff of `src/plugins/spec-tree/skills/manage-pr/SKILL.md` against the base is lines 40 and 43 and the decision table rows at lines 102 to 113; the script is outside it. No finding lies on changed text. The run repeats six of the seven findings above (`anti-pattern-repeating-skill-name`, `xml-semantic-names`, `conciseness`, the step-number inconsistency and the undefined tracking action, and `script-validation-message` at lines 146 and 237 of the script) and adds the `description-trigger-conflict` finding that entry 6 records. It raised no `tool-restriction-grant-coverage` finding.
-
-**Impact.** A reader of the skill meets a tracking mechanism that does not exist, two step numbers for one command, and a Step 6 command outside the grant.
-
-**Settlement condition.** Each of the seven findings is resolved in the skill and its script, and one typed skill audit of `manage-pr` then raises none of them.
-
-## manage-pr instructs mktemp outside its tool grant `src/plugins/spec-tree/skills/manage-pr/SKILL.md`, `Step 6`, `tool-restriction-grant-coverage`
-
-`instructions:skill-auditor` run `2026-10-06_18-43-57-466-ceb2c552ad89` rejected the post-edit audit of `manage-pr` at head `4be7a922d11c27af632039953b5baf36db8b999f` on seven `debt` findings. The changeset's diff of `src/plugins/spec-tree/skills/manage-pr/SKILL.md` is lines 40 and 43; the script is outside it. No finding lies on changed text.
-
 - Rule `tool-restriction-grant-coverage`, `SKILL.md` frontmatter line 6 and Step 6 at line 72: Step 6 instructs `mktemp -d`, and `allowed-tools` grants no `mktemp` pattern.
-
-`instructions:skill-auditor` run `2026-10-07_06-38-38-191-06ac6f474845` rejected the audit of `manage-pr` at head `3f9a679fe2e4b2531e671242bb8242cb7c14dc8c` on eight `debt` findings. The changeset's diff of `src/plugins/spec-tree/skills/manage-pr/SKILL.md` against the base is lines 40 and 43 and the decision table rows at lines 102 to 113; the script is outside it. No finding lies on changed text. The run repeats six of the seven findings above (`anti-pattern-repeating-skill-name`, `xml-semantic-names`, `conciseness`, the step-number inconsistency and the undefined tracking action, and `script-validation-message` at lines 146 and 237 of the script) and adds the `description-trigger-conflict` finding that entry 6 records. It raised no `tool-restriction-grant-coverage` finding.
-
-**Impact.** A reader of the skill meets a tracking mechanism that does not exist, two step numbers for one command, and a Step 6 command outside the grant.
-
-**Settlement condition.** Each of the seven findings is resolved in the skill and its script, and one typed skill audit of `manage-pr` then raises none of them.
-
-## manage-pr restates the wait-routing instruction and the clean-review predicate `src/plugins/spec-tree/skills/manage-pr/SKILL.md`, `the clean-review predicate`, `conciseness`
-
-`instructions:skill-auditor` run `2026-10-06_18-43-57-466-ceb2c552ad89` rejected the post-edit audit of `manage-pr` at head `4be7a922d11c27af632039953b5baf36db8b999f` on seven `debt` findings. The changeset's diff of `src/plugins/spec-tree/skills/manage-pr/SKILL.md` is lines 40 and 43; the script is outside it. No finding lies on changed text.
-
 - Rule `conciseness`, `SKILL.md` lines 90, 133, and 153, and the clean-review predicate at lines 118, 130, 232, and 256: the wait-routing instruction and the predicate definition are restated.
-
-`instructions:skill-auditor` run `2026-10-07_06-38-38-191-06ac6f474845` rejected the audit of `manage-pr` at head `3f9a679fe2e4b2531e671242bb8242cb7c14dc8c` on eight `debt` findings. The changeset's diff of `src/plugins/spec-tree/skills/manage-pr/SKILL.md` against the base is lines 40 and 43 and the decision table rows at lines 102 to 113; the script is outside it. No finding lies on changed text. The run repeats six of the seven findings above (`anti-pattern-repeating-skill-name`, `xml-semantic-names`, `conciseness`, the step-number inconsistency and the undefined tracking action, and `script-validation-message` at lines 146 and 237 of the script) and adds the `description-trigger-conflict` finding that entry 6 records. It raised no `tool-restriction-grant-coverage` finding.
-
-**Impact.** A reader of the skill meets a tracking mechanism that does not exist, two step numbers for one command, and a Step 6 command outside the grant.
-
-**Settlement condition.** Each of the seven findings is resolved in the skill and its script, and one typed skill audit of `manage-pr` then raises none of them.
-
-## The review-thread script raises a CLI-argument message for a malformed response node `src/plugins/spec-tree/skills/manage-pr/scripts/resolve_review_thread.py`, `iter_thread_comments`, `script-validation-message`
-
-`instructions:skill-auditor` run `2026-10-06_18-43-57-466-ceb2c552ad89` rejected the post-edit audit of `manage-pr` at head `4be7a922d11c27af632039953b5baf36db8b999f` on seven `debt` findings. The changeset's diff of `src/plugins/spec-tree/skills/manage-pr/SKILL.md` is lines 40 and 43; the script is outside it. No finding lies on changed text.
-
 - Rule `script-validation-message`, `scripts/resolve_review_thread.py` line 237 (`iter_thread_comments`): a malformed review-thread node `id` raises the CLI-argument message `thread_id must be a GitHub node ID` instead of naming the response field.
 
 `instructions:skill-auditor` run `2026-10-07_06-38-38-191-06ac6f474845` rejected the audit of `manage-pr` at head `3f9a679fe2e4b2531e671242bb8242cb7c14dc8c` on eight `debt` findings. The changeset's diff of `src/plugins/spec-tree/skills/manage-pr/SKILL.md` against the base is lines 40 and 43 and the decision table rows at lines 102 to 113; the script is outside it. No finding lies on changed text. The run repeats six of the seven findings above (`anti-pattern-repeating-skill-name`, `xml-semantic-names`, `conciseness`, the step-number inconsistency and the undefined tracking action, and `script-validation-message` at lines 146 and 237 of the script) and adds the `description-trigger-conflict` finding that entry 6 records. It raised no `tool-restriction-grant-coverage` finding.
