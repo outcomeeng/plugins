@@ -1613,6 +1613,7 @@ def test_a_target_still_uncached_after_the_fetch_leaves_its_record_unrefreshed_a
         )
     }
     for plugin in fetched:
+        assert plugin is not None
         identifier = marketplace_plugin_identifier(plugin, observation.marketplace)
         assert entries_after[identifier] == entries_before[identifier]
     assert observation.exit_code != 0

@@ -51,7 +51,9 @@ def test_real_agent_clis_map_full_and_generated_subsets() -> None:
             in {operation.value for operation in PLUGIN_OPERATIONS}
         )
         assert refreshed == selected, agent
-    assert persistent_report[ReportField.COMPLETED_OPERATIONS] >= len(commands)
+    assert cast(int, persistent_report[ReportField.COMPLETED_OPERATIONS]) >= len(
+        commands
+    )
     assert pending_entries == [], pending_entries
     assert (
         observation.persistent_claude_plugins.installed
