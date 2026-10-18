@@ -83,3 +83,29 @@ follow-up Change will state the decision line and the assertion, and carries the
 **Settlement condition**: a recover request whose `writableRoots` names a worktree held by no prepared
 candidate ends with `INVALID_TARGET` before any activation or native launch, and a linked compliance
 test holds that rule.
+
+## DEBT [evidence]: the writable-roots probe has no attested run
+
+The CI review of https://github.com/outcomeeng/plugins/pull/689 at head
+91fa1eab0532df6b23c20a6870e1d39c4a0a5b15 raised this finding at
+`spx/43-coding-agents.enabler/32-native-agent-recovery.enabler/native-agent-recovery.md:16`
+(https://github.com/outcomeeng/plugins/pull/689#issuecomment-6245101073).
+
+**Evidence**: the assertion that a recovered native session's effective permission policy lists a
+supplied writable root links `probes/writable-roots/probe.md`, and that probe has no attested run.
+`probes/writable-roots/` holds the protocol and no `runs/` artifact. The linked tests in
+`tests/test_native_agent_recovery.mapping.l1.py` and `tests/test_native_agent_recovery.compliance.l1.py`
+assert the rendered resume command and its option placement. None of them launches a native agent
+session or reads its effective policy, so nothing yet shows that the appended `--add-dir` option reaches
+a recovered session's permissions.
+
+**Resolution shape**: run the protocol in `probes/writable-roots/probe.md` against a live Claude Code
+session and a live Codex session, read each recovered session's effective policy through that agent's own
+status surface, and retain each screen as the probe's inspectable artifact.
+
+**Deferral reason**: the attested run restarts Prowl, which the operator owns, so the run has no form
+inside the Change that links the probe. The node declares `malleability: spec`, so an unattested probe
+leaves the assertion Declared and the node merges as itself.
+
+**Settlement condition**: `probes/writable-roots/` retains an attested run for one Claude Code candidate
+and one Codex candidate, and each retained screen lists the supplied root as writable.
