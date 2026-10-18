@@ -84,52 +84,6 @@ follow-up Change will state the decision line and the assertion, and carries the
 candidate ends with `INVALID_TARGET` before any activation or native launch, and a linked compliance
 test holds that rule.
 
-## DEBT [evidence]: the writable-roots probe has no attested run
-
-The CI review of https://github.com/outcomeeng/plugins/pull/689 at head
-91fa1eab0532df6b23c20a6870e1d39c4a0a5b15 raised this finding at
-`spx/43-coding-agents.enabler/32-native-agent-recovery.enabler/native-agent-recovery.md:16`
-(https://github.com/outcomeeng/plugins/pull/689#issuecomment-6245101073).
-
-**Evidence**: the assertion that a recovered native session's effective permission policy lists a
-supplied writable root links `probes/writable-roots/probe.md`, and that probe has no attested run.
-`probes/writable-roots/` holds the protocol and no `runs/` artifact. The linked tests in
-`tests/test_native_agent_recovery.mapping.l1.py` and `tests/test_native_agent_recovery.compliance.l1.py`
-assert the rendered resume command and its option placement. None of them launches a native agent
-session or reads its effective policy, so nothing yet shows that the appended `--add-dir` option reaches
-a recovered session's permissions.
-
-**Resolution shape**: run the protocol in `probes/writable-roots/probe.md` against a live Claude Code
-session and a live Codex session, read each recovered session's effective policy through that agent's own
-status surface, and retain each screen as the probe's inspectable artifact.
-
-**Deferral reason**: the attested run needs live sessions in Prowl panes and the operator's Codex home,
-which the operator owns, so the run has no form inside the Change that links the probe. The node declares `malleability: spec`, so an unattested probe
-leaves the assertion Declared and the node merges as itself.
-
-**Settlement condition**: `probes/writable-roots/` retains an attested run for one Claude Code candidate
-and one Codex candidate, and each retained screen lists the supplied root as writable.
-
-**Attested run, partly settled**: the probe holds an attested run of 2026-10-18 with one Claude Code
-candidate and one Codex candidate, and the Author session served as the `current-session` controller from
-its own Prowl pane. Claude Code's `/permissions` Workspace tab lists
-`/Users/shz/Code/outcomeeng/plugins/worktrees/executor-593/.spx/probe-writable-root` after a recovery that
-appends it and lists no such directory after a recovery that appends none, so the Claude Code half of the
-settlement condition holds. Codex runs under the operator's setting `Custom (danger-full-access, Ask for
-approval)`, and its `/status` screen lists no writable directory with or without the root, so the Codex
-half does not hold: the two screens are the same and show neither that the option reached the session nor
-that the resume path dropped it. The probe verdict is `failed` for that reason.
-
-A rerun of the Codex half under `workspace-write`, set in the Codex home's configuration for that rerun
-alone, shows the root in the `Permissions` line after a recovery that supplies it:
-`Custom (workspace with network access [/Users/shz/Code/outcomeeng/plugins/worktrees/executor-593/.spx/probe-writable-root], Ask for approval)`.
-The screen after a recovery that supplies no root shows the same line, so the control does not separate the
-appended option from earlier state of the same Codex thread, and the probe verdict for Codex stays `failed`.
-
-A run of `outcomeeng_testing/harnesses/writable_roots_probe.py` for Codex on the free worktree `/Users/shz/Code/outcomeeng/plugins/worktrees/executor-180` stopped `undecided` at `reserve-candidate` before any observation: no pane ran in that worktree, so the Prowl pane inventory held no worktree for it. The runner reserves a candidate pane only in a worktree that already appears in the Prowl pane inventory.
-
-**Codex half settled**: after an operator-authorized Prowl `open` entered that worktree into the inventory, one rerun of the same runner took a fresh Codex seed thread, `01a1506b-7b6a-7f81-92ad-9d5db8838726`, and resumed it first without the root and then with it, under `workspace-write`. The screen after the first recovery omits the root, `Permissions:         Workspace (Ask for approval)`, and the screen after the second lists it, `Permissions:         Workspace [/Users/shz/Code/outcomeeng/plugins/worktrees/executor-593/.spx/probe-root-593-b] (Ask for approval)`, so both halves of the settlement condition hold. The probe records the verdict.
-
 ## DEBT [consistency]: an absent or unusable agent-token module ends recovery with a traceback
 
 The local review of https://github.com/outcomeeng/plugins/pull/694, run
