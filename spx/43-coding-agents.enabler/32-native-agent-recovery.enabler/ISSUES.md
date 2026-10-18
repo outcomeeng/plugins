@@ -126,11 +126,9 @@ alone, shows the root in the `Permissions` line after a recovery that supplies i
 The screen after a recovery that supplies no root shows the same line, so the control does not separate the
 appended option from earlier state of the same Codex thread, and the probe verdict for Codex stays `failed`.
 
-A run of `outcomeeng_testing/harnesses/writable_roots_probe.py` for Codex on the free worktree `/Users/shz/Code/outcomeeng/plugins/worktrees/executor-180` stopped `undecided` at `reserve-candidate` before any observation: no pane ran in that worktree, so the Prowl pane inventory held no worktree for it. The runner reserves a candidate pane only in a worktree that already runs a pane.
+A run of `outcomeeng_testing/harnesses/writable_roots_probe.py` for Codex on the free worktree `/Users/shz/Code/outcomeeng/plugins/worktrees/executor-180` stopped `undecided` at `reserve-candidate` before any observation: no pane ran in that worktree, so the Prowl pane inventory held no worktree for it. The runner reserves a candidate pane only in a worktree that already appears in the Prowl pane inventory.
 
-**Remaining settlement condition**: the Codex half. A Codex thread that has never carried the root is
-resumed first without the root and then with it, under `workspace-write`, and the status screen after the
-first recovery omits the root while the screen after the second lists it.
+**Codex half settled**: after an operator-authorized Prowl `open` entered that worktree into the inventory, one rerun of the same runner took a fresh Codex seed thread, `01a1506b-7b6a-7f81-92ad-9d5db8838726`, and resumed it first without the root and then with it, under `workspace-write`. The screen after the first recovery omits the root, `Permissions:         Workspace (Ask for approval)`, and the screen after the second lists it, `Permissions:         Workspace [/Users/shz/Code/outcomeeng/plugins/worktrees/executor-593/.spx/probe-root-593-b] (Ask for approval)`, so both halves of the settlement condition hold. The probe records the verdict.
 
 ## DEBT [consistency]: an absent or unusable agent-token module ends recovery with a traceback
 
