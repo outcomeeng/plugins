@@ -315,6 +315,8 @@ WRITABLE_ROOT_SETS: tuple[tuple[str, ...], ...] = (
     VERBATIM_WRITABLE_ROOTS,
 )
 
+NATIVE_HOME_PATH = "/srv/prepared-native-home/.codex-home"
+
 NON_ABSOLUTE_WRITABLE_ROOTS: tuple[str, ...] = (
     "relative/root",
     "./current/root",

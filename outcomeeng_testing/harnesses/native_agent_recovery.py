@@ -830,6 +830,7 @@ class WritableRootLaunch:
     resume_locator: str
     roots: tuple[str, ...]
     command: tuple[str, ...]
+    native_home: str | None = None
 
 
 @dataclass(frozen=True)
@@ -852,6 +853,10 @@ def writable_root_agent_types() -> tuple[str, ...]:
     return tuple(agent_type.value for agent_type in module.NATIVE_WRITABLE_ROOT_OPTIONS)
 
 
+def native_home_agent_type() -> str:
+    return cast(str, _load().AgentType.CODEX.value)
+
+
 def rootless_agent_types() -> tuple[str, ...]:
     accepting = writable_root_agent_types()
     return tuple(
@@ -869,6 +874,7 @@ def observe_writable_root_recovery(
     roots_by_agent_type: Mapping[str, tuple[str, ...]],
     *,
     occupy_first_pane: bool = False,
+    native_homes_by_agent_type: Mapping[str, str] | None = None,
 ) -> WritableRootRecovery:
     """Run recovery over the operational roster, supplying roots per agent type.
 
@@ -879,7 +885,20 @@ def observe_writable_root_recovery(
     """
     module = _load()
     roster = OPERATIONAL_RECOVERY_ROSTER
-    prepared = _prepared(module, roster)
+    native_homes = native_homes_by_agent_type or {}
+    candidate_items = recovery_candidates(module, roster)
+    for item in candidate_items:
+        agent_type = cast(str, item[module.AGENT_TYPE_FIELD])
+        if agent_type in native_homes:
+            item[module.NATIVE_HOME_FIELD] = native_homes[agent_type]
+    pre_panes, pre_agents = _pre_restart_rosters(module, roster)
+    prepared = module.prepare(
+        roster.original_pane_ids,
+        pre_panes,
+        pre_agents,
+        candidate_items,
+        identity_evidence(module, roster, roster.original_pane_ids),
+    )
     prepared_before = json.dumps(prepared, sort_keys=True)
     panes, _ = _post_restart_rosters(module, roster, len(roster.original_pane_ids))
     request_roots = {
@@ -929,6 +948,7 @@ def observe_writable_root_recovery(
                     )
                 ),
                 command=tuple(shlex.split(cast(str, delivery[module.TEXT_FIELD]))),
+                native_home=cast(str | None, candidate.get(module.NATIVE_HOME_FIELD)),
             )
         )
     return WritableRootRecovery(
