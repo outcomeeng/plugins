@@ -493,7 +493,7 @@ Severity is the validity judgment the Reviewer makes. **Disposition** follows th
 
 - `architecture` — violation of structural principles declared by ADRs or PDRs (layer boundaries, separation of concerns, dependency directions, module-shape rules). A finding is an architecture one when the structure itself is at odds with a governance principle, even if every layer is internally consistent.
 
-**Finding labels.** Both `BLOCKING` and `DEBT` use `Reference:` + `Evidence:` + `Required:`. A review records with each finding its entry key per `<authority_gates>` and places the label `TRACKED` after the severity on each `DEBT` finding whose entry key a heading of the governing node's `ISSUES.md` carries.
+**Finding labels.** Both `BLOCKING` and `DEBT` use `Unit:` + `Reference:` + `Evidence:` + `Required:`. A review records with each finding its entry key per `<authority_gates>`, the label of the enclosing unit in the `Unit:` line, and places the label `TRACKED` after the severity on each `DEBT` finding whose entry key a heading of the governing node's `ISSUES.md` carries.
 
 **No findings: emit no finding.** When the changeset has no `BLOCKING` or `DEBT` findings, record zero finding objects; the run-completed event carries the clean result, and each local or hosted surface renders that result from the journal. NEVER invent lower-priority findings to prove the review happened.
 
@@ -505,6 +505,7 @@ Comment format examples:
 
 ```text
 ### BLOCKING [consistency]: path/to/file:42
+Unit: <label of the enclosing unit>
 Reference: <quote the standard from AGENTS.md, skills, governance from decisions (PDR/ADR), or assertion from specs>
 Evidence: <quote the diff or behavior and explain the disagreement between layers>
 Required: <concrete change>
