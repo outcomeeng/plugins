@@ -129,6 +129,20 @@ def distinct_namespace_pairs() -> st.SearchStrategy[tuple[str, str]]:
     )
 
 
+def nonconforming_plist_paths(directory: str, label: str) -> st.SearchStrategy[str]:
+    """Vary recorded launch-agent paths that break the plist-naming convention for
+    ``label``: a relative path, a file under ``directory`` named for another label, or
+    the label without its plist suffix."""
+    relative = (
+        st.lists(_segments(), min_size=1, max_size=3)
+        .map("/".join)
+        .map(lambda prefix: prefix + "/" + label + ".plist")
+    )
+    renamed = _segments().map(lambda segment: directory + "/" + segment + ".plist")
+    unsuffixed = st.just(directory + "/" + label)
+    return st.one_of(relative, renamed, unsuffixed)
+
+
 def invalid_namespaces(maximum: int) -> st.SearchStrategy[str]:
     """Vary namespaces broken by construction: an empty value, an empty segment, a
     whitespace or path-separator character, another foreign ASCII character, or a
