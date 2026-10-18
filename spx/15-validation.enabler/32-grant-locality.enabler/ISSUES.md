@@ -2,7 +2,7 @@
 
 Known defects, contradictions and gaps in this node. Coordination note; not spec truth.
 
-## DEBT [evidence]: the grant-locality compliance test rebuilds the frontmatter boundary instead of driving the validator
+## DEBT [evidence]: the grant-locality compliance test rebuilds the frontmatter boundary instead of driving the validator `spx/15-validation.enabler/32-grant-locality.enabler/tests/test_grant_locality.compliance.l1.py`, `test_escaping_grant_outside_the_frontmatter_is_not_a_violation`, `partial-coupling`
 
 Defect class: `falsifiability`, rule `partial-coupling`.
 

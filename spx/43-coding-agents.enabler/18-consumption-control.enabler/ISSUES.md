@@ -10,7 +10,7 @@ The twelve linked files under this node's `tests/` directory carry no retrievabl
 
 **Settlement condition:** the Change that hardens this node below `spec` authors the assertion-design records before its evidence audits.
 
-## DEBT [consistency]: reinstall with another launch-agents directory abandons the prior plist
+## DEBT [consistency]: reinstall with another launch-agents directory abandons the prior plist `src/plugins/coding-agents/skills/control-token-spend/scripts/usage_schedule.py`, `install_plan`, `consistency`
 
 CI review on PR 659 at head `862a3f2efaced60b77b4f30693cf20eb4889e0e8` (comment of 2026-10-12T14:15:18Z) found that `install_plan()` in `src/plugins/coding-agents/skills/control-token-spend/scripts/usage_schedule.py` derives each job plist path from the invocation's `--launch-agents-dir`, which the saved configuration does not persist. The ownership checks in `install()` inspect only the new plan's paths and never the paths the prior installation manifest records.
 
@@ -26,7 +26,7 @@ The same CI review found that `installation_observation` and `native_installatio
 
 **Settlement condition:** a linked test installs twice into one root and observes each of those branches.
 
-## DEBT [evidence]: report evidence never reaches a zero denominator
+## DEBT [evidence]: report evidence never reaches a zero denominator `outcomeeng_testing/generators/consumption_control.py`, `growing_contexts`, `evidence`
 
 The same CI review found that the context-growth, cost-growth, measured-cost-share, and cache-read-share ratios are `None` when their denominator is zero, and `usage_reports.py` renders that case as `unknown` in HTML and as an empty CSV field. `growing_contexts()` in `outcomeeng_testing/generators/consumption_control.py` draws every context from positive integers, and the report and context fixtures carry positive usage counters, so no linked test reaches the `unknown` rendering.
 
