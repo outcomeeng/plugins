@@ -1800,13 +1800,14 @@ class MalformedRetainedRecordObservation:
     message: str
 
 
-def malformed_retained_record_property(
-    check: Callable[[MalformedRetainedRecordObservation], None],
+def _retained_record_property(
+    mutate: Callable[[ModuleType, st.DataObject, Path, dict[str, Any]], object],
+    observe: Callable[[ModuleType, Path, str, object], None],
 ) -> None:
     """Install under one namespace, then another, so the installation record carries the
-    first namespace's jobs as retained jobs; give one retained entry a non-conforming
-    path and read the record. The observation is the rejection message, empty when the
-    record was accepted. Any exception other than ValueError propagates to the linked test."""
+    first namespace's jobs as retained jobs; let ``mutate`` corrupt the loaded record,
+    write it back, and hand ``observe`` the schedule module, the record path, the rejection message, and
+    whatever ``mutate`` returned."""
     _, _, schedule, _ = modules()
 
     @seed(SEED)
@@ -1821,25 +1822,49 @@ def malformed_retained_record_property(
                 _install_under(schedule, work, runner, agents, namespace)
             record_path = work.config.root / schedule.INSTALL_NAME
             record = json.loads(record_path.read_text())
-            index = data.draw(st.integers(0, len(record[schedule.RETAINED_JOBS]) - 1))
-            entry = record[schedule.RETAINED_JOBS][index]
-            rejected = data.draw(
-                nonconforming_plist_paths(str(agents), str(entry["label"]))
-            )
-            entry["path"] = rejected
+            extra = mutate(schedule, data, agents, record)
             record_path.write_text(json.dumps(record), encoding="utf-8")
             message = _manifest_rejection(schedule, work.config.root)
-            check(
-                MalformedRetainedRecordObservation(
-                    str(record_path), schedule.RETAINED_JOBS, rejected, message
-                )
-            )
+            observe(schedule, record_path, message, extra)
 
     run_replayable_property(
         run,
         seed_value=SEED,
         replay_path=INSTALLATION_REPLAY,
     )
+
+
+def malformed_retained_record_property(
+    check: Callable[[MalformedRetainedRecordObservation], None],
+) -> None:
+    """Give one retained entry of the installation record a non-conforming path and read
+    the record. The observation is the rejection message, empty when the record was
+    accepted. Any exception other than ValueError propagates to the linked test."""
+
+    def mutate(
+        schedule: ModuleType,
+        data: st.DataObject,
+        agents: Path,
+        record: dict[str, Any],
+    ) -> object:
+        index = data.draw(st.integers(0, len(record[schedule.RETAINED_JOBS]) - 1))
+        entry = record[schedule.RETAINED_JOBS][index]
+        rejected = data.draw(
+            nonconforming_plist_paths(str(agents), str(entry["label"]))
+        )
+        entry["path"] = rejected
+        return rejected
+
+    def observe(
+        schedule: ModuleType, record_path: Path, message: str, rejected: object
+    ) -> None:
+        check(
+            MalformedRetainedRecordObservation(
+                str(record_path), schedule.RETAINED_JOBS, str(rejected), message
+            )
+        )
+
+    _retained_record_property(mutate, observe)
 
 
 class RetainedRecordMalformation(StrEnum):
@@ -1859,42 +1884,33 @@ def malformed_retained_field_property(
     malformation: RetainedRecordMalformation,
     check: Callable[[MalformedRetainedFieldObservation], None],
 ) -> None:
-    """Install under one namespace, then another, so the installation record carries
-    retained jobs; apply ``malformation`` to the retained jobs field and read the
-    record. The observation is the rejection message, empty when the record was
+    """Apply ``malformation`` to the retained jobs field of the installation record and
+    read the record. The observation is the rejection message, empty when the record was
     accepted. Any exception other than ValueError propagates to the linked test."""
-    _, _, schedule, _ = modules()
 
-    @seed(SEED)
-    @settings(max_examples=EXAMPLES, deadline=None)
-    @given(distinct_namespace_pairs(), st.data())
-    def run(namespaces: tuple[str, str], data: st.DataObject) -> None:
-        first, second = namespaces
-        with workspace() as work:
-            runner = RecordingRunner()
-            agents = work.root / "launch-agents"
-            for namespace in (first, second):
-                _install_under(schedule, work, runner, agents, namespace)
-            record_path = work.config.root / schedule.INSTALL_NAME
-            record = json.loads(record_path.read_text())
-            retained = record[schedule.RETAINED_JOBS]
-            index = data.draw(st.integers(0, len(retained) - 1))
-            if malformation is RetainedRecordMalformation.MISSING_PATH:
-                del retained[index]["path"]
-            elif malformation is RetainedRecordMalformation.NON_LIST_VALUE:
-                record[schedule.RETAINED_JOBS] = data.draw(non_list_retained_values())
-            else:
-                retained[index] = data.draw(non_mapping_retained_entries())
-            record_path.write_text(json.dumps(record), encoding="utf-8")
-            message = _manifest_rejection(schedule, work.config.root)
-            check(
-                MalformedRetainedFieldObservation(
-                    str(record_path), schedule.RETAINED_JOBS, message
-                )
+    def mutate(
+        schedule: ModuleType,
+        data: st.DataObject,
+        agents: Path,
+        record: dict[str, Any],
+    ) -> object:
+        retained = record[schedule.RETAINED_JOBS]
+        index = data.draw(st.integers(0, len(retained) - 1))
+        if malformation is RetainedRecordMalformation.MISSING_PATH:
+            del retained[index]["path"]
+        elif malformation is RetainedRecordMalformation.NON_LIST_VALUE:
+            record[schedule.RETAINED_JOBS] = data.draw(non_list_retained_values())
+        else:
+            retained[index] = data.draw(non_mapping_retained_entries())
+        return None
+
+    def observe(
+        schedule: ModuleType, record_path: Path, message: str, extra: object
+    ) -> None:
+        check(
+            MalformedRetainedFieldObservation(
+                str(record_path), schedule.RETAINED_JOBS, message
             )
+        )
 
-    run_replayable_property(
-        run,
-        seed_value=SEED,
-        replay_path=INSTALLATION_REPLAY,
-    )
+    _retained_record_property(mutate, observe)
