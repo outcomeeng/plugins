@@ -31,6 +31,7 @@ An authoritative SPX projection, raw run token, and run file for the requested i
 - ALWAYS record coverage as `<coverage_model>` states; a run that narrows a set or records a unit only where it found something states its findings as its coverage.
 - NEVER let a raised finding or a rejected terminal status shorten the inspection: rejection is a verdict about what was inspected, never permission to leave a concern or a resolved path unrecorded.
 - ALWAYS start the verification run after resolving the target's Git metadata and validating the run-driver identity, before reading changed project file bodies or loading concern standards — every substantive project inspection and concern result belongs to the open run.
+- NEVER write the run journal or its context anywhere but the locations `spx verification run` resolves. When the native permission policy refuses a run-recording write — a payload file, a resolver output file, a run-recording command, or the journal — stop at that write, retry it no more, write to no other location, and return the `<verdict_format>` blocked diagnostic with `diagnostic: configuration error` naming the refused path; the host grants the paths, and this skill never widens its own access.
 
 </constraints>
 
@@ -339,6 +340,7 @@ spx verification run finding add --verification-type audit --scope-type changese
 - ALWAYS pass `--payload` the path exactly as the file-write tool's result reports it, copied from that result, never retyped from memory; pass `--input` the start-input path named in the resolver's `--output` argument, written out literally.
 - ALWAYS write only payload files with the file-write tool, and pass each file as the value of `--payload`, its path written out literally.
 - ALWAYS add each scope unit and each finding with its own literal command and its own payload file, one at a time, and stop the audit at the first command that exits nonzero, other than the one rerun on an absent-payload diagnostic that the next bullet allows, returning the `<verdict_format>` blocked diagnostic.
+- A permission refusal is no absent payload file and takes no rerun.
 - ALWAYS, when a scope-add or finding-add command exits nonzero with a diagnostic that names its payload file as absent, run that command once more with the `--payload` path copied from the file-write result; on a second failure, stop with the `<verdict_format>` blocked diagnostic naming the run token. A `run start` whose diagnostic names its `--input` file as absent runs no second time, because the resolver wrote that file and no file-write result names it: stop with the `<verdict_format>` blocked diagnostic.
 - NEVER send a payload through a heredoc, a pipe, or an inline argument, and never build one with an interpreter or `printf` stage — the dangerous-command guard blocks those forms.
 - NEVER remove a payload file; the harness clears its scratch directory.
@@ -463,6 +465,7 @@ payloadSource: <payload-file-path-or-none>
 payloadKey: <unitId-or-finding-idempotency-key-or-none>
 exitCode: <exact-exit-code>
 stderr: <exact-stderr>
+diagnostic: <configuration error naming the refused path, or none>
 ```
 
 Never return the command alone: the run token locates durable state, the payload
