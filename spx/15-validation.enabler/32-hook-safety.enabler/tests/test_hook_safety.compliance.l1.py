@@ -17,6 +17,7 @@ import pytest
 
 from outcomeeng.validation.hook_contract import (
     CLAUDE_PLUGIN_ROOT_TOKEN,
+    CODEX_PLUGIN_ROOT_TOKEN,
     PRE_TOOL_USE_EVENT,
     PRE_WRITE_ADAPTER_INTERPRETER,
     PRE_WRITE_COMMAND_CLAUDE,
@@ -26,6 +27,7 @@ from outcomeeng.validation.hook_contract import (
     PRE_WRITE_MATCHER_SEPARATOR,
     PRE_WRITE_PLUGIN,
     PRE_WRITE_TOOLS,
+    SESSION_START_EVENT,
 )
 from outcomeeng.validation.hook_safety import (
     BLOCKING_EVENTS,
@@ -35,7 +37,10 @@ from outcomeeng.validation.hook_safety import (
 
 
 def config(
-    event: str, *, command: str = "echo '{}'", timeout: int | None = 5
+    event: str,
+    *,
+    command: str = f"echo '{PRE_WRITE_EMPTY_RESULT}'",
+    timeout: int | None = 5,
 ) -> Mapping[str, object]:
     """Build a one-hook hooks.json config for ``event`` with an overridable command/timeout."""
     handler: dict[str, object] = {"type": "command", "command": command}
@@ -54,62 +59,68 @@ def test_blocking_event_is_flagged(event: str) -> None:
 
 
 def test_non_blocking_event_with_safe_command_passes() -> None:
-    assert hook_config_violations(config("SessionStart")) == []
+    assert hook_config_violations(config(SESSION_START_EVENT)) == []
 
 
 def test_missing_timeout_is_flagged() -> None:
     # NEVER: pass a hook entry that declares no explicit timeout.
-    assert hook_config_violations(config("SessionStart", timeout=None))
+    assert hook_config_violations(config(SESSION_START_EVENT, timeout=None))
 
 
 def test_bare_script_invocation_without_fallback_is_flagged() -> None:
     # NEVER: pass a bare script-file invocation at a substituted path with no inline fallback.
-    bare = "python3 ${CLAUDE_PLUGIN_ROOT}/scripts/session-start.py"
-    assert hook_config_violations(config("SessionStart", command=bare))
+    bare = f"{PRE_WRITE_ADAPTER_INTERPRETER} {CLAUDE_PLUGIN_ROOT_TOKEN}/scripts/session-start.py"
+    assert hook_config_violations(config(SESSION_START_EVENT, command=bare))
 
 
 def test_script_invocation_with_inline_fallback_passes() -> None:
-    guarded = "python3 ${CLAUDE_PLUGIN_ROOT}/scripts/session-start.py 2>/dev/null || echo '{}'"
-    assert hook_config_violations(config("SessionStart", command=guarded)) == []
+    guarded = f"{PRE_WRITE_ADAPTER_INTERPRETER} {CLAUDE_PLUGIN_ROOT_TOKEN}/scripts/session-start.py 2>/dev/null || echo '{PRE_WRITE_EMPTY_RESULT}'"
+    assert hook_config_violations(config(SESSION_START_EVENT, command=guarded)) == []
 
 
 def test_bare_skill_dir_invocation_is_flagged() -> None:
     # The substituted-path check covers ${CLAUDE_SKILL_DIR}, not only ${CLAUDE_PLUGIN_ROOT}.
-    bare = "python3 ${CLAUDE_SKILL_DIR}/scripts/run.py"
-    assert hook_config_violations(config("SessionStart", command=bare))
+    bare = f"{PRE_WRITE_ADAPTER_INTERPRETER} " + "${CLAUDE_SKILL_DIR}/scripts/run.py"
+    assert hook_config_violations(config(SESSION_START_EVENT, command=bare))
 
 
 def test_skill_dir_invocation_with_inline_fallback_passes() -> None:
-    guarded = "python3 ${CLAUDE_SKILL_DIR}/scripts/run.py || echo '{}'"
-    assert hook_config_violations(config("SessionStart", command=guarded)) == []
+    guarded = (
+        f"{PRE_WRITE_ADAPTER_INTERPRETER} "
+        + "${CLAUDE_SKILL_DIR}/scripts/run.py"
+        + f" || echo '{PRE_WRITE_EMPTY_RESULT}'"
+    )
+    assert hook_config_violations(config(SESSION_START_EVENT, command=guarded)) == []
 
 
 def test_codex_skill_dir_token_invocation_is_flagged() -> None:
     # The build rewrites ${CLAUDE_SKILL_DIR} to ${SKILL_DIR} in dist/codex; a bare
     # invocation via the Codex token must be caught when that tree is scanned.
-    bare = "python3 ${SKILL_DIR}/scripts/run.py"
-    assert hook_config_violations(config("SessionStart", command=bare))
+    bare = f"{PRE_WRITE_ADAPTER_INTERPRETER} " + "${SKILL_DIR}/scripts/run.py"
+    assert hook_config_violations(config(SESSION_START_EVENT, command=bare))
 
 
 def test_codex_plugin_root_token_invocation_is_flagged() -> None:
     # Codex exposes its native ${PLUGIN_ROOT} alongside the ${CLAUDE_PLUGIN_ROOT} alias.
-    bare = "python3 ${PLUGIN_ROOT}/scripts/run.py"
-    assert hook_config_violations(config("SessionStart", command=bare))
+    bare = f"{PRE_WRITE_ADAPTER_INTERPRETER} {CODEX_PLUGIN_ROOT_TOKEN}/scripts/run.py"
+    assert hook_config_violations(config(SESSION_START_EVENT, command=bare))
 
 
 def test_short_circuit_fallback_satisfies_the_presence_check() -> None:
     # The deterministic check verifies a ``||`` fallback exists. Whether that fallback's
     # floor emits a valid empty result (``|| true`` does not) is the audited inline-guard
     # property of the contract, not this check — so a short-circuit fallback passes here.
-    short_circuit = "python3 ${CLAUDE_PLUGIN_ROOT}/scripts/session-start.py || true"
-    assert hook_config_violations(config("SessionStart", command=short_circuit)) == []
+    short_circuit = f"{PRE_WRITE_ADAPTER_INTERPRETER} {CLAUDE_PLUGIN_ROOT_TOKEN}/scripts/session-start.py || true"
+    assert (
+        hook_config_violations(config(SESSION_START_EVENT, command=short_circuit)) == []
+    )
 
 
 def test_extensionless_substituted_script_without_fallback_is_flagged() -> None:
     # A substituted-path invocation with no file extension drifts the same way; the check
     # does not depend on a ``.py`` / ``.sh`` suffix.
-    bare = "python3 ${CLAUDE_PLUGIN_ROOT}/scripts/session-start"
-    assert hook_config_violations(config("SessionStart", command=bare))
+    bare = f"{PRE_WRITE_ADAPTER_INTERPRETER} {CLAUDE_PLUGIN_ROOT_TOKEN}/scripts/session-start"
+    assert hook_config_violations(config(SESSION_START_EVENT, command=bare))
 
 
 def test_unrecognized_event_is_flagged() -> None:
@@ -128,12 +139,12 @@ def test_omitted_matcher_block_is_handled() -> None:
     # hook in that form is still flagged on timeout and command shape.
     omitted: Mapping[str, object] = {
         "hooks": {
-            "SessionStart": [
+            SESSION_START_EVENT: [
                 {
                     "hooks": [
                         {
                             "type": "command",
-                            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/x.py",
+                            "command": f"{PRE_WRITE_ADAPTER_INTERPRETER} {CLAUDE_PLUGIN_ROOT_TOKEN}/x.py",
                         }
                     ]
                 }
@@ -147,12 +158,12 @@ def test_omitted_matcher_safe_form_passes() -> None:
     # The same matcher-less shape, guarded and timed, is clean.
     safe: Mapping[str, object] = {
         "hooks": {
-            "SessionStart": [
+            SESSION_START_EVENT: [
                 {
                     "hooks": [
                         {
                             "type": "command",
-                            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/x.py || echo '{}'",
+                            "command": f"{PRE_WRITE_ADAPTER_INTERPRETER} {CLAUDE_PLUGIN_ROOT_TOKEN}/x.py || echo '{PRE_WRITE_EMPTY_RESULT}'",
                             "timeout": 5,
                         }
                     ]
@@ -166,46 +177,54 @@ def test_omitted_matcher_safe_form_passes() -> None:
 def test_floor_preceding_the_script_is_flagged() -> None:
     # A floor that precedes the script (``echo '{}' && script``) does not guard the
     # invocation — the fallback must follow the script.
-    leading = "echo '{}' && python3 ${CLAUDE_PLUGIN_ROOT}/scripts/session-start.py"
-    assert hook_config_violations(config("SessionStart", command=leading))
+    leading = f"echo '{PRE_WRITE_EMPTY_RESULT}' && {PRE_WRITE_ADAPTER_INTERPRETER} {CLAUDE_PLUGIN_ROOT_TOKEN}/scripts/session-start.py"
+    assert hook_config_violations(config(SESSION_START_EVENT, command=leading))
 
 
 def test_leading_and_trailing_fallback_passes() -> None:
     # Only the trailing fallback (after the script) guards the invocation; a redundant
     # leading floor does not change the outcome.
-    both = "echo '{}' && python3 ${CLAUDE_PLUGIN_ROOT}/scripts/session-start.py || echo '{}'"
-    assert hook_config_violations(config("SessionStart", command=both)) == []
+    both = f"echo '{PRE_WRITE_EMPTY_RESULT}' && {PRE_WRITE_ADAPTER_INTERPRETER} {CLAUDE_PLUGIN_ROOT_TOKEN}/scripts/session-start.py || echo '{PRE_WRITE_EMPTY_RESULT}'"
+    assert hook_config_violations(config(SESSION_START_EVENT, command=both)) == []
 
 
 def test_second_substituted_invocation_without_fallback_is_flagged() -> None:
     # Each substituted-path invocation needs its own guard — a guarded first script does
     # not cover a bare second one in a multi-statement command.
-    cmd = "python3 ${CLAUDE_PLUGIN_ROOT}/a.py || echo '{}' ; python3 ${CLAUDE_PLUGIN_ROOT}/b.py"
-    assert hook_config_violations(config("SessionStart", command=cmd))
+    cmd = f"{PRE_WRITE_ADAPTER_INTERPRETER} {CLAUDE_PLUGIN_ROOT_TOKEN}/a.py || echo '{PRE_WRITE_EMPTY_RESULT}' ; {PRE_WRITE_ADAPTER_INTERPRETER} {CLAUDE_PLUGIN_ROOT_TOKEN}/b.py"
+    assert hook_config_violations(config(SESSION_START_EVENT, command=cmd))
 
 
 def test_quoted_substituted_path_invocation_is_flagged() -> None:
     # A shell-safe quoted variable ("${CLAUDE_PLUGIN_ROOT}"/...) is the same substituted
     # path; the quote between the brace and the slash must not defeat detection.
-    bare = 'python3 "${CLAUDE_PLUGIN_ROOT}"/scripts/session-start.py'
-    assert hook_config_violations(config("SessionStart", command=bare))
+    bare = f'{PRE_WRITE_ADAPTER_INTERPRETER} "{CLAUDE_PLUGIN_ROOT_TOKEN}"/scripts/session-start.py'
+    assert hook_config_violations(config(SESSION_START_EVENT, command=bare))
 
 
 def test_quoted_substituted_path_with_fallback_passes() -> None:
-    guarded = 'python3 "${CLAUDE_PLUGIN_ROOT}"/scripts/session-start.py || echo "{}"'
-    assert hook_config_violations(config("SessionStart", command=guarded)) == []
+    guarded = f'{PRE_WRITE_ADAPTER_INTERPRETER} "{CLAUDE_PLUGIN_ROOT_TOKEN}"/scripts/session-start.py || echo "{PRE_WRITE_EMPTY_RESULT}"'
+    assert hook_config_violations(config(SESSION_START_EVENT, command=guarded)) == []
 
 
 def test_blocking_event_violation_reported_once_per_event() -> None:
     # Two handlers on one blocking event produce exactly one event-level violation.
     cfg: Mapping[str, object] = {
         "hooks": {
-            "PreToolUse": [
+            PRE_TOOL_USE_EVENT: [
                 {
                     "matcher": "",
                     "hooks": [
-                        {"type": "command", "command": "echo '{}'", "timeout": 5},
-                        {"type": "command", "command": "echo '{}'", "timeout": 5},
+                        {
+                            "type": "command",
+                            "command": f"echo '{PRE_WRITE_EMPTY_RESULT}'",
+                            "timeout": 5,
+                        },
+                        {
+                            "type": "command",
+                            "command": f"echo '{PRE_WRITE_EMPTY_RESULT}'",
+                            "timeout": 5,
+                        },
                     ],
                 }
             ]
@@ -217,8 +236,8 @@ def test_blocking_event_violation_reported_once_per_event() -> None:
 
 def test_version_pinned_cache_path_is_flagged() -> None:
     # NEVER: pass a hook command naming a version-pinned plugin cache path.
-    pinned = "python3 /Users/dev/.claude/plugins/cache/outcomeeng/spec-tree/0.57.33/scripts/x.py || echo '{}'"
-    assert hook_config_violations(config("SessionStart", command=pinned))
+    pinned = f"{PRE_WRITE_ADAPTER_INTERPRETER} /Users/dev/.claude/plugins/cache/outcomeeng/spec-tree/0.57.33/scripts/x.py || echo '{PRE_WRITE_EMPTY_RESULT}'"
+    assert hook_config_violations(config(SESSION_START_EVENT, command=pinned))
 
 
 def _write_config(root: Path, runtime: str, cfg: Mapping[str, object]) -> None:
@@ -235,7 +254,7 @@ def _rule_messages(violations: list[str]) -> list[str]:
 def test_rules_apply_identically_across_both_runtime_trees(tmp_path: Path) -> None:
     # ALWAYS: each runtime tree, scanned in isolation, yields the same rule violation —
     # so a bug that skipped one subtree would make the two lists differ.
-    blocking = config("PreToolUse")
+    blocking = config(PRE_TOOL_USE_EVENT)
     claude_root = tmp_path / "claude"
     codex_root = tmp_path / "codex"
     _write_config(claude_root, "dist/claude", blocking)

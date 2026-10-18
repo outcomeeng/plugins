@@ -13,16 +13,20 @@ from pathlib import Path
 import pytest
 
 from outcomeeng.validation.hook_contract import (
+    CLAUDE_PLUGIN_ROOT_TOKEN,
     PRE_TOOL_USE_EVENT,
+    PRE_WRITE_ADAPTER_INTERPRETER,
     PRE_WRITE_COMMAND_CLAUDE,
+    PRE_WRITE_EMPTY_RESULT,
     PRE_WRITE_MATCHER_SEPARATOR,
     PRE_WRITE_PLUGIN,
     PRE_WRITE_TOOLS,
+    SESSION_START_EVENT,
 )
 from outcomeeng.validation.hook_safety import iter_tree_violations, main
 
 # A command-shape-clean command, so a fixture's only possible violation is its event.
-SAFE_COMMAND = "echo '{}'"
+SAFE_COMMAND = f"echo '{PRE_WRITE_EMPTY_RESULT}'"
 
 
 def write_hooks(
@@ -37,7 +41,7 @@ def write_hooks(
 def blocking_config() -> dict[str, object]:
     return {
         "hooks": {
-            "PreToolUse": [
+            PRE_TOOL_USE_EVENT: [
                 {
                     "matcher": "",
                     "hooks": [
@@ -52,7 +56,7 @@ def blocking_config() -> dict[str, object]:
 def safe_config() -> dict[str, object]:
     return {
         "hooks": {
-            "SessionStart": [
+            SESSION_START_EVENT: [
                 {
                     "matcher": "",
                     "hooks": [
@@ -65,7 +69,7 @@ def safe_config() -> dict[str, object]:
 
 
 def test_blocking_hook_is_reported_with_location(tmp_path: Path) -> None:
-    write_hooks(tmp_path, "dist/claude", "spec-tree", blocking_config())
+    write_hooks(tmp_path, "dist/claude", PRE_WRITE_PLUGIN, blocking_config())
 
     violations = iter_tree_violations(tmp_path)
 
@@ -73,24 +77,24 @@ def test_blocking_hook_is_reported_with_location(tmp_path: Path) -> None:
         "a blocking-capable hook must produce a non-empty report (non-zero exit)"
     )
     report = "\n".join(violations)
-    assert "spec-tree" in report  # plugin
+    assert PRE_WRITE_PLUGIN in report  # plugin
     assert "hooks.json" in report  # file
-    assert "PreToolUse" in report  # event
+    assert PRE_TOOL_USE_EVENT in report  # event
 
 
 def test_clean_tree_reports_nothing(tmp_path: Path) -> None:
-    write_hooks(tmp_path, "dist/claude", "spec-tree", safe_config())
-    write_hooks(tmp_path, "dist/codex", "spec-tree", safe_config())
+    write_hooks(tmp_path, "dist/claude", PRE_WRITE_PLUGIN, safe_config())
+    write_hooks(tmp_path, "dist/codex", PRE_WRITE_PLUGIN, safe_config())
 
     assert iter_tree_violations(tmp_path) == []
 
 
 def guarded_substituted_config() -> dict[str, object]:
     # A non-blocking hook whose command IS a substituted-path invocation, guarded.
-    command = "python3 ${CLAUDE_PLUGIN_ROOT}/scripts/session-start.py || echo '{}'"
+    command = f"{PRE_WRITE_ADAPTER_INTERPRETER} {CLAUDE_PLUGIN_ROOT_TOKEN}/scripts/session-start.py || echo '{PRE_WRITE_EMPTY_RESULT}'"
     return {
         "hooks": {
-            "SessionStart": [
+            SESSION_START_EVENT: [
                 {
                     "matcher": "",
                     "hooks": [{"type": "command", "command": command, "timeout": 5}],
@@ -103,7 +107,7 @@ def guarded_substituted_config() -> dict[str, object]:
 def test_guarded_substituted_path_hook_reports_nothing(tmp_path: Path) -> None:
     # Scenario witness for the assertion's "uses a guarded command" clause: a guarded
     # substituted-path invocation in an otherwise clean tree produces no violations.
-    write_hooks(tmp_path, "dist/claude", "spec-tree", guarded_substituted_config())
+    write_hooks(tmp_path, "dist/claude", PRE_WRITE_PLUGIN, guarded_substituted_config())
 
     assert iter_tree_violations(tmp_path) == []
 
@@ -114,19 +118,19 @@ def test_main_reports_location_and_exits_non_zero(
     # The first scenario assertion couples both halves: reports plugin/file/event AND
     # exits non-zero. Verify them together at the CLI entry point.
     root = tmp_path / "dist/claude"
-    write_hooks(tmp_path, "dist/claude", "spec-tree", blocking_config())
+    write_hooks(tmp_path, "dist/claude", PRE_WRITE_PLUGIN, blocking_config())
 
     code = main([str(root)])
     err = capsys.readouterr().err
 
     assert code == 1
-    assert "spec-tree" in err and "hooks.json" in err and "PreToolUse" in err
+    assert PRE_WRITE_PLUGIN in err and "hooks.json" in err and PRE_TOOL_USE_EVENT in err
 
 
 def test_main_exits_zero_for_a_clean_tree(tmp_path: Path) -> None:
     # The assertion frames "the dist trees" (plural): exercise both at the CLI entry.
-    write_hooks(tmp_path, "dist/claude", "spec-tree", safe_config())
-    write_hooks(tmp_path, "dist/codex", "spec-tree", safe_config())
+    write_hooks(tmp_path, "dist/claude", PRE_WRITE_PLUGIN, safe_config())
+    write_hooks(tmp_path, "dist/codex", PRE_WRITE_PLUGIN, safe_config())
 
     assert main([str(tmp_path / "dist/claude"), str(tmp_path / "dist/codex")]) == 0
 
