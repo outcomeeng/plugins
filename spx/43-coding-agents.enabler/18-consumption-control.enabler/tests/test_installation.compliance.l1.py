@@ -1,10 +1,12 @@
 """Managed assets and job failures cross the recording command boundary."""
 
 from outcomeeng_testing.harnesses.consumption_control import (
+    MalformedRetainedRecordObservation,
     NamespaceReinstallObservation,
     NamespaceReturnObservation,
     NamespaceScopeObservation,
     installation_observation,
+    malformed_retained_record_property,
     namespace_reinstall_property,
     namespace_return_property,
     namespace_scope_property,
@@ -83,3 +85,14 @@ def test_status_stop_and_restart_act_on_the_namespace_the_record_names() -> None
         assert observed.second_labels <= observed.loaded_after_restart
 
     namespace_reinstall_property(check)
+
+
+def test_retained_job_with_a_nonconforming_path_is_rejected_naming_file_and_field() -> (
+    None
+):
+    def check(observed: MalformedRetainedRecordObservation) -> None:
+        assert observed.message, observed.rejected_path
+        assert observed.record_path in observed.message
+        assert observed.field in observed.message
+
+    malformed_retained_record_property(check)

@@ -38,6 +38,7 @@ from outcomeeng_testing.generators.consumption_control import (
     alert_reads,
     distinct_namespace_pairs,
     invalid_namespaces,
+    nonconforming_plist_paths,
     valid_namespaces,
 )
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
@@ -1798,6 +1799,69 @@ def namespace_reinstall_property(
                     labels[schedule.JobOperation.STATUS],
                     labels[schedule.JobOperation.STOP],
                     labels[schedule.JobOperation.RESTART],
+                )
+            )
+
+    run_replayable_property(
+        run,
+        seed_value=SEED,
+        replay_path=REPLAY.replace(
+            "accounting.property.l1", "installation.compliance.l1"
+        ),
+    )
+
+
+@dataclass(frozen=True)
+class MalformedRetainedRecordObservation:
+    record_path: str
+    field: str
+    rejected_path: str
+    message: str
+
+
+def malformed_retained_record_property(
+    check: Callable[[MalformedRetainedRecordObservation], None],
+) -> None:
+    """Install under one namespace, then another, so the installation record carries the
+    first namespace's jobs as retained jobs; give one retained entry a non-conforming
+    path and read the record. The observation is the rejection message, empty when the
+    record was accepted. Any exception other than ValueError propagates to the linked test."""
+    _, _, schedule, _ = modules()
+
+    @seed(SEED)
+    @settings(max_examples=EXAMPLES, deadline=None)
+    @given(distinct_namespace_pairs(), st.data())
+    def run(namespaces: tuple[str, str], data: st.DataObject) -> None:
+        first, second = namespaces
+        with workspace() as work:
+            runner = RecordingRunner()
+            agents = work.root / "launch-agents"
+            for namespace in (first, second):
+                schedule.install(
+                    replace(work.config, namespace=namespace),
+                    SCRIPTS,
+                    agents,
+                    runner,
+                    "darwin",
+                    True,
+                )
+            record_path = work.config.root / schedule.INSTALL_NAME
+            record = json.loads(record_path.read_text())
+            index = data.draw(st.integers(0, len(record[schedule.RETAINED_JOBS]) - 1))
+            entry = record[schedule.RETAINED_JOBS][index]
+            rejected = data.draw(
+                nonconforming_plist_paths(str(agents), str(entry["label"]))
+            )
+            entry["path"] = rejected
+            record_path.write_text(json.dumps(record), encoding="utf-8")
+            try:
+                schedule.manifest(work.config.root)
+                message = ""
+            except ValueError as error:
+                message = str(error)
+            check(
+                MalformedRetainedRecordObservation(
+                    str(record_path), schedule.RETAINED_JOBS, rejected, message
                 )
             )
 
