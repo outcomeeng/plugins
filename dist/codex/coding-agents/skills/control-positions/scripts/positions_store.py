@@ -70,13 +70,22 @@ def _refuse_link(path: Path, what: str) -> None:
 
 
 def read_records(data_root: Path) -> list[dict[str, object]]:
-    """Return every durable record, oldest first; a symlinked record is refused."""
+    """Return every durable record, oldest first.
+
+    A symlinked, unreadable, or malformed record is refused.
+    """
     records: list[dict[str, object]] = []
     for path in _record_files(data_root):
         _refuse_link(path, "Record")
         if not path.is_file():
             continue
-        loaded = json.loads(path.read_text(encoding="utf-8"))
+        try:
+            loaded = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as error:
+            raise StoreError(
+                f"Record is unreadable or not valid JSON: {path}: {error}; inspect "
+                "the file and correct or remove it"
+            ) from error
         if isinstance(loaded, dict):
             records.append(loaded)
     return records
