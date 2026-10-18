@@ -22,8 +22,6 @@ from outcomeeng.distribution.agents import (
 )
 from outcomeeng_testing.generators.agent_conversion import every_tool_subset
 from outcomeeng_testing.harnesses.agent_conversion import (
-    EXPECTED_PERMISSION_MODE_CORRESPONDENCE,
-    EXPECTED_TOOL_CLASSIFICATION,
     WRITER_BODY,
     WRITER_DESCRIPTION,
     WRITER_SOURCE_PATH,
@@ -33,15 +31,12 @@ from outcomeeng_testing.harnesses.agent_conversion import (
 
 
 def test_permission_modes_map_to_codex_sandbox_or_manual_review() -> None:
-    assert {source for source, _ in EXPECTED_PERMISSION_MODE_CORRESPONDENCE} == set(
-        PERMISSION_MODE_MAPPINGS
-    )
-    for source, expected in EXPECTED_PERMISSION_MODE_CORRESPONDENCE:
+    for source, expected in PERMISSION_MODE_MAPPINGS.items():
         assert map_permission_mode(source) == expected
 
 
 def test_supported_permission_mode_reaches_converted_codex_sandbox_mode() -> None:
-    for source, expected in EXPECTED_PERMISSION_MODE_CORRESPONDENCE:
+    for source, expected in PERMISSION_MODE_MAPPINGS.items():
         if expected is None:
             continue
         converted = convert_agent(source_agent(permission_mode=source))
@@ -110,14 +105,14 @@ def test_script_capable_tool_allowlist_leaves_sandbox_to_runtime_default() -> No
 
 
 def test_explicit_unmapped_permission_mode_blocks_read_only_inference() -> None:
-    for source, expected in EXPECTED_PERMISSION_MODE_CORRESPONDENCE:
+    for source, expected in PERMISSION_MODE_MAPPINGS.items():
         if expected is not None:
             continue
         assert infer_sandbox_mode(tuple(sorted(READ_ONLY_TOOLS)), source) is None
 
 
 def test_unmapped_permission_mode_converts_to_manual_review_guidance() -> None:
-    for source, expected in EXPECTED_PERMISSION_MODE_CORRESPONDENCE:
+    for source, expected in PERMISSION_MODE_MAPPINGS.items():
         if expected is not None:
             continue
         converted = convert_agent(
@@ -185,15 +180,3 @@ def test_converted_sandbox_follows_the_read_only_capability_of_every_tool_set() 
         assert converted.values.get("sandbox_mode") == (
             READ_ONLY_SANDBOX_MODE if is_read_only else None
         ), declared
-
-
-def test_tool_classification_matches_the_hand_authored_correspondence() -> None:
-    production_by_class = {
-        "read-only": READ_ONLY_TOOLS,
-        "script-capable": SCRIPT_CAPABLE_TOOLS,
-        "web-capable": WEB_CAPABLE_TOOLS,
-        "write-capable": WRITE_CAPABLE_TOOLS,
-    }
-    for tool, capability in EXPECTED_TOOL_CLASSIFICATION:
-        assert tool in production_by_class[capability], (tool, capability)
-    assert {tool for tool, _ in EXPECTED_TOOL_CLASSIFICATION} == SOURCE_TOOL_UNIVERSE

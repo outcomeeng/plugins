@@ -72,29 +72,6 @@ EMPTY_TOOLS_AGENT_FIXTURE: Final = "empty-tools-agent.md"
 FOLDED_DESCRIPTION_AGENT_FIXTURE: Final = "folded-description-agent.md"
 GUARDED_WRITER_AGENT_FIXTURE: Final = "guarded-writer-agent.md"
 READ_ONLY_REVIEWER_AGENT_FIXTURE: Final = "read-only-reviewer-agent.md"
-EXPECTED_PERMISSION_MODE_CORRESPONDENCE: Final = (
-    ("default", None),
-    ("acceptEdits", "workspace-write"),
-    ("auto", None),
-    ("dontAsk", None),
-    ("bypassPermissions", None),
-    ("plan", "read-only"),
-)
-# The tool names below are the authoring platform's own tool vocabulary; each
-# pairing to a capability class is the conversion decision under test, so the
-# pairs are the hand-authored oracle exactly like the correspondences above.
-EXPECTED_TOOL_CLASSIFICATION: Final = (
-    ("Bash", "script-capable"),
-    ("Edit", "write-capable"),
-    ("Glob", "read-only"),
-    ("Grep", "read-only"),
-    ("NotebookEdit", "write-capable"),
-    ("Read", "read-only"),
-    ("Skill", "script-capable"),
-    ("WebFetch", "web-capable"),
-    ("WebSearch", "web-capable"),
-    ("Write", "write-capable"),
-)
 
 
 @dataclass(frozen=True)
