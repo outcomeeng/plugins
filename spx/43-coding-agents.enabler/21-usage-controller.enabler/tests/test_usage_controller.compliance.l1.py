@@ -1124,6 +1124,73 @@ def test_switch_account_report_names_the_positions_whose_exit_send_failed() -> N
     assert {(item.pane, STOP_TEXT) for item in positions} <= set(sends_of(every_failed))
 
 
+def test_pass_bound_reached_before_the_ceiling_stop_leaves_every_ceiling_position_unfinished() -> (
+    None
+):
+    # Clauses: the pass-bound clause (a pass that reaches the bound records its
+    # unfinished positions and leaves them to the next pass) and the weekly-ceiling
+    # clause (every position of a subscription at the ceiling receives `/exit`).
+    # Rejects the mutation that lets the ceiling stop of the first subscription end
+    # the pass bound handling, so a later subscription at the ceiling is dropped with
+    # no stop and no record that it still needs one.
+    module = load_control_positions()
+    first = PositionSpec(1, ALPHA)
+    second = PositionSpec(2, BETA)
+    third = PositionSpec(3, BETA)
+    positions = (first, second, third)
+    config = ConfigSpec(positions)
+    weekly = {ALPHA: WEEKLY_CEILING_PERCENT, BETA: WEEKLY_CEILING_PERCENT}
+
+    (unbounded,) = run_passes(module, config, [PassStep(weekly=weekly)])
+    assert {
+        record[module.RecordField.POSITION]
+        for record in unbounded.new_records
+        if record[module.RecordField.ACTION] == module.Action.STOP
+    } == {item.worktree for item in positions}
+
+    # The inventory and the three screen reads fit in the pass; the clock then
+    # stands at the bound, so no `/exit` send can start.
+    exhausted = PassStep(
+        weekly=weekly,
+        leading_seconds=(0, 0, 0, module.PASS_BOUND_SECONDS),
+    )
+    (bounded,) = run_passes(module, config, [exhausted])
+
+    assert not [call for call in bounded.calls if call.operation == "send"]
+    assert set(bounded.unfinished) == {item.worktree for item in positions}
+    assert bounded.error is None
+
+
+def test_pass_bound_reached_inside_the_per_position_loop_leaves_every_ceiling_position_unfinished() -> (
+    None
+):
+    # Clauses: the pass-bound clause and the weekly-ceiling clause. The clock reaches
+    # the bound while the second position is read, so the per-position loop ends on
+    # the bound before the ceiling stop runs. Rejects the mutation that, after the
+    # loop met the bound, stops or skips subscriptions in measurement order and drops
+    # the positions of a subscription at the ceiling that are not named unfinished.
+    module = load_control_positions()
+    first = PositionSpec(1, ALPHA)
+    second = PositionSpec(2, BETA)
+    third = PositionSpec(3, BETA)
+    positions = (first, second, third)
+    config = ConfigSpec(positions)
+    weekly = {ALPHA: WEEKLY_CEILING_PERCENT, BETA: WEEKLY_CEILING_PERCENT}
+    inside_loop = PassStep(
+        weekly=weekly, leading_seconds=(0, 0, module.PASS_BOUND_SECONDS)
+    )
+
+    (bounded,) = run_passes(module, config, [inside_loop])
+
+    assert {call.pane for call in bounded.calls if call.operation == "read"} == {
+        first.pane,
+        second.pane,
+    }
+    assert not [call for call in bounded.calls if call.operation == "send"]
+    assert set(bounded.unfinished) == {item.worktree for item in positions}
+    assert bounded.error is None
+
+
 def test_failed_exit_send_leaves_the_paused_position_paused() -> None:
     # Clauses: a paused position resumes at the first pass where its spend is back
     # under its share, and a stop is a position that received `/exit`. Rejects the

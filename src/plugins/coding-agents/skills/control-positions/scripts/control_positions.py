@@ -574,16 +574,15 @@ class ControlPass:
         return targets
 
     def _control(self, targets: list[Target]) -> None:
+        exhausted = False
         for index, target in enumerate(targets):
             try:
                 self._handle(target)
             except PassBound:
                 self._leave(item.position.worktree for item in targets[index:])
+                exhausted = True
                 break
-        try:
-            self._stop_at_ceiling(targets)
-        except PassBound:
-            return
+        self._stop_at_ceiling(targets, exhausted)
 
     def _measure(self, target: Target) -> Measurement:
         position = target.position
@@ -753,7 +752,13 @@ class ControlPass:
         if self._act(self.prowl.send(target.pane, COMPACT_TEXT), worktree):
             self._record(Action.COMPACT, worktree, observed, threshold, reason)
 
-    def _stop_at_ceiling(self, targets: list[Target]) -> None:
+    def _stop_at_ceiling(self, targets: list[Target], exhausted: bool) -> None:
+        """Stop each subscription at its ceiling; `exhausted` marks a spent budget.
+
+        Once the budget is spent no Prowl call starts, and every position of each
+        subscription at the ceiling is left to the next pass, not only those of the
+        first subscription whose send met the bound.
+        """
         settings = self.settings
         for subscription, weekly in self.weekly.items():
             if weekly < settings.weekly_ceiling_percent:
@@ -768,6 +773,9 @@ class ControlPass:
                 )
                 continue
             members = [t for t in targets if t.position.subscription == subscription]
+            if exhausted:
+                self._leave(item.position.worktree for item in members)
+                continue
             stopped_worktrees: list[str] = []
             for index, target in enumerate(members):
                 try:
@@ -777,7 +785,8 @@ class ControlPass:
                     )
                 except PassBound:
                     self._leave(item.position.worktree for item in members[index:])
-                    raise
+                    exhausted = True
+                    break
                 if stopped:
                     stopped_worktrees.append(target.position.worktree)
                     self.state.paused.discard(target.position.worktree)
