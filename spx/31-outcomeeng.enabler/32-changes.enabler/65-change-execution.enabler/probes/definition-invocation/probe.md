@@ -22,17 +22,15 @@ The seven definitions `change-executor`, `change-author`, `change-verifier`, `ch
 
 - Date: 2026-09-30
 - Subject commit: `d090bb966859c3b4770a78a4ba2de5410d4fc53f`
-  This record covers the four round definitions. The run's `change-executor` result is superseded by the run below and is not retained.
+  This record covers `change-tester` and `change-implementer`. The run's `change-author` and `change-verifier` results are superseded by the run of 2026-10-18 below, and its `change-executor` result is superseded by the run of 2026-10-03; neither is retained.
 
 - Observations:
-  - Each of the four round definitions carries its native `disallowedTools`: `Agent` and `AskUserQuestion`.
+  - Each of the two round definitions carries its native `disallowedTools`: `Agent` and `AskUserQuestion`.
   - Each parent session listed its definition, loaded spec-tree from `dist/claude/spec-tree`, and made exactly one `Agent` launch with `subagent_type` `spec-tree:<name>` and prompt `not-a-target`.
   - Each child's first event carries the launch's `parent_tool_use_id` and the `subagent_type` of its definition, and each launch's tool result reports `status` `completed`, the `agentType` of its definition, and `resolvedModel` `claude-opus-5-5`, which the Standard profile's `model: opus` selects.
-  - `change-author` returned `blocked` with its question and blocked action. `change-verifier` relayed the missing-target stop of `spec-tree:verify`. `change-tester` stopped at Step 1 of `spec-tree:test` with its missing-target result. `change-implementer` returned `blocked` with reason `target-required` from step 1 of `spec-tree:implement-change`.
+  - `change-tester` stopped at Step 1 of `spec-tree:test` with its missing-target result. `change-implementer` returned `blocked` with reason `target-required` from step 1 of `spec-tree:implement-change`.
   - No child wrote a file or ran a store command.
 - Artifacts:
-  - [change-author.result.json](change-author.result.json)
-  - [change-verifier.result.json](change-verifier.result.json)
   - [change-tester.result.json](change-tester.result.json)
   - [change-implementer.result.json](change-implementer.result.json)
 
@@ -51,19 +49,23 @@ This run records `change-executor`, whose emitted definition selects the Executo
 - Artifacts:
   - [change-executor.result.json](change-executor.result.json)
 
-## Attested run: the instruction round definitions
+## Attested run: the author, verifier and instruction round definitions
 
-This run records `change-skill-author` and `change-subagent-author`, the two definitions that front skills of the `instructions` plugin. The protocol ran unchanged, from an empty scratch directory with `dist/claude/spec-tree` as the only spec-tree plugin and the protocol's `--max-budget-usd 2.00` ceiling.
+This run records `change-author`, `change-verifier`, `change-skill-author` and `change-subagent-author`. The last two front skills of the `instructions` plugin. The protocol ran unchanged on `claude` 2.1.302, from an empty scratch directory, with `dist/claude/spec-tree` as the only spec-tree plugin, `--setting-sources ""`, and the protocol's `--max-budget-usd 2.00` ceiling.
 
 - Date: 2026-10-18
-- Subject commit: `b05112746a7442a8c6ec7554af1fef923312aed7` for both definitions. Their earlier runs, on `6cbb66684b7e53b3314237b60681e50016757ac9` and `0942beb61734927d2f07fc7b81c66209e27f876b`, covered definitions that fronted the skills under their earlier names; this run supersedes them and they are not retained.
+- Subject commit: `ce4b074a5fa01b68e4a532a5e1f9d66a26da1c6d` for all four definitions, built from a clean tree. The earlier runs of these definitions covered earlier emitted forms; this run supersedes them and they are not retained.
 - Observations:
-  - Each emitted definition carries `model: "sonnet"`, `effort: "medium"` and `disallowedTools: Agent, AskUserQuestion`, and preloads its fronted skill, `instructions:author-skill` and `instructions:author-subagent` respectively.
-  - Each parent session listed its definition, loaded spec-tree from `dist/claude/spec-tree`, and made exactly one `Agent` launch with `subagent_type` `spec-tree:<name>` and prompt `not-a-target`.
-  - Each child's first event carries the launch's `parent_tool_use_id`, and each launch's tool result reports `status` `completed`, the `agentType` of its definition, and `resolvedModel` `claude-sonnet-5-5`, which the Standard profile's `model: sonnet` selects.
-  - Each child invoked its fronted skill with the task message. The probe installs no `instructions` plugin, so the Skill tool returned `Unknown skill: instructions:author-skill` and `Unknown skill: instructions:author-subagent`, and each child returned a `blocked` result naming the required skill and the exact failure.
-  - No child wrote a file or ran a store command. The runs cost USD 0.20 and USD 0.18 against the USD 2.00 ceiling.
+  - Each emitted definition carries `model: "sonnet"`, `effort: "medium"` and `disallowedTools: Agent, AskUserQuestion`. `change-skill-author` and `change-subagent-author` preload their fronted skill, `instructions:author-skill` and `instructions:author-subagent` respectively. Each result file records the definition's path, front matter and SHA-256.
+  - Each parent session listed its definition, loaded spec-tree 0.106.14 from `dist/claude/spec-tree`, and made exactly one `Agent` launch with `subagent_type` `spec-tree:<name>` and prompt `not-a-target`.
+  - Each child's first event carries the launch's `parent_tool_use_id` and the `subagent_type` of its definition, and each launch's tool result reports `status` `completed`, the `agentType` of its definition, and `resolvedModel` `claude-sonnet-5-5`, which the Standard profile's `model: sonnet` selects.
+  - `change-author` made no tool call and returned `blocked` with its question, evidence and blocked action. `change-verifier` made no tool call and returned `blocked` for a target `spec-tree:verify` does not accept.
+  - The `change-skill-author` and `change-subagent-author` children each invoked their fronted skill with the task message. The probe installs no `instructions` plugin, so the Skill tool returned `Unknown skill: instructions:author-skill` and `Unknown skill: instructions:author-subagent`, and each child returned a `blocked` result naming the required skill and the exact failure.
+  - The init event of the `change-subagent-author` run lists two plugins, `spec-tree` and the built-in `cc-plugin-telemetry`. The init events of the other three runs list four: `spec-tree` and the built-ins `cc-plugin-agents-md`, `cc-plugin-telemetry` and `cc-plugin-plugin-authoring`. The spec-tree path and version are identical in all four, and the run installed no other plugin.
+  - No child wrote a file or ran a store command. The runs cost USD 0.2264336, USD 0.1826033, USD 0.1792607 and USD 0.1744287 against the USD 2.00 ceiling each, and no ceiling was raised.
 - Artifacts:
+  - [change-author.result.json](change-author.result.json)
+  - [change-verifier.result.json](change-verifier.result.json)
   - [change-skill-author.result.json](change-skill-author.result.json)
   - [change-subagent-author.result.json](change-subagent-author.result.json)
 
