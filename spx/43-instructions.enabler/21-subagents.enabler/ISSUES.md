@@ -140,7 +140,7 @@ explicit instruction.
 **Settlement condition:** both descriptions state the role and the calling-skill condition
 in passive form, and one `subagent-auditor` run on each raises no such finding.
 
-## The subagent auditor's verdict format keeps a zero finding count for approval `src/plugins/instructions/skills/audit-subagent/SKILL.md`, `<verdict_format>`, `consistency`
+## The subagent auditor's verdict format keeps a zero finding count for approval
 
 **Evidence.** `spec-tree:changes-reviewer` run `2026-10-10_19-49-04-623-01d567a86f84` reported, as `debt` (`consistency`), that `<verdict_format>` in `src/plugins/instructions/skills/audit-subagent/SKILL.md` states that the projection's `findingCount` is zero for approval, while the same sentence admits `filed` findings under an approved run. `src/plugins/instructions/skills/audit-skill/SKILL.md` dropped that clause, and `src/plugins/spec-tree/skills/author-change/SKILL.md` step 4 requires `run.findingCount` to equal the number of `filed` entries on an approved run.
 
