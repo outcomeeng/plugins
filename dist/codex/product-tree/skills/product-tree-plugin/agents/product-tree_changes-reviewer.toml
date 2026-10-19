@@ -62,7 +62,7 @@ The sealed review journal prefix is the durable run state.
 </success_criteria>
 
 <manual_review_guidance>
-Source `skills` entries were preserved as prompt guidance. The generated Codex `skills.config` entries enable these skills; they are not a spawn-time preload guarantee. Invoke or load these skills before relying on this agent's specialized behavior: `product-tree:review-changes`.
+Source `skills` entries were preserved as prompt guidance. The generated Codex `skills.config` entries enable these skills; they are not a spawn-time preload guarantee. Load each of these skills through its `Use skill` instruction before relying on this agent's specialized behavior, and search for no dedicated skill-invocation tool: the absence of one is no availability failure, while an absent installed skill or an unreadable skill file is one: `product-tree:review-changes`.
 
 Source `tools` allowlists can map only to Codex configuration boundaries with matching semantics. Treat command-level meanings inside allowed shell tools as manual-review guidance: `Read`, `Write`, `Grep`, `Glob`, `Bash(gh pr view:*)`, `Bash(git fetch origin pull/*/head:*)`, `Bash(git rev-parse:*)`, `Bash(python3 "*/skills/review-changes/scripts/review_run.py":*)`, `Bash(SPX_VERIFY_*=* python3 "*/skills/review-changes/scripts/review_run.py":*)`.
 </manual_review_guidance>
