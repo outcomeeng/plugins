@@ -101,18 +101,6 @@ Impact: each later audit of those skills raises the finding again, though their 
 
 Revisit and settlement condition: `/skill-standards` states that a run-driver identity recorded as provenance, with no branching on it, is input data; one typed skill audit of each of `audit-skill`, `audit-subagent`, and `author-skill` then raises no `caller_independence` finding.
 
-## DEBT [bound]: orchestrate-change reads nested connections at first:50 with no blocked result
-
-Defect class: `bound`.
-
-Finding: product property 3 of [`spx/15-agent-tools.pdr.md`](spx/15-agent-tools.pdr.md) covers a `gh api graphql` call reading a connection and requires a named page bound and a blocked result when the result fills it. `src/plugins/coding-agents/skills/orchestrate-change/SKILL.md` line 52 reads `issueFieldValues(first:50)` with no blocked result when the connection returns 50 nodes. Change outcomeeng/changes#333 added that blocked result to the `canonical-state` rule of `src/plugins/spec-tree/skills/change-standards/references/lifecycle.md`, which carried the other nested reads; the Change edits no file of `orchestrate-change`.
-
-Evidence: `spec-tree:changes-reviewer` run `2026-10-06_19-01-19-956-109edd5dce9a` on head `7ab8c651a26303d97d3b99534f17a215c2bf2a66`, finding `consistency` against `lifecycle.md:23`; the `orchestrate-change` read names its bound and returns no blocked result at 50 nodes.
-
-Impact: an issue that carries 50 or more field values drops a value from the `orchestrate-change` read with no blocked result.
-
-Revisit and settlement condition: `orchestrate-change` states that a connection returning 50 nodes is a blocked read naming `50 field values`, and one typed skill audit of `orchestrate-change` follows the edit.
-
 ## DEBT [tooling-limit]: the GitHub GraphQL budget belongs to the account, and the REST rate-limit endpoint misreports it
 
 Defect class: `tooling-limit`.
