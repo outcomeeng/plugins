@@ -68,7 +68,8 @@ A source that cannot be read is never a quiet period. A mail store that is unava
 1. Interpret `$ARGUMENTS` as a complete JSON request. When it is empty, run nothing and report that `timeoutSeconds` and at least one source are required.
 2. Build the request from the last event handled, naming `timeoutSeconds` and every source to read.
 3. Write the request with the file-write tool to a file in the scratch directory the harness names for this session, under a file name unique to the agent and the request, and submit it through the input redirect in `<invocation_form>`. Where the harness names no scratch directory, use the one the environment designates, such as `$RUNNER_TEMP` on a hosted runner.
-4. Read the one line the run prints. Act on `event` by handling it, then re-arm with the new `id`, `state`, or `after` instant. Treat `timeout` as no event. Stop on `unreadable-source` or `invalid-request` and report the line verbatim.
+4. Arm one run at a time, with its one explicit `timeoutSeconds`, as the owner that collects its line. Run it in the background only under an agent harness whose documented contract wakes the session when the process exits. Under every other harness, run it in the foreground and collect the line within the active turn, or move the wait to the next step boundary.
+5. Read the one line the run prints. Act on `event` by handling it, then arm the next run with the new `id`, `state`, or `after` instant. Treat `timeout` as no event. Stop on `unreadable-source` or `invalid-request` and report the line verbatim.
 
 </workflow>
 
@@ -89,7 +90,8 @@ python3 "${SKILL_DIR}/scripts/wait_event.py" < <request-file>
 - NEVER pass a request through a heredoc, a pipe, or an inline argument, and NEVER remove the request file.
 - NEVER run `am`, `herdr`, or a consumption-control read to reproduce a wait; the script reads mail through `/operate-agent-mail`, session states through `/operate-herdr`, and alerts through `/control-token-spend`, and builds no command of its own.
 - NEVER rely on the wait to acknowledge a record, mark mail read, or prompt a pane; it keeps no cursor, state file, or lock and changes nothing. Record a receipt with `/operate-agent-mail` and steer a pane with `/operate-herdr`.
-- NEVER start the wait in the background or keep it as a standing watcher; the next wait is armed after the line is handled.
+- ALWAYS follow the arming rule `bounded-background-wait`: a wait has one explicit deadline, one result, and one owner that collects its termination, and the owner arms the next wait only after handling the line.
+- NEVER start the wait in the background under an agent harness whose documented contract does not wake the session when the process exits, and NEVER keep it as a standing watcher or let a run re-arm itself.
 
 </constraints>
 

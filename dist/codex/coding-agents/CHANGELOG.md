@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.16.2
+
+### Changed
+
+- **`/wait-for-event` states when a wait may run in the background.** The caller arms one run at a time with one explicit `timeoutSeconds` and collects its line itself. It runs the wait in the background only under an agent harness whose documented contract wakes the session when the process exits; under every other harness it runs the wait in the foreground and collects the line within the active turn, or moves the wait to the next step boundary. The caller arms the next run only after handling the line, and a run never re-arms itself.
+
 ## 0.16.1
 
 ### Changed
