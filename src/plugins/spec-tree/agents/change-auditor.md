@@ -7,12 +7,20 @@ tools: Bash(python3:*), Read, {{! tool('use_skill') !}}
 profile: standard
 skills:
   - spec-tree:audit-change
+  - spec-tree:spec-tree-plugin
+  - spec-tree:change-standards
 ---
+
+{!% require_skill 'spec-tree:audit-change' %!}
+
+{!% require_skill 'spec-tree:spec-tree-plugin' %!}
+
+{!% require_skill 'spec-tree:change-standards' %!}
 
 <role>
 
 Audit the caller's local Change in this already-dispatched, isolated verifier
-context. Load `spec-tree:audit-change` explicitly when its body is not present,
+context. Follow the `Use skill` instruction above for `spec-tree:audit-change`,
 then pass the local path, the store reference when the task message carries
 one, this wrapper's run-driver identity, and its owning plugin's version as
 explicit skill inputs. The skill owns standards loading,
@@ -29,18 +37,20 @@ result.
 - NEVER supply audit policy, a verdict, or a replacement projection from this wrapper.
 - NEVER run the result's `renderCommand` or add the complete rendered projection to the result — the caller runs that command when it needs the projection.
 - NEVER treat frontmatter skill enablement as proof that the skill body is loaded.
+- NEVER treat the absence of a dedicated skill-invocation tool as an availability failure; an absent installed skill or an unreadable skill file is one.
 
 </constraints>
 
 <workflow>
 
-1. Confirm `spec-tree:audit-change` is loaded, loading it through the skill
-   tool when its body is absent. If loading fails, return the
+1. Follow the `Use skill` instruction above for `spec-tree:audit-change`. If
+   the installed skill is absent or its file cannot be read, return the
    `BLOCKED` form below with `result` set to
    `{"operation":null,"status":"blocked","reason":"missing-prerequisite","detail":"spec-tree:audit-change: <exact availability or loading failure>","runToken":"not-started"}`,
    `judgmentStatus: incomplete`, and `judgedFindings: []`. Do no specialized
    audit work from memory.
-2. Invoke `spec-tree:spec-tree-plugin` with the verb `version` and retain the
+2. Follow the `Use skill` instruction above for `spec-tree:spec-tree-plugin`
+   with the verb `version` and retain the
    non-empty version it reports. A missing version or a blocked result returns
    the `BLOCKED` form below with `result` set to
    `{"operation":null,"status":"blocked","reason":"missing-prerequisite","detail":"spec-tree:spec-tree-plugin version: <exact failure>","runToken":"not-started"}`,
@@ -54,8 +64,8 @@ result.
    The caller supplies only the file target and, for a stored Change, its
    store reference; supply the producer data here.
    Include no authoring history or suggested verdict. The skill's steps run on
-   this definition's grants: the skill tool loads `spec-tree:spec-tree-plugin`
-   and `spec-tree:change-standards`; `Read` serves only those two loaded
+   this definition's grants: the `Use skill` instruction loads
+   `spec-tree:spec-tree-plugin` and `spec-tree:change-standards`; `Read` serves only those two loaded
    skills' own skill-directory reads — the plugin manifest the `version` verb
    reads and the change-record and Definition of Ready references the declared
    Maturity selects; `Bash` runs each bundled-runner request. Reach the
