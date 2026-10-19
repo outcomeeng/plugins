@@ -38,83 +38,60 @@ human surface, the same shape the audit kind produces.
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import pathlib
 import re
 import sys
 from dataclasses import dataclass
 from enum import StrEnum
+from types import ModuleType
 from typing import Any, cast
 
 SCHEMA_VERSION = 4
 
 AGENT_TOKENS_PATH = pathlib.Path(__file__).with_name("agent-tokens.json")
-AGENT_TOKENS_REQUIRED_KEYS = ("CLAUDE", "CODEX")
-AGENT_TOKENS_REINSTALL_ADVICE = (
-    "the file ships beside this script in the spec-tree plugin; "
-    "reinstall or update the spec-tree plugin to restore it"
-)
-AGENT_TOKENS_ERROR_PREFIX = "error: agent tokens file"
-AGENT_TOKENS_NOT_FOUND = "not found: "
-AGENT_TOKENS_UNREADABLE = "unreadable: "
-AGENT_TOKENS_NOT_VALID_JSON = "is not valid JSON: "
-AGENT_TOKENS_NOT_AN_OBJECT = "must hold a JSON object: "
-AGENT_TOKENS_LACKS_KEYS = "lacks required key(s)"
-AGENT_TOKENS_FOUND_TYPE_OPEN = "(found "
-AGENT_TOKENS_KEYS_FOUND_OPEN = "(keys found: "
-AGENT_TOKENS_NO_KEYS = "none"
-AGENT_TOKENS_LOAD_FAILURE_EXIT_CODE = 2
 
 
-class AgentTokensLoadError(RuntimeError):
-    """Raised when the sibling agent-tokens data file cannot supply the agent tokens."""
-
-
-def load_agent_tokens(path: pathlib.Path) -> dict[str, str]:
-    """Read the agent tokens from ``path``, naming the file and the fix when it cannot supply them."""
+def _sibling_provider(skill: str, module_name: str) -> ModuleType:
+    """Load a sibling provider skill's script by the installed tree's layout."""
+    cached = sys.modules.get(module_name)
+    if cached is not None:
+        return cached
+    skills = pathlib.Path(__file__).resolve().parents[2]
+    path = skills / skill / "scripts" / f"{module_name}.py"
+    spec = importlib.util.spec_from_file_location(module_name, path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot load {module_name} from {path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
     try:
-        text = path.read_text(encoding="utf-8")
-    except FileNotFoundError as exc:
-        raise AgentTokensLoadError(
-            f"{AGENT_TOKENS_ERROR_PREFIX} {AGENT_TOKENS_NOT_FOUND}{path}; {AGENT_TOKENS_REINSTALL_ADVICE}"
-        ) from exc
-    except OSError as exc:
-        raise AgentTokensLoadError(
-            f"{AGENT_TOKENS_ERROR_PREFIX} {AGENT_TOKENS_UNREADABLE}{path} ({exc}); "
-            f"{AGENT_TOKENS_REINSTALL_ADVICE}"
-        ) from exc
-    try:
-        tokens = json.loads(text)
-    except json.JSONDecodeError as exc:
-        raise AgentTokensLoadError(
-            f"{AGENT_TOKENS_ERROR_PREFIX} {AGENT_TOKENS_NOT_VALID_JSON}{path} ({exc}); "
-            f"{AGENT_TOKENS_REINSTALL_ADVICE}"
-        ) from exc
-    if not isinstance(tokens, dict):
-        raise AgentTokensLoadError(
-            f"{AGENT_TOKENS_ERROR_PREFIX} {AGENT_TOKENS_NOT_AN_OBJECT}{path} "
-            f"{AGENT_TOKENS_FOUND_TYPE_OPEN}{type(tokens).__name__}); {AGENT_TOKENS_REINSTALL_ADVICE}"
-        )
-    missing = [key for key in AGENT_TOKENS_REQUIRED_KEYS if key not in tokens]
-    if missing:
-        raise AgentTokensLoadError(
-            f"{AGENT_TOKENS_ERROR_PREFIX} {AGENT_TOKENS_LACKS_KEYS} {', '.join(missing)}: {path} "
-            f"{AGENT_TOKENS_KEYS_FOUND_OPEN}{', '.join(sorted(map(str, tokens))) or AGENT_TOKENS_NO_KEYS}); "
-            f"{AGENT_TOKENS_REINSTALL_ADVICE}"
-        )
-    return tokens
+        spec.loader.exec_module(module)
+    except Exception:
+        # A module that failed to execute never stays cached as if it loaded.
+        del sys.modules[spec.name]
+        raise
+    return module
 
 
-def _load_agent_tokens_or_exit(path: pathlib.Path) -> dict[str, str]:
-    """Load the agent tokens, or report the failure as an ``error:`` line and exit 2."""
-    try:
-        return load_agent_tokens(path)
-    except AgentTokensLoadError as exc:
-        print(exc, file=sys.stderr)
-        raise SystemExit(AGENT_TOKENS_LOAD_FAILURE_EXIT_CODE) from exc
-
-
-_AGENT_TOKENS = _load_agent_tokens_or_exit(AGENT_TOKENS_PATH)
+# The update-instruction-block skill owns the agent-tokens loader; this module passes it the
+# data file the build renders beside this script.
+_TOKENS_PROVIDER = _sibling_provider("update-instruction-block", "instruction_block")
+AgentTokensLoadError = _TOKENS_PROVIDER.AgentTokensLoadError
+load_agent_tokens = _TOKENS_PROVIDER.load_agent_tokens
+AGENT_TOKENS_REQUIRED_KEYS = _TOKENS_PROVIDER.AGENT_TOKENS_REQUIRED_KEYS
+AGENT_TOKENS_REINSTALL_ADVICE = _TOKENS_PROVIDER.AGENT_TOKENS_REINSTALL_ADVICE
+AGENT_TOKENS_ERROR_PREFIX = _TOKENS_PROVIDER.AGENT_TOKENS_ERROR_PREFIX
+AGENT_TOKENS_NOT_FOUND = _TOKENS_PROVIDER.AGENT_TOKENS_NOT_FOUND
+AGENT_TOKENS_UNREADABLE = _TOKENS_PROVIDER.AGENT_TOKENS_UNREADABLE
+AGENT_TOKENS_NOT_VALID_JSON = _TOKENS_PROVIDER.AGENT_TOKENS_NOT_VALID_JSON
+AGENT_TOKENS_NOT_AN_OBJECT = _TOKENS_PROVIDER.AGENT_TOKENS_NOT_AN_OBJECT
+AGENT_TOKENS_LACKS_KEYS = _TOKENS_PROVIDER.AGENT_TOKENS_LACKS_KEYS
+AGENT_TOKENS_FOUND_TYPE_OPEN = _TOKENS_PROVIDER.AGENT_TOKENS_FOUND_TYPE_OPEN
+AGENT_TOKENS_KEYS_FOUND_OPEN = _TOKENS_PROVIDER.AGENT_TOKENS_KEYS_FOUND_OPEN
+AGENT_TOKENS_NO_KEYS = _TOKENS_PROVIDER.AGENT_TOKENS_NO_KEYS
+AGENT_TOKENS_LOAD_FAILURE_EXIT_CODE = _TOKENS_PROVIDER.AGENT_TOKENS_LOAD_FAILURE_EXIT_CODE
+_AGENT_TOKENS = _TOKENS_PROVIDER.load_agent_tokens_or_exit(AGENT_TOKENS_PATH)
 GENERATED_TREE_AGENT_TOKENS = tuple(
     _AGENT_TOKENS[key] for key in AGENT_TOKENS_REQUIRED_KEYS
 )
