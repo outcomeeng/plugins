@@ -41,6 +41,7 @@ import io
 import json
 import os
 import pathlib
+import shutil
 import subprocess
 import sys
 import traceback
@@ -49,8 +50,10 @@ from types import ModuleType
 from typing import Any, Callable, cast
 from unittest.mock import patch
 
-from outcomeeng.distribution.contracts import AGENT_TOKEN_DATA_FILENAME, Target
+from outcomeeng.distribution.contracts import Target
+from outcomeeng.distribution.instruction_block import GENERATOR_PATH
 from outcomeeng.distribution.shipped_scripts import load_shipped_module
+from outcomeeng_testing.harnesses.agent_tokens import stage_agent_tokens_file
 from outcomeeng_testing.harnesses.dist_tree import DistTreeReader
 
 # Two ``parents`` hops land at the repository root: this file lives at
@@ -87,6 +90,10 @@ REFERENCES_DIR = SKILL_DIR / "references"
 REVIEW_PROMPT_PATH = REFERENCES_DIR / "review-prompt.md"
 
 REVIEW_RESULT_MODULE_PATH = SCRIPTS_DIR / "review_result.py"
+# The sibling skill whose script owns the agent-tokens loader, in the generated tree.
+TOKENS_PROVIDER_SCRIPTS_DIR = (
+    SCRIPTS_DIR.parents[1] / GENERATOR_PATH.parents[1].name / SCRIPTS_DIR.name
+)
 COMPUTE_DIFF_SCRIPT = SCRIPTS_DIR / "compute_diff.py"
 JOURNAL_EMIT_SCRIPT = SCRIPTS_DIR / "journal_emit.py"
 REVIEW_RUN_SCRIPT = SCRIPTS_DIR / "review_run.py"
@@ -146,20 +153,24 @@ def run_review_result_with_agent_tokens_file(
     """Run a copy of the shipped module beside an agent-tokens file of the given state.
 
     ``tokens`` is the file's text, or ``None`` for an absent file; ``make_directory`` places a
-    directory at the file's path so reading it fails as an unreadable file. The copy loads in
-    its own interpreter so the import-time load is the behavior under observation.
+    directory at the file's path so reading it fails as an unreadable file. The copy sits in
+    the installed tree's layout: the sibling skill that owns the loader is copied whole beside
+    it, with the data file it loads for itself, and the module's own data file is the state
+    under observation. The copy loads in its own interpreter so the import-time load is the
+    behavior under observation.
     """
-    scripts_dir = scratch / "scripts"
-    scripts_dir.mkdir()
+    skills_dir = scratch / SCRIPTS_DIR.parents[1].name
+    scripts_dir = skills_dir / SCRIPTS_DIR.parent.name / SCRIPTS_DIR.name
+    scripts_dir.mkdir(parents=True)
+    shutil.copytree(
+        TOKENS_PROVIDER_SCRIPTS_DIR,
+        skills_dir / TOKENS_PROVIDER_SCRIPTS_DIR.parent.name / SCRIPTS_DIR.name,
+    )
     module = scripts_dir / REVIEW_RESULT_MODULE_PATH.name
     module.write_text(
         REVIEW_RESULT_MODULE_PATH.read_text(encoding="utf-8"), encoding="utf-8"
     )
-    tokens_path = scripts_dir / AGENT_TOKEN_DATA_FILENAME
-    if make_directory:
-        tokens_path.mkdir()
-    elif tokens is not None:
-        tokens_path.write_text(tokens, encoding="utf-8")
+    stage_agent_tokens_file(scripts_dir, tokens=tokens, make_directory=make_directory)
     return subprocess.run(  # noqa: S603 — the interpreter and the copied module are harness-built
         [sys.executable, "-I", "-B", str(module)],
         capture_output=True,

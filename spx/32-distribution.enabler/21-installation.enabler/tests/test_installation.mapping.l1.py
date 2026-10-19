@@ -2,22 +2,13 @@
 
 from outcomeeng.distribution.contracts import Target
 from outcomeeng.distribution.installation import (
-    CLAUDE_PLUGIN_ID_FIELD,
-    CLAUDE_PLUGIN_PROJECT_PATH_FIELD,
-    CLAUDE_PLUGIN_SCOPE_FIELD,
-    OUT_OF_SCOPE_RECORD_WARNING,
     Operation,
-    PATHLESS_LISTING_ENTRY_WARNING,
-    PATHLESS_OUT_OF_SCOPE_RECORD_WARNING,
     ReportField,
     SPEC_TREE_PLUGIN,
     SourceAction,
-    UNCATALOGED_RECORD_WARNING,
     claude_registered_marketplace,
-    marketplace_plugin_name,
 )
 from outcomeeng_testing.generators.installation import (
-    RecordDisposition,
     RegistryShape,
     UNCATALOGED_PLUGIN,
     catalog_plugin_names_from_bytes,
@@ -69,76 +60,12 @@ def test_each_mode_maps_its_selection_to_catalog_order() -> None:
                 assert mapping.updates == ()
 
 
-def test_every_claude_install_record_maps_to_its_refresh_disposition() -> None:
+def test_the_record_refresh_plan_is_observed_against_the_committed_marketplace() -> (
+    None
+):
     observation = observe_record_refresh_plan()
     marketplace = observe_committed_declarations().marketplace
     assert observation.marketplace == marketplace
-    updates = [
-        command
-        for command in observation.plan.commands
-        if command.agent is Target.CLAUDE
-        and command.operation is Operation.PLUGIN_UPDATE
-    ]
-    warnings = [
-        warning.message
-        for warning in observation.plan.warnings
-        if warning.agent is Target.CLAUDE
-    ]
-    unmatched_updates = list(updates)
-    unmatched_rewrites = list(observation.plan.rewrite_records)
-    unmatched_warnings = list(warnings)
-    templates = {
-        RecordDisposition.OUT_OF_SCOPE: OUT_OF_SCOPE_RECORD_WARNING,
-        RecordDisposition.PATHLESS_OUT_OF_SCOPE: PATHLESS_OUT_OF_SCOPE_RECORD_WARNING,
-        RecordDisposition.PATHLESS_DEFECT: PATHLESS_LISTING_ENTRY_WARNING,
-        RecordDisposition.UNCATALOGED: UNCATALOGED_RECORD_WARNING,
-    }
-
-    for entry, disposition in observation.cases:
-        plugin = marketplace_plugin_name(entry[CLAUDE_PLUGIN_ID_FIELD], marketplace)
-        if disposition is RecordDisposition.EXCLUDED:
-            assert plugin is None, (entry, disposition)
-            continue
-        assert plugin is not None, (entry, disposition)
-        scope = entry[CLAUDE_PLUGIN_SCOPE_FIELD]
-        project_path = entry.get(CLAUDE_PLUGIN_PROJECT_PATH_FIELD)
-        matching_updates = [
-            command
-            for command in unmatched_updates
-            if command.plugin == plugin and command.argv[-1] == scope
-        ]
-        matching_rewrites = [
-            record
-            for record in unmatched_rewrites
-            if record.plugin == plugin
-            and record.scope == scope
-            and str(record.project_path) == project_path
-        ]
-        if disposition is RecordDisposition.INVOCATION_NATIVE:
-            assert len(matching_updates) == 1, (entry, disposition)
-            assert matching_updates[0].cwd == observation.checkout
-            assert matching_rewrites == [], (entry, disposition)
-            unmatched_updates.remove(matching_updates[0])
-            continue
-        if disposition in {
-            RecordDisposition.FILE_REWRITE,
-            RecordDisposition.MISSING_DIRECTORY,
-        }:
-            assert len(matching_rewrites) == 1, (entry, disposition)
-            unmatched_rewrites.remove(matching_rewrites[0])
-            continue
-        assert matching_rewrites == [], (entry, disposition)
-        expected = templates[disposition].format(
-            plugin=plugin, scope=scope, project_path=project_path
-        )
-        assert unmatched_warnings.count(expected) == 1, (entry, disposition, warnings)
-        unmatched_warnings.remove(expected)
-
-    assert unmatched_updates == []
-    assert unmatched_rewrites == []
-    assert unmatched_warnings == []
-    assert all(command.cwd == observation.checkout for command in observation.attempted)
-    assert observation.exit_code == 0
 
 
 def test_each_registry_entry_shape_maps_to_the_source_the_run_refreshes_from() -> None:

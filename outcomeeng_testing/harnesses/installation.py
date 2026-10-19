@@ -2607,25 +2607,24 @@ def observe_unresolved_target_record() -> UnresolvedTargetObservation:
 
 
 @dataclass(frozen=True)
-class BootstrapDriftObservation:
-    """A persistent run that registers the marketplace itself, with its report."""
+class _NoTargetRefreshRun:
+    """One persistent refresh over generated no-target records, with the runner it drove."""
 
     checkout: Path
     other_checkout: Path
-    listed_version: str
     target_version: str
+    runner: RecordingRunner
     document: dict[str, object]
-    """The run's JSON report, parsed from the one execution's own output."""
     exit_code: int
 
 
-def observe_bootstrap_record_drift() -> BootstrapDriftObservation:
-    """Run a persistent refresh whose Claude registry carries no marketplace entry.
+def _run_no_target_refresh(
+    *, registered: bool = True, failed_operation: Operation | None = None
+) -> _NoTargetRefreshRun:
+    """Run a persistent refresh whose listing names one record of the invocation checkout and one of another.
 
-    The listing names one record of the invocation checkout and one of
-    another checkout, so the run has both a record its native update moves
-    and a record it cannot move without a registered clone. The report and
-    the exit code come from that one execution.
+    ``registered`` and ``failed_operation`` configure the recording runner that stands in
+    for the agent CLIs.
     """
     checkout = repository_root()
     with TemporaryDirectory() as temporary_directory:
@@ -2663,7 +2662,8 @@ def observe_bootstrap_record_drift() -> BootstrapDriftObservation:
             record_file=record_file,
             clone=clone,
             served_version=target_version,
-            registered=False,
+            registered=registered,
+            failed_operation=failed_operation,
         )
         stdout = StringIO()
         stderr = StringIO()
@@ -2674,13 +2674,45 @@ def observe_bootstrap_record_drift() -> BootstrapDriftObservation:
                 runner=runner,
             )
         document = cast("dict[str, object]", json.loads(stdout.getvalue()))
-    return BootstrapDriftObservation(
+    return _NoTargetRefreshRun(
         checkout=preflight.roots.checkout,
         other_checkout=other.resolve(),
-        listed_version=LISTED_VERSION,
         target_version=target_version,
+        runner=runner,
         document=document,
         exit_code=exit_code,
+    )
+
+
+@dataclass(frozen=True)
+class BootstrapDriftObservation:
+    """A persistent run that registers the marketplace itself, with its report."""
+
+    checkout: Path
+    other_checkout: Path
+    listed_version: str
+    target_version: str
+    document: dict[str, object]
+    """The run's JSON report, parsed from the one execution's own output."""
+    exit_code: int
+
+
+def observe_bootstrap_record_drift() -> BootstrapDriftObservation:
+    """Run a persistent refresh whose Claude registry carries no marketplace entry.
+
+    The listing names one record of the invocation checkout and one of
+    another checkout, so the run has both a record its native update moves
+    and a record it cannot move without a registered clone. The report and
+    the exit code come from that one execution.
+    """
+    run = _run_no_target_refresh(registered=False)
+    return BootstrapDriftObservation(
+        checkout=run.checkout,
+        other_checkout=run.other_checkout,
+        listed_version=LISTED_VERSION,
+        target_version=run.target_version,
+        document=run.document,
+        exit_code=run.exit_code,
     )
 
 
@@ -2713,62 +2745,16 @@ def observe_unreadable_head_record() -> UnreadableHeadObservation:
     checkout and one of another checkout, so the run carries both
     dispositions a no-target run reports.
     """
-    checkout = repository_root()
-    with TemporaryDirectory() as temporary_directory:
-        temporary_root = Path(temporary_directory).resolve()
-        mirror = temporary_root / "checkout"
-        other = temporary_root / "other-checkout"
-        other.mkdir()
-        mirror_installation_inputs(checkout, mirror)
-        _write_project_marketplace(mirror, DECLARED_CLAUDE_SOURCE)
-        clone = temporary_root / "clone"
-        mirror_installation_inputs(checkout, clone)
-        environment = _persistent_environment(temporary_root)
-        _prepare_agent_state(environment)
-        preflight = build_persistent_preflight(mirror, environment)
-        marketplace = MARKETPLACE
-        cases = generated_no_target_records(
-            marketplace,
-            SPEC_TREE_PLUGIN,
-            preflight.roots.checkout,
-            other,
-            LISTED_VERSION,
-        )
-        target_version = served_version(len(cases))
-        _serve_clone_versions(clone, (SPEC_TREE_PLUGIN,), target_version)
-        cache_root = (
-            preflight.roots.claude_config / CLAUDE_PLUGIN_CACHE_RELATIVE / marketplace
-        )
-        (cache_root / SPEC_TREE_PLUGIN / target_version).mkdir(parents=True)
-        record_file = preflight.roots.claude_config / CLAUDE_INSTALLED_PLUGINS_RELATIVE
-        record_file.parent.mkdir(parents=True, exist_ok=True)
-        record_file.write_text(
-            json.dumps(_record_file_from_cases(cases, cache_root), indent=2)
-        )
-        runner = RecordingRunner(
-            record_file=record_file,
-            clone=clone,
-            served_version=target_version,
-            failed_operation=Operation.MARKETPLACE_HEAD,
-        )
-        stdout = StringIO()
-        stderr = StringIO()
-        with redirect_stdout(stdout), redirect_stderr(stderr):
-            exit_code = main(
-                [CHECKOUT_OPTION, str(mirror), JSON_OUTPUT_OPTION],
-                base_environment=environment,
-                runner=runner,
-            )
-        document = cast("dict[str, object]", json.loads(stdout.getvalue()))
+    run = _run_no_target_refresh(failed_operation=Operation.MARKETPLACE_HEAD)
     return UnreadableHeadObservation(
-        checkout=preflight.roots.checkout,
-        other_checkout=other.resolve(),
+        checkout=run.checkout,
+        other_checkout=run.other_checkout,
         plugin=SPEC_TREE_PLUGIN,
         listed_version=LISTED_VERSION,
-        served_version=target_version,
-        operations=tuple(command.operation for command in runner.calls),
-        document=document,
-        exit_code=exit_code,
+        served_version=run.target_version,
+        operations=tuple(command.operation for command in run.runner.calls),
+        document=run.document,
+        exit_code=run.exit_code,
     )
 
 

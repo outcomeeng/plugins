@@ -195,3 +195,18 @@ def build_agent_keyed_tables() -> tuple[AgentKeyedTable, ...]:
         for capability, names in CONFIGURED_AGENT_TERM_NAMES.items()
     )
     return tuple(tables)
+
+
+def stage_agent_tokens_file(
+    scripts_dir: Path, *, tokens: str | None, make_directory: bool = False
+) -> None:
+    """Place the agent-tokens data file beside a copied script in the given state.
+
+    ``tokens`` is the file's text, or ``None`` for an absent file; ``make_directory`` places a
+    directory at the file's path so reading it fails as an unreadable file.
+    """
+    tokens_path = scripts_dir / AGENT_TOKEN_DATA_FILENAME
+    if make_directory:
+        tokens_path.mkdir()
+    elif tokens is not None:
+        tokens_path.write_text(tokens, encoding="utf-8")

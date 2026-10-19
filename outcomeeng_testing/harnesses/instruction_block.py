@@ -41,7 +41,6 @@ from typing import Final, cast
 from hypothesis import given, seed, settings
 
 from outcomeeng.distribution import instruction_block as distribution
-from outcomeeng.distribution.contracts import AGENT_TOKEN_DATA_FILENAME
 from outcomeeng.distribution.shipped_scripts import load_shipped_module
 from outcomeeng_testing.generators.instruction_block import (
     DelegationCandidateCase,
@@ -55,6 +54,7 @@ from outcomeeng_testing.generators.instruction_block import (
     instruction_block_cases,
     unsupported_language_tokens,
 )
+from outcomeeng_testing.harnesses.agent_tokens import stage_agent_tokens_file
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
 
 REPO_ROOT: Final = pathlib.Path(__file__).resolve().parents[2]
@@ -445,11 +445,7 @@ def run_script_with_agent_tokens_file(
     script.write_text(
         INSTRUCTION_BLOCK_MODULE_PATH.read_text(encoding="utf-8"), encoding="utf-8"
     )
-    tokens_path = scripts_dir / AGENT_TOKEN_DATA_FILENAME
-    if make_directory:
-        tokens_path.mkdir()
-    elif tokens is not None:
-        tokens_path.write_text(tokens, encoding="utf-8")
+    stage_agent_tokens_file(scripts_dir, tokens=tokens, make_directory=make_directory)
     return subprocess.run(
         [sys.executable, "-I", str(script), "--check", "--template", str(script)],
         capture_output=True,
