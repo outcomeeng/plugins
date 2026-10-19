@@ -104,7 +104,11 @@ from outcomeeng.distribution.installation import (
     Operation,
     ListedInstallRecord,
     PersistentPreflight,
+    OUT_OF_SCOPE_RECORD_WARNING,
+    PATHLESS_LISTING_ENTRY_WARNING,
+    PATHLESS_OUT_OF_SCOPE_RECORD_WARNING,
     PLUGIN_OPERATIONS,
+    UNCATALOGED_RECORD_WARNING,
     ScopeSplitClassification,
     ScopeSplitEntry,
     ScopeSplitError,
@@ -1486,6 +1490,118 @@ def observe_record_refresh_plan(
             record_file_after=record_file_after,
             exit_code=installation_exit_code(report),
         )
+
+
+@dataclass(frozen=True)
+class RecordDispositionRow:
+    """What a plan holds for one generated Claude Code install record.
+
+    The updates and rewrites are the plan entries naming the record's plugin
+    and scope (and project path, for a rewrite) that no earlier record
+    claimed; the warning count is how many unclaimed plan warnings carry the
+    wording the record's disposition prescribes.
+    """
+
+    entry: dict[str, str]
+    disposition: RecordDisposition
+    plugin: str | None
+    updates: tuple[InstallationCommand, ...]
+    rewrites: tuple[ClaudeInstallRecord, ...]
+    warning_count: int
+
+
+@dataclass(frozen=True)
+class RecordDispositionProjection:
+    """The plan's Claude Code update, rewrite and warning entries matched to the generated records.
+
+    Each record claims the one entry of the kind its disposition prescribes,
+    so the unmatched tuples hold what no generated record accounts for.
+    """
+
+    rows: tuple[RecordDispositionRow, ...]
+    unmatched_updates: tuple[InstallationCommand, ...]
+    unmatched_rewrites: tuple[ClaudeInstallRecord, ...]
+    unmatched_warnings: tuple[str, ...]
+
+
+_RECORD_WARNING_TEMPLATES: dict[RecordDisposition, str] = {
+    RecordDisposition.OUT_OF_SCOPE: OUT_OF_SCOPE_RECORD_WARNING,
+    RecordDisposition.PATHLESS_OUT_OF_SCOPE: PATHLESS_OUT_OF_SCOPE_RECORD_WARNING,
+    RecordDisposition.PATHLESS_DEFECT: PATHLESS_LISTING_ENTRY_WARNING,
+    RecordDisposition.UNCATALOGED: UNCATALOGED_RECORD_WARNING,
+}
+
+
+def project_record_dispositions(
+    observation: RecordRefreshObservation,
+) -> RecordDispositionProjection:
+    """Match the plan's Claude Code updates, rewrites and warnings to the generated records."""
+    marketplace = observation.marketplace
+    unmatched_updates = [
+        command
+        for command in observation.plan.commands
+        if command.agent is Target.CLAUDE
+        and command.operation is Operation.PLUGIN_UPDATE
+    ]
+    unmatched_rewrites = list(observation.plan.rewrite_records)
+    unmatched_warnings = [
+        warning.message
+        for warning in observation.plan.warnings
+        if warning.agent is Target.CLAUDE
+    ]
+    rows: list[RecordDispositionRow] = []
+    for entry, disposition in observation.cases:
+        plugin = marketplace_plugin_name(entry[CLAUDE_PLUGIN_ID_FIELD], marketplace)
+        scope = entry[CLAUDE_PLUGIN_SCOPE_FIELD]
+        project_path = entry.get(CLAUDE_PLUGIN_PROJECT_PATH_FIELD)
+        updates = tuple(
+            command
+            for command in unmatched_updates
+            if plugin is not None
+            and command.plugin == plugin
+            and command.argv[-1] == scope
+        )
+        rewrites = tuple(
+            record
+            for record in unmatched_rewrites
+            if plugin is not None
+            and record.plugin == plugin
+            and record.scope == scope
+            and str(record.project_path) == project_path
+        )
+        template = _RECORD_WARNING_TEMPLATES.get(disposition)
+        expected = (
+            template.format(plugin=plugin, scope=scope, project_path=project_path)
+            if template is not None and plugin is not None
+            else None
+        )
+        warning_count = unmatched_warnings.count(expected) if expected else 0
+        rows.append(
+            RecordDispositionRow(
+                entry=entry,
+                disposition=disposition,
+                plugin=plugin,
+                updates=updates,
+                rewrites=rewrites,
+                warning_count=warning_count,
+            )
+        )
+        if disposition is RecordDisposition.INVOCATION_NATIVE and updates:
+            unmatched_updates.remove(updates[0])
+        elif (
+            disposition
+            in {RecordDisposition.FILE_REWRITE, RecordDisposition.MISSING_DIRECTORY}
+            and rewrites
+        ):
+            unmatched_rewrites.remove(rewrites[0])
+        elif warning_count and expected is not None:
+            unmatched_warnings.remove(expected)
+    return RecordDispositionProjection(
+        rows=tuple(rows),
+        unmatched_updates=tuple(unmatched_updates),
+        unmatched_rewrites=tuple(unmatched_rewrites),
+        unmatched_warnings=tuple(unmatched_warnings),
+    )
 
 
 @dataclass(frozen=True)
@@ -5154,8 +5270,11 @@ __all__ = [
     "observe_persistent_plan",
     "observe_record_refresh_plan",
     "observe_local_record_bootstrap_plan",
+    "RecordDispositionProjection",
+    "RecordDispositionRow",
     "RecordRefreshObservation",
     "RecordRewriteObservation",
+    "project_record_dispositions",
     "RegistryShapeObservation",
     "UnlocatedRegistryObservation",
     "observe_unlocated_registry_plan",
