@@ -10,7 +10,7 @@ Rule `declaration-form`, severity WARNING, unit [`spx/15-merging.pdr.md`](spx/15
 
 **Settlement condition**: the statement is cut to one to three sentences.
 
-## A blocking deferral entry carries no binding to its finding `spx/15-merging.pdr.md` `merge-readiness` `spx/15-merging.pdr.md`
+## A blocking deferral entry carries no binding to its finding [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md) `merge-readiness` [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md)
 
 Category consistency, severity debt, finding F-001 of local review run 2026-10-19_02-54-13-208-c01dea92c8ca on head `f804826386378a8c482223e1a52ad608e74f158a`, at line 34 of [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md). The sentence is the merge-readiness decision the governing Change states in exact text, so the changeset writes no repair to it and the finding is returned `filed`.
 
