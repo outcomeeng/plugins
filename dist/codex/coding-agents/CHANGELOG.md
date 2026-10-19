@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.16.1
+
+### Changed
+
+- **`/orchestrate-change` settles blockers and questions in the order the coordination overlay declares, and states its retry rule once.** The order comes from the priority field `spx/local/coordination.md` declares for the Change store; Changes of equal priority, and every Change when the overlay declares no priority field, go by ascending issue number. A start the harness's classifier refuses is retried once, changed only by the correction the retrace finds, and a retrace that finds no defect resubmits the request unchanged; a second refusal stops the start. A Check whose issue-field read returns 50 values stops with reason `field-values-unbounded` instead of reading a possibly truncated list.
+
 ## 0.16.0
 
 ### Added
