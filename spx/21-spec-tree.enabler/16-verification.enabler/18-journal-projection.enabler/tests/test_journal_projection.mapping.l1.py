@@ -113,7 +113,8 @@ def test_optional_concern_action_map_into_event_and_surface(
 
 
 # The optional unit/tracked are a finite source-owned domain: unit present or
-# absent, tracked True, False, or absent. The expected carry/omit and rendered
+# absent, tracked True, False, or absent; unit set with tracked absent is the
+# shape of every blocking finding and every untracked debt finding. The expected carry/omit and rendered
 # form derive from the input state: unit renders in parentheses beside the
 # location, tracked True renders the TRACKED label after the severity, and an
 # absent field leaves both event data and line as the prior shape.
@@ -122,6 +123,7 @@ def test_optional_concern_action_map_into_event_and_surface(
     [
         ("Journal Projection", True),
         ("Journal Projection", False),
+        ("Journal Projection", None),
         (None, None),
     ],
 )
