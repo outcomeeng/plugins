@@ -1,0 +1,10 @@
+{
+  "session_id": "5c0f0f3e-6d6a-4c52-9a31-0b1f6f0c2a11",
+  "transcript_path": "@WORKSPACE@/config/projects/-workspace-code-product/5c0f0f3e-6d6a-4c52-9a31-0b1f6f0c2a11.jsonl",
+  "cwd": "@WORKSPACE@/code/product",
+  "hook_event_name": "PreToolUse",
+  "tool_name": "@TOOL@",
+  "tool_input": {
+    "file_path": "@WORKSPACE@/cod/product/src/module.py"
+  }
+}

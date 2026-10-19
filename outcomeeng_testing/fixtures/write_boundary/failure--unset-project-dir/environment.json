@@ -1,0 +1,4 @@
+{
+  "CLAUDE_CONFIG_DIR": "@WORKSPACE@/config",
+  "CLAUDE_CODE_TMPDIR": "@WORKSPACE@/tmp"
+}

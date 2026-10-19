@@ -1,0 +1,6 @@
+{
+  "CLAUDE_PROJECT_DIR": "@WORKSPACE@/code/product",
+  "CLAUDE_CONFIG_DIR": "@WORKSPACE@/config",
+  "CLAUDE_CODE_TMPDIR": "@WORKSPACE@/tmp",
+  "PATH": "@WORKSPACE@/no-interpreter-bin"
+}
