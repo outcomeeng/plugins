@@ -1855,6 +1855,67 @@ def retained_bound_property(
 
 
 @dataclass(frozen=True)
+class RetentionPlanObservation:
+    planned_removals: frozenset[str]
+    expected_removals: frozenset[str]
+    removals_remaining_after_plan: frozenset[str]
+    calls_during_plan: int
+
+
+def retention_plan_property(
+    check: Callable[[RetentionPlanObservation], None],
+) -> None:
+    """Install under more distinct namespaces than the retention bound keeps, then plan
+    an install under one more namespace without activating it, and observe the removals
+    the plan names and that planning changed nothing."""
+    _, _, schedule, _ = modules()
+    namespaces = schedule.RETAINED_NAMESPACES
+
+    @seed(SEED)
+    @settings(max_examples=EXAMPLES, deadline=None)
+    @given(namespace_histories(namespaces + 2))
+    def run(history: list[str]) -> None:
+        with workspace() as work:
+            runner = RecordingRunner()
+            agents = work.root / "launch-agents"
+            plans = [
+                _install_under(schedule, work, runner, agents, namespace)
+                for namespace in history[:-1]
+            ]
+            ordered = [
+                job for plan in reversed(plans) for job in plan[ScheduleField.JOBS]
+            ]
+            expected = ordered[schedule.RETAINED_JOB_LIMIT :]
+            mark = len(runner.calls)
+            planned = schedule.install(
+                replace(work.config, namespace=history[-1]),
+                SCRIPTS,
+                agents,
+                runner,
+                "darwin",
+                False,
+            )
+            check(
+                RetentionPlanObservation(
+                    frozenset(planned[schedule.RETENTION_REMOVALS]),
+                    frozenset(job["path"] for job in expected),
+                    frozenset(
+                        path
+                        for path in planned[schedule.RETENTION_REMOVALS]
+                        if Path(path).exists()
+                    ),
+                    len(runner.calls) - mark,
+                )
+            )
+
+    run_replayable_property(
+        run,
+        seed_value=SEED,
+        replay_path=INSTALLATION_REPLAY,
+    )
+
+
+@dataclass(frozen=True)
 class MalformedRetainedRecordObservation:
     record_path: str
     field: str
