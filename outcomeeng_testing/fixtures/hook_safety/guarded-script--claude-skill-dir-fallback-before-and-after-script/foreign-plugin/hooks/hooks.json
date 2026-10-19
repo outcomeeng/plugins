@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{}' && python3 ${CLAUDE_SKILL_DIR}/scripts/session-start.py || echo '{}'",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

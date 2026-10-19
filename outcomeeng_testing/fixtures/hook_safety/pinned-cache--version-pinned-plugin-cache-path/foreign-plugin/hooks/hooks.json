@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 /home/user/.claude/plugins/cache/marketplace/plugin/1.2.3/scripts/session-start.py || echo '{}'",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

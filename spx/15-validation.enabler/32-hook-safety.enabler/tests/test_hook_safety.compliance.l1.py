@@ -1,10 +1,12 @@
 """Compliance evidence: the hook-safety validator rejects every trap-prone hook payload.
 
-Each violating case is a whole ``hooks.json`` payload the hook-tree harness builds
-from the validator's source-owned values, varying the one value its clause names,
-writes into a runtime tree, and hands the test by path through the scan. Conforming
-payloads sit beside the violating ones so enforcement is neither blind nor
-always-failing. Every case domain comes from the harness's case builders; this file
+Each violating case is a whole ``hooks.json`` fixture tree under
+``outcomeeng_testing/fixtures/hook_safety/``, copied by path into a runtime tree by
+the hook-tree harness; its directory name states the one clause instance it
+violates. The blocking-events clause places one fixture's handler list under each
+event the source-owned ``BLOCKING_EVENTS`` supplies. Conforming fixtures sit beside
+the violating ones so enforcement is neither blind nor always-failing. Every
+expected value is imported from the ``outcomeeng.validation`` hook modules; this file
 chooses no case, value, or setup policy.
 """
 
@@ -15,66 +17,86 @@ import pytest
 from outcomeeng.validation.hook_contract import (
     BLOCKING_EVENT_VIOLATION_MARKER,
     CLAUDE_RUNTIME_TREE,
+    PRE_TOOL_USE_EVENT,
     RUNTIME_TREES,
 )
-from outcomeeng.validation.hook_safety import iter_tree_violations
+from outcomeeng.validation.hook_safety import BLOCKING_EVENTS, iter_tree_violations
 from outcomeeng_testing.harnesses.hook_safety_tree import (
-    HookCase,
-    allowlist_violation_cases,
-    bare_script_cases,
-    conforming_cases,
-    guarded_script_cases,
+    FixtureCase,
+    FixtureGroup,
+    fixture_cases,
     hook_tree,
-    missing_timeout_cases,
-    pinned_cache_cases,
-    pre_write_violation_cases,
 )
 
-VIOLATING_CASES = (
-    *allowlist_violation_cases(),
-    *missing_timeout_cases(),
-    *bare_script_cases(),
-    *pinned_cache_cases(),
-    *pre_write_violation_cases(),
-)
-CONFORMING_CASES = (*conforming_cases(), *guarded_script_cases())
 
-
-def case_id(case: HookCase) -> str:
+def case_id(case: FixtureCase) -> str:
     return case.name
 
 
 # --- NEVER: a hook on an event outside the permitted non-blocking set --------------
 
 
-@pytest.mark.parametrize("case", allowlist_violation_cases(), ids=case_id)
-def test_event_outside_the_allowlist_is_flagged(case: HookCase) -> None:
+@pytest.mark.parametrize("event", sorted(BLOCKING_EVENTS))
+@pytest.mark.parametrize("case", fixture_cases(FixtureGroup.SESSION_START), ids=case_id)
+def test_handlers_on_a_blocking_event_are_flagged(
+    case: FixtureCase, event: str
+) -> None:
     with hook_tree() as tree:
-        tree.write_case(CLAUDE_RUNTIME_TREE, case)
+        tree.install_rekeyed(CLAUDE_RUNTIME_TREE, case, event)
+
+        violations = iter_tree_violations(tree.root)
+
+    assert any(
+        BLOCKING_EVENT_VIOLATION_MARKER in violation for violation in violations
+    ), event
+
+
+@pytest.mark.parametrize(
+    "case", fixture_cases(FixtureGroup.UNRECOGNIZED_EVENT), ids=case_id
+)
+def test_unrecognized_event_is_flagged(case: FixtureCase) -> None:
+    with hook_tree() as tree:
+        tree.install(CLAUDE_RUNTIME_TREE, case)
 
         violations = iter_tree_violations(tree.root)
 
     assert violations, case.name
 
 
-@pytest.mark.parametrize("case", conforming_cases(), ids=case_id)
+@pytest.mark.parametrize(
+    "case",
+    fixture_cases(FixtureGroup.SESSION_START, FixtureGroup.PRE_WRITE_EXCEPTION),
+    ids=case_id,
+)
 @pytest.mark.parametrize("runtime", RUNTIME_TREES)
-def test_permitted_hook_passes(runtime: str, case: HookCase) -> None:
+def test_permitted_hook_passes(runtime: str, case: FixtureCase) -> None:
     with hook_tree() as tree:
-        tree.write_case(runtime, case)
+        tree.install(runtime, case)
 
         violations = iter_tree_violations(tree.root)
 
     assert violations == [], case.name
 
 
+@pytest.mark.parametrize("runtime", RUNTIME_TREES)
+def test_shipped_hook_config_passes(runtime: str) -> None:
+    with hook_tree() as tree:
+        tree.install_shipped(runtime)
+
+        violations = iter_tree_violations(tree.root)
+
+    assert violations == [], runtime
+
+
 # --- NEVER: a hook entry without an explicit timeout -------------------------------
 
 
-@pytest.mark.parametrize("case", missing_timeout_cases(), ids=case_id)
-def test_handler_without_a_timeout_is_flagged(case: HookCase) -> None:
+@pytest.mark.parametrize(
+    "case", fixture_cases(FixtureGroup.MISSING_TIMEOUT), ids=case_id
+)
+def test_handler_without_a_timeout_is_flagged(case: FixtureCase) -> None:
     with hook_tree() as tree:
-        tree.write_case(CLAUDE_RUNTIME_TREE, case)
+        tree.install(CLAUDE_RUNTIME_TREE, case)
 
         violations = iter_tree_violations(tree.root)
 
@@ -84,22 +106,24 @@ def test_handler_without_a_timeout_is_flagged(case: HookCase) -> None:
 # --- NEVER: a bare substituted-path invocation with no inline fallback -------------
 
 
-@pytest.mark.parametrize("case", bare_script_cases(), ids=case_id)
+@pytest.mark.parametrize("case", fixture_cases(FixtureGroup.BARE_SCRIPT), ids=case_id)
 def test_substituted_path_invocation_without_a_fallback_is_flagged(
-    case: HookCase,
+    case: FixtureCase,
 ) -> None:
     with hook_tree() as tree:
-        tree.write_case(CLAUDE_RUNTIME_TREE, case)
+        tree.install(CLAUDE_RUNTIME_TREE, case)
 
         violations = iter_tree_violations(tree.root)
 
     assert violations, case.name
 
 
-@pytest.mark.parametrize("case", guarded_script_cases(), ids=case_id)
-def test_substituted_path_invocation_with_a_fallback_passes(case: HookCase) -> None:
+@pytest.mark.parametrize(
+    "case", fixture_cases(FixtureGroup.GUARDED_SCRIPT), ids=case_id
+)
+def test_substituted_path_invocation_with_a_fallback_passes(case: FixtureCase) -> None:
     with hook_tree() as tree:
-        tree.write_case(CLAUDE_RUNTIME_TREE, case)
+        tree.install(CLAUDE_RUNTIME_TREE, case)
 
         violations = iter_tree_violations(tree.root)
 
@@ -109,10 +133,12 @@ def test_substituted_path_invocation_with_a_fallback_passes(case: HookCase) -> N
 # --- NEVER: a command naming a version-pinned plugin cache path --------------------
 
 
-@pytest.mark.parametrize("case", pinned_cache_cases(), ids=case_id)
-def test_command_naming_a_version_pinned_cache_path_is_flagged(case: HookCase) -> None:
+@pytest.mark.parametrize("case", fixture_cases(FixtureGroup.PINNED_CACHE), ids=case_id)
+def test_command_naming_a_version_pinned_cache_path_is_flagged(
+    case: FixtureCase,
+) -> None:
     with hook_tree() as tree:
-        tree.write_case(CLAUDE_RUNTIME_TREE, case)
+        tree.install(CLAUDE_RUNTIME_TREE, case)
 
         violations = iter_tree_violations(tree.root)
 
@@ -122,13 +148,23 @@ def test_command_naming_a_version_pinned_cache_path_is_flagged(case: HookCase) -
 # --- ALWAYS: the rules apply identically across the runtime trees ------------------
 
 
-@pytest.mark.parametrize("case", VIOLATING_CASES, ids=case_id)
+@pytest.mark.parametrize(
+    "case",
+    fixture_cases(
+        FixtureGroup.UNRECOGNIZED_EVENT,
+        FixtureGroup.MISSING_TIMEOUT,
+        FixtureGroup.BARE_SCRIPT,
+        FixtureGroup.PINNED_CACHE,
+        FixtureGroup.PRE_WRITE_DEVIATION,
+    ),
+    ids=case_id,
+)
 def test_violating_case_report_is_identical_across_runtime_trees(
-    case: HookCase,
+    case: FixtureCase,
 ) -> None:
     with hook_tree() as tree:
         for runtime in RUNTIME_TREES:
-            tree.write_case(runtime, case)
+            tree.install(runtime, case)
 
         reports = [
             iter_tree_violations(tree.runtime_root(runtime))
@@ -139,11 +175,37 @@ def test_violating_case_report_is_identical_across_runtime_trees(
     assert all(report == reports[0] for report in reports), case.name
 
 
-@pytest.mark.parametrize("case", CONFORMING_CASES, ids=case_id)
-def test_conforming_case_passes_in_every_runtime_tree(case: HookCase) -> None:
+@pytest.mark.parametrize("event", sorted(BLOCKING_EVENTS))
+@pytest.mark.parametrize("case", fixture_cases(FixtureGroup.SESSION_START), ids=case_id)
+def test_blocking_event_report_is_identical_across_runtime_trees(
+    case: FixtureCase, event: str
+) -> None:
     with hook_tree() as tree:
         for runtime in RUNTIME_TREES:
-            tree.write_case(runtime, case)
+            tree.install_rekeyed(runtime, case, event)
+
+        reports = [
+            iter_tree_violations(tree.runtime_root(runtime))
+            for runtime in RUNTIME_TREES
+        ]
+
+    assert reports[0], event
+    assert all(report == reports[0] for report in reports), event
+
+
+@pytest.mark.parametrize(
+    "case",
+    fixture_cases(
+        FixtureGroup.SESSION_START,
+        FixtureGroup.GUARDED_SCRIPT,
+        FixtureGroup.PRE_WRITE_EXCEPTION,
+    ),
+    ids=case_id,
+)
+def test_conforming_case_passes_in_every_runtime_tree(case: FixtureCase) -> None:
+    with hook_tree() as tree:
+        for runtime in RUNTIME_TREES:
+            tree.install(runtime, case)
 
         reports = [
             iter_tree_violations(tree.runtime_root(runtime))
@@ -156,16 +218,35 @@ def test_conforming_case_passes_in_every_runtime_tree(case: HookCase) -> None:
 # --- NEVER: a PreToolUse entry differing from the pre-write exception --------------
 
 
-@pytest.mark.parametrize("case", pre_write_violation_cases(), ids=case_id)
+@pytest.mark.parametrize(
+    "case", fixture_cases(FixtureGroup.PRE_WRITE_DEVIATION), ids=case_id
+)
 @pytest.mark.parametrize("runtime", RUNTIME_TREES)
 def test_entry_differing_from_the_pre_write_exception_is_flagged(
-    runtime: str, case: HookCase
+    runtime: str, case: FixtureCase
 ) -> None:
     with hook_tree() as tree:
-        tree.write_case(runtime, case)
+        tree.install(runtime, case)
 
         violations = iter_tree_violations(tree.root)
 
     assert any(
         BLOCKING_EVENT_VIOLATION_MARKER in violation for violation in violations
     ), case.name
+
+
+@pytest.mark.parametrize("event", sorted(BLOCKING_EVENTS - {PRE_TOOL_USE_EVENT}))
+@pytest.mark.parametrize(
+    "case", fixture_cases(FixtureGroup.PRE_WRITE_EXCEPTION), ids=case_id
+)
+def test_pre_write_exception_block_on_another_blocking_event_is_flagged(
+    case: FixtureCase, event: str
+) -> None:
+    with hook_tree() as tree:
+        tree.install_rekeyed(CLAUDE_RUNTIME_TREE, case, event)
+
+        violations = iter_tree_violations(tree.root)
+
+    assert any(
+        BLOCKING_EVENT_VIOLATION_MARKER in violation for violation in violations
+    ), event

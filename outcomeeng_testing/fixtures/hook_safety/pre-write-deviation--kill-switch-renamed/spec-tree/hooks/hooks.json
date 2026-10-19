@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ \"${SPECTREE_WRITE_BOUNDARY_HOOK_DISABLED_RENAMED:-}\" = \"1\" ]; then echo '{}'; else command -v python3 >/dev/null 2>&1 && python3 ${CLAUDE_PLUGIN_ROOT}/scripts/write_boundary.py || echo '{}'; fi",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

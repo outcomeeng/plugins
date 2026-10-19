@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${PLUGIN_ROOT}/scripts/session-start.py || echo '{}'",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

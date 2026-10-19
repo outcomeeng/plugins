@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "UnrecognizedEvent": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{}'",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}
