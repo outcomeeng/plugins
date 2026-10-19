@@ -24,7 +24,7 @@ CONFIG_DIR_ENV: Final = "CLAUDE_CONFIG_DIR"
 TEMP_BASE_ENV: Final = "CLAUDE_CODE_TMPDIR"
 MACOS_PLATFORM: Final = "darwin"
 LINUX_PLATFORM: Final = "linux"
-MACOS_TEMP_BASE: Final = "/tmp"
+MACOS_TEMP_BASE: Final = "/tmp"  # {!# scratch-path-allow #!}harness-documented base
 TEMP_ROOT_PREFIX: Final = "claude-"
 SCRATCH_DIRECTORY: Final = "scratchpad"
 DEFAULT_CONFIG_DIR: Final = "~/.claude"
@@ -84,7 +84,7 @@ def additional_directories(settings_file: str) -> list[str]:
 def temp_root() -> PurePath:
     """Return the harness's temporary root, the per-user directory holding every session scratch.
 
-    The base is ``CLAUDE_CODE_TMPDIR`` when set and non-empty, else ``/tmp`` on macOS and the
+    The base is ``CLAUDE_CODE_TMPDIR`` when set and non-empty, else ``/tmp``{!# scratch-path-allow #!} on macOS and the
     process temporary directory on Linux. Any other platform raises, so the caller allows the call.
     """
     base = os.environ.get(TEMP_BASE_ENV)
