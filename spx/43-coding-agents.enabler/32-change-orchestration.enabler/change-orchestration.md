@@ -13,11 +13,11 @@ The Orchestrator is a position, never one of the five Roles: it holds no Role fo
 
 ## Assertions
 
-- ALWAYS: on Codex, `/orchestrate-change` Start returns an explicit `unavailable` result naming the Change and writes no store state, while Check runs unchanged; on Claude Code, Start returns no such result ([test](tests/test_orchestrate_change_emission.compliance.l1.py))
 - ALWAYS: across the Changes one Orchestrator orchestrates, it settles blockers and questions in the order the coordination overlay declares for the Change store's priority field, and orders Changes of equal priority, and every Change when the overlay declares no priority field, by ascending issue number ([audit])
 
 ### Compliance
 
+- ALWAYS: on Codex, `/orchestrate-change` Start returns an explicit `unavailable` result naming the Change and writes no store state, while Check runs unchanged; on Claude Code, Start returns no such result ([test](tests/test_orchestrate_change_emission.compliance.l1.py))
 - ALWAYS: `/orchestrate-change` claims one Change for its Executor, naming the Executor's worktree root, and starts one Executor session for it in the root pane `spx/43-coding-agents.enabler/18-herdr-environment.enabler` returns when it creates the Executor's worktree, for a root absent from the pool, or opens the existing one, either grouped with the herdr workspace the invocation names; on Claude Code the session starts with the spec-tree definition `change-executor` selected ([audit])
 - ALWAYS: the Executor session's start and every resume withhold the harness's structured-question tool through the harness setting alone; no skill detects whether its session is an Executor ([audit])
 - ALWAYS: `/orchestrate-change` names `change-executor` as the one configured definition it starts, and starts no session through any other definition ([audit])
