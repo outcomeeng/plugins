@@ -41,6 +41,11 @@ PERMISSIONS_KEY: Final = "permissions"
 ADDITIONAL_DIRECTORIES_KEY: Final = "additionalDirectories"
 SETTINGS_ENCODING: Final = "utf-8"
 EVENT_NAME: Final = "PreToolUse"
+HOOK_SPECIFIC_OUTPUT_FIELD: Final = "hookSpecificOutput"
+HOOK_EVENT_NAME_FIELD: Final = "hookEventName"
+PERMISSION_DECISION_FIELD: Final = "permissionDecision"
+PERMISSION_DECISION_REASON_FIELD: Final = "permissionDecisionReason"
+DENY_DECISION: Final = "deny"
 ALLOW_RESULT: Final = "{}"
 
 
@@ -168,10 +173,10 @@ def main() -> int:
         else:
             result = json.dumps(
                 {
-                    "hookSpecificOutput": {
-                        "hookEventName": EVENT_NAME,
-                        "permissionDecision": "deny",
-                        "permissionDecisionReason": reason,
+                    HOOK_SPECIFIC_OUTPUT_FIELD: {
+                        HOOK_EVENT_NAME_FIELD: EVENT_NAME,
+                        PERMISSION_DECISION_FIELD: DENY_DECISION,
+                        PERMISSION_DECISION_REASON_FIELD: reason,
                     }
                 }
             )
