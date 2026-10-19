@@ -6,6 +6,9 @@ CAN preserve enforceable restrictions while surfacing unsupported source semanti
 
 ## Assertions
 
+- ALWAYS: converted-agent manual-review guidance names only capabilities present in the rendered source-tool set; a target-absent capability never reappears as guidance.
+- ALWAYS: every generated Codex agent that composes skills, including the implementation auditor's installed concern skills selected for its changed files, loads each through the `Use skill` instruction without searching for a dedicated skill-invocation tool; its instructions name no skill tool as an available capability and treat the absence of one as no availability failure ([audit:codex-skill-loading])
+
 ### Mappings
 
 - Source `permissionMode` values with supported Codex equivalents map to `sandbox_mode`, and unsupported values map to manual-review guidance in `developer_instructions` ([test](tests/test_execution_policy.mapping.l1.py))
@@ -14,6 +17,4 @@ CAN preserve enforceable restrictions while surfacing unsupported source semanti
 
 ### Compliance
 
-- ALWAYS: converted-agent manual-review guidance names only capabilities present in the rendered source-tool set; a target-absent capability never reappears as guidance. ([test](tests/test_execution_policy.compliance.l1.py))
-- ALWAYS: every generated Codex agent that composes skills, including the implementation auditor's installed concern skills selected for its changed files, loads each through the `Use skill` instruction without searching for a dedicated skill-invocation tool; its instructions name no skill tool as an available capability and treat the absence of one as no availability failure. ([test](tests/test_execution_policy.compliance.l1.py))
 - ALWAYS: converted agents keep manual-review guidance for rendered source fields whose Codex semantics remain prompt guidance rather than hard execution boundaries — `disallowedTools` and command-level meanings inside rendered `tools` do not restrict commands executed through allowed shell tools, and `skills.config` enables named skills without proving spawn-time preload behavior ([test](tests/test_execution_policy.compliance.l1.py))
