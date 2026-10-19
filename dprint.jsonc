@@ -18,6 +18,8 @@
     "**/semgrep_*.yaml",
     "outcomeeng/vendor/**",
     "outcomeeng_testing/fixtures/link_conversion/**",
+    // Whole-payload fixtures keep their exact bytes, including payloads that are malformed or not valid UTF-8.
+    "outcomeeng_testing/fixtures/write_boundary/**",
     "pyproject.toml",
     // The authored registry data file carries one build token and renders into JSON under dist/.
     "src/plugins/*/skills/*/scripts/artifact-registry.json",
