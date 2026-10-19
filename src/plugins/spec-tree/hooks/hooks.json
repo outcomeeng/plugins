@@ -11,6 +11,18 @@
           }
         ]
       }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ \"${SPECTREE_WRITE_BOUNDARY_HOOK_DISABLED:-}\" = \"1\" ]; then echo '{}'; else command -v python3 >/dev/null 2>&1 && python3 {!% if target == 'claude' %!}${CLAUDE_PLUGIN_ROOT}{!% else %!}${PLUGIN_ROOT}{!% endif %!}/scripts/write_boundary.py || echo '{}'; fi",
+            "timeout": 5
+          }
+        ]
+      }
     ]
   }
 }
