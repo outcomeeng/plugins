@@ -199,6 +199,8 @@ def absent(result: CommandResult) -> bool:
 
 
 RETAINED_JOBS = "retained_jobs"
+RETAINED_NAMESPACES = 4
+RETAINED_JOB_LIMIT = RETAINED_NAMESPACES * len(MODES)
 
 
 def checked_retained_jobs(path: Path, value: Json) -> None:
@@ -537,9 +539,38 @@ def install(
                 )
         checked(runner, (LAUNCHCTL, LaunchctlOperation.BOOTSTRAP, domain, str(path)))
     plan[ScheduleField.STATUS] = "installed"
-    plan["retention_gaps"] = retain_assets(config.root, assets)
+    plan[RETAINED_JOBS], job_gaps = retain_jobs(plan[RETAINED_JOBS], runner)
+    plan["retention_gaps"] = [*retain_assets(config.root, assets), *job_gaps]
     json_write(installed_path, plan)
     return plan
+
+
+def retain_jobs(retained: list[Json], runner: Runner) -> tuple[list[Json], list[str]]:
+    """Keep the newest retained jobs; stop and remove the older ones this install owns."""
+    gaps: list[str] = []
+    domain = f"gui/{os.getuid()}"
+    for job in retained[RETAINED_JOB_LIMIT:]:
+        path = Path(job["path"])
+        try:
+            if path.is_symlink() or (
+                path.exists()
+                and path.read_bytes() != plistlib.dumps(job[ScheduleField.PLIST])
+            ):
+                gaps.append(f"job retention preserved changed launch agent: {path}")
+                continue
+            target = domain + "/" + job["label"]
+            result = runner.run((LAUNCHCTL, LaunchctlOperation.PRINT, target))
+            if result.returncode == 0:
+                checked(runner, (LAUNCHCTL, LaunchctlOperation.BOOTOUT, target))
+            elif not absent(result):
+                gaps.append(
+                    f"job retention could not establish status: {path}: {result.stderr[:2000]}"
+                )
+                continue
+            path.unlink(missing_ok=True)
+        except (OSError, RuntimeError) as error:
+            gaps.append(f"job retention failed: {path}: {error}")
+    return retained[:RETAINED_JOB_LIMIT], gaps
 
 
 def retain_assets(root: Path, active: Path) -> list[str]:

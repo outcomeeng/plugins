@@ -129,6 +129,13 @@ def distinct_namespace_pairs() -> st.SearchStrategy[tuple[str, str]]:
     )
 
 
+def namespace_histories(minimum: int) -> st.SearchStrategy[list[str]]:
+    """Vary sequences of at least ``minimum`` pairwise-distinct namespaces."""
+    return st.lists(
+        valid_namespaces(), min_size=minimum, max_size=minimum + 3, unique=True
+    )
+
+
 def nonconforming_plist_paths(directory: str, label: str) -> st.SearchStrategy[str]:
     """Vary recorded launch-agent paths that break the plist-naming convention for
     ``label``: a relative path, a file under ``directory`` named for another label, or

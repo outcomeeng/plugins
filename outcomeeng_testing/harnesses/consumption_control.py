@@ -37,6 +37,7 @@ from outcomeeng_testing.generators.consumption_control import (
     duration_snapshots,
     alert_reads,
     distinct_namespace_pairs,
+    namespace_histories,
     invalid_namespaces,
     non_list_retained_values,
     non_mapping_retained_entries,
@@ -1782,6 +1783,67 @@ def namespace_reinstall_property(
                     labels[schedule.JobOperation.STATUS],
                     labels[schedule.JobOperation.STOP],
                     labels[schedule.JobOperation.RESTART],
+                )
+            )
+
+    run_replayable_property(
+        run,
+        seed_value=SEED,
+        replay_path=INSTALLATION_REPLAY,
+    )
+
+
+@dataclass(frozen=True)
+class RetainedBoundObservation:
+    limit: int
+    retained_labels: tuple[str, ...]
+    expected_retained: tuple[str, ...]
+    pruned_labels: frozenset[str]
+    pruned_files_remaining: frozenset[str]
+    loaded_after: frozenset[str]
+    record_bytes: int
+    record_ceiling: int
+    gaps: tuple[str, ...]
+
+
+def retained_bound_property(
+    check: Callable[[RetainedBoundObservation], None],
+) -> None:
+    """Install under more distinct namespaces than the retention bound keeps, against
+    one root, then observe the record, the launch-agent files, and the loaded jobs."""
+    _, _, schedule, _ = modules()
+    namespaces = schedule.RETAINED_NAMESPACES
+
+    @seed(SEED)
+    @settings(max_examples=EXAMPLES, deadline=None)
+    @given(namespace_histories(namespaces + 2))
+    def run(history: list[str]) -> None:
+        with workspace() as work:
+            runner = RecordingRunner()
+            agents = work.root / "launch-agents"
+            plans = [
+                _install_under(schedule, work, runner, agents, namespace)
+                for namespace in history
+            ]
+            jobs_by_install = [plan[ScheduleField.JOBS] for plan in plans[:-1]]
+            ordered = [job for jobs in reversed(jobs_by_install) for job in jobs]
+            kept = ordered[: schedule.RETAINED_JOB_LIMIT]
+            pruned = ordered[schedule.RETAINED_JOB_LIMIT :]
+            record_path = work.config.root / schedule.INSTALL_NAME
+            record = json.loads(record_path.read_text())
+            check(
+                RetainedBoundObservation(
+                    schedule.RETAINED_JOB_LIMIT,
+                    tuple(job["label"] for job in record[schedule.RETAINED_JOBS]),
+                    tuple(job["label"] for job in kept),
+                    frozenset(job["label"] for job in pruned),
+                    frozenset(
+                        job["path"] for job in pruned if Path(job["path"]).exists()
+                    ),
+                    frozenset(runner.loaded),
+                    record_path.stat().st_size,
+                    schedule.COMMAND_BYTES,
+                    tuple(plans[-1]["retention_gaps"]),
                 )
             )
 
