@@ -51,9 +51,9 @@ The Author and the Fixer use separate agent sessions, whoever calls them.
 
 **Verifier.** The role held by the agent session that produces an agentic verdict: an Auditor for audit, a Reviewer for review.
 
-**Position.** A standing post in a chain of agent sessions, such as the Orchestrator of a Change, that one agent session occupies under one agent-mail name and that reports to one principal. A position is never a Role: the agent session that occupies it holds a Role only for a Change it refines, executes, produces, repairs, or verifies.
+**Position.** Authority over a scope that its holder keeps across Changes, as `versions/4.0/methodology/application/agent-orchestration.md` of `outcomeeng/methodology` defines it. A position is never a Role: a position holder holds a Role only for a Change it refines, executes, produces, repairs, or verifies.
 
-**Principal.** The position another position reports to, addressed by its agent-mail name. A position passes to its principal every question and stop it does not settle itself.
+**Principal.** The next higher rank in the chain of positions that holds the context of a question, as `versions/4.0/methodology/application/agent-orchestration.md` of `outcomeeng/methodology` states the chain. A position holder answers what lies within its scope and passes every other question to its principal.
 
 ## Rationale
 
@@ -68,7 +68,7 @@ The Refiner is the operator's conversation because refinement is an interview. F
 1. Agent-facing decisions, specs, skills, and instructions use agent harness, agent, agent adapter, agent session, subagent, and subagent definition for their defined meanings; product domains identify which concept they govern and preserve those distinctions in configuration, invocation, observation, and resume behavior.
 2. Agent-facing decisions, specs, skills, and instructions name who refines, executes, produces, repairs, or verifies a Change with the capitalized Role names Refiner, Executor, Author, Fixer, and Verifier, with Auditor and Reviewer as the two Verifier kinds; the Refiner is held by the operator's conversation.
 3. The Author and the Fixer use separate agent sessions, whoever calls them.
-4. Agent-facing decisions, specs, skills, and instructions call a standing post in a chain of agent sessions a position and the position it reports to its principal, and never use position for a Role.
+4. Agent-facing decisions, specs, skills, and instructions call authority over a scope that its holder keeps across Changes a position and the next higher rank that holds a question's context the principal of the position that passes it, and never use position for a Role.
 
 ## Verification
 
@@ -84,4 +84,4 @@ The Refiner is the operator's conversation because refinement is an interview. F
 - ALWAYS: the Refiner role is held by the agent session in conversation with the operator, realized by loading into that conversation the refinement skills the Change's Maturity routes to, never by dispatching a subagent or loading an agent definition ([audit])
 - ALWAYS: the Author and the Fixer use separate agent sessions, whoever calls them ([audit])
 - NEVER: an SPX payload field name — `producer`, `expectedProducer`, `recordedByRunDriver`, the run driver — or a dispatch-pattern word such as orchestrator or applier stands in for a role name ([audit])
-- ALWAYS: decisions, specs, skills, and instructions that name a standing post in a chain of agent sessions call it a position and the position it reports to its principal, and never use position as a synonym for a Role ([audit])
+- ALWAYS: decisions, specs, skills, and instructions that name authority over a scope that its holder keeps across Changes call it a position and the next higher rank that holds a question's context its principal, and never use position as a synonym for a Role ([audit])
