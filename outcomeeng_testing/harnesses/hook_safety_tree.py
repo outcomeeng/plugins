@@ -78,6 +78,11 @@ class FixtureCase:
         return tuple(sorted(child.name for child in self.path.iterdir()))
 
 
+def case_id(case: FixtureCase) -> str:
+    """Return the parametrize id of one fixture case: its directory name."""
+    return case.name
+
+
 def fixture_cases(*groups: FixtureGroup) -> tuple[FixtureCase, ...]:
     """Return every fixture of the given groups, ordered by name.
 
@@ -180,6 +185,7 @@ __all__ = [
     "FixtureGroup",
     "HookTree",
     "ScanReport",
+    "case_id",
     "fixture_cases",
     "hook_tree",
 ]

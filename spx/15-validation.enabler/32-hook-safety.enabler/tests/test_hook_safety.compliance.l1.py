@@ -24,13 +24,10 @@ from outcomeeng.validation.hook_safety import BLOCKING_EVENTS, iter_tree_violati
 from outcomeeng_testing.harnesses.hook_safety_tree import (
     FixtureCase,
     FixtureGroup,
+    case_id,
     fixture_cases,
     hook_tree,
 )
-
-
-def case_id(case: FixtureCase) -> str:
-    return case.name
 
 
 # --- NEVER: a hook on an event outside the permitted non-blocking set --------------

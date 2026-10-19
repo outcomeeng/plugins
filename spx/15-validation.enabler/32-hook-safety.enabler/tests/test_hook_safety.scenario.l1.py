@@ -21,13 +21,10 @@ from outcomeeng.validation.hook_safety import iter_tree_violations
 from outcomeeng_testing.harnesses.hook_safety_tree import (
     FixtureCase,
     FixtureGroup,
+    case_id,
     fixture_cases,
     hook_tree,
 )
-
-
-def case_id(case: FixtureCase) -> str:
-    return case.name
 
 
 @pytest.mark.parametrize("case", fixture_cases(FixtureGroup.SESSION_START), ids=case_id)
