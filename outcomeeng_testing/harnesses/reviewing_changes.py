@@ -37,7 +37,6 @@ outside ``spx/``.
 
 from __future__ import annotations
 
-import importlib.util
 import io
 import json
 import os
@@ -51,6 +50,7 @@ from typing import Any, Callable, cast
 from unittest.mock import patch
 
 from outcomeeng.distribution.contracts import AGENT_TOKEN_DATA_FILENAME, Target
+from outcomeeng.distribution.shipped_scripts import load_shipped_module
 from outcomeeng_testing.harnesses.dist_tree import DistTreeReader
 
 # Two ``parents`` hops land at the repository root: this file lives at
@@ -137,20 +137,7 @@ def load_review_result_module() -> ModuleType:
     Returns the already-loaded module on subsequent calls so the importlib
     loader runs at most once per test session.
     """
-    cached = sys.modules.get("review_result")
-    if cached is not None:
-        return cached
-    spec = importlib.util.spec_from_file_location(
-        "review_result", REVIEW_RESULT_MODULE_PATH
-    )
-    if spec is None or spec.loader is None:
-        raise RuntimeError(
-            f"Cannot load review_result from {REVIEW_RESULT_MODULE_PATH}"
-        )
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["review_result"] = module
-    spec.loader.exec_module(module)
-    return module
+    return load_shipped_module("review_result", REVIEW_RESULT_MODULE_PATH)
 
 
 def run_review_result_with_agent_tokens_file(
@@ -174,7 +161,7 @@ def run_review_result_with_agent_tokens_file(
     elif tokens is not None:
         tokens_path.write_text(tokens, encoding="utf-8")
     return subprocess.run(  # noqa: S603 — the interpreter and the copied module are harness-built
-        [sys.executable, "-I", str(module)],
+        [sys.executable, "-I", "-B", str(module)],
         capture_output=True,
         text=True,
         check=False,
@@ -183,49 +170,17 @@ def run_review_result_with_agent_tokens_file(
 
 def load_compute_diff_module() -> ModuleType:
     """Load the ``compute_diff`` script as a module via importlib."""
-
-    cached = sys.modules.get("compute_diff")
-    if cached is not None:
-        return cached
-    spec = importlib.util.spec_from_file_location("compute_diff", COMPUTE_DIFF_SCRIPT)
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"Cannot load compute_diff from {COMPUTE_DIFF_SCRIPT}")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["compute_diff"] = module
-    spec.loader.exec_module(module)
-    return module
+    return load_shipped_module("compute_diff", COMPUTE_DIFF_SCRIPT)
 
 
 def load_journal_emit_module() -> ModuleType:
     """Load the review ``journal_emit`` adapter via importlib."""
-
-    cached = sys.modules.get("review_changes_journal_emit")
-    if cached is not None:
-        return cached
-    spec = importlib.util.spec_from_file_location(
-        "review_changes_journal_emit", JOURNAL_EMIT_SCRIPT
-    )
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"Cannot load journal_emit from {JOURNAL_EMIT_SCRIPT}")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["review_changes_journal_emit"] = module
-    spec.loader.exec_module(module)
-    return module
+    return load_shipped_module("review_changes_journal_emit", JOURNAL_EMIT_SCRIPT)
 
 
 def load_review_run_module() -> ModuleType:
     """Load the review runner module via importlib."""
-
-    cached = sys.modules.get("review_run")
-    if cached is not None:
-        return cached
-    spec = importlib.util.spec_from_file_location("review_run", REVIEW_RUN_SCRIPT)
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"Cannot load review_run from {REVIEW_RUN_SCRIPT}")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["review_run"] = module
-    spec.loader.exec_module(module)
-    return module
+    return load_shipped_module("review_run", REVIEW_RUN_SCRIPT)
 
 
 def review_run_journal_env_keys() -> tuple[str, ...]:
@@ -450,7 +405,7 @@ def run_script(
     inspect returncode explicitly; success-path tests pass ``check=True``.
     """
     return subprocess.run(  # noqa: S603 — script path comes from the harness, not user input
-        [sys.executable, str(script), *args],
+        [sys.executable, "-B", str(script), *args],
         input=stdin,
         capture_output=True,
         text=True,
