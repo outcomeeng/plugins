@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import tempfile
 from pathlib import PurePath
 from typing import Final
 
@@ -21,7 +22,9 @@ WRITE_TOOLS: Final = frozenset({"Write", "Edit"})
 PROJECT_DIR_ENV: Final = "CLAUDE_PROJECT_DIR"
 CONFIG_DIR_ENV: Final = "CLAUDE_CONFIG_DIR"
 TEMP_BASE_ENV: Final = "CLAUDE_CODE_TMPDIR"
-DEFAULT_TEMP_BASE: Final = "/tmp"
+MACOS_PLATFORM: Final = "darwin"
+LINUX_PLATFORM: Final = "linux"
+MACOS_TEMP_BASE: Final = "/tmp"
 TEMP_ROOT_PREFIX: Final = "claude-"
 SCRATCH_DIRECTORY: Final = "scratchpad"
 DEFAULT_CONFIG_DIR: Final = "~/.claude"
@@ -74,8 +77,19 @@ def additional_directories(settings_file: str) -> list[str]:
 
 
 def temp_root() -> PurePath:
-    """Return the harness's temporary root, the per-user directory holding every session scratch."""
-    base = os.environ.get(TEMP_BASE_ENV) or DEFAULT_TEMP_BASE
+    """Return the harness's temporary root, the per-user directory holding every session scratch.
+
+    The base is ``CLAUDE_CODE_TMPDIR`` when set and non-empty, else ``/tmp`` on macOS and the
+    process temporary directory on Linux. Any other platform raises, so the caller allows the call.
+    """
+    base = os.environ.get(TEMP_BASE_ENV)
+    if not base:
+        if sys.platform == MACOS_PLATFORM:
+            base = MACOS_TEMP_BASE
+        elif sys.platform.startswith(LINUX_PLATFORM):
+            base = tempfile.gettempdir()
+        else:
+            raise ValueError(sys.platform)
     return resolve(f"{TEMP_ROOT_PREFIX}{os.getuid()}", base)
 
 
