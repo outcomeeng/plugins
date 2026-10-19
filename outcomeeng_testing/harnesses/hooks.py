@@ -29,7 +29,15 @@ from typing import Any
 
 from hypothesis import seed, settings
 
-from outcomeeng.validation.hook_contract import SESSION_START_EVENT
+from outcomeeng.validation.hook_contract import (
+    COMMAND_KEY,
+    HOOKS_CONFIG_ENCODING,
+    HOOKS_CONFIG_FILE,
+    HOOKS_DIRECTORY,
+    HOOKS_KEY,
+    PRE_WRITE_PLUGIN,
+    SESSION_START_EVENT,
+)
 from outcomeeng_testing.harnesses.spec_tree import (
     marketplace_root_for_spec_tree_root_test,
 )
@@ -117,9 +125,27 @@ def _hooks_config(test_file: str | None = None) -> dict[str, Any]:
     return config
 
 
-def session_start_events(test_file: str | None = None) -> list[str]:
-    """Return the hook event names the spec-tree plugin declares, in order."""
-    return list(_hooks_config(test_file)["hooks"])
+def shipped_hook_events(runtime: str, test_file: str) -> dict[str, Any]:
+    """Return the event map of the spec-tree plugin's shipped hooks.json in one runtime tree.
+
+    The file is read by path beneath the marketplace root that contains
+    ``test_file``; ``runtime`` is a source-owned runtime-tree name.
+    """
+    path = (
+        marketplace_root_for_spec_tree_root_test(test_file)
+        / runtime
+        / PRE_WRITE_PLUGIN
+        / HOOKS_DIRECTORY
+        / HOOKS_CONFIG_FILE
+    )
+    config: dict[str, Any] = json.loads(path.read_text(encoding=HOOKS_CONFIG_ENCODING))
+    events: dict[str, Any] = config[HOOKS_KEY]
+    return events
+
+
+def event_commands(blocks: list[dict[str, Any]]) -> list[str]:
+    """Return the handler commands of one event's blocks, in declaration order."""
+    return [handler[COMMAND_KEY] for block in blocks for handler in block[HOOKS_KEY]]
 
 
 def session_start_command(test_file: str | None = None) -> str:
@@ -272,6 +298,7 @@ def worktree_occupancy(project_dir: Path) -> list[dict[str, Any]]:
 
 
 __all__ = [
+    "event_commands",
     "KILL_SWITCH_DISABLED",
     "KILL_SWITCH_ENV",
     "HOOK_EVIDENCE_REPLAY_PATH",
@@ -287,7 +314,7 @@ __all__ = [
     "run_session_start",
     "session_start_workspace",
     "session_start_command",
-    "session_start_events",
+    "shipped_hook_events",
     "worktree_claim_path_from_env",
     "worktree_occupancy",
 ]
