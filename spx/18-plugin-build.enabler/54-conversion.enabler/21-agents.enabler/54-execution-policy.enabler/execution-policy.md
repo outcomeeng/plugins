@@ -7,7 +7,7 @@ CAN preserve enforceable restrictions while surfacing unsupported source semanti
 ## Assertions
 
 - ALWAYS: converted-agent manual-review guidance names only capabilities present in the rendered source-tool set; a target-absent capability never reappears as guidance.
-- ALWAYS: a generated Codex implementation auditor composes every installed concern skill selected for its changed files through the `Use skill` instruction, without searching for a dedicated skill-invocation tool.
+- ALWAYS: every generated Codex agent that composes skills, including the implementation auditor's installed concern skills selected for its changed files, loads each through the `Use skill` instruction without searching for a dedicated skill-invocation tool; its instructions name no skill tool as an available capability and treat the absence of one as no availability failure.
 
 ### Mappings
 
