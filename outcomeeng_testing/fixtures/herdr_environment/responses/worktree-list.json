@@ -2,11 +2,11 @@
   "id": "cli:worktree:list",
   "result": {
     "source": {
-      "repo_key": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/herdr-capture-164-grouped/repo/.git",
+      "repo_key": "/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-executor-597/90612d41-0c46-4cdc-bf0a-82525e1066a8/scratchpad/herdr-capture/repo/.git",
       "repo_name": "repo",
-      "repo_root": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/herdr-capture-164-grouped/repo",
-      "source_checkout_path": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/herdr-capture-164-grouped/repo",
-      "source_workspace_id": "w2Y"
+      "repo_root": "/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-executor-597/90612d41-0c46-4cdc-bf0a-82525e1066a8/scratchpad/herdr-capture/repo",
+      "source_checkout_path": "/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-executor-597/90612d41-0c46-4cdc-bf0a-82525e1066a8/scratchpad/herdr-capture/repo",
+      "source_workspace_id": "w7E"
     },
     "type": "worktree_list",
     "worktrees": [
@@ -17,8 +17,8 @@
         "is_linked_worktree": false,
         "is_prunable": false,
         "label": "repo",
-        "open_workspace_id": "w2Y",
-        "path": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/herdr-capture-164-grouped/repo"
+        "open_workspace_id": "w7E",
+        "path": "/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-executor-597/90612d41-0c46-4cdc-bf0a-82525e1066a8/scratchpad/herdr-capture/repo"
       },
       {
         "branch": "capture-create",
@@ -27,8 +27,8 @@
         "is_linked_worktree": true,
         "is_prunable": false,
         "label": "repo",
-        "open_workspace_id": "w2Z",
-        "path": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/herdr-capture-164-grouped/wt-create"
+        "open_workspace_id": "w7F",
+        "path": "/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-executor-597/90612d41-0c46-4cdc-bf0a-82525e1066a8/scratchpad/herdr-capture/wt-create"
       },
       {
         "branch": "capture-open",
@@ -37,8 +37,8 @@
         "is_linked_worktree": true,
         "is_prunable": false,
         "label": "repo",
-        "open_workspace_id": "w20",
-        "path": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/herdr-capture-164-grouped/wt-open"
+        "open_workspace_id": "w7G",
+        "path": "/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-executor-597/90612d41-0c46-4cdc-bf0a-82525e1066a8/scratchpad/herdr-capture/wt-open"
       }
     ]
   }

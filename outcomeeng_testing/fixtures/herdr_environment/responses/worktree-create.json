@@ -3,19 +3,19 @@
   "result": {
     "root_pane": {
       "agent_status": "unknown",
-      "cwd": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/herdr-capture-164-grouped/wt-create",
+      "cwd": "/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-executor-597/90612d41-0c46-4cdc-bf0a-82525e1066a8/scratchpad/herdr-capture/wt-create",
       "focused": false,
-      "foreground_cwd": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/herdr-capture-164-grouped/wt-create",
-      "pane_id": "w2Z:p1",
+      "foreground_cwd": "/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-executor-597/90612d41-0c46-4cdc-bf0a-82525e1066a8/scratchpad/herdr-capture/wt-create",
+      "pane_id": "w7F:p1",
       "revision": 0,
       "scroll": {
         "max_offset_from_bottom": 0,
         "offset_from_bottom": 0,
         "viewport_rows": 40
       },
-      "tab_id": "w2Z:t1",
-      "terminal_id": "term_65c916cd16e892a",
-      "workspace_id": "w2Z"
+      "tab_id": "w7F:t1",
+      "terminal_id": "term_65e2b602b569b70",
+      "workspace_id": "w7F"
     },
     "tab": {
       "agent_status": "unknown",
@@ -23,25 +23,25 @@
       "label": "1",
       "number": 1,
       "pane_count": 1,
-      "tab_id": "w2Z:t1",
-      "workspace_id": "w2Z"
+      "tab_id": "w7F:t1",
+      "workspace_id": "w7F"
     },
     "type": "worktree_created",
     "workspace": {
-      "active_tab_id": "w2Z:t1",
+      "active_tab_id": "w7F:t1",
       "agent_status": "unknown",
       "focused": false,
       "label": "wt-create",
-      "number": 16,
+      "number": 98,
       "pane_count": 1,
       "tab_count": 1,
-      "workspace_id": "w2Z",
+      "workspace_id": "w7F",
       "worktree": {
-        "checkout_path": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/herdr-capture-164-grouped/wt-create",
+        "checkout_path": "/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-executor-597/90612d41-0c46-4cdc-bf0a-82525e1066a8/scratchpad/herdr-capture/wt-create",
         "is_linked_worktree": true,
-        "repo_key": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/herdr-capture-164-grouped/repo/.git",
+        "repo_key": "/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-executor-597/90612d41-0c46-4cdc-bf0a-82525e1066a8/scratchpad/herdr-capture/repo/.git",
         "repo_name": "repo",
-        "repo_root": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/herdr-capture-164-grouped/repo"
+        "repo_root": "/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-executor-597/90612d41-0c46-4cdc-bf0a-82525e1066a8/scratchpad/herdr-capture/repo"
       }
     },
     "worktree": {
@@ -51,8 +51,8 @@
       "is_linked_worktree": true,
       "is_prunable": false,
       "label": "repo",
-      "open_workspace_id": "w2Z",
-      "path": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/herdr-capture-164-grouped/wt-create"
+      "open_workspace_id": "w7F",
+      "path": "/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-executor-597/90612d41-0c46-4cdc-bf0a-82525e1066a8/scratchpad/herdr-capture/wt-create"
     }
   }
 }

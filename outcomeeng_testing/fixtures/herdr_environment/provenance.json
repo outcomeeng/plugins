@@ -83,7 +83,7 @@
     {
       "path": "responses/errors/worktree-open.not_git_worktree.json",
       "tool": "herdr",
-      "version": "0.9.1",
+      "version": "0.9.5",
       "exitCode": 1
     },
     {
@@ -134,17 +134,17 @@
     {
       "path": "responses/worktree-create.json",
       "tool": "herdr",
-      "version": "0.9.1"
+      "version": "0.9.5"
     },
     {
       "path": "responses/worktree-list.json",
       "tool": "herdr",
-      "version": "0.9.1"
+      "version": "0.9.5"
     },
     {
       "path": "responses/worktree-open.json",
       "tool": "herdr",
-      "version": "0.9.1"
+      "version": "0.9.5"
     },
     {
       "path": "usage/agent-get.txt",
