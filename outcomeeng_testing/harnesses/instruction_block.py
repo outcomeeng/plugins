@@ -33,8 +33,8 @@ from collections.abc import Callable
 from contextlib import redirect_stderr, redirect_stdout
 from dataclasses import dataclass
 import sys
-import traceback
 from tempfile import TemporaryDirectory
+import traceback
 from types import ModuleType
 from typing import Final, cast
 

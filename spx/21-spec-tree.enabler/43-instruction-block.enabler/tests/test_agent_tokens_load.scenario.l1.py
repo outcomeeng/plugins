@@ -21,7 +21,9 @@ VALID_TOKENS = declared_agent_tokens()
 NON_OBJECT_DOCUMENT = json.dumps(list(VALID_TOKENS.values()))
 PARTIAL_DOCUMENT_ROWS = [
     (
-        json.dumps({key: token for key, token in VALID_TOKENS.items() if key != missing}),
+        json.dumps(
+            {key: token for key, token in VALID_TOKENS.items() if key != missing}
+        ),
         False,
         f"{ERROR_PREFIX} {MODULE.AGENT_TOKENS_LACKS_KEYS} {missing}: ",
     )
@@ -50,9 +52,7 @@ def test_an_absent_file_names_its_path_and_the_fix(tmp_path: pathlib.Path) -> No
 
     message = _load_error(path)
 
-    assert message.startswith(
-        f"{ERROR_PREFIX} {MODULE.AGENT_TOKENS_NOT_FOUND}{path}"
-    )
+    assert message.startswith(f"{ERROR_PREFIX} {MODULE.AGENT_TOKENS_NOT_FOUND}{path}")
     assert message.endswith(ADVICE)
 
 
@@ -62,9 +62,7 @@ def test_an_unreadable_file_names_its_path_and_the_fix(tmp_path: pathlib.Path) -
 
     message = _load_error(path)
 
-    assert message.startswith(
-        f"{ERROR_PREFIX} {MODULE.AGENT_TOKENS_UNREADABLE}{path}"
-    )
+    assert message.startswith(f"{ERROR_PREFIX} {MODULE.AGENT_TOKENS_UNREADABLE}{path}")
     assert message.endswith(ADVICE)
 
 
@@ -107,9 +105,7 @@ def test_a_missing_required_key_names_it_and_the_keys_found(
     assert message.startswith(
         f"{ERROR_PREFIX} {MODULE.AGENT_TOKENS_LACKS_KEYS} {missing}: {path}"
     )
-    assert (
-        f"{MODULE.AGENT_TOKENS_KEYS_FOUND_OPEN}{', '.join(sorted(kept))}" in message
-    )
+    assert f"{MODULE.AGENT_TOKENS_KEYS_FOUND_OPEN}{', '.join(sorted(kept))}" in message
     assert message.endswith(ADVICE)
 
 
@@ -123,7 +119,9 @@ def test_an_empty_object_names_every_required_key_and_no_keys_found(
 
     required = ", ".join(MODULE.AGENT_TOKENS_REQUIRED_KEYS)
     assert f"{MODULE.AGENT_TOKENS_LACKS_KEYS} {required}" in message
-    assert f"{MODULE.AGENT_TOKENS_KEYS_FOUND_OPEN}{MODULE.AGENT_TOKENS_NO_KEYS}" in message
+    assert (
+        f"{MODULE.AGENT_TOKENS_KEYS_FOUND_OPEN}{MODULE.AGENT_TOKENS_NO_KEYS}" in message
+    )
 
 
 @pytest.mark.parametrize(
