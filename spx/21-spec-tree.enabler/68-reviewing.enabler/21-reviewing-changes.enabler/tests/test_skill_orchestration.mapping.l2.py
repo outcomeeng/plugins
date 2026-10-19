@@ -73,7 +73,8 @@ def test_finish_counts_one_finding_under_the_count_named_by_its_severity(
 
 
 # The optional unit/tracked payload fields are a finite state domain: both set
-# (the review kind records the enclosing unit and the ISSUES.md match) or both
+# (the review kind records the enclosing unit and the ISSUES.md match), unit
+# alone (every blocking finding and every untracked debt finding), or both
 # absent (the prior event shape). The expected event data derives from the
 # payload state: a field present in the payload is carried verbatim onto the
 # finding-reported event, a field absent is omitted. A tracked debt finding
@@ -83,9 +84,10 @@ def test_finish_counts_one_finding_under_the_count_named_by_its_severity(
     [
         {"unit": "Reviewing Changes", "tracked": True},
         {"unit": "Reviewing Changes", "tracked": False},
+        {"unit": "Reviewing Changes"},
         {},
     ],
-    ids=["tracked", "untracked", "omitted"],
+    ids=["tracked", "untracked", "unit-only", "omitted"],
 )
 def test_append_finding_maps_unit_and_tracked_onto_event_and_finish_counts_debt(
     tmp_path: pathlib.Path, optional_fields: dict
