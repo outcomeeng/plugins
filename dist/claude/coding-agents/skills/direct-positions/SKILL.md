@@ -94,7 +94,7 @@ Test record: `direction_core.py` and `direction.py` are exercised by the positio
 
 <passes>
 
-The monitor, the doorbell, and the controller are passes. Each pass runs once, writes its observations to the state directory, and ends. The monitor pass writes `quiet.json` and `observations.json`, and the doorbell pass writes `rungs.json` and `quiet.json`. No pass loops, waits for its next pass, or outlives this session. After a pass ends, re-arm the next one through a session-scoped harness capability: the harness monitor for the monitor pass, and a bounded background run whose exit the harness reports for the doorbell and controller passes. A harness without such a capability runs each pass at the next step boundary.
+The monitor, the doorbell, and the controller are passes. Each pass runs once, writes its observations to the state directory, and ends. The monitor pass writes `quiet.json` and `observations.json`, and the doorbell pass writes `rungs.json` and `quiet.json`. No pass loops, waits for its next pass, or outlives this session. After a pass ends and its result is handled, arm the next one. Arm the monitor pass through the harness monitor. Arm the doorbell and controller passes as a bounded background run only under an agent harness whose documented contract wakes the session when the process exits; under every other harness, run them in the foreground and collect the result within the active turn, or move the pass to the next step boundary. A pass never arms its own successor.
 
 - **Monitor pass.** For each position in `positions` and each group in `executor_groups`, read the pane through its environment skill. Record quiet time and context fill. Report a pane quiet for its stall minutes or filled past its context percent.
 - **Doorbell pass.** After `doorbell_start_delay_seconds`, list each position's unread mail through `coding-agents:operate-agent-mail` for the `mail.agent` identity. For a position whose highest unread id exceeds its recorded rung and whose pane is idle, send one prompt through the position's environment skill that tells it to read its mail, then record the new rung. Skip every pane `<pane_guards>` excludes.
@@ -160,7 +160,7 @@ Write the resume note at the absolute `resumeNote` path the `compose` result pri
 - Every pane operation and mail operation went through `coding-agents:operate-herdr`, `coding-agents:operate-prowl`, or `coding-agents:operate-agent-mail`.
 - No input went into an untouchable pane, an operator-prompted pane, or a pane at a question or approval screen.
 - Every action carries the methodology chapter or operator grant that permitted it; every other action stopped naming the absent definition and the absent grant.
-- Each pass ended after one run and was re-armed through a harness capability or deferred to the next step boundary.
+- Each pass ended after one run, and its successor was armed only after the result was handled: the monitor through the harness monitor, the doorbell and controller as a bounded background run under a harness that wakes the session on process exit or otherwise as a foreground run collected within the active turn or deferred to the next step boundary.
 - Every state file and the resume note were written under the invocation checkout, and nothing was written into the common Git directory.
 - The resume note records the state a post-compaction session needs.
 
