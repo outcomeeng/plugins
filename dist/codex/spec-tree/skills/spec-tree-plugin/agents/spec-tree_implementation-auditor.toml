@@ -46,7 +46,7 @@ Return only the `spx verification run` token, run file, and rendered projection 
 </success_criteria>
 
 <manual_review_guidance>
-Source `skills` entries were preserved as prompt guidance. The generated Codex `skills.config` entries enable these skills; they are not a spawn-time preload guarantee. Invoke or load these skills before relying on this agent's specialized behavior: `spec-tree:audit-implementation`.
+Source `skills` entries were preserved as prompt guidance. The generated Codex `skills.config` entries enable these skills; they are not a spawn-time preload guarantee. Load each of these skills through its `Use skill` instruction before relying on this agent's specialized behavior, and search for no dedicated skill-invocation tool: the absence of one is no availability failure, while an absent installed skill or an unreadable skill file is one: `spec-tree:audit-implementation`.
 
 Source `tools` allowlists can map only to Codex configuration boundaries with matching semantics. Treat command-level meanings inside allowed shell tools as manual-review guidance: `Bash`, `Read`, `Glob`, `Grep`, `Write`.
 </manual_review_guidance>

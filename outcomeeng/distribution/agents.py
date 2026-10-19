@@ -85,8 +85,11 @@ UNSUPPORTED_FIELDS_LIMITATION: Final = "Review unsupported source agent fields m
 CODEX_SKILLS_GUIDANCE_TEMPLATE: Final = (
     "Source `skills` entries were preserved as prompt guidance. "
     "The generated Codex `skills.config` entries enable these skills; "
-    f"they are {SKILL_ENABLEMENT_LIMITATION}. Invoke or load these "
-    "skills before relying on this agent's specialized behavior: {skills}."
+    f"they are {SKILL_ENABLEMENT_LIMITATION}. Load each of these skills "
+    "through its `Use skill` instruction before relying on this agent's "
+    "specialized behavior, and search for no dedicated skill-invocation tool: "
+    "the absence of one is no availability failure, while an absent installed "
+    "skill or an unreadable skill file is one: {skills}."
 )
 CODEX_TOOLS_GUIDANCE_TEMPLATE: Final = (
     "Source `tools` allowlists can map only to Codex configuration "

@@ -15,6 +15,7 @@ An entry is written by the changeset that ships the change. A later changeset ad
 ### Fixed
 
 - **`change-auditor` loads `audit-change`, `spec-tree-plugin`, and `change-standards` through the `Use skill` instruction on every agent, and its instructions name no skill tool as an available capability.** A native dispatch of the Change Auditor on Codex returns the `finish` result with `run.sealed` true. The definition treats the absence of a dedicated skill-invocation tool as no availability failure and reserves the `BLOCKED` diagnostic for an absent installed skill or an unreadable skill file. Before this change, its workflow told Claude to load the skills through the skill tool, so a Codex dispatch, which has none, returned the pre-run `BLOCKED` diagnostic for a missing skill tool and sealed no run.
+- **Every generated Codex agent that composes skills loads them through the `Use skill` instruction and treats the absence of a dedicated skill-invocation tool as no availability failure.** The Codex conversion states this in each such agent's manual-review guidance, so the agents without their own statement no longer report a missing skill tool as an availability failure.
 
 ## 0.106.14
 
