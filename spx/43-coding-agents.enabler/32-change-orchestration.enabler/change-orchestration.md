@@ -13,8 +13,8 @@ The Orchestrator is a position, never one of the five Roles: it holds no Role fo
 
 ## Assertions
 
-- ALWAYS: on Codex, `/orchestrate-change` Start returns an explicit `unavailable` result naming the Change and writes no store state, while Check runs unchanged; on Claude Code, Start returns no such result
-- ALWAYS: across the Changes one Orchestrator orchestrates, it settles blockers and questions in the order the coordination overlay declares for the Change store's priority field, and orders Changes of equal priority, and every Change when the overlay declares no priority field, by ascending issue number
+- ALWAYS: on Codex, `/orchestrate-change` Start returns an explicit `unavailable` result naming the Change and writes no store state, while Check runs unchanged; on Claude Code, Start returns no such result ([test](tests/test_orchestrate_change_emission.compliance.l1.py))
+- ALWAYS: across the Changes one Orchestrator orchestrates, it settles blockers and questions in the order the coordination overlay declares for the Change store's priority field, and orders Changes of equal priority, and every Change when the overlay declares no priority field, by ascending issue number ([audit])
 
 ### Compliance
 
