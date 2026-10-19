@@ -7,6 +7,7 @@ from outcomeeng_testing.harnesses.consumption_control import (
     NamespaceReturnObservation,
     NamespaceScopeObservation,
     RetainedBoundObservation,
+    RetentionPlanObservation,
     RetainedRecordMalformation,
     installation_observation,
     malformed_retained_field_property,
@@ -15,6 +16,7 @@ from outcomeeng_testing.harnesses.consumption_control import (
     namespace_return_property,
     namespace_scope_property,
     retained_bound_property,
+    retention_plan_property,
     workspace,
 )
 
@@ -105,6 +107,16 @@ def test_retained_jobs_are_bounded_and_older_jobs_are_stopped_and_removed() -> N
         assert not observed.gaps
 
     retained_bound_property(check)
+
+
+def test_install_plan_names_the_launch_agents_a_reinstall_would_remove() -> None:
+    def check(observed: RetentionPlanObservation) -> None:
+        assert observed.expected_removals
+        assert observed.planned_removals == observed.expected_removals
+        assert observed.removals_remaining_after_plan == observed.planned_removals
+        assert not observed.calls_during_plan
+
+    retention_plan_property(check)
 
 
 def test_retained_job_with_a_nonconforming_path_is_rejected_naming_file_and_field() -> (

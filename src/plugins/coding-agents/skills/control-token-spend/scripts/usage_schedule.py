@@ -199,6 +199,7 @@ def absent(result: CommandResult) -> bool:
 
 
 RETAINED_JOBS = "retained_jobs"
+RETENTION_REMOVALS = "retention_removals"
 RETAINED_NAMESPACES = 4
 RETAINED_JOB_LIMIT = RETAINED_NAMESPACES * len(MODES)
 
@@ -477,7 +478,7 @@ def install(
     plan = install_plan(
         config, source, Path(sys.executable).resolve(), agents_directory, platform
     )
-    if plan[ScheduleField.STATUS] == "unsupported" or not activate:
+    if plan[ScheduleField.STATUS] == "unsupported":
         return plan
     installed_path = config.root / INSTALL_NAME
     prior = manifest(config.root)
@@ -488,9 +489,11 @@ def install(
     )
     owned_paths = {job["path"] for job in prior_jobs}
     planned_paths = {job["path"] for job in plan[ScheduleField.JOBS]}
-    plan[RETAINED_JOBS] = [
-        job for job in prior_jobs if job["path"] not in planned_paths
-    ]
+    retained = [job for job in prior_jobs if job["path"] not in planned_paths]
+    plan[RETENTION_REMOVALS] = [job["path"] for job in retained[RETAINED_JOB_LIMIT:]]
+    if not activate:
+        return plan
+    plan[RETAINED_JOBS] = retained
     for job in plan[ScheduleField.JOBS]:
         path = Path(job["path"])
         if path.is_symlink() or (path.exists() and str(path) not in owned_paths):
