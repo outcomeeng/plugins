@@ -4,6 +4,8 @@ Every plugin ships dual manifests (`.claude-plugin/plugin.json` and `.codex-plug
 
 A consumer skill's script reaches a provider skill's logic by a `__file__`-relative import only when the provider skill belongs to the same plugin, because a plugin's runtime relies only on its own installed tree; no script imports or names a path into another plugin's files or the plugin cache.
 
+bounded-background-wait: A finite wait with one explicit deadline, one result, and one owner that collects its termination runs in the background only under an agent harness whose documented contract wakes the session when the process exits; under every other harness it runs in the foreground and its owner collects it within the active turn, or the wait moves to the next step boundary. No wait re-arms itself; its owner arms the next wait after it handles the result.
+
 ## Rationale
 
 The dual-manifest lockstep exists because the Codex marketplace cache resolves plugin versions independently of the Claude Code cache, so a single-file version bump causes Codex cache drift; lockstep is the simplest mechanical guarantee. The `/skill-standards` conformance invariant keeps invocation descriptions, frontmatter, and body structure under one owning standard, so descriptions match how each skill is selected. Helpers are Python because the marketplace manages Python via `uv`, helpers cross the Codex and Claude Code surfaces unchanged, and shell portability consumes more author time than it saves; hook scripts are Python too, because consumers already run Python for every skill, so a Python hook adds no runtime requirement and needs neither a shell nor `jq` — a plugin-root `scripts/` directory holds them, run as `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/<name>.py` from inside the inline guard [`spx/15-hook-safety.pdr.md`](spx/15-hook-safety.pdr.md) requires, so `scripts/` means Python across the plugin.
@@ -17,8 +19,6 @@ Two skills each executing the same logic is one shape; one skill establishing a 
 The skill subsumes the command: slash invocation, argument passing, and a curated prompt body are a subset of what a skill provides, and the skill adds model-invocability, progressive disclosure, bundled references and `scripts/`, and an `allowed-tools` restriction. Maintaining a command artifact alongside skills doubles the authoring and audit burden for one invocation surface and splits discovery across two catalogs, so the marketplace authors functionality once, as a skill. An agent fronting a skill carries no logic because a thin wrapper keeps a single source of behavior — the shape the verification wrappers already follow — so autonomous or background execution adds an invocation path, not a second implementation.
 
 ## Verification
-
-- ALWAYS: `bounded-background-wait` — a finite wait with one explicit deadline, one result, and one owner that collects its termination runs in the background only under an agent harness whose documented contract wakes the session when the process exits; under every other harness it runs in the foreground and its owner collects it within the active turn, or the wait moves to the next step boundary. No wait re-arms itself; its owner arms the next wait after it handles the result.
 
 ### Testing
 
