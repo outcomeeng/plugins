@@ -44,6 +44,7 @@ import os
 import pathlib
 import subprocess
 import sys
+import traceback
 from contextlib import redirect_stderr, redirect_stdout
 from types import ModuleType
 from typing import Any, Callable, cast
@@ -55,6 +56,21 @@ from outcomeeng_testing.harnesses.dist_tree import DistTreeReader
 # Two ``parents`` hops land at the repository root: this file lives at
 # ``outcomeeng_testing/harnesses/reviewing_changes.py``.
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
+
+
+def _standard_traceback_header() -> str:
+    """Return the header the standard library's traceback module starts a traceback with.
+
+    Formats one raised exception and takes the start of the first line of the result.
+    """
+    try:
+        raise RuntimeError
+    except RuntimeError as raised:
+        first_line = traceback.format_exception(raised)[0].splitlines()[0]
+    return first_line.split(maxsplit=1)[0]
+
+
+TRACEBACK_HEADER = _standard_traceback_header()
 
 SKILL_DIR = REPO_ROOT / "src" / "plugins" / "spec-tree" / "skills" / "review-changes"
 SKILL_FILE = SKILL_DIR / "SKILL.md"

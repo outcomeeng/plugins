@@ -16,7 +16,6 @@ from outcomeeng_testing.harnesses import instruction_block as harness
 MODULE = harness.load_instruction_block_module()
 USAGE_ERROR_EXIT_CODE = MODULE.AGENT_TOKENS_LOAD_FAILURE_EXIT_CODE
 ERROR_PREFIX = MODULE.AGENT_TOKENS_ERROR_PREFIX
-TRACEBACK_MARKER = "Traceback"
 ADVICE = MODULE.AGENT_TOKENS_REINSTALL_ADVICE
 VALID_TOKENS = declared_agent_tokens()
 NON_OBJECT_DOCUMENT = json.dumps(list(VALID_TOKENS.values()))
@@ -91,7 +90,7 @@ def test_a_non_object_value_names_its_type_and_the_fix(tmp_path: pathlib.Path) -
     assert message.startswith(
         f"{ERROR_PREFIX} {MODULE.AGENT_TOKENS_NOT_AN_OBJECT}{path}"
     )
-    assert f"{MODULE.AGENT_TOKENS_FOUND_TYPE_OPEN}{found_type})" in message
+    assert f"{MODULE.AGENT_TOKENS_FOUND_TYPE_OPEN}{found_type}" in message
     assert message.endswith(ADVICE)
 
 
@@ -109,7 +108,7 @@ def test_a_missing_required_key_names_it_and_the_keys_found(
         f"{ERROR_PREFIX} {MODULE.AGENT_TOKENS_LACKS_KEYS} {missing}: {path}"
     )
     assert (
-        f"{MODULE.AGENT_TOKENS_KEYS_FOUND_OPEN}{', '.join(sorted(kept))})" in message
+        f"{MODULE.AGENT_TOKENS_KEYS_FOUND_OPEN}{', '.join(sorted(kept))}" in message
     )
     assert message.endswith(ADVICE)
 
@@ -124,7 +123,7 @@ def test_an_empty_object_names_every_required_key_and_no_keys_found(
 
     required = ", ".join(MODULE.AGENT_TOKENS_REQUIRED_KEYS)
     assert f"{MODULE.AGENT_TOKENS_LACKS_KEYS} {required}" in message
-    assert f"{MODULE.AGENT_TOKENS_KEYS_FOUND_OPEN}{MODULE.AGENT_TOKENS_NO_KEYS})" in message
+    assert f"{MODULE.AGENT_TOKENS_KEYS_FOUND_OPEN}{MODULE.AGENT_TOKENS_NO_KEYS}" in message
 
 
 @pytest.mark.parametrize(
@@ -153,7 +152,7 @@ def test_the_script_reports_a_load_failure_as_an_error_line_with_exit_two(
     )
 
     assert result.returncode == USAGE_ERROR_EXIT_CODE
-    assert TRACEBACK_MARKER not in result.stderr
+    assert harness.TRACEBACK_HEADER not in result.stderr
     assert result.stderr.startswith(expected_fragment)
     assert result.stderr.count("\n") == 1
     assert result.stdout == ""

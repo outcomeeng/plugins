@@ -33,6 +33,7 @@ from collections.abc import Callable
 from contextlib import redirect_stderr, redirect_stdout
 from dataclasses import dataclass
 import sys
+import traceback
 from tempfile import TemporaryDirectory
 from types import ModuleType
 from typing import Final, cast
@@ -58,6 +59,21 @@ from outcomeeng_testing.harnesses.property_evidence import run_replayable_proper
 
 REPO_ROOT: Final = pathlib.Path(__file__).resolve().parents[2]
 INSTRUCTION_BLOCK_MODULE_PATH = distribution.GENERATOR_PATH
+
+
+def _standard_traceback_header() -> str:
+    """Return the header the standard library's traceback module starts a traceback with.
+
+    Formats one raised exception and takes the start of the first line of the result.
+    """
+    try:
+        raise RuntimeError
+    except RuntimeError as raised:
+        first_line = traceback.format_exception(raised)[0].splitlines()[0]
+    return first_line.split(maxsplit=1)[0]
+
+
+TRACEBACK_HEADER: Final = _standard_traceback_header()
 FIXTURES_DIR: Final = REPO_ROOT / "outcomeeng_testing/fixtures/instruction_block"
 
 INSTRUCTION_BLOCK_PROPERTY_EXAMPLES: Final = 50
