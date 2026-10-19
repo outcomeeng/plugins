@@ -6,6 +6,7 @@ from outcomeeng_testing.harnesses.consumption_control import (
     NamespaceReinstallObservation,
     NamespaceReturnObservation,
     NamespaceScopeObservation,
+    RetainedBoundObservation,
     RetainedRecordMalformation,
     installation_observation,
     malformed_retained_field_property,
@@ -13,6 +14,7 @@ from outcomeeng_testing.harnesses.consumption_control import (
     namespace_reinstall_property,
     namespace_return_property,
     namespace_scope_property,
+    retained_bound_property,
     workspace,
 )
 
@@ -88,6 +90,21 @@ def test_status_stop_and_restart_act_on_the_namespace_the_record_names() -> None
         assert observed.second_labels <= observed.loaded_after_restart
 
     namespace_reinstall_property(check)
+
+
+def test_retained_jobs_are_bounded_and_older_jobs_are_stopped_and_removed() -> None:
+    def check(observed: RetainedBoundObservation) -> None:
+        assert len(observed.retained_labels) <= observed.limit
+        assert observed.retained_labels == observed.expected_retained
+        assert observed.pruned_labels
+        assert observed.pruned_labels.isdisjoint(observed.retained_labels)
+        assert not observed.pruned_files_remaining
+        assert observed.pruned_labels.isdisjoint(observed.loaded_after)
+        assert set(observed.retained_labels) <= observed.loaded_after
+        assert observed.record_bytes < observed.record_ceiling
+        assert not observed.gaps
+
+    retained_bound_property(check)
 
 
 def test_retained_job_with_a_nonconforming_path_is_rejected_naming_file_and_field() -> (
