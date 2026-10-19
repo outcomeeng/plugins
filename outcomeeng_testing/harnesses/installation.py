@@ -4640,8 +4640,8 @@ def _persistent_environment(root: Path) -> dict[str, str]:
     environment.update(
         {
             HOME_ENV: str(root / "home"),
-            CLAUDE_CONFIG_ENV: str(root / "claude"),
-            CODEX_HOME_ENV: str(root / "codex"),
+            CLAUDE_CONFIG_ENV: str(root / Target.CLAUDE.value),
+            CODEX_HOME_ENV: str(root / Target.CODEX.value),
             CODEX_SQLITE_HOME_ENV: str(root / "codex-sqlite"),
         }
     )

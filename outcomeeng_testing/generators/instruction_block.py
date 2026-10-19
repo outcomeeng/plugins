@@ -17,6 +17,8 @@ from types import ModuleType
 from hypothesis import strategies as st
 from hypothesis.strategies import SearchStrategy
 
+from outcomeeng.distribution.contracts import Target
+
 _LANGUAGE_TOKEN_CHARACTERS = string.ascii_letters + string.digits + "-_"
 _DOCUMENT_LINE_CHARACTERS = string.ascii_letters + string.digits + " -_`"
 
@@ -172,7 +174,7 @@ def instruction_block_cases(
     harness_claude = next(
         harness
         for harness, filename in module.AGENT_HARNESS_INSTRUCTION_FILENAMES.items()
-        if filename.casefold().startswith("claude")
+        if filename.casefold().startswith(Target.CLAUDE.value)
     )
     harness_codex = next(
         harness

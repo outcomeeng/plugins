@@ -107,7 +107,7 @@ def prepare_profile_build(
         agents=None if skill else {"reviewer": content},
     )
     dist_root = root / "dist"
-    existing = dist_root / "claude" / "sentinel.txt"
+    existing = dist_root / Target.CLAUDE.value / "sentinel.txt"
     existing.parent.mkdir(parents=True, exist_ok=True)
     existing.write_text("Existing generated output.\n", encoding="utf-8")
     return builder.src_root, dist_root

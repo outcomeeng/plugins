@@ -417,13 +417,11 @@ WAIT_FOR_LOAD_POLICY_CONTRADICTIONS: Final = (
         ),
     ),
 )
-CODEX_HARNESS: Final = "codex"
-CLAUDE_HARNESS: Final = "claude"
 # The dispatch mechanics each harness block owns. The authorization section is
 # harness-neutral, so each marker below belongs to exactly one rendered router.
 HARNESS_DISPATCH_MECHANICS_MARKERS: Final = {
-    CLAUDE_HARNESS: "Launch through the `Agent` tool in the foreground",
-    CODEX_HARNESS: "collect the result through the native collaboration tools",
+    Target.CLAUDE: "Launch through the `Agent` tool in the foreground",
+    Target.CODEX: "collect the result through the native collaboration tools",
 }
 WAIT_FOR_LOAD_CODEX_POLICY_REQUIREMENTS: Final = (
     (
@@ -1101,7 +1099,7 @@ def validate_codex_agent_registry_policy(
     blocks_by_harness: Mapping[str, str],
 ) -> None:
     """Reject missing, incomplete, or cross-harness agent-registry policy."""
-    codex_document = blocks_by_harness.get(CODEX_HARNESS)
+    codex_document = blocks_by_harness.get(Target.CODEX)
     if codex_document is None:
         raise CodexAgentRegistryPolicyError("missing Codex router")
     codex_router = managed_router_block(codex_document)
@@ -1122,7 +1120,7 @@ def validate_codex_agent_registry_policy(
             f"Codex router agent registry policy is incomplete: {details}"
         )
 
-    claude_document = blocks_by_harness.get(CLAUDE_HARNESS)
+    claude_document = blocks_by_harness.get(Target.CLAUDE)
     if claude_document is None:
         raise CodexAgentRegistryPolicyError("missing Claude router")
     claude_router = managed_router_block(claude_document)
@@ -1197,7 +1195,7 @@ def validate_wait_for_load_policy(blocks_by_harness: Mapping[str, str]) -> None:
                 f"missing router section: {WAIT_FOR_LOAD_POLICY_HEADING}"
             ) from exc
         requirements = list(WAIT_FOR_LOAD_POLICY_REQUIREMENTS)
-        if harness == CODEX_HARNESS:
+        if harness == Target.CODEX:
             requirements.extend(WAIT_FOR_LOAD_CODEX_POLICY_REQUIREMENTS)
         missing = [
             name
@@ -1279,7 +1277,7 @@ def validate_verifier_dispatch_policy(
     blocks_by_harness: Mapping[str, str],
 ) -> None:
     """Reject a Codex router that omits or contradicts the verifier boundary."""
-    document = blocks_by_harness.get(CODEX_HARNESS)
+    document = blocks_by_harness.get(Target.CODEX)
     if document is None:
         raise VerifierDispatchPolicyError("missing Codex router")
     router = managed_router_block(document)

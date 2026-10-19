@@ -1,4 +1,4 @@
-"""Observations of the agent-token owner, the build's agent-token consumers, and a build's rendered agent tokens."""
+"""Observations of the agent-token owner, the toolchain's agent-token declarations, and a build's rendered agent tokens."""
 
 from __future__ import annotations
 
@@ -28,16 +28,14 @@ from outcomeeng.distribution.contracts import (
 from outcomeeng.distribution.orchestration import CATALOG_PATHS
 from outcomeeng_testing.harnesses.src_tree import src_tree
 
-# The modules that make up the build and the targets it generates.
-BUILD_MODULE_PATHS: Final = tuple(
-    Path("outcomeeng") / "distribution" / filename
-    for filename in (
-        "build.py",
-        "contracts.py",
-        "installation.py",
-        "orchestration.py",
-    )
+# The packages whose modules make up the product's toolchain.
+TOOLCHAIN_PACKAGE_NAMES: Final = (
+    "outcomeeng",
+    "outcomeeng_testing",
+    "outcomeeng_evals",
 )
+# A name ending in one of these suffixes holds the spelling of an executable.
+EXECUTABLE_NAME_SUFFIXES: Final = ("_BIN", "_BINARY", "_EXECUTABLE")
 
 TOKEN_READING_SKILL: Final = "token-reader"
 TOKEN_READING_SCRIPT: Final = (
@@ -64,7 +62,7 @@ OTHER_PLUGIN_READING_SCRIPT: Final = TOKEN_READING_SCRIPT
 
 @dataclass(frozen=True)
 class TokenLiteral:
-    """One string constant of a build module that spells an agent token."""
+    """One string constant of a toolchain module that spells an agent token."""
 
     module: Path
     line: int
@@ -120,18 +118,72 @@ def owner_source_tokens() -> Mapping[str, str]:
     )
 
 
-def build_module_token_literals() -> tuple[TokenLiteral, ...]:
-    """Observe every string constant in the build's modules equal to an owner token."""
+def toolchain_module_paths() -> tuple[Path, ...]:
+    """Return every Python module of the toolchain packages, relative to the repository root."""
+    return tuple(
+        module.relative_to(REPOSITORY_ROOT)
+        for package in TOOLCHAIN_PACKAGE_NAMES
+        for module in sorted((REPOSITORY_ROOT / package).rglob("*.py"))
+    )
+
+
+def _docstring_constants(tree: ast.AST) -> frozenset[int]:
+    """Return the identity of every docstring constant in a parsed module."""
+    docstrings: set[int] = set()
+    for node in ast.walk(tree):
+        if isinstance(
+            node, ast.Module | ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef
+        ):
+            first = node.body[0] if node.body else None
+            if isinstance(first, ast.Expr) and isinstance(first.value, ast.Constant):
+                docstrings.add(id(first.value))
+    return frozenset(docstrings)
+
+
+def _command_spellings(tree: ast.AST, tokens: frozenset[str]) -> frozenset[int]:
+    """Return the identity of every constant that spells an executable.
+
+    An executable is spelled as the first element of a command vector or as
+    the value of a name that holds an executable. A sequence of agent tokens
+    is a roster of agents and spells no executable.
+    """
+    spellings: set[int] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Tuple | ast.List) and node.elts:
+            if not any(
+                isinstance(element, ast.Constant) and element.value in tokens
+                for element in node.elts[1:]
+            ):
+                spellings.add(id(node.elts[0]))
+        elif isinstance(node, ast.Assign | ast.AnnAssign) and node.value is not None:
+            targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+            if any(
+                isinstance(target, ast.Name)
+                and target.id.endswith(EXECUTABLE_NAME_SUFFIXES)
+                for target in targets
+            ):
+                spellings.add(id(node.value))
+    return frozenset(spellings)
+
+
+def toolchain_module_token_literals() -> tuple[TokenLiteral, ...]:
+    """Observe every string constant in the toolchain's modules equal to an owner token.
+
+    Docstrings and the spelling of an executable in a command vector are not
+    declarations of a token.
+    """
     tokens = frozenset(owner_source_tokens().values())
     literals: list[TokenLiteral] = []
-    for module in BUILD_MODULE_PATHS:
+    for module in toolchain_module_paths():
         tree = ast.parse((REPOSITORY_ROOT / module).read_text(encoding="utf-8"))
+        exempt = _docstring_constants(tree) | _command_spellings(tree, tokens)
         literals.extend(
             TokenLiteral(module, node.lineno, node.value)
             for node in ast.walk(tree)
             if isinstance(node, ast.Constant)
             and isinstance(node.value, str)
             and node.value in tokens
+            and id(node) not in exempt
         )
     return tuple(literals)
 
