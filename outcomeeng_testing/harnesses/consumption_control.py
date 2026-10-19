@@ -1885,7 +1885,11 @@ def retention_plan_property(
             ordered = [
                 job for plan in reversed(plans) for job in plan[ScheduleField.JOBS]
             ]
-            expected = ordered[schedule.RETAINED_JOB_LIMIT :]
+            expected = [
+                job
+                for job in ordered[schedule.RETAINED_JOB_LIMIT :]
+                if Path(job["path"]).exists()
+            ]
             mark = len(runner.calls)
             planned = schedule.install(
                 replace(work.config, namespace=history[-1]),
