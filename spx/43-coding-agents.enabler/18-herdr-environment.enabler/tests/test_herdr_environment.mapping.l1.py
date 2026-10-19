@@ -12,6 +12,7 @@ from outcomeeng_testing.harnesses.cli_usage import read_argv
 from outcomeeng_testing.harnesses.herdr_environment import (
     AbsentExecutableRunner,
     CapturedResponse,
+    ControlledClock,
     RecordingRunner,
     background_work_exit_runner,
     captured_error_message,
@@ -724,3 +725,38 @@ def test_stop_answers_the_background_work_confirmation_with_exactly_one_key() ->
     )
     assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
     assert runner.calls.count(key) == 1
+
+
+def test_stop_maps_a_session_that_holds_its_pane_at_the_bound_to_exit_blocked() -> (
+    None
+):
+    module = load_herdr_environment()
+    other_screen = captured_success_response(module, module.Operation.READ)
+    assert other_screen is not None, "no captured pane read"
+    keys = module.PUBLIC_HERDR_COMMAND_PREFIXES[module.Operation.KEY]
+    # The three ways a session keeps its pane after `/exit`, each answered by no
+    # key: the confirmation without the request's field, the confirmation in a
+    # session of another agent kind, and a screen that is not the confirmation.
+    stalls = [
+        ({}, {}),
+        ({"stop_background_work": True}, {"agent_kind": "codex"}),
+        ({"stop_background_work": True}, {"screen": other_screen.result}),
+    ]
+
+    for request_fields, runner_fields in stalls:
+        clock = ControlledClock()
+        armed = background_work_exit_runner(module, clock=clock, **runner_fields)
+        assert armed is not None, "no captured background-work exit confirmation"
+        runner, pane = armed
+        request = module.operation_request(
+            module.Operation.STOP, pane=pane, mutation_authorized=True, **request_fields
+        )
+
+        result = module.execute(request, runner, clock)
+
+        assert result[module.STATUS_FIELD] == module.ExecutionStatus.EXIT_BLOCKED
+        assert result[module.OUTPUT_FIELD] == runner.screen.stdout
+        session = cast(dict[str, object], result[module.SESSION_RESULT_FIELD])
+        assert session[module.PANE_ID_FIELD] == pane
+        assert clock.elapsed == module.STOP_BOUND_SECONDS
+        assert not any(call[: len(keys)] == tuple(keys) for call in runner.calls)

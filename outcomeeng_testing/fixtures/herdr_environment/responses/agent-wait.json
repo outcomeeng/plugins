@@ -4,19 +4,20 @@
     "agent": {
       "agent": "claude",
       "agent_status": "done",
-      "cwd": "/Users/shz/Code/outcomeeng/plugins/worktrees/orchestrate-officers",
+      "completion_seq": 3514,
+      "cwd": "/Users/shz/Code/outcomeeng/plugins/worktrees/executor-597",
       "focused": false,
-      "foreground_cwd": "/Users/shz/Code/outcomeeng/plugins/worktrees/orchestrate-officers",
+      "foreground_cwd": "/Users/shz/Code/outcomeeng/plugins/worktrees/executor-597",
       "interactive_ready": true,
-      "name": "startprobe",
-      "pane_id": "w9:p3",
+      "name": "capture-a",
+      "pane_id": "w63:p2",
       "revision": 4,
-      "state_change_seq": 8,
-      "tab_id": "w9:t1",
-      "terminal_id": "term_65bbf79a7f9924",
-      "terminal_title": "✳ Reply with ok",
-      "terminal_title_stripped": "Reply with ok",
-      "workspace_id": "w9"
+      "state_change_seq": 3514,
+      "tab_id": "w63:t2",
+      "terminal_id": "term_65e28e5660f046a",
+      "terminal_title": "✳ Ok reply",
+      "terminal_title_stripped": "Ok reply",
+      "workspace_id": "w63"
     },
     "type": "agent_info"
   }

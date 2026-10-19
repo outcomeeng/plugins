@@ -61,9 +61,8 @@ RESPONSE_FIXTURE_ROOT = FIXTURE_ROOT / "responses"
 ERROR_FIXTURE_ROOT = RESPONSE_FIXTURE_ROOT / "errors"
 # Responses herdr wrote for agent sessions whose evidence lacks projected
 # fields: a session started by a shell command outside the adapter, which
-# carries no name and no interactive_ready, and a start blocked during startup,
-# which carries no interactive_ready. The inventory lists both beside one
-# complete session.
+# carries no name and no interactive_ready. The inventory lists it beside the
+# complete sessions of the same workspace.
 INCOMPLETE_FIXTURE_ROOT = RESPONSE_FIXTURE_ROOT / "incomplete"
 # The pane list herdr wrote for the stopped pane's workspace once the exit
 # prompt ended its session.
@@ -633,12 +632,38 @@ BACKGROUND_WORK_SCREEN_FIXTURE = (
 AGENT_NOT_FOUND_GET_FIXTURE = ERROR_FIXTURE_ROOT / "agent-get.agent_not_found.json"
 
 
+CLOCK_RUNAWAY_SECONDS = 600
+
+
+@dataclass
+class ControlledClock:
+    """Time-and-concurrency collaborator: a clock that advances only through the
+    sleeps it is asked for, so a bounded wait runs without wall-clock delay. A
+    wait that keeps sleeping past the runaway limit raises, so an unbounded loop
+    ends the run as an execution error instead of hanging it."""
+
+    elapsed: float = 0.0
+    sleeps: list[float] = field(default_factory=list)
+
+    def now(self) -> float:
+        return self.elapsed
+
+    def sleep(self, seconds: float) -> None:
+        self.sleeps.append(seconds)
+        self.elapsed += seconds
+        if self.elapsed > CLOCK_RUNAWAY_SECONDS:
+            raise RuntimeError(
+                f"the controlled clock ran {self.elapsed} seconds without the wait ending"
+            )
+
+
 @dataclass
 class BackgroundWorkExitRunner:
     """Interaction-protocol collaborator: a hosted session whose `/exit` meets a
     pane read answering with the given screen until a key is sent, after which
     herdr reports no agent session in that pane. It records every argument
-    vector and returns captured results only; it judges nothing."""
+    vector, the controlled clock's time at each command, and the bound each
+    command carried, and returns captured results only; it judges nothing."""
 
     prompt: CommandResultContract
     agent: CommandResultContract
@@ -651,6 +676,9 @@ class BackgroundWorkExitRunner:
     keys_prefix: tuple[str, ...]
     calls: list[tuple[str, ...]] = field(default_factory=list)
     key_sent: bool = False
+    clock: ControlledClock | None = None
+    call_times: list[float] = field(default_factory=list)
+    call_bounds: list[int] = field(default_factory=list)
 
     def run(
         self,
@@ -660,6 +688,9 @@ class BackgroundWorkExitRunner:
         timeout_seconds: int = 0,
     ) -> CommandResultContract:
         self.calls.append(argv)
+        self.call_bounds.append(timeout_seconds)
+        if self.clock is not None:
+            self.call_times.append(self.clock.now())
         if argv[: len(self.keys_prefix)] == self.keys_prefix:
             self.key_sent = True
             return self.keyed
@@ -677,10 +708,12 @@ def background_work_exit_runner(
     *,
     screen: CommandResultContract | None = None,
     agent_kind: str | None = None,
+    clock: ControlledClock | None = None,
 ) -> tuple[BackgroundWorkExitRunner, str] | None:
     """The runner for a stop of a captured session, and that session's pane, or
     None while herdr's confirmation screen is uncaptured. `screen` replaces the
-    pane read; `agent_kind` replaces the kind herdr's evidence names."""
+    pane read; `agent_kind` replaces the kind herdr's evidence names; `clock` is
+    the controlled clock whose time the runner records at each command."""
     stopped = captured_success_response(module, module.Operation.STOP)
     looked_up = captured_success_response(module, module.Operation.READ)
     if (
@@ -710,6 +743,7 @@ def background_work_exit_runner(
             get_prefix=tuple(module.EVIDENCE_COMMAND_PREFIXES[module.Operation.READ]),
             read_prefix=tuple(prefixes[module.Operation.READ]),
             keys_prefix=tuple(prefixes[module.Operation.KEY]),
+            clock=clock,
         ),
         pane,
     )

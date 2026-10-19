@@ -4,6 +4,7 @@ from typing import cast
 
 from outcomeeng_testing.generators.herdr_environment import operation_requests
 from outcomeeng_testing.harnesses.herdr_environment import (
+    ControlledClock,
     RecordingRunner,
     background_work_exit_runner,
     captured_success_response,
@@ -339,3 +340,35 @@ def test_stop_sends_a_key_only_to_the_background_work_confirmation_of_a_claude_s
     )
     module.execute(requested, elsewhere)
     assert not any(call[: len(keys)] == tuple(keys) for call in elsewhere.calls)
+
+
+def test_stop_reads_its_pane_no_later_than_its_bound() -> None:
+    module = load_herdr_environment()
+    clock = ControlledClock()
+    armed = background_work_exit_runner(module, clock=clock)
+    assert armed is not None, "no captured background-work exit confirmation"
+    runner, pane = armed
+    # The session holds its pane for as long as the clock runs: the request
+    # lacks the field that would answer the confirmation.
+    request = module.operation_request(
+        module.Operation.STOP, pane=pane, mutation_authorized=True
+    )
+
+    module.execute(request, runner, clock)
+
+    assert len(runner.call_times) == len(runner.calls) == len(runner.call_bounds)
+    read_prefix = tuple(module.PUBLIC_HERDR_COMMAND_PREFIXES[module.Operation.READ])
+    get_prefix = tuple(module.EVIDENCE_COMMAND_PREFIXES[module.Operation.READ])
+    pane_reads = [
+        (started, bound)
+        for call, started, bound in zip(
+            runner.calls, runner.call_times, runner.call_bounds, strict=True
+        )
+        if call[: len(read_prefix)] == read_prefix
+        or call[: len(get_prefix)] == get_prefix
+    ]
+    assert len(pane_reads) > 2
+    for started, bound in pane_reads:
+        assert started <= module.STOP_BOUND_SECONDS
+        left = max(1, module.STOP_BOUND_SECONDS - started)
+        assert left <= bound < left + 1
