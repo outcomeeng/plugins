@@ -191,6 +191,20 @@ AUTHORITY_HIERARCHY_POLICY_REQUIREMENTS: Final = (
         "`<tool> < <file>`",
     ),
     (
+        "payload exact scratch path",
+        "write each payload file at the scratch directory's path exactly as the "
+        "harness names it for the session",
+    ),
+    (
+        "payload scratch path reconstruction prohibition",
+        "retype, shorten, or reconstruct that directory",
+    ),
+    (
+        "purposeless file prohibition",
+        "write a file without a task purpose: no dummy, probe, or placeholder "
+        "file, and no file written only to learn whether a write succeeds",
+    ),
+    (
         "payload removal prohibition",
         "remove a payload file",
     ),

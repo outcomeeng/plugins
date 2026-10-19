@@ -60,6 +60,8 @@ When a named subagent is unavailable, invoke the owning plugin's `/<plugin>-plug
 - **ALWAYS** write the payload with the harness's file-write tool to a file in the scratch directory the harness names for the session, under a file name unique to the agent. Where the harness names no scratch directory, use `$RUNNER_TEMP` on a hosted runner.
 - **ALWAYS** hand the file to the tool through its own file argument, such as `gh pr create --body-file <file>` or `git commit -F <file>`, or through an input redirect `<tool> < <file>`. An output redirect is no payload form. A request sent to a skill's runner travels through a scratch file the same way.
 - **NEVER** pass a payload through a heredoc, a pipe, or an inline form such as a quoted or `printf` argument; assemble or repair no payload with command substitution or post-hoc text substitution; write no payload to a fixed path or to `$TMPDIR`, which every session of the user shares.
+- **ALWAYS** write each payload file at the scratch directory's path exactly as the harness names it for the session, followed by the file's unique name; **NEVER** retype, shorten, or reconstruct that directory, because a retyped path differs from the harness's by one character and lands in a directory no session owns.
+- **NEVER** write a file without a task purpose: no dummy, probe, or placeholder file, and no file written only to learn whether a write succeeds, in any directory.
 - **NEVER** remove a payload file; the harness clears its scratch directory, and a harness without garbage collection keeps the file.
 
 ---
