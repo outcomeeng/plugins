@@ -6,6 +6,12 @@ CAN be verified for correctness before changes reach the main branch, with the t
 
 ## Assertions
 
+- Given a pytest run whose tests create temp files through `tempfile`, through `tmp_path`, and through a child process, when the run ends with a passing and a failing test, then the entries of the user temp folder equal the entries before the run
+- ALWAYS: a pytest run creates its run root under `.spx/worktree/test-runs/` in its worktree, sets `TMPDIR` and Python's default temp directory to that root before its first test, and removes the root when the run ends, per [`spx/15-test-language.adr.md`](spx/15-test-language.adr.md)
+- ALWAYS: a pytest run sets `GIT_CEILING_DIRECTORIES` to its run root before its first test, per [`spx/15-test-language.adr.md`](spx/15-test-language.adr.md)
+- ALWAYS: before its first test, a pytest run removes every run root left under `.spx/worktree/test-runs/` in its own worktree and touches no path outside that worktree, per [`spx/15-test-language.adr.md`](spx/15-test-language.adr.md)
+- NEVER: pytest keeps a `tmp_path` directory after its test ends, whether the test passed or failed, per [`spx/15-test-language.adr.md`](spx/15-test-language.adr.md)
+
 ### Compliance
 
 - ALWAYS: GitHub Actions runs the full quality gate on `pull_request` and on push to `main` by invoking the `just check-full` gate recipe with the gate's toolchain provisioned at the project's declared Python version, never an inlined or filtered subset beyond the live-discovery selection [`spx/15-validation.enabler/65-gate.enabler/21-selected-gate.enabler/15-live-discovery.pdr.md`](spx/15-validation.enabler/65-gate.enabler/21-selected-gate.enabler/15-live-discovery.pdr.md) declares and never a soft-passed step, per [spx/13-infrastructure.enabler/21-test-infrastructure.enabler/15-ci-gate.adr.md](spx/13-infrastructure.enabler/21-test-infrastructure.enabler/15-ci-gate.adr.md) ([test](tests/test_ci_gate.compliance.l1.py))
