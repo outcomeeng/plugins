@@ -223,7 +223,7 @@ Impact: a later audit of `change-standards` can raise the finding again.
 
 Revisit and settlement condition: `inert-stdin` in `lifecycle.md` states the instruction in imperative voice or names Claude as its subject, and one typed skill audit of `change-standards` raises no `banned_subject` finding on it.
 
-## DEBT [consistency]: the report-changes assertions map a row from the retired Claimed, Claim, and Handoff comment model `spx/31-outcomeeng.enabler/32-changes.enabler/changes.md` `report-changes row mapping assertions` `consistency`
+## DEBT [consistency]: the report-changes assertions map a row from the retired Claimed, Claim, and Handoff comment model `spx/31-outcomeeng.enabler/32-changes.enabler/changes.md` `report-changes row mapping assertions` [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md)
 
 Defect class: `consistency`.
 
@@ -234,3 +234,15 @@ Evidence: the assertions at lines 55 and 56 of `changes.md`; the two links of th
 Impact: the assertions, the linked tests, the skill, and the script encode the retired model, so a report built from them derives no holder, changeset, or next action from the current records and reports a Lifecycle set that includes `Claimed`.
 
 Revisit and settlement condition: a Change revises the `report-changes` assertions, tests, harness, skill, and script together to derive the holder from the assignee and the winning claim block, the changeset and next action from the newest Handoff commit on `change/<N>`, and the Lifecycle set from the four values `Available`, `Submitted`, `Applied`, and `Abandoned`.
+
+## FILED [security]: authority-read accepts a holder's own release of a Submitted Change as the Maintainer's confirmation `src/plugins/spec-tree/skills/change-standards/references/lifecycle.md` `authority-read` [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md)
+
+Defect class: `security`.
+
+Finding: the `authority-read` rule reads a Lifecycle move out of `Submitted` whose Maturity at the move equals the Maturity at the move into `Submitted` as the authority for leaving that Maturity. The release of a `Submitted` Change writes `Available` and lets its pending confirmation lapse, so a holder's own release writes the same field-change event the rule accepts. A holder who submits a Change at Framed and then releases it leaves a `Submitted` to `Available` move at equal Maturity, which the rule reports as the authority to advance past Framed. The rule, the decisions `field-authority` and `authority-move` of [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md), `maturity-and-authority` in `change-standards`, and the `audit-change` authority read name no condition that tells a holder's release from the Product's Maintainer's confirmation.
+
+Evidence: local review run `2026-10-21_22-42-32-804-317559994c88` on head `50b3087be79b99724a255beca186b9e3646f769b` returned the finding as `reject`, category `security`, at line 41 of `src/plugins/spec-tree/skills/change-standards/references/lifecycle.md`. The decisions `release-event`, `submitted-not-ready`, and `lifecycle-transitions` of the PDR state in exact text that the release of a `Submitted` Change writes `Available`, and the Change's Governance mutations state them as written, so under [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md) the changeset writes no repair and the finding is returned `filed`. The Plugins Maintainer ruled it `filed`.
+
+Impact: the store's field-change events cannot show whether the Maintainer or the holder moved a `Submitted` Change to `Available`, so the Maturity gate rests on an event a holder can also write.
+
+Revisit and settlement condition: `authority-read`, the PDR decisions `field-authority` and `authority-move`, and the `audit-change` authority read exclude a holder's own release from the authority for leaving a Maturity, and one change audit and one PDR audit raise no finding on the exclusion.
