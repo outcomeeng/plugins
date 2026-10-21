@@ -193,7 +193,7 @@ The taxonomy is closed: `spx/` admits no artifact outside this table, the canoni
 
 ADR versus PDR is decided by content: an ADR governs architecture the product's users cannot observe; a PDR governs behavior they can. A decision record is a file inside the node whose subtree it governs, at the position every later reader loads it from; a lower-index record constrains higher-index siblings and their descendants. When a decision's owner is unclear, decompose the structure first and author the record afterwards. Tree position determines reach, so broad reach never determines type, and a root record is one every subtree obeys.
 
-Test-infrastructure boundaries and the placements this taxonomy rules out are in `${CLAUDE_SKILL_DIR}/references/artifact-placement.md`: files under `spx/<node>/tests/` hold typed assertion evidence only; harnesses, generators, and inert fixtures are governed production code in the language's declared infrastructure home, owned by the output node whose behavior they mediate, never a top-level infrastructure-testing subtree and never “test support,” “helpers,” “utilities,” or “tools”; a child `[test]` rule may concretize an ancestor `[audit]` rule, while same-content repetition with the same mechanism is duplication.
+Read `${CLAUDE_SKILL_DIR}/references/artifact-placement.md` when placing a harness, generator, or fixture, or when a placement might fall outside this taxonomy.
 
 </artifact_placement>
 
