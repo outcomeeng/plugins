@@ -1,0 +1,23 @@
+Capture: Claude Code /permissions, Workspace tab, session 88e5fc76-9a78-419a-9324-02539d39c4b7, pane C961086A-0C1F-4786-ADE4-44A229B55C3D, worktree /Users/shz/Code/outcomeeng/plugins/worktrees/frame-120/
+Recovery: claude --resume 88e5fc76-9a78-419a-9324-02539d39c4b7 --add-dir /Users/shz/Code/outcomeeng/plugins/worktrees/executor-593/.spx/probe-writable-root
+Source: Prowl read of the pane screen, last 60 lines, stable-screen mode; the blank padding rows and the horizontal rule rows are elided, every other row is verbatim.
+
+▝▜██████▀  Sonnet 5.5 with high effort · Claude Max
+ ▝▝   ▝▝   ~/Code/outcomeeng/plugins/worktrees/frame-120
+
+❯ Reply with the single word ready. Take no other action.
+
+⏺ ready
+
+✻ Churned for 3s · done 11:37 AM
+
+   Permissions  Recently denied   Allow   Ask   Deny   Auto mode   Workspace
+
+   Claude Code can read files in the workspace, and make edits when auto-accept edits is on.
+
+     -  /Users/shz/Code/outcomeeng/plugins/worktrees/frame-120 (Original working directory)
+     1. /private/tmp
+     2. /Users/shz/Code/outcomeeng/plugins/worktrees/executor-593/.spx/probe-writable-root
+     3. Add directory…
+
+   ←/→ to switch · ↓ to select · Esc to cancel

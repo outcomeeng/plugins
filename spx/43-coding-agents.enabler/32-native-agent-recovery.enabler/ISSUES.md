@@ -84,32 +84,6 @@ follow-up Change will state the decision line and the assertion, and carries the
 candidate ends with `INVALID_TARGET` before any activation or native launch, and a linked compliance
 test holds that rule.
 
-## DEBT [evidence]: the writable-roots probe has no attested run
-
-The CI review of https://github.com/outcomeeng/plugins/pull/689 at head
-91fa1eab0532df6b23c20a6870e1d39c4a0a5b15 raised this finding at
-`spx/43-coding-agents.enabler/32-native-agent-recovery.enabler/native-agent-recovery.md:16`
-(https://github.com/outcomeeng/plugins/pull/689#issuecomment-6245101073).
-
-**Evidence**: the assertion that a recovered native session's effective permission policy lists a
-supplied writable root links `probes/writable-roots/probe.md`, and that probe has no attested run.
-`probes/writable-roots/` holds the protocol and no `runs/` artifact. The linked tests in
-`tests/test_native_agent_recovery.mapping.l1.py` and `tests/test_native_agent_recovery.compliance.l1.py`
-assert the rendered resume command and its option placement. None of them launches a native agent
-session or reads its effective policy, so nothing yet shows that the appended `--add-dir` option reaches
-a recovered session's permissions.
-
-**Resolution shape**: run the protocol in `probes/writable-roots/probe.md` against a live Claude Code
-session and a live Codex session, read each recovered session's effective policy through that agent's own
-status surface, and retain each screen as the probe's inspectable artifact.
-
-**Deferral reason**: the attested run restarts Prowl, which the operator owns, so the run has no form
-inside the Change that links the probe. The node declares `malleability: spec`, so an unattested probe
-leaves the assertion Declared and the node merges as itself.
-
-**Settlement condition**: `probes/writable-roots/` retains an attested run for one Claude Code candidate
-and one Codex candidate, and each retained screen lists the supplied root as writable.
-
 ## DEBT [consistency]: an absent or unusable agent-token module ends recovery with a traceback
 
 The local review of https://github.com/outcomeeng/plugins/pull/694, run
@@ -144,3 +118,50 @@ follow-up Change states the decision line and the assertion, and carries the fix
 **Settlement condition**: an absent, non-executing, or `AgentToken`-less agent-token module makes
 recovery print one `error:` line on stderr and exit 2. A linked scenario test holds that rule, and the
 coding-agents changelog records it.
+
+## DEBT [consistency]: recovery admits no candidate set without a current-session controller
+
+`_validate_candidate_set` in `src/plugins/coding-agents/skills/recover-prowl-agents/scripts/recover_agents.py`
+rejects a candidate set unless exactly one candidate carries `current-session` evidence. Prepare, activate,
+recover, verify, and reassess each read the manifest through `_prepared_candidates`, so each rejects such
+a set.
+
+**Evidence**: running `prepare` for one Claude Code candidate (evidence `public-agent`) and one Codex
+candidate (evidence `native-status`), each in its own Prowl pane, returned
+`{"detail": "Recovery candidates require exactly one current-session controller.", "schemaVersion": 5, "status": "invalid-target"}`.
+The session that ran the command holds no Prowl pane.
+
+**Impact**: a session outside every Prowl pane cannot recover a set of Prowl panes. The writable-roots probe
+ran only after the Author session moved into a Prowl pane and served as the controller; before that, its
+protocol could not run without a candidate mislabeled as the controller.
+
+**Resolution shape**: the node's spec and the exact-native-recovery decision state whether the controller is
+required; the source and the compliance test follow the answer.
+
+**Deferral reason**: the requirement is a stated product rule that no Change authorizes this changeset to
+amend.
+
+**Settlement condition**: the decision and the spec state the controller rule, and the source and linked
+tests comply with it.
+
+## DEBT [evidence]: the writable-roots probe runner has no deterministic test coverage
+
+The probe runner `outcomeeng_testing/harnesses/writable_roots_probe.py`, about 1100 lines, runs through
+the justfile recipe `probe-writable-roots-codex`. No test under `spx/**/tests` imports it, so no
+assertion governs its pure helpers.
+
+**Evidence**: the helpers `parse_status`, `root_listed`, `workspace_policy`, `server_attached`,
+`expand_home`, `condense_screen`, `input_ready`, `command_pending`, `socket_paths`, and the admission
+exclusion check, and the `CodexWritableRootProbe` flow with injected terminal, recovery, and runner
+doubles, have no linked test. The local review run `2026-10-21_07-48-52-767-20eb803fc352` reported the
+gap as an evidence finding on that file.
+
+**Impact**: these helpers decide the INVALID stop conditions that the probe verdict relies on. A defect
+in a helper can change a probe verdict or stop condition without any deterministic test failing.
+
+**Resolution shape**: unit coverage of the runner is a separate, larger concern than the probe track.
+It needs its own assertion design under this node, covering the helpers and the
+`CodexWritableRootProbe` flow with injected doubles.
+
+**Settlement condition**: co-located tests cover the helpers, with assertion design declared under the
+owning node.

@@ -157,6 +157,10 @@ verify-marketplace-installation:
 verify-native-profile-execution artifact_directory *args:
     @uv run python -m outcomeeng_testing.harnesses.native_profile_execution "{{artifact_directory}}" {{args}}
 
+# Run the writable-roots probe protocol for one fresh Codex thread and capture its status screens
+probe-writable-roots-codex *args:
+    @uv run python -m outcomeeng_testing.harnesses.writable_roots_probe {{args}}
+
 # Bump the manifest version of every plugin with changes under src/plugins/<name>/** since base_ref
 # Segment defaults to per-plugin auto-detection; pass an explicit segment to override every changed plugin.
 bump base_ref="origin/main" segment="":

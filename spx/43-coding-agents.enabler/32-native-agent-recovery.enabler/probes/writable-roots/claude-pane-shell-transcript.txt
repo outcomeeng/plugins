@@ -1,0 +1,23 @@
+Capture: shell transcript of the candidate pane 955EA513-D369-4E8C-8072-CC80CA0A4279 in the worktree /Users/shz/Code/outcomeeng/plugins/worktrees/executor-180/ after the third exit of the Claude Code session 6c9c26dd-13fd-4384-bce8-81a4bf7108ab, Claude Code 2.1.303 (Claude Code).
+Source: Prowl read of the pane screen, last 40 lines, stable-screen mode; trailing blanks are trimmed and every row is verbatim. The seed launch, the control resume without a root, and the treatment resume with a root appear in that order, each followed by the exit line Claude Code prints.
+
+Last login: Sun Oct 18 23:06:00 on ttys114
+direnv: loading ~/Code/outcomeeng/.envrc
+direnv: export +CODEX_HOME
+~/Code/outcomeeng/plugins/worktrees/executor-180 @1df1afae
+❯ claude
+
+Resume this session with:
+claude --resume 6c9c26dd-13fd-4384-bce8-81a4bf7108ab
+~/Code/outcomeeng/plugins/worktrees/executor-180 @1df1afae 2m 10s
+❯ claude --resume 6c9c26dd-13fd-4384-bce8-81a4bf7108ab
+
+Resume this session with:
+claude --resume 6c9c26dd-13fd-4384-bce8-81a4bf7108ab
+~/Code/outcomeeng/plugins/worktrees/executor-180 @1df1afae 1m 35s
+❯ claude --resume 6c9c26dd-13fd-4384-bce8-81a4bf7108ab --add-dir /Users/shz/Code/outcomeeng/plugins/worktrees/executor-593/.spx/probe-root-593-c
+
+Resume this session with:
+claude --resume 6c9c26dd-13fd-4384-bce8-81a4bf7108ab
+~/Code/outcomeeng/plugins/worktrees/executor-180 @1df1afae 1m 9s
+❯
