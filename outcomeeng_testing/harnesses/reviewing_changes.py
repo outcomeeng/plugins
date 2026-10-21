@@ -37,6 +37,8 @@ outside ``spx/``.
 
 from __future__ import annotations
 
+import enum
+import importlib.util
 import io
 import json
 import os
@@ -47,7 +49,7 @@ import sys
 import traceback
 from contextlib import redirect_stderr, redirect_stdout
 from types import ModuleType
-from typing import Any, Callable, cast
+from typing import Any, Callable, NamedTuple, cast
 from unittest.mock import patch
 
 from outcomeeng.distribution.contracts import Target
@@ -159,6 +161,42 @@ def run_review_result_with_agent_tokens_file(
     under observation. The copy loads in its own interpreter so the import-time load is the
     behavior under observation.
     """
+    module = _stage_review_result_copy(
+        scratch, tokens=tokens, make_directory=make_directory
+    )
+    return subprocess.run(  # noqa: S603 — the interpreter and the copied module are harness-built
+        [sys.executable, "-I", "-B", str(module)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+def load_review_result_with_agent_tokens(
+    scratch: pathlib.Path, *, tokens: str
+) -> ModuleType:
+    """Load a copy of the shipped module staged beside an agent-tokens file holding ``tokens``.
+
+    The copy sits in the installed tree's layout, so the module reads the staged data file
+    through its own loader; the caller observes the module attributes derived from that file.
+    """
+    module_path = _stage_review_result_copy(
+        scratch, tokens=tokens, make_directory=False
+    )
+    spec = importlib.util.spec_from_file_location(
+        "review_result_with_staged_agent_tokens", module_path
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _stage_review_result_copy(
+    scratch: pathlib.Path, *, tokens: str | None, make_directory: bool
+) -> pathlib.Path:
+    """Copy the module and its loader sibling into ``scratch`` beside a staged tokens file."""
     skills_dir = scratch / SCRIPTS_DIR.parents[1].name
     scripts_dir = skills_dir / SCRIPTS_DIR.parent.name / SCRIPTS_DIR.name
     scripts_dir.mkdir(parents=True)
@@ -171,12 +209,7 @@ def run_review_result_with_agent_tokens_file(
         REVIEW_RESULT_MODULE_PATH.read_text(encoding="utf-8"), encoding="utf-8"
     )
     stage_agent_tokens_file(scripts_dir, tokens=tokens, make_directory=make_directory)
-    return subprocess.run(  # noqa: S603 — the interpreter and the copied module are harness-built
-        [sys.executable, "-I", "-B", str(module)],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    return module
 
 
 def load_compute_diff_module() -> ModuleType:
@@ -399,6 +432,56 @@ def open_scoped_review_run(
     if scoped.returncode != 0:
         raise RuntimeError(f"review_run.py append-scope failed: {scoped.stderr}")
     return state_path
+
+
+class BranchExport(enum.Enum):
+    """What the caller exports as the review's branch value."""
+
+    NOTHING = "nothing"
+    CHECKED_OUT_BRANCH = "checked-out-branch"
+    HEAD_COMMIT = "head-commit"
+
+
+class StartedReviewRun(NamedTuple):
+    """A started review run: its recorded metadata and the repository facts around it."""
+
+    metadata: dict[str, Any]
+    checked_out_branch: str
+    head_commit: str
+    exported: str | None
+
+
+def start_review_run_exporting(
+    scratch: pathlib.Path, export: BranchExport
+) -> StartedReviewRun:
+    """Start a review run in a fresh synthetic repository under ``scratch``.
+
+    The exported branch value follows ``export``: nothing, the checked-out branch's name,
+    or the full identity of the head commit. A non-zero exit is a setup failure and raises
+    with the runner's stderr.
+    """
+    scratch.mkdir(parents=True)
+    repo = scratch / "repo"
+    repo.mkdir()
+    base_ref = init_repo_with_branch(repo)
+    env, _journal_path = runner_env(scratch, repo, base_ref)
+    checked_out_branch = run_git(
+        "symbolic-ref", "--short", "HEAD", cwd=repo
+    ).stdout.strip()
+    head_commit = run_git("rev-parse", "HEAD", cwd=repo).stdout.strip()
+    exported = {
+        BranchExport.NOTHING: None,
+        BranchExport.CHECKED_OUT_BRANCH: checked_out_branch,
+        BranchExport.HEAD_COMMIT: head_commit,
+    }[export]
+    if exported is not None:
+        env[str(load_review_run_module().ENV_BRANCH)] = exported
+    started = run_script(REVIEW_RUN_SCRIPT, "start", env=env, cwd=repo)
+    if started.returncode != 0:
+        raise RuntimeError(f"review_run.py start failed: {started.stderr}")
+    state_path = pathlib.Path(json.loads(started.stdout)["statePath"])
+    metadata = json.loads(state_path.read_text(encoding="utf-8"))["metadata"]
+    return StartedReviewRun(metadata, checked_out_branch, head_commit, exported)
 
 
 def run_script(
