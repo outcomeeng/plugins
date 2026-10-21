@@ -38,7 +38,6 @@ outside ``spx/``.
 from __future__ import annotations
 
 import enum
-import importlib.util
 import io
 import json
 import os
@@ -161,42 +160,6 @@ def run_review_result_with_agent_tokens_file(
     under observation. The copy loads in its own interpreter so the import-time load is the
     behavior under observation.
     """
-    module = _stage_review_result_copy(
-        scratch, tokens=tokens, make_directory=make_directory
-    )
-    return subprocess.run(  # noqa: S603 — the interpreter and the copied module are harness-built
-        [sys.executable, "-I", "-B", str(module)],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-
-
-def load_review_result_with_agent_tokens(
-    scratch: pathlib.Path, *, tokens: str
-) -> ModuleType:
-    """Load a copy of the shipped module staged beside an agent-tokens file holding ``tokens``.
-
-    The copy sits in the installed tree's layout, so the module reads the staged data file
-    through its own loader; the caller observes the module attributes derived from that file.
-    """
-    module_path = _stage_review_result_copy(
-        scratch, tokens=tokens, make_directory=False
-    )
-    spec = importlib.util.spec_from_file_location(
-        "review_result_with_staged_agent_tokens", module_path
-    )
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-def _stage_review_result_copy(
-    scratch: pathlib.Path, *, tokens: str | None, make_directory: bool
-) -> pathlib.Path:
-    """Copy the module and its loader sibling into ``scratch`` beside a staged tokens file."""
     skills_dir = scratch / SCRIPTS_DIR.parents[1].name
     scripts_dir = skills_dir / SCRIPTS_DIR.parent.name / SCRIPTS_DIR.name
     scripts_dir.mkdir(parents=True)
@@ -209,7 +172,12 @@ def _stage_review_result_copy(
         REVIEW_RESULT_MODULE_PATH.read_text(encoding="utf-8"), encoding="utf-8"
     )
     stage_agent_tokens_file(scripts_dir, tokens=tokens, make_directory=make_directory)
-    return module
+    return subprocess.run(  # noqa: S603 — the interpreter and the copied module are harness-built
+        [sys.executable, "-I", "-B", str(module)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
 
 
 def load_compute_diff_module() -> ModuleType:

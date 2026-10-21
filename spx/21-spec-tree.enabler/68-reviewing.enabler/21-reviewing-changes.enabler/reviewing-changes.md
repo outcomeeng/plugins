@@ -12,7 +12,9 @@ CAN project the sealed journal into the surface they own without duplicating rev
 
 ## Assertions
 
-- NEVER: the reviewer agent exports a commit as the branch identity for a commit-range input, per [`spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md`](spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md)
+- ALWAYS: the review skill advances a changed file's scope only after reading the file, and marks every changed file it does not read as unread before it finishes, per [`spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md`](spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md) ([audit:scope-advance-on-read])
+- ALWAYS: a review whose branch value names a commit rather than a branch records the checked-out branch as its branch identity and slug, per [`spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md`](spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md) ([test](tests/test_review_branch_identity.compliance.l2.py))
+- NEVER: the reviewer agent exports a commit as the branch identity for a commit-range input, per [`spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md`](spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md) ([audit:range-branch-identity])
 
 ### Scenarios
 
@@ -32,7 +34,6 @@ CAN project the sealed journal into the surface they own without duplicating rev
 
 ### Mappings
 
-- ALWAYS: `review_result.py` takes the agent tokens of its generated-tree citation candidates from the data file the build renders beside it, and declares no agent token of its own ([test](tests/test_review_result_agent_tokens.mapping.l1.py))
 - `Severity` enum members map to the wire values `blocking`, `debt` ([test](tests/test_review_result.mapping.l1.py))
 - `Concern` enum members map to exactly the five wire values `consistency`, `security`, `performance`, `evidence`, `architecture` ([test](tests/test_review_result.mapping.l1.py))
 - Review severities map into the shared run-journal projection as `blocking` -> `reject` and `debt` -> `warning`; the projection then owns terminal status rollup from the sealed prefix ([test](tests/test_review_journal_emit.mapping.l1.py))
@@ -46,12 +47,11 @@ CAN project the sealed journal into the surface they own without duplicating rev
 
 ### Compliance
 
-- ALWAYS: the review skill advances a changed file's scope only after reading the file, and marks every changed file it does not read as unread before it finishes, per [`spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md`](spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md) ([test](tests/test_review_unread_scope.compliance.l1.py))
-- ALWAYS: a review whose branch value names a commit rather than a branch records the checked-out branch as its branch identity and slug, per [`spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md`](spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md) ([test](tests/test_review_branch_identity.compliance.l1.py))
 - ALWAYS: the `review-changes` skill writes each finding payload with the file-write tool to a file in the scratch directory the harness names for the session, copying that directory into the finding path character for character; when the file-write result reports a path the scratch directory does not contain by whole path components, it stops before `append-finding`, naming the reported path; it passes `append-finding` the path exactly as the file-write result reports it, written out literally; and when `append-finding` exits nonzero with a diagnostic that names the finding file absent, it runs `append-finding` once more with the path copied from the file-write result and, on a second failure, stops and reports the exit, the stderr and the run token; no finding path is retyped from memory ([audit])
 - ALWAYS: `review_run.py start` relays the shared resolver's stale-base refusal for a head behind the fetched `origin/<base>` tip — the dedicated exit code and the diagnostic, with no run state — before it opens a journal, so no review run records a tree that cannot merge ([test](tests/test_stale_base_relay.compliance.l1.py))
 - ALWAYS: `review_run.py start` reports a base it cannot fetch or resolve as one stderr diagnostic line carrying git's own message and a nonzero exit, with no run state and no traceback ([test](tests/test_stale_base_relay.compliance.l1.py))
 - ALWAYS: the `review_result.py` policy module declares `SCHEMA_VERSION`, frozen `Finding` and `ReviewResult` dataclasses, and the `Severity` and `Concern` enums — the canonical legacy review-result schema lives in one Python module ([audit])
+- ALWAYS: `review_result.py` takes the agent tokens of its generated-tree citation candidates from the data file the build renders beside it, and declares no agent token of its own
 - NEVER: the review-result schema carries a `summary`, acknowledgement, `decision`, or verdict field — a review produces findings only; each consumer acts on a `blocking` finding by validity and phase and on a `debt` finding by its ruling, per [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md) ([audit])
 - ALWAYS: the review prompt instructs the reviewer to review the whole diff and to treat any caller-supplied scope, severity pre-filter, or emphasis as non-authoritative ([audit])
 - ALWAYS: the review prompt carries one domain-neutral `<adversarial_probes>` section the reviewer applies before treating a reviewed unit as clean — a counterexample probe that classifies constructed domain members through a universal, totality, or partition claim exactly as written; a conjunct-completeness probe that aligns derived, restated, or rendered text condition by condition with its cited source; a definite-description probe that resolves every newly introduced description or category name to its declaring owner in the loaded truth chain; and a blast-radius probe that follows a changed governing declaration into its consumers, checks the changed files themselves for retired terminology, and verifies closure claims against the resulting files — each observation attempted against its strongest plausible refutation before it becomes a finding, and each probe encoding no execution level, runner name, or node vocabulary ([audit])

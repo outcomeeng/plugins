@@ -1,6 +1,6 @@
 """Compliance evidence for the branch identity a review run records.
 
-``l1``: the shipped review runner runs as a subprocess against a synthetic
+``l2``: the shipped review runner runs as a subprocess against a synthetic
 repository, with the journal routed at the fake ``spx`` the harness writes.
 """
 

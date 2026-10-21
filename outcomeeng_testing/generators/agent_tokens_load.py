@@ -68,21 +68,3 @@ def load_failure_cases(module: ModuleType) -> tuple[LoadFailureCase, ...]:
             for missing in module.AGENT_TOKENS_REQUIRED_KEYS
         ),
     )
-
-
-STAGED_TOKEN_SUFFIX = "-staged"
-
-
-def staged_tokens_document(module: ModuleType) -> str:
-    """Return a tokens document whose every required token differs from the declared one.
-
-    Each required key maps to its declared token with a suffix appended, so a module
-    that reads its candidates from the staged file yields values no declaration of its
-    own holds.
-    """
-    return json.dumps(
-        {
-            key: f"{VALID_TOKENS[key]}{STAGED_TOKEN_SUFFIX}"
-            for key in module.AGENT_TOKENS_REQUIRED_KEYS
-        }
-    )
