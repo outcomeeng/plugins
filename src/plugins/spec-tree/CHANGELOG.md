@@ -10,6 +10,12 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.106.17
+
+### Added
+
+- **`/report-changes` lists the open Changes of the Change store as one table, read-only.** The skill reads the store and the Priority order from `spx/local/coordination.md`, takes the optional filters Product, Maturity, Lifecycle, holder, and blocked state from its arguments, and passes all of them as request values to its bundled standard-library script, which reads no overlay and no repository content. Each row carries the Change's number, URL, title, Product, Maturity, Lifecycle, Priority, holder, and Parent as the store holds them, plus the root reached through `Parent`, or `unresolved` on a cycle or an absent Change; its blockers with their state; the branch or pull request, with its head commit and its checks, that the newest Handoff's `Branch or PR` line names; the waiting state (`confirmation: <Maturity>`, `holder: <login>` with the winning Claim's session and claim root, `blockers: <numbers>`, `claim`, and `checks` for a Claimed Change whose pull request holds a check not in success); and the newest Handoff's `Next block` line. Rows follow the declared Priority order, a Change with no Priority standing last, then ascending issue number, and every page of the store is read. A read that fails, returns unreadable output, or fills a bound (`100 issues per page, 10 pages`, `50 field values`, `100 blockers, one page`, and likewise `100 assignees` and `100 events per page, 10 pages`) returns a blocked result naming the read or the bound and no row. The skill and its script run reading `gh` commands only and write no comment, field, assignee, blocker, or file. Before this change, a consumer listed Changes with ad hoc `gh` commands that read neither every page nor the Handoff and Claim records.
+
 ## 0.106.16
 
 ### Changed
