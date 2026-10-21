@@ -65,6 +65,7 @@ def _load_module(name: str, path: pathlib.Path) -> ModuleType:
 
 
 review_result = _load_module("review_result", _HERE / "review_result.py")
+review_run = _load_module("review_run", _HERE / "review_run.py")
 compute_diff = _load_module("compute_diff", _HERE / "compute_diff.py")
 jp = _load_module(
     "journal_projection",
@@ -174,9 +175,7 @@ def _resolve_head_ref() -> str:
 
 
 def _resolve_branch_name() -> str:
-    return os.environ.get(ENV_BRANCH, "").strip() or str(
-        changeset_scope.detect_current_branch(pathlib.Path.cwd())
-    )
+    return str(review_run._branch_identity(pathlib.Path.cwd()))
 
 
 def _resolve_target_kind() -> object:
