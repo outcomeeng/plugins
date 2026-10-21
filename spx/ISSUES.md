@@ -19,3 +19,13 @@ Category consistency, severity debt, finding F-001 of local review run 2026-10-1
 **Impact**: a blocking finding's deferral is not checkable against the finding it defers, so an unrelated entry can release the merge-readiness predicate.
 
 **Settlement condition**: a blocking deferral entry is matched to its finding by the same entry key a debt ruling uses.
+
+## The delegate echelon and the grant record have no definition in the tree [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md) `property 6` `versions/4.0/methodology/application/agent-orchestration.md Rank section`
+
+Category consistency, severity blocking, in the CI review of https://github.com/outcomeeng/plugins/pull/700, at line 17 of [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md). Property 6 is the override decision the governing Change states in exact text, so the changeset writes no repair to it, the finding is returned `filed`, and it counts as no rejection.
+
+**Evidence**: property 6 states that the operator delegate, the highest rank present of the delegate echelon, may override an Audit verdict, a Review rejection, or an audit that reached no verdict, and that the delegate performs an irreversible act only under an authorization the grant record names. The terms "delegate echelon" and "grant record" are defined only in the methodology chapter `versions/4.0/methodology/application/agent-orchestration.md`. No node in this tree states the echelon membership, its rank order, or the grant record location, writer, and schema. The sibling debt-finding rule in [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md) and [`spx/15-agent-terminology.pdr.md`](spx/15-agent-terminology.pdr.md) ground rank order in the Rank section of that chapter, while property 6 cites no source. The audit-tagged assertion in [`spx/21-spec-tree.enabler/76-merge.enabler/merge.md`](spx/21-spec-tree.enabler/76-merge.enabler/merge.md) that forbids an irreversible act no grant record authorization names depends on an artifact whose location and shape the tree never names.
+
+**Impact**: an Auditor checks the grant-record rule against an artifact the tree does not define, and the override rule derives its authority from terms with no in-tree meaning.
+
+**Settlement condition**: a Change brings the terms "delegate echelon" and "grant record" into the tree, stating the echelon membership, its rank order, and the grant record location, writer, and schema, or cites the Rank section of the methodology chapter `versions/4.0/methodology/application/agent-orchestration.md` for them.
