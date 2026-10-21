@@ -223,7 +223,7 @@ Impact: a later audit of `change-standards` can raise the finding again.
 
 Revisit and settlement condition: `inert-stdin` in `lifecycle.md` states the instruction in imperative voice or names Claude as its subject, and one typed skill audit of `change-standards` raises no `banned_subject` finding on it.
 
-## DEBT [consistency]: the report-changes assertions map a row from the retired Claimed, Claim, and Handoff comment model
+## DEBT [consistency]: the report-changes assertions map a row from the retired Claimed, Claim, and Handoff comment model `spx/31-outcomeeng.enabler/32-changes.enabler/changes.md` `report-changes row mapping assertions` `consistency`
 
 Defect class: `consistency`.
 
