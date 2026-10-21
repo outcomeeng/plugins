@@ -376,7 +376,7 @@ def render_generated(generated: GeneratedStore) -> ReplayedStore:
             }
         )
         start += size
-    blockers = {
+    blockers: dict[str, list[dict[str, object]]] = {
         str(issue.number): [
             {
                 "number": number,

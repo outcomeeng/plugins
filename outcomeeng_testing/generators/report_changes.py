@@ -18,7 +18,7 @@ from __future__ import annotations
 import string
 from dataclasses import dataclass
 from types import ModuleType
-from typing import Final
+from typing import Final, Literal
 
 from hypothesis import strategies as st
 
@@ -34,7 +34,7 @@ _MAX_PRIORITIES: Final = 5
 _MAX_ASSIGNEES: Final = 3
 _MAX_BLOCKERS: Final = 3
 _MAX_NUMBER: Final = 10_000
-_SURROGATE_CATEGORY: Final = "Cs"
+_SURROGATE_CATEGORY: Final[Literal["Cs"]] = "Cs"
 
 
 @dataclass(frozen=True)
