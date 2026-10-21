@@ -222,3 +222,15 @@ Evidence: `instructions:skill-auditor` run `2026-10-17_18-16-04-154-bd168bad0aee
 Impact: a later audit of `change-standards` can raise the finding again.
 
 Revisit and settlement condition: `inert-stdin` in `lifecycle.md` states the instruction in imperative voice or names Claude as its subject, and one typed skill audit of `change-standards` raises no `banned_subject` finding on it.
+
+## DEBT [consistency]: the report-changes assertions map a row from the retired Claimed, Claim, and Handoff comment model
+
+Defect class: `consistency`.
+
+Finding: the `report-changes` assertions of [`spx/31-outcomeeng.enabler/32-changes.enabler/changes.md`](spx/31-outcomeeng.enabler/32-changes.enabler/changes.md) at lines 55 and 56 map a row's changeset from the `Branch or PR` line of the newest `Handoff:` comment, its next action from that comment's `Next block` line, and its waiting state from a `Claimed` Change, its winning Claim, and `claim none recorded`. [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) removes the `Claimed` Lifecycle value, the `Claim:` and `Handoff:` comments, and every comment read except the claim exception, and keeps the Handoff on the Change's branch `change/<N>`.
+
+Evidence: the assertions at lines 55 and 56 of `changes.md`; the two links of those assertions to `spx/31-outcomeeng.enabler/32-changes.enabler/tests/test_report_changes.mapping.l1.py`; `src/plugins/spec-tree/skills/report-changes/SKILL.md`; and `src/plugins/spec-tree/skills/report-changes/scripts/report_changes.py`. The local review run `2026-10-21_19-28-07-109-fedf596d2469` raised the mismatch as a `reject` finding of category `consistency`.
+
+Impact: the assertions, the linked tests, the skill, and the script encode the retired model, so a report built from them derives no holder, changeset, or next action from the current records and reports a Lifecycle set that includes `Claimed`.
+
+Revisit and settlement condition: a Change revises the `report-changes` assertions, tests, harness, skill, and script together to derive the holder from the assignee and the winning claim block, the changeset and next action from the newest Handoff commit on `change/<N>`, and the Lifecycle set from the four values `Available`, `Submitted`, `Applied`, and `Abandoned`.
