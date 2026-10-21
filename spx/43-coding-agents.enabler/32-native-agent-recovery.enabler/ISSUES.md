@@ -136,7 +136,7 @@ coding-agents changelog entry.
 
 **Deferral reason**: the fix needs a decision line and a spec assertion that
 outcomeeng/changes#120's record does not state. Its execution runs under a standing order that
-forbids revising the record. The finding cites `spx/15-spec-coverage.adr.md`, which requires `[test]`
+forbids revising the record. The finding cites [`spx/15-spec-coverage.adr.md`](spx/15-spec-coverage.adr.md), which requires `[test]`
 evidence for assertions about executable code. No assertion declares this path, and this node declares
 `malleability: spec`, whose Passing requires no evidence beyond reachability and tagged results. A
 follow-up Change states the decision line and the assertion, and carries the fix.
