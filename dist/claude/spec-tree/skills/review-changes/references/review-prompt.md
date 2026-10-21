@@ -9,6 +9,7 @@
 - `<finding_validity>` — findings only; conditional framing; same-class sweep
 - `<concern>` — the five concerns
 - `<severity>` — the two severities
+- `<tracked_debt>` — the entry key and the `TRACKED` label for a `debt` finding the governing node's `ISSUES.md` records
 - `<finding_shape>` — the `Finding` object for `append-finding`
 - `<no_findings>` — the empty finding stream is the clean result
 - `<rule_citation>` — accepted citation forms and grounding rules
@@ -98,9 +99,21 @@ Every finding carries exactly one `severity`:
 - `blocking` — merge-safety defect: if deployed, the changeset would create a deterministic issue or pose a risk.
 - `debt` — a real defect that does not jeopardize merge safety: a problem the change carries, but not merge-blocking.
 
-Judge validity and severity only. Whether `debt` is fixed in the current changeset or tracked elsewhere is the author's disposition call. Do not introduce a third, scope-shaped severity.
+Judge validity and severity only. Whether a `debt` finding on changed text is fixed, accepted, or dropped is a ruling from a position above the changeset's author, never the Reviewer's call. Do not introduce a third, scope-shaped severity.
 
 </severity>
+
+<tracked_debt>
+
+Read the `ISSUES.md` of each governing node of the changed files, when one exists, before judging any `debt` finding. A governing node is the node a changed file belongs to under `spx/`, or the node whose linked test, eval, or probe reaches it.
+
+Every finding carries an entry key: the path of the file it names, the label of the unit that encloses it, and its rule citation. The unit label is the enclosing unit's own label — a heading, an assertion's or decision's slug or opening words, or a function or class name — and never a line number.
+
+An `ISSUES.md` entry heading ends with its entry key as three code spans in order: the file path, the unit label, and the rule citation. Label a `debt` finding `TRACKED` when one such heading carries all three, each equal to the finding's `file`, `unit`, and `rule`. `TRACKED` stands beside the severity, is no third severity, and blocks nothing. A `blocking` finding is never `TRACKED`, and a `debt` finding whose entry key no heading carries is not `TRACKED`.
+
+An `ISSUES.md` entry recorded before its heading carried an entry key matches no finding. A review that raises its finding again reports a new `debt` finding that takes its own ruling. No existing heading is rewritten ahead of a ruling, because its rule citation exists only in the review that raises the finding.
+
+</tracked_debt>
 
 <finding_shape>
 
@@ -111,6 +124,8 @@ Produce each finding as one JSON `Finding` object for `append-finding`. The obje
 - `severity` — one of `blocking`, `debt`.
 - `file`, `line` — the cited location.
 - `rule` — the cited rule.
+- `unit` — the label of the unit that encloses the finding, part of its entry key.
+- `tracked` — `true` for a `debt` finding labeled `TRACKED` under `<tracked_debt>`; omitted otherwise.
 - `message` — the evidence and failure explanation.
 - `action` — the concrete required change.
 

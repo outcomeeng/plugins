@@ -11,8 +11,10 @@ Tested with: the stale-base refusal before any journal opens, an unfetchable
 base reported as a diagnostic line rather than a traceback, the
 start/append-scope/append-finding/finish round trip, a finish before every
 changed file has a scope-advanced event, a rename's source and destination
-scope, a nonzero `spx journal` exit propagated with its stderr, and scratch
-cleanup on every failure path.
+scope, a finding's optional `unit` and `tracked` fields carried onto the
+finding-reported event and a tracked `debt` finding counted toward `debt`, a
+nonzero `spx journal` exit propagated with its stderr, and scratch cleanup on
+every failure path.
 """
 
 from __future__ import annotations
@@ -349,6 +351,12 @@ def _optional_str(value: object) -> str | None:
     return None
 
 
+def _optional_bool(value: object) -> bool | None:
+    if isinstance(value, bool):
+        return value
+    return None
+
+
 def _line_number(value: object) -> int | None:
     if isinstance(value, int):
         return value
@@ -371,6 +379,8 @@ def _finding_event_from_stdin(*, now: str, attempt: int) -> dict[str, object]:
         identifier=_optional_str(raw.get("id")),
         concern=_optional_str(raw.get("concern")),
         action=_optional_str(raw.get("action")),
+        unit=_optional_str(raw.get("unit")),
+        tracked=_optional_bool(raw.get("tracked")),
     )
     return jp.finding_reported_event(finding, now=now, attempt=attempt)
 

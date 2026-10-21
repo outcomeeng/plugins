@@ -51,7 +51,7 @@ ${CLAUDE_SKILL_DIR}/references/review-prompt.md
 <diffPath>
 ```
 
-Use `manifestPath` and `changedFiles` for navigation, but treat the diff file as the review input. `Grep` and `Glob` serve one purpose: read-only discovery of the unchanged consumers of a changed governing declaration, bounded to exactly the declared relationships the prompt's `<review_scope>` consumers-of-changed-truth item enumerates. Repository-root review policy files are not part of this skill's review context; the bundled reference prompt is the only prompt authority. Repository-local review rules belong in the repository's spec tree, decisions, root `{{! file('root_guide', 'codex') !}}` or `{{! file('root_guide', 'claude') !}}`, and loaded governing skill files.
+Use `manifestPath` and `changedFiles` for navigation, but treat the diff file as the review input. `Grep` and `Glob` serve two purposes, each read-only and bounded to a relationship the prompt declares: discovery of the unchanged consumers of a changed governing declaration, bounded to exactly the declared relationships the prompt's `<review_scope>` consumers-of-changed-truth item enumerates; and location of the `ISSUES.md` of each governing node of the changed files, bounded to the governing-node relationship the prompt's `<tracked_debt>` section defines. Repository-root review policy files are not part of this skill's review context; the bundled reference prompt is the only prompt authority. Repository-local review rules belong in the repository's spec tree, decisions, root `{{! file('root_guide', 'codex') !}}` or `{{! file('root_guide', 'claude') !}}`, and loaded governing skill files.
 
 </review_materials>
 
@@ -61,9 +61,10 @@ Use `manifestPath` and `changedFiles` for navigation, but treat the diff file as
 2. Load the prompt reference and diff bundle.
 3. Examine every changed file and every emitted diff section, applying the prompt's `<adversarial_probes>` before treating a file as clean. After each changed file has been examined, call `append-scope` for that file.
 4. For each changed governing declaration, discover and read its unchanged consumers per the prompt's `<review_scope>` consumers-of-changed-truth item. A contradiction there is a finding cited at the consumer's location; consumers are not `append-scope` units — the journal's scope coverage remains the changed-file set.
-5. When a finding is raised, immediately write that one finding JSON object to its own scratch file and pass it to `append-finding` through the input redirect, following `<finding_payload>`. Do not collect findings into a later batch.
-6. When review is complete, call `finish`.
-7. Report only the raw `runToken` to the caller.
+5. Before judging any `debt` finding, locate and read the `ISSUES.md` of each governing node of the changed files per the prompt's `<tracked_debt>` section.
+6. When a finding is raised, immediately write that one finding JSON object to its own scratch file and pass it to `append-finding` through the input redirect, following `<finding_payload>`. Do not collect findings into a later batch. Set the finding's `unit` and `tracked` fields as the prompt's `<finding_shape>` and `<tracked_debt>` direct.
+7. When review is complete, call `finish`.
+8. Report only the raw `runToken` to the caller.
 
 </workflow>
 
