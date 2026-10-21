@@ -459,8 +459,8 @@ class CodexWritableRootProbe:
         record = self.record
         try:
             try:
-                record.shared_config_digest_before = self._shared_digest()
                 self._admit()
+                record.shared_config_digest_before = self._shared_digest()
                 self._provision_home()
                 with self.authentication.authenticated_home(
                     self.request.probe_home,
@@ -484,7 +484,8 @@ class CodexWritableRootProbe:
         finally:
             self._release_credential_link()
             try:
-                record.shared_config_digest_after = self._shared_digest()
+                if CODEX_HOME_ENV in self.request.environment:
+                    record.shared_config_digest_after = self._shared_digest()
             except ProbeStopped:
                 record.shared_config_digest_after = None
         if (
@@ -516,6 +517,13 @@ class CodexWritableRootProbe:
 
     def _admit(self) -> None:
         request = self.request
+        for variable in (CODEX_HOME_ENV, HOME_ENV):
+            if variable not in request.environment:
+                raise _stop(
+                    ProbeStopCondition.UNDECIDED,
+                    "admission",
+                    f"The environment lacks {variable}.",
+                )
         for name, path in (
             ("probe home", request.probe_home),
             ("writable root", request.writable_root),
