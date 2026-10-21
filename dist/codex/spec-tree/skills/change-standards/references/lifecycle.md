@@ -114,16 +114,16 @@ The head commit on the `Branch or PR` line is the tip the work stopped at; a rea
 
 <rule id="lifecycle-transitions">
 
-`Available` means the Change waits for no confirmation; `Submitted` means a finished stage waits for the Product's Maintainer, as `maturity-and-authority` states; `Applied` and `Abandoned` are terminal. The holder is the assignee in every Lifecycle. A transition is one of seven moves, and one skill performs each and moves nothing else:
+`Available` means the Change waits for no confirmation; `Submitted` means a finished stage waits for the Product's Maintainer, as `maturity-and-authority` states; `Applied` and `Abandoned` are terminal. The holder is the assignee in every Lifecycle. A transition is one of seven moves, each writes only the fields it names, and each is performed separately:
 
-- A claim, by `claim-change`, adds the assignee and writes no Lifecycle.
-- A release, by `release-change`, removes the assignee, and writes `Available` only for a `Submitted` Change, whose pending confirmation then lapses. The unassign event is the release, and no comment is read for it.
-- A submit, by `release-change` with its `submit` result, writes `Submitted` at Proposed, Framed, or Sliced and keeps the assignee.
-- A confirm, by `confirm-change`, writes `Available` with Maturity unchanged and keeps the assignee.
-- A reject, by `confirm-change`, posts the reject block, writes the Maturity one level lower, then writes `Available`, and keeps the assignee; it is refused at Proposed.
-- An applied and an abandoned, by `close-change`, write the terminal value its one argument names and keep the assignee.
+- A claim adds the assignee and writes no Lifecycle.
+- A release removes the assignee, and writes `Available` only for a `Submitted` Change, whose pending confirmation then lapses. The unassign event is the release, and no comment is read for it.
+- A submit writes `Submitted` at Proposed, Framed, or Sliced and keeps the assignee.
+- A confirm writes `Available` with Maturity unchanged and keeps the assignee.
+- A reject posts the reject block, writes the Maturity one level lower, then writes `Available`, and keeps the assignee; it is refused at Proposed.
+- An applied and an abandoned write the terminal value each names and keep the assignee.
 
-Each transition posts exactly one transition block under `transition-comment` and no other comment, and none writes a body section. Only a reject writes Maturity among the Lifecycle skills. A confirm and a reject act for the Product's Maintainer on a `Submitted` Change only, and report any other Lifecycle without mutation. No operation posts, reads, or parses a `Rejection:` comment, and none writes the Lifecycle value `Claimed`.
+Each transition posts exactly one transition block under `transition-comment` and no other comment, and none writes a body section. Only a reject writes Maturity among the Lifecycle transitions. A confirm and a reject act for the Product's Maintainer on a `Submitted` Change only, and report any other Lifecycle without mutation. No operation posts, reads, or parses a `Rejection:` comment, and none writes the Lifecycle value `Claimed`.
 
 </rule>
 
