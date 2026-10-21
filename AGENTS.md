@@ -275,7 +275,7 @@ Test level is encoded in the filename. The `{evidence}` segment is chosen by `/t
 
 ## Change Lifecycle
 
-Work is coordinated through Changes in the store `spx/local/coordination.md` declares. Hold a Change through `/claim-change` before refining or executing it. When the work stops with continuation remaining, `/release-change` writes the Handoff, removes the holder, and returns the Change to Available for any agent to claim; when the Change reaches a terminal Lifecycle, `/close-change <Applied|Abandoned>` writes the terminal record and closes it. A follow-up is a Proposed Change created through `/author-change`. Maturity moves only through `/author-change`; the three Lifecycle skills move Lifecycle and nothing else.
+Work is coordinated through Changes in the store `spx/local/coordination.md` declares. Hold a Change through `/claim-change` before refining or executing it; the claim makes the session the Change's assignee and writes no Lifecycle. When the work stops with continuation remaining, `/release-change` records the Handoff as an empty commit on the Change's branch, removes the assignee, and leaves the Change for any agent to claim; when the Change reaches a terminal Lifecycle, `/close-change <Applied|Abandoned>` writes the terminal record and closes it. Each of these transitions posts one comment that is one fenced YAML block and nothing else. A follow-up is a Proposed Change created through `/author-change`. Maturity moves only through `/author-change`, except that `/confirm-change` lowers it on a rejection; the Lifecycle skills move Lifecycle and the assignee and nothing else.
 
 <!-- /SPEC-TREE -->
 
