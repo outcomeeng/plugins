@@ -109,3 +109,38 @@ leaves the assertion Declared and the node merges as itself.
 
 **Settlement condition**: `probes/writable-roots/` retains an attested run for one Claude Code candidate
 and one Codex candidate, and each retained screen lists the supplied root as writable.
+
+## DEBT [consistency]: an absent or unusable agent-token module ends recovery with a traceback
+
+The local review of https://github.com/outcomeeng/plugins/pull/694, run
+`2026-10-19_16-02-20-796-7460c0a782fd` on head 1e709fbcdcf3d6f793730e4f394d2b48e91e4bbe, raised this
+as finding F-002 at `src/plugins/coding-agents/skills/recover-prowl-agents/scripts/recover_agents.py:137`.
+
+**Evidence**: `_load_agent_tokens` and `_agent_token_class` raise `RuntimeError` at import time when
+the sibling `agent_tokens.py` is absent, fails to execute, or declares no `AgentToken`. The message
+opens with `error:`, but the exception escapes as a traceback. The same changeset makes
+`/update-instruction-block` and `/review-changes` report the equivalent load failure of their
+`agent-tokens.json` as one `error:` line with exit code 2, declares that behavior in
+`spx/21-spec-tree.enabler/43-instruction-block.enabler/instruction-block.md`, tests it in both
+nodes, and records it in the spec-tree changelog. No assertion of this node declares the
+missing-module behavior, no test drives it, and the coding-agents changelog carries no entry for it.
+
+**Impact**: a consumer whose installed coding-agents plugin lacks the module reads a traceback
+instead of a one-line diagnostic. An intact installation always carries the module beside the script,
+so the path runs only in a damaged install.
+
+**Resolution shape**: catch the load failure where the module is imported, print the `error:` line on
+stderr, and exit 2, as `review_result.py` does. Declare that behavior in this node's spec, link a
+scenario test covering the absent, non-executing, and `AgentToken`-less module states, and add the
+coding-agents changelog entry.
+
+**Deferral reason**: the fix needs a decision line and a spec assertion that
+outcomeeng/changes#120's record does not state. Its execution runs under a standing order that
+forbids revising the record. The finding cites `spx/15-spec-coverage.adr.md`, which requires `[test]`
+evidence for assertions about executable code. No assertion declares this path, and this node declares
+`malleability: spec`, whose Passing requires no evidence beyond reachability and tagged results. A
+follow-up Change states the decision line and the assertion, and carries the fix.
+
+**Settlement condition**: an absent, non-executing, or `AgentToken`-less agent-token module makes
+recovery print one `error:` line on stderr and exit 2. A linked scenario test holds that rule, and the
+coding-agents changelog records it.

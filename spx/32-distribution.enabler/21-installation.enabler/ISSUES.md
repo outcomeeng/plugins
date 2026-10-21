@@ -64,3 +64,27 @@ neither cites, restates, nor depends on a change that falsifies it.
 **Settlement condition**: the mapping rejects an inventory that stops filtering
 on scope, project path, or marketplace, and the compliance test rejects a plan
 that ignores the selected `CODEX_HOME` or isolated state root.
+
+## DEBT [evidence]: two test bodies repeat between this node and its repository-installation child
+
+**Evidence**: at head 1e709fbcdcf3d6f793730e4f394d2b48e91e4bbe both this node's tests and the tests
+of `spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler` define
+`test_each_registry_entry_shape_maps_to_the_source_the_run_refreshes_from` and
+`test_no_agent_announces_a_first_install_its_plan_does_not_carry`. This node's copies, in
+`tests/test_installation.mapping.l1.py` and `tests/test_installation.compliance.l1.py`, drive the same
+harness observations as the child's copies and differ in two ways only: they read the marketplace
+through `observe_committed_declarations`, and they add the empty-Codex-inventory states. The parallel
+copies came with the restructuring of this node's assertions into typed sections in
+https://github.com/outcomeeng/plugins/pull/694.
+
+**Impact**: one rule is verified twice with the same mechanism, so a change to it edits two test files
+and a divergence between them goes unnoticed.
+
+**Resolution shape**: keep one copy at the node whose assertion owns the rule, link it from that
+assertion, and remove the other copy together with any link to it.
+
+**Deferral reason**: the operator overrode this node's test-evidence audit rejection for
+outcomeeng/changes#120 on head 1e709fbcdcf3d6f793730e4f394d2b48e91e4bbe and ordered that no further
+audit run on it. Deduplicating the tests changes the evidence that override covers.
+
+**Settlement condition**: each of the two rules has one test, at the node whose assertion links it.
