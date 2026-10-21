@@ -456,10 +456,19 @@ def _scope_coverage_error(
     marked_unread = set(unread)
     contradictory = sorted(advanced & marked_unread)
     if contradictory:
-        return f"files both read and marked unread: {', '.join(contradictory)}"
+        return (
+            f"files both read and marked unread: {', '.join(contradictory)}. "
+            "A file with a scope-advanced event was read; drop --unread for "
+            "each of these files."
+        )
     outside = sorted(marked_unread - expected)
     if outside:
-        return f"unread files outside changed files: {', '.join(outside)}"
+        return (
+            f"unread files outside changed files: {', '.join(outside)}. "
+            f"--unread names only changed files; the changed files are: "
+            f"{', '.join(sorted(expected))}. Drop or correct each --unread "
+            "value to one of them."
+        )
 
     return _scope_unit_delta_message(
         expected=expected - marked_unread, advanced=advanced
