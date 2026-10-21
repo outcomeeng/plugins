@@ -41,13 +41,13 @@ A Role does not identify a subagent definition. A configured Verifier names a su
 
 **Refiner.** The role of the Change's holder during refinement. The agent session in conversation with the operator holds it, realized by loading into that conversation the refinement skills the Change's Maturity routes to; the role is never dispatched as a subagent and never loaded from an agent definition.
 
-**Executor.** The role of the Change's holder during execution. The Executor takes a Leaf's `## Governance mutations` blocks and then its `## Spec mutations` blocks, each in record order, delegates production and verification, integrates the changeset, and escalates a reopened product or architecture judgment to the operator. The Executor produces no artifact.
+**Executor.** The role of the Change's holder during execution. The Executor takes a Leaf's `## Governance mutations` blocks and then its `## Spec mutations` blocks, each in record order, delegates production and verification, integrates the changeset, and escalates a reopened product or architecture judgment to the operator. The Executor produces no artifact other than a mechanical repair. A mechanical repair fixes a finding and changes no behavior or decision: a path or link, a typo, a wording the finding states, or a renamed identifier. A mechanical repair never covers decision-record text. The Executor makes it directly, with no Fixer round, and every other repair goes to a Fixer.
 
 **Author.** The role held by the agent session that produces the artifacts of one round: decisions, specs, verification artifacts, or implementation.
 
 **Fixer.** The Author role in a later round on the same subject.
 
-The Author and the Fixer use separate agent sessions, whoever calls them.
+The Author and the Fixer use separate agent sessions, whoever calls them. A mechanical repair is no round, and the Executor that makes it holds neither the Author nor the Fixer Role.
 
 **Verifier.** The role held by the agent session that produces an agentic verdict: an Auditor for audit, a Reviewer for review.
 
@@ -67,10 +67,13 @@ The Refiner is the operator's conversation because refinement is an interview. F
 
 1. Agent-facing decisions, specs, skills, and instructions use agent harness, agent, agent adapter, agent session, subagent, and subagent definition for their defined meanings; product domains identify which concept they govern and preserve those distinctions in configuration, invocation, observation, and resume behavior.
 2. Agent-facing decisions, specs, skills, and instructions name who refines, executes, produces, repairs, or verifies a Change with the capitalized Role names Refiner, Executor, Author, Fixer, and Verifier, with Auditor and Reviewer as the two Verifier kinds; the Refiner is held by the operator's conversation.
-3. The Author and the Fixer use separate agent sessions, whoever calls them.
+3. The Author and the Fixer use separate agent sessions, whoever calls them; a mechanical repair is no round, and the Executor that makes it holds neither Role.
 4. Agent-facing decisions, specs, skills, and instructions call authority over a scope that its holder keeps across Changes a position and the next higher rank that holds a question's context the principal of the position that passes it, and never use position for a Role.
 
 ## Verification
+
+- ALWAYS: the Executor produces no artifact other than a mechanical repair, which fixes a finding, changes no behavior or decision, and never covers decision-record text; the Executor makes it directly with no Fixer round, and every other repair goes to a Fixer
+- ALWAYS: a mechanical repair is no round, and the Executor that makes it holds neither the Author nor the Fixer Role
 
 ### Audit
 
