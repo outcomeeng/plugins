@@ -345,6 +345,37 @@ def filled_blockers(store: ReplayedStore, count: int) -> ReplayedStore:
     return replace(store, blockers=blockers)
 
 
+@dataclass(frozen=True)
+class OmittedPriority:
+    """A store whose Priority order omits a Priority one open Change holds."""
+
+    store: ReplayedStore
+    #: The Priority the order omits.
+    priority: str
+    #: The first open Change, in reading order, that holds it.
+    number: int
+
+
+def omitting_a_held_priority(store: ReplayedStore) -> OmittedPriority:
+    """The store whose Priority order drops the Priority of its first open Change that holds one."""
+    script = load_script()
+    for page in store.pages:
+        for node in page["data"]["repository"]["issues"]["nodes"]:  # type: ignore[index]
+            if node["state"] != script.IssueState.OPEN:
+                continue
+            for entry in node["issueFieldValues"]["nodes"]:
+                if entry["field"]["name"] == script.FIELD_PRIORITY:
+                    order = tuple(
+                        name for name in store.priority_order if name != entry["name"]
+                    )
+                    return OmittedPriority(
+                        store=replace(store, priority_order=order),
+                        priority=entry["name"],
+                        number=node["number"],
+                    )
+    raise LookupError("the store holds no open Change with a Priority")
+
+
 def render_generated(generated: GeneratedStore) -> ReplayedStore:
     """Render a generated store into the store's answer shapes."""
     script = load_script()

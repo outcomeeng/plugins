@@ -443,6 +443,50 @@
                     }
                   ]
                 }
+              },
+              {
+                "number": 11,
+                "url": "https://github.com/example-org/example-changes/issues/11",
+                "title": "Claimed with no Claim comment",
+                "state": "OPEN",
+                "assignees": {
+                  "nodes": [
+                    {
+                      "login": "example-holder-d"
+                    },
+                    {
+                      "login": "example-holder-e"
+                    }
+                  ]
+                },
+                "issueFieldValues": {
+                  "nodes": [
+                    {
+                      "name": "example-product",
+                      "field": {
+                        "name": "Product"
+                      }
+                    },
+                    {
+                      "name": "Executable",
+                      "field": {
+                        "name": "Maturity"
+                      }
+                    },
+                    {
+                      "name": "Claimed",
+                      "field": {
+                        "name": "Lifecycle"
+                      }
+                    },
+                    {
+                      "name": "Normal",
+                      "field": {
+                        "name": "Priority"
+                      }
+                    }
+                  ]
+                }
               }
             ]
           }
@@ -770,6 +814,27 @@
       "changeset": "none",
       "waiting": [
         "claim"
+      ],
+      "next_action": "none recorded"
+    },
+    {
+      "number": 11,
+      "url": "https://github.com/example-org/example-changes/issues/11",
+      "title": "Claimed with no Claim comment",
+      "product": "example-product",
+      "maturity": "Executable",
+      "lifecycle": "Claimed",
+      "priority": "Normal",
+      "holder": [
+        "example-holder-d",
+        "example-holder-e"
+      ],
+      "parent": null,
+      "root": 11,
+      "blockers": [],
+      "changeset": "none",
+      "waiting": [
+        "holder: example-holder-d, example-holder-e (claim none recorded)"
       ],
       "next_action": "none recorded"
     },

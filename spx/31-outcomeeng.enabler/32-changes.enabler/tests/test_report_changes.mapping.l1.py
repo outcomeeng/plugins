@@ -131,3 +131,45 @@ def test_a_reclaimed_change_waits_on_the_holder_of_the_claim_after_its_newest_av
             assert stale_session not in waiting[0]
             assert stale_root not in waiting[0]
     assert observed.event_page_calls
+
+
+def test_a_claimed_change_with_no_claim_comment_waits_on_its_assignees() -> None:
+    """Design record.
+
+    Assertion: a `Claimed` Change's waiting state maps to `holder: <login>`; a
+    Claimed Change with no Claim comment has no winning Claim, so the entry
+    names its assignee logins and records that no claim was found.
+    Production subject: the script's entry point reading a Claimed Change whose
+    comments hold no Claim.
+    Case provenance: the recorded store's Claimed Change that has no comments
+    and two assignees.
+    Oracle owner: the fixture's direct row, read by hand from those answers.
+    Rejected mutation: the script names no assignee, names only the first
+    assignee, or reports a session and root it never read.
+    Failure observation: the row's waiting entry differs from the direct row or
+    omits an assignee login or the no-claim marker.
+    """
+    recorded = load_recorded_store()
+
+    observed = report(recorded)
+
+    assert observed.exit_code == script.EXIT_OK
+    rows = {row[Row.NUMBER]: row for row in observed.result[Report.ROWS]}
+    unclaimed = [
+        direct
+        for direct in recorded.direct
+        if direct[Row.WAITING][0].startswith(script.Waiting.HOLDER)
+        and not any(
+            comment["body"].startswith(script.CLAIM_PREFIX)
+            for comment in recorded.comments.get(str(direct[Row.NUMBER]), [])
+        )
+    ]
+    assert unclaimed
+    for direct in unclaimed:
+        waiting = rows[direct[Row.NUMBER]][Row.WAITING]
+        assert waiting == direct[Row.WAITING]
+        assert len(direct[Row.HOLDER]) > 1
+        assert waiting[0].startswith(f"{script.Waiting.HOLDER}: ")
+        for login in direct[Row.HOLDER]:
+            assert login in waiting[0]
+        assert f"claim {script.NO_NEXT_ACTION}" in waiting[0]

@@ -34,6 +34,7 @@ from outcomeeng_testing.harnesses.report_changes import (
     filled_field_values,
     load_recorded_store,
     load_script,
+    omitting_a_held_priority,
     report,
     spec_bounds,
     unending_events,
@@ -152,6 +153,39 @@ def test_an_event_timeline_that_never_ends_blocks_naming_the_event_bound() -> No
     assert observed.result[Report.BOUND] == bounds.events
     assert Report.ROWS not in observed.result
     assert len(observed.event_page_calls) == bounds.event_page_count
+
+
+def test_a_priority_the_order_omits_blocks_naming_the_priority_order_and_returns_no_row() -> (
+    None
+):
+    """Design record.
+
+    Assertion: NEVER return a shorter list in place of a failure; a read that
+    returns output the report cannot place yields a blocked result naming the
+    read and no row.
+    Production subject: the script's entry point reading a store whose open
+    Change holds a Priority that `--priority-order` does not list.
+    Case provenance: the recorded store; the omitted Priority is the first
+    Priority an open Change holds in reading order, dropped from the recorded
+    Priority order.
+    Oracle owner: the script's priority-order read name, exported by the script,
+    and the spec assertion text, which demands a blocked result and no row.
+    Rejected mutation: the script drops or misplaces the Change whose Priority
+    the order omits and returns the rows it has.
+    Failure observation: the exit code is not blocked, the read name differs
+    from the script's, the detail omits the Change or the Priority, or rows are
+    present.
+    """
+    omitted = omitting_a_held_priority(load_recorded_store())
+
+    observed = report(omitted.store)
+
+    assert observed.exit_code == script.EXIT_BLOCKED
+    assert observed.result[Report.STATUS] == script.ReportStatus.BLOCKED
+    assert observed.result[Report.READ] == script.PRIORITY_ORDER_READ
+    assert f"{omitted.store.store}#{omitted.number}" in observed.result[Report.DETAIL]
+    assert repr(omitted.priority) in observed.result[Report.DETAIL]
+    assert Report.ROWS not in observed.result
 
 
 def test_the_script_issues_reading_commands_only_and_writes_no_file() -> None:
