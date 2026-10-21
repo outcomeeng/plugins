@@ -43,7 +43,7 @@ The body carries no attestation, accountable-person, priority, or overrule text;
 - change-type: A Change whose record carries a Governance mutations or Spec mutations block is a Leaf, a Change that another Change names in `parent` is a Parent, and a Change with neither is a root.
 - parent-product: A Change carries the Product that owns its Output, and a Parent and its children may carry different Products.
 - execution-order: Execution takes the Governance mutations blocks, then the Spec mutations blocks, each in record order. The merge composition for the Node's malleability after, and the decision-record audit of a record, select each block's results and Verifiers.
-- handoff-blocks: A Handoff names the branch with its head commit, the completed Governance mutations and Spec mutations blocks by path, and the next block, or `refinement: <Maturity> → <next level>` below Executable.
+- handoff-blocks: A Handoff names, on its `Branch or PR` line, the branch or pull request with its head commit, and after integration the merged pull request with its merge commit; it also names the completed Governance mutations and Spec mutations blocks by path, and the next block, or `refinement: <Maturity> → <next level>` below Executable.
 
 ## Definitions of Ready
 
