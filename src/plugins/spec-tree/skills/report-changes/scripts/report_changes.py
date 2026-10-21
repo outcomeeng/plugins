@@ -54,6 +54,7 @@ HANDOFF_NEXT_LABEL = "Next block"
 NO_CHANGESET = "none"
 NO_WAITING = "none"
 NO_NEXT_ACTION = "none recorded"
+PRIORITY_ORDER_READ = "priority order"
 UNRESOLVED_ROOT = "unresolved"
 CHECK_SUCCESS = "success"
 
@@ -389,6 +390,40 @@ def field_values(read: str, node: dict[str, Any]) -> dict[str, Any]:
     return values
 
 
+def store_page(read: str, data: dict[str, Any]) -> tuple[list[Any], dict[str, Any]]:
+    try:
+        issues = data["repository"]["issues"]
+        return issues["nodes"], issues["pageInfo"]
+    except (KeyError, TypeError) as error:
+        raise BlockedRead(read, f"unreadable output: missing {error}") from error
+
+
+def change_of(read: str, node: dict[str, Any]) -> Change:
+    assignees = tuple(
+        a["login"] for a in (node.get("assignees") or {}).get("nodes") or []
+    )
+    if len(assignees) >= ASSIGNEE_LIMIT:
+        raise BlockedRead(
+            read,
+            f"issue {node.get('number')} returned {ASSIGNEE_LIMIT} assignees",
+            bound=Bound.ASSIGNEES,
+        )
+    values = field_values(read, node)
+    parent = values.get(FIELD_PARENT)
+    return Change(
+        number=node["number"],
+        url=node["url"],
+        title=node["title"],
+        state=node["state"],
+        assignees=assignees,
+        product=values.get(FIELD_PRODUCT),
+        maturity=values.get(FIELD_MATURITY),
+        lifecycle=values.get(FIELD_LIFECYCLE),
+        priority=values.get(FIELD_PRIORITY),
+        parent=parent if isinstance(parent, int) else None,
+    )
+
+
 def read_store(request: Request, runner: GhRunner) -> list[Change]:
     read = f"issues of {request.store}"
     changes: list[Change] = []
@@ -397,39 +432,10 @@ def read_store(request: Request, runner: GhRunner) -> list[Change]:
         variables: dict[str, str | int] = {"o": request.owner, "r": request.repo}
         if cursor is not None:
             variables["after"] = cursor
-        data = graphql(runner, read, STORE_QUERY, variables)
-        try:
-            issues = data["repository"]["issues"]
-            nodes = issues["nodes"]
-            page_info = issues["pageInfo"]
-        except (KeyError, TypeError) as error:
-            raise BlockedRead(read, f"unreadable output: missing {error}") from error
-        for node in nodes:
-            assignees = tuple(
-                a["login"] for a in (node.get("assignees") or {}).get("nodes") or []
-            )
-            if len(assignees) >= ASSIGNEE_LIMIT:
-                raise BlockedRead(
-                    read,
-                    f"issue {node.get('number')} returned {ASSIGNEE_LIMIT} assignees",
-                    bound=Bound.ASSIGNEES,
-                )
-            values = field_values(read, node)
-            parent = values.get(FIELD_PARENT)
-            changes.append(
-                Change(
-                    number=node["number"],
-                    url=node["url"],
-                    title=node["title"],
-                    state=node["state"],
-                    assignees=assignees,
-                    product=values.get(FIELD_PRODUCT),
-                    maturity=values.get(FIELD_MATURITY),
-                    lifecycle=values.get(FIELD_LIFECYCLE),
-                    priority=values.get(FIELD_PRIORITY),
-                    parent=parent if isinstance(parent, int) else None,
-                )
-            )
+        nodes, page_info = store_page(
+            read, graphql(runner, read, STORE_QUERY, variables)
+        )
+        changes.extend(change_of(read, node) for node in nodes)
         if not page_info["hasNextPage"]:
             return changes
         cursor = page_info["endCursor"]
@@ -687,7 +693,7 @@ def priority_rank(request: Request, change: Change) -> int:
         return request.priority_order.index(change.priority)
     except ValueError as error:
         raise BlockedRead(
-            "priority order",
+            PRIORITY_ORDER_READ,
             f"{request.store}#{change.number} holds Priority {change.priority!r}, "
             f"which --priority-order does not list ({', '.join(request.priority_order)})",
         ) from error
