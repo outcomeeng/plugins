@@ -172,4 +172,4 @@ def test_a_claimed_change_with_no_claim_comment_waits_on_its_assignees() -> None
         assert waiting[0].startswith(f"{script.Waiting.HOLDER}: ")
         for login in direct[Row.HOLDER]:
             assert login in waiting[0]
-        assert f"claim {script.NO_NEXT_ACTION}" in waiting[0]
+        assert f"claim {script.NO_CLAIM_RECORDED}" in waiting[0]

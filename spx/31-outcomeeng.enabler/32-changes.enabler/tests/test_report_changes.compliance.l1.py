@@ -160,9 +160,9 @@ def test_a_priority_the_order_omits_blocks_naming_the_priority_order_and_returns
 ):
     """Design record.
 
-    Assertion: NEVER return a shorter list in place of a failure; a read that
-    returns output the report cannot place yields a blocked result naming the
-    read and no row.
+    Assertion: NEVER return a shorter list in place of a failure; a Change
+    whose Priority the declared Priority order omits yields a blocked result
+    naming the priority-order read and no row.
     Production subject: the script's entry point reading a store whose open
     Change holds a Priority that `--priority-order` does not list.
     Case provenance: the recorded store; the omitted Priority is the first
