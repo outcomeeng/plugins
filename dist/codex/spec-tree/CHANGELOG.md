@@ -10,6 +10,12 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.107.2
+
+### Changed
+
+- **The generated Spec Tree instruction block states Change holding without a `Claimed` Lifecycle.** Its Change Lifecycle section says that `/claim-change` makes the session the Change's assignee and writes no Lifecycle, that `/release-change` records the Handoff as an empty commit on the Change's branch and removes the assignee, and that each transition posts one comment that is one fenced YAML block and nothing else. It also says that Maturity moves only through `/author-change` except that `/confirm-change` lowers it on a rejection, and that the Lifecycle skills move Lifecycle and the assignee and nothing else. Run `/update-instruction-block` to bring a consumer's root instruction files to this text. Before this change, the section said that `/release-change` writes the Handoff and returns the Change to Available, and that the three Lifecycle skills move Lifecycle and nothing else.
+
 ## 0.107.1
 
 ### Changed
