@@ -12,6 +12,10 @@ CAN project the sealed journal into the surface they own without duplicating rev
 
 ## Assertions
 
+- ALWAYS: the review skill advances a changed file's scope only after reading the file, and marks every changed file it does not read as unread before it finishes, per [`spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md`](spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md)
+- ALWAYS: a review whose branch value names a commit rather than a branch records the checked-out branch as its branch identity and slug, per [`spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md`](spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md)
+- NEVER: the reviewer agent exports a commit as the branch identity for a commit-range input, per [`spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md`](spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md)
+
 ### Scenarios
 
 - Given `SPX_VERIFY_BASE_REF` set in the environment, `review_run.py start` uses that scope, computes the review-input bundle, opens the review journal, appends the scope-entered event, and returns run state including `runToken`, `statePath`, `diffPath`, `manifestPath`, and `changedFiles` ([test](tests/test_skill_orchestration.scenario.l2.py))

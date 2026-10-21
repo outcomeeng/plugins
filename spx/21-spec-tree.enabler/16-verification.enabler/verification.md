@@ -15,6 +15,9 @@ The six verification types and the two axes that classify them — verdict mode 
 
 ## Assertions
 
+- ALWAYS: a run finished with one or more units marked unread seals `failed`, and its terminal event lists each unread unit, per [`spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md`](spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md)
+- NEVER: a run seals approved while a unit of its scope carries no scope-advanced event or is marked unread, per [`spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md`](spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md)
+
 ### Compliance
 
 Each rule enforces a guarantee of [`spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md`](spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md).
