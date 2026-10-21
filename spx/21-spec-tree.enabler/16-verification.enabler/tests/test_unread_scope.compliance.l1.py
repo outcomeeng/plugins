@@ -73,8 +73,7 @@ def test_a_run_never_seals_approved_while_a_unit_of_its_scope_is_unread(
     """
     _unread_unit, events = _finish_run_with_unread_unit(tmp_path)
 
-    for event in events:
-        if event["type"] == jp.RUN_COMPLETED:
-            assert event["data"][jp.RUN_STATE_STATUS] != str(
-                jp.JournalRunStatus.APPROVED
-            )
+    terminal_events = [event for event in events if event["type"] == jp.RUN_COMPLETED]
+    assert terminal_events
+    for event in terminal_events:
+        assert event["data"][jp.RUN_STATE_STATUS] != str(jp.JournalRunStatus.APPROVED)
