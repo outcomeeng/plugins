@@ -143,3 +143,25 @@ amend.
 
 **Settlement condition**: the decision and the spec state the controller rule, and the source and linked
 tests comply with it.
+
+## DEBT [evidence]: the writable-roots probe runner has no deterministic test coverage
+
+The probe runner `outcomeeng_testing/harnesses/writable_roots_probe.py`, about 1100 lines, runs through
+the justfile recipe `probe-writable-roots-codex`. No test under `spx/**/tests` imports it, so no
+assertion governs its pure helpers.
+
+**Evidence**: the helpers `parse_status`, `root_listed`, `workspace_policy`, `server_attached`,
+`expand_home`, `condense_screen`, `input_ready`, `command_pending`, `socket_paths`, and the admission
+exclusion check, and the `CodexWritableRootProbe` flow with injected terminal, recovery, and runner
+doubles, have no linked test. The local review run `2026-10-21_07-48-52-767-20eb803fc352` reported the
+gap as an evidence finding on that file.
+
+**Impact**: these helpers decide the INVALID stop conditions that the probe verdict relies on. A defect
+in a helper can change a probe verdict or stop condition without any deterministic test failing.
+
+**Resolution shape**: unit coverage of the runner is a separate, larger concern than the probe track.
+It needs its own assertion design under this node, covering the helpers and the
+`CodexWritableRootProbe` flow with injected doubles.
+
+**Settlement condition**: co-located tests cover the helpers, with assertion design declared under the
+owning node.
