@@ -22,6 +22,7 @@ A sealed `spx verification run` on one local Change record, whose terminal statu
 - NEVER write a file. Every request and payload passes to the runner on stdin and every result returns on stdout; the SPX run journal holds the run.
 - ALWAYS reach the candidate, every repository path, and the SPX store only through the bundled runner, `python3 "${CLAUDE_SKILL_DIR}/scripts/audit_change_run.py"`; the runner's SPX journal appends are the audit's only write path. NEVER invoke `rm`, `mktemp`, `spx`, `git`, `realpath`, or `printf`, redirect shell output to a file, or run a bundled script any other way.
 - ALWAYS issue each runner invocation as its own command, never chained to another command with `&&` or `;` and never piped into another command — a chained command loses the payload of the one behind it and leaves the run unsealed. A nonzero runner exit ends the audit with `BLOCKED` naming the request's `operation` and the exit status.
+- NEVER write the run journal or its context anywhere but the locations `spx verification run` resolves. When the native permission policy refuses a run-recording write — a runner `start`, `add-scope`, `add-finding`, `reconcile`, or `finish` invocation, or the journal it appends to — stop at that write, retry it no more, write to no other location, and return the `<verdict_format>` blocked diagnostic with `diagnostic: configuration error` naming the refused path; the host grants the paths, and this skill never widens its own access.
 - ALWAYS take the candidate's content from `read-candidate`, every reference answer from `resolve-reference`, every authority fact from `read-authority`, the published body from `read-published`, the store's Parent and child relations from `read-relations`, and every length count from `count-limits`. NEVER count words by hand, and NEVER judge authority from a body line, a front-matter value, or the conversation. The composed `spec-tree:change-standards` and `spec-tree:spec-tree-plugin` skills read their own skill-directory files. `allowed-tools` grants only the runner invocation and, where the harness has one, the skill-composition tool, and grants no Read, Grep, or Glob: the runner is the audit's only read path, and its SPX journal appends make its grant a write grant rather than a read-only one.
 - NEVER run deterministic verification, publish a Change, or delegate this audit to another session.
 - ALWAYS judge contract-form content only against `spec-tree:change-standards`, loaded with the candidate's declared Maturity as step 3 of `<execution_sequence>` loads it, and with `Lifecycle` as step 7 loads it for authority. The standards own the record rules, the cumulative Definitions of Ready, and the authority rules; this skill owns the audit procedure.
@@ -319,6 +320,7 @@ result: <the result object of the one blocked shape below that applies>
 runnerExit: <the exit status of the runner invocation that produced result, or none when no runner call ran>
 judgmentStatus: <complete|incomplete>
 judgedFindings: <complete-JSON-array>
+diagnostic: <configuration error naming the refused path, or none>
 ```
 
 The blocked shapes of `result`:
