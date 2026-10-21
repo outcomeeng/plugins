@@ -133,7 +133,7 @@ writes no version and merges the reviewed head.
 A merged pull request that carried plugin content without its version commit
 leaves the source manifests behind the changelog heading its content commits
 authored. The owed version ships as a pull request whose changeset is the
-version commit alone. Branch from the synchronized `origin/<default>`, and bind
+version commit alone. Branch from the synchronized `origin/main`, and bind
 `version_base_ref` to the base commit the merged pull request was compared
 with, because against the current default branch the recipes find no changed
 plugin content and write nothing. Run `just bump "$version_base_ref"`,
