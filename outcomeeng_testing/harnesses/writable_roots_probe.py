@@ -82,7 +82,12 @@ SESSION_ID_PATTERN = re.compile(
     r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
 )
 HOME_PREFIX = "~/"
-SYSTEM_TEMPORARY_ROOTS = ("/tmp", "/private/tmp", "/var/tmp", "/private/var/tmp")
+SYSTEM_TEMPORARY_ROOTS = (
+    "/tmp",  # NOSONAR S5443 - forbidden value, never a write target
+    "/private/tmp",  # NOSONAR S5443 - forbidden value, never a write target
+    "/var/tmp",  # NOSONAR S5443 - forbidden value, never a write target
+    "/private/var/tmp",  # NOSONAR S5443 - forbidden value, never a write target
+)
 SOCKET_SEARCH_DEPTH = 4
 PROWL_SUCCEEDED_STATUS = "succeeded"
 
