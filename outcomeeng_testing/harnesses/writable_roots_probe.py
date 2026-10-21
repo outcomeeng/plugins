@@ -31,6 +31,7 @@ from pathlib import Path
 from types import ModuleType
 from typing import Protocol, cast
 
+from outcomeeng.distribution.contracts import Target
 from outcomeeng.distribution.installation import (
     CODEX_EXECUTABLE,
     CODEX_HOME_ENV,
@@ -1048,7 +1049,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--controller-pane", required=True)
     parser.add_argument("--controller-session", required=True)
     parser.add_argument("--controller-worktree", type=Path, required=True)
-    parser.add_argument("--controller-agent-type", default="claude")
+    parser.add_argument("--controller-agent-type", default=Target.CLAUDE.value)
     parser.add_argument("--probe-home", type=Path, required=True)
     parser.add_argument("--writable-root", type=Path, required=True)
     parser.add_argument("--artifact-directory", type=Path, required=True)
