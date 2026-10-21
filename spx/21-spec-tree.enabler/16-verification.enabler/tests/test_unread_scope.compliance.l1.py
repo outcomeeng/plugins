@@ -2,8 +2,9 @@
 
 ``l1``: the shipped review runner (the agentic-run sealer) runs as a
 subprocess against a synthetic repository, with the journal routed at the
-fake ``spx`` the harness writes. Each test leaves the run's changed files without
-scope-advanced events and either marks them unread at finish or marks nothing.
+fake ``spx`` the harness writes. Each test finishes the run with a combination of
+scope-advanced events and unread marks: all changed files unread, none marked, a
+file both advanced and unread, or an unread file outside the changed files.
 """
 
 from __future__ import annotations
@@ -126,4 +127,72 @@ def test_a_finish_with_a_unit_neither_advanced_nor_marked_unread_is_refused(
     )
 
     assert finished.returncode != 0
+    assert all(event["type"] != jp.RUN_COMPLETED for event in _events(run))
+
+
+def test_a_finish_marking_unread_a_unit_it_also_advanced_is_refused(
+    tmp_path: pathlib.Path,
+) -> None:
+    """Such a finish exits nonzero, names the unit, and appends no terminal event.
+
+    A runner that lets a unit count as both examined and unread, and so seals
+    the run, fails this check.
+    """
+    run = _start_run(tmp_path)
+    contradictory_unit = run.changed_files[0]
+    advanced = run_script(
+        REVIEW_RUN_SCRIPT,
+        "append-scope",
+        "--state",
+        run.state_path,
+        contradictory_unit,
+        env=run.env,
+        cwd=run.repo,
+    )
+    assert advanced.returncode == 0, advanced.stderr
+
+    finished = run_script(
+        REVIEW_RUN_SCRIPT,
+        "finish",
+        "--state",
+        run.state_path,
+        "--unread",
+        contradictory_unit,
+        env=run.env,
+        cwd=run.repo,
+    )
+
+    assert finished.returncode != 0
+    assert contradictory_unit in finished.stderr
+    assert all(event["type"] != jp.RUN_COMPLETED for event in _events(run))
+
+
+def test_a_finish_marking_unread_a_file_outside_the_changed_files_is_refused(
+    tmp_path: pathlib.Path,
+) -> None:
+    """Such a finish exits nonzero, names the file, and appends no terminal event.
+
+    Every changed file is marked unread, so the extra file is the only defect;
+    a runner that ignores an unread file outside the changed files seals the
+    run and fails this check.
+    """
+    run = _start_run(tmp_path)
+    outside_unit = f"outside/{run.changed_files[0]}"
+    assert outside_unit not in run.changed_files
+    unread_args = [
+        arg for unit in (*run.changed_files, outside_unit) for arg in ("--unread", unit)
+    ]
+
+    finished = run_script(
+        REVIEW_RUN_SCRIPT,
+        "finish",
+        "--state",
+        run.state_path,
+        *unread_args,
+        env=run.env,
+        cwd=run.repo,
+    )
+
+    assert finished.returncode != 0
+    assert outside_unit in finished.stderr
     assert all(event["type"] != jp.RUN_COMPLETED for event in _events(run))
