@@ -407,6 +407,7 @@ class BranchExport(enum.Enum):
 
     NOTHING = "nothing"
     CHECKED_OUT_BRANCH = "checked-out-branch"
+    OTHER_BRANCH = "other-branch"
     HEAD_COMMIT = "head-commit"
 
 
@@ -425,7 +426,8 @@ def start_review_run_exporting(
     """Start a review run in a fresh synthetic repository under ``scratch``.
 
     The exported branch value follows ``export``: nothing, the checked-out branch's name,
-    or the full identity of the head commit. A non-zero exit is a setup failure and raises
+    the name of an existing branch that is not checked out (the base branch), or the full
+    identity of the head commit. A non-zero exit is a setup failure and raises
     with the runner's stderr.
     """
     scratch.mkdir(parents=True)
@@ -440,6 +442,7 @@ def start_review_run_exporting(
     exported = {
         BranchExport.NOTHING: None,
         BranchExport.CHECKED_OUT_BRANCH: checked_out_branch,
+        BranchExport.OTHER_BRANCH: base_ref,
         BranchExport.HEAD_COMMIT: head_commit,
     }[export]
     if exported is not None:

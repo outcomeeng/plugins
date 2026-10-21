@@ -47,11 +47,13 @@ def test_a_branch_value_naming_a_branch_is_recorded_as_the_identity(
 ) -> None:
     """The commit rule leaves a branch value alone.
 
-    A runner that discards every exported value in favor of the checked-out
-    branch fails this check when the two differ in the exported run.
+    The exported value names an existing branch that is not the checked-out
+    branch, so a runner that discards every exported value in favor of the
+    checked-out branch fails this check.
     """
     exported = start_review_run_exporting(
-        tmp_path / "branch", BranchExport.CHECKED_OUT_BRANCH
+        tmp_path / "branch", BranchExport.OTHER_BRANCH
     )
 
+    assert exported.exported != exported.checked_out_branch
     assert exported.metadata[jp.RUN_STATE_BRANCH_NAME] == exported.exported
