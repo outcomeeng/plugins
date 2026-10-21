@@ -51,7 +51,7 @@ CAN move a prioritized Output from proposal to executable work without placing m
 - A row's waiting state maps a `Submitted` Change to `confirmation: <Maturity>`, a `Claimed` Change to `holder: <login>` with the session and claim root of its winning Claim, an `Available` Change with an open blocker to `blockers: <numbers>`, and any other `Available` Change to `claim`, and adds `checks` to a `Claimed` Change whose pull request holds a check that has not concluded success
 - NEVER: `report-changes` returns a shorter list in place of a failure; a read that fails, returns unreadable output, or fills a bound — `100 issues per page, 10 pages`, `50 field values`, or `100 blockers, one page` — yields a blocked result naming the failed read or the bound and no row
 - NEVER: `report-changes` writes; it runs reading `gh` commands only, posts no comment, writes no field, assignee, or blocker, and its script writes no file
-- ALWAYS: `report-changes` reads the Change store and the Priority order from `spx/local/coordination.md` and passes them to its bundled script as request values, and the script reads no overlay and no repository content
+- ALWAYS: `report-changes` reads the Change store and the Priority order from `spx/local/coordination.md` and passes them to its bundled script as request values, and the script reads no overlay and no repository content ([audit:report-request-values])
 
 ### Mapping
 
