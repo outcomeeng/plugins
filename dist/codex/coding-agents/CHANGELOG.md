@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.16.3
+
+### Changed
+
+- **`/orchestrate-change` starts the Executor session without claiming the Change, and reads holding from the assignee and Handoffs from commits on `change/<N>`.** Start posts no claim and adds no assignee: the Executor session claims the Change for its own session and worktree, and a restarted Executor claims it again. Check reads a release from the Change's assignee list and its newest assignment event, an empty list after an unassignment, and reads the Handoff's `Blockers` and `Hazards` from the newest `Handoff:` commit on the Change's branch `change/<N>`; a release is reported to the principal once per Handoff commit under the correlation `change-<N>-handoff-<commit SHA>`. No step reads a `Claim:` or `Handoff:` comment or a `Claimed` Lifecycle. A start the harness's classifier refuses twice reports the refused request and the reason to the principal, with no Claim held.
+
 ## 0.16.1
 
 ### Changed
