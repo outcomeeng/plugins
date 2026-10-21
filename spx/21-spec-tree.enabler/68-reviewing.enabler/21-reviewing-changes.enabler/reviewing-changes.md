@@ -12,9 +12,9 @@ CAN project the sealed journal into the surface they own without duplicating rev
 
 ## Assertions
 
-- ALWAYS: the review skill advances a changed file's scope only after reading the file, and marks every changed file it does not read as unread before it finishes, per [`spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md`](spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md) ([audit:scope-advance-on-read])
+- ALWAYS: the review skill advances a changed file's scope only after reading the file, and marks every changed file it does not read as unread before it finishes, per [`spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md`](spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md) ([audit])
 - ALWAYS: a review whose branch value names a commit rather than a branch records the checked-out branch as its branch identity and slug, per [`spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md`](spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md) ([test](tests/test_review_branch_identity.compliance.l2.py))
-- NEVER: the reviewer agent exports a commit as the branch identity for a commit-range input, per [`spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md`](spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md) ([audit:range-branch-identity])
+- NEVER: the reviewer agent exports a commit as the branch identity for a commit-range input, per [`spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md`](spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md) ([audit])
 
 ### Scenarios
 
