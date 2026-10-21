@@ -30,6 +30,17 @@ The script needs `gh` authenticated for the store and Python 3.13 or later, and 
 
 </available_scripts>
 
+<script_test_record>
+
+`scripts/report_changes.py` was tested by replaying a recorded Change store through an injected command runner, so no test touched a live store or the network.
+
+- **Sample input:** a store of open and closed Changes across several pages, with Product, Maturity, Lifecycle, Priority, and Parent values, assignees, blockers, Handoff and Claim comments, field-change events, and linked branches and pull requests with check results; the request named the store and a Priority order, once without filters and once with each filter.
+- **Expected output:** exit 0 and `{"status": "ok", "rows": [...]}` holding exactly the open Changes that pass the filters, over every page, in Priority order with no Priority last, then by ascending issue number. Each row's root, blockers, changeset, waiting state, and next action equal the same values read directly from the recorded store, including `unresolved` for a Parent cycle or an absent Change, and `none` and `none recorded` for a Change with no Handoff.
+- **Error cases:** each of the store, blocker, comment, field-change event, and check reads made to exit nonzero, return unreadable output, or fail to start gave exit 3, a blocked result naming the read and its detail, and no row. A store that never ends its pages, a Change returning a full set of field values, and a Change returning a full blocker list each gave exit 3 with the bound named and no row.
+- **Cleanup:** every `gh` command the script issued was a read; no GraphQL write, no REST method other than GET, no file written, and no entry left in the working directory.
+
+</script_test_record>
+
 <workflow>
 
 1. **Read the request values.** Read `spx/local/coordination.md`. Take the `Repository` value of its Change store as the store, and the `Priority` line's order from first to last as the Priority order, joined by commas. An absent file, store, or Priority order is a blocked result naming what is missing, with nothing run.
