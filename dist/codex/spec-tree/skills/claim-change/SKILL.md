@@ -5,7 +5,7 @@ description: >-
   Change store to hold it for refinement or execution. NEVER assign a Change or
   post its claim by hand without this skill.
 argument-hint: "[#N | owner/repo#N | issue-url] [worktree-root]"
-allowed-tools: Read, Write, Bash(spx worktree status:*), Bash(git fetch:*), Bash(git switch:*), Bash(gh issue list:*), Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh issue comment:*), Bash(gh api graphql:*), Bash(gh api user --jq .login), Bash(printenv USER), Bash(hostname -s), Bash(git log:*), Bash(printenv CODEX_THREAD_ID), Bash(git rev-parse --show-toplevel), Bash(git worktree list --porcelain), Bash(git ls-remote --heads origin:*), request_user_input
+allowed-tools: Read, Write, Bash(spx worktree status:*), Bash(git fetch:*), Bash(git switch:*), Bash(gh issue list:*), Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh issue comment:*), Bash(gh api graphql:*), Bash(gh api user --jq .login), Bash(printenv USER), Bash(hostname -s), Bash(git log -1:*), Bash(printenv CODEX_THREAD_ID), Bash(git rev-parse --show-toplevel), Bash(git worktree list --porcelain), Bash(git ls-remote --heads origin:*), request_user_input
 ---
 
 <objective>

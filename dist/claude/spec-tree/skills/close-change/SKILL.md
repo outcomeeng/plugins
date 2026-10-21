@@ -7,7 +7,7 @@ description: >-
   or before its terminal precondition holds.
 argument-hint: "<Applied|Abandoned> [#N | owner/repo#N | issue-url]"
 arguments: terminal reference
-allowed-tools: Read, Write, Bash(git fetch:*), Bash(git merge-base --is-ancestor:*), Bash(spx spec status:*), Bash(gh issue view:*), Bash(gh pr view:*), Bash(gh pr checks:*), Bash(git cat-file -e:*), Bash(git rev-parse --verify:*), Bash(git log:*), Bash(gh issue comment:*), Bash(gh issue close:*), Bash(gh api graphql:*), Bash(gh api user --jq .login), Bash(printenv USER), Bash(hostname -s), Bash(git rev-parse --show-toplevel), Bash(git rev-parse --abbrev-ref origin/HEAD), Bash(printenv CLAUDE_CODE_SESSION_ID), AskUserQuestion, Skill
+allowed-tools: Read, Write, Bash(git fetch:*), Bash(git merge-base --is-ancestor:*), Bash(spx spec status:*), Bash(gh issue view:*), Bash(gh pr view:*), Bash(gh pr checks:*), Bash(git cat-file -e:*), Bash(git rev-parse --verify:*), Bash(git log -1:*), Bash(gh issue comment:*), Bash(gh issue close:*), Bash(gh api graphql:*), Bash(gh api user --jq .login), Bash(printenv USER), Bash(hostname -s), Bash(git rev-parse --show-toplevel), Bash(git rev-parse --abbrev-ref origin/HEAD), Bash(printenv CLAUDE_CODE_SESSION_ID), AskUserQuestion, Skill
 ---
 
 <objective>
