@@ -402,6 +402,47 @@
                     }
                   ]
                 }
+              },
+              {
+                "number": 10,
+                "url": "https://github.com/example-org/example-changes/issues/10",
+                "title": "Reclaimed after a release",
+                "state": "OPEN",
+                "assignees": {
+                  "nodes": [
+                    {
+                      "login": "example-holder-c"
+                    }
+                  ]
+                },
+                "issueFieldValues": {
+                  "nodes": [
+                    {
+                      "name": "example-product",
+                      "field": {
+                        "name": "Product"
+                      }
+                    },
+                    {
+                      "name": "Executable",
+                      "field": {
+                        "name": "Maturity"
+                      }
+                    },
+                    {
+                      "name": "Claimed",
+                      "field": {
+                        "name": "Lifecycle"
+                      }
+                    },
+                    {
+                      "name": "Urgent",
+                      "field": {
+                        "name": "Priority"
+                      }
+                    }
+                  ]
+                }
               }
             ]
           }
@@ -466,6 +507,109 @@
         "createdAt": "2026-10-03T09:00:00Z",
         "body": "Handoff:\n- Branch or PR: work/example-branch@def456\n- Next block: Governance mutations block 1\n"
       }
+    ],
+    "10": [
+      {
+        "author": {
+          "login": "example-holder-a"
+        },
+        "createdAt": "2026-10-04T07:00:00Z",
+        "body": "Claim: session-first /example/root-first"
+      },
+      {
+        "author": {
+          "login": "example-holder-a"
+        },
+        "createdAt": "2026-10-04T07:30:00Z",
+        "body": "Handoff:\n- Branch or PR: work/example-first@111aaa\n- Next block: Governance mutations block 1\n"
+      },
+      {
+        "author": {
+          "login": "example-holder-b2"
+        },
+        "createdAt": "2026-10-04T08:00:00Z",
+        "body": "Claim: session-second /example/root-second"
+      },
+      {
+        "author": {
+          "login": "example-holder-b2"
+        },
+        "createdAt": "2026-10-04T09:00:00Z",
+        "body": "Handoff:\n- Branch or PR: work/example-second@222bbb\n- Next block: Spec mutations block 1\n"
+      },
+      {
+        "author": {
+          "login": "example-holder-c"
+        },
+        "createdAt": "2026-10-04T10:00:00Z",
+        "body": "Claim: session-c /example/root-c"
+      },
+      {
+        "author": {
+          "login": "example-holder-c"
+        },
+        "createdAt": "2026-10-04T11:00:00Z",
+        "body": "Handoff:\n- Branch or PR: work/example-reclaimed@333ccc\n- Next block: Spec mutations block 2\n"
+      }
+    ]
+  },
+  "events": {
+    "10": [
+      {
+        "createdAt": "2026-10-04T07:00:00Z",
+        "actor": {
+          "login": "example-holder-a"
+        },
+        "previousValue": "Available",
+        "newValue": "Claimed",
+        "issueField": {
+          "name": "Lifecycle"
+        }
+      },
+      {
+        "createdAt": "2026-10-04T07:45:00Z",
+        "actor": {
+          "login": "example-holder-a"
+        },
+        "previousValue": "Claimed",
+        "newValue": "Available",
+        "issueField": {
+          "name": "Lifecycle"
+        }
+      },
+      {
+        "createdAt": "2026-10-04T08:00:00Z",
+        "actor": {
+          "login": "example-holder-b2"
+        },
+        "previousValue": "Available",
+        "newValue": "Claimed",
+        "issueField": {
+          "name": "Lifecycle"
+        }
+      },
+      {
+        "createdAt": "2026-10-04T09:30:00Z",
+        "actor": {
+          "login": "example-holder-b2"
+        },
+        "previousValue": "Claimed",
+        "newValue": "Available",
+        "issueField": {
+          "name": "Lifecycle"
+        }
+      },
+      {
+        "createdAt": "2026-10-04T10:00:00Z",
+        "actor": {
+          "login": "example-holder-c"
+        },
+        "previousValue": "Available",
+        "newValue": "Claimed",
+        "issueField": {
+          "name": "Lifecycle"
+        }
+      }
     ]
   },
   "checks": {
@@ -522,6 +666,30 @@
         "confirmation: Framed"
       ],
       "next_action": "none recorded"
+    },
+    {
+      "number": 10,
+      "url": "https://github.com/example-org/example-changes/issues/10",
+      "title": "Reclaimed after a release",
+      "product": "example-product",
+      "maturity": "Executable",
+      "lifecycle": "Claimed",
+      "priority": "Urgent",
+      "holder": [
+        "example-holder-c"
+      ],
+      "parent": null,
+      "root": 10,
+      "blockers": [],
+      "changeset": {
+        "kind": "branch",
+        "ref": "work/example-reclaimed",
+        "head": "333ccc"
+      },
+      "waiting": [
+        "holder: example-holder-c (session session-c, root /example/root-c)"
+      ],
+      "next_action": "Spec mutations block 2"
     },
     {
       "number": 2,

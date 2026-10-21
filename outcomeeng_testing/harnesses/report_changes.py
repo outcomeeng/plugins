@@ -15,7 +15,7 @@ A replayed store is either an inert fixture file under
 identities because the Change store is private and this repository is public,
 or a generated store from ``outcomeeng_testing.generators.report_changes``
 rendered into the store's answer shapes here. A fixture holds the store's
-``pages`` in reading order, the REST ``blockers`` and the ``comments`` per
+``pages`` in reading order, the REST ``blockers``, the ``comments``, and the field-change ``events`` per
 issue number, the pull request ``checks`` per URL, and ``direct``, the rows
 read by hand from those answers. The collaborator answers the first store
 call with the first page and each later one with the page that follows the
@@ -39,7 +39,7 @@ import sys
 import threading
 from collections.abc import Callable, Sequence
 from contextlib import chdir
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import StrEnum
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -297,6 +297,7 @@ def load_recorded_store(path: Path = RECORDED_STORE) -> ReplayedStore:
         pages=document["pages"],
         blockers=document["blockers"],
         comments=document["comments"],
+        events=document["events"],
         checks=document["checks"],
         direct=document["direct"],
     )
@@ -308,14 +309,7 @@ def unending_issues(store: ReplayedStore) -> ReplayedStore:
     info = page["data"]["repository"]["issues"]["pageInfo"]  # type: ignore[index]
     info["hasNextPage"] = True
     info["endCursor"] = _UNENDING_CURSOR
-    return ReplayedStore(
-        store=store.store,
-        priority_order=store.priority_order,
-        pages=[page],
-        blockers=store.blockers,
-        comments=store.comments,
-        checks=store.checks,
-    )
+    return replace(store, pages=[page])
 
 
 def filled_field_values(store: ReplayedStore, count: int) -> ReplayedStore:
@@ -325,14 +319,7 @@ def filled_field_values(store: ReplayedStore, count: int) -> ReplayedStore:
         "nodes"
     ]
     nodes[:] = [nodes[0]] * count
-    return ReplayedStore(
-        store=store.store,
-        priority_order=store.priority_order,
-        pages=pages,
-        blockers=store.blockers,
-        comments=store.comments,
-        checks=store.checks,
-    )
+    return replace(store, pages=pages)
 
 
 def filled_assignees(store: ReplayedStore, count: int) -> ReplayedStore:
@@ -342,28 +329,12 @@ def filled_assignees(store: ReplayedStore, count: int) -> ReplayedStore:
         "nodes"
     ]
     assignees[:] = [{"login": f"assignee-{index}"} for index in range(count)]
-    return ReplayedStore(
-        store=store.store,
-        priority_order=store.priority_order,
-        pages=pages,
-        blockers=store.blockers,
-        comments=store.comments,
-        checks=store.checks,
-    )
+    return replace(store, pages=pages)
 
 
 def unending_events(store: ReplayedStore) -> ReplayedStore:
     """The store whose field-change event timelines never report their last page."""
-    return ReplayedStore(
-        store=store.store,
-        priority_order=store.priority_order,
-        pages=store.pages,
-        blockers=store.blockers,
-        comments=store.comments,
-        events=store.events,
-        checks=store.checks,
-        events_never_end=True,
-    )
+    return replace(store, events_never_end=True)
 
 
 def filled_blockers(store: ReplayedStore, count: int) -> ReplayedStore:
@@ -371,14 +342,7 @@ def filled_blockers(store: ReplayedStore, count: int) -> ReplayedStore:
     blockers = copy.deepcopy(store.blockers)
     for number, entries in blockers.items():
         blockers[number] = [entries[0]] * count
-    return ReplayedStore(
-        store=store.store,
-        priority_order=store.priority_order,
-        pages=store.pages,
-        blockers=blockers,
-        comments=store.comments,
-        checks=store.checks,
-    )
+    return replace(store, blockers=blockers)
 
 
 def render_generated(generated: GeneratedStore) -> ReplayedStore:

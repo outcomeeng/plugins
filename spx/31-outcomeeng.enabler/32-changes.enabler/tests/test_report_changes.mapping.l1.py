@@ -5,7 +5,8 @@ from. The replayed store is a recorded multi-page fixture whose answers hold
 a Change in each waiting state, a Parent cycle, an absent Parent, a Change
 with no Handoff, a Handoff whose ``Branch or PR`` line reads ``none``, a
 Handoff that names a branch, and a Handoff that names a pull request with a
-check that has not concluded success. The fixture's ``direct`` rows are those
+check that has not concluded success, and a Claimed Change that was released
+and claimed again, with its field-change events. The fixture's ``direct`` rows are those
 columns read by hand from its answers, so the script's mapping code selects
 neither a case nor an expected row. The waiting-state domain is the script's
 own ``Waiting`` enumeration, and the fixture is checked to cover every member.
@@ -78,3 +79,55 @@ def test_waiting_state_equals_the_direct_read_for_every_waiting_state() -> None:
     ]
     for state in script.Waiting:
         assert any(entry.startswith(state) for entry in direct_entries)
+
+
+def test_a_reclaimed_change_waits_on_the_holder_of_the_claim_after_its_newest_available_move() -> (
+    None
+):
+    """Design record.
+
+    Assertion: a `Claimed` Change's waiting state maps to `holder: <login>` with
+    the session and claim root of its winning Claim, the earliest Claim comment
+    posted after the newest Handoff that a Lifecycle move to Available follows.
+    Production subject: the script's entry point reading a Claimed Change whose
+    comments hold three Claims, each followed by a Handoff, and whose
+    field-change events hold a move to Available after each of the first two.
+    Case provenance: the recorded store's reclaimed Change, whose comments and
+    events the fixture records; the stale Claims are the ones before the last.
+    Oracle owner: the fixture's direct row, read by hand from those answers by
+    the spec sentence.
+    Rejected mutation: the script's winning-claim bound compares against the
+    oldest Available move instead of the newest, or ignores the moves and takes
+    the first Claim since creation, or bounds by the newest Handoff overall.
+    Failure observation: the row's waiting entry differs from the direct row,
+    names a stale Claim's session, or names no winning Claim's session.
+    """
+    recorded = load_recorded_store()
+
+    observed = report(recorded)
+
+    assert observed.exit_code == script.EXIT_OK
+    assert recorded.events
+    rows = {row[Row.NUMBER]: row for row in observed.result[Report.ROWS]}
+    directs = {direct[Row.NUMBER]: direct for direct in recorded.direct}
+    for number, events in recorded.events.items():
+        assert events
+        claims = [
+            comment
+            for comment in recorded.comments[number]
+            if comment["body"].startswith(script.CLAIM_PREFIX)
+        ]
+        stale, winning = claims[:-1], claims[-1]
+        assert stale
+        waiting = rows[int(number)][Row.WAITING]
+        assert waiting == directs[int(number)][Row.WAITING]
+        session, claim_root = winning["body"].split()[1:3]
+        assert (
+            f"{winning['author']['login']} (session {session}, root {claim_root})"
+            in waiting[0]
+        )
+        for comment in stale:
+            stale_session, stale_root = comment["body"].split()[1:3]
+            assert stale_session not in waiting[0]
+            assert stale_root not in waiting[0]
+    assert observed.event_page_calls
