@@ -165,6 +165,8 @@ class ReplayedStore:
     events: dict[str, list[dict[str, object]]] = field(default_factory=dict)
     checks: dict[str, list[dict[str, object]]] = field(default_factory=dict)
     direct: list[dict[str, object]] = field(default_factory=list)
+    #: Whether every page of an issue's field-change events reports a further page.
+    events_never_end: bool = False
 
 
 @dataclass(frozen=True)
@@ -220,6 +222,15 @@ class ReportObservation:
     working_directory_entries: tuple[str, ...]
 
     @property
+    def event_page_calls(self) -> tuple[GhCall, ...]:
+        """The calls that read a page of an issue's field-change events."""
+        return tuple(
+            call
+            for call in self.calls
+            if call.graphql_query == load_script().EVENT_QUERY
+        )
+
+    @property
     def store_page_calls(self) -> tuple[GhCall, ...]:
         """The calls that read a page of the store's issues."""
         return tuple(
@@ -236,6 +247,8 @@ class SpecBounds:
     issues: str
     field_values: str
     blockers: str
+    assignees: str
+    events: str
 
     @property
     def page_count(self) -> int:
@@ -249,16 +262,30 @@ class SpecBounds:
     def blocker_count(self) -> int:
         return int(_FIRST_INTEGER.findall(self.blockers)[0])
 
+    @property
+    def assignee_count(self) -> int:
+        return int(_FIRST_INTEGER.findall(self.assignees)[0])
+
+    @property
+    def event_page_count(self) -> int:
+        return int(_FIRST_INTEGER.findall(self.events)[-1])
+
 
 def spec_bounds() -> SpecBounds:
-    """The three bounds named in the spec assertion that forbids a shorter list."""
+    """The five bounds named in the spec assertion that forbids a shorter list."""
     line = next(
         text
         for text in CHANGES_SPEC.read_text(encoding="utf-8").splitlines()
         if _BOUND_LINE in text
     )
-    issues, field_values, blockers = _BOUND_PHRASE.findall(line)
-    return SpecBounds(issues=issues, field_values=field_values, blockers=blockers)
+    issues, field_values, blockers, assignees, events = _BOUND_PHRASE.findall(line)
+    return SpecBounds(
+        issues=issues,
+        field_values=field_values,
+        blockers=blockers,
+        assignees=assignees,
+        events=events,
+    )
 
 
 def load_recorded_store(path: Path = RECORDED_STORE) -> ReplayedStore:
@@ -305,6 +332,37 @@ def filled_field_values(store: ReplayedStore, count: int) -> ReplayedStore:
         blockers=store.blockers,
         comments=store.comments,
         checks=store.checks,
+    )
+
+
+def filled_assignees(store: ReplayedStore, count: int) -> ReplayedStore:
+    """The store whose first issue returns ``count`` assignees."""
+    pages = copy.deepcopy(store.pages)
+    assignees = pages[0]["data"]["repository"]["issues"]["nodes"][0]["assignees"][  # type: ignore[index]
+        "nodes"
+    ]
+    assignees[:] = [{"login": f"assignee-{index}"} for index in range(count)]
+    return ReplayedStore(
+        store=store.store,
+        priority_order=store.priority_order,
+        pages=pages,
+        blockers=store.blockers,
+        comments=store.comments,
+        checks=store.checks,
+    )
+
+
+def unending_events(store: ReplayedStore) -> ReplayedStore:
+    """The store whose field-change event timelines never report their last page."""
+    return ReplayedStore(
+        store=store.store,
+        priority_order=store.priority_order,
+        pages=store.pages,
+        blockers=store.blockers,
+        comments=store.comments,
+        events=store.events,
+        checks=store.checks,
+        events_never_end=True,
     )
 
 
@@ -431,7 +489,12 @@ class _Replay:
             number = self._value(argv, _NUMBER_PREFIX)
             nodes = self._replayed.events.get(str(number), [])
             timeline = {
-                "pageInfo": {"hasNextPage": False, "endCursor": None},
+                "pageInfo": {
+                    "hasNextPage": self._replayed.events_never_end,
+                    "endCursor": _UNENDING_CURSOR
+                    if self._replayed.events_never_end
+                    else None,
+                },
                 "nodes": nodes,
             }
             return ReadKind.EVENTS, {

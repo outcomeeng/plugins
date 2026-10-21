@@ -6,7 +6,8 @@ blocked result naming the failed read or the bound and no row. The violating
 cases are the failures of every kind of read the script makes, each in every
 way a read fails (a nonzero exit, output that is not JSON, a `gh` that cannot
 start), and one store per bound: an issue connection that never ends, an issue
-whose field-value connection is full, and a blocker list that is full. The
+whose field-value connection is full, a blocker list that is full, an assignee
+connection that is full, and an event timeline that never ends. The
 bounds come from the spec assertion text, and the counts that fill them come
 from the bounds. A script that skips a failed read, or returns the rows it has,
 returns rows where the rule demands none.
@@ -28,12 +29,14 @@ from outcomeeng_testing.harnesses.report_changes import (
     Fault,
     FaultKind,
     ReadKind,
+    filled_assignees,
     filled_blockers,
     filled_field_values,
     load_recorded_store,
     load_script,
     report,
     spec_bounds,
+    unending_events,
     unending_issues,
 )
 
@@ -99,6 +102,56 @@ def test_a_full_blocker_list_blocks_naming_its_bound() -> None:
     assert observed.result[Report.STATUS] == script.ReportStatus.BLOCKED
     assert observed.result[Report.BOUND] == bounds.blockers
     assert Report.ROWS not in observed.result
+
+
+def test_a_full_assignee_connection_blocks_naming_its_bound() -> None:
+    """Design record.
+
+    Assertion: NEVER return a shorter list when a read fills a bound; the
+    `100 assignees` bound.
+    Production subject: the script's entry point reading a store whose first
+    issue returns as many assignees as the bound.
+    Case provenance: the count comes from the bound in the spec assertion text.
+    Oracle owner: the spec assertion text names the bound and demands no row.
+    Rejected mutation: the script drops its assignee-limit check and returns
+    rows.
+    Failure observation: the exit code is not blocked, the bound is absent, and
+    rows are present.
+    """
+    bounds = spec_bounds()
+
+    observed = report(filled_assignees(load_recorded_store(), bounds.assignee_count))
+
+    assert observed.exit_code == script.EXIT_BLOCKED
+    assert observed.result[Report.STATUS] == script.ReportStatus.BLOCKED
+    assert observed.result[Report.BOUND] == bounds.assignees
+    assert Report.ROWS not in observed.result
+
+
+def test_an_event_timeline_that_never_ends_blocks_naming_the_event_bound() -> None:
+    """Design record.
+
+    Assertion: NEVER return a shorter list when a read fills a bound; the
+    `100 events per page, 10 pages` bound.
+    Production subject: the script's entry point reading a Claimed Change whose
+    field-change event timeline reports a further page on every page.
+    Case provenance: the page count comes from the bound in the spec assertion
+    text; the Claimed Change is in the recorded store.
+    Oracle owner: the spec assertion text names the bound and demands no row.
+    Rejected mutation: the script returns the moves it has after the last page
+    instead of blocking.
+    Failure observation: the exit code is not blocked, the bound is absent, rows
+    are present, or the event pages read differ from the bound's page count.
+    """
+    bounds = spec_bounds()
+
+    observed = report(unending_events(load_recorded_store()))
+
+    assert observed.exit_code == script.EXIT_BLOCKED
+    assert observed.result[Report.STATUS] == script.ReportStatus.BLOCKED
+    assert observed.result[Report.BOUND] == bounds.events
+    assert Report.ROWS not in observed.result
+    assert len(observed.event_page_calls) == bounds.event_page_count
 
 
 def test_the_script_issues_reading_commands_only_and_writes_no_file() -> None:
