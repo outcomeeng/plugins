@@ -447,6 +447,7 @@ class CodexWritableRootProbe:
         self.record = ProbeRecord()
         self.candidate_key: str | None = None
         self.controller_key: str | None = None
+        self.home_provisioned = False
 
     @property
     def shared_config(self) -> Path:
@@ -482,7 +483,7 @@ class CodexWritableRootProbe:
                 "evidence": stopped.evidence,
             }
         finally:
-            self._release_credential_link()
+            self._release_credential()
             try:
                 if CODEX_HOME_ENV in self.request.environment:
                     record.shared_config_digest_after = self._shared_digest()
@@ -510,10 +511,11 @@ class CodexWritableRootProbe:
                 f"The shared home's configuration is unreadable: {error.strerror}.",
             ) from None
 
-    def _release_credential_link(self) -> None:
-        link = self.request.probe_home / AUTH_FILENAME
-        if link.is_symlink():
-            link.unlink()
+    def _release_credential(self) -> None:
+        if not self.home_provisioned:
+            return
+        # Removing the entry never follows a link, so the saved login stays.
+        (self.request.probe_home / AUTH_FILENAME).unlink(missing_ok=True)
 
     def _admit(self) -> None:
         request = self.request
@@ -586,6 +588,7 @@ class CodexWritableRootProbe:
     def _provision_home(self) -> None:
         request = self.request
         request.probe_home.mkdir(parents=True)
+        self.home_provisioned = True
         request.probe_home.chmod(0o700)
         (request.probe_home / CONFIG_FILENAME).write_text(
             probe_home_configuration(request.candidate_worktree), encoding="utf-8"
