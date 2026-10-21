@@ -1,0 +1,896 @@
+{
+  "store": "example-org/example-changes",
+  "priority_order": [
+    "Blocker",
+    "Urgent",
+    "Normal",
+    "Deferred"
+  ],
+  "pages": [
+    {
+      "data": {
+        "repository": {
+          "issues": {
+            "pageInfo": {
+              "hasNextPage": true,
+              "endCursor": "cursor-1"
+            },
+            "nodes": [
+              {
+                "number": 1,
+                "url": "https://github.com/example-org/example-changes/issues/1",
+                "title": "Awaiting confirmation",
+                "state": "OPEN",
+                "assignees": {
+                  "nodes": []
+                },
+                "issueFieldValues": {
+                  "nodes": [
+                    {
+                      "name": "example-product",
+                      "field": {
+                        "name": "Product"
+                      }
+                    },
+                    {
+                      "name": "Framed",
+                      "field": {
+                        "name": "Maturity"
+                      }
+                    },
+                    {
+                      "name": "Submitted",
+                      "field": {
+                        "name": "Lifecycle"
+                      }
+                    },
+                    {
+                      "name": "Urgent",
+                      "field": {
+                        "name": "Priority"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "number": 2,
+                "url": "https://github.com/example-org/example-changes/issues/2",
+                "title": "Held with a pull request",
+                "state": "OPEN",
+                "assignees": {
+                  "nodes": [
+                    {
+                      "login": "example-holder"
+                    }
+                  ]
+                },
+                "issueFieldValues": {
+                  "nodes": [
+                    {
+                      "name": "example-product",
+                      "field": {
+                        "name": "Product"
+                      }
+                    },
+                    {
+                      "name": "Executable",
+                      "field": {
+                        "name": "Maturity"
+                      }
+                    },
+                    {
+                      "name": "Claimed",
+                      "field": {
+                        "name": "Lifecycle"
+                      }
+                    },
+                    {
+                      "name": "Normal",
+                      "field": {
+                        "name": "Priority"
+                      }
+                    },
+                    {
+                      "value": 1.0,
+                      "field": {
+                        "name": "Parent"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "number": 3,
+                "url": "https://github.com/example-org/example-changes/issues/3",
+                "title": "Waiting on a blocker",
+                "state": "OPEN",
+                "assignees": {
+                  "nodes": []
+                },
+                "issueFieldValues": {
+                  "nodes": [
+                    {
+                      "name": "example-product",
+                      "field": {
+                        "name": "Product"
+                      }
+                    },
+                    {
+                      "name": "Sliced",
+                      "field": {
+                        "name": "Maturity"
+                      }
+                    },
+                    {
+                      "name": "Available",
+                      "field": {
+                        "name": "Lifecycle"
+                      }
+                    },
+                    {
+                      "name": "Normal",
+                      "field": {
+                        "name": "Priority"
+                      }
+                    },
+                    {
+                      "value": 1,
+                      "field": {
+                        "name": "Parent"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "data": {
+        "repository": {
+          "issues": {
+            "pageInfo": {
+              "hasNextPage": true,
+              "endCursor": "cursor-2"
+            },
+            "nodes": [
+              {
+                "number": 4,
+                "url": "https://github.com/example-org/example-changes/issues/4",
+                "title": "Ready to claim",
+                "state": "OPEN",
+                "assignees": {
+                  "nodes": []
+                },
+                "issueFieldValues": {
+                  "nodes": [
+                    {
+                      "name": "example-product",
+                      "field": {
+                        "name": "Product"
+                      }
+                    },
+                    {
+                      "name": "Executable",
+                      "field": {
+                        "name": "Maturity"
+                      }
+                    },
+                    {
+                      "name": "Available",
+                      "field": {
+                        "name": "Lifecycle"
+                      }
+                    },
+                    {
+                      "name": "Deferred",
+                      "field": {
+                        "name": "Priority"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "number": 5,
+                "url": "https://github.com/example-org/example-changes/issues/5",
+                "title": "Held on a branch",
+                "state": "OPEN",
+                "assignees": {
+                  "nodes": [
+                    {
+                      "login": "example-holder-b"
+                    }
+                  ]
+                },
+                "issueFieldValues": {
+                  "nodes": [
+                    {
+                      "name": "example-product",
+                      "field": {
+                        "name": "Product"
+                      }
+                    },
+                    {
+                      "name": "Executable",
+                      "field": {
+                        "name": "Maturity"
+                      }
+                    },
+                    {
+                      "name": "Claimed",
+                      "field": {
+                        "name": "Lifecycle"
+                      }
+                    },
+                    {
+                      "name": "Blocker",
+                      "field": {
+                        "name": "Priority"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "number": 9,
+                "url": "https://github.com/example-org/example-changes/issues/9",
+                "title": "Closed already",
+                "state": "CLOSED",
+                "assignees": {
+                  "nodes": []
+                },
+                "issueFieldValues": {
+                  "nodes": [
+                    {
+                      "name": "example-product",
+                      "field": {
+                        "name": "Product"
+                      }
+                    },
+                    {
+                      "name": "Executable",
+                      "field": {
+                        "name": "Maturity"
+                      }
+                    },
+                    {
+                      "name": "Applied",
+                      "field": {
+                        "name": "Lifecycle"
+                      }
+                    },
+                    {
+                      "name": "Urgent",
+                      "field": {
+                        "name": "Priority"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "data": {
+        "repository": {
+          "issues": {
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": "cursor-3"
+            },
+            "nodes": [
+              {
+                "number": 6,
+                "url": "https://github.com/example-org/example-changes/issues/6",
+                "title": "Cycle one",
+                "state": "OPEN",
+                "assignees": {
+                  "nodes": []
+                },
+                "issueFieldValues": {
+                  "nodes": [
+                    {
+                      "name": "example-product",
+                      "field": {
+                        "name": "Product"
+                      }
+                    },
+                    {
+                      "name": "Proposed",
+                      "field": {
+                        "name": "Maturity"
+                      }
+                    },
+                    {
+                      "name": "Available",
+                      "field": {
+                        "name": "Lifecycle"
+                      }
+                    },
+                    {
+                      "value": 7,
+                      "field": {
+                        "name": "Parent"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "number": 7,
+                "url": "https://github.com/example-org/example-changes/issues/7",
+                "title": "Cycle two",
+                "state": "OPEN",
+                "assignees": {
+                  "nodes": []
+                },
+                "issueFieldValues": {
+                  "nodes": [
+                    {
+                      "name": "example-product",
+                      "field": {
+                        "name": "Product"
+                      }
+                    },
+                    {
+                      "name": "Proposed",
+                      "field": {
+                        "name": "Maturity"
+                      }
+                    },
+                    {
+                      "name": "Available",
+                      "field": {
+                        "name": "Lifecycle"
+                      }
+                    },
+                    {
+                      "name": "Normal",
+                      "field": {
+                        "name": "Priority"
+                      }
+                    },
+                    {
+                      "value": 6,
+                      "field": {
+                        "name": "Parent"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "number": 8,
+                "url": "https://github.com/example-org/example-changes/issues/8",
+                "title": "Absent parent",
+                "state": "OPEN",
+                "assignees": {
+                  "nodes": []
+                },
+                "issueFieldValues": {
+                  "nodes": [
+                    {
+                      "name": "example-product",
+                      "field": {
+                        "name": "Product"
+                      }
+                    },
+                    {
+                      "name": "Proposed",
+                      "field": {
+                        "name": "Maturity"
+                      }
+                    },
+                    {
+                      "name": "Available",
+                      "field": {
+                        "name": "Lifecycle"
+                      }
+                    },
+                    {
+                      "value": 99,
+                      "field": {
+                        "name": "Parent"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "number": 10,
+                "url": "https://github.com/example-org/example-changes/issues/10",
+                "title": "Reclaimed after a release",
+                "state": "OPEN",
+                "assignees": {
+                  "nodes": [
+                    {
+                      "login": "example-holder-c"
+                    }
+                  ]
+                },
+                "issueFieldValues": {
+                  "nodes": [
+                    {
+                      "name": "example-product",
+                      "field": {
+                        "name": "Product"
+                      }
+                    },
+                    {
+                      "name": "Executable",
+                      "field": {
+                        "name": "Maturity"
+                      }
+                    },
+                    {
+                      "name": "Claimed",
+                      "field": {
+                        "name": "Lifecycle"
+                      }
+                    },
+                    {
+                      "name": "Urgent",
+                      "field": {
+                        "name": "Priority"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "number": 11,
+                "url": "https://github.com/example-org/example-changes/issues/11",
+                "title": "Claimed with no Claim comment",
+                "state": "OPEN",
+                "assignees": {
+                  "nodes": [
+                    {
+                      "login": "example-holder-d"
+                    },
+                    {
+                      "login": "example-holder-e"
+                    }
+                  ]
+                },
+                "issueFieldValues": {
+                  "nodes": [
+                    {
+                      "name": "example-product",
+                      "field": {
+                        "name": "Product"
+                      }
+                    },
+                    {
+                      "name": "Executable",
+                      "field": {
+                        "name": "Maturity"
+                      }
+                    },
+                    {
+                      "name": "Claimed",
+                      "field": {
+                        "name": "Lifecycle"
+                      }
+                    },
+                    {
+                      "name": "Normal",
+                      "field": {
+                        "name": "Priority"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "blockers": {
+    "3": [
+      {
+        "number": 2,
+        "state": "open",
+        "state_reason": null,
+        "repository_url": "https://api.github.com/repos/example-org/example-changes"
+      },
+      {
+        "number": 5,
+        "state": "closed",
+        "state_reason": "completed",
+        "repository_url": "https://api.github.com/repos/other-org/other-repo"
+      }
+    ]
+  },
+  "comments": {
+    "2": [
+      {
+        "author": {
+          "login": "example-holder"
+        },
+        "createdAt": "2026-10-01T10:00:00Z",
+        "body": "Claim: session-a /example/root-a"
+      },
+      {
+        "author": {
+          "login": "example-holder"
+        },
+        "createdAt": "2026-10-01T11:00:00Z",
+        "body": "Handoff:\n- Branch or PR: https://github.com/example-org/example-plugins/pull/7@abc123\n- Next block: Spec mutations block 2\n"
+      }
+    ],
+    "4": [
+      {
+        "author": {
+          "login": "example-holder"
+        },
+        "createdAt": "2026-10-02T09:00:00Z",
+        "body": "Handoff:\n- Branch or PR: none\n- Next block: none\n"
+      }
+    ],
+    "5": [
+      {
+        "author": {
+          "login": "example-holder-b"
+        },
+        "createdAt": "2026-10-03T08:00:00Z",
+        "body": "Claim: session-b /example/root-b"
+      },
+      {
+        "author": {
+          "login": "example-holder-b"
+        },
+        "createdAt": "2026-10-03T09:00:00Z",
+        "body": "Handoff:\n- Branch or PR: work/example-branch@def456\n- Next block: Governance mutations block 1\n"
+      }
+    ],
+    "10": [
+      {
+        "author": {
+          "login": "example-holder-a"
+        },
+        "createdAt": "2026-10-04T07:00:00Z",
+        "body": "Claim: session-first /example/root-first"
+      },
+      {
+        "author": {
+          "login": "example-holder-a"
+        },
+        "createdAt": "2026-10-04T07:30:00Z",
+        "body": "Handoff:\n- Branch or PR: work/example-first@111aaa\n- Next block: Governance mutations block 1\n"
+      },
+      {
+        "author": {
+          "login": "example-holder-b2"
+        },
+        "createdAt": "2026-10-04T08:00:00Z",
+        "body": "Claim: session-second /example/root-second"
+      },
+      {
+        "author": {
+          "login": "example-holder-b2"
+        },
+        "createdAt": "2026-10-04T09:00:00Z",
+        "body": "Handoff:\n- Branch or PR: work/example-second@222bbb\n- Next block: Spec mutations block 1\n"
+      },
+      {
+        "author": {
+          "login": "example-holder-c"
+        },
+        "createdAt": "2026-10-04T10:00:00Z",
+        "body": "Claim: session-c /example/root-c"
+      },
+      {
+        "author": {
+          "login": "example-holder-c"
+        },
+        "createdAt": "2026-10-04T11:00:00Z",
+        "body": "Handoff:\n- Branch or PR: work/example-reclaimed@333ccc\n- Next block: Spec mutations block 2\n"
+      }
+    ]
+  },
+  "events": {
+    "10": [
+      {
+        "createdAt": "2026-10-04T07:00:00Z",
+        "actor": {
+          "login": "example-holder-a"
+        },
+        "previousValue": "Available",
+        "newValue": "Claimed",
+        "issueField": {
+          "name": "Lifecycle"
+        }
+      },
+      {
+        "createdAt": "2026-10-04T07:45:00Z",
+        "actor": {
+          "login": "example-holder-a"
+        },
+        "previousValue": "Claimed",
+        "newValue": "Available",
+        "issueField": {
+          "name": "Lifecycle"
+        }
+      },
+      {
+        "createdAt": "2026-10-04T08:00:00Z",
+        "actor": {
+          "login": "example-holder-b2"
+        },
+        "previousValue": "Available",
+        "newValue": "Claimed",
+        "issueField": {
+          "name": "Lifecycle"
+        }
+      },
+      {
+        "createdAt": "2026-10-04T09:30:00Z",
+        "actor": {
+          "login": "example-holder-b2"
+        },
+        "previousValue": "Claimed",
+        "newValue": "Available",
+        "issueField": {
+          "name": "Lifecycle"
+        }
+      },
+      {
+        "createdAt": "2026-10-04T10:00:00Z",
+        "actor": {
+          "login": "example-holder-c"
+        },
+        "previousValue": "Available",
+        "newValue": "Claimed",
+        "issueField": {
+          "name": "Lifecycle"
+        }
+      }
+    ]
+  },
+  "checks": {
+    "https://github.com/example-org/example-plugins/pull/7": [
+      {
+        "name": "gate",
+        "conclusion": "SUCCESS"
+      },
+      {
+        "name": "review",
+        "conclusion": "FAILURE"
+      }
+    ]
+  },
+  "direct": [
+    {
+      "number": 5,
+      "url": "https://github.com/example-org/example-changes/issues/5",
+      "title": "Held on a branch",
+      "product": "example-product",
+      "maturity": "Executable",
+      "lifecycle": "Claimed",
+      "priority": "Blocker",
+      "holder": [
+        "example-holder-b"
+      ],
+      "parent": null,
+      "root": 5,
+      "blockers": [],
+      "changeset": {
+        "kind": "branch",
+        "ref": "work/example-branch",
+        "head": "def456"
+      },
+      "waiting": [
+        "holder: example-holder-b (session session-b, root /example/root-b)"
+      ],
+      "next_action": "Governance mutations block 1"
+    },
+    {
+      "number": 1,
+      "url": "https://github.com/example-org/example-changes/issues/1",
+      "title": "Awaiting confirmation",
+      "product": "example-product",
+      "maturity": "Framed",
+      "lifecycle": "Submitted",
+      "priority": "Urgent",
+      "holder": [],
+      "parent": null,
+      "root": 1,
+      "blockers": [],
+      "changeset": "none",
+      "waiting": [
+        "confirmation: Framed"
+      ],
+      "next_action": "none recorded"
+    },
+    {
+      "number": 10,
+      "url": "https://github.com/example-org/example-changes/issues/10",
+      "title": "Reclaimed after a release",
+      "product": "example-product",
+      "maturity": "Executable",
+      "lifecycle": "Claimed",
+      "priority": "Urgent",
+      "holder": [
+        "example-holder-c"
+      ],
+      "parent": null,
+      "root": 10,
+      "blockers": [],
+      "changeset": {
+        "kind": "branch",
+        "ref": "work/example-reclaimed",
+        "head": "333ccc"
+      },
+      "waiting": [
+        "holder: example-holder-c (session session-c, root /example/root-c)"
+      ],
+      "next_action": "Spec mutations block 2"
+    },
+    {
+      "number": 2,
+      "url": "https://github.com/example-org/example-changes/issues/2",
+      "title": "Held with a pull request",
+      "product": "example-product",
+      "maturity": "Executable",
+      "lifecycle": "Claimed",
+      "priority": "Normal",
+      "holder": [
+        "example-holder"
+      ],
+      "parent": 1,
+      "root": 1,
+      "blockers": [],
+      "changeset": {
+        "kind": "pull_request",
+        "ref": "https://github.com/example-org/example-plugins/pull/7",
+        "head": "abc123",
+        "checks": [
+          {
+            "name": "gate",
+            "result": "success"
+          },
+          {
+            "name": "review",
+            "result": "failure"
+          }
+        ]
+      },
+      "waiting": [
+        "holder: example-holder (session session-a, root /example/root-a)",
+        "checks"
+      ],
+      "next_action": "Spec mutations block 2"
+    },
+    {
+      "number": 3,
+      "url": "https://github.com/example-org/example-changes/issues/3",
+      "title": "Waiting on a blocker",
+      "product": "example-product",
+      "maturity": "Sliced",
+      "lifecycle": "Available",
+      "priority": "Normal",
+      "holder": [],
+      "parent": 1,
+      "root": 1,
+      "blockers": [
+        {
+          "number": "2",
+          "state": "open",
+          "state_reason": null
+        },
+        {
+          "number": "other-org/other-repo#5",
+          "state": "closed",
+          "state_reason": "completed"
+        }
+      ],
+      "changeset": "none",
+      "waiting": [
+        "blockers: 2"
+      ],
+      "next_action": "none recorded"
+    },
+    {
+      "number": 7,
+      "url": "https://github.com/example-org/example-changes/issues/7",
+      "title": "Cycle two",
+      "product": "example-product",
+      "maturity": "Proposed",
+      "lifecycle": "Available",
+      "priority": "Normal",
+      "holder": [],
+      "parent": 6,
+      "root": "unresolved",
+      "blockers": [],
+      "changeset": "none",
+      "waiting": [
+        "claim"
+      ],
+      "next_action": "none recorded"
+    },
+    {
+      "number": 11,
+      "url": "https://github.com/example-org/example-changes/issues/11",
+      "title": "Claimed with no Claim comment",
+      "product": "example-product",
+      "maturity": "Executable",
+      "lifecycle": "Claimed",
+      "priority": "Normal",
+      "holder": [
+        "example-holder-d",
+        "example-holder-e"
+      ],
+      "parent": null,
+      "root": 11,
+      "blockers": [],
+      "changeset": "none",
+      "waiting": [
+        "holder: example-holder-d, example-holder-e (claim none recorded)"
+      ],
+      "next_action": "none recorded"
+    },
+    {
+      "number": 4,
+      "url": "https://github.com/example-org/example-changes/issues/4",
+      "title": "Ready to claim",
+      "product": "example-product",
+      "maturity": "Executable",
+      "lifecycle": "Available",
+      "priority": "Deferred",
+      "holder": [],
+      "parent": null,
+      "root": 4,
+      "blockers": [],
+      "changeset": "none",
+      "waiting": [
+        "claim"
+      ],
+      "next_action": "none"
+    },
+    {
+      "number": 6,
+      "url": "https://github.com/example-org/example-changes/issues/6",
+      "title": "Cycle one",
+      "product": "example-product",
+      "maturity": "Proposed",
+      "lifecycle": "Available",
+      "priority": null,
+      "holder": [],
+      "parent": 7,
+      "root": "unresolved",
+      "blockers": [],
+      "changeset": "none",
+      "waiting": [
+        "claim"
+      ],
+      "next_action": "none recorded"
+    },
+    {
+      "number": 8,
+      "url": "https://github.com/example-org/example-changes/issues/8",
+      "title": "Absent parent",
+      "product": "example-product",
+      "maturity": "Proposed",
+      "lifecycle": "Available",
+      "priority": null,
+      "holder": [],
+      "parent": 99,
+      "root": "unresolved",
+      "blockers": [],
+      "changeset": "none",
+      "waiting": [
+        "claim"
+      ],
+      "next_action": "none recorded"
+    }
+  ]
+}
