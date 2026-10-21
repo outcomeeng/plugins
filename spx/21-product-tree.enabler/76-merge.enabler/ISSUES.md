@@ -228,3 +228,13 @@ Its attested run is dated 2026-10-06 against head `45772763e227a276a609f76c455fb
 **Impact**: a merging flow following the reference classifies a rejected run that carries no finding as nothing, contrary to the governing assertions.
 
 **Settlement condition**: outcomeeng/changes#513 converts the shipped skills, after which the Loop semantics and Verdict handling of `merge-policy.md` read an Auditor verdict from the sealed run's terminal status, and one typed skill audit of `merging-standards` raises no consistency finding against `merge.md`.
+
+## The shipped override text uses the delegate echelon and the grant record undefined `src/plugins/spec-tree/skills/merging-standards/SKILL.md` `After it reads the findings, the operator's delegate` `consistency`
+
+Category consistency, severity debt, local review run 2026-10-21_21-52-55-064-c8917fdead3b, accepted by the Maintainer.
+
+**Evidence**: the bullet beginning "After it reads the findings, the operator's delegate" at line 22 of `src/plugins/spec-tree/skills/merging-standards/SKILL.md` binds two definite descriptions, "the delegate echelon" and "the grant record", that no surface in the loaded truth chain or in the installed plugin tree defines. Only a methodology chapter outside the plugin defines them. The shipped skill renders into consumer repositories that carry neither that chapter nor a grant record location, writer, or schema, so a consumer agent cannot resolve who the delegate is or which authorization permits an irreversible act. The same terms recur in `src/plugins/spec-tree/skills/merging-standards/references/merge-policy.md` (override bullet), `src/plugins/spec-tree/skills/execute-change/SKILL.md` (delegate paragraph in the definitions), and `spx/21-spec-tree.enabler/76-merge.enabler/merge.md` (NEVER override bullet), together with the `dist/claude/` and `dist/codex/` renderings of the three skill files. The entry in `spx/ISSUES.md` on the delegate echelon and the grant record is keyed to [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md) only, so these skill-file sites are not covered by it.
+
+**Impact**: a consumer agent applying the override rule resolves neither the delegate nor the authorization that permits an irreversible act, and the rule derives its authority from terms with no meaning inside the plugin tree.
+
+**Settlement condition**: the shared condition in the `spx/ISSUES.md` entry on the delegate echelon and the grant record holds, and each site named above then uses terms that a surface shipped with the plugin defines or cites.
