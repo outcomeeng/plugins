@@ -54,6 +54,7 @@ HANDOFF_NEXT_LABEL = "Next block"
 NO_CHANGESET = "none"
 NO_WAITING = "none"
 NO_NEXT_ACTION = "none recorded"
+NO_CLAIM_RECORDED = "none recorded"
 PRIORITY_ORDER_READ = "priority order"
 UNRESOLVED_ROOT = "unresolved"
 CHECK_SUCCESS = "success"
@@ -660,7 +661,7 @@ def waiting_state(
     if change.lifecycle == "Claimed":
         if claim is None:
             waiting = [
-                f"{Waiting.HOLDER}: {', '.join(change.assignees) or NO_NEXT_ACTION} (claim {NO_NEXT_ACTION})"
+                f"{Waiting.HOLDER}: {', '.join(change.assignees) or NO_NEXT_ACTION} (claim {NO_CLAIM_RECORDED})"
             ]
         else:
             waiting = [

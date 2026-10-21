@@ -15,7 +15,7 @@ A table of the open Changes of the declared Change store that pass the request's
 <constraints>
 
 - NEVER write: the report runs reading `gh` commands only and posts no comment and writes no field, assignee, or blocker; this skill holds no file-write tool, and the script writes no file.
-- NEVER substitute a shorter list for a failure: a read that fails, returns unreadable output, or fills a bound yields the blocked result and no row.
+- NEVER substitute a shorter list for a failure: a read that fails, returns unreadable output, or fills a bound yields the blocked result and no row, and a Change whose Priority the declared Priority order omits yields a blocked result naming the priority-order read and no row.
 - ALWAYS take the Change store and the Priority order from `spx/local/coordination.md` and pass them to the script as request values; the script reads no overlay and no repository content.
 
 </constraints>
@@ -35,8 +35,8 @@ The script needs `gh` authenticated for the store and Python 3.13 or later, and 
 `scripts/report_changes.py` was tested by replaying a recorded Change store through an injected command runner, so no test touched a live store or the network.
 
 - **Sample input:** a store of open and closed Changes across several pages, with Product, Maturity, Lifecycle, Priority, and Parent values, assignees, blockers, Handoff and Claim comments, field-change events, and linked branches and pull requests with check results; the request named the store and a Priority order, once without filters and once with each filter.
-- **Expected output:** exit 0 and `{"status": "ok", "rows": [...]}` holding exactly the open Changes that pass the filters, over every page, in Priority order with no Priority last, then by ascending issue number. Each row's root, blockers, changeset, waiting state, and next action equal the same values read directly from the recorded store, including `unresolved` for a Parent cycle or an absent Change, and `none` and `none recorded` for a Change with no Handoff.
-- **Error cases:** each of the store, blocker, comment, field-change event, and check reads made to exit nonzero, return unreadable output, or fail to start gave exit 3, a blocked result naming the read and its detail, and no row. A store that never ends its pages, a Change returning a full set of field values, and a Change returning a full blocker list each gave exit 3 with the bound named and no row.
+- **Expected output:** exit 0 and `{"status": "ok", "rows": [...]}` holding exactly the open Changes that pass the filters, over every page, in Priority order with no Priority last, then by ascending issue number. Each row's root, blockers, changeset, waiting state, and next action equal the same values read directly from the recorded store, including `unresolved` for a Parent cycle or an absent Change, `none` and `none recorded` for a Change with no Handoff, and `holder: <logins> (claim none recorded)` for a Claimed Change with no winning Claim.
+- **Error cases:** each of the store, blocker, comment, field-change event, and check reads made to exit nonzero, return unreadable output, or fail to start gave exit 3, a blocked result naming the read and its detail, and no row. A store that never ends its pages, a Change returning a full set of field values, and a Change returning a full blocker list each gave exit 3 with the bound named and no row. A Change holding a Priority the request's Priority order omits gave exit 3, a blocked result naming the priority-order read, and no row.
 - **Cleanup:** every `gh` command the script issued was a read; no GraphQL write, no REST method other than GET, no file written, and no entry left in the working directory.
 
 </script_test_record>
@@ -69,8 +69,8 @@ The script needs `gh` authenticated for the store and Python 3.13 or later, and 
 <success_criteria>
 
 - Each row carries the Change's number, URL, title, Product, Maturity, Lifecycle, Priority, holder, and Parent exactly as the store holds them, and the rows stand in the declared Priority order, a Change with no Priority with the last value, then by ascending issue number.
-- Root, blockers, changeset, waiting state, and next action appear as the script derived them, with `unresolved`, `none`, and `none recorded` where it reports them.
-- A failed read or a filled bound produced the blocked result and no row.
+- Root, blockers, changeset, waiting state, and next action appear as the script derived them, with `unresolved`, `none`, and `none recorded` where it reports them, and `holder: <logins> (claim none recorded)` for a Claimed Change with no winning Claim.
+- A failed read, a filled bound, or a Priority the declared Priority order omits produced the blocked result and no row.
 - No comment, field, assignee, blocker, or file was written.
 
 </success_criteria>
