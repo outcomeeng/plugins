@@ -103,7 +103,7 @@ the complete modified and untracked file set. Preserve the selector verbatim.
 Never infer advisory intent from a dirty checkout.
 
 Run-driver identity uses the six published producer fields (the
-`expectedProducer` shape in `<verification_run_contract>`) in the invocation
+`expectedProducer` shape in `<scope_payload>` of the payload-shapes reference) in the invocation
 context, separate from `$ARGUMENTS`. Accept that identity generically; never
 infer it from a role name, installed plugin, or descriptive text.
 
@@ -206,94 +206,10 @@ Parallel concern analysis emits no SPX commands; queue each concern's completed
 results and persist them one at a time. Render only after `finish` exits
 successfully.
 
-Every scope payload uses the published SPX field names below. Emit one scope
-unit per subject path and concern partition; `subject` and
-`priorContext.changedFilePartition` are strings, never path arrays. Emit only
-the fields shown. The `producerProvenance` object is optional for a scope unit
-and is omitted for `coverage-gap`; when present, both plugin-version fields are
-required.
-
-```json
-{
-  "unitId": "<stable-scope-key>",
-  "auditClass": "implementation",
-  "auditKind": "<code|tests|architecture|coverage-gap>",
-  "subject": "<the exact resolved path>",
-  "coverageRequirement": "<required|optional>",
-  "coverageStatus": "<audited|not-applicable|missing-skill|unsupported>",
-  "priorContext": {
-    "changedFilePartition": "<the exact resolved path>",
-    "languagePartition": "<selected-kind-when-known>",
-    "concernPartition": "<code|tests|architecture|coverage-gap>"
-  },
-  "expectedProducer": {
-    "producerKind": "skill",
-    "agentName": "<run-driver-agent-name>",
-    "agentOwningPluginName": "<run-driver-agent-owning-plugin-name>",
-    "skillName": "<selected-audit-skill>",
-    "skillOwningPluginName": "<selected-audit-skill-plugin>",
-    "invocationRole": "leaf-skill"
-  },
-  "recordedByRunDriver": "<the six producer fields of the run-driver identity>",
-  "producerProvenance": {
-    "agentOwningPluginVersion": "<spec-tree-plugin-version>",
-    "skillOwningPluginVersion": "<selected-audit-skill-plugin-version>",
-    "toolVersion": "<spx-version-when-known>"
-  }
-}
-```
-
-The `coverageStatus` values above are the required-unit set. An optional unit
-may additionally carry `skipped`; no unit carries `incomplete`. The accounting
-record for a resolved path no concern claimed is this complete payload — every
-field shown is required, and `producerProvenance` is omitted:
-
-```json
-{
-  "unitId": "implementation:unknown:coverage-gap:<the exact resolved path>",
-  "auditClass": "implementation",
-  "auditKind": "coverage-gap",
-  "subject": "<the exact resolved path>",
-  "coverageRequirement": "optional",
-  "coverageStatus": "skipped",
-  "priorContext": { "changedFilePartition": "<the exact resolved path>", "concernPartition": "coverage-gap" },
-  "expectedProducer": "<the six producer fields of the run-driver identity>",
-  "recordedByRunDriver": "<the six producer fields of the run-driver identity>"
-}
-```
-
-When the selection names an artifact-type audit skill for the path, its
-accounting record names it: `unitId` carries the selection's kind in place of
-`unknown`, and `expectedProducer` is the producer shape of a concern unit with
-that `skillName`, that `skillOwningPluginName`, and `invocationRole`
-`leaf-skill`; each selected artifact-type skill gets its own record.
-
-`languagePartition` is the only optional prior-context field. Omit it when the
-kind is unknown; never replace `priorContext` with top-level partition
-fields. Use `coverage-gap` with `producerProvenance` omitted, because no leaf
-skill executed, for a missing producer, an unsupported subject, and the
-accounting record `<coverage_model>` requires for an unclaimed resolved path.
-
-Every finding payload uses the exact published SPX field names below. Its
-`unitId` references a scope unit already accepted by the run, its
-`producerIdentity` matches that unit's `expectedProducer`, and observed versus
-expected text lives under `evidence`.
-
-```json
-{
-  "unitId": "<accepted-scope-unit-id>",
-  "producerIdentity": "<the unit's expectedProducer object, repeated exactly>",
-  "producerProvenance": "<the unit's producerProvenance object, repeated exactly>",
-  "rule": "<violated-rule-or-principle>",
-  "severity": "<blocking|debt>",
-  "location": "<path-and-line-or-subject-location>",
-  "message": "<finding-message>",
-  "evidence": {
-    "observed": "<observed-state>",
-    "expected": "<required-state>"
-  }
-}
-```
+Read `${CLAUDE_SKILL_DIR}/references/payload-shapes.md` before writing the first
+payload. It carries the scope-unit shape (`<scope_payload>`), the accounting
+record for a resolved path no concern claimed (`<accounting_payload>`), and the
+finding shape (`<finding_payload>`), each with the published SPX field names.
 
 The idempotency key is a command argument, never a payload field. A scope
 unit's key is the value its payload carries in `unitId`: audit class, kind
@@ -370,7 +286,7 @@ Build the expected coverage inventory from the selection the scope resolver reco
 
 Dispatch only a skill whose `contract` is `concern`. A path whose registered artifact's audit skill carries the `artifact-type` contract, a path matching no registered artifact, and a matched path whose selected concern skill returns `NOT_APPLICABLE` stay with their artifact-type auditor and the whole-changeset review; never manufacture a kind, a missing skill, or an unsupported unit for such a path.
 
-Leaving a path to another auditor is not leaving it unaccounted for. Record every resolved path no concern claimed as the accounting record shown in `<verification_run_contract>`, with the exact resolved path as its `subject`: reconciliation matches inventory paths against recorded subjects, so a `subject` that is anything but the literal path leaves that path unaccounted forever. The record says the path was considered and left to another auditor, and names that auditor's skill as `<plugin>:<audit>` when the selection names an artifact-type audit skill for the path; it claims no coverage, creates no kind partition, and rejects no run, and it makes the run's own recorded subject set equal its sealed inventory.
+Leaving a path to another auditor is not leaving it unaccounted for. Record every resolved path no concern claimed as the accounting record in `<accounting_payload>` of the payload-shapes reference, with the exact resolved path as its `subject`: reconciliation matches inventory paths against recorded subjects, so a `subject` that is anything but the literal path leaves that path unaccounted forever. The record says the path was considered and left to another auditor, and names that auditor's skill as `<plugin>:<audit>` when the selection names an artifact-type audit skill for the path; it claims no coverage, creates no kind partition, and rejects no run, and it makes the run's own recorded subject set equal its sealed inventory.
 
 Give every selected concern skill the **complete** resolved three-dot changed-path set,
 the resolved endpoint identities, discovered governing context, and the advisory
@@ -390,7 +306,7 @@ The reconciler never counts a `missing-skill` unit as a subject outside the
 inventory; the paths themselves stay accounted by the kind's other concerns
 or by accounting records.
 
-Each expected unit carries the scope payload in `<verification_run_contract>`: one resolved path as its `subject` — inspected by a concern, or accounted for as unclaimed; a `missing-skill` unit names the absent skill as `<plugin>:<audit>` instead — with `recordedByRunDriver` present on every unit so a missing-skill, unsupported, or accounting unit still identifies its recorder, `expectedProducer` naming the concern skill expected to cover it or the run-driver identity for an accounting record, and `producerProvenance` only where a concern skill executed. A concern's completion is every expected path unit carrying `coverageStatus: audited`; its finding count is the count of accepted finding rows for those path-scoped units.
+Each expected unit carries the scope payload in `<scope_payload>` of the payload-shapes reference: one resolved path as its `subject` — inspected by a concern, or accounted for as unclaimed; a `missing-skill` unit names the absent skill as `<plugin>:<audit>` instead — with `recordedByRunDriver` present on every unit so a missing-skill, unsupported, or accounting unit still identifies its recorder, `expectedProducer` naming the concern skill expected to cover it or the run-driver identity for an accounting record, and `producerProvenance` only where a concern skill executed. A concern's completion is every expected path unit carrying `coverageStatus: audited`; its finding count is the count of accepted finding rows for those path-scoped units.
 
 - Plan the complete inventory before invoking any concern skill. NEVER mark a planned unit `audited`.
 - Queue each unit only once its coverage status is settled: immediately for a classified gap or accounting record, or after its concern finishes for an executed producer.
@@ -418,7 +334,7 @@ The composition contract is the plugin-qualified skill name the selection carrie
 
 <finding_model>
 
-Record each accepted concern finding on touched text through `spx verification run finding add`, using the finding payload shape in `<verification_run_contract>`; its `producerIdentity` matches the coverage unit's `expectedProducer`. Finding identity for convergence is content and stable producer identity, not plugin version, so a version change preserves provenance without making the same finding look new. Classify every returned finding as `${CLAUDE_SKILL_DIR}/references/touched-text.md` states, record only a finding on touched text, and return each other finding as `filed`.
+Record each accepted concern finding on touched text through `spx verification run finding add`, using the shape in `<finding_payload>` of the payload-shapes reference; its `producerIdentity` matches the coverage unit's `expectedProducer`. Finding identity for convergence is content and stable producer identity, not plugin version, so a version change preserves provenance without making the same finding look new. Classify every returned finding as `${CLAUDE_SKILL_DIR}/references/touched-text.md` states, record only a finding on touched text, and return each other finding as `filed`.
 
 </finding_model>
 
@@ -472,7 +388,7 @@ Never return the command alone: the run token locates durable state, the payload
 source and key identify the rejected boundary, and the exit code and stderr carry
 the failure evidence — a stale-base refusal is read from its exit code and stderr.
 
-Each finding row names every field of the finding payload shape in `<verification_run_contract>`, so a reader sees the producer, unit, rule, severity, location, message, and observed-versus-expected evidence without opening the journal. After the projection, return each `filed` finding on its own line in the form `${CLAUDE_SKILL_DIR}/references/touched-text.md` gives, or `filed: none`.
+Each finding row names every field of the finding payload shape in `<finding_payload>` of the payload-shapes reference, so a reader sees the producer, unit, rule, severity, location, message, and observed-versus-expected evidence without opening the journal. After the projection, return each `filed` finding on its own line in the form `${CLAUDE_SKILL_DIR}/references/touched-text.md` gives, or `filed: none`.
 
 The rendered SPX projection is the inspection surface. Do not hand-format a competing verdict when `spx verification run render` succeeds.
 
