@@ -11,7 +11,7 @@ allowed-tools: Read, Write, Bash(git status:*), Bash(git rev-parse:*), Bash(git 
 ---
 
 <objective>
-One held Change released in the declared store: its Handoff an empty commit on the Change's branch on origin, any local work committed and pushed, one release block posted, and its holder removed — Lifecycle `Available` written only for a `Submitted` Change. For the `submit` result, the Handoff commit lands, one submit block posts, Lifecycle `Submitted` is written, and the holder stays. The resulting state reads back complete.
+One held Change released in the declared store: its Handoff an empty commit on the Change's branch on origin, any local work committed and pushed, one release block posted, and its holder removed — Lifecycle `Available` written only for a `Submitted` Change. For the `submit` result, the Handoff commit lands, one submit block posts, Lifecycle `Submitted` is written, and the holder stays.
 </objective>
 
 <required_reading>
