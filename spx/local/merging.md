@@ -128,6 +128,20 @@ Changes outside the referenced distribution boundary skip version writing. The
 current-head CI review and checks decide merge readiness; the final merge
 writes no version and merges the reviewed head.
 
+### Version-only recovery pull request
+
+A merged pull request that carried plugin content without its version commit
+leaves the source manifests behind the changelog heading its content commits
+authored. The owed version ships as a pull request whose changeset is the
+version commit alone. Branch from the synchronized `origin/main`, and bind
+`version_base_ref` to the base commit the merged pull request was compared
+with, because against the current default branch the recipes find no changed
+plugin content and write nothing. Run `just bump "$version_base_ref"`,
+`just build-skills`, the heading comparison of step 3, and
+`just bump-check "$version_base_ref"` on the clean committed head. The pull
+request opens through `/open-pr` with the local review on its exact head, and
+its CI review judges the version-only diff.
+
 ## Governance surfaces (base-sync review reuse)
 
 A prior local review is reusable across a clean rebase only when the branch patch is unchanged **and** no base-delta path is a governance surface: `AGENTS.md`, `CLAUDE.md`, any `spx/local/*.md`, the bundled review prompt at `src/plugins/spec-tree/skills/review-changes/references/review-prompt.md`, or any standards reference under `src/plugins/*/skills/*-standards/` or `src/plugins/*/skills/**/SKILL.md`.

@@ -62,6 +62,10 @@ supplies its distribution boundary and segment selection.
 A changeset with no plugin-distribution change skips version writing and its
 version commit. It still passes the opening protocol's other checks.
 
+A pull request whose changeset is the owed version commit of an already merged
+pull request opens with that commit; `spx/local/merging.md` declares this
+version-only recovery path.
+
 `just bump-check` verifies that affected manifests agree and are ahead of the
 base. The full CI gate does not run this comparison; the merge-time check is
 required even when all CI-related verification is green.
