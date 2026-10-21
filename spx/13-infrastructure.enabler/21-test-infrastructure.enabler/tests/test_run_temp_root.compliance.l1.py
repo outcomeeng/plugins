@@ -10,10 +10,17 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from outcomeeng_testing.harnesses.run_temp_root import RUN_ROOTS_RELATIVE
+import pytest
+
+from outcomeeng_testing.harnesses.run_temp_root import (
+    BASETEMP_OPTION,
+    RUN_ROOTS_RELATIVE,
+)
 from outcomeeng_testing.harnesses.run_temp_root_observation import (
     FAILING_TEST,
     PASSING_TEST,
+    observe_basetemp_run,
+    observe_concurrent_pytest_run,
     observe_pytest_run,
 )
 
@@ -48,6 +55,28 @@ def test_stale_roots_are_swept_without_leaving_the_worktree(tmp_path: Path) -> N
     assert observation.first_test["run_roots_present"] == [run_root.name]
     assert observation.outside_sentinel_after == observation.outside_sentinel_before
     assert observation.neighbour_exists_after
+
+
+def test_run_root_of_a_run_in_progress_survives_the_sweep(tmp_path: Path) -> None:
+    observation = observe_concurrent_pytest_run(tmp_path)
+    run_root = Path(str(observation.first_test["temp_variable"]))
+
+    assert observation.live_root_name is not None
+    assert observation.first_test["run_roots_present"] == sorted(
+        [observation.live_root_name, run_root.name]
+    )
+    assert observation.live_root_exists_after
+    assert observation.run_roots_after == (observation.live_root_name,)
+
+
+def test_basetemp_option_is_refused_before_any_temp_file_is_created(
+    tmp_path: Path,
+) -> None:
+    observation = observe_basetemp_run(tmp_path)
+
+    assert observation.returncode == pytest.ExitCode.USAGE_ERROR, observation.output
+    assert BASETEMP_OPTION in observation.output
+    assert not observation.basetemp_created
 
 
 def test_tmp_path_directories_do_not_outlive_their_tests(tmp_path: Path) -> None:
