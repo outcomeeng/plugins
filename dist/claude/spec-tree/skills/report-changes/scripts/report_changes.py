@@ -56,7 +56,39 @@ NO_WAITING = "none"
 NO_NEXT_ACTION = "none recorded"
 UNRESOLVED_ROOT = "unresolved"
 CHECK_SUCCESS = "success"
-BLOCKER_OPEN = "open"
+
+
+class IssueState(StrEnum):
+    """The state of an issue in the store's GraphQL answer."""
+
+    OPEN = "OPEN"
+    CLOSED = "CLOSED"
+
+
+class BlockerState(StrEnum):
+    """The state of a blocking issue in the store's REST answer."""
+
+    OPEN = "open"
+    CLOSED = "closed"
+
+
+class Flag(StrEnum):
+    """The command-line flags that carry the request values."""
+
+    STORE = "--store"
+    PRIORITY_ORDER = "--priority-order"
+    PRODUCT = "--product"
+    MATURITY = "--maturity"
+    LIFECYCLE = "--lifecycle"
+    HOLDER = "--holder"
+    BLOCKED = "--blocked"
+
+
+class BlockedFilter(StrEnum):
+    """The values of the blocked-state filter."""
+
+    YES = "yes"
+    NO = "no"
 
 
 class ReportStatus(StrEnum):
@@ -238,24 +270,24 @@ def build_parser() -> argparse.ArgumentParser:
     parser = RequestParser(
         description="Report the open Changes of a Change store (read-only)."
     )
-    parser.add_argument("--store", required=True, help="Change store as owner/repo")
+    parser.add_argument(Flag.STORE, required=True, help="Change store as owner/repo")
     parser.add_argument(
-        "--priority-order",
+        Flag.PRIORITY_ORDER,
         required=True,
         help="Priority values from first to last, comma-separated "
         "(for example Blocker,Urgent,Normal,Deferred)",
     )
-    parser.add_argument("--product", help="keep only Changes with this Product")
+    parser.add_argument(Flag.PRODUCT, help="keep only Changes with this Product")
     parser.add_argument(
-        "--maturity", help=f"keep only this Maturity: {', '.join(MATURITIES)}"
+        Flag.MATURITY, help=f"keep only this Maturity: {', '.join(MATURITIES)}"
     )
     parser.add_argument(
-        "--lifecycle", help=f"keep only this Lifecycle: {', '.join(LIFECYCLES)}"
+        Flag.LIFECYCLE, help=f"keep only this Lifecycle: {', '.join(LIFECYCLES)}"
     )
-    parser.add_argument("--holder", help="keep only Changes this login is assigned to")
+    parser.add_argument(Flag.HOLDER, help="keep only Changes this login is assigned to")
     parser.add_argument(
-        "--blocked",
-        choices=("yes", "no"),
+        Flag.BLOCKED,
+        choices=tuple(BlockedFilter),
         help="yes keeps Changes with an open blocker, no keeps Changes without one",
     )
     return parser
@@ -296,7 +328,7 @@ def parse_request(argv: list[str]) -> Request:
         maturity=args.maturity,
         lifecycle=args.lifecycle,
         holder=args.holder,
-        blocked=None if args.blocked is None else args.blocked == "yes",
+        blocked=None if args.blocked is None else args.blocked == BlockedFilter.YES,
     )
 
 
@@ -640,7 +672,7 @@ def waiting_state(
 
 def matches(request: Request, change: Change) -> bool:
     return (
-        change.state == "OPEN"
+        change.state == IssueState.OPEN
         and (request.product is None or change.product == request.product)
         and (request.maturity is None or change.maturity == request.maturity)
         and (request.lifecycle is None or change.lifecycle == request.lifecycle)
@@ -673,7 +705,7 @@ def build_report(request: Request, runner: GhRunner) -> list[dict[str, Any]]:
             c
             for c in candidates
             if any(
-                b[BlockerField.STATE] == BLOCKER_OPEN
+                b[BlockerField.STATE] == BlockerState.OPEN
                 for b in blockers_by_number[c.number]
             )
             == request.blocked
@@ -686,7 +718,7 @@ def build_report(request: Request, runner: GhRunner) -> list[dict[str, Any]]:
         open_blockers = [
             b[BlockerField.NUMBER]
             for b in blockers
-            if b[BlockerField.STATE] == BLOCKER_OPEN
+            if b[BlockerField.STATE] == BlockerState.OPEN
         ]
         comments = read_comments(request, runner, change.number)
         handoff = newest_handoff(comments)
