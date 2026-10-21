@@ -10,6 +10,14 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.106.15
+
+### Changed
+
+- **`/update-instruction-block` reads the agent tokens from an `agent-tokens.json` file that ships beside its script, and reports a missing or unusable file as an `error:` line with exit code 2.** The script maps each token to its root instruction file, `{{! file('root_guide', 'claude') !}}` for Claude Code and `{{! file('root_guide', 'codex') !}}` for Codex, and the build renders the data file next to the script in the installed plugin. When the file is absent, unreadable, not valid JSON, not a JSON object, or lacks the `CLAUDE` or `CODEX` key, the script prints one `error:` line on stderr that names the file, what is wrong, and the fix, and exits 2, as it does for its other input failures. Before this change, the script carried the token names inline and had no such file to fail on.
+
+- **`/review-changes` reads the agent tokens of its generated-tree citation candidates from an `agent-tokens.json` file that ships beside `review_result.py`, and reports a missing or unusable file as an `error:` line with exit code 2.** The module resolves a rule citation that names a plugin skill against the `dist/` tree of each agent token, and the build renders the data file next to the module in the installed plugin. When the file is absent, unreadable, not valid JSON, not a JSON object, or lacks the `CLAUDE` or `CODEX` key, loading the module prints one `error:` line on stderr that names the file, what is wrong, and the fix, and exits 2 instead of raising a traceback. Before this change, the module listed the `dist/claude` and `dist/codex` candidates inline and had no such file to fail on.
+
 ## 0.106.14
 
 ### Changed

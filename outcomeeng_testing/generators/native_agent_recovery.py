@@ -10,6 +10,8 @@ from types import ModuleType
 from hypothesis import strategies as st
 from hypothesis.strategies import SearchStrategy
 
+from outcomeeng.distribution.contracts import declared_agent_tokens
+
 MIN_RECOVERY_PANES = 1
 MAX_RECOVERY_PANES = 23
 
@@ -46,7 +48,8 @@ def recovery_roster_case(
     namespace: str,
 ) -> RecoveryRosterCase:
     root = Path("/") / namespace
-    agent_types = ("claude", "codex", "pi")
+    agent_tokens = declared_agent_tokens()
+    agent_types = (agent_tokens["CLAUDE"], agent_tokens["CODEX"], agent_tokens["PI"])
     return RecoveryRosterCase(
         original_pane_ids=tuple(
             f"11111111-1111-4111-8111-{index:012d}" for index in range(shape.pane_count)

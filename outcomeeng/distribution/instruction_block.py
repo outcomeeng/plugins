@@ -17,7 +17,6 @@ leaving the freshly written files uncommitted.
 from __future__ import annotations
 
 import argparse
-import importlib.util
 import re
 import subprocess
 import sys
@@ -26,13 +25,17 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final, Protocol, cast
 
+from outcomeeng.distribution.shipped_scripts import load_shipped_module
 from outcomeeng.distribution.contracts import (
     DIST_DIR_NAME,
+    Target,
 )
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[2]
-GENERATOR_RELATIVE_PATH: Final = Path(
-    "src/plugins/spec-tree/skills/update-instruction-block/scripts/instruction_block.py"
+GENERATOR_RELATIVE_PATH: Final = (
+    Path(DIST_DIR_NAME)
+    / Target.CLAUDE.value
+    / "spec-tree/skills/update-instruction-block/scripts/instruction_block.py"
 )
 GENERATOR_PATH: Final = REPO_ROOT / GENERATOR_RELATIVE_PATH
 AUTHORED_TEMPLATE_RELATIVE_PATH: Final = Path(
@@ -414,13 +417,11 @@ WAIT_FOR_LOAD_POLICY_CONTRADICTIONS: Final = (
         ),
     ),
 )
-CODEX_HARNESS: Final = "codex"
-CLAUDE_HARNESS: Final = "claude"
 # The dispatch mechanics each harness block owns. The authorization section is
 # harness-neutral, so each marker below belongs to exactly one rendered router.
 HARNESS_DISPATCH_MECHANICS_MARKERS: Final = {
-    CLAUDE_HARNESS: "Launch through the `Agent` tool in the foreground",
-    CODEX_HARNESS: "collect the result through the native collaboration tools",
+    Target.CLAUDE: "Launch through the `Agent` tool in the foreground",
+    Target.CODEX: "collect the result through the native collaboration tools",
 }
 WAIT_FOR_LOAD_CODEX_POLICY_REQUIREMENTS: Final = (
     (
@@ -759,17 +760,10 @@ def _run(
 
 def load_instruction_block_module() -> InstructionBlockModule:
     """Load the shipped instruction-block generator to reuse its pure render contract."""
-    cached = sys.modules.get("instruction_block")
-    if cached is not None:
-        return cast(InstructionBlockModule, cached)
-    spec = importlib.util.spec_from_file_location("instruction_block", GENERATOR_PATH)
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"cannot load instruction_block from {GENERATOR_PATH}")
-    module = importlib.util.module_from_spec(spec)
-    # Register before exec so dataclass type introspection can resolve the module by name.
-    sys.modules["instruction_block"] = module
-    spec.loader.exec_module(module)
-    return cast(InstructionBlockModule, module)
+    return cast(
+        InstructionBlockModule,
+        load_shipped_module("instruction_block", GENERATOR_PATH),
+    )
 
 
 def budget_regression(
@@ -1105,7 +1099,7 @@ def validate_codex_agent_registry_policy(
     blocks_by_harness: Mapping[str, str],
 ) -> None:
     """Reject missing, incomplete, or cross-harness agent-registry policy."""
-    codex_document = blocks_by_harness.get(CODEX_HARNESS)
+    codex_document = blocks_by_harness.get(Target.CODEX)
     if codex_document is None:
         raise CodexAgentRegistryPolicyError("missing Codex router")
     codex_router = managed_router_block(codex_document)
@@ -1126,7 +1120,7 @@ def validate_codex_agent_registry_policy(
             f"Codex router agent registry policy is incomplete: {details}"
         )
 
-    claude_document = blocks_by_harness.get(CLAUDE_HARNESS)
+    claude_document = blocks_by_harness.get(Target.CLAUDE)
     if claude_document is None:
         raise CodexAgentRegistryPolicyError("missing Claude router")
     claude_router = managed_router_block(claude_document)
@@ -1201,7 +1195,7 @@ def validate_wait_for_load_policy(blocks_by_harness: Mapping[str, str]) -> None:
                 f"missing router section: {WAIT_FOR_LOAD_POLICY_HEADING}"
             ) from exc
         requirements = list(WAIT_FOR_LOAD_POLICY_REQUIREMENTS)
-        if harness == CODEX_HARNESS:
+        if harness == Target.CODEX:
             requirements.extend(WAIT_FOR_LOAD_CODEX_POLICY_REQUIREMENTS)
         missing = [
             name
@@ -1283,7 +1277,7 @@ def validate_verifier_dispatch_policy(
     blocks_by_harness: Mapping[str, str],
 ) -> None:
     """Reject a Codex router that omits or contradicts the verifier boundary."""
-    document = blocks_by_harness.get(CODEX_HARNESS)
+    document = blocks_by_harness.get(Target.CODEX)
     if document is None:
         raise VerifierDispatchPolicyError("missing Codex router")
     router = managed_router_block(document)

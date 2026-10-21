@@ -2,10 +2,12 @@
 
 import json
 import tempfile
+import tomllib
 from pathlib import Path
+from typing import cast
 
+from outcomeeng.distribution.contracts import Target
 from outcomeeng.distribution.installation import (
-    Agent,
     CLAUDE_PLUGIN_ID_FIELD,
     CLAUDE_PLUGIN_PROJECT_PATH_FIELD,
     CLAUDE_PLUGIN_SCOPE_FIELD,
@@ -14,20 +16,37 @@ from outcomeeng.distribution.installation import (
     CLAUDE_SCOPE_BEARING_OPERATIONS,
     CLAUDE_SCOPELESS_OPERATIONS,
     CLAUDE_SCOPE_FLAG,
+    CLAUDE_INSTALLED_PLUGINS_FIELD,
+    CLAUDE_PLUGIN_VERSION_FIELD,
+    CODEX_CONFIG_PATH,
     CODEX_HOME_ENV,
     FETCH_PROJECT_PREFIX,
+    FIRST_INSTALL_WARNING,
     InstallationMode,
     Operation,
     ReportField,
     SPEC_TREE_PLUGIN,
     STATE_ENV_NAMES,
+    marketplace_plugin_identifier,
     marketplace_plugin_name,
 )
 from outcomeeng_testing.generators.installation import (
+    ClosingDisposition,
     RecordDisposition,
+    generated_boolean_states,
     UNCACHED_OTHER_CHECKOUT_STATE,
 )
 from outcomeeng_testing.harnesses.installation import (
+    RegistryState,
+    absent_from_every_agent,
+    captured_non_pending_failure_wordings,
+    committed_catalog_plugin_names,
+    install_record_fixture_path,
+    observe_codex_config_independence,
+    observe_committed_declarations,
+    observe_designated_failure,
+    observe_empty_selection_execution,
+    observe_racing_install_record_rewrite,
     observe_first_failure,
     observe_inspection_failure,
     observe_invalid_persistent_selections,
@@ -37,6 +56,8 @@ from outcomeeng_testing.harnesses.installation import (
     observe_record_refresh_plan,
     observe_repository_plan,
     observe_uncached_fetch,
+    observe_unpublished_plugin,
+    observe_unreadable_source,
 )
 
 
@@ -81,20 +102,20 @@ def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None
     refreshing = observe_persistent_execution()
     registering = observe_persistent_plan(claude_marketplace_listed=False)
     bootstrapping = observe_persistent_plan(
-        installed={agent: frozenset() for agent in Agent},
+        installed={agent: frozenset() for agent in Target},
     )
     plans = (refreshing.report.plan, registering.plan, bootstrapping.plan)
     claude_commands = [
         command
         for plan in plans
         for command in (*plan.commands, *plan.closing)
-        if command.agent is Agent.CLAUDE
+        if command.agent is Target.CLAUDE
     ]
     codex_commands = [
         command
         for plan in plans
         for command in (*plan.commands, *plan.closing)
-        if command.agent is Agent.CODEX
+        if command.agent is Target.CODEX
     ]
 
     observed = {command.operation for command in claude_commands}
@@ -106,7 +127,7 @@ def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None
         and command.cwd == plan.roots.checkout
         for plan in plans
         for command in plan.commands
-        if command.agent is Agent.CLAUDE
+        if command.agent is Target.CLAUDE
         and command.operation in CLAUDE_SCOPE_BEARING_OPERATIONS
         and command.operation is not Operation.PLUGIN_UPDATE
     )
@@ -115,13 +136,14 @@ def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None
         and command.cwd == plan.roots.checkout
         for plan in plans
         for command in plan.commands
-        if command.agent is Agent.CLAUDE
+        if command.agent is Target.CLAUDE
         and command.operation is Operation.PLUGIN_UPDATE
     )
     spread = observe_record_refresh_plan()
+    marketplace = observe_committed_declarations().marketplace
     expected_updates = {
         (
-            marketplace_plugin_name(entry[CLAUDE_PLUGIN_ID_FIELD], spread.marketplace),
+            marketplace_plugin_name(entry[CLAUDE_PLUGIN_ID_FIELD], marketplace),
             entry[CLAUDE_PLUGIN_SCOPE_FIELD],
             Path(entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD]),
         )
@@ -130,7 +152,7 @@ def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None
     }
     expected_rewrites = {
         (
-            marketplace_plugin_name(entry[CLAUDE_PLUGIN_ID_FIELD], spread.marketplace),
+            marketplace_plugin_name(entry[CLAUDE_PLUGIN_ID_FIELD], marketplace),
             entry[CLAUDE_PLUGIN_SCOPE_FIELD],
             Path(entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD]),
         )
@@ -141,7 +163,7 @@ def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None
     observed_updates = [
         (command.plugin, command.argv[-1], command.cwd)
         for command in spread.plan.commands
-        if command.agent is Agent.CLAUDE
+        if command.agent is Target.CLAUDE
         and command.operation is Operation.PLUGIN_UPDATE
     ]
     assert {scope for _, scope, _ in expected_updates} == CLAUDE_REFRESH_SCOPES
@@ -158,7 +180,7 @@ def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None
     assert all(
         command.argv[-2] == CLAUDE_SCOPE_FLAG
         for command in spread.plan.commands
-        if command.agent is Agent.CLAUDE
+        if command.agent is Target.CLAUDE
         and command.operation is Operation.PLUGIN_UPDATE
     )
     assert all(
@@ -171,7 +193,7 @@ def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None
         dict(command.environment)[CODEX_HOME_ENV] == str(plan.roots.codex_home)
         for plan in plans
         for command in plan.commands
-        if command.agent is Agent.CODEX
+        if command.agent is Target.CODEX
     )
     assert refreshing.attempted[len(refreshing.preflight.inspections) :] == (
         *refreshing.report.plan.commands,
@@ -182,7 +204,7 @@ def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None
         Operation.MARKETPLACE_INSPECT,
         Operation.PLUGIN_INSPECT,
     }
-    assert {command.agent for command in inspections} == set(Agent)
+    assert {command.agent for command in inspections} == set(Target)
     assert all(
         command.cwd == refreshing.preflight.roots.checkout
         and CLAUDE_SCOPE_FLAG not in command.argv
@@ -236,7 +258,7 @@ def test_an_enable_failure_stops_the_run_rather_than_reading_as_idempotent() -> 
     document = json.loads(observation.stderr)
 
     assert observation.exit_code != 0
-    assert document[ReportField.AGENT] == Agent.CLAUDE.value
+    assert document[ReportField.AGENT] == Target.CLAUDE.value
     assert document[ReportField.OPERATION] == Operation.PLUGIN_ENABLE.value
     assert document[ReportField.PLUGIN] == observation.attempted[-1].plugin
     assert (
@@ -274,11 +296,11 @@ def test_invalid_installed_selection_never_reaches_a_state_changing_operation() 
 
 
 def test_a_codex_operation_failure_reports_the_codex_agent_and_stops() -> None:
-    observation = observe_first_failure(Operation.PLUGIN_INSTALL, agent=Agent.CODEX)
+    observation = observe_first_failure(Operation.PLUGIN_INSTALL, agent=Target.CODEX)
     document = json.loads(observation.stderr)
 
     assert observation.exit_code != 0
-    assert document[ReportField.AGENT] == Agent.CODEX.value
+    assert document[ReportField.AGENT] == Target.CODEX.value
     assert document[ReportField.OPERATION] == Operation.PLUGIN_INSTALL.value
     assert document[ReportField.PLUGIN] == observation.attempted[-1].plugin
     assert document[ReportField.COMPLETED_OPERATIONS] == len(observation.attempted) - 1
@@ -293,7 +315,7 @@ def test_first_agent_cli_failure_reports_the_operation_and_stops() -> None:
     document = json.loads(observation.stderr)
 
     assert observation.exit_code != 0
-    assert document[ReportField.AGENT] == Agent.CLAUDE.value
+    assert document[ReportField.AGENT] == Target.CLAUDE.value
     assert document[ReportField.OPERATION] == Operation.PLUGIN_INSTALL.value
     assert document[ReportField.PLUGIN] == observation.attempted[-1].plugin
     assert document[ReportField.STDERR] == Operation.PLUGIN_INSTALL.value
@@ -303,3 +325,245 @@ def test_first_agent_cli_failure_reports_the_operation_and_stops() -> None:
         == observation.command_sequence[: len(observation.attempted)]
     )
     assert len(observation.attempted) < len(observation.command_sequence)
+
+
+def test_a_persistent_run_plans_from_one_listing_and_reads_it_once_more_after_execution() -> (
+    None
+):
+    observation = observe_persistent_execution()
+    claude = [
+        command for command in observation.attempted if command.agent is Target.CLAUDE
+    ]
+    operations = [command.operation for command in claude]
+
+    assert operations.count(Operation.PLUGIN_INSPECT) == 1
+    assert operations.count(Operation.PLUGIN_LIST) == 1
+    assert operations.index(Operation.PLUGIN_INSPECT) < min(
+        index
+        for index, operation in enumerate(operations)
+        if operation is Operation.PLUGIN_UPDATE
+    )
+    assert operations[-1] is Operation.PLUGIN_LIST
+
+
+def test_a_record_the_closing_listing_leaves_off_the_target_fails_the_run() -> None:
+    observation = observe_record_refresh_plan(supplied_closing_listing=True)
+    stale = [
+        entry
+        for entry, disposition in observation.closing_cases
+        if disposition is ClosingDisposition.STALE
+    ]
+
+    assert len(stale) == 1
+    (entry,) = stale
+    plugin = marketplace_plugin_name(
+        entry[CLAUDE_PLUGIN_ID_FIELD], observe_committed_declarations().marketplace
+    )
+    off_target = cast(
+        "list[dict[str, str]]", observation.document[ReportField.OFF_TARGET_RECORDS]
+    )
+    assert {
+        ReportField.PLUGIN: plugin,
+        ReportField.SCOPE: entry[CLAUDE_PLUGIN_SCOPE_FIELD],
+        ReportField.PROJECT_PATH: entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD],
+        ReportField.VERSION: entry[CLAUDE_PLUGIN_VERSION_FIELD],
+    } in off_target
+    assert observation.exit_code != 0
+
+
+def test_no_agent_announces_a_first_install_its_plan_does_not_carry() -> None:
+    states = generated_boolean_states(RegistryState)
+    cases = (
+        *observe_unreadable_source(states).cases,
+        *observe_unreadable_source(states, codex_inventory_empty=True).cases,
+    )
+    marketplace = observe_committed_declarations().marketplace
+    announcements = 0
+
+    for case in cases:
+        reported = cast("list[dict[str, str]]", case.document[ReportField.WARNINGS])
+        for agent in Target:
+            announced = {
+                ReportField.AGENT: agent.value,
+                ReportField.MESSAGE: FIRST_INSTALL_WARNING.format(
+                    marketplace=marketplace,
+                    agent=agent.value,
+                    plugin=SPEC_TREE_PLUGIN,
+                ),
+            } in reported
+            installs = [
+                command
+                for command in case.attempted
+                if command.agent is agent
+                and command.operation is Operation.PLUGIN_INSTALL
+            ]
+            if announced:
+                announcements += 1
+                assert installs, (case.state, agent)
+            pending = {
+                entry[ReportField.PLUGIN]
+                for entry in cast(
+                    "list[dict[str, str]]",
+                    case.document[ReportField.PENDING_PUBLICATION],
+                )
+                if entry[ReportField.AGENT] == agent.value
+            }
+            reached = {
+                command.plugin
+                for command in case.attempted
+                if command.agent is agent
+                and command.operation
+                in {Operation.PLUGIN_INSTALL, Operation.PLUGIN_UPDATE}
+            } - pending
+            named = cast(
+                "list[str]",
+                case.document[ReportField(f"{agent.value}_plugins")],
+            )
+            assert set(named) == reached, (case.state, agent)
+
+    assert announcements > 0
+
+
+def test_an_empty_selection_supplies_only_spec_tree_with_a_warning_and_disabled_codex_activation() -> (
+    None
+):
+    observation = observe_persistent_plan(
+        installed={agent: frozenset() for agent in Target},
+    )
+    marketplace = observe_committed_declarations().marketplace
+    plan = observation.plan
+    installs = [
+        command
+        for command in plan.commands
+        if command.operation is Operation.PLUGIN_INSTALL
+    ]
+
+    assert plan.claude_plugins == (SPEC_TREE_PLUGIN,)
+    assert plan.codex_plugins == (SPEC_TREE_PLUGIN,)
+    assert {command.agent for command in installs} == set(Target)
+    assert {command.plugin for command in installs} == {SPEC_TREE_PLUGIN}
+    assert {(warning.agent, warning.message) for warning in plan.warnings} == {
+        (
+            agent,
+            FIRST_INSTALL_WARNING.format(
+                marketplace=marketplace,
+                agent=agent.value,
+                plugin=SPEC_TREE_PLUGIN,
+            ),
+        )
+        for agent in Target
+    }
+    assert plan.codex_disabled == (SPEC_TREE_PLUGIN,)
+
+
+def test_an_empty_selection_writes_disabled_activation_into_the_selected_codex_home() -> (
+    None
+):
+    observation = observe_empty_selection_execution()
+    marketplace = observe_committed_declarations().marketplace
+
+    assert observation.codex_config is not None
+    written = tomllib.loads(observation.codex_config.decode("utf-8"))
+    assert (
+        written["plugins"][
+            marketplace_plugin_identifier(SPEC_TREE_PLUGIN, marketplace)
+        ]["enabled"]
+        is False
+    )
+
+
+def test_an_established_pending_publication_absence_is_reported_in_persistent_mode_and_terminal_in_isolated_mode() -> (
+    None
+):
+    for absent in committed_catalog_plugin_names():
+        persistent = observe_unpublished_plugin(
+            isolated=False, unpublished=absent_from_every_agent(frozenset({absent}))
+        )
+        isolated = observe_unpublished_plugin(
+            isolated=True, unpublished=absent_from_every_agent(frozenset({absent}))
+        )
+
+        assert persistent.failure is None, absent
+        assert persistent.report is not None, absent
+        assert {entry.plugin for entry in persistent.report.pending_publication} == {
+            absent
+        }
+        assert isolated.report is None, absent
+        assert isolated.failure is not None, absent
+        assert isolated.failure.command.plugin == absent
+
+
+def test_a_persistent_update_failure_outside_the_pending_wording_stops_every_later_operation() -> (
+    None
+):
+    marketplace = observe_committed_declarations().marketplace
+    failures = [
+        observe_designated_failure(
+            isolated=False,
+            operation=Operation.PLUGIN_UPDATE,
+            stderr=wording,
+        )
+        for wording in captured_non_pending_failure_wordings(
+            sorted(committed_catalog_plugin_names()), marketplace
+        )
+    ]
+
+    assert failures
+    for observation in failures:
+        assert observation.report is None
+        assert observation.failure is not None
+        assert observation.failure.command.operation is Operation.PLUGIN_UPDATE
+        assert observation.calls[-1] == observation.failure.command
+
+
+def test_trusted_product_codex_configuration_changes_no_installation_command() -> None:
+    observation = observe_codex_config_independence()
+
+    assert observation.before.commands == observation.after.commands
+    assert observation.before.codex_plugins == observation.after.codex_plugins
+    assert observation.before.agent_home == observation.after.agent_home
+    assert observation.before.codex_disabled == observation.after.codex_disabled
+    assert (
+        observation.persistent_before.commands == observation.persistent_after.commands
+    )
+    assert (
+        observation.persistent_before.codex_plugins
+        == observation.persistent_after.codex_plugins
+    )
+    assert (
+        observation.persistent_before.agent_home
+        == observation.persistent_after.agent_home
+    )
+    assert (
+        observation.persistent_before.codex_disabled
+        == observation.persistent_after.codex_disabled
+    )
+    assert observation.config_observed == observation.config_written
+    assert all(
+        str(CODEX_CONFIG_PATH) not in argument
+        for plan in (observation.after, observation.persistent_after)
+        for command in plan.commands
+        for argument in command.argv
+    )
+
+
+def test_a_record_written_after_the_listing_read_survives_the_install_record_write(
+    tmp_path: Path,
+) -> None:
+    observation = observe_racing_install_record_rewrite(
+        install_record_fixture_path(), tmp_path
+    )
+    plugins = cast(
+        "dict[str, list[dict[str, str]]]",
+        observation.document_after[CLAUDE_INSTALLED_PLUGINS_FIELD],
+    )
+    concurrent_path = observation.concurrent_entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD]
+    surviving = [
+        entry
+        for entry in plugins[observation.concurrent_identifier]
+        if entry.get(CLAUDE_PLUGIN_PROJECT_PATH_FIELD) == concurrent_path
+    ]
+
+    assert surviving == [observation.concurrent_entry]
+    assert observation.reads > 1
+    assert observation.rewrites

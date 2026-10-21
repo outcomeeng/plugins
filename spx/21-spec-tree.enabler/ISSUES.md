@@ -245,3 +245,11 @@ Evidence: run token `2026-10-17_01-48-26-442-f2c3646f8f3d`, read at head `1097a3
 Impact: an approval of an ADR, a test-evidence body or an eval-evidence body in the apply lifecycle rests on a verdict object outside the sealed run, which the assertion forbids.
 
 Revisit and settlement condition: Step 4, Step 8a, `<review_gates>` and `<success_criteria>` of the apply skill read each of the four auditors' verdicts from the terminal status of the sealed run whose token the launch returns, and one typed skill audit approves the amended skill.
+
+## DEBT [duplication]: two harnesses each derive the traceback header
+
+Evidence: at head 1e709fbcdcf3d6f793730e4f394d2b48e91e4bbe, `outcomeeng_testing/harnesses/instruction_block.py` and `outcomeeng_testing/harnesses/reviewing_changes.py` each define the same `_standard_traceback_header` function and bind its result to `TRACEBACK_HEADER`. The agent-token load tests of `spx/21-spec-tree.enabler/43-instruction-block.enabler` and `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler` read it to show that a load failure prints no traceback. Both copies came with https://github.com/outcomeeng/plugins/pull/694.
+
+Impact: one observation has two homes, so a change to how the header is derived edits two harnesses.
+
+Settlement condition: one harness module both nodes import, such as `outcomeeng_testing/harnesses/agent_tokens.py`, owns the traceback header, and neither node's harness defines its own copy.

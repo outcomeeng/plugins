@@ -6,6 +6,8 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Final
 
+from outcomeeng.distribution.shipped_scripts import load_shipped_module
+
 TEXT_FILE_SUFFIXES: Final = frozenset(
     {".md", ".py", ".sh", ".json", ".toml", ".yml", ".yaml"}
 )
@@ -32,7 +34,6 @@ OUTPUT_STYLES_SUBDIR_NAME: Final = "output-styles"
 CLAUDE_PLUGIN_SUBDIR_NAME: Final = ".claude-plugin"
 CODEX_PLUGIN_SUBDIR_NAME: Final = ".codex-plugin"
 CODEX_PLUGIN_MANIFEST: Final = Path(CODEX_PLUGIN_SUBDIR_NAME) / "plugin.json"
-DIST_CODEX_PLUGINS_DIR: Final = Path(DIST_DIR_NAME) / "codex"
 REFERENCES_SUBDIR_NAME: Final = "references"
 SKILL_FILENAME: Final = "SKILL.md"
 MARKDOWN_FILE_SUFFIX: Final = ".md"
@@ -79,11 +80,46 @@ def format_runtime_token(kind: str, capability: str, runtime: str | None = None)
     )
 
 
-class Target(StrEnum):
-    """Generated output target."""
+# ``parents[2]`` reaches the repository root from
+# ``outcomeeng/distribution/contracts.py``.
+REPOSITORY_ROOT: Final = Path(__file__).resolve().parents[2]
+SOURCE_ROOT_NAME: Final = "src"
+AGENT_TOKEN_OWNER_PATH: Final = (
+    Path(SOURCE_ROOT_NAME)
+    / PLUGINS_DIR_NAME
+    / "coding-agents"
+    / SKILLS_SUBDIR_NAME
+    / "recover-prowl-agents"
+    / SCRIPTS_SUBDIR_NAME
+    / "agent_tokens.py"
+)
+AGENT_TOKEN_OWNER_MODULE_NAME: Final = "agent_tokens"
+AGENT_TOKEN_ENUM_NAME: Final = "AgentToken"
+AGENT_TOKEN_DATA_FILENAME: Final = "agent-tokens.json"
+AGENT_TOKEN_READING_PLUGIN_NAME: Final = "spec-tree"
 
-    CLAUDE = "claude"
-    CODEX = "codex"
+
+def declared_agent_tokens() -> dict[str, str]:
+    """Return each agent-token member name and its token, read from the owner module."""
+    module = load_shipped_module(
+        AGENT_TOKEN_OWNER_MODULE_NAME, REPOSITORY_ROOT / AGENT_TOKEN_OWNER_PATH
+    )
+    return {
+        member.name: member.value for member in getattr(module, AGENT_TOKEN_ENUM_NAME)
+    }
+
+
+_AGENT_TOKENS: Final = declared_agent_tokens()
+
+
+class Target(StrEnum):
+    """Generated output target; each value is the owner's token of the same name."""
+
+    CLAUDE = _AGENT_TOKENS["CLAUDE"]
+    CODEX = _AGENT_TOKENS["CODEX"]
+
+
+DIST_CODEX_PLUGINS_DIR: Final = Path(DIST_DIR_NAME) / Target.CODEX.value
 
 
 RUNTIME_TOKEN_TOOL_KIND: Final = "tool"
@@ -182,7 +218,6 @@ def format_target_conditional(target: Target, body: str) -> str:
     return format_target_branches(((target, body),))
 
 
-SOURCE_ROOT_NAME: Final = "src"
 CLAUDE_DIST_RELATIVE: Final = Path(DIST_DIR_NAME) / Target.CLAUDE.value
 DISTRIBUTION_WORKFLOW_RELATIVE: Final = (
     Path(".github") / "workflows" / "distribute-skills.yml"

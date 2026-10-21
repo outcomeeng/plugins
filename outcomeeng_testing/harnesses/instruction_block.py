@@ -24,7 +24,6 @@ only invocation-owned temporary repositories and clean them on exit.
 
 from __future__ import annotations
 
-import importlib.util
 import io
 import itertools
 import os
@@ -35,12 +34,14 @@ from contextlib import redirect_stderr, redirect_stdout
 from dataclasses import dataclass
 import sys
 from tempfile import TemporaryDirectory
+import traceback
 from types import ModuleType
 from typing import Final, cast
 
 from hypothesis import given, seed, settings
 
 from outcomeeng.distribution import instruction_block as distribution
+from outcomeeng.distribution.shipped_scripts import load_shipped_module
 from outcomeeng_testing.generators.instruction_block import (
     DelegationCandidateCase,
     InstructionBlockCases,
@@ -53,10 +54,26 @@ from outcomeeng_testing.generators.instruction_block import (
     instruction_block_cases,
     unsupported_language_tokens,
 )
+from outcomeeng_testing.harnesses.agent_tokens import stage_agent_tokens_file
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
 
 REPO_ROOT: Final = pathlib.Path(__file__).resolve().parents[2]
 INSTRUCTION_BLOCK_MODULE_PATH = distribution.GENERATOR_PATH
+
+
+def _standard_traceback_header() -> str:
+    """Return the header the standard library's traceback module starts a traceback with.
+
+    Formats one raised exception and takes the start of the first line of the result.
+    """
+    try:
+        raise RuntimeError
+    except RuntimeError as raised:
+        first_line = traceback.format_exception(raised)[0].splitlines()[0]
+    return first_line.split(maxsplit=1)[0]
+
+
+TRACEBACK_HEADER: Final = _standard_traceback_header()
 FIXTURES_DIR: Final = REPO_ROOT / "outcomeeng_testing/fixtures/instruction_block"
 
 INSTRUCTION_BLOCK_PROPERTY_EXAMPLES: Final = 50
@@ -409,21 +426,32 @@ def observe_root_instruction_topology_seeds(
 
 
 def load_instruction_block_module() -> ModuleType:
-    """Load the ``instruction_block`` module via importlib and cache it."""
-    cached = sys.modules.get("instruction_block")
-    if cached is not None:
-        return cached
-    spec = importlib.util.spec_from_file_location(
-        "instruction_block", INSTRUCTION_BLOCK_MODULE_PATH
+    """Load the ``instruction_block`` module and cache it."""
+    return load_shipped_module("instruction_block", INSTRUCTION_BLOCK_MODULE_PATH)
+
+
+def run_script_with_agent_tokens_file(
+    scratch: pathlib.Path, *, tokens: str | None, make_directory: bool = False
+) -> subprocess.CompletedProcess[str]:
+    """Run a copy of the shipped script beside an agent-tokens file of the given state.
+
+    ``tokens`` is the file's text, or ``None`` for an absent file; ``make_directory`` places a
+    directory at the file's path so reading it fails as an unreadable file. The copy runs in
+    its own interpreter so the import-time load is the behavior under observation.
+    """
+    scripts_dir = scratch / "scripts"
+    scripts_dir.mkdir()
+    script = scripts_dir / INSTRUCTION_BLOCK_MODULE_PATH.name
+    script.write_text(
+        INSTRUCTION_BLOCK_MODULE_PATH.read_text(encoding="utf-8"), encoding="utf-8"
     )
-    if spec is None or spec.loader is None:
-        raise RuntimeError(
-            f"Cannot load instruction_block from {INSTRUCTION_BLOCK_MODULE_PATH}"
-        )
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["instruction_block"] = module
-    spec.loader.exec_module(module)
-    return module
+    stage_agent_tokens_file(scripts_dir, tokens=tokens, make_directory=make_directory)
+    return subprocess.run(
+        [sys.executable, "-I", str(script), "--check", "--template", str(script)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
 
 
 def canonical_template_path(agent_harness: str | None = None) -> pathlib.Path:

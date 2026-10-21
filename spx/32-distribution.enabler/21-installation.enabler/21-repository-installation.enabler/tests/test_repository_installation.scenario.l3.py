@@ -4,8 +4,8 @@ import json
 
 import pytest
 
+from outcomeeng.distribution.contracts import Target
 from outcomeeng.distribution.installation import (
-    Agent,
     CLAUDE_LOCAL_SCOPE,
     CLAUDE_PROJECT_SCOPE,
     CODEX_HOME_CONFIG_PATH,
@@ -27,7 +27,7 @@ from outcomeeng_testing.harnesses.installation import (
 )
 
 
-def _first_install_warning(agent: Agent) -> str:
+def _first_install_warning(agent: Target) -> str:
     """The bootstrap warning for one agent, named for this checkout's marketplace."""
     return FIRST_INSTALL_WARNING.format(
         marketplace=MARKETPLACE, agent=agent.value, plugin=SPEC_TREE_PLUGIN
@@ -50,10 +50,10 @@ def test_real_agent_clis_bootstrap_empty_persistent_state() -> None:
             ReportField.AGENT: agent.value,
             ReportField.MESSAGE: _first_install_warning(agent),
         }
-        for agent in Agent
+        for agent in Target
     ]
     assert observation.stderr.splitlines() == [
-        f"{STDERR_WARNING_PREFIX}{_first_install_warning(agent)}" for agent in Agent
+        f"{STDERR_WARNING_PREFIX}{_first_install_warning(agent)}" for agent in Target
     ]
     assert observation.claude_listing_exit_code == 0, observation.claude_listing_stderr
     assert observation.codex_listing_exit_code == 0, observation.codex_listing_stderr

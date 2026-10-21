@@ -5,8 +5,8 @@ from typing import cast
 
 import pytest
 
+from outcomeeng.distribution.contracts import Target
 from outcomeeng.distribution.installation import (
-    Agent,
     CLAUDE_CATALOG_PATH,
     CLAUDE_GIT_SOURCE_TYPE,
     CLAUDE_PLUGIN_ID_FIELD,
@@ -19,15 +19,11 @@ from outcomeeng.distribution.installation import (
     CODEX_CATALOG_PATH,
     CODEX_PLUGIN_ENTRIES_FIELD,
     InstallationMode,
-    OUT_OF_SCOPE_RECORD_WARNING,
     Operation,
-    PATHLESS_LISTING_ENTRY_WARNING,
-    PATHLESS_OUT_OF_SCOPE_RECORD_WARNING,
     PLUGIN_OPERATIONS,
     REPORTED_FAILURE_OPERATIONS,
     ReportField,
     SourceAction,
-    UNCATALOGED_RECORD_WARNING,
     claude_registered_marketplace,
     claude_source_type,
     installed_plugin_names,
@@ -56,6 +52,7 @@ from outcomeeng_testing.harnesses.installation import (
     observe_isolated_subset_plan,
     observe_planned_operations,
     observe_record_refresh_plan,
+    project_record_dispositions,
     observe_registry_shape_plan,
     observe_uncached_fetch,
     repository_root,
@@ -66,18 +63,18 @@ def test_explicit_isolated_subsets_map_to_their_selection_in_catalog_order() -> 
     observation = observe_isolated_subset_plan()
 
     catalogs = {
-        Agent.CLAUDE: catalog_plugin_names_from_document(
+        Target.CLAUDE: catalog_plugin_names_from_document(
             repository_root() / CLAUDE_CATALOG_PATH
         ),
-        Agent.CODEX: catalog_plugin_names_from_document(
+        Target.CODEX: catalog_plugin_names_from_document(
             repository_root() / CODEX_CATALOG_PATH
         ),
     }
     planned = {
-        Agent.CLAUDE: observation.plan.claude_plugins,
-        Agent.CODEX: observation.plan.codex_plugins,
+        Target.CLAUDE: observation.plan.claude_plugins,
+        Target.CODEX: observation.plan.codex_plugins,
     }
-    for agent in Agent:
+    for agent in Target:
         assert set(planned[agent]) == set(observation.subsets[agent])
         positions = [catalogs[agent].index(plugin) for plugin in planned[agent]]
         assert positions == sorted(set(positions))
@@ -89,7 +86,7 @@ def test_claude_inventory_maps_only_the_invocation_checkout_refresh_scopes() -> 
     entries, in_scope = generated_claude_listing_entries(catalog, checkout, MARKETPLACE)
 
     observed = installed_plugin_names(
-        Agent.CLAUDE,
+        Target.CLAUDE,
         json.dumps(list(entries)),
         checkout=checkout,
         marketplace=MARKETPLACE,
@@ -104,7 +101,7 @@ def test_codex_inventory_maps_only_outcomeeng_marketplace_entries() -> None:
     entries, in_scope = generated_codex_listing_entries(catalog, MARKETPLACE)
 
     observed = installed_plugin_names(
-        Agent.CODEX,
+        Target.CODEX,
         json.dumps({CODEX_PLUGIN_ENTRIES_FIELD: list(entries)}),
         checkout=checkout,
         marketplace=MARKETPLACE,
@@ -157,7 +154,7 @@ def test_absent_plugin_wording_is_pending_only_for_persistent_plugin_operations(
         source=source,
         operation=operation,
         plugin=plugin if carries_plugin else None,
-        stderr=captured_unpublished_plugin_stderr(Agent.CODEX, plugin),
+        stderr=captured_unpublished_plugin_stderr(Target.CODEX, plugin),
     )
 
     if pending:
@@ -189,68 +186,32 @@ def test_every_claude_install_record_maps_to_one_update_one_rewrite_or_one_warni
     updates = [
         command
         for command in observation.plan.commands
-        if command.agent is Agent.CLAUDE
+        if command.agent is Target.CLAUDE
         and command.operation is Operation.PLUGIN_UPDATE
     ]
-    warnings = [
-        warning.message
-        for warning in observation.plan.warnings
-        if warning.agent is Agent.CLAUDE
-    ]
-    unmatched_updates = list(updates)
-    unmatched_rewrites = list(observation.plan.rewrite_records)
-    unmatched_warnings = list(warnings)
-    templates = {
-        RecordDisposition.OUT_OF_SCOPE: OUT_OF_SCOPE_RECORD_WARNING,
-        RecordDisposition.PATHLESS_OUT_OF_SCOPE: PATHLESS_OUT_OF_SCOPE_RECORD_WARNING,
-        RecordDisposition.PATHLESS_DEFECT: PATHLESS_LISTING_ENTRY_WARNING,
-        RecordDisposition.UNCATALOGED: UNCATALOGED_RECORD_WARNING,
-    }
+    projection = project_record_dispositions(observation)
 
-    for entry, disposition in observation.cases:
-        plugin = marketplace_plugin_name(entry[CLAUDE_PLUGIN_ID_FIELD], marketplace)
-        if disposition is RecordDisposition.EXCLUDED:
-            assert plugin is None, (entry, disposition)
+    for row in projection.rows:
+        if row.disposition is RecordDisposition.EXCLUDED:
+            assert row.plugin is None, row
             continue
-        assert plugin is not None, (entry, disposition)
-        scope = entry[CLAUDE_PLUGIN_SCOPE_FIELD]
-        project_path = entry.get(CLAUDE_PLUGIN_PROJECT_PATH_FIELD)
-        matching_updates = [
-            command
-            for command in unmatched_updates
-            if command.plugin == plugin and command.argv[-1] == scope
-        ]
-        matching_rewrites = [
-            record
-            for record in unmatched_rewrites
-            if record.plugin == plugin
-            and record.scope == scope
-            and str(record.project_path) == project_path
-        ]
-        if disposition is RecordDisposition.INVOCATION_NATIVE:
-            assert len(matching_updates) == 1, (entry, disposition)
-            assert matching_updates[0].cwd == observation.checkout
-            assert matching_rewrites == [], (entry, disposition)
-            unmatched_updates.remove(matching_updates[0])
-            continue
-        if disposition in {
+        assert row.plugin is not None, row
+        if row.disposition is RecordDisposition.INVOCATION_NATIVE:
+            assert len(row.updates) == 1, row
+            assert row.updates[0].cwd == observation.checkout
+            assert row.rewrites == (), row
+        elif row.disposition in {
             RecordDisposition.FILE_REWRITE,
             RecordDisposition.MISSING_DIRECTORY,
         }:
-            assert len(matching_rewrites) == 1, (entry, disposition)
-            unmatched_rewrites.remove(matching_rewrites[0])
-            continue
-        assert matching_rewrites == [], (entry, disposition)
-        template = templates[disposition]
-        expected = template.format(
-            plugin=plugin, scope=scope, project_path=project_path
-        )
-        assert unmatched_warnings.count(expected) == 1, (entry, disposition, warnings)
-        unmatched_warnings.remove(expected)
+            assert len(row.rewrites) == 1, row
+        else:
+            assert row.rewrites == (), row
+            assert row.warning_count == 1, row
 
-    assert unmatched_updates == []
-    assert unmatched_rewrites == []
-    assert unmatched_warnings == []
+    assert projection.unmatched_updates == ()
+    assert projection.unmatched_rewrites == ()
+    assert projection.unmatched_warnings == ()
     positions = [observation.catalog.index(command.plugin) for command in updates]
     assert positions == sorted(positions)
     assert all(command.cwd == observation.checkout for command in observation.attempted)
@@ -354,7 +315,7 @@ def test_each_registry_entry_shape_maps_to_the_source_the_run_refreshes_from() -
         source_operations = [
             command
             for command in plan.commands
-            if command.agent is Agent.CLAUDE
+            if command.agent is Target.CLAUDE
             and command.operation
             in {Operation.MARKETPLACE_ADD, Operation.MARKETPLACE_REFRESH}
         ]

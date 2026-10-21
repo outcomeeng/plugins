@@ -17,6 +17,12 @@ CAN maintain skills and thin agents as one canonical source while delivering nat
   its own reasoning controls, and authored sources select profiles rather than
   independently selecting model and effort fields ([audit]).
 
+### Mappings
+
+- ALWAYS: the build loads the coding-agents agent-token module by path, every generated-output target is one of its tokens, and no toolchain module declares an agent token ([test](tests/test_agent_token_ownership.mapping.l1.py))
+- ALWAYS: the build renders the agent tokens into a data file beside each spec-tree script that reads them, and the rendered file equals the declaration it renders ([test](tests/test_agent_token_rendering.mapping.l1.py))
+- ALWAYS: the build's per-agent tables — the agent capability registry, the configured-agent prompt-field and term tables, and the marketplace catalog paths — key each agent by its `Target` member, and every generated-tree path derives from a `Target` value ([test](tests/test_agent_target_keys.mapping.l1.py))
+
 ### Compliance
 
 - ALWAYS: every committed file under `dist/` traces to a `src/` ancestor through the build — every committed generated artifact is a build product ([test](tests/test_plugin_build.compliance.l1.py))

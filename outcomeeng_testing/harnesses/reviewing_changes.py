@@ -4,8 +4,11 @@ Provides the shared scaffolding consumed by every test file under
 ``spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/tests/``:
 
 - ``SCRIPTS_DIR`` and the per-script paths derived from it. A single source
-  keeps every test file from walking ``__file__.parents[...]`` to find
-  ``src/plugins/spec-tree/skills/review-changes/scripts``.
+  keeps every test file from walking ``__file__.parents[...]`` to find the
+  generated ``dist/claude/spec-tree/skills/review-changes/scripts`` tree, which
+  carries the agent-tokens data file the build renders beside ``review_result.py``.
+- ``run_review_result_with_agent_tokens_file``. Runs a copy of the module beside
+  an agent-tokens file in a chosen state, observing the load failure it reports.
 - ``REFERENCES_DIR`` and ``REVIEW_PROMPT_PATH``. Tests that assert the
   swappable prompt is a standalone reference file consume the path from
   one source.
@@ -34,29 +37,63 @@ outside ``spx/``.
 
 from __future__ import annotations
 
-import importlib.util
 import io
 import json
 import os
 import pathlib
+import shutil
 import subprocess
 import sys
+import traceback
 from contextlib import redirect_stderr, redirect_stdout
 from types import ModuleType
 from typing import Any, Callable, cast
 from unittest.mock import patch
 
+from outcomeeng.distribution.contracts import Target
+from outcomeeng.distribution.instruction_block import GENERATOR_PATH
+from outcomeeng.distribution.shipped_scripts import load_shipped_module
+from outcomeeng_testing.harnesses.agent_tokens import stage_agent_tokens_file
+from outcomeeng_testing.harnesses.dist_tree import DistTreeReader
+
 # Two ``parents`` hops land at the repository root: this file lives at
 # ``outcomeeng_testing/harnesses/reviewing_changes.py``.
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 
+
+def _standard_traceback_header() -> str:
+    """Return the header the standard library's traceback module starts a traceback with.
+
+    Formats one raised exception and takes the start of the first line of the result.
+    """
+    try:
+        raise RuntimeError
+    except RuntimeError as raised:
+        first_line = traceback.format_exception(raised)[0].splitlines()[0]
+    return first_line.split(maxsplit=1)[0]
+
+
+TRACEBACK_HEADER = _standard_traceback_header()
+
 SKILL_DIR = REPO_ROOT / "src" / "plugins" / "spec-tree" / "skills" / "review-changes"
 SKILL_FILE = SKILL_DIR / "SKILL.md"
-SCRIPTS_DIR = SKILL_DIR / "scripts"
+# The scripts run from the generated tree: the build renders the agent-tokens data file
+# beside the one that reads it, so the authored directory alone cannot load that script.
+SCRIPTS_DIR = (
+    DistTreeReader(REPO_ROOT).target_root(Target.CLAUDE)
+    / "spec-tree"
+    / "skills"
+    / "review-changes"
+    / "scripts"
+)
 REFERENCES_DIR = SKILL_DIR / "references"
 REVIEW_PROMPT_PATH = REFERENCES_DIR / "review-prompt.md"
 
 REVIEW_RESULT_MODULE_PATH = SCRIPTS_DIR / "review_result.py"
+# The sibling skill whose script owns the agent-tokens loader, in the generated tree.
+TOKENS_PROVIDER_SCRIPTS_DIR = (
+    SCRIPTS_DIR.parents[1] / GENERATOR_PATH.parents[1].name / SCRIPTS_DIR.name
+)
 COMPUTE_DIFF_SCRIPT = SCRIPTS_DIR / "compute_diff.py"
 JOURNAL_EMIT_SCRIPT = SCRIPTS_DIR / "journal_emit.py"
 REVIEW_RUN_SCRIPT = SCRIPTS_DIR / "review_run.py"
@@ -107,67 +144,54 @@ def load_review_result_module() -> ModuleType:
     Returns the already-loaded module on subsequent calls so the importlib
     loader runs at most once per test session.
     """
-    cached = sys.modules.get("review_result")
-    if cached is not None:
-        return cached
-    spec = importlib.util.spec_from_file_location(
-        "review_result", REVIEW_RESULT_MODULE_PATH
+    return load_shipped_module("review_result", REVIEW_RESULT_MODULE_PATH)
+
+
+def run_review_result_with_agent_tokens_file(
+    scratch: pathlib.Path, *, tokens: str | None, make_directory: bool = False
+) -> subprocess.CompletedProcess[str]:
+    """Run a copy of the shipped module beside an agent-tokens file of the given state.
+
+    ``tokens`` is the file's text, or ``None`` for an absent file; ``make_directory`` places a
+    directory at the file's path so reading it fails as an unreadable file. The copy sits in
+    the installed tree's layout: the sibling skill that owns the loader is copied whole beside
+    it, with the data file it loads for itself, and the module's own data file is the state
+    under observation. The copy loads in its own interpreter so the import-time load is the
+    behavior under observation.
+    """
+    skills_dir = scratch / SCRIPTS_DIR.parents[1].name
+    scripts_dir = skills_dir / SCRIPTS_DIR.parent.name / SCRIPTS_DIR.name
+    scripts_dir.mkdir(parents=True)
+    shutil.copytree(
+        TOKENS_PROVIDER_SCRIPTS_DIR,
+        skills_dir / TOKENS_PROVIDER_SCRIPTS_DIR.parent.name / SCRIPTS_DIR.name,
     )
-    if spec is None or spec.loader is None:
-        raise RuntimeError(
-            f"Cannot load review_result from {REVIEW_RESULT_MODULE_PATH}"
-        )
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["review_result"] = module
-    spec.loader.exec_module(module)
-    return module
+    module = scripts_dir / REVIEW_RESULT_MODULE_PATH.name
+    module.write_text(
+        REVIEW_RESULT_MODULE_PATH.read_text(encoding="utf-8"), encoding="utf-8"
+    )
+    stage_agent_tokens_file(scripts_dir, tokens=tokens, make_directory=make_directory)
+    return subprocess.run(  # noqa: S603 — the interpreter and the copied module are harness-built
+        [sys.executable, "-I", "-B", str(module)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
 
 
 def load_compute_diff_module() -> ModuleType:
     """Load the ``compute_diff`` script as a module via importlib."""
-
-    cached = sys.modules.get("compute_diff")
-    if cached is not None:
-        return cached
-    spec = importlib.util.spec_from_file_location("compute_diff", COMPUTE_DIFF_SCRIPT)
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"Cannot load compute_diff from {COMPUTE_DIFF_SCRIPT}")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["compute_diff"] = module
-    spec.loader.exec_module(module)
-    return module
+    return load_shipped_module("compute_diff", COMPUTE_DIFF_SCRIPT)
 
 
 def load_journal_emit_module() -> ModuleType:
     """Load the review ``journal_emit`` adapter via importlib."""
-
-    cached = sys.modules.get("review_changes_journal_emit")
-    if cached is not None:
-        return cached
-    spec = importlib.util.spec_from_file_location(
-        "review_changes_journal_emit", JOURNAL_EMIT_SCRIPT
-    )
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"Cannot load journal_emit from {JOURNAL_EMIT_SCRIPT}")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["review_changes_journal_emit"] = module
-    spec.loader.exec_module(module)
-    return module
+    return load_shipped_module("review_changes_journal_emit", JOURNAL_EMIT_SCRIPT)
 
 
 def load_review_run_module() -> ModuleType:
     """Load the review runner module via importlib."""
-
-    cached = sys.modules.get("review_run")
-    if cached is not None:
-        return cached
-    spec = importlib.util.spec_from_file_location("review_run", REVIEW_RUN_SCRIPT)
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"Cannot load review_run from {REVIEW_RUN_SCRIPT}")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["review_run"] = module
-    spec.loader.exec_module(module)
-    return module
+    return load_shipped_module("review_run", REVIEW_RUN_SCRIPT)
 
 
 def review_run_journal_env_keys() -> tuple[str, ...]:
@@ -392,7 +416,7 @@ def run_script(
     inspect returncode explicitly; success-path tests pass ``check=True``.
     """
     return subprocess.run(  # noqa: S603 — script path comes from the harness, not user input
-        [sys.executable, str(script), *args],
+        [sys.executable, "-B", str(script), *args],
         input=stdin,
         capture_output=True,
         text=True,

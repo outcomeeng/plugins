@@ -27,6 +27,7 @@ from outcomeeng.distribution.contracts import (
     AGENTS_SUBDIR_NAME,
     DIST_DIR_NAME,
     SKILLS_SUBDIR_NAME,
+    Target,
 )
 
 MARKETPLACE_IDENTIFIER_JOINER = "@"
@@ -51,9 +52,9 @@ CODEX_HOME_CONFIG_PATH = Path("config.toml")
 """The configuration file the installed Codex CLI requires in an existing `CODEX_HOME`."""
 ISOLATED_HOME_DIRECTORY = "home"
 """The directory beneath isolated state that becomes `HOME`."""
-ISOLATED_CLAUDE_CONFIG_DIRECTORY = "claude"
+ISOLATED_CLAUDE_CONFIG_DIRECTORY = Target.CLAUDE.value
 """The directory beneath isolated state that becomes `CLAUDE_CONFIG_DIR`."""
-ISOLATED_CODEX_HOME_DIRECTORY = "codex"
+ISOLATED_CODEX_HOME_DIRECTORY = Target.CODEX.value
 """The directory beneath isolated state that becomes `CODEX_HOME`."""
 ISOLATED_CODEX_SQLITE_DIRECTORY = "codex-sqlite"
 """The directory beneath isolated state that becomes `CODEX_SQLITE_HOME`."""
@@ -78,8 +79,8 @@ STATE_ENV_NAMES: tuple[str, ...] = (
     CODEX_HOME_ENV,
     CODEX_SQLITE_HOME_ENV,
 )
-CLAUDE_EXECUTABLE = "claude"
-CODEX_EXECUTABLE = "codex"
+CLAUDE_EXECUTABLE = Target.CLAUDE.value
+CODEX_EXECUTABLE = Target.CODEX.value
 CODEX_EXEC_SUBCOMMAND = "exec"
 """The Codex subcommand that runs one non-interactive session."""
 CLAUDE_LIST_COMMAND = (CLAUDE_EXECUTABLE, "plugin", "list", "--json")
@@ -314,13 +315,6 @@ def catalog_marketplace_name(catalog_path: Path) -> str:
     if not isinstance(name, str) or not name:
         raise ValueError(f"marketplace catalog {catalog_path} names no marketplace")
     return name
-
-
-class Agent(StrEnum):
-    """Agent harnesses supported by marketplace installation."""
-
-    CLAUDE = "claude"
-    CODEX = "codex"
 
 
 class InstallationMode(StrEnum):
@@ -590,7 +584,7 @@ type ListedInstallRecord = (
 class InstallationCommand:
     """One ordered external operation in an installation plan."""
 
-    agent: Agent
+    agent: Target
     operation: Operation
     plugin: str | None
     argv: tuple[str, ...]
@@ -749,7 +743,7 @@ class InstallationWarning:
     fails the run's exit code without stopping its other work.
     """
 
-    agent: Agent
+    agent: Target
     message: str
     blocking: bool = False
 
@@ -790,7 +784,7 @@ class PendingPublication:
     and installed by the other. A plugin name alone cannot say which.
     """
 
-    agent: Agent
+    agent: Target
     plugin: str
 
 
@@ -811,13 +805,13 @@ class InstallationReport:
     target: MarketplaceTarget | None = None
     """The head commit and per-plugin versions every record moves to; None without a registered clone."""
 
-    def pending_for(self, agent: Agent) -> frozenset[str]:
+    def pending_for(self, agent: Target) -> frozenset[str]:
         """The plugins this agent could not install because they are unpublished."""
         return frozenset(
             entry.plugin for entry in self.pending_publication if entry.agent is agent
         )
 
-    def installed_for(self, agent: Agent) -> frozenset[str]:
+    def installed_for(self, agent: Target) -> frozenset[str]:
         """The plugins this agent installed: what its plan carries, less what is pending.
 
         The selection says which plugins the run means to reach; the install
@@ -844,7 +838,7 @@ class InstallationReport:
         so its update did not refresh it; a record the rewrite could not
         reach is reported in `rewrite_warnings`.
         """
-        pending = self.pending_for(Agent.CLAUDE)
+        pending = self.pending_for(Target.CLAUDE)
         rewritten = frozenset(rewrite.record for rewrite in self.rewrites)
         return tuple(
             record
@@ -882,7 +876,7 @@ class AgentAdapter(Protocol):
     """Build and normalize commands for one supported agent harness."""
 
     @property
-    def agent(self) -> Agent: ...
+    def agent(self) -> Target: ...
 
     def commands(
         self,
@@ -918,7 +912,7 @@ class AgentAdapter(Protocol):
 class ClaudeInstallationAdapter:
     """Translate a Claude catalog into scoped CLI operations."""
 
-    agent: Agent = Agent.CLAUDE
+    agent: Target = Target.CLAUDE
 
     def commands(
         self,
@@ -1068,7 +1062,7 @@ class ClaudeInstallationAdapter:
 class CodexInstallationAdapter:
     """Translate a Codex catalog into selected-home CLI operations."""
 
-    agent: Agent = Agent.CODEX
+    agent: Target = Target.CODEX
 
     def commands(
         self,
@@ -1198,12 +1192,12 @@ def build_isolated_installation_plan(
     claude_catalog = catalog_plugin_names(roots.checkout / CLAUDE_CATALOG_PATH)
     codex_catalog = catalog_plugin_names(roots.checkout / CODEX_CATALOG_PATH)
     selected_claude = _isolated_selection(
-        Agent.CLAUDE,
+        Target.CLAUDE,
         claude_catalog,
         claude_plugins,
     )
     selected_codex = _isolated_selection(
-        Agent.CODEX,
+        Target.CODEX,
         codex_catalog,
         codex_plugins,
     )
@@ -1234,7 +1228,7 @@ def build_persistent_preflight(
     _reject_scope_split(roots.checkout, codex_plugins, codex_agents)
     inspections = (
         _command(
-            Agent.CLAUDE,
+            Target.CLAUDE,
             Operation.MARKETPLACE_INSPECT,
             None,
             CLAUDE_MARKETPLACE_LIST_COMMAND,
@@ -1242,7 +1236,7 @@ def build_persistent_preflight(
             environment,
         ),
         _command(
-            Agent.CLAUDE,
+            Target.CLAUDE,
             Operation.PLUGIN_INSPECT,
             None,
             CLAUDE_LIST_COMMAND,
@@ -1250,7 +1244,7 @@ def build_persistent_preflight(
             environment,
         ),
         _command(
-            Agent.CODEX,
+            Target.CODEX,
             Operation.MARKETPLACE_INSPECT,
             None,
             CODEX_MARKETPLACE_LIST_COMMAND,
@@ -1258,7 +1252,7 @@ def build_persistent_preflight(
             environment,
         ),
         _command(
-            Agent.CODEX,
+            Target.CODEX,
             Operation.PLUGIN_INSPECT,
             None,
             codex_list_command(roots.marketplace),
@@ -1283,7 +1277,7 @@ def _unmoved_record_warnings(
     """One blocking warning per install record the run leaves where it found it."""
     return tuple(
         InstallationWarning(
-            agent=Agent.CLAUDE,
+            agent=Target.CLAUDE,
             message=template.format(
                 plugin=record.plugin,
                 scope=record.scope,
@@ -1357,28 +1351,28 @@ def build_persistent_installation_plan(
             blocking=True,
         )
         for agent, registered in (
-            (Agent.CLAUDE, claude_registered),
-            (Agent.CODEX, codex_registered),
+            (Target.CLAUDE, claude_registered),
+            (Target.CODEX, codex_registered),
         )
         if declared_source_error is not None and registered is None
     )
     claude_installed = installed_plugin_names(
-        Agent.CLAUDE,
+        Target.CLAUDE,
         claude_plugins_payload,
         checkout=preflight.roots.checkout,
         marketplace=marketplace,
     )
     claude_selection, claude_bootstrapping = _persistent_selection(
-        Agent.CLAUDE,
+        Target.CLAUDE,
         preflight.claude_plugins,
         claude_installed,
         marketplace,
     )
     codex_selection, codex_bootstrapping = _persistent_selection(
-        Agent.CODEX,
+        Target.CODEX,
         preflight.codex_plugins,
         installed_plugin_names(
-            Agent.CODEX,
+            Target.CODEX,
             codex_plugins_payload,
             checkout=preflight.roots.checkout,
             marketplace=marketplace,
@@ -1414,7 +1408,7 @@ def build_persistent_installation_plan(
         None
         if settings_error is None
         else InstallationWarning(
-            agent=Agent.CLAUDE,
+            agent=Target.CLAUDE,
             message=UNREADABLE_SETTINGS_WARNING.format(diagnostic=settings_error),
             blocking=any(plugin not in claude_installed for plugin in claude_selection),
         )
@@ -1456,7 +1450,7 @@ def build_persistent_installation_plan(
     )
     first_install = _first_install_warnings(
         plan,
-        {Agent.CLAUDE: claude_bootstrapping, Agent.CODEX: codex_bootstrapping},
+        {Target.CLAUDE: claude_bootstrapping, Target.CODEX: codex_bootstrapping},
         marketplace,
     )
     if not first_install:
@@ -1480,7 +1474,7 @@ def execute_persistent_installation(
     """
     preflight = build_persistent_preflight(checkout, base_environment)
     inspection_results: list[CommandResult] = []
-    inspection_payloads: dict[tuple[Agent, Operation], str] = {}
+    inspection_payloads: dict[tuple[Target, Operation], str] = {}
     for inspection in preflight.inspections:
         result = _checked_result(inspection, runner(inspection))
         if result.exit_code != 0:
@@ -1494,16 +1488,16 @@ def execute_persistent_installation(
     plan = build_persistent_installation_plan(
         preflight,
         claude_marketplace_payload=inspection_payloads[
-            (Agent.CLAUDE, Operation.MARKETPLACE_INSPECT)
+            (Target.CLAUDE, Operation.MARKETPLACE_INSPECT)
         ],
         claude_plugins_payload=inspection_payloads[
-            (Agent.CLAUDE, Operation.PLUGIN_INSPECT)
+            (Target.CLAUDE, Operation.PLUGIN_INSPECT)
         ],
         codex_marketplace_payload=inspection_payloads[
-            (Agent.CODEX, Operation.MARKETPLACE_INSPECT)
+            (Target.CODEX, Operation.MARKETPLACE_INSPECT)
         ],
         codex_plugins_payload=inspection_payloads[
-            (Agent.CODEX, Operation.PLUGIN_INSPECT)
+            (Target.CODEX, Operation.PLUGIN_INSPECT)
         ],
     )
     settings = checkout / CLAUDE_PROJECT_SETTINGS_PATH
@@ -1599,13 +1593,13 @@ def _build_plan(
     )
     _reject_scope_split(roots.checkout, codex_plugins, selected_codex_agents)
     plugins_by_agent = {
-        Agent.CLAUDE: claude_plugins,
-        Agent.CODEX: codex_plugins,
+        Target.CLAUDE: claude_plugins,
+        Target.CODEX: codex_plugins,
     }
-    actions = {Agent.CLAUDE: claude_action, Agent.CODEX: codex_action}
+    actions = {Target.CLAUDE: claude_action, Target.CODEX: codex_action}
     bootstrap_sources = {
-        Agent.CLAUDE: claude_bootstrap_source,
-        Agent.CODEX: codex_bootstrap_source,
+        Target.CLAUDE: claude_bootstrap_source,
+        Target.CODEX: codex_bootstrap_source,
     }
     commands = tuple(
         command
@@ -1658,7 +1652,7 @@ def _build_plan(
             command.plugin
             for command in commands
             if codex_bootstrapping
-            and command.agent is Agent.CODEX
+            and command.agent is Target.CODEX
             and command.operation is Operation.PLUGIN_INSTALL
             and command.plugin is not None
         ),
@@ -1816,7 +1810,7 @@ def claude_refresh_records(
             if record.scope in CLAUDE_REFRESH_SCOPES:
                 warnings.append(
                     InstallationWarning(
-                        agent=Agent.CLAUDE,
+                        agent=Target.CLAUDE,
                         message=VERSIONLESS_LISTING_ENTRY_WARNING.format(
                             plugin=record.plugin,
                             scope=record.scope,
@@ -1828,7 +1822,7 @@ def claude_refresh_records(
                 continue
             warnings.append(
                 InstallationWarning(
-                    agent=Agent.CLAUDE,
+                    agent=Target.CLAUDE,
                     message=OUT_OF_SCOPE_RECORD_WARNING.format(
                         plugin=record.plugin,
                         scope=record.scope,
@@ -1841,7 +1835,7 @@ def claude_refresh_records(
             if record.scope in CLAUDE_REFRESH_SCOPES:
                 warnings.append(
                     InstallationWarning(
-                        agent=Agent.CLAUDE,
+                        agent=Target.CLAUDE,
                         message=PATHLESS_LISTING_ENTRY_WARNING.format(
                             plugin=record.plugin, scope=record.scope
                         ),
@@ -1870,7 +1864,7 @@ def claude_refresh_records(
         else:
             rewrites.append(record)
             continue
-        warnings.append(InstallationWarning(agent=Agent.CLAUDE, message=message))
+        warnings.append(InstallationWarning(agent=Target.CLAUDE, message=message))
 
     def order(record: ClaudeInstallRecord) -> tuple[int, str, str]:
         return (
@@ -1885,7 +1879,7 @@ def claude_refresh_records(
 
 
 def installed_plugin_names(
-    agent: Agent,
+    agent: Target,
     payload: str,
     *,
     checkout: Path,
@@ -1898,7 +1892,7 @@ def installed_plugin_names(
     read through the same record parser the refresh consumes; Codex's is the
     selected home's marketplace entries.
     """
-    if agent is Agent.CLAUDE:
+    if agent is Target.CLAUDE:
         resolved_checkout = checkout.resolve()
         return frozenset(
             record.plugin
@@ -1943,7 +1937,7 @@ def installed_plugin_names(
 
 
 def _isolated_selection(
-    agent: Agent,
+    agent: Target,
     catalog: tuple[str, ...],
     requested: Sequence[str] | None,
 ) -> tuple[str, ...]:
@@ -1963,7 +1957,7 @@ def _isolated_selection(
 
 
 def _persistent_selection(
-    agent: Agent,
+    agent: Target,
     catalog: tuple[str, ...],
     installed: frozenset[str],
     marketplace: str,
@@ -1992,7 +1986,7 @@ def _persistent_selection(
 
 def _first_install_warnings(
     plan: InstallationPlan,
-    bootstrapping: Mapping[Agent, bool],
+    bootstrapping: Mapping[Target, bool],
     marketplace: str,
 ) -> tuple[InstallationWarning, ...]:
     """One first-install warning per agent whose plan carries the bootstrap install.
@@ -2016,7 +2010,7 @@ def _first_install_warnings(
                 plugin=SPEC_TREE_PLUGIN,
             ),
         )
-        for agent in Agent
+        for agent in Target
         if bootstrapping.get(agent, False) and agent in installing
     )
 
@@ -2099,7 +2093,7 @@ def generated_codex_agents_root(checkout: Path, plugin: str) -> Path:
     return (
         checkout
         / DIST_DIR_NAME
-        / Agent.CODEX.value
+        / Target.CODEX.value
         / plugin
         / SKILLS_SUBDIR_NAME
         / f"{plugin}-plugin"
@@ -2114,7 +2108,7 @@ def generated_codex_agent_definitions(
 ) -> tuple[AgentDefinition, ...]:
     """Read every catalog plugin's generated Codex agent definitions."""
     agents_root = codex_home / CODEX_HOME_AGENTS_PATH
-    codex_tree = checkout / DIST_DIR_NAME / Agent.CODEX.value
+    codex_tree = checkout / DIST_DIR_NAME / Target.CODEX.value
     definitions: list[AgentDefinition] = []
     destinations: dict[Path, Path] = {}
     for plugin in plugins:
@@ -2707,7 +2701,7 @@ def execute_installation(
                     head = result.stdout.strip() if result.exit_code == 0 else None
                 if (
                     plan.mode is InstallationMode.PERSISTENT
-                    and command.agent is Agent.CLAUDE
+                    and command.agent is Target.CLAUDE
                     and command.operation is Operation.MARKETPLACE_REFRESH
                 ):
                     claude_refresh = command
@@ -2739,7 +2733,7 @@ def execute_installation(
     agent_home = apply_agent_home_plan(
         without_pending_plugins(
             plan.agent_home,
-            frozenset(entry.plugin for entry in pending if entry.agent is Agent.CODEX),
+            frozenset(entry.plugin for entry in pending if entry.agent is Target.CODEX),
         )
     )
     return InstallationReport(
@@ -2853,7 +2847,7 @@ def _rewrite_records(
     if plan.claude_clone is None:
         return None, (), ()
     unpublished = frozenset(
-        entry.plugin for entry in pending if entry.agent is Agent.CLAUDE
+        entry.plugin for entry in pending if entry.agent is Target.CLAUDE
     )
     if head is None:
         _, drop_warnings = rewrite_install_records(
@@ -3042,14 +3036,17 @@ def _record_drift(
     if plan.mode is not InstallationMode.PERSISTENT:
         return None
     unpublished = frozenset(
-        entry.plugin for entry in pending if entry.agent is Agent.CLAUDE
+        entry.plugin for entry in pending if entry.agent is Target.CLAUDE
     )
     refreshed = (
         *(record for record in plan.claude_records if record.plugin not in unpublished),
         *(rewrite.record for rewrite in rewrites),
     )
     for offset, command in enumerate(plan.closing):
-        if command.agent is Agent.CLAUDE and command.operation is Operation.PLUGIN_LIST:
+        if (
+            command.agent is Target.CLAUDE
+            and command.operation is Operation.PLUGIN_LIST
+        ):
             return compare_install_listings(
                 refreshed,
                 claude_install_records(
@@ -3116,12 +3113,12 @@ def main(
     if arguments.json_output:
         print(json.dumps(report_document(report), sort_keys=True))
     else:
-        print(f"installed {len(report.installed_for(Agent.CLAUDE))} Claude plugins")
+        print(f"installed {len(report.installed_for(Target.CLAUDE))} Claude plugins")
         print(
             f"refreshed {len(report.refreshed_claude_records())} Claude Code "
             "install records"
         )
-        print(f"installed {len(report.installed_for(Agent.CODEX))} Codex plugins")
+        print(f"installed {len(report.installed_for(Target.CODEX))} Codex plugins")
         for entry in report.pending_publication:
             print(
                 f"pending publication, not installed: {entry.plugin} ({entry.agent.value})"
@@ -3156,7 +3153,7 @@ def _claude_source_commands(
     if action is SourceAction.ADD:
         commands.append(
             _command(
-                Agent.CLAUDE,
+                Target.CLAUDE,
                 Operation.MARKETPLACE_ADD,
                 None,
                 _claude_argv(
@@ -3176,7 +3173,7 @@ def _claude_source_commands(
     else:
         commands.append(
             _command(
-                Agent.CLAUDE,
+                Target.CLAUDE,
                 Operation.MARKETPLACE_REFRESH,
                 None,
                 _claude_argv(
@@ -3205,7 +3202,7 @@ def _codex_source_commands(
     if action is SourceAction.ADD:
         commands.append(
             _command(
-                Agent.CODEX,
+                Target.CODEX,
                 Operation.MARKETPLACE_ADD,
                 None,
                 (
@@ -3224,7 +3221,7 @@ def _codex_source_commands(
     else:
         commands.append(
             _command(
-                Agent.CODEX,
+                Target.CODEX,
                 Operation.MARKETPLACE_REFRESH,
                 None,
                 (
@@ -3573,7 +3570,7 @@ def unreadable_head_warnings(
     """
     return tuple(
         InstallationWarning(
-            agent=Agent.CLAUDE,
+            agent=Target.CLAUDE,
             message=UNREADABLE_HEAD_RECORD_WARNING.format(
                 plugin=record.plugin,
                 scope=record.scope,
@@ -3604,7 +3601,7 @@ def unresolved_target_warnings(
     """
     return tuple(
         InstallationWarning(
-            agent=Agent.CLAUDE,
+            agent=Target.CLAUDE,
             message=UNRESOLVED_TARGET_RECORD_WARNING.format(
                 plugin=record.plugin,
                 scope=record.scope,
@@ -3643,7 +3640,7 @@ def plan_install_record_rewrite(
         if version not in cached_versions.get(record.plugin, frozenset()):
             warnings.append(
                 InstallationWarning(
-                    agent=Agent.CLAUDE,
+                    agent=Target.CLAUDE,
                     message=UNREFRESHABLE_RECORD_WARNING.format(
                         plugin=record.plugin,
                         scope=record.scope,
@@ -3725,7 +3722,7 @@ def apply_install_record_writes(
             continue
         warnings.append(
             InstallationWarning(
-                agent=Agent.CLAUDE,
+                agent=Target.CLAUDE,
                 message=UNWRITTEN_RECORD_WARNING.format(
                     plugin=rewrite.record.plugin,
                     scope=rewrite.record.scope,
@@ -3931,7 +3928,7 @@ def _create_isolated_roots(roots: InstallationRoots) -> None:
     provision_codex_home(roots.codex_home)
 
 
-def _agent_adapter(agent: Agent) -> AgentAdapter:
+def _agent_adapter(agent: Target) -> AgentAdapter:
     for adapter in AGENT_ADAPTERS:
         if adapter.agent is agent:
             return adapter
@@ -3939,7 +3936,7 @@ def _agent_adapter(agent: Agent) -> AgentAdapter:
 
 
 def _command(
-    agent: Agent,
+    agent: Target,
     operation: Operation,
     plugin: str | None,
     argv: tuple[str, ...],
@@ -4006,7 +4003,7 @@ def report_document(report: InstallationReport) -> dict[str, object]:
     agent_home = report.agent_home
     return {
         ReportField.MODE: report.plan.mode.value,
-        ReportField.CLAUDE_PLUGINS: sorted(report.installed_for(Agent.CLAUDE)),
+        ReportField.CLAUDE_PLUGINS: sorted(report.installed_for(Target.CLAUDE)),
         ReportField.CLAUDE_RECORDS: [
             {
                 ReportField.PLUGIN: record.plugin,
@@ -4058,7 +4055,7 @@ def report_document(report: InstallationReport) -> dict[str, object]:
             }
             for command in (*report.plan.commands, *report.plan.closing)
         ],
-        ReportField.CODEX_PLUGINS: sorted(report.installed_for(Agent.CODEX)),
+        ReportField.CODEX_PLUGINS: sorted(report.installed_for(Target.CODEX)),
         ReportField.COMPLETED_OPERATIONS: len(report.results),
         ReportField.STATE_ROOT: (
             str(report.plan.roots.state) if report.plan.roots.state else None
@@ -4160,7 +4157,6 @@ __all__ = [
     "rewrite_install_records",
     "AGENT_OWNERSHIP_FILENAME",
     "AGENT_OWNERSHIP_SCHEMA_VERSION",
-    "Agent",
     "AgentAdapter",
     "AgentDefinition",
     "AgentHomeAction",

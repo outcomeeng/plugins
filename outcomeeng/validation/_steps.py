@@ -23,6 +23,7 @@ from outcomeeng.distribution.contracts import (
     INSTRUCTION_BLOCK_ARGV as _INSTRUCTION_BLOCK_ARGV,
     ORCHESTRATION_VALIDATION_ARGV,
     TEXT_FILE_SUFFIXES,
+    Target,
 )
 from outcomeeng.validation._model import Recipe, Step
 
@@ -122,8 +123,8 @@ _REFERENCE_SUFFIXES: Final = (".md", ".py", ".json", ".toml", ".yaml", ".yml")
 def _skill_files() -> tuple[str, ...]:
     roots = (
         _REPO_ROOT / "src" / "plugins",
-        _REPO_ROOT / "dist" / "claude",
-        _REPO_ROOT / "dist" / "codex",
+        _REPO_ROOT / "dist" / Target.CLAUDE.value,
+        _REPO_ROOT / "dist" / Target.CODEX.value,
     )
     return tuple(
         sorted(

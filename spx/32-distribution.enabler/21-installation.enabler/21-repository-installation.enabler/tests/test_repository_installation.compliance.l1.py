@@ -11,8 +11,8 @@ from pathlib import Path
 
 import pytest
 
+from outcomeeng.distribution.contracts import Target
 from outcomeeng.distribution.installation import (
-    Agent,
     CLAUDE_LOCAL_SCOPE,
     CLAUDE_PLUGIN_ID_FIELD,
     CLAUDE_PLUGIN_PROJECT_PATH_FIELD,
@@ -317,7 +317,7 @@ def test_reconciliation_preserves_a_pending_plugins_prior_owned_definitions() ->
         for name in observation.shipped_by_plugin.get(plugin, frozenset())
     }
 
-    assert observation.second_report.pending_for(Agent.CODEX) == observation.changed
+    assert observation.second_report.pending_for(Target.CODEX) == observation.changed
     assert pending_names
     owned_first = {
         entry.destination.name: entry for entry in observation.ownership_first
@@ -831,7 +831,7 @@ def test_a_recorded_plugin_is_refreshed_by_the_native_update_never_a_reinstall()
     claude_commands = [
         command
         for command in execution.report.plan.commands
-        if command.agent is Agent.CLAUDE
+        if command.agent is Target.CLAUDE
     ]
     updated = [
         command.plugin
@@ -864,7 +864,7 @@ def test_a_recorded_plugin_is_refreshed_by_the_native_update_never_a_reinstall()
     registering_claude = [
         command
         for command in registering.plan.commands
-        if command.agent is Agent.CLAUDE
+        if command.agent is Target.CLAUDE
     ]
     registering_operations = [command.operation for command in registering_claude]
     assert registering.plan.claude_plugins
@@ -888,7 +888,8 @@ def test_a_recorded_plugin_is_refreshed_by_the_native_update_never_a_reinstall()
         assert failure.failure is not None
         assert failure.failure.command.operation is Operation.PLUGIN_UPDATE
         assert not any(
-            command.operation is Operation.PLUGIN_LIST and command.agent is Agent.CLAUDE
+            command.operation is Operation.PLUGIN_LIST
+            and command.agent is Target.CLAUDE
             for command in failure.calls
         )
 
@@ -900,7 +901,7 @@ def test_a_local_scope_record_for_the_checkout_suppresses_the_bootstrap_install(
     claude_commands = [
         command
         for command in observation.plan.commands
-        if command.agent is Agent.CLAUDE
+        if command.agent is Target.CLAUDE
     ]
     updates = [
         command
@@ -917,7 +918,7 @@ def test_a_local_scope_record_for_the_checkout_suppresses_the_bootstrap_install(
     ]
     assert FIRST_INSTALL_WARNING.format(
         marketplace=observation.plan.roots.marketplace,
-        agent=Agent.CLAUDE.value,
+        agent=Target.CLAUDE.value,
         plugin=SPEC_TREE_PLUGIN,
     ) not in [warning.message for warning in observation.plan.warnings]
 
@@ -927,7 +928,7 @@ def test_a_persistent_run_reads_the_listing_once_before_and_once_after_execution
 ):
     observation = observe_persistent_execution()
     claude = [
-        command for command in observation.attempted if command.agent is Agent.CLAUDE
+        command for command in observation.attempted if command.agent is Target.CLAUDE
     ]
     operations = [command.operation for command in claude]
     assert operations.count(Operation.PLUGIN_INSPECT) == 1
@@ -946,12 +947,12 @@ def test_a_persistent_run_reads_the_listing_once_before_and_once_after_execution
             next(
                 index
                 for index, command in enumerate(drifted.attempted)
-                if command.agent is Agent.CLAUDE
+                if command.agent is Target.CLAUDE
                 and command.operation is Operation.PLUGIN_LIST
             )
             + 1 :
         ]
-        if command.agent is Agent.CLAUDE
+        if command.agent is Target.CLAUDE
     ]
     assert trailing == []
 
@@ -1200,7 +1201,7 @@ def test_no_agent_announces_a_first_install_its_plan_does_not_carry() -> None:
 
     for case in observation.cases:
         reported = cast("list[dict[str, str]]", case.document[ReportField.WARNINGS])
-        for agent in (Agent.CLAUDE, Agent.CODEX):
+        for agent in (Target.CLAUDE, Target.CODEX):
             announced = {
                 ReportField.AGENT: agent.value,
                 ReportField.MESSAGE: FIRST_INSTALL_WARNING.format(
@@ -1235,7 +1236,7 @@ def test_no_agent_announces_a_first_install_its_plan_does_not_carry() -> None:
                 "list[str]",
                 case.document[
                     ReportField.CLAUDE_PLUGINS
-                    if agent is Agent.CLAUDE
+                    if agent is Target.CLAUDE
                     else ReportField.CODEX_PLUGINS
                 ],
             )
@@ -1305,7 +1306,7 @@ def test_a_refused_installation_command_reports_the_refusal_the_cli_printed() ->
     observed = observe_isolated_codex_home_contract(refuse_every_home=True)
     assert observed.report is None
     assert observed.failure is not None
-    assert observed.failure.command.agent is Agent.CODEX
+    assert observed.failure.command.agent is Target.CODEX
     assert observed.failure.result.stderr == captured_codex_home_refusal()
 
 
@@ -1385,7 +1386,7 @@ def test_the_install_record_replace_drops_the_fetch_project_before_the_closing_l
     closing_position = next(
         index
         for index, command in enumerate(observation.attempted)
-        if command.agent is Agent.CLAUDE and command.operation is Operation.PLUGIN_LIST
+        if command.agent is Target.CLAUDE and command.operation is Operation.PLUGIN_LIST
     )
 
     closing = cast("list[dict[str, str]]", json.loads(observation.listings[-1]))
@@ -1447,7 +1448,7 @@ def test_a_run_with_an_uncached_target_fetch_adds_no_listing_read_beyond_the_clo
     listing_reads = [
         command
         for command in observation.attempted
-        if command.agent is Agent.CLAUDE
+        if command.agent is Target.CLAUDE
         and command.operation in {Operation.PLUGIN_INSPECT, Operation.PLUGIN_LIST}
     ]
 
@@ -1612,6 +1613,7 @@ def test_a_target_still_uncached_after_the_fetch_leaves_its_record_unrefreshed_a
         )
     }
     for plugin in fetched:
+        assert plugin is not None
         identifier = marketplace_plugin_identifier(plugin, observation.marketplace)
         assert entries_after[identifier] == entries_before[identifier]
     assert observation.exit_code != 0

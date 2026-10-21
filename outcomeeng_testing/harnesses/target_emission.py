@@ -201,7 +201,10 @@ def structure_deviations() -> dict[Target, tuple[Path, ...]]:
     for target in Target:
         found: list[Path] = []
         for emission in snapshot.projection.for_target(target):
-            if emission.action is EmissionAction.FAN_OUT:
+            if emission.action in {
+                EmissionAction.FAN_OUT,
+                EmissionAction.AGENT_TOKENS,
+            }:
                 continue
             if not emission.source.is_relative_to(plugins_root):
                 continue

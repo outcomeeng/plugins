@@ -11,6 +11,8 @@ import math
 from dataclasses import dataclass
 from enum import StrEnum
 
+from outcomeeng.distribution.contracts import Target
+
 SECONDS_PER_MINUTE = 60
 PASS_BOUND_MINUTES = 5
 PASS_INTERVAL_MINUTES = 30
@@ -28,8 +30,8 @@ BETA = "beta"
 
 
 class AgentKind(StrEnum):
-    CLAUDE = "claude"
-    CODEX = "codex"
+    CLAUDE = Target.CLAUDE.value
+    CODEX = Target.CODEX.value
 
 
 @dataclass(frozen=True)

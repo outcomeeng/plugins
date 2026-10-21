@@ -15,6 +15,8 @@ from outcomeeng.distribution.installation import (
     CLAUDE_EXECUTABLE,
     CODEX_EXEC_SUBCOMMAND,
     CODEX_EXECUTABLE,
+    ISOLATED_CLAUDE_CONFIG_DIRECTORY,
+    ISOLATED_CODEX_HOME_DIRECTORY,
 )
 from outcomeeng.distribution.native_thread_evidence import (
     NativeThreadReader,
@@ -90,7 +92,11 @@ def _definition_filename(target: Target) -> str:
 
 
 def _native_definition_path(state_root: Path, target: Target, name: str) -> Path:
-    agent_home = "claude" if target is Target.CLAUDE else "codex"
+    agent_home = (
+        ISOLATED_CLAUDE_CONFIG_DIRECTORY
+        if target is Target.CLAUDE
+        else ISOLATED_CODEX_HOME_DIRECTORY
+    )
     return state_root / agent_home / "agents" / name
 
 

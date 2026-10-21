@@ -4,13 +4,18 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import os
 import shlex
 import sys
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import TextIO, cast
+from pathlib import Path
+from types import ModuleType
+from typing import Any, TextIO, cast
+
+AGENT_TOKEN_MODULE_NAME = "agent_tokens"
 
 SCHEMA_VERSION = 5
 TRANSPORT_SCHEMA_VERSION = 1
@@ -129,10 +134,57 @@ class Resolution(StrEnum):
     ALREADY_CORRELATED = "already-correlated"
 
 
+def _load_agent_tokens() -> ModuleType:
+    """Load the sibling agent-token module by a `__file__`-relative import."""
+    path = Path(__file__).resolve().with_name(f"{AGENT_TOKEN_MODULE_NAME}.py")
+    cached = sys.modules.get(AGENT_TOKEN_MODULE_NAME)
+    if cached is not None and Path(getattr(cached, "__file__", "")) == path:
+        return cached
+    advice = (
+        "the module ships beside this script in the coding-agents plugin; "
+        "reinstall or update the coding-agents plugin to restore it"
+    )
+    spec = importlib.util.spec_from_file_location(AGENT_TOKEN_MODULE_NAME, path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(
+            f"error: cannot load {AGENT_TOKEN_MODULE_NAME} from {path}; {advice}"
+        )
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[AGENT_TOKEN_MODULE_NAME] = module
+    try:
+        spec.loader.exec_module(module)
+    except FileNotFoundError as exc:
+        sys.modules.pop(AGENT_TOKEN_MODULE_NAME, None)
+        raise RuntimeError(
+            f"error: agent token module not found: {path}; {advice}"
+        ) from exc
+    except Exception as exc:
+        sys.modules.pop(AGENT_TOKEN_MODULE_NAME, None)
+        raise RuntimeError(
+            f"error: agent token module failed to load: {path} "
+            f"({type(exc).__name__}: {exc}); {advice}"
+        ) from exc
+    return module
+
+
+def _agent_token_class() -> Any:
+    module = _load_agent_tokens()
+    token_class = getattr(module, "AgentToken", None)
+    if token_class is None:
+        raise RuntimeError(
+            f"error: agent token module {getattr(module, '__file__', AGENT_TOKEN_MODULE_NAME)} "
+            "declares no AgentToken; reinstall or update the coding-agents plugin to restore it"
+        )
+    return token_class
+
+
+AgentToken = _agent_token_class()
+
+
 class AgentType(StrEnum):
-    CLAUDE = "claude"
-    CODEX = "codex"
-    PI = "pi"
+    CLAUDE = AgentToken.CLAUDE.value
+    CODEX = AgentToken.CODEX.value
+    PI = AgentToken.PI.value
 
 
 class EvidenceSource(StrEnum):
@@ -160,9 +212,9 @@ POST_RESTART_EVIDENCE_SOURCES = frozenset(
 )
 
 NATIVE_RESUME_PREFIXES: dict[AgentType, tuple[str, ...]] = {
-    AgentType.CLAUDE: ("claude", "--resume"),
-    AgentType.CODEX: ("codex", "resume"),
-    AgentType.PI: ("pi", "--session"),
+    AgentType.CLAUDE: (AgentType.CLAUDE.value, "--resume"),
+    AgentType.CODEX: (AgentType.CODEX.value, "resume"),
+    AgentType.PI: (AgentType.PI.value, "--session"),
 }
 
 NATIVE_WRITABLE_ROOT_OPTIONS: dict[AgentType, str] = {

@@ -43,7 +43,10 @@ and an operator tie break; a dirty root file; and the CLI rejections (missing or
 template without ``template_version``, a symlink escaping the repository, an unsupported language
 token, a duplicate flag); and a fitting and a breaching root instruction file measured against
 the project-doc ceiling, with exact byte-size and overage assertions on the reported budget
-lines. The executable cases live in the governing node's ``tests/`` directory.
+lines; and the sibling agent-tokens data file absent, unreadable, malformed JSON, a non-object
+JSON value, and missing the CLAUDE or CODEX key, each reporting its ``error:`` line on stderr
+with exit code 2 and no traceback when the script runs. The executable cases live in the
+governing node's ``tests/`` directory.
 
 """
 
@@ -51,6 +54,7 @@ from __future__ import annotations
 
 import argparse
 import difflib
+import json
 import pathlib
 import re
 import subprocess
@@ -158,7 +162,85 @@ BOOTSTRAP_SHARED_THRESHOLD = 0.8
 DELEGATION_STUB_MAX_CHARACTERS = 500
 
 # Each agent harness reads its own instruction filename from the product root.
-AGENT_HARNESS_INSTRUCTION_FILENAMES = {"claude": "CLAUDE.md", "codex": "AGENTS.md"}
+AGENT_TOKENS_PATH = pathlib.Path(__file__).with_name("agent-tokens.json")
+AGENT_TOKENS_REQUIRED_KEYS = ("CLAUDE", "CODEX")
+AGENT_TOKENS_REINSTALL_ADVICE = (
+    "the file ships beside this script in the spec-tree plugin; "
+    "reinstall or update the spec-tree plugin to restore it"
+)
+AGENT_TOKENS_ERROR_PREFIX = "error: agent tokens file"
+AGENT_TOKENS_NOT_FOUND = "not found: "
+AGENT_TOKENS_UNREADABLE = "unreadable: "
+AGENT_TOKENS_NOT_VALID_JSON = "is not valid JSON: "
+AGENT_TOKENS_NOT_AN_OBJECT = "must hold a JSON object: "
+AGENT_TOKENS_LACKS_KEYS = "lacks required key(s)"
+AGENT_TOKENS_FOUND_TYPE_OPEN = "(found "
+AGENT_TOKENS_KEYS_FOUND_OPEN = "(keys found: "
+AGENT_TOKENS_NO_KEYS = "none"
+
+
+class AgentTokensLoadError(RuntimeError):
+    """Raised when the sibling agent-tokens data file cannot supply the agent tokens."""
+
+
+def load_agent_tokens(path: pathlib.Path) -> dict[str, str]:
+    """Read the agent tokens from ``path``, naming the file and the fix when it cannot supply them."""
+    try:
+        text = path.read_text(encoding="utf-8")
+    except FileNotFoundError as exc:
+        raise AgentTokensLoadError(
+            f"{AGENT_TOKENS_ERROR_PREFIX} {AGENT_TOKENS_NOT_FOUND}{path}; {AGENT_TOKENS_REINSTALL_ADVICE}"
+        ) from exc
+    except OSError as exc:
+        raise AgentTokensLoadError(
+            f"{AGENT_TOKENS_ERROR_PREFIX} {AGENT_TOKENS_UNREADABLE}{path} ({exc}); "
+            f"{AGENT_TOKENS_REINSTALL_ADVICE}"
+        ) from exc
+    try:
+        tokens = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise AgentTokensLoadError(
+            f"{AGENT_TOKENS_ERROR_PREFIX} {AGENT_TOKENS_NOT_VALID_JSON}{path} ({exc}); "
+            f"{AGENT_TOKENS_REINSTALL_ADVICE}"
+        ) from exc
+    if not isinstance(tokens, dict):
+        raise AgentTokensLoadError(
+            f"{AGENT_TOKENS_ERROR_PREFIX} {AGENT_TOKENS_NOT_AN_OBJECT}{path} "
+            f"{AGENT_TOKENS_FOUND_TYPE_OPEN}{type(tokens).__name__}); {AGENT_TOKENS_REINSTALL_ADVICE}"
+        )
+    missing = [key for key in AGENT_TOKENS_REQUIRED_KEYS if key not in tokens]
+    if missing:
+        raise AgentTokensLoadError(
+            f"{AGENT_TOKENS_ERROR_PREFIX} {AGENT_TOKENS_LACKS_KEYS} {', '.join(missing)}: {path} "
+            f"{AGENT_TOKENS_KEYS_FOUND_OPEN}{', '.join(sorted(map(str, tokens))) or AGENT_TOKENS_NO_KEYS}); "
+            f"{AGENT_TOKENS_REINSTALL_ADVICE}"
+        )
+    return tokens
+
+
+AGENT_TOKENS_LOAD_FAILURE_EXIT_CODE = 2
+
+
+def load_agent_tokens_or_exit(path: pathlib.Path) -> dict[str, str]:
+    """Load the agent tokens, or report the failure as an ``error:`` line and exit 2.
+
+    The tokens key the module's constants, so a load failure surfaces at import; it leaves
+    the script as the usage-error form the CLI's other input failures use, not as a traceback.
+    """
+    try:
+        return load_agent_tokens(path)
+    except AgentTokensLoadError as exc:
+        print(exc, file=sys.stderr)
+        raise SystemExit(AGENT_TOKENS_LOAD_FAILURE_EXIT_CODE) from exc
+
+
+_AGENT_TOKENS = load_agent_tokens_or_exit(AGENT_TOKENS_PATH)
+CLAUDE_TOKEN = _AGENT_TOKENS["CLAUDE"]
+CODEX_TOKEN = _AGENT_TOKENS["CODEX"]
+AGENT_HARNESS_INSTRUCTION_FILENAMES = {
+    CLAUDE_TOKEN: "CLAUDE.md",
+    CODEX_TOKEN: "AGENTS.md",
+}
 OBSOLETE_SPX_INSTRUCTION_FILENAMES = ("CLAUDE.md", "AGENTS.md")
 OBSOLETE_SPX_DIR_NAME = "spx"
 RETIRED_GENERATED_INSTRUCTION_HEADINGS = (
@@ -1031,15 +1113,17 @@ def build_root_instruction_documents(
     is refused rather than dropped. Passing over it would write both files, exit zero, and leave
     the operator reading a success that answered nothing.
     """
-    body_claude = _strip_managed_block(_product_owned_root_document(seeds["claude"]))
-    body_codex = _strip_managed_block(_product_owned_root_document(seeds["codex"]))
+    body_claude = _strip_managed_block(
+        _product_owned_root_document(seeds[CLAUDE_TOKEN])
+    )
+    body_codex = _strip_managed_block(_product_owned_root_document(seeds[CODEX_TOKEN]))
 
     if is_first_encounter(body_claude, body_codex):
         if adopt_harness is not None:
             adopted = adopt_delegated_body(
-                {"claude": body_claude, "codex": body_codex}, adopt_harness
+                {CLAUDE_TOKEN: body_claude, CODEX_TOKEN: body_codex}, adopt_harness
             )
-            body_claude, body_codex = adopted["claude"], adopted["codex"]
+            body_claude, body_codex = adopted[CLAUDE_TOKEN], adopted[CODEX_TOKEN]
         body_claude, body_codex = bootstrap_wrap(body_claude, body_codex)
     elif adopt_harness is not None:
         raise CliInputError(
@@ -1049,8 +1133,10 @@ def build_root_instruction_documents(
         )
 
     return {
-        "claude": prepend_router_block(blocks_by_harness["claude"], body_claude),
-        "codex": prepend_router_block(blocks_by_harness["codex"], body_codex),
+        CLAUDE_TOKEN: prepend_router_block(
+            blocks_by_harness[CLAUDE_TOKEN], body_claude
+        ),
+        CODEX_TOKEN: prepend_router_block(blocks_by_harness[CODEX_TOKEN], body_codex),
     }
 
 
@@ -1404,14 +1490,14 @@ def _region_recency_winner(
     """
     claude = _region_committed_timestamp(
         repo_root,
-        AGENT_HARNESS_INSTRUCTION_FILENAMES["claude"],
+        AGENT_HARNESS_INSTRUCTION_FILENAMES[CLAUDE_TOKEN],
         text_a,
         name,
         runner=runner,
     )
     codex = _region_committed_timestamp(
         repo_root,
-        AGENT_HARNESS_INSTRUCTION_FILENAMES["codex"],
+        AGENT_HARNESS_INSTRUCTION_FILENAMES[CODEX_TOKEN],
         text_b,
         name,
         runner=runner,
@@ -1500,12 +1586,13 @@ def reconcile_root_shared_regions(
 
     if text_a != original_a:
         _replace_path_with_text(
-            _repo_child(repo_root, AGENT_HARNESS_INSTRUCTION_FILENAMES["claude"]),
+            _repo_child(repo_root, AGENT_HARNESS_INSTRUCTION_FILENAMES[CLAUDE_TOKEN]),
             text_a,
         )
     if text_b != original_b:
         _replace_path_with_text(
-            _repo_child(repo_root, AGENT_HARNESS_INSTRUCTION_FILENAMES["codex"]), text_b
+            _repo_child(repo_root, AGENT_HARNESS_INSTRUCTION_FILENAMES[CODEX_TOKEN]),
+            text_b,
         )
     return ReconcileReport(
         reconciled=tuple(reconciled),
@@ -1528,9 +1615,9 @@ def unresolved_delegation(repo_root: pathlib.Path) -> tuple[str, ...]:
         return ()
     bodies = {
         harness: _strip_managed_block(_product_owned_root_document(text))
-        for harness, text in zip(("claude", "codex"), texts, strict=True)
+        for harness, text in zip((CLAUDE_TOKEN, CODEX_TOKEN), texts, strict=True)
     }
-    if not is_first_encounter(bodies["claude"], bodies["codex"]):
+    if not is_first_encounter(bodies[CLAUDE_TOKEN], bodies[CODEX_TOKEN]):
         return ()
     return tuple(
         AGENT_HARNESS_INSTRUCTION_FILENAMES[harness]
@@ -1672,7 +1759,7 @@ def main(argv: list[str] | None = None) -> int:
             print("error: --reconcile requires --repo-root", file=sys.stderr)
             return 2
         forced_winner = (
-            {"claude": "a", "codex": "b"}[args.from_harness]
+            {CLAUDE_TOKEN: "a", CODEX_TOKEN: "b"}[args.from_harness]
             if args.from_harness is not None
             else None
         )

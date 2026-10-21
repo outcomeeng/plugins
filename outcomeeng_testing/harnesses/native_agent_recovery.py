@@ -16,6 +16,7 @@ from typing import cast
 
 from hypothesis import example, given, seed, settings
 
+from outcomeeng.distribution.contracts import Target
 from outcomeeng_testing.generators.native_agent_recovery import (
     OPERATIONAL_RECOVERY_ROSTER,
     RecoveryRosterCase,
@@ -765,7 +766,7 @@ def verify_native_agent_recovery_compliance() -> list[str]:
         module,
         Path("/unexpected/worktree"),
         roster.unknown_pane_id,
-        "claude",
+        Target.CLAUDE.value,
         "88888888-8888-4888-8888-888888888888",
     )
     extra = module.verify(

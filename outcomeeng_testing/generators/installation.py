@@ -15,7 +15,6 @@ from typing import cast
 from outcomeeng.distribution.build import agent_capability
 from outcomeeng.distribution.contracts import Target
 from outcomeeng.distribution.installation import (
-    Agent,
     CATALOG_PLUGIN_NAME_FIELD,
     CATALOG_PLUGINS_FIELD,
     CLAUDE_CATALOG_PATH,
@@ -89,13 +88,13 @@ def generated_agent_subsets(
     checkout: Path,
     *,
     include_spec_tree: bool,
-) -> Mapping[Agent, frozenset[str]]:
+) -> Mapping[Target, frozenset[str]]:
     """Generate one catalog-bounded subset for every supported agent."""
     catalogs = {
-        Agent.CLAUDE: catalog_plugin_names_from_document(
+        Target.CLAUDE: catalog_plugin_names_from_document(
             checkout / CLAUDE_CATALOG_PATH
         ),
-        Agent.CODEX: catalog_plugin_names_from_document(checkout / CODEX_CATALOG_PATH),
+        Target.CODEX: catalog_plugin_names_from_document(checkout / CODEX_CATALOG_PATH),
     }
     return {
         agent: generated_catalog_subset(

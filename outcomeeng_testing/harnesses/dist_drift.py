@@ -21,6 +21,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from outcomeeng.distribution.contracts import Target
 from outcomeeng.distribution.orchestration import DIST_ROOT_NAME, SOURCE_PLUGINS_DIR
 
 
@@ -68,7 +69,7 @@ def dist_drift_repo() -> Iterator[DistDriftRepo]:
         # Disable commit signing locally so the seed commit succeeds regardless
         # of a contributor's global commit.gpgsign (no signing key in this repo).
         _git(repo, "config", "commit.gpgsign", "false")
-        dist_path = Path(DIST_ROOT_NAME) / "claude" / "example" / "SKILL.md"
+        dist_path = Path(DIST_ROOT_NAME) / Target.CLAUDE.value / "example" / "SKILL.md"
         src_path = SOURCE_PLUGINS_DIR / "example" / "skills" / "example" / "SKILL.md"
         for rel in (dist_path, src_path):
             target = repo / rel

@@ -11,6 +11,9 @@ CAN retain the Spec Tree routing instructions and reach the product's own phase 
 
 ## Assertions
 
+- ALWAYS: the instruction-block generator reads the agent tokens from the data file the build renders beside it and maps to a root instruction file only the tokens that have one: `claude` to `CLAUDE.md` and `codex` to `AGENTS.md`
+- NEVER: the toolchain's instruction-block writer or a test of this node declares an agent token; each takes it from the module that owns it
+
 ### Scenarios
 
 - Given a template with language blocks and per-harness blocks, when the managed surface is generated for an enabled-language set, then both `CLAUDE.md` and `AGENTS.md` are written, each with its router block first, preserving content outside every managed fence, and containing inside the router block exactly the enabled languages' blocks and only its own harness's blocks ([test](tests/test_instruction_block.scenario.l1.py))
@@ -44,6 +47,7 @@ CAN retain the Spec Tree routing instructions and reach the product's own phase 
 - Given a root instruction file with uncommitted working-tree changes, when shared-region reconciliation runs, then it makes no change and reports the dirty file, operating only on committed state ([test](tests/test_instruction_block.scenario.l1.py))
 - Given a root instruction file whose router block is preceded by product content, when staleness is checked, then it reports `stale`, so a re-render moves the router back to the first content of the file ([test](tests/test_instruction_block.scenario.l1.py))
 - Given two root files whose biggest identical span begins at a line boundary in one file but mid-line in the other, when the bootstrap wraps a `shared` region, then the region is snapped to whole lines in both files, so a harness-specific prefix on the shared line is never split ([test](tests/test_instruction_block.scenario.l1.py))
+- Given the agent-tokens data file beside the generator is absent, unreadable, malformed JSON, a JSON value that is not an object, or missing the `CLAUDE` or `CODEX` key, when the generator runs, then it prints one `error:` line on stderr naming the file, what is wrong, and the fix, exits 2, and raises no traceback, in the form of its other input failures ([test](tests/test_agent_tokens_load.scenario.l1.py))
 
 ### Mappings
 

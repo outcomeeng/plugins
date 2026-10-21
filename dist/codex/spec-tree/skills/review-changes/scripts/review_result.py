@@ -26,6 +26,10 @@ Tested with:
 - Unknown severity and concern values -> names the value and allowed set.
 - Malformed JSON -> raises ``ReviewResultValidationError``.
 - Round trips through ``to_json_dict`` and ``from_json_dict`` -> preserve equality.
+- The sibling ``agent-tokens.json`` file absent, unreadable, malformed JSON, a non-object JSON
+  value, and missing the ``CLAUDE`` or ``CODEX`` key -> each prints its ``error:`` line on
+  stderr and exits 2 with no traceback when the module loads; a complete file -> the
+  generated-tree citation candidates derive from its tokens.
 
 A review carries findings only — no summary, acknowledgement, decision, or
 verdict field. The journal-rendered findings surface is the review's whole
@@ -34,14 +38,65 @@ human surface, the same shape the audit kind produces.
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import pathlib
 import re
+import sys
 from dataclasses import dataclass
 from enum import StrEnum
+from types import ModuleType
 from typing import Any, cast
 
 SCHEMA_VERSION = 4
+
+AGENT_TOKENS_PATH = pathlib.Path(__file__).with_name("agent-tokens.json")
+
+
+def _sibling_provider(skill: str, module_name: str) -> ModuleType:
+    """Load a sibling provider skill's script by the installed tree's layout."""
+    cached = sys.modules.get(module_name)
+    if cached is not None:
+        return cached
+    skills = pathlib.Path(__file__).resolve().parents[2]
+    path = skills / skill / "scripts" / f"{module_name}.py"
+    spec = importlib.util.spec_from_file_location(module_name, path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot load {module_name} from {path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    try:
+        spec.loader.exec_module(module)
+    except Exception:
+        # A module that failed to execute never stays cached as if it loaded.
+        del sys.modules[spec.name]
+        raise
+    return module
+
+
+# The update-instruction-block skill owns the agent-tokens loader; this module passes it the
+# data file the build renders beside this script.
+_TOKENS_PROVIDER = _sibling_provider("update-instruction-block", "instruction_block")
+AgentTokensLoadError = _TOKENS_PROVIDER.AgentTokensLoadError
+load_agent_tokens = _TOKENS_PROVIDER.load_agent_tokens
+AGENT_TOKENS_REQUIRED_KEYS = _TOKENS_PROVIDER.AGENT_TOKENS_REQUIRED_KEYS
+AGENT_TOKENS_REINSTALL_ADVICE = _TOKENS_PROVIDER.AGENT_TOKENS_REINSTALL_ADVICE
+AGENT_TOKENS_ERROR_PREFIX = _TOKENS_PROVIDER.AGENT_TOKENS_ERROR_PREFIX
+AGENT_TOKENS_NOT_FOUND = _TOKENS_PROVIDER.AGENT_TOKENS_NOT_FOUND
+AGENT_TOKENS_UNREADABLE = _TOKENS_PROVIDER.AGENT_TOKENS_UNREADABLE
+AGENT_TOKENS_NOT_VALID_JSON = _TOKENS_PROVIDER.AGENT_TOKENS_NOT_VALID_JSON
+AGENT_TOKENS_NOT_AN_OBJECT = _TOKENS_PROVIDER.AGENT_TOKENS_NOT_AN_OBJECT
+AGENT_TOKENS_LACKS_KEYS = _TOKENS_PROVIDER.AGENT_TOKENS_LACKS_KEYS
+AGENT_TOKENS_FOUND_TYPE_OPEN = _TOKENS_PROVIDER.AGENT_TOKENS_FOUND_TYPE_OPEN
+AGENT_TOKENS_KEYS_FOUND_OPEN = _TOKENS_PROVIDER.AGENT_TOKENS_KEYS_FOUND_OPEN
+AGENT_TOKENS_NO_KEYS = _TOKENS_PROVIDER.AGENT_TOKENS_NO_KEYS
+AGENT_TOKENS_LOAD_FAILURE_EXIT_CODE = (
+    _TOKENS_PROVIDER.AGENT_TOKENS_LOAD_FAILURE_EXIT_CODE
+)
+_AGENT_TOKENS = _TOKENS_PROVIDER.load_agent_tokens_or_exit(AGENT_TOKENS_PATH)
+GENERATED_TREE_AGENT_TOKENS = tuple(
+    _AGENT_TOKENS[key] for key in AGENT_TOKENS_REQUIRED_KEYS
+)
 
 
 class Severity(StrEnum):
@@ -534,8 +589,10 @@ def _resolve_plugin_skill_path(plugin: str, skill: str, rule: str) -> pathlib.Pa
     suffix = pathlib.Path(plugin) / "skills" / skill / "SKILL.md"
     candidates = (
         pathlib.Path("src") / "plugins" / suffix,
-        pathlib.Path("dist") / "claude" / suffix,
-        pathlib.Path("dist") / "codex" / suffix,
+        *(
+            pathlib.Path("dist") / token / suffix
+            for token in GENERATED_TREE_AGENT_TOKENS
+        ),
         *_runtime_plugin_skill_candidates(plugin, skill),
         *(ancestor / suffix for ancestor in pathlib.Path(__file__).resolve().parents),
     )
