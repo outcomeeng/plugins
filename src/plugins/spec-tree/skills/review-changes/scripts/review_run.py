@@ -13,8 +13,11 @@ start/append-scope/append-finding/finish round trip, a finish before every
 changed file has a scope-advanced event, a rename's source and destination
 scope, a finding's optional `unit` and `tracked` fields carried onto the
 finding-reported event and a tracked `debt` finding counted toward `debt`, a
-nonzero `spx journal` exit propagated with its stderr, and scratch cleanup on
-every failure path.
+nonzero `spx journal` exit propagated with its stderr, a finish that marks
+changed files unread sealing `failed` with the unread files named in the
+terminal event, a finish that leaves a changed file neither advanced nor marked
+unread refused, a branch value naming a commit replaced by the checked-out
+branch as the run's branch identity, and scratch cleanup on every failure path.
 """
 
 from __future__ import annotations
@@ -213,6 +216,38 @@ def _journal_env_from_state(state: dict[str, Any]) -> dict[str, str]:
     return journal_env
 
 
+def _names_commit_not_branch(value: str, repo: pathlib.Path) -> bool:
+    """Whether ``value`` resolves to a commit and names no local or remote branch."""
+    for namespace in ("refs/heads", "refs/remotes"):
+        branch_ref = subprocess.run(  # noqa: S603,S607
+            ["git", "show-ref", "--verify", "--quiet", f"{namespace}/{value}"],
+            cwd=repo,
+            capture_output=True,
+            check=False,
+        )
+        if branch_ref.returncode == 0:
+            return False
+    resolved = subprocess.run(  # noqa: S603,S607
+        ["git", "rev-parse", "--verify", "--quiet", f"{value}^{{commit}}"],
+        cwd=repo,
+        capture_output=True,
+        check=False,
+    )
+    return resolved.returncode == 0
+
+
+def _branch_identity(repo: pathlib.Path) -> str:
+    """The run's branch identity: a branch name, never a commit.
+
+    An exported branch value that names a commit and no branch ref, as a
+    commit-range input exports, yields the checked-out branch.
+    """
+    exported = os.environ.get(ENV_BRANCH, "").strip()
+    if exported and not _names_commit_not_branch(exported, repo):
+        return exported
+    return str(changeset_scope.detect_current_branch(repo))
+
+
 def _metadata_from_manifest(
     *, manifest_path: pathlib.Path, started_at: str, target: str
 ) -> dict[str, Any]:
@@ -226,9 +261,7 @@ def _metadata_from_manifest(
         "changedFiles": _manifest_changed_files(manifest),
         "reviewInputSha256": _require_manifest_str(manifest, "diff_sha256"),
     }
-    branch_name = os.environ.get(ENV_BRANCH, "").strip() or str(
-        changeset_scope.detect_current_branch(repo)
-    )
+    branch_name = _branch_identity(repo)
     target_kind = _target_kind()
     metadata: dict[str, Any] = {
         "target": target,
@@ -386,12 +419,17 @@ def _finding_event_from_stdin(*, now: str, attempt: int) -> dict[str, object]:
 
 
 def _completed_event(
-    *, metadata: dict[str, Any], prefix: list[dict[str, object]], completed_at: str
+    *,
+    metadata: dict[str, Any],
+    prefix: list[dict[str, object]],
+    completed_at: str,
+    unread: list[str],
 ) -> dict[str, object]:
     parsed = jp.run_metadata_from_json(json.dumps(metadata))
     run = replace(jp.run_from_metadata(parsed), completed_at=completed_at)
     overall = jp.compute_overall(prefix)
-    status = jp.terminal_status(overall)
+    # A run that leaves a unit of its scope unread proves no approval.
+    status = jp.JournalRunStatus.FAILED if unread else jp.terminal_status(overall)
     event = jp.run_completed_event(run, status=status, now=completed_at)
     data = event.get("data")
     if isinstance(data, dict):
@@ -400,18 +438,41 @@ def _completed_event(
             "debt": _finding_counts(prefix)["debt"],
             "overall": str(overall),
         }
+        if unread:
+            data["review"]["unread"] = list(unread)
     return event
 
 
 def _scope_coverage_error(
-    *, metadata: dict[str, Any], prefix: list[dict[str, object]]
+    *,
+    metadata: dict[str, Any],
+    prefix: list[dict[str, object]],
+    unread: list[str],
 ) -> str | None:
     expected = _expected_scope_units(metadata)
     if isinstance(expected, str):
         return expected
     advanced = _advanced_scope_units(prefix)
+    marked_unread = set(unread)
+    contradictory = sorted(advanced & marked_unread)
+    if contradictory:
+        return (
+            f"files both read and marked unread: {', '.join(contradictory)}. "
+            "A file with a scope-advanced event was read; drop --unread for "
+            "each of these files."
+        )
+    outside = sorted(marked_unread - expected)
+    if outside:
+        return (
+            f"unread files outside changed files: {', '.join(outside)}. "
+            f"--unread names only changed files; the changed files are: "
+            f"{', '.join(sorted(expected))}. Drop or correct each --unread "
+            "value to one of them."
+        )
 
-    return _scope_unit_delta_message(expected=expected, advanced=advanced)
+    return _scope_unit_delta_message(
+        expected=expected - marked_unread, advanced=advanced
+    )
 
 
 def _expected_scope_units(metadata: dict[str, Any]) -> set[str] | str:
@@ -623,8 +684,9 @@ def _finish(args: argparse.Namespace) -> int:
             sys.stderr.write("spx journal read output must be a JSON event array\n")
             return 1
         prefix = [event for event in prefix_value if isinstance(event, dict)]
+        unread = sorted(set(args.unread))
         coverage_error = _scope_coverage_error(
-            metadata=state["metadata"], prefix=prefix
+            metadata=state["metadata"], prefix=prefix, unread=unread
         )
         if coverage_error is not None:
             sys.stderr.write(f"{coverage_error}\n")
@@ -634,6 +696,7 @@ def _finish(args: argparse.Namespace) -> int:
             metadata=state["metadata"],
             prefix=prefix,
             completed_at=completed_at,
+            unread=unread,
         )
         code = _append_event(run_token, event, journal_env=journal_env)
         if code != 0:
@@ -672,6 +735,12 @@ def main(argv: list[str] | None = None) -> int:
 
     finish = subparsers.add_parser("finish", help="finish and seal the run")
     finish.add_argument("--state", type=pathlib.Path, required=True)
+    finish.add_argument(
+        "--unread",
+        action="append",
+        default=[],
+        help="a changed file the review did not read; seals the run failed",
+    )
 
     args = parser.parse_args(argv)
     handlers = {

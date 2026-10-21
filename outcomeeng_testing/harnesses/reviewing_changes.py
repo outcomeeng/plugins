@@ -37,6 +37,7 @@ outside ``spx/``.
 
 from __future__ import annotations
 
+import enum
 import io
 import json
 import os
@@ -47,7 +48,7 @@ import sys
 import traceback
 from contextlib import redirect_stderr, redirect_stdout
 from types import ModuleType
-from typing import Any, Callable, cast
+from typing import Any, Callable, NamedTuple, cast
 from unittest.mock import patch
 
 from outcomeeng.distribution.contracts import Target
@@ -399,6 +400,59 @@ def open_scoped_review_run(
     if scoped.returncode != 0:
         raise RuntimeError(f"review_run.py append-scope failed: {scoped.stderr}")
     return state_path
+
+
+class BranchExport(enum.Enum):
+    """What the caller exports as the review's branch value."""
+
+    NOTHING = "nothing"
+    CHECKED_OUT_BRANCH = "checked-out-branch"
+    OTHER_BRANCH = "other-branch"
+    HEAD_COMMIT = "head-commit"
+
+
+class StartedReviewRun(NamedTuple):
+    """A started review run: its recorded metadata and the repository facts around it."""
+
+    metadata: dict[str, Any]
+    checked_out_branch: str
+    head_commit: str
+    exported: str | None
+
+
+def start_review_run_exporting(
+    scratch: pathlib.Path, export: BranchExport
+) -> StartedReviewRun:
+    """Start a review run in a fresh synthetic repository under ``scratch``.
+
+    The exported branch value follows ``export``: nothing, the checked-out branch's name,
+    the name of an existing branch that is not checked out (the base branch), or the full
+    identity of the head commit. A non-zero exit is a setup failure and raises
+    with the runner's stderr.
+    """
+    scratch.mkdir(parents=True)
+    repo = scratch / "repo"
+    repo.mkdir()
+    base_ref = init_repo_with_branch(repo)
+    env, _journal_path = runner_env(scratch, repo, base_ref)
+    checked_out_branch = run_git(
+        "symbolic-ref", "--short", "HEAD", cwd=repo
+    ).stdout.strip()
+    head_commit = run_git("rev-parse", "HEAD", cwd=repo).stdout.strip()
+    exported = {
+        BranchExport.NOTHING: None,
+        BranchExport.CHECKED_OUT_BRANCH: checked_out_branch,
+        BranchExport.OTHER_BRANCH: base_ref,
+        BranchExport.HEAD_COMMIT: head_commit,
+    }[export]
+    if exported is not None:
+        env[str(load_review_run_module().ENV_BRANCH)] = exported
+    started = run_script(REVIEW_RUN_SCRIPT, "start", env=env, cwd=repo)
+    if started.returncode != 0:
+        raise RuntimeError(f"review_run.py start failed: {started.stderr}")
+    state_path = pathlib.Path(json.loads(started.stdout)["statePath"])
+    metadata = json.loads(state_path.read_text(encoding="utf-8"))["metadata"]
+    return StartedReviewRun(metadata, checked_out_branch, head_commit, exported)
 
 
 def run_script(

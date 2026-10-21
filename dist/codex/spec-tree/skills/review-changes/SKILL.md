@@ -27,16 +27,18 @@ Invoke only the bundled runner:
 python3 "${SKILL_DIR}/scripts/review_run.py" start
 python3 "${SKILL_DIR}/scripts/review_run.py" append-scope --state "<statePath>" "<changed-file>"
 python3 "${SKILL_DIR}/scripts/review_run.py" append-finding --state "<statePath>" < "<finding-file>"
-python3 "${SKILL_DIR}/scripts/review_run.py" finish --state "<statePath>"
+python3 "${SKILL_DIR}/scripts/review_run.py" finish --state "<statePath>" --unread "<unread-file>"
 ```
+
+Pass `--unread "<unread-file>"` once for each changed file Claude did not read, and omit it when Claude read every changed file.
 
 `start` fetches a git-derived or `origin/` base and refuses a head behind the fetched `origin/<base>` tip before any journal exists — the dedicated stale-base exit code with a `stale-base` JSON diagnostic on stderr and no run state; an exported local ref or commit is compared as given — and otherwise computes the diff bundle, opens the review journal, appends the scope-entered event, and returns JSON containing `statePath`, `runToken`, `diffPath`, `manifestPath`, and `changedFiles`. Report the refusal as a `stale-base` block carrying the diagnostic verbatim and stop.
 
-`append-scope` appends one scope-advanced event for a changed file after Claude has examined that file.
+`append-scope` appends one scope-advanced event for a changed file only after Claude has read that file; a file Claude has not read gets no scope-advanced event.
 
 `append-finding` reads one finding JSON object from its standard input, which the input redirect from `<finding-file>` supplies, wraps it in the journal event envelope, and appends it. The runner does not perform the full review finding schema or citation validation; `spx journal append` is the authoritative event boundary.
 
-`finish` reads the journal prefix, appends the terminal run-completed event with review status and finding counts, seals the run, removes runner-owned scratch storage, and prints the raw run token.
+`finish` refuses, with a non-zero exit, while a changed file is neither advanced nor marked unread. Otherwise it reads the journal prefix, appends the terminal run-completed event with review status, finding counts, and each unread file, and seals the run `failed` when any file is marked unread, never `approved`. It then removes runner-owned scratch storage and prints the raw run token.
 
 When any runner verb exits non-zero, stop and surface its stderr, except for the single `append-finding` rerun `<finding_payload>` directs; the command boundary in `<constraints>` admits no repair outside the runner.
 
@@ -59,11 +61,11 @@ Use `manifestPath` and `changedFiles` for navigation, but treat the diff file as
 
 1. Run `start` and parse the returned JSON.
 2. Load the prompt reference and diff bundle.
-3. Examine every changed file and every emitted diff section, applying the prompt's `<adversarial_probes>` before treating a file as clean. After each changed file has been examined, call `append-scope` for that file.
+3. Examine every changed file and every emitted diff section, applying the prompt's `<adversarial_probes>` before treating a file as clean. After Claude has read a changed file, call `append-scope` for that file; never call it for a file Claude sampled or skipped.
 4. For each changed governing declaration, discover and read its unchanged consumers per the prompt's `<review_scope>` consumers-of-changed-truth item. A contradiction there is a finding cited at the consumer's location; consumers are not `append-scope` units — the journal's scope coverage remains the changed-file set.
 5. Before judging any `debt` finding, locate and read the `ISSUES.md` of each governing node of the changed files per the prompt's `<tracked_debt>` section.
 6. When a finding is raised, immediately write that one finding JSON object to its own scratch file and pass it to `append-finding` through the input redirect, following `<finding_payload>`. Do not collect findings into a later batch. Set the finding's `unit` and `tracked` fields as the prompt's `<finding_shape>` and `<tracked_debt>` direct.
-7. When review is complete, call `finish`.
+7. When review is complete, call `finish`, passing `--unread` for each changed file Claude did not read.
 8. Report only the raw `runToken` to the caller.
 
 </workflow>
@@ -104,6 +106,8 @@ A finding is a payload: it carries code spans, quotes, and JSON.
 
 **A partial run was reported as complete.** `finish` failed before sealing, and Claude returned the earlier `runToken`. Report the non-zero exit and stderr; only the token printed by a successful `finish` is a completed review result.
 
+**Sampled files were recorded as read.** Claude sampled a large changeset, appended scope for all 322 changed files, and sealed an approval over files it never opened. Append scope only for a file Claude read, and mark every other changed file with `finish --unread`, which seals the run `failed`.
+
 **A universal claim was read without being executed.** Claude inspected every changed line and accepted "exhaustive" and "mutually exclusive" as prose. The claim failed for constructed boundary members absent from the corpus. Apply the counterexample probe in `<adversarial_probes>` before completing that file's scope.
 
 **Changed governing truth stopped at the diff boundary.** Claude compared changed specifications with their governors while leaving unchanged language renderings and shipped auditors unread. Those consumers contradicted the new rule. Follow declared derivation edges outward per the prompt's `<review_scope>` consumers-of-changed-truth item and report each contradiction at the consumer.
@@ -114,7 +118,7 @@ A finding is a payload: it carries code spans, quotes, and JSON.
 
 - [ ] The final output is exactly the raw `runToken` returned by `finish`.
 - [ ] The sealed journal prefix contains a terminal run-completed event.
-- [ ] The terminal run-completed event records review status and finding counts.
+- [ ] The terminal run-completed event records review status and finding counts, and names each unread file.
 - [ ] The final output contains no rendered findings, count line, verdict, or summary.
 - [ ] A non-zero runner exit is reported with its stderr instead of a partial review result.
 
