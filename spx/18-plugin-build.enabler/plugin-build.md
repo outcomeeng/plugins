@@ -16,6 +16,7 @@ CAN maintain skills and thin agents as one canonical source while delivering nat
   profile selected under [`spx/15-subagent-execution.pdr.md`](spx/15-subagent-execution.pdr.md); each harness keeps
   its own reasoning controls, and authored sources select profiles rather than
   independently selecting model and effort fields ([audit]).
+- ALWAYS: the build formats every generated file whatever repository or ignore file encloses its output directory.
 
 ### Mappings
 
