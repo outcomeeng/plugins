@@ -8,6 +8,8 @@ Two categories of artifact produce `[test]` evidence: infrastructure scripts (va
 
 ## Verification
 
+- ALWAYS: a test whose case needs a location outside every repository, marketplace root, or tool configuration takes a location no ancestor directory can supply, such as the filesystem root or a path beneath it that the test never creates, or creates that boundary itself as its own repository or its own configuration, so its verdict holds whatever lies above its temp directory
+
 ### Audit
 
 - ALWAYS: use Python (pytest) for all `[test]` evidence in the spec tree — the quality gate runs a single runner for this lane ([audit])
@@ -16,3 +18,4 @@ Two categories of artifact produce `[test]` evidence: infrastructure scripts (va
 - NEVER: use a non-pytest runner for `[test]` evidence in the spec tree — the lane is single-runner by decision ([audit])
 - NEVER: route `[eval]` evidence through pytest as its primary execution surface — `[eval]` belongs to the lane governed by [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md) ([audit])
 - NEVER: reference a `[test]` link from a spec assertion to a path outside `spx/**/tests/` — co-location is mandatory for `[test]`-lane evidence ([audit])
+- NEVER: a test's verdict depends on a repository, a marketplace root, an ignore file, or a tool configuration that a directory above its temp directory carries ([audit])
