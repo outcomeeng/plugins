@@ -16,7 +16,6 @@ CAN maintain skills and thin agents as one canonical source while delivering nat
   profile selected under [`spx/15-subagent-execution.pdr.md`](spx/15-subagent-execution.pdr.md); each harness keeps
   its own reasoning controls, and authored sources select profiles rather than
   independently selecting model and effort fields ([audit]).
-- ALWAYS: the build formats every generated file whatever repository or ignore file encloses its output directory.
 
 ### Mappings
 
@@ -26,6 +25,7 @@ CAN maintain skills and thin agents as one canonical source while delivering nat
 
 ### Compliance
 
+- ALWAYS: the build formats every generated file whatever repository or ignore file encloses its output directory ([test](tests/test_generated_formatting.compliance.l1.py))
 - ALWAYS: every committed file under `dist/` traces to a `src/` ancestor through the build — every committed generated artifact is a build product ([test](tests/test_plugin_build.compliance.l1.py))
 
 ### Properties
