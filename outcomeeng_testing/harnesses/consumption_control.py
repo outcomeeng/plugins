@@ -8,6 +8,7 @@ import hashlib
 from html.parser import HTMLParser
 import json
 import os
+import plistlib
 import shutil
 import subprocess
 import sys
@@ -39,7 +40,9 @@ from outcomeeng_testing.generators.consumption_control import (
     distinct_namespace_pairs,
     namespace_histories,
     invalid_namespaces,
+    foreign_job_labels,
     non_list_retained_values,
+    non_string_namespace_values,
     non_mapping_retained_entries,
     nonconforming_plist_paths,
     valid_namespaces,
@@ -1843,7 +1846,7 @@ def retained_bound_property(
                     frozenset(runner.loaded),
                     record_path.stat().st_size,
                     schedule.COMMAND_BYTES,
-                    tuple(plans[-1]["retention_gaps"]),
+                    tuple(gap for plan in plans for gap in plan["retention_gaps"]),
                 )
             )
 
@@ -1998,6 +2001,7 @@ class RetainedRecordMalformation(StrEnum):
     MISSING_PATH = "missing_path"
     NON_LIST_VALUE = "non_list_value"
     NON_MAPPING_ENTRY = "non_mapping_entry"
+    FOREIGN_LABEL = "foreign_label"
 
 
 @dataclass(frozen=True)
@@ -2027,6 +2031,10 @@ def malformed_retained_field_property(
             del retained[index]["path"]
         elif malformation is RetainedRecordMalformation.NON_LIST_VALUE:
             record[schedule.RETAINED_JOBS] = data.draw(non_list_retained_values())
+        elif malformation is RetainedRecordMalformation.FOREIGN_LABEL:
+            label = data.draw(foreign_job_labels(schedule.MODES))
+            retained[index]["label"] = label
+            retained[index]["path"] = str(agents / (label + ".plist"))
         else:
             retained[index] = data.draw(non_mapping_retained_entries())
         return None
@@ -2041,3 +2049,90 @@ def malformed_retained_field_property(
         )
 
     _retained_record_property(mutate, observe)
+
+
+def malformed_namespace_field_property(
+    check: Callable[[MalformedRetainedFieldObservation], None],
+) -> None:
+    """Give the installation record a namespace value that is not a string and read the
+    record. The observation is the rejection message, empty when the record was
+    accepted. Any exception other than ValueError propagates to the linked test."""
+    accounting, _, _, _ = modules()
+
+    def mutate(
+        schedule: ModuleType,
+        data: st.DataObject,
+        agents: Path,
+        record: dict[str, Any],
+    ) -> object:
+        record[accounting.NAMESPACE_ENV] = data.draw(non_string_namespace_values())
+        return None
+
+    def observe(
+        schedule: ModuleType, record_path: Path, message: str, extra: object
+    ) -> None:
+        check(
+            MalformedRetainedFieldObservation(
+                str(record_path), accounting.NAMESPACE_ENV, message
+            )
+        )
+
+    _retained_record_property(mutate, observe)
+
+
+@dataclass(frozen=True)
+class OutsideRetentionObservation:
+    outside_paths: frozenset[str]
+    outside_files_remaining: frozenset[str]
+    gaps: tuple[str, ...]
+
+
+def outside_retention_property(
+    check: Callable[[OutsideRetentionObservation], None],
+) -> None:
+    """Move the oldest retained launch agent of the record to a directory other than the
+    one the install writes to, then install until retention passes the moved entry. The
+    observation is the moved files that remain and the retention gaps."""
+    _, _, schedule, _ = modules()
+    namespaces = schedule.RETAINED_NAMESPACES
+
+    @seed(SEED)
+    @settings(max_examples=EXAMPLES, deadline=None)
+    @given(namespace_histories(namespaces + 2))
+    def run(history: list[str]) -> None:
+        with workspace() as work:
+            runner = RecordingRunner()
+            agents = work.root / "launch-agents"
+            outside = work.root / "foreign-agents"
+            outside.mkdir()
+            for namespace in history[:namespaces]:
+                _install_under(schedule, work, runner, agents, namespace)
+            record_path = work.config.root / schedule.INSTALL_NAME
+            record = json.loads(record_path.read_text())
+            moved = [
+                entry
+                for entry in record[schedule.RETAINED_JOBS][-len(schedule.MODES) :]
+            ]
+            for entry in moved:
+                relocated = outside / (entry["label"] + ".plist")
+                relocated.write_bytes(plistlib.dumps(entry[ScheduleField.PLIST]))
+                entry["path"] = str(relocated)
+            record_path.write_text(json.dumps(record), encoding="utf-8")
+            plans = [
+                _install_under(schedule, work, runner, agents, namespace)
+                for namespace in history[namespaces:]
+            ]
+            paths = frozenset(entry["path"] for entry in moved)
+            check(
+                OutsideRetentionObservation(
+                    paths,
+                    frozenset(path for path in paths if Path(path).exists()),
+                    tuple(gap for plan in plans for gap in plan["retention_gaps"]),
+                )
+            )
+
+    run_replayable_property(
+        run,
+        seed_value=SEED,
+        replay_path=INSTALLATION_REPLAY,
+    )

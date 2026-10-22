@@ -6,15 +6,18 @@ from outcomeeng_testing.harnesses.consumption_control import (
     NamespaceReinstallObservation,
     NamespaceReturnObservation,
     NamespaceScopeObservation,
+    OutsideRetentionObservation,
     RetainedBoundObservation,
     RetentionPlanObservation,
     RetainedRecordMalformation,
     installation_observation,
+    malformed_namespace_field_property,
     malformed_retained_field_property,
     malformed_retained_record_property,
     namespace_reinstall_property,
     namespace_return_property,
     namespace_scope_property,
+    outside_retention_property,
     retained_bound_property,
     retention_plan_property,
     workspace,
@@ -161,3 +164,34 @@ def test_a_retained_job_entry_that_is_not_an_object_is_rejected_naming_file_and_
     malformed_retained_field_property(
         RetainedRecordMalformation.NON_MAPPING_ENTRY, check
     )
+
+
+def test_a_retained_job_with_a_label_no_namespace_owns_is_rejected_naming_file_and_field() -> (
+    None
+):
+    def check(observed: MalformedRetainedFieldObservation) -> None:
+        assert observed.message
+        assert observed.record_path in observed.message
+        assert observed.field in observed.message
+
+    malformed_retained_field_property(RetainedRecordMalformation.FOREIGN_LABEL, check)
+
+
+def test_a_namespace_that_is_not_a_string_is_rejected_naming_file_and_field() -> None:
+    def check(observed: MalformedRetainedFieldObservation) -> None:
+        assert observed.message
+        assert observed.record_path in observed.message
+        assert observed.field in observed.message
+
+    malformed_namespace_field_property(check)
+
+
+def test_retention_preserves_a_retained_launch_agent_outside_the_install_directory() -> (
+    None
+):
+    def check(observed: OutsideRetentionObservation) -> None:
+        assert observed.outside_paths
+        assert observed.outside_files_remaining == observed.outside_paths
+        assert observed.gaps
+
+    outside_retention_property(check)

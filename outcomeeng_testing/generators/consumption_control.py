@@ -150,6 +150,30 @@ def nonconforming_plist_paths(directory: str, label: str) -> st.SearchStrategy[s
     return st.one_of(relative, renamed, unsuffixed)
 
 
+def foreign_job_labels(modes: tuple[str, ...]) -> st.SearchStrategy[str]:
+    """Vary retained-entry labels that are no namespace's job label: a valid namespace
+    followed by a final segment that names none of ``modes``, or a single segment."""
+    foreign_mode = _segments().filter(lambda segment: segment not in modes)
+    return st.one_of(
+        st.tuples(valid_namespaces(), foreign_mode).map(
+            lambda parts: parts[0] + _NAMESPACE_SEPARATOR + parts[1]
+        ),
+        foreign_mode,
+    )
+
+
+def non_string_namespace_values() -> st.SearchStrategy[object]:
+    """Vary present namespace values that are not strings: a number, a boolean, null,
+    a list, or an object, each of which string coercion would turn into a name."""
+    return st.one_of(
+        st.integers(),
+        st.booleans(),
+        st.none(),
+        st.lists(_segments(), max_size=3),
+        st.dictionaries(_segments(), _segments(), max_size=3),
+    )
+
+
 def non_list_retained_values() -> st.SearchStrategy[object]:
     """Vary present retained-jobs values that are not a list of entries: a string, a
     number, a boolean, null, or an object."""
