@@ -1637,6 +1637,7 @@ def formatter_format_command(formatter: str) -> tuple[str, ...]:
         "fmt",
         "--config",
         str(FORMATTER_CONFIG_PATH),
+        "--no-gitignore",
         "--allow-no-files",
         FORMATTER_FILE_GLOB,
     )
