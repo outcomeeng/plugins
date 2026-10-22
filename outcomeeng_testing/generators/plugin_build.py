@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from hypothesis import strategies as st
 
 from outcomeeng.distribution.build import FORMATTER_VERSION_OUTPUT
+from outcomeeng.distribution.contracts import FRONTMATTER_DELIMITER
 from outcomeeng_testing.generators.fragments import inert_fragment_bodies
 from outcomeeng_testing.generators.source_and_templating import (
     SourceScenario,
@@ -40,6 +41,11 @@ def nonmatching_formatter_versions() -> st.SearchStrategy[str]:
     return st.text().filter(lambda output: output.strip() != FORMATTER_VERSION_OUTPUT)
 
 
+def _opens_no_frontmatter(body: str) -> bool:
+    """Report whether a rendered body leaves its document without a frontmatter fence."""
+    return not body.startswith(FRONTMATTER_DELIMITER)
+
+
 @st.composite
 def plugin_build_sources(
     draw: st.DrawFn,
@@ -57,7 +63,7 @@ def plugin_build_sources(
         plugins=tuple(
             PluginBuildPlugin(
                 scenario=scenario,
-                body=draw(inert_fragment_bodies()),
+                body=draw(inert_fragment_bodies().filter(_opens_no_frontmatter)),
                 opaque_body=draw(st.binary(max_size=PLUGIN_BUILD_MAX_OPAQUE_BYTES)),
             )
             for scenario in scenarios
