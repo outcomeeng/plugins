@@ -204,6 +204,29 @@ RETAINED_NAMESPACES = 4
 RETAINED_JOB_LIMIT = RETAINED_NAMESPACES * len(MODES)
 
 
+def conforming_job_label(label: str) -> bool:
+    """Whether ``label`` is ``job_label(namespace, mode)`` for a valid namespace and a mode."""
+    namespace, _, mode = label.rpartition(".")
+    if mode not in MODES:
+        return False
+    try:
+        checked_namespace(namespace, NAMESPACE_ENV)
+    except ValueError:
+        return False
+    return label == job_label(namespace, mode)
+
+
+def record_namespace(path: Path, value: Json) -> str:
+    """Return the namespace the installation record names, requiring a string."""
+    raw = value.get(NAMESPACE_ENV, DEFAULT_NAMESPACE)
+    if not isinstance(raw, str):
+        raise ValueError(
+            f"Invalid {NAMESPACE_ENV} field: {path} must hold a string; "
+            "inspect the file and reinstall through install"
+        )
+    return checked_namespace(raw, NAMESPACE_ENV)
+
+
 def checked_retained_jobs(path: Path, value: Json) -> None:
     retained = value.get(RETAINED_JOBS, [])
     if not isinstance(retained, list):
@@ -226,6 +249,12 @@ def checked_retained_jobs(path: Path, value: Json) -> None:
             raise ValueError(
                 f"Invalid {RETAINED_JOBS} entry: {path} entries must carry a label "
                 "and a path string; inspect the file and reinstall through install"
+            )
+        if not conforming_job_label(label):
+            raise ValueError(
+                f"Invalid {RETAINED_JOBS} entry label {label!r}: {path} must name a "
+                f"job label of a namespace and one of {', '.join(MODES)}; "
+                "inspect the file and reinstall through install"
             )
         location = Path(raw)
         if (
@@ -266,9 +295,7 @@ def manifest(root: Path) -> Json | None:
             f"Invalid managed installation identity: {path} must carry schema_version 1 "
             f"and root {root}; inspect the file and reinstall through install"
         )
-    namespace = checked_namespace(
-        str(value.get(NAMESPACE_ENV, DEFAULT_NAMESPACE)), NAMESPACE_ENV
-    )
+    namespace = record_namespace(path, value)
     recorded_jobs = value.get(ScheduleField.JOBS)
     if not isinstance(recorded_jobs, list) or len(recorded_jobs) != len(MODES):
         raise ValueError(
@@ -490,7 +517,11 @@ def install(
     owned_paths = {job["path"] for job in prior_jobs}
     planned_paths = {job["path"] for job in plan[ScheduleField.JOBS]}
     retained = [job for job in prior_jobs if job["path"] not in planned_paths]
-    plan[RETENTION_REMOVALS] = [job["path"] for job in retained[RETAINED_JOB_LIMIT:]]
+    plan[RETENTION_REMOVALS] = [
+        job["path"]
+        for job in retained[RETAINED_JOB_LIMIT:]
+        if Path(job["path"]).parent == agents_directory
+    ]
     if not activate:
         return plan
     plan[RETAINED_JOBS] = retained
@@ -542,18 +573,27 @@ def install(
                 )
         checked(runner, (LAUNCHCTL, LaunchctlOperation.BOOTSTRAP, domain, str(path)))
     plan[ScheduleField.STATUS] = "installed"
-    plan[RETAINED_JOBS], job_gaps = retain_jobs(plan[RETAINED_JOBS], runner)
+    plan[RETAINED_JOBS], job_gaps = retain_jobs(
+        plan[RETAINED_JOBS], agents_directory, runner
+    )
     plan["retention_gaps"] = [*retain_assets(config.root, assets), *job_gaps]
     json_write(installed_path, plan)
     return plan
 
 
-def retain_jobs(retained: list[Json], runner: Runner) -> tuple[list[Json], list[str]]:
+def retain_jobs(
+    retained: list[Json], agents_directory: Path, runner: Runner
+) -> tuple[list[Json], list[str]]:
     """Keep the newest retained jobs; stop and remove the older ones this install owns."""
     gaps: list[str] = []
     domain = f"gui/{os.getuid()}"
     for job in retained[RETAINED_JOB_LIMIT:]:
         path = Path(job["path"])
+        if path.parent != agents_directory:
+            gaps.append(
+                f"job retention preserved launch agent outside {agents_directory}: {path}"
+            )
+            continue
         try:
             if path.is_symlink() or (
                 path.exists()
@@ -646,9 +686,7 @@ def jobs(root: Path, operation: str, runner: Runner, platform: str) -> Json:
     value = manifest(root)
     if value is None:
         return {ScheduleField.STATUS: JobStatus.NOT_INSTALLED, "operation": operation}
-    namespace = checked_namespace(
-        str(value.get(NAMESPACE_ENV, DEFAULT_NAMESPACE)), NAMESPACE_ENV
-    )
+    namespace = record_namespace(installation, value)
     domain = f"gui/{os.getuid()}"
     result: Json = {
         "operation": operation,
