@@ -25,6 +25,7 @@ from usage_accounting import (
     DEFAULT_ROOT,
     HOUR,
     LOCK_NAME,
+    NAMESPACE_ENV,
     PRICE_OVERRIDE_ENV,
     QUARTER,
     RESET_ENV,
@@ -80,6 +81,7 @@ class Option(StrEnum):
     ALERT_USD = "--alert-usd"
     WEEKLY_BUDGET_USD = "--weekly-budget-usd"
     PRICE_FILE = "--price-file"
+    LAUNCHD_NAMESPACE = "--launchd-namespace"
 
 
 class ControlField(StrEnum):
@@ -96,6 +98,7 @@ CONFIGURATION_OPTIONS = {
     Option.ALERT_USD: ALERT_ENV,
     Option.WEEKLY_BUDGET_USD: BUDGET_ENV,
     Option.PRICE_FILE: PRICE_OVERRIDE_ENV,
+    Option.LAUNCHD_NAMESPACE: NAMESPACE_ENV,
 }
 
 

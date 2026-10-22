@@ -5,8 +5,13 @@ from decimal import Decimal
 from outcomeeng_testing.harnesses.consumption_control import (
     PriceOverrideObservation,
     configuration_property,
+    invalid_namespace_property,
     invalid_price_override_property,
+    invalid_routed_namespace_property,
+    NamespaceRoute,
     price_override_property,
+    valid_namespace_property,
+    valid_routed_namespace_property,
 )
 
 
@@ -33,3 +38,37 @@ def test_invalid_price_override_names_its_rejected_field() -> None:
         assert location in message
 
     invalid_price_override_property(check)
+
+
+def test_invalid_namespace_names_its_rejected_field() -> None:
+    def check(diagnostic: tuple[str, str]) -> None:
+        field, message = diagnostic
+        assert field in message
+
+    invalid_namespace_property(check)
+
+
+def test_valid_namespace_is_accepted_and_saved_unchanged() -> None:
+    def check(namespace: str, resolved: str, saved: str) -> None:
+        assert resolved == namespace
+        assert saved == namespace
+
+    valid_namespace_property(check)
+
+
+def test_invalid_namespace_is_rejected_on_the_saved_and_option_routes() -> None:
+    def check(
+        route: NamespaceRoute, namespace: str, diagnostic: tuple[str, str]
+    ) -> None:
+        field, message = diagnostic
+        assert message, (route, namespace)
+        assert field in message
+
+    invalid_routed_namespace_property(check)
+
+
+def test_valid_namespace_is_accepted_on_the_saved_and_option_routes() -> None:
+    def check(route: NamespaceRoute, namespace: str, resolved: str) -> None:
+        assert resolved == namespace, route
+
+    valid_routed_namespace_property(check)
