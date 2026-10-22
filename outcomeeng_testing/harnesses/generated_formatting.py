@@ -11,6 +11,7 @@ from typing import Final
 from outcomeeng.distribution.build import (
     FormatterProbe,
     build,
+    formatter_format_command,
 )
 from outcomeeng.distribution.contracts import DIST_DIR_NAME
 from outcomeeng_testing.harnesses.distribution import FileSnapshot, snapshot_files
@@ -21,9 +22,13 @@ GENERATED_FORMATTING_PLUGIN: Final = "formatting-plugin"
 GENERATED_FORMATTING_SKILL: Final = "formatting-skill"
 GITIGNORE_FILENAME: Final = ".gitignore"
 IGNORE_EVERYTHING_PATTERN: Final = "*\n"
-FORMAT_SUBCOMMAND: Final = "fmt"
 HOST_DIRECTORY_NAME: Final = "host"
-UNFORMATTED_SKILL_BODY: Final = "* first\n* second\n"
+UNFORMATTED_SKILL_FIXTURE: Final = (
+    Path(__file__).resolve().parents[1]
+    / "fixtures"
+    / "generated_formatting"
+    / "unformatted-skill.md"
+)
 
 
 class Enclosure(StrEnum):
@@ -52,7 +57,11 @@ def build_inside_enclosure(enclosure: Enclosure) -> FormattingObservation:
     with src_tree() as builder:
         builder.add_plugin(
             GENERATED_FORMATTING_PLUGIN,
-            skills={GENERATED_FORMATTING_SKILL: UNFORMATTED_SKILL_BODY},
+            skills={
+                GENERATED_FORMATTING_SKILL: UNFORMATTED_SKILL_FIXTURE.read_text(
+                    encoding="utf-8"
+                )
+            },
         )
         host_root = builder.root / HOST_DIRECTORY_NAME
         host_root.mkdir()
@@ -63,7 +72,7 @@ def build_inside_enclosure(enclosure: Enclosure) -> FormattingObservation:
         def recording_runner(
             command: tuple[str, ...], cwd: Path
         ) -> subprocess.CompletedProcess[str]:
-            if FORMAT_SUBCOMMAND in command:
+            if command == formatter_format_command(command[0]):
                 before.append(_output_snapshot(dist_root))
             return subprocess.run(
                 command, cwd=cwd, check=False, capture_output=True, text=True
