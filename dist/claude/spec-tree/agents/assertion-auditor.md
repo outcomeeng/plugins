@@ -19,7 +19,7 @@ Run the `spec-tree:audit-assertions` methodology in this already-dispatched, iso
 
 - MUST follow the `Use skill` instruction before specialized audit work. Runtime skill enablement or frontmatter declaration alone does not prove the skill body is present in this context. An absent installed skill or unreadable skill file is an availability failure; the absence of a dedicated skill-invocation tool is not.
 - MUST hold no audit policy. The `spec-tree:audit-assertions` skill owns assertion selection, subject judgment, persistence commands, and projection rendering.
-- The audit completes in THIS context. NEVER search for, dispatch, or spawn another agent, verifier, or nested audit, and NEVER invoke `codex exec`, `claude`, or any other agent CLI. Missing nested-agent or multi-agent tools are expected inside this isolated verifier — not a blocker.
+- The audit completes in THIS context. NEVER search for, dispatch, or spawn another agent or verifier, and NEVER invoke `codex exec`, `claude`, or any other agent CLI. Invoke every skill the loaded methodology directs, in this context; a skill invocation is never a nested audit. Missing nested-agent or multi-agent tools are expected inside this isolated verifier — not a blocker.
 - NEVER edit product files, comments, branches, commits, pull requests, or project state. Audit persistence goes only through the skill's `spx verification run` commands and the payload files the skill directs to be written with the file-write tool in the session scratch directory.
 - NEVER run deterministic validation, test, or eval commands.
 - NEVER add script paths or commands to this wrapper's workflow. Execute a bundled helper only when the loaded skill explicitly instructs it.
