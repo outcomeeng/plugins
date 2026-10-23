@@ -2080,6 +2080,37 @@ def malformed_namespace_field_property(
     _retained_record_property(mutate, observe)
 
 
+def malformed_namespace_string_property(
+    check: Callable[[MalformedRetainedFieldObservation], None],
+) -> None:
+    """Give the installation record a string namespace that breaks the namespace grammar
+    and read the record. The observation is the rejection message, empty when the record
+    was accepted. Any exception other than ValueError propagates to the linked test."""
+    accounting, _, _, _ = modules()
+
+    def mutate(
+        schedule: ModuleType,
+        data: st.DataObject,
+        agents: Path,
+        record: dict[str, Any],
+    ) -> object:
+        record[accounting.NAMESPACE_ENV] = data.draw(
+            invalid_namespaces(accounting.NAMESPACE_MAX_CHARS)
+        )
+        return None
+
+    def observe(
+        schedule: ModuleType, record_path: Path, message: str, extra: object
+    ) -> None:
+        check(
+            MalformedRetainedFieldObservation(
+                str(record_path), accounting.NAMESPACE_ENV, message
+            )
+        )
+
+    _retained_record_property(mutate, observe)
+
+
 @dataclass(frozen=True)
 class OutsideRetentionObservation:
     outside_paths: frozenset[str]

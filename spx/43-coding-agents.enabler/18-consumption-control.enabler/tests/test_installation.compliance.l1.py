@@ -12,6 +12,7 @@ from outcomeeng_testing.harnesses.consumption_control import (
     RetainedRecordMalformation,
     installation_observation,
     malformed_namespace_field_property,
+    malformed_namespace_string_property,
     malformed_retained_field_property,
     malformed_retained_record_property,
     namespace_reinstall_property,
@@ -184,6 +185,17 @@ def test_a_namespace_that_is_not_a_string_is_rejected_naming_file_and_field() ->
         assert observed.field in observed.message
 
     malformed_namespace_field_property(check)
+
+
+def test_a_namespace_that_breaks_the_grammar_is_rejected_naming_file_and_field() -> (
+    None
+):
+    def check(observed: MalformedRetainedFieldObservation) -> None:
+        assert observed.message
+        assert observed.record_path in observed.message
+        assert observed.field in observed.message
+
+    malformed_namespace_string_property(check)
 
 
 def test_retention_preserves_a_retained_launch_agent_outside_the_install_directory() -> (
