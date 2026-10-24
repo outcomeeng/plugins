@@ -30,14 +30,10 @@ Use skill `product-tree:understand` and use its live inline foundation. Read the
 
 - Live `/understand` `<atemporal_voice>` and `<decision_to_spec_alignment>`
 - Live `/understand` `<assertion_types>` — the five assertion types and their canonical headings
-- `${SKILL_DIR}/../understand/references/artifact-placement.md` `<common_misplacements>` — a conditional reference, read in full
+- The `artifact-placement.md` reference the live `/understand` `<artifact_placement>` section names, `<common_misplacements>` — a conditional reference, read in full
 - Live `/understand` `<files_in_a_node>` — the canonical node shape, including the skip targets it declares
 - Live `/understand` `<identity_and_kinds>` and `<product_scope>` — the seven kinds, their openings, and containment
-- `${SKILL_DIR}/../understand/templates/decisions/decision-name.adr.md`
-- `${SKILL_DIR}/../understand/templates/decisions/decision-name.pdr.md`
-- `${SKILL_DIR}/../understand/templates/product/product-name.spec.md`
-- `${SKILL_DIR}/../understand/templates/nodes/substrate-name.spec.md`, `capability-name.spec.md`, `domain-name.spec.md`, `interface-name.spec.md`, `surface-name.spec.md`, and `variant-name.spec.md`
-- `${SKILL_DIR}/../understand/templates/records/node-name.outcome.md`
+- The canonical templates beneath the `Template root` the live `<PRODUCT_TREE_FOUNDATION>` marker records: `decisions/decision-name.adr.md`, `decisions/decision-name.pdr.md`, `product/product-name.spec.md`, `nodes/substrate-name.spec.md`, `nodes/capability-name.spec.md`, `nodes/domain-name.spec.md`, `nodes/interface-name.spec.md`, `nodes/surface-name.spec.md`, `nodes/variant-name.spec.md`, and `records/node-name.outcome.md`; a marker that lacks `Template root` requires `/understand` to run again before any template is read
 
 </required_references>
 
@@ -98,7 +94,7 @@ Compare each classified file's `##` headings against its template's `##` heading
 
 <ancestor_decision_conformance>
 
-For each classified output-kind spec, including the prior forms, invoke `/contextualize` on the spec's canonical full node path and compare the spec against every applicable ADR and PDR in the resulting context. A governing decision wins over the spec.
+For each classified output-kind spec, including the prior forms, use skill `product-tree:contextualize` on the spec's canonical full node path and compare the spec against every applicable ADR and PDR in the resulting context. A governing decision wins over the spec.
 
 **Report as findings:**
 
@@ -185,7 +181,7 @@ Report only the factual gap: the changed higher-level declaration, the constrain
 4. **Discover**: For a file scope, use that file directly. For a directory scope, glob `{scope}/**/*.md`. For a changeset scope, use every Markdown path in the supplied changed-file set directly. In every mode, exclude `CLAUDE.md` and `AGENTS.md`, `PLAN.md`, `ISSUES.md`, files inside `tests/`, files inside `spx/local/`, files inside an `evals/` directory sitting directly under a node directory, and files inside a `knowledge/` directory sitting directly under a node directory or the product root.
 5. **Classify**: Map each file to its artifact type per `<file_classification>`.
 6. **Check each file**:
-   - If classified: run structural, language, and placement checks; for an output-kind spec, also run ancestor-decision conformance through `/contextualize`
+   - If classified: run structural, language, and placement checks; for an output-kind spec, also run ancestor-decision conformance per `<ancestor_decision_conformance>`
    - If unrecognized: report classification failure, then run language check only (language rules apply to all text)
 7. **Check downstream alignment for changesets**: For changed product specs, ADRs, PDRs, and ancestor specs, report missing first affected lower specs or Change grounding.
 8. **Report**: Emit findings grouped by file path per `<report_format>`.
