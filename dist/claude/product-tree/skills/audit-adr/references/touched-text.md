@@ -34,13 +34,15 @@ A touched sentence that only cites an already-defective passage leaves the findi
 
 <classification>
 
-Classify each finding, native or composed, by its `location`: a finding on touched text keeps severity `blocking` and fails its row; a finding on any other text is standing and is returned with severity `filed`. A finding's severity labels its defect and never decides the verdict: the run approves when no `blocking` finding exists, whatever `filed` findings it reports. A composed language row takes the same classification, so a composed `FAIL` rejects the ADR only through a `blocking` finding.
+Classify each finding, native or composed, by its `locations`: a finding on touched text keeps severity `blocking` and fails its row; a finding on any other text is standing and is returned with severity `filed`. A finding's severity labels its defect and never decides the verdict: the run approves when no `blocking` finding exists, whatever `filed` findings it reports. A composed language row takes the same classification, so a composed `FAIL` rejects the ADR only through a `blocking` finding.
 
 </classification>
 
 <finding_key>
 
-A finding is identified by its key, `<adr-file-path>:<location>:<rule>`, where `location` names the section or rule by its text rather than a line number and `rule` is one finding identifier of the verdict format. The same finding carries the same key in every run and on every head.
+A finding is identified by its key, `<adr-file-path>:<rule-id>`, where `rule-id` is the identifier that `${CLAUDE_SKILL_DIR}/references/rule-catalog.md` gives the violated rule, or the identifier a composed language skill's catalog gives it. The finding's `locations` name each section or rule where the rule is violated by its text rather than a line number. The same finding carries the same key in every run and on every head.
+
+A rule violated both on touched text and elsewhere yields two findings under one key: a `blocking` finding whose `locations` are the touched ones, and a `filed` finding whose `locations` are the rest.
 
 </finding_key>
 

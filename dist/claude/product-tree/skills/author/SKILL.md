@@ -13,7 +13,7 @@ A Product Tree artifact — a product spec, decision record (ADR/PDR), output-ki
 
 <stop_triggers>
 
-About to choose an assertion's verification type (`[test]` / `[eval]` / `[probe]` / `[audit]`) or its assertion type (scenario / mapping / conformance / property / compliance); about to write or edit a test file; about to implement a work item -> STOP. That work belongs to `/apply`, which invokes `/verify` before the selected specialist. Write the assertion or decision-rule text without a tag or type subsection; never select which type it resolves to, and never write the test or implementation behind it. Tagging new text with a chosen type, authoring a test, or writing implementation code from inside this skill is the exact boundary breach this trigger exists to stop.
+About to choose an assertion's verification type (`[test]` / `[eval]` / `[probe]` / `[audit]`) or its assertion type (scenario / mapping / conformance / property / compliance); about to write or edit a test file; about to implement a work item -> STOP. That work belongs to `/apply`, which invokes `/verify` before the selected specialist. Write the assertion or decision-rule text without a tag or type subsection; never select which type it resolves to, and never write the test or implementation behind it.
 
 </stop_triggers>
 
@@ -360,23 +360,11 @@ How to avoid: treat "which ADR/PDR?" as structural when the owning node, node na
 
 **Writing implementation details in specs.** Specs describe *what*, not *how*. "How" belongs in ADRs (architecture) or code. If the spec describes function signatures, data structures, or algorithms, stop — that's an ADR or code.
 
-**Copying temporal language from user input.** Users naturally say "we need to fix X" or "currently the system does Y." Translate to atemporal: "The system does Z" or "X handles Y correctly."
-
 **Writing a hypothesis into a spec.** A condition only real use settles belongs in the node's outcome record, directional and without a value, linking its metric source. A spec declares the output; the record declares what the output moves.
-
-**Placing assertions in ADRs/PDRs.** Decision records govern; they don't assert. Assertions belong in specs. ADRs/PDRs carry MUST/NEVER rules under `## Verification`, verified by audit, eval, or test per subsection.
-
-**Bare node or decision references.** Never write `32-parser.capability`, `15-build.adr.md`, or `PDR-21` as a reference. Use the full path from `spx/` so the file can be found.
 
 **Numbering from 1.** Indices start at 10+ and use the sparse distribution formula. Never use single-digit indices.
 
 **Listing children in the parent spec.** A parent spec describes the node's aggregate behavior — what the whole concern does from the outside. It does NOT enumerate or reference its children. Children describe their own concerns in their own specs. A parent spec that reads "X provides A, B, and C (these are the child nodes)" is a table of contents, not a declaration. Rewrite as a single coherent statement of what the node does; let `/contextualize` walk the tree to surface children.
-
-**Multiplying decision records before the tree justifies it.** Authoring a separate ADR for every architectural micro-choice (packaging, edition, panic handling, logging) in a pre-commit tree produces six decision records for a product with five nodes. Closely-related choices belong in one ADR with named subsections; product-level guarantees belong in the product spec's compliance section, not as independent PDRs — unless the guarantee already lives inside an existing record sharing its subject and rationale, which is placement, not multiplication. Keep indices packed (under 55 in small trees) until real node growth demands spreading. The tree reflects scope that exists, not scope that might.
-
-**Preselecting a verification subsection or tag.** Write new rules directly under `## Verification` without a subsection or tag. `/apply` invokes `/verify` to choose test, evaluate, probe, or audit from the real subject; authoring never makes that choice.
-
-**Pre-shaping decomposition.** When a request needs multiple sibling nodes, authoring captures intent in the governing Change and delegates to `/decompose <node-address>`. Proposed child names, proposed indices, and proposed dependency chains do not belong in the handoff.
 
 </anti_patterns>
 

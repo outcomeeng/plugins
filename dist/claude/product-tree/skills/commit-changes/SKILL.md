@@ -3,7 +3,7 @@ name: commit-changes
 description: >-
   ALWAYS invoke this skill when committing changes or when user says "commit".
   NEVER run git commit without this skill.
-allowed-tools: Read, Write, Glob, Grep, Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git branch:*), Bash(git rev-parse:*), Bash(git add:*), Bash(git commit:*)
+allowed-tools: Read, Write, Glob, Grep, Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git rev-parse:*), Bash(git add:*), Bash(git commit:*)
 ---
 
 <objective>
@@ -64,7 +64,7 @@ This skill creates either a local checkpoint before a verification gate or a pub
    - Implementation files
    - Co-located tests (in `spx/.../tests/`)
 4. **Include work item reference** — Add a `Refs:` footer using the node path format from the verification context (e.g. `Refs: spx/55-example.domain/21-bar.capability`)
-5. **Record verification state** — Read the latest focused deterministic result from workflow state as `passing`, `failing`, or `not-run`. A failing or not-run checkpoint is available for base sync, recovery, and collaboration while remaining ineligible for verification-readiness gates.
+5. **Record verification state** — Read the latest focused deterministic result from workflow state as `passing`, `failing`, or `not-run`. A failing or not-run checkpoint is available for recovery and collaboration while remaining ineligible for verification-readiness gates.
 
 Resolve the specific file list, work item context, and checkpoint purpose from the invocation inputs and repository state.
 
@@ -121,37 +121,19 @@ Changed files:
 
 Before staging any files, check CLAUDE.md for product-specific validation commands and record the latest applicable result as `passing`, `failing`, or `not-run`. This skill is git-only and never runs those commands itself. Continue to the commit in every state; include the required command and current state in the result for the next gate.
 
-```bash
-# CLAUDE.md may require commands like:
-just check        # Justfile task runner
-just validate
-pnpm run check    # pnpm scripts
-pnpm run validate
-npm run check     # npm scripts
-make check        # Makefile targets
-make lint
-```
-
 **Step 1: Selective Staging**
 
-```bash
-# ALWAYS stage specific files
-git add path/to/file1.ts path/to/file2.ts
-```
+ALWAYS stage explicit paths with `git add`; never `git add .` or a wildcard.
 
 **Rules:**
 
 - One logical change per commit
 - Review each `??` untracked file consciously
 - Keep unrelated experimental work out of the concern; an intentionally incomplete checkpoint is allowed when its staged paths form one coherent concern
-- Use explicit paths, not wildcards
 
 **Step 2: Diff Review**
 
-```bash
-git diff --cached           # Review actual changes
-git diff --cached --name-only  # Verify file list
-```
+Review `git diff --cached` and verify `git diff --cached --name-only`.
 
 **Checklist:**
 
@@ -194,104 +176,17 @@ A commit message is a payload: it spans lines and carries code spans, quotes, or
 
 <message_format>
 
-```text
-<type>[(scope)]: <description>
-
-[optional body]
-
-[optional footer(s)]
-```
-
-**Subject Line (Required)**
-
-- **Type**: Required (see commit_types section)
-- **Scope**: Optional, component/module name
-- **Description**: Imperative mood, 50 chars max, no period
-
-```text
-feat(auth): add OAuth2 token refresh
-fix: handle empty response from API
-refactor(db): extract query builder module
-```
-
-**Body (Optional)**
-
-- Wrap at 72 characters
-- Explain WHAT and WHY, not HOW
-- Blank line between subject and body
-
-**Footer (Optional)**
-
-- `BREAKING CHANGE: description` - major version bump
-- `Refs: #123` or `Closes #456` - issue references
-- Work item refs: `Refs: feature-32/story-27`
+Subject line: `<type>[(scope)]: <description>` in imperative mood, 50 characters at most, no period. A body, when present, explains WHAT and WHY, not HOW.
 
 </message_format>
 
 <commit_types>
 
-**Standard Types**
+Use the Conventional Commits types, plus `spec` for specification-only changes, and any custom type the product's CLAUDE.md or commit-standards.md defines.
 
-| Type         | Purpose                               | SemVer |
-| ------------ | ------------------------------------- | ------ |
-| **spec**     | Specification only                    | PATCH  |
-| **test**     | Add/modify tests                      | PATCH  |
-| **feat**     | Implementation of new functionality   | MINOR  |
-| **refactor** | Code restructure (no behavior change) | PATCH  |
-| **fix**      | Bug fix                               | PATCH  |
-| **docs**     | Documentation only                    | PATCH  |
-| **style**    | Formatting (no logic change)          | PATCH  |
-| **perf**     | Performance improvement               | PATCH  |
-| **ci**       | CI/CD changes                         | PATCH  |
-| **build**    | Build system, dependencies            | PATCH  |
-| **revert**   | Revert previous commit                | varies |
-
-**Domain-Specific Types**
-
-Projects may define custom types:
-
-| Type         | Domain           | Purpose                        |
-| ------------ | ---------------- | ------------------------------ |
-| **draft**    | Writing projects | New or revised content         |
-| **research** | Academic/books   | Research notes                 |
-| **meta**     | Process docs     | Process/workflow documentation |
-
-Check product's CLAUDE.md or commit-standards.md for custom types.
-
-**IMPORTANT:** NEVER USE `chore:`. Everything has purpose; use specific type instead
+**NEVER USE `chore:`.** Everything has a purpose; use the specific type instead.
 
 </commit_types>
-
-<breaking_changes>
-
-Mark breaking changes with:
-
-1. **Exclamation suffix**: "feat!: remove deprecated API"
-2. **Footer**:
-
-   ```text
-   feat: change authentication flow
-
-   BREAKING CHANGE: JWT tokens now expire in 1 hour instead of 24
-   ```
-
-</breaking_changes>
-
-<scope_guidelines>
-
-**Use Scope When:**
-
-- Component-specific: `feat(auth): add 2FA support`
-- Module changes: `fix(api): handle rate limiting`
-- Clear subsystem: `test(db): add connection pool tests`
-
-**Omit Scope When:**
-
-- Single-file change: `fix: correct typo in error message`
-- Cross-cutting: `refactor: consolidate error handling`
-- Obvious context: `docs: update installation guide`
-
-</scope_guidelines>
 
 <description_principles>
 
@@ -396,41 +291,11 @@ test(auth): add auth tests
 
 </description_principles>
 
-<critical_rules>
-
-1. **NO ATTRIBUTION** - Never include author names in commit messages
-2. **IMPERATIVE MOOD** - "add feature" not "added feature" or "adds feature"
-3. **NO PERIOD** - Subject line doesn't end with punctuation
-4. **SELECTIVE STAGING** - Never use `git add .`
-5. **ATOMIC COMMITS** - One logical change per commit
-
-</critical_rules>
-
-<commands_reference>
-
-```bash
-# Check what will be committed
-git status
-git diff --cached
-git diff --cached --name-only
-
-# Stage selectively
-git add path/to/specific/file.ts
-
-# Commit with the message file written in the scratch directory
-git commit -F <message-file>
-
-# View recent commits for style reference
-git log --oneline -10
-```
-
-</commands_reference>
-
 <failure_modes>
 
-**Failure 1: A failing check stranded a base sync.**
+**Failure 1: A failing check stranded a dirty tree.**
 
-What happened: Claude refused to commit session-owned changes because deterministic verification was red, so `/sync-base` could neither clear the dirty tree nor rebase the work.
+What happened: Claude refused to commit session-owned changes because deterministic verification was red, so the dirty tree could be neither cleared nor rebased.
 
 Why it failed: Local checkpoint creation was incorrectly treated as publication authorization.
 

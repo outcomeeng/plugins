@@ -64,7 +64,7 @@ Before any write that sends text to the store — a comment, an issue title or b
 
 <rule id="inert-stdin">
 
-Every field a `gh` command receives from a Change body, conversation state, or interview output is passed as inert data. A comment body or an issue body is a payload: write it with the file-write tool to a file in the scratch directory the harness names for the session, under a file name unique to the agent, the store command, and the Change, and pass it through the command's file argument, `--body-file <file>`. No heredoc, pipe, or inline form carries a payload, and the agent never removes the file. A title, which `gh` takes only as an argument, and every other interpolated argument is one single-quoted argument; inside it a literal apostrophe is written as `'"'"'` and nothing else is escaped. Never `--body "…"`, never a double-quoted argument carrying such text, never a redirect built from it.
+Every field a `gh` command receives from a Change body, conversation state, or interview output is passed as inert data. A comment body or an issue body is a payload: write it with the file-write tool to a file in the scratch directory the harness names for the session, under a file name unique to the session, the store command, and the Change, and pass it through the command's file argument, `--body-file <file>`. No heredoc, pipe, or inline form carries a payload; NEVER remove the file. A title, which `gh` takes only as an argument, and every other interpolated argument is one single-quoted argument; inside it a literal apostrophe is written as `'"'"'` and nothing else is escaped. Never `--body "…"`, never a double-quoted argument carrying such text, never a redirect built from it.
 
 </rule>
 

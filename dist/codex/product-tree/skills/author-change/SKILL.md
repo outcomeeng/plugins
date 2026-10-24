@@ -9,7 +9,7 @@ allowed-tools: Read, Write, Edit, Grep, Glob, collaboration.spawn_agent, collabo
 ---
 
 <objective>
-A complete store-independent Change record in the final format, authored locally, independently audited once, persisted through the configured store at the highest Maturity whose blocking criteria it meets, and read back equal, or the children of a split, the merge, or the reframe of a Change under the Sliced workflow; or the `authority-required` result, which leaves the candidate and the store record unchanged.
+A complete store-independent Change record in the final format, held in the configured store at the highest Maturity whose blocking criteria it meets and read back equal to its local candidate, or the children of a split, the merge, or the reframe of a Change under the Sliced workflow; or the `authority-required` result, which leaves the candidate and the store record unchanged.
 </objective>
 
 <essential_principles>

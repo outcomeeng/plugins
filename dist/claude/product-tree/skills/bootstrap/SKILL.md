@@ -14,12 +14,6 @@ An initial `spx/` root scaffolded with a product spec and product guide, plus re
 
 **PREREQUISITE**: Check for `<PRODUCT_TREE_FOUNDATION>` marker. If absent, use skill `product-tree:understand` first.
 
-This skill runs when:
-
-- The user says "bootstrap", "set up product tree", "start a new product"
-- `/author` detects no `spx/` directory or an empty one
-- The user invokes this skill directly
-
 </quick_start>
 
 <workflow>
@@ -57,7 +51,7 @@ Use skill `product-tree:interview` and apply its methodology (one question at a 
 
 Record top-level answers as intent only. Do not assign node types, child names, or indices in bootstrapping — `/decompose spx/` owns structure.
 
-When candidate top-level areas mix aggregate domains, concrete behaviors, surfaces, actors, and code-shaped names, apply the product-domain-shapes classifier and examples provided by `/understand`.
+When candidate top-level areas mix aggregate domains, concrete behaviors, surfaces, actors, and code-shaped names, apply the product-domain-shapes classifier and examples from the reference the live `<PRODUCT_TREE_FOUNDATION>` marker lists.
 
 **Brownfield guard — existing code present.** When Step 1 found an implemented codebase, derive top-level intent from the product dimensions above — consumers, jobs, surfaces, actors — never from the code's package, module, directory, or file layout. Pre-analysis of existing code informs vocabulary, constraints, and open decisions; it does not set the partition. Candidate areas named after code components (`config`, `model`, `parser`, `layout`, …) repeat the implementation's filing in the tree and invert the truth hierarchy. `/decompose` enforces the same rule — "decompose by user-facing concern, not implementation layer" — so apply it here and code-shaped intent never reaches it.
 
@@ -97,7 +91,7 @@ Wait for user confirmation before creating files.
 
 1. Create `spx/` directory if it doesn't exist.
 
-2. Write `spx/{product-name}.product.md` using the canonical product template provided by `/understand`. Fill every section from the interview — leave no `{placeholder}` unresolved:
+2. Write `spx/{product-name}.product.md` using the canonical product template beneath the `Template root` the live `<PRODUCT_TREE_FOUNDATION>` marker records. Fill every section from the interview — leave no `{placeholder}` unresolved:
    - Product name
    - Why this product exists
    - Consumers and jobs, Surfaces, and Actors and sidedness — from the product-dimension coverage areas
@@ -118,7 +112,7 @@ Wait for user confirmation before creating files.
 
 **Step 5: Delegate top-level composition**
 
-After the root scaffold exists, invoke `/decompose spx/` to compose top-level children. Pass only `spx/`; the root product spec and `spx/PLAN.md` carry the user-provided intent.
+After the root scaffold exists, use skill `product-tree:decompose` with `spx/` to compose top-level children. Pass only `spx/`; the root product spec and `spx/PLAN.md` carry the user-provided intent.
 
 </step>
 
