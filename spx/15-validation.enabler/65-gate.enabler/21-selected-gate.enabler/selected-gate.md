@@ -21,6 +21,7 @@ CAN run the deterministic gate steps that prove the current slice without spendi
 ### Properties
 
 - Gate selection is deterministic for any ordering or duplication of the same changed-path set ([test](tests/test_selected_gate.property.l1.py))
+- For any set of changed test files drawn across every execution level, the planned pytest step targets exactly the files outside the on-demand suite, and no pytest step is planned when every file lies inside it ([test](tests/test_selected_gate.property.l1.py))
 - For any chain of test-infrastructure modules in which each imports the next and an executed test imports the first, every module in the chain reaches that test ([test](tests/test_infrastructure_index.property.l1.py))
 
 ### Compliance
