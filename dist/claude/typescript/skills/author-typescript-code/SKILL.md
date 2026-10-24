@@ -247,7 +247,7 @@ For each `/verify` routing row whose verification type is audit, re-read the rou
 
 **If working on a product-tree work item** (enabler/outcome):
 
-1. **Invoke `product-tree:contextualize` FIRST** with the node path
+1. **Use skill `product-tree:contextualize` FIRST** with the node path
 2. **If context loading fails**: ABORT - do not proceed until all required documents exist
 3. **If context loading succeeds**: Proceed with implementation using loaded context
 

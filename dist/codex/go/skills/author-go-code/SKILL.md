@@ -99,7 +99,7 @@ For each `/verify` routing row whose verification type is audit, re-read the rou
 <context_loading>
 If this work belongs to a product-tree node:
 
-1. invoke `product-tree:contextualize` with the full path
+1. Use skill `product-tree:contextualize` with the full path
 2. abort if required context is missing
 3. implement only after the context is loaded
 

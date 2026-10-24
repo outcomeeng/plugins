@@ -19,14 +19,14 @@ A factual report of Product Tree files' non-conformances to templates, atemporal
 2. **RULES FROM UNDERSTANDING** — All conformance rules live in the understanding skill's inline foundation and templates. This skill owns zero rules. Read them at check time.
 3. **STRICT CLASSIFICATION** — Only the seven kinds — `.product`, `.substrate`, `.capability`, `.domain`, `.interface`, `.surface`, `.variant` — and the prior `.enabler` and `.outcome` forms a tree authored under a 3.x methodology version still carries are recognized node kinds. Only `.adr.md`, `.pdr.md`, `{slug}.spec.md`, `{slug}.outcome.md`, and the prior forms `{slug}.md` and `*.product.md` are recognized files. Anything else is "unrecognized."
 4. **COMPLETE SCAN** — Check every `.md` file in scope. Do not skip files. Do not sample.
-5. **FOUNDATION REQUIRED** — The `<PRODUCT_TREE_FOUNDATION>` marker must be present. If absent, invoke `product-tree:understand` before continuing.
+5. **FOUNDATION REQUIRED** — The `<PRODUCT_TREE_FOUNDATION>` marker must be present. If absent, use skill `product-tree:understand` before continuing.
 6. **CHANGESET SCOPE FROM THE SHARED PRIMITIVE** — When checking downstream alignment for a branch changeset, consume the supplied changed-file set derived through `/scope-changeset`. Do not hand-roll base-ref or git-diff derivation in this skill.
 
 </principles>
 
 <required_references>
 
-Invoke `product-tree:understand` and use its live inline foundation. Read the conditional templates in full before checking conformance:
+Use skill `product-tree:understand` and use its live inline foundation. Read the conditional templates in full before checking conformance:
 
 - Live `/understand` `<atemporal_voice>` and `<decision_to_spec_alignment>`
 - Live `/understand` `<assertion_types>` — the five assertion types and their canonical headings
@@ -179,7 +179,7 @@ Report only the factual gap: the changed higher-level declaration, the constrain
 
 <workflow>
 
-1. **Gate**: Check the conversation for a live `<PRODUCT_TREE_FOUNDATION>` marker. If absent, invoke `product-tree:understand` and resume only after it emits the marker.
+1. **Gate**: Check the conversation for a live `<PRODUCT_TREE_FOUNDATION>` marker. If absent, use skill `product-tree:understand` and resume only after it emits the marker.
 2. **Load rules**: Read every inline leaf and sibling-relative template named in `<required_references>`.
 3. **Scope**: Read `$ARGUMENTS` as the complete scope input. When it names one Markdown file, use that file directly; when it names a directory, use that directory; when it is empty, default to `spx/` in the product root. For a branch changeset, consume the exact changed-file set supplied in `$ARGUMENTS` after derivation through `/scope-changeset`; stop with that requirement when the set is absent.
 4. **Discover**: For a file scope, use that file directly. For a directory scope, glob `{scope}/**/*.md`. For a changeset scope, use every Markdown path in the supplied changed-file set directly. In every mode, exclude `{{! file('root_guide', 'claude') !}}` and `{{! file('root_guide', 'codex') !}}`, `PLAN.md`, `ISSUES.md`, files inside `tests/`, files inside `spx/local/`, files inside an `evals/` directory sitting directly under a node directory, and files inside a `knowledge/` directory sitting directly under a node directory or the product root.

@@ -28,7 +28,7 @@ A binding TypeScript ADR whose testability constraints live as ALWAYS/NEVER rule
 
 When creating ADRs for a product-tree work item (enabler/outcome), ensure complete hierarchical context is loaded:
 
-1. **Invoke `product-tree:contextualize`** with the node path
+1. **Use skill `product-tree:contextualize`** with the node path
 2. **Verify all ancestor ADRs/PDRs are loaded** - Must understand and honor all decision records in hierarchy
 3. **Read the node spec** - Requirements, Test Strategy, and Outcomes sections
 
