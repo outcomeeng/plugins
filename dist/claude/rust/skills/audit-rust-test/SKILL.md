@@ -33,7 +33,7 @@ Read local overlay files — each routes skill behavior to the product's governi
 Read `spx/local/rust.md` if it exists; otherwise apply the loaded skills only.
 Read `spx/local/rust-tests.md` if it exists; otherwise apply the loaded skills only.
 
-Invoke `/contextualize` on the spec node under audit — `<PRODUCT_TREE_CONTEXT>` marker must be present before Gate 1.
+Use skill `product-tree:contextualize` on the spec node under audit — `<PRODUCT_TREE_CONTEXT>` marker must be present before Gate 1.
 
 This audit runs no deterministic verification — no `cargo fmt`, `cargo clippy`, `cargo test`, `cargo llvm-cov`, or any other project command. Spend the whole audit reading the evidence chain.
 

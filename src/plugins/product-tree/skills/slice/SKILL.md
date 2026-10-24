@@ -23,7 +23,7 @@ A slice is observable when its merged result can be shown to the operator as a c
 <workflow>
 
 <step number="1" name="Load methodology" frequency="once per session">
-Invoke `/understand`. Skip when the `PRODUCT_TREE_FOUNDATION` marker is already present.
+Use skill `product-tree:understand`. Skip when the `PRODUCT_TREE_FOUNDATION` marker is already present.
 </step>
 
 <step number="2" name="Load tree context">

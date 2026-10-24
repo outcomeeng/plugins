@@ -10,7 +10,7 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 ### Changed
 
-- **The Go skills name the `product-tree` plugin and its markers.** `/audit-go-test`, `/author-go-test`, `/author-go-architecture`, and `/author-go-code` require `product-tree:test`, `product-tree:audit-tests`, `product-tree:verify`, and `product-tree:contextualize`, and `/audit-go-test` requires the `<PRODUCT_TREE_CONTEXT>` marker. `/author-go-code` produces code that complies with its governing spec. `/author-go-architecture` and `/author-go-code` name `product-tree:contextualize` with the `Use skill` instruction. Before this change, the skills named `spec-tree:` skills and the `<SPEC_TREE_CONTEXT>` marker, which stop resolving once the methodology plugin is installed under its new name.
+- **The Go skills name the `product-tree` plugin and its markers.** `/audit-go-test`, `/author-go-test`, `/author-go-architecture`, and `/author-go-code` require `product-tree:test`, `product-tree:audit-tests`, `product-tree:verify`, and `product-tree:contextualize`, and `/audit-go-test` requires the `<PRODUCT_TREE_CONTEXT>` marker. `/author-go-code` produces code that complies with its governing spec. `/audit-go-test`, `/author-go-architecture`, and `/author-go-code` name `product-tree:contextualize` with the `Use skill` instruction. Before this change, the skills named `spec-tree:` skills and the `<SPEC_TREE_CONTEXT>` marker, which stop resolving once the methodology plugin is installed under its new name.
 
 ## 0.4.1
 

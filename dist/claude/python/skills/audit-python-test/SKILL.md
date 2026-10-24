@@ -30,7 +30,7 @@ Use skill `product-tree:test`.
 
 Read `spx/local/python.md` and `spx/local/python-tests.md` when they exist; otherwise apply the loaded skills only. Each overlay routes behavior to the product's governing specs and decisions, supplements the loaded skills, and does not declare product truth.
 
-Invoke `/contextualize` on the spec node under audit — `<PRODUCT_TREE_CONTEXT>` marker must be present before Gate 1.
+Use skill `product-tree:contextualize` on the spec node under audit — `<PRODUCT_TREE_CONTEXT>` marker must be present before Gate 1.
 
 </prerequisites>
 

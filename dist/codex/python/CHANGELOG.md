@@ -10,7 +10,7 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 ### Changed
 
-- **The Python skills name the `product-tree` plugin and its markers.** `/audit-python-test` and `/author-python-test` require `product-tree:test` and `product-tree:audit-tests`, `/audit-python-test` requires the `<PRODUCT_TREE_CONTEXT>` marker, `/author-python-code` reads its context from `/product-tree:contextualize`, and the example harness in `/python-test-standards` is `ProductTreeEnv`. Before this change, the skills named `spec-tree:` skills, the `<SPEC_TREE_CONTEXT>` marker, and `SpecTreeEnv`.
+- **The Python skills name the `product-tree` plugin and its markers.** `/audit-python-test` and `/author-python-test` require `product-tree:test` and `product-tree:audit-tests`, `/audit-python-test` requires the `<PRODUCT_TREE_CONTEXT>` marker, `/author-python-code` reads its context from `/product-tree:contextualize`, and the example harness in `/python-test-standards` is `ProductTreeEnv`. `/audit-python-test` names `product-tree:contextualize` with the `Use skill` instruction. Before this change, the skills named `spec-tree:` skills, the `<SPEC_TREE_CONTEXT>` marker, and `SpecTreeEnv`.
 
 ## 0.25.1
 

@@ -13,7 +13,7 @@ Product Tree structure composed from a target node address, durable spec content
 
 <quick_start>
 
-**PREREQUISITE**: Check for `<PRODUCT_TREE_FOUNDATION>` marker. If absent, invoke `/understand` first.
+**PREREQUISITE**: Check for `<PRODUCT_TREE_FOUNDATION>` marker. If absent, use skill `product-tree:understand` first.
 
 **Target:** `$ARGUMENTS`
 
@@ -53,7 +53,7 @@ If the target is a node address:
 
 1. Accept only the target node address as structural input. The address must be the full path from `spx/`; never accept a bare node name or numeric prefix as sufficient.
 2. If the request includes proposed child names, indices, or dependency order, preserve those details as intent in the target node's `PLAN.md` or `ISSUES.md`; do not treat them as structure.
-3. Check for a matching `<PRODUCT_TREE_CONTEXT>` marker. If absent, invoke `/contextualize`.
+3. Check for a matching `<PRODUCT_TREE_CONTEXT>` marker. If absent, use skill `product-tree:contextualize`.
 4. Read the context manifest, target spec, existing children, and target `PLAN.md` or `ISSUES.md`.
 
 For both target modes, note root product scope, ancestor constraints, current assertions, existing siblings/children, and any known issues before proposing structure.

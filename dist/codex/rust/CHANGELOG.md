@@ -10,7 +10,7 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 ### Changed
 
-- **The Rust skills name the `product-tree` plugin and its markers.** `/audit-rust-test`, `/author-rust-test`, `/author-rust-architecture`, and `/author-rust-code` require `product-tree:test`, `product-tree:audit-tests`, `product-tree:verify`, and `product-tree:contextualize`, `/audit-rust-test` requires the `<PRODUCT_TREE_CONTEXT>` marker, and the example harness module in `/rust-test-standards` is `harnesses/product_tree.rs`. `/author-rust-code` produces code that complies with its governing spec. `/author-rust-architecture` and `/author-rust-code` name `product-tree:contextualize` with the `Use skill` instruction. Before this change, the skills named `spec-tree:` skills, the `<SPEC_TREE_CONTEXT>` marker, and `harnesses/spec_tree.rs`.
+- **The Rust skills name the `product-tree` plugin and its markers.** `/audit-rust-test`, `/author-rust-test`, `/author-rust-architecture`, and `/author-rust-code` require `product-tree:test`, `product-tree:audit-tests`, `product-tree:verify`, and `product-tree:contextualize`, `/audit-rust-test` requires the `<PRODUCT_TREE_CONTEXT>` marker, and the example harness module in `/rust-test-standards` is `harnesses/product_tree.rs`. `/author-rust-code` produces code that complies with its governing spec. `/audit-rust-test`, `/author-rust-architecture`, and `/author-rust-code` name `product-tree:contextualize` with the `Use skill` instruction. Before this change, the skills named `spec-tree:` skills, the `<SPEC_TREE_CONTEXT>` marker, and `harnesses/spec_tree.rs`.
 
 ## 0.11.1
 

@@ -42,7 +42,7 @@ Use skill `product-tree:product-tree-plugin`. Invoke it with the verb `version` 
 
 <execution_sequence>
 
-1. **Load context.** Invoke `/understand` when the live `<PRODUCT_TREE_FOUNDATION>` marker is absent, then invoke `/contextualize` on the directory containing the spec. Read the spec at `path`. A target that is absent or is not a node spec returns `BLOCKED` with the exact failure.
+1. **Load context.** Use skill `product-tree:understand` when the live `<PRODUCT_TREE_FOUNDATION>` marker is absent, then use skill `product-tree:contextualize` on the directory containing the spec. Read the spec at `path`. A target that is absent or is not a node spec returns `BLOCKED` with the exact failure.
 2. **Enumerate.** List every assertion under `## Assertions` in document order, numbering each from one. Select those tagged `[audit:{rule-slug}]` and the pathless `[audit]`. A selected assertion's designator is its slug, or `ordinal-<n>` with `<n>` its position in that list when pathless; its unit key is `assertion:<designator>:<path>`.
 3. **Open the run.** Start the run before judging anything:
 

@@ -12,7 +12,7 @@ An initial `spx/` root scaffolded with a product spec and product guide, plus re
 
 <quick_start>
 
-**PREREQUISITE**: Check for `<PRODUCT_TREE_FOUNDATION>` marker. If absent, invoke `/understand` first.
+**PREREQUISITE**: Check for `<PRODUCT_TREE_FOUNDATION>` marker. If absent, use skill `product-tree:understand` first.
 
 This skill runs when:
 
