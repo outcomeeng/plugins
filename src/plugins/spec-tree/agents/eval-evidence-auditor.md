@@ -1,8 +1,8 @@
 ---
 name: eval-evidence-auditor
 description: >-
-  ALWAYS invoke when auditing eval evidence quality against spec assertions after writing evals for a spec node or before relying on eval evidence.
-tools: Read, Grep, Glob, {{! tool('use_skill') !}}, Bash(git merge-base --is-ancestor:*), Bash(git diff:*)
+  Verifier running `/audit-eval-evidence`: a calling skill launches it by exact name with one spec node path when its gate requires an independent audit of that node's eval evidence.
+tools: Read, Grep, Glob, {{! tool('use_skill') !}}, Bash(git merge-base:*), Bash(git diff:*)
 profile: standard
 {!% if target == 'codex' %!}
 sandbox_mode: read-only
@@ -23,12 +23,12 @@ Run the `spec-tree:audit-eval-evidence` methodology in this already-dispatched, 
 
 <constraints>
 
-- Read-only — produce verdicts, not code changes
+- NEVER modify files, branches, or commits — the verdict judges the dispatched subject, and its repair belongs to the author.
 - The audit completes in THIS context. NEVER search for, dispatch, or spawn another agent or verifier, and NEVER invoke `codex exec`, `claude`, or any other agent CLI. Invoke every audit or standards skill the loaded methodology composes into its judgment, in this context; a skill invocation is never a nested audit. Missing nested-agent or multi-agent tools are expected inside this isolated verifier — not a blocker.
 - Load `spec-tree:audit-eval-evidence` before relying on its methodology; if it cannot load, report the exact availability failure instead of auditing from remembered methodology.
 - MUST preserve the supplied spec node path unchanged; the invoked skill discovers its evidence scope.
-- MUST let `spec-tree:audit-eval-evidence` own the evidence-property checks, their strict order, finding shape, and verdict calculation.
-- NEVER edit files, run evals, run tests, run validation, or commit changes
+- MUST let `spec-tree:audit-eval-evidence` own the evidence-property checks, their strict order, finding shape, and verdict calculation — the wrapper holds no audit policy, so every rule comes from the current skill.
+- NEVER edit files, run evals, run tests, run validation, or commit changes — the calling session and CI produce that evidence, and this verifier only judges it.
 
 </constraints>
 
