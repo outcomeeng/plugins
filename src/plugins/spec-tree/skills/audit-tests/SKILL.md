@@ -18,11 +18,10 @@ A verdict on whether a spec node's tests provide behavior-coupled evidence its a
 
 - NEVER modify the tests under audit or any other file — this audit produces a verdict, never a fix or a commit.
 - NEVER run the project's coverage command, test command, linter, type-checker, or any other deterministic verification inside the audit — deterministic verification on the changeset is a precondition; establish coverage by reading whether the test drives execution into the assertion-relevant path.
-- ALWAYS name the assertion, the failed property, and the evidentiary gap in every REJECT finding.
+- ALWAYS name the assertion, the failed property, and the evidentiary gap in every REJECT finding — the author repairs from the finding alone, and a finding missing any of the three leaves the repair unbounded.
 - ALWAYS construct every finding as one complete record containing `id`, `file`, `line`, `assertion`, `property`, `rule`, `severity`, `message`, and `remediation_target` before adding it to a row — required fields are never deferred to verdict rendering.
-- ALWAYS reject an incomplete evidence-chain inventory before approval; absence of an artifact is missing evidence, never permission to infer its contents.
+- ALWAYS reject an incomplete evidence-chain inventory before approval — an absent artifact is missing evidence, never permission to infer its contents.
 - NEVER issue a finding the evidence model does not support — drop an unbacked finding rather than reject the tests for it; NEVER reject on text the changeset leaves unchanged and does not invalidate — return that finding with severity `FILED`, and NEVER raise a recorded finding's severity or let a `FILED` finding start to reject unless the run names a changed basis. `${CLAUDE_SKILL_DIR}/references/touched-text.md` defines touched text, the finding key, and the `FILED` form.
-- The only `Bash` capability this skill grants is the read-only `git diff`, `git merge-base`, and `git branch --show-current`, unlike the language auditors it composes. The omission of any other grant is deliberate: the no-deterministic-verification constraint above is enforced at the tool-permission layer rather than by prose alone, and this base audit reaches every other artifact it judges through `Read`, `Grep`, and `Glob`. Do not add another `Bash` grant for parity.
 
 </constraints>
 
@@ -74,7 +73,7 @@ If the request carries no target, return `REJECTED` with only `gate-1-assertion`
 
 **Step 1: Load context**
 
-Invoke `/understand` when the live `<SPEC_TREE_FOUNDATION>` marker is absent, then invoke `/contextualize` on the spec node whose tests are being audited. This loads the spec's assertions, ancestor ADRs/PDRs, and the full hierarchy context.
+When the live `<SPEC_TREE_FOUNDATION>` marker is absent: Use skill `spec-tree:understand`. Then, on the spec node whose tests are being audited: Use skill `spec-tree:contextualize`. This loads the spec's assertions, ancestor ADRs/PDRs, and the full hierarchy context.
 
 Do not proceed without live `<SPEC_TREE_FOUNDATION>` and `<SPEC_TREE_CONTEXT>` markers.
 
@@ -302,7 +301,7 @@ For each language, consume an explicitly supplied completed verdict or invoke th
 
 Merge each valid result's findings into the matching rows by `name` — append, never replace — and derive their statuses under `<verdict_format>`. Merge its evidence-chain entries and coverage traces with the shared inspection, preserving every inspected artifact and assertion without duplicate entries. A composed rejection remains a rejection in the merged result. When a required `audit-<lang>-test` skill is absent or unavailable, mark `gate-1-assertion` as `FAIL` and append a `REJECT` finding there naming the missing skill, property `language-composition`, and remediation target `skill-installation`; never approve incomplete coverage.
 
-A language audit returns a third shape when its own scope step finds that every subject it was given is a retired path with no current `[test]` assertion and no current evidence-chain owner: `{"status": "NOT_APPLICABLE", "subjects": [...], "explanation": "..."}`, carrying no rows and no findings. Treat it as neither a pass nor a failure of that language's concerns. Record the reported subjects and explanation in verdict metadata, compose the remaining languages normally, and decide the overall verdict from the rows that do exist. When every language in scope returns `NOT_APPLICABLE` and no language-neutral finding was raised, emit that same shape rather than an approval, because no evidence was judged.
+A language audit returns a third shape when its own scope step finds that every subject it was given is a retired path with no current `[test]` assertion and no current evidence-chain owner: `{"status": "NOT_APPLICABLE", "subjects": [...], "explanation": "..."}`, carrying no rows and no findings. Treat it as neither a pass nor a failure of that language's concerns. Record the language, reported subjects, and explanation as one `metadata.not_applicable` entry, compose the remaining languages normally, and decide the overall verdict from the rows that do exist. When every language in scope returns `NOT_APPLICABLE` and no language-neutral finding was raised, emit that same shape rather than an approval, because no evidence was judged.
 
 </step>
 
@@ -339,7 +338,7 @@ Emit the verdict as a single JSON object. This JSON is the skill's entire output
 
 The skill's `overall` is `APPROVED` iff every applicable gate row is `PASS`; otherwise it is `REJECTED`. A required gate that cannot be evaluated is a `FAIL` row with a `REJECT` finding naming the missing evidence. Findings within each row carry severity `REJECT` for blocking findings (these are what flip a row to `FAIL`), `FILED` for a finding outside touched text, which fails no row and additionally carries `key`, `baseRefEvidence`, and `issuesEntry` (`path`, `heading`), and `WARNING` or `INFO` for non-blocking observations. Every finding MUST include every field shown in its row schema: `id`, `file`, `line`, `assertion`, `property`, `rule`, `severity`, `message`, and `remediation_target`; omission of any field is an invalid verdict.
 
-The `metadata.evidence_chain` array MUST project the complete inspected inventory. Preserve every applicable discovery artifact even when it carries no finding. The `metadata.coverage_traces` array projects Step 3e: a language-specific concern includes traces for the coverage it judges and leaves the array empty only when coverage is outside its declared scope; this audit's merged verdict MUST carry one entry per audited assertion, naming the assertion-relevant source path, the test path followed into it, and the coverage judgment. Use `saturated` only for a trivially total path reached by the test.
+The `metadata.evidence_chain` array MUST project the complete inspected inventory. Preserve every applicable discovery artifact even when it carries no finding. The `metadata.coverage_traces` array projects Step 3e: a language-specific concern includes traces for the coverage it judges and leaves the array empty only when coverage is outside its declared scope; this audit's merged verdict MUST carry one entry per audited assertion, naming the assertion-relevant source path, the test path followed into it, and the coverage judgment. Use `saturated` only for a trivially total path reached by the test. The `metadata.not_applicable` array holds one entry per language that returned `NOT_APPLICABLE`, and stays empty otherwise.
 
 ```json
 {
@@ -359,9 +358,23 @@ The `metadata.evidence_chain` array MUST project the complete inspected inventor
           "assertion": "<full-assertion-text-or-stable-id>",
           "property": "<testability | evidence-chain-completeness | declarations | predicate-ownership | source-ownership | oracle-independence | coupling | falsifiability | alignment | coverage | language-composition | unsupported-language>",
           "rule": "<assertion-id-or-property-name>",
-          "severity": "REJECT | FILED",
+          "severity": "REJECT | FILED | WARNING | INFO",
           "message": "<one-line evidentiary gap>",
           "remediation_target": "<source-contract | harness | generator | fixture | eval-case | test-file | source-file | test-infrastructure | independent-oracle | skill-installation | language-partition>"
+        },
+        {
+          "id": "f-004",
+          "file": "<test-file>",
+          "line": null,
+          "assertion": "<full-assertion-text-or-stable-id>",
+          "property": "<property as above>",
+          "rule": "<assertion-id-or-property-name>",
+          "severity": "FILED",
+          "message": "<one-line evidentiary gap>",
+          "remediation_target": "<remediation target as above>",
+          "key": "<file>:<assertion-or-declaration>:<property>:<rule>",
+          "baseRefEvidence": "<base>..<head>",
+          "issuesEntry": { "path": "<governing-node>/ISSUES.md", "heading": "<entry heading>" }
         }
       ]
     },
@@ -376,7 +389,7 @@ The `metadata.evidence_chain` array MUST project the complete inspected inventor
           "assertion": "<full-assertion-text-or-stable-id | cross-assertion>",
           "property": "architectural-duplication",
           "rule": "<duplication-pattern>",
-          "severity": "REJECT | FILED",
+          "severity": "REJECT | FILED | WARNING | INFO",
           "message": "<extraction target>: <nearest common test-infrastructure location>",
           "remediation_target": "<source-contract | harness | generator | fixture | eval-case | test-file | source-file | test-infrastructure | independent-oracle | skill-installation | language-partition>"
         }
@@ -399,6 +412,13 @@ The `metadata.evidence_chain` array MUST project the complete inspected inventor
         "source_path": "<repository-relative-assertion-relevant-path>",
         "test_path": "<repository-relative-test-path-and-call-chain>",
         "judgment": "reaches | saturated | missing"
+      }
+    ],
+    "not_applicable": [
+      {
+        "language": "<language>",
+        "subjects": ["<repository-relative-path>"],
+        "explanation": "<why no subject carries a current [test] assertion>"
       }
     ]
   }

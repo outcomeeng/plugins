@@ -23,7 +23,7 @@ A `<SPEC_TREE_CONTEXT target="...">` marker carrying a structured context manife
 - Lower-index siblings' specs must be read at each directory level — they constrain the target
 - Explicit full-path ADR/PDR citations in loaded specs and decision records must be read before the context marker is emitted; coordination notes never add cited decisions.
 - A context-grounded answer requires the matching `<SPEC_TREE_CONTEXT target="...">` marker. Loading this skill or reading a pre-compaction summary supplies no context.
-- Context loading reads the checkout as it stands. It never runs `/sync-base`, fetches, rebases, or otherwise moves the checkout, so a Verifier's context load leaves the head it judges in place.
+- Context loading reads the checkout as it stands. It never runs `/sync-base`, fetches, rebases, or otherwise moves the checkout, so the context it reports describes the head it found.
 - Test files are not read by `/contextualize`. The node target spec or product-root product spec already exposes inline `[test](tests/...)` links; list those links and the applicable `tests/` directory state, then leave test-body inspection to `/test`, `/audit-tests`, or `/apply`.
 - **Always use canonical full paths** from `spx/` for targets and references. The product-root target is exactly `spx/`; a node target begins with `spx/` and contains only node-directory segments. Never refer to nodes, ADRs, or PDRs by bare name or numeric prefix; sibling numbers repeat under different parents and decision files cannot be found without their parent path.
   - Wrong: `/contextualize 32-parser.capability`
@@ -41,7 +41,7 @@ A `<SPEC_TREE_CONTEXT target="...">` marker carrying a structured context manife
 
 Check the live conversation for the `<SPEC_TREE_FOUNDATION>` marker.
 A marker mentioned only in a compaction summary, Handoff, prior run description, or statement that `/understand` ran does not count. Reading the `/understand` SKILL.md file alone does not count.
-If absent → STOP. Invoke `/understand` first, then continue with Step 0. Do not inspect git, session state, product files, or spec-tree content before the live marker is present.
+If absent → STOP. Use skill `spec-tree:understand`. Then continue with Step 0. Do not inspect git, session state, product files, or spec-tree content before the live marker is present.
 
 </step>
 
@@ -322,7 +322,7 @@ Claude answered a progress question by reporting the clean worktree and local ve
 
 **Failure 8: Moved the checkout while loading context**
 
-Claude ran a base sync before reading the tree, and the rebase replaced the head a Verifier had been asked to judge. The verdict then described a commit nobody submitted. Context loading reads the checkout as it stands; base currency belongs to the lifecycle workflows that own branch movement.
+Claude ran a base sync before reading the tree, and the rebase replaced the head under inspection with a different commit. The loaded context then described a commit nobody had asked about. Context loading reads the checkout as it stands; branch movement belongs to the workflows that own it.
 
 **Failure 9: Missed cited methodology governance**
 
@@ -334,35 +334,25 @@ Claude checked `PLAN.md` and `ISSUES.md` only inside node directories, so produc
 
 **Failure 11: Rejected the canonical product-root target**
 
-Claude required at least one node-directory segment after `spx/`, so `/author` could not contextualize the parent of a top-level node even though `spx/` is the canonical product-root address. Treat exact `spx/` as product-root mode, walk zero node segments, and emit product-level context without attempting node-spec lookup.
+Claude required at least one node-directory segment after `spx/`, so the parent of a top-level node could not be contextualized even though `spx/` is the canonical product-root address. Treat exact `spx/` as product-root mode, walk zero node segments, and emit product-level context without attempting node-spec lookup.
 
 </failure_modes>
 
 <success_criteria>
 
-Context loading is complete when:
+The emitted `<SPEC_TREE_CONTEXT target="...">` marker is sound when:
 
-- [ ] `<SPEC_TREE_FOUNDATION>` marker present (loaded via `/understand`)
-- [ ] Product spec located and read
-- [ ] Target accepted before filesystem lookup only when it is exact `spx/` or a canonical full `spx/...` node path
-- [ ] All product-level ADRs/PDRs read (glob count = read count)
-- [ ] Every ancestor along the path: spec read, ADRs/PDRs read
-- [ ] Runtime guide files checked at product root and on each directory along the target path; present guides read and listed
-- [ ] Lower-index siblings' specs read at each directory level
-- [ ] Node target spec and ADRs/PDRs read, or product-root mode recorded with top-level children enumerated
-- [ ] Full-path ADR/PDR citations in loaded specs and decisions read transitively, with citing files recorded
-- [ ] Children enumerated
-- [ ] Test links listed from the node target spec or product-root product spec, with co-located test files listed without reading test bodies
-- [ ] Implementation state reported as unknown unless a prior workflow already established it
-- [ ] Coordination notes (PLAN.md, ISSUES.md) checked and read if present at product root, each ancestor, and target
-- [ ] Coordination-note citations excluded from cited-governance loading
-- [ ] Local skill overlays enumerated from `spx/local/` and listed in manifest
-- [ ] `spx/local/merging.md` read when present and lifecycle continuation state emitted in the manifest
-- [ ] The checkout's head is unchanged by context loading: no `/sync-base`, fetch, or rebase ran
-- [ ] Status and progress contexts include a lifecycle verdict and continuation action rather than treating local verification, commits, or worktree cleanliness as completion
-- [ ] All node, ADR, PDR, test, and coordination-note references in the manifest use full paths from `spx/`
-- [ ] Bootstrap state derives only from `$target` and the observed tree: exact `spx/` with a product spec and no nodes is `true`; every node target is `false`, and a missing node target aborts
-- [ ] `<SPEC_TREE_CONTEXT target="...">` marker emitted with full manifest
-- [ ] No ABORT conditions triggered (or appropriate error shown with remediation)
+- [ ] A live `<SPEC_TREE_FOUNDATION>` marker precedes it in the conversation
+- [ ] Its target is exact `spx/` or a canonical full `spx/...` node path, accepted before any filesystem lookup
+- [ ] At every level it names, the ADR and PDR read counts equal their glob counts
+- [ ] It lists the product spec, every ancestor spec, and every lower-index sibling spec as read, and no higher-index sibling spec as read
+- [ ] Every full-path ADR/PDR cited by a loaded spec or decision appears with its citing file, and no cited decision comes from a coordination note
+- [ ] Every guide file and coordination note present at the product root, on the path, and at the target is listed
+- [ ] Test links and co-located test files are listed, implementation state reads `unknown` unless a prior workflow established it, and no test body was read
+- [ ] Local overlays are listed, and when `spx/local/merging.md` exists the lifecycle continuation fields carry its routing
+- [ ] Every node, ADR, PDR, test, and coordination-note reference is a full path from `spx/`
+- [ ] Bootstrap is `true` only for exact `spx/` with a product spec and no nodes, and `false` for every node target
+- [ ] The checkout's head is the same before and after context loading
+- [ ] An ABORT emits no marker and names the missing path with its remediation
 
 </success_criteria>

@@ -18,8 +18,8 @@ A PASS, FAIL, or UNKNOWN verdict on a spec node's `[eval]` evidence against the 
 
 - NEVER modify eval artifacts, skill bodies, prompts, cases, history, or any other file — this audit produces a verdict, never a fix or a commit.
 - NEVER run evals, tests, validation, coverage, linters, type-checkers, or other deterministic verification inside the audit — establish evidence quality by reading.
-- ALWAYS name the assertion, the failed property, and the evidentiary gap in every REJECT finding.
-- NEVER approve prompt-only simulation as evidence for skill, agent, classifier, or script behavior.
+- ALWAYS name the assertion, the failed property, and the evidentiary gap in every REJECT finding — the author repairs from the finding alone, and a finding missing any of the three leaves the repair unbounded.
+- NEVER approve prompt-only simulation as evidence for skill, agent, classifier, or script behavior — a prompt that simulates the producer scores the simulation, never the shipped producer the assertion governs.
 - NEVER issue a finding the evidence model does not support — drop an unbacked finding rather than reject the eval evidence for it.
 - NEVER reject on text the changeset leaves unchanged and does not invalidate — return that finding with severity `FILED`, and NEVER raise a recorded finding's severity or let a `FILED` finding start to reject unless the run names a changed basis. `${SKILL_DIR}/references/touched-text.md` defines touched text, the finding key, and the `FILED` form.
 
@@ -190,8 +190,19 @@ Emit all five gate rows exactly once. Derive `overall` in order: `FAIL` if any g
           "file": "<eval-artifact-or-producer-file>",
           "line": null,
           "rule": "producer-coupling",
-          "severity": "REJECT | FILED",
+          "severity": "REJECT | FILED | WARNING | INFO",
           "message": "<one-line evidentiary gap>"
+        },
+        {
+          "id": "f-002",
+          "file": "<eval-artifact-or-producer-file>",
+          "line": null,
+          "rule": "producer-coupling",
+          "severity": "FILED",
+          "message": "<one-line evidentiary gap>",
+          "key": "<file>:<assertion>:<rule>",
+          "baseRefEvidence": "<base>..<head>",
+          "issuesEntry": { "path": "<governing-node>/ISSUES.md", "heading": "<entry heading>" }
         }
       ]
     },
