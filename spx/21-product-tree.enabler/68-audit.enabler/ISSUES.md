@@ -170,7 +170,8 @@ five assertions; the operator accepted `[audit]`-only with the gap recorded here
 
 `outcomeeng/validation/audit_artifacts.py` enforces an exact file inventory for
 each `audit-*` skill directory. For `audit-implementation` the permitted set is
-`SKILL.md`, `references/`, `references/operational-failures.md`,
+`SKILL.md`, `references/`, `references/failure-modes.md`,
+`references/rule-catalog.md`, `references/run-payloads.md`,
 `references/touched-text.md`, `scripts/`, and `scripts/resolve_scope.py`. Adding
 any further bundled file — a `templates/`
 directory carrying the scope-unit and finding payload shapes, for instance —
@@ -192,7 +193,8 @@ still rejecting executable audit machinery.
 The constraint now also blocks the standard remedy for the skill's size.
 `SKILL.md` stands at 499 of the 500-line ceiling `/skill-standards` sets, and
 the content that would move — the scope and finding payload contracts — has
-nowhere to go, because `references/operational-failures.md` and
+nowhere to go, because `references/failure-modes.md`,
+`references/rule-catalog.md`, `references/run-payloads.md`, and
 `references/touched-text.md` are the only reference files the inventory admits.
 The next necessary addition crosses the ceiling with no sanctioned extraction
 available, so widening the validator to a category rule is the move that unblocks

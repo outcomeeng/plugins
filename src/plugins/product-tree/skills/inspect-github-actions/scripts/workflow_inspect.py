@@ -14,6 +14,9 @@ log text inside a `log` field (not JSON-structured) and preserves whitespace
 exactly as `gh` emits it; output exceeding `--max-bytes` is truncated to the
 last N bytes with `truncated: true` in the response.
 
+Failures set `error` to `<subcommand> <argument>: <cause>. Next: <action>.` and
+exit 1. Every `gh` call goes through the module-level `_run` function.
+
 Subprocess invocations use `subprocess.run(..., capture_output=True, text=True)`
 with bounded lifetime — no streaming gh subcommands, no polling.
 """
@@ -32,20 +35,11 @@ SUBPROCESS_TIMEOUT_SECONDS = 60
 
 
 def _run(cmd: list[str]) -> tuple[int, str, str]:
-    try:
-        proc = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=SUBPROCESS_TIMEOUT_SECONDS,
-        )
-    except subprocess.TimeoutExpired as exc:
-        return 124, "", f"subprocess timed out after {exc.timeout}s: {' '.join(cmd)}"
-    return proc.returncode, proc.stdout.strip(), proc.stderr.strip()
+    """Run one `gh` command; the single seam every subcommand reaches `gh` through.
 
-
-def _run_raw(cmd: list[str]) -> tuple[int, str, str]:
-    """Like `_run` but preserves stdout whitespace verbatim (for log content)."""
+    Returns (exit code, stdout verbatim, stderr stripped). Tests replace this
+    function to supply recorded `gh` output without live credentials.
+    """
     try:
         proc = subprocess.run(
             cmd,
@@ -58,14 +52,54 @@ def _run_raw(cmd: list[str]) -> tuple[int, str, str]:
     return proc.returncode, proc.stdout, proc.stderr.strip()
 
 
-def _gh_json(args: list[str]) -> tuple[int, Any, str]:
+def _error(subcommand: str, argument: str | None, cause: str, action: str) -> str:
+    """Compose an error naming the subcommand and argument, the cause, and the next action."""
+    target = subcommand if argument is None else f"{subcommand} {argument}"
+    return f"{target}: {cause}. Next: {action}."
+
+
+def _gh_failure(
+    subcommand: str, argument: str | None, gh_name: str, code: int, detail: str
+) -> str:
+    if code == 124:
+        action = "retry once; if it times out again, narrow the request or check network access"
+    else:
+        action = (
+            "run python3 gh_access.py to check gh authentication and repository "
+            "access, then retry"
+        )
+    cause = f"gh {gh_name} exited {code}: {detail or 'no output'}"
+    return _error(subcommand, argument, cause, action)
+
+
+def _validate_id(subcommand: str, label: str, value: str, source: str) -> str | None:
+    if value.isascii() and value.isdigit() and int(value) > 0:
+        return None
+    return _error(
+        subcommand,
+        value,
+        f"{label} must be a positive integer, got '{value}'",
+        f"pass the number from {source}",
+    )
+
+
+def _gh_json(
+    subcommand: str, argument: str | None, gh_name: str, args: list[str]
+) -> tuple[Any, str | None]:
     code, out, err = _run(args)
     if code != 0:
-        return code, None, err or out
+        return None, _gh_failure(
+            subcommand, argument, gh_name, code, err or out.strip()
+        )
     try:
-        return code, json.loads(out), ""
+        return json.loads(out), None
     except json.JSONDecodeError as exc:
-        return 1, None, f"could not parse gh JSON output: {exc}"
+        return None, _error(
+            subcommand,
+            argument,
+            f"gh {gh_name} returned output that is not JSON ({exc})",
+            "run python3 gh_access.py to check the gh version and authentication, then retry",
+        )
 
 
 def cmd_runs(branch: str | None, limit: int) -> dict[str, Any]:
@@ -80,9 +114,25 @@ def cmd_runs(branch: str | None, limit: int) -> dict[str, Any]:
     ]
     if branch:
         args.extend(["--branch", branch])
-    code, data, err = _gh_json(args)
-    if code != 0 or data is None:
-        return {"schema_version": SCHEMA_VERSION, "runs": [], "error": err}
+    if limit < 1:
+        return {
+            "schema_version": SCHEMA_VERSION,
+            "runs": [],
+            "error": _error(
+                "runs",
+                f"--limit {limit}",
+                "limit must be at least 1",
+                "pass --limit with a positive integer",
+            ),
+        }
+    data, err = _gh_json("runs", None, "run list", args)
+    if err is not None or not isinstance(data, list):
+        return {
+            "schema_version": SCHEMA_VERSION,
+            "runs": [],
+            "error": err
+            or _error("runs", None, "gh run list returned no list", "retry"),
+        }
     return {"schema_version": SCHEMA_VERSION, "runs": data, "error": None}
 
 
@@ -90,11 +140,22 @@ def cmd_run(run_id: str) -> dict[str, Any]:
     fields = (
         "databaseId,status,conclusion,workflowName,headBranch,headSha,createdAt,jobs"
     )
-    code, data, err = _gh_json(["gh", "run", "view", run_id, "--json", fields])
-    if code != 0 or not isinstance(data, dict):
+    invalid = _validate_id("run", "run id", run_id, "`workflow_inspect.py runs`")
+    if invalid:
+        return {"schema_version": SCHEMA_VERSION, "error": invalid}
+    data, err = _gh_json(
+        "run", run_id, "run view", ["gh", "run", "view", run_id, "--json", fields]
+    )
+    if err is not None or not isinstance(data, dict):
         return {
             "schema_version": SCHEMA_VERSION,
-            "error": err or "gh run view returned no run object",
+            "error": err
+            or _error(
+                "run",
+                run_id,
+                "gh run view returned no run object",
+                "confirm the run id with `workflow_inspect.py runs`",
+            ),
         }
     jobs = data.get("jobs") or []
     return {
@@ -120,9 +181,24 @@ def cmd_run(run_id: str) -> dict[str, Any]:
 
 
 def cmd_jobs(run_id: str) -> dict[str, Any]:
-    code, data, err = _gh_json(["gh", "run", "view", run_id, "--json", "jobs"])
-    if code != 0 or not isinstance(data, dict):
-        return {"schema_version": SCHEMA_VERSION, "jobs": [], "error": err}
+    invalid = _validate_id("jobs", "run id", run_id, "`workflow_inspect.py runs`")
+    if invalid:
+        return {"schema_version": SCHEMA_VERSION, "jobs": [], "error": invalid}
+    data, err = _gh_json(
+        "jobs", run_id, "run view", ["gh", "run", "view", run_id, "--json", "jobs"]
+    )
+    if err is not None or not isinstance(data, dict):
+        return {
+            "schema_version": SCHEMA_VERSION,
+            "jobs": [],
+            "error": err
+            or _error(
+                "jobs",
+                run_id,
+                "gh run view returned no jobs object",
+                "confirm the run id with `workflow_inspect.py runs`",
+            ),
+        }
     jobs = data.get("jobs") or []
     return {
         "schema_version": SCHEMA_VERSION,
@@ -147,17 +223,34 @@ def cmd_log(run_id: str, failed: bool, max_bytes: int) -> dict[str, Any]:
     Tail-truncated rather than head-truncated: CI failures appear at the end
     of a run, so keeping the trailing window preserves the diagnostic content.
     """
-    args = ["gh", "run", "view", run_id]
-    args.append("--log-failed" if failed else "--log")
-    code, out, err = _run_raw(args)
+    log_flag = "--log-failed" if failed else "--log"
+    failure = {
+        "schema_version": SCHEMA_VERSION,
+        "log": "",
+        "failed_only": failed,
+        "byte_count": 0,
+        "truncated": False,
+    }
+    invalid = _validate_id("log", "run id", run_id, "`workflow_inspect.py runs`")
+    if invalid:
+        return {**failure, "error": invalid}
+    if max_bytes < 1:
+        return {
+            **failure,
+            "error": _error(
+                "log",
+                f"--max-bytes {max_bytes}",
+                "max-bytes must be at least 1",
+                "pass --max-bytes with a positive integer",
+            ),
+        }
+    code, out, err = _run(["gh", "run", "view", run_id, log_flag])
     if code != 0:
         return {
-            "schema_version": SCHEMA_VERSION,
-            "log": "",
-            "failed_only": failed,
-            "byte_count": 0,
-            "truncated": False,
-            "error": err or "gh run view --log returned non-zero",
+            **failure,
+            "error": _gh_failure(
+                "log", run_id, f"run view {log_flag}", code, err or out.strip()
+            ),
         }
     raw = out.encode("utf-8")
     byte_count = len(raw)
@@ -179,7 +272,15 @@ def cmd_log(run_id: str, failed: bool, max_bytes: int) -> dict[str, Any]:
 
 
 def cmd_checks(pr_number: str) -> dict[str, Any]:
-    code, data, err = _gh_json(
+    invalid = _validate_id(
+        "checks", "pull request number", pr_number, "`gh pr list` or the PR URL"
+    )
+    if invalid:
+        return {"schema_version": SCHEMA_VERSION, "error": invalid}
+    data, err = _gh_json(
+        "checks",
+        pr_number,
+        "pr view",
         [
             "gh",
             "pr",
@@ -187,10 +288,19 @@ def cmd_checks(pr_number: str) -> dict[str, Any]:
             pr_number,
             "--json",
             "number,headRefName,statusCheckRollup",
-        ]
+        ],
     )
-    if code != 0 or not isinstance(data, dict):
-        return {"schema_version": SCHEMA_VERSION, "error": err}
+    if err is not None or not isinstance(data, dict):
+        return {
+            "schema_version": SCHEMA_VERSION,
+            "error": err
+            or _error(
+                "checks",
+                pr_number,
+                "gh pr view returned no pull request object",
+                "confirm the pull request number",
+            ),
+        }
     return {
         "schema_version": SCHEMA_VERSION,
         "number": data.get("number"),
@@ -204,17 +314,33 @@ def cmd_artifacts(run_id: str) -> dict[str, Any]:
     # archive_download_url is a presigned URL with embedded credentials; never
     # surface it through the agent. Callers that need to download an artifact
     # invoke `gh run download <run-id>` directly.
-    code, data, err = _gh_json(
+    invalid = _validate_id("artifacts", "run id", run_id, "`workflow_inspect.py runs`")
+    if invalid:
+        return {"schema_version": SCHEMA_VERSION, "artifacts": [], "error": invalid}
+    data, err = _gh_json(
+        "artifacts",
+        run_id,
+        "api",
         [
             "gh",
             "api",
             f"repos/:owner/:repo/actions/runs/{run_id}/artifacts",
             "--jq",
             "{artifacts: [.artifacts[] | {id, name, size_in_bytes, expired}]}",
-        ]
+        ],
     )
-    if code != 0 or not isinstance(data, dict):
-        return {"schema_version": SCHEMA_VERSION, "artifacts": [], "error": err}
+    if err is not None or not isinstance(data, dict):
+        return {
+            "schema_version": SCHEMA_VERSION,
+            "artifacts": [],
+            "error": err
+            or _error(
+                "artifacts",
+                run_id,
+                "gh api returned no artifacts object",
+                "confirm the run id with `workflow_inspect.py runs`",
+            ),
+        }
     return {
         "schema_version": SCHEMA_VERSION,
         "artifacts": data.get("artifacts", []),
@@ -223,17 +349,30 @@ def cmd_artifacts(run_id: str) -> dict[str, Any]:
 
 
 def cmd_workflow_files() -> dict[str, Any]:
-    code, data, err = _gh_json(
+    data, err = _gh_json(
+        "workflow-files",
+        None,
+        "workflow list",
         [
             "gh",
             "workflow",
             "list",
             "--json",
             "id,name,state,path",
-        ]
+        ],
     )
-    if code != 0 or not isinstance(data, list):
-        return {"schema_version": SCHEMA_VERSION, "workflows": [], "error": err}
+    if err is not None or not isinstance(data, list):
+        return {
+            "schema_version": SCHEMA_VERSION,
+            "workflows": [],
+            "error": err
+            or _error(
+                "workflow-files",
+                None,
+                "gh workflow list returned no list",
+                "run python3 gh_access.py to check repository access",
+            ),
+        }
     return {"schema_version": SCHEMA_VERSION, "workflows": data, "error": None}
 
 

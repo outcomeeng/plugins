@@ -10,7 +10,7 @@ allowed-tools: Read, Grep, Glob, {{! tool('use_skill') !}}, Bash(git branch --sh
 
 <objective>
 
-A verdict on one output or variant spec, including prior enabler/outcome forms — APPROVED or REJECTED, with findings on touched text naming the section or assertion, rule, and evidence for section structure, atemporal voice, or declaration form and tag fitness, and every other finding returned as `filed`.
+A verdict on one output or variant spec, including prior enabler/outcome forms, against the node-spec form — APPROVED or REJECTED, with findings on touched text naming the section or assertion, rule, and evidence for section structure, atemporal voice, or declaration form and tag fitness, and every other finding returned as `filed`.
 
 </objective>
 

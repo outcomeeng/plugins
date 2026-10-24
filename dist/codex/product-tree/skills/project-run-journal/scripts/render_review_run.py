@@ -90,8 +90,15 @@ def _render_review_run(
 
 def _run_token(value: str) -> RunToken:
     if not RUN_TOKEN.fullmatch(value):
+        offending = "".join(
+            sorted({char for char in value if not RUN_TOKEN.fullmatch(char)})
+        )
         raise ValueError(
-            "run token must contain only ASCII letters, digits, underscores, and hyphens"
+            "run token must contain only ASCII letters, digits, underscores, "
+            f"and hyphens; received {value!r} with rejected characters "
+            f"{offending!r} (an empty token is also rejected). Pass the "
+            "runToken exactly as reported by `spx journal open` or the "
+            "review result."
         )
     return RunToken(value)
 

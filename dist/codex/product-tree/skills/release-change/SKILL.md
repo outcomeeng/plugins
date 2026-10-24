@@ -42,7 +42,7 @@ Use skill `product-tree:change-standards`. Invoke it with `Lifecycle`; it loads 
 
 <result>
 
-Return the issue URL, the readback values verbatim, the pushed branch or PR with its head commit, and the Handoff's Next block line. A Change released `Available` is claimable by any agent through `claim-change`; a Change released `Submitted` waits for the Product's Maintainer to move it out of `Submitted`, and no session claims, refines, or executes it before. A rejection at `Framed` or `Sliced` is applied in the order `maturity-and-authority` states: this release comes first, the rejecting one-level Maturity lowering second, the rejecting move out of `Submitted` third, and further refinement only after a session claims the Change again; a rejection at `Proposed` leaves the Change `Submitted`.
+Return the issue URL, the readback values verbatim, the pushed branch or PR with its head commit, and the Handoff's Next block line. A Change released `Available` is claimable by any agent through `claim-change`; a Change released `Submitted` is held for the Product's Maintainer under `maturity-and-authority`, which also governs a rejection of it.
 
 </result>
 
@@ -63,7 +63,7 @@ Return the issue URL, the readback values verbatim, the pushed branch or PR with
 - The Handoff carries exactly the five continuation lines and the two context lines, refinement landed in the body before it, and it passed `write-inspection` before posting.
 - A `submit` release ran only at `Proposed`, `Framed`, or `Sliced`, posted its Handoff before writing `Submitted`, and named `confirmation: <Maturity>` as its Next block line; an `Executable` Change was refused without further mutation after the body revision, and any other token, a first token matching no reference form included, was refused before anything was read or written.
 - A blocker read that returned a page of 100 entries stopped the release before the Handoff posted and named the bound `100 blockers, one page`.
-- The released state reads back complete: Lifecycle `Available` (`Submitted` for `submit`), an empty assignee list, the exact new Handoff as the newest `Handoff:`, Product unchanged (the overlay Product, or empty for a root), and Maturity equal to the value step 2 retained.
+- The readback under `complete-readback` is taken from the store after the last write, not inferred from the writes: Product and Maturity read as they stood before the release wrote anything, and the newest `Handoff:` is the exact comment this release posted.
 - Every failed transition stopped before later mutation and reported the ordered successful writes, the failed operation, and the complete observed state.
 
 </success_criteria>

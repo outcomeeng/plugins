@@ -1,0 +1,30 @@
+{
+  "databaseId": 9001,
+  "status": "completed",
+  "conclusion": "failure",
+  "workflowName": "check",
+  "headBranch": "main",
+  "headSha": "1111111111111111111111111111111111111111",
+  "createdAt": "2026-10-01T10:00:00Z",
+  "attempt": 1,
+  "jobs": [
+    {
+      "databaseId": 7001,
+      "name": "lint",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-10-01T10:00:05Z",
+      "completedAt": "2026-10-01T10:01:00Z",
+      "steps": []
+    },
+    {
+      "databaseId": 7002,
+      "name": "test",
+      "status": "completed",
+      "conclusion": "failure",
+      "startedAt": "2026-10-01T10:00:06Z",
+      "completedAt": "2026-10-01T10:05:00Z",
+      "steps": []
+    }
+  ]
+}

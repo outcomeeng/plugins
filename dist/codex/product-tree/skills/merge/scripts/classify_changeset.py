@@ -67,7 +67,17 @@ def _load_changeset_scope() -> ModuleType:
     path = skills_dir.joinpath(*_CHANGESET_SCOPE_RELPATH)
     spec = importlib.util.spec_from_file_location("changeset_scope", path)
     if spec is None or spec.loader is None:
-        raise RuntimeError(f"Cannot load changeset_scope from {path}")
+        siblings = (
+            sorted(entry.name for entry in skills_dir.iterdir() if entry.is_dir())
+            if skills_dir.is_dir()
+            else []
+        )
+        raise ChangesetClassificationError(
+            f"cannot load changeset_scope from {path}; skills directory "
+            f"{skills_dir} holds: {', '.join(siblings) or '(nothing)'}. "
+            "Reinstall the product-tree plugin so the scope-changeset skill "
+            "sits beside the merge skill."
+        )
     module = importlib.util.module_from_spec(spec)
     sys.modules["changeset_scope"] = module
     spec.loader.exec_module(module)
@@ -88,13 +98,26 @@ def _working_tree_paths(repo: pathlib.Path) -> list[str]:
     is followed by a separate NUL field carrying the source path, which is
     consumed and discarded so only the destination path is counted once.
     """
-    result = subprocess.run(
-        ["git", "status", "--porcelain", "-z"],  # noqa: S607 — git via PATH, portable helper
-        cwd=repo,
-        capture_output=True,
-        text=True,
-        check=True,
-    )
+    command = ["git", "status", "--porcelain", "-z"]
+    try:
+        result = subprocess.run(  # noqa: S603 — fixed argument list, no shell
+            command,  # noqa: S607 — git via PATH, portable helper
+            cwd=repo,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except FileNotFoundError as exc:
+        raise ChangesetClassificationError(
+            f"cannot run `{' '.join(command)}` in {repo}: git is not on PATH. "
+            "Install git or add it to PATH, then rerun."
+        ) from exc
+    except subprocess.CalledProcessError as exc:
+        detail = (exc.stderr or "").strip() or f"exit status {exc.returncode}"
+        raise ChangesetClassificationError(
+            f"`{' '.join(command)}` failed in {repo}: {detail}. "
+            "Run the classifier from inside a git working tree."
+        ) from exc
     fields = result.stdout.split("\x00")
     paths: list[str] = []
     index = 0

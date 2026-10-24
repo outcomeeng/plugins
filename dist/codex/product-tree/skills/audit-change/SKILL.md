@@ -380,7 +380,5 @@ the runner in a uniquely named request file and read every result on stdout, and
   resolutions, store events, and run-driver identity yields the same applicability
   decisions, finding inventory, idempotency keys, severities, and terminal
   verdict.
-- The final output is `OUTSIDE_CONTRACT` for a front-matter key-set mismatch,
-  the unchanged `finish` result, or the complete blocked diagnostic.
 
 </success_criteria>

@@ -1,15 +1,14 @@
 ---
 name: project-run-journal
-user-invocable: false
 description: >-
-  Verification run-journal projection methodology loaded by audit and review
-  skills when building spx journal events, computing rollups, or rendering verdict
-  surfaces.
+  Verification run-journal protocol — streams a run through spx journal, builds
+  events, rollups, and verdict surfaces through a bundled projection, and renders
+  a sealed review run locally.
 allowed-tools: Read, Bash(spx journal:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/render_review_run.py":*), Write
 ---
 
 <objective>
-The shared run-journal projection: per-event builders, event-prefix rollup and rendering, and the local review-run inspection helper.
+The run-journal protocol: per-event builders, event-prefix rollup and rendering, and the local review-run inspection helper.
 </objective>
 
 <channel>
@@ -25,13 +24,13 @@ The `spx` CLI owns the run journal. The verification kind is the opaque `--type 
 | `spx journal render --type <t> --run <tok>`                           | return the event-prefix as a JSON array (identity projection)                                                                       |
 | `spx journal list --type <t> --sealed <sealed\|unsealed> --limit <n>` | list persisted run metadata for the type, each record carrying `runToken`, `branchSlug`, `sealed`, `terminalState`, and `startedAt` |
 
-An append event is a JSON object with non-empty `id`, `source`, `type`, and `time` strings and an integer `attempt`, plus an optional `data` object; the channel assigns `specversion`, `streamid`, `seq` (1-based, contiguous), and `runid`. `read` and `render` return the event-prefix JSON unchanged — the channel renders no verification-kind-specific surface, so the rollup and the human-readable verdict are this skill's consumer-side projection over that prefix.
+An append event is a JSON object with non-empty `id`, `source`, `type`, and `time` strings and an integer `attempt`, plus an optional `data` object; the channel assigns `specversion`, `streamid`, `seq` (1-based, contiguous), and `runid`. `read` and `render` return the event-prefix JSON unchanged — the channel renders no verification-kind-specific surface, so the rollup and the human-readable verdict are this skill's projection over that prefix.
 
 </channel>
 
 <api_surface>
 
-The projection lives in `${CLAUDE_SKILL_DIR}/scripts/journal_projection.py`, imported by sibling skills' scripts through the marketplace skill-co-located importlib convention (no path is hardcoded in agent prose). It is pure — it touches no journal backend, filesystem, or network — so it is verified at `l1` without a real journal and without mocking.
+The projection lives in `${CLAUDE_SKILL_DIR}/scripts/journal_projection.py`, imported by a script through the marketplace skill-co-located importlib convention (no path is hardcoded in agent prose). It is pure — it touches no journal backend, filesystem, or network — so it is verified at `l1` without a real journal and without mocking.
 
 | Symbol                                              | Purpose                                                                                                                                                                                  |
 | --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -40,27 +39,27 @@ The projection lives in `${CLAUDE_SKILL_DIR}/scripts/journal_projection.py`, imp
 | `finding_reported_event(finding, *, now, attempt)`  | One finding-reported event carrying a raised finding, appended the instant the finding is raised                                                                                         |
 | `run_completed_event(run, *, status, now, attempt)` | The terminal `com.outcomeeng.spx.journal.run.completed` event whose data is the core journal run-state record, appended at the end                                                       |
 | `compute_overall(events)`                           | The rollup over an event prefix: any `REJECT` finding maps to a rejected overall, else any `UNKNOWN` finding to unknown, else approved                                                   |
-| `terminal_status(outcome)`                          | Map a rollup `Outcome` to the channel's `JournalRunStatus` vocabulary — the `status` argument the consuming skill passes to `run_completed_event`                                        |
-| `journal_run_state_record(run, *, status)`          | Serialize a run's identity into the core run-state dict; `run_completed_event` wraps it, and a consumer needing the raw dict calls it directly                                           |
+| `terminal_status(outcome)`                          | Map a rollup `Outcome` to the channel's `JournalRunStatus` vocabulary — the `status` argument of `run_completed_event`                                                                   |
+| `journal_run_state_record(run, *, status)`          | Serialize a run's identity into the core run-state dict; `run_completed_event` wraps it, and the raw dict comes from calling it directly                                                 |
 | `render_surface(events)`                            | The human-readable verdict surface rendered from any event prefix — partial in-flight or sealed: heading, a progress line per scope-advanced, a finding line each, footer once completed |
 
-`render_review_run.py <run-token> [--branch-slug <slug>]` is the supported local inspection helper for sealed review runs. It calls `spx journal render --type review --run <run-token>`, resolves a not-found current-scope miss through `spx journal list --type review --sealed sealed --limit 200`, re-renders with the listed branch slug when exactly one sealed run matches the token, parses the returned event prefix, and prints the raw token, terminal status, full head/base identity, scope coverage, blocking/debt counts, and any findings through `render_surface(events)`. The explicit `--branch-slug` option remains available when the caller already has a concrete slug.
+`render_review_run.py <run-token> [--branch-slug <slug>]` is the supported local inspection helper for sealed review runs. It calls `spx journal render --type review --run <run-token>`, resolves a not-found current-scope miss through `spx journal list --type review --sealed sealed --limit 200`, re-renders with the listed branch slug when exactly one sealed run matches the token, parses the returned event prefix, and prints the raw token, terminal status, full head/base identity, scope coverage, blocking/debt counts, and any findings through `render_surface(events)`. The explicit `--branch-slug` option remains available when a concrete slug is already known.
 
 </api_surface>
 
 <workflow>
 
-To record a verification run, the consuming skill **streams** it — driving the channel (Bash) and building each event through the pure projection the moment the run reaches it, never gathering a finished result and dumping its events at the end:
+To record a verification run, **stream** it — drive the channel (Bash) and build each event through the pure projection the moment the run reaches it, never gathering a finished result and dumping its events at the end:
 
 1. Open the run with the `open` form in `<command_forms>`; capture the run token from its output.
 2. `scope_entered_event(run, now=<utc>, attempt=<n>)`, then the `append` form, at the run's start. The run identity carries scope hash, branch name, branch slug, target kind, head SHA, base ref, optional base SHA, config digest, participants, path-filter scope, timestamps, and output paths so the terminal event can fold through the core journal run-state projection.
-3. As the run advances, `scope_advanced_event(unit, …)` per unit of scope examined and `finding_reported_event(finding, …)` the instant each finding is raised, each appended through the `append` form.
+3. As the run advances, build `scope_advanced_event(unit, …)` per unit of scope examined (a partition for an audit run, a changed file for a review run) and `finding_reported_event(finding, …)` the instant each finding is raised, and append each through the `append` form.
 4. `run_completed_event(run, status=<terminal_status(compute_overall(prefix))>, …)` through the `append` form, then the `seal` form to finalize the sequence.
 5. The `read` form returns the sealed event prefix; `compute_overall` gives the verdict and `render_surface` the human-readable surface. The `render` form returns the same prefix as the identity projection.
 
-The consuming skill elaborates the generic core (scope-entered, scope-advanced, finding-reported, run-completed) with its own units — audit names per-partition units; review names changed files — but never re-implements event construction, the rollup, or the render, and never builds a finished run's events as one batch.
+Build every event through the projection's four builders (scope-entered, scope-advanced, finding-reported, run-completed); re-implement no event construction, rollup, or render, and build no finished run's events as one batch.
 
-After a `{{! subagent_name('product-tree', 'changes-reviewer') !}}` wrapper returns a raw review run token, inspect that token locally with:
+To inspect a sealed review run from its raw run token, run:
 
 ```bash
 python3 "${CLAUDE_SKILL_DIR}/scripts/render_review_run.py" <run-token>
@@ -99,13 +98,45 @@ An append event is a payload: it carries quotes, code spans, and JSON.
 
 </command_forms>
 
+<script_tests>
+
+Each bundled script was tested at `l1` against its real code, with a stub `spx` executable on `PATH` standing in for the journal CLI where the script invokes it. Both scripts are Python standard library only.
+
+`journal_projection.py`, tested with:
+
+- A run identity yields a scope-entered event carrying its target, scope hash, branch, head, and base ✓
+- A unit name yields a scope-advanced event naming that unit ✓
+- A finding yields a finding-reported event carrying it ✓
+- A run identity and terminal status yield a run-completed event whose data is the core run-state record, every field asserted ✓
+- Every builder's output is a valid append input: non-empty `id`, `source`, `type`, `time`, integer `attempt` ✓
+- `compute_overall` over finding sets with `REJECT`, `UNKNOWN`, and neither severity returns rejected, unknown, and approved ✓
+- Optional concern, action, and unit-tracked fields map into the event and the surface ✓
+- `render_surface` over a sealed prefix prints heading, progress lines, finding lines, and footer ✓
+- `render_surface` over a partial in-flight prefix omits the footer ✓
+
+`render_review_run.py`, tested with:
+
+- A sealed approved run prints a compact summary ✓
+- A sealed run with findings prints the shared projection ✓
+- A run with no review summary counts its finding events ✓
+- An explicit `--branch-slug` renders a run outside the current scope, accepting a state-store slug ✓
+- A current-scope miss resolves the branch slug through `spx journal list`, including the state-store slug form, and re-renders ✓
+- A current-scope miss with no list match, or with several matches, reports the original miss ✓
+- A direct render failure other than a miss is reported without a branch-slug retry ✓
+- A run token `../bad` → exit 1, error on stderr, `spx` never invoked ✓
+- A prefix with no terminal completion event → exit 1 naming the token ✓
+- `spx` exits nonzero → that exit code and stderr pass through ✓
+- `spx journal render` or `spx journal list` returns invalid JSON → exit 1 naming the failed command ✓
+
+</script_tests>
+
 <success_criteria>
 
 - Every journal verb a streaming run uses runs in the one form `<command_forms>` states, each as its own command, and every event travels through an event file and an input redirect.
 - A run is streamed as journal events appended as it advances and its verdict derived from the sealed event prefix, never from a separate store and never as one batch built from a finished result.
 - Each per-event builder's output conforms to the channel append-input contract; `compute_overall` follows the rollup rule; `render_surface` renders any prefix including a partial in-flight one; all are pure and `l1`-verifiable without a real journal.
 - A sealed review run token is locally inspectable through `render_review_run.py`, which reads the prefix through `spx journal render --type review --run <run-token>`, resolves current-scope misses through `spx journal list --type review --sealed sealed --limit 200`, and renders summary output from that prefix.
-- Every agentic verification surface drives the run journal through this one projection — no consumer re-implements event construction or the rollup.
+- Every event, rollup, and verdict surface of a run comes from the projection; a run builds none of them by hand.
 - `journal_projection.py` imports only the Python standard library.
 
 </success_criteria>

@@ -22,38 +22,13 @@ A verdict on whether a spec node's tests provide behavior-coupled evidence its a
 - ALWAYS construct every finding as one complete record containing `id`, `file`, `locations`, `property`, `rule`, `severity`, `message`, and `remediation_target` before adding it to a row — required fields are never deferred to verdict rendering.
 - ALWAYS reject an incomplete evidence-chain inventory before approval — an absent artifact is missing evidence, never permission to infer its contents.
 - NEVER issue a finding the evidence model does not support — drop an unbacked finding rather than reject the tests for it; NEVER reject on text the changeset leaves unchanged and does not invalidate — return that finding with severity `FILED`, and NEVER raise a recorded finding's severity or let a `FILED` finding start to reject unless the run names a changed basis. `${SKILL_DIR}/references/touched-text.md` defines touched text, the finding key, and the `FILED` form; `${SKILL_DIR}/references/rule-catalog.md` defines the rule identifiers.
+- NEVER substitute a code-quality signal for an evidence judgment — mocking patterns, skip patterns, and type annotations are linting concerns for other tools; identify declarations by reading the test file and judge ownership from the evidence role of each declaration.
 
 </constraints>
 
-<essential_principles>
-
-**PREDICATE AND OWNERSHIP SCREEN, THEN COUPLING.**
-
-Screen the full chain for verdict logic and classify each test-file binding by semantic choice before checking imports. A test that imports nothing from the codebase will pass forever regardless of what any file contains. This is a prerequisite.
-
-**COMPLETE THE EVIDENCE CHAIN.**
-
-Start from every linked test and recursively follow repository imports through test infrastructure before judging evidence. Inventory each linked test, harness, generator, fixture reference, and applicable discovery artifact with its path, role, importing artifact, and inspection status. An unresolved import, unread artifact, or unclassified role is `incomplete-evidence-chain` and rejects the audit. Approval requires a complete inventory in verdict metadata.
-
-Four properties must hold, checked in strict order: coupling (the test exercises codebase behavior, not authored prose), falsifiability (a named mutation breaks it), alignment (it exercises the asserted behavior), and coverage (the test drives execution into the assertion-relevant path). A test missing any property has zero evidentiary value regardless of code quality.
-
-**JUDGE COVERAGE BY READING.**
-
-Apply the no-deterministic-verification constraint above by establishing coverage from a source trace into the assertion-relevant code path.
-
-**NO MECHANICAL SUBSTITUTES.**
-
-Mocking patterns, skip patterns, type annotations — these are linting concerns (SemGrep, ESLint). The auditor evaluates evidence quality, not code quality signals. The declaration screen is a read step: identify declarations in the test file, then judge ownership from their evidence role.
-
-Apply the literal rule by reading the test's literals against their sources.
-
-**TEST FILES OWN PREDICATES AND NO INDEPENDENT DATA OR CONFIGURATION.**
-
-Before coupling, inspect every executed test and imported infrastructure artifact, and judge each against the predicate-seam and semantic-binding rules of `/test-evidence-standards`. The remediation target is part of the finding: source contract, spec-governed harness, spec-governed generator, inert whole-payload fixture, independent oracle, or curated eval case data when generation is wasteful and not tractable.
-
-</essential_principles>
-
 <audit_workflow>
+
+Judge in strict order: the complete evidence-chain inventory, source testability, ownership of every declaration, then the four properties coupling, falsifiability, alignment, and coverage. A test missing any of those four properties has zero evidentiary value regardless of code quality.
 
 Bind the spec-node path or evidence scope: `$ARGUMENTS` supplies it when that argument is non-empty; when it is empty, the target is the one the request text carries, and the empty substitution binds nothing. Resolve evidence paths to their governing node or lowest common ancestor before context loading; never infer a target from adjacent conversation.
 
@@ -125,31 +100,17 @@ Read each linked test file before coupling. Identify every variable, constant, l
 
 Use language syntax while reading to enumerate declarations, then classify ownership by reading the declaration and its evidence role. Do not outsource the verdict to a grep pattern or validation command.
 
-Before applying the data rows, resolve anything that looks like case data through the per-assertion-type litmus from `/test-evidence-standards`, applied below. A case that litmus assigns to the test itself is correctly owned there and is never a REJECT; demanding it move into a production module is the source laundering the standard forbids.
+Before classifying data bindings, resolve anything that looks like case data through the per-assertion-type litmus from `/test-evidence-standards`, applied below. A case that litmus assigns to the test itself is correctly owned there and is never a REJECT; demanding it move into a production module is the source laundering the standard forbids.
 
-| Binding or predicate role                                                                                                                       | Verdict                                  |
-| ----------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| Actual result, observation, resource handle, generated parameter, callback input, or imported-contract alias that introduces no choice          | ACCEPT — assertion flow                  |
-| Behavioral predicate or assertion API call in the linked test function or callback                                                              | ACCEPT — test-owned predicate            |
-| Predicate, matcher, expected-value parameter, assertion call, or verdict helper in infrastructure                                               | REJECT — assertion seam                  |
-| Runner settings, seed policy, retries, setup policy, or lifecycle policy                                                                        | REJECT — test-owned configuration        |
-| Test-invented case data, boundary bags, expected outputs, fixture contents, or generator domains the assertion type does not assign to the test | REJECT — test-owned data                 |
-| Source-owned singleton shape or vocabulary copied into the test                                                                                 | REJECT — source ownership copied to test |
+Classify each binding and predicate under `<semantic_binding_ownership>` of `/test-evidence-standards`: assertion flow and linked-test predicates are accepted; an infrastructure predicate, test-owned configuration, test-owned data, and source-owned vocabulary copied into the test are rejected.
 
 Do not treat casing or syntax as evidence. Renaming `MAPPING_RUNS` to `mappingRuns`, changing an assignment to destructuring, or receiving a value through a parameter does not change what the binding chooses.
 
-Use property `predicate-ownership` with rule `assertion-seam` and remediation target `test-file` when infrastructure owns a predicate, matcher, expected-value parameter, assertion call, or verdict helper. Use property `oracle-independence` with rule `oracle-independence` and remediation target `independent-oracle` when an expected result derives from the production table, algorithm, parser, branch logic, or other implementation path that produces the actual result. Use property `source-ownership` with rule `source-ownership` when the test copies a source-owned singleton shape or vocabulary. Use property `declarations` for the remaining two REJECT rows, with rule `test-owned-configuration` for a binding that chooses runner settings, seed policy, or setup or lifecycle policy, and rule `test-owned-data` for a binding that chooses boundary bags, expected outputs, fixture contents, generator domains, or case data the assertion type does not assign to the test.
+Use property `predicate-ownership` with rule `assertion-seam` and remediation target `test-file` when infrastructure owns a predicate, matcher, expected-value parameter, assertion call, or verdict helper. Use property `oracle-independence` with rule `oracle-independence` and remediation target `independent-oracle` when an expected result derives from the production table, algorithm, parser, branch logic, or other implementation path that produces the actual result. Use property `source-ownership` with rule `source-ownership` when the test copies a source-owned singleton shape or vocabulary. Use property `declarations` for the remaining two rejections, with rule `test-owned-configuration` for a binding that chooses runner settings, seed policy, or setup or lifecycle policy, and rule `test-owned-data` for a binding that chooses boundary bags, expected outputs, fixture contents, generator domains, or case data the assertion type does not assign to the test.
 
 For property-based tests, verify seed and replay behavior by reading the imported harness or property wrapper. If a property test has no harness-owned seed policy and no failure output that includes the seed or replay path, REJECT with rule `test-owned-configuration` or `missing-property-seed-reporting`.
 
-Apply category-specific ownership checks to every imported test-infrastructure artifact:
-
-| Artifact role | Allowed ownership                                                                      | REJECT with `source-ownership`                                                                              |
-| ------------- | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Harness       | Setup, teardown, cleanup, resource policy, access to real behavior, replay diagnostics | Protocol keys, command tokens, status values, expected outputs, arbitrary request payloads, or domain truth |
-| Generator     | Variable domains with meaningful variation and shrinking                               | Copied protocol vocabulary, constant-only domains, or hand-picked expected outputs                          |
-| Fixture       | Inert whole payload consumed by path or bytes                                          | Isolated tokens, values, expected outputs, or executable exports                                            |
-| Discovery     | Test collection and registration policy                                                | Fixture bodies, domain values, generated cases, or hidden setup policy                                      |
+Apply `<artifact_ownership>` of `/test-evidence-standards` to every imported harness, generator, fixture, and discovery artifact; an artifact that owns anything those rules assign elsewhere is REJECT with `source-ownership`.
 
 Judge a source symbol the test cites by declared-contract ownership: does production consume it, emit it, publish it as API, register it, or serialize it against a declared schema? An absent in-repository caller opens that question rather than settling it, so inspect the declared surfaces the checkout carries — packaging entry points and export declarations, plugin and protocol implementations, registry and reflective lookups, generated use, and declared schemas — before reporting the symbol as laundered. Name the surfaces inspected in the finding. Report the finding when none of them requires the symbol: a consumer outside the checkout is not evidence this audit can gather, so its bare possibility never withholds a finding the declared surfaces support.
 
@@ -215,17 +176,7 @@ vi.mock("../src/database", () => ({ query: vi.fn() }));
 
 **Import + mock = REJECT with rule `severed-coupling`.**
 
-**Exception**: Test doubles used under these seven legitimate exception cases from the `/test` methodology are not `severed-coupling`. Identify the matching exception and verify the double type:
-
-| Exception             | Double type           |
-| --------------------- | --------------------- |
-| Failure simulation    | Stub returning errors |
-| Interaction protocols | Spy recording calls   |
-| Time and concurrency  | Fake clock            |
-| Safety                | Stub that records     |
-| Combinatorial cost    | Configurable fake     |
-| Observability         | Spy recording details |
-| Contract probes       | Contract stub         |
+**Exception**: a test double used under the controlled-implementation relief of `/test-evidence-standards`, one of the seven named exception cases of the `/test` methodology, is not `severed-coupling`. Identify the matching exception and verify the double is the type that case names.
 
 </step>
 
@@ -251,15 +202,7 @@ or copy a literal from that prose as an independent oracle; authored prose is
 verified through spec audit and review, and duplicated literals violate source
 ownership.
 
-Check assertion-type-to-strategy alignment:
-
-| Assertion type | Required test strategy                            | REJECT if                 |
-| -------------- | ------------------------------------------------- | ------------------------- |
-| Scenario       | Example-based with Given/When/Then inputs         | Missing concrete scenario |
-| Mapping        | Parameterized over input set                      | Only one example tested   |
-| Property       | Property-based framework (fast-check, Hypothesis) | Only example-based        |
-| Conformance    | Tool or schema validation                         | Manual check              |
-| Compliance     | Rule exercised against violating cases            | Only conforming cases     |
+Judge the test strategy against `<type_level_permissions>` and `<assertion_type_litmus>` of `/test-evidence-standards` for the assertion type; a strategy those rules do not permit for that type is REJECT with rule `misaligned`.
 
 </step>
 
@@ -320,7 +263,7 @@ Gate 2 is a composed-language concern. It applies when at least one language-spe
 
 **Step 4: Issue verdict**
 
-Scan all findings across all assertions, including any folded in from the composed language audit, and classify each as `${SKILL_DIR}/references/touched-text.md` states: a finding on touched text keeps severity `REJECT`, and every other finding becomes `FILED`. If any assertion has a property failure on touched text: **REJECTED.**
+Scan all findings across all assertions, including any folded in from the composed language audit; any REJECT finding makes the verdict **REJECTED**.
 
 Before row rollup, inspect every finding as a complete record. Require every finding field from `<verdict_format>`, including `remediation_target`, and derive that target from the semantic owner named by the evidence model. Complete a missing field before adding the finding to a row; never emit a partial finding and rely on its message to imply the omitted field.
 

@@ -11,8 +11,6 @@ argument-hint: <file-path-or-requirement>
 <objective>
 A decision-ready requirements packet: resolved choices, remaining open decisions, coverage state, and artifact constraints.
 
-The input is a file path, a requirement, or a decision or problem framing. It may also carry coverage areas and domain context, which the interview uses in place of the generic defaults.
-
 </objective>
 
 <essential_principles>
@@ -48,7 +46,7 @@ When a question is warranted, its options obey:
 **Questioning Protocol**
 
 - **One question at a time** — never batch. Go deep before moving on.
-- **Inside an active interview, use {{! tool('ask_user') !}}** — structured choices (2-4 options per question), never open-ended. A workflow's use of {{! tool('ask_user') !}} for an operational choice does not by itself make the prompt an interview.
+- **Inside an active interview, use {{! tool('ask_user') !}}** — structured choices (2-4 options per question), never open-ended.
 - **No obvious questions** — never ask what can be inferred from input or codebase analysis
 - **Options must require judgment** — no "yes/no", no obviously-correct choices
 - **Describe trade-offs** — each option's description explains consequences, not just what it is
@@ -167,11 +165,15 @@ How to avoid: "We'll figure it out later" is pushback bait. Ask a concrete follo
 
 After 30+ turns, Claude loses track of which areas are [done] vs [pending]. Coverage map stops being displayed. Questions start repeating or missing obvious areas. Context compression eats the early interview.
 
+Why it failed: the coverage map lived only in earlier turns, and once Claude stopped restating it, compression removed the only record of which areas were done.
+
 How to avoid: Display the coverage map before EVERY question, not just the first one. The display is a forcing function — writing it out pulls the state back into active context. A turn that skips the display is the signal to stop and re-read the previous turns.
 
 **Failure 4: Generated spec doesn't trace back to interview**
 
-Spec is written from Claude's synthesis, not from the recorded Q&A. Assertions appear that were never discussed. The decisions log is empty or missing. User reviews the spec and asks "where did this come from?" — agent can't answer.
+Spec is written from Claude's synthesis, not from the recorded Q&A. Assertions appear that were never discussed. The decisions log is empty or missing. User reviews the spec and asks "where did this come from?" — Claude can't answer.
+
+Why it failed: Claude wrote the spec from its own synthesis rather than from the recorded Q&A, so no assertion carried a link back to an answer.
 
 How to avoid: Every section of the generated spec must trace to a specific coverage area explored in the interview. Every assertion must map to something the user said. The decisions log is NOT optional — if there was any pushback, disagreement, or trade-off, it belongs in the log with the user's final answer.
 
@@ -196,14 +198,6 @@ Claude offered "use the existing validation harness" against "hand-roll a bespok
 Why it failed: Claude shaped the question to look neutral instead of reasoning to the option the evidence favored.
 
 How to avoid: every option is a materially distinct end-state a reasonable operator might actually choose. If only one option survives scrutiny, there is no question — decide and proceed. When a question is real, state the recommended option first and label it recommended; do not manufacture a counterweight to look balanced.
-
-**Failure 8: Treating every structured workflow prompt as an interview**
-
-Claude saw a workflow use {{! tool('ask_user') !}} for an operational choice and invoked this skill, turning a local workflow decision into requirements gathering.
-
-Why it failed: this skill governs requirements, scope, design, and draft-approval questions for artifacts. Structured tool choice alone is not a routing trigger.
-
-How to avoid: Load this skill only when the unresolved decision concerns artifact requirements, scope, design, or draft approval. For mechanical workflow choices, follow the governing workflow and use {{! tool('ask_user') !}} directly when that workflow requires it.
 
 </failure_modes>
 

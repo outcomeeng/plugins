@@ -11,7 +11,7 @@ allowed-tools: Read, Grep, Glob, Bash(spx verification run:*), Write, Bash(git m
 
 <objective>
 
-A sealed `spx verification run` on one node spec, with one root scope unit for the spec (none when the spec has no `[audit]` assertion) and one child scope unit per `[audit]` assertion identified by its rule slug (a pathless `[audit]` assertion by its ordinal in the spec), every finding on touched text recorded on its child unit, returned as the run token, the run file, and the rendered projection, whose `terminalStatus` is `approved` or `rejected`, followed by each other finding as a `filed` line; or the complete `BLOCKED` diagnostic when the run cannot finish.
+A sealed `spx verification run` on one node spec, with one root scope unit for the spec (none when the spec has no `[audit]` assertion) and one child scope unit per `[audit]` assertion identified by its rule slug (a pathless `[audit]` assertion by its ordinal in the spec), whose verdict judges each assertion against the subject its text names and records every finding on touched text on its child unit under the category `constraint-unmet`, `subject-not-found`, or `subject-unnamed`, returned as the run token, the run file, and the rendered projection, whose `terminalStatus` is `approved` or `rejected`, followed by each other finding as a `filed` line; or the complete `BLOCKED` diagnostic when the run cannot finish.
 
 </objective>
 

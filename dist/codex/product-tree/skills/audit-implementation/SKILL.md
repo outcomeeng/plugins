@@ -102,7 +102,7 @@ the complete modified and untracked file set. Preserve the selector verbatim.
 Never infer advisory intent from a dirty checkout.
 
 Run-driver identity uses the six published producer fields (the
-`expectedProducer` shape in `<verification_run_contract>`) in the invocation
+`expectedProducer` shape in `${SKILL_DIR}/references/run-payloads.md`) in the invocation
 context, separate from `$ARGUMENTS`. Accept that identity generically; never
 infer it from a role name, installed plugin, or descriptive text.
 
@@ -205,143 +205,17 @@ Parallel concern analysis emits no SPX commands; queue each concern's completed
 results and persist them one at a time. Render only after `finish` exits
 successfully.
 
-Every scope payload uses the published SPX field names below. Emit one scope
-unit per subject path and concern partition; `subject` and
-`priorContext.changedFilePartition` are strings, never path arrays. Emit only
-the fields shown. The `producerProvenance` object is optional for a scope unit
-and is omitted for `coverage-gap`; when present, both plugin-version fields are
-required.
+Read `${SKILL_DIR}/references/run-payloads.md` before writing the first scope or finding payload: it carries the scope, accounting-record, and finding payload JSON, the idempotency key forms, and the payload-file rules. Those rules bind every command that follows:
 
-```json
-{
-  "unitId": "<stable-scope-key>",
-  "auditClass": "implementation",
-  "auditKind": "<code|tests|architecture|coverage-gap>",
-  "subject": "<the exact resolved path>",
-  "coverageRequirement": "<required|optional>",
-  "coverageStatus": "<audited|not-applicable|missing-skill|unsupported>",
-  "priorContext": {
-    "changedFilePartition": "<the exact resolved path>",
-    "languagePartition": "<selected-kind-when-known>",
-    "concernPartition": "<code|tests|architecture|coverage-gap>"
-  },
-  "expectedProducer": {
-    "producerKind": "skill",
-    "agentName": "<run-driver-agent-name>",
-    "agentOwningPluginName": "<run-driver-agent-owning-plugin-name>",
-    "skillName": "<selected-audit-skill>",
-    "skillOwningPluginName": "<selected-audit-skill-plugin>",
-    "invocationRole": "leaf-skill"
-  },
-  "recordedByRunDriver": "<the six producer fields of the run-driver identity>",
-  "producerProvenance": {
-    "agentOwningPluginVersion": "<product-tree-plugin-version>",
-    "skillOwningPluginVersion": "<selected-audit-skill-plugin-version>",
-    "toolVersion": "<spx-version-when-known>"
-  }
-}
-```
-
-The `coverageStatus` values above are the required-unit set. An optional unit
-may additionally carry `skipped`; no unit carries `incomplete`. The accounting
-record for a resolved path no concern claimed is this complete payload — every
-field shown is required, and `producerProvenance` is omitted:
-
-```json
-{
-  "unitId": "implementation:unknown:coverage-gap:<the exact resolved path>",
-  "auditClass": "implementation",
-  "auditKind": "coverage-gap",
-  "subject": "<the exact resolved path>",
-  "coverageRequirement": "optional",
-  "coverageStatus": "skipped",
-  "priorContext": { "changedFilePartition": "<the exact resolved path>", "concernPartition": "coverage-gap" },
-  "expectedProducer": "<the six producer fields of the run-driver identity>",
-  "recordedByRunDriver": "<the six producer fields of the run-driver identity>"
-}
-```
-
-When the selection names an artifact-type audit skill for the path, its
-accounting record names it: `unitId` carries the selection's kind in place of
-`unknown`, and `expectedProducer` is the producer shape of a concern unit with
-that `skillName`, that `skillOwningPluginName`, and `invocationRole`
-`leaf-skill`; each selected artifact-type skill gets its own record.
-
-`languagePartition` is the only optional prior-context field. Omit it when the
-kind is unknown; never replace `priorContext` with top-level partition
-fields. Use `coverage-gap` with `producerProvenance` omitted, because no leaf
-skill executed, for a missing producer, an unsupported subject, and the
-accounting record `<coverage_model>` requires for an unclaimed resolved path.
-
-Every finding payload uses the exact published SPX field names below. Its
-`unitId` references a scope unit already accepted by the run, its
-`producerIdentity` matches that unit's `expectedProducer`, and observed versus
-expected text lives under `evidence`.
-
-```json
-{
-  "unitId": "<accepted-scope-unit-id>",
-  "producerIdentity": "<the unit's expectedProducer object, repeated exactly>",
-  "producerProvenance": "<the unit's producerProvenance object, repeated exactly>",
-  "rule": "<rule-identifier-from-a-catalog>",
-  "severity": "<blocking|debt>",
-  "location": "<path-and-line-or-subject-location>",
-  "message": "<finding-message>",
-  "evidence": {
-    "observed": "<observed-state>",
-    "expected": "<required-state>"
-  }
-}
-```
-
-The idempotency key is a command argument, never a payload field. A scope
-unit's key is the value its payload carries in `unitId`: audit class, kind
-partition, concern partition, and subject path joined with `:` —
-`implementation:<kind>:<concern>:<subject-path>`. A finding's key extends its
-unit's key with the violated rule — `<stable-scope-key>:<rule>`.
-
-Keep the rule segment colon-free. SPX never parses the key back into segments,
-so a `:` inside a subject path is not a separator; a colon-free rule makes the
-last `:` the boundary between subject path and rule, and a colon inside the rule
-collides two distinct findings on one key.
-
-The key always carries a kind segment, even though
-`priorContext.languagePartition` may be omitted. Render an unknown kind as
-the literal `unknown`; the key substitutes no default for a segment left out.
-
-Pass every key as one single-quoted argument, `--idempotency-key
-'<stable-scope-key>'` — a subject path can carry `|`, `&`, `;`, `(`, `)`, `<`,
-`>`, `*`, `?`, or whitespace, and unquoted it splits the command so the shell
-runs a fragment as a program. Encode a literal apostrophe with the single-quote
-splice `'"'"'`.
-
-Never emit the retired aliases `id`, `subjectPaths`, `expectedProducerIdentity`,
-`executionProducerIdentity`, `stableProducerIdentity`, top-level `observed`,
-or top-level `expected`; SPX rejects or discards those shapes at the
-verification-type boundary.
-
-Write each rendered scope object to its own payload file and pass the file by
-path:
+- Write each scope and finding payload with the file-write tool to its own file in the session scratch directory, and pass `--payload` the path exactly as the file-write result reports it, never retyped.
+- Add each scope unit and each finding with its own literal command, one at a time, and stop at the first nonzero exit with the `<verdict_format>` blocked diagnostic; the one exception is a single rerun of a scope-add or finding-add whose diagnostic names its payload file as absent.
+- Pass every idempotency key as one single-quoted argument.
+- Send no payload through a heredoc, a pipe, or an inline argument, and remove no payload file.
 
 ```bash
 spx verification run scope add --verification-type audit --scope-type changeset --scope '<base>..<head>' --run '<token>' --idempotency-key '<stable-scope-key>' --payload '<scope-file>'
-```
-
-Write each rendered finding object to its own payload file and pass it the same
-way:
-
-```bash
 spx verification run finding add --verification-type audit --scope-type changeset --scope '<base>..<head>' --run '<token>' --idempotency-key '<stable-scope-key>:<rule>' --payload '<finding-file>'
 ```
-
-- ALWAYS copy the scratch directory the harness names for the session into each payload path character for character, and write each scope and finding payload with the file-write tool to its own file there, under a name unique to this run and payload, such as `<run-token>-scope-<n>.json` and `<run-token>-finding-<n>.json`. Where the harness names no scratch directory, use the one the hosting environment designates, such as `$RUNNER_TEMP` on a hosted runner.
-- ALWAYS stop before the command that reads a payload file when the file-write result reports a path that the scratch directory does not contain by whole path components, returning the `<verdict_format>` blocked diagnostic naming the reported path.
-- ALWAYS pass `--payload` the path exactly as the file-write tool's result reports it, copied from that result, never retyped from memory; pass `--input` the start-input path named in the resolver's `--output` argument, written out literally.
-- ALWAYS write only payload files with the file-write tool, and pass each file as the value of `--payload`, its path written out literally.
-- ALWAYS add each scope unit and each finding with its own literal command and its own payload file, one at a time, and stop the audit at the first command that exits nonzero, other than the one rerun on an absent-payload diagnostic that the next bullet allows, returning the `<verdict_format>` blocked diagnostic.
-- ALWAYS, when a scope-add or finding-add command exits nonzero with a diagnostic that names its payload file as absent, run that command once more with the `--payload` path copied from the file-write result; on a second failure, stop with the `<verdict_format>` blocked diagnostic naming the run token. A `run start` whose diagnostic names its `--input` file as absent runs no second time, because the resolver wrote that file and no file-write result names it: stop with the `<verdict_format>` blocked diagnostic.
-- NEVER send a payload through a heredoc, a pipe, or an inline argument, and never build one with an interpreter or `printf` stage — the dangerous-command guard blocks those forms.
-- NEVER remove a payload file; the harness clears its scratch directory.
 
 ```bash
 spx verification run finish \
@@ -368,7 +242,7 @@ Build the expected coverage inventory from the selection the scope resolver reco
 
 Dispatch only a skill whose `contract` is `concern`. A path whose registered artifact's audit skill carries the `artifact-type` contract, a path matching no registered artifact, and a matched path whose selected concern skill returns `NOT_APPLICABLE` stay with their artifact-type auditor and the whole-changeset review; never manufacture a kind, a missing skill, or an unsupported unit for such a path.
 
-Leaving a path to another auditor is not leaving it unaccounted for. Record every resolved path no concern claimed as the accounting record shown in `<verification_run_contract>`, with the exact resolved path as its `subject`: reconciliation matches inventory paths against recorded subjects, so a `subject` that is anything but the literal path leaves that path unaccounted forever. The record says the path was considered and left to another auditor, and names that auditor's skill as `<plugin>:<audit>` when the selection names an artifact-type audit skill for the path; it claims no coverage, creates no kind partition, and rejects no run, and it makes the run's own recorded subject set equal its sealed inventory.
+Leaving a path to another auditor is not leaving it unaccounted for. Record every resolved path no concern claimed as the accounting record shown in `${SKILL_DIR}/references/run-payloads.md`, with the exact resolved path as its `subject`: reconciliation matches inventory paths against recorded subjects, so a `subject` that is anything but the literal path leaves that path unaccounted forever. The record says the path was considered and left to another auditor, and names that auditor's skill as `<plugin>:<audit>` when the selection names an artifact-type audit skill for the path; it claims no coverage, creates no kind partition, and rejects no run, and it makes the run's own recorded subject set equal its sealed inventory.
 
 Give every selected concern skill the **complete** resolved three-dot changed-path set,
 the resolved endpoint identities, discovered governing context, and the advisory
@@ -388,7 +262,7 @@ The reconciler never counts a `missing-skill` unit as a subject outside the
 inventory; the paths themselves stay accounted by the kind's other concerns
 or by accounting records.
 
-Each expected unit carries the scope payload in `<verification_run_contract>`: one resolved path as its `subject` — inspected by a concern, or accounted for as unclaimed; a `missing-skill` unit names the absent skill as `<plugin>:<audit>` instead — with `recordedByRunDriver` present on every unit so a missing-skill, unsupported, or accounting unit still identifies its recorder, `expectedProducer` naming the concern skill expected to cover it or the run-driver identity for an accounting record, and `producerProvenance` only where a concern skill executed. A concern's completion is every expected path unit carrying `coverageStatus: audited`; its finding count is the count of accepted finding rows for those path-scoped units.
+Each expected unit carries the scope payload in `${SKILL_DIR}/references/run-payloads.md`: one resolved path as its `subject` — inspected by a concern, or accounted for as unclaimed; a `missing-skill` unit names the absent skill as `<plugin>:<audit>` instead — with `recordedByRunDriver` present on every unit so a missing-skill, unsupported, or accounting unit still identifies its recorder, `expectedProducer` naming the concern skill expected to cover it or the run-driver identity for an accounting record, and `producerProvenance` only where a concern skill executed. A concern's completion is every expected path unit carrying `coverageStatus: audited`; its finding count is the count of accepted finding rows for those path-scoped units.
 
 - Plan the complete inventory before invoking any concern skill. NEVER mark a planned unit `audited`.
 - Queue each unit only once its coverage status is settled: immediately for a classified gap or accounting record, or after its concern finishes for an executed producer.
@@ -397,7 +271,7 @@ Each expected unit carries the scope payload in `<verification_run_contract>`: o
 - After a concern returns, queue one path-scoped row per inspected path, carrying a stable path-scoped unit id, the exact path in `subject`, and `coverageStatus: audited`. NEVER record fewer rows than the concern returned paths, and NEVER collapse several inspected paths into one representative row — the recorded subject set is the evidence that the inspection happened, so a reduced set is an unverifiable claim.
 - Queue that concern's complete scope rows BEFORE any of its findings. A finding is recorded against coverage already accepted, never in place of it; recording a row only where a finding landed states the findings as the coverage.
 - Queue each returned finding on touched text after those scope rows, associated with its matching path-scoped unit. A finding outside touched text is queued nowhere: it is returned as `filed` under `<verdict_format>`.
-- Persist queued units one `spx verification run scope add` command at a time, ordered by the order each kind first appears in the selection, then concern order `code`, `tests`, `architecture`, preserving each command result before the next mutation and stopping at the first nonzero exit, other than the one rerun on an absent-payload diagnostic that `<verification_run_contract>` allows.
+- Persist queued units one `spx verification run scope add` command at a time, ordered by the order each kind first appears in the selection, then concern order `code`, `tests`, `architecture`, preserving each command result before the next mutation and stopping at the first nonzero exit, other than the one rerun on an absent-payload diagnostic that the payload rules allow.
 - Derive the concern's finding count from the accepted finding rows; NEVER emit a custom count SPX discards.
 - A concern returning no complete result for a required unit MUST name the failed operation or absent prerequisite. When it names neither, drive the concern to a final result rather than recording a non-audited status.
 - NEVER manufacture a completed result from Claude's own inspection in place of a concern result.
@@ -416,7 +290,7 @@ The composition contract is the plugin-qualified skill name the selection carrie
 
 <finding_model>
 
-Record each accepted concern finding on touched text through `spx verification run finding add`, using the finding payload shape in `<verification_run_contract>`; its `producerIdentity` matches the coverage unit's `expectedProducer`. Finding identity for convergence is content and stable producer identity, not plugin version, so a version change preserves provenance without making the same finding look new. Every `rule` is an identifier from `${SKILL_DIR}/references/rule-catalog.md` or, for a finding a composed concern skill returned, the identifier from that skill's own rule catalog; a finding naming any other identifier is withdrawn. Classify every returned finding as `${SKILL_DIR}/references/touched-text.md` states, record only a finding on touched text, and return each other finding as `filed`.
+Record each accepted concern finding on touched text through `spx verification run finding add`, using the finding payload shape in `${SKILL_DIR}/references/run-payloads.md`; its `producerIdentity` matches the coverage unit's `expectedProducer`. Finding identity for convergence is content and stable producer identity, not plugin version, so a version change preserves provenance without making the same finding look new. Every `rule` is an identifier from `${SKILL_DIR}/references/rule-catalog.md` or, for a finding a composed concern skill returned, the identifier from that skill's own rule catalog; a finding naming any other identifier is withdrawn. Classify every returned finding as `${SKILL_DIR}/references/touched-text.md` states, record only a finding on touched text, and return each other finding as `filed`.
 
 </finding_model>
 
@@ -469,7 +343,7 @@ Never return the command alone: the run token locates durable state, the payload
 source and key identify the rejected boundary, and the exit code and stderr carry
 the failure evidence — a stale-base refusal is read from its exit code and stderr.
 
-Each finding row names every field of the finding payload shape in `<verification_run_contract>`, so a reader sees the producer, unit, rule, severity, location, message, and observed-versus-expected evidence without opening the journal. After the projection, return each `filed` finding on its own line in the form `${SKILL_DIR}/references/touched-text.md` gives, or `filed: none`.
+Each finding row names every field of the finding payload shape in `${SKILL_DIR}/references/run-payloads.md`, so a reader sees the producer, unit, rule, severity, location, message, and observed-versus-expected evidence without opening the journal. After the projection, return each `filed` finding on its own line in the form `${SKILL_DIR}/references/touched-text.md` gives, or `filed: none`.
 
 The rendered SPX projection is the inspection surface. Do not hand-format a competing verdict when `spx verification run render` succeeds.
 
@@ -477,7 +351,7 @@ The rendered SPX projection is the inspection surface. Do not hand-format a comp
 
 <failure_modes>
 
-A failed preparation, concern invocation, payload submission, or projection matches one failure below. Preserve the exact diagnostic and apply the no-retry rule, since these records authorize no replacement invocation; the one rerun of a scope-add or finding-add command whose diagnostic names its payload file as absent, under `<verification_run_contract>`, is the only retry.
+A failed preparation, concern invocation, payload submission, or projection matches one failure below or one in `${SKILL_DIR}/references/failure-modes.md`; read that file when a diagnostic matches none below, and before the first payload write. Preserve the exact diagnostic and apply the no-retry rule, since these records authorize no replacement invocation; the one rerun of a scope-add or finding-add command whose diagnostic names its payload file as absent is the only retry.
 
 **Failure 1: The request was empty or malformed**
 
@@ -497,22 +371,6 @@ Why it failed: The coverage inventory belongs before concern dispatch, so a late
 
 How to avoid: Validate and record every selected concern skill against the installed inventory before invoking any concern skill. Record an absent selected skill as `missing-skill` naming `<plugin>:<audit>`, then finish and render the rejected run.
 
-**Failure 3: Every changed file extension became a required partition**
-
-What happened: Claude treated documentation and manifest suffixes as programming languages, required concern skills that do not exist, rejected the run before dispatch, and skipped a selected concern skill.
-
-Why it failed: Implementation-audit ownership comes from the registry selection the scope resolver recorded for each path, not from the set of suffixes present in a changeset. Artifact-type auditors and whole-changeset review own paths whose registered audit skill follows another contract and paths no registered artifact matches.
-
-How to avoid: Read the selection from the run's sealed start input, validate each selected concern skill before dispatch, then let each concern skill claim applicable paths or return `NOT_APPLICABLE`; record every other path as an accounting unit, naming `<plugin>:<audit>` when the selection carries an artifact-type skill for it.
-
-**Failure 4: A finding was reported only in prose**
-
-What happened: Claude named a concern finding in text without recording it through `spx verification run finding add`.
-
-Why it failed: Prose findings are not durable evidence and cannot appear in the rendered SPX projection.
-
-How to avoid: Record every finding through `spx verification run finding add`; use the rendered projection as the inspection surface.
-
 **Failure 5: Coverage labels replaced concern execution**
 
 What happened: Claude inspected changed files before opening the verification run, then emitted three scope rows labeled `audited` with generic partition subjects and no observable concern-skill results.
@@ -520,60 +378,6 @@ What happened: Claude inspected changed files before opening the verification ru
 Why it failed: An `audited` label asserted completion without naming the inspected paths or preserving the concern invocation that produced the judgment. The sealed projection could not distinguish a completed concern audit from orchestration self-certification.
 
 How to avoid: Start the run before project inspection and invoke each concern skill while the run is open. After a concern returns, record one accepted scope row per inspected path using the exact path in `subject` and `priorContext.changedFilePartition`, then record every finding with the accepted path-scoped `unitId`. Assign `coverageStatus: audited` only to those completed path-scoped rows; never emit custom concern-result fields.
-
-**Failure 6: Scope events were persisted concurrently**
-
-What happened: Claude launched multiple `spx verification run scope add` commands at the same time. The sealed render carried duplicate sequence numbers and skipped the intervening sequence even though the terminal status was approved.
-
-Why it failed: Concurrent mutations raced the journal's sequence assignment, so the rendered event prefix violated the strictly increasing, contiguous sequence contract.
-
-How to avoid: Execute every state-changing `spx verification run` command serially and wait for its exit before issuing the next mutation for that run.
-
-**Failure 7: An implementation code scope used semantic aliases instead of SPX fields**
-
-What happened: Claude submitted `id`, `subjectPaths`,
-`expectedProducerIdentity`, and `executionProducerIdentity` for a code unit.
-`spx verification run scope add` exited `1` with
-`spx verification run scope add payload failed verification-type validation`,
-then Claude returned only the command and dropped the run token, exit code, and
-stderr.
-
-Why it failed: The published scope contract requires `unitId`, one string
-`subject`, nested `priorContext`, `expectedProducer`, and
-`recordedByRunDriver`. A command-only fallback also discarded the
-evidence needed to reproduce the rejected payload boundary.
-
-How to avoid: Construct scope and finding payloads from the exact JSON contracts
-in `<verification_run_contract>` and relay the complete blocked diagnostic from
-`<verdict_format>` without reformatting or omission.
-
-**Failure 8: An unquoted idempotency key split the command**
-
-What happened: Claude passed
-`--idempotency-key implementation:<kind>:tests:reports/audit report` without
-quotes. The shell split the key at the space, so `spx` received a truncated key
-and a stray argument.
-
-Why it failed: An unquoted argument reaches the shell before `spx` sees it, so
-any shell metacharacter the key carries — including one inside the subject path
-of an otherwise correctly formatted key — becomes syntax rather than key text.
-A subject path carrying `|` yields a different symptom: the shell runs the
-fragment after it as a command, reporting `command not found` when the fragment
-carries no slash and the `PATH` lookup fails, `No such file or directory` when a
-slash-bearing fragment names nothing, and `Permission denied` when it names an
-existing non-executable file. Each symptom names a path fragment, which reads as
-a file problem rather than the quoting defect it is.
-
-How to avoid: Pass every key as one single-quoted argument,
-`--idempotency-key '<stable-scope-key>'`, per `<verification_run_contract>`.
-
-**Failure 9: Deterministic verification ran inside the audit**
-
-What happened: Claude ran validation, tests, or evals during implementation-audit orchestration.
-
-Why it failed: This orchestration composes agentic concern audits only; running deterministic verification changes the audit boundary.
-
-How to avoid: Stop and return the boundary failure with the deterministic command that was attempted.
 
 **Failure 10: A run sealed with required coverage uncovered and no blocker**
 
@@ -593,69 +397,6 @@ How to avoid: A required unit reaches only `audited`, `not-applicable`,
 `<verdict_format>` blocked diagnostic naming the concrete failed operation or
 absent prerequisite. Remaining work, elapsed time, context pressure, and
 unfinished reading are never that cause.
-
-**Failure 11: A truncated bulk read became missing coverage**
-
-What happened: Claude read many source files in one call, the output truncated,
-and no later read recovered the omitted content. The units covering those paths
-never reached a final status.
-
-Why it failed: A read boundary was converted into a coverage conclusion. The
-files were present and readable; only the single oversized call failed.
-
-How to avoid: Read subject bodies one at a time, and re-issue a truncated or
-partial read in bounded ranges until the body is complete. An unrecovered read
-is never coverage evidence.
-
-**Failure 12: One commit's patch stood in for the changeset**
-
-What happened: Claude inspected the latest commit's patch instead of the
-resolved `base..head` range, so the subject was a fraction of the changeset the
-run had already scoped.
-
-Why it failed: The run's scope identity and the inspected content disagreed. The
-projection reported coverage over a scope Claude never read.
-
-How to avoid: Derive every subject body from the resolved `base` and `head`
-retained at stage 1 of `<execution_sequence>`. Read a committed body with
-`git show '{head}:{path}'`, never from a single commit's patch.
-
-**Failure 13: A finding was raised before its governing standards were read**
-
-What happened: Claude rejected a generated-value binding as invalid test
-evidence before reading the applicable test standards and the audited
-repository's `spx/local/` overlay. Both permit the pattern, and the overlay
-documents the exact form observed. Claude withdrew the finding after reading
-them.
-
-Why it failed: The judgment ran against remembered rules rather than the
-repository's declared ones. A finding raised that way costs the audited work a
-repair round for a defect that does not exist.
-
-How to avoid: Load each concern's governing standards and the audited
-repository's declared `spx/local/` overlays at stage 3 of
-`<execution_sequence>`, before any concern judgment. Withdraw a finding raised
-before that load rather than recording it.
-
-**Failure 14: The resolved path inventory was corrupted by being retyped**
-
-What happened: The resolver returned 48 changed paths for the audited head.
-Claude read them out of the resolver's output and retyped them into the
-`run start --input` payload, which reached the run carrying 47: two paths were
-dropped and a third was replaced by a same-named file from a different
-directory. Nothing later in the run referred to the resolver's output again, so
-the substitution was invisible until the run was compared against a fresh
-resolver invocation after it had sealed.
-
-Why it failed: A changed-path set is longer than a response reproduces
-reliably, and the paths in one repository differ by a single directory segment.
-Retyping such a list is a transcription task, and the contract gave the
-transcription no later referent that could contradict it.
-
-How to avoid: Have the resolver write its output to a file and pass that file by
-path to `run start --input`, with `--audit-input` carrying only the short
-invocation-supplied values, per `<verification_run_contract>`. Never read `changed_paths` out of the resolver's
-output and re-emit them into a payload.
 
 **Failure 15: A narrowed plan reconciled with itself and sealed an approved run**
 
@@ -704,52 +445,6 @@ one. Treat `rejected` as a verdict about what was inspected, never as permission
 to stop: the remaining concerns and every unclaimed resolved path are recorded
 before `finish`. Then run the stage 7 reconciler, which fails on exactly this
 shape by naming the paths the run left unaccounted.
-
-**Failure 17: Kinds were discovered by invoking skills that did not exist**
-
-What happened: A run on a TypeScript changeset loaded the complete TypeScript concern skills, then invoked `python:audit-python-code` and `rust:audit-rust-code` "to probe whether the python and rust concern skills are loadable", received `Unknown skill` for both, and read the two errors as evidence that no other language was installed.
-
-Why it failed: The run selected skills by trial invocation instead of reading the registry selection. A failed invocation is one step from a manufactured `missing-skill` unit: a run that records those errors as coverage seals `rejected` for two kinds the changeset never touched, and the kind set the run records becomes the driver's guess rather than the registry's selection.
-
-How to avoid: Select skills only from `artifact_selection` in the run's sealed start input. Read the installed skill inventory this context already carries to decide whether a selected skill runs or is recorded as `missing-skill`. Invoke a concern skill only as dispatch to a selected artifact.
-
-**Failure 18: A preloaded skill's empty argument was read as the target**
-
-What happened: A request carried `HEAD` as its text while the harness had
-preloaded this skill with `$ARGUMENTS` substituted empty. The run bound the
-empty substitution, returned `BLOCKED` with `runToken: not-started` naming an
-absent selector, and never read the request text that carried it. Three runs
-on the identical input shape bound the request text and proceeded; nothing in
-the contract said which source was the selector.
-
-Why it failed: The request contract named `$ARGUMENTS` as the only selector
-source. A harness that preloads the skill renders that argument before any
-request exists, so it is empty there, and a driver that takes it literally
-reports its own launch mechanics as a request error.
-
-How to avoid: Bind the selector from `$ARGUMENTS` when it is non-empty and
-from the request text when it is empty; an empty substitution binds nothing,
-and only a request with no selector is the missing-input case.
-
-**Failure 19: A retyped payload path voided the run**
-
-What happened: Claude wrote a scope payload with the file-write tool, then typed
-the path into `scope add --payload` from memory. The typed scratch directory
-differed from the reported one by a character, the command exited nonzero
-naming the payload file as absent, and the run sealed no verdict.
-
-Why it failed: A scratch directory name is long and differs from its neighbours
-by a few characters, so retyping it is a transcription task with no later
-referent to contradict it. The failure surfaced only at the command.
-
-How to avoid: Copy the scratch directory the harness names into each payload
-path character for character, and pass each scope-add and finding-add command
-the path exactly as the file-write result reports it. Stop before the command
-when the reported path lies outside that directory by whole path components,
-naming the reported path. Rerun a scope-add or finding-add command once, with
-the path copied from the file-write result, when its diagnostic names the
-payload file as absent; on a second failure return the blocked diagnostic
-naming the run token.
 
 </failure_modes>
 

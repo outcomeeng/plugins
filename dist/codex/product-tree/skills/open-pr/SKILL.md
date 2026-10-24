@@ -15,7 +15,7 @@ After loading this skill, check whether `spx/local/open-pr.md` exists at the rep
 
 The overlay MUST NOT: skip or weaken the local deterministic-verification, evidence-auditor, or local-review predicates of `VERIFICATION_READINESS`, open the PR before `VERIFICATION_READINESS` holds, open the PR as a draft gating step, or weaken the upstream-safety check.
 
-Production-relevance recognition, merge command, and local deterministic verification scope live in `spx/local/merging.md`, so /manage-pr and /open-pr see the same rules. The local deterministic-verification commands come from the project's own `AGENTS.md` convention, with the overlay allowed to centralize scope and escalation cases.
+Production-relevance recognition, merge command, and local deterministic verification scope live in `spx/local/merging.md`, shared with /manage-pr. The local deterministic-verification commands come from the project's own `AGENTS.md` convention, with the overlay allowed to centralize scope and escalation cases.
 </project_specialization>
 
 <the_opening_flow>
@@ -97,14 +97,13 @@ Resolve `<branch>` with `git branch --show-current` first and write it literally
 Flag rationale:
 
 - No `--draft` — the PR opens ready per /merging-standards `<authority_gates>`; `VERIFICATION_READINESS` (Step 3) is the gate that earns the open, and opening ready fires every CI review (Codex and the CI review) at once. A stacked PR is the one exception — pass `--draft` only when `<branch_topology>` holds it draft until its base merges.
-- `--title` and `--body-file` — explicit title plus body from the scratch file; matches /commit-changes conventions.
 - `--head` — the feature branch, stated explicitly so the head ref never depends on gh's inference. It suppresses gh's fork/push-target prompt, which is safe only because `<repository_target_gate>` has already resolved and checked both repositories; without that gate the suppressed prompt would hide a cross-repository target rather than settle it.
 - `--base` — omit only for peer branches targeting the repo default; specify the previous stack branch for stacked PRs.
 - `GIT_TERMINAL_PROMPT=0` — disables git credential prompts. (gh detects non-TTY stdin/stdout and skips its own prompts automatically; no `GH_*` env var is needed.)
 
-The file carries the body verbatim, so backticks, `$variables`, quotes, and `!` pass through literally. Never embed multi-line content in `--body "..."` — gh does not expand `\n` escapes. Never use command substitution or post-hoc text substitution to assemble or repair the body; rewrite the file.
+Never embed multi-line content in `--body "..."` — gh does not expand `\n` escapes. Never use command substitution or post-hoc text substitution to assemble or repair the body; rewrite the file.
 
-Do not use `--fill`. If both `--fill` and `--body-file` are passed, the explicit body wins; `--fill` is then dead weight.
+Do not use `--fill`.
 
 **Step 6 — Start the first management pass.** Use skill `product-tree:manage-pr`. Resolve the PR number, then invoke `/manage-pr` on that PR. `/manage-pr` owns pending checks, CI review waits, reinspection, merge gates, and post-merge closeout evidence.
 
@@ -184,11 +183,11 @@ The narrow Bash grants in frontmatter authorize approval-free execution. Run req
 
 **Push rejection after local readiness.** Claude reached `VERIFICATION_READINESS`, then the explicit destination push was rejected because the remote branch advanced or credentials failed. For a remote advancement: Use skill `product-tree:sync-base`. Re-run it, re-establish `VERIFICATION_READINESS` on the resulting tree, and push again; for credentials or permission failure, stop with the exact command output and no PR mutation.
 
-**Duplicate PR already exists.** Claude attempted `gh pr create` even though the branch already had an open PR. Detect an existing PR before creation or classify the `gh pr create` failure; switch to /manage-pr for that PR instead of opening a second PR or changing the branch name.
+**Duplicate PR already exists.** Claude attempted `gh pr create` on a branch that already had an open PR, because no pre-flight step looks up an existing PR and an earlier run or another session may have opened one. Detect an existing PR before creation or classify the `gh pr create` failure; switch to /manage-pr for that PR instead of opening a second PR or changing the branch name.
 
 **Stacked topology opened ready too early.** Claude treated a stacked branch like a peer branch and opened it ready against the default base. When `<branch_topology>` classifies a stack, set the previous stack branch as `--base` and keep the PR draft until its base merges; do not satisfy `VERIFICATION_READINESS` against the wrong base.
 
-**Repair stall.** Claude repeated deterministic, evidence-audit, and review fixes without reaching one tree where all predicates held. Stop when a gate reaches its second counted rejection or when the next fix would expand the changeset beyond the requested scope, record the split-out `BLOCKING` finding's concern in the owning node's `ISSUES.md`, and run one final deterministic verification and the evidence-auditor predicates and review the merge composition selects on the narrowed branch before opening.
+**Repair stall.** Claude repeated deterministic, evidence-audit, and review fixes without reaching one tree where all predicates held, because each fix changed a tree that another predicate had not yet covered, so repairing one gate reopened another and nothing bounded the loop short of the cap. Stop when a gate reaches its second counted rejection or when the next fix would expand the changeset beyond the requested scope, record the split-out `BLOCKING` finding's concern in the owning node's `ISSUES.md`, and run one final deterministic verification and the evidence-auditor predicates and review the merge composition selects on the narrowed branch before opening.
 
 </failure_modes>
 

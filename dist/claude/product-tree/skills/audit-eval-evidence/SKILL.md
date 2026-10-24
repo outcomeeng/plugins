@@ -10,14 +10,14 @@ allowed-tools: Read, Grep, Glob, Skill, Bash(git merge-base:*), Bash(git diff:*)
 
 <objective>
 
-A PASS, FAIL, or UNKNOWN verdict on a spec node's `[eval]` evidence against the eval-evidence model's producer coupling, oracle independence, assertion alignment, falsifiability, and run evidence criteria, with each finding on touched text naming the assertion or eval artifact, the failed property, and the evidentiary gap, and every other finding returned as `FILED`.
+A PASS, FAIL, or UNKNOWN verdict on a spec node's `[eval]` evidence against the eval-evidence model, with each finding on touched text naming the assertion or eval artifact, the failed property, and the evidentiary gap, and every other finding returned as `FILED`.
 
 </objective>
 
 <constraints>
 
 - NEVER modify eval artifacts, skill bodies, prompts, cases, history, or any other file — this audit produces a verdict, never a fix or a commit.
-- NEVER run evals, tests, validation, coverage, linters, type-checkers, or other deterministic verification inside the audit — establish evidence quality by reading.
+- NEVER run evals, tests, validation, coverage, linters, type-checkers, or other deterministic verification inside the audit — establish evidence quality by reading `eval.toml`, `prompt.md`, `cases.jsonl`, `history.jsonl`, relevant run summaries, and the producing artifact.
 - ALWAYS name the assertion, the failed property, and the evidentiary gap in every REJECT finding — the author repairs from the finding alone, and a finding missing any of the three leaves the repair unbounded.
 - NEVER approve prompt-only simulation as evidence for skill, agent, classifier, or script behavior — a prompt that simulates the producer scores the simulation, never the shipped producer the assertion governs.
 - NEVER issue a finding the evidence model does not support — drop an unbacked finding rather than reject the eval evidence for it.
@@ -25,27 +25,11 @@ A PASS, FAIL, or UNKNOWN verdict on a spec node's `[eval]` evidence against the 
 
 </constraints>
 
-<essential_principles>
-
-**PRODUCER COUPLING FIRST.**
-
-An eval that never exercises the actual producing skill, agent, classifier, or script will pass regardless of what that producer contains. Check coupling before oracle quality or run history. For claims about skill behavior, a prompt that merely asks for a simulated verdict while restating the desired rules is not evidence about the skill.
-
-Five properties must hold, checked in strict order: producer coupling, oracle independence, assertion alignment, falsifiability, and run evidence. A suite missing any property has zero evidentiary value for the assertion it claims to verify.
-
-**JUDGE BY READING.**
-
-This audit runs no deterministic verification. Establish evidence quality by reading `eval.toml`, `prompt.md`, `cases.jsonl`, `history.jsonl`, relevant run summaries, and the producing artifact.
-
-**SCHEMA VERDICT.**
-
-PASS, FAIL, or UNKNOWN. If any required evidence property is missing for any `[eval]` assertion, FAIL.
-
-</essential_principles>
-
 <audit_workflow>
 
 Bind the spec-node target: `$ARGUMENTS` supplies it when that argument is non-empty; when it is empty, the target is the one the request text carries, and the empty substitution binds nothing. If the request carries no target, return `UNKNOWN` with all five gate rows `UNKNOWN`, each carrying one `REJECT` finding with rule `missing-target`, this skill's file as `file`, `line: null`, and a message naming the required spec-node path. Preserve the supplied target string and set `metadata.branch` to JSON `null`; never inspect an inferred scope.
+
+Check the five evidence properties in strict order, producer coupling first: an eval that never exercises the actual producing skill, agent, classifier, or script passes regardless of what that producer contains, and a prompt that merely asks for a simulated verdict while restating the desired rules is not evidence about the skill. A suite missing any property has zero evidentiary value for the assertion it claims to verify.
 
 <step name="load_context">
 
@@ -243,7 +227,6 @@ The verdict is sound when:
 - Every `[eval]` assertion's suite was judged on all five evidence properties with none skipped — producer coupling, oracle independence, assertion alignment, falsifiability, and run evidence.
 - The verdict states an overall PASS/FAIL/UNKNOWN through the JSON `overall` field and every applicable gate row carries its determination.
 - Each REJECT finding lies on touched text and is falsifiable: it names the assertion or eval artifact, the failed evidence property, the evidentiary gap, and how the eval could pass while the assertion is unfulfilled; every finding outside touched text appears as `FILED` with its key, `baseRefEvidence`, and `issuesEntry`.
-- No deterministic command was run inside the audit; evidence quality was established by reading the eval artifacts, producing artifact, and committed run summaries.
 - The same target, governing requirements, eval artifacts, and run evidence produce the same gate statuses and overall verdict.
 
 </success_criteria>

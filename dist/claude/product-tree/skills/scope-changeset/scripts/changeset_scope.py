@@ -180,8 +180,14 @@ def resolve_committed_scope(
             ),
         }
     except subprocess.CalledProcessError as exc:
+        reason = (exc.stderr or "").strip() or (
+            f"command {' '.join(map(str, exc.cmd))!r} exited {exc.returncode} "
+            "with no output; check that each ref in the selector names a "
+            "commit with 'git rev-parse --verify <ref>' and that "
+            "'git fetch origin' succeeds"
+        )
         raise ScopeResolutionError(
-            f"git could not resolve {selector}: {(exc.stderr or '').strip()}"
+            f"git could not resolve {selector}: {reason}"
         ) from exc
     except BaseRefNotConfiguredError as exc:
         raise ScopeResolutionError(str(exc)) from exc
@@ -360,11 +366,23 @@ def detect_base_ref(
         check=False,
     )
     if result.returncode != 0:
-        raise BaseRefNotConfiguredError(f"{ORIGIN_HEAD_REF} unset at {repo}")
+        raise BaseRefNotConfiguredError(
+            (
+                f"{ORIGIN_HEAD_REF} unset at {repo}; set it with "
+                f"'git -C {repo} remote set-head origin --auto' or "
+                f"'git -C {repo} remote set-head origin <branch>'"
+            )
+        )
     line = result.stdout.strip()
     if line.startswith(ORIGIN_HEAD_REF_PREFIX):
         return line[len(ORIGIN_HEAD_REF_PREFIX) :]
-    raise BaseRefNotConfiguredError(f"{ORIGIN_HEAD_REF} has unexpected shape: {line!r}")
+    raise BaseRefNotConfiguredError(
+        (
+            f"{ORIGIN_HEAD_REF} has unexpected shape {line!r} at {repo}; expected "
+            f"a value starting with {ORIGIN_HEAD_REF_PREFIX!r}; reset it with "
+            f"'git -C {repo} remote set-head origin --auto'"
+        )
+    )
 
 
 def detect_current_branch(
@@ -388,7 +406,13 @@ def detect_current_branch(
     )
     branch = result.stdout.strip()
     if branch == "HEAD":
-        raise DetachedHeadError(f"detached HEAD at {repo}")
+        raise DetachedHeadError(
+            (
+                f"detached HEAD at {repo}; check out a named branch with "
+                f"'git -C {repo} switch <branch>' or "
+                f"'git -C {repo} switch -c <new-branch>'"
+            )
+        )
     return branch
 
 

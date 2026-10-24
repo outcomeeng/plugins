@@ -54,13 +54,7 @@ Specify the selected slice fully:
 Specify later slices only where they constrain the current slice's architecture, interfaces, or constraints. Treat the rest of the program under the cone of uncertainty — naming a later slice's effect on a current interface is in scope; designing a later slice's internals is not.
 </step>
 
-<step number="5" name="Boundary check">
-Confirm the slice changes no durable tree structure. If selecting the slice surfaced a need to create, split, re-scope, or reindex a node, that is `/decompose` (structure) or `/author` (a new node) — stop, route there, and resume slice selection over the updated tree. Slice selection chooses an execution path across nodes that already exist; it never restructures them.
-
-Confirm that delivering the slice makes one real invocation more useful and inspectable than before. A dependency-ordered list of infrastructure without that observable path is not an executable slice.
-</step>
-
-<step number="6" name="Hand off to apply">
+<step number="5" name="Hand off to apply">
 Hand the selected slice's node set to `/apply` as its work queue. `/apply` runs the per-node TDD flow over each node in ascending index order, then carries the changeset through `/merge`.
 </step>
 

@@ -14,7 +14,7 @@ A committed changeset's full endpoint identities and changed paths, with a canon
 
 <invocation>
 
-When `$ARGUMENTS` is empty, load the API reference below without executing a command or emitting a scope marker. Script consumers import the provider.
+When `$ARGUMENTS` is empty, load the API reference below without executing a command or emitting a scope marker. The provider is importable as a Python module.
 
 When a selector is supplied, resolve it through this skill's own command:
 
@@ -22,15 +22,15 @@ When a selector is supplied, resolve it through this skill's own command:
 python3 "${SKILL_DIR}/scripts/changeset_scope.py" "<selector>"
 ```
 
-Pass the supplied selector as one literal argument. For a git-derived or `origin/` base the command fetches the base's remote-tracking ref, reads the current checkout, and emits one JSON object with `base`, `head`, and `changed_paths`; an explicit range whose base names a local ref or a commit is compared as given, with no fetch and no refusal. Exit status 3 (`EXIT_STALE_BASE`) is the stale-base refusal: the head does not descend from the fetched `origin/<base>` tip, stdout carries no scope, and stderr carries one JSON diagnostic with `status` `stale-base`, `tip`, `merge_base`, and `behind`. Report it as a `stale-base` block and emit no marker; a scope computed against an older base is never a substitute. Any other nonzero exit or malformed result is `blocked`: preserve its diagnostic and emit no marker. Never fabricate a base, endpoint identity, or path set.
+Pass the supplied selector as one literal argument. For a git-derived or `origin/` base the command fetches the base's remote-tracking ref, reads the current checkout, and emits one JSON object with `base`, `head`, and `changed_paths`; an explicit range whose base names a local ref or a commit is compared as given, with no fetch and no refusal. Exit status 3 (`EXIT_STALE_BASE`) is the stale-base refusal: the head does not descend from the fetched `origin/<base>` tip, which is the base identity in place of the merge base, stdout carries no scope, and stderr carries one JSON diagnostic with `status` `stale-base`, `tip`, `merge_base`, and `behind`. Report it as a `stale-base` block and emit no marker; a scope computed against an older base is never a substitute. Any other nonzero exit or malformed result is `blocked`: preserve its diagnostic and emit no marker. Never fabricate a base, endpoint identity, or path set.
 
-After a successful command, emit `<COMMITTED_CHANGESET_SCOPE>` with the supplied selector, absolute checkout root, and all three returned fields verbatim. The invoking workflow consumes this marker without re-executing the derivation. The marker applies only to that checkout and selector at the recorded full head; discard it when the subject changes. The command fetches the base's remote-tracking ref and never rebases, commits, or modifies the working tree.
+After a successful command, emit `<COMMITTED_CHANGESET_SCOPE>` with the supplied selector, absolute checkout root, and all three returned fields verbatim. The marker applies only to that checkout and selector at the recorded full head; discard it when the subject changes. The command never rebases, commits, or modifies the working tree.
 
 </invocation>
 
 <api_surface>
 
-The derivation lives in `${SKILL_DIR}/scripts/changeset_scope.py`, imported by sibling skills' scripts through the marketplace skill-co-located importlib convention (no path is hardcoded in agent prose).
+The derivation lives in `${SKILL_DIR}/scripts/changeset_scope.py`, importable as a Python module by file path.
 
 | Symbol                                              | Purpose                                                                                                                                                                                     |
 | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -58,18 +58,7 @@ and Git execution failures raise `ScopeResolutionError` without changing the
 checkout. Invalid repository paths retain the path and operating-system error
 in that diagnostic. `ScopeField` owns the returned JSON field names.
 
-For a git-derived or `origin/` base the base identity is the fetched
-`origin/<base>` tip, never the merge base. `require_current_base` fetches that
-ref, then refuses a head whose merge base with the tip is not the tip itself
-by raising `StaleBaseError`; a local-ref or commit base in an explicit range
-is the caller's exact endpoint, compared as given with no fetch and no
-refusal, so exit status 3 arises only for a git-derived or `origin/` base. The CLI maps
-it to `EXIT_STALE_BASE` (exit status 3) and prints
-`StaleBaseError.diagnostic()` — the `StaleBaseField` names `status`
-(`STALE_BASE_STATUS`), `tip`, `merge_base`, and `behind` — on stderr in place
-of a scope. `detect_base_ref`, `remote_tracking_ref`, and `branch_scope` carry
-no refusal, so an importer that partitions or synchronizes rather than
-verifies composes them directly.
+`require_current_base` raises `StaleBaseError` for a head whose merge base with the fetched tip is not the tip itself. The CLI maps it to `EXIT_STALE_BASE` and prints `StaleBaseError.diagnostic()`, with the `StaleBaseField` names `status` (`STALE_BASE_STATUS`), `tip`, `merge_base`, and `behind`, on stderr in place of a scope. `detect_base_ref`, `remote_tracking_ref`, and `branch_scope` carry no refusal.
 
 The focused scope suites exercise stale local bases, explicit ranges, a branch
 other than the checked-out branch, concrete endpoint identities, malformed
@@ -83,7 +72,7 @@ through the shipped resolver CLI.
 
 <scoping_invariant>
 
-Every changeset diff range over a git-derived base is composed against the remote-tracking ref `origin/{base}` through `remote_tracking_ref`. Shared branch-scope consumers call `branch_scope`; consumers with their own diff operation import `remote_tracking_ref` before composing that range. A bare local branch ref can lag `origin/{base}` in a multi-worktree checkout; scoping against the remote-tracking ref keeps the merge base at the true branch point so already-merged commits do not re-enter the scope.
+Every changeset diff range over a git-derived base is composed against the remote-tracking ref `origin/{base}` through `remote_tracking_ref`. `branch_scope` composes that range; a caller with its own diff operation composes it from `remote_tracking_ref`. A bare local branch ref can lag `origin/{base}` in a multi-worktree checkout; scoping against the remote-tracking ref keeps the merge base at the true branch point so already-merged commits do not re-enter the scope.
 
 </scoping_invariant>
 

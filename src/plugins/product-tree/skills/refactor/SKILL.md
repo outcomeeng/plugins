@@ -264,19 +264,9 @@ How to avoid: Before re-pointing, classify each citing assertion. Universal — 
 
 <anti_patterns>
 
-**Moving without checking ADR/PDR scope.** A node governed by an ADR at index 15 in directory A is no longer governed by that ADR if moved to directory B. The constraint silently disappears.
-
-**Using bare node or decision names.** A refactor report or Change entry that names `32-parser.capability` or `15-build.adr.md` cannot be resolved reliably. Use full paths from `spx/`.
-
-**Consolidating similar but distinct nodes.** Two nodes about "parsing" may parse different things for different reasons. If they own different contracts, they're different nodes — similarity in implementation doesn't mean similarity in purpose.
-
-**Extracting providers directly.** Refactoring applies tree surgery; `/decompose` owns shared-provider boundaries, ordering evidence, and indices.
-
 **Leaving empty nodes after re-scope.** If all assertions move out of a node, the node is now empty. Either remove it or consolidate it — don't leave a spec with no assertions.
 
 **Treating `spx/local/` as a node directory.** `spx/local/` holds skill overlays, not spec nodes. It has no kind suffix and its files have no spec structure. Do not move, archive, or validate it as part of tree surgery.
-
-**Blanket-re-pointing cited assertions to a generalized parent.** When generalizing a node into a new parent node, an assertion that held only for the original child does not automatically hold for every child. Classify each citation universal vs node-specific and re-point it to the parent or the realizing child accordingly.
 
 </anti_patterns>
 

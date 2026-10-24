@@ -87,8 +87,6 @@ gh pr checks <pr-number> --watch --fail-fast --interval 30
 
 The command exits when all PR checks finish, and `--fail-fast` exits when any check fails. Do not schedule runtime heartbeats or timers for PR checks. Do not act from the pre-wait gate tuple; Step 1 and Step 2 re-read PR state, check rollup, PR-level comments, formal reviews, review-thread comments, and base drift before the next action.
 
-When Step 8 emits `WAIT_FOR_CHECKS`, `WAIT_FOR_REVIEW`, or `MENTION_REVIEW_NEEDED:<trigger-phrase>`, run Step 7 and immediately return to Step 1 in the same turn. Do not merge or emit a final token from pre-watch state. The post-watch pass must re-read PR state, check rollup, PR-level comments, formal reviews, and review-thread comments before deciding the next action.
-
 </step>
 
 **Step 8 — Evaluate the merge gate and act.** Apply /merging-standards `<authority_gates>`: `MERGE_READINESS`. Declared `DEPLOYMENT_READINESS` and `RELEASE_READINESS` phases are handled after merge in Step 9.
@@ -131,8 +129,6 @@ Otherwise, evaluate `MERGE_READINESS` from observable PR state:
 
 - A clean current-head CI review exists — present, complete and valid, and reporting no unresolved finding on touched or invalidated text across the union of current-head review surfaces and reviewers — stated directly, or with every `BLOCKING` finding resolved only by its fix, its individual drop as unbacked, or its recorded deferral (an entry in the owning node's `ISSUES.md` whose reason names why its fix is a separate larger concern) and every `DEBT` finding resolved by a ruling that accepts or drops it or by its `TRACKED` label (a valid in-scope `BLOCKING` finding, or a `DEBT` finding whose ruling directs a fix, is fixed in Step 5 — if one remains this pass, emit `FIX_FINDING:<item>`; a `DEBT` finding with no ruling and no `TRACKED` label emits `MERGE_BLOCKED:debt-ruling-pending`); the absence of a current-head review is `WAIT_FOR_REVIEW`, never clean.
 - Every other required check is terminal-green per /merging-standards `<authority_gates>`. The review-kind check's absent, non-terminal, skipped, and failed states are handled before this point from the check conclusion itself. If no current-head review has landed after that guard, emit `WAIT_FOR_REVIEW`; else if a non-review required check is non-terminal, emit `WAIT_FOR_CHECKS`; if a non-review required check is terminal-but-not-success or absent, or a PR-state predicate (`OPEN`, `isDraft` false, head SHA matches, rebased onto base) fails, emit `MERGE_BLOCKED:<reason>`.
-
-For `WAIT_FOR_CHECKS`, `WAIT_FOR_REVIEW`, or `MENTION_REVIEW_NEEDED:<trigger-phrase>`, run Step 7 and immediately return to Step 1 in the same turn. Do not merge or emit a final token from pre-watch state. The post-watch pass must re-read PR state, check rollup, PR-level comments, formal reviews, and review-thread comments before deciding the next action.
 
 When `MERGE_READINESS` appears to hold, run the mutation-point guard from /merging-standards `<authority_gates>` immediately before the merge command. The guard re-reads live PR state and returns either `MERGE_READY:<head-sha>` or one existing action token. Do not run `gh pr merge` unless the guard returns `MERGE_READY:<head-sha>` for the head SHA just inspected.
 
@@ -182,16 +178,6 @@ Tested inputs and expected outputs:
 For pre-flight, branch topology, push semantics, base sync, the authority gates, the PR-check wait requirement, review inspection, review classification, and the action token table, see /merging-standards. For commit selection, message format, and atomic-commit rules, see /commit-changes. Managing-flow-specific commands:
 
 ```bash
-# PR identity
-gh pr view <pr-number-or-url-or-branch> --json number,url,headRefName,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
-gh pr view --json number,url,headRefName,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
-
-# Checks snapshot
-gh pr checks <pr-number>
-
-# Required PR-check wait
-gh pr checks <pr-number> --watch --fail-fast --interval 30
-
 # Post a PR-level comment (top of the conversation). The body is a payload: write it with the
 # file-write tool to a file in the session scratch directory under a file name unique to this
 # agent and PR, then pass that file. Never use a heredoc, a pipe, or an inline --body.
