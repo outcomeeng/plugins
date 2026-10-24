@@ -11,9 +11,8 @@ allowed-tools: Read, Bash(spx diagnose:*)
 
 <objective>
 
-A deterministic environment-diagnostics report from `spx diagnose`, run with
-the plugin-shipped manifest, relayed with remediation judgment for every
-non-healthy verdict.
+A deterministic environment-diagnostics report from `spx diagnose`, relayed with
+remediation judgment for every non-healthy verdict.
 
 </objective>
 
@@ -21,8 +20,8 @@ non-healthy verdict.
 
 1. Run `spx diagnose --manifest "${SKILL_DIR}/manifest.json"`.
 2. Preserve stdout, stderr, and the exit code exactly. Session identifiers,
-   version strings, paths, verdict names, and status values are identity values;
-   report them verbatim.
+   version strings, paths, marketplace names, plugin names, verdict names, and
+   status values are identity values; report them verbatim.
 3. Relay the `spx diagnose` report without reclassifying any check and without
    recomputing the overall verdict.
 4. When the report's overall verdict is non-healthy, add remediation judgment
@@ -43,28 +42,17 @@ non-healthy verdict.
   overall verdict is `spx diagnose` output.
 - NEVER edit the manifest at runtime or substitute values into the command by
   hand. The build renders the manifest before the plugin ships.
-- ALWAYS pass the manifest by path from the installed skill directory.
-- ALWAYS keep identity values verbatim, including session IDs, version strings,
-  paths, marketplace names, plugin names, and status values.
 
 </constraints>
 
-<manifest>
-
-The manifest is `${SKILL_DIR}/manifest.json`. It declares the spx version
-floor, marketplace identity, expected plugin set, and diagnostic check set that
-the installed plugin asks `spx diagnose` to evaluate.
-
-</manifest>
-
 <success_criteria>
 
-- `spx diagnose --manifest "${SKILL_DIR}/manifest.json"`
-  ran, or its startup failure was reported verbatim.
-- The deterministic report was relayed without rewriting check verdicts,
-  readings, or the overall verdict.
-- Every non-healthy verdict in the report received remediation judgment grounded
-  in the report.
+- Every check verdict, reading, and the overall verdict in the relayed report
+  match the `spx diagnose` output character for character.
+- Each remediation statement traces to a per-check verdict, reading, or
+  remediation field of the report.
+- A startup failure appears with stdout, stderr, and exit code verbatim, followed
+  by the install-or-update direction.
 - The skill body contains no check classification table and no overall-verdict
   fold.
 

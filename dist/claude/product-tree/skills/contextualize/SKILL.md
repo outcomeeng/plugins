@@ -29,7 +29,7 @@ A `<PRODUCT_TREE_CONTEXT target="...">` marker carrying a structured context man
   - Wrong: `/contextualize 32-parser.capability`
   - Right: `/contextualize spx/{path-to-node}`
 
-**BOOTSTRAP MODE**: Bootstrap is derived from the documented target and tree state, never from an undeclared operation. When `$target` is exactly `spx/`, one product spec exists, and no node directories exist, emit the product-root manifest with `bootstrap=true`. A missing node target always aborts; authoring a new node contextualizes its existing parent (`spx/` for a top-level node or the canonical full parent node path for a nested node).
+**BOOTSTRAP MODE**: Bootstrap is derived from the documented target and tree state, never from an undeclared operation. When `$target` is exactly `spx/`, one product spec exists, and no node directories exist, emit the product-root manifest with `bootstrap=true`. A missing node target always aborts; a node that does not yet exist takes its context from its existing parent (`spx/` for a top-level node or the canonical full parent node path for a nested node).
 
 </essential_principles>
 
@@ -66,7 +66,7 @@ Glob: "$target/*.md"  (node targets only)
 
 If the product file is missing, ABORT: "No product file found in spx/. Create one with `/bootstrap` first."
 
-If a node target path doesn't exist, ABORT: "Target path not found: $target. Check the path or contextualize its existing parent before creating it with `/author`."
+If a node target path doesn't exist, ABORT: "Target path not found: $target. Check the path, or target its existing parent while the node does not yet exist."
 
 For the exact product-root target `spx/`, list top-level node directories after locating the product spec. Set `bootstrap=true` when none exist and `bootstrap=false` otherwise. For every node target, set `bootstrap=false`.
 

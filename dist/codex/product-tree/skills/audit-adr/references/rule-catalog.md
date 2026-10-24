@@ -16,7 +16,7 @@ The rule catalog of the ADR audit: every rule identifier a native finding may ca
 
 The unit of a finding is the audited ADR file path, or `input` when the request carries no path. The key is `<unit>:<rule-id>`, for example `spx/21-x.enabler/15-y.adr.md:temporal-voice`. One key covers every location in the ADR where that rule is violated, and the finding lists each such location by the section or rule text, never a line number.
 
-Severity in the tables below labels the defect on touched text. A finding whose locations lie outside touched text takes severity `filed` per `${SKILL_DIR}/references/touched-text.md`.
+Severity in the tables below labels the defect on touched text. A finding whose locations all lie outside touched text takes severity `filed`.
 
 </key_form>
 

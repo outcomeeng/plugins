@@ -53,17 +53,19 @@ Read the appropriate template before drafting.
 
 Ask or infer from context:
 
-| Artifact           | When to create                                    | Template                                                                       |
-| ------------------ | ------------------------------------------------- | ------------------------------------------------------------------------------ |
-| **Product spec**   | Bootstrapping a new tree                          | `templates/product/product-name.spec.md`                                       |
-| **ADR**            | Architecture decision needs recording             | `templates/decisions/decision-name.adr.md`                                     |
-| **PDR**            | Product decision needs recording                  | `templates/decisions/decision-name.pdr.md`                                     |
-| **Output node**    | One of the five output kinds                      | `templates/nodes/{substrate,capability,domain,interface,surface}-name.spec.md` |
-| **Variant node**   | One implementation of its parent's whole contract | `templates/nodes/variant-name.spec.md`                                         |
-| **Outcome record** | A condition only real use settles                 | `templates/records/node-name.outcome.md`                                       |
-| **Probe protocol** | A claim only observing the running node settles   | `templates/probes/probe.md`                                                    |
+Each template below is read beneath the `Template root` the live `<PRODUCT_TREE_FOUNDATION>` marker records.
 
-If unclear which type, apply the ordered kind decision procedure from live `/understand` `<identity_and_kinds>` and `references/kind-decision.md` — product, variant, substrate, surface, interface, domain, capability — and:
+| Artifact           | When to create                                    | Template beneath the `Template root`                                 |
+| ------------------ | ------------------------------------------------- | -------------------------------------------------------------------- |
+| **Product spec**   | Bootstrapping a new tree                          | `product/product-name.spec.md`                                       |
+| **ADR**            | Architecture decision needs recording             | `decisions/decision-name.adr.md`                                     |
+| **PDR**            | Product decision needs recording                  | `decisions/decision-name.pdr.md`                                     |
+| **Output node**    | One of the five output kinds                      | `nodes/{substrate,capability,domain,interface,surface}-name.spec.md` |
+| **Variant node**   | One implementation of its parent's whole contract | `nodes/variant-name.spec.md`                                         |
+| **Outcome record** | A condition only real use settles                 | `records/node-name.outcome.md`                                       |
+| **Probe protocol** | A claim only observing the running node settles   | `probes/probe.md`                                                    |
+
+If unclear which type, apply the ordered kind decision procedure from live `/understand` `<identity_and_kinds>` and the `kind-decision.md` reference that section names — product, variant, substrate, surface, interface, domain, capability — and:
 
 - Governs how the product is built (architecture, invisible to its users)? → ADR
 - Governs what the product does (behavior its users observe)? → PDR

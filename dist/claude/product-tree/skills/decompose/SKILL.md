@@ -7,7 +7,7 @@ allowed-tools: Read, Glob, Grep, Write, Edit, Skill
 
 <objective>
 
-Product Tree structure composed from a target node address, durable spec content, and node-local coordination notes — concern boundaries identified, enabler/outcome types assigned, sparse indices and ordering evidence recorded, assertions redistributed, and structural quality validated.
+Product Tree structure under a target node address, composed from durable spec content and node-local coordination notes.
 
 </objective>
 

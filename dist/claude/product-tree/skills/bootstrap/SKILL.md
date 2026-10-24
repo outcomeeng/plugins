@@ -1,6 +1,6 @@
 ---
 name: bootstrap
-description: ALWAYS invoke this skill when setting up a new product tree or when /author detects an empty spx/ directory. NEVER create a product tree from scratch without this skill.
+description: ALWAYS invoke this skill when setting up a new product tree in an empty or absent spx/ directory. NEVER create a product tree from scratch without this skill.
 allowed-tools: Read, Glob, Grep, Write, Skill
 ---
 

@@ -123,7 +123,6 @@ Return the result — `closed`, `released`, `release-refused`, `not-held`, or `u
 - Execution began only after the store showed this session's worktree holding the Executable Leaf, with every predecessor closed and every blocker resolved.
 - Every artifact came from a launched session of the definition the block's content required, and every Fixer was a fresh session of the same definition.
 - Every verdict came from a configured Verifier launched once with a target-only task message on a committed head that passed the product's `verify` command.
-- The Change ended `Applied` through `/close-change`, or `Available` with a Handoff naming the stop condition through `/release-change`.
 - No load-gated command was still running when the result was reported.
 
 </success_criteria>

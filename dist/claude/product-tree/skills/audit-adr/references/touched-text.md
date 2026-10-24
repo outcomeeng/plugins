@@ -40,7 +40,7 @@ Classify each finding, native or composed, by its `locations`: a finding on touc
 
 <finding_key>
 
-A finding is identified by its key, `<adr-file-path>:<rule-id>`, where `rule-id` is the identifier that `${CLAUDE_SKILL_DIR}/references/rule-catalog.md` gives the violated rule, or the identifier a composed language skill's catalog gives it. The finding's `locations` name each section or rule where the rule is violated by its text rather than a line number. The same finding carries the same key in every run and on every head.
+A finding is identified by its key, `<adr-file-path>:<rule-id>`, where `rule-id` is the catalogued identifier of the violated rule, from the ADR audit's own catalog or from a composed language skill's catalog. The finding's `locations` name each section or rule where the rule is violated by its text rather than a line number. The same finding carries the same key in every run and on every head.
 
 A rule violated both on touched text and elsewhere yields two findings under one key: a `blocking` finding whose `locations` are the touched ones, and a `filed` finding whose `locations` are the rest.
 

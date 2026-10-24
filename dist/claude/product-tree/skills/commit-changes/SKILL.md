@@ -133,19 +133,10 @@ ALWAYS stage explicit paths with `git add`; never `git add .` or a wildcard.
 
 **Step 2: Diff Review**
 
-Review `git diff --cached` and verify `git diff --cached --name-only`.
-
-**Checklist:**
-
-- [ ] File count matches scope of change
-- [ ] No surprise files included
-- [ ] All changes related to single purpose
-- [ ] No debug code (console.log, print statements, temp comments)
+Review `git diff --cached` and verify `git diff --cached --name-only` against the concern's file list.
 
 **Step 3: Atomic Commit Verification**
 
-- [ ] Single purpose - does exactly one thing
-- [ ] Independent - can be reverted without breaking other features
 - [ ] Complete for its stated checkpoint — includes every path needed to preserve that concern, even when verification still fails
 
 **Split or inspect before committing:**
