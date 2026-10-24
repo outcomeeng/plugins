@@ -6,6 +6,7 @@ Usage::
     python3 -m outcomeeng.validation check-full
     python3 -m outcomeeng.validation validation
     python3 -m outcomeeng.validation test -- -k gate
+    python3 -m outcomeeng.validation test-on-demand
 
 Constructs the production `ProcessSpawner` adapter, binds the output sink
 to stdout, and runs the selected recipe. Returns the orchestrator's exit
@@ -27,8 +28,11 @@ from outcomeeng.validation.selected_gate import (
 from outcomeeng.validation._steps import (
     RECIPE_CHECK,
     RECIPE_TEST,
+    RECIPE_TEST_ON_DEMAND,
     RECIPE_VALIDATION,
     VALIDATION_RECIPE,
+    discover_on_demand_tests,
+    on_demand_recipe,
     test_recipe,
 )
 
@@ -38,7 +42,13 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "recipe",
         nargs="?",
-        choices=(RECIPE_CHECK, RECIPE_CHECK_FULL, RECIPE_VALIDATION, RECIPE_TEST),
+        choices=(
+            RECIPE_CHECK,
+            RECIPE_CHECK_FULL,
+            RECIPE_VALIDATION,
+            RECIPE_TEST,
+            RECIPE_TEST_ON_DEMAND,
+        ),
         default=RECIPE_CHECK,
     )
     parser.add_argument("recipe_args", nargs=argparse.REMAINDER)
@@ -61,6 +71,12 @@ def main(argv: list[str] | None = None) -> int:
             spawner=spawner,
             sink=sys.stdout,
             recipe=test_recipe(_recipe_args(parsed.recipe_args)),
+        )
+    if parsed.recipe == RECIPE_TEST_ON_DEMAND:
+        return run_recipe(
+            spawner=spawner,
+            sink=sys.stdout,
+            recipe=on_demand_recipe(discover_on_demand_tests(Path.cwd())),
         )
     if parsed.recipe == RECIPE_CHECK_FULL:
         return run_full_check(spawner=spawner, sink=sys.stdout, repo=Path.cwd())

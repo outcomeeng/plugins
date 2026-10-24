@@ -41,7 +41,11 @@ from outcomeeng_testing.generators.installation import (
     RecordDisposition,
     generated_boolean_states,
 )
+from outcomeeng.validation import ON_DEMAND_EXCLUSION_ARGV, is_on_demand_test
 from outcomeeng.validation._steps import RECIPE_TEST
+from outcomeeng_testing.harnesses.real_agent_selection import (
+    pytest_collection_observation,
+)
 from outcomeeng_testing.harnesses.installation import (
     observe_unlocated_registry_plan,
     DECLARED_CLAUDE_SOURCE,
@@ -114,6 +118,12 @@ def test_verification_recipe_uses_pytest_discovery_for_the_node() -> None:
         RECIPE_TEST,
         Path(__file__).parent.relative_to(repository_root()).as_posix(),
     )
+    collection = pytest_collection_observation(
+        (*ON_DEMAND_EXCLUSION_ARGV, *observation.invoked[1:])
+    )
+    assert collection.exit_code == 0, collection.output
+    assert collection.collected
+    assert not any(is_on_demand_test(node_id) for node_id in collection.collected)
 
 
 def test_first_persistent_run_installs_only_spec_tree_and_warns() -> None:

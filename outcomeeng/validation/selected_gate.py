@@ -6,7 +6,7 @@ import fnmatch
 import importlib.util
 import sys
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
 from types import MappingProxyType
@@ -25,6 +25,7 @@ from outcomeeng.validation._steps import (
     FMT_CHECK_ARGV,
     INSTRUCTION_BLOCK_ARGV,
     MYPY_ARGV,
+    ON_DEMAND_LEVEL,
     PREFLIGHT_STEPS,
     PYRIGHT_ARGV,
     PYTEST_ARGV,
@@ -35,6 +36,7 @@ from outcomeeng.validation._steps import (
     SPX_MARKDOWN_ARGV,
     TEST_RECIPE,
     VALIDATION_STEPS,
+    is_on_demand_test,
 )
 from outcomeeng.validation.infrastructure_index import (
     TEST_INFRASTRUCTURE_PACKAGE,
@@ -72,36 +74,12 @@ EVIDENCE_LINK_REASON: Final = "spec-tree evidence link surface changed"
 TEST_REASON: Final = "changed python assertion tests"
 REACHED_TESTS_REASON: Final = "tests reaching changed test infrastructure"
 FULL_CHECK_REASON: Final = "explicit full gate"
-# The real-agent Codex tests: the fresh-session subagent discovery test and the
-# real-agent bootstrap test. Both run on the Codex CLI the host installs and
-# consume model quota, so the gate wrappers select them only for a changeset
-# that changes an agent definition.
-REAL_AGENT_CODEX_TEST_MODULE: Final = (
-    "spx/32-distribution.enabler/21-installation.enabler/"
-    "21-repository-installation.enabler/tests/"
-    "test_repository_installation.scenario.l3.py"
-)
-REAL_AGENT_CODEX_TEST_FUNCTIONS: Final = (
-    "test_fresh_codex_session_discovers_every_placed_canonical_subagent",
-    "test_real_agent_clis_bootstrap_empty_persistent_state",
-)
-PYTEST_NODE_ID_SEPARATOR: Final = "::"
-REAL_AGENT_CODEX_TESTS: Final = tuple(
-    f"{REAL_AGENT_CODEX_TEST_MODULE}{PYTEST_NODE_ID_SEPARATOR}{function}"
-    for function in REAL_AGENT_CODEX_TEST_FUNCTIONS
-)
-REAL_AGENT_CODEX_INCLUDED_REASON: Final = (
-    "real-agent Codex tests included: agent definition changed"
-)
-REAL_AGENT_CODEX_EXCLUDED_REASON: Final = (
-    "real-agent Codex tests excluded: no agent definition changed"
-)
-PYTEST_KEYWORD_OPTION: Final = "-k"
-# Deselects by test function name, so the exclusion names no node id and a
-# pytest argument tail that carries it still collects every other test.
-REAL_AGENT_CODEX_EXCLUSION: Final = (
-    PYTEST_KEYWORD_OPTION,
-    f"not ({' or '.join(REAL_AGENT_CODEX_TEST_FUNCTIONS)})",
+# The on-demand suite is every test whose file name carries the on-demand
+# execution level. The pytest argv every plan carries excludes it from each
+# directory it collects, and the plan names that exclusion before any step runs.
+ON_DEMAND_EXCLUDED_REASON: Final = (
+    f"on-demand suite excluded: {ON_DEMAND_LEVEL} tests run only through "
+    "`just test-on-demand`"
 )
 # The full gate runs in CI from a merge-commit checkout that carries no
 # `origin/HEAD`; its first parent is the base tip there and the previous commit
@@ -216,21 +194,6 @@ INSTRUCTION_BLOCK_PATTERNS: Final = (
     "dist/codex/spec-tree/skills/update-instruction-block/templates/instruction-block.md",
     "outcomeeng/distribution/instruction_block.py",
 )
-# Agent definitions: authored agent sources, their generated renderings, the
-# code that converts and emits them, the repository installation code that
-# places and reconciles them in the selected agent home, and the shipped
-# placement scripts.
-AGENT_DEFINITION_PATTERNS: Final = (
-    "src/plugins/*/agents/**",
-    "dist/claude/*/agents/**",
-    "dist/codex/*/skills/*/agents/**",
-    "outcomeeng/distribution/agents.py",
-    "outcomeeng/distribution/profiles.py",
-    "outcomeeng/distribution/build.py",
-    "outcomeeng/distribution/installation.py",
-    "src/templates/plugin/scripts/place_agents.py",
-    "dist/*/*/skills/*-plugin/scripts/place_agents.py",
-)
 
 
 class PathCategory(StrEnum):
@@ -248,7 +211,6 @@ class PathCategory(StrEnum):
     EVAL_TRIGGER = "eval-trigger"
     EVAL_PROMPT = "eval-prompt"
     EVIDENCE_LINK = "evidence-link"
-    AGENT_DEFINITION = "agent-definition"
 
 
 # The planner classifies every changed path through this registry alone, so a
@@ -268,7 +230,6 @@ PATH_CATEGORY_PATTERNS: Final[Mapping[PathCategory, tuple[str, ...]]] = (
             PathCategory.EVAL_TRIGGER: EVAL_TRIGGER_PATTERNS,
             PathCategory.EVAL_PROMPT: EVAL_PROMPT_PATTERNS,
             PathCategory.EVIDENCE_LINK: EVIDENCE_LINK_PATTERNS,
-            PathCategory.AGENT_DEFINITION: AGENT_DEFINITION_PATTERNS,
         }
     )
 )
@@ -286,9 +247,8 @@ SKILL_LANE_ARGVS: Final = tuple(
     step.argv for step in VALIDATION_STEPS if step.label in SKILL_STEP_LABELS
 )
 # The validation steps each lane-bearing category selects. The full-gate,
-# test-infrastructure, assertion-test, and agent-definition categories select
-# no validation lane of their own: they decide the full surface or the pytest
-# step instead.
+# test-infrastructure, and assertion-test categories select no validation lane
+# of their own: they decide the full surface or the pytest step instead.
 VALIDATION_LANES: Final[Mapping[PathCategory, ValidationLane]] = MappingProxyType(
     {
         PathCategory.MARKDOWN: ValidationLane(
@@ -359,15 +319,6 @@ class SelectedGatePlan:
     changed_paths: tuple[str, ...]
     selected_steps: tuple[SelectedGateStep, ...]
     full_gate: bool
-    real_agent_codex: bool = False
-
-    @property
-    def real_agent_codex_reason(self) -> str:
-        return (
-            REAL_AGENT_CODEX_INCLUDED_REASON
-            if self.real_agent_codex
-            else REAL_AGENT_CODEX_EXCLUDED_REASON
-        )
 
     @property
     def steps(self) -> tuple[Step, ...]:
@@ -526,11 +477,8 @@ def build_selected_gate_plan(
         return SelectedGatePlan(changed_paths=(), selected_steps=(), full_gate=False)
 
     categories = changed_path_categories(normalized)
-    real_agent_codex = PathCategory.AGENT_DEFINITION in categories
     if PathCategory.FULL_GATE in categories:
-        return _full_surface_plan(
-            normalized, reason=FULL_GATE_REASON, real_agent_codex=real_agent_codex
-        )
+        return _full_surface_plan(normalized, reason=FULL_GATE_REASON)
 
     infrastructure_paths = tuple(
         path for path in normalized if _is_test_infrastructure_path(path)
@@ -542,15 +490,11 @@ def build_selected_gate_plan(
         for report in (test_infrastructure.reach(p) for p in infrastructure_paths):
             if report.kind is InfrastructureReach.SHARED:
                 return _full_surface_plan(
-                    normalized,
-                    reason=SHARED_TEST_INFRASTRUCTURE_REASON,
-                    real_agent_codex=real_agent_codex,
+                    normalized, reason=SHARED_TEST_INFRASTRUCTURE_REASON
                 )
             if report.kind is InfrastructureReach.UNTRACEABLE:
                 return _full_surface_plan(
-                    normalized,
-                    reason=UNTRACEABLE_TEST_INFRASTRUCTURE_REASON,
-                    real_agent_codex=real_agent_codex,
+                    normalized, reason=UNTRACEABLE_TEST_INFRASTRUCTURE_REASON
                 )
             reached_tests.update(report.tests)
 
@@ -570,32 +514,26 @@ def build_selected_gate_plan(
     changed_test_paths = tuple(
         path
         for path in normalized
-        if _is_python_assertion_test(path) and path not in deleted_path_set
+        if _is_python_assertion_test(path)
+        and path not in deleted_path_set
+        and not is_on_demand_test(path)
     )
-    reached_only = reached_tests - set(changed_test_paths) - deleted_path_set
-    test_path_set = set(changed_test_paths) | reached_only
-    real_agent_module_targeted = REAL_AGENT_CODEX_TEST_MODULE in {
-        path.split(PYTEST_NODE_ID_SEPARATOR, maxsplit=1)[0] for path in test_path_set
+    reached_only = {
+        path
+        for path in reached_tests - set(changed_test_paths) - deleted_path_set
+        if not is_on_demand_test(path)
     }
-    if real_agent_codex and not real_agent_module_targeted:
-        test_path_set.update(REAL_AGENT_CODEX_TESTS)
-    test_paths = tuple(sorted(test_path_set))
+    test_paths = tuple(sorted(set(changed_test_paths) | reached_only))
     if test_paths:
         test_reasons = (
             *((TEST_REASON,) if changed_test_paths else ()),
             *((REACHED_TESTS_REASON,) if reached_only else ()),
-            *((REAL_AGENT_CODEX_INCLUDED_REASON,) if real_agent_codex else ()),
-        )
-        exclusion = (
-            REAL_AGENT_CODEX_EXCLUSION
-            if real_agent_module_targeted and not real_agent_codex
-            else ()
         )
         selected_steps.append(
             SelectedGateStep(
                 step=Step(
                     label=TEST_RECIPE.steps[0].label,
-                    argv=(*PYTEST_ARGV, *test_paths, *exclusion),
+                    argv=(*PYTEST_ARGV, *test_paths),
                 ),
                 reason=REASON_SEPARATOR.join(test_reasons),
             )
@@ -604,24 +542,18 @@ def build_selected_gate_plan(
         changed_paths=normalized,
         selected_steps=tuple(selected_steps),
         full_gate=False,
-        real_agent_codex=real_agent_codex,
     )
 
 
 def build_full_gate_plan(changed_paths: tuple[str, ...]) -> SelectedGatePlan:
     """Build the explicit full gate plan for changed paths.
 
-    The plan carries the complete validation-plus-test recipe set; the changed
-    paths decide only whether its pytest steps run the real-agent Codex tests.
+    The plan carries the complete validation-plus-test recipe set; its pytest
+    steps exclude the on-demand suite whatever the changed paths are.
     """
 
     normalized = tuple(sorted(set(changed_paths)))
-    return _full_surface_plan(
-        normalized,
-        reason=FULL_CHECK_REASON,
-        real_agent_codex=PathCategory.AGENT_DEFINITION
-        in changed_path_categories(normalized),
-    )
+    return _full_surface_plan(normalized, reason=FULL_CHECK_REASON)
 
 
 def changed_path_categories(paths: Sequence[str]) -> frozenset[PathCategory]:
@@ -639,37 +571,15 @@ def _full_surface_plan(
     changed_paths: tuple[str, ...],
     *,
     reason: str,
-    real_agent_codex: bool,
 ) -> SelectedGatePlan:
     return SelectedGatePlan(
         changed_paths=changed_paths,
         selected_steps=tuple(
-            SelectedGateStep(
-                step=_full_surface_step(step, real_agent_codex), reason=reason
-            )
+            SelectedGateStep(step=step, reason=reason)
             for recipe in CHECK_RECIPES
             for step in recipe.steps
         ),
         full_gate=True,
-        real_agent_codex=real_agent_codex,
-    )
-
-
-def _full_surface_step(step: Step, real_agent_codex: bool) -> Step:
-    if real_agent_codex or step.argv[: len(PYTEST_ARGV)] != PYTEST_ARGV:
-        return step
-    return replace(step, argv=(*step.argv, *REAL_AGENT_CODEX_EXCLUSION))
-
-
-def _full_surface_recipes(plan: SelectedGatePlan) -> tuple[Recipe, ...]:
-    return tuple(
-        replace(
-            recipe,
-            steps=tuple(
-                _full_surface_step(step, plan.real_agent_codex) for step in recipe.steps
-            ),
-        )
-        for recipe in CHECK_RECIPES
     )
 
 
@@ -711,9 +621,7 @@ def run_selected_check(
     )
     _write_plan(sink, plan)
     if plan.full_gate:
-        return run_check(
-            spawner=spawner, sink=sink, recipes=_full_surface_recipes(plan)
-        )
+        return run_check(spawner=spawner, sink=sink, recipes=CHECK_RECIPES)
     return run_recipe(
         spawner=spawner,
         sink=sink,
@@ -735,7 +643,7 @@ def run_full_check(
     base_ref: str | None = None,
     runner: GitRunner = run_git_command,
 ) -> int:
-    """Run the explicit full gate, selecting real-agent Codex tests by changeset."""
+    """Run the explicit full gate, which excludes the on-demand suite."""
 
     resolved_base_ref = (
         base_ref if base_ref is not None else resolve_full_gate_base_ref(repo)
@@ -751,7 +659,7 @@ def run_full_check(
         return GIT_DISCOVERY_FAILURE_EXIT_CODE
     plan = build_full_gate_plan(changed_paths)
     _write_plan(sink, plan, changeset_base=resolved_base_ref)
-    return run_check(spawner=spawner, sink=sink, recipes=_full_surface_recipes(plan))
+    return run_check(spawner=spawner, sink=sink, recipes=CHECK_RECIPES)
 
 
 def resolve_full_gate_base_ref(repo: Path) -> str:
@@ -813,7 +721,7 @@ def render_plan(plan: SelectedGatePlan, *, changeset_base: str | None = None) ->
         f"{PLAN_LINE_INDENT}{item.step.label}: {item.reason}"
         for item in plan.selected_steps
     )
-    lines.append(f"{PLAN_LINE_INDENT}{plan.real_agent_codex_reason}")
+    lines.append(f"{PLAN_LINE_INDENT}{ON_DEMAND_EXCLUDED_REASON}")
     return "\n".join(lines) + "\n"
 
 

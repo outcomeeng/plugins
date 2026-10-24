@@ -72,11 +72,13 @@ from outcomeeng.validation.selected_gate import (
     run_selected_check as production_run_selected_check,
 )
 from outcomeeng_testing.generators.gate import (
+    GeneratedTestFile,
     SELECTED_GATE_PYTHON_SOURCE_PATH,
     SELECTED_GATE_PYTHON_TEST_PATH,
     SELECTED_GATE_SKILL_PATH,
     SELECTED_GATE_WORKFLOW_PATH,
     category_patterns,
+    generated_test_file_sets,
     path_from_pattern,
     selected_gate_changed_paths,
 )
@@ -94,6 +96,9 @@ SELECTED_GATE_PROPERTY_REPLAY_PATH = (
     "test_selection_is_deterministic_for_path_order_and_duplicates"
 )
 SELECTED_GATE_PROPERTY_EXAMPLES = 40
+ON_DEMAND_SUITE_PROPERTY_SEED = 20261024
+ON_DEMAND_SUITE_PROPERTY_EXAMPLES = 60
+ON_DEMAND_SUITE_PROPERTY_REPLAY_COMMAND = "just test"
 PATHSPEC_GIT_TIMEOUT_SECONDS = 30
 STATIC_ANALYSIS_ARGVS = (RUFF_CHECK_ARGV, MYPY_ARGV, PYRIGHT_ARGV)
 PASS_EXIT_CODE = 0
@@ -406,6 +411,40 @@ def selected_gate_property(
             configured,
             seed_value=SELECTED_GATE_PROPERTY_SEED,
             replay_path=SELECTED_GATE_PROPERTY_REPLAY_PATH,
+        )
+
+    return wrapper
+
+
+def _on_demand_suite_replay_path(
+    test_func: Callable[[list[GeneratedTestFile]], None],
+) -> str:
+    # A property named `_{name}` runs through the test entry point `test_{name}`
+    # beside it in the same file.
+    source = Path(inspect.getfile(test_func)).resolve()
+    return (
+        f"{ON_DEMAND_SUITE_PROPERTY_REPLAY_COMMAND} "
+        f"{source.relative_to(Path(__file__).resolve().parents[2]).as_posix()}"
+        f"::test{test_func.__name__}"
+    )
+
+
+def on_demand_suite_property(
+    test_func: Callable[[list[GeneratedTestFile]], None],
+) -> Callable[[], None]:
+    """Run the on-demand suite property with reproducible failure diagnostics."""
+
+    configured = seed(ON_DEMAND_SUITE_PROPERTY_SEED)(
+        settings(max_examples=ON_DEMAND_SUITE_PROPERTY_EXAMPLES, deadline=None)(
+            given(test_files=generated_test_file_sets())(test_func)
+        )
+    )
+
+    def wrapper() -> None:
+        run_replayable_property(
+            configured,
+            seed_value=ON_DEMAND_SUITE_PROPERTY_SEED,
+            replay_path=_on_demand_suite_replay_path(test_func),
         )
 
     return wrapper

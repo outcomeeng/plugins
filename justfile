@@ -12,6 +12,10 @@ test *args:
 test-v *args:
     python3 -m outcomeeng.validation test -- -v {{args}}
 
+# Run the on-demand suite: every l3 [test] file, which no other recipe runs
+test-on-demand:
+    python3 -m outcomeeng.validation test-on-demand
+
 # Run one [eval] suite using plugin_dir from eval.toml unless PLUGIN_DIR is set
 eval eval_toml:
     #!/usr/bin/env bash

@@ -14,7 +14,7 @@ validation recipe. Pytest-backed `[test]` evidence belongs to the test recipe.
 from __future__ import annotations
 
 from collections.abc import Sequence
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Final
 
 from outcomeeng.distribution.contracts import (
@@ -28,11 +28,15 @@ from outcomeeng.distribution.contracts import (
 from outcomeeng.validation._model import Recipe, Step
 
 _REPO_ROOT: Final = Path(__file__).resolve().parents[2]
+# The directories `[tool.pytest.ini_options] testpaths` collects.
+TEST_ROOTS: Final = ("spx", "tests")
+TEST_FILE_PREFIX: Final = "test_"
 PYTHON_SOURCE_PATHS: Final = ("outcomeeng", "outcomeeng_testing", "outcomeeng_evals")
 INSTRUCTION_BLOCK_ARGV: Final = _INSTRUCTION_BLOCK_ARGV
 
 RECIPE_VALIDATION: Final = "validation"
 RECIPE_TEST: Final = "test"
+RECIPE_TEST_ON_DEMAND: Final = "test-on-demand"
 RECIPE_CHECK: Final = "check"
 RECIPE_AD_HOC: Final = "ad-hoc"
 VERIFICATION_TYPE_VALIDATION: Final = "validation"
@@ -86,7 +90,40 @@ FOUNDATION_MANIFEST_ARGV: Final = (
     "-m",
     "outcomeeng.validation.foundation_manifest",
 )
-PYTEST_ARGV: Final = ("uv", "run", "python", "-m", "pytest")
+
+# The execution levels a test file name can carry, in order of increasing
+# execution pain. Every test whose file name carries the on-demand level forms
+# the on-demand suite, which no default verification runs.
+EXECUTION_LEVEL_L1: Final = "l1"
+EXECUTION_LEVEL_L2: Final = "l2"
+EXECUTION_LEVEL_L3: Final = "l3"
+EXECUTION_LEVELS: Final = (EXECUTION_LEVEL_L1, EXECUTION_LEVEL_L2, EXECUTION_LEVEL_L3)
+ON_DEMAND_LEVEL: Final = EXECUTION_LEVEL_L3
+TEST_FILE_SUFFIX: Final = ".py"
+TEST_FILE_NAME_SEPARATOR: Final = "."
+# `test_{subject}.{evidence}.{level}[.{runner}].py`: the level is the third
+# dot-separated segment of the file name.
+TEST_FILE_LEVEL_INDEX: Final = 2
+PYTEST_NODE_ID_SEPARATOR: Final = "::"
+# pytest drops an ignored file from every directory it collects and still runs
+# a file the command line names, so one exclusion keeps the on-demand suite out
+# of each directory target while a target that names an on-demand file keeps it.
+PYTEST_IGNORE_GLOB_OPTION: Final = "--ignore-glob"
+ON_DEMAND_EXCLUSION_ARGV: Final = tuple(
+    f"{PYTEST_IGNORE_GLOB_OPTION}=*{TEST_FILE_NAME_SEPARATOR}{ON_DEMAND_LEVEL}{tail}"
+    for tail in (
+        TEST_FILE_SUFFIX,
+        f"{TEST_FILE_NAME_SEPARATOR}*{TEST_FILE_SUFFIX}",
+    )
+)
+PYTEST_ARGV: Final = (
+    "uv",
+    "run",
+    "python",
+    "-m",
+    "pytest",
+    *ON_DEMAND_EXCLUSION_ARGV,
+)
 
 # Generated eval artifacts. Both derive from `eval.toml` definitions and the
 # producers those definitions name; both fail the gate when the committed
@@ -329,4 +366,59 @@ def test_recipe(pytest_args: Sequence[str] = ()) -> Recipe:
         purpose=TEST_RECIPE.purpose,
         preflight_steps=TEST_RECIPE.preflight_steps,
         steps=(Step(label="pytest", argv=(*PYTEST_ARGV, *pytest_args)),),
+    )
+
+
+def test_file_level(path: str) -> str | None:
+    """Return the execution level a test file name carries, or ``None``.
+
+    ``path`` may carry a pytest node-id tail; only the file name decides.
+    """
+
+    name = PurePosixPath(path.split(PYTEST_NODE_ID_SEPARATOR, maxsplit=1)[0]).name
+    segments = name.split(TEST_FILE_NAME_SEPARATOR)
+    if (
+        len(segments) <= TEST_FILE_LEVEL_INDEX + 1
+        or segments[-1] != TEST_FILE_SUFFIX[1:]
+    ):
+        return None
+    level = segments[TEST_FILE_LEVEL_INDEX]
+    return level if level in EXECUTION_LEVELS else None
+
+
+def is_on_demand_test(path: str) -> bool:
+    """Return whether ``path`` names a test of the on-demand suite."""
+
+    return test_file_level(path) == ON_DEMAND_LEVEL
+
+
+def on_demand_recipe(test_files: Sequence[str]) -> Recipe:
+    """Return the recipe that runs every on-demand file among ``test_files``.
+
+    The pytest step names each on-demand file and no other, so no other test
+    runs; with no on-demand file the recipe carries no pytest step, because an
+    untargeted pytest run would collect every other test.
+    """
+
+    targets = tuple(sorted({path for path in test_files if is_on_demand_test(path)}))
+    return Recipe(
+        name=RECIPE_TEST_ON_DEMAND,
+        verification_type=TEST_RECIPE.verification_type,
+        purpose=TEST_RECIPE.purpose,
+        preflight_steps=TEST_RECIPE.preflight_steps,
+        steps=(Step(label="pytest", argv=(*PYTEST_ARGV, *targets)),) if targets else (),
+    )
+
+
+def discover_on_demand_tests(root: Path) -> tuple[str, ...]:
+    """Return every on-demand test file under the pytest test roots of ``root``."""
+
+    return tuple(
+        sorted(
+            path.relative_to(root).as_posix()
+            for test_root in TEST_ROOTS
+            if (root / test_root).is_dir()
+            for path in (root / test_root).rglob(f"*{TEST_FILE_SUFFIX}")
+            if path.name.startswith(TEST_FILE_PREFIX) and is_on_demand_test(path.name)
+        )
     )
