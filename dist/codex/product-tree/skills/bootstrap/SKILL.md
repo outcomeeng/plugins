@@ -141,7 +141,7 @@ Recommend next steps:
 
 **Failure 1: Bootstrapped over an existing tree**
 
-Claude ran bootstrapping in a product that already had `spx/` with specs. The product spec was overwritten.
+Claude ran bootstrapping in a product that already had `spx/` with specs, because it read the request as a new product and skipped the existence check. The product spec was overwritten.
 
 How to avoid: Step 1 checks for an existing product spec. If one exists, redirect to `/author` or `/decompose spx/`.
 
@@ -153,7 +153,7 @@ How to avoid: Bootstrapping records product intent in the product spec and root 
 
 **Failure 3: Lost top-level intent**
 
-Claude created only the product spec and guide, then discarded the user's candidate product areas. The next composition step had no durable local context.
+Claude created only the product spec and guide, then discarded the user's candidate product areas, because it treated the interview answers as conversation context the next step would still hold. The next composition step ran in a fresh session and had no durable local context.
 
 How to avoid: Write candidate areas, constraints, examples, and unresolved questions to `spx/PLAN.md` before invoking `/decompose spx/`.
 
@@ -167,16 +167,13 @@ How to avoid: In brownfield, derive top-level intent from consumers, jobs, surfa
 
 <success_criteria>
 
-Bootstrapping is complete when:
+The scaffold is sound when:
 
-- [ ] Existing tree checked (no overwrite of existing product spec); brownfield (existing code) detected if present
-- [ ] User interviewed across consumers, jobs, surfaces, actors/sidedness, constraints, success signals, and top-level intent
-- [ ] Brownfield: top-level intent derived from product dimensions, not the code's module or file layout
-- [ ] Root scaffold plan presented and confirmed
-- [ ] `spx/{product-name}.product.md` created with hypothesis and scope
-- [ ] `AGENTS.md` and `CLAUDE.md` carry managed sections created from template, scoped to the project's enabled languages
-- [ ] `spx/PLAN.md` created when top-level intent exists
-- [ ] Top-level structure delegated to `/decompose spx/`
-- [ ] Next steps recommended
+- [ ] No existing product spec was overwritten; a tree already present redirected to `/author` or `/decompose spx/`
+- [ ] The product spec states the hypothesis and scope the interview surfaced in atemporal voice and enumerates no child
+- [ ] Every candidate top-level area is a user-facing capability derived from consumers, jobs, surfaces, and actors; none is named after a code component
+- [ ] The managed sections of `AGENTS.md` and `CLAUDE.md` match the installed template and name only the project's enabled languages
+- [ ] `spx/PLAN.md` carries every candidate area, constraint, example, and unresolved question the interview surfaced and assigns no node kind or index
+- [ ] The user confirmed the root scaffold plan before any file was written
 
 </success_criteria>

@@ -114,7 +114,7 @@ The plugin ships the round definitions this skill launches for Claude Code only.
 
 **A `/merge` finding was repaired in the Executor session.** Claude edited the file a valid `/merge` review finding named, which the first constraint forbids, so the merge gate could not pass within the Executor's own limits. Start a Fixer round of the definition whose round produced the file, with the finding as its repair block (step 6).
 
-**A refused release was reported as released.** Claude returned `released` for a Change still `Claimed` after `/release-change` refused. Return `release-refused` with the exact report whenever the release is refused (step 8).
+**A refused release was reported as released.** Claude returned `released` for a Change still `Claimed` after `/release-change` refused, because it took the invocation of the release skill as the release itself and never read the skill's report. Return `release-refused` with the exact report whenever the release is refused (step 8).
 
 </failure_modes>
 

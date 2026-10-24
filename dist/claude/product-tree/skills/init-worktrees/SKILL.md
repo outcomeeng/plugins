@@ -2,7 +2,7 @@
 name: init-worktrees
 description: >-
   ALWAYS invoke this skill when setting up a repository's git worktree layout — classifying a checkout as a single tree, a bare-repo worktree pool, or non-compliant, and provisioning the bare-repo pool while pushing every local ref to the remote and carrying a prior checkout's gitignored state across. NEVER run git clone --bare plus git worktree add to build the pool outside this skill.
-allowed-tools: Read, Bash(git:*), Bash(python3:*), Bash(just:*), Bash(pnpm:*), AskUserQuestion
+allowed-tools: Read, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/init_worktrees.py":*), Bash(git -C * remote get-url origin), Bash(just -d * clean), Bash(pnpm --dir * run clean), AskUserQuestion
 ---
 
 <objective>
@@ -35,6 +35,12 @@ Gather the provisioning inputs. Infer them; ask only for an operator-owned gap u
 
 </step>
 
+<step name="confirm_plan">
+
+Block on the runtime's structured-question tool (`AskUserQuestion` on Claude Code, `request_user_input` on Codex) before provisioning, naming every effect the provisioner has outside the new pool: the origin URL that receives a push of all local branches and tags, the absolute prior-checkout path that is renamed to its absolute `<name>.migrate` husk path (or that no rename occurs), the absolute container path that is built, and that the prior checkout's gitignored state is moved out of it. Offer proceed, change an input, and stop. Run `provision` only after the operator chooses to proceed.
+
+</step>
+
 <step name="provision">
 
 Run the provisioner. It derives the repository name from the prior checkout's origin, pushes every local branch and tag to the remote so no local-only ref is lost, renames the prior checkout aside to a `<name>.migrate` husk when it occupies the target container path, clones `<repo>.git` bare, restores the `origin/*` fetch refspec a bare clone omits, resolves the default branch from the clone, adds the sibling main checkout tracking `origin/<default>`, adds one detached pool worktree per name at the `origin/<default>` tip, and carries the prior checkout's gitignored state across — `.spx/` beside the new git-common-dir, every other gitignored path into the main checkout:
@@ -45,7 +51,7 @@ python3 "${CLAUDE_SKILL_DIR}/scripts/init_worktrees.py" provision \
   --worktree <repo>-a --worktree <repo>-b --worktree <repo>-c --worktree <repo>-d
 ```
 
-For a fresh layout with no prior checkout, pass `--origin <url>` in place of `--from <prior>` (no push or carry runs). The command prints a JSON object including `main_worktree` and `prior_husk` — the renamed-aside prior checkout (or `null` when no in-place rename occurred). A non-zero exit is an error, not a partial success: surface it and resolve its cause (a diverged branch that fails to push, an unreachable remote, or a carried path whose home is already occupied) before re-running.
+For a fresh layout with no prior checkout, pass `--origin <url>` in place of `--from <prior>` (no push or carry runs). The command prints a JSON object including `main_worktree` and `prior_husk` — the renamed-aside prior checkout (or `null` when no in-place rename occurred). A non-zero exit is an error, not a partial success: the script writes the failed command, its git stderr, and the fix to stderr — surface that text and resolve its cause (a diverged branch that fails to push, an unreachable remote, or a carried path whose home is already occupied) before re-running.
 
 </step>
 
@@ -113,8 +119,8 @@ Then block on the runtime's structured-question tool (`AskUserQuestion` on Claud
 - [ ] `classify --path .` exits 0 and emits a `layout` of `single`, `pool`, or `non-compliant`
 - [ ] A `pool` verdict ends the flow with no provisioning run
 - [ ] Provisioning inputs gathered (origin, container as `<parent-of-prior>/<repo>`, pool worktree names)
+- [ ] The operator confirmed the origin URL, prior-checkout and husk paths, and container through the structured-question gate before `provision` ran
 - [ ] `provision` pushed every local branch and tag to the remote and carried the prior checkout's gitignored state across
-- [ ] Bare `<repo>.git`, sibling main checkout (named for the repository) tracking `origin/<default>`, detached pool worktrees, and `.spx/` beside the git-common-dir all created under the repository-name container
 - [ ] The repository's clean target ran in the main checkout to purge moved regenerable bulk
 - [ ] `classify --path <main_worktree>` on the new main checkout emits `{"layout": "pool"}`
 - [ ] Prior-husk removal handed to the operator, never run by the skill, with confirmation obtained through the structured-question gate

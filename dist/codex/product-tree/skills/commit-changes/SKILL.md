@@ -32,8 +32,6 @@ This skill does NOT:
 - Modify git configuration
 - Bypass pre-commit hooks
 
-Changes may remain uncommitted until another agent session or human is expected or asked to read them. When repository writes are authorized, commit the exact current version before that reading. After any further change, commit the new version before another agent session or human reads it. Without repository-write authorization, defer the reading. Record verification state as `passing`, `failing`, or `not-run`; green verification governs gate eligibility rather than commit permission.
-
 </context>
 
 <project_specialization>
@@ -58,7 +56,7 @@ After loading this skill, check whether `spx/local/commit-changes.md` exists (pa
 
 This skill creates either a local checkpoint before a verification gate or a publication-ready commit after one:
 
-1. **Commit before another session reads** — When repository writes are authorized, commit the exact current version before another agent session or human is expected or asked to read it. Without that authorization, defer the reading. The commit may record deterministic verification as passing, failing, or not run; approval and green verification govern gate dispatch, publication, and merge readiness.
+1. **Commit before another session reads** — When repository writes are authorized, commit the exact current version before another agent session or human is expected or asked to read it, and commit again after any further change before the next such reading. Without that authorization, defer the reading.
 2. **New checkpoint after repair** — When a gate rejects the subject, fix the defect class, rerun deterministic verification, and create a new commit. Do not amend the audited checkpoint while its run remains prior context.
 3. **Scope to work item** — Stage only files from the work item:
    - Implementation files

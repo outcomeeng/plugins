@@ -92,7 +92,12 @@ def classify(facts: GitFacts) -> Layout:
 
 
 def _git(repo: Path, *args: str) -> None:
-    subprocess.run(["git", "-C", str(repo), *args], check=True, capture_output=True)
+    subprocess.run(
+        ["git", "-C", str(repo), *args],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
 
 
 def _git_out(*args: str, cwd: Path | None = None) -> str:
@@ -367,6 +372,7 @@ def provision(
         ["git", "clone", "--quiet", "--bare", origin_url, str(bare_dir)],
         check=True,
         capture_output=True,
+        text=True,
     )
     # Bare clones do not set up origin/* tracking refs — restore the refspec.
     _git(
@@ -447,6 +453,28 @@ def _cmd_provision(args: argparse.Namespace) -> int:
     return 0
 
 
+def _report_failure(error: Exception) -> None:
+    """Write the failed operation, its cause, and the fix to stderr."""
+    if isinstance(error, subprocess.CalledProcessError):
+        command = " ".join(str(part) for part in error.cmd)
+        detail = (error.stderr or "").strip() or f"exit status {error.returncode}"
+        fix = (
+            "resolve the git error above (a diverged branch rejected by the "
+            "remote, an unreachable remote, an occupied path, or low disk space), "
+            "then re-run; if the prior checkout was already renamed to "
+            "<name>.migrate, restore it before re-running"
+        )
+        print(
+            f"error: command failed: {command}\n{detail}\nfix: {fix}", file=sys.stderr
+        )
+    else:
+        print(
+            f"error: {type(error).__name__}: {error}\n"
+            "fix: resolve the cause named above, then re-run",
+            file=sys.stderr,
+        )
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -469,7 +497,11 @@ def main(argv: list[str] | None = None) -> int:
     provision_parser.set_defaults(func=_cmd_provision)
 
     args = parser.parse_args(argv)
-    return int(args.func(args))
+    try:
+        return int(args.func(args))
+    except (subprocess.CalledProcessError, ValueError, OSError) as error:
+        _report_failure(error)
+        return 1
 
 
 if __name__ == "__main__":
