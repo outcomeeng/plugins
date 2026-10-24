@@ -224,7 +224,13 @@ def record_namespace(path: Path, value: Json) -> str:
             f"Invalid {NAMESPACE_ENV} field: {path} must hold a string; "
             "inspect the file and reinstall through install"
         )
-    return checked_namespace(raw, NAMESPACE_ENV)
+    try:
+        return checked_namespace(raw, NAMESPACE_ENV)
+    except ValueError as error:
+        raise ValueError(
+            f"Invalid {NAMESPACE_ENV} field: {path} holds a namespace that breaks "
+            f"the namespace grammar: {error}; inspect the file and reinstall through install"
+        ) from error
 
 
 def checked_retained_jobs(path: Path, value: Json) -> None:
