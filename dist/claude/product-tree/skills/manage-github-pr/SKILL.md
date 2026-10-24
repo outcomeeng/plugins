@@ -56,9 +56,9 @@ After the plan or required confirmation, run `spx worktree status` from the assi
 
 **Step 3 — Implement if needed.** When the agreed scope requires code that does not exist yet, drive it through the governing skills — `/apply` for a product-tree node, or the language coding and testing skills — never writing implementation by hand outside them.
 
-**Step 4 — Commit.** Invoke `/commit-changes`. Branch off the base first when the work sits on the base branch.
+**Step 4 — Commit.** Use skill `product-tree:commit-changes`. Branch off the base first when the work sits on the base branch.
 
-**Step 5 — Open.** Invoke `/open-pr`. It evaluates `VERIFICATION_READINESS` and opens the PR ready. Skip this step in Open PR mode.
+**Step 5 — Open.** Use skill `product-tree:open-pr`. It evaluates `VERIFICATION_READINESS` and opens the PR ready. Skip this step in Open PR mode.
 
 **Step 6 — Drive to merge.** Invoke `/manage-pr <pr-pointer> --return-closeout` when the pointer is known, or `/manage-pr --return-closeout` when it resolves from the current branch. The explicit marker keeps broader-goal continuation and session closure in this outer lifecycle. `/manage-pr` evaluates `MERGE_READINESS`, merges under the gate, and runs any declared deploy and release phases.
 

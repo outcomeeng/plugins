@@ -108,7 +108,7 @@ Resume: if state file exists, re-validate against current codebase state, flag s
 
 **When loaded by another skill**: Skip. The calling skill specifies coverage areas and domain context. Apply `<essential_principles>` directly.
 
-**When invoked directly** (`/interview`):
+**When invoked directly**:
 
 If user provided input with `/interview <input>`:
 
@@ -118,7 +118,7 @@ If user provided input with `/interview <input>`:
    - Decision framing ("should we X or Y") → coverage centers on options, criteria, trade-offs
    - Problem framing ("why does X", "X is broken") → coverage builds a causal chain from symptoms to root cause
    - New idea with no artifact → generic coverage defaults (Problem, Users, Approach, Risks, Constraints)
-3. If the input maps to an existing product-tree skill (`/bootstrap`, `/author`, `/decompose`, `/align`), suggest that skill instead — it will load `/interview` for methodology and bring its own domain knowledge
+3. If the input maps to an existing product-tree skill (`/bootstrap`, `/author`, `/decompose`, `/align`), suggest that skill instead — it will load this skill for methodology and bring its own domain knowledge
 
 If no input: ask "What would you like to interview about?"
 
@@ -173,7 +173,7 @@ How to avoid: Every section of the generated spec must trace to a specific cover
 
 **Failure 5: Skipping pre-analysis to get to questions faster**
 
-Claude invokes `/interview`, reads the intake question, and immediately starts asking the user things. No codebase scan, no doc reading, no analysis brief. Every question the user answers could have been inferred from the codebase. User gets annoyed that Claude didn't do its homework.
+Claude loads this skill, reads the intake question, and immediately starts asking the user things. No codebase scan, no doc reading, no analysis brief. Every question the user answers could have been inferred from the codebase. User gets annoyed that Claude didn't do its homework.
 
 How to avoid: Pre-Analysis Protocol is non-negotiable. Complete the codebase, docs, and input research before the first question. Use an Explore agent only when the active repository and runtime instructions explicitly authorize that bounded research subagent; otherwise perform the same read-only research in the main conversation. Share the brief. The user should never have to supply something that exists in the codebase or docs.
 
@@ -191,11 +191,11 @@ How to avoid: every option is a materially distinct end-state a reasonable opera
 
 **Failure 8: Treating every structured workflow prompt as an interview**
 
-Claude saw a workflow use {{! tool('ask_user') !}} for an operational choice and invoked `/interview`, turning a local workflow decision into requirements gathering.
+Claude saw a workflow use {{! tool('ask_user') !}} for an operational choice and invoked this skill, turning a local workflow decision into requirements gathering.
 
-Why it failed: `/interview` governs requirements, scope, design, and draft-approval questions for artifacts. Structured tool choice alone is not a routing trigger.
+Why it failed: this skill governs requirements, scope, design, and draft-approval questions for artifacts. Structured tool choice alone is not a routing trigger.
 
-How to avoid: Invoke `/interview` only when the unresolved decision concerns artifact requirements, scope, design, or draft approval. For mechanical workflow choices, follow the governing workflow and use {{! tool('ask_user') !}} directly when that workflow requires it.
+How to avoid: Load this skill only when the unresolved decision concerns artifact requirements, scope, design, or draft approval. For mechanical workflow choices, follow the governing workflow and use {{! tool('ask_user') !}} directly when that workflow requires it.
 
 </failure_modes>
 

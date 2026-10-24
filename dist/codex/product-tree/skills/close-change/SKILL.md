@@ -71,8 +71,8 @@ Return the issue URL and the readback values verbatim for each Change closed, in
 - A terminal argument outside `Applied` and `Abandoned`, `Refined` included, was refused with the accepted values and no read or write; the held Change resolved from the explicit reference when given, else from the newest marker.
 - This session's worktree held the Change, a `Submitted` Change was reported as waiting without mutation, and the precondition for the Change's type held from current state before the first write; a root closed only on the operator's direction, and a Parent stayed open while a child was open or its last child closed `Abandoned`.
 - A Node whose directory on the default branch holds no status claim held its results only when the newest Handoff listed its block and named a pull request whose every check on the merged head reported `SUCCESS`; a Handoff naming a pushed branch, or a check that reported `SKIPPED`, refused `Applied` for that Node.
-- An `Applied` close whose Parent has a Parent and no open child claimed that Parent and closed it `Applied`, repeating upward, and closed no root.
-- The terminal state reads back complete: the exact terminal comment newest, an empty assignee list, Lifecycle equal to the argument, the issue `CLOSED` with the matching reason, and Product (empty for a root) and Maturity unchanged.
+- The upward continuation claimed each Parent before closing it, stopped at the first Parent with an open child or no Parent of its own, and closed no root.
+- The readback left Product (empty for a root) and Maturity unchanged, and `stateReason` matched the argument: `COMPLETED` for `Applied`, `NOT_PLANNED` for `Abandoned`.
 - Every failed transition stopped before later mutation and reported the ordered successful writes, the failed operation, and the complete observed state.
 
 </success_criteria>

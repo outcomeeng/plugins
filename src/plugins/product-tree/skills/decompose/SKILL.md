@@ -22,11 +22,11 @@ Accept exactly one target from `$ARGUMENTS`:
 - `spx/` — compose top-level children from the product root after bootstrapping creates the product spec and root guide.
 - `{path-to-node}` — decompose or restructure children under an existing node.
 
-If `$ARGUMENTS` is empty, stop before reading or writing product files. State that `/decompose` requires exactly one target and give the two accepted forms above.
+If `$ARGUMENTS` is empty, stop before reading or writing product files. State that this skill requires exactly one target and give the two accepted forms above.
 
 Read the conditional operational sources below before composing. Use the live inline foundation for node and ordering rules:
 
-- Live `/understand` `<identity_and_kinds>` — the seven kinds, their order, and containment — and `${CLAUDE_SKILL_DIR}/../understand/references/kind-decision.md` for the ordered kind tests and the structural scorecards
+- Live `/understand` `<identity_and_kinds>` — the seven kinds, their order, and containment — and the `kind-decision.md` reference that section names for the ordered kind tests and the structural scorecards
 - Live `/understand` `<ordering_model>` — the context-loading meaning of an index and the inverse assignment rule
 - Live `/understand` `<artifact_placement>` — artifact taxonomy, test-infrastructure governance, and placement rules
 - `/understand` product-domain-shapes classifier and examples
@@ -81,7 +81,7 @@ Classify the target with the product-domain-shapes reference before deciding whe
 - **One coherent concern**: keep the target whole when one hypothesis or enables statement covers all assertions, assertions are tightly coupled, or proposed children would carry only 1-2 trivial assertions.
 - **Aggregate domain plus first concrete behavior**: create both parent and child from the first slice when the aggregate owns shared policy, vocabulary, scope, routing, coordination, or cross-child assertions and the concrete behavior owns an independently validated contract.
 - **Implementation layer**: translate code-shaped names back to product dimensions before proposing nodes.
-- **Unsettled boundary**: invoke `/interview` with the unresolved boundary as the current coverage area.
+- **Unsettled boundary**: use skill `product-tree:interview` with the unresolved boundary as the current coverage area.
 
 </step>
 
@@ -109,7 +109,7 @@ Each area is complete when:
 - **Index Budget** — full-vs-partial composition horizon is known.
 - **Refactor/Issue Handling** — sibling refactors, duplicate nodes, stale coordination notes, and known issues have a destination.
 
-If any area is incomplete or doubtful, invoke `/interview` before continuing. Use the coverage map above as the calling skill's domain-specific coverage areas. Ask one structured question at a time and continue until every area is resolved or recorded as an explicit issue.
+If any area is incomplete or doubtful, use skill `product-tree:interview` before continuing. Use the coverage map above as the calling skill's domain-specific coverage areas. Ask one structured question at a time and continue until every area is resolved or recorded as an explicit issue.
 
 </step>
 
@@ -336,7 +336,7 @@ How to avoid: When the aggregate owns shared scope or cross-child policy and the
 
 **Failure 9: Left decision placement to authoring while ownership was unsettled**
 
-Claude asked `/author` to place exactly one PDR even though the concept crossed plausible owners and raised node identity questions. Authoring proposed a path from reach, then the operator had to ask whether `/decompose` had been invoked.
+Claude asked `/author` to place exactly one PDR even though the concept crossed plausible owners and raised node identity questions. Authoring proposed a path from reach, then the operator had to ask whether decomposition had run.
 
 How to avoid: treat ADR/PDR placement as decomposition work when the location depends on concept ownership, node renaming, node splitting, parent/child boundaries, or context-loading reach. Return the owning directory and scope boundary first; `/author` writes the decision record only after that structure is settled.
 

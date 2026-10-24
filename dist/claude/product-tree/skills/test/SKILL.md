@@ -311,7 +311,7 @@ For a canonical ADR/PDR target, use decision-rule mode. Require context for the 
 
 **Step 2: Extract assertions from the spec**
 
-For a spec target, parse the target spec node and extract assertions already selected for `[test]` evidence plus the exact untagged assertions supplied to this invocation as selected test work. Ignore every other untagged assertion; verification-type selection remains outside `/test`. Extract any existing test links from the selected set:
+For a spec target, parse the target spec node and extract assertions already selected for `[test]` evidence plus the exact untagged assertions supplied to this invocation as selected test work. Ignore every other untagged assertion; verification-type selection remains outside this skill. Extract any existing test links from the selected set:
 
 | Type            | Pattern in spec                                    | Test strategy   |
 | --------------- | -------------------------------------------------- | --------------- |

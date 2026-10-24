@@ -27,13 +27,13 @@ Use skill `product-tree:understand`. Skip when the `PRODUCT_TREE_FOUNDATION` mar
 </step>
 
 <step number="2" name="Load tree context">
-Identify the candidate area the plan touches, then invoke `/contextualize` on the lowest common ancestor of the nodes the plan reaches. Load the existing nodes, their ancestry, and the governing decisions — the slice is selected from nodes that already exist, so their current specs and ordering constrain what a coherent increment can be.
+Identify the candidate area the plan touches, then use skill `product-tree:contextualize` on the lowest common ancestor of the nodes the plan reaches. Load the existing nodes, their ancestry, and the governing decisions — the slice is selected from nodes that already exist, so their current specs and ordering constrain what a coherent increment can be.
 
 When the plan names no existing node — the work needs nodes that do not exist yet — stop and route to `/decompose` (to compose the structure) or `/author` (to create a node), then return. Slice selection operates over an existing tree.
 </step>
 
 <step number="3" name="Select the slice with the operator">
-Invoke `/interview` to decide the slice. Reason to a recommendation first: the smallest coherent node set whose merged result demonstrates business and user value. Ask the operator only what the plan, the specs, and the loaded context do not settle — the value the next increment should demonstrate, and which of several coherent slices to take first.
+Use skill `product-tree:interview` to decide the slice. Reason to a recommendation first: the smallest coherent node set whose merged result demonstrates business and user value. Ask the operator only what the plan, the specs, and the loaded context do not settle — the value the next increment should demonstrate, and which of several coherent slices to take first.
 
 Confirm with the operator:
 

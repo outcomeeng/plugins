@@ -154,14 +154,14 @@ Read the `<common_misplacements>` section of `/understand` `references/artifact-
 
 <downstream_alignment_conformance>
 
-Use the live `/understand` `<decision_to_spec_alignment>` section. For changeset checks, use the exact changed-file set derived through `/scope-changeset`. Stop and request that derived set when it is absent; never derive git scope inside `/align`.
+Use the live `/understand` `<decision_to_spec_alignment>` section. For changeset checks, use the exact changed-file set derived through `/scope-changeset`. Stop and request that derived set when it is absent; never derive git scope in this skill.
 
 For each changed higher-level declaration — product spec, ADR, PDR, or ancestor spec — report a finding when the changed-file set contains neither:
 
 - the first affected lower spec or specs that receive the new truth, nor
 - a Change, referenced from the changeset or its commit message, carrying the remaining downstream evidence or implementation work.
 
-Report only the factual gap: the changed higher-level declaration, the constraining scope, and the absent lower-spec or Change grounding. Do not choose the downstream structure in `/align`; structural ownership questions route to `/decompose`.
+Report only the factual gap: the changed higher-level declaration, the constraining scope, and the absent lower-spec or Change grounding. Do not choose the downstream structure here; structural ownership questions route to `/decompose`.
 
 </downstream_alignment_conformance>
 

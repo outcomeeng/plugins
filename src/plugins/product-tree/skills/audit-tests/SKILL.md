@@ -65,7 +65,7 @@ If the request carries no target, return `REJECTED` with only `gate-1-assertion`
 
 **Step 0: Load shared test-evidence standards**
 
-{!% require_skill 'product-tree:test-evidence-standards' %!} Apply its complete predicate-seam, semantic-binding, case-provenance, oracle-independence, assertion-type-litmus, mutation litmus, and assertion-design-record rules. A missing reference blocks the audit because `/test` and `/audit-tests` must judge from the same standards.
+{!% require_skill 'product-tree:test-evidence-standards' %!} Apply its complete predicate-seam, semantic-binding, case-provenance, oracle-independence, assertion-type-litmus, mutation litmus, and assertion-design-record rules. A missing reference blocks the audit because `/test` and this audit must judge from the same standards.
 
 </step>
 

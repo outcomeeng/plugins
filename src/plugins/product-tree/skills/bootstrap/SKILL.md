@@ -18,7 +18,7 @@ This skill runs when:
 
 - The user says "bootstrap", "set up product tree", "start a new product"
 - `/author` detects no `spx/` directory or an empty one
-- The user invokes `/bootstrap` directly
+- The user invokes this skill directly
 
 </quick_start>
 
@@ -45,7 +45,7 @@ Also detect **brownfield**: a product already implemented in code while `spx/` i
 
 **Step 2: Interview the user**
 
-Invoke `/interview` and apply its methodology (one question at a time, `{{! tool('ask_user') !}}`, coverage display before each question, pushback) with the product-bootstrap coverage areas below as the interview plan. `/interview` supplies the technique; bootstrapping supplies the coverage areas — do not fork the interview. Take the areas in order, each constraining the next:
+Use skill `product-tree:interview` and apply its methodology (one question at a time, `{{! tool('ask_user') !}}`, coverage display before each question, pushback) with the product-bootstrap coverage areas below as the interview plan. `/interview` supplies the technique; bootstrapping supplies the coverage areas — do not fork the interview. Take the areas in order, each constraining the next:
 
 1. **Consumers** — who consumes this product? Name distinct personas, not a single "user".
 2. **Job-to-be-done** — what job does each consumer hire the product for?
@@ -105,7 +105,7 @@ Wait for user confirmation before creating files.
    - Scope (capabilities grouped by the consumer and surface they serve)
    - Product-level compliance rules, if any emerged from interview
 
-3. Invoke `/update-instruction-block` for the repository root so its generator writes both root instruction blocks — `{{! file('root_guide') !}}` for this runtime and `{!% if target == 'claude' %!}`{{! file('root_guide', 'codex') !}}`{!% else %!}`{{! file('root_guide', 'claude') !}}`{!% endif %!}` for the other runtime — from the installed template. `/update-instruction-block` owns instruction-block rendering, enabled-language detection, and any explicit language override.
+3. Use skill `product-tree:update-instruction-block` for the repository root so its generator writes both root instruction blocks — `{{! file('root_guide') !}}` for this runtime and `{!% if target == 'claude' %!}`{{! file('root_guide', 'codex') !}}`{!% else %!}`{{! file('root_guide', 'claude') !}}`{!% endif %!}` for the other runtime — from the installed template. `/update-instruction-block` owns instruction-block rendering, enabled-language detection, and any explicit language override.
 
 4. If top-level composition intent exists, write `spx/PLAN.md` with:
    - Candidate product areas from the interview

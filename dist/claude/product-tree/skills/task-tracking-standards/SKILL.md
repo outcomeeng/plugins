@@ -15,7 +15,7 @@ This is a reference skill. Skills that create, update, or delete a heartbeat or 
 </reference_note>
 
 <when_to_load>
-Load `/task-tracking-standards` before any workflow:
+Load this skill before any workflow:
 
 - creates or refreshes a heartbeat for a workflow whose governing skill has no foreground wait command
 - schedules a delayed rollout or external-convergence re-check
@@ -30,7 +30,7 @@ Load `/task-tracking-standards` before any workflow:
 - Heartbeat text points to authoritative state; it never copies the full state.
 - The continuation prompt is a pointer, never a payload: it names the skills to reload and the pointers each skill must handle (the work-item identifiers, plus the repository when a cold reader needs it to resolve them), and nothing else.
 - Never assume conversation memory survives to the next fire. Compaction, session resumption, and a fresh automation thread each discard it, and none can be anticipated when the prompt is written. The wake-up reconstructs the directive, the plan, the finding assessments, and the next action by reloading the named skills and re-reading the durable artifacts (PR body, commits, PLAN.md, ISSUES.md) and live state. If the next fire must know something, write it to a durable artifact — never to the prompt, never to hoped-for retained memory.
-- On wake-up, reload the named workflow skills, `/task-tracking-standards`, repository instructions, and authoritative state before acting. The reload is mandatory recovery: the protocol a skill carries cannot be assumed to have survived in context, so re-invoking restores it.
+- On wake-up, reload the named workflow skills, this skill, repository instructions, and authoritative state before acting. The reload is mandatory recovery: the protocol a skill carries cannot be assumed to have survived in context, so re-invoking restores it.
 - A failed check keeps the work active. Fetch failed logs once, classify the layer, then continue the repair loop or ask for the exact missing approval, credential, or judgment.
 - "Stop before retrying" means classify before rerunning the same external job. It never means abandon active work.
 - Delayed external convergence requires an updated heartbeat before ending the turn when the governing workflow has no foreground wait command.
@@ -53,7 +53,7 @@ Use pointers to these sources instead of copying their contents into a heartbeat
 <heartbeat_payload>
 The continuation prompt carries exactly two things:
 
-1. **The skills to reload** — the owning workflow skill and the references it depends on, always including `/task-tracking-standards`. The reloaded skill bodies supply the protocol; the prompt does not.
+1. **The skills to reload** — the owning workflow skill and the references it depends on, always including this skill. The reloaded skill bodies supply the protocol; the prompt does not.
 2. **The pointers each skill must handle** — the work-item identifiers the skill resumes from (PR number, run id, branch, issue, or rollout id), plus the repository when a cold reader needs it to resolve them. The pointers say what each skill operates on; the skill resolves everything else from them.
 
 It carries nothing else. The wake-up reconstructs the directive, the plan, the finding assessments, the next action, and the stop condition by reloading the named skills and re-reading the durable artifacts (PR body, commits, `PLAN.md`, `ISSUES.md`) and live state. The prompt is not a memory: it is re-sent unchanged on every fire, it would be stale by fire time, and conversation memory is never assumed to survive (compaction, resumption, or a fresh thread can discard it, none anticipable). So the directive, the finding assessments, and the rationale never appear in the prompt — if the next fire must know something, it is written to a durable artifact (`PLAN.md` / `ISSUES.md`), the source the wake-up already re-reads.
@@ -162,7 +162,7 @@ Neither form carries the directive, the finding assessments, or the rationale; t
 <success_criteria>
 Tracking is correct when:
 
-- every heartbeat-producing skill loads `/task-tracking-standards` before mutating runtime tracking
+- every heartbeat-producing skill loads this skill before mutating runtime tracking
 - the continuation prompt carries only the skills to reload and the pointers each handles — never the directive, finding assessments, or rationale, which are reconstructed on wake-up; anything the next fire needs is written to a durable artifact
 - wake-ups reload the named skills and re-read authoritative state before acting, never assuming conversation memory survived
 - failed checks stay in the active workflow until classified and repaired or blocked by an explicit operator decision

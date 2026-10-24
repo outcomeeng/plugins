@@ -275,7 +275,7 @@ Recommend next steps based on artifact type:
 
 | Created                          | Recommended next                                  |
 | -------------------------------- | ------------------------------------------------- |
-| Product spec                     | Author top-level nodes with `/author`             |
+| Product spec                     | Author top-level nodes with this skill            |
 | ADR/PDR                          | Verify compliance in affected nodes with `/align` |
 | Output node with many assertions | Decompose with `/decompose`                       |
 | Output node                      | Establish evidence with `/apply`                  |
