@@ -41,7 +41,7 @@ Language-specific ADR concerns — testability-in-Verification (dependency injec
 
 - NEVER modify the ADR under audit or any other file — this audit produces a verdict, never a fix or a commit.
 - ALWAYS derive the valid section set from the canonical ADR template before judging structure — never from memory.
-- ALWAYS name the section, the violated rule, and the evidence in every REJECT finding.
+- ALWAYS name the section, the violated rule, and the evidence in every REJECT finding — the author repairs from the finding alone, and an unanchored finding leaves nothing to repair.
 - NEVER issue a finding the cited rule or canonical template does not support — drop an unbacked finding rather than reject the ADR for it.
 - NEVER reject on text the changeset leaves unchanged and does not invalidate — return that finding as `filed`, and NEVER raise a recorded finding's severity or let a `filed` finding start to reject unless the run names a changed basis. `${CLAUDE_SKILL_DIR}/references/touched-text.md` defines touched text, the finding key, and the `filed` form.
 
@@ -55,9 +55,9 @@ Language-specific ADR concerns — testability-in-Verification (dependency injec
 
 Bind the required ADR path, preserving spaces within it: `$ARGUMENTS` supplies it when that argument is non-empty; when it is empty, the path is the one the request text carries, and the empty substitution binds nothing. If the request carries no path, run `git branch --show-current` for metadata and emit the `<verdict_format>` JSON with `target: ""`, `overall: "REJECTED"`, and all three native rows marked `FAIL`. Each row carries a `missing-target` finding with severity `blocking`, location `input`, `observed` naming the absent target, and `expected` and `message` naming the required ADR path. Stop before context loading or artifact inspection.
 
-Invoke `/understand` when the live `<SPEC_TREE_FOUNDATION>` marker is absent or lacks `Template root`. Read `decisions/decision-name.adr.md` beneath that marker's resolved absolute template directory. The template remains owned by `/understand`. Then invoke `/contextualize` on the directory containing the ADR. Run `git branch --show-current` to populate verdict metadata without granting broader shell authority.
+When the live `<SPEC_TREE_FOUNDATION>` marker is absent or lacks `Template root`: Use skill `spec-tree:understand`. Read `decisions/decision-name.adr.md` beneath that marker's resolved absolute template directory. The template remains owned by `/understand`. Then, on the directory containing the ADR: Use skill `spec-tree:contextualize`. Run `git branch --show-current` to populate verdict metadata without granting broader shell authority.
 
-The input is the ADR path alone. Derive its governing node from the containing directory, using canonical `spx/` for a product-root ADR. Retain the successful `/sync-base` result established by `/contextualize`: its `preservation` supplies the committed base and head identities and `branch_paths_after` supplies the current changeset paths. Use that context with the ADR's governed declarations and linked implementation surfaces in Step 5b; no supplied language classification is required.
+The input is the ADR path alone. Derive its governing node from the containing directory, using canonical `spx/` for a product-root ADR. Resolve the committed changeset from the checkout as it stands: run `git merge-base HEAD origin/HEAD` for the base, then `git diff --name-only <base> HEAD` for the changed paths. Use that context with the ADR's governed declarations and linked implementation surfaces in Step 5b; no supplied language classification is required.
 
 Do not proceed without the canonical ADR template content and live `<SPEC_TREE_FOUNDATION>` and `<SPEC_TREE_CONTEXT>` markers.
 
@@ -107,7 +107,7 @@ Check EVERY section for temporal language:
 
 Read each rule's placement before judging tags. An untagged rule directly under `## Verification` has the canonical authoring form. For every such rule, identify its subject, the condition it constrains, and a concrete observation that would violate it. Reject a vague, ambiguous, or unfalsifiable rule with `invalid-draft-rule` in the `tag-validity` row, mark that row `FAIL`, and quote the rule with the missing or ambiguous criterion. For example, `ALWAYS: improve quality` fails because it names no observable condition. Check each draft rule against the decision statement and governing decisions; a contradiction also produces `invalid-draft-rule`, citing both conflicting declarations. Select no evidence type or tag during these checks.
 
-A tagged rule must have the matching routed subsection. When `### Testing` contains rules, invoke `spec-tree:test-evidence-standards` and load its assertion-type litmus. Apply that reference and the loaded foundation's assertion-type definitions to the declared claim and tag. If the required reference cannot load, emit a blocking `test-standards-unavailable` finding and a failed `tag-validity` row. Judge declaration compatibility only; evidence completeness belongs to evidence auditing. Never invoke the mutating `/test` authoring workflow, select a replacement tag, or change the ADR during this audit.
+A tagged rule must have the matching routed subsection. When `### Testing` contains rules: Use skill `spec-tree:test-evidence-standards`. Load its assertion-type litmus. Apply that reference and the loaded foundation's assertion-type definitions to the declared claim and tag. If the required reference cannot load, emit a blocking `test-standards-unavailable` finding and a failed `tag-validity` row. Judge declaration compatibility only; evidence completeness belongs to evidence auditing. Never invoke the mutating `/test` authoring workflow, select a replacement tag, or change the ADR during this audit.
 
 For each routed rule:
 

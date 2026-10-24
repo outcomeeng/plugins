@@ -10,6 +10,16 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.107.2
+
+### Changed
+
+- **`/contextualize` reads the checkout as it stands and never moves it.** Context loading no longer runs `/sync-base`, fetches, or rebases, and the `<SPEC_TREE_CONTEXT>` marker drops the `Sync-base status`, `Synchronized checkout`, and `Synchronized base` fields. A Verifier that loads context now judges the head it was dispatched against; before this change a test-evidence audit rebased the Author's branch while other Verifiers were judging the same head. The generated instruction block states the same rule. `/audit-adr` resolves its changeset with `git merge-base HEAD origin/HEAD` and `git diff --name-only <base> HEAD`, and `/audit-tests` and `/audit-eval-evidence` read `metadata.branch` from `git branch --show-current`; `test-evidence-auditor` and `eval-evidence-auditor` gain the `git branch --show-current` grant. Bring a branch current through `/sync-base` or the `/merge` flow, which own base movement.
+
+### Fixed
+
+- **Auditor agents run the skills their methodology composes.** The seven auditor agents (`adr-auditor`, `assertion-auditor`, `eval-evidence-auditor`, `implementation-auditor`, `pdr-auditor`, `spec-auditor`, `test-evidence-auditor`) ban spawning another agent or verifier and invoking an agent CLI, and direct the auditor to invoke every audit or standards skill its loaded methodology composes into its judgment, in its own context, because a skill invocation is never a nested audit. Before this change the ban named a "nested audit", and a `test-evidence-auditor` read the `audit-{lang}-test` invocation `audit-tests` requires as one and skipped the language test concern.
+
 ## 0.107.1
 
 ### Changed
