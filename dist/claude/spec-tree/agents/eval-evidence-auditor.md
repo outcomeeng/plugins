@@ -4,7 +4,7 @@ effort: "medium"
 name: eval-evidence-auditor
 description: >-
   Verifier running `/audit-eval-evidence`: a calling skill launches it by exact name with one spec node path when its gate requires an independent audit of that node's eval evidence.
-tools: Read, Grep, Glob, Skill, Bash(git merge-base:*), Bash(git diff:*)
+tools: Read, Grep, Glob, Skill, Bash(git merge-base:*), Bash(git diff:*), Bash(git branch --show-current:*)
 skills:
   - spec-tree:audit-eval-evidence
 ---

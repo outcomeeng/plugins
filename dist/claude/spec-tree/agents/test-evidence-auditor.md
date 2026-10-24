@@ -4,7 +4,7 @@ effort: "medium"
 name: test-evidence-auditor
 description: >-
   Verifier running `/audit-tests`: a calling skill launches it by exact name with one spec node path when its gate requires an independent audit of that node's test evidence.
-tools: Read, Grep, Glob, Skill, Bash(git diff:*), Bash(git merge-base:*)
+tools: Read, Grep, Glob, Skill, Bash(git diff:*), Bash(git merge-base:*), Bash(git branch --show-current:*)
 skills:
   - spec-tree:audit-tests
 ---

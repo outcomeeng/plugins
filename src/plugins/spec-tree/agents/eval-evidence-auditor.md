@@ -2,7 +2,7 @@
 name: eval-evidence-auditor
 description: >-
   Verifier running `/audit-eval-evidence`: a calling skill launches it by exact name with one spec node path when its gate requires an independent audit of that node's eval evidence.
-tools: Read, Grep, Glob, {{! tool('use_skill') !}}, Bash(git merge-base:*), Bash(git diff:*)
+tools: Read, Grep, Glob, {{! tool('use_skill') !}}, Bash(git merge-base:*), Bash(git diff:*), Bash(git branch --show-current:*)
 profile: standard
 {!% if target == 'codex' %!}
 sandbox_mode: read-only

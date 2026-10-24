@@ -9,7 +9,7 @@ description: >-
   behavior-coupled evidence its assertions are fulfilled, covering predicate
   ownership, source ownership, coupling, falsifiability, and full-chain coverage.
 argument-hint: "<spec-node-path-or-evidence-scope>"
-allowed-tools: Read, Grep, Glob, Skill, Bash(git diff:*), Bash(git merge-base:*)
+allowed-tools: Read, Grep, Glob, Skill, Bash(git diff:*), Bash(git merge-base:*), Bash(git branch --show-current:*)
 ---
 
 <objective>
@@ -26,7 +26,7 @@ A verdict on whether a spec node's tests provide behavior-coupled evidence its a
 - ALWAYS construct every finding as one complete record containing `id`, `file`, `line`, `assertion`, `property`, `rule`, `severity`, `message`, and `remediation_target` before adding it to a row — required fields are never deferred to verdict rendering.
 - ALWAYS reject an incomplete evidence-chain inventory before approval; absence of an artifact is missing evidence, never permission to infer its contents.
 - NEVER issue a finding the evidence model does not support — drop an unbacked finding rather than reject the tests for it; NEVER reject on text the changeset leaves unchanged and does not invalidate — return that finding with severity `FILED`, and NEVER raise a recorded finding's severity or let a `FILED` finding start to reject unless the run names a changed basis. `${CLAUDE_SKILL_DIR}/references/touched-text.md` defines touched text, the finding key, and the `FILED` form.
-- The only `Bash` capability this skill grants is the read-only `git diff` and `git merge-base`, unlike the language auditors it composes. The omission of any other grant is deliberate: the no-deterministic-verification constraint above is enforced at the tool-permission layer rather than by prose alone, and this base audit reaches every other artifact it judges through `Read`, `Grep`, and `Glob`. Do not add another `Bash` grant for parity.
+- The only `Bash` capability this skill grants is the read-only `git diff`, `git merge-base`, and `git branch --show-current`, unlike the language auditors it composes. The omission of any other grant is deliberate: the no-deterministic-verification constraint above is enforced at the tool-permission layer rather than by prose alone, and this base audit reaches every other artifact it judges through `Read`, `Grep`, and `Glob`. Do not add another `Bash` grant for parity.
 
 </constraints>
 
@@ -337,7 +337,7 @@ Before row rollup, inspect every finding as a complete record. Require all nine 
 
 <verdict_format>
 
-The `NOT_APPLICABLE` result defined in Step 3f is the alternate output when no evidence is applicable; it contains only `status`, `subjects`, and `explanation`, and the gate-verdict schema below does not apply. Every gate verdict includes `metadata.branch`: the branch string from the successful `/sync-base` result retained by `/contextualize`, an empty string for a detached HEAD, or JSON `null` when unavailable.
+The `NOT_APPLICABLE` result defined in Step 3f is the alternate output when no evidence is applicable; it contains only `status`, `subjects`, and `explanation`, and the gate-verdict schema below does not apply. Every gate verdict includes `metadata.branch`: the output of `git branch --show-current`, an empty string for a detached HEAD, or JSON `null` when unavailable.
 
 Emit the verdict as a single JSON object. This JSON is the skill's entire output; never emit a prose or markdown verdict.
 

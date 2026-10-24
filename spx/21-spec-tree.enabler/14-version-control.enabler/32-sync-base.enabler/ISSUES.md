@@ -48,14 +48,6 @@ Carry the rebase-never-reset invariant and the untracked-collision gap above
 into the ported surface rather than leaving either behind. Revisit when the
 capability publishes.
 
-## `/sync-base` has no read-only form a Verifier could select
-
-A Verifier's context load runs `/sync-base`, which fetches, rebases the audited branch onto its base and resolves conflicts, while other Verifiers dispatched against the same committed head are still running. `/sync-base` offers no form that reports a branch behind its base without moving the checkout.
-
-**Evidence.** Rollout `agent-a4cedd803fc1a5758.jsonl` of the test-evidence audit dispatched against head `f07db1bbaf225ec031d7a777f02c166daa588871` on 2026-09-16 rebased the branch to `15d4309e69c26804cd1b04676248a529fd0235b9`; implementation-audit run `2026-09-16_12-40-04-694-a2e206a2d753` then found its sealed head superseded.
-
-**Settlement condition.** `/sync-base` reports behind-base without moving the checkout when the caller selects it, or the context load reads the committed subject without calling it; the decision lives with the entry in `spx/21-spec-tree.enabler/18-context-loading.enabler/ISSUES.md`.
-
 ## The conflict handoff to a superior meets the node's audit rule and fails `/skill-standards` caller independence
 
 **Evidence.** Skill-auditor run `2026-10-08_23-39-23-724-b13324f3337e` rejected the `sync-base` skill on the conflict handoff in `<conflict_reconciliation>` of `src/plugins/spec-tree/skills/sync-base/SKILL.md`, which defines a superior as whoever assigned the work and sends that superior an assessment. That text follows the ALWAYS `[audit]` assertion in `spx/21-spec-tree.enabler/14-version-control.enabler/32-sync-base.enabler/sync-base.md` that the skill sends its superior an assessment with a recommended route and acts on the superior's decision, and the `### Audit` rule of [`spx/21-spec-tree.enabler/14-version-control.enabler/32-sync-base.enabler/13-base-sync-mechanism.adr.md`](spx/21-spec-tree.enabler/14-version-control.enabler/32-sync-base.enabler/13-base-sync-mechanism.adr.md) that names the same handoff. `/skill-standards` rejects the same text as a dependency on the caller.

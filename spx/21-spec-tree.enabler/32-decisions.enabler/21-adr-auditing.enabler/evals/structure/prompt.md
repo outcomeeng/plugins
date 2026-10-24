@@ -57,7 +57,7 @@ Bind the required ADR path, preserving spaces within it: `$ARGUMENTS` supplies i
 
 Invoke `/understand` when the live `<SPEC_TREE_FOUNDATION>` marker is absent or lacks `Template root`. Read `decisions/decision-name.adr.md` beneath that marker's resolved absolute template directory. The template remains owned by `/understand`. Then invoke `/contextualize` on the directory containing the ADR. Run `git branch --show-current` to populate verdict metadata without granting broader shell authority.
 
-The input is the ADR path alone. Derive its governing node from the containing directory, using canonical `spx/` for a product-root ADR. Retain the successful `/sync-base` result established by `/contextualize`: its `preservation` supplies the committed base and head identities and `branch_paths_after` supplies the current changeset paths. Use that context with the ADR's governed declarations and linked implementation surfaces in Step 5b; no supplied language classification is required.
+The input is the ADR path alone. Derive its governing node from the containing directory, using canonical `spx/` for a product-root ADR. Resolve the committed changeset from the checkout as it stands: run `git merge-base HEAD origin/HEAD` for the base, then `git diff --name-only <base> HEAD` for the changed paths. Use that context with the ADR's governed declarations and linked implementation surfaces in Step 5b; no supplied language classification is required.
 
 Do not proceed without the canonical ADR template content and live `<SPEC_TREE_FOUNDATION>` and `<SPEC_TREE_CONTEXT>` markers.
 

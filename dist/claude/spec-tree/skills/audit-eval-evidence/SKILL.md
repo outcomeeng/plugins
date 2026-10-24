@@ -5,7 +5,7 @@ description: >-
   provides evidence its `[eval]` assertions are fulfilled, covering case
   quality, verdict schema fit, and producer coupling.
 argument-hint: "<spec-node-path>"
-allowed-tools: Read, Grep, Glob, Skill, Bash(git merge-base:*), Bash(git diff:*)
+allowed-tools: Read, Grep, Glob, Skill, Bash(git merge-base:*), Bash(git diff:*), Bash(git branch --show-current:*)
 ---
 
 <objective>
@@ -55,7 +55,7 @@ Read the evidence model before auditing: `${CLAUDE_SKILL_DIR}/references/evidenc
 
 Use skill `spec-tree:contextualize` on the spec node whose eval evidence is being audited. This loads the spec's assertions, ancestor ADRs/PDRs, and hierarchy context.
 
-Do not proceed without a `<SPEC_TREE_CONTEXT>` marker. Populate branch metadata from the successful `/sync-base` result retained by `/contextualize`; use JSON `null` when unavailable, and preserve an empty string for a detached HEAD.
+Do not proceed without a `<SPEC_TREE_CONTEXT>` marker. Run `git branch --show-current` for branch metadata; use JSON `null` when unavailable, and preserve an empty string for a detached HEAD.
 
 </step>
 
@@ -168,7 +168,7 @@ Scan all findings across all `[eval]` assertions and classify each as `${CLAUDE_
 
 <verdict_format>
 
-Always include `metadata.branch`: the branch string from the successful `/sync-base` result retained by `/contextualize`, an empty string for a detached HEAD, or JSON `null` when unavailable.
+Always include `metadata.branch`: the output of `git branch --show-current`, an empty string for a detached HEAD, or JSON `null` when unavailable.
 
 Emit the verdict as a single JSON object. This JSON is the skill's entire output; never a prose or markdown verdict.
 
