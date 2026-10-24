@@ -70,3 +70,23 @@ live-discovery tests are members.
 
 **Settlement condition**: the sentence names the on-demand suite as the CI scope's
 one exclusion.
+
+## DEBT [evidence]: the static-analysis steps are checked in a step list, not in the `check-full` recipe
+
+Defect class: `alignment`.
+
+Finding: the compliance assertion of `spx/13-infrastructure.enabler/21-test-infrastructure.enabler/21-python-code-quality.enabler/python-code-quality.md` that `ruff check`, `mypy --strict`, and `pyright` run as named steps in `just check-full` is evidenced by `tests/test_python_code_quality.compliance.l2.py`, which reads argv membership of `VALIDATION_STEPS`. No test reads that the `check-full` recipe composes `VALIDATION_STEPS` or that the steps carry names, so narrowing the recipe or renaming a step leaves the test passing.
+
+Evidence: filed finding f-001 of the `spec-tree:test-evidence-auditor` verdict on `spx/13-infrastructure.enabler/21-test-infrastructure.enabler/21-python-code-quality.enabler` at head `06654f813bcc281da60595cb201040462389a7fe`. The diff from merge base `708f150169f21a58087e73e0f61382ea0b7e7dba` changes neither the spec, nor either linked test, nor the step declarations.
+
+Settlement condition: a test reads the `check-full` recipe body and the composed step labels, and narrowing the recipe or renaming a step fails it. The entry "The gate recipe body has no evidence" above names the same recipe body.
+
+## DEBT [evidence]: the package-set oracle for type checking is the production tuple
+
+Defect class: `oracle-independence`.
+
+Finding: `test_type_checking_steps_target_product_packages` in `spx/13-infrastructure.enabler/21-test-infrastructure.enabler/21-python-code-quality.enabler/tests/test_python_code_quality.compliance.l2.py` derives its expected package set from `PYTHON_SOURCE_PATHS`, the tuple `outcomeeng/validation/_steps.py` builds `MYPY_ARGV` and `PYRIGHT_ARGV` from. Dropping a package from the tuple changes the expectation and the argv together, and the test passes. No source outside the production path owns the set of importable product packages.
+
+Evidence: filed finding f-002 of the same verdict and head, with the same base evidence.
+
+Settlement condition: the expected package set derives from a source the step tuple does not feed, such as the packaging metadata's declared packages, and removing a package from `PYTHON_SOURCE_PATHS` fails the test.
