@@ -1,5 +1,5 @@
 <objective>
-The classification that sorts each spec-audit finding into a finding on touched text, which rejects, or a standing finding, which is returned as `FILED` with its key, `baseRefEvidence`, and `issuesEntry`.
+The classification that sorts each spec-audit finding into a finding on touched text, which rejects, or a standing finding, which is returned with severity `filed`, its key, `baseRefEvidence`, and `issuesEntry`.
 </objective>
 
 <contents>
@@ -34,24 +34,26 @@ A touched sentence that only cites an already-defective passage leaves the findi
 
 <classification>
 
-Classify each finding by its `location`: a finding on touched text keeps severity `REJECT` and fails its row; a finding on any other text is standing and is returned with severity `FILED`. A finding's severity labels its defect and never decides the verdict: the run approves when no `REJECT` finding exists, whatever `FILED` findings it reports.
+Classify each finding by its `locations`: a finding on touched text keeps severity `blocking` and fails its row; a finding on any other text is standing and is returned with severity `filed`. A finding's severity labels its defect and never decides the verdict: the run approves when no `blocking` finding exists, whatever `filed` findings it reports.
 
 </classification>
 
 <finding_key>
 
-A finding is identified by its key, `<node-spec-file-path>:<location>:<rule>`, where `location` names the section or assertion by its text rather than a line number and `rule` is one violation pattern of the verdict format. The same finding carries the same key in every run and on every head.
+A finding is identified by its key, `<node-spec-file-path>:<rule-id>`, where `rule-id` is the catalogued identifier of the violated rule. The finding's `locations` name each section or assertion where the rule is violated by its text rather than a line number. The same finding carries the same key in every run and on every head.
+
+A rule violated both on touched text and elsewhere yields two findings under one key: a `blocking` finding whose `locations` are the touched ones, and a `filed` finding whose `locations` are the rest.
 
 </finding_key>
 
 <severity_and_disposition>
 
-A finding keeps the severity and disposition recorded for its key in the governing node's `ISSUES.md`, found in the node directory or its nearest ancestor holding one. Its severity rises, or a `FILED` finding starts to reject, only when the run names one changed basis in the finding's `evidence`: the text now lies in the diff, the change invalidates it, or the standard's catalog changed the rule or its severity. A run that names no basis returns the finding with its recorded severity and disposition.
+A finding keeps the severity and disposition recorded for its key in the governing node's `ISSUES.md`, found in the node directory or its nearest ancestor holding one. Its severity rises, or a `filed` finding starts to reject, only when the run names one changed basis in the finding's `observed` field: the text now lies in the diff, the change invalidates it, or the standard's catalog changed the rule or its severity. A run that names no basis returns the finding with its recorded severity and disposition.
 
 </severity_and_disposition>
 
 <filed_finding>
 
-A `FILED` finding carries the usual finding fields plus `key`, `baseRefEvidence`, the `<base>..<head>` diff range showing every location lies outside the change, and `issuesEntry`, an object whose `path` is the `ISSUES.md` of the nearest node that governs the audited artifact, found by the Product Tree foundation's governing-node search for product content, or the product root's `spx/ISSUES.md` when no node governs it, and whose `heading` is the heading of the entry that records the finding. The finding sits in the row of the property it concerns without failing that row.
+A `filed` finding carries the usual finding fields plus `key`, `baseRefEvidence`, the `<base>..<head>` diff range showing every location lies outside the change, and `issuesEntry`, an object whose `path` is the `ISSUES.md` of the nearest node that governs the audited artifact, found by the Product Tree foundation's governing-node search for product content, or the product root's `spx/ISSUES.md` when no node governs it, and whose `heading` is the heading of the entry that records the finding. The finding sits in the row of the property it concerns without failing that row.
 
 </filed_finding>

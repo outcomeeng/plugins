@@ -1,7 +1,7 @@
 ---
 name: manage-github-pr
 description: >-
-  ALWAYS invoke this skill when the user asks to open or manage a GitHub pull request, or runs /manage-github-pr.
+  ALWAYS invoke this skill when the user asks to open or manage a GitHub pull request.
   NEVER open or manage a GitHub pull request outside this skill.
 argument-hint: "[instructions describing the change, or empty to use the current changeset]"
 allowed-tools: Read, {{! tool('use_skill') !}}, {{! tool('ask_user') !}}, Bash(spx worktree status:*), Bash(spx diagnose:*), Bash(git branch:*), Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git rev-parse:*), Bash(gh repo view:*), Bash(gh pr view:*), Bash(head:*), Bash(echo:*)
@@ -29,7 +29,7 @@ Live repository state for mode detection, read at invocation.
 !`git diff --cached --name-status 2>/dev/null | head -100`
 
 **Commits ahead of base (default branch):**
-!`base=$(gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name' 2>/dev/null || echo main); echo "base: ${base}"; git log --oneline "origin/${base}..HEAD" 2>/dev/null | head -10 || echo '(none)'`
+!`git log --oneline origin/HEAD..HEAD 2>/dev/null | head -10`
 
 **Existing PR for this branch:**
 !`gh pr view --json url --jq '.url' 2>/dev/null || echo '(none)'`
@@ -42,27 +42,27 @@ Read `$ARGUMENTS` and the injected state, then pick exactly one mode:
 - **Open PR** — `$ARGUMENTS` names a PR number or PR URL, or the injected state shows an existing PR for this branch. The PR already defines lifecycle state; manage it.
 - **Instructed** — `$ARGUMENTS` is non-empty. Interpret it as instructions: what to ship, and any constraint on scope, branch, or framing. When the instruction names work that does not yet exist, implementation is part of the job.
 - **Existing changeset** — `$ARGUMENTS` is empty and the working tree is dirty, or the branch is ahead of its base. The changeset already defines the work; derive intent from the diff and commits.
-- **Empty** — `$ARGUMENTS` is empty, the working tree is clean, and the branch is the base with no commits ahead. Nothing is staged to ship; establish the change through `/interview` before any mutation.
+- **Empty** — `$ARGUMENTS` is empty, the working tree is clean, and the branch is the base with no commits ahead. Nothing is staged to ship; establish the change through the Step 1 interview before any mutation.
 
 </mode_detection>
 
 <workflow>
 
-**Step 1 — Establish intent and route.** Use skill `product-tree:understand`, then use skill `product-tree:contextualize` on the governing node, immediately before the first product content this pass reads or modifies — a finding fix, base-sync conflict reconciliation, `/commit-changes` of edited product content, a coordination-note edit — or the first node this pass discusses, and at no earlier step. PR inspection, check wait, merge, deploy, and release touch no product content and proceed without either reload. Use skill `product-tree:merging-standards`, follow its `<reference_index>`, and directly read `merge-policy.md` before consuming `<repo_local_overlay>` or any other tagged merge-policy section. Per the detected mode, gather what is being shipped. In Open PR mode, resolve the PR pointer and proceed directly to Step 6. In Empty mode, use skill `product-tree:interview` to elicit the change. In Instructed mode, resolve the instruction against the repository — when it touches the product tree, load context through `/contextualize` first per {{! file('root_guide') !}}. `spx/local/merging.md` configures the GitHub-PR transport (merge command, deployment and release declarations, pre-flight) and is read by `/open-pr`, `/manage-pr`, and `/merging-standards`.
+**Step 1 — Establish intent and route.** Use skill `product-tree:understand`, then use skill `product-tree:contextualize` on the governing node, immediately before the first product content this pass reads or modifies — a finding fix, base-sync conflict reconciliation, `/commit-changes` of edited product content, a coordination-note edit — or the first node this pass discusses, and at no earlier step. PR inspection, check wait, merge, deploy, and release touch no product content and proceed without either reload. Use skill `product-tree:merging-standards`, follow its `<reference_index>`, and directly read `merge-policy.md` before consuming `<repo_local_overlay>` or any other tagged merge-policy section. Per the detected mode, gather what is being shipped. In Open PR mode, resolve the PR pointer and proceed directly to Step 6. In Empty mode, use skill `product-tree:interview` to elicit the change. In Instructed mode, resolve the instruction against the repository — when it touches the product tree, use skill `product-tree:contextualize` first per {{! file('root_guide') !}}. `spx/local/merging.md` configures the GitHub-PR transport (merge command, deployment and release declarations, pre-flight) and is read by `/open-pr`, `/manage-pr`, and `/merging-standards`.
 
 **Step 2 — State the plan; confirm only if the overlay opts in.** Read `spx/local/merging.md` (via `/merging-standards` `<repo_local_overlay>`) for the pre-mutation-confirmation setting. By default — no setting declared — state the plan in prose (the change to make, the branch, the commit shape, and that the flow runs through PR open, merge, and closure unless the user instruction says otherwise) and proceed autonomously; there is no confirmation pause. Only when the overlay opts into a pre-mutation confirmation, present that same plan through the runtime's structured-question tool (`{{! tool('ask_user', 'claude') !}}` on Claude Code, `{{! tool('ask_user', 'codex') !}}` on Codex) and obtain confirmation before the first mutating action — never branch, commit, push, open, or merge before that confirmation. Establishing *what* to ship in Empty mode (Step 1, `/interview`) is requirements work, not this confirmation, and always proceeds.
 
 After the plan or required confirmation, run `spx worktree status` from the assigned root and require a fresh passing `/merging-standards` `<occupancy_preflight>` before the first branch, commit, or other checkout-sensitive mutation. Then run every overlay-declared preflight check per `<overlay_safety_checks>`. In Open PR mode, Step 6 delegates these boundaries to `/manage-pr`, whose occupancy preflight precedes checkout-sensitive mutation and whose merge cleanup repeats the overlay preflight immediately before merge.
 
-**Step 3 — Implement if needed.** When the agreed scope requires code that does not exist yet, drive it through the governing skills — `/apply` for a product-tree node, or the language coding and testing skills — never writing implementation by hand outside them.
+**Step 3 — Implement if needed.** When the agreed scope requires code that does not exist yet, drive it through the governing skills — use skill `product-tree:apply` for a product-tree node, or the language coding and testing skills — never writing implementation by hand outside them.
 
 **Step 4 — Commit.** Use skill `product-tree:commit-changes`. Branch off the base first when the work sits on the base branch.
 
 **Step 5 — Open.** Use skill `product-tree:open-pr`. It evaluates `VERIFICATION_READINESS` and opens the PR ready. Skip this step in Open PR mode.
 
-**Step 6 — Drive to merge.** Invoke `/manage-pr <pr-pointer> --return-closeout` when the pointer is known, or `/manage-pr --return-closeout` when it resolves from the current branch. The explicit marker keeps broader-goal continuation and session closure in this outer lifecycle. `/manage-pr` evaluates `MERGE_READINESS`, merges under the gate, and runs any declared deploy and release phases.
+**Step 6 — Drive to merge.** Use skill `product-tree:manage-pr` with `<pr-pointer> --return-closeout` when the pointer is known, or with `--return-closeout` alone when it resolves from the current branch. The explicit marker keeps broader-goal continuation and session closure in this outer lifecycle. `/manage-pr` evaluates `MERGE_READINESS`, merges under the gate, and runs any declared deploy and release phases.
 
-**Step 7 — Continue or close.** Consume `/manage-pr`'s closeout-ready result. When it carries remaining in-scope work — a further PR, a pending `PLAN.md` item, a `spx/EXCLUDE` entry, a declared-but-unimplemented assertion — continue with it directly. When no in-scope work remains, produce the operator-useful closeout from the carried branch-state record and live state, and dispose of the held Change per /merging-standards `<close_phase>` — `close-change Applied` when the Change's Output is delivered, `release-change` when continuation remains for another holder. Do not append a separate merge receipt — a Change disposition completed earlier in the same conversation never satisfies this step for work merged after it, because new merged work reopens the disposition. The `--return-closeout` marker makes this outer lifecycle's ownership explicit.
+**Step 7 — Continue or close.** Consume `/manage-pr`'s closeout-ready result. When it carries remaining in-scope work — a further PR, a pending `PLAN.md` item, a `spx/EXCLUDE` entry, a declared-but-unimplemented assertion — continue with it directly. When no in-scope work remains, produce the operator-useful closeout from the carried branch-state record and live state, and dispose of the held Change per /merging-standards `<close_phase>` — use skill `product-tree:close-change` with `Applied` when the Change's Output is delivered, or use skill `product-tree:release-change` when continuation remains for another holder. Do not append a separate merge receipt — a Change disposition completed earlier in the same conversation never satisfies this step for work merged after it, because new merged work reopens the disposition.
 
 </workflow>
 

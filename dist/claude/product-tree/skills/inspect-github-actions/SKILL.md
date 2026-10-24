@@ -2,12 +2,12 @@
 name: inspect-github-actions
 description: >-
   ALWAYS invoke this skill when the user asks about CI failures, workflow logs, GitHub Actions status, pipeline issues, or troubleshooting failed builds. NEVER attempt CI workflow investigation through ad hoc gh CLI calls without this skill.
-allowed-tools: Bash(python3:*gh_access.py*), Bash(git branch --show-current), Bash(git rev-parse:*), Bash(gh run view:*), Bash(gh run list:*), Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh auth switch:*), Read, Grep, AskUserQuestion
+allowed-tools: Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/gh_access.py":*), Bash(git branch --show-current), Bash(git rev-parse:*), Bash(gh run view:*), Bash(gh run list:*), Bash(gh pr view:*), Bash(gh pr checks:*), Read, Grep, AskUserQuestion
 ---
 
 <objective>
 
-A GitHub Actions workflow-run diagnosis from inside a session — status, run discovery, log triage, authentication state, and operator-approved account switching when needed.
+A GitHub Actions workflow-run diagnosis that names the selected run by its identifying tuple, reports the literal status and conclusion, and surfaces the failing job, failing step, and error excerpt.
 
 </objective>
 
@@ -135,19 +135,16 @@ Do NOT invoke `gh run watch`. Do NOT wrap a status check in an `until` or `while
 - NEVER write `until <check>; do sleep N; done` or `while ! <check>; do sleep N; done`. Per-iteration process trees from these constructs accumulate until the host is exhausted.
 - NEVER call any state-changing `gh` subcommand without an explicit user instruction in the same turn. The user's answer to `AskUserQuestion` is explicit instruction. The full list — also enforced programmatically by `${CLAUDE_SKILL_DIR}/scripts/mutation_gate.py` — is `gh auth login`, `gh auth switch`, `gh auth refresh`, `gh auth logout`, `gh run rerun`, `gh run cancel`, `gh run delete`, `gh workflow run`, `gh workflow enable`, and `gh workflow disable`.
 - NEVER report a conclusion other than the literal value returned by `gh run view --json conclusion`. Derived states ("looks failed", "probably passing") are prohibited.
-- NEVER ship shell scripts in this skill's `scripts/` directory. Helpers are Python.
 
 </safety_rules>
 
 <failure_modes>
 
-**Failure 1: zsh `status` builtin clash.** A shell variable named `status` is read-only under zsh and triggers `read-only variable: status` at first assignment. When parsing gh JSON output, name the variable `run_status` or similar.
+**Failure 1: Claude assigned to a variable named `status`.** Claude parsed gh JSON output into a shell variable named `status`, which is read-only under zsh and fails with `read-only variable: status` at the first assignment. Name the variable `run_status` or similar.
 
-**Failure 2: `export -f` portability.** `export -f` is bash-only and fails in zsh with `invalid option(s)`. When sourcing helper functions, do not export them — sourcing alone makes them available in the calling shell.
+**Failure 2: Claude assumed `gh` was authenticated inside a CI runner.** Claude ran `gh` commands in a GitHub Actions job, where default runners do not authenticate `gh`, and the commands failed. When the skill runs inside a CI job, surface "gh is not authenticated" and the standard remediation: pipe `${{ secrets.GITHUB_TOKEN }}` into `gh auth login --with-token`. Do not attempt account switching in CI — switching requires a TTY which CI does not have.
 
-**Failure 3: gh unauthenticated inside CI runners.** Default GitHub Actions runners do not authenticate `gh` automatically. When the skill runs inside a CI job, surface "gh is not authenticated" and the standard remediation: pipe `${{ secrets.GITHUB_TOKEN }}` into `gh auth login --with-token`. Do not attempt account switching in CI — switching requires a TTY which CI does not have.
-
-**Failure 4: status report led with narrative.** Reporting "the workflow failed" before naming the run id, branch, and commit SHA leaves the user unable to verify which run. Lead with the identifying tuple in the order listed in `<step name="report_status">`.
+**Failure 3: Claude led a status report with narrative.** Claude wrote "the workflow failed" before naming the run id, branch, and commit SHA, which left the user unable to verify which run. Lead with the identifying tuple in the order listed in `<step name="report_status">`.
 
 </failure_modes>
 
@@ -161,3 +158,14 @@ Do NOT invoke `gh run watch`. Do NOT wrap a status check in an `until` or `while
 - No `gh run watch` invocation. No polling loops. No credential or workflow mutation outside an explicit user instruction.
 
 </success_criteria>
+
+<script_test_record>
+
+The three scripts are tested by pytest files in the workflow-observability node's `tests/` directory; each runs the script as a `python3` subprocess or imports it by file path, with the standard library only.
+
+- `scripts/gh_access.py` — tested by `test_workflow_observability.scenario.l1.py` with `parse_remote` on SCP-form, URL-form, and malformed remotes; with an injected `gh` runner that shows an enterprise host reaches every API call and that `available_accounts` keeps only accounts of the detected host; and by running the script outside a git checkout, which yields `owner_repo` null. `test_workflow_observability.property.l1.py` shows `schema_version` on stdout for an unreachable repository. `test_workflow_observability.scenario.l3.py` runs it against live `gh` credentials and a github.com remote and checks every documented field.
+- `scripts/mutation_gate.py` — tested by `test_workflow_observability.scenario.l1.py` with a gated command that exits 1 and names the missing `--user-instructed` flag on stderr, and the same command with the flag, which exits 0 and appends one tab-separated line to the audit log. `test_workflow_observability.property.l1.py` shows an ungated command passes through with JSON on stdout and diagnostics on stderr, and a blocked command writes only to stderr.
+- `scripts/workflow_inspect.py` — tested by `test_workflow_observability.scenario.l3.py` with `run <id>` against live `gh` credentials and a real run id, which checks the documented run and jobs fields. No test exercises its other subcommands (`runs`, `jobs`, `log`, `checks`, `artifacts`, `workflow-files`) against recorded or live output; a dry `python3 workflow_inspect.py --help` and `log --help` list the seven subcommands and the `--failed` and `--max-bytes` options without calling `gh`.
+- All three: `test_workflow_observability.compliance.l1.py` and `test_workflow_observability.property.l1.py` check that each script imports only the standard library, passes `capture_output=True` to every `subprocess.run`, uses no `subprocess.Popen`, contains no `gh run watch` reference, and contains no `time.sleep` or `time` import.
+
+</script_test_record>

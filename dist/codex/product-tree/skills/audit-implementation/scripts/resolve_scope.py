@@ -137,17 +137,33 @@ def read_run_document(
         text=True,
         check=False,
     )
+    command = f"{SPX_COMMAND} {' '.join((*RUN_COMMAND_PREFIX, *argv))}"
     if completed.returncode:
+        detail = completed.stderr.strip() or "it wrote nothing to stderr"
         raise RuntimeError(
-            completed.stderr.strip() or f"spx exited {completed.returncode}"
+            f"`{command}` exited {completed.returncode}: {detail}. "
+            "Confirm the run token names a run that "
+            "`spx verification run start` created, and that `spx` is "
+            "installed and current."
         )
     for line in reversed(completed.stdout.splitlines()):
         if not line.strip():
             continue
-        document = json.loads(line)
-        if field in document:
+        try:
+            document = json.loads(line)
+        except json.JSONDecodeError as exc:
+            raise RuntimeError(
+                f"`{command}` wrote a stdout line that is not JSON "
+                f"({exc}): {line[:200]!r}. Update `spx` to a release whose "
+                "`verification run` commands print JSON documents."
+            ) from exc
+        if isinstance(document, dict) and field in document:
             return document[field]
-    raise RuntimeError(f"no {field} in `spx verification run {argv[0]}` output")
+    raise RuntimeError(
+        f"`{command}` printed no JSON document carrying the `{field}` field. "
+        "Confirm the run token names an existing run and update `spx` to a "
+        f"release whose `verification run {argv[0]}` output carries `{field}`."
+    )
 
 
 def reconcile(
@@ -222,15 +238,31 @@ def _reconcile_run(
             runner, args.repo, [INPUT_COMMAND, *locator], AuditField.INPUT_CONTENT
         )
         if not isinstance(content, str):
-            raise RuntimeError("recorded start input content is not a string")
+            raise RuntimeError(
+                f"the recorded start input `{AuditField.INPUT_CONTENT}` field is "
+                f"a {type(content).__name__}, not a string holding the run-start "
+                "JSON document. Start the run with `--input` set to the file "
+                f"this script wrote through `{OUTPUT_OPTION}`."
+            )
         recorded_input = json.loads(content)
         units = read_run_document(
             runner, args.repo, [RENDER_COMMAND, *locator], AuditField.SCOPE_UNITS
         )
         if not isinstance(recorded_input, dict):
-            raise RuntimeError("recorded start input is not a JSON object")
+            raise RuntimeError(
+                "the recorded start input decodes to a "
+                f"{type(recorded_input).__name__}, not a JSON object. Start the "
+                f"run with `--input` set to the file this script wrote through "
+                f"`{OUTPUT_OPTION}`."
+            )
         if not isinstance(units, list) or not all(isinstance(u, dict) for u in units):
-            raise RuntimeError("recorded scope units are not a list of objects")
+            raise RuntimeError(
+                f"the rendered `{AuditField.SCOPE_UNITS}` field is a "
+                f"{type(units).__name__}"
+                + ("" if not isinstance(units, list) else " holding a non-object entry")
+                + ", not a list of scope-unit objects. Update `spx` to a release "
+                "whose `verification run render` prints scope units as objects."
+            )
         sealed = recorded_input.get(scope.ScopeField.CHANGED_PATHS) or []
         live = recorded_input.get(LIVE_PATHS_KEY) or []
         fresh = resolved[scope.ScopeField.CHANGED_PATHS]
@@ -239,7 +271,15 @@ def _reconcile_run(
             or not isinstance(live, list)
             or not isinstance(fresh, list)
         ):
-            raise RuntimeError("recorded start input path lists are not arrays")
+            raise RuntimeError(
+                "the path lists are not all arrays: "
+                f"`{scope.ScopeField.CHANGED_PATHS}` in the recorded start input "
+                f"is a {type(sealed).__name__}, `{LIVE_PATHS_KEY}` in it is a "
+                f"{type(live).__name__}, and the freshly resolved "
+                f"`{scope.ScopeField.CHANGED_PATHS}` is a {type(fresh).__name__}. "
+                f"Start the run with `--input` set to the file this script wrote "
+                f"through `{OUTPUT_OPTION}`."
+            )
         verdict = reconcile(sealed, fresh, units, live)
     except (OSError, RuntimeError, TypeError, json.JSONDecodeError) as exc:
         print(f"{RECONCILE_PREFIX}: {exc}", file=sys.stderr)
@@ -301,7 +341,10 @@ def main(argv: list[str] | None = None, runner: Runner = subprocess.run) -> int:
             resolved = {**json.loads(args.audit_input), **resolved}
         except (json.JSONDecodeError, TypeError) as exc:
             print(
-                f"{ERROR_PREFIX}: --audit-input must be a JSON object: {exc}",
+                f"{ERROR_PREFIX}: --audit-input must be one JSON object such as "
+                f"""'{{"selector": "HEAD"}}', received """
+                f"{args.audit_input[:200]!r} ({type(exc).__name__}: {exc}). "
+                "Pass the object as a single-quoted argument.",
                 file=sys.stderr,
             )
             return EXIT_COMMAND_FAILURE
@@ -316,7 +359,9 @@ def main(argv: list[str] | None = None, runner: Runner = subprocess.run) -> int:
     live = resolved.get(LIVE_PATHS_KEY) or []
     if not isinstance(live, list) or not all(isinstance(p, str) for p in live):
         print(
-            f"{ERROR_PREFIX}: {LIVE_PATHS_KEY} must be a list of path strings",
+            f"{ERROR_PREFIX}: {LIVE_PATHS_KEY} in --audit-input must be a list of "
+            f"path strings, received {json.dumps(live)[:200]}. Pass the modified "
+            "and untracked paths as a JSON array of strings.",
             file=sys.stderr,
         )
         return EXIT_COMMAND_FAILURE

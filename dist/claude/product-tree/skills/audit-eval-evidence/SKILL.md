@@ -85,20 +85,7 @@ When the target has no `[eval]` assertions, return `UNKNOWN` with all five gate 
 
 **Step 3a: Producer coupling**
 
-Classify how the eval reaches the producer:
-
-| Category         | Definition                                                                                  | Verdict                                                                |
-| ---------------- | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| Direct           | The eval runner invokes the producing skill, agent, classifier, script, or command directly | Proceed                                                                |
-| Harness-mediated | The eval invokes a harness that loads and runs the producer without replacing its behavior  | Proceed after verifying the harness chain                              |
-| Prompt-loaded    | The prompt loads the producer body as context while the case drives a verdict task          | Proceed only when the artifact under audit is the loaded producer text |
-| Simulation       | The prompt restates the desired policy or asks for a simulated verdict without the producer | REJECT                                                                 |
-| False            | Metadata names the producer but the prompt or harness never uses it                         | REJECT                                                                 |
-| Unknown          | The artifact path cannot establish how the producer is reached                              | REJECT                                                                 |
-
-When `eval.toml` declares `prompt_source.kind = "producer-section"`, treat the materialized prompt as Prompt-loaded only after verifying the producer path, selected section, and prompt template exist and `prompt.md` is current with that source. The selected producer section is the artifact under audit for that suite; a mutation to that section must change the materialized prompt. Do not require the eval runner to invoke the whole skill, agent, classifier, or script when the assertion is about the selected section's behavior: the loaded section is the producer artifact for that suite. A hand-authored prompt that copies the same policy without `prompt_source` remains Simulation.
-
-Apply the evidence model's `<producer_coupling>` counterfactual reading procedure. If the eval would still pass after the identified producer mutation, classify as Simulation or False and REJECT.
+Classify how the eval reaches the producer into one category of the evidence model's `<producer_coupling>` table, including the `prompt_source.kind = "producer-section"` case, and apply that table's verdict for the category. Apply the evidence model's `<producer_coupling>` counterfactual reading procedure. If the eval would still pass after the identified producer mutation, classify as Simulation or False and REJECT.
 
 </step>
 
@@ -132,7 +119,7 @@ If the assertion could be unfulfilled while the suite passes, REJECT — "misali
 
 **Step 3d: Falsifiability**
 
-Name a concrete mutation to the producing artifact that would make at least one case fail. For `producer-section` suites, the mutation targets the selected producer section and reaches the eval through prompt materialization. Write it down:
+Name a concrete mutation to the producing artifact that would make at least one case fail, as the evidence model's `<falsifiability_model>` defines. Write it down:
 
 ```text
 Producer: the /manage-pr skill's post-merge guidance section

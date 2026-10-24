@@ -7,18 +7,27 @@ allowed-tools: Read, Write, Glob, Grep, Bash(git status:*), Bash(git diff:*), Ba
 ---
 
 <objective>
-Atomic local commits with selectively staged concerns, Conventional Commits messages, preserved unrelated work, and an explicit verification state.
+One atomic local commit per concern. Each commit stages explicit paths, carries a Conventional Commits message, leaves unrelated work in place, and records a verification state.
 </objective>
+
+<inputs>
+
+| Input               | Values                                                 | Default when absent |
+| ------------------- | ------------------------------------------------------ | ------------------- |
+| Verification state  | `passing`, `failing`, or `not-run`                     | `not-run`           |
+| Work item reference | A reference string such as a node path or issue number | No `Refs:` footer   |
+
+The verification state describes the latest focused deterministic result for the committed paths; this skill reports it and never runs verification itself.
+
+</inputs>
 
 <success_criteria>
 
-A successful commit is observable when:
+A commit is sound when:
 
 - `git commit` exits zero and the full `HEAD` commit ID differs from its pre-commit value.
-- The committed concern contains only the explicitly staged paths and leaves unrelated tracked, untracked, and staged work untouched.
 - `git diff --cached --name-only` is empty for the committed concern after the commit.
-- The commit message follows Conventional Commits with one type-and-scope concern and an imperative subject.
-- The result reports the full commit ID, committed paths, remaining paths, and verification state: `passing`, `failing`, or `not-run`.
+- The result reports the full commit ID, committed paths, remaining paths, and verification state.
 - Pre-commit hooks ran normally; a hook rejection returns the exact failure and creates no successful-commit claim.
 
 </success_criteria>
@@ -52,21 +61,19 @@ After loading this skill, check whether `spx/local/commit-changes.md` exists (pa
 
 </context_gathering>
 
-<verification_checkpoint_context>
-
-This skill creates either a local checkpoint before a verification gate or a publication-ready commit after one:
+<checkpoint_rules>
 
 1. **Commit before another session reads** — When repository writes are authorized, commit the exact current version before another agent session or human is expected or asked to read it, and commit again after any further change before the next such reading. Without that authorization, defer the reading.
-2. **New checkpoint after repair** — When a gate rejects the subject, fix the defect class, rerun deterministic verification, and create a new commit. Do not amend the audited checkpoint while its run remains prior context.
+2. **New commit after repair** — After repairing a defect in a commit that others have read or reviewed, create a new commit. Do not amend that commit.
 3. **Scope to work item** — Stage only files from the work item:
    - Implementation files
    - Co-located tests (in `spx/.../tests/`)
-4. **Include work item reference** — Add a `Refs:` footer using the node path format from the verification context (e.g. `Refs: spx/55-example.domain/21-bar.capability`)
-5. **Record verification state** — Read the latest focused deterministic result from workflow state as `passing`, `failing`, or `not-run`. A failing or not-run checkpoint is available for recovery and collaboration while remaining ineligible for verification-readiness gates.
+4. **Include work item reference** — When the work item reference input is present, add a `Refs:` footer carrying it verbatim (e.g. `Refs: spx/55-example.domain/21-bar.capability`). When absent, add no footer.
+5. **Record verification state** — Report the verification state input. A `failing` or `not-run` state never blocks the commit.
 
-Resolve the specific file list, work item context, and checkpoint purpose from the invocation inputs and repository state.
+Resolve the specific file list from the invocation inputs and repository state.
 
-</verification_checkpoint_context>
+</checkpoint_rules>
 
 <concern_separation>
 
@@ -117,7 +124,7 @@ Changed files:
 
 **Step 0: Record Product-Specific Validation State**
 
-Before staging any files, check AGENTS.md for product-specific validation commands and record the latest applicable result as `passing`, `failing`, or `not-run`. This skill is git-only and never runs those commands itself. Continue to the commit in every state; include the required command and current state in the result for the next gate.
+Before staging any files, check AGENTS.md for product-specific validation commands. Take the verification state from the input, or `not-run` when absent. This skill is git-only and never runs those commands itself. Continue to the commit in every state; include the product command and the state in the result.
 
 **Step 1: Selective Staging**
 
@@ -286,17 +293,17 @@ test(auth): add auth tests
 
 What happened: Claude refused to commit session-owned changes because deterministic verification was red, so the dirty tree could be neither cleared nor rebased.
 
-Why it failed: Local checkpoint creation was incorrectly treated as publication authorization.
+Why it failed: A red verification state was treated as a reason to withhold a local commit.
 
-How to avoid: Record `Verification: failing`, create the atomic checkpoint, and leave gate dispatch and publication blocked until the tree is repaired and re-verified.
+How to avoid: Record `Verification: failing`, create the atomic checkpoint, and report the failing state in the result.
 
 **Failure 2: Missing verification blocked a recovery checkpoint.**
 
 What happened: Claude required a fresh validation run before preserving work even though the immediate need was a local checkpoint for recovery or context loading.
 
-Why it failed: An unrun gate predicate was used as commit authority instead of lifecycle evidence.
+Why it failed: An unrun verification was used as commit authority instead of a recorded state.
 
-How to avoid: Record `Verification: not-run`, create the checkpoint, and include the product command required before any readiness gate.
+How to avoid: Record `Verification: not-run`, create the checkpoint, and include the product verification command in the result.
 
 **Failure 3: A hook rejection was treated as permission to bypass hooks.**
 

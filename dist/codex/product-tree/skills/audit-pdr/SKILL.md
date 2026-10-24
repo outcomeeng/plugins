@@ -10,7 +10,7 @@ allowed-tools: Read, Grep, Glob, Bash(git branch --show-current:*), Bash(git mer
 
 <objective>
 
-A verdict on one PDR — APPROVED or REJECTED, with findings on touched text naming the section, rule, and evidence for content classification, property quality, declaration form and tag fitness, atemporal voice, or consistency with the product spec and ancestor PDRs, and every other finding returned as `FILED`.
+A verdict on one PDR against the PDR evidence model — APPROVED or REJECTED, with findings on touched text naming the section, rule, and evidence for content classification, property quality, declaration form and tag fitness, atemporal voice, or consistency with the product spec and ancestor PDRs, and every other finding returned as `filed`.
 
 </objective>
 
@@ -22,8 +22,6 @@ Read the PDR evidence model's boundary guidance for content classification, prop
 
 PDRs govern what the product does, behavior that its users experience. "Sessions expire after 1 hour" is product behavior. "Sessions use JWT with 1-hour TTL" is architecture. If the content describes HOW something is built rather than WHAT users observe, it belongs in an ADR.
 
-"Users" means the audience the product document declares, and "observe" means observe through the interaction surfaces that document names — not a fixed end-user-application assumption. When the product document declares an audience that operates the product through a command-line, filesystem, version-control, or other infrastructure surface, the CLI, filesystem, and version-control state that audience operates is product behavior; the internal algorithm, in-memory data structure, persisted schema, and library choices that audience never touches stay architecture.
-
 **ATEMPORAL VOICE.**
 
 PDRs state atemporal product truth without historical context. No references to past behavior or events.
@@ -34,9 +32,9 @@ PDRs state atemporal product truth without historical context. No references to 
 
 - NEVER modify the PDR under audit or any other file — this audit produces a verdict, never a fix or a commit.
 - ALWAYS read the PDR evidence model before judging — derive the rule set from it, never from memory.
-- ALWAYS name the section, the violated rule, and the evidence in every REJECT finding.
+- ALWAYS name the location, the violated rule, and the evidence in every `blocking` finding.
 - NEVER issue a finding the cited rule does not support — drop an unbacked finding rather than reject the PDR for it.
-- NEVER reject on text the changeset leaves unchanged and does not invalidate — return that finding as `FILED`, and NEVER raise a recorded finding's severity or let a `FILED` finding start to reject unless the run names a changed basis. `${SKILL_DIR}/references/touched-text.md` defines touched text, the finding key, and the `FILED` form.
+- NEVER reject on text the changeset leaves unchanged and does not invalidate — return that finding as `filed`, and NEVER raise a recorded finding's severity or let a `filed` finding start to reject unless the run names a changed basis. `${SKILL_DIR}/references/touched-text.md` defines touched text, the finding key, and the `filed` form; `${SKILL_DIR}/references/rule-catalog.md` defines the rule identifiers.
 
 </constraints>
 
@@ -46,7 +44,7 @@ PDRs state atemporal product truth without historical context. No references to 
 
 **Step 1: Load context**
 
-Bind the required PDR path, preserving spaces within it: `$ARGUMENTS` supplies it when that argument is non-empty; when it is empty, the path is the one the request text carries, and the empty substitution binds nothing. If the request carries no path, run `git branch --show-current` for metadata and emit the `<verdict_format>` JSON with `target: ""`, `overall: "REJECTED"`, and all five property rows marked `FAIL`. Each row carries a `missing-target` finding with severity `REJECT`, location `input`, evidence naming the empty input, and a message naming the required PDR path. Stop before context loading or artifact inspection.
+Bind the required PDR path, preserving spaces within it: `$ARGUMENTS` supplies it when that argument is non-empty; when it is empty, the path is the one the request text carries, and the empty substitution binds nothing. If the request carries no path, run `git branch --show-current` for metadata and emit the `<verdict_format>` JSON with `target: ""`, `overall: "REJECTED"`, and all five property rows marked `FAIL`. Each row carries a `missing-target` finding with severity `blocking`, unit `input`, locations `["input"]`, evidence naming the empty input, and a message naming the required PDR path. Stop before context loading or artifact inspection.
 
 Use skill `product-tree:understand` when the live `<PRODUCT_TREE_FOUNDATION>` marker is absent or lacks `Template root`. Read `decisions/decision-name.pdr.md` beneath that marker's resolved absolute template directory, then use skill `product-tree:contextualize` on the directory containing the PDR. Derive declaration form and required tags from that canonical template. Run `git branch --show-current` to populate verdict metadata without granting broader shell authority.
 
@@ -64,7 +62,7 @@ Read the PDR under audit. Identify its sections: the opening decision statement,
 
 Resolve the touched text of the PDR as `${SKILL_DIR}/references/touched-text.md` states, so Steps 3 to 7 can classify each finding.
 
-Record an absent `## Verification` section as a `REJECT` finding with rule `missing-section` in the `tag-validity` row, marking that row `FAIL`. Name the expected section and identify its absence as evidence. Continue the remaining checks so the verdict covers every evaluable property; an unenforceable PDR cannot receive `APPROVED`.
+Record an absent `## Verification` section as a `missing-section` finding in the `tag-validity` row, marking that row `FAIL`. Name the expected section and identify its absence as evidence. Continue the remaining checks so the verdict covers every evaluable property; an unenforceable PDR cannot receive `APPROVED`.
 
 </step>
 
@@ -72,22 +70,18 @@ Record an absent `## Verification` section as a `REJECT` finding with rule `miss
 
 **Step 3: Content classification**
 
-First, read the product document loaded in Step 1 and name its declared audience and the interaction surfaces through which that audience operates the product. "Observable" is judged against that audience: a statement is product behavior when the declared audience observes or operates it. For a product whose audience operates a command-line, filesystem, version-control, or other infrastructure surface, the CLI commands, on-disk layout, and version-control state that audience runs and inspects are observable product behavior — not architecture. The architecture line falls at what the audience never operates: the internal algorithm by which a tool reaches an observable result, the in-memory data structures it holds, the schema it persists, and the libraries it depends on.
+First, read the product document loaded in Step 1 and name its declared audience and the interaction surfaces through which that audience operates the product. Then read every statement in the PDR and classify it by the evidence model's content classification, judging "observable" against that audience:
 
-Then read every statement in the PDR. Classify each:
+| Content type                       | Belongs in     | Finding if in PDR                                      |
+| ---------------------------------- | -------------- | ------------------------------------------------------ |
+| Observable product behavior        | PDR            | Correct                                                |
+| Observable non-functional property | PDR (property) | Correct                                                |
+| Technology choice                  | ADR            | `architecture-content`                                 |
+| Implementation approach            | ADR or code    | `architecture-content`                                 |
+| Data structure or schema           | ADR            | `architecture-content`                                 |
+| Performance implementation         | ADR            | `architecture-content` (a guarantee is a PDR property) |
 
-| Content type                       | Belongs in     | Finding if in PDR                    |
-| ---------------------------------- | -------------- | ------------------------------------ |
-| Observable product behavior        | PDR            | Correct                              |
-| Observable non-functional property | PDR (property) | Correct                              |
-| Technology choice                  | ADR            | REJECT — architecture                |
-| Implementation approach            | ADR or code    | REJECT — implementation              |
-| Data structure or schema           | ADR            | REJECT — architecture                |
-| Performance implementation         | ADR            | REJECT (performance guarantee = PDR) |
-
-**Any architecture or implementation content → REJECT — finding rule "architecture-content."**
-
-The test: "Would the product document's declared audience observe or operate this?" If yes, it is product behavior. If only an implementer of the tool — never the audience — would know it, it belongs in an ADR. Do not flag a tooling product's CLI, filesystem, or version-control state as architecture merely because it names git, a path, or a command; that state is what its audience operates. Reserve the architecture finding for the tool's internal algorithm, data structures, schema, and library choices.
+Record each `architecture-content` finding in the `content-classification` row.
 
 </step>
 
@@ -95,18 +89,9 @@ The test: "Would the product document's declared audience observe or operate thi
 
 **Step 4: Property quality**
 
-For each product property:
+Judge each product property against the evidence model's observable, falsifiable, and stable criteria. Stability covers failure and boundary conditions; never silently limit a guarantee to the successful case.
 
-1. Is it observable from the user's perspective?
-   - "Pages load in under 2 seconds" → observable ✓
-   - "Database uses row-level locking" → not user-observable ✗
-2. Is it falsifiable — is there a scenario where it's violated?
-   - "Good user experience" → unfalsifiable ✗
-   - "Search returns results in under 500ms" → falsifiable ✓
-3. Is it stable — does its guarantee hold across all applicable contexts, including failure and boundary conditions, as the evidence model requires?
-   - "Theme selection persists across sessions" → assess persistence across session boundaries and failure conditions, without silently limiting the guarantee to successful sessions.
-
-**Non-observable or unfalsifiable property → REJECT — finding rule "non-observable-property." An unstable property → REJECT — finding rule "unstable-property."** Record either violation in `property-quality` and mark that row `FAIL`. Name the property and the context that breaks the guarantee; a stability finding requires evidence, and an unevaluable criterion follows `<verdict_format>`'s missing-evidence rule.
+A non-observable or unfalsifiable property is a `non-observable-property` finding, and an unstable property is an `unstable-property` finding. Record either violation in `property-quality` and mark that row `FAIL`. Name the property and the context that breaks the guarantee; a stability finding requires evidence, and an unevaluable criterion follows `<verdict_format>`'s missing-evidence rule.
 
 </step>
 
@@ -116,21 +101,11 @@ For each product property:
 
 Rules live under `## Verification`. Preserve Step 2's failed `tag-validity` row when the section is absent; an empty rule loop never clears that finding. If the section contains no rules, mark `tag-validity` as `FAIL` with `missing-verification-rules`. An untagged rule directly under the section has the canonical authoring form and may coexist with routed subsections. For every such rule, identify its subject, the observable condition it constrains, and a concrete observation that would violate it. Reject a vague, ambiguous, or unfalsifiable rule with `invalid-draft-rule` in `property-quality`, mark that row `FAIL`, and quote the rule with the missing or ambiguous criterion. For example, `ALWAYS: improve quality` fails because it names no observable condition. Select no evidence type or tag during these checks; an absent draft tag alone causes no finding.
 
-A tagged rule requires its matching routed subsection. When `### Testing` contains rules, use skill `product-tree:test-evidence-standards` and load its assertion-type litmus. Apply that reference and the loaded foundation's assertion-type definitions to the declared claim and tag. If the required reference cannot load, emit a `REJECT` finding named `test-standards-unavailable` and a failed `tag-validity` row. Judge declaration compatibility only; evidence completeness belongs to evidence auditing. Never invoke the mutating `/test` authoring workflow, select a replacement tag, or change the PDR during this audit.
+A tagged rule requires its matching routed subsection. When `### Testing` contains rules, use skill `product-tree:test-evidence-standards` and load its assertion-type litmus. Apply that reference and the loaded foundation's assertion-type definitions to the declared claim and tag. If the required reference cannot load, emit a `test-standards-unavailable` finding and a failed `tag-validity` row. Judge declaration compatibility only; evidence completeness belongs to evidence auditing. Never invoke the mutating `/test` authoring workflow, select a replacement tag, or change the PDR during this audit.
 
-For each routed rule:
+For each routed rule, judge tag validity and assertion-type fit as the evidence model's tag validity states. Under `### Testing`, apply the loaded foundation's assertion-type definitions and the shared litmus to the declared claim and tag: reject a declared type whose required domain or oracle contradicts the claim, citing the claim and the loaded criterion, and do not choose among compatible types or require executable evidence for a declaration.
 
-1. The rule carries exactly one tag, and the tag is valid for its subsection:
-   - under `### Testing` → a `/test`-routed assertion type: one of `scenario`, `mapping`, `conformance`, `property`, `compliance`;
-   - under `### Eval` → `([eval])` — the rule governs a skill, agent, or classifier whose output has a parseable contract;
-   - under `### Audit` → `([audit:{rule-slug}])` whose slug no other `### Audit` rule in the PDR repeats, or the pathless `([audit])` that the loaded foundation admits for a toolchain without slug support — the rule governs a Product Tree decision, spec, skill, or agent that admits no deterministic test or graded eval.
-
-   An unsupported bare mechanism tag, a tag that disagrees with its subsection, a missing tag, more than one tag, or an `### Audit` slug that repeats within the PDR is invalid.
-2. Under `### Testing`, the declared assertion type is compatible with the claim's quantifier and evidence shape under the loaded foundation and shared assertion-type litmus. A universal claim cannot carry `scenario`. Reject a declared type whose required domain or oracle contradicts the claim, citing the claim and the loaded criterion; do not choose among compatible types or require executable evidence for a declaration.
-
-A rule earns a sound tag only when it is verifiable (a test, eval, or audit skill can determine pass/fail) and specific (two independent reviewers would agree on the verdict). An unverifiable or vague rule produces a `REJECT` finding under `invalid-tag` in `tag-validity`, marking the row `FAIL` even when the tag's syntax is valid; quote the rule and identify the missing observable condition or ambiguous criterion.
-
-**A routed rule with a missing, unsupported, duplicate, repeated-slug, or subsection-mismatched tag → REJECT — "invalid-tag." An assertion type that contradicts the claim's shape → REJECT — "assertion-type-mismatch."**
+A routed rule with a missing, unsupported, duplicate, repeated-slug, or subsection-mismatched tag, or one that is unverifiable or vague, is an `invalid-tag` finding in `tag-validity`; mark the row `FAIL`, quote the rule, and identify the missing observable condition or ambiguous criterion. An assertion type that contradicts the claim's shape is an `assertion-type-mismatch` finding.
 
 Apply content classification, property quality, voice, and consistency to draft and routed declarations alike. Approval establishes declaration quality only; it supplies no evidence result, implementation claim, or Passing state for an untagged rule.
 
@@ -142,14 +117,14 @@ Apply content classification, property quality, voice, and consistency to draft 
 
 Check EVERY section for temporal language:
 
-| Temporal (REJECT)                     | Atemporal (correct)                                |
+| Temporal (`temporal-voice`)           | Atemporal (correct)                                |
 | ------------------------------------- | -------------------------------------------------- |
 | "We discovered that users ask for X"  | "Users value X"                                    |
 | "Currently the product does X"        | "The product does X"                               |
 | "After customer feedback, we decided" | "The product does X to meet customer expectations" |
 | "The existing implementation lacks"   | (omit — PDR doesn't reference code)                |
 
-**Any temporal language in any section → REJECT — finding rule "temporal-language."**
+Any temporal language in any section is a `temporal-voice` finding.
 
 </step>
 
@@ -163,8 +138,7 @@ Compare the PDR against:
 2. **Ancestor PDRs** — Does the PDR contradict constraints from PDRs higher in the tree?
 3. **Sibling ADRs** — Does the PDR overlap with architecture concerns?
 
-**Contradiction with product spec or ancestor PDR → REJECT — finding rule "consistency-violation."**
-**Overlap with ADR → finding (content misplacement) but not automatic REJECT.**
+A contradiction with the product spec or an ancestor PDR is a `consistency-violation` finding. A statement that overlaps a sibling ADR's architecture concern is an `architecture-content` finding, judged under Step 3.
 
 </step>
 
@@ -172,7 +146,7 @@ Compare the PDR against:
 
 **Step 8: Issue verdict**
 
-Classify every finding per `${SKILL_DIR}/references/touched-text.md`: a finding on touched text keeps severity `REJECT`; every other finding becomes `FILED`. If any property row holds a `REJECT` finding: REJECTED. Otherwise: APPROVED, whatever `FILED` findings the rows carry.
+Classify every finding per `${SKILL_DIR}/references/touched-text.md`: a finding on touched text keeps severity `blocking`; every other finding becomes `filed`. If any property row holds a `blocking` finding: REJECTED. Otherwise: APPROVED, whatever `filed` findings the rows carry.
 
 </step>
 
@@ -182,7 +156,7 @@ Classify every finding per `${SKILL_DIR}/references/touched-text.md`: a finding 
 
 Emit the verdict as a single JSON object. This JSON is the skill's entire output; never a prose or markdown verdict.
 
-The skill's `overall` is `APPROVED` iff every property row is `PASS`; otherwise it is `REJECTED`. A required property that cannot be evaluated is a `FAIL` row with a `REJECT` finding naming the missing evidence. Findings within each row carry severity `REJECT` for blocking violations on touched text, `FILED` for a finding outside touched text, and `WARNING`/`INFO` for non-blocking observations. A `FILED` finding fails no row and additionally carries `key`, `baseRefEvidence`, and `issuesEntry` (`path`, `heading`).
+The skill's `overall` is `APPROVED` iff every property row is `PASS`; otherwise it is `REJECTED`. A required property that cannot be evaluated is a `FAIL` row with a `blocking` finding naming the missing evidence. Findings within each row carry severity `blocking` for violations on touched text and `filed` for a finding outside touched text. A `filed` finding fails no row and additionally carries `key`, `baseRefEvidence`, and `issuesEntry` (`path`, `heading`).
 
 ```json
 {
@@ -196,11 +170,11 @@ The skill's `overall` is `APPROVED` iff every property row is `PASS`; otherwise 
       "status": "PASS | FAIL",
       "findings": [
         {
-          "location": "<section or property>",
-          "rule": "<violation pattern>",
+          "rule": "<rule-id>",
+          "severity": "blocking | filed",
+          "locations": ["<section, property, or rule text>"],
           "evidence": "<quoted artifact evidence>",
-          "message": "<one-line detail>",
-          "severity": "REJECT | FILED | WARNING | INFO"
+          "message": "<one-line detail>"
         }
       ]
     },
@@ -213,7 +187,7 @@ The skill's `overall` is `APPROVED` iff every property row is `PASS`; otherwise 
 }
 ```
 
-Each finding carries `location` (the section or property the objective requires it to name), `rule` (the violation pattern, e.g., `architecture-content`, `invalid-draft-rule`, `invalid-tag`, `test-standards-unavailable`, `assertion-type-mismatch`, `temporal-language`), `evidence` (the quoted artifact evidence), `message` (the one-line detail), and `severity`. A passing row carries an empty `findings` array or only `FILED` findings.
+Each finding is keyed `<pdr-file-path>:<rule-id>` and carries `rule` (the `<rule-id>`), `severity`, `locations` (every location in the PDR where that rule is violated), `evidence` (the quoted artifact evidence), and `message` (the one-line detail). Every `<rule-id>` comes from `${SKILL_DIR}/references/rule-catalog.md`, and a finding names no identifier outside it. A passing row carries an empty `findings` array or only `filed` findings.
 
 </verdict_format>
 
@@ -239,13 +213,13 @@ How to avoid: Step 4 asks "Is this falsifiable from the user's perspective?"
 
 Claude saw a `### Testing` rule "ALWAYS: every export conforms to RFC 4180 ([scenario])" and approved it because the prose read like a concrete interaction. `ALWAYS` is a universal claim, and a single scenario cannot establish a claim about every case — the tag should be `mapping`, `conformance`, `property`, or `compliance`. The mismatch is `assertion-type-mismatch`, not `invalid-tag`.
 
-How to avoid: Step 5 reads the quantifier first. A universal (ALWAYS / NEVER / "for all" / "no input") tagged `scenario` is `assertion-type-mismatch`; a structural tag problem — bare mechanism tag, wrong subsection, missing tag, more than one tag — is `invalid-tag`.
+How to avoid: Step 5 reads the quantifier first and separates a quantifier mismatch from a structural tag problem.
 
 **Failure 4: Flagged a tooling product's observable state as architecture**
 
 Claude audited a PDR for a command-line tool whose product document declares its audience operates the product through a CLI and an on-disk layout. The PDR described the repository layout the audience inspects on disk and the version-control state it observes. Claude saw git commands and filesystem paths, applied the end-user-application reflex ("a user does not see git"), and rejected the statements as `architecture-content`. That is a false positive: the declared audience operates exactly that surface, so the layout is observable product behavior.
 
-How to avoid: Step 3 reads the product document's declared audience first and judges "observable" against it. A git topology, a path layout, or a CLI behavior the audience operates is product behavior. Reserve `architecture-content` for what the audience never operates — the tool's internal algorithm, in-memory data structures, persisted schema, and library choices — which stays an ADR concern even for a tooling product.
+How to avoid: Step 3 reads the product document's declared audience first and judges "observable" against it.
 
 </failure_modes>
 
@@ -255,8 +229,8 @@ The verdict is sound when:
 
 - Every PDR rule was judged with none skipped — content classification, property quality (observability, falsifiability, and stability), per-rule tag validity and assertion-type fit, atemporal voice, and consistency (coverage-complete).
 - The verdict states an overall APPROVED/REJECTED, every property row carrying its determination, with no rule left unevaluated.
-- Each REJECT finding lies on touched text, and every finding outside touched text appears as `FILED` with its key, `baseRefEvidence`, and `issuesEntry`.
-- Each REJECT finding is falsifiable: it names the section, the violated rule, and the evidence — the architecture content wrongly placed, the non-observable, unfalsifiable, or unstable property, absent verification section or rules, the unverifiable rule or mismatched tag, the temporal phrase, or the contradicted product spec or ancestor PDR.
+- Each `blocking` finding lies on touched text, and every finding outside touched text appears as `filed` with its key, `baseRefEvidence`, and `issuesEntry`.
+- Each `blocking` finding is falsifiable: it names the location, the violated rule, and the evidence — the architecture content wrongly placed, the non-observable, unfalsifiable, or unstable property, absent verification section or rules, the unverifiable rule or mismatched tag, the temporal phrase, or the contradicted product spec or ancestor PDR.
 - An absent or empty Verification section fails `tag-validity`; an unmet property-quality criterion fails `property-quality`. Neither condition can disappear through an empty iteration or receive an overall `APPROVED` verdict.
 - The same PDR yields the same verdict.
 

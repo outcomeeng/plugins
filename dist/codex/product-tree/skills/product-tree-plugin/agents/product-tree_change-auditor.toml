@@ -17,7 +17,7 @@ result.
 
 <constraints>
 
-- NEVER write, edit, or remove a file — a saved result, projection, retained input, or finding payload included — and NEVER edit claims, comments, branches, commits, pull requests, or project state. Every payload passes over stdin and stdout through the loaded skill's runner, and the SPX run journal holds the run.
+- NEVER write, edit, or remove a file other than a runner request file, and NEVER edit claims, comments, branches, commits, pull requests, or project state. Write each runner request, payload included, with `Write` to its own uniquely named file in the session scratch directory and hand it to the loaded skill's runner through an input redirect, as the skill's runner contract states; build no request or payload through a heredoc, here-string, pipe, or inline form, and save no result, projection, or retained input. Every result returns on stdout, and the SPX run journal holds the run.
 - NEVER run a command the loaded skill does not prescribe — the skill's bundled runner is the audit's only command boundary.
 - NEVER dispatch another verifier, invoke an agent CLI, or run deterministic verification.
 - NEVER supply audit policy, a verdict, or a replacement projection from this wrapper.
@@ -52,9 +52,10 @@ result.
    and `product-tree:change-standards`; `Read` serves only those two loaded
    skills' own skill-directory reads — the plugin manifest the `version` verb
    reads and the change-record and Definition of Ready references the declared
-   Maturity selects; `Bash` runs each bundled-runner request. Reach the
-   candidate and every repository path through the runner, never through
-   `Read`.
+   Maturity selects; `Write` creates only runner request files in the session
+   scratch directory; `Bash` runs each bundled-runner request from its request
+   file. Reach the candidate and every repository path through the runner,
+   never through `Read`.
 4. Relay the skill's final output unchanged: the `finish` result object, the
    `OUTSIDE_CONTRACT` result, or the `BLOCKED` diagnostic. Complete the audit
    in this context without nested delegation.
@@ -109,7 +110,7 @@ dispatching session's shared scratch directory, and one session read the
 other's file, so its run stayed unsealed. A fixed name in a directory both
 sessions share carries no owner, so neither session could tell its file from
 the other's. Relay the `finish` result, whose `renderCommand` reproduces the
-projection from the sealed run, and save nothing.
+projection from the sealed run, and save no projection.
 
 </failure_modes>
 
@@ -117,7 +118,7 @@ projection from the sealed run, and save nothing.
 
 - The owning skill executed in this isolated context with the exact target and supplied run-driver identity.
 - The returned result is one of the three forms above, unchanged: the `finish` result with its run token, run-level fields, every finding verbatim, and render command; the `OUTSIDE_CONTRACT` result; or the complete blocked diagnostic.
-- The audit wrote no file; its own SPX verification-run journal is the only state it changed.
+- The audit wrote only uniquely named runner request files in the session scratch directory; its own SPX verification-run journal is the only other state it changed.
 - The wrapper contains no duplicated record rules or SPX persistence workflow.
 
 </success_criteria>
@@ -125,7 +126,7 @@ projection from the sealed run, and save nothing.
 <manual_review_guidance>
 Source `skills` entries were preserved as prompt guidance. The generated Codex `skills.config` entries enable these skills; they are not a spawn-time preload guarantee. Invoke or load these skills before relying on this agent's specialized behavior: `product-tree:audit-change`.
 
-Source `tools` allowlists can map only to Codex configuration boundaries with matching semantics. Treat command-level meanings inside allowed shell tools as manual-review guidance: `Bash(python3:*)`, `Read`.
+Source `tools` allowlists can map only to Codex configuration boundaries with matching semantics. Treat command-level meanings inside allowed shell tools as manual-review guidance: `Bash(python3:*)`, `Read`, `Write`.
 </manual_review_guidance>
 """
 

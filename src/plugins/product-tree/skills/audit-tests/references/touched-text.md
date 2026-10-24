@@ -34,13 +34,15 @@ A touched line that only reaches an already-defective artifact leaves the findin
 
 <classification>
 
-Classify each finding by its `file`, `line`, and `assertion`: a finding on touched text keeps severity `REJECT` and fails its row; a finding on any other text is standing and is returned with severity `FILED`. A finding returned by a composed language audit takes the same classification. A finding's severity labels its defect and never decides the verdict: the run approves when no `REJECT` finding exists, whatever `FILED` findings it reports.
+Classify each finding by its `locations`: a finding on touched text keeps severity `REJECT` and fails its row; a finding on any other text is standing and is returned with severity `FILED`. A finding returned by a composed language audit takes the same classification. A finding's severity labels its defect and never decides the verdict: the run approves when no `REJECT` finding exists, whatever `FILED` findings it reports.
 
 </classification>
 
 <finding_key>
 
-A finding is identified by its key, `<file>:<assertion-or-declaration>:<property>:<rule>`, where the third segment names the property and the fourth the rule of the verdict format, and the second names the assertion or declaration by its text rather than a line number. The same finding carries the same key in every run and on every head.
+A finding is identified by its key, `<file>:<rule-id>`, where `file` is the repository-relative path of the artifact that holds the defect and `rule-id` is the catalogued identifier of the violated rule, from the test audit's own catalog or from a composed language skill's catalog. The finding's `locations` name each assertion and declaration where the rule is violated by its text rather than a line number. The same finding carries the same key in every run and on every head.
+
+A rule violated both on touched text and elsewhere in one file yields two findings under one key: a `REJECT` finding whose `locations` are the touched ones, and a `FILED` finding whose `locations` are the rest.
 
 </finding_key>
 
@@ -52,6 +54,6 @@ A finding keeps the severity and disposition recorded for its key in the governi
 
 <filed_finding>
 
-A `FILED` finding carries the nine canonical fields plus `key`, `baseRefEvidence`, the `<base>..<head>` diff range showing every location lies outside the change, and `issuesEntry`, an object whose `path` is the `ISSUES.md` of the nearest node that governs the audited artifact, found by the Product Tree foundation's governing-node search for product content, or the product root's `spx/ISSUES.md` when no node governs it, and whose `heading` is the heading of the entry that records the finding. The finding sits in the row of the gate it concerns without failing that row.
+A `FILED` finding carries the usual finding fields plus `key`, `baseRefEvidence`, the `<base>..<head>` diff range showing every location lies outside the change, and `issuesEntry`, an object whose `path` is the `ISSUES.md` of the nearest node that governs the audited artifact, found by the Product Tree foundation's governing-node search for product content, or the product root's `spx/ISSUES.md` when no node governs it, and whose `heading` is the heading of the entry that records the finding. The finding sits in the row of the gate it concerns without failing that row.
 
 </filed_finding>

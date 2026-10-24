@@ -125,17 +125,17 @@ Impact: a later audit of `audit-change` can raise the finding again, and a run w
 
 Revisit and settlement condition: the objective keeps the output and its shape, the success criterion states the soundness property of the `filed` listing without restating the rejection rule, and one typed skill audit of `audit-change` raises no `objective_criteria_duplication` finding.
 
-## DEBT [finding-identity]: the audit-change runner derives a finding key from its position in the finding list
+## DEBT [finding-identity]: no linked case asserts that a finding keeps its key when the finding list changes
 
 Defect class: `finding-identity`.
 
-Finding: `finding_key` in `src/plugins/product-tree/skills/audit-change/scripts/audit_change_run.py` returns `<unit_id>` followed by `finding-<ordinal>-<rule>`, and line 257 of `src/plugins/product-tree/skills/audit-change/SKILL.md` passes each finding's one-based position in the sorted finding inventory of one run as the `ordinal`. Property 12 of [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md) identifies a finding by its unit's key and its rule identifier, the same in every run and on every head. The same finding takes a different key when an earlier finding in the list appears or disappears between runs.
+Finding: `finding_key` in `src/plugins/product-tree/skills/audit-change/scripts/audit_change_run.py` returns `<unit_id>:<rule>`, and `src/plugins/product-tree/skills/audit-change/SKILL.md` states the key `<unitId>:<rule>` with no ordinal, so the key no longer depends on a finding's position. Property 12 of [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md) identifies a finding by its unit's key and its rule identifier, the same in every run and on every head. `test_a_complete_audit_writes_no_file_and_its_journal_reproduces_the_projection` in `tests/test_audit_change_run.compliance.l1.py` asserts that each submitted finding's key equals its unit and rule, but it submits one finding list, and the only assertion of `changes.md` it serves is the runner-writes-no-file rule. No case submits a second list that adds or removes an earlier finding and asserts that a surviving finding keeps its key.
 
-Evidence: `finding_key` and its caller `_add_finding` in `audit_change_run.py`, and the `ordinal` sentence of the skill above.
+Evidence: the test above and the assertion at line 65 of `changes.md` that links it.
 
-Impact: a `filed` finding recorded once can reappear under a new key after an unrelated finding changes position, so a later run cannot match it to the recorded entry and the Author records it again.
+Impact: a later change that reintroduces a positional input to the key leaves every linked test passing, so a `filed` finding could again reappear under a new key without a failing case.
 
-Revisit and settlement condition: the runner builds the key from the unit and the rule alone, and a linked case asserts that one finding keeps its key when the list around it changes.
+Revisit and settlement condition: a linked case asserts that one finding keeps its key when the finding list around it changes.
 
 ## DEBT [property-quality]: the Sliced Parent criterion and the Framed Spec mutations criterion read as in tension
 

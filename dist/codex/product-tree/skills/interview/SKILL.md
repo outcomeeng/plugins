@@ -8,7 +8,9 @@ argument-hint: <file-path-or-requirement>
 ---
 
 <objective>
-A decision-ready requirements packet for the calling workflow: resolved choices, remaining open decisions, coverage state, and artifact constraints.
+A decision-ready requirements packet: resolved choices, remaining open decisions, coverage state, and artifact constraints.
+
+The input is a file path, a requirement, or a decision or problem framing. It may also carry coverage areas and domain context, which the interview uses in place of the generic defaults.
 
 </objective>
 
@@ -62,7 +64,7 @@ Coverage: Problem [done] | Users [done] | API Design [current] | Data Model [pen
 Coverage areas are dynamic:
 
 - **Generic defaults**: Problem, Users, Technical Approach, Risks, Constraints
-- **Calling skill overrides**: When a calling skill provides domain-specific areas, use those instead
+- **Supplied areas**: When the input supplies domain-specific areas, use those instead
 - **Refine as the interview proceeds**: Split broad areas (e.g., "Technical Approach" into "API Design" + "Data Model")
 - **Add discovered areas**: New concerns that emerge during conversation
 - **Mark [done]**: When an area is sufficiently explored
@@ -105,11 +107,9 @@ Resume: if state file exists, re-validate against current codebase state, flag s
 
 <intake>
 
-**When loaded by another skill**: Skip. The calling skill specifies coverage areas and domain context. Apply `<essential_principles>` directly.
+**When the input supplies coverage areas and domain context**: skip the questions below and apply `<essential_principles>` directly with those areas.
 
-**When invoked directly**:
-
-If user provided input with `/interview <input>`:
+**Otherwise**, if the input is `/interview <input>`:
 
 1. Analyze the input
 2. Infer what the user needs from the input and current state:
@@ -117,7 +117,7 @@ If user provided input with `/interview <input>`:
    - Decision framing ("should we X or Y") → coverage centers on options, criteria, trade-offs
    - Problem framing ("why does X", "X is broken") → coverage builds a causal chain from symptoms to root cause
    - New idea with no artifact → generic coverage defaults (Problem, Users, Approach, Risks, Constraints)
-3. If the input maps to an existing product-tree skill (`/bootstrap`, `/author`, `/decompose`, `/align`), suggest that skill instead — it will load this skill for methodology and bring its own domain knowledge
+3. If the input maps to an existing product-tree skill (`/bootstrap`, `/author`, `/decompose`, `/align`), suggest that skill instead — it brings its own domain knowledge and coverage areas
 
 If no input: ask "What would you like to interview about?"
 
@@ -138,9 +138,9 @@ If no input: ask "What would you like to interview about?"
 <workflows_index>
 All in `${SKILL_DIR}/workflows/`:
 
-| Workflow            | Purpose                                                              |
-| ------------------- | -------------------------------------------------------------------- |
-| direct-interview.md | Generic interview for direct invocation (no domain-specific context) |
+| Workflow            | Purpose                                           |
+| ------------------- | ------------------------------------------------- |
+| direct-interview.md | Generic interview with the default coverage areas |
 
 </workflows_index>
 
@@ -150,11 +150,15 @@ All in `${SKILL_DIR}/workflows/`:
 
 Claude asks 15+ questions all drilling into one area (e.g., "API Design") while ignoring other pending areas on the coverage map. The interview grows without making the coverage map advance. User gets frustrated; context window fills with narrow detail.
 
+Why it failed: each answer opened a more specific follow-up in the same area, and Claude chose the next question from the last answer instead of from the coverage map.
+
 How to avoid: Before each question, check the coverage map. If an area is at 3+ consecutive questions and still not marked [done], ask whether the question probes a real gap or just explores. Move to the next pending area when the current one has enough signal to draft the spec section — depth is for unclear cases, not comprehensive documentation.
 
 **Failure 2: Accepting vague answers without pushback**
 
 User responds with "we'll figure it out later" or "just make it work for the common case." Claude records the non-answer and moves on. The resulting spec has holes that surface during implementation.
+
+Why it failed: Claude treated an answer as a resolution because the user gave one, without testing whether the answer decided anything.
 
 How to avoid: "We'll figure it out later" is pushback bait. Ask a concrete follow-up: "What's the common case? Describe one user who hits this." Force specificity. If the user does not know, record it as an open decision with a `([audit:{rule-slug}])` tag, not as a resolved assertion.
 
@@ -174,7 +178,9 @@ How to avoid: Every section of the generated spec must trace to a specific cover
 
 Claude loads this skill, reads the intake question, and immediately starts asking the user things. No codebase scan, no doc reading, no analysis brief. Every question the user answers could have been inferred from the codebase. User gets annoyed that Claude didn't do its homework.
 
-How to avoid: Pre-Analysis Protocol is non-negotiable. Complete the codebase, docs, and input research before the first question. Use an Explore agent only when the active repository and runtime instructions explicitly authorize that bounded research subagent; otherwise perform the same read-only research in the main conversation. Share the brief. The user should never have to supply something that exists in the codebase or docs.
+Why it failed: Claude treated the intake question as the start of the interview and the research as optional preparation.
+
+How to avoid: Complete the Pre-Analysis Protocol and share its brief before the first question. The user should never have to supply something that exists in the codebase or docs.
 
 **Failure 6: Asking a question the evidence already settled**
 
@@ -185,6 +191,8 @@ How to avoid: Decide-First Protocol. Reason the decision through first. Ask only
 **Failure 7: Strawman options and false balance**
 
 Claude offered "use the existing validation harness" against "hand-roll a bespoke validator from scratch" — the second option a strawman no one would pick, dressed up to make the question look like a real choice. Or it split a single judgment into a fabricated 50/50 to appear neutral, when one option was plainly correct.
+
+Why it failed: Claude shaped the question to look neutral instead of reasoning to the option the evidence favored.
 
 How to avoid: every option is a materially distinct end-state a reasonable operator might actually choose. If only one option survives scrutiny, there is no question — decide and proceed. When a question is real, state the recommended option first and label it recommended; do not manufacture a counterweight to look balanced.
 

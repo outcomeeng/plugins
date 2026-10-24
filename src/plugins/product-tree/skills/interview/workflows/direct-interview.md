@@ -47,8 +47,6 @@ Complete pre-analysis research before the first question:
 3. Check dependencies (package.json, pyproject.toml, etc.)
 4. Read product docs (README, {{! file('root_guide') !}}, existing specs)
 
-Use an Explore agent only when the active repository and runtime instructions explicitly authorize that bounded research subagent for interview pre-analysis. Otherwise perform the same read-only research in the main conversation. Read named files, skill files, skill references, the repository's {{! file('root_guide') !}} instruction file, and user-provided files in the main conversation.
-
 Share the structured brief with the user before asking the first question. Include your preliminary opinions — they set the tone for a collaborative interview, not a passive one.
 
 </step>

@@ -148,13 +148,15 @@ Budget-exhausted and other operational failures are neither passes nor behaviora
 
 Use these `rule` values in findings:
 
-| Rule                  | Meaning                                                             |
-| --------------------- | ------------------------------------------------------------------- |
-| `missing-artifact`    | Required eval artifact is absent                                    |
-| `producer-coupling`   | Suite does not reach the real producer                              |
-| `oracle-leakage`      | Prompt or case input exposes the expected answer                    |
-| `assertion-alignment` | Expected verdict fields do not prove the assertion                  |
-| `falsifiability`      | No mutation to the producer changes the result                      |
-| `run-evidence`        | Passing run evidence is missing, stale, or operationally incomplete |
+| Rule                  | Meaning                                                                |
+| --------------------- | ---------------------------------------------------------------------- |
+| `missing-artifact`    | Required eval artifact is absent                                       |
+| `missing-target`      | Request carries no spec-node target to audit                           |
+| `producer-coupling`   | Suite does not reach the real producer                                 |
+| `oracle-leakage`      | Prompt or case input exposes the expected answer                       |
+| `assertion-alignment` | Expected verdict fields do not prove the assertion                     |
+| `falsifiability`      | No mutation to the producer changes the result                         |
+| `run-evidence`        | Passing run evidence is missing, stale, or operationally incomplete    |
+| `no-eval-assertions`  | Target spec carries no `[eval]` assertion, so no eval evidence applies |
 
 </rejection_categories>

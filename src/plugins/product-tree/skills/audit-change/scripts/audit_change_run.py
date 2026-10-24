@@ -46,8 +46,7 @@ anywhere and every process it starts:
   a NUL character or text with no UTF-8 encoding; an absolute,
   parent-traversing, or unnormalized candidate path; a payload that is not an
   object with a non-empty ``unitId``; a finding rule that is not a lowercase
-  hyphenated ID; an ordinal that is not an integer from the minimum to the
-  maximum; and an unlisted terminal status. Each blocks on stdout.
+  hyphenated ID; and an unlisted terminal status. Each blocks on stdout.
 
 None of these writes a file outside the SPX store, and none starts a process
 other than ``git`` and ``spx``; the generated requests start none.
@@ -112,7 +111,6 @@ class RequestField(StrEnum):
     CANDIDATE_SHA256 = "candidateSha256"
     RUN_TOKEN = "runToken"
     PAYLOAD = "payload"
-    ORDINAL = "ordinal"
     TERMINAL_STATUS = "terminalStatus"
     ISSUE = "issue"
 
@@ -276,8 +274,6 @@ _RULE_ID_RUN: Final = f"[{re.escape(RULE_ID_ALPHABET)}]+"
 RULE_ID_PATTERN: Final = re.compile(
     f"{_RULE_ID_RUN}(?:{re.escape(RULE_ID_SEPARATOR)}{_RULE_ID_RUN})*"
 )
-MIN_FINDING_ORDINAL: Final = 1
-MAX_FINDING_ORDINAL: Final = 999
 VERIFICATION_TYPE: Final = "audit"
 SCOPE_TYPE: Final = "file"
 
@@ -352,7 +348,6 @@ REQUIRED_FIELDS: Final[Mapping[Operation, frozenset[RequestField]]] = {
         {
             RequestField.PATH,
             RequestField.RUN_TOKEN,
-            RequestField.ORDINAL,
             RequestField.PAYLOAD,
         }
     ),
@@ -628,21 +623,6 @@ def _finding_rule(request: Mapping[str, object]) -> str:
     return rule
 
 
-def _ordinal(request: Mapping[str, object]) -> int:
-    ordinal = request.get(RequestField.ORDINAL)
-    if (
-        not isinstance(ordinal, int)
-        or isinstance(ordinal, bool)
-        or not MIN_FINDING_ORDINAL <= ordinal <= MAX_FINDING_ORDINAL
-    ):
-        raise Blocked(
-            BlockReason.INVALID_REQUEST,
-            f"{RequestField.ORDINAL} must be an integer from "
-            f"{MIN_FINDING_ORDINAL} to {MAX_FINDING_ORDINAL}",
-        )
-    return ordinal
-
-
 def _payload_text(request: Mapping[str, object]) -> str:
     try:
         return json.dumps(request.get(RequestField.PAYLOAD), separators=(",", ":"))
@@ -689,7 +669,6 @@ _REQUEST_CHECKS: Final[
         _run_token,
         _unit_id,
         _finding_rule,
-        _ordinal,
         _payload_text,
     ),
     Operation.RECONCILE: (_candidate_path, _run_token),
@@ -958,13 +937,13 @@ def _add_scope(context: _Context, request: Mapping[str, object]) -> dict[str, ob
     return _append(context, request, noun="scope", idempotency_key=_unit_id(request))
 
 
-def finding_key(unit_id: str, ordinal: int, rule: str) -> str:
-    """Return the idempotency key of one finding on one unit."""
-    return f"{unit_id}{IDEMPOTENCY_KEY_SEPARATOR}finding-{ordinal:03d}-{rule}"
+def finding_key(unit_id: str, rule: str) -> str:
+    """Return the idempotency key of the one finding of a rule on one unit."""
+    return f"{unit_id}{IDEMPOTENCY_KEY_SEPARATOR}{rule}"
 
 
 def _add_finding(context: _Context, request: Mapping[str, object]) -> dict[str, object]:
-    key = finding_key(_unit_id(request), _ordinal(request), _finding_rule(request))
+    key = finding_key(_unit_id(request), _finding_rule(request))
     return _append(context, request, noun="finding", idempotency_key=key)
 
 
