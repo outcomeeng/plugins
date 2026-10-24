@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from pathlib import PurePosixPath
 
 import pytest
@@ -10,6 +10,7 @@ import pytest
 from outcomeeng.validation import (
     CHECK_RECIPES,
     ON_DEMAND_EXCLUSION_ARGV,
+    ON_DEMAND_LEVEL,
     PREFLIGHT_STEPS,
     PYTEST_ARGV,
     RECIPE_CHECK,
@@ -17,8 +18,6 @@ from outcomeeng.validation import (
     RECIPE_TEST,
     RECIPE_VALIDATION,
     SUMMARY_PATH_LABEL,
-    discover_on_demand_tests,
-    is_on_demand_test,
     recipe_header,
 )
 from outcomeeng.validation.infrastructure_index import (
@@ -48,6 +47,7 @@ from outcomeeng_testing.generators.gate import (
     SELECTED_GATE_FULL_GATE_PATH,
     SELECTED_GATE_PYTHON_SOURCE_PATH,
     SELECTED_GATE_PYTHON_TEST_PATH,
+    on_demand_fixture_files,
     path_from_pattern,
 )
 from outcomeeng_testing.harnesses import installation as installation_harness
@@ -69,14 +69,25 @@ from outcomeeng_testing.harnesses.infrastructure_index import (
     repository_reach,
     synthetic_repository,
 )
+from outcomeeng_testing.harnesses.on_demand_collection import (
+    fixture_collection,
+    pytest_argument_tail,
+)
 from outcomeeng_testing.harnesses.real_agent_selection import (
-    REPOSITORY_ROOT,
     direct_test_observation,
     first_parent_full_check_observation,
-    pytest_collection_observation,
     run_full_check_observation,
 )
-from outcomeeng.validation._steps import PYTEST_NODE_ID_SEPARATOR
+
+# The generator composes each fixture file at one execution level, so the level
+# of every path below is the generator's, not the selector's.
+FIXTURE = on_demand_fixture_files()
+ON_DEMAND_PATHS = frozenset(
+    test_file.path for test_file in FIXTURE if test_file.level == ON_DEMAND_LEVEL
+)
+DEFAULT_SUITE_FILES = frozenset(
+    test_file.path for test_file in FIXTURE if test_file.level != ON_DEMAND_LEVEL
+)
 
 
 def _pytest_arguments(plan: SelectedGatePlan) -> tuple[tuple[str, ...], ...]:
@@ -95,20 +106,28 @@ def _pytest_calls(
     )
 
 
-def _on_demand_files() -> tuple[str, ...]:
-    files = discover_on_demand_tests(REPOSITORY_ROOT)
-    assert files
-    return files
+def _plan_targets(plan: SelectedGatePlan) -> frozenset[str]:
+    return frozenset(
+        argument for arguments in _pytest_arguments(plan) for argument in arguments
+    )
+
+
+def _pytest_steps_argv(plan: SelectedGatePlan) -> tuple[tuple[str, ...], ...]:
+    return tuple(
+        step.argv for step in plan.steps if step.argv[: len(PYTEST_ARGV)] == PYTEST_ARGV
+    )
 
 
 def _full_surface_steps() -> tuple[tuple[str, ...], ...]:
     return tuple(step.argv for recipe in CHECK_RECIPES for step in recipe.steps)
 
 
-def _collected_files(collected: frozenset[str]) -> frozenset[str]:
-    return frozenset(
-        node_id.split(PYTEST_NODE_ID_SEPARATOR, maxsplit=1)[0] for node_id in collected
-    )
+def _collected_by(pytest_argv: Sequence[str]) -> frozenset[str]:
+    # Real pytest collection over the fixture, for the arguments a spawned
+    # pytest argv carries.
+    return fixture_collection(
+        FIXTURE, pytest_argument_tail(pytest_argv)
+    ).collected_files
 
 
 def test_an_empty_changeset_selects_no_steps() -> None:
@@ -216,18 +235,15 @@ def test_infrastructure_path_without_an_index_is_rejected_by_name() -> None:
 
 
 def test_a_changeset_of_on_demand_files_selects_no_pytest_target() -> None:
-    files = _on_demand_files()
+    files = tuple(sorted(ON_DEMAND_PATHS))
 
     local = build_selected_gate_plan(files)
     full = build_full_gate_plan(files)
 
+    assert files
     assert _pytest_arguments(local) == ()
     for plan in (local, full):
-        assert not any(
-            is_on_demand_test(argument)
-            for arguments in _pytest_arguments(plan)
-            for argument in arguments
-        )
+        assert not ON_DEMAND_PATHS & _plan_targets(plan)
 
 
 @pytest.mark.parametrize("category", tuple(PathCategory), ids=str)
@@ -236,20 +252,15 @@ def test_no_changed_path_category_selects_an_on_demand_test(
 ) -> None:
     for pattern in PATH_CATEGORY_PATTERNS[category]:
         path = path_from_pattern(pattern)
+        changed = (path, *sorted(ON_DEMAND_PATHS))
         with synthetic_repository() as repo:
             local = build_selected_gate_plan(
-                (path, *_on_demand_files()),
-                test_infrastructure=index_test_infrastructure(repo.root),
+                changed, test_infrastructure=index_test_infrastructure(repo.root)
             )
-        full = build_full_gate_plan((path, *_on_demand_files()))
+        full = build_full_gate_plan(changed)
 
         for plan in (local, full):
-            pytest_arguments = _pytest_arguments(plan)
-            assert not any(
-                is_on_demand_test(argument)
-                for arguments in pytest_arguments
-                for argument in arguments
-            ), path
+            assert not ON_DEMAND_PATHS & _plan_targets(plan), path
             assert all(
                 step.argv[: len(PYTEST_ARGV)] == PYTEST_ARGV
                 for step in plan.steps
@@ -272,9 +283,7 @@ def test_a_node_local_reach_of_an_on_demand_test_selects_no_on_demand_target() -
     assert reached.kind is InfrastructureReach.NODE_LOCAL
     assert on_demand_path in reached.tests
     assert plan.full_gate is False
-    assert on_demand_path not in {
-        argument for arguments in _pytest_arguments(plan) for argument in arguments
-    }
+    assert on_demand_path not in _plan_targets(plan)
     assert all(
         step.argv[: len(PYTEST_ARGV)] == PYTEST_ARGV
         for step in plan.steps
@@ -289,11 +298,10 @@ def test_a_shared_test_infrastructure_module_selects_the_full_surface_without_th
 
     plan = build_selected_gate_plan((reach.path,), test_infrastructure=reach.index)
 
-    assert not any(
-        is_on_demand_test(argument)
-        for arguments in _pytest_arguments(plan)
-        for argument in arguments
-    )
+    assert plan.full_gate is True
+    assert [_collected_by(call) for call in _pytest_steps_argv(plan)] == [
+        DEFAULT_SUITE_FILES
+    ]
     assert all(
         step.argv[: len(PYTEST_ARGV)] == PYTEST_ARGV
         for step in plan.steps
@@ -320,23 +328,21 @@ def test_widening_to_the_full_suite_removes_no_other_step() -> None:
 
 
 def test_the_exclusion_leaves_on_demand_files_out_of_a_collected_directory() -> None:
-    directory = PurePosixPath(_on_demand_files()[0]).parent.as_posix()
+    directory = PurePosixPath(sorted(ON_DEMAND_PATHS)[0]).parent.as_posix()
+    in_directory = frozenset(
+        test_file.path
+        for test_file in FIXTURE
+        if PurePosixPath(test_file.path).parent.as_posix() == directory
+    )
 
-    excluded = pytest_collection_observation((*ON_DEMAND_EXCLUSION_ARGV, directory))
-    unfiltered = pytest_collection_observation((directory,))
+    excluded = fixture_collection(FIXTURE, (*ON_DEMAND_EXCLUSION_ARGV, directory))
+    unfiltered = fixture_collection(FIXTURE, (directory,))
 
     assert excluded.exit_code == 0, excluded.output
     assert unfiltered.exit_code == 0, unfiltered.output
-    assert excluded.collected
-    assert not any(
-        is_on_demand_test(file) for file in _collected_files(excluded.collected)
-    )
-    assert any(
-        is_on_demand_test(file) for file in _collected_files(unfiltered.collected)
-    )
-    assert excluded.collected == frozenset(
-        node_id for node_id in unfiltered.collected if not is_on_demand_test(node_id)
-    )
+    assert unfiltered.collected_files == in_directory
+    assert excluded.collected_files
+    assert excluded.collected_files == in_directory - ON_DEMAND_PATHS
 
 
 @pytest.mark.parametrize(
@@ -374,11 +380,7 @@ def test_a_full_gate_execution_spawns_only_exclusion_carrying_pytest_runs(
     pytest_calls = _pytest_calls(run.spawn_calls)
     assert run.exit_code == 0
     assert pytest_calls
-    assert not any(
-        is_on_demand_test(argument)
-        for call in pytest_calls
-        for argument in call[len(PYTEST_ARGV) :]
-    )
+    assert all(_collected_by(call) == DEFAULT_SUITE_FILES for call in pytest_calls)
     assert tuple(call for call in run.spawn_calls if call not in pytest_calls) == tuple(
         step.argv
         for recipe in CHECK_RECIPES
@@ -390,7 +392,7 @@ def test_a_full_gate_execution_spawns_only_exclusion_carrying_pytest_runs(
 def test_direct_execution_runs_a_named_on_demand_test_whatever_the_changeset() -> None:
     # Both gate wrappers exclude the on-demand suite whatever the changeset is;
     # direct execution naming an on-demand file still runs it.
-    named = _on_demand_files()
+    named = tuple(sorted(ON_DEMAND_PATHS))
     gate_runs = (
         run_check_observation(branch_path=unrelated_validation_source_path()),
         run_full_check_observation(branch_path=unrelated_validation_source_path()),
@@ -399,19 +401,15 @@ def test_direct_execution_runs_a_named_on_demand_test_whatever_the_changeset() -
 
     for run in gate_runs:
         assert _pytest_calls(run.spawn_calls)
-        assert not any(
-            is_on_demand_test(argument)
+        assert all(
+            _collected_by(call) == DEFAULT_SUITE_FILES
             for call in _pytest_calls(run.spawn_calls)
-            for argument in call[len(PYTEST_ARGV) :]
         )
 
     assert direct.exit_code == 0
     (direct_pytest_call,) = _pytest_calls(direct.spawn_calls)
     assert direct_pytest_call[len(PYTEST_ARGV) :] == named
-    collection = pytest_collection_observation((*ON_DEMAND_EXCLUSION_ARGV, named[0]))
-    assert collection.exit_code == 0, collection.output
-    assert collection.collected
-    assert _collected_files(collection.collected) == frozenset((named[0],))
+    assert _collected_by(direct_pytest_call) == ON_DEMAND_PATHS
 
 
 def test_ci_full_verification_without_a_default_branch_selects_by_the_first_parent() -> (
@@ -430,11 +428,7 @@ def test_ci_full_verification_without_a_default_branch_selects_by_the_first_pare
     )
     pytest_calls = _pytest_calls(run.spawn_calls)
     assert pytest_calls
-    assert not any(
-        is_on_demand_test(argument)
-        for call in pytest_calls
-        for argument in call[len(PYTEST_ARGV) :]
-    )
+    assert all(_collected_by(call) == DEFAULT_SUITE_FILES for call in pytest_calls)
     plan_end = run.output.index(RECIPE_HEADER_PREFIX)
     assert run.output.index(ON_DEMAND_EXCLUDED_REASON) < plan_end
     assert (

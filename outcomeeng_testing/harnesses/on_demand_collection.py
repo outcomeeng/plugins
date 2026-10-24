@@ -3,8 +3,8 @@
 The harness writes a violating whole-payload fixture, test files at every
 execution level, into a temporary repository and reports which files real
 pytest collects for the argument tail of a pytest argv the production recipes
-compose. It also reports the argvs the `test-on-demand` dispatch spawns against
-that repository and the command the `justfile` recipe body resolves to. The
+compose. It also reports the argvs a recipe dispatch spawns against that repository and the
+command the `justfile` recipe body resolves to for the words a caller passes. The
 linked tests own every predicate over those observations.
 
 Exception case: Stage 5, Interaction protocols — the dispatch observation runs
@@ -114,26 +114,27 @@ def fixture_collection(
     )
 
 
-def on_demand_dispatch_spawns(
-    files: Sequence[GeneratedTestFile],
+def recipe_dispatch_spawns(
+    argv: Sequence[str], files: Sequence[GeneratedTestFile]
 ) -> tuple[tuple[str, ...], ...]:
-    """Return the argvs `test-on-demand` spawns against a repository of ``files``."""
+    """Return the argvs the entry point spawns for ``argv`` against ``files``."""
 
     spawner = RecordingSpawner(exit_codes=[os.EX_OK] * SPAWN_BUDGET)
     with TemporaryDirectory() as tmp:
         root = Path(tmp)
         write_fixture(root, files)
-        validation_main(
-            ["test-on-demand"], spawner=spawner, sink=io.StringIO(), repo=root
-        )
+        validation_main(list(argv), spawner=spawner, sink=io.StringIO(), repo=root)
     return tuple(spawner.spawn_calls)
 
 
-def justfile_recipe_command(recipe: str) -> tuple[str, ...]:
-    """Return the command line the repository `justfile` resolves ``recipe`` to."""
+def justfile_recipe_command(recipe: str, *arguments: str) -> tuple[str, ...]:
+    """Return the command line the repository `justfile` resolves ``recipe`` to.
+
+    ``arguments`` are the words a caller passes to the recipe.
+    """
 
     completed = subprocess.run(
-        (*JUST_DRY_RUN_ARGV, str(REPOSITORY_ROOT / "justfile"), recipe),
+        (*JUST_DRY_RUN_ARGV, str(REPOSITORY_ROOT / "justfile"), recipe, *arguments),
         cwd=REPOSITORY_ROOT,
         stdin=subprocess.DEVNULL,
         capture_output=True,
