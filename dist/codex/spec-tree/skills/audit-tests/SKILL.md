@@ -295,9 +295,9 @@ The judgment is traced from the code and named in the finding — never a measur
 
 The four evidence properties above are language-neutral. Language-specific test-evidence concerns — the per-language check IDs and extraction targets named in `<verdict_format>` — are owned by the language test audit skill, not by this one.
 
-Read detected language or language partitions from the audit inputs. When absent, derive partitions from the linked-test filenames and the installed language plugins. Take the installed `audit-<lang>-test` skills from the skill listing already in context; no directory scan is needed. For each, load that language's `<lang>-test-standards` skill and read its filename instantiation of `<subject>.<evidence>.<level>[.<runner>]` — the concrete pattern the standard states, such as `test_<subject>.<evidence>.<level>[.<runner>].py`. The text after the last closing bracket is the declared suffix: a compound suffix such as `.test.ts` as readily as a bare `.py` or `_test.go`. Map every linked test whose filename ends in an installed plugin's declared suffix to that language. Reject a suffix no installed plugin declares, or an ambiguous partition, with property `unsupported-language` and remediation target `language-partition` instead of guessing; never map an extension from a list this skill carries.
+Read detected language or language partitions from the audit inputs. When absent, derive partitions from the linked-test filenames and the installed language plugins. Take the installed `audit-<lang>-test` skills from the skill listing already in context; no directory scan is needed. For each language: Use skill `<lang>:<lang>-test-standards`. Read its filename instantiation of `<subject>.<evidence>.<level>[.<runner>]` — the concrete pattern the standard states, such as `test_<subject>.<evidence>.<level>[.<runner>].py`. The text after the last closing bracket is the declared suffix: a compound suffix such as `.test.ts` as readily as a bare `.py` or `_test.go`. Map every linked test whose filename ends in an installed plugin's declared suffix to that language. Reject a suffix no installed plugin declares, or an ambiguous partition, with property `unsupported-language` and remediation target `language-partition` instead of guessing; never map an extension from a list this skill carries.
 
-For each language, consume an explicitly supplied completed verdict or invoke the installed `audit-<lang>-test` skill through the runtime's supported skill mechanism. A completed verdict uses the same `<verdict_format>` contract as a fresh result; never invoke that concern again. Validate its output shape, required fields, applicable rows, and agreement between findings, row statuses, and overall status. Malformed or incomplete evidence adds a `gate-1-assertion` `REJECT` finding with property `language-composition`; continue the remaining languages.
+For each language, consume an explicitly supplied completed verdict; otherwise: Use skill `<lang>:audit-<lang>-test`. A completed verdict uses the same `<verdict_format>` contract as a fresh result; never invoke that concern again. Validate its output shape, required fields, applicable rows, and agreement between findings, row statuses, and overall status. Malformed or incomplete evidence adds a `gate-1-assertion` `REJECT` finding with property `language-composition`; continue the remaining languages.
 
 Merge each valid result's findings into the matching rows by `name` — append, never replace — and derive their statuses under `<verdict_format>`. Merge its evidence-chain entries and coverage traces with the shared inspection, preserving every inspected artifact and assertion without duplicate entries. A composed rejection remains a rejection in the merged result. When a required `audit-<lang>-test` skill is absent or unavailable, mark `gate-1-assertion` as `FAIL` and append a `REJECT` finding there naming the missing skill, property `language-composition`, and remediation target `skill-installation`; never approve incomplete coverage.
 
@@ -361,20 +361,6 @@ The `metadata.evidence_chain` array MUST project the complete inspected inventor
           "severity": "REJECT | FILED | WARNING | INFO",
           "message": "<one-line evidentiary gap>",
           "remediation_target": "<source-contract | harness | generator | fixture | eval-case | test-file | source-file | test-infrastructure | independent-oracle | skill-installation | language-partition>"
-        },
-        {
-          "id": "f-004",
-          "file": "<test-file>",
-          "line": null,
-          "assertion": "<full-assertion-text-or-stable-id>",
-          "property": "<property as above>",
-          "rule": "<assertion-id-or-property-name>",
-          "severity": "FILED",
-          "message": "<one-line evidentiary gap>",
-          "remediation_target": "<remediation target as above>",
-          "key": "<file>:<assertion-or-declaration>:<property>:<rule>",
-          "baseRefEvidence": "<base>..<head>",
-          "issuesEntry": { "path": "<governing-node>/ISSUES.md", "heading": "<entry heading>" }
         }
       ]
     },
@@ -414,13 +400,7 @@ The `metadata.evidence_chain` array MUST project the complete inspected inventor
         "judgment": "reaches | saturated | missing"
       }
     ],
-    "not_applicable": [
-      {
-        "language": "<language>",
-        "subjects": ["<repository-relative-path>"],
-        "explanation": "<why no subject carries a current [test] assertion>"
-      }
-    ]
+    "not_applicable": [{ "language": "<language>", "subjects": ["<repository-relative-path>"], "explanation": "<reason>" }]
   }
 }
 ```
