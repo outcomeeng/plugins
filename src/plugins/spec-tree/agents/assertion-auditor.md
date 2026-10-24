@@ -4,6 +4,9 @@ description: >-
   Verifier running `/audit-assertions`: a calling skill launches it by exact name with one node spec path when its gate requires an independent verdict on that node's `[audit]` assertions.
 tools: Read, Glob, Grep, Write, Bash(spx verification run:*), Bash(git merge-base:*), Bash(git diff:*), {{! tool('use_skill') !}}
 profile: standard
+{!% if target == 'codex' %!}
+sandbox_mode: workspace-write
+{!% endif %!}
 skills:
   - spec-tree:audit-assertions
 ---

@@ -15,6 +15,7 @@ An entry is written by the changeset that ships the change. A later changeset ad
 ### Changed
 
 - **`/contextualize` reads the checkout as it stands and never moves it.** Context loading no longer runs `/sync-base`, fetches, or rebases, and the `<SPEC_TREE_CONTEXT>` marker drops the `Sync-base status`, `Synchronized checkout`, and `Synchronized base` fields. A Verifier that loads context now judges the head it was dispatched against; before this change a test-evidence audit rebased the Author's branch while other Verifiers were judging the same head. The generated instruction block states the same rule. `/audit-adr` resolves its changeset with `git merge-base HEAD origin/HEAD` and `git diff --name-only <base> HEAD`, and `/audit-tests` and `/audit-eval-evidence` read `metadata.branch` from `git branch --show-current`; `test-evidence-auditor` and `eval-evidence-auditor` gain the `git branch --show-current` grant. Bring a branch current through `/sync-base` or the `/merge` flow, which own base movement.
+- **The Codex `assertion-auditor` and `implementation-auditor` run in a `workspace-write` sandbox.** Both record their verdicts through `spx verification run` commands and scratch payload files, and before this change their Codex definitions carried no sandbox, so they inherited the invoking session's execution policy.
 
 ### Fixed
 

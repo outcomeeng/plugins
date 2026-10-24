@@ -5,6 +5,9 @@ description: >-
   changeset scope selector when its gate requires an independent audit of that changeset's implementation.
 tools: Bash, Read, Glob, Grep, Write, {{! tool('use_skill') !}}
 profile: standard
+{!% if target == 'codex' %!}
+sandbox_mode: workspace-write
+{!% endif %!}
 skills:
   - spec-tree:audit-implementation
 ---

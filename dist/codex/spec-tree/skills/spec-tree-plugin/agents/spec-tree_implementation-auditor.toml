@@ -2,6 +2,7 @@ name = "spec-tree_implementation-auditor"
 description = "Verifier running `/audit-implementation`: a calling skill launches it by exact name with one changeset scope selector when its gate requires an independent audit of that changeset's implementation."
 model = "gpt-6.1-sol"
 model_reasoning_effort = "high"
+sandbox_mode = "workspace-write"
 web_search = "disabled"
 developer_instructions = """Use skill `spec-tree:audit-implementation`.
 
